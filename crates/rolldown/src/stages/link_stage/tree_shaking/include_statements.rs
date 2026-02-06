@@ -553,7 +553,14 @@ pub fn include_runtime_symbol(
   runtime: &RuntimeModuleBrief,
   depended_runtime_helper: RuntimeHelper,
 ) {
+  let runtime_module = &ctx.modules[runtime.id()].as_normal().expect("runtime should be normal");
+
   if depended_runtime_helper.is_empty() {
+    // No runtime helpers needed, but if the runtime has side effects (e.g. from
+    // a plugin transform), we still need to include it.
+    if runtime_module.side_effects.has_side_effects() {
+      include_module(ctx, runtime_module);
+    }
     return;
   }
 
@@ -572,9 +579,8 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
 
   ctx.is_module_included_vec[module.idx] = true;
 
-  if module.idx == ctx.runtime_idx {
-    // runtime module has no side effects and it's statements should be included
-    // by other modules's references.
+  if module.idx == ctx.runtime_idx && !module.side_effects.has_side_effects() {
+    // Unmodified runtime: statements included only via references.
     return;
   }
 

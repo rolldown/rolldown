@@ -118,5 +118,18 @@ impl LinkStage<'_> {
         meta.dependencies.insert(self.runtime.id());
       }
     }
+
+    // If the runtime module has side effects (e.g. from a plugin transform) and is included,
+    // ensure entry modules depend on it so the code splitter can reach it via BFS.
+    let runtime_idx = self.runtime.id();
+    if self.metas[runtime_idx].is_included {
+      if let Some(runtime_module) = self.module_table[runtime_idx].as_normal() {
+        if runtime_module.side_effects.has_side_effects() {
+          for &entry_module_idx in self.entries.keys() {
+            self.metas[entry_module_idx].dependencies.insert(runtime_idx);
+          }
+        }
+      }
+    }
   }
 }

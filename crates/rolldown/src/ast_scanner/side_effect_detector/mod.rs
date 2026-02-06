@@ -254,6 +254,14 @@ impl<'a> SideEffectDetector<'a> {
             .set(SideEffectDetail::GlobalVarAccess, self.is_unresolved_reference(ident_ref));
           break;
         }
+        ast::Expression::MetaProperty(_) => {
+          // Only `import.meta.url` is a spec-defined side-effect-free property read.
+          // Other accesses like `import.meta.hot.accept()` may have side effects.
+          if chains.len() == 1 && chains[0] == "url" {
+            return;
+          }
+          break;
+        }
         _ => {
           *side_effects_detail |= self.detect_side_effect_of_expr(cur);
           break;
@@ -1235,7 +1243,7 @@ mod test {
   fn test_meta_property_expression() {
     assert!(!get_statements_side_effect("import.meta"));
     assert!(!get_statements_side_effect("const meta = import.meta"));
-    assert!(get_statements_side_effect("import.meta.url"));
+    assert!(!get_statements_side_effect("import.meta.url"));
     assert!(get_statements_side_effect("const { url } = import.meta"));
     assert!(get_statements_side_effect("import.meta.url = 'test'"));
   }

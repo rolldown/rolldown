@@ -6,7 +6,8 @@ use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaView, ExportsKind, FlatOptions, ModuleDefFormat, ModuleIdx, ModuleType, NormalModule,
-  StableModuleId, side_effects::DeterminedSideEffects, side_effects::HookSideEffects,
+  SideEffectDetail, StableModuleId, side_effects::DeterminedSideEffects,
+  side_effects::HookSideEffects,
 };
 use rolldown_common::{
   ModuleLoaderMsg, RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief,
@@ -111,6 +112,17 @@ impl RuntimeModuleTask {
       ..
     } = scan_result;
 
+    let determined_side_effects = match side_effects {
+      Some(HookSideEffects::False) => DeterminedSideEffects::UserDefined(false),
+      Some(HookSideEffects::NoTreeshake) => DeterminedSideEffects::NoTreeshake,
+      Some(HookSideEffects::True) | None => {
+        let has_side_effects = stmt_infos
+          .iter()
+          .any(|stmt_info| stmt_info.side_effect.contains(SideEffectDetail::Unknown));
+        DeterminedSideEffects::Analyzed(has_side_effects)
+      }
+    };
+
     let mut resolved_id = ResolvedId::make_dummy();
     resolved_id.id = RUNTIME_MODULE_ID;
     let module_type = ModuleType::Js;
@@ -149,7 +161,7 @@ impl RuntimeModuleTask {
         dynamic_importers: FxIndexSet::default(),
         imported_ids: FxIndexSet::default(),
         dynamically_imported_ids: FxIndexSet::default(),
-        side_effects: DeterminedSideEffects::Analyzed(false),
+        side_effects: determined_side_effects,
         named_imports,
         named_exports,
         stmt_infos,
@@ -208,6 +220,9 @@ impl RuntimeModuleTask {
 
     let scoping = ast.make_scoping();
     let facade_path = RUNTIME_MODULE_ID;
+    // Always respect annotations in the runtime module, regardless of user config.
+    // The runtime is trusted internal code.
+    let runtime_flat_options = self.flat_options - FlatOptions::IgnoreAnnotations;
     let scanner = AstScanner::new(
       self.module_idx,
       scoping,
@@ -218,7 +233,7 @@ impl RuntimeModuleTask {
       ast.comments(),
       &self.ctx.options,
       ast.allocator(),
-      self.flat_options,
+      runtime_flat_options,
     );
     let scan_result = scanner.scan(ast.program())?;
 

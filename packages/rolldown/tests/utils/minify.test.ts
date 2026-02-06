@@ -1,4 +1,4 @@
-import { minify, minifySync } from 'rolldown/experimental';
+import { minify, minifySync } from 'rolldown/utils';
 import { expect, test } from 'vitest';
 
 // Generated from `transformSync('original.ts', 'const a: number = 1;', { sourcemap: true })`

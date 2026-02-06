@@ -16,6 +16,8 @@ type MinifyOptions = OriginalMinifyOptions & {
  * Minify asynchronously.
  *
  * Note: This function can be slower than `minifySync` due to the overhead of spawning a thread.
+ *
+ * @experimental
  */
 async function minify(
   filename: string,
@@ -33,7 +35,11 @@ async function minify(
   return result;
 }
 
-/** Minify synchronously. */
+/**
+ * Minify synchronously.
+ *
+ * @experimental
+ */
 function minifySync(
   filename: string,
   sourceText: string,

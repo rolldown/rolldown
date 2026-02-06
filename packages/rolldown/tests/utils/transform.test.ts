@@ -3,7 +3,7 @@ import {
   transform,
   transformSync,
   TsconfigCache,
-} from 'rolldown/experimental';
+} from 'rolldown/utils';
 import { expect, describe, it } from 'vitest';
 
 describe('enhanced transform', () => {

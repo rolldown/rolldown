@@ -434,6 +434,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.symbol_ref_db.scoping().get_root_binding(name)
   }
 
+  fn get_similar_root_bindings(&self, name: &str) -> Vec<String> {
+    let root_scope_id = self.result.symbol_ref_db.scoping().root_scope_id();
+    let bindings = self.result.symbol_ref_db.scoping().get_bindings(root_scope_id);
+    let binding_names: Vec<&str> = bindings.keys().map(|s| &**s).collect();
+
+    rolldown_utils::string_similarity::find_similar_str(name, binding_names, 3)
+      .into_iter()
+      .map(|s| s.to_string())
+      .collect()
+  }
+
   /// `is_dummy` means if it the import record is created during ast transformation.
   ///
   /// `import_expression_address` - The AST address of the ImportExpression node,
@@ -712,11 +723,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
           self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
         } else {
+          let similar_names = self.get_similar_root_bindings(spec.local.name().as_str());
           self.result.errors.push(BuildDiagnostic::export_undefined_variable(
             self.immutable_ctx.id.to_string(),
             self.immutable_ctx.source.clone(),
             spec.local.span(),
             ArcStr::from(spec.local.name().as_str()),
+            similar_names,
           ));
         }
       });

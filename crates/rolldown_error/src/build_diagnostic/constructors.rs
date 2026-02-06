@@ -310,8 +310,9 @@ impl BuildDiagnostic {
     source: ArcStr,
     span: Span,
     name: ArcStr,
+    similar_names: Vec<String>,
   ) -> Self {
-    Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
+    Self::new_inner(ExportUndefinedVariable { filename, source, span, name, similar_names })
   }
 
   pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {

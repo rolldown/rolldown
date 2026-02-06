@@ -296,20 +296,24 @@ impl GlobImportVisit<'_> {
           rolldown_plugin::PluginContextResolveOptions { custom, ..Default::default() }
         }),
       );
-      if let Ok(result) = rolldown_utils::futures::block_on(future) {
-        let id: Cow<'_, str> = match result {
-          Ok(resolved_id) => Cow::Owned(resolved_id.id.to_string()),
-          Err(_) => Cow::Borrowed(glob),
-        };
-        let path = Path::new(id.as_ref());
-        if path.is_absolute() && path.starts_with(root) {
-          return Some(PathWithGlob::new(id.to_string(), glob));
-        }
+
+      let resolved_id = rolldown_utils::futures::block_on(future)
+        .ok()
+        .and_then(Result::ok)
+        .map(|resolved| resolved.id.to_string());
+
+      if let Some(ref id) = resolved_id
+        && Path::new(id.as_str()).is_absolute()
+      {
+        return Some(PathWithGlob::new(id.clone(), glob));
       }
 
       self.ctx.warn(LogWithoutPlugin {
         message: format!(
-          "Invalid glob pattern: `{glob}` in file '{}'. Glob patterns must start with:\n  • '/' for absolute paths from project root\n  • './' or '../' for relative paths\n  • '**/' for recursive matching from project root\n  • '#' for subpath imports (with '*' wildcard)",
+          "Invalid glob pattern: `{glob}`{} in file '{}'. Glob patterns must start with:\n  • '/' for absolute paths from project root\n  • './' or '../' for relative paths\n  • '**/' for recursive matching from project root\n  • '#' for subpath imports (with '*' wildcard)",
+         resolved_id
+              .map(|id| format!(" (resolved: `{id}`)"))
+              .unwrap_or_default(),
           self.id.relative(self.root).display()
         ),
         ..Default::default()

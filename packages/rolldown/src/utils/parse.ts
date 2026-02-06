@@ -21,8 +21,6 @@ export type { ParseResult, ParserOptions };
  *
  * Generally `parseSync` is preferable to use as it does not have the overhead of spawning a thread.
  * If you need to parallelize parsing multiple files, it is recommended to use worker threads.
- *
- * @experimental
  */
 export async function parse(
   filename: string,
@@ -41,8 +39,6 @@ export async function parse(
  *
  * If you need to parallelize parsing multiple files, it is recommended to use worker threads
  * with `parseSync` rather than using `parse`.
- *
- * @experimental
  */
 export function parseSync(
   filename: string,

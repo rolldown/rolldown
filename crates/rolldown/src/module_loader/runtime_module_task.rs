@@ -74,10 +74,13 @@ impl RuntimeModuleTask {
       get_runtime_js()
     };
 
+    let original_source = source.clone();
+
     // Call transform hook on runtime module
     let mut sourcemap_chain = vec![];
     let mut side_effects: Option<HookSideEffects> = None;
     let mut module_type = ModuleType::Js;
+    let mut code_changed_by_plugins: Option<Vec<String>> = Some(vec![]);
 
     let source: ArcStr = self
       .ctx
@@ -90,9 +93,19 @@ impl RuntimeModuleTask {
         &mut side_effects,
         &mut module_type,
         None,
+        &mut code_changed_by_plugins,
       )
       .await?
       .into();
+
+    // Track which plugins modified the runtime module, so we can provide
+    // helpful error messages if symbol validation fails.
+    let mut modified_by_plugins: Vec<String> = vec![];
+    if let Some(plugin_names) = code_changed_by_plugins {
+      if !plugin_names.is_empty() && source.as_str() != original_source {
+        modified_by_plugins = plugin_names;
+      }
+    }
 
     let (ast, scan_result) = self.make_ecma_ast(RUNTIME_MODULE_KEY, &source)?;
 
@@ -192,7 +205,8 @@ impl RuntimeModuleTask {
       originative_resolved_id: resolved_id,
     };
 
-    let runtime = RuntimeModuleBrief::new(self.module_idx, &symbol_ref_db.ast_scopes);
+    let mut runtime = RuntimeModuleBrief::new(self.module_idx, &symbol_ref_db.ast_scopes);
+    runtime.set_modified_by_plugins(modified_by_plugins);
     let result = ModuleLoaderMsg::RuntimeNormalModuleDone(Box::new(RuntimeModuleTaskResult {
       ast,
       module,

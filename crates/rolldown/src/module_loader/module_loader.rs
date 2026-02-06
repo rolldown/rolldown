@@ -559,6 +559,7 @@ impl<'a> ModuleLoader<'a> {
           self.symbol_ref_db.store_local_db(runtime.id(), local_symbol_ref_db);
           self.remaining -= 1;
 
+          errors.extend(runtime.validate_symbols(&rolldown_common::RUNTIME_HELPER_NAMES));
           runtime_brief = Some(runtime);
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {

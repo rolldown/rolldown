@@ -46,5 +46,6 @@ bitflags! {
     const DuplicateShebang = 1 << 39;
     const TsConfigError = 1 << 40;
     const UnsupportedTsconfigOption = 1 << 41;
+    const RuntimeModuleSymbolNotFoundError = 1 << 42;
   }
 }

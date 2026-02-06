@@ -34,6 +34,7 @@ use super::events::plugin_error::{CausedPlugin, PluginError};
 use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::resolve_error::DiagnosableResolveError;
+
 use super::events::tsconfig_error::TsConfigError;
 use super::events::unhandleable_error::UnhandleableError;
 use super::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
@@ -382,5 +383,15 @@ impl BuildDiagnostic {
 
   pub fn unsupported_tsconfig_option(message: String) -> Self {
     Self::new_inner(UnsupportedTsconfigOption { message })
+  }
+
+  pub fn runtime_module_symbol_not_found(
+    symbol_name: String,
+    modified_by_plugins: Vec<String>,
+  ) -> Self {
+    Self::new_inner(super::events::runtime_module_symbol_not_found::RuntimeModuleSymbolNotFound {
+      symbol_name,
+      modified_by_plugins,
+    })
   }
 }

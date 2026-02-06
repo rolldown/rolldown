@@ -108,6 +108,7 @@ pub enum EventKind {
   TsConfigError = 40,
   /// Whether to emit warnings when a tsconfig option or combination of options is not supported.
   UnsupportedTsconfigOption = 41,
+  RuntimeModuleSymbolNotFoundError = 42,
 }
 
 impl Display for EventKind {
@@ -160,6 +161,9 @@ impl Display for EventKind {
       EventKind::DuplicateShebang => write!(f, "DUPLICATE_SHEBANG"),
       EventKind::TsConfigError => write!(f, "TSCONFIG_ERROR"),
       EventKind::UnsupportedTsconfigOption => write!(f, "UNSUPPORTED_TSCONFIG_OPTION"),
+      EventKind::RuntimeModuleSymbolNotFoundError => {
+        write!(f, "RUNTIME_MODULE_SYMBOL_NOT_FOUND")
+      }
     }
   }
 }

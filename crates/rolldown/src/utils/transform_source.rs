@@ -31,6 +31,7 @@ pub async fn transform_source(
       side_effects,
       module_type,
       magic_string_tx,
+      &mut None,
     )
     .await
 }

@@ -227,6 +227,7 @@ impl PluginDriver {
     side_effects: &mut Option<HookSideEffects>,
     module_type: &mut ModuleType,
     magic_string_tx: Option<Arc<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>>,
+    code_changed_by_plugins: &mut Option<Vec<String>>,
   ) -> Result<String> {
     let mut code = original_code;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
@@ -270,6 +271,11 @@ impl PluginDriver {
           *side_effects = Some(v);
         }
         if let Some(v) = r.code {
+          if let Some(changed_by) = code_changed_by_plugins {
+            if v != code {
+              changed_by.push(plugin.call_name().to_string());
+            }
+          }
           code = v;
           trace_action!(action::HookTransformCallEnd {
             action: "HookTransformCallEnd",

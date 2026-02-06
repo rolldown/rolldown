@@ -43,6 +43,7 @@ pub mod plugin_error;
 pub mod plugin_timings;
 pub mod prefer_builtin_feature;
 pub mod resolve_error;
+pub mod runtime_module_symbol_not_found;
 pub mod tsconfig_error;
 pub mod unhandleable_error;
 pub mod unloadable_dependency;

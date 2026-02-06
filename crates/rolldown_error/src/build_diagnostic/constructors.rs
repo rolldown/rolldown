@@ -386,11 +386,11 @@ impl BuildDiagnostic {
   }
 
   pub fn runtime_module_symbol_not_found(
-    symbol_name: String,
+    symbol_names: Vec<String>,
     modified_by_plugins: Vec<String>,
   ) -> Self {
     Self::new_inner(super::events::runtime_module_symbol_not_found::RuntimeModuleSymbolNotFound {
-      symbol_name,
+      symbol_names,
       modified_by_plugins,
     })
   }

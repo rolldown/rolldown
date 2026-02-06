@@ -5,8 +5,8 @@ use rolldown_common::RUNTIME_MODULE_KEY;
 use rolldown_plugin::{HookTransformReturn, HookUsage, Plugin, SharedTransformPluginContext};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
-/// A plugin that removes `__exportAll` from the runtime module,
-/// simulating a plugin that accidentally breaks a runtime utility.
+/// A plugin that removes `__exportAll` and `__toCommonJS` from the runtime module,
+/// simulating a plugin that accidentally breaks runtime utilities.
 #[derive(Debug)]
 struct RuntimeBreakingPlugin;
 
@@ -21,8 +21,11 @@ impl Plugin for RuntimeBreakingPlugin {
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> HookTransformReturn {
     if args.id == RUNTIME_MODULE_KEY {
-      // Remove __exportAll from the runtime module
-      let modified = args.code.replace("export var __exportAll", "var __removed_exportAll");
+      // Remove __exportAll and __toCommonJS from the runtime module
+      let modified = args
+        .code
+        .replace("export var __exportAll", "var __removed_exportAll")
+        .replace("export var __toCommonJS", "var __removed_toCommonJS");
       return Ok(Some(rolldown_plugin::HookTransformOutput {
         code: Some(modified),
         ..Default::default()

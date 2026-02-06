@@ -69,6 +69,10 @@
     "./plugins": {
       "dev": "./src/plugins-index.ts",
       "default": "./dist/plugins-index.mjs"
+    },
+    "./utils": {
+      "dev": "./src/utils-index.ts",
+      "default": "./dist/utils-index.mjs"
     }
   },
   "publishConfig": {
@@ -85,7 +89,8 @@
       "./parallelPlugin": "./dist/parallel-plugin.mjs",
       "./parseAst": "./dist/parse-ast-index.mjs",
       "./package.json": "./package.json",
-      "./plugins": "./dist/plugins-index.mjs"
+      "./plugins": "./dist/plugins-index.mjs",
+      "./utils": "./dist/utils-index.mjs"
     },
     "registry": "https://registry.npmjs.org/"
   },

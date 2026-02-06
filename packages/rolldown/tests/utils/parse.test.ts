@@ -1,4 +1,4 @@
-import { parse, parseSync } from 'rolldown/experimental';
+import { parse, parseSync } from 'rolldown/utils';
 import { expect, test } from 'vitest';
 
 test('parse non json value', async () => {

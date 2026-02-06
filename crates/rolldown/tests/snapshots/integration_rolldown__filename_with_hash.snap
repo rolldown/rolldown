@@ -4279,7 +4279,7 @@ expression: output
 
 # tests/rolldown/function/external/export_external
 
-- main-!~{000}~.js => main-5sPV7EtM.js
+- main-!~{000}~.js => main-C2zWePJ9.js
 
 # tests/rolldown/function/external/implicit_import_external
 

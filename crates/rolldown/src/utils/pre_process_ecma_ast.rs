@@ -190,7 +190,6 @@ impl PreProcessEcmaAst {
 }
 
 /// Augment export undefined errors from oxc with similar name suggestions
-/// Augment export undefined errors from oxc with similar name suggestions
 fn augment_export_undefined_errors(
   errors: Vec<oxc::diagnostics::OxcDiagnostic>,
   scoping: &Scoping,
@@ -217,7 +216,7 @@ fn augment_export_undefined_errors(
           let name = &error_message[start + 1..start + 1 + end];
           let similar_names = rolldown_utils::string_similarity::find_similar_str(
             name,
-            binding_names.clone(),
+            binding_names.iter().copied(),
             3,
           )
           .into_iter()

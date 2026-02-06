@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::VecDeque, path::Path};
 
 use crate::{
   chunk_graph::ChunkGraph,
-  stages::generate_stage::{chunk_ext::ChunkDebugExt, chunk_optimizer::TempChunkGraph},
+  stages::generate_stage::{chunk_ext::ChunkDebugExt, chunk_optimizer::ChunkOptimizationGraph},
   types::linking_metadata::LinkingMetadataVec,
   utils::chunk::normalize_preserve_entry_signature,
 };
@@ -810,9 +810,8 @@ impl GenerateStage<'_> {
     // TODO: maybe we could bailout peer chunk?
     let allow_chunk_optimization = self.options.experimental.is_chunk_optimization_enabled()
       && !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
-
     let mut temp_chunk_graph =
-      TempChunkGraph::new(allow_chunk_optimization, chunk_graph, bits_to_chunk);
+      ChunkOptimizationGraph::new(allow_chunk_optimization, chunk_graph, bits_to_chunk);
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
@@ -842,6 +841,9 @@ impl GenerateStage<'_> {
           chunk_id,
           self.link_output.metas[normal_module.idx].depended_runtime_helper,
         );
+        if allow_chunk_optimization {
+          temp_chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
+        }
       } else if normal_module.is_user_defined_entry
         && self.link_output.metas[normal_module.idx].wrap_kind().is_none()
         // Don't apply this optimization when multiple entries point to the same module
@@ -870,9 +872,13 @@ impl GenerateStage<'_> {
             entry_chunk_idx,
             self.link_output.metas[normal_module.idx].depended_runtime_helper,
           );
+
+          if allow_chunk_optimization {
+            temp_chunk_graph.add_module_to_chunk(normal_module.idx, entry_chunk_idx);
+          }
         }
       } else if allow_chunk_optimization {
-        temp_chunk_graph.init_module(normal_module.idx, bits);
+        temp_chunk_graph.init_module_assignment(normal_module.idx, bits);
       } else {
         let mut chunk =
           Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);
@@ -891,11 +897,13 @@ impl GenerateStage<'_> {
     }
 
     if allow_chunk_optimization {
+      temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
+
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,
         input_base,
-        &temp_chunk_graph,
+        &mut temp_chunk_graph,
       );
 
       self.optimize_facade_dynamic_entry_chunks(
@@ -903,6 +911,7 @@ impl GenerateStage<'_> {
         index_splitting_info,
         input_base,
         &mut module_to_assigned,
+        &temp_chunk_graph,
       );
     }
 

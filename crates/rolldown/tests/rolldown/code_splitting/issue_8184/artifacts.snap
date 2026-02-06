@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+//#region c.js
+import("./a2.js");
+
+//#endregion
+```
+
+## a2.js
+
+```js
+import "./a.js";
+
+```
+
+## dbp-1.js
+
+```js
+import "./a.js";
+
+```
+
+## dbp-2.js
+
+```js
+import "./a.js";
+
+// HIDDEN [\0rolldown/runtime.js]
+//#region x.js
+var require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = 42;
+}));
+
+//#endregion
+//#region b.js
+var import_x = require_x();
+
+//#endregion
+```
+
+## dbp-activity-showcase.js
+
+```js
+//#region dbp-activity-showcase.js
+import("./dbp-2.js");
+
+//#endregion
+```

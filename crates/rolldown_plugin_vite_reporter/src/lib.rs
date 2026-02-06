@@ -4,6 +4,7 @@ use std::{
   borrow::Cow,
   fmt::Write as _,
   path::{Path, PathBuf},
+  pin::Pin,
   sync::{
     Arc, RwLock,
     atomic::{AtomicBool, AtomicU32, Ordering},
@@ -18,7 +19,10 @@ use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_plugin_utils::is_in_node_modules;
 use sugar_path::SugarPath as _;
 
-#[derive(Debug)]
+pub type LogInfoFn =
+  dyn Fn(String) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send>> + Send + Sync;
+
+#[derive(derive_more::Debug)]
 #[expect(clippy::struct_excessive_bools)]
 pub struct ViteReporterPlugin {
   pub root: PathBuf,
@@ -35,6 +39,8 @@ pub struct ViteReporterPlugin {
   pub has_transformed: AtomicBool,
   pub transformed_count: AtomicU32,
   pub latest_checkpoint: Arc<RwLock<Instant>>,
+  #[debug(skip)]
+  pub log_info: Arc<LogInfoFn>,
 }
 
 impl Plugin for ViteReporterPlugin {
@@ -278,6 +284,7 @@ impl Plugin for ViteReporterPlugin {
         args.options.cwd.join(&args.options.out_dir).normalize().relative(&args.options.cwd);
       let out_dir = out_dir.to_slash_lossy();
 
+      let mut info = String::new();
       for group in utils::GROUPS {
         let mut filtered = log_entries.iter().filter(|e| e.group == group).collect::<Vec<_>>();
         if filtered.is_empty() {
@@ -285,7 +292,6 @@ impl Plugin for ViteReporterPlugin {
         }
         filtered.sort_by(|a, b| a.size.cmp(&b.size));
         for log_entry in filtered {
-          let mut info = String::new();
           let _ = write!(
             &mut info,
             "{}",
@@ -359,9 +365,10 @@ impl Plugin for ViteReporterPlugin {
             );
           }
 
-          utils::log_info(&info);
+          let _ = writeln!(&mut info);
         }
       }
+      (self.log_info)(info).await?;
     } else if self.warn_large_chunks {
       has_large_chunks = args.bundle.iter().any(|output| {
         if let rolldown_common::Output::Chunk(chunk) = output {
@@ -377,10 +384,6 @@ impl Plugin for ViteReporterPlugin {
         itoa::Buffer::new().format(self.chunk_limit)
       ).if_supports_color(Stream::Stdout, |text| { text.bold().yellow().to_string() }).to_string();
       ctx.warn(rolldown_common::LogWithoutPlugin { message, ..Default::default() });
-    }
-    // Print a newline to separate from next log
-    if self.should_log_info {
-      utils::log_info("");
     }
     Ok(())
   }

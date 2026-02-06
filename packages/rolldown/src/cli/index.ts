@@ -3,7 +3,7 @@ import { version } from '../../package.json';
 import { parseCliArguments } from './arguments';
 import { bundleWithCliOptions, bundleWithConfig } from './commands/bundle';
 import { showHelp } from './commands/help';
-import { logger } from './logger';
+import { logger, setCliSilent } from './logger';
 import { checkNodeVersion } from './version-check';
 
 if (!checkNodeVersion(process.versions.node)) {
@@ -16,6 +16,7 @@ if (!checkNodeVersion(process.versions.node)) {
 
 async function main() {
   const { rawArgs, ...cliOptions } = parseCliArguments();
+  setCliSilent(cliOptions.silent);
   // Process --environment flag
   if (cliOptions.environment) {
     const environment = Array.isArray(cliOptions.environment)

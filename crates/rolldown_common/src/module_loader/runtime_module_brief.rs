@@ -41,16 +41,19 @@ impl RuntimeModuleBrief {
   /// Validate that all expected runtime helper symbols are present.
   /// Returns a list of errors for any missing symbols.
   pub fn validate_symbols(&self, expected_symbols: &[&str]) -> Vec<BuildDiagnostic> {
-    let mut errors = vec![];
-    for &name in expected_symbols {
-      if !self.name_to_symbol.contains_key(name) {
-        errors.push(BuildDiagnostic::runtime_module_symbol_not_found(
-          name.to_string(),
-          self.modified_by_plugins.clone(),
-        ));
-      }
+    let missing: Vec<String> = expected_symbols
+      .iter()
+      .filter(|name| !self.name_to_symbol.contains_key(**name))
+      .map(std::string::ToString::to_string)
+      .collect();
+    if missing.is_empty() {
+      vec![]
+    } else {
+      vec![BuildDiagnostic::runtime_module_symbol_not_found(
+        missing,
+        self.modified_by_plugins.clone(),
+      )]
     }
-    errors
   }
 
   pub fn resolve_symbol(&self, name: &str) -> SymbolRef {

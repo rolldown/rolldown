@@ -60,11 +60,20 @@ impl PreProcessEcmaAst {
 
     // Step 1: Build initial semantic data and check for semantic errors.
     let semantic_ret = ast.program.with_dependent(|_owner, dep| {
-      SemanticBuilder::new().with_check_syntax_error(false).build(&dep.program)
+      SemanticBuilder::new().with_check_syntax_error(true).build(&dep.program)
     });
 
     let (errors, warnings): (Vec<_>, Vec<_>) =
       semantic_ret.errors.into_iter().partition(|w| w.severity == OxcSeverity::Error);
+
+    // Filter out "Export is not defined" errors - these will be handled by the AST scanner
+    // which can provide better error messages with similar name suggestions
+    let (errors, _filtered_export_errors): (Vec<_>, Vec<_>) = errors
+      .into_iter()
+      .partition(|e| {
+        let msg = e.message.to_string();
+        !(msg.starts_with("Export '") && msg.contains("is not defined"))
+      });
 
     let mut warnings = if errors.is_empty() {
       BuildDiagnostic::from_oxc_diagnostics(

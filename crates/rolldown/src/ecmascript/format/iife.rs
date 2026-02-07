@@ -49,7 +49,7 @@ pub async fn render_iife<'code>(
   warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
-  let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
+  let AddonRenderContext { hashbang, banner, intro, outro, footer, directives, always_strict: _ } =
     addon_render_context;
   if let Some(hashbang) = hashbang {
     source_joiner.append_source(hashbang);

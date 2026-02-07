@@ -28,7 +28,7 @@ pub async fn render_umd<'code>(
   warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
-  let AddonRenderContext { banner, intro, outro, footer, directives, .. } = addon_render_context;
+  let AddonRenderContext { banner, intro, outro, footer, directives, always_strict: _, .. } = addon_render_context;
   if let Some(banner) = banner {
     source_joiner.append_source(banner);
   }

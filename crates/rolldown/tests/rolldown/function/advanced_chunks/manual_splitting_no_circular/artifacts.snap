@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] Warning: `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import { n as multiply, t as add } from "./vendor.js";
+import { strictEqual } from "node:assert";
+
+//#region app.js
+function compute(a, b) {
+	return add(a, b) + multiply(a, b);
+}
+
+//#endregion
+//#region main.js
+strictEqual(add(2, 3), 5);
+strictEqual(multiply(4, 5), 20);
+strictEqual(compute(2, 3), 11);
+
+//#endregion
+```
+
+## vendor.js
+
+```js
+//#region utils.js
+function add(a, b) {
+	return a + b;
+}
+function multiply(a, b) {
+	return a * b;
+}
+
+//#endregion
+export { multiply as n, add as t };
+```

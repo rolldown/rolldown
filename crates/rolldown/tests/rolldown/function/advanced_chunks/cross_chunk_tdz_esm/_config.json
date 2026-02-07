@@ -1,0 +1,11 @@
+{
+  "_comment": "Tests cycle prevention in manualCodeSplitting. shared.js depends on helpers.js which depends on state.js. Splitting shared.js into a vendor chunk would create a circular chunk dependency (vendor->entry for getConfig, entry->vendor for TIMEOUT). The cycle prevention detects this and keeps shared.js in the entry chunk, preserving const bindings. See https://github.com/rolldown/rolldown/issues/7449",
+  "config": {
+    "manualCodeSplitting": {
+      "groups": [
+        { "name": "vendor", "test": "shared\\.js" }
+      ],
+      "includeDependenciesRecursively": false
+    }
+  }
+}

@@ -1535,7 +1535,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
           }
         } else if self.ctx.options.top_level_var {
-          // Here we should find if it's a "VariableDeclaration" and switch it to "Var."
+          if let Statement::VariableDeclaration(var_decl) = &mut top_stmt {
+            var_decl.kind = ast::VariableDeclarationKind::Var;
+            for decl in &mut var_decl.declarations {
+              decl.kind = VariableDeclarationKind::Var;
+            }
+          }
+          if let Statement::ClassDeclaration(class_decl) = &mut top_stmt {
+            if let Some(mut decl) = self.get_transformed_class_decl(class_decl) {
+              top_stmt = Statement::from(decl.take_in(self.alloc));
+            }
+          }
+        }
+        // Convert const/let to var in chunks with circular chunk dependencies.
+        // This runs AFTER export stripping (above), so it catches declarations
+        // that were originally `export const` and are now plain `const`.
+        // Without this, circular chunk imports cause TDZ ReferenceErrors because
+        // const/let bindings cannot be accessed before initialization.
+        if self.ctx.chunk_graph.chunks_with_circular_deps.contains(&self.ctx.chunk_idx) {
           if let Statement::VariableDeclaration(var_decl) = &mut top_stmt {
             var_decl.kind = ast::VariableDeclarationKind::Var;
             for decl in &mut var_decl.declarations {

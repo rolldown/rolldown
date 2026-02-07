@@ -18,6 +18,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if symbol_flag.contains(SymbolFlags::Import) {
       let symbol_ref: SymbolRef = (self.immutable_ctx.idx, symbol_id).into();
       let named_import = self.result.named_imports.get(&symbol_ref);
+      let import_decl_span = self.result.symbol_ref_db.scoping().symbol_span(symbol_id);
       let is_namespace =
         named_import.is_some_and(|import| matches!(import.imported, Specifier::Star));
       if is_namespace {
@@ -49,11 +50,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         }
 
         if let Some((span, name)) = self.get_span_if_namespace_specifier_updated() {
+          // For namespace imports, get the actual imported name (the namespace identifier)
+          let imported_name = self.result.symbol_ref_db.symbol_name(symbol_id);
           self.result.errors.push(BuildDiagnostic::assign_to_import(
             self.immutable_ctx.id.as_arc_str().clone(),
             self.immutable_ctx.source.clone(),
             span,
             name.into(),
+            Some(import_decl_span),
+            Some(imported_name.into()),
           ));
           return;
         }
@@ -66,6 +71,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           self.immutable_ctx.source.clone(),
           ident.span,
           ident.name.as_str().into(),
+          Some(import_decl_span),
+          None, // For non-namespace imports, use the name itself
         ));
       }
     }

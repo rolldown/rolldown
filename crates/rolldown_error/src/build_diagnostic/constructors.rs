@@ -314,8 +314,22 @@ impl BuildDiagnostic {
     Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
   }
 
-  pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
-    Self::new_inner(AssignToImport { filename, source, span, name })
+  pub fn assign_to_import(
+    filename: ArcStr,
+    source: ArcStr,
+    span: Span,
+    name: ArcStr,
+    import_decl_span: Option<Span>,
+    imported_name: Option<ArcStr>,
+  ) -> Self {
+    Self::new_inner(AssignToImport {
+      filename,
+      source,
+      span,
+      name,
+      import_decl_span,
+      imported_name,
+    })
   }
 
   pub fn cannot_call_namespace(

@@ -3999,6 +3999,14 @@ expression: output
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BulwG9Fz.js
 - ui-!~{003}~.js => ui-DG571VYR.js
 
+# tests/rolldown/function/comments/none
+
+- main-!~{000}~.js => main-Cs2f_zjc.js
+
+# tests/rolldown/function/comments/none_with_legal_inline
+
+- main-!~{000}~.js => main-CuA_YVq_.js
+
 # tests/rolldown/function/context/defined
 
 - main-!~{000}~.js => main-CRCfOHFz.js

@@ -89,6 +89,8 @@ export interface NormalizedOutputOptions {
   minify: false | MinifyOptions | 'dce-only';
   /** @see {@linkcode OutputOptions.legalComments | legalComments} */
   legalComments: 'none' | 'inline';
+  /** @see {@linkcode OutputOptions.comments | comments} */
+  comments: 'none' | 'all';
   /** @see {@linkcode OutputOptions.polyfillRequire | polyfillRequire} */
   polyfillRequire: boolean;
   /** @see {@linkcode OutputOptions.plugins | plugins} */
@@ -290,6 +292,11 @@ export class NormalizedOutputOptionsImpl
   @lazyProp
   get legalComments(): 'none' | 'inline' {
     return this.inner.legalComments;
+  }
+
+  @lazyProp
+  get comments(): 'none' | 'all' {
+    return this.inner.comments;
   }
 
   @lazyProp

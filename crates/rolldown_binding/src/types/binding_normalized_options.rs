@@ -303,6 +303,14 @@ impl BindingNormalizedOptions {
     }
   }
 
+  #[napi(getter, ts_return_type = "'none' | 'all'")]
+  pub fn comments(&self) -> &'static str {
+    match self.inner.comments {
+      rolldown::Comments::None => "none",
+      rolldown::Comments::All => "all",
+    }
+  }
+
   #[napi(getter)]
   pub fn preserve_modules(&self) -> bool {
     self.inner.preserve_modules

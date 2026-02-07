@@ -149,6 +149,8 @@ pub struct BindingOutputOptions<'env> {
   pub manual_code_splitting: Option<BindingManualCodeSplittingOptions>,
   #[napi(ts_type = "'none' | 'inline'")]
   pub legal_comments: Option<String>,
+  #[napi(ts_type = "'none' | 'all'")]
+  pub comments: Option<String>,
   pub polyfill_require: Option<bool>,
   pub preserve_modules: Option<bool>,
   pub virtual_dirname: Option<String>,

@@ -97,5 +97,15 @@ pub fn normalize_binding_transform_options(options: TransformOptions) -> Bundler
     module_name: HelperLoaderOptions::default().module_name,
   });
 
-  BundlerTransformOptions { jsx, target, decorator, typescript, assumptions, plugins, helpers }
+  BundlerTransformOptions {
+    jsx,
+    #[cfg(debug_assertions)]
+    jsx_preset: None,
+    target,
+    decorator,
+    typescript,
+    assumptions,
+    plugins,
+    helpers,
+  }
 }

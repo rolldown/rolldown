@@ -19,10 +19,12 @@ use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use rolldown_error::BuildDiagnostic;
+
 use crate::{
   ast_scanner::{
     const_eval::{ConstEvalCtx, try_extract_const_literal},
-    side_effect_detector::SideEffectDetector,
+    side_effect_detector::{SideEffectDetector, UntranspiledSyntax},
   },
   module_finalizers::TraverseState,
 };
@@ -33,6 +35,8 @@ type MutationResult = (
   Option<(ModuleIdx, FxHashMap<StmtInfoIdx, SideEffectDetail>)>,
   FxHashMap<SymbolRef, ConstExportMeta>,
   FxHashSet<Address>,
+  UntranspiledSyntax,
+  ModuleIdx,
 );
 
 #[derive(Default)]
@@ -245,6 +249,7 @@ impl LinkStage<'_> {
             visit_path: vec![],
             latest_side_effect_free_call_expr_addr: None,
             unreachable_import_expression_addresses: FxHashSet::default(),
+            untranspiled_syntax: UntranspiledSyntax::empty(),
           };
           ctx.visit_program(&dep.program);
 
@@ -256,6 +261,7 @@ impl LinkStage<'_> {
           if side_effect_mutations.is_none()
             && ctx.local_constant_symbol_map.is_empty()
             && ctx.unreachable_import_expression_addresses.is_empty()
+            && ctx.untranspiled_syntax.is_empty()
           {
             return None;
           }
@@ -263,13 +269,17 @@ impl LinkStage<'_> {
             side_effect_mutations,
             ctx.local_constant_symbol_map,
             ctx.unreachable_import_expression_addresses,
+            ctx.untranspiled_syntax,
+            module_idx,
           ))
         })
       })
       .collect();
 
     let mut new_constant_refs = FxHashSet::default();
-    for (side_effect_mutations, local_constants, unreachable_addresses) in mutation_result {
+    for (side_effect_mutations, local_constants, unreachable_addresses, untranspiled, module_idx) in
+      mutation_result
+    {
       if let Some((module_idx, mutations)) = side_effect_mutations {
         if let Some(module) = self.module_table[module_idx].as_normal_mut() {
           for (stmt_info_idx, side_effect_detail) in mutations {
@@ -286,6 +296,16 @@ impl LinkStage<'_> {
 
       // Collect all unreachable import expression addresses
       all_unreachable_addresses.extend(unreachable_addresses);
+
+      if !untranspiled.is_empty() {
+        let module_id = self.module_table[module_idx].stable_id().to_string();
+        if untranspiled.contains(UntranspiledSyntax::TypeScript) {
+          self.errors.push(BuildDiagnostic::untranspiled_syntax(module_id.clone(), "TypeScript"));
+        }
+        if untranspiled.contains(UntranspiledSyntax::Jsx) {
+          self.errors.push(BuildDiagnostic::untranspiled_syntax(module_id, "JSX"));
+        }
+      }
     }
     new_constant_refs
   }
@@ -317,6 +337,7 @@ struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
   /// Import expressions that are inside lazy paths (e.g., inside a PURE-annotated function)
   /// and should be considered unreachable for chunk splitting purposes
   unreachable_import_expression_addresses: FxHashSet<Address>,
+  untranspiled_syntax: UntranspiledSyntax,
 }
 
 impl<'a, 'ast: 'a> std::ops::Deref for CrossModuleOptimizationRunnerContext<'a, 'ast> {
@@ -367,13 +388,14 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
       self.visit_statement(stmt);
       if pre_addr_len != self.side_effect_free_call_expr_addr.len() {
         let stmt_info_idx = StmtInfoIdx::new(idx + 1);
-        let side_effect_detail = SideEffectDetector::new(
+        let detector = SideEffectDetector::new(
           self.immutable_ctx.ast_scope,
           self.immutable_ctx.flat_options,
           self.immutable_ctx.options,
           Some(&self.side_effect_free_call_expr_addr),
-        )
-        .detect_side_effect_of_stmt(stmt);
+        );
+        let side_effect_detail = detector.detect_side_effect_of_stmt(stmt);
+        self.untranspiled_syntax |= detector.untranspiled_syntax.get();
         self.side_effect_detail_mutations.insert(stmt_info_idx, side_effect_detail);
       }
       self.toplevel_stmt_idx += 1;

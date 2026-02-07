@@ -173,13 +173,14 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
           self.statement_replace_map.insert(stmt_addr, new_stmts);
         }
       }
-      Declaration::FunctionDeclaration(_) | Declaration::ClassDeclaration(_) => {}
-      Declaration::TSTypeAliasDeclaration(_)
+      Declaration::FunctionDeclaration(_)
+      | Declaration::ClassDeclaration(_)
+      | Declaration::TSTypeAliasDeclaration(_)
       | Declaration::TSInterfaceDeclaration(_)
       | Declaration::TSEnumDeclaration(_)
       | Declaration::TSModuleDeclaration(_)
       | Declaration::TSImportEqualsDeclaration(_)
-      | Declaration::TSGlobalDeclaration(_) => unreachable!(),
+      | Declaration::TSGlobalDeclaration(_) => {}
     }
     walk_mut::walk_declaration(self, it);
   }

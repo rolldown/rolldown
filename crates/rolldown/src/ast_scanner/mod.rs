@@ -709,15 +709,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.imports.insert(decl.span, record_idx);
     } else {
       decl.specifiers.iter().for_each(|spec| {
+        // If the binding doesn't exist, Oxc semantic will report an error
         if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
           self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
-        } else {
-          self.result.errors.push(BuildDiagnostic::export_undefined_variable(
-            self.immutable_ctx.id.to_string(),
-            self.immutable_ctx.source.clone(),
-            spec.local.span(),
-            ArcStr::from(spec.local.name().as_str()),
-          ));
         }
       });
       if let Some(decl) = decl.declaration.as_ref() {

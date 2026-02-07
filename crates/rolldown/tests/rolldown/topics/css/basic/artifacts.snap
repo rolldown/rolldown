@@ -3,8 +3,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/test-3kwOTbJ8.png
-
 ## main.css
 
 ```css
@@ -14,7 +12,7 @@ body {
 
 body {
   background-color: #f0f0f0;
-  background-image: url(assets/test-3kwOTbJ8.png);
+  background-image: url(test.png);
 }
 
 
@@ -23,8 +21,5 @@ body {
 ## main.js
 
 ```js
-//#region test.png
-var test_default = "assets/test-3kwOTbJ8.png";
 
-//#endregion
 ```

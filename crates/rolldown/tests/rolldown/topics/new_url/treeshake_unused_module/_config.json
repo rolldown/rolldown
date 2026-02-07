@@ -1,0 +1,10 @@
+{
+  "config": {
+    "dir": "dist",
+    "chunkFilenames": "chunks/[name]-[hash].js",
+    "experimental": {
+      "resolveNewUrlToAsset": true
+    }
+  },
+  "snapshotBytes": true
+}

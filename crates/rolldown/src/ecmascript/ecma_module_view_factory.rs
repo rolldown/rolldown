@@ -213,6 +213,11 @@ pub fn lazy_check_side_effects(
     // CSS modules are considered to have side effects by default
     return DeterminedSideEffects::Analyzed(true);
   }
+  // Asset modules are only used for `new URL(, import.meta.url)` and should not have side effects.
+  // This allows them to be tree-shaken when the referencing code is not used.
+  if matches!(module_type, ModuleType::Asset) {
+    return DeterminedSideEffects::Analyzed(false);
+  }
   resolved_id
     .package_json
     .as_ref()

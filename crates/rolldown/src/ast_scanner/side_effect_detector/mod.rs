@@ -1,3 +1,5 @@
+use std::cell::Cell;
+
 use crate::ast_scanner::side_effect_detector::utils::{
   extract_member_expr_chain, is_primitive_literal,
 };
@@ -33,6 +35,15 @@ bitflags! {
   }
 }
 
+bitflags! {
+  #[derive(Debug, Clone, Copy, Default)]
+  /// Tracks untranspiled syntax encountered during side effect detection.
+  pub struct UntranspiledSyntax: u8 {
+    const TypeScript = 1 << 0;
+    const Jsx = 1 << 1;
+  }
+}
+
 mod utils;
 
 /// Detect if a statement "may" have side effect.
@@ -42,6 +53,7 @@ pub struct SideEffectDetector<'a> {
   flat_options: FlatOptions,
   /// This field is only used for `LinkStage#cross_module_optimization`.
   side_effect_free_function_symbol_ref: Option<&'a FxHashSet<Address>>,
+  pub untranspiled_syntax: Cell<UntranspiledSyntax>,
 }
 
 impl<'a> SideEffectDetector<'a> {
@@ -51,7 +63,17 @@ impl<'a> SideEffectDetector<'a> {
     options: &'a SharedNormalizedBundlerOptions,
     side_effect_free_function_symbol_ref: Option<&'a FxHashSet<Address>>,
   ) -> Self {
-    Self { scope, options, flat_options, side_effect_free_function_symbol_ref }
+    Self {
+      scope,
+      options,
+      flat_options,
+      side_effect_free_function_symbol_ref,
+      untranspiled_syntax: Cell::new(UntranspiledSyntax::empty()),
+    }
+  }
+
+  fn record_untranspiled(&self, syntax: UntranspiledSyntax) {
+    self.untranspiled_syntax.set(self.untranspiled_syntax.get() | syntax);
   }
 
   #[inline]
@@ -138,7 +160,10 @@ impl<'a> SideEffectDetector<'a> {
             .as_ref()
             .is_some_and(|init| self.detect_side_effect_of_expr(init).has_side_effect()))
         }
-        ClassElement::TSIndexSignature(_) => unreachable!("ts should be transpiled"),
+        ClassElement::TSIndexSignature(_) => {
+          self.record_untranspiled(UntranspiledSyntax::TypeScript);
+          true
+        }
       })
       .into()
   }
@@ -327,7 +352,10 @@ impl<'a> SideEffectDetector<'a> {
       AssignmentTarget::TSAsExpression(_)
       | AssignmentTarget::TSSatisfiesExpression(_)
       | AssignmentTarget::TSNonNullExpression(_)
-      | AssignmentTarget::TSTypeAssertion(_) => unreachable!(),
+      | AssignmentTarget::TSTypeAssertion(_) => {
+        self.record_untranspiled(UntranspiledSyntax::TypeScript);
+        true.into()
+      }
 
       AssignmentTarget::ArrayAssignmentTarget(array_pattern) => {
         (!array_pattern.elements.is_empty() || array_pattern.rest.is_some()).into()
@@ -416,8 +444,10 @@ impl<'a> SideEffectDetector<'a> {
           ChainElement::StaticMemberExpression(ref static_member_expression) => {
             cur = &static_member_expression.object;
           }
-          ChainElement::TSNonNullExpression(_) => unreachable!(),
-          ChainElement::PrivateFieldExpression(_) => break None,
+          // TS syntax will be caught by detect_side_effect_of_expr
+          ChainElement::TSNonNullExpression(_) | ChainElement::PrivateFieldExpression(_) => {
+            break None;
+          }
         },
         _ => break None,
       }
@@ -570,7 +600,10 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::TSSatisfiesExpression(_)
       | Expression::TSTypeAssertion(_)
       | Expression::TSNonNullExpression(_)
-      | Expression::TSInstantiationExpression(_) => unreachable!("ts should be transpiled"),
+      | Expression::TSInstantiationExpression(_) => {
+        self.record_untranspiled(UntranspiledSyntax::TypeScript);
+        true.into()
+      }
       // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2541-L2574
       Expression::BinaryExpression(binary_expr) => {
         match binary_expr.operator {
@@ -664,7 +697,8 @@ impl<'a> SideEffectDetector<'a> {
         if self.flat_options.jsx_preserve() {
           return true.into();
         }
-        unreachable!("jsx should be transpiled")
+        self.record_untranspiled(UntranspiledSyntax::Jsx);
+        true.into()
       }
 
       Expression::ArrayExpression(expr) => self.detect_side_effect_of_array_expr(expr),
@@ -791,7 +825,10 @@ impl<'a> SideEffectDetector<'a> {
       | Declaration::TSEnumDeclaration(_)
       | Declaration::TSModuleDeclaration(_)
       | Declaration::TSImportEqualsDeclaration(_)
-      | Declaration::TSGlobalDeclaration(_) => unreachable!("ts should be transpiled"),
+      | Declaration::TSGlobalDeclaration(_) => {
+        self.record_untranspiled(UntranspiledSyntax::TypeScript);
+        true.into()
+      }
     }
   }
 
@@ -863,7 +900,8 @@ impl<'a> SideEffectDetector<'a> {
               self.detect_side_effect_of_class(decl)
             }
             ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
-              unreachable!("ts should be transpiled")
+              self.record_untranspiled(UntranspiledSyntax::TypeScript);
+              true.into()
             }
           }
         }
@@ -880,7 +918,8 @@ impl<'a> SideEffectDetector<'a> {
         }
         ast::ModuleDeclaration::TSExportAssignment(_)
         | ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => {
-          unreachable!("ts should be transpiled")
+          self.record_untranspiled(UntranspiledSyntax::TypeScript);
+          true.into()
         }
       },
       Statement::BlockStatement(block) => self.detect_side_effect_of_block(block),

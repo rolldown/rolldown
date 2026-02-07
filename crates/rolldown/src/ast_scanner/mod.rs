@@ -44,6 +44,7 @@ use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::{FxHashMap, FxHashSet};
+use side_effect_detector::UntranspiledSyntax;
 use std::borrow::Cow;
 use sugar_path::SugarPath;
 
@@ -152,6 +153,7 @@ pub struct AstScanner<'me, 'ast> {
   cjs_named_exports_usage: FxHashMap<CompactStr, CommonjsExportSymbolUsage>,
   traverse_state: TraverseState,
   current_comment_idx: usize,
+  untranspiled_syntax: UntranspiledSyntax,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -241,6 +243,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       )]),
       traverse_state: TraverseState::empty(),
       current_comment_idx: 0,
+      untranspiled_syntax: UntranspiledSyntax::empty(),
     }
   }
 
@@ -778,7 +781,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             let id = cls_decl.id.as_ref().unwrap();
             self.add_local_export(id.name.as_str(), id.expect_symbol_id(), id.span);
           }
-          _ => unreachable!("doesn't support ts now"),
+          _ => {
+            self.untranspiled_syntax |= UntranspiledSyntax::TypeScript;
+          }
         }
       }
     }
@@ -845,7 +850,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           (symbol_id, id.span)
         })
       }
-      ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
+      ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
+        self.untranspiled_syntax |= UntranspiledSyntax::TypeScript;
+        None
+      }
       oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
     };
     let (reference, span) = local_binding_for_default_export

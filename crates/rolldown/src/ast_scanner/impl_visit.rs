@@ -23,8 +23,9 @@ use rolldown_std_utils::OptionExt;
 use crate::ast_scanner::{TraverseState, cjs_export_analyzer::CommonJsAstType};
 
 use super::{
-  AstScanner, cjs_export_analyzer::CjsGlobalAssignmentType,
-  side_effect_detector::SideEffectDetector,
+  AstScanner,
+  cjs_export_analyzer::CjsGlobalAssignmentType,
+  side_effect_detector::{SideEffectDetector, UntranspiledSyntax},
 };
 
 impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
@@ -82,20 +83,22 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     );
     // Custom visit
 
-    #[expect(
-      clippy::cast_possible_truncation,
-      reason = "We don't have a plan to support more than u32 statements in a single module"
-    )]
     for (idx, stmt) in program.body.iter().enumerate() {
       // `0` is reserved for Module Namespace Object stmt info
-      self.current_stmt_idx = StmtInfoIdx::from_raw_unchecked(idx as u32 + 1);
-      self.current_stmt_info.side_effect = SideEffectDetector::new(
+      #[expect(
+        clippy::cast_possible_truncation,
+        reason = "We don't have a plan to support more than u32 statements in a single module"
+      )]
+      {
+        self.current_stmt_idx = StmtInfoIdx::from_raw_unchecked(idx as u32 + 1);
+      }
+      let detector = SideEffectDetector::new(
         &self.result.symbol_ref_db.ast_scopes,
         self.immutable_ctx.flat_options,
         self.immutable_ctx.options,
         None,
-      )
-      .detect_side_effect_of_stmt(stmt);
+      );
+      self.current_stmt_info.side_effect = detector.detect_side_effect_of_stmt(stmt);
 
       #[cfg(debug_assertions)]
       {
@@ -111,6 +114,19 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         self.result.ecma_view_meta.insert(EcmaViewMeta::ExecutionOrderSensitive);
       }
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
+    }
+
+    if self.untranspiled_syntax.contains(UntranspiledSyntax::TypeScript) {
+      self.result.errors.push(BuildDiagnostic::untranspiled_syntax(
+        self.immutable_ctx.id.to_string(),
+        "TypeScript",
+      ));
+    }
+    if self.untranspiled_syntax.contains(UntranspiledSyntax::Jsx) {
+      self
+        .result
+        .errors
+        .push(BuildDiagnostic::untranspiled_syntax(self.immutable_ctx.id.to_string(), "JSX"));
     }
 
     self.result.hashbang_range = program.hashbang.as_ref().map(GetSpan::span);
@@ -401,11 +417,29 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       | Declaration::TSEnumDeclaration(_)
       | Declaration::TSModuleDeclaration(_)
       | Declaration::TSImportEqualsDeclaration(_)
-      | Declaration::TSGlobalDeclaration(_) => unreachable!(),
+      | Declaration::TSGlobalDeclaration(_) => {
+        self.untranspiled_syntax |= UntranspiledSyntax::TypeScript;
+      }
     }
   }
 
   fn visit_expression(&mut self, it: &Expression<'ast>) {
+    match it {
+      Expression::TSAsExpression(_)
+      | Expression::TSSatisfiesExpression(_)
+      | Expression::TSTypeAssertion(_)
+      | Expression::TSNonNullExpression(_)
+      | Expression::TSInstantiationExpression(_) => {
+        self.untranspiled_syntax |= UntranspiledSyntax::TypeScript;
+      }
+      Expression::JSXElement(_) | Expression::JSXFragment(_)
+        if !self.immutable_ctx.flat_options.jsx_preserve() =>
+      {
+        self.untranspiled_syntax |= UntranspiledSyntax::Jsx;
+      }
+      _ => {}
+    }
+
     if self.is_root_scope()
       && matches!(
         it,

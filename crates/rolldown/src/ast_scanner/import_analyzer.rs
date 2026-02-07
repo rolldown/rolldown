@@ -17,11 +17,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let symbol_flag = self.result.symbol_ref_db.scoping().symbol_flags(symbol_id);
     if symbol_flag.contains(SymbolFlags::Import) {
       let symbol_ref: SymbolRef = (self.immutable_ctx.idx, symbol_id).into();
-      let is_namespace = self
-        .result
-        .named_imports
-        .get(&symbol_ref)
-        .is_some_and(|import| matches!(import.imported, Specifier::Star));
+      let named_import = self.result.named_imports.get(&symbol_ref);
+      let is_namespace =
+        named_import.is_some_and(|import| matches!(import.imported, Specifier::Star));
       if is_namespace {
         if let Some(parent) = self.visit_path.last() {
           let expr_span = match parent {
@@ -35,12 +33,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           };
           if let Some(span) = expr_span {
             let name = self.result.symbol_ref_db.symbol_name(symbol_id);
+            let declaration_span =
+              named_import.map(|import| import.span_imported).unwrap_or_default();
             self.result.warnings.push(
               BuildDiagnostic::cannot_call_namespace(
                 self.immutable_ctx.id.as_arc_str().clone(),
                 self.immutable_ctx.source.clone(),
                 span,
                 name.into(),
+                declaration_span,
               )
               .with_severity_warning(),
             );

@@ -892,7 +892,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
       ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
         let symbol_id = spec.local.expect_symbol_id();
-        self.add_star_import(symbol_id, rec_id, spec.span);
+        self.add_star_import(symbol_id, rec_id, spec.local.span());
       }
     });
   }

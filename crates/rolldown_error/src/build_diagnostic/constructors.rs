@@ -318,8 +318,14 @@ impl BuildDiagnostic {
     Self::new_inner(AssignToImport { filename, source, span, name })
   }
 
-  pub fn cannot_call_namespace(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
-    Self::new_inner(CannotCallNamespace { filename, source, span, name })
+  pub fn cannot_call_namespace(
+    filename: ArcStr,
+    source: ArcStr,
+    span: Span,
+    name: ArcStr,
+    declaration_span: Span,
+  ) -> Self {
+    Self::new_inner(CannotCallNamespace { filename, source, span, name, declaration_span })
   }
 
   pub fn prefer_builtin_feature(

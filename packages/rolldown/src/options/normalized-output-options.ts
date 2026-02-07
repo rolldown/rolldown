@@ -8,6 +8,7 @@ import type {
   AddonFunction,
   AssetFileNamesFunction,
   ChunkFileNamesFunction,
+  CommentsOptions,
   GlobalsFunction,
   MinifyOptions,
   OutputOptions,
@@ -89,6 +90,8 @@ export interface NormalizedOutputOptions {
   minify: false | MinifyOptions | 'dce-only';
   /** @see {@linkcode OutputOptions.legalComments | legalComments} */
   legalComments: 'none' | 'inline';
+  /** @see {@linkcode OutputOptions.comments | comments} */
+  comments: Required<CommentsOptions>;
   /** @see {@linkcode OutputOptions.polyfillRequire | polyfillRequire} */
   polyfillRequire: boolean;
   /** @see {@linkcode OutputOptions.plugins | plugins} */
@@ -290,6 +293,16 @@ export class NormalizedOutputOptionsImpl
   @lazyProp
   get legalComments(): 'none' | 'inline' {
     return this.inner.legalComments;
+  }
+
+  @lazyProp
+  get comments(): Required<CommentsOptions> {
+    const c = this.inner.comments;
+    return {
+      legal: c.legal ?? true,
+      annotation: c.annotation ?? true,
+      other: c.other ?? true,
+    };
   }
 
   @lazyProp

@@ -2,6 +2,7 @@ use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
 use types::code_splitting_mode::CodeSplittingMode;
+use types::comments::CommentsOptions;
 use types::devtools_options::DevtoolsOptions;
 use types::generated_code_options::GeneratedCodeOptions;
 use types::inject_import::InjectImport;
@@ -211,6 +212,7 @@ pub struct BundlerOptions {
   pub transform: Option<BundlerTransformOptions>,
   pub watch: Option<WatchOption>,
   pub legal_comments: Option<LegalComments>,
+  pub comments: Option<CommentsOptions>,
   pub polyfill_require: Option<bool>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",

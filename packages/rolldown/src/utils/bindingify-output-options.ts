@@ -38,6 +38,7 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     preserveModules,
     virtualDirname,
     legalComments,
+    comments,
     preserveModulesRoot,
     manualChunks,
     topLevelVar,
@@ -94,6 +95,7 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     preserveModules,
     virtualDirname,
     legalComments,
+    comments: bindingifyComments(comments),
     preserveModulesRoot,
     topLevelVar,
     minifyInternalExports: outputOptions.minifyInternalExports,
@@ -171,6 +173,16 @@ function bindingifyAssetFilenames(
     };
   }
   return assetFileNames;
+}
+
+function bindingifyComments(comments: OutputOptions['comments']): BindingOutputOptions['comments'] {
+  if (comments == null) {
+    return undefined;
+  }
+  if (typeof comments === 'boolean') {
+    return comments;
+  }
+  return comments;
 }
 
 function bindingifyCodeSplitting(

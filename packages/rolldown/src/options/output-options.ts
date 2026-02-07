@@ -102,6 +102,12 @@ export type CodeSplittingTestFunction = (id: string) => boolean | undefined | vo
 
 export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
 
+export interface CommentsOptions {
+  legal?: boolean;
+  annotation?: boolean;
+  other?: boolean;
+}
+
 /** @inline */
 export interface ChunkingContext {
   getModuleInfo(moduleId: string): ModuleInfo | null;
@@ -600,6 +606,21 @@ export interface OutputOptions {
    * - `inline`: preserve comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
    */
   legalComments?: 'none' | 'inline';
+  /**
+   * Control which comments are preserved in the output.
+   *
+   * - `true`: Preserve all comments (legal, annotation, JSDoc) (default)
+   * - `false`: Strip all comments
+   * - Object: Granular control over comment categories
+   *   - `legal`: `@license`, `@preserve`, `//!`, `/*!`
+   *   - `annotation`: `@__PURE__`, `@__NO_SIDE_EFFECTS__`, `@vite-ignore`
+   *   - `other`: JSDoc (`/** *​/`) comments
+   *
+   * When both `legalComments` and `comments.legal` are set, `comments.legal` takes priority.
+   *
+   * @default true
+   */
+  comments?: boolean | CommentsOptions;
   /**
    * The list of plugins to use only for this output.
    *

@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+/**
+* @license MIT
+*/
+function hello(name) {
+	return name;
+}
+//! Legal bang comment
+const foo = "bar";
+
+//#endregion
+export { foo, hello };
+```

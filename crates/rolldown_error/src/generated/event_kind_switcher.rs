@@ -22,7 +22,6 @@ bitflags! {
     const FilenameConflict = 1 << 15;
     const AssignToImportError = 1 << 16;
     const CommonJsVariableInEsm = 1 << 17;
-    const ExportUndefinedVariableError = 1 << 18;
     const ImportIsUndefined = 1 << 19;
     const UnsupportedFeatureError = 1 << 20;
     const EmptyImportMeta = 1 << 21;

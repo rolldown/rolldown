@@ -45,7 +45,11 @@ export default defineTest({
                 ]);
                 expect(moduleInfo.importers).toStrictEqual([]);
                 expect(moduleInfo.dynamicImporters).toStrictEqual([]);
-                expect(moduleInfo.meta).toBe(meta);
+                // Check that meta contains the original properties
+                expect(moduleInfo.meta.value).toBe(1);
+                // Check that commonjs.isCommonJS is added by rolldown
+                expect(moduleInfo.meta.commonjs).toBeDefined();
+                expect(moduleInfo.meta.commonjs.isCommonJS).toBeDefined();
                 expect(moduleInfo.exports).toStrictEqual(['result', '*']);
                 break;
               case path.join(import.meta.dirname, 'static.js'):

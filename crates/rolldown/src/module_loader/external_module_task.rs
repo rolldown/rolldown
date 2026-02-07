@@ -56,6 +56,7 @@ impl ExternalModuleTask {
         code: None,
         id,
         is_entry: false,
+        is_commonjs: false,
         importers: FxIndexSet::default(),
         dynamic_importers: FxIndexSet::default(),
         imported_ids: FxIndexSet::default(),

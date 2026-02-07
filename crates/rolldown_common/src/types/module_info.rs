@@ -9,6 +9,7 @@ pub struct ModuleInfo {
   pub code: Option<ArcStr>,
   pub id: ModuleId,
   pub is_entry: bool,
+  pub is_commonjs: bool,
   pub importers: FxIndexSet<ModuleId>,
   pub dynamic_importers: FxIndexSet<ModuleId>,
   pub imported_ids: FxIndexSet<ModuleId>,

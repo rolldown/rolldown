@@ -60,15 +60,12 @@ impl PreProcessEcmaAst {
 
     // Step 1: Build initial semantic data and check for semantic errors.
     let semantic_ret = ast.program.with_dependent(|_owner, dep| {
-      SemanticBuilder::new().with_check_syntax_error(true).build(&dep.program)
+      SemanticBuilder::new().with_check_syntax_error(false).build(&dep.program)
     });
 
     let (errors, warnings): (Vec<_>, Vec<_>) =
       semantic_ret.errors.into_iter().partition(|w| w.severity == OxcSeverity::Error);
 
-    self.stats = semantic_ret.semantic.stats();
-    let scoping = semantic_ret.semantic.into_scoping();
-    
     let mut warnings = if errors.is_empty() {
       BuildDiagnostic::from_oxc_diagnostics(
         warnings,
@@ -78,12 +75,17 @@ impl PreProcessEcmaAst {
         EventKind::ParseError,
       )
     } else {
-      // Process export undefined errors to add similar name suggestions
-      let augmented_errors = augment_export_undefined_errors(errors, &scoping, &source, resolved_id);
-      return Err(augmented_errors)?;
+      return Err(BuildDiagnostic::from_oxc_diagnostics(
+        errors,
+        &source,
+        resolved_id,
+        Severity::Error,
+        EventKind::ParseError,
+      ))?;
     };
 
-    let mut scoping = Some(scoping);
+    self.stats = semantic_ret.semantic.stats();
+    let mut scoping = Some(semantic_ret.semantic.into_scoping());
 
     // Step 2: Run define plugin.
     if let Some(replace_global_define_config) = replace_global_define_config {
@@ -187,73 +189,4 @@ impl PreProcessEcmaAst {
     self.stats = ret.stats();
     ret.into_scoping()
   }
-}
-
-/// Augment export undefined errors from oxc with similar name suggestions
-fn augment_export_undefined_errors(
-  errors: Vec<oxc::diagnostics::OxcDiagnostic>,
-  scoping: &Scoping,
-  source: &arcstr::ArcStr,
-  resolved_id: &str,
-) -> BatchedBuildDiagnostic {
-  use arcstr::ArcStr;
-  use oxc::span::Span;
-  
-  let root_scope_id = scoping.root_scope_id();
-  let bindings = scoping.get_bindings(root_scope_id);
-  let binding_names: Vec<&str> = bindings.keys().map(|s| &**s).collect();
-  
-  let mut diagnostics = Vec::new();
-  
-  for mut error in errors {
-    // Check if this is an "Export is not defined" error
-    let error_message = error.message.to_string();
-    if error_message.contains("is not defined") && error_message.starts_with("Export '") {
-      // Extract the undefined export name from the message
-      // Message format: "Export 'name' is not defined"
-      if let Some(start) = error_message.find('\'') {
-        if let Some(end) = error_message[start + 1..].find('\'') {
-          let name = &error_message[start + 1..start + 1 + end];
-          let similar_names = rolldown_utils::string_similarity::find_similar_str(
-            name,
-            binding_names.iter().copied(),
-            3,
-          )
-          .into_iter()
-          .map(|s| s.to_string())
-          .collect::<Vec<_>>();
-          
-          // Get the span from the error labels
-          if let Some(labels) = &error.labels {
-            if let Some(label) = labels.first() {
-              let offset = label.offset();
-              let len = label.len();
-              let span = Span::new(offset as u32, (offset + len) as u32);
-              
-              diagnostics.push(BuildDiagnostic::export_undefined_variable(
-                resolved_id.to_string(),
-                source.clone(),
-                span,
-                ArcStr::from(name),
-                similar_names,
-              ));
-              continue;
-            }
-          }
-        }
-      }
-    }
-    
-    // For non-export-undefined errors, convert normally
-    diagnostics.push(BuildDiagnostic::oxc_error(
-      source.clone(),
-      resolved_id.to_string(),
-      error.help.take().unwrap_or_default().into(),
-      error.message.to_string(),
-      error.labels.take().unwrap_or_default(),
-      EventKind::ParseError,
-    ));
-  }
-  
-  BatchedBuildDiagnostic::from(diagnostics)
 }

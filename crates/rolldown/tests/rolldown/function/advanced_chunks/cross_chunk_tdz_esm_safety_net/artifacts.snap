@@ -1,0 +1,62 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] Warning: `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import { t as TIMEOUT } from "./vendor.js";
+import { strictEqual } from "node:assert";
+
+//#region state.js
+var state = {};
+
+//#endregion
+//#region helpers.js
+function getConfig(key, defaultValue) {
+	const value = state?.config?.[key];
+	if (value !== void 0) return value;
+	return defaultValue;
+}
+
+//#endregion
+//#region main.js
+state.config = { TIMEOUT: 5e3 };
+strictEqual(TIMEOUT, 3e5);
+strictEqual(getConfig("TIMEOUT", 999), 5e3);
+
+//#endregion
+export { getConfig as t };
+```
+
+## vendor.js
+
+```js
+import { t as getConfig } from "./main.js";
+
+//#region vendor_dep.js
+var TIMEOUT_FROM_VENDOR = getConfig("TIMEOUT", 3e5);
+
+//#endregion
+//#region shared.js
+var TIMEOUT = TIMEOUT_FROM_VENDOR;
+
+//#endregion
+export { TIMEOUT as t };
+```

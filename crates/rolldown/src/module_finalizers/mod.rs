@@ -1535,7 +1535,33 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
           }
         } else if self.ctx.options.top_level_var {
-          // Here we should find if it's a "VariableDeclaration" and switch it to "Var."
+          if let Statement::VariableDeclaration(var_decl) = &mut top_stmt {
+            var_decl.kind = ast::VariableDeclarationKind::Var;
+            for decl in &mut var_decl.declarations {
+              decl.kind = VariableDeclarationKind::Var;
+            }
+          }
+          if let Statement::ClassDeclaration(class_decl) = &mut top_stmt {
+            if let Some(mut decl) = self.get_transformed_class_decl(class_decl) {
+              top_stmt = Statement::from(decl.take_in(self.alloc));
+            }
+          }
+        }
+        // Convert const/let to var in ESM chunks with circular chunk dependencies.
+        //
+        // This runs AFTER export stripping (above), so it catches declarations that were
+        // originally `export const` and are now plain `const`.
+        //
+        // Without this, circular chunk imports can cause TDZ ReferenceErrors because
+        // const/let bindings cannot be accessed before initialization.
+        //
+        // Wrapped modules (strictExecutionOrder/on-demand wrapping) are already immune to TDZ
+        // because execution is deferred via lazy initializers, so we skip them to avoid
+        // unnecessary semantics changes.
+        if self.ctx.options.format.is_esm()
+          && self.ctx.linking_info.wrap_kind().is_none()
+          && self.ctx.chunk_graph.chunks_with_circular_deps.contains(&self.ctx.chunk_idx)
+        {
           if let Statement::VariableDeclaration(var_decl) = &mut top_stmt {
             var_decl.kind = ast::VariableDeclarationKind::Var;
             for decl in &mut var_decl.declarations {

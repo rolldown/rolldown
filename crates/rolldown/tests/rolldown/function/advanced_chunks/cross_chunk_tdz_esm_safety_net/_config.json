@@ -1,0 +1,12 @@
+{
+  "_comment": "Tests the const/let->var safety net for circular chunk deps. This fixture creates a direct entry<->vendor chunk cycle without triggering the manual split prevention heuristic (the cycle is caused by two different modules in the vendor chunk). The safety net should convert const/let to var in the affected chunks so runtime avoids TDZ ReferenceErrors.",
+  "config": {
+    "manualCodeSplitting": {
+      "groups": [
+        { "name": "vendor", "test": "shared\\.js|vendor_dep\\.js" }
+      ],
+      "includeDependenciesRecursively": false
+    }
+  }
+}
+

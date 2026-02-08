@@ -1,0 +1,62 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] Warning: `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+## MANUAL_CODE_SPLITTING_SKIPPED
+
+```text
+[MANUAL_CODE_SPLITTING_SKIPPED] Warning: Skipped manual code splitting for "shared.js" into group "vendor" because it would create a circular chunk dependency and may cause TDZ errors at runtime.
+
+To keep the split, consider:
+
+- Enabling `strictExecutionOrder: true` (wraps modules with lazy init)
+- Setting `manualCodeSplitting.includeDependenciesRecursively: true`
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import { strictEqual } from "node:assert";
+
+//#region state.js
+const state = {};
+
+//#endregion
+//#region helpers.js
+function getConfig(key, defaultValue) {
+	const value = state.config?.[key];
+	if (value !== void 0) return value;
+	return defaultValue;
+}
+
+//#endregion
+//#region shared.js
+const TIMEOUT = getConfig("TIMEOUT", 3e5);
+const MAX_RETRIES = getConfig("MAX_RETRIES", 3);
+
+//#endregion
+//#region main.js
+state.config = { TIMEOUT: 5e3 };
+strictEqual(TIMEOUT, 3e5);
+strictEqual(MAX_RETRIES, 3);
+strictEqual(getConfig("TIMEOUT", 999), 5e3);
+
+//#endregion
+```

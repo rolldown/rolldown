@@ -23,6 +23,7 @@ pub struct BindingChecksOptions {
   pub plugin_timings: Option<bool>,
   pub duplicate_shebang: Option<bool>,
   pub unsupported_tsconfig_option: Option<bool>,
+  pub manual_code_splitting_skipped: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -46,6 +47,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       plugin_timings: value.plugin_timings,
       duplicate_shebang: value.duplicate_shebang,
       unsupported_tsconfig_option: value.unsupported_tsconfig_option,
+      manual_code_splitting_skipped: value.manual_code_splitting_skipped,
     }
   }
 }

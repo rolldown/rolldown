@@ -18,6 +18,7 @@ export function transformModuleInfo(info: BindingModuleInfo, option: ModuleOptio
     dynamicallyImportedIds: info.dynamicallyImportedIds,
     exports: info.exports,
     isEntry: info.isEntry,
+    isCommonJS: info.isCommonjs,
     ...option,
   };
 }

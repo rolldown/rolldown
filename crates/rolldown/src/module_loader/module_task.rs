@@ -99,6 +99,7 @@ impl ModuleTask {
       Arc::new(ModuleInfo {
         code: None,
         id: id.clone(),
+        is_commonjs: false,
         is_entry: self.is_user_defined_entry,
         importers: FxIndexSet::default(),
         dynamic_importers: FxIndexSet::default(),

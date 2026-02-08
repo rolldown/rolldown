@@ -79,6 +79,7 @@ impl NormalModule {
       code: Some(self.ecma_view.source.clone()),
       id: self.id.clone(),
       is_entry: self.is_user_defined_entry,
+      is_commonjs: self.exports_kind.is_commonjs(),
       importers: {
         let mut value = self.ecma_view.importers.clone();
         value.sort_unstable();

@@ -38,12 +38,14 @@ pub async fn defer_sync_scan_data(
       _ => {
         // for Some(HookSideEffects::True) and None, we need to re resolve module source_id,
         // get package_json and re analyze the side effects
-        let resolved_id = resolver
+        let Ok(resolved) = resolver
           // other params except `source_id` is not important, since we need `package_json`
           // from `resolved_id` to re analyze the side effects
           .resolve(None, source_id.as_str(), ImportKind::Import, normal.is_user_defined_entry)
-          .expect("Should have resolved id")
-          .into();
+        else {
+          continue;
+        };
+        let resolved_id = resolved.into();
         normalize_side_effects(
           options,
           &resolved_id,

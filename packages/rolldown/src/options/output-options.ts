@@ -601,6 +601,18 @@ export interface OutputOptions {
    */
   legalComments?: 'none' | 'inline';
   /**
+   * Control whether non-legal comments are preserved in the output.
+   *
+   * - `'all'`: Preserve all comments including JSDoc and annotation comments (default)
+   * - `'none'`: Strip all non-legal comments (JSDoc, annotations, etc.)
+   *
+   * Legal comments (`@license`, `@preserve`, `//!`, `/*!`) are controlled separately
+   * by the {@linkcode legalComments | output.legalComments} option.
+   *
+   * @default 'all'
+   */
+  comments?: 'none' | 'all';
+  /**
    * The list of plugins to use only for this output.
    *
    * @see {@linkcode InputOptions.plugins | plugins}

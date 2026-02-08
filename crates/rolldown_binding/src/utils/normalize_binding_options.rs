@@ -479,6 +479,17 @@ pub fn normalize_binding_options(
         )),
       })
       .transpose()?,
+    comments: output_options
+      .comments
+      .map(|inner| match inner.as_str() {
+        "none" => Ok(rolldown::Comments::None),
+        "all" => Ok(rolldown::Comments::All),
+        _ => Err(napi::Error::new(
+          napi::Status::GenericFailure,
+          format!("Invalid value for `comments` option: {inner}"),
+        )),
+      })
+      .transpose()?,
     drop_labels: input_options.drop_labels,
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,

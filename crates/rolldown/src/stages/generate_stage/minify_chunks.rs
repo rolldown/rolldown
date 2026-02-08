@@ -1,6 +1,6 @@
 use oxc::codegen::{self, CodegenOptions, CommentOptions};
 use oxc_allocator::AllocatorPool;
-use rolldown_common::{LegalComments, MinifyOptions, NormalizedBundlerOptions};
+use rolldown_common::{Comments, LegalComments, MinifyOptions, NormalizedBundlerOptions};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildResult;
 use rolldown_sourcemap::collapse_sourcemaps;
@@ -32,8 +32,16 @@ impl GenerateStage<'_> {
             minify: remove_whitespace,
             comments: CommentOptions {
               normal: false,
-              jsdoc: false,
-              annotation: !remove_whitespace,
+              jsdoc: if matches!(options.comments, Comments::All) {
+                !remove_whitespace
+              } else {
+                false
+              },
+              annotation: if matches!(options.comments, Comments::All) {
+                !remove_whitespace
+              } else {
+                false
+              },
               legal: if matches!(options.legal_comments, LegalComments::Inline)
                 || !remove_whitespace
               {

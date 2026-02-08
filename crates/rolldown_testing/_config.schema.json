@@ -458,6 +458,16 @@
             }
           ]
         },
+        "comments": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Comments"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "polyfillRequire": {
           "type": [
             "boolean",
@@ -1450,6 +1460,20 @@
           "description": "Preserve all legal comments",
           "type": "string",
           "const": "inline"
+        }
+      ]
+    },
+    "Comments": {
+      "oneOf": [
+        {
+          "description": "Strip JSDoc and annotation comments",
+          "type": "string",
+          "const": "none"
+        },
+        {
+          "description": "Preserve all JSDoc and annotation comments",
+          "type": "string",
+          "const": "all"
         }
       ]
     },

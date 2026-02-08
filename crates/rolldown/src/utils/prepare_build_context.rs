@@ -4,10 +4,10 @@ use arcstr::ArcStr;
 use itertools::Either;
 use oxc::{transformer::EngineTargets, transformer_plugins::InjectGlobalVariablesConfig};
 use rolldown_common::{
-  AttachDebugInfo, CodeSplittingMode, GlobalsOutputOption, InjectImport, JsxOptions, JsxPreset,
-  LegalComments, MinifyOptions, ModuleType, NormalizedBundlerOptions, OutputFormat, Platform,
-  PreserveEntrySignatures, RawTransformOptions, TransformOptions, TreeshakeOptions, TsConfig,
-  merge_transform_options_with_tsconfig, normalize_optimization_option,
+  AttachDebugInfo, CodeSplittingMode, Comments, GlobalsOutputOption, InjectImport, JsxOptions,
+  JsxPreset, LegalComments, MinifyOptions, ModuleType, NormalizedBundlerOptions, OutputFormat,
+  Platform, PreserveEntrySignatures, RawTransformOptions, TransformOptions, TreeshakeOptions,
+  TsConfig, merge_transform_options_with_tsconfig, normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
@@ -423,6 +423,7 @@ pub fn prepare_build_context(
     checks: raw_options.checks.unwrap_or_default().into(),
     watch: raw_options.watch.unwrap_or_default(),
     legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Inline),
+    comments: raw_options.comments.unwrap_or(Comments::All),
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),
     keep_names: raw_options.keep_names.unwrap_or_default(),
     polyfill_require: raw_options.polyfill_require.unwrap_or(true),

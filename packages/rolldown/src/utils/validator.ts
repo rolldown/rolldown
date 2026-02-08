@@ -878,6 +878,10 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.union([v.literal('none'), v.literal('inline')])),
     v.description('Control comments in the output'),
   ),
+  comments: v.pipe(
+    v.optional(v.union([v.literal('none'), v.literal('all')])),
+    v.description('Control non-legal comments in the output'),
+  ),
   plugins: v.optional(v.custom<RolldownOutputPluginOption>(() => true)),
   polyfillRequire: v.pipe(
     v.optional(v.boolean()),

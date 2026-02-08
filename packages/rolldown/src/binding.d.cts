@@ -1568,6 +1568,7 @@ export declare class BindingNormalizedOptions {
   get polyfillRequire(): boolean
   get minify(): false | 'dce-only' | MinifyOptions
   get legalComments(): 'none' | 'inline'
+  get comments(): 'none' | 'all'
   get preserveModules(): boolean
   get preserveModulesRoot(): string | undefined
   get virtualDirname(): string
@@ -2316,6 +2317,7 @@ export interface BindingOutputOptions {
   minify?: boolean | 'dce-only' | MinifyOptions
   manualCodeSplitting?: BindingManualCodeSplittingOptions
   legalComments?: 'none' | 'inline'
+  comments?: 'none' | 'all'
   polyfillRequire?: boolean
   preserveModules?: boolean
   virtualDirname?: string

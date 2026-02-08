@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+function hello(name) {
+	return name;
+}
+const foo = "bar";
+const x = 1;
+
+//#endregion
+export { foo, hello, x };
+```

@@ -75,7 +75,6 @@ xxhash-rust = { workspace = true, features = ["xxh3"] }
 [dev-dependencies]
 cow-utils = { workspace = true }
 dunce = { workspace = true }
-glob = { workspace = true }
 insta = { workspace = true }
 regex = { workspace = true }
 rolldown_dev = { path = "../rolldown_dev" }

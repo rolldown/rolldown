@@ -159,6 +159,68 @@ impl GenerateStage<'_> {
       }
     }
 
+    // Prevent circular chunk dependencies for non-wrapped modules.
+    //
+    // When `includeDependenciesRecursively: false`, a module can be split into a
+    // separate chunk while its dependencies stay in the entry chunk. If the split
+    // module is also depended on by something in the entry chunk, this creates a
+    // bidirectional (circular) import between chunks, causing TDZ errors for
+    // const/let bindings at runtime.
+    //
+    // Wrapped modules (WrapKind::Esm/Cjs) use lazy initialization (__esmMin/__cjsMin)
+    // and are immune to TDZ, so we skip them. This is critical for issue #3650
+    // where strictExecutionOrder wraps all modules.
+    if matches!(chunking_options.include_dependencies_recursively, Some(false)) {
+      // Build reverse dependency map: for each module, which modules depend on it?
+      let mut reverse_deps: FxHashMap<ModuleIdx, Vec<ModuleIdx>> = FxHashMap::default();
+      for normal_module in
+        self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
+      {
+        if !metas[normal_module.idx].is_included {
+          continue;
+        }
+        for dep in &metas[normal_module.idx].dependencies {
+          reverse_deps.entry(*dep).or_default().push(normal_module.idx);
+        }
+      }
+
+      for group in index_module_groups.iter_mut() {
+        let modules_snapshot: Vec<ModuleIdx> = group.modules.iter().copied().collect();
+        for module_idx in modules_snapshot {
+          // Wrapped modules use lazy init — immune to TDZ
+          if !metas[module_idx].wrap_kind().is_none() {
+            continue;
+          }
+
+          // Check if this module has dependencies outside the group
+          let has_outside_dep =
+            metas[module_idx].dependencies.iter().any(|dep| !group.modules.contains(dep));
+          if !has_outside_dep {
+            continue;
+          }
+
+          // Check if splitting this module would create a circular chunk dependency:
+          // module_idx is in this group, has deps outside the group, and something
+          // outside the group depends on module_idx AND shares a chunk (same bits)
+          // with one of module_idx's outside deps.
+          let would_create_cycle = reverse_deps.get(&module_idx).is_some_and(|rdeps| {
+            rdeps.iter().any(|&rdep| {
+              !group.modules.contains(&rdep)
+                && metas[rdep].is_included
+                && metas[module_idx].dependencies.iter().any(|&dep| {
+                  !group.modules.contains(&dep)
+                    && index_splitting_info[dep].bits == index_splitting_info[rdep].bits
+                })
+            })
+          });
+
+          if would_create_cycle {
+            group.remove_module(module_idx, &self.link_output.module_table);
+          }
+        }
+      }
+    }
+
     let mut module_groups = index_module_groups.raw;
 
     module_groups.retain(|group| !group.modules.is_empty());

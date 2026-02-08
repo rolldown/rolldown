@@ -1,0 +1,11 @@
+{
+  "_comment": "Verifies that manual splitting with includeDependenciesRecursively: false still works when no circular chunk dependency would be created. utils.js has no dependencies outside the group and nothing outside the group depends on it in a way that creates a cycle, so it should be successfully split into the vendor chunk.",
+  "config": {
+    "manualCodeSplitting": {
+      "groups": [
+        { "name": "vendor", "test": "utils\\.js" }
+      ],
+      "includeDependenciesRecursively": false
+    }
+  }
+}

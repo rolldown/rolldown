@@ -71,11 +71,7 @@ db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "warn"
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
-ignore = [
-  # bincode is unmaintained but comes from oxc-browserslist
-  # Track: https://github.com/oxc-project/oxc-browserslist/issues/454
-  "RUSTSEC-2025-0141",
-]
+ignore = []
 
 # This section is considered when running `cargo deny check licenses`
 # More documentation for the licenses section can be found here:

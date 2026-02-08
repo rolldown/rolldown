@@ -1747,7 +1747,8 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
+export type BindingBuiltinPluginName =  'builtin:chunk-visualize'|
+'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
 'builtin:replace'|
 'builtin:vite-alias'|
@@ -1806,6 +1807,11 @@ export interface BindingChunkImportMap {
 export declare enum BindingChunkModuleOrderBy {
   ModuleId = 0,
   ExecOrder = 1
+}
+
+export interface BindingChunkVisualizePluginConfig {
+  /** Output filename for the visualization data (default: "analyze-data.json") */
+  fileName?: string
 }
 
 export interface BindingClientHmrUpdate {

@@ -46,6 +46,7 @@ export {
 } from './builtin-plugin/constructors';
 
 export { viteAliasPlugin } from './builtin-plugin/alias-plugin';
+export { chunkVisualizePlugin } from './builtin-plugin/chunk-visualize-plugin';
 export { viteTransformPlugin } from './builtin-plugin/transform-plugin';
 export { viteManifestPlugin } from './builtin-plugin/vite-manifest-plugin';
 

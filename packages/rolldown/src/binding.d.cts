@@ -1534,6 +1534,31 @@ export declare class BindingModuleInfo {
   get code(): string | null
 }
 
+export declare class BindingNewBundleEndEventData {
+  output: string
+  duration: number
+  get result(): BindingWatcherBundler
+}
+
+export declare class BindingNewBundleErrorEventData {
+  get result(): BindingWatcherBundler
+  get error(): Array<BindingError>
+}
+
+export declare class BindingNewWatcher {
+  constructor(options: Array<BindingBundlerOptions>, notifyOption?: BindingNotifyOption | undefined | null)
+  start(listener: (data: BindingNewWatcherEvent) => void): Promise<void>
+  close(): Promise<void>
+}
+
+export declare class BindingNewWatcherEvent {
+  eventKind(): string
+  bundleEventKind(): string
+  bundleEndData(): BindingNewBundleEndEventData
+  bundleErrorData(): BindingNewBundleErrorEventData
+  watchChangeData(): BindingWatcherChangeData
+}
+
 export declare class BindingNormalizedOptions {
   get input(): Array<string> | Record<string, string>
   get cwd(): string

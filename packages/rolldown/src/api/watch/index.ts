@@ -1,5 +1,6 @@
 import type { WatchOptions } from '../../options/watch-options';
 import { type RolldownWatcher, WatcherEmitter } from './watch-emitter';
+import { createNewWatcher } from './new-watcher';
 import { createWatcher } from './watcher';
 
 // Compat to `rollup.watch`
@@ -36,6 +37,10 @@ import { createWatcher } from './watcher';
  */
 export function watch(input: WatchOptions | WatchOptions[]): RolldownWatcher {
   const emitter = new WatcherEmitter();
-  createWatcher(emitter, input);
+  if (process.env.USE_NEW_WATCH) {
+    createNewWatcher(emitter, input);
+  } else {
+    createWatcher(emitter, input);
+  }
   return emitter;
 }

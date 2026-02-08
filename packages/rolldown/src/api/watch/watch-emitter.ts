@@ -1,4 +1,8 @@
-import { type BindingWatcherBundler, type BindingWatcherEvent } from '../../binding.cjs';
+import {
+  type BindingWatcherBundler,
+  type BindingWatcherEvent,
+  type BindingNewWatcherEvent,
+} from '../../binding.cjs';
 import type { MaybePromise } from '../../types/utils';
 import { aggregateBindingErrorsIntoJsError } from '../../utils/error';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
@@ -124,7 +128,7 @@ export class WatcherEmitter implements RolldownWatcher {
     }
   }
 
-  async onEvent(event: BindingWatcherEvent): Promise<void> {
+  async onEvent(event: BindingWatcherEvent | BindingNewWatcherEvent): Promise<void> {
     const listeners = this.listeners.get(event.eventKind() as WatcherEvent);
     if (listeners) {
       switch (event.eventKind()) {

@@ -533,6 +533,20 @@ where
               }
             };
           }
+          #[cfg(debug_assertions)]
+          "jsxPreset" => {
+            let preset_str = v
+              .as_str()
+              .ok_or_else(|| serde::de::Error::custom("transform.jsxPreset should be a string"))?;
+            transform_options.jsx_preset = Some(match preset_str {
+              "enable" => crate::JsxPreset::Enable,
+              "disable" => crate::JsxPreset::Disable,
+              "preserve" => crate::JsxPreset::Preserve,
+              _ => {
+                return Err(serde::de::Error::custom(format!("unknown jsxPreset: {preset_str}",)));
+              }
+            });
+          }
           _ => return Err(serde::de::Error::custom(format!("unknown transform option: {k}",))),
         }
       }

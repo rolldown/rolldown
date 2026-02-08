@@ -109,6 +109,7 @@ pub enum EventKind {
   /// Whether to emit warnings when a tsconfig option or combination of options is not supported.
   UnsupportedTsconfigOption = 41,
   RuntimeModuleSymbolNotFoundError = 42,
+  UntranspiledSyntaxError = 43,
 }
 
 impl Display for EventKind {
@@ -164,6 +165,7 @@ impl Display for EventKind {
       EventKind::RuntimeModuleSymbolNotFoundError => {
         write!(f, "RUNTIME_MODULE_SYMBOL_NOT_FOUND")
       }
+      EventKind::UntranspiledSyntaxError => write!(f, "UNTRANSPILED_SYNTAX"),
     }
   }
 }

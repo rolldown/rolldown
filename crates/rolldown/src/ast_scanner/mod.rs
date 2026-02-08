@@ -47,8 +47,19 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
 use sugar_path::SugarPath;
 
+use bitflags::bitflags;
+
 use crate::SharedOptions;
 use crate::ast_scanner::cjs_export_analyzer::CommonjsExportSymbolUsage;
+
+bitflags! {
+  #[derive(Debug, Clone, Copy, Default)]
+  /// Tracks untranspiled syntax encountered during scanning.
+  pub(crate) struct UntranspiledSyntax: u8 {
+    const TypeScript = 1 << 0;
+    const Jsx = 1 << 1;
+  }
+}
 
 #[derive(Debug)]
 pub struct ScanResult {
@@ -152,6 +163,7 @@ pub struct AstScanner<'me, 'ast> {
   cjs_named_exports_usage: FxHashMap<CompactStr, CommonjsExportSymbolUsage>,
   traverse_state: TraverseState,
   current_comment_idx: usize,
+  untranspiled_syntax: UntranspiledSyntax,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -241,6 +253,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       )]),
       traverse_state: TraverseState::empty(),
       current_comment_idx: 0,
+      untranspiled_syntax: UntranspiledSyntax::empty(),
     }
   }
 
@@ -778,7 +791,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             let id = cls_decl.id.as_ref().unwrap();
             self.add_local_export(id.name.as_str(), id.expect_symbol_id(), id.span);
           }
-          _ => unreachable!("doesn't support ts now"),
+          _ => {
+            self.untranspiled_syntax |= UntranspiledSyntax::TypeScript;
+          }
         }
       }
     }
@@ -845,7 +860,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           (symbol_id, id.span)
         })
       }
-      ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
+      ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
+        self.untranspiled_syntax |= UntranspiledSyntax::TypeScript;
+        None
+      }
       oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
     };
     let (reference, span) = local_binding_for_default_export

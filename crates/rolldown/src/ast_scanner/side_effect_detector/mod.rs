@@ -138,7 +138,7 @@ impl<'a> SideEffectDetector<'a> {
             .as_ref()
             .is_some_and(|init| self.detect_side_effect_of_expr(init).has_side_effect()))
         }
-        ClassElement::TSIndexSignature(_) => unreachable!("ts should be transpiled"),
+        ClassElement::TSIndexSignature(_) => true,
       })
       .into()
   }
@@ -322,12 +322,11 @@ impl<'a> SideEffectDetector<'a> {
       }
 
       AssignmentTarget::AssignmentTargetIdentifier(_)
-      | AssignmentTarget::PrivateFieldExpression(_) => true.into(),
-
-      AssignmentTarget::TSAsExpression(_)
+      | AssignmentTarget::PrivateFieldExpression(_)
+      | AssignmentTarget::TSAsExpression(_)
       | AssignmentTarget::TSSatisfiesExpression(_)
       | AssignmentTarget::TSNonNullExpression(_)
-      | AssignmentTarget::TSTypeAssertion(_) => unreachable!(),
+      | AssignmentTarget::TSTypeAssertion(_) => true.into(),
 
       AssignmentTarget::ArrayAssignmentTarget(array_pattern) => {
         (!array_pattern.elements.is_empty() || array_pattern.rest.is_some()).into()
@@ -416,8 +415,9 @@ impl<'a> SideEffectDetector<'a> {
           ChainElement::StaticMemberExpression(ref static_member_expression) => {
             cur = &static_member_expression.object;
           }
-          ChainElement::TSNonNullExpression(_) => unreachable!(),
-          ChainElement::PrivateFieldExpression(_) => break None,
+          ChainElement::TSNonNullExpression(_) | ChainElement::PrivateFieldExpression(_) => {
+            break None;
+          }
         },
         _ => break None,
       }
@@ -566,11 +566,21 @@ impl<'a> SideEffectDetector<'a> {
         );
         detail | consequent_detail | alternate_detail
       }
+      // Untranspiled TS/JSX syntax should be caught during scan stage.
+      // Conservatively treat as side-effectful since they should not appear here.
       Expression::TSAsExpression(_)
       | Expression::TSSatisfiesExpression(_)
       | Expression::TSTypeAssertion(_)
       | Expression::TSNonNullExpression(_)
-      | Expression::TSInstantiationExpression(_) => unreachable!("ts should be transpiled"),
+      | Expression::TSInstantiationExpression(_)
+      | Expression::JSXElement(_)
+      | Expression::JSXFragment(_)
+      // Inherently side-effectful expressions.
+      | Expression::Super(_)
+      | Expression::AwaitExpression(_)
+      | Expression::ImportExpression(_)
+      | Expression::YieldExpression(_)
+      | Expression::V8IntrinsicExpression(_) => true.into(),
       // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2541-L2574
       Expression::BinaryExpression(binary_expr) => {
         match binary_expr.operator {
@@ -654,19 +664,6 @@ impl<'a> SideEffectDetector<'a> {
           _ => true.into(),
         }
       }
-      Expression::Super(_)
-      | Expression::AwaitExpression(_)
-      | Expression::ImportExpression(_)
-      | Expression::YieldExpression(_)
-      | Expression::V8IntrinsicExpression(_) => true.into(),
-
-      Expression::JSXElement(_) | Expression::JSXFragment(_) => {
-        if self.flat_options.jsx_preserve() {
-          return true.into();
-        }
-        unreachable!("jsx should be transpiled")
-      }
-
       Expression::ArrayExpression(expr) => self.detect_side_effect_of_array_expr(expr),
       Expression::NewExpression(expr) => {
         let is_side_effect_free_global_constructor =
@@ -791,7 +788,7 @@ impl<'a> SideEffectDetector<'a> {
       | Declaration::TSEnumDeclaration(_)
       | Declaration::TSModuleDeclaration(_)
       | Declaration::TSImportEqualsDeclaration(_)
-      | Declaration::TSGlobalDeclaration(_) => unreachable!("ts should be transpiled"),
+      | Declaration::TSGlobalDeclaration(_) => true.into(),
     }
   }
 
@@ -862,9 +859,7 @@ impl<'a> SideEffectDetector<'a> {
             ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
               self.detect_side_effect_of_class(decl)
             }
-            ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
-              unreachable!("ts should be transpiled")
-            }
+            ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => true.into(),
           }
         }
         ast::ModuleDeclaration::ExportNamedDeclaration(named_decl) => {
@@ -879,9 +874,7 @@ impl<'a> SideEffectDetector<'a> {
           }
         }
         ast::ModuleDeclaration::TSExportAssignment(_)
-        | ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => {
-          unreachable!("ts should be transpiled")
-        }
+        | ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => true.into(),
       },
       Statement::BlockStatement(block) => self.detect_side_effect_of_block(block),
       Statement::DoWhileStatement(do_while) => {

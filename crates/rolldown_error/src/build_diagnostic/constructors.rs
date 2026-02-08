@@ -40,6 +40,7 @@ use super::events::unhandleable_error::UnhandleableError;
 use super::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use super::events::unsupported_feature::UnsupportedFeature;
 use super::events::unsupported_tsconfig_option::UnsupportedTsconfigOption;
+use super::events::untranspiled_syntax::UntranspiledSyntax;
 use super::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
@@ -375,6 +376,10 @@ impl BuildDiagnostic {
 
   pub fn unhandleable_error(err: anyhow::Error) -> Self {
     Self::new_inner(UnhandleableError(err))
+  }
+
+  pub fn untranspiled_syntax(filename: String, syntax_kind: &'static str) -> Self {
+    Self::new_inner(UntranspiledSyntax { filename, syntax_kind })
   }
 
   pub fn bundler_initialize_error(message: String, hint: Option<String>) -> Self {

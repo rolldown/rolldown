@@ -1,0 +1,11 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## UNTRANSPILED_SYNTAX
+
+```text
+[UNTRANSPILED_SYNTAX] Error: JSX syntax should be transpiled before bundling. Found untranspiled JSX in "main.jsx"
+
+```

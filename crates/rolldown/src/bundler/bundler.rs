@@ -63,17 +63,24 @@ impl Bundler {
     self.closed = false;
   }
 
+  /// Close the bundle for watch mode. This calls the `closeBundle` hook but preserves the cache
+  /// for incremental builds. Does not set `closed = true` so next build can proceed without reset.
+  pub async fn close_bundle(&mut self) -> Result<()> {
+    // NOTE: `close_bundle` is not called if no bundle happened: https://github.com/rolldown/rolldown/issues/6910
+    if let Some(last_bundle_handle) = &self.last_bundle_handle {
+      last_bundle_handle.plugin_driver.close_bundle(None).await?;
+      last_bundle_handle.plugin_driver.clear();
+    }
+    Ok(())
+  }
+
   pub(super) async fn inner_close(&mut self) -> Result<()> {
     if self.closed {
       return Ok(());
     }
 
     self.closed = true;
-    // NOTE: `close_bundle` is not called if no bundle happened: https://github.com/rolldown/rolldown/issues/6910
-    if let Some(last_bundle_handle) = &self.last_bundle_handle {
-      last_bundle_handle.plugin_driver.close_bundle(None).await?;
-      last_bundle_handle.plugin_driver.clear();
-    }
+    self.close_bundle().await?;
 
     // Clean up resources
     self.cache = ScanStageCache::default();

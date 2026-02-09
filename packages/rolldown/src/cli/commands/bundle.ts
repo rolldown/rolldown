@@ -124,7 +124,8 @@ async function watchInner(
         break;
 
       case 'BUNDLE_END':
-        await event.result.close();
+        // Use closeBundle() instead of close() to preserve cache for next build
+        await event.result.closeBundle();
         logger.success(
           `Rebuilt ${styleText('bold', relativeId(event.output[0]))} in ${styleText(
             'green',
@@ -134,7 +135,8 @@ async function watchInner(
         break;
 
       case 'ERROR':
-        await event.result.close();
+        // Use closeBundle() instead of close() to preserve cache for next build
+        await event.result.closeBundle();
         logger.error(event.error);
         break;
 

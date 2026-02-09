@@ -1677,7 +1677,16 @@ export declare class BindingWatcher {
  * This is returned from watcher event data to allow access to the bundler instance.
  */
 export declare class BindingWatcherBundler {
+  /**
+   * Fully close the bundler and clean up all resources including the cache.
+   * This should be called when a build fails or when the watcher is being shut down.
+   */
   close(): Promise<void>
+  /**
+   * Close the bundle and call the `closeBundle` hook, but preserve the cache for incremental builds.
+   * This should be used in watch mode after each successful build completes.
+   */
+  closeBundle(): Promise<void>
 }
 
 export declare class BindingWatcherChangeData {

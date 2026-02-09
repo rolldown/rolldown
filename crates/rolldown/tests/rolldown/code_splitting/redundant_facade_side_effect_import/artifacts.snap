@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { t as resolveThing } from "./resolve-chunk.js";
+
+//#region main.js
+function loadV4() {
+	return resolveThing();
+}
+
+//#endregion
+export { loadV4 };
+```
+
+## resolve-chunk.js
+
+```js
+//#region resolve.js
+let counter = 0;
+counter++;
+function resolveThing() {
+	return counter;
+}
+
+//#endregion
+export { resolveThing as t };
+```
+
+## sorter-chunk.js
+
+```js
+import { t as resolveThing } from "./resolve-chunk.js";
+
+//#region sorter.js
+function createSorter() {
+	return resolveThing();
+}
+
+//#endregion
+export { createSorter as t };
+```
+
+## sorter.js
+
+```js
+import { t as createSorter } from "./sorter-chunk.js";
+
+export { createSorter };
+```

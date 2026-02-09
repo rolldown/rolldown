@@ -333,6 +333,7 @@ impl GenerateStage<'_> {
 
   /// - Filter out depended symbols to come from other chunks
   /// - Mark exports of importee chunks
+  #[expect(clippy::too_many_lines)]
   fn compute_chunk_imports(
     &self,
     chunk_graph: &ChunkGraph,
@@ -514,6 +515,19 @@ impl GenerateStage<'_> {
             // With strict_execution_order/wrapping, modules aren't executed in loading but on-demand.
             // So we don't need to do plain imports to address the side effects. It would be ensured
             // by those `init_xxx()` calls.
+
+            // Compute chunks transitively reachable from symbol-based imports.
+            // A side-effect import is redundant if the target chunk is already
+            // transitively loaded via the symbol import chain (e.g. facade entry
+            // -> chunk C -> chunk S means S is already loaded).
+            let transitively_reachable = collect_transitively_reachable_chunks(
+              chunk_id,
+              &index_cross_chunk_imports[chunk_id],
+              chunk,
+              chunk_graph,
+              &self.link_output.module_table,
+            );
+
             chunk_graph
               .chunk_table
               .iter_enumerated()
@@ -523,6 +537,9 @@ impl GenerateStage<'_> {
                   && importee_chunk.has_side_effect(&self.link_output.module_table)
               })
               .for_each(|(importee_chunk_id, _)| {
+                if transitively_reachable.contains(&importee_chunk_id) {
+                  return;
+                }
                 index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
                 let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
                 imports_from_other_chunks.entry(importee_chunk_id).or_default();
@@ -562,6 +579,9 @@ impl GenerateStage<'_> {
                 // Skip if already covered by the bit-based check above
                 let importee_chunk = &chunk_graph.chunk_table[importee_chunk_idx];
                 if importee_chunk.bits.has_bit(*importer_chunk_bit) {
+                  continue;
+                }
+                if transitively_reachable.contains(&importee_chunk_idx) {
                   continue;
                 }
                 index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
@@ -725,6 +745,58 @@ impl GenerateStage<'_> {
       }
     }
   }
+}
+
+/// Compute all chunks transitively reachable from the given seed chunks by
+/// following module-level static import records. This uses module data directly
+/// rather than `index_cross_chunk_imports`, so it works regardless of chunk
+/// processing order.
+///
+/// Used to skip redundant side-effect imports: if a chunk is already transitively
+/// loaded via the symbol import chain, a direct side-effect import is unnecessary.
+/// This commonly occurs with facade entries created by `manualChunks`.
+fn collect_transitively_reachable_chunks(
+  origin_chunk_id: ChunkIdx,
+  cross_chunk_imports: &FxHashSet<ChunkIdx>,
+  origin_chunk: &rolldown_common::Chunk,
+  chunk_graph: &ChunkGraph,
+  module_table: &rolldown_common::ModuleTable,
+) -> FxHashSet<ChunkIdx> {
+  let seed_count = cross_chunk_imports.len() + origin_chunk.imports_from_other_chunks.len();
+  if seed_count == 0 {
+    return FxHashSet::default();
+  }
+
+  let mut reachable = FxHashSet::with_capacity_and_hasher(seed_count, Default::default());
+  let mut stack = Vec::with_capacity(seed_count);
+  stack.extend(cross_chunk_imports.iter().copied());
+  stack.extend(origin_chunk.imports_from_other_chunks.keys().copied());
+
+  while let Some(c) = stack.pop() {
+    if !reachable.insert(c) {
+      continue;
+    }
+    for &mod_idx in &chunk_graph.chunk_table[c].modules {
+      let Some(module) = module_table[mod_idx].as_normal() else {
+        continue;
+      };
+      for rec in &module.import_records {
+        if rec.kind == ImportKind::DynamicImport {
+          continue;
+        }
+        let Some(resolved) = rec.resolved_module else {
+          continue;
+        };
+        let Some(importee_chunk) = chunk_graph.module_to_chunk[resolved] else {
+          continue;
+        };
+        if importee_chunk != origin_chunk_id && !reachable.contains(&importee_chunk) {
+          stack.push(importee_chunk);
+        }
+      }
+    }
+  }
+  reachable
 }
 
 // The same implementation with https://github.com/oxc-project/oxc/blob/crates_v0.86.0/crates/oxc_mangler/src/base54.rs#L30-L31

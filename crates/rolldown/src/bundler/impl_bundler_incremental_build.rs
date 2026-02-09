@@ -19,6 +19,15 @@ impl Bundler {
   }
 
   #[cfg(feature = "experimental")]
+  pub async fn with_cached_bundle_experimental<T>(
+    &mut self,
+    bundle_mode: BundleMode,
+    with_fn: impl AsyncFnOnce(&mut Bundle) -> BuildResult<T>,
+  ) -> BuildResult<T> {
+    self.with_cached_bundle(bundle_mode, with_fn).await
+  }
+
+  #[cfg(feature = "experimental")]
   pub async fn incremental_write(
     &mut self,
     scan_mode: ScanMode<ArcStr>,

@@ -73,7 +73,6 @@ Platform-agnostic configuration:
 Notable differences from esbuild's `platform` option:
 
 - The default output format is always `'esm'` regardless of platform (in esbuild, Node.js defaults to `'cjs'`)
-- No automatic `</script>` escape behavior when platform is `'browser'`
 
 ##### Choosing a Platform
 

@@ -365,13 +365,13 @@ importers:
         specifier: workspace:*
         version: link:../../packages/rolldown
 
-  examples/chunk-import-map:
+  examples/bundle-analyzer-demo:
     devDependencies:
       rolldown:
         specifier: workspace:*
         version: link:../../packages/rolldown
 
-  examples/chunk-visualize-demo:
+  examples/chunk-import-map:
     devDependencies:
       rolldown:
         specifier: workspace:*

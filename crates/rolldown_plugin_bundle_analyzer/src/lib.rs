@@ -10,7 +10,7 @@ use sugar_path::SugarPath;
 
 /// Plugin configuration
 #[derive(Debug, Default)]
-pub struct ChunkVisualizePlugin {
+pub struct BundleAnalyzerPlugin {
   /// Output filename for the visualization data
   pub file_name: Option<String>,
 }
@@ -88,9 +88,9 @@ pub(crate) struct ModuleData {
   pub(crate) importers: Option<Vec<usize>>,
 }
 
-impl Plugin for ChunkVisualizePlugin {
+impl Plugin for BundleAnalyzerPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:chunk-visualize")
+    Cow::Borrowed("builtin:bundle-analyzer")
   }
 
   fn register_hook_usage(&self) -> HookUsage {
@@ -119,7 +119,7 @@ impl Plugin for ChunkVisualizePlugin {
   }
 }
 
-impl ChunkVisualizePlugin {
+impl BundleAnalyzerPlugin {
   fn build_analyze_data(&self, ctx: &PluginContext, bundle: &[Output]) -> AnalyzeData {
     let cwd = ctx.cwd();
 

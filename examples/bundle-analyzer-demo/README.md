@@ -1,10 +1,10 @@
-# Chunk Visualization Example
+# Bundle Analyzer Example
 
-This example demonstrates how to use Rolldown's chunk visualization feature to analyze your bundle composition.
+This example demonstrates how to use Rolldown's bundle analyzer plugin to analyze your bundle composition.
 
-## What is Chunk Visualization?
+## What is Bundle Analyzer?
 
-The chunk visualization plugin generates a JSON file containing detailed information about:
+The bundle analyzer plugin generates a JSON file containing detailed information about:
 
 - **Chunks**: All output chunks, their sizes, types, and relationships
 - **Modules**: All modules in your bundle and their importers
@@ -31,22 +31,22 @@ pnpm run build
 This will generate:
 
 - `dist/` - Your bundled output files
-- `dist/analyze-data.json` - The chunk visualization data
+- `dist/analyze-data.json` - The bundle analysis data
 
 ## Configuration
 
-Enable chunk visualization in your `rolldown.config.js`:
+Enable bundle analyzer in your `rolldown.config.js`:
 
 ```javascript
-import { chunkVisualizePlugin } from 'rolldown/experimental';
+import { bundleAnalyzerPlugin } from 'rolldown/experimental';
 
 export default {
   plugins: [
     // Default: generates 'analyze-data.json'
-    chunkVisualizePlugin(),
+    bundleAnalyzerPlugin(),
 
     // Or with custom filename:
-    // chunkVisualizePlugin({
+    // bundleAnalyzerPlugin({
     //   fileName: 'bundle-analysis.json'
     // })
   ],
@@ -145,8 +145,8 @@ https://iwanabethatguy.github.io/chunk-visualize/
 
 This example demonstrates:
 
-- ✅ Static entry chunks
-- ✅ Dynamic imports
-- ✅ Common/shared chunks
-- ✅ Module dependencies
-- ✅ Import relationships
+- Static entry chunks
+- Dynamic imports
+- Common/shared chunks
+- Module dependencies
+- Import relationships

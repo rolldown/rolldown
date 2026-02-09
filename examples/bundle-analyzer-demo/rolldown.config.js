@@ -1,5 +1,5 @@
 import { defineConfig } from 'rolldown';
-import { chunkVisualizePlugin } from 'rolldown/experimental';
+import { bundleAnalyzerPlugin } from 'rolldown/experimental';
 
 export default defineConfig({
   input: {
@@ -10,5 +10,5 @@ export default defineConfig({
     dir: 'dist',
     format: 'esm',
   },
-  plugins: [chunkVisualizePlugin()],
+  plugins: [bundleAnalyzerPlugin()],
 });

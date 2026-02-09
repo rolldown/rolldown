@@ -1747,7 +1747,7 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export type BindingBuiltinPluginName =  'builtin:chunk-visualize'|
+export type BindingBuiltinPluginName =  'builtin:bundle-analyzer'|
 'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
 'builtin:replace'|
@@ -1765,6 +1765,11 @@ export type BindingBuiltinPluginName =  'builtin:chunk-visualize'|
 'builtin:vite-transform'|
 'builtin:vite-wasm-fallback'|
 'builtin:vite-web-worker-post';
+
+export interface BindingBundleAnalyzerPluginConfig {
+  /** Output filename for the analysis data (default: "analyze-data.json") */
+  fileName?: string
+}
 
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
@@ -1807,11 +1812,6 @@ export interface BindingChunkImportMap {
 export declare enum BindingChunkModuleOrderBy {
   ModuleId = 0,
   ExecOrder = 1
-}
-
-export interface BindingChunkVisualizePluginConfig {
-  /** Output filename for the visualization data (default: "analyze-data.json") */
-  fileName?: string
 }
 
 export interface BindingClientHmrUpdate {

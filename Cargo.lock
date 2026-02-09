@@ -2866,7 +2866,7 @@ dependencies = [
  "rolldown_devtools",
  "rolldown_error",
  "rolldown_plugin",
- "rolldown_plugin_chunk_visualize",
+ "rolldown_plugin_bundle_analyzer",
  "rolldown_plugin_esm_external_require",
  "rolldown_plugin_isolated_declaration",
  "rolldown_plugin_replace",
@@ -3077,20 +3077,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_plugin_chunk_import_map"
-version = "0.1.0"
-dependencies = [
- "arcstr",
- "rolldown_common",
- "rolldown_plugin",
- "rolldown_utils",
- "rustc-hash",
- "serde_json",
- "xxhash-rust",
-]
-
-[[package]]
-name = "rolldown_plugin_chunk_visualize"
+name = "rolldown_plugin_bundle_analyzer"
 version = "0.1.0"
 dependencies = [
  "arcstr",
@@ -3101,6 +3088,19 @@ dependencies = [
  "serde",
  "serde_json",
  "sugar_path",
+]
+
+[[package]]
+name = "rolldown_plugin_chunk_import_map"
+version = "0.1.0"
+dependencies = [
+ "arcstr",
+ "rolldown_common",
+ "rolldown_plugin",
+ "rolldown_utils",
+ "rustc-hash",
+ "serde_json",
+ "xxhash-rust",
 ]
 
 [[package]]

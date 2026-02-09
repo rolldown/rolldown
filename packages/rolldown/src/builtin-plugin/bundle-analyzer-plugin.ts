@@ -1,8 +1,8 @@
-import type { BindingChunkVisualizePluginConfig } from '../binding.cjs';
+import type { BindingBundleAnalyzerPluginConfig } from '../binding.cjs';
 import { BuiltinPlugin } from './utils';
 
 /**
- * A plugin that generates chunk visualization data for analyzing bundle composition.
+ * A plugin that analyzes bundle composition and generates detailed reports.
  *
  * The plugin outputs a JSON file containing detailed information about:
  * - All chunks and their relationships
@@ -12,11 +12,11 @@ import { BuiltinPlugin } from './utils';
  *
  * @example
  * ```js
- * import { chunkVisualizePlugin } from 'rolldown/experimental';
+ * import { bundleAnalyzerPlugin } from 'rolldown/experimental';
  *
  * export default {
  *   plugins: [
- *     chunkVisualizePlugin()
+ *     bundleAnalyzerPlugin()
  *   ]
  * }
  * ```
@@ -24,17 +24,17 @@ import { BuiltinPlugin } from './utils';
  * @example
  * **Custom filename**
  * ```js
- * import { chunkVisualizePlugin } from 'rolldown/experimental';
+ * import { bundleAnalyzerPlugin } from 'rolldown/experimental';
  *
  * export default {
  *   plugins: [
- *     chunkVisualizePlugin({
+ *     bundleAnalyzerPlugin({
  *       fileName: 'bundle-analysis.json'
  *     })
  *   ]
  * }
  * ```
  */
-export function chunkVisualizePlugin(config?: BindingChunkVisualizePluginConfig): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:chunk-visualize', config);
+export function bundleAnalyzerPlugin(config?: BindingBundleAnalyzerPluginConfig): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:bundle-analyzer', config);
 }

@@ -9,5 +9,5 @@ pub use crate::{
     CJS_ROLLDOWN_MODULE_REF, CJS_ROLLDOWN_MODULE_REF_IDENT,
   },
   ecma_ast::{EcmaAst, ToSourceString, program_cell::WithMutFields},
-  ecma_compiler::{EcmaCompiler, PrintOptions},
+  ecma_compiler::{EcmaCompiler, PrintCommentsOptions, PrintOptions},
 };

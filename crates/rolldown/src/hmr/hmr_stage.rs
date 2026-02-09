@@ -12,7 +12,7 @@ use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, ImportKind,
   Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
 };
-use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
+use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::BuildResult;
 use rolldown_fs::OsFileSystem;
@@ -486,7 +486,11 @@ impl<'a> HmrStage<'a> {
           PrintOptions {
             sourcemap: enable_sourcemap,
             filename: affected_module.id.to_string(),
-            print_legal_comments: false,
+            comments: PrintCommentsOptions {
+              legal: false,
+              annotation: self.options.comments.annotation,
+              other: self.options.comments.other,
+            },
             initial_indent: 0,
           },
         );
@@ -720,7 +724,11 @@ impl<'a> HmrStage<'a> {
           PrintOptions {
             sourcemap: enable_sourcemap,
             filename: affected_module.id.to_string(),
-            print_legal_comments: false, // ignore hmr chunk comments
+            comments: PrintCommentsOptions {
+              legal: false, // ignore hmr chunk comments
+              annotation: self.options.comments.annotation,
+              other: self.options.comments.other,
+            },
             initial_indent: 0,
           },
         );
@@ -907,7 +915,11 @@ impl<'a> HmrStage<'a> {
           PrintOptions {
             sourcemap: enable_sourcemap,
             filename: affected_module.id.to_string(),
-            print_legal_comments: false, // ignore hmr chunk comments
+            comments: PrintCommentsOptions {
+              legal: false, // ignore hmr chunk comments
+              annotation: self.options.comments.annotation,
+              other: self.options.comments.other,
+            },
             initial_indent: 0,
           },
         );

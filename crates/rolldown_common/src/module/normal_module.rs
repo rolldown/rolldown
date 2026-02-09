@@ -4,8 +4,8 @@ use crate::css::css_view::CssView;
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
   AssetView, DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx,
-  ImportRecordMeta, LegalComments, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions,
-  RawImportRecord, ResolvedId, StableModuleId, StmtInfoIdx,
+  ImportRecordMeta, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord,
+  ResolvedId, StableModuleId, StmtInfoIdx,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -198,8 +198,6 @@ impl NormalModule {
       ModuleRenderArgs::Ecma { ast } => {
         let enable_sourcemap = options.sourcemap.is_some() && !self.is_virtual();
 
-        let print_legal_comments = matches!(options.legal_comments, LegalComments::Inline);
-
         // Because oxc codegen sourcemap is last of sourcemap chain,
         // If here no extra sourcemap need remapping, we using it as final module sourcemap.
         // So here make sure using correct `source_name` and `source_content.
@@ -208,7 +206,7 @@ impl NormalModule {
           PrintOptions {
             sourcemap: enable_sourcemap,
             filename: self.id.to_string(),
-            print_legal_comments,
+            comments: options.comments.into(),
             initial_indent,
           },
         );

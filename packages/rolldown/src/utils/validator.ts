@@ -876,6 +876,19 @@ const OutputOptionsSchema = v.strictObject({
   advancedChunks: v.optional(AdvancedChunksSchema),
   legalComments: v.pipe(
     v.optional(v.union([v.literal('none'), v.literal('inline')])),
+    v.description('Control legal comments in the output'),
+  ),
+  comments: v.pipe(
+    v.optional(
+      v.union([
+        v.boolean(),
+        v.strictObject({
+          legal: v.optional(v.boolean()),
+          annotation: v.optional(v.boolean()),
+          other: v.optional(v.boolean()),
+        }),
+      ]),
+    ),
     v.description('Control comments in the output'),
   ),
   plugins: v.optional(v.custom<RolldownOutputPluginOption>(() => true)),

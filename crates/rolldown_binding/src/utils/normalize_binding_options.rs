@@ -479,6 +479,14 @@ pub fn normalize_binding_options(
         )),
       })
       .transpose()?,
+    comments: output_options.comments.map(|c| match c {
+      napi::Either::A(b) => rolldown::CommentsOptions { legal: b, annotation: b, other: b },
+      napi::Either::B(obj) => rolldown::CommentsOptions {
+        legal: obj.legal.unwrap_or(true),
+        annotation: obj.annotation.unwrap_or(true),
+        other: obj.other.unwrap_or(true),
+      },
+    }),
     drop_labels: input_options.drop_labels,
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,

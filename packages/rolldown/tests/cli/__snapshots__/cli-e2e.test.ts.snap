@@ -46,6 +46,7 @@ OPTIONS
   --chunk-file-names <name>   Name pattern for emitted secondary chunks.
   --clean-dir                 Clean output directory before emitting output.
   --code-splitting <code-splitting>Code splitting options (true, false, or object).
+  --comments <comments>       Control comments in the output.
   --context <context>         The entity top-level \`this\` represents.
   --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.
   --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.
@@ -66,7 +67,7 @@ OPTIONS
   --input <input>             Entry file.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
   --keep-names                Keep function and class names after bundling.
-  --legal-comments <legal-comments>Control comments in the output.
+  --legal-comments <legal-comments>Control legal comments in the output.
   --log-level <log-level>     Log level (silent, info, debug, warn).
   --make-absolute-externals-relative Prevent normalization of external imports.
   --minify-internal-exports   Minify internal exports.

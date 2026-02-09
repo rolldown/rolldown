@@ -52,7 +52,6 @@ pub enum EventKind {
   ///
   /// {@include ../docs/checks-commonjs-variable-in-esm.md}
   CommonJsVariableInEsm = 17,
-  ExportUndefinedVariableError = 18,
   /// Whether to emit warnings when an imported variable is not exported.
   ///
   /// If the code is importing a variable that is not exported by the imported module, the value will always be `undefined`. This might be a mistake in the code.
@@ -135,7 +134,6 @@ impl Display for EventKind {
       // --- Derived from esbuild
       EventKind::AssignToImportError => write!(f, "ASSIGN_TO_IMPORT"),
       EventKind::CommonJsVariableInEsm => write!(f, "COMMONJS_VARIABLE_IN_ESM"),
-      EventKind::ExportUndefinedVariableError => write!(f, "EXPORT_UNDEFINED_VARIABLE"),
       EventKind::ImportIsUndefined => write!(f, "IMPORT_IS_UNDEFINED"),
       EventKind::UnsupportedFeatureError => write!(f, "UNSUPPORTED_FEATURE"),
       EventKind::EmptyImportMeta => write!(f, "EMPTY_IMPORT_META"),

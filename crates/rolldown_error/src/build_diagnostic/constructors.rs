@@ -21,7 +21,6 @@ use super::events::cannot_call_namespace::CannotCallNamespace;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
 use super::events::duplicate_shebang::DuplicateShebang;
-use super::events::export_undefined_variable::ExportUndefinedVariable;
 use super::events::filename_conflict::FilenameConflict;
 use super::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use super::events::import_is_undefined::ImportIsUndefined;
@@ -304,15 +303,6 @@ impl BuildDiagnostic {
       b_field: b_field_name.to_string(),
       b_config_name: b_config_name.to_string(),
     })
-  }
-
-  pub fn export_undefined_variable(
-    filename: String,
-    source: ArcStr,
-    span: Span,
-    name: ArcStr,
-  ) -> Self {
-    Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
   }
 
   pub fn assign_to_import(

@@ -24,7 +24,6 @@ pub mod could_not_clean_directory;
 pub mod duplicate_shebang;
 pub mod empty_import_meta;
 pub mod eval;
-pub mod export_undefined_variable;
 pub mod external_entry;
 pub mod filename_conflict;
 pub mod forbid_const_assign;

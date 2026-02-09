@@ -592,6 +592,7 @@ export interface InputOptions {
      * @default false
      */
     chunkImportMap?: boolean | { baseUrl?: string; fileName?: string };
+
     /**
      * Enable on-demand wrapping of modules.
      * @default false

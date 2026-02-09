@@ -3,6 +3,8 @@ use napi_derive::napi;
 #[derive(Debug)]
 #[napi(string_enum)]
 pub enum BindingBuiltinPluginName {
+  #[napi(value = "builtin:chunk-visualize")]
+  ChunkVisualize,
   #[napi(value = "builtin:esm-external-require")]
   EsmExternalRequire,
   #[napi(value = "builtin:isolated-declaration")]

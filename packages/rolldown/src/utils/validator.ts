@@ -885,7 +885,7 @@ const OutputOptionsSchema = v.strictObject({
         v.strictObject({
           legal: v.optional(v.boolean()),
           annotation: v.optional(v.boolean()),
-          other: v.optional(v.boolean()),
+          jsdoc: v.optional(v.boolean()),
         }),
       ]),
     ),

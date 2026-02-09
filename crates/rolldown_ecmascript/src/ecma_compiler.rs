@@ -88,7 +88,7 @@ impl EcmaCompiler {
         comments: CommentOptions {
           normal: false,
           legal,
-          jsdoc: options.comments.other,
+          jsdoc: options.comments.jsdoc,
           annotation: options.comments.annotation,
         },
         initial_indent: options.initial_indent,
@@ -147,5 +147,5 @@ pub struct PrintOptions {
 pub struct PrintCommentsOptions {
   pub legal: bool,
   pub annotation: bool,
-  pub other: bool,
+  pub jsdoc: bool,
 }

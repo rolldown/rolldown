@@ -3,5 +3,5 @@
 pub struct BindingCommentsOptions {
   pub legal: Option<bool>,
   pub annotation: Option<bool>,
-  pub other: Option<bool>,
+  pub jsdoc: Option<bool>,
 }

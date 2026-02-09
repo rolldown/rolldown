@@ -1823,7 +1823,7 @@ export interface BindingClientHmrUpdate {
 export interface BindingCommentsOptions {
   legal?: boolean
   annotation?: boolean
-  other?: boolean
+  jsdoc?: boolean
 }
 
 export interface BindingDeferSyncScanData {

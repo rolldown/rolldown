@@ -3,7 +3,7 @@
     "comments": {
       "legal": true,
       "annotation": false,
-      "other": false
+      "jsdoc": false
     }
   },
   "expectExecuted": false

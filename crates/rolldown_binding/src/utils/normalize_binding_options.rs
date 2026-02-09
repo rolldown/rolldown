@@ -480,11 +480,11 @@ pub fn normalize_binding_options(
       })
       .transpose()?,
     comments: output_options.comments.map(|c| match c {
-      napi::Either::A(b) => rolldown::CommentsOptions { legal: b, annotation: b, other: b },
+      napi::Either::A(b) => rolldown::CommentsOptions { legal: b, annotation: b, jsdoc: b },
       napi::Either::B(obj) => rolldown::CommentsOptions {
         legal: obj.legal.unwrap_or(true),
         annotation: obj.annotation.unwrap_or(true),
-        other: obj.other.unwrap_or(true),
+        jsdoc: obj.jsdoc.unwrap_or(true),
       },
     }),
     drop_labels: input_options.drop_labels,

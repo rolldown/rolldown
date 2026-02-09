@@ -301,7 +301,7 @@ export class NormalizedOutputOptionsImpl
     return {
       legal: c.legal ?? true,
       annotation: c.annotation ?? true,
-      other: c.other ?? true,
+      jsdoc: c.jsdoc ?? true,
     };
   }
 

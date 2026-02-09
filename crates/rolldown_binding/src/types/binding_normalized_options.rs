@@ -308,7 +308,7 @@ impl BindingNormalizedOptions {
     crate::options::BindingCommentsOptions {
       legal: Some(self.inner.comments.legal),
       annotation: Some(self.inner.comments.annotation),
-      other: Some(self.inner.comments.other),
+      jsdoc: Some(self.inner.comments.jsdoc),
     }
   }
 

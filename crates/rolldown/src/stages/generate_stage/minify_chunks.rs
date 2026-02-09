@@ -32,7 +32,7 @@ impl GenerateStage<'_> {
             minify: remove_whitespace,
             comments: CommentOptions {
               normal: false,
-              jsdoc: options.comments.other && !remove_whitespace,
+              jsdoc: options.comments.jsdoc && !remove_whitespace,
               annotation: options.comments.annotation && !remove_whitespace,
               legal: if options.comments.legal || !remove_whitespace {
                 codegen::LegalComment::Inline

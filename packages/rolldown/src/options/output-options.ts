@@ -105,7 +105,7 @@ export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
 export interface CommentsOptions {
   legal?: boolean;
   annotation?: boolean;
-  other?: boolean;
+  jsdoc?: boolean;
 }
 
 /** @inline */
@@ -614,7 +614,7 @@ export interface OutputOptions {
    * - Object: Granular control over comment categories
    *   - `legal`: `@license`, `@preserve`, `//!`, `/*!`
    *   - `annotation`: `@__PURE__`, `@__NO_SIDE_EFFECTS__`, `@vite-ignore`
-   *   - `other`: JSDoc comments
+   *   - `jsdoc`: JSDoc comments
    *
    * Note: Regular line and block comments without these markers
    * are always removed regardless of this option.

@@ -20,33 +20,33 @@ pub struct CommentsOptions {
   /// Preserve annotation comments (`@__PURE__`, `@__NO_SIDE_EFFECTS__`, `@vite-ignore`, coverage directives)
   pub annotation: bool,
   /// Preserve JSDoc comments (`/** */`)
-  pub other: bool,
+  pub jsdoc: bool,
 }
 
 impl Default for CommentsOptions {
   fn default() -> Self {
     // comments: true
-    Self { legal: true, annotation: true, other: true }
+    Self { legal: true, annotation: true, jsdoc: true }
   }
 }
 
 impl From<CommentsOptions> for PrintCommentsOptions {
   fn from(opts: CommentsOptions) -> Self {
-    Self { legal: opts.legal, annotation: opts.annotation, other: opts.other }
+    Self { legal: opts.legal, annotation: opts.annotation, jsdoc: opts.jsdoc }
   }
 }
 
 impl Display for CommentsOptions {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    if self.legal && self.annotation && self.other {
+    if self.legal && self.annotation && self.jsdoc {
       write!(f, "true")
-    } else if !self.legal && !self.annotation && !self.other {
+    } else if !self.legal && !self.annotation && !self.jsdoc {
       write!(f, "false")
     } else {
       write!(
         f,
-        "{{ legal: {}, annotation: {}, other: {} }}",
-        self.legal, self.annotation, self.other
+        "{{ legal: {}, annotation: {}, jsdoc: {} }}",
+        self.legal, self.annotation, self.jsdoc
       )
     }
   }
@@ -68,18 +68,18 @@ pub enum RawCommentsOption {
 pub struct RawCommentsObject {
   pub legal: Option<bool>,
   pub annotation: Option<bool>,
-  pub other: Option<bool>,
+  pub jsdoc: Option<bool>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
 impl From<RawCommentsOption> for CommentsOptions {
   fn from(raw: RawCommentsOption) -> Self {
     match raw {
-      RawCommentsOption::Bool(b) => CommentsOptions { legal: b, annotation: b, other: b },
+      RawCommentsOption::Bool(b) => CommentsOptions { legal: b, annotation: b, jsdoc: b },
       RawCommentsOption::Object(obj) => CommentsOptions {
         legal: obj.legal.unwrap_or(true),
         annotation: obj.annotation.unwrap_or(true),
-        other: obj.other.unwrap_or(true),
+        jsdoc: obj.jsdoc.unwrap_or(true),
       },
     }
   }

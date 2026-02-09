@@ -489,7 +489,7 @@ impl<'a> HmrStage<'a> {
             comments: PrintCommentsOptions {
               legal: false,
               annotation: self.options.comments.annotation,
-              other: self.options.comments.other,
+              jsdoc: self.options.comments.jsdoc,
             },
             initial_indent: 0,
           },
@@ -727,7 +727,7 @@ impl<'a> HmrStage<'a> {
             comments: PrintCommentsOptions {
               legal: false, // ignore hmr chunk comments
               annotation: self.options.comments.annotation,
-              other: self.options.comments.other,
+              jsdoc: self.options.comments.jsdoc,
             },
             initial_indent: 0,
           },
@@ -918,7 +918,7 @@ impl<'a> HmrStage<'a> {
             comments: PrintCommentsOptions {
               legal: false, // ignore hmr chunk comments
               annotation: self.options.comments.annotation,
-              other: self.options.comments.other,
+              jsdoc: self.options.comments.jsdoc,
             },
             initial_indent: 0,
           },

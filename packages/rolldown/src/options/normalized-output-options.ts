@@ -88,7 +88,7 @@ export interface NormalizedOutputOptions {
   sourcemapPathTransform: SourcemapPathTransformOption | undefined;
   /** @see {@linkcode OutputOptions.minify | minify} */
   minify: false | MinifyOptions | 'dce-only';
-  /** @see {@linkcode OutputOptions.legalComments | legalComments} */
+  /** @deprecated Use `comments.legal` instead. @see {@linkcode OutputOptions.legalComments | legalComments} */
   legalComments: 'none' | 'inline';
   /** @see {@linkcode OutputOptions.comments | comments} */
   comments: Required<CommentsOptions>;

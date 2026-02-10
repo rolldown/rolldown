@@ -8,7 +8,7 @@ use crate::{
 use anyhow::Result;
 use rolldown_common::{
   AddonRenderContext, EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId, ModuleIdx,
-  OutputFormat, RenderedModule,
+  OutputFormat, RenderedModule, TsConfig,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::HookAddonArgs;
@@ -97,7 +97,7 @@ impl Generator for EcmaGenerator {
       },
     );
 
-    let directives: Vec<_> = ctx
+    let mut directives: Vec<&str> = ctx
       .chunk
       .user_defined_entry_module(&ctx.link_output.module_table)
       .or_else(|| {
@@ -115,6 +115,21 @@ impl Generator for EcmaGenerator {
           .collect::<_>()
       })
       .unwrap_or_default();
+
+    // Check if we should inject "use strict" based on tsconfig settings
+    if should_inject_use_strict(ctx) {
+      // Only add if not already present and not ESM format
+      if !matches!(ctx.options.format, OutputFormat::Esm) {
+        let has_use_strict = directives.iter().any(|d| {
+          let normalized = d.trim_start_matches(['\'', '"']).trim_end_matches(['\'', '"', ';']);
+          normalized == "use strict"
+        });
+        if !has_use_strict {
+          // Insert "use strict" at the beginning
+          directives.insert(0, "\"use strict\";");
+        }
+      }
+    }
 
     let banner = {
       let injection = match ctx.options.banner.as_ref() {
@@ -253,4 +268,75 @@ impl Generator for EcmaGenerator {
       warnings: std::mem::take(&mut ctx.warnings),
     }))
   }
+}
+
+/// Check if "use strict" should be injected based on tsconfig settings
+fn should_inject_use_strict(ctx: &GenerateContext<'_>) -> bool {
+  use std::path::Path;
+  
+  // Only inject when tsconfig is enabled
+  let tsconfig = &ctx.options.tsconfig;
+  
+  match tsconfig {
+    TsConfig::Auto(false) => {
+      // tsconfig is explicitly disabled
+      return false;
+    }
+    TsConfig::Auto(true) | TsConfig::Manual(_) => {
+      // tsconfig is enabled, continue to check alwaysStrict
+    }
+  }
+
+  // Get the entry module to check its file path
+  let entry_module = ctx
+    .chunk
+    .user_defined_entry_module(&ctx.link_output.module_table)
+    .or_else(|| {
+      ctx.options.preserve_modules.then_some({
+        let first_idx = *ctx.chunk.modules.first()?;
+        ctx.link_output.module_table[first_idx].as_normal()?
+      })
+    });
+
+  let entry_module = match entry_module {
+    Some(m) => m,
+    None => return false,
+  };
+
+  // Convert ModuleId to Path for tsconfig resolution
+  let entry_path = Path::new(entry_module.id.as_str());
+  
+  // Try to resolve tsconfig for the entry file
+  let resolved_tsconfig = match ctx.resolver.resolve_tsconfig(&entry_path) {
+    Ok(tsconfig) => tsconfig,
+    Err(_) => return false,
+  };
+
+  // Parse the tsconfig.json file to check for alwaysStrict
+  // Since oxc_resolver doesn't expose alwaysStrict, we need to read it manually
+  let tsconfig_path = &resolved_tsconfig.path;
+  
+  // Read and parse the tsconfig.json file
+  let Ok(content) = std::fs::read_to_string(tsconfig_path) else {
+    return false;
+  };
+  
+  let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) else {
+    return false;
+  };
+  
+  // Check for alwaysStrict or strict in compilerOptions
+  if let Some(compiler_options) = json.get("compilerOptions") {
+    let always_strict = compiler_options.get("alwaysStrict")
+      .and_then(|v| v.as_bool())
+      .unwrap_or(false);
+    
+    let strict = compiler_options.get("strict")
+      .and_then(|v| v.as_bool())
+      .unwrap_or(false);
+    
+    return always_strict || strict;
+  }
+  
+  false
 }

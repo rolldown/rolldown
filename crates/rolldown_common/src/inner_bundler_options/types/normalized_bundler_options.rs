@@ -23,6 +23,7 @@ use super::output_option::{
 };
 use super::sanitize_filename::SanitizeFilename;
 use super::treeshake::NormalizedTreeshakeOptions;
+use super::tsconfig::TsConfig;
 use super::watch_option::WatchOption;
 use super::{
   is_external::IsExternal, output_exports::OutputExports, output_format::OutputFormat,
@@ -115,6 +116,7 @@ pub struct NormalizedBundlerOptions {
   pub clean_dir: bool,
   pub context: String,
   pub strict_execution_order: bool,
+  pub tsconfig: TsConfig,
 }
 
 // This is only used for testing
@@ -192,6 +194,7 @@ impl Default for NormalizedBundlerOptions {
       clean_dir: false,
       context: Default::default(),
       strict_execution_order: false,
+      tsconfig: TsConfig::default(),
     }
   }
 }

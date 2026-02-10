@@ -9,7 +9,7 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{ecmascript::property_access_str, indexmap::FxIndexMap};
 use rustc_hash::FxHashMap;
 
-use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
+use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput, SharedResolver};
 
 pub struct GenerateContext<'a> {
   pub chunk_idx: ChunkIdx,
@@ -18,6 +18,7 @@ pub struct GenerateContext<'a> {
   pub link_output: &'a LinkStageOutput,
   pub chunk_graph: &'a ChunkGraph,
   pub plugin_driver: &'a SharedPluginDriver,
+  pub resolver: &'a SharedResolver,
   pub warnings: Vec<BuildDiagnostic>,
   pub module_id_to_codegen_ret: Vec<Option<ModuleRenderOutput>>,
   /// The key of the map is exported item symbol,

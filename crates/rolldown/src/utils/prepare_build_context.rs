@@ -326,7 +326,7 @@ pub fn prepare_build_context(
     // Create TransformOptions based on tsconfig mode:
     // - Auto: Create Raw mode (will resolve tsconfig per file)
     // - None/Manual: Create Normal mode (resolve tsconfig once now)
-    match tsconfig {
+    match &tsconfig {
       ref v @ TsConfig::Manual(ref path) => {
         // Manual mode: Resolve tsconfig now and create Normal mode
         let resolved_tsconfig = resolver.resolve_tsconfig(&path).map_err(|err| {
@@ -344,18 +344,18 @@ pub fn prepare_build_context(
           )
         } else {
           TransformOptions::new_raw(
-            RawTransformOptions::new(raw_transform_options, v.clone()),
+            RawTransformOptions::new(raw_transform_options, (*v).clone()),
             target,
             jsx_preset,
           )
         })
       }
-      v @ TsConfig::Auto(is_auto) => {
-        Box::new(if is_auto {
+      ref v @ TsConfig::Auto(is_auto) => {
+        Box::new(if *is_auto {
           // Auto mode: Create Raw mode TransformOptions
           // Each file will find its nearest tsconfig during compilation
           TransformOptions::new_raw(
-            RawTransformOptions::new(raw_transform_options, v),
+            RawTransformOptions::new(raw_transform_options, (*v).clone()),
             target,
             jsx_preset,
           )
@@ -469,6 +469,7 @@ pub fn prepare_build_context(
     clean_dir: raw_options.clean_dir.unwrap_or(false),
     context: raw_options.context.unwrap_or_default(),
     strict_execution_order: raw_options.strict_execution_order.unwrap_or(false),
+    tsconfig,
   };
 
   normalized.minify = raw_minify.normalize(&normalized);

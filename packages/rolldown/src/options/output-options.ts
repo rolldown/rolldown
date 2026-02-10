@@ -600,10 +600,12 @@ export interface OutputOptions {
     groups?: CodeSplittingGroup[];
   };
   /**
-   * Control comments in the output.
+   * Control legal comments in the output.
    *
    * - `none`: no comments
    * - `inline`: preserve comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
+   *
+   * @deprecated Use `comments.legal` instead. When both `legalComments` and `comments.legal` are set, `comments.legal` takes priority.
    */
   legalComments?: 'none' | 'inline';
   /**

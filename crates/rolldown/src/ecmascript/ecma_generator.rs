@@ -97,7 +97,7 @@ impl Generator for EcmaGenerator {
       },
     );
 
-    let mut directives: Vec<&str> = ctx
+    let directives: Vec<&str> = ctx
       .chunk
       .user_defined_entry_module(&ctx.link_output.module_table)
       .or_else(|| {
@@ -117,19 +117,22 @@ impl Generator for EcmaGenerator {
       .unwrap_or_default();
 
     // Check if we should inject "use strict" based on tsconfig settings
-    if should_inject_use_strict(ctx) {
-      // Only add if not already present and not ESM format
-      if !matches!(ctx.options.format, OutputFormat::Esm) {
-        let has_use_strict = directives.iter().any(|d| {
-          let normalized = d.trim_start_matches(['\'', '"']).trim_end_matches(['\'', '"', ';']);
-          normalized == "use strict"
-        });
-        if !has_use_strict {
-          // Insert "use strict" at the beginning
-          directives.insert(0, "\"use strict\";");
-        }
-      }
-    }
+    // and prepare the directives list accordingly
+    let use_strict_literal = "\"use strict\";";
+    let should_add_use_strict = should_inject_use_strict(ctx);
+    let has_use_strict = directives.iter().any(|d| {
+      let normalized = d.trim_start_matches(['\'', '"']).trim_end_matches(['\'', '"', ';']);
+      normalized == "use strict"
+    });
+    
+    let final_directives: Vec<&str> = if should_add_use_strict && !has_use_strict {
+      // Prepend "use strict" to the directives
+      std::iter::once(use_strict_literal)
+        .chain(directives.into_iter())
+        .collect()
+    } else {
+      directives
+    };
 
     let banner = {
       let injection = match ctx.options.banner.as_ref() {
@@ -193,7 +196,7 @@ impl Generator for EcmaGenerator {
       intro: intro.as_deref(),
       outro: outro.as_deref(),
       footer: footer.as_deref(),
-      directives: &directives,
+      directives: &final_directives,
     };
     let mut source_joiner = match ctx.options.format {
       OutputFormat::Esm => render_esm(ctx, addon_render_context, &rendered_module_sources),
@@ -274,16 +277,28 @@ impl Generator for EcmaGenerator {
 fn should_inject_use_strict(ctx: &GenerateContext<'_>) -> bool {
   use std::path::Path;
   
+  eprintln!("DEBUG: should_inject_use_strict called");
+  eprintln!("DEBUG: format = {:?}", ctx.options.format);
+  
+  // Don't inject for ESM format (already strict)
+  if matches!(ctx.options.format, OutputFormat::Esm) {
+    eprintln!("DEBUG: Skipping ESM format");
+    return false;
+  }
+  
   // Only inject when tsconfig is enabled
   let tsconfig = &ctx.options.tsconfig;
+  eprintln!("DEBUG: tsconfig = {:?}", tsconfig);
   
   match tsconfig {
     TsConfig::Auto(false) => {
       // tsconfig is explicitly disabled
+      eprintln!("DEBUG: tsconfig explicitly disabled");
       return false;
     }
     TsConfig::Auto(true) | TsConfig::Manual(_) => {
       // tsconfig is enabled, continue to check alwaysStrict
+      eprintln!("DEBUG: tsconfig enabled");
     }
   }
 
@@ -300,16 +315,27 @@ fn should_inject_use_strict(ctx: &GenerateContext<'_>) -> bool {
 
   let entry_module = match entry_module {
     Some(m) => m,
-    None => return false,
+    None => {
+      eprintln!("DEBUG: No entry module found");
+      return false;
+    }
   };
+
+  eprintln!("DEBUG: entry_module.id = {:?}", entry_module.id);
 
   // Convert ModuleId to Path for tsconfig resolution
   let entry_path = Path::new(entry_module.id.as_str());
   
   // Try to resolve tsconfig for the entry file
   let resolved_tsconfig = match ctx.resolver.resolve_tsconfig(&entry_path) {
-    Ok(tsconfig) => tsconfig,
-    Err(_) => return false,
+    Ok(tsconfig) => {
+      eprintln!("DEBUG: resolved tsconfig path = {:?}", tsconfig.path);
+      tsconfig
+    },
+    Err(e) => {
+      eprintln!("DEBUG: Failed to resolve tsconfig: {:?}", e);
+      return false;
+    }
   };
 
   // Parse the tsconfig.json file to check for alwaysStrict
@@ -318,10 +344,14 @@ fn should_inject_use_strict(ctx: &GenerateContext<'_>) -> bool {
   
   // Read and parse the tsconfig.json file
   let Ok(content) = std::fs::read_to_string(tsconfig_path) else {
+    eprintln!("DEBUG: Failed to read tsconfig file at {:?}", tsconfig_path);
     return false;
   };
   
+  eprintln!("DEBUG: tsconfig content = {:?}", content);
+  
   let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) else {
+    eprintln!("DEBUG: Failed to parse tsconfig JSON");
     return false;
   };
   
@@ -335,8 +365,10 @@ fn should_inject_use_strict(ctx: &GenerateContext<'_>) -> bool {
       .and_then(|v| v.as_bool())
       .unwrap_or(false);
     
+    eprintln!("DEBUG: alwaysStrict = {}, strict = {}", always_strict, strict);
     return always_strict || strict;
   }
   
+  eprintln!("DEBUG: No compilerOptions found");
   false
 }

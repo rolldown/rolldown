@@ -1,0 +1,104 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// HIDDEN [rolldown:hmr]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+//#region module_with_class_fields.js
+var module_with_class_fields_exports = /* @__PURE__ */ __exportAll({ getValue: () => getValue });
+const module_with_class_fields_hot = __rolldown_runtime__.createModuleHotContext("module_with_class_fields.js");
+__rolldown_runtime__.registerModule("module_with_class_fields.js", { exports: module_with_class_fields_exports });
+var _privateField = /* @__PURE__ */ new WeakMap();
+var MyService = class {
+	constructor() {
+		_defineProperty(this, "name", "service");
+		_classPrivateFieldInitSpec(this, _privateField, 42);
+	}
+	getValue() {
+		return _classPrivateFieldGet2(_privateField, this);
+	}
+};
+function getValue() {
+	return new MyService().getValue();
+}
+
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+console.log(getValue());
+main_hot.accept(() => {});
+
+//#endregion
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+//#region main.js
+var init_main_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule("main.js", { exports: __rolldown_exports__ });
+		init_module_with_class_fields_1();
+		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
+		var import_rolldown_hmr_00 = __rolldown_runtime__.loadExports("rolldown:hmr");
+		var import_module_with_class_fields_01 = __rolldown_runtime__.loadExports("module_with_class_fields.js");
+		console.log(import_module_with_class_fields_01.getValue());
+		hot_main.accept(() => {});
+	} finally {}
+}));
+
+//#endregion
+//#region module_with_class_fields.js
+var init_module_with_class_fields_1 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ getValue: () => getValue });
+		__rolldown_runtime__.registerModule("module_with_class_fields.js", { exports: __rolldown_exports__ });
+		const hot_module_with_class_fields = __rolldown_runtime__.createModuleHotContext("module_with_class_fields.js");
+		var import_defineProperty_10 = __rolldown_runtime__.loadExports("\\0@oxc-project+runtime@0.112.0/helpers/defineProperty.js");
+		var import_classPrivateFieldInitSpec_11 = __rolldown_runtime__.loadExports("\\0@oxc-project+runtime@0.112.0/helpers/classPrivateFieldInitSpec.js");
+		var import_classPrivateFieldGet2_12 = __rolldown_runtime__.loadExports("\\0@oxc-project+runtime@0.112.0/helpers/classPrivateFieldGet2.js");
+		var _privateField = /* @__PURE__ */ new WeakMap();
+		class MyService {
+			constructor() {
+				import_defineProperty_10.default(this, "name", "service-updated");
+				import_classPrivateFieldInitSpec_11.default(this, _privateField, 99);
+			}
+			getValue() {
+				return import_classPrivateFieldGet2_12.default(_privateField, this);
+			}
+		}
+		function getValue() {
+			return new MyService().getValue();
+		}
+	} finally {}
+}));
+
+//#endregion
+init_main_0()
+__rolldown_runtime__.applyUpdates([['main.js', 'main.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: main.js, accepted_via: main.js

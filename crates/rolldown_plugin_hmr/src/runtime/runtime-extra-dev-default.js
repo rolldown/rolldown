@@ -8,14 +8,12 @@ var BaseDevRuntime = DevRuntime;
 
 class ModuleHotContext {
   /**
-   * @type {{ deps: [string], fn: (moduleExports: Record<string, any>[]) => void }[]}
-   */
-  acceptCallbacks = [];
-  /**
    * @param {string} moduleId
    * @param {InstanceType<BaseDevRuntime>} devRuntime
    */
   constructor(moduleId, devRuntime) {
+    /** @type {{ deps: [string], fn: (moduleExports: Record<string, any>[]) => void }[]} */
+    this.acceptCallbacks = [];
     this.moduleId = moduleId;
     this.devRuntime = devRuntime;
   }
@@ -79,16 +77,12 @@ class DefaultDevRuntime extends BaseDevRuntime {
     };
 
     super(messenger, clientId);
-  }
 
-  /**
-   * @type {Map<string, ModuleHotContext>}
-   */
-  moduleHotContexts = new Map();
-  /**
-   * @type {Map<string, ModuleHotContext>}
-   */
-  moduleHotContextsToBeUpdated = new Map();
+    /** @type {Map<string, ModuleHotContext>} */
+    this.moduleHotContexts = new Map();
+    /** @type {Map<string, ModuleHotContext>} */
+    this.moduleHotContextsToBeUpdated = new Map();
+  }
   /**
    * @override
    * @param {string} moduleId

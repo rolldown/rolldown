@@ -1,0 +1,10 @@
+{
+  "config": {
+    "experimental": {
+      "devMode": {}
+    },
+    "transform": {
+      "target": "es2020"
+    }
+  }
+}

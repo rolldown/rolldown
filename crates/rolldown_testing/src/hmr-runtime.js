@@ -7,15 +7,14 @@
 var BaseDevRuntime = DevRuntime;
 
 class TestHotContext {
-  moduleId;
-  /** @type {{ deps: string, cb: Function }[]} */
-  callbacks = [];
-
   /**
    * @param {string} moduleId
    */
   constructor(moduleId) {
+    /** @type {string} */
     this.moduleId = moduleId;
+    /** @type {{ deps: string, cb: Function }[]} */
+    this.callbacks = [];
   }
 
   /**
@@ -33,7 +32,14 @@ class TestHotContext {
 }
 
 class TestDevRuntime extends BaseDevRuntime {
-  contexts = new Map();
+  /**
+   * @param {...any} _args
+   */
+  constructor(..._args) {
+    super(..._args);
+    /** @type {Map<string, TestHotContext>} */
+    this.contexts = new Map();
+  }
 
   /**
    * @override

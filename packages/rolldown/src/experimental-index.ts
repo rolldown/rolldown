@@ -14,6 +14,7 @@ export {
   type NapiResolveOptions as ResolveOptions,
   type ResolveResult,
   ResolverFactory,
+  resolveTsconfig,
 } from './binding.cjs';
 
 export { defineParallelPlugin } from './plugin/parallel-plugin';

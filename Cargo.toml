@@ -226,7 +226,7 @@ quote = "1"
 syn = { version = "2", default-features = false }
 
 # napi
-napi = { version = "3.0.0", features = ["async", "anyhow", "tracing"] }
+napi = { version = "3.0.0", features = ["async", "anyhow", "tracing", "object_indexmap"] }
 napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 

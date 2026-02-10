@@ -640,5 +640,6 @@ module.exports.enhancedTransformSync = nativeBinding.enhancedTransformSync
 module.exports.FilterTokenKind = nativeBinding.FilterTokenKind
 module.exports.initTraceSubscriber = nativeBinding.initTraceSubscriber
 module.exports.registerPlugins = nativeBinding.registerPlugins
+module.exports.resolveTsconfig = nativeBinding.resolveTsconfig
 module.exports.shutdownAsyncRuntime = nativeBinding.shutdownAsyncRuntime
 module.exports.startAsyncRuntime = nativeBinding.startAsyncRuntime

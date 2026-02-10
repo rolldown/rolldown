@@ -1826,6 +1826,26 @@ export interface BindingCommentsOptions {
   jsdoc?: boolean
 }
 
+export interface BindingCompilerOptions {
+  baseUrl?: string
+  paths?: Record<string, Array<string>>
+  experimentalDecorators?: boolean
+  emitDecoratorMetadata?: boolean
+  useDefineForClassFields?: boolean
+  rewriteRelativeImportExtensions?: boolean
+  jsx?: string
+  jsxFactory?: string
+  jsxFragmentFactory?: string
+  jsxImportSource?: string
+  verbatimModuleSyntax?: boolean
+  preserveValueImports?: boolean
+  importsNotUsedAsValues?: string
+  target?: string
+  module?: string
+  allowJs?: boolean
+  rootDirs?: Array<string>
+}
+
 export interface BindingDeferSyncScanData {
   /** ModuleId */
   id: string
@@ -2536,6 +2556,13 @@ export interface BindingTreeshake {
   propertyWriteSideEffects?: BindingPropertyWriteSideEffects
 }
 
+export interface BindingTsconfig {
+  files?: Array<string>
+  include?: Array<string>
+  exclude?: Array<string>
+  compilerOptions: BindingCompilerOptions
+}
+
 /** TypeScript compiler options for inline tsconfig configuration. */
 export interface BindingTsconfigCompilerOptions {
   /** Specifies the JSX factory function to use. */
@@ -2566,6 +2593,11 @@ export interface BindingTsconfigCompilerOptions {
 export interface BindingTsconfigRawOptions {
   /** TypeScript compiler options. */
   compilerOptions?: BindingTsconfigCompilerOptions
+}
+
+export interface BindingTsconfigResult {
+  tsconfig: BindingTsconfig
+  tsconfigFilePaths: Array<string>
 }
 
 export interface BindingViteAliasPluginAlias {
@@ -2833,6 +2865,9 @@ export interface PreRenderedChunk {
 }
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+
+/** @hidden This is only expected to be used by Vite */
+export declare function resolveTsconfig(filename: string, cache?: TsconfigCache | undefined | null): BindingTsconfigResult | null
 
 /**
  * Shutdown the tokio runtime manually.

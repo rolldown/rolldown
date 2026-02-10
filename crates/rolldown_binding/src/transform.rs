@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 
+use indexmap::IndexMap;
 use napi::{Task, bindgen_prelude::AsyncTask};
 use napi_derive::napi;
+use oxc_resolver::{CompilerOptions, TsConfig};
 use rolldown::EnhancedTransformResult;
 use rolldown_common::{
   EnhancedTransformOptions, TsconfigOption, enhanced_transform as core_enhanced_transform,
@@ -130,4 +132,108 @@ pub fn enhanced_transform_sync(
   cache: Option<&TsconfigCache>,
 ) -> napi::Result<BindingEnhancedTransformResult> {
   enhanced_transform_internal(&filename, &source_text, options, cache)
+}
+
+/// @hidden This is only expected to be used by Vite
+#[napi]
+pub fn resolve_tsconfig(
+  filename: String,
+  cache: Option<&TsconfigCache>,
+) -> napi::Result<Option<BindingTsconfigResult>> {
+  let tsconfig_cache = if let Some(cache) = cache { cache } else { &TsconfigCache::new() };
+
+  match tsconfig_cache.find_tsconfig(Path::new(&filename)) {
+    Ok(Some(tsconfig)) => Ok(Some(tsconfig.as_ref().clone().into())),
+    Ok(None) => Ok(None),
+    Err(err) => {
+      Err(napi::Error::from_reason(format!("Failed to resolve tsconfig for {filename}: {err}")))
+    }
+  }
+}
+
+fn pathbufs_into_strings(paths: Option<Vec<PathBuf>>) -> Option<Vec<String>> {
+  paths.map(|vec| vec.into_iter().map(|path_buf| path_buf.to_string_lossy().to_string()).collect())
+}
+
+#[napi(object, object_from_js = false)]
+pub struct BindingTsconfigResult {
+  pub tsconfig: BindingTsconfig,
+  pub tsconfig_file_paths: Vec<String>,
+}
+
+impl From<TsConfig> for BindingTsconfigResult {
+  fn from(tsconfig: TsConfig) -> Self {
+    let tsconfig_file_paths = vec![tsconfig.path.to_string_lossy().to_string()];
+    Self { tsconfig: tsconfig.into(), tsconfig_file_paths }
+  }
+}
+
+#[napi(object, object_from_js = false)]
+pub struct BindingTsconfig {
+  pub files: Option<Vec<String>>,
+  pub include: Option<Vec<String>>,
+  pub exclude: Option<Vec<String>>,
+  pub compiler_options: BindingCompilerOptions,
+}
+
+impl From<TsConfig> for BindingTsconfig {
+  fn from(tsconfig: TsConfig) -> Self {
+    Self {
+      files: pathbufs_into_strings(tsconfig.files),
+      include: pathbufs_into_strings(tsconfig.include),
+      exclude: pathbufs_into_strings(tsconfig.exclude),
+      compiler_options: tsconfig.compiler_options.into(),
+    }
+  }
+}
+
+#[napi(object, object_from_js = false)]
+pub struct BindingCompilerOptions {
+  pub base_url: Option<String>,
+  pub paths: Option<IndexMap<String, Vec<String>>>,
+  pub experimental_decorators: Option<bool>,
+  pub emit_decorator_metadata: Option<bool>,
+  pub use_define_for_class_fields: Option<bool>,
+  pub rewrite_relative_import_extensions: Option<bool>,
+  pub jsx: Option<String>,
+  pub jsx_factory: Option<String>,
+  pub jsx_fragment_factory: Option<String>,
+  pub jsx_import_source: Option<String>,
+  pub verbatim_module_syntax: Option<bool>,
+  pub preserve_value_imports: Option<bool>,
+  pub imports_not_used_as_values: Option<String>,
+  pub target: Option<String>,
+  pub module: Option<String>,
+  pub allow_js: Option<bool>,
+  pub root_dirs: Option<Vec<String>>,
+}
+
+impl From<CompilerOptions> for BindingCompilerOptions {
+  fn from(options: CompilerOptions) -> Self {
+    Self {
+      base_url: options.base_url.map(|p| p.to_string_lossy().to_string()),
+      paths: options.paths.map(|p| {
+        p.into_iter()
+          .map(|(k, v)| {
+            (k, v.into_iter().map(|path_buf| path_buf.to_string_lossy().to_string()).collect())
+          })
+          .collect()
+      }),
+      experimental_decorators: options.experimental_decorators,
+      emit_decorator_metadata: options.emit_decorator_metadata,
+      use_define_for_class_fields: options.use_define_for_class_fields,
+      rewrite_relative_import_extensions: options.rewrite_relative_import_extensions,
+      jsx: options.jsx,
+      jsx_factory: options.jsx_factory,
+      jsx_fragment_factory: options.jsx_fragment_factory,
+      jsx_import_source: options.jsx_import_source,
+      verbatim_module_syntax: options.verbatim_module_syntax,
+      preserve_value_imports: options.preserve_value_imports,
+      imports_not_used_as_values: options.imports_not_used_as_values,
+      target: options.target,
+      module: options.module,
+      allow_js: options.allow_js,
+      root_dirs: pathbufs_into_strings(options.root_dirs),
+    }
+  }
 }

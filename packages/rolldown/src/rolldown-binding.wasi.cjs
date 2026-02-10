@@ -172,5 +172,6 @@ module.exports.enhancedTransformSync = __napiModule.exports.enhancedTransformSyn
 module.exports.FilterTokenKind = __napiModule.exports.FilterTokenKind
 module.exports.initTraceSubscriber = __napiModule.exports.initTraceSubscriber
 module.exports.registerPlugins = __napiModule.exports.registerPlugins
+module.exports.resolveTsconfig = __napiModule.exports.resolveTsconfig
 module.exports.shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime
 module.exports.startAsyncRuntime = __napiModule.exports.startAsyncRuntime

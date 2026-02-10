@@ -13,7 +13,7 @@ class TestHotContext {
   constructor(moduleId) {
     /** @type {string} */
     this.moduleId = moduleId;
-    /** @type {{ deps: string, cb: Function }[]} */
+    /** @type {{ deps: string | string[], cb: (mod: any | any[]) => void }[]} */
     this.callbacks = [];
   }
 
@@ -33,10 +33,11 @@ class TestHotContext {
 
 class TestDevRuntime extends BaseDevRuntime {
   /**
-   * @param {...any} _args
+   * @param {any} messenger
+   * @param {string} clientId
    */
-  constructor(..._args) {
-    super(..._args);
+  constructor(messenger, clientId) {
+    super(messenger, clientId);
     /** @type {Map<string, TestHotContext>} */
     this.contexts = new Map();
   }

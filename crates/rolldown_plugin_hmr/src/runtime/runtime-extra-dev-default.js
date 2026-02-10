@@ -12,7 +12,7 @@ class ModuleHotContext {
    * @param {InstanceType<BaseDevRuntime>} devRuntime
    */
   constructor(moduleId, devRuntime) {
-    /** @type {{ deps: [string], fn: (moduleExports: Record<string, any>[]) => void }[]} */
+    /** @type {{ deps: string[], fn: (moduleExports: Record<string, any>) => void }[]} */
     this.acceptCallbacks = [];
     this.moduleId = moduleId;
     this.devRuntime = devRuntime;

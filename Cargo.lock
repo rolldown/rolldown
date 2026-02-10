@@ -1785,8 +1785,7 @@ dependencies = [
 [[package]]
 name = "oxc"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b49207b129742093b80ee68144f4da6053a652252250b94798954f508bcbc23c"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",
@@ -1851,8 +1850,7 @@ dependencies = [
 [[package]]
 name = "oxc_allocator"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7b9c7293fac710d0be6e941b70749566dc69f1918cf0446a677d0eb9a7c8259"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "allocator-api2",
  "hashbrown 0.16.1",
@@ -1865,8 +1863,7 @@ dependencies = [
 [[package]]
 name = "oxc_ast"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4dd97b20b4ad9987795c0e5eda56752de8c24682a4e2cd6b1698fdc8135510e3"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "bitflags 2.10.0",
  "oxc_allocator",
@@ -1882,8 +1879,7 @@ dependencies = [
 [[package]]
 name = "oxc_ast_macros"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58b1eb3b6f9ed42c528030161d0370b023229ed05b785baf7a80d7e99a794da2"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "phf",
  "proc-macro2",
@@ -1894,8 +1890,7 @@ dependencies = [
 [[package]]
 name = "oxc_ast_visit"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "936eaf04ad8fd9f1e7613e277a7a0a2f8575fa9543c7a0fac4a8a6f590c8527c"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",
@@ -1906,8 +1901,7 @@ dependencies = [
 [[package]]
 name = "oxc_cfg"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d012b89f8a58cce25c0f0b1f1d7f0aa48ad257161c81933887d382a28a51c490"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "bitflags 2.10.0",
  "itertools",
@@ -1920,8 +1914,7 @@ dependencies = [
 [[package]]
 name = "oxc_codegen"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdb04590335665806a3bc39485bb2f3c31d198c1dfd6bf7aa8405cd93b8205a0"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "bitflags 2.10.0",
  "cow-utils",
@@ -1941,8 +1934,7 @@ dependencies = [
 [[package]]
 name = "oxc_compat"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7a1d5d8480010cab1dd1ede5287085472224f39aace766dcd2ae4c0005f3273"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "cow-utils",
  "oxc-browserslist",
@@ -1954,8 +1946,7 @@ dependencies = [
 [[package]]
 name = "oxc_data_structures"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cea257e0e5a91b5cfcf06fd91744514d24e53c5450620f54a9fa1053f2b3fdf2"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "ropey",
 ]
@@ -1963,8 +1954,7 @@ dependencies = [
 [[package]]
 name = "oxc_diagnostics"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed1dce4194036de316f09d86c9a02e42aab1693c20423f20dda694c5d9f04394"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "cow-utils",
  "oxc-miette",
@@ -1974,8 +1964,7 @@ dependencies = [
 [[package]]
 name = "oxc_ecmascript"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50f9465ce204eaddca376dcc235a44915c05ad512e280417d2cafd6bb1934f04"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "cow-utils",
  "num-bigint",
@@ -1990,8 +1979,7 @@ dependencies = [
 [[package]]
 name = "oxc_estree"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1bc44f56db73d6b7a5b8c4b4979cde79809e7c18d7fe5d99dffc37128bedd8c"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "dragonbox_ecma",
  "itoa",
@@ -2012,8 +2000,7 @@ dependencies = [
 [[package]]
 name = "oxc_isolated_declarations"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ace9329d9a846ce33e55227f75811209ef224732449dffe498ea1e1f800f90f"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "bitflags 2.10.0",
  "oxc_allocator",
@@ -2029,8 +2016,7 @@ dependencies = [
 [[package]]
 name = "oxc_mangler"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e89072e886c2f89af49d8c45d4b486b395d30b72827932e55e1f71bb637298d"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "itertools",
  "oxc_allocator",
@@ -2046,10 +2032,10 @@ dependencies = [
 [[package]]
 name = "oxc_minifier"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e7ec0b87652c198b49844fcbe406fbdcf2fc735cfef765420d4b21fad8420d4"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "cow-utils",
+ "itoa",
  "oxc_allocator",
  "oxc_ast",
  "oxc_ast_visit",
@@ -2062,6 +2048,7 @@ dependencies = [
  "oxc_regular_expression",
  "oxc_semantic",
  "oxc_span",
+ "oxc_str",
  "oxc_syntax",
  "oxc_traverse",
  "rustc-hash",
@@ -2070,8 +2057,7 @@ dependencies = [
 [[package]]
 name = "oxc_minify_napi"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "217aca63bec7dcee0d312066427139e6ae5c8a834fd6ceccd4aaf6c41016650b"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "napi",
  "napi-build",
@@ -2090,8 +2076,7 @@ dependencies = [
 [[package]]
 name = "oxc_napi"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fa374ddef2299dc60bb6bd058c6a3d209ae3d29b4ce85f3d433d9581de3f829"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "napi",
  "napi-build",
@@ -2106,8 +2091,7 @@ dependencies = [
 [[package]]
 name = "oxc_parser"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f38f73b67e2ae42ce4a14e4e1dc305d65e1ada635c52959dbfaad5eec7245a15"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "bitflags 2.10.0",
  "cow-utils",
@@ -2129,8 +2113,7 @@ dependencies = [
 [[package]]
 name = "oxc_parser_napi"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd44d27ddedd8e4111dfa19cabbe24257a961586a3d3e0c2656a7bc0887929d2"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "napi",
  "napi-build",
@@ -2145,8 +2128,7 @@ dependencies = [
 [[package]]
 name = "oxc_regular_expression"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b53ad034b3b87531190c0adde3dca1ee8a3d09e9009960576077a4062d9bc10"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "bitflags 2.10.0",
  "oxc_allocator",
@@ -2202,8 +2184,7 @@ dependencies = [
 [[package]]
 name = "oxc_semantic"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bc73688fe48cf7f8cd6202216864c5d569f3903758b9b0c1733dbd1eedc1fce"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "itertools",
  "memchr",
@@ -2241,8 +2222,7 @@ dependencies = [
 [[package]]
 name = "oxc_span"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4807a64b6063717dcd863fb4c1ce5ec628728d037e2f20e3ffdcf3aa4adf96ca"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "compact_str 0.9.0",
  "oxc-miette",
@@ -2256,20 +2236,20 @@ dependencies = [
 [[package]]
 name = "oxc_str"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c64a431903dbb9b8505324824d1bd50e52407ebc30bf9a42279cd477328223e"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "compact_str 0.9.0",
+ "hashbrown 0.16.1",
  "oxc_allocator",
  "oxc_estree",
+ "rustc-hash",
  "serde",
 ]
 
 [[package]]
 name = "oxc_syntax"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82c8d491f4b2755a81aac85cde4706b591129215b3a79229ed0607ef622ed38b"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "bitflags 2.10.0",
  "cow-utils",
@@ -2277,7 +2257,6 @@ dependencies = [
  "nonmax",
  "oxc_allocator",
  "oxc_ast_macros",
- "oxc_data_structures",
  "oxc_estree",
  "oxc_index",
  "oxc_span",
@@ -2289,8 +2268,7 @@ dependencies = [
 [[package]]
 name = "oxc_transform_napi"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "741623b720a79cf6d4fc0a298b1550bfc420bfdf97bccc6f452e74413c059ca2"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "napi",
  "napi-build",
@@ -2304,8 +2282,7 @@ dependencies = [
 [[package]]
 name = "oxc_transformer"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "768f8763f5901f4f517b96a25235a838805764cff3c5d2a67eed3c07493f8894"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "base64",
  "compact_str 0.9.0",
@@ -2333,8 +2310,7 @@ dependencies = [
 [[package]]
 name = "oxc_transformer_plugins"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c0c09deff1f88c604201ab0a705a893e9bd0a797a76426e192cb038a82505b1"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "cow-utils",
  "itoa",
@@ -2355,8 +2331,7 @@ dependencies = [
 [[package]]
 name = "oxc_traverse"
 version = "0.112.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b66d5f2c7cb914d0b773560986d39b0ae5efcf59ce2367c45d4e30f551500b4"
+source = "git+https://github.com/oxc-project/oxc?branch=02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables#db2bb96a0f42878503400fbdfaf4bd60b62d10c8"
 dependencies = [
  "itoa",
  "oxc_allocator",
@@ -2366,6 +2341,7 @@ dependencies = [
  "oxc_ecmascript",
  "oxc_semantic",
  "oxc_span",
+ "oxc_str",
  "oxc_syntax",
  "rustc-hash",
 ]

@@ -6,6 +6,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
+[PARSE_ERROR] Error: Identifier `fn` has already been declared
+   ╭─[ keep.js:2:10 ]
+   │
+ 2 │ function fn() {}
+   │          ─┬  
+   │           ╰── `fn` has already been declared here
+   │ 
+ 4 │ var fn = function() {};
+   │     ─────────┬────────  
+   │              ╰────────── It can not be redeclared here
+───╯
+
+```
+
+## PARSE_ERROR
+
+```text
 [PARSE_ERROR] Error: Identifier `foo` has already been declared
     ╭─[ keep.js:30:10 ]
     │

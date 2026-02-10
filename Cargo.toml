@@ -229,8 +229,7 @@ napi = { version = "3.0.0", features = ["async", "anyhow", "tracing"] }
 napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 
-# oxc crates with the same version
-oxc = { version = "0.112.0", features = [
+oxc = { git = "https://github.com/oxc-project/oxc", branch = "02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -241,14 +240,16 @@ oxc = { version = "0.112.0", features = [
   "isolated_declarations",
   "regular_expression",
   "cfg",
+] } # oxc crates with the same version
+oxc_allocator = { git = "https://github.com/oxc-project/oxc", branch = "02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables", features = [
+  "pool",
 ] }
-oxc_allocator = { version = "0.112.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.112.0" }
-oxc_napi = { version = "0.112.0" }
-oxc_minify_napi = { version = "0.112.0" }
-oxc_parser_napi = { version = "0.112.0" }
-oxc_transform_napi = { version = "0.112.0" }
-oxc_traverse = { version = "0.112.0" }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc", branch = "02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables" }
+oxc_napi = { git = "https://github.com/oxc-project/oxc", branch = "02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc", branch = "02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc", branch = "02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc", branch = "02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc", branch = "02-10-refactor_transformer_plugins_remove_scoping_dependency_from_replaceglobaldefines_and_injectglobalvariables" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

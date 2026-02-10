@@ -334,7 +334,7 @@ impl NestedScopeRenamer<'_, '_> {
       };
 
       for scope_id in self.scoping.scope_ancestors(current_reference.scope_id()) {
-        if let Some(binding) = self.scoping.get_binding(scope_id, &canonical_name)
+        if let Some(binding) = self.scoping.get_binding(scope_id, canonical_name.as_str().into())
           && binding != symbol
         {
           let symbol_ref = (self.module_idx, binding).into();
@@ -386,7 +386,7 @@ impl NestedScopeRenamer<'_, '_> {
 
       for reference in self.scoping.get_resolved_references(symbol_ref.symbol) {
         for scope_id in self.scoping.scope_ancestors(reference.scope_id()) {
-          if let Some(binding) = self.scoping.get_binding(scope_id, &canonical_name)
+          if let Some(binding) = self.scoping.get_binding(scope_id, canonical_name.as_str().into())
             && binding != symbol_ref.symbol
           {
             let nested_symbol_ref = (self.module_idx, binding).into();
@@ -484,9 +484,9 @@ impl NestedScopeRenamer<'_, '_> {
     // Skip root scope (index 0), check nested scopes only
     for (_, bindings) in self.scoping.iter_bindings().skip(1) {
       for (&name, symbol_id) in bindings {
-        if wrapper_param_names.contains(name) {
+        if wrapper_param_names.contains(name.into()) {
           let symbol_ref = (self.module_idx, *symbol_id).into();
-          self.renamer.register_nested_scope_symbols(symbol_ref, name);
+          self.renamer.register_nested_scope_symbols(symbol_ref, name.into());
         }
       }
     }

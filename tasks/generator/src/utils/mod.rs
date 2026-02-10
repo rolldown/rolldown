@@ -91,8 +91,9 @@ struct ExtractTargetSpan<'a> {
 
 impl<'a> ExtractTargetSpan<'a> {
   fn new(toplevel_item_name: &str, semantic: &Semantic<'a>) -> Self {
-    let symbol_id =
-      semantic.scoping().find_binding(semantic.scoping().root_scope_id(), toplevel_item_name);
+    let symbol_id = semantic
+      .scoping()
+      .find_binding(semantic.scoping().root_scope_id(), toplevel_item_name.into());
     Self { ret_span: None, visit_path: vec![], symbol_id }
   }
 }

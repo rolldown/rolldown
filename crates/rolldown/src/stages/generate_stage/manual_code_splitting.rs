@@ -92,7 +92,7 @@ impl ManualSplitter<'_> {
   }
 
   async fn collect_and_match_modules(
-    &mut self,
+    &self,
     metas: &LinkingMetadataVec,
   ) -> Result<IndexVec<ModuleGroupIdx, ModuleGroup>, BatchedBuildDiagnostic> {
     let mut index_module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::new();
@@ -185,7 +185,7 @@ impl ManualSplitter<'_> {
   fn assign_runtime_chunk(
     &mut self,
     metas: &LinkingMetadataVec,
-    module_groups: &mut Vec<ModuleGroup>,
+    module_groups: &mut [ModuleGroup],
   ) {
     // Manually pull out the runtime module into a standalone chunk.
     let runtime_module_idx = self.link_output.runtime.id();
@@ -249,7 +249,7 @@ impl ManualSplitter<'_> {
         }
       }
 
-      self.finalize_group_to_chunk(this_module_group, &mut module_groups);
+      self.finalize_group_to_chunk(&this_module_group, &mut module_groups);
     }
   }
 
@@ -336,11 +336,11 @@ impl ManualSplitter<'_> {
 
       Some((left_group, right_group))
     } else {
-      return None;
+      None
     }
   }
 
-  fn finalize_group_to_chunk(&mut self, group: ModuleGroup, remaining_groups: &mut [ModuleGroup]) {
+  fn finalize_group_to_chunk(&mut self, group: &ModuleGroup, remaining_groups: &mut [ModuleGroup]) {
     let first_module = group.modules.iter().next().copied().expect("must have one");
 
     let mut chunk = Chunk::new(
@@ -402,12 +402,12 @@ impl GenerateStage<'_> {
     }
 
     let mut splitter = ManualSplitter {
-      link_output: &self.link_output,
+      link_output: self.link_output,
       index_splitting_info,
-      options: &self.options,
+      options: self.options,
       chunking_options,
       match_groups: &match_groups,
-      plugin_driver: &self.plugin_driver,
+      plugin_driver: self.plugin_driver,
       input_base,
       chunk_graph,
       module_to_assigned,

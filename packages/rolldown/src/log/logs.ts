@@ -89,7 +89,7 @@ export function error(base: Error | RolldownLog): never {
   if (!(base instanceof Error)) {
     base = Object.assign(new Error(base.message), base);
     Object.defineProperty(base, 'name', {
-      value: 'RollupError',
+      value: 'RolldownError',
       writable: true,
     });
   }

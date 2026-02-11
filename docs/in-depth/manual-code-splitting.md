@@ -366,6 +366,7 @@ With `includeDependenciesRecursively: false`, depended modules of a group might 
 
 ### Why is the chunk bigger than `maxSize`?
 
-If the input has a module that is bigger than `maxSize`, the generated chunk will contain that module and thus the chunk will be bigger than `maxSize`.
+`maxSize` acts as a target rather than a strict limit. A chunk may exceed this value in the following scenarios:
 
-This can be improved by splitting a single module into multiple chunks. But this is not supported yet.
+- If a single module is larger than `maxSize`, the resulting chunk will exceed the limit. Rolldown does not currently support splitting a single module into multiple chunks.
+- Rolldown prioritizes the `minSize` configuration. If splitting a large chunk would result in new chunks that fall below the `minSize` threshold, Rolldown will keep the original chunk undivided to avoid generating excessively small files.

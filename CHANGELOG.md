@@ -1,4 +1,70 @@
 
+## [1.0.0-rc.4] - 2026-02-11
+
+### 🚀 Features
+
+- rename error name to `RolldownError` from `RollupError` (#8262) by @sapphi-red
+- add hidden `resolve_tsconfig` function for Vite (#8257) by @sapphi-red
+- rust: introduce `rolldown_watcher` (#8161) by @hyf0
+- unify `comments` and `legalComments` into a single granular `comments` option (#8229) by @IWANABETHATGUY
+- add builtin plugin for visualizing chunk graph (#8162) by @IWANABETHATGUY
+- show import declaration location in AssignToImport errors (#8222) by @Copilot
+- show import declaration span in CannotCallNamespace error (#8223) by @Copilot
+- emit error when plugin accidentally removes runtime module symbols (#8203) by @IWANABETHATGUY
+- support tsconfig loading & inputMap for `transform` (#8180) by @sapphi-red
+- rolldown_plugin_vite_reporter: update warning message to link to Rolldown docs (#8205) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- avoid panic on untranspiled JSX syntax by reporting a diagnostic error (#8226) by @IWANABETHATGUY
+- rolldown_plugin_vite_import_glob: relax absolute path check and improve invalid glob warning (#8219) by @shulaoda
+- merge chunks after detect circular reference (#8154) by @IWANABETHATGUY
+- rust: detect runtime module side effects based on its content (#8209) by @hyf0
+
+### 🚜 Refactor
+
+- rename `other` to `jsdoc` in comments options (#8256) by @IWANABETHATGUY
+- rename chunk-visualize plugin with bundle-analyzer plugin (#8255) by @IWANABETHATGUY
+- remove EXPORT_UNDEFINED_VARIABLE error (#8228) by @Copilot
+- consolidate missing runtime symbol errors into a single diagnostic (#8220) by @IWANABETHATGUY
+- stabilize `parse` and `parseSync` (#8215) by @sapphi-red
+- return errors instead of panicking on builtin plugin conversion failure (#8217) by @shulaoda
+- expose `parse` / `minify` / `transform` from `rolldown/utils` (#8214) by @sapphi-red
+- prepare defer chunk merging (#8153) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- remove `<script>` escape behavior difference note from `platform` option (#8253) by @sapphi-red
+- TypeScript & JSX support by plugins (#8183) by @sapphi-red
+
+### 🧪 Testing
+
+- ensure runtime module is preserved even if it's not used but has side effects (#8213) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update oxc to v0.113.0 (#8267) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.12.0 (#8272) by @renovate[bot]
+- deps: update oxc apps (#8269) by @renovate[bot]
+- deps: update test262 submodule for tests (#8261) by @sapphi-red
+- deps: update crate-ci/typos action to v1.43.4 (#8260) by @renovate[bot]
+- deps: update dependency esbuild to v0.27.3 (#8250) by @renovate[bot]
+- deps: update rust crates (#8244) by @renovate[bot]
+- deps: update dependency semver to v7.7.4 (#8247) by @renovate[bot]
+- deps: update github-actions (#8243) by @renovate[bot]
+- deps: update npm packages (#8245) by @renovate[bot]
+- deps: update oxc resolver to v11.17.1 (#8240) by @renovate[bot]
+- deps: update rust crate oxc_sourcemap to v6.0.2 (#8241) by @renovate[bot]
+- rust: handle ignored `RUSTSEC-2025-0141` cargo check error (#8235) by @hyf0
+- deps: update dependency oxlint-tsgolint to v0.11.5 (#8233) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to ^0.22.0 (#8232) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.43.3 (#8225) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.21.9 (#8224) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.43.2 (#8212) by @renovate[bot]
+- remove rolldown_plugin_vite_wasm_helper (#8207) by @shulaoda
+- build docs for production (#8206) by @sapphi-red
+
+
 ## [1.0.0-rc.3] - 2026-02-04
 
 ### 🚀 Features

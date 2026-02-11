@@ -6114,7 +6114,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/issue_5525
 
-- entry-!~{000}~.js => entry-2LLfWXbw.js
+- entry-!~{000}~.js => entry-CYtKTr1Y.js
 - entry2-!~{001}~.js => entry2-CR5TFNyE.js
 - foo-!~{002}~.js => foo-CGzpx-1R.js
 

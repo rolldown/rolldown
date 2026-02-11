@@ -3,7 +3,6 @@ import {
 	VarKlass as VarKlass2,
 	FunctionDeclaration as FunctionDeclaration2,
 	VarFunction as VarFunction2,
-	VarKlass,
 } from "./foo.js";
 import assert from "node:assert";
 

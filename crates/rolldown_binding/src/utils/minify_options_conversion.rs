@@ -4,7 +4,7 @@ pub fn mangle_options_to_napi_mangle_options(
   mangle: &oxc::minifier::MangleOptions,
 ) -> oxc_minify_napi::MangleOptions {
   oxc_minify_napi::MangleOptions {
-    toplevel: Some(mangle.top_level),
+    toplevel: mangle.top_level,
     keep_names: {
       let keep_names = oxc_minify_napi::MangleOptionsKeepNames {
         function: mangle.keep_names.function,

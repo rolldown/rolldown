@@ -1,4 +1,4 @@
-use std::{cmp::Reverse, sync::Arc};
+use std::{cmp::Reverse, path::Path, sync::Arc};
 
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
@@ -6,7 +6,7 @@ use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, MatchGroupTest, Module, ModuleIdx, ModuleTable,
 };
 use rolldown_error::BuildResult;
-use rolldown_utils::BitSet;
+use rolldown_utils::{BitSet, xxhash::xxhash_with_base};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
@@ -318,8 +318,18 @@ impl GenerateStage<'_> {
       let entries_aware =
         match_groups[this_module_group.match_group_index].entries_aware.unwrap_or(false);
 
+      let chunk_name = if entries_aware {
+        derive_entries_aware_chunk_name(
+          &this_module_group.name,
+          first_module_bits,
+          self.link_output,
+        )
+      } else {
+        this_module_group.name.clone()
+      };
+
       let mut chunk = Chunk::new(
-        Some(this_module_group.name.clone()),
+        Some(chunk_name),
         None,
         first_module_bits.clone(),
         vec![],
@@ -353,6 +363,55 @@ impl GenerateStage<'_> {
       });
     }
     Ok(())
+  }
+}
+
+fn derive_entries_aware_chunk_name(
+  group_name: &str,
+  bits: &BitSet,
+  link_output: &crate::stages::link_stage::LinkStageOutput,
+) -> ArcStr {
+  const MAX_CHUNK_NAME_LEN: usize = 100;
+  const HASH_DISPLAY_LEN: usize = 8;
+  const TRUNCATED_LEN: usize = MAX_CHUNK_NAME_LEN - HASH_DISPLAY_LEN - 1; // 1 for the `~` separator
+
+  let entry_names: Vec<String> = link_output
+    .entries
+    .iter()
+    .flat_map(|(_idx, entries)| entries.iter())
+    .enumerate()
+    .filter_map(|(index, entry_point)| {
+      if bits.has_bit(index.try_into().unwrap()) {
+        Some(entry_point.name.as_ref().map(ArcStr::to_string).unwrap_or_else(|| {
+          // Fall back to file stem of the entry module's stable_id
+          let module = &link_output.module_table[entry_point.idx];
+          Path::new(module.stable_id().as_str())
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| module.stable_id().to_string())
+        }))
+      } else {
+        None
+      }
+    })
+    .collect();
+
+  let full_name = if entry_names.is_empty() {
+    group_name.to_string()
+  } else {
+    format!("{}~{}", group_name, entry_names.join("~"))
+  };
+
+  if full_name.len() > MAX_CHUNK_NAME_LEN {
+    let hash = xxhash_with_base(full_name.as_bytes(), 36);
+    let mut truncate_at = TRUNCATED_LEN;
+    while !full_name.is_char_boundary(truncate_at) {
+      truncate_at -= 1;
+    }
+    let truncated = &full_name[..truncate_at];
+    ArcStr::from(format!("{truncated}~{}", &hash[..HASH_DISPLAY_LEN]))
+  } else {
+    ArcStr::from(full_name)
   }
 }
 

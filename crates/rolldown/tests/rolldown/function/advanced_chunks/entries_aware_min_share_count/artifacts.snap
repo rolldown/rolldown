@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //! User-defined Entry: [Entry-Module-Id: entry-a.js] [Name: Some("entry-a")]
-import "./utils.js";
+import "./utils~entry-a~entry-b.js";
 
 //#region utils/debounce.js
 console.log("debounce");
@@ -19,8 +19,8 @@ console.log("debounce");
 
 ```js
 //! User-defined Entry: [Entry-Module-Id: entry-b.js] [Name: Some("entry-b")]
-import "./utils.js";
-import "./utils2.js";
+import "./utils~entry-a~entry-b.js";
+import "./utils~entry-b~entry-c.js";
 
 ```
 
@@ -28,11 +28,11 @@ import "./utils2.js";
 
 ```js
 //! User-defined Entry: [Entry-Module-Id: entry-c.js] [Name: Some("entry-c")]
-import "./utils2.js";
+import "./utils~entry-b~entry-c.js";
 
 ```
 
-## utils.js
+## utils~entry-a~entry-b.js
 
 ```js
 //! ManualCodeSplitting: [Group-Name: utils] [Entries: entry-a.js, entry-b.js]
@@ -42,7 +42,7 @@ console.log("formatDate");
 //#endregion
 ```
 
-## utils2.js
+## utils~entry-b~entry-c.js
 
 ```js
 //! ManualCodeSplitting: [Group-Name: utils] [Entries: entry-b.js, entry-c.js]

@@ -329,15 +329,6 @@ pub fn enhanced_transform(
 
   let mut program = parse_ret.program;
 
-  let semantic_ret = SemanticBuilder::new().build(&program);
-  let mut scoping = Some(semantic_ret.semantic.into_scoping());
-  if !semantic_ret.errors.is_empty() {
-    append_oxc_diagnostics(semantic_ret.errors, &source, filename, &mut warnings, &mut errors);
-    if !errors.is_empty() {
-      return EnhancedTransformResult::new_for_error(errors, warnings, tsconfig_file_paths);
-    }
-  }
-
   // Generate isolated declarations if enabled (must be done before transform modifies the AST)
   let (declaration, declaration_map) = if let Some(ref decl_options) = declaration_options
     && source_type.is_typescript()
@@ -364,11 +355,7 @@ pub fn enhanced_transform(
         define.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
       match ReplaceGlobalDefinesConfig::new(&define_pairs) {
         Ok(config) => {
-          let ret = ReplaceGlobalDefines::new(&allocator, config)
-            .build(scoping.take().unwrap(), &mut program);
-          if !ret.changed {
-            scoping = Some(ret.scoping);
-          }
+          let _ = ReplaceGlobalDefines::new(&allocator, config).build(&mut program);
         }
         Err(errs) => {
           errors.extend(
@@ -382,9 +369,14 @@ pub fn enhanced_transform(
     }
   }
 
-  let scoping = scoping
-    .take()
-    .unwrap_or_else(|| SemanticBuilder::new().build(&program).semantic.into_scoping());
+  let semantic_ret = SemanticBuilder::new().build(&program);
+  let scoping = semantic_ret.semantic.into_scoping();
+  if !semantic_ret.errors.is_empty() {
+    append_oxc_diagnostics(semantic_ret.errors, &source, filename, &mut warnings, &mut errors);
+    if !errors.is_empty() {
+      return EnhancedTransformResult::new_for_error(errors, warnings, tsconfig_file_paths);
+    }
+  }
 
   let transform_ret = Transformer::new(&allocator, Path::new(filename), &oxc_transform_options)
     .build_with_scoping(scoping, &mut program);
@@ -399,8 +391,7 @@ pub fn enhanced_transform(
     && !inject.is_empty()
   {
     let config = build_inject_config(inject);
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
-    let _ = InjectGlobalVariables::new(&allocator, config).build(scoping, &mut program);
+    let _ = InjectGlobalVariables::new(&allocator, config).build(&mut program);
   }
 
   let codegen_ret: CodegenReturn = Codegen::new()

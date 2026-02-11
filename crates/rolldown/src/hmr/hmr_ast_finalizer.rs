@@ -223,7 +223,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             } else {
               // export { foo, bar as bar2 }
               decl.specifiers.iter().for_each(|specifier| {
-                if let Some(symbol_id) = scoping.get_root_binding(&specifier.local.name()) {
+                if let Some(symbol_id) = scoping.get_root_binding(specifier.local.name().into()) {
                   self
                     .named_exports
                     .insert(specifier.exported.name(), NamedExport { local_binding: symbol_id });

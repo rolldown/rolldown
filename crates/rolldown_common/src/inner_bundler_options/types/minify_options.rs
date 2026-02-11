@@ -41,7 +41,7 @@ impl RawMinifyOptions {
           let keep_names = options.keep_names;
           let mangle = MangleOptions {
             // IIFE need to preserve top level names
-            top_level: !matches!(options.format, OutputFormat::Iife),
+            top_level: Some(!matches!(options.format, OutputFormat::Iife)),
             keep_names: MangleOptionsKeepNames { function: keep_names, class: keep_names },
             debug: false,
           };

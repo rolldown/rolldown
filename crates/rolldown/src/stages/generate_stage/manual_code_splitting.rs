@@ -6,6 +6,7 @@ use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, MatchGroupTest, Module, ModuleIdx, ModuleTable,
 };
 use rolldown_error::BuildResult;
+use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
@@ -76,7 +77,8 @@ impl GenerateStage<'_> {
     }
 
     let mut index_module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::new();
-    let mut name_to_module_group: FxHashMap<(usize, ArcStr), ModuleGroupIdx> = FxHashMap::default();
+    let mut name_to_module_group: FxHashMap<(usize, ArcStr, Option<BitSet>), ModuleGroupIdx> =
+      FxHashMap::default();
     let metas = &self.link_output.metas;
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
     {
@@ -133,7 +135,9 @@ impl GenerateStage<'_> {
         };
         let group_name = ArcStr::from(group_name);
 
-        let unique_key = (match_group_index, group_name.clone());
+        let entries_aware = match_group.entries_aware.unwrap_or(false);
+        let bits_key = if entries_aware { Some(splitting_info.bits.clone()) } else { None };
+        let unique_key = (match_group_index, group_name.clone(), bits_key);
 
         let module_group_idx = name_to_module_group.entry(unique_key).or_insert_with(|| {
           index_module_groups.push(ModuleGroup {
@@ -306,23 +310,30 @@ impl GenerateStage<'_> {
           }
         }
       }
+
+      let first_module_bits = &index_splitting_info
+        [this_module_group.modules.iter().next().copied().expect("must have one")]
+      .bits;
+
+      let entries_aware =
+        match_groups[this_module_group.match_group_index].entries_aware.unwrap_or(false);
+
       let mut chunk = Chunk::new(
         Some(this_module_group.name.clone()),
         None,
-        index_splitting_info
-          [this_module_group.modules.iter().next().copied().expect("must have one")]
-        .bits
-        .clone(),
+        first_module_bits.clone(),
         vec![],
         ChunkKind::Common,
         input_base.clone(),
         None,
       );
       chunk.add_creation_reason(
-        ChunkCreationReason::ManualCodeSplittingGroup(
-          &this_module_group.name,
-          this_module_group.match_group_index.try_into().unwrap(),
-        ),
+        ChunkCreationReason::ManualCodeSplittingGroup {
+          name: &this_module_group.name,
+          group_index: this_module_group.match_group_index.try_into().unwrap(),
+          bits: if entries_aware { Some(first_module_bits) } else { None },
+          link_output: self.link_output,
+        },
         self.options,
       );
 

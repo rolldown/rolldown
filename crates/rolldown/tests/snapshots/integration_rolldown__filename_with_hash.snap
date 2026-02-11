@@ -3920,6 +3920,30 @@ expression: output
 - other-!~{001}~.js => other-B3P9919W.js
 - shared-!~{002}~.js => shared-CFIfvxkD.js
 
+# tests/rolldown/function/advanced_chunks/entries_aware_false
+
+- entry-a-!~{000}~.js => entry-a-DAoBvWkD.js
+- entry-b-!~{001}~.js => entry-b-msWKko7E.js
+- entry-c-!~{002}~.js => entry-c-Bg5GIhoe.js
+- vendor-!~{003}~.js => vendor-stCDKbV-.js
+
+# tests/rolldown/function/advanced_chunks/entries_aware_min_share_count
+
+- entry-a-!~{000}~.js => entry-a-BuB0R6K1.js
+- entry-b-!~{001}~.js => entry-b-K_U200iY.js
+- entry-c-!~{002}~.js => entry-c-aGNiz1tQ.js
+- utils-!~{003}~.js => utils-BHkG74Os.js
+- utils-!~{005}~.js => utils-BhoauC96.js
+
+# tests/rolldown/function/advanced_chunks/entries_aware_true
+
+- entry-a-!~{000}~.js => entry-a-DnZjnQcX.js
+- entry-b-!~{001}~.js => entry-b-D57VDdfN.js
+- entry-c-!~{002}~.js => entry-c-ifTLlP1t.js
+- vendor-!~{007}~.js => vendor-C-UBb0Ro.js
+- vendor-!~{005}~.js => vendor-CvTFbgzK.js
+- vendor-!~{003}~.js => vendor-r_yNgesz.js
+
 # tests/rolldown/function/advanced_chunks/include_dependencies_recursively
 
 - main-!~{000}~.js => main-Cu3PnZ1_.js

@@ -1,0 +1,46 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-a.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: entry-a.js] [Name: Some("entry-a")]
+import "./vendor.js";
+
+```
+
+## entry-b.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: entry-b.js] [Name: Some("entry-b")]
+import "./vendor.js";
+
+```
+
+## entry-c.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: entry-c.js] [Name: Some("entry-c")]
+import "./vendor.js";
+
+```
+
+## vendor.js
+
+```js
+//! ManualCodeSplitting: [Group-Name: vendor]
+//#region shared-by-abc.js
+console.log("shared-by-abc");
+
+//#endregion
+//#region shared-by-ab.js
+console.log("shared-by-ab");
+
+//#endregion
+//#region shared-by-a.js
+console.log("shared-by-a");
+
+//#endregion
+```

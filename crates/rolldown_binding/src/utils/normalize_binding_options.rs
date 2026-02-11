@@ -460,6 +460,7 @@ pub fn normalize_binding_options(
             max_module_size: item.max_module_size,
             min_module_size: item.min_module_size,
             max_size: item.max_size,
+            entries_aware: item.entries_aware,
           })
           .collect::<Vec<_>>()
       }),

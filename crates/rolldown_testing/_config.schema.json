@@ -1284,6 +1284,12 @@
             "null"
           ],
           "format": "double"
+        },
+        "entriesAware": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false,

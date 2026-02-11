@@ -1,0 +1,32 @@
+{
+  "_comment": "With entriesAware: true, modules are split by entry-point reachability. Expected: 3 vendor chunks — shared-by-abc (bits={A,B,C}) loaded by all, shared-by-ab (bits={A,B}) loaded by A+B only, shared-by-a (bits={A}) loaded by A only.",
+  "config": {
+    "input": [
+      {
+        "name": "entry-a",
+        "import": "./entry-a.js"
+      },
+      {
+        "name": "entry-b",
+        "import": "./entry-b.js"
+      },
+      {
+        "name": "entry-c",
+        "import": "./entry-c.js"
+      }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "vendor",
+          "test": "shared-by",
+          "entriesAware": true
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "hiddenRuntimeModule": true
+}

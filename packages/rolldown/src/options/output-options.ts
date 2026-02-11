@@ -847,6 +847,26 @@ export type CodeSplittingGroup = {
    * @default 0
    */
   minModuleSize?: number;
+  /**
+   * When `false` (default), all matching modules are merged into a single chunk.
+   * Every entry that uses any of these modules must load the entire chunk — even
+   * modules it doesn't need.
+   *
+   * When `true`, matching modules are grouped by which entries actually import them.
+   * Modules shared by the same set of entries go into the same chunk, while modules
+   * shared by a different set go into a separate chunk. This way, each entry only
+   * loads the code it actually uses.
+   *
+   * Example: entries A, B, C all match a `"vendor"` group.
+   * - `moduleX` is used by A, B, C
+   * - `moduleY` is used by A, B only
+   *
+   * With `entriesAware: false` → one `vendor.js` chunk with both modules; C loads `moduleY` unnecessarily.
+   * With `entriesAware: true`  → `vendor.js` (moduleX, loaded by all) + `vendor2.js` (moduleY, loaded by A and B only).
+   *
+   * @default false
+   */
+  entriesAware?: boolean;
 };
 
 /**

@@ -47,5 +47,6 @@ bitflags! {
     const UnsupportedTsconfigOption = 1 << 41;
     const RuntimeModuleSymbolNotFoundError = 1 << 42;
     const UntranspiledSyntaxError = 1 << 43;
+    const ManualCodeSplittingSkipped = 1 << 44;
   }
 }

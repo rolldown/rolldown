@@ -379,6 +379,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when a tsconfig option or combination of options is not supported',
     ),
   ),
+  manualCodeSplittingSkipped: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a module is skipped from a manual code splitting group',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 

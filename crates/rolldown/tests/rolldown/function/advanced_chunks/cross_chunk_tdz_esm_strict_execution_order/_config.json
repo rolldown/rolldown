@@ -1,0 +1,13 @@
+{
+  "_comment": "Like cross_chunk_tdz_esm, but with strictExecutionOrder enabled. Modules are wrapped with lazy initializers so circular chunk imports are TDZ-safe, and the manual split should not be blocked by the cycle-prevention heuristic. See https://github.com/rolldown/rolldown/issues/7449",
+  "config": {
+    "strictExecutionOrder": true,
+    "manualCodeSplitting": {
+      "groups": [
+        { "name": "vendor", "test": "shared\\.js" }
+      ],
+      "includeDependenciesRecursively": false
+    }
+  }
+}
+

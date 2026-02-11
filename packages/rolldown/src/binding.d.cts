@@ -1803,6 +1803,7 @@ export interface BindingChecksOptions {
   pluginTimings?: boolean
   duplicateShebang?: boolean
   unsupportedTsconfigOption?: boolean
+  manualCodeSplittingSkipped?: boolean
 }
 
 export interface BindingChunkImportMap {

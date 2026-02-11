@@ -3914,6 +3914,21 @@ expression: output
 - common-!~{004}~.js => common-2P79ByQ6.js
 - rolldown-runtime-!~{002}~.js => rolldown-runtime-CE7yJa86.js
 
+# tests/rolldown/function/advanced_chunks/cross_chunk_tdz_esm
+
+- main-!~{000}~.js => main-CPZaG9er.js
+
+# tests/rolldown/function/advanced_chunks/cross_chunk_tdz_esm_safety_net
+
+- main-!~{000}~.js => main-co-1Yl1L.js
+- vendor-!~{001}~.js => vendor-DUlbkYV5.js
+
+# tests/rolldown/function/advanced_chunks/cross_chunk_tdz_esm_strict_execution_order
+
+- main-!~{000}~.js => main-BolaoRkK.js
+- rolldown-runtime-!~{001}~.js => rolldown-runtime-DTdeWZzM.js
+- vendor-!~{003}~.js => vendor-DDowXU5m.js
+
 # tests/rolldown/function/advanced_chunks/dynamic_entry_shared_module_not_merged
 
 - main-!~{000}~.js => main-VcNR0yWP.js
@@ -3930,6 +3945,11 @@ expression: output
 
 - main-!~{000}~.js => main-CXYuKywD.js
 - splited_lib-!~{001}~.js => splited_lib-DirPE8LP.js
+
+# tests/rolldown/function/advanced_chunks/manual_splitting_no_circular
+
+- main-!~{000}~.js => main-D42Fdz15.js
+- vendor-!~{001}~.js => vendor-DhmhhbWv.js
 
 # tests/rolldown/function/advanced_chunks/max_module_size
 

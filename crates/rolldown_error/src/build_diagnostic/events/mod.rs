@@ -33,6 +33,7 @@ pub mod invalid_define_config;
 pub mod invalid_export_option;
 pub mod invalid_option;
 pub mod json_parse;
+pub mod manual_code_splitting_circular_chunk_dependency;
 pub mod missing_export;
 pub mod missing_global_name;
 pub mod missing_name_option_for_iife_export;

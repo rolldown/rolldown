@@ -27,6 +27,7 @@ use super::events::import_is_undefined::ImportIsUndefined;
 use super::events::invalid_define_config::InvalidDefineConfig;
 use super::events::invalid_option::{InvalidOption, InvalidOptionType};
 use super::events::json_parse::JsonParse;
+use super::events::manual_code_splitting_circular_chunk_dependency::ManualCodeSplittingCircularChunkDependency;
 use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
 use super::events::plugin_error::{CausedPlugin, PluginError};
@@ -114,6 +115,13 @@ impl BuildDiagnostic {
 
   pub fn circular_dependency(paths: Vec<String>) -> Self {
     Self::new_inner(CircularDependency { paths })
+  }
+
+  pub fn manual_code_splitting_skipped_due_to_circular_chunk_dependency(
+    module_id: String,
+    group_name: String,
+  ) -> Self {
+    Self::new_inner(ManualCodeSplittingCircularChunkDependency { module_id, group_name })
   }
 
   pub fn circular_reexport(importer_id: String, imported_specifier: String) -> Self {

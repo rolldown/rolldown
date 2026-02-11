@@ -34,6 +34,7 @@ OPTIONS
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
   --checks.filename-conflict  Whether to emit warnings when files generated have the same name with different contents.
   --checks.import-is-undefined Whether to emit warnings when an imported variable is not exported.
+  --checks.manual-code-splitting-skipped Whether to emit warnings when a module is skipped from a manual code splitting group.
   --checks.missing-global-name Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missing-name-option-for-iife-export Whether to emit warnings when the \`output.name\` option is missing when needed.
   --checks.mixed-exports      Whether to emit warnings when the way to export values is ambiguous.

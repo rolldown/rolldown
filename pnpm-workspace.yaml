@@ -21,8 +21,8 @@ catalog:
   '@napi-rs/wasm-runtime': ^1.0.0
   '@oxc-node/cli': ^0.0.35
   '@oxc-node/core': ^0.0.35
-  '@oxc-project/runtime': '=0.112.0'
-  '@oxc-project/types': '=0.112.0'
+  '@oxc-project/runtime': '=0.113.0'
+  '@oxc-project/types': '=0.113.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rollup/plugin-commonjs': ^29.0.0
   '@rollup/plugin-json': ^6.1.0

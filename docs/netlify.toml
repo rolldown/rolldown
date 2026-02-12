@@ -1,6 +1,6 @@
 [build]
 # only build on netlify if there are any change in docs
-# COMMIT_REF and CACHED_COMMIT_REF are the same for builds runs without cache
+# COMMIT_REF and CACHED_COMMIT_REF are the same for build runs without cache
 ignore = "if [ \"${COMMIT_REF}\" = \"${CACHED_COMMIT_REF}\" ] ; then false ; else git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./docs ./packages/rolldown ; fi"
 
 [[redirects]]

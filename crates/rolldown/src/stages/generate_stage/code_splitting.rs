@@ -797,13 +797,13 @@ impl GenerateStage<'_> {
       );
     }
 
-    let mut module_to_assigned: IndexVec<ModuleIdx, bool> =
+    let mut module_is_assigned: IndexVec<ModuleIdx, bool> =
       oxc_index::index_vec![false; self.link_output.module_table.modules.len()];
 
     self
       .apply_manual_code_splitting(
         index_splitting_info,
-        &mut module_to_assigned,
+        &mut module_is_assigned,
         chunk_graph,
         input_base,
       )
@@ -827,11 +827,11 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      if module_to_assigned[normal_module.idx] {
+      if module_is_assigned[normal_module.idx] {
         continue;
       }
 
-      module_to_assigned[normal_module.idx] = true;
+      module_is_assigned[normal_module.idx] = true;
 
       let bits = &index_splitting_info[normal_module.idx].bits;
       debug_assert!(
@@ -880,7 +880,7 @@ impl GenerateStage<'_> {
         chunk_graph,
         index_splitting_info,
         input_base,
-        &mut module_to_assigned,
+        &mut module_is_assigned,
         &temp_chunk_graph,
       );
     }

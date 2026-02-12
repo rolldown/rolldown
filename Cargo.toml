@@ -230,8 +230,8 @@ napi = { version = "3.0.0", features = ["async", "anyhow", "tracing", "object_in
 napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 
-# oxc crates with the same version
-oxc = { version = "0.113.0", features = [
+# oxc crates pinned to a specific oxc commit
+oxc = { git = "https://github.com/oxc-project/oxc.git", rev = "8b53c3f00ceea7ec82e9d77e77f2b95d5eee4ced", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -243,13 +243,15 @@ oxc = { version = "0.113.0", features = [
   "regular_expression",
   "cfg",
 ] }
-oxc_allocator = { version = "0.113.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.113.0" }
-oxc_napi = { version = "0.113.0" }
-oxc_minify_napi = { version = "0.113.0" }
-oxc_parser_napi = { version = "0.113.0" }
-oxc_transform_napi = { version = "0.113.0" }
-oxc_traverse = { version = "0.113.0" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc.git", rev = "8b53c3f00ceea7ec82e9d77e77f2b95d5eee4ced", features = [
+  "pool",
+] }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc.git", rev = "8b53c3f00ceea7ec82e9d77e77f2b95d5eee4ced" }
+oxc_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "8b53c3f00ceea7ec82e9d77e77f2b95d5eee4ced" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "8b53c3f00ceea7ec82e9d77e77f2b95d5eee4ced" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "8b53c3f00ceea7ec82e9d77e77f2b95d5eee4ced" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "8b53c3f00ceea7ec82e9d77e77f2b95d5eee4ced" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc.git", rev = "8b53c3f00ceea7ec82e9d77e77f2b95d5eee4ced" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

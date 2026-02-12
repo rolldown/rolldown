@@ -105,7 +105,7 @@ impl<'a> GenerateStage<'a> {
 
     let mut warnings = vec![];
     self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings)?;
-    if !self.options.format.is_esm() {
+    if !warnings.is_empty() {
       self.link_output.warnings.extend(warnings);
     }
 

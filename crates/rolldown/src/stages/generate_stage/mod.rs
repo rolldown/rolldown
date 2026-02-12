@@ -4,27 +4,25 @@ use arcstr::ArcStr;
 use futures::future::try_join_all;
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
+use rolldown_common::{
+  ChunkIdx, ChunkKind, CssAssetNameReplacer, ImportMetaRolldownAssetReplacer, Module,
+  OutputExports, PreliminaryFilename, RollupPreRenderedAsset,
+};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_std_utils::OptionExt;
-use rustc_hash::{FxHashMap, FxHashSet};
-
-use rolldown_common::{
-  ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, CssAssetNameReplacer, EcmaViewMeta,
-  ImportMetaRolldownAssetReplacer, Module, OutputExports, PreliminaryFilename,
-  RenderedConcatenatedModuleParts, RollupPreRenderedAsset, SymbolRef, SymbolRefFlags,
-};
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_std_utils::{PathBufExt, PathExt, representative_file_name_for_preserve_modules};
+use rolldown_std_utils::OptionExt as _;
+use rolldown_std_utils::{
+  PathBufExt as _, PathExt as _, representative_file_name_for_preserve_modules,
+};
 use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::HashPlaceholderGenerator,
-  index_vec_ext::IndexVecExt,
-  indexmap::FxIndexMap,
   make_unique_name::make_unique_name,
-  rayon::{IntoParallelRefMutIterator, ParallelIterator},
+  rayon::{IntoParallelRefMutIterator as _, ParallelIterator as _},
 };
-use sugar_path::SugarPath;
+use rustc_hash::FxHashMap;
+use sugar_path::SugarPath as _;
 use tracing::debug_span;
 
 const COMMON_JS_EXTENSIONS: &[&str] = &["js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts"];
@@ -44,7 +42,6 @@ struct PreGeneratedChunkName {
 use crate::{
   BundleOutput, SharedOptions,
   chunk_graph::ChunkGraph,
-  module_finalizers::{FinalizerMutableState, ScopeHoistingFinalizerContext},
   stages::link_stage::LinkStageOutput,
   types::generator::GenerateContext,
   utils::chunk::{
@@ -55,12 +52,12 @@ use crate::{
   },
 };
 
-mod apply_transfer_parts_mutation;
 mod chunk_ext;
 mod chunk_optimizer;
 mod code_splitting;
 mod compute_cross_chunk_links;
 mod detect_ineffective_dynamic_imports;
+mod finalize_modules;
 mod manual_code_splitting;
 mod minify_chunks;
 mod on_demand_wrapping;
@@ -124,94 +121,8 @@ impl<'a> GenerateStage<'a> {
         );
       });
     });
-    let side_effect_free_function_symbols = self
-      .link_output
-      .module_table
-      .iter()
-      .zip(self.link_output.symbol_db.inner().iter())
-      .filter_map(|(m, symbol_for_module)| {
-        let normal_module = m.as_normal()?;
-        let idx = normal_module.idx;
-        normal_module
-          .meta
-          .contains(EcmaViewMeta::TopExportedSideEffectsFreeFunction)
-          .then(move || {
-            let symbol_for_module = symbol_for_module.as_ref()?;
-            Some(symbol_for_module.flags.iter().filter_map(move |(symbol_id, flag)| {
-              flag
-                .contains(SymbolRefFlags::SideEffectsFreeFunction)
-                .then_some(SymbolRef::from((idx, *symbol_id)))
-            }))
-          })
-          .flatten()
-      })
-      .flatten()
-      .collect::<FxHashSet<SymbolRef>>();
 
-    let transfer_parts_rendered_maps = debug_span!("finalize_modules").in_scope(|| {
-      let ast_table_iter = self.link_output.ast_table.par_iter_mut_enumerated();
-      ast_table_iter
-        .filter(|(idx, _ast)| {
-          self.link_output.module_table[*idx]
-            .as_normal()
-            .is_some_and(|m| self.link_output.metas[m.idx].is_included)
-        })
-        .filter_map(|(idx, ast)| {
-          let ast = ast.as_mut()?;
-          let module = self.link_output.module_table[idx].as_normal().unwrap();
-          let ast_scope = &self.link_output.symbol_db[idx].as_ref().unwrap().ast_scopes;
-          let chunk_idx = chunk_graph.module_to_chunk[idx].unwrap();
-          let chunk = &chunk_graph.chunk_table[chunk_idx];
-          let linking_info = &self.link_output.metas[module.idx];
-          let ctx = ScopeHoistingFinalizerContext {
-            idx,
-            chunk,
-            chunk_idx,
-            symbol_db: &self.link_output.symbol_db,
-            linking_info,
-            module,
-            modules: &self.link_output.module_table.modules,
-            linking_infos: &self.link_output.metas,
-            runtime: &self.link_output.runtime,
-            chunk_graph: &chunk_graph,
-            options: self.options,
-            file_emitter: &self.plugin_driver.file_emitter,
-            constant_value_map: &self.link_output.global_constant_symbol_map,
-            side_effect_free_function_symbols: &side_effect_free_function_symbols,
-            safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
-            used_symbol_refs: &self.link_output.used_symbol_refs,
-          };
-          let mutable_state = FinalizerMutableState {
-            cur_stmt_index: 0,
-            keep_name_statement_to_insert: Vec::new(),
-            needs_hosted_top_level_binding: false,
-            module_namespace_included: self
-              .link_output
-              .used_symbol_refs
-              .contains(&module.namespace_object_ref),
-            transferred_import_record: chunk
-              .remove_map
-              .get(&module.idx)
-              .cloned()
-              .map(|idxs| {
-                idxs.into_iter().map(|idx| (idx, String::new())).collect::<FxIndexMap<_, _>>()
-              })
-              .unwrap_or_default(),
-            rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
-          };
-
-          let concatenated_wrapped_module_kind = ctx.linking_info.concatenated_wrapped_module_kind;
-          let (transferred_import_record, rendered_concatenated_wrapped_module_parts) =
-            ctx.finalize_normal_module(ast, ast_scope, mutable_state);
-
-          (!transferred_import_record.is_empty()
-            || !matches!(concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None))
-          .then_some((idx, transferred_import_record, rendered_concatenated_wrapped_module_parts))
-        })
-        .collect::<Vec<_>>()
-    });
-
-    self.apply_transfer_parts_mutation(&mut chunk_graph, transfer_parts_rendered_maps);
+    self.finalize_modules(&mut chunk_graph);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph).await
   }

@@ -3449,7 +3449,6 @@ dependencies = [
  "rayon",
  "rolldown_common",
  "rolldown_plugin",
- "rolldown_plugin_utils",
  "sugar_path",
  "terminal_size",
 ]

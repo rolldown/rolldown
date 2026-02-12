@@ -573,12 +573,14 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       {
         *property = ast::AssignmentTargetProperty::AssignmentTargetPropertyProperty(
           ast::AssignmentTargetPropertyProperty {
+            node_id: std::cell::Cell::new(oxc::syntax::node::NodeId::DUMMY),
             name: ast::PropertyKey::StaticIdentifier(
               self.snippet.id_name(&prop.binding.name, prop.span).into_in(self.alloc),
             ),
             binding: if let Some(init) = prop.init.take() {
               ast::AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
                 ast::AssignmentTargetWithDefault {
+                  node_id: std::cell::Cell::new(oxc::syntax::node::NodeId::DUMMY),
                   binding: ast::AssignmentTarget::from(target),
                   init,
                   span: Span::default(),

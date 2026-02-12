@@ -24,7 +24,7 @@ use crate::ast_scanner::{TraverseState, cjs_export_analyzer::CommonJsAstType};
 
 use super::{
   AstScanner, UntranspiledSyntax, cjs_export_analyzer::CjsGlobalAssignmentType,
-  side_effect_detector::SideEffectDetector,
+  side_effect_context::SideEffectContext,
 };
 
 impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
@@ -91,13 +91,15 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       {
         self.current_stmt_idx = StmtInfoIdx::from_raw_unchecked(idx as u32 + 1);
       }
-      let detector = SideEffectDetector::new(
-        &self.result.symbol_ref_db.ast_scopes,
-        self.immutable_ctx.flat_options,
-        self.immutable_ctx.options,
-        None,
-      );
-      self.current_stmt_info.side_effect = detector.detect_side_effect_of_stmt(stmt);
+      self.current_stmt_info.side_effect = {
+        let side_effect_ctx = SideEffectContext::new(
+          &self.result.symbol_ref_db.ast_scopes,
+          self.immutable_ctx.flat_options,
+          self.immutable_ctx.options,
+          None,
+        );
+        side_effect_ctx.detect_stmt(stmt)
+      };
 
       #[cfg(debug_assertions)]
       {

@@ -1,7 +1,10 @@
+use std::cell::Cell;
+
 use oxc::allocator::Box;
 use oxc::ast::ast::{
   Expression, JSXMemberExpression, JSXMemberExpressionObject, StaticMemberExpression,
 };
+use oxc::syntax::node::NodeId;
 
 pub trait JsxExt<'ast> {
   type AstKind;
@@ -64,9 +67,11 @@ impl<'ast> JsxExt<'ast> for JSXMemberExpression<'ast> {
     Self: Sized,
   {
     Some(JSXMemberExpression {
+      node_id: Cell::new(NodeId::DUMMY),
       span: member_expr.span,
       object: JSXMemberExpressionObject::from_ast(member_expr.object, allocator)?,
       property: oxc::ast::ast::JSXIdentifier {
+        node_id: Cell::new(NodeId::DUMMY),
         span: member_expr.span,
         name: member_expr.property.name.into(),
       },

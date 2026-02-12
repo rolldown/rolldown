@@ -5,7 +5,7 @@ mod hmr;
 pub mod impl_visit;
 mod import_analyzer;
 mod new_url;
-pub mod side_effect_detector;
+pub mod side_effect_context;
 
 use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, try_extract_const_literal};

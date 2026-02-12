@@ -1,3 +1,5 @@
+use std::cell::Cell;
+
 use oxc::{
   allocator::{Allocator, Box, Dummy as _, IntoIn as _, TakeIn as _},
   ast::ast::{
@@ -6,6 +8,7 @@ use oxc::{
     Expression, ObjectAssignmentTarget, ObjectPropertyKind, PropertyKind,
   },
   span::SPAN,
+  syntax::node::NodeId,
 };
 use smallvec::SmallVec;
 
@@ -60,6 +63,7 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
           rest: obj_pat.rest.take().map(|rest| {
             Box::new_in(
               AssignmentTargetRest {
+                node_id: Cell::new(NodeId::DUMMY),
                 span: rest.span,
                 target: rest.unbox().argument.into_assignment_target(alloc),
               },
@@ -76,10 +80,12 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
       // Turn `var [a, ,c = 1] = ...` to `[a, ,c = 1] = ...`
       BindingPattern::ArrayPattern(mut arr_pat) => {
         let mut arr_target = ArrayAssignmentTarget {
+          node_id: Cell::new(NodeId::DUMMY),
           span: arr_pat.span,
           rest: arr_pat.rest.take().map(|rest| {
             Box::new_in(
               AssignmentTargetRest {
+                node_id: Cell::new(NodeId::DUMMY),
                 span: rest.span,
                 target: rest.unbox().argument.into_assignment_target(alloc),
               },
@@ -94,6 +100,7 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
               let assign_pat = assign_pat.unbox();
               AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
                 AssignmentTargetWithDefault {
+                  node_id: Cell::new(NodeId::DUMMY),
                   span: assign_pat.span,
                   init: assign_pat.right,
                   binding: assign_pat.left.into_assignment_target(alloc),

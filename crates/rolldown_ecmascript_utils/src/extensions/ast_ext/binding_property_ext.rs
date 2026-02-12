@@ -1,3 +1,5 @@
+use std::cell::Cell;
+
 use oxc::{
   allocator::{Allocator, Box, Dummy as _, IntoIn as _, TakeIn},
   ast::ast::{
@@ -6,6 +8,7 @@ use oxc::{
     AssignmentTargetWithDefault, BindingPattern, BindingProperty, IdentifierReference,
     ObjectAssignmentTarget,
   },
+  syntax::node::NodeId,
 };
 
 use crate::BindingPatternExt as _;
@@ -29,6 +32,7 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
           let binding_id = assign_pat.left.get_binding_identifier().unwrap();
           AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
             AssignmentTargetPropertyIdentifier {
+              node_id: Cell::new(NodeId::DUMMY),
               span: self.span,
               init: Some(assign_pat.right),
               binding: IdentifierReference {
@@ -42,10 +46,12 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
         } else {
           AssignmentTargetProperty::AssignmentTargetPropertyProperty(
             AssignmentTargetPropertyProperty {
+              node_id: Cell::new(NodeId::DUMMY),
               name: self.key,
               span: self.span,
               binding: AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
                 AssignmentTargetWithDefault {
+                  node_id: Cell::new(NodeId::DUMMY),
                   span: assign_pat.span,
                   init: assign_pat.right,
                   binding: assign_pat.left.into_assignment_target(alloc),
@@ -63,6 +69,7 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
         if self.shorthand {
           AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
             AssignmentTargetPropertyIdentifier {
+              node_id: Cell::new(NodeId::DUMMY),
               init: None,
               span: self.span,
               binding: IdentifierReference {
@@ -76,6 +83,7 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
         } else {
           AssignmentTargetProperty::AssignmentTargetPropertyProperty(
             AssignmentTargetPropertyProperty {
+              node_id: Cell::new(NodeId::DUMMY),
               name: self.key,
               span: self.span,
               binding: AssignmentTargetMaybeDefault::from(self.value.into_assignment_target(alloc)),
@@ -96,15 +104,18 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
         });
         AssignmentTargetProperty::AssignmentTargetPropertyProperty(
           AssignmentTargetPropertyProperty {
+            node_id: Cell::new(NodeId::DUMMY),
             name: self.key,
             span: self.span,
             binding: AssignmentTargetMaybeDefault::ArrayAssignmentTarget(
               ArrayAssignmentTarget {
+                node_id: Cell::new(NodeId::DUMMY),
                 elements,
                 span: arr_pat.span,
                 rest: arr_pat.rest.map(|rest| {
                   Box::new_in(
                     AssignmentTargetRest {
+                      node_id: Cell::new(NodeId::DUMMY),
                       span: rest.span,
                       target: rest.unbox().argument.into_assignment_target(alloc),
                     },
@@ -128,15 +139,18 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
         });
         AssignmentTargetProperty::AssignmentTargetPropertyProperty(
           AssignmentTargetPropertyProperty {
+            node_id: Cell::new(NodeId::DUMMY),
             name: self.key,
             span: self.span,
             binding: AssignmentTargetMaybeDefault::ObjectAssignmentTarget(
               ObjectAssignmentTarget {
+                node_id: Cell::new(NodeId::DUMMY),
                 properties,
                 span: obj_pat.span,
                 rest: obj_pat.rest.map(|rest| {
                   Box::new_in(
                     AssignmentTargetRest {
+                      node_id: Cell::new(NodeId::DUMMY),
                       span: rest.span,
                       target: rest.unbox().argument.into_assignment_target(alloc),
                     },

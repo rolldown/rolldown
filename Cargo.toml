@@ -264,6 +264,12 @@ oxc_resolver = { version = "11.15.0", features = [
 oxc_resolver_napi = { version = "11.15.0", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "6" } # https://github.com/oxc-project/oxc-sourcemap
 
+[patch.crates-io]
+oxc = { path = "/Users/boshen/oxc/oxc3/crates/oxc" }
+oxc_allocator = { path = "/Users/boshen/oxc/oxc3/crates/oxc_allocator" }
+oxc_ecmascript = { path = "/Users/boshen/oxc/oxc3/crates/oxc_ecmascript" }
+oxc_traverse = { path = "/Users/boshen/oxc/oxc3/crates/oxc_traverse" }
+
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.
 debug = "line-tables-only"

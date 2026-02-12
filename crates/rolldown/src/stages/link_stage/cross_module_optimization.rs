@@ -22,7 +22,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   ast_scanner::{
     const_eval::{ConstEvalCtx, try_extract_const_literal},
-    side_effect_detector::SideEffectDetector,
+    side_effect_context::SideEffectContext,
   },
   module_finalizers::TraverseState,
 };
@@ -367,13 +367,13 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
       self.visit_statement(stmt);
       if pre_addr_len != self.side_effect_free_call_expr_addr.len() {
         let stmt_info_idx = StmtInfoIdx::new(idx + 1);
-        let side_effect_detail = SideEffectDetector::new(
+        let side_effect_ctx = SideEffectContext::new(
           self.immutable_ctx.ast_scope,
           self.immutable_ctx.flat_options,
           self.immutable_ctx.options,
           Some(&self.side_effect_free_call_expr_addr),
-        )
-        .detect_side_effect_of_stmt(stmt);
+        );
+        let side_effect_detail = side_effect_ctx.detect_stmt(stmt);
         self.side_effect_detail_mutations.insert(stmt_info_idx, side_effect_detail);
       }
       self.toplevel_stmt_idx += 1;

@@ -560,7 +560,6 @@ impl<'a> GenerateStage<'a> {
           link_output: self.link_output,
           chunk_graph,
           plugin_driver: self.plugin_driver,
-          warnings: Vec::new(),
           module_id_to_codegen_ret: Vec::new(),
           render_export_items_index_vec: &IndexVec::default(),
           chunk_idx,

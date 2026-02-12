@@ -37,9 +37,6 @@ impl Generator for AssetGenerator {
       });
     }
 
-    Ok(Ok(GenerateOutput {
-      chunks: instantiated_chunks,
-      warnings: std::mem::take(&mut ctx.warnings),
-    }))
+    Ok(Ok(GenerateOutput { chunks: instantiated_chunks, warnings: vec![] }))
   }
 }

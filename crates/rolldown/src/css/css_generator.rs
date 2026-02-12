@@ -19,10 +19,7 @@ impl Generator for CssGenerator {
       .collect::<Vec<_>>();
 
     if ordered_css_modules.is_empty() {
-      return Ok(Ok(GenerateOutput {
-        chunks: vec![],
-        warnings: std::mem::take(&mut ctx.warnings),
-      }));
+      return Ok(Ok(GenerateOutput::default()));
     }
 
     ordered_css_modules.sort_by_key(|m| m.exec_order);
@@ -99,7 +96,7 @@ impl Generator for CssGenerator {
         post_banner: None,
         post_footer: None,
       }],
-      warnings: std::mem::take(&mut ctx.warnings),
+      warnings: vec![],
     }))
   }
 }

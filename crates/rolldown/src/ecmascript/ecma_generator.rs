@@ -200,8 +200,6 @@ impl Generator for EcmaGenerator {
       }
     };
 
-    ctx.warnings.extend(warnings);
-
     if ctx.options.experimental.is_attach_debug_info_full() && !ctx.chunk.debug_info.is_empty() {
       let debug_info_str =
         ctx.chunk.debug_info.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n//! ");
@@ -250,7 +248,7 @@ impl Generator for EcmaGenerator {
         post_banner,
         post_footer,
       }],
-      warnings: std::mem::take(&mut ctx.warnings),
+      warnings,
     }))
   }
 }

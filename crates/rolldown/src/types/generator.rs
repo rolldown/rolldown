@@ -18,7 +18,6 @@ pub struct GenerateContext<'a> {
   pub link_output: &'a LinkStageOutput,
   pub chunk_graph: &'a ChunkGraph,
   pub plugin_driver: &'a SharedPluginDriver,
-  pub warnings: Vec<BuildDiagnostic>,
   pub module_id_to_codegen_ret: Vec<Option<ModuleRenderOutput>>,
   /// The key of the map is exported item symbol,
   /// the value of the map is optional alias. e.g.
@@ -109,6 +108,7 @@ impl GenerateContext<'_> {
   }
 }
 
+#[derive(Default)]
 pub struct GenerateOutput {
   pub chunks: Vec<InstantiatedChunk>,
   pub warnings: Vec<BuildDiagnostic>,

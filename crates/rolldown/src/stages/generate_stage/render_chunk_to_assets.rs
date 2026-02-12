@@ -196,7 +196,6 @@ impl GenerateStage<'_> {
               link_output: self.link_output,
               chunk_graph,
               plugin_driver: self.plugin_driver,
-              warnings: vec![],
               module_id_to_codegen_ret,
               render_export_items_index_vec,
             };
@@ -212,7 +211,6 @@ impl GenerateStage<'_> {
               link_output: self.link_output,
               chunk_graph,
               plugin_driver: self.plugin_driver,
-              warnings: vec![],
               module_id_to_codegen_ret: vec![],
               render_export_items_index_vec: &index_vec![],
             };
@@ -228,7 +226,6 @@ impl GenerateStage<'_> {
               link_output: self.link_output,
               chunk_graph,
               plugin_driver: self.plugin_driver,
-              warnings: vec![],
               module_id_to_codegen_ret: vec![],
               render_export_items_index_vec: &index_vec![],
             };

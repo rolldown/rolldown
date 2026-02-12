@@ -155,7 +155,7 @@ impl ExternalDecider {
           Some(result) => result,
           _ => return false,
         };
-        if !configured_as_external && resolved.id.as_path().is_in_node_modules() {
+        if !configured_as_external && !resolved.id.as_path().is_in_node_modules() {
           return false;
         }
         can_externalize_file(&resolved.id)

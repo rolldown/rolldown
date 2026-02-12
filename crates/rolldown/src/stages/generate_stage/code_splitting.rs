@@ -876,7 +876,7 @@ impl GenerateStage<'_> {
         &mut temp_chunk_graph,
       );
 
-      self.optimize_facade_dynamic_entry_chunks(
+      self.optimize_facade_entry_chunks(
         chunk_graph,
         index_splitting_info,
         input_base,

@@ -714,14 +714,16 @@ impl GenerateStage<'_> {
       );
       let is_target_pure_user_entry_chunk = matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, bit: _, module: _ } if meta.is_pure_user_defined_entry());
       let is_target_common_chunk = matches!(target_chunk.kind, ChunkKind::Common);
-      // Four optimization scenarios:
-      // 1. Emitted chunk (AllowExtension) merged into manual code splitting group
+      // Five optimization scenarios (scenario 1 is handled above for user-defined entries):
+      // 1. User-defined facade entry chunk merged with common chunk
+      //    → Common chunk modules are moved into the entry chunk (handled above)
+      // 2. Emitted chunk (AllowExtension) merged into manual code splitting group
       //    → Group by target chunk to detect export name conflicts before merging
-      // 2. Dynamic entry chunk merged into manual code splitting group
+      // 3. Dynamic entry chunk merged into manual code splitting group
       //    → Directly merge, the facade chunk can be removed
-      // 3. Dynamic entry chunk merged into user-defined entry chunk
+      // 4. Dynamic entry chunk merged into user-defined entry chunk
       //    → Directly merge, the facade chunk can be removed
-      // 4. Dynamic entry chunk merged into common chunk
+      // 5. Dynamic entry chunk merged into common chunk
       //    → Directly merge, the facade chunk can be removed
       if is_target_manual_chunk && is_emitted_entry_chunk {
         emitted_chunk_groups.entry(target_chunk_idx).or_default().push(from_chunk_idx);
@@ -818,12 +820,12 @@ impl GenerateStage<'_> {
     }
   }
 
-  /// This optimization handles the case where a dynamic entry chunk has no modules of its own
-  /// because all of its modules were moved to a common chunk (when dynamic entry modules are captured by `advancedChunks`).
-  /// Instead of keeping an empty entry chunk, we rewrite references to point directly to the common chunk
+  /// This optimization handles the case where a facade entry chunk (dynamic, emitted, or user-defined)
+  /// has no modules of its own because all of its modules were moved to another chunk
+  /// (e.g., a common chunk, manual code splitting group, or user-defined entry chunk).
+  /// Instead of keeping an empty facade chunk, we rewrite references to point directly to the target chunk
   /// and ensure proper symbol inclusion.
-  #[expect(clippy::too_many_lines)]
-  pub(super) fn optimize_facade_dynamic_entry_chunks(
+  pub(super) fn optimize_facade_entry_chunks(
     &mut self,
     chunk_graph: &mut ChunkGraph,
     index_splitting_info: &IndexSplittingInfo,
@@ -988,11 +990,62 @@ impl GenerateStage<'_> {
       }
     }
 
-    // Process common chunk merges: move modules from common chunks into facade entry chunks.
-    // After merging, retarget any entry_module_to_entry_chunk mappings and
-    // common_chunk_exported_facade_chunk_namespace entries that still reference the
-    // removed common chunk, so dynamic imports resolve to the correct chunk.
-    for merge in &common_chunk_merges {
+    Self::apply_common_chunk_merges(
+      chunk_graph,
+      &common_chunk_merges,
+      &mut runtime_dependent_chunks,
+    );
+
+    if needs_export_all_helper {
+      include_runtime_symbol(context, runtime, RuntimeHelper::ExportAll);
+    }
+
+    // Ensure runtime module is properly assigned to chunk graph
+    if chunk_graph.module_to_chunk[runtime_module_idx].is_none()
+      && !runtime_dependent_chunks.is_empty()
+    {
+      // If only one common chunk was appended with dynamic entry module, we just put runtime module into that chunk.
+      // Else create a new common chunk to store runtime module.
+      let runtime_chunk_idx = match runtime_dependent_chunks.len() {
+        1 => runtime_dependent_chunks.into_iter().next().unwrap(),
+        _ => {
+          let runtime_chunk = Chunk::new(
+            Some("rolldown-runtime".into()),
+            None,
+            index_splitting_info[runtime_module_idx].bits.clone(),
+            vec![],
+            ChunkKind::Common,
+            input_base.clone(),
+            None,
+          );
+          chunk_graph.add_chunk(runtime_chunk)
+        }
+      };
+      chunk_graph.add_module_to_chunk(
+        runtime_module_idx,
+        runtime_chunk_idx,
+        self.link_output.metas[runtime_module_idx].depended_runtime_helper,
+      );
+      module_is_assigned[runtime_module_idx] = true;
+    }
+
+    // Restore the included info back to metas
+    included_info_to_linking_metadata_vec(
+      &mut self.link_output.metas,
+      stmt_info_included_vec,
+      &module_included_vec,
+      &module_namespace_reason_vec,
+    );
+  }
+
+  /// Move modules from common chunks into facade entry chunks, then retarget
+  /// all chunk-graph references that still point at the removed common chunk.
+  fn apply_common_chunk_merges(
+    chunk_graph: &mut ChunkGraph,
+    common_chunk_merges: &[CommonChunkMerge],
+    runtime_dependent_chunks: &mut FxHashSet<ChunkIdx>,
+  ) {
+    for merge in common_chunk_merges {
       let from_chunk = &mut chunk_graph.chunk_table[merge.from_chunk_idx];
       let from_chunk_modules = std::mem::take(&mut from_chunk.modules);
       let from_chunk_debug_info = std::mem::take(&mut from_chunk.debug_info);
@@ -1042,46 +1095,5 @@ impl GenerateStage<'_> {
         runtime_dependent_chunks.insert(merge.to_chunk_idx);
       }
     }
-
-    if needs_export_all_helper {
-      include_runtime_symbol(context, runtime, RuntimeHelper::ExportAll);
-    }
-
-    // Ensure runtime module is properly assigned to chunk graph
-    if chunk_graph.module_to_chunk[runtime_module_idx].is_none()
-      && !runtime_dependent_chunks.is_empty()
-    {
-      // If only one common chunk was appended with dynamic entry module, we just put runtime module into that chunk.
-      // Else create a new common chunk to store runtime module.
-      let runtime_chunk_idx = match runtime_dependent_chunks.len() {
-        1 => runtime_dependent_chunks.into_iter().next().unwrap(),
-        _ => {
-          let runtime_chunk = Chunk::new(
-            Some("rolldown-runtime".into()),
-            None,
-            index_splitting_info[runtime_module_idx].bits.clone(),
-            vec![],
-            ChunkKind::Common,
-            input_base.clone(),
-            None,
-          );
-          chunk_graph.add_chunk(runtime_chunk)
-        }
-      };
-      chunk_graph.add_module_to_chunk(
-        runtime_module_idx,
-        runtime_chunk_idx,
-        self.link_output.metas[runtime_module_idx].depended_runtime_helper,
-      );
-      module_is_assigned[runtime_module_idx] = true;
-    }
-
-    // Restore the included info back to metas
-    included_info_to_linking_metadata_vec(
-      &mut self.link_output.metas,
-      stmt_info_included_vec,
-      &module_included_vec,
-      &module_namespace_reason_vec,
-    );
   }
 }

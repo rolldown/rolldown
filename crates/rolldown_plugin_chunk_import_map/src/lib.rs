@@ -126,10 +126,8 @@ impl Plugin for ChunkImportMapPlugin {
         file_name: Some(
           self.file_name.as_ref().map_or(arcstr::literal!("importmap.json"), ArcStr::from),
         ),
-        source: (serde_json::to_string_pretty(
-          &serde_json::json!({ "imports": chunk_import_map }),
-        )?)
-        .into(),
+        source: (serde_json::to_string(&serde_json::json!({ "imports": chunk_import_map }))?)
+          .into(),
         ..Default::default()
       })
       .await?;

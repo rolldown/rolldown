@@ -246,7 +246,7 @@ impl Bundle {
     self.plugin_driver.set_link_stage_time(start);
 
     let bundle_output =
-      GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)
+      GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver, &self.resolver)
         .generate()
         .await; // Notice we don't use `?` to break the control flow here.
 

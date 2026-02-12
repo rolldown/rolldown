@@ -43,7 +43,7 @@ struct PreGeneratedChunkName {
 }
 
 use crate::{
-  BundleOutput, SharedOptions,
+  BundleOutput, SharedOptions, SharedResolver,
   chunk_graph::ChunkGraph,
   module_finalizers::{FinalizerMutableState, ScopeHoistingFinalizerContext},
   stages::link_stage::LinkStageOutput,
@@ -71,6 +71,7 @@ pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
   options: &'a SharedOptions,
   plugin_driver: &'a SharedPluginDriver,
+  resolver: &'a SharedResolver,
 }
 
 impl<'a> GenerateStage<'a> {
@@ -78,8 +79,9 @@ impl<'a> GenerateStage<'a> {
     link_output: &'a mut LinkStageOutput,
     options: &'a SharedOptions,
     plugin_driver: &'a SharedPluginDriver,
+    resolver: &'a SharedResolver,
   ) -> Self {
-    Self { link_output, options, plugin_driver }
+    Self { link_output, options, plugin_driver, resolver }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -560,6 +562,7 @@ impl<'a> GenerateStage<'a> {
           link_output: self.link_output,
           chunk_graph,
           plugin_driver: self.plugin_driver,
+          resolver: self.resolver,
           warnings: Vec::new(),
           module_id_to_codegen_ret: Vec::new(),
           render_export_items_index_vec: &IndexVec::default(),

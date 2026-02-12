@@ -7,7 +7,9 @@ use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleId, ModuleType,
   NormalizedBundlerOptions, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
 };
-use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosableArcstr, EventKind};
+use rolldown_error::{
+  BuildDiagnostic, BuildResult, DiagnosableArcstr, DiagnosticOptions, EventKind,
+};
 use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::ecmascript::{self};
@@ -139,10 +141,11 @@ pub async fn resolve_dependencies(
                 },
                 format!("Matched alias not found for '{specifier}'"),
                     EventKind::ResolveError,
-                Some("May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/apis/config-options#resolve-alias for more details".to_string()),
+                Some("Maybe you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/reference/InputOptions.resolve#alias for more details".to_string()),
               ));
           }
           e => {
+            let diagnostic_opts = DiagnosticOptions { cwd: options.cwd.clone() };
             build_errors.push(BuildDiagnostic::resolve_error(
               source.clone(),
               self_resolved_id.id.as_arc_str().clone(),
@@ -151,7 +154,7 @@ pub async fn resolve_dependencies(
               } else {
                 DiagnosableArcstr::Span(dep.state.span)
               },
-              rolldown_resolver::error::resolve_error_to_message(e),
+              rolldown_error::resolve_error_to_message(e, &diagnostic_opts),
               EventKind::ResolveError,
               None,
             ));

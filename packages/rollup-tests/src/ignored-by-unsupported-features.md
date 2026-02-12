@@ -18,6 +18,7 @@
 
 ### The `resolveDynamicImport` hook `specifier: AstNode` not supported
  - rollup@form@dynamic-import-unresolvable: Returns the raw AST nodes for unresolvable dynamic imports@generates es
+ - rollup@function@dynamic-import-expression: Dynamic import expression replacement
 
 ### The plugin `sequential` is not supported
  - rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks
@@ -115,11 +116,6 @@
 ### The `input.perf` and `bundle.getTimings()` is not supported
  - rollup@function@adds-timings-to-bundle-when-codesplitting: Adds timing information to bundle when bundling with perf=true
  - rollup@function@adds-timings-to-bundle: Adds timing information to bundle when bundling with perf=true
-
-### `output.dynamicImportInCjs` is not compatible yet
- - rollup@function@dynamic-import-this-function: uses correct "this" in dynamic imports when not using arrow functions
- - rollup@function@dynamic-import-this-arrow: uses correct "this" in dynamic imports when using arrow functions
- - rollup@function@dynamic-import-expression: Dynamic import expression replacement
 
 ### The `input.moduleContext` is not supported
  - rollup@form@custom-module-context-function: allows custom module-specific context with a function option
@@ -298,6 +294,10 @@
  - rollup@form@import-attributes@keeps-static-attributes-key-assert: keeps any import attributes on input using import attributes with "with" key@generates es
  - rollup@form@import-attributes@keeps-static-attributes-key-default: keeps any import attributes on input using import attributes with "with" key@generates es
  - rollup@form@import-attributes@keeps-static-attributes-key-with: keeps any import attributes on input using import attributes with "with" key@generates es
+ - rollup@form@resolve-file-url-import-meta-attributes: adds attributes to file resolveFileUrl and resolveImportMeta hooks@generates es
+ - rollup@function@deprecated@load-attributes: does not allow returning attributes from the "load" hook
+ - rollup@function@deprecated@transform-attributes: does not allow returning attributes from the "transform" hook
+ - rollup@function@extend-more-hooks-to-include-import-attributes: extend load, transform and renderDynamicImport to include import attributes
 
 ### watch behavior is not compatible yet
  - rollup@hooks@allows to enforce plugin hook order in watch mode

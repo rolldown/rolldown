@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/foo-DoQK7vb1.bin
+
+## main.js
+
+```js
+//#region foo.bin
+var foo_default = "assets/foo-DoQK7vb1.bin";
+
+//#endregion
+//#region main.js
+const url = new URL("assets/foo-DoQK7vb1.bin", import.meta.url);
+
+//#endregion
+export { url };
+```

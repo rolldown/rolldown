@@ -31,7 +31,7 @@ nodeAssert.equal(value, "foo");
 ```js
 import nodeAssert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region dep.js
 var value$1;
 var init_dep = __esmMin((() => {
@@ -90,7 +90,7 @@ init_main();
 ```js
 import nodeAssert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region dep.js
 const value$1 = "";
 

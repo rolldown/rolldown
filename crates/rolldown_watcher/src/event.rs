@@ -1,0 +1,83 @@
+use crate::watch_task::WatchTaskIdx;
+use rolldown::Bundler;
+use std::fmt::{Debug, Display};
+use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+
+/// Watch-related events
+#[derive(Debug, Clone)]
+pub enum WatchEvent {
+  /// Watch run is starting (all tasks)
+  Start,
+  /// A single task is starting its build
+  TaskStart(WatchStartEventData),
+  /// A single task has finished its build
+  TaskEnd(WatchEndEventData),
+  /// All tasks have finished
+  End,
+  /// An error occurred during bundling
+  Error(WatchErrorEventData),
+}
+
+impl WatchEvent {
+  pub fn as_str(&self) -> &str {
+    match self {
+      WatchEvent::Start => "START",
+      WatchEvent::TaskStart(_) => "BUNDLE_START",
+      WatchEvent::TaskEnd(_) => "BUNDLE_END",
+      WatchEvent::End => "END",
+      WatchEvent::Error(_) => "ERROR",
+    }
+  }
+}
+
+impl Display for WatchEvent {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    write!(f, "{}", self.as_str())
+  }
+}
+
+/// Data for task start event
+#[derive(Debug, Clone)]
+pub struct WatchStartEventData {
+  pub task_index: WatchTaskIdx,
+}
+
+/// Data for task end event
+#[derive(Clone)]
+pub struct WatchEndEventData {
+  pub task_index: WatchTaskIdx,
+  pub output: String,
+  pub duration: u32,
+  pub bundler: Arc<Mutex<Bundler>>,
+}
+
+impl Debug for WatchEndEventData {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("WatchEndEventData")
+      .field("task_index", &self.task_index)
+      .field("output", &self.output)
+      .field("duration", &self.duration)
+      .finish_non_exhaustive()
+  }
+}
+
+/// Data for task error event
+#[derive(Clone)]
+pub struct WatchErrorEventData {
+  pub task_index: WatchTaskIdx,
+  pub errors: Vec<String>,
+  pub cwd: PathBuf,
+  pub bundler: Arc<Mutex<Bundler>>,
+}
+
+impl Debug for WatchErrorEventData {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("WatchErrorEventData")
+      .field("task_index", &self.task_index)
+      .field("errors", &self.errors)
+      .field("cwd", &self.cwd)
+      .finish_non_exhaustive()
+  }
+}

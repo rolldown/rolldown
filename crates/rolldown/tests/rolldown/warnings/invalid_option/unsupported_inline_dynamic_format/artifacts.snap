@@ -17,7 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function() {
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 	var lib_exports = /* @__PURE__ */ __exportAll({ default: () => lib_default });

@@ -163,3 +163,67 @@ fn test_collapse_sourcemaps() {
 "#
   );
 }
+
+/// Test for https://github.com/rollup/rollup/issues/5955
+#[test]
+fn test_collapse_sourcemaps_with_coarse_segments() {
+  use oxc_sourcemap::SourceMap;
+
+  fn get_loc(mut pos: usize, code: &str) -> (u32, u32) {
+    for (line_idx, line) in code.lines().enumerate() {
+      if pos <= line.len() {
+        #[expect(clippy::cast_possible_truncation)]
+        return (line_idx as u32, pos as u32);
+      }
+      pos -= line.len() + 1; // +1 for newline
+    }
+    panic!("position out of bounds");
+  }
+
+  let original_code = "import { useEffect } from 'react';
+
+export function App() {
+  useEffect(() => {
+    console.log('ReplayAnalyze');
+  }, []);
+
+  return <div>{'.'}</div>;
+}
+";
+  let transformed_code = r#"import{jsx}from"react/jsx-runtime";import{useEffect}from"react";export function App(){return useEffect((()=>{console.log("ReplayAnalyze")}),[]),jsx("div",{children:"."})}"#;
+
+  // spellchecker:off
+  let esbuild_map_json = r#"{
+    "version": 3,
+    "sources": ["<stdin>"],
+    "sourcesContent": ["import { useEffect } from 'react';\n\nexport function App() {\n  useEffect(() => {\n    console.log('ReplayAnalyze');\n  }, []);\n\n  return <div>{'.'}</div>;\n}\n"],
+    "mappings": "AAOS;AAPT,SAAS,iBAAiB;AAEnB,gBAAS,MAAM;AACpB,YAAU,MAAM;AACd,YAAQ,IAAI,eAAe;AAAA,EAC7B,GAAG,CAAC,CAAC;AAEL,SAAO,oBAAC,SAAK,eAAI;AACnB;",
+    "names": []
+  }"#;
+  // spellchecker:on
+  let esbuild_map = SourceMap::from_json_string(esbuild_map_json).unwrap();
+
+  // spellchecker:off
+  let terser_map_json = r#"{
+    "version": 3,
+    "names": ["jsx", "useEffect", "App", "console", "log", "children"],
+    "sources": ["0"],
+    "sourcesContent": ["import { jsx } from \"react/jsx-runtime\";\nimport { useEffect } from \"react\";\nexport function App() {\n  useEffect(() => {\n    console.log(\"ReplayAnalyze\");\n  }, []);\n  return /* @__PURE__ */ jsx(\"div\", { children: \".\" });\n}\n"],
+    "mappings": "OAASA,QAAW,2BACXC,cAAiB,eACnB,SAASC,MAId,OAHAD,WAAU,KACRE,QAAQC,IAAI,gBAAgB,GAC3B,IACoBJ,IAAI,MAAO,CAAEK,SAAU,KAChD"
+  }"#;
+  // spellchecker:on
+  let terser_map = SourceMap::from_json_string(terser_map_json).unwrap();
+
+  let collapsed = collapse_sourcemaps(&[&esbuild_map, &terser_map]);
+  let collapsed_lookup_table = collapsed.generate_lookup_table();
+
+  let generated_loc = get_loc(transformed_code.find("return").unwrap(), transformed_code);
+  let original_loc = collapsed
+    .lookup_source_view_token(&collapsed_lookup_table, generated_loc.0, generated_loc.1)
+    .map(|token| (token.get_src_line(), token.get_src_col()));
+  assert_eq!(
+    original_loc,
+    Some(get_loc(original_code.find("return").unwrap(), original_code)),
+    "collapsed sourcemap should map 'return' in transformed code back to original source"
+  );
+}

@@ -37,7 +37,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import * as fs from "fs";
 import { readFileSync } from "fs";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region entry.js
 var require_entry = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.fs = fs;

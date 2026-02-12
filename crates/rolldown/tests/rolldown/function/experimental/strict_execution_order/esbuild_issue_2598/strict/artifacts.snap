@@ -21,7 +21,7 @@ init_lazy_chunk();
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region polyfill.js
 var init_polyfill = __esmMin((() => {
 	Object.somePolyfilledFunction = () => {};

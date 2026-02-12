@@ -8,7 +8,7 @@ use sugar_path::SugarPath as _;
 use rolldown_common::{
   FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule,
   NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, SourcemapChainElement, StrOrBytes,
-  try_extract_barrel_info,
+  try_extract_lazy_barrel_info,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
@@ -26,31 +26,20 @@ use crate::{
 
 use super::{resolve_utils::resolve_dependencies, task_context::TaskContext};
 
-pub struct ModuleTaskOwnerRef<'a> {
-  module: &'a NormalModule,
-  importee_span: Span,
-}
-
-impl<'a> ModuleTaskOwnerRef<'a> {
-  pub fn new(module: &'a NormalModule, importee_span: Span) -> Self {
-    Self { module, importee_span }
-  }
-}
-
-impl From<ModuleTaskOwnerRef<'_>> for ModuleTaskOwner {
-  fn from(owner: ModuleTaskOwnerRef) -> Self {
-    ModuleTaskOwner {
-      source: owner.module.source.clone(),
-      importer_id: owner.module.stable_id.as_arc_str().clone(),
-      importee_span: owner.importee_span,
-    }
-  }
-}
-
 pub struct ModuleTaskOwner {
   source: ArcStr,
   importer_id: ArcStr,
   importee_span: Span,
+}
+
+impl ModuleTaskOwner {
+  pub fn new(normal_module: &NormalModule, importee_span: Span) -> Self {
+    Self {
+      source: normal_module.source.clone(),
+      importer_id: normal_module.stable_id.as_arc_str().clone(),
+      importee_span,
+    }
+  }
 }
 
 pub struct ModuleTask {
@@ -211,9 +200,9 @@ impl ModuleTask {
     let repr_name = self.resolved_id.id.as_path().representative_file_name();
     let repr_name = legitimize_identifier_name(&repr_name).into_owned();
 
-    // Build BarrelInfo for lazy barrel optimization
-    let barrel_info = if self.ctx.options.experimental.is_lazy_barrel_enabled() {
-      try_extract_barrel_info(&ecma_view, &raw_import_records)
+    // Build lazy barrel info if the experimental flag is enabled
+    let barrel_info = if self.flat_options.is_lazy_barrel_enabled() {
+      try_extract_lazy_barrel_info(&ecma_view, &raw_import_records)
     } else {
       None
     };
@@ -271,6 +260,7 @@ impl ModuleTask {
       &self.ctx.options,
       self.asserted_module_type.as_ref(),
       &mut is_read_from_disk,
+      self.module_idx,
     )
     .await;
     if is_read_from_disk {
@@ -291,9 +281,6 @@ impl ModuleTask {
         )
       })
     })?;
-    if let Some(asserted) = &self.asserted_module_type {
-      module_type = asserted.clone();
-    }
     let source = match source {
       _ if self.resolved_id.id.starts_with("rolldown:") => source,
       StrOrBytes::Str(source) => {

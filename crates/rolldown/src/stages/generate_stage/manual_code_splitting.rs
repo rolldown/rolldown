@@ -1,4 +1,4 @@
-use std::{cmp::Reverse, sync::Arc};
+use std::{cmp::Reverse, path::Path, sync::Arc};
 
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
@@ -6,6 +6,7 @@ use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, MatchGroupTest, Module, ModuleIdx, ModuleTable,
 };
 use rolldown_error::BuildResult;
+use rolldown_utils::{BitSet, xxhash::xxhash_with_base};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
@@ -76,7 +77,8 @@ impl GenerateStage<'_> {
     }
 
     let mut index_module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::new();
-    let mut name_to_module_group: FxHashMap<(usize, ArcStr), ModuleGroupIdx> = FxHashMap::default();
+    let mut name_to_module_group: FxHashMap<(usize, ArcStr, Option<BitSet>), ModuleGroupIdx> =
+      FxHashMap::default();
     let metas = &self.link_output.metas;
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
     {
@@ -133,7 +135,9 @@ impl GenerateStage<'_> {
         };
         let group_name = ArcStr::from(group_name);
 
-        let unique_key = (match_group_index, group_name.clone());
+        let entries_aware = match_group.entries_aware.unwrap_or(false);
+        let bits_key = if entries_aware { Some(splitting_info.bits.clone()) } else { None };
+        let unique_key = (match_group_index, group_name.clone(), bits_key);
 
         let module_group_idx = name_to_module_group.entry(unique_key).or_insert_with(|| {
           index_module_groups.push(ModuleGroup {
@@ -160,13 +164,6 @@ impl GenerateStage<'_> {
     }
 
     let mut module_groups = index_module_groups.raw;
-    module_groups.sort_by_cached_key(|item| {
-      Reverse((Reverse(item.priority), item.match_group_index, item.name.clone()))
-    });
-    // - Higher priority group goes first.
-    // - If two groups have the same priority, the one with the lower index goes first.
-    // - If two groups have the same priority and index, we use dictionary order to sort them.
-    // Outer `Reverse` is due to we're gonna use `pop` consume the vector.
 
     module_groups.retain(|group| !group.modules.is_empty());
     if module_groups.is_empty() {
@@ -174,11 +171,19 @@ impl GenerateStage<'_> {
       return Ok(());
     }
 
-    // Manually pull out the module `rolldown:runtime` into a standalone chunk.
+    // - Higher priority group goes first.
+    // - If two groups have the same priority, the one with the lower index goes first.
+    // - If two groups have the same priority and index, we use dictionary order to sort them.
+    // Outer `Reverse` is due to we're gonna use `pop` consume the vector.
+    module_groups.sort_by_cached_key(|item| {
+      Reverse((Reverse(item.priority), item.match_group_index, item.name.clone()))
+    });
+
+    // Manually pull out the runtime module into a standalone chunk.
     let runtime_module_idx = self.link_output.runtime.id();
     assert!(
       matches!(&self.link_output.module_table[runtime_module_idx], Module::Normal(_)),
-      "`rolldown:runtime` is always a normal module"
+      "rolldown runtime is always a normal module"
     );
 
     if metas[runtime_module_idx].is_included {
@@ -265,15 +270,15 @@ impl GenerateStage<'_> {
           } else {
             // TODO: Though, [0..next_left_index] is a valid group, we want to find a best split index that makes files in left group are in the same disk location.
             let mut split_size = left_size;
-            loop {
-              if next_left_index <= next_right_index && split_size < allow_max_size {
-                split_size += self.link_output.module_table.modules
-                  [modules[next_left_index as usize]]
-                  .size() as f64;
-                next_left_index += 1;
-              } else {
+            while next_left_index <= next_right_index {
+              let next_size = self.link_output.module_table.modules
+                [modules[next_left_index as usize]]
+                .size() as f64;
+              if split_size > 0.0 && split_size + next_size > allow_max_size {
                 break;
               }
+              split_size += next_size;
+              next_left_index += 1;
             }
             while next_left_index <= next_right_index && next_right_index >= 0 {
               right_size += self.link_output.module_table.modules
@@ -305,23 +310,40 @@ impl GenerateStage<'_> {
           }
         }
       }
+
+      let first_module_bits = &index_splitting_info
+        [this_module_group.modules.iter().next().copied().expect("must have one")]
+      .bits;
+
+      let entries_aware =
+        match_groups[this_module_group.match_group_index].entries_aware.unwrap_or(false);
+
+      let chunk_name = if entries_aware {
+        derive_entries_aware_chunk_name(
+          &this_module_group.name,
+          first_module_bits,
+          self.link_output,
+        )
+      } else {
+        this_module_group.name.clone()
+      };
+
       let mut chunk = Chunk::new(
-        Some(this_module_group.name.clone()),
+        Some(chunk_name),
         None,
-        index_splitting_info
-          [this_module_group.modules.iter().next().copied().expect("must have one")]
-        .bits
-        .clone(),
+        first_module_bits.clone(),
         vec![],
         ChunkKind::Common,
         input_base.clone(),
         None,
       );
       chunk.add_creation_reason(
-        ChunkCreationReason::ManualCodeSplittingGroup(
-          &this_module_group.name,
-          this_module_group.match_group_index.try_into().unwrap(),
-        ),
+        ChunkCreationReason::ManualCodeSplittingGroup {
+          name: &this_module_group.name,
+          group_index: this_module_group.match_group_index.try_into().unwrap(),
+          bits: if entries_aware { Some(first_module_bits) } else { None },
+          link_output: self.link_output,
+        },
         self.options,
       );
 
@@ -341,6 +363,55 @@ impl GenerateStage<'_> {
       });
     }
     Ok(())
+  }
+}
+
+fn derive_entries_aware_chunk_name(
+  group_name: &str,
+  bits: &BitSet,
+  link_output: &crate::stages::link_stage::LinkStageOutput,
+) -> ArcStr {
+  const MAX_CHUNK_NAME_LEN: usize = 100;
+  const HASH_DISPLAY_LEN: usize = 8;
+  const TRUNCATED_LEN: usize = MAX_CHUNK_NAME_LEN - HASH_DISPLAY_LEN - 1; // 1 for the `~` separator
+
+  let entry_names: Vec<String> = link_output
+    .entries
+    .iter()
+    .flat_map(|(_idx, entries)| entries.iter())
+    .enumerate()
+    .filter_map(|(index, entry_point)| {
+      if bits.has_bit(index.try_into().unwrap()) {
+        Some(entry_point.name.as_ref().map(ArcStr::to_string).unwrap_or_else(|| {
+          // Fall back to file stem of the entry module's stable_id
+          let module = &link_output.module_table[entry_point.idx];
+          Path::new(module.stable_id().as_str())
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| module.stable_id().to_string())
+        }))
+      } else {
+        None
+      }
+    })
+    .collect();
+
+  let full_name = if entry_names.is_empty() {
+    group_name.to_string()
+  } else {
+    format!("{}~{}", group_name, entry_names.join("~"))
+  };
+
+  if full_name.len() > MAX_CHUNK_NAME_LEN {
+    let hash = xxhash_with_base(full_name.as_bytes(), 36);
+    let mut truncate_at = TRUNCATED_LEN;
+    while !full_name.is_char_boundary(truncate_at) {
+      truncate_at -= 1;
+    }
+    let truncated = &full_name[..truncate_at];
+    ArcStr::from(format!("{truncated}~{}", &hash[..HASH_DISPLAY_LEN]))
+  } else {
+    ArcStr::from(full_name)
   }
 }
 

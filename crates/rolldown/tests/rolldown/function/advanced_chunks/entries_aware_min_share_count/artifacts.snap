@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-a.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: entry-a.js] [Name: Some("entry-a")]
+import "./utils~entry-a~entry-b.js";
+
+//#region utils/debounce.js
+console.log("debounce");
+
+//#endregion
+```
+
+## entry-b.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: entry-b.js] [Name: Some("entry-b")]
+import "./utils~entry-a~entry-b.js";
+import "./utils~entry-b~entry-c.js";
+
+```
+
+## entry-c.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: entry-c.js] [Name: Some("entry-c")]
+import "./utils~entry-b~entry-c.js";
+
+```
+
+## utils~entry-a~entry-b.js
+
+```js
+//! ManualCodeSplitting: [Group-Name: utils] [Entries: entry-a.js, entry-b.js]
+//#region utils/formatDate.js
+console.log("formatDate");
+
+//#endregion
+```
+
+## utils~entry-b~entry-c.js
+
+```js
+//! ManualCodeSplitting: [Group-Name: utils] [Entries: entry-b.js, entry-c.js]
+//#region utils/deepClone.js
+console.log("deepClone");
+
+//#endregion
+```

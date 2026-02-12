@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 
@@ -17,7 +17,7 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 //#region reexports.mjs
-var reexports_exports = /* @__PURE__ */ __exportAll({}, 1);
+var reexports_exports = /* @__PURE__ */ __exportAll({});
 __reExport(reexports_exports, /* @__PURE__ */ __toESM(require_cjs(), 1));
 
 //#endregion
@@ -36,7 +36,7 @@ node_assert.default.equal(String(reexports_exports), "[object Module]");
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { a: 1 };
@@ -44,7 +44,7 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 //#region reexports.mjs
-var reexports_exports = /* @__PURE__ */ __exportAll({}, 1);
+var reexports_exports = /* @__PURE__ */ __exportAll({});
 __reExport(reexports_exports, /* @__PURE__ */ __toESM(require_cjs(), 1));
 
 //#endregion

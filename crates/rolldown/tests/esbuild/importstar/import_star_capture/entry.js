@@ -2,6 +2,7 @@ import assert from 'node:assert'
 import * as ns from './foo'
 let foo = 234
 assert.deepEqual(ns, {
+  [Symbol.toStringTag]: 'Module',
   foo: 123
 })
 assert.equal(ns.foo, 123)

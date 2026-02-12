@@ -8,10 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
-// HIDDEN [rolldown:hmr]
+// HIDDEN [\0rolldown/runtime.js]
 //#region trigger-dep.js
-var trigger_dep_exports = {};
+var trigger_dep_exports = /* @__PURE__ */ __exportAll({});
 var trigger_dep_hot;
 var init_trigger_dep = __esmMin((() => {
 	trigger_dep_hot = __rolldown_runtime__.createModuleHotContext("trigger-dep.js");
@@ -40,6 +39,7 @@ var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	exports.foo = "foo";
 	exports.bar = "bar";
 	var Noop = class {
+		static baz2 = this.baz3 = "wrong";
 		static {
 			this.baz = "bar";
 		}
@@ -78,7 +78,7 @@ var require_umd_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 //#region cases/require/index.js
-var require_exports = {};
+var require_exports = /* @__PURE__ */ __exportAll({});
 init_trigger_dep();
 const require_hot = __rolldown_runtime__.createModuleHotContext("cases/require/index.js");
 __rolldown_runtime__.registerModule("cases/require/index.js", { exports: require_exports });
@@ -89,6 +89,7 @@ const requireCjsLib = require_cjs_lib();
 assert.strictEqual(requireCjsLib.foo, "foo");
 assert.strictEqual(requireCjsLib.bar, "bar");
 assert.strictEqual(requireCjsLib.baz, undefined);
+assert.strictEqual(requireCjsLib.baz3, undefined);
 assert.strictEqual(requireCjsLib.qux, "qux");
 const requiredUmdLib = require_umd_lib();
 assert.strictEqual(requiredUmdLib(), "exports");
@@ -122,7 +123,7 @@ __rolldown_runtime__.registerModule("cases/manual_reexport/barrel.js", { exports
 
 //#endregion
 //#region cases/manual_reexport/index.js
-var manual_reexport_exports = {};
+var manual_reexport_exports = /* @__PURE__ */ __exportAll({});
 init_trigger_dep();
 const manual_reexport_hot = __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/index.js");
 __rolldown_runtime__.registerModule("cases/manual_reexport/index.js", { exports: manual_reexport_exports });
@@ -147,7 +148,7 @@ const foo = "foo-index";
 
 //#endregion
 //#region cases/deconflict_import_bindings/index.js
-var deconflict_import_bindings_exports = {};
+var deconflict_import_bindings_exports = /* @__PURE__ */ __exportAll({});
 init_trigger_dep();
 const deconflict_import_bindings_hot = __rolldown_runtime__.createModuleHotContext("cases/deconflict_import_bindings/index.js");
 __rolldown_runtime__.registerModule("cases/deconflict_import_bindings/index.js", { exports: deconflict_import_bindings_exports });
@@ -156,7 +157,7 @@ assert.strictEqual(foo, "foo-index");
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 if (main_hot) {
@@ -292,6 +293,7 @@ var require_cjs_lib_7 = __rolldown_runtime__.createCjsInitializer((function(__ro
 		__rolldown_exports__.foo = "foo";
 		__rolldown_exports__.bar = "bar";
 		class Noop {
+			static baz2 = this.baz3 = "wrong";
 			static {
 				this.baz = "bar";
 			}
@@ -321,6 +323,7 @@ var init_require_8 = __rolldown_runtime__.createEsmInitializer((function() {
 		import_node_assert_80.default.strictEqual(requireCjsLib.foo, "foo");
 		import_node_assert_80.default.strictEqual(requireCjsLib.bar, "bar");
 		import_node_assert_80.default.strictEqual(requireCjsLib.baz, undefined);
+		import_node_assert_80.default.strictEqual(requireCjsLib.baz3, undefined);
 		import_node_assert_80.default.strictEqual(requireCjsLib.qux, "qux");
 		const requiredUmdLib = (require_umd_lib_9(), __rolldown_runtime__.loadExports("cases/require/umd-lib.js"));
 		import_node_assert_80.default.strictEqual(requiredUmdLib(), "exports");
@@ -370,10 +373,9 @@ var init_main_10 = __rolldown_runtime__.createEsmInitializer((function() {
 		init_manual_reexport_4();
 		init_deconflict_import_bindings_2();
 		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
-		var import_rolldown_hmr_100 = __rolldown_runtime__.loadExports("rolldown:hmr");
-		var import_require_101 = __rolldown_runtime__.loadExports("cases/require/index.js");
-		var import_manual_reexport_102 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
-		var import_deconflict_import_bindings_103 = __rolldown_runtime__.loadExports("cases/deconflict_import_bindings/index.js");
+		var import_require_100 = __rolldown_runtime__.loadExports("cases/require/index.js");
+		var import_manual_reexport_101 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
+		var import_deconflict_import_bindings_102 = __rolldown_runtime__.loadExports("cases/deconflict_import_bindings/index.js");
 		if (hot_main) {
 			hot_main.accept();
 		}

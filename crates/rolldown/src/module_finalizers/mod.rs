@@ -10,7 +10,7 @@ use oxc::{
       NumberBase, Statement, VariableDeclarationKind,
     },
   },
-  span::{Atom, GetSpan, GetSpanMut, SPAN},
+  span::{GetSpan, GetSpanMut, SPAN},
 };
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx,
@@ -27,7 +27,7 @@ use rolldown_ecmascript_utils::{
 mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::{FinalizerMutableState, ScopeHoistingFinalizerContext};
-use oxc::span::CompactStr;
+use oxc::span::{CompactStr, Ident};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -38,6 +38,12 @@ use crate::utils::external_import_interop::import_record_needs_interop;
 
 mod hmr;
 mod rename;
+
+/// Helper enum for `try_rewrite_cjs_member_expr_assignment_target` to handle both static and computed member properties.
+enum CjsMemberProperty<'a, 'ast> {
+  Static(&'a str),
+  Computed(&'a ast::Expression<'ast>),
+}
 
 bitflags! {
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -80,7 +86,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
   pub scope_stack: Vec<ScopeFlags>,
   pub state: TraverseState,
-  pub top_level_var_bindings: FxIndexSet<Atom<'ast>>,
+  pub top_level_var_bindings: FxIndexSet<Ident<'ast>>,
   pub cur_stmt_index: usize,
   pub keep_name_statement_to_insert: Vec<(usize, CompactStr, CompactStr)>,
   pub needs_hosted_top_level_binding: bool,
@@ -461,7 +467,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     decl: &mut ast::VariableDeclaration<'ast>,
     traverse_state: TraverseState,
-  ) -> Option<(Expression<'ast>, Vec<Atom<'ast>>)> {
+  ) -> Option<(Expression<'ast>, Vec<Ident<'ast>>)> {
     let should_hoist = (decl.kind.is_var() && traverse_state.contains(TraverseState::TopLevel))
       || (decl.kind.is_lexical() && traverse_state.contains(TraverseState::IsRootLevel));
     if !should_hoist {
@@ -503,7 +509,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // https://github.com/rolldown/rolldown/blob/d6d65f9080e427cd9feef56eb7a110fbcf6c1414/crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs#L347-L354
     arg_obj_expr.properties.extend(self.ctx.linking_info.canonical_exports(false).filter_map(
       |(export, resolved_export)| {
-        if !self.ctx.used_symbol_refs.contains(&resolved_export.symbol_ref) {
+        // Even if the symbol is not marked as used (generated inside module),
+        // it should be included in the namespace export.
+        let is_inlinable_constant = self
+          .ctx
+          .constant_value_map
+          .get(&self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref))
+          .is_some_and(|meta| !meta.commonjs_export);
+        if !self.ctx.used_symbol_refs.contains(&resolved_export.symbol_ref)
+          && !is_inlinable_constant
+        {
           return None;
         }
         // prop_name: () => returned
@@ -538,6 +553,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       } else {
         let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc));
         let args = if self.ctx.options.generated_code.symbols {
+          self.snippet.builder.vec_from_iter([obj_expr])
+        } else {
           self.snippet.builder.vec_from_iter([
             obj_expr,
             ast::Argument::NumericLiteral(self.snippet.builder.alloc_numeric_literal(
@@ -547,8 +564,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               NumberBase::Decimal,
             )),
           ])
-        } else {
-          self.snippet.builder.vec_from_iter([obj_expr])
         };
         self.snippet.builder.expression_call_with_pure(
           SPAN,
@@ -862,6 +877,80 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  /// Try to rewrite a member expression assignment target when the object is a default import from CJS.
+  /// For `import_src.log = value`, if `import_src` is from a CJS module, we need to rewrite to
+  /// `import_src.default.log = value` because __toESM creates getter-only properties.
+  fn try_rewrite_cjs_member_expr_assignment_target(
+    &self,
+    target: &ast::SimpleAssignmentTarget<'ast>,
+  ) -> Option<ast::SimpleAssignmentTarget<'ast>> {
+    let (id_ref, property) = match target {
+      ast::SimpleAssignmentTarget::StaticMemberExpression(member_expr) => {
+        let ast::Expression::Identifier(id_ref) = &member_expr.object else {
+          return None;
+        };
+        (id_ref, CjsMemberProperty::Static(member_expr.property.name.as_str()))
+      }
+      ast::SimpleAssignmentTarget::ComputedMemberExpression(member_expr) => {
+        let ast::Expression::Identifier(id_ref) = &member_expr.object else {
+          return None;
+        };
+        (id_ref, CjsMemberProperty::Computed(&member_expr.expression))
+      }
+      _ => return None,
+    };
+
+    // Resolve the identifier to check if it's a CJS default import
+    let reference_id = id_ref.reference_id.get()?;
+    let symbol_id = self.scope.symbol_id_for(reference_id)?;
+    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+    let symbol = self.ctx.symbol_db.get(canonical_ref);
+
+    // Check if this symbol has a namespace_alias with property_name "default"
+    // This indicates it's a default import from a CJS module
+    let ns_alias = symbol.namespace_alias.as_ref()?;
+    if ns_alias.property_name.as_str() != "default" {
+      return None;
+    }
+
+    // Build: ns_name.default
+    // IMPORTANT: Use SPAN (0-0) for the new member expression to avoid being matched
+    // by resolved_member_expr_refs lookup which uses span as key
+    let ns_name = self.canonical_name_for(ns_alias.namespace_ref);
+    let ns_id_ref = self.snippet.id_ref_expr(ns_name, SPAN);
+    let default_access =
+      ast::Expression::StaticMemberExpression(self.snippet.builder.alloc_static_member_expression(
+        SPAN,
+        ns_id_ref,
+        self.snippet.id_name("default", SPAN),
+        false,
+      ));
+
+    // Create: ns_name.default.property or ns_name.default[expression]
+    match property {
+      CjsMemberProperty::Static(property_name) => {
+        let final_access = self.snippet.builder.alloc_static_member_expression(
+          SPAN,
+          default_access,
+          self.snippet.id_name(property_name, SPAN),
+          false,
+        );
+        Some(ast::SimpleAssignmentTarget::StaticMemberExpression(final_access))
+      }
+      CjsMemberProperty::Computed(expr) => {
+        let expr_clone = expr.clone_in(self.alloc);
+        let final_access = self.snippet.builder.alloc_computed_member_expression(
+          SPAN,
+          default_access,
+          expr_clone,
+          false,
+        );
+        Some(ast::SimpleAssignmentTarget::ComputedMemberExpression(final_access))
+      }
+    }
+  }
+
   fn get_conflicted_info(&self, id: KeepNameId) -> Option<(&'me str, &'me str)> {
     let symbol_ref: SymbolRef = match id {
       KeepNameId::SymbolId(symbol_id) => (self.ctx.idx, symbol_id).into(),
@@ -900,7 +989,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // needs to rewrite to `var T = class T { static a = new T(); }`
         let mut id = id.clone();
         let new_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
-        id.name = self.snippet.atom(new_name);
+        id.name = self.snippet.atom(new_name).into();
         class.id = Some(id);
       }
     }
@@ -1316,6 +1405,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           use ast::ExportDefaultDeclarationKind;
           let default_decl_span = default_decl.span;
           match &mut default_decl.declaration {
+            // Special case: when exporting an identifier that's already the default export symbol
+            ast::ExportDefaultDeclarationKind::Identifier(id)
+              if self.scope.scoping().get_reference(id.reference_id()).symbol_id().is_some_and(
+                |symbol_id| symbol_id == self.ctx.module.default_export_ref.symbol,
+              ) =>
+            {
+              // "let a = ..;export default a" => "let a = ..;" (no transformation needed)
+              return;
+            }
             decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
               let expr = decl.to_expression_mut();
               let canonical_name_for_default_export_ref =

@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region commonjs.js
 var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { bar: 1 };
@@ -16,7 +16,7 @@ var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 //#region reexports.mjs
-var reexports_exports = {};
+var reexports_exports = /* @__PURE__ */ __exportAll({});
 var import_commonjs = require_commonjs();
 __reExport(reexports_exports, /* @__PURE__ */ __toESM(require_commonjs(), 1));
 assert.equal(import_commonjs.bar, 1);

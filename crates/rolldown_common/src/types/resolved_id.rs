@@ -1,7 +1,7 @@
 use std::{path::Path, sync::Arc};
 
 use arcstr::ArcStr;
-use rolldown_utils::stabilize_id::stabilize_id;
+use rolldown_utils::{dataurl::is_data_url, stabilize_id::stabilize_id};
 
 use super::module_id::ModuleId;
 use crate::{ModuleDefFormat, PackageJson, side_effects::HookSideEffects};
@@ -68,7 +68,7 @@ impl ResolvedId {
   /// 1. doesn't guarantee to be unique
   /// 2. relative to the cwd, so it could show stable path across different machines
   pub fn debug_id(&self, cwd: impl AsRef<Path>) -> String {
-    if self.id.trim_start().starts_with("data:") {
+    if is_data_url(&self.id) {
       return format!("<{}>", self.id.as_str());
     }
 

@@ -21,6 +21,7 @@ main();
 ## main2.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 const require_shared = require('./shared.js');
 
 exports.shared = require_shared.shared;

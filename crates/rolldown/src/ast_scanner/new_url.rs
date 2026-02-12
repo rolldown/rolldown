@@ -1,6 +1,7 @@
 use oxc::ast::{Comment, ast::NewExpression};
 use rolldown_common::{ImportKind, ImportRecordMeta, ModuleType, get_leading_comment};
 use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_utils::dataurl::is_data_url;
 
 use super::AstScanner;
 
@@ -43,12 +44,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
     let path = &first_arg_string_literal.value;
 
-    if path.starts_with("data:") {
+    if is_data_url(path) {
       return;
     }
 
-    let idx =
-      self.add_import_record(path, ImportKind::NewUrl, expr.span, ImportRecordMeta::empty(), None);
+    let idx = self.add_import_record(
+      path,
+      ImportKind::NewUrl,
+      first_arg_string_literal.span,
+      ImportRecordMeta::empty(),
+      None,
+    );
     self.result.import_records[idx].asserted_module_type = Some(ModuleType::Asset);
     self.result.new_url_references.insert(expr.span, idx);
   }

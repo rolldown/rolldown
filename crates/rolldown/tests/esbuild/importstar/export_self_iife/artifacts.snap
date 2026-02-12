@@ -17,6 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function(exports) {
 
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region entry.js
 	const foo = 123;

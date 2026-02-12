@@ -1,4 +1,5 @@
 #[derive(Debug, Clone, Copy)]
+#[expect(clippy::enum_variant_names)]
 pub enum BundleMode {
   // Normal build
   FullBuild,

@@ -109,8 +109,8 @@ impl Default for TreeshakeOptions {
 
 #[derive(Clone, Debug)]
 pub enum ModuleSideEffects {
-  #[debug("ModuleSideEffectsRules({_0:?})")]
-  ModuleSideEffectsRules(Vec<ModuleSideEffectsRule>),
+  #[debug("Rules({_0:?})")]
+  Rules(Vec<ModuleSideEffectsRule>),
   #[debug("IdSet({_0:?})")]
   IdSet(FxHashSet<String>),
   #[debug("Boolean({_0})")]
@@ -143,7 +143,7 @@ impl ModuleSideEffects {
   /// Panics if the side effects are defined as a function
   pub fn native_resolve(&self, path: &str, is_external: bool) -> Option<bool> {
     match self {
-      ModuleSideEffects::ModuleSideEffectsRules(rules) => {
+      ModuleSideEffects::Rules(rules) => {
         for ModuleSideEffectsRule { test, external, side_effects } in rules {
           let is_match_rule = match (test, external) {
             (Some(test), Some(external)) => test.matches(path) && *external == is_external,

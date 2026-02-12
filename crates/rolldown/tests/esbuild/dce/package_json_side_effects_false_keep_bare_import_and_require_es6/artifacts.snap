@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## src_entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region node_modules/demo-pkg/index.js
 var demo_pkg_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 var foo;

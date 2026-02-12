@@ -458,6 +458,16 @@
             }
           ]
         },
+        "comments": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommentsOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "polyfillRequire": {
           "type": [
             "boolean",
@@ -629,29 +639,12 @@
     "GeneratedCodeOptions": {
       "type": "object",
       "properties": {
-        "preset": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/GeneratedCodePreset"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "symbols": {
           "type": "boolean"
         }
       },
       "required": [
         "symbols"
-      ]
-    },
-    "GeneratedCodePreset": {
-      "type": "string",
-      "enum": [
-        "es5",
-        "es2015"
       ]
     },
     "SourceMapType": {
@@ -1015,16 +1008,6 @@
             "null"
           ]
         },
-        "transformHiresSourcemap": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SourcemapHires"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "nativeMagicString": {
           "type": [
             "boolean",
@@ -1114,28 +1097,6 @@
       "enum": [
         "execOrder",
         "moduleId"
-      ]
-    },
-    "SourcemapHires": {
-      "oneOf": [
-        {
-          "type": "string",
-          "enum": [
-            "boundary"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "boolean": {
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "boolean"
-          ],
-          "additionalProperties": false
-        }
       ]
     },
     "SimpleMinifyOptions": {
@@ -1323,6 +1284,12 @@
             "null"
           ],
           "format": "double"
+        },
+        "entriesAware": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false,
@@ -1434,6 +1401,24 @@
             "boolean",
             "null"
           ]
+        },
+        "duplicateShebang": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "unsupportedTsconfigOption": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "ineffectiveDynamicImport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1489,6 +1474,41 @@
           "const": "inline"
         }
       ]
+    },
+    "CommentsOptions": {
+      "description": "Resolved comments options with explicit boolean flags.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/RawCommentsObject"
+        }
+      ]
+    },
+    "RawCommentsObject": {
+      "type": "object",
+      "properties": {
+        "legal": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "annotation": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "jsdoc": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "MakeAbsoluteExternalsRelative": {
       "oneOf": [

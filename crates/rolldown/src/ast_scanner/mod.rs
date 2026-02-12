@@ -47,8 +47,19 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
 use sugar_path::SugarPath;
 
+use bitflags::bitflags;
+
 use crate::SharedOptions;
 use crate::ast_scanner::cjs_export_analyzer::CommonjsExportSymbolUsage;
+
+bitflags! {
+  #[derive(Debug, Clone, Copy, Default)]
+  /// Tracks untranspiled syntax encountered during scanning.
+  pub(crate) struct UntranspiledSyntax: u8 {
+    const TypeScript = 1 << 0;
+    const Jsx = 1 << 1;
+  }
+}
 
 #[derive(Debug)]
 pub struct ScanResult {
@@ -152,6 +163,7 @@ pub struct AstScanner<'me, 'ast> {
   cjs_named_exports_usage: FxHashMap<CompactStr, CommonjsExportSymbolUsage>,
   traverse_state: TraverseState,
   current_comment_idx: usize,
+  untranspiled_syntax: UntranspiledSyntax,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -241,6 +253,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       )]),
       traverse_state: TraverseState::empty(),
       current_comment_idx: 0,
+      untranspiled_syntax: UntranspiledSyntax::empty(),
     }
   }
 
@@ -273,15 +286,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 
-    if self.esm_export_keyword.is_some() {
+    if let Some(esm_export_keyword) = self.esm_export_keyword {
       exports_kind = ExportsKind::Esm;
       if let Some(start) = self.cjs_module_ident {
         self.result.warnings.push(
           BuildDiagnostic::commonjs_variable_in_esm(
             self.immutable_ctx.id.to_string(),
             self.immutable_ctx.source.clone(),
-            // SAFETY: we checked at the beginning
-            self.esm_export_keyword.expect("should have start offset"),
+            esm_export_keyword,
             CjsExportSpan::Module(start),
           )
           .with_severity_warning(),
@@ -292,8 +304,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           BuildDiagnostic::commonjs_variable_in_esm(
             self.immutable_ctx.id.to_string(),
             self.immutable_ctx.source.clone(),
-            // SAFETY: we checked at the beginning
-            self.esm_export_keyword.expect("should have start offset"),
+            esm_export_keyword,
             CjsExportSpan::Exports(start),
           )
           .with_severity_warning(),
@@ -306,7 +317,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     } else {
       // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.
       match self.immutable_ctx.module_type {
-        ModuleDefFormat::CJS | ModuleDefFormat::CjsPackageJson | ModuleDefFormat::Cts => {
+        ModuleDefFormat::Cjs | ModuleDefFormat::CjsPackageJson | ModuleDefFormat::Cts => {
           exports_kind = ExportsKind::CommonJs;
         }
         ModuleDefFormat::EsmMjs | ModuleDefFormat::EsmPackageJson | ModuleDefFormat::EsmMts => {
@@ -433,7 +444,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn get_root_binding(&self, name: &str) -> Option<SymbolId> {
-    self.result.symbol_ref_db.scoping().get_root_binding(name)
+    self.result.symbol_ref_db.scoping().get_root_binding(name.into())
   }
 
   /// `is_dummy` means if it the import record is created during ast transformation.
@@ -663,7 +674,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.ecma_view_meta.insert(EcmaViewMeta::HasStarExport);
     }
     self.result.imports.insert(decl.span, id);
-    self.result.import_records[id].meta.insert(ImportRecordMeta::IsReExport);
     if let Some(ref with_clause) = decl.with_clause {
       self.result.import_attribute_map.insert(id, ImportAttribute::from_with_clause(with_clause));
     }
@@ -710,18 +720,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
       }
       self.result.imports.insert(decl.span, record_idx);
-      self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsReExport);
     } else {
       decl.specifiers.iter().for_each(|spec| {
         if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
           self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
-        } else {
-          self.result.errors.push(BuildDiagnostic::export_undefined_variable(
-            self.immutable_ctx.id.to_string(),
-            self.immutable_ctx.source.clone(),
-            spec.local.span(),
-            ArcStr::from(spec.local.name().as_str()),
-          ));
         }
       });
       if let Some(decl) = decl.declaration.as_ref() {
@@ -782,7 +784,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             let id = cls_decl.id.as_ref().unwrap();
             self.add_local_export(id.name.as_str(), id.expect_symbol_id(), id.span);
           }
-          _ => unreachable!("doesn't support ts now"),
+          _ => {
+            self.untranspiled_syntax |= UntranspiledSyntax::TypeScript;
+          }
         }
       }
     }
@@ -802,7 +806,29 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
     use oxc::ast::ast::ExportDefaultDeclarationKind;
     let local_binding_for_default_export = match &decl.declaration {
-      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
+      ast::ExportDefaultDeclarationKind::Identifier(id) => {
+        if let Some(symbol_id) = self.resolve_symbol_from_reference(id) {
+          let scoping = self.result.symbol_ref_db.ast_scopes.scoping();
+          let symbol_id_span = scoping.symbol_span(symbol_id);
+
+          // We can only reuse the symbol if all the following conditions are met:
+          // 1. Declaration is before `export default` (not: `export default foo; const foo = 1;`)
+          // 2. Symbol is not an imported binding (not: `import { foo } from './other'; export default foo;`)
+          // 3. Symbol has no redeclarations (not: `var foo = 1; var foo = 2; export default foo;`)
+          // 4. Symbol has no write references (not: `let foo = 1; foo = 2; export default foo;`)
+          // See https://github.com/rollup/rollup/blob/061a0387/test/function/samples/default-export-before-declaration
+          let cannot_reuse_symbol = (id.span.is_unspanned()
+            || symbol_id_span.is_unspanned()
+            || symbol_id_span.start > id.span.start)
+            || scoping.symbol_flags(symbol_id).is_import()
+            || !scoping.symbol_redeclarations(symbol_id).is_empty()
+            || scoping.get_resolved_references(symbol_id).any(Reference::is_write);
+          if !cannot_reuse_symbol {
+            self.result.default_export_ref.symbol = symbol_id;
+          }
+        }
+        None
+      }
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
         if fn_decl.is_side_effect_free() || fn_decl.pure {
           self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
@@ -827,7 +853,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           (symbol_id, id.span)
         })
       }
-      ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
+      ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
+        self.untranspiled_syntax |= UntranspiledSyntax::TypeScript;
+        None
+      }
+      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
     };
     let (reference, span) = local_binding_for_default_export
       .unwrap_or((self.result.default_export_ref.symbol, Span::default()));
@@ -873,7 +903,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
       ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
         let symbol_id = spec.local.expect_symbol_id();
-        self.add_star_import(symbol_id, rec_id, spec.span);
+        self.add_star_import(symbol_id, rec_id, spec.local.span());
       }
     });
   }

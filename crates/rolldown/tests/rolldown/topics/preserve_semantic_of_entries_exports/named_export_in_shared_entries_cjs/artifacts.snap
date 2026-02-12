@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region main.js
 const foo = "foo";
@@ -19,6 +20,7 @@ exports.foo = foo;
 ## entry2.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 const require_entry = require('./entry.js');
 
 exports.default = require_entry.default;

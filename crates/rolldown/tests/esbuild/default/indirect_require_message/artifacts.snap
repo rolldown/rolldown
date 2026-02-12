@@ -28,7 +28,7 @@ require = x;
 ## chunk.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 export { __require as t };
 ```
 

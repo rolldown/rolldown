@@ -14,4 +14,5 @@ packages/rolldown/tests/stability/**/*.js -linguist-detectable
 * text eol=lf
 *.png -text
 *.jpg -text
+*.bin -text
 *.md text eol=lf

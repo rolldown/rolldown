@@ -52,7 +52,7 @@ impl Plugin for ViteTransformPlugin {
     let extension = Path::new(args.id).extension().map(|s| s.to_string_lossy());
     let extension = extension.as_ref().map(|s| clean_url(s));
     let module_type = extension.map(ModuleType::from_str_with_fallback);
-    if !self.filter(args.id, &cwd, &module_type) {
+    if !self.filter(args.id, &cwd, module_type.as_ref()) {
       return Ok(None);
     }
 
@@ -66,7 +66,7 @@ impl Plugin for ViteTransformPlugin {
         ret.errors,
         &ArcStr::from(args.code.as_str()),
         args.id,
-        &Severity::Error,
+        Severity::Error,
         EventKind::ParseError,
       )))?;
     }
@@ -80,7 +80,7 @@ impl Plugin for ViteTransformPlugin {
         transformer_return.errors,
         &ArcStr::from(args.code.as_str()),
         args.id,
-        &Severity::Error,
+        Severity::Error,
         EventKind::ParseError,
       )))?;
     }

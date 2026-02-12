@@ -19,12 +19,12 @@ export var __commonJS = (cb, mod) =>
 export var __commonJSMin = (cb, mod) => () => (
   mod || cb((mod = { exports: {} }).exports, mod), mod.exports
 );
-export var __exportAll = (all, symbols) => {
+export var __exportAll = (all, no_symbols) => {
   let target = {};
   for (var name in all) {
     __defProp(target, name, { get: all[name], enumerable: true });
   }
-  if (symbols) {
+  if (!no_symbols) {
     __defProp(target, Symbol.toStringTag, { value: 'Module' });
   }
   return target;

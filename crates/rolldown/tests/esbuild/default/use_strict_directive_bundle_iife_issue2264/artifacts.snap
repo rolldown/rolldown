@@ -19,6 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 (function(exports) {
 
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region entry.js
 	let a = 1;

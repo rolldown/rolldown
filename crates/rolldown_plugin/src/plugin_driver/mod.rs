@@ -12,7 +12,7 @@ use arcstr::ArcStr;
 use dashmap::DashMap;
 use rolldown_common::{
   ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, PluginIdx, SharedFileEmitter,
-  SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
+  SharedModuleInfoDashMap,
 };
 use rolldown_utils::dashmap::FxDashSet;
 use sugar_path::SugarPath;
@@ -32,11 +32,10 @@ pub struct PluginDriver {
   plugins: IndexPluginable,
   contexts: IndexPluginContext,
   hook_orders: PluginHookOrders,
-  options: SharedNormalizedBundlerOptions,
   pub file_emitter: SharedFileEmitter,
   pub watch_files: Arc<FxDashSet<ArcStr>>,
   pub module_infos: SharedModuleInfoDashMap,
-  /// Transform dependencies per module, tracked during transform hooks
+  /// Module dependencies tracked during load/transform hooks for HMR invalidation
   pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   context_load_completion_manager: ContextLoadCompletionManager,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
@@ -48,7 +47,8 @@ impl PluginDriver {
   pub fn clear(&self) {
     self.watch_files.clear();
     self.module_infos.clear();
-    self.transform_dependencies.clear();
+    // Note: transform_dependencies is NOT cleared here - it's preserved across incremental builds
+    // by BundleFactory which manages its lifecycle (reset on full builds only)
     self.context_load_completion_manager.clear();
     self.file_emitter.clear();
     if let Some(collector) = &self.hook_timing_collector {

@@ -11,7 +11,7 @@ use crate::{MemberExprRefResolution, SymbolRef, type_aliases::MemberExprRefResol
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberExprRef {
   pub object_ref: SymbolRef,
-  pub prop_and_span_list: Box<Vec<(CompactStr, Span)>>,
+  pub prop_and_span_list: Vec<(CompactStr, Span)>,
   /// Span of the whole member expression
   /// FIXME: use `AstNodeId` to identify the MemberExpr instead of `Span`
   /// related discussion: https://github.com/rolldown/rolldown/pull/1818#discussion_r1699374441
@@ -38,13 +38,7 @@ impl MemberExprRef {
     obj_ref_type: MemberExprObjectReferencedType,
     reference_id: Option<ReferenceId>,
   ) -> Self {
-    Self {
-      object_ref,
-      prop_and_span_list: Box::new(prop_and_span_list),
-      span,
-      object_ref_type: obj_ref_type,
-      reference_id,
-    }
+    Self { object_ref, prop_and_span_list, span, object_ref_type: obj_ref_type, reference_id }
   }
 
   /// This method is tricky, use it with care.

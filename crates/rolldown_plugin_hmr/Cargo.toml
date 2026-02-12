@@ -9,8 +9,6 @@ repository.workspace = true
 description = "Rolldown plugin for Hot Module Replacement (HMR)"
 
 [dependencies]
-arcstr = { workspace = true }
-oxc = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 

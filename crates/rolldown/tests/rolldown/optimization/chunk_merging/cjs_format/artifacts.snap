@@ -17,6 +17,7 @@ module.exports = dep_default;
 ## main.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 const require_dep = require('./dep.js');
 
 exports.value = require_dep;
@@ -29,7 +30,7 @@ exports.value = require_dep;
 ### dep.js
 
 ```js
-Object.defineProperty(exports, '__esModule', { value: true });
+Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
 
 //#region dep.js
 var dep_default = 42;
@@ -41,6 +42,7 @@ exports.default = dep_default;
 ### main.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 const require_dep = require('./dep.js');
 
 exports.value = require_dep.default;

@@ -19,6 +19,6 @@ export default defineTest({
     ],
   },
   afterTest: (_) => {
-    expect(transformHookFunction).toBeCalledTimes(2);
+    expect(transformHookFunction).toBeCalledTimes(3);
   },
 });

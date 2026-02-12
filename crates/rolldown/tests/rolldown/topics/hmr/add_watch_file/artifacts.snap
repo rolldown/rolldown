@@ -6,12 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
-// HIDDEN [rolldown:hmr]
+// HIDDEN [\0rolldown/runtime.js]
 //#region entry.js
-var entry_exports = {};
 const entry_hot = __rolldown_runtime__.createModuleHotContext("entry.js");
-__rolldown_runtime__.registerModule("entry.js", { exports: entry_exports });
+__rolldown_runtime__.registerModule("entry.js", {});
 const content = "input\n";
 console.log(content);
 
@@ -32,12 +30,10 @@ console.log(content);
 #### entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
-// HIDDEN [rolldown:hmr]
+// HIDDEN [\0rolldown/runtime.js]
 //#region entry.js
-var entry_exports = {};
 const entry_hot = __rolldown_runtime__.createModuleHotContext("entry.js");
-__rolldown_runtime__.registerModule("entry.js", { exports: entry_exports });
+__rolldown_runtime__.registerModule("entry.js", {});
 const content = "input2\n";
 console.log(content);
 

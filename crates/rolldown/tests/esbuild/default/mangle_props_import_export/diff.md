@@ -35,7 +35,7 @@ let bar_ = require("xyz").b;
 ```
 ### rolldown
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo_ = 123;

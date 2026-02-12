@@ -59,7 +59,7 @@ const bindingFileWasiBrowser = nodePath.resolve('src/rolldown-binding.wasi-brows
 
 const configs: BuildOptions[] = [
   withShared({
-    plugins: [patchBindingJs(), dts()],
+    plugins: [patchBindingJs(), dts(), removeIncludeTagsFromDts()],
     output: {
       dir: buildMeta.buildOutputDir,
       format: 'esm',
@@ -107,6 +107,7 @@ function withShared({
     input: {
       index: './src/index',
       'plugins-index': './src/plugins-index',
+      'utils-index': './src/utils-index',
       'experimental-index': './src/experimental-index',
       ...(!isBrowserBuild
         ? {
@@ -278,4 +279,33 @@ function getTsconfigCompilerOptionsForFile(file: string) {
     compilerOptions = parsedConfig.options;
   }
   return compilerOptions;
+}
+
+/**
+ * Removes {@include ...} tags from generated .d.ts files.
+ * These tags are only used for the docs site and should not appear in the published types.
+ */
+function removeIncludeTagsFromDts(): Plugin {
+  const includeTagRegex = /\s*\{@include\s+[^}]+\}/g;
+
+  return {
+    name: 'remove-include-tags-from-dts',
+    generateBundle(_options, bundle) {
+      for (const [fileName, output] of Object.entries(bundle)) {
+        if (!fileName.endsWith('.d.ts') && !fileName.endsWith('.d.mts')) {
+          continue;
+        }
+        if (output.type === 'asset') {
+          this.warn(
+            `Expected .d.ts files to be chunks, but found asset type for ${fileName} (type: ${output.type}).`,
+          );
+        } else if (output.type === 'chunk') {
+          const matches = output.code.match(includeTagRegex);
+          if (matches) {
+            output.code = output.code.replace(includeTagRegex, '');
+          }
+        }
+      }
+    },
+  };
 }

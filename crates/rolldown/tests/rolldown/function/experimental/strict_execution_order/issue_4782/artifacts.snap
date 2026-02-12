@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region dep-a.js
 var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const sideEffect = {};
@@ -39,7 +39,7 @@ init_main();
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region dep-a.js
 var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const sideEffect = {};

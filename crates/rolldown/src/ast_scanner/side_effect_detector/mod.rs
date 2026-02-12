@@ -8,6 +8,7 @@ use oxc::ast::ast::{
   VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression};
+use oxc::span::Ident;
 use oxc_allocator::{Address, UnstableAddress};
 use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, SideEffectDetail};
 use rolldown_utils::global_reference::{
@@ -137,7 +138,7 @@ impl<'a> SideEffectDetector<'a> {
             .as_ref()
             .is_some_and(|init| self.detect_side_effect_of_expr(init).has_side_effect()))
         }
-        ClassElement::TSIndexSignature(_) => unreachable!("ts should be transpiled"),
+        ClassElement::TSIndexSignature(_) => true,
       })
       .into()
   }
@@ -159,7 +160,7 @@ impl<'a> SideEffectDetector<'a> {
     let max_len = 3;
     let mut chains = vec![];
     if let ast::Expression::StringLiteral(ref str) = expr.expression {
-      chains.push(str.value);
+      chains.push(str.value.into());
     } else {
       side_effects_detail |= self.detect_side_effect_of_expr(&expr.expression);
     }
@@ -228,7 +229,7 @@ impl<'a> SideEffectDetector<'a> {
     property_access_side_effects: bool,
     side_effects_detail: &mut SideEffectDetail,
     max_len: usize,
-    chains: &mut Vec<ast::Atom<'a>>,
+    chains: &mut Vec<Ident<'a>>,
     mut cur: &Expression<'a>,
     property_access_flag: PropertyAccessFlag,
   ) {
@@ -240,7 +241,7 @@ impl<'a> SideEffectDetector<'a> {
         }
         ast::Expression::ComputedMemberExpression(computed_expr) => {
           if let ast::Expression::StringLiteral(ref str) = computed_expr.expression {
-            chains.push(str.value);
+            chains.push(str.value.into());
           } else {
             *side_effects_detail |= self.detect_side_effect_of_expr(&computed_expr.expression);
           }
@@ -251,6 +252,14 @@ impl<'a> SideEffectDetector<'a> {
           chains.reverse();
           side_effects_detail
             .set(SideEffectDetail::GlobalVarAccess, self.is_unresolved_reference(ident_ref));
+          break;
+        }
+        ast::Expression::MetaProperty(_) => {
+          // Only `import.meta.url` is a spec-defined side-effect-free property read.
+          // Other accesses like `import.meta.hot.accept()` may have side effects.
+          if chains.len() == 1 && chains[0] == "url" {
+            return;
+          }
           break;
         }
         _ => {
@@ -313,12 +322,11 @@ impl<'a> SideEffectDetector<'a> {
       }
 
       AssignmentTarget::AssignmentTargetIdentifier(_)
-      | AssignmentTarget::PrivateFieldExpression(_) => true.into(),
-
-      AssignmentTarget::TSAsExpression(_)
+      | AssignmentTarget::PrivateFieldExpression(_)
+      | AssignmentTarget::TSAsExpression(_)
       | AssignmentTarget::TSSatisfiesExpression(_)
       | AssignmentTarget::TSNonNullExpression(_)
-      | AssignmentTarget::TSTypeAssertion(_) => unreachable!(),
+      | AssignmentTarget::TSTypeAssertion(_) => true.into(),
 
       AssignmentTarget::ArrayAssignmentTarget(array_pattern) => {
         (!array_pattern.elements.is_empty() || array_pattern.rest.is_some()).into()
@@ -407,8 +415,9 @@ impl<'a> SideEffectDetector<'a> {
           ChainElement::StaticMemberExpression(ref static_member_expression) => {
             cur = &static_member_expression.object;
           }
-          ChainElement::TSNonNullExpression(_) => unreachable!(),
-          ChainElement::PrivateFieldExpression(_) => break None,
+          ChainElement::TSNonNullExpression(_) | ChainElement::PrivateFieldExpression(_) => {
+            break None;
+          }
         },
         _ => break None,
       }
@@ -557,11 +566,21 @@ impl<'a> SideEffectDetector<'a> {
         );
         detail | consequent_detail | alternate_detail
       }
+      // Untranspiled TS/JSX syntax should be caught during scan stage.
+      // Conservatively treat as side-effectful since they should not appear here.
       Expression::TSAsExpression(_)
       | Expression::TSSatisfiesExpression(_)
       | Expression::TSTypeAssertion(_)
       | Expression::TSNonNullExpression(_)
-      | Expression::TSInstantiationExpression(_) => unreachable!("ts should be transpiled"),
+      | Expression::TSInstantiationExpression(_)
+      | Expression::JSXElement(_)
+      | Expression::JSXFragment(_)
+      // Inherently side-effectful expressions.
+      | Expression::Super(_)
+      | Expression::AwaitExpression(_)
+      | Expression::ImportExpression(_)
+      | Expression::YieldExpression(_)
+      | Expression::V8IntrinsicExpression(_) => true.into(),
       // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2541-L2574
       Expression::BinaryExpression(binary_expr) => {
         match binary_expr.operator {
@@ -645,19 +664,6 @@ impl<'a> SideEffectDetector<'a> {
           _ => true.into(),
         }
       }
-      Expression::Super(_)
-      | Expression::AwaitExpression(_)
-      | Expression::ImportExpression(_)
-      | Expression::YieldExpression(_)
-      | Expression::V8IntrinsicExpression(_) => true.into(),
-
-      Expression::JSXElement(_) | Expression::JSXFragment(_) => {
-        if self.flat_options.jsx_preserve() {
-          return true.into();
-        }
-        unreachable!("jsx should be transpiled")
-      }
-
       Expression::ArrayExpression(expr) => self.detect_side_effect_of_array_expr(expr),
       Expression::NewExpression(expr) => {
         let is_side_effect_free_global_constructor =
@@ -782,7 +788,7 @@ impl<'a> SideEffectDetector<'a> {
       | Declaration::TSEnumDeclaration(_)
       | Declaration::TSModuleDeclaration(_)
       | Declaration::TSImportEqualsDeclaration(_)
-      | Declaration::TSGlobalDeclaration(_) => unreachable!("ts should be transpiled"),
+      | Declaration::TSGlobalDeclaration(_) => true.into(),
     }
   }
 
@@ -853,9 +859,7 @@ impl<'a> SideEffectDetector<'a> {
             ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
               self.detect_side_effect_of_class(decl)
             }
-            ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
-              unreachable!("ts should be transpiled")
-            }
+            ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => true.into(),
           }
         }
         ast::ModuleDeclaration::ExportNamedDeclaration(named_decl) => {
@@ -870,9 +874,7 @@ impl<'a> SideEffectDetector<'a> {
           }
         }
         ast::ModuleDeclaration::TSExportAssignment(_)
-        | ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => {
-          unreachable!("ts should be transpiled")
-        }
+        | ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => true.into(),
       },
       Statement::BlockStatement(block) => self.detect_side_effect_of_block(block),
       Statement::DoWhileStatement(do_while) => {
@@ -1234,7 +1236,7 @@ mod test {
   fn test_meta_property_expression() {
     assert!(!get_statements_side_effect("import.meta"));
     assert!(!get_statements_side_effect("const meta = import.meta"));
-    assert!(get_statements_side_effect("import.meta.url"));
+    assert!(!get_statements_side_effect("import.meta.url"));
     assert!(get_statements_side_effect("const { url } = import.meta"));
     assert!(get_statements_side_effect("import.meta.url = 'test'"));
   }
@@ -1385,11 +1387,32 @@ mod test {
     assert!(get_statements_side_effect("Boolean({})"));
     assert!(get_statements_side_effect("let val; Boolean(val)"));
 
-    // BigInt() - side-effect-free with primitive arguments only
+    // BigInt() - side-effect-free only with proven-safe arguments
+    // BigInt() with no arguments throws TypeError
+    assert!(get_statements_side_effect("BigInt()"));
+    // Integer literals are safe
     assert!(!get_statements_side_effect("BigInt(123)"));
-    assert!(!get_statements_side_effect("BigInt('456')"));
+    assert!(!get_statements_side_effect("BigInt(0)"));
+    assert!(!get_statements_side_effect("BigInt(-1)"));
+    assert!(!get_statements_side_effect("BigInt(+1)"));
+    // Boolean literals are safe
     assert!(!get_statements_side_effect("BigInt(true)"));
-    // these two will throw `TypeError`
+    assert!(!get_statements_side_effect("BigInt(false)"));
+    // BigInt literals are safe
+    assert!(!get_statements_side_effect("BigInt(123n)"));
+
+    // BigInt() with strings has side effects (can't validate statically)
+    // BigInt("123") works but BigInt("abc") or BigInt("1.5") throws
+    assert!(get_statements_side_effect("BigInt('456')"));
+    assert!(get_statements_side_effect("BigInt('abc')"));
+
+    // BigInt() with non-integer numbers throws RangeError
+    assert!(get_statements_side_effect("BigInt(1.5)"));
+    assert!(get_statements_side_effect("BigInt(NaN)"));
+    assert!(get_statements_side_effect("BigInt(Infinity)"));
+    assert!(get_statements_side_effect("BigInt(-Infinity)"));
+
+    // BigInt() with undefined/null throws TypeError
     assert!(get_statements_side_effect("BigInt(undefined)"));
     assert!(get_statements_side_effect("BigInt(null)"));
 
@@ -1397,10 +1420,52 @@ mod test {
     assert!(get_statements_side_effect("let val; BigInt(val)"));
     assert!(get_statements_side_effect("BigInt({})"));
 
+    // BigInt() with spread elements has side effects
+    assert!(get_statements_side_effect("let args; BigInt(...args)"));
+
     // Spread elements should have side effects
     assert!(get_statements_side_effect("let args; String(...args)"));
     assert!(get_statements_side_effect("let args; Number(...args)"));
     assert!(get_statements_side_effect("let args; Boolean(...args)"));
+  }
+
+  #[test]
+  fn test_regexp_constructor() {
+    // RegExp() and new RegExp() with valid patterns/flags are side-effect-free
+    // Valid patterns
+    assert!(!get_statements_side_effect("RegExp()"));
+    assert!(!get_statements_side_effect("new RegExp()"));
+    assert!(!get_statements_side_effect("RegExp('abc')"));
+    assert!(!get_statements_side_effect("new RegExp('abc')"));
+    assert!(!get_statements_side_effect("RegExp('abc', 'g')"));
+    assert!(!get_statements_side_effect("new RegExp('abc', 'g')"));
+    assert!(!get_statements_side_effect("RegExp('abc', 'gi')"));
+    assert!(!get_statements_side_effect("new RegExp('abc', 'gimsuy')"));
+    // RegExp with a RegExp literal argument is valid
+    assert!(!get_statements_side_effect("RegExp(/foo/)"));
+    assert!(!get_statements_side_effect("new RegExp(/foo/)"));
+
+    // Invalid patterns throw SyntaxError - these have side effects
+    assert!(get_statements_side_effect("RegExp('[')"));
+    assert!(get_statements_side_effect("new RegExp('[')"));
+    assert!(get_statements_side_effect("RegExp('\\\\')"));
+    assert!(get_statements_side_effect("new RegExp('\\\\')"));
+
+    // Invalid flags throw SyntaxError - these have side effects
+    assert!(get_statements_side_effect("RegExp('a', 'xyz')"));
+    assert!(get_statements_side_effect("new RegExp('a', 'xyz')"));
+    assert!(get_statements_side_effect("RegExp('a', 'gg')"));
+    assert!(get_statements_side_effect("new RegExp('a', 'gg')"));
+
+    // Non-literal arguments have side effects (can't statically validate)
+    assert!(get_statements_side_effect("let p; RegExp(p)"));
+    assert!(get_statements_side_effect("let p; new RegExp(p)"));
+    assert!(get_statements_side_effect("let f; RegExp('a', f)"));
+    assert!(get_statements_side_effect("let f; new RegExp('a', f)"));
+
+    // RegExp literals are side-effect-free (they're validated at parse time)
+    assert!(!get_statements_side_effect("/abc/"));
+    assert!(!get_statements_side_effect("/abc/g"));
   }
 
   #[test]

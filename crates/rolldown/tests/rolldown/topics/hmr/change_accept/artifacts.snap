@@ -1,6 +1,22 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: child.js is dynamically imported by parent.js but also statically imported by parent.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: parent.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
 # Assets
 
 ## main.js
@@ -8,8 +24,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
-// HIDDEN [rolldown:hmr]
+// HIDDEN [\0rolldown/runtime.js]
 //#region child.js
 var child_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 const child_hot = __rolldown_runtime__.createModuleHotContext("child.js");
@@ -18,7 +33,7 @@ const foo = 0;
 
 //#endregion
 //#region parent.js
-var parent_exports = {};
+var parent_exports = /* @__PURE__ */ __exportAll({});
 const parent_hot = __rolldown_runtime__.createModuleHotContext("parent.js");
 __rolldown_runtime__.registerModule("parent.js", { exports: parent_exports });
 parent_hot.accept("child.js", () => {
@@ -31,7 +46,7 @@ process.on("beforeExit", (code) => {
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 main_hot.accept("parent.js", () => {});

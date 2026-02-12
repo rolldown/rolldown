@@ -1,0 +1,3720 @@
+## [1.0.0-beta.58] - 2025-12-31
+
+### 💥 BREAKING CHANGES
+
+- experimental/devtools: rename InputOptions#debug to InputOptions#devtools (#7686) by @Copilot
+
+### 🚀 Features
+
+- implement target feature check in `should_transform_js` for raw options (#7697) by @shulaoda
+- support `output.dynamicImportInCjs` option (#7677) by @shulaoda
+- types: expose `ChecksOptions` type (#7653) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- export runtime helpers for cross-chunk access (#7658) by @shulaoda
+- cjs namespace merging regression (#7665) by @IWANABETHATGUY
+- replace panic with proper error handling for hash placeholder generation (#7661) by @shulaoda
+- remove the blank line between shebang and postBanner (#7643) by @btea
+- rolldown_plugin_vite_reporter: apply padding before ANSI coloring for proper size column alignment (#7649) by @shulaoda
+
+### 🚜 Refactor
+
+- rust: use `StableModuleId` as the map key if possible (#7718) by @hyf0
+- rust: return `StableModuleId` instead of `&str` from `Module#stable_id()` (#7717) by @hyf0
+- rust: return correct stable id of external module from `Module#stable_id()` (#7716) by @hyf0
+- rust: introduce `StableModuleId` type (#7715) by @hyf0
+- rust: reduce unnecessary `id.as_arc_str().clone().into()` (#7714) by @hyf0
+- rust: remove `ModuleId#resource_id` and use `as_arc_str` directly (#7710) by @hyf0
+- rust: remove unused `Module#id_clone` (#7709) by @hyf0
+- rust: remove `Module#id_as_str` and use `Module#id` directly (#7708) by @hyf0
+- consolidate namespace call analysis into import analyzer (#7657) by @IWANABETHATGUY
+- rust: make `ExternalModule#id` have the type `ModuleId` (#7707) by @hyf0
+- rust: rename `Module#id` to `Module#id_as_str` (#7706) by @hyf0
+- rust: use `ModuleId` instead of raw `ArcStr` for `ScanStageCache` (#7701) by @hyf0
+- simplify error propagation in cache merge (#7702) by @shulaoda
+- use `ModuleId` as the type of `ResolvedId#id` (#7694) by @hyf0
+- types: rename `resolved_request_info.rs` to `resolved_id.rs` and move its contents (#7687) by @hyf0
+- devtools: emit data to `<CWD>/node_modules/.rolldown` (#7692) by @hyf0
+- use `InvalidOption` for hash placeholder generation errors (#7674) by @shulaoda
+- rolldown_error: remove dependency on rolldown_utils (#7672) by @shulaoda
+- use nodejs-built-in-modules v1.0.0 directly in callsites (#7667) by @Boshen
+
+### 📚 Documentation
+
+- migrate input options content from options to auto gen docs (#7663) by @mdong1909
+- create reference index page (#7659) by @mdong1909
+- tweak auto-generated reference output (#7654) by @sapphi-red
+- initialize auto-gen docs (#7252) by @mdong1909
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update napi (#7705) by @renovate[bot]
+- pin Node.js version to 24.12.0 LTS in .node-version file (#7713) by @Copilot
+- update esbuild test reasons (#7703) by @sapphi-red
+- deps: update crate-ci/typos action to v1.40.1 (#7696) by @renovate[bot]
+- deps: update oxc to v0.106.0 (#7512) by @renovate[bot]
+- js: replace dprint with oxfmt (#7214) by @Boshen
+- deps: update dependency oxlint to v1.36.0 (#7691) by @renovate[bot]
+- deps: update github-actions (#7679) by @renovate[bot]
+- deps: update npm packages (#7680) by @renovate[bot]
+- deps: update rust crates (#7678) by @renovate[bot]
+- deps: update oxc resolver to v11.16.2 (#7668) by @renovate[bot]
+- add API reference files to knip entry points (#7669) by @Copilot
+- deps: update notify (#7651) by @sapphi-red
+- add `homepage` field to package.json (#7648) by @trivikr
+- deps: update oxc resolver to v11.16.1 (#7647) by @renovate[bot]
+- deps: update rolldown-plugin-dts to 0.20.0 (#7645) by @shulaoda
+
+## [1.0.0-beta.57] - 2025-12-24
+
+### 💥 BREAKING CHANGES
+
+- tsconfig: enable project references support in manual mode (#7545) by @shulaoda
+
+### 🚀 Features
+
+- add `CANNOT_CALL_NAMESPACE` warning (#7636) by @sapphi-red
+- add import path for unresolved import diagnostics (#7625) by @sapphi-red
+- optimize dynamic entry facade chunks by merging with common chunks when they are captured by common chunks (#7486) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- rename `__export` to `__exportAll` to be compatible with `cjs-module-lexer` (#7640) by @IWANABETHATGUY
+- strip UTF-8 BOM when using text loader (#7635) by @sapphi-red
+- rolldown_plugin_replace: avoid crashing with invalid delimiters (#7621) by @sapphi-red
+
+### 🚜 Refactor
+
+- export all filter functions (#7622) by @sxzz
+- allow multiple help messages in diagnostics (#7624) by @sapphi-red
+
+### 📚 Documentation
+
+- add README.md to packages/rolldown (#7556) by @Copilot
+
+### ⚡ Performance
+
+- use fsevents on macOS for file watching (#7596) by @sapphi-red
+
+### 🧪 Testing
+
+- handle re-exports of external modules in CJS format (#7641) by @IWANABETHATGUY
+- update integration to use vite's rolldown-canary branch (#7633) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- docs: fix Netlify ignore condition to detect docs changes across all PR commits (#7637) by @Copilot
+- deps: update rollup submodule for tests to v4.54.0 (#7630) by @sapphi-red
+- skip benchmarks for PRs with 'graphite: merge-when-ready' label (#7631) by @Boshen
+- deps: update esbuild for tests to 0.27.2 (#7629) by @sapphi-red
+- fix "update-test-dependencies" workflow (#7628) by @sapphi-red
+- deps: update test262 submodule for tests (#7626) by @sapphi-red
+- deps: update dependency oxlint to v1.35.0 (#7623) by @renovate[bot]
+
+## [1.0.0-beta.56] - 2025-12-22
+
+### 💥 BREAKING CHANGES
+
+- rename `MIXED_EXPORT` error to `MIXED_EXPORTS` (#7565) by @sapphi-red
+
+### 🚀 Features
+
+- rename `id` property to `exporter` in CIRCULAR_REEXPORT error (#7592) by @sapphi-red
+- add `ids` property to `CIRCULAR_DEPENDENCY` error (#7591) by @sapphi-red
+- node/dev: expose `devMode.lazy` (#7549) by @hyf0
+- set log and pos properties for `parseAst` function errors (#7568) by @sapphi-red
+- set log and pos properties for logs (#7567) by @sapphi-red
+- test-dev-sever: support to manually configure port, run tests in concurrent (#7576) by @hyf0
+- add `exporter` property to `MISSING_EXPORT` error (#7564) by @sapphi-red
+- add `id` property to `PARSE_ERROR` error (#7563) by @sapphi-red
+- support ImporterId hook filter (#7540) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- types: better "go to definition" experience for interface `OutputPlugin` (#7610) by @KazariEX
+- `postBanner` content should be placed after shebang (#7583) by @btea
+- use sanitized filename for preserve modules chunk name (#7603) by @IWANABETHATGUY
+- correct filter out unused cjs namespace (#7602) by @IWANABETHATGUY
+- watch: property respect `notify.pollInternal` and `notify.compareContents` (#7595) by @sapphi-red
+- make `cleanDir` work with default output directory (#7579) by @shulaoda
+- merge `MISSING_NAME_OPTION_FOR_UMD_EXPORT` error to `MISSING_NAME_OPTION_FOR_IIFE_EXPORT` error (#7566) by @sapphi-red
+- dev/hmr: ensure cjs modules with no exports reference correct `module` identifier (#7544) by @leegeunhyeok
+
+### 🚜 Refactor
+
+- remove `stable_id` field from `PARSE_ERROR` error (#7593) by @sapphi-red
+- make include_runtime_symbol reuseable after linking stage (#7580) by @IWANABETHATGUY
+- rust/dev: construct the bundler within itself (#7553) by @hyf0
+- rust/watcher: polish API of `Watcher` struct (#7551) by @hyf0
+- use `LinkingMetadata::stmt_info_included` to check if a stmt_info is included (#7572) by @IWANABETHATGUY
+- use `LinkingMetadata::is_included` to check if a module is included (#7571) by @IWANABETHATGUY
+- store module and stmt_info is included info to module meta (#7570) by @IWANABETHATGUY
+- make include\_\* method reunsable after linking stage (#7552) by @IWANABETHATGUY
+- rust/watcher: construct the bundler within watcher itself (#7550) by @hyf0
+- extract make include_runtime_symbol reusable (#7546) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- renovate: add `kill-port` in `ignoreDeps` in renovate.json (#7619) by @sapphi-red
+- deps: update rust crates (#7617) by @renovate[bot]
+- deps: update npm packages (#7616) by @renovate[bot]
+- deps: update github-actions (#7615) by @renovate[bot]
+- ci: skip benchmark workflows on draft PRs (#7611) by @Copilot
+- deps: update dependency rolldown-plugin-dts to ^0.19.0 (#7607) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.10.0 (#7601) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.18.4 (#7599) by @renovate[bot]
+- deps: update notify (#7594) by @sapphi-red
+- test-dev-server: add retry mechanism to hmr-full-bundle-mode tests (#7588) by @Copilot
+- deps: update napi to v3.7.1 (#7590) by @renovate[bot]
+- add JSDoc documentation for memfs type (#7587) by @Copilot
+- deps: update dependency oxlint to v1.34.0 (#7589) by @renovate[bot]
+- move some tests in ignored-by-unsupported-features that are passing (#7569) by @sapphi-red
+- deps: update dependency oxlint-tsgolint to v0.9.2 (#7582) by @renovate[bot]
+- deps: update oxc resolver to v11.16.0 (#7574) by @renovate[bot]
+- test/dev-server: don't run `pnpm install` during tests (#7560) by @hyf0
+- test/dev-server: use `kill-port@1` to improve performance (#7575) by @hyf0
+- normalize error object to make some Rollup tests pass (#7562) by @sapphi-red
+- ci: separate dev-server(hmr) tests and normal tests (#7558) by @hyf0
+- ci: make native rolldown build reusable (#7557) by @hyf0
+- resolve some TODOs (#7561) by @sapphi-red
+
+### ❤️ New Contributors
+
+- @KazariEX made their first contribution in [#7610](https://github.com/rolldown/rolldown/pull/7610)
+- @leegeunhyeok made their first contribution in [#7544](https://github.com/rolldown/rolldown/pull/7544)
+
+## [1.0.0-beta.55] - 2025-12-17
+
+### 🚀 Features
+
+- add validation errors for incompatible `inlineDynamicImports` options (#7539) by @Copilot
+- rolldown_plugin_vite_reporter: truncate long importer lists in ineffective dynamic import warnings (#7528) by @Copilot
+- export `memfs` from `rolldown/experimental` for browser builds (#7490) by @Copilot
+- implement `postBanner` and `postFooter` (#7487) by @sevenc-nanashi
+- port getLogFilter helper from Rollup for advanced log filtering (#6890) by @taearls
+- dev: initialize `rolldown_plugin_lazy_compilation` (#7488) by @hyf0
+- enable `experimental.transform_hires_sourcemap: 'boundary'` by default (#7478) by @sapphi-red
+- apply merge CJS namespace optimizations more generally (#7475) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- avoid panic on invalid values for `output.exports`, `output.format`, `output.hash_characters` (#7542) by @sapphi-red
+- handle `__proto__` export for module namespace correctly (#7534) by @sapphi-red
+- handle `__proto__` export correctly (#7533) by @sapphi-red
+- rolldown_plugin_vite_resolve: acquire resolver lock before package json resolution (#7524) by @sapphi-red
+- disable syntax transform optimization for `minify: 'dce-only'` (#7520) by @sapphi-red
+- arrow function expression keep names (#7519) by @IWANABETHATGUY
+- skip symbols that are imported from other module when deconflicting module symbols (#7510) by @IWANABETHATGUY
+- preserve class names in assignment expressions with keepNames option (#7491) by @IWANABETHATGUY
+- accessor with decorators should be kept (#7499) by @Copilot
+- rolldown_plugin_vite_reporter: support `Infinity` for chunk_limit (#7497) by @shulaoda
+- change filename template validation errors from UNHANDLEABLE_ERROR to INVALID_OPTION (#7472) by @Copilot
+- `no entry found for key` error when merging CJS namespace exports (#7474) by @sapphi-red
+- generate output with syntax error when wrapped esm module using tla syntax (#7468) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- dev: rename `experimental.hmr` to `experimental.devMode` (#7527) by @hyf0
+- pass addon option to rust as it is (#7526) by @hyf0
+- remove unused stmtinfo meta flag (#7518) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- clarify `closeBundle` behavior (#7525) by @sapphi-red
+
+### 🧪 Testing
+
+- add tests for static string postBanner and postFooter (#7516) by @Copilot
+- disable pluginTimings in Rust integration tests to avoid snapshot noise (#7485) by @shulaoda
+- port Rollup JSX tests to `crates/rolldown/tests/rollup` (#7480) by @sapphi-red
+- re-triage some esbuild JSX preserve tests (#7479) by @sapphi-red
+- disable pluginTimings by default to avoid snapshot noise (#7471) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- mark feature that will not be supported as ignored in rollup test status (#7535) by @sapphi-red
+- support `banner`/`footer`/`intro`/`outro` for config variants (#7532) by @sapphi-red
+- `dce/dce_of_decorators` esbuild test is now passing (#7531) by @sapphi-red
+- deps: update github-actions (major) (#7495) by @renovate[bot]
+- deps: update npm packages (#7493) by @renovate[bot]
+- add a check to verify failedReasons are updated (#7521) by @sapphi-red
+- deps: update test262 submodule for tests (#7523) by @sapphi-red
+- deps: update taiki-e/install-action action to v2.63.2 (#7496) by @renovate[bot]
+- deps: update oxc apps (#7511) by @renovate[bot]
+- deps: update oxc to v0.103.0 (#7513) by @camc314
+- fix format in `.github/instructions/bug-investigation.instructions.md` (#7506) by @sapphi-red
+- add instructions for REPL decoding (#7502) by @sapphi-red
+- deps: update github-actions (#7492) by @renovate[bot]
+- deps: cargo-shear v1.9.0 (#7483) by @Boshen
+- deps: update dependency oxlint-tsgolint to v0.9.0 (#7484) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.8.6 (#7470) by @renovate[bot]
+- add syntax validation for test output chunks that are not executed (#7466) by @IWANABETHATGUY
+- deps: update dependency rust to v1.92.0 (#7467) by @renovate[bot]
+- deps: update test262 submodule for tests (#7457) by @sapphi-red
+
+### ❤️ New Contributors
+
+- @sevenc-nanashi made their first contribution in [#7487](https://github.com/rolldown/rolldown/pull/7487)
+- @taearls made their first contribution in [#6890](https://github.com/rolldown/rolldown/pull/6890)
+
+## [1.0.0-beta.54] - 2025-12-11
+
+### 🚀 Features
+
+- rolldown_plugin_vite_reporter: add newline after build summary for better log separation (#7458) by @shulaoda
+- plugin: collect plugin hook execution timings (#7364) by @shulaoda
+- test-dev-server: reload page when detecting hmr reload message (#7422) by @hyf0
+- rolldown_plugin_vite_dynamic_import_vars: add transform-based v2 implementation (#7400) by @shulaoda
+- rolldown_plugin_vite_import_glob: add transform-based v2 implementation (#7394) by @shulaoda
+- rolldown_plugin_vite_wasm_helper: add v2 implementation (#7402) by @shulaoda
+- expose error location and context fields on JS API error objects (#7341) by @Copilot
+- add `CIRCULAR_REEXPORT` error (#7337) by @Copilot
+- support emit prebuilt chunk (#7277) by @Copilot
+
+### 🐛 Bug Fixes
+
+- preserve object key order when parse json with serde_json (#7443) by @IWANABETHATGUY
+- improve JSON parsing with serde_json to emit proper diagnostic (#7442) by @IWANABETHATGUY
+- deconflict external symbols in CJS modules (#7447) by @IWANABETHATGUY
+- rolldown_plugin_vite_transform,rolldown_plugin_vite_resolve: enable `yarnPnp` option when pnp is detected (#5791) by @sapphi-red
+- skip deconflicting top-level symbols for CJS modules (#7425) by @IWANABETHATGUY
+- rolldown_plugin_esm_external_require: run resolveId hook before other plugins (#7426) by @shulaoda
+- avoid duplicate underscores in legitimized identifiers (#7418) by @IWANABETHATGUY
+- use `process.on('exit')` instead of `signal-exit` on webcontainers (#7421) by @sapphi-red
+- dev: remove `imports` when an import is removed (#7348) by @sapphi-red
+- bench: access latency.mean instead of mean in tinybench result (#7417) by @shulaoda
+- path compression in symbol linking (#7392) by @IWANABETHATGUY
+- rolldown_plugin_vite_resolve: add RwLock to avoid clearing cache while resolving (#7386) by @sapphi-red
+- handle JSON prototype properties correctly (#7383) by @IWANABETHATGUY
+- preserve entry signature strict chunk merging (#7343) by @IWANABETHATGUY
+- support eliminating multiple unused dynamic imports in a single statement (#7361) by @IWANABETHATGUY
+- eliminate unreachable dynamic entry (#7356) by @IWANABETHATGUY
+- `NormalizedInputOptions#cwd` should always exists (#7360) by @hyf0
+- cli: support multiple comma-separated define arguments (#7340) by @Copilot
+- remove redundant symbol param in \_\_reExport runtime helper (#7346) by @IWANABETHATGUY
+- always use \_\_export for empty namespace objects when symbols enabled (#7345) by @IWANABETHATGUY
+- relax the restriction of preserveEntrySignatures when merging chunks (#7339) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- builtin-plugin: make config parameter required for vite plugins (#7451) by @shulaoda
+- move esbuild test related scripts to `scripts/src/esbuild-tests` (#7377) by @sapphi-red
+- rewrite gen-esbuild-test in TypeScript (#7376) by @sapphi-red
+- remove unnecessary Option in current_stmt_idx (#7359) by @IWANABETHATGUY
+- move more code into chunk optimizer (#7335) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- checks: clarify pluginTimings measures CPU time due to concurrent execution (#7448) by @shulaoda
+- checks: add accuracy note to pluginTimings documentation (#7441) by @shulaoda
+- development-guide: add esbuild test description (#7439) by @sapphi-red
+- checks: expand `pluginTimings` documentation with detection mechanism (#7428) by @shulaoda
+- add checks options documentation (#7427) by @shulaoda
+- development-guide: add test262 integration test description (#7430) by @sapphi-red
+- guide: fix grammer in getting-started (#7331) by @jakeparis
+
+### 🧪 Testing
+
+- rollup-tests: make `--grep` work and document it (#7431) by @sapphi-red
+- add a way to run some test262 test cases by name (#7429) by @sapphi-red
+- rolldown_plugin_vite_dynamic_import_vars: add test cases for v2 implementation (#7401) by @shulaoda
+- rolldown_plugin_vite_import_glob: add test cases for v2 implementation (#7395) by @shulaoda
+- triage new esbuild tests (#7405) by @sapphi-red
+- hmr: delete file used (#5933) by @sapphi-red
+- watch: add `watchChange` hook `create` / `delete` tests (#7349) by @sapphi-red
+- hmr: delete file not used anymore (#5932) by @sapphi-red
+- triage esbuild failed reasons (#7391) by @sapphi-red
+- change esbuild tests stats and diff generation (#7379) by @sapphi-red
+- dev: add `continuous generate hmr patch` and `debounce bundle` tests (#7368) by @hyf0
+- add new esbuild tests (#7353) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- setup Node before updating snapshots for test262 update (#7435) by @sapphi-red
+- run tests when submodules are updated (#7455) by @sapphi-red
+- exclude NUL path pattern to prevent crash on Windows (#7450) by @IWANABETHATGUY
+- run cargo-test for esbuild script changes and update esbuild snapshot (#7440) by @sapphi-red
+- jsx_import_meta tests to `ignoreReasons` due to architectural limitation (#7434) by @Copilot
+- deps: update dependency oxlint-tsgolint to v0.8.5 (#7433) by @renovate[bot]
+- update test dependencies automatically (#7432) by @sapphi-red
+- remove unused code (#7420) by @IWANABETHATGUY
+- add back `just update-esbuild-diff` and add it to CI (#7404) by @sapphi-red
+- deps: update oxc-resolver to 11.15.0 (#7415) by @shulaoda
+- deps: update rust crate napi to v3.7.0 (#7393) by @renovate[bot]
+- fix esbuild compatibility metrics calculation (#7390) by @sapphi-red
+- support `tsconfig: true` in rust tests (#7389) by @sapphi-red
+- hide oxc runtime in snapshots (#7388) by @sapphi-red
+- deps: update oxc to v0.102.0 (#7385) by @camc314
+- improve esbuild tests to download snapshots automatically (#7378) by @sapphi-red
+- deps: update dependency tinybench to v6 (#7371) by @renovate[bot]
+- deps: update actions/checkout action to v6 (#7370) by @renovate[bot]
+- deps: update rust crates (#7367) by @renovate[bot]
+- deps: update dependency oxlint to v1.32.0 (#7374) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.8.4 (#7373) by @renovate[bot]
+- node/test-dev-server: support using custom html file (#7357) by @hyf0
+- test: setup browser-based e2e test for `test-dev-server` (#7351) by @hyf0
+- pin pnpm to version 10.23.0 (#7369) by @IWANABETHATGUY
+- deps: update dependency rolldown-plugin-dts to v0.18.3 (#7372) by @renovate[bot]
+- deps: update github-actions (#7365) by @renovate[bot]
+- deps: update npm packages (#7366) by @renovate[bot]
+- polish the comments about `SymbolRefFlags` (#7358) by @IWANABETHATGUY
+- deps: update dependency rolldown-plugin-dts to v0.18.2 (#7355) by @renovate[bot]
+- fix esbuild test generation script (#7352) by @sapphi-red
+- apply cargo shear suggestion (#7347) by @IWANABETHATGUY
+- deps: update oxc to v11.15.0 (#7344) by @renovate[bot]
+- deps: update dependency @napi-rs/cli to v3.5.0 (#7338) by @renovate[bot]
+- deps: update dependency oxlint to v1.31.0 (#7305) by @renovate[bot]
+- update rollup-tests results (#7333) by @sapphi-red
+- update rollup-tests Rollup version (#7332) by @sapphi-red
+- add ignore config for test262 submodule (#7326) by @Copilot
+
+### ❤️ New Contributors
+
+- @jakeparis made their first contribution in [#7331](https://github.com/rolldown/rolldown/pull/7331)
+
+## [1.0.0-beta.53] - 2025-12-03
+
+### 💥 BREAKING CHANGES
+
+- drop `i686-pc-windows-msvc` target support (#7230) by @sapphi-red
+
+### 🚀 Features
+
+- rolldown_plugin_vite_manifest: pass normalized options to `isLegacy` callback (#7321) by @shulaoda
+- plugin/vite-resolve: add `disableCache` option (#6763) by @sapphi-red
+- rolldown: export `createTokioRuntime` for tsdown (#7264) by @shulaoda
+- rolldown_plugin_vite_html: sync `moduleSideEffects` for already loaded modules (#7254) by @shulaoda
+- rolldown_plugin_vite_html: load module scripts with side effects to prevent tree-shaking (#7244) by @shulaoda
+- rolldown_plugin_vite_css_post: implement `cssScopeTo` for scoped CSS tree-shaking (#7240) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- export default class decl \_\_name runtime insertion (#7316) by @IWANABETHATGUY
+- chunk side effects calculation (#7273) by @IWANABETHATGUY
+- node: `output.generateCode.preset: 'es2015'` should set `output.generateCode.symbols: true` by default (#7314) by @sapphi-red
+- skip name helper for classes with static name property (#7312) by @IWANABETHATGUY
+- preserve chunk imports relationship after chunk merging (#7303) by @shulaoda
+- dev: make `register_modules` async (#7289) by @hyf0
+- preserve computed property in object destructuring (#7288) by @IWANABETHATGUY
+- support dynamic imports with shared dependencies (#7261) by @IWANABETHATGUY
+- call `defer_sync_scan_data` in non-incremental build mode (#7255) by @shulaoda
+- optimize chunk merging for shared entry points (#7194) by @IWANABETHATGUY
+- add indentation for UMD format output (#7263) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: pass options to `isLegacy` callback for proper legacy detection (#7260) by @shulaoda
+- rolldown_plugin_vite_css_post: also detect `?inline=true` query for inlined CSS (#7245) by @shulaoda
+- rolldown_plugin_vite_css_post: distinguish empty CSS from no CSS (#7241) by @shulaoda
+- add Windows support for t-run command (#7242) by @IWANABETHATGUY
+- cjs: prevent duplicate require declarations for external modules with preserveModules (#7234) by @logaretm
+- rolldown_plugin_vite_resolve: resolve from root for virtual modules (#7236) by @sapphi-red
+- include entry level external modules in chunk exports (#7218) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- dev: make `removeClient` async (#7313) by @hyf0
+- move chunk merging code out of code_splitting.rs (#7285) by @IWANABETHATGUY
+- extract common function util for chunk merging (#7271) by @IWANABETHATGUY
+- use iterative method to merge chunks (#7256) by @IWANABETHATGUY
+- use concat_string! instead of string replace for generating chunk level exports (#7247) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- add warning to experimental.resolveNewUrlToAsset about JS/TS files (#7300) by @Copilot
+- add sequential hook execution difference in plugin-api.md (#7308) by @Copilot
+- add migration example from onwarn to onLog (#7299) by @Copilot
+- add migration example for manualChunks to advancedChunks (#7298) by @Copilot
+- deps: bump vitepress to fix build (#7307) by @sapphi-red
+- examples & text for experimental.resolveNewUrlToAsset (#7259) by @TheAlexLichter
+
+### ⚡ Performance
+
+- rolldown_plugin_vite_css_post: lazily load `cssScopeTo` from JS module options (#7253) by @shulaoda
+- rolldown_plugin_vite_css_post: avoid unnecessary string clones in `resolve_asset_urls_in_css` (#7250) by @shulaoda
+
+### 🧪 Testing
+
+- generate relative path like name in advanced chunks (#7267) by @IWANABETHATGUY
+- add test case for preserveEntrySignatures with re-exports (#7279) by @IWANABETHATGUY
+- add test262 integration tests (#7196) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency rolldown-plugin-dts to v0.18.1 (#7304) by @renovate[bot]
+- enable tracing feature for napi (#7322) by @sapphi-red
+- deps: update napi (#7320) by @renovate[bot]
+- deps: update oxc (#7318) by @renovate[bot]
+- deps: update napi (#7317) by @renovate[bot]
+- deps: update oxc to v0.100.0 (#7301) by @renovate[bot]
+- deps: downgrade pnpm to 10.23.0 to fix Netlify build (#7306) by @shulaoda
+- add `trustPolicyExclude` for chokidar and semver (#7302) by @sapphi-red
+- update pnpm lockfile (#7291) by @IWANABETHATGUY
+- deps: update npm packages (#7272) by @renovate[bot]
+- deps: update rust crates (#7270) by @renovate[bot]
+- deps: update oxc (#7262) by @renovate[bot]
+- deps: update github-actions (#7269) by @renovate[bot]
+- deps: update dependency dprint-typescript to v0.95.13 (#7268) by @renovate[bot]
+- deps: update `html5gum` to 0.8.1 (#7265) by @shulaoda
+- rolldown: remove unused `getModuleOptions` from `PluginContext` (#7266) by @shulaoda
+- remove unnecessary justfile ignore (#7243) by @IWANABETHATGUY
+- deps: update oxc apps (#7238) by @renovate[bot]
+- add `nul` to workaround https://github.com/anthropics/claude-c… (#7237) by @IWANABETHATGUY
+- deps: update dependency valibot to v1.2.0 [security] (#7231) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.40.0 (#7232) by @renovate[bot]
+
+### ❤️ New Contributors
+
+- @logaretm made their first contribution in [#7234](https://github.com/rolldown/rolldown/pull/7234)
+
+## [1.0.0-beta.52] - 2025-11-26
+
+### 💥 BREAKING CHANGES
+
+- change `output.generatedCode.profilerNames` default to false (#7139) by @Copilot
+
+### 🚀 Features
+
+- support vite-style tsconfig resolution (#6873) by @shulaoda
+- rolldown: oxc v0.99.0 (#7165) by @camc314
+- browser: export `plugins` (#7210) by @sxzz
+- rolldown_plugin_vite_css_post: add `inline` parameter to `cssMinify` callback (#7191) by @shulaoda
+- rolldown_plugin_vite_build_import_analysis: implement `render_chunk` to replace `__VITE_IS_MODERN__` flag (#7178) by @shulaoda
+- rolldown_plugin_utils: optimize SVG data URL encoding (#7156) by @shulaoda
+- dev: replace `DevEngine::hasLatestBuildOutput` with `DevEngine::getBundleState` (#7145) by @sapphi-red
+- rolldown_plugin_vite_asset_import_meta_url: support `@vite-ignore` comment (#7141) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: implement static URL processing (#7140) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: align `asset_resolver` logic (#7137) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: align `try_fs_resolve` logic (#7136) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: validate relative paths (#7120) by @shulaoda
+- export `viteAssetImportMetaUrlPlugin` and add dynamic URL tests (#7119) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- watch overwrite rename event on linux (#7201) by @sapphi-red
+- preserve name for parenthesized anonymous default exports and arrow functions with keepNames (#7159) by @Copilot
+- rolldown_plugin_vite_html: add missing async attribute for inlined entry scripts (#7202) by @shulaoda
+- respect target setting in DCE to prevent modern syntax generation (#7128) by @Copilot
+- rolldown_plugin_vite_html: add semicolon to import statement in CSS removal (#7200) by @shulaoda
+- rolldown_plugin_vite_html: use correct CSS asset filename in HTML injection (#7199) by @shulaoda
+- rolldown_plugin_vite_css_post: handle scoped package names in lib CSS filename (#7198) by @shulaoda
+- rolldown_plugin_vite_html: use patched `html5gum` with correct span tracking (#7193) by @shulaoda
+- rolldown_plugin_vite_html: handle HTML strings in script tags correctly (#7192) by @shulaoda
+- handle JSON import namespace property access correctly (#7190) by @IWANABETHATGUY
+- only include runtime helpers from included modules (#7183) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: normalize paths to use forward slashes in `original_file_name` (#7175) by @shulaoda
+- rolldown_plugin_vite_css_post: use `filename` instead of `reference_id` for imported assets (#7174) by @shulaoda
+- rolldown_plugin_vite_css_post: correct regex escaping in pure CSS chunk pruning (#7173) by @shulaoda
+- rolldown_plugin_vite_html: use correct dependency path for modulepreload links (#7172) by @shulaoda
+- update cur_stmt_index when processing top level statements (#7157) by @IWANABETHATGUY
+- rolldown_plugin_utils: strip leading character from public asset URL (#7170) by @shulaoda
+- rolldown_plugin_vite_html: use correct `public_base` for `html_result_map` key (#7169) by @shulaoda
+- rolldown_plugin_utils: correct runtime handling and escape single quotes in asset paths (#7168) by @shulaoda
+- rolldown_plugin_utils: prevent data race in `file_to_url` cache (#7166) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: correct glob pattern and query string handling in dynamic URLs (#7162) by @shulaoda
+- rolldown_plugin_vite_css_post: use correct start position in magic string updates (#7158) by @shulaoda
+- data race in `FileEmitter::emit_file` causing duplicate asset emissions (#7164) by @shulaoda
+- dev: watch files even if the build failed (#7149) by @sapphi-red
+- rolldown_plugin_utils: always use base64 encoding for data URLs (#7148) by @shulaoda
+- preserve "default" name for anonymous default exports with keepNames (#7151) by @Copilot
+- correctly handle cjs json module as entry point (#7147) by @IWANABETHATGUY
+- rolldown_plugin_utils: correct `reference_id` parsing in `render_asset_url_in_js` (#7143) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: exclude quotes from URL span (#7142) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: use template literal for glob result indexing (#7134) by @shulaoda
+- tree shake unused dynamic entry when `inlineDynamicImports` is enabled (#7129) by @IWANABETHATGUY
+- correct return value of `parse` / `parseSync` functions (#7127) by @sapphi-red
+
+### 🚜 Refactor
+
+- rolldown_plugin_vite_transform: use `oxc_resolver` for tsconfig discovery (#7220) by @shulaoda
+- rolldown_plugin_vite_resolve: use `resolve_file` for tsconfig discovery (#7216) by @shulaoda
+- rolldown_plugin_utils: remove redundant `ViteMetadata::get_or_insert_default()` (#7189) by @shulaoda
+- rolldown_plugin_utils: simplify `ViteMetadata::get()` to always return a value (#7188) by @shulaoda
+- rolldown_utils: add `guess_mime_skip_utf8_check` for binary assets (#7161) by @shulaoda
+- rolldown_plugin_utils: extract asset URL parsing into `AssetUrlIter` (#7144) by @shulaoda
+- store pattern name in FilenameTemplate (#7132) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- tsconfig: document auto-discovery mode and improve structure (#7228) by @shulaoda
+- add plugin hook filter compatibility and fallback guide (#7138) by @Copilot
+- update top level navigation (#7092) by @mdong1909
+
+### 🧪 Testing
+
+- add tsconfig include/exclude/files matching test cases (#6899) by @shulaoda
+- vite-tests: run `playwright install` in case playwright binary is missing (#7226) by @sapphi-red
+- watch: close watcher when an error occured in the test cases (#7225) by @sapphi-red
+- watch: reject `waitBuildFinished` if `ERROR` event occurs (#7224) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- example: revert accidental changes to basic-typescript (#7227) by @shulaoda
+- deps: update oxc apps (#7212) by @renovate[bot]
+- deps: update rust crates (#7204) by @renovate[bot]
+- deps: update `oxc_resolver_napi` to 11.14.0 (#7217) by @shulaoda
+- deps: update oxc_resolver (#6909) by @shulaoda
+- deps: update dependency glob to v13 (#7208) by @renovate[bot]
+- deps: update actions/checkout action to v6 (#7207) by @renovate[bot]
+- deps: update npm packages (#7206) by @renovate[bot]
+- deps: update github-actions (#7205) by @renovate[bot]
+- add missing status code comment (#7185) by @iiio2
+- deps: update dependency oxlint-tsgolint to v0.8.1 (#7197) by @renovate[bot]
+- rust: add more tracing log for hmr + dev logic (#7179) by @hyf0
+- deps: update dependency oxlint-tsgolint to v0.8.0 (#7167) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.7.3 (#7133) by @renovate[bot]
+- merge similar inlineDynamicImports test case (#7131) by @IWANABETHATGUY
+- deps: update `rolldown-plugin-dts` to 0.18.0 (#7125) by @shulaoda
+
+## [1.0.0-beta.51] - 2025-11-19
+
+### 💥 BREAKING CHANGES
+
+- rolldown_plugin_vite_react_refresh_wrapper: add vite prefix (#7086) by @shulaoda
+- rolldown_plugin_vite_web_worker_post: add vite prefix (#7085) by @shulaoda
+- rolldown_plugin_vite_wasm_helper: add vite prefix (#7084) by @shulaoda
+- rolldown_plugin_vite_wasm_fallback: add vite prefix (#7083) by @shulaoda
+- rolldown_plugin_vite_transform: add vite prefix (#7082) by @shulaoda
+- rolldown_plugin_vite_reporter: add vite prefix (#7081) by @shulaoda
+- rolldown_plugin_vite_module_preload_polyfill: add vite prefix (#7080) by @shulaoda
+- rolldown_plugin_vite_manifest: add vite prefix (#7079) by @shulaoda
+- rolldown_plugin_vite_load_fallback: add vite prefix (#7072) by @shulaoda
+- rolldown_plugin_vite_json: add vite prefix (#7071) by @shulaoda
+- rolldown_plugin_vite_import_glob: add vite prefix (#7070) by @shulaoda
+- rolldown_plugin_vite_html_inline_proxy: add vite prefix (#7069) by @shulaoda
+- rolldown_plugin_vite_dynamic_import_vars: add vite prefix (#7068) by @shulaoda
+- rolldown_plugin_vite_build_import_analysis: add vite prefix (#7067) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: add vite prefix (#7066) by @shulaoda
+- rolldown_plugin_vite_alias: add vite prefix (#7065) by @shulaoda
+- rolldown_plugin_vite_asset_plugin: add vite prefix (#7064) by @shulaoda
+
+### 🚀 Features
+
+- export sync APIs to experimental (#7122) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: implement template literal support for dynamic URLs (#7118) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: implement AST-based URL detection (#7113) by @shulaoda
+- add isPathFragment validation for filename patterns (rollup compat) (#7101) by @IWANABETHATGUY
+- rolldown_plugin_vite_asset_import_meta_url: align filter logic (#7103) by @shulaoda
+- rolldown: oxc v0.98.0 (#6961) by @camc314
+- show error contexts for unhandleable errors (#7095) by @sapphi-red
+- rolldown_plugin_utils: extract `get_hash` utility function (#7059) by @shulaoda
+- rolldown_plugin_asset: initialize `CSSEntriesCache` (#7015) by @shulaoda
+- rolldown_plugin_vite_html: align `transformIndexHtml` logic (#7010) by @shulaoda
+- builtin-plugin: support `bindingifyViteHtmlPlugin` (#7008) by @shulaoda
+- impl `generatedCode.symbols` for reexport dynamic modules. (#6993) by @IWANABETHATGUY
+- rolldown_plugin_manifest: support v2 logic (#6979) by @shulaoda
+- support Node.js `module.exports` ESM export (#6967) by @Copilot
+- change "could not clean directory" from error to warning (#6955) by @Copilot
+- rolldown_binding: add context to errors thrown by plugin hooks (#6964) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- content hash should be affected by the minify behavior (#7102) by @hyf0
+- `canonical name not found for "__toESM"` error when only named imports are used from a CJS module (#7094) by @sapphi-red
+- preserve directory structure in chunk names with preserveModules (#6872) by @IWANABETHATGUY
+- rolldown_plugin_asset: correct bundle deletion index calculation (#7063) by @shulaoda
+- rolldown_plugin_utils: correct string slicing in `render_asset_url_in_js` (#7061) by @shulaoda
+- rolldown_plugin_vite_html: use transformed result in asset URL handling (#7060) by @shulaoda
+- rolldown_plugin_vite_html: skip redundant path resolution for processed URLs (#7058) by @shulaoda
+- rolldown_plugin_vite_css_post: data race in CSS URL processing (#7055) by @shulaoda
+- rolldown_plugin_vite_css_post: always compute css asset dirname in build command (#7054) by @shulaoda
+- rolldown_plugin_vite_css: ensure consistent url in import and export (#7053) by @shulaoda
+- rolldown_plugin_vite_css_post: use `get_or_insert_default` for `HTMLProxyResult` (#7052) by @shulaoda
+- rolldown_plugin_vite_css: skip `commonjs-proxy` CSS requests (#7050) by @shulaoda
+- rolldown_plugin_utils: correct `is_css_module` (#7049) by @shulaoda
+- rolldown_plugin_utils: correct `is_css_request` (#7048) by @shulaoda
+- rolldown_plugin_vite_html: use correct inline module index (#7046) by @shulaoda
+- rolldown_plugin_vite_html: correct scripts url update logic (#7045) by @shulaoda
+- rolldown_plugin_vite_html: fallback to original url on NotFound error (#7043) by @shulaoda
+- rolldown_plugin_vite_html: move src_tasks to correct branch (#7040) by @shulaoda
+- rolldown_plugin_vite_html: correct `handle_style_tag_or_attribute` (#7038) by @shulaoda
+- builtin-plugin: add `config` to `htmlInlineProxyPlugin` (#7036) by @shulaoda
+- missing CJS default export when SafelyMergeCjsNs optimization is enabled (#7006) by @Copilot
+- reserve global names before deconflicting external symbols (#7022) by @IWANABETHATGUY
+- rolldown_plugin_build_import_analysis: process all bundle outputs correctly (#7020) by @shulaoda
+- rolldown_plugin_vite_css_post: process all bundle outputs correctly (#7019) by @shulaoda
+- rolldown_plugin_vite_css_post: remove `/*$vite$:1*/` correctly (#7018) by @shulaoda
+- rolldown_plugin_vite_html: use correct span for `style_urls` (#7017) by @shulaoda
+- rolldown_plugin_vite_html: track full element span from start to end tag (#7016) by @shulaoda
+- builtin-plugin: correct `viteHtmlPlugin` related logic (#7013) by @shulaoda
+- remove unused module namespace object exporting (#7002) by @IWANABETHATGUY
+- rust/dev: allow to recover from hmr rebuild failure (#6991) by @hyf0
+- rust/dev: `ensure_latest_bundle_output` shouldn't loop infinitely (#6974) by @hyf0
+- rust/dev: `DevEngine#ensure_latest_bundle_output` should schedule a rebuild task if there're no queued tasks (#6968) by @hyf0
+- add Symbol.toStringTag to module facades when generatedCode.symbols is enabled (#6784) by @Copilot
+
+### 🚜 Refactor
+
+- extension checking to use constant array (#7057) by @Copilot
+- rust/devtools: tweak namings and introduction comments (#7028) by @hyf0
+- rolldown_plugin_vite_html: use `root` instead of `cwd` (#7035) by @shulaoda
+- rolldown_plugin_vite_css_post: use `root` instead of `cwd` (#7034) by @shulaoda
+- rolldown_plugin_vite_css: use `root` instead of `cwd` (#7033) by @shulaoda
+- rolldown_plugin_transform: use `root` instead of `cwd` (#7032) by @shulaoda
+- rolldown_plugin_reporter: use `root` instead of `cwd` (#7031) by @shulaoda
+- rolldown_plugin_asset: use `root` instead of `cwd` (#7030) by @shulaoda
+- rolldown_plugin_html_inline_proxy: use `root` instead of `cwd` (#7029) by @shulaoda
+- rust/dev: remove dead code of `rolldown_dev` crate (#6997) by @hyf0
+- rust: move dev related code into new `rolldown_dev` crate (#6996) by @hyf0
+- rolldown_resolver: use consistent generic parameter name `Fs` (#6998) by @shulaoda
+- rolldown_resolver: improve resolve method clarity and documentation (#6986) by @shulaoda
+- rename `is_module_facade()` to `is_entry_point()` for clarity (#6994) by @IWANABETHATGUY
+- rust/dev: unwrap `Result<_>` from the return type of `BundleCoordinator::schedule_build_if_stale` (#6980) by @sapphi-red
+- rolldown_resolver: reorganize impl blocks (#6984) by @shulaoda
+- rolldown_resolver: extract configuration logic into separate module (#6983) by @shulaoda
+- rolldown_resolver: improve error messages (#6982) by @shulaoda
+- rust/dev: rename `CoordinatorStatus` to `CoordinatorStateSnapshot` (#6973) by @hyf0
+- rust/dev: replace `InitialBuildState` with `CoordinatorState` (#6972) by @hyf0
+- ast_scanner: derive `Debug`, `Clone`, `Copy` for `CjsGlobalAssignmentType` (#6971) by @camc314
+- rust: filter out devtools specific events for normal tracing (#6965) by @hyf0
+- rust/dev: replace `CoordinatorMsg::HasLatestBuildOutput` with `GetStatus` (#6960) by @hyf0
+- rust/dev: `ensure_current_build_finish` shouldn't block the coordinator's event loop (#6959) by @hyf0
+
+### 📚 Documentation
+
+- in-depth/directives: remove TODOs and fix code (#7112) by @sapphi-red
+- clarify concepts of rolldown's test infra (#7047) by @hyf0
+- contrib/style: add suggestions about choosing file names (#6989) by @hyf0
+
+### ⚡ Performance
+
+- rolldown_plugin_vite_css_post: cache CSS URL processing results (#7056) by @shulaoda
+- remove unnecessary `collect_vec` (#6999) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- add testcase for #6880 and #6879 (#7107) by @IWANABETHATGUY
+- vite-tests: use integration branch for vite compatibility tests (#7091) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- remove redundant chunk level linefeed (#7109) by @IWANABETHATGUY
+- pin oxc-minify to 0.97.0 (#7108) by @IWANABETHATGUY
+- deps: update oxc apps (#7104) by @renovate[bot]
+- deps: update glob for security (#7105) by @shulaoda
+- rolldown: add aliases for renamed vite plugins (#7087) by @shulaoda
+- automate weekly beta releases (#7089) by @Boshen
+- deps: update dependency oxlint-tsgolint to v0.7.0 (#7088) by @renovate[bot]
+- deps: update github-actions (#7075) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.6.0 (#7037) by @renovate[bot]
+- deps: update npm packages (#7076) by @renovate[bot]
+- deps: update rust crates (#7077) by @renovate[bot]
+- add retry to flaky tests (#7041) by @sapphi-red
+- rust: rename `rolldown_debug` to `rolldown_devtools` (#7026) by @hyf0
+- deps: update crate-ci/typos action to v1.39.2 (#7001) by @renovate[bot]
+- ai/github: make copilot review check rust api style (#6988) by @hyf0
+- move test `recover_from_initial_build_error` to `error_recovery/from_initial_build_syntax_error` (#6990) by @hyf0
+- oxlint: enable `typescript/consistent-type-imports` rule (#6987) by @shulaoda
+- deps: update crate-ci/typos action to v1.39.1 (#6975) by @renovate[bot]
+- build.ts: separate import type (#6921) by @iiio2
+- format rolldown runtime (#6966) by @IWANABETHATGUY
+
+## [1.0.0-beta.50] - 2025-11-12
+
+### 🚀 Features
+
+- rolldown: oxc_resolver v11.13.2 (#6956) by @Boshen
+- rolldown: oxc v0.97.0 (#6940) by @Boshen
+
+### 🐛 Bug Fixes
+
+- handle error when creating output chunk directories (#6953) by @sapphi-red
+- throw error if `experimental.hmr` is set for APIs other than `dev` (#6860) by @Copilot
+- apply output.paths transformation to chunk.imports and generated code (#6923) by @Copilot
+
+### 🚜 Refactor
+
+- use `anyhow::Context::context` where applicable (#6952) by @sapphi-red
+- dev: use actor design pattern and allow to recover from intial build error (#6936) by @hyf0
+
+### 📚 Documentation
+
+- add sitemap (#6929) by @mdong1909
+
+### 🧪 Testing
+
+- validate publishConfig.exports matches exports field (#6950) by @Copilot
+- re-enable output/paths/function test (#6934) by @Copilot
+
+### ⚙️ Miscellaneous Tasks
+
+- rename `rolldown_watcher` to `rolldown_fs_watcher` (#6958) by @hyf0
+- enable trust policy (#6948) by @iiio2
+- deps: update napi (#6951) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.17.6 (#6947) by @renovate[bot]
+- deps: update npm packages (#6937) by @renovate[bot]
+- deps: update dependency tsdown to v0.16.2 (#6933) by @renovate[bot]
+
+### ❤️ New Contributors
+
+- @mdong1909 made their first contribution in [#6929](https://github.com/rolldown/rolldown/pull/6929)
+
+## [1.0.0-beta.49] - 2025-11-10
+
+### 🐛 Bug Fixes
+
+- node/exports: export `./plugins` in `publishConfig` for `rolldown` (#6926) by @Copilot
+- add type of `meta.ast` for transform hook (#6919) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency rust to v1.91.1 (#6927) by @renovate[bot]
+- deps: update dependency oxlint to v1.28.0 (#6924) by @renovate[bot]
+- update example with `meta.ast` + `meta.nativeString` (#6922) by @IWANABETHATGUY
+
+## [1.0.0-beta.48] - 2025-11-10
+
+### 💥 BREAKING CHANGES
+
+- `this.emitFile` does not respect `chunkFileNames` (#6868) by @Copilot
+- remove deprecated top-level `dropLabels` option (#6915) by @sapphi-red
+- remove deprecated top-level `keepNames` option (#6914) by @sapphi-red
+- remove deprecated top-level `profilerNames` option (#6913) by @sapphi-red
+- remove deprecated top-level `define` and `inject` options (#6912) by @sapphi-red
+- move stable plugins from experimental to `rolldown/plugins` (#6303) by @shulaoda
+- node: remove experimental `RolldownBuild#scan`, only expose it from `rolldown/experimental` (#6889) by @hyf0
+
+### 🚀 Features
+
+- add side-effect detection for global constructors with primitive arguments (#6898) by @IWANABETHATGUY
+- rust: use `BundleMode` to handle incremental build exhaustively (#6894) by @hyf0
+- detect side-effect-free global function calls (#6897) by @IWANABETHATGUY
+- expose `parseSync` / `parseAsync` function (#6866) by @sapphi-red
+- skip `__toESM` helper when only named imports are used from CJS modules (#6850) by @Copilot
+- rolldown_binding: expose `htmlInlineProxyPlugin` (#6856) by @shulaoda
+- rolldown_plugin_html_inline_proxy: align `load` hook logic (#6855) by @shulaoda
+- rolldown_plugin_html_inline_proxy: align `resolveId` hook logic (#6854) by @shulaoda
+- rolldown_plugin_html_inline_proxy: initialize (#6853) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- cli: support nested options in CLI properly (#6911) by @sapphi-red
+- debug: ensure injecting `hook_resolve_id_trigger` correctly (#6908) by @hyf0
+- use chunk-specific exports for entry module export detection (#6904) by @IWANABETHATGUY
+- debug: ensure build get injected and add tests (#6896) by @hyf0
+- error: return friendly error for bundler already closed scenario (#6878) by @hyf0
+- improve dynamic entry processing with iterative approach (#6869) by @IWANABETHATGUY
+- handle tsconfig option resolve error (#6871) by @sapphi-red
+- handle error when creating output chunk directories (#6870) by @sapphi-red
+- node: `NormalizedOutputOptionsImpl` and `NormalizedInputOptionsImpl` enumerable (#6861) by @hyf0
+- node: keys of `RolldownOutput` should be enumerable (#6852) by @Copilot
+
+### 🚜 Refactor
+
+- rust: rename `BundleContext` to `BundleHandle` (#6893) by @hyf0
+- rust: rename `build_span` to `bundle_span` (#6892) by @hyf0
+- rust: introduce `PluginDriverFactory` to manage creation of `PluginDriver` (#6891) by @hyf0
+- crates/rolldown_binding: remove useless `BindingBundlerImpl` (#6888) by @hyf0
+- crates/rolldown_binding: rename `Bundler` to `ClassicBundler` and clarify the purpose (#6887) by @hyf0
+- rust: rename `BuildFactory/Build` to `BundleFactory/Bundle` (#6886) by @hyf0
+- rust: tweak incremental build related methods of `Bundler` (#6884) by @hyf0
+- rust: manage build via `BuildFactory` for `Bundler` (#6883) by @hyf0
+- node: implement a new `Bundler` that satisfy the usage of `RolldownBuild` (#6877) by @hyf0
+- node: remove useless `nonEnumerable` decorator (#6862) by @hyf0
+
+### 📚 Documentation
+
+- add documentation for native replace plugin (#6315) by @shulaoda
+- in-depth/directives: expand description of how directives are handled (#6882) by @sapphi-red
+- in-depth/bundling-cjs: clarify the condition of `default` export interop (#6875) by @sapphi-red
+- add troubleshooting section for `this` in exported functions (#6865) by @sapphi-red
+- update prebuilt binaries list based on Node 24 platform support tier (#6864) by @sapphi-red
+- remove unsupported [ext] placeholder from entryFileNames and chunkFileNames (#6859) by @Copilot
+
+### ⚡ Performance
+
+- rolldown: improve sourcemap chain processing (#6858) by @Brooooooklyn
+
+### 🧪 Testing
+
+- add test case for issue #6881 with scientific notation (#6906) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update npm packages (#6918) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.17.5 (#6917) by @renovate[bot]
+- deps: lock file maintenance (#6907) by @renovate[bot]
+- deps: update rust crates (#6905) by @renovate[bot]
+- deps: update npm packages (#6903) by @renovate[bot]
+- deps: update github-actions (#6902) by @renovate[bot]
+- deps: update `oxc_resolver` and `oxc_resolver_napi` (#6901) by @shulaoda
+- deps: update dependency rolldown-plugin-dts to v0.17.4 (#6895) by @renovate[bot]
+- deps: update dependency tsdown to v0.16.1 (#6885) by @renovate[bot]
+- deps: upgrade napi to remove linker args that skip missing symbols (#6867) by @Boshen
+
+## [1.0.0-beta.47] - 2025-11-05
+
+### 💥 BREAKING CHANGES
+
+- `meta.magicString` and `meta.ast` now only initialized once (#6828) by @IWANABETHATGUY
+
+### 🚀 Features
+
+- rolldown_plugin_utils: support common module preload config (#6839) by @shulaoda
+- expose `minify` function (#6836) by @sapphi-red
+- rolldown_plugin_build_import_analysis: remove all `__VITE_PRELOAD__` (#6833) by @shulaoda
+- rolldown_plugin_build_import_analysis: inject **vite**mapDeps (#6832) by @shulaoda
+- rolldown_plugin_build_import_analysis: align partial logic (#6831) by @shulaoda
+- expose more magic string method in js binding (#6819) by @IWANABETHATGUY
+- rolldown_plugin_build_import_analysis: align renderBuiltUrl logic (#6808) by @shulaoda
+- rolldown_plugin_build_import_analysis: align resolve dependencies logic (#6803) by @shulaoda
+- rolldown_plugin_build_import_analysis: align partial logic (#6802) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_build_import_analysis: correct unaligned code (#6845) by @shulaoda
+- rolldown_binding: resolveDependencies shouldn't return Promise (#6844) by @shulaoda
+- browser: correct binding file (#6830) by @sxzz
+
+### 🚜 Refactor
+
+- rolldown_plugin_vite_html: use module preload instead (#6843) by @shulaoda
+- rolldown_plugin_build_import_analysis: use module preload config instead (#6841) by @shulaoda
+- rolldown_binding: correct `renderBuiltUrl` (#6835) by @shulaoda
+- rolldown_plugin_build_import_analysis: remove unnecessary is_module_preload (#6834) by @shulaoda
+- rolldown_plugin_build_import_analysis: remove unnecessary `IS_MODERN_FLAG` (#6823) by @shulaoda
+- rolldown_plugin_build_import_analysis: tweak v2 config (#6804) by @shulaoda
+
+### 📚 Documentation
+
+- add link to Native MagicString In-Depth Guide and fix broken markdown syntax (#6827) by @IWANABETHATGUY
+- update current status of native magic string (#6820) by @IWANABETHATGUY
+- add specific use cases (#6822) by @shulaoda
+- add minification preservation instructions for banner/footer options (#6786) by @ZiuChen
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: bump oxc-resolver to v11.13.1 (#6847) by @renovate[bot]
+- deps: update dependency tsdown to v0.16.0 (#6840) by @renovate[bot]
+- README.md: fix broken documentation link to getting started guide (#6837) by @Cheng-fung
+
+### ❤️ New Contributors
+
+- @Cheng-fung made their first contribution in [#6837](https://github.com/rolldown/rolldown/pull/6837)
+- @ZiuChen made their first contribution in [#6786](https://github.com/rolldown/rolldown/pull/6786)
+
+## [1.0.0-beta.46] - 2025-11-03
+
+### 💥 BREAKING CHANGES
+
+- default `preserveEntrySignatures` to `'exports-only'` to align with Rollup (#6723) by @Copilot
+
+### 🚀 Features
+
+- link to docs for commonjs prefer_builtin_feature diagnostic (#6793) by @sapphi-red
+- rolldown_plugin_build_import_analysis: align partial logic (#6789) by @shulaoda
+- improve `EVAL` warning message (#6776) by @sapphi-red
+- rolldown: oxc v0.96.0 (#6774) by @Boshen
+- rolldown_plugin_build_import_analysis: align partial logic (#6773) by @shulaoda
+- skip `__toESM` when not needed to reduce output size (#6751) by @Copilot
+- improve `EMPTY_IMPORT_META` warning message (#6761) by @sapphi-red
+- rolldown_plugin_build_import_analysis: align no preload logic (#6762) by @shulaoda
+- rolldown_plugin_vite_css_post: align `RemovedPureCSSFilesCache` logic (#6745) by @shulaoda
+- rolldown_plugin_build_import_analysis: initialize `generateBundle` logic (#6744) by @shulaoda
+- experimental: introduce `freeExternalMemory` to free external memory immediately (#6721) by @hyf0
+
+### 🐛 Bug Fixes
+
+- plugins: wrap replacePlugin with makeBuiltinPluginCallable (#6782) by @huang-julien
+- debug: make sure `this.resolve` is also tracked under corresponding session (#6798) by @hyf0
+- legal comments above directives are not preserved (#6787) by @shulaoda
+- panic when rendering exports to other chunks (#6765) by @Copilot
+- transform/inject: escape special characters in import source (#6778) by @Copilot
+- handle default exports from CJS modules correctly (#6767) by @IWANABETHATGUY
+- rolldown_plugin_build_import_analysis: correct aligned logic (#6768) by @shulaoda
+- duplicate default export when using both import and require (#6764) by @Copilot
+- handle arbitrary module namespace identifiers in `preserveEntrySignatures: 'allow-extension'` (#6753) by @Copilot
+- TypeError when loading CJS files after bundling mixed CJS+TS project (#6743) by @IWANABETHATGUY
+- add warnings for import.meta.dirname/filename/url in UMD and IIFE formats (#6747) by @Copilot
+- rolldown_plugin_manifest: should keep `names` field (#6742) by @shulaoda
+- legal comments above import statements are not preserved (#6717) by @shulaoda
+- remove redundant node check in dynamic entry graph construction (#6730) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- remove unnecessary `#[napi(gettter)]`, use function call directly (#6694) by @hyf0
+- explain the reason if memory doesn't get dropped by `freeExternalMemory` (#6781) by @hyf0
+- pre compute exports (#6755) by @IWANABETHATGUY
+- dev: receive an interface for DevRuntime rather than WebSocket directly (#6734) by @sapphi-red
+- dev: fix types for the runtime file and expose it properly (#6731) by @sapphi-red
+
+### 📚 Documentation
+
+- fix magicstring credit (#6812) by @TheAlexLichter
+- in-depth/bundling-cjs: wrap some sections with caveats section (#6796) by @sapphi-red
+- in-depth/bundling-cjs: add "Ambiguous `default` import from CJS modules" section (#6795) by @sapphi-red
+- in-depth/bundling-cjs: make `esmExternalRequirePlugin` link more prominent (#6792) by @sapphi-red
+- add explanation about direct eval (#6775) by @sapphi-red
+- add "Non-ESM Output Formats" page (#6760) by @sapphi-red
+- use oxc for benchmark comparison in native magic string doc (#6740) by @sapphi-red
+- polish `cleanDir` option (#6741) by @hyf0
+- fix image in native magic string doc (#6739) by @sapphi-red
+- update description about `attachDebugInfo: 'none'` (#6738) by @IWANABETHATGUY
+- add warning about cleanDir behavior with multiple configs (#6735) by @Copilot
+
+### 🧪 Testing
+
+- skip paths function test (#6771) by @IWANABETHATGUY
+- rust/dev: add test about recover from initial build error (#6567) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- correct prepare release binding file (#6817) by @shulaoda
+- deps: update github-actions (#6806) by @renovate[bot]
+- deps: lock file maintenance npm packages (#6814) by @renovate[bot]
+- use correct node version (#6809) by @shulaoda
+- deps: lock file maintenance rust crates (#6815) by @renovate[bot]
+- deps: update npm packages (major) (#6813) by @renovate[bot]
+- deps: update dependency dprint-typescript to v0.95.12 (#6805) by @renovate[bot]
+- fix typo (#6801) by @iiio2
+- fix typo in is_import_expr_ignored_by_comment method name (#6797) by @sapphi-red
+- deps: update crate-ci/typos action to v1.39.0 (#6794) by @renovate[bot]
+- deps: upgrade Rust to v1.91.0 and fix new clippy lints (#6785) by @Copilot
+- allow dprint to format `packages/rolldown/tests` except diagnostics directory (#6772) by @Copilot
+- deps: update dependency tsdown to v0.15.12 (#6759) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.17.3 (#6758) by @renovate[bot]
+- test/dev: collect multiple build outputs for each step (#6736) by @hyf0
+- rolldown: change the NAPI-RS binding file to the cjs (#6688) by @Brooooooklyn
+- test: automatically run extra test with `preserve_entry_signatures: 'allow-extension'` (#6727) by @Copilot
+- deps: update dependency rolldown-plugin-dts to v0.17.2 (#6732) by @renovate[bot]
+- fix node validation (#6728) by @shulaoda
+- deps: lock file maintenance rust crates (#6636) by @renovate[bot]
+- deps: update dependency tsdown to v0.15.11 (#6725) by @renovate[bot]
+
+### ❤️ New Contributors
+
+- @huang-julien made their first contribution in [#6782](https://github.com/rolldown/rolldown/pull/6782)
+
+## [1.0.0-beta.45] - 2025-10-27
+
+### 🚀 Features
+
+- plugin/vite-resolve: add `legacyInconsistentCjsInterop` option (#6687) by @sapphi-red
+- rolldown_plugin_vite_css_post: initialize `CSSStyles` (#6691) by @shulaoda
+- rolldown_plugin_manifest: align with `vitejs/vite#20585` (#6684) by @shulaoda
+- enabling mangle private class members (#6679) by @IWANABETHATGUY
+- rolldown_resolver: auto tsconfig discovery (#6602) by @Boshen
+- support named imports + CJS by optimization.inlineConst (#6644) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- rolldown_binding: use Record instead of Map (#6715) by @shulaoda
+- validate valibot schema against existing type (#6703) by @ocavue
+- rolldown_plugin_vite_css_post: align some logic (#6697) by @shulaoda
+- node/options: should validate `transform.jsx` correctly (#6698) by @ocavue
+- inherit runtime helpers from eliminated dependencies (#6689) by @IWANABETHATGUY
+- clean-dir: advance clean outdir to allow `generateBundle` outputs (#6647) by @aprosail
+- rename variable to better reflect its purpose and fix CJS imports (#6663) by @IWANABETHATGUY
+- bailout tree shake commonjs export when it is defined multiple time (#6659) by @IWANABETHATGUY
+- rolldown_plugin_reporter: color dimmed text correctly (#6649) by @sapphi-red
+- don't inline json module when used as a namespace reference (#6652) by @IWANABETHATGUY
+- avoid `define` deprecation warning when loading a config file (#6641) by @sapphi-red
+
+### 💼 Other
+
+- pluginutils: switch to tsc to solve the issue of loading conflicting binary (#6708) by @hyf0
+
+### 🚜 Refactor
+
+- node: only call `transformToRollupOutput` when needed (#6695) by @hyf0
+- node: split `transformToRollupOutput` into mutable and immutable versions (#6693) by @hyf0
+- remove unnecessaey lazy data passing for `BindingOutputs` (#6692) by @hyf0
+- rolldown_plugin_utils: tweak `CSSEntriesCache` (#6685) by @shulaoda
+- rolldown_binding: use unified `BindingRenderBuiltUrl` (#6653) by @shulaoda
+
+### 📚 Documentation
+
+- in-depth about `experimental.nativeMagicString` (#6713) by @IWANABETHATGUY
+- polish `optimization` (#6719) by @IWANABETHATGUY
+- clarify `output.cleanDir` timing behavior for plugin compatibility (#6682) by @Copilot
+- add Kevin Deng, 翠 (sapphi-red), and Alexander Lichter to team page with Bluesky links (#6664) by @Copilot
+- polish `preserveEntrySignature` doc (#6661) by @IWANABETHATGUY
+- set up redirects via netlify (#6654) by @TheAlexLichter
+- polish doc about `treeshake` (#6650) by @IWANABETHATGUY
+- rework options documentation first round (#6542) by @hyf0
+
+### ⚡ Performance
+
+- rolldown: upgrade sugar_path (#6646) by @Brooooooklyn
+
+### 🧪 Testing
+
+- add live bindings test for default export snapshot semantics (#6538) by @Copilot
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance npm packages (#6714) by @renovate[bot]
+- deps: update github-actions (#6710) by @renovate[bot]
+- deps: update dependency @vueuse/core to v14 (#6711) by @renovate[bot]
+- deps: update github-actions (major) (#6712) by @renovate[bot]
+- deps: update dependency tsdown to v0.15.10 (#6706) by @renovate[bot]
+- remove `typedoc` dependency and cleanup unused documentation generation (#6686) by @Copilot
+- deps: update dependency rolldown-plugin-dts to v0.17.1 (#6690) by @renovate[bot]
+- lint: `oxlint --type-aware` (#5660) by @Boshen
+- rolldown: update napi and js binding (#6676) by @Brooooooklyn
+- deps: update vitest to v4 (#6673) by @sapphi-red
+- test: support `DevTestMeta#dev` (#6672) by @hyf0
+- deps: update dependency rolldown-plugin-dts to ^0.17.0 (#6671) by @renovate[bot]
+- test: move dev related options to rolldown_dev_common (#6667) by @hyf0
+- test: add `DevTestMeta` under `TestMeta#dev` to control dev related behaviors (#6666) by @hyf0
+- deps: update dependency vite to v7.1.11 [security] (#6645) by @renovate[bot]
+- pluginutils: use rolldown to build plugutils (#6642) by @Brooooooklyn
+- deps: update dependency tsdown to v0.15.9 (#6643) by @renovate[bot]
+
+### ❤️ New Contributors
+
+- @ocavue made their first contribution in [#6703](https://github.com/rolldown/rolldown/pull/6703)
+
+## [1.0.0-beta.44] - 2025-10-20
+
+### 💥 BREAKING CHANGES
+
+- enable `output.minifyInternalExports` for `format: 'es'` or `minify: true` (#6594) by @sapphi-red
+- node/options: remove `InputOptions.jsx`, prefer `transform.jsx` always (#6548) by @hyf0
+
+### 🚀 Features
+
+- support jsx preset for `transform.jsx` (#6630) by @shulaoda
+- rolldown_plugin_vite_html: align `inject_to_body` function (#6622) by @shulaoda
+- rolldown_vite_css_post_plugin: tweak `is_legacy` field (#6620) by @shulaoda
+- native-plugin: expose `viteHtmlPlugin` (#6609) by @shulaoda
+- native-plugin: expose `viteCSSPostPlugin` (#6606) by @shulaoda
+- builtin-plugin: expose `viteCSSPlugin` (#6605) by @shulaoda
+- rolldown_plugin_vite_html: complete plugin binding (#6604) by @shulaoda
+- rolldown_plugin_vite_css: support plugin binding (#6598) by @shulaoda
+- add TypedArray constructors to side-effect free globals (#6592) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: align process src attr logic (#6572) by @shulaoda
+- rolldown: support `output.clearDir` to clean up `dir` before build (#6486) by @aprosail
+- dev: return `RolldownOutput` instead of `BindingOutputs` from `onOutput` (#6563) by @sapphi-red
+- rolldown_plugin_vite_html: align process srcset logic (#6560) by @shulaoda
+- rolldown_plugin_vite_html: align process src function (#6559) by @shulaoda
+- rolldown_plugin_vite_html: align parse secset function (#6558) by @shulaoda
+- node/options: deprecate `dropLabels` and add `transform.dropLabels` (#6557) by @hyf0
+- node/options: deprecate `keepNames` and add `output.keepNames` (#6556) by @hyf0
+- node/options: deprecate `profilerNames` and add `output.generatedCode.profilerNames` (#6555) by @hyf0
+- node/options: deprecate top level `inject` and `define` and add `transform.define`, `transform.inject` (#6544) by @hyf0
+- rolldown_plugin_vite_html: initialize attributes handle logic (#6543) by @shulaoda
+- rolldown: oxc v0.95.0 (#6541) by @Boshen
+- rolldown_plugin_vite_html: align inject css logic (#6528) by @shulaoda
+- rolldown_plugin_vite_html: align modulepreload inject logic (#6526) by @shulaoda
+- rolldown_plugin_vite_html: align css bundle output inject logic (#6524) by @shulaoda
+- rolldown_plugin_vite_html: support inject_to_head function (#6522) by @shulaoda
+- rolldown_plugin_vite_html: align emit and delete logic (#6521) by @shulaoda
+- rolldown_vite_html: align handle html asset url logic (#6518) by @shulaoda
+- add an example how to transform code and generate sourcemap with `experimental.nativeMagicString` (#6514) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: align handle inline css logic (#6517) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- native-plugin: use correct config for assetPlugin (#6638) by @shulaoda
+- no_color not being respected on reporter (#6615) by @H4ad
+- improve tree shaking for JSON default imports (#6626) by @IWANABETHATGUY
+- cjs treeshaking removes used code (#6597) by @IWANABETHATGUY
+- plugin/vite-resolve: return `package_json_path` from resolveId hook (#6434) by @sapphi-red
+- dev: `should have idx` error happens with `deferSyncScanData` + incremental rebuild (#6568) by @sapphi-red
+- rolldown: sync scoping properly in pre_process_ecma_ast (#6537) by @Boshen
+- process CJS tree shaking bailout modules before eliminating unused dynamic entries (#6549) by @IWANABETHATGUY
+- rust/dev: error of `bundler.scan`doesn't get handled (#6547) by @Copilot
+- inline only self referenced json module properties (#6519) by @IWANABETHATGUY
+- avoid processing native MagicString sourcemap when `sourcemap` is disabled (#6510) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- rolldown_binding: unify `BindingAssetInlineLimit` (#6625) by @shulaoda
+- rolldown_binding: tweak `BindingAssetPluginConfig` (#6624) by @shulaoda
+- tweak `viteCSSPlugin` config (#6610) by @shulaoda
+- rust/dev: remove unnecessary bundler cache management of dev engine (#6576) by @hyf0
+- rust/dev: refactor `TaskInput` into enum to reduce invalid states (#6575) by @hyf0
+- improve the error message of `ScanStageCache#merge` (#6564) by @IWANABETHATGUY
+- rust/dev: use `client_id` to check if module is executed for test environment (#6566) by @hyf0
+- rust/binding: mark napi object that won't be received from js side (#6531) by @hyf0
+- rust/binding: mark napi object struct that won't be passed to js explicitly (#6525) by @hyf0
+- rust/binding: use `&str` or `JsString` to avoid unnecessary clone (#6523) by @hyf0
+- rust/binding: use `&str` to avoid unnecessary clone (#6520) by @hyf0
+- rust: replace unwrap with expect for better error handling in message sending (#6509) by @hyf0
+
+### 📚 Documentation
+
+- add redirect from `/guide/in-depth/` to `/in-depth/` (#6554) by @Copilot
+- guide: polish notable features page (#6535) by @sapphi-red
+- builtin-plugins: add replace plugin docs (#6534) by @sapphi-red
+- add `Additional Thanks` in `acknowledgements` page (#6507) by @hyf0
+- polish doc for `experimental.nativeMagicString` (#6504) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- cli: advance `createTokioRuntime` (#6618) by @hyf0
+- rolldown: reduce unnecessary Vec allocate (#6601) by @Brooooooklyn
+- rolldown: make derived assets generation more parallel (#6600) by @Brooooooklyn
+- rolldown: make chunks generation more parallel (#6599) by @Brooooooklyn
+- rolldown_utils: only allocate HASH_PLACEHOLDER_LEFT once (#6595) by @Brooooooklyn
+- rolldown: use oxc-resolver with simd-json (#6591) by @Boshen
+- rolldown: avoid allocate the sourcemap sources on non Windows os (#6590) by @Brooooooklyn
+- resolver: use optimized fs.read_to_string impl (#6589) by @Brooooooklyn
+- deps: upgrade json-escape-simd and add simdutf8 dependency (#6579) by @Brooooooklyn
+- rust/dev: remove unncessary clone for `ClientInput` (#6565) by @hyf0
+- visit ast in `cross_module_optimization` stage parallel (#6552) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- json module prop conflict with normal module declaration binding (#6540) by @IWANABETHATGUY
+- vite-tests: fix rolldown overrides (#6532) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- remove string conversion warning in `replacePlugin` to compatible with rollup (#6639) by @IWANABETHATGUY
+- deps: update dependency dprint-json to v0.21.0 (#6637) by @renovate[bot]
+- deps: lock file maintenance (#6635) by @renovate[bot]
+- deps: lock file maintenance npm packages (#6632) by @renovate[bot]
+- node: use built-in styleText (#6340) by @dumbmatter
+- deps: update actions/setup-node action to v6 (#6629) by @renovate[bot]
+- deps: update github-actions (#6628) by @renovate[bot]
+- deps: update dependency dprint-markdown to v0.20.0 (#6627) by @renovate[bot]
+- Switch color dependencies (ansis and picocolors) to built-in styleText (#6619) by @IWANABETHATGUY
+- native-plugin: tweak assetPlugin (#6623) by @shulaoda
+- remove deprecated warning in `build.ts` (#6621) by @IWANABETHATGUY
+- deps: update dependency tsdown to v0.15.8 (#6617) by @renovate[bot]
+- rolldown_binding: rename vite css plugin config field (#6611) by @shulaoda
+- add colored deprecation warnings for top-level options (#6612) by @IWANABETHATGUY
+- rust: make `cargo publish --workspace` work (#6287) by @Boshen
+- deps: update dependency rolldown-plugin-dts to v0.16.12 (#6608) by @renovate[bot]
+- test: add `opposite_minify_internal_exports` and remove `minify_internal_exports` extend test (#6596) by @hyf0
+- test: render snapshot for build and dev independently (#6584) by @hyf0
+- test: split test logic for normal build and dev engine (#6580) by @hyf0
+- fix rolldown build self warning (#6578) by @IWANABETHATGUY
+- tweak `BindingBuiltinPluginName` (#6574) by @shulaoda
+- rust: use forked `notify` crate (#6573) by @Boshen
+- add `.len()` and `.is_empty()` to `HybridIndexVec` (#6570) by @sapphi-red
+- ai: improve `AGENT.md` with verified prompts (#6533) by @hyf0
+- clippy: set `too-many-lines-threshold` to 200 (#6530) by @shulaoda
+- clean up examples/basic-vue (#6515) by @IWANABETHATGUY
+- deps: update dependency tsdown to v0.15.7 (#6512) by @renovate[bot]
+- add shulaoda to release PR assignees (#6505) by @shulaoda
+
+### ❤️ New Contributors
+
+- @dumbmatter made their first contribution in [#6340](https://github.com/rolldown/rolldown/pull/6340)
+- @H4ad made their first contribution in [#6615](https://github.com/rolldown/rolldown/pull/6615)
+- @aprosail made their first contribution in [#6486](https://github.com/rolldown/rolldown/pull/6486)
+
+## [1.0.0-beta.43] - 2025-10-13
+
+### 🚀 Features
+
+- add filterVitePlugins utility that uses to skip vite plugins using apply: "serve" (#6502) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: align partial can inline entry logic (#6500) by @shulaoda
+- rolldown_plugin_vite_html: align get_imported_chunks logic (#6499) by @shulaoda
+- rolldown_plugin_vite_html: align HtmlTagDescriptor (#6498) by @shulaoda
+- rolldown_plugin_vite_html: align partial utility functions logic (#6497) by @shulaoda
+- rolldown_html_vite_html: align partial inject chunk asset links logic (#6496) by @shulaoda
+- rolldown_plugin_vite_html: align `processedHtml` logic (#6494) by @shulaoda
+- add `nativeMagicString` options (#6469) by @IWANABETHATGUY
+- rust: eagerly cleanup resources when calling `close` (#6483) by @hyf0
+- rust: verify if bundler is closed for public API (#6481) by @hyf0
+- replace [format] placeholder in chunk filename templates (#6476) by @elecmonkey
+- implement synchronous JS callback invocation for paths function (#6474) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: align partial transform hook logic (#6471) by @shulaoda
+- Support `output.paths` (#6470) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: align script urls handle logic (#6466) by @shulaoda
+- add validation for `preserveEntrySignatures` with `includeDependenciesRecursively` option (#6468) by @hyf0
+- rolldown_plugin_vite_html: align partial logic (#6465) by @shulaoda
+- background sourcemap generation for Javascript transform hooks (#6293) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: handle style tag (#6464) by @shulaoda
+- rolldown_plugin_vite_html: handle inline style attribute (#6463) by @shulaoda
+- rolldown_plugin_vite_html: partially handle vite-ignore attribute (#6462) by @shulaoda
+- dev/node: expose errors of `on_hmr_updatrs` to node (#6454) by @hyf0
+- dev/node: expose errors of `on_output` to node (#6453) by @hyf0
+- dev: expose hmr errors on `on_hmr_updatrs` callback (#6443) by @hyf0
+
+### 🐛 Bug Fixes
+
+- fallback sourcemap generation for `experimental.nativeMagicString: false` (#6488) by @IWANABETHATGUY
+- take `resolve.modules` into account (#6484) by @Pickachu
+- rolldown: increase tokio blocking threads size for watch mode (#6467) by @Brooooooklyn
+- use len_utf16 in magic_string CharToByteMapper (#6461) by @IWANABETHATGUY
+- pass `advancedChunks#includeDependenciesRecursively` to rust (#6448) by @hyf0
+- dev: should compute hmr update correctly for multiple clients (#6442) by @hyf0
+- allow specifying packageJsonPath in PluginContext.load (#6439) by @sapphi-red
+- use transform.target as default for minify target when `minify: { compress: true }` (#6433) by @sapphi-red
+
+### 🚜 Refactor
+
+- extract background sourcemap handling into separate methods (#6501) by @IWANABETHATGUY
+- rust: only expose methods of `Bundler` for public usage (#6480) by @hyf0
+- dev/node: use napi object instead clss for `BindingClientHmrUpdate` (#6456) by @hyf0
+- dev/node: improve `DevOnHmrUpdates` API (#6455) by @hyf0
+
+### 📚 Documentation
+
+- update team page and add acknowledgements page (#6495) by @hyf0
+- restructure website and files (#6492) by @hyf0
+- correct incorrect documentation about the config file (#6472) by @jsparkdev
+- options: `experimental.strictExecutionOrder` (#6450) by @hyf0
+- adding `why-plugin-hook-filter` in depth (#6446) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- rolldown: replace serde JSON string escape with simd impl (#6475) by @Brooooooklyn
+
+### ⚙️ Miscellaneous Tasks
+
+- docs: redirect removed path to new locations for compatibility (#6493) by @hyf0
+- deps: lock file maintenance npm packages (#6490) by @renovate[bot]
+- deps: update github-actions (major) (#6415) by @renovate[bot]
+- deps: update github-actions (#6489) by @renovate[bot]
+- rust: add comment for `DiagnosticOptions#stabilize_path` (#6447) by @hyf0
+- rust: remove unused `BindingHmrOutput` (#6457) by @hyf0
+- rolldown_plugin_vite_html: tweak `utils.rs` (#6460) by @shulaoda
+- change node version to lts (#6435) by @iiio2
+- rust/test: split hmr related structs into their own files (#6445) by @hyf0
+- deps: update crate-ci/typos action to v1.38.1 (#6452) by @renovate[bot]
+- rust/test: render hmr errors (#6444) by @hyf0
+- examples: add `"type": "module"` in `package.json` (#6441) by @iiio2
+
+### ❤️ New Contributors
+
+- @Pickachu made their first contribution in [#6484](https://github.com/rolldown/rolldown/pull/6484)
+- @elecmonkey made their first contribution in [#6476](https://github.com/rolldown/rolldown/pull/6476)
+- @jsparkdev made their first contribution in [#6472](https://github.com/rolldown/rolldown/pull/6472)
+
+## [1.0.0-beta.42] - 2025-10-07
+
+### 🚀 Features
+
+- rolldown: oxc v0.94.0 (#6428) by @Boshen
+- add CLI environment flag (#6426) by @IWANABETHATGUY
+- dev: use `RebuildStrategy#Auto` by default (#6420) by @hyf0
+- rolldown_plugin_vite_html: introduce html plugin state (#6413) by @shulaoda
+- dev: expose build errors via `DevOptions#on_output` (#6412) by @hyf0
+- dev: add binding for `DevOptions#rebuild_strategy` (#6396) by @hyf0
+- dev: add `RebuildStrategy::Auto` to issue rebuild automatically if detecting full reload hmr update (#6395) by @hyf0
+- debug: inject `call_id` for `renderChunk` hook (#6392) by @hyf0
+- node/dev: add `DevEngine#close` (#6377) by @hyf0
+- rust/dev: add `DevEngine#close` (#6376) by @hyf0
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_react_refresh_wrapper: register exports in next microtask (#6423) by @sapphi-red
+- plugin/vite-resolve: try original extension before replacing with TS variants (#6421) by @sapphi-red
+- node/resolve: take custom package json path into account (#6419) by @hyf0
+- dev: call `watchChange` hook (#6403) by @sapphi-red
+- use minify options for DCE for dce-only minify (#6402) by @sapphi-red
+- respect package.json type field in plugin-resolved modules (#6400) by @hyf0
+- returning result of this.resolve in resolveDynamicImport hook impacts bundle size (#6397) by @sapphi-red
+- rolldown_plugin_json: avoid generating named exports for `eval` and `arguments` (#6381) by @sapphi-red
+- use static property for namespace object (#6383) by @sapphi-red
+
+### 🚜 Refactor
+
+- rust: improve constuction of `PackageJson` and remove unused fields (#6418) by @hyf0
+- introduce `BindingResult` to pass errors from rust to js (#6390) by @hyf0
+- rust: rename eager_rebuild to rebuild_strategy with enum (#6394) by @hyf0
+- rust/binding: use `BindingError` to cover `JsError` and `NativeError` (#6388) by @hyf0
+- rust/binding: rename `BindingError` to `NativeError` (#6387) by @hyf0
+
+### 📚 Documentation
+
+- tweak built-in transforms section (#6384) by @sapphi-red
+
+### ⚡ Performance
+
+- dev: avoid frequent `setTimeout` -> `clearTimeout` (#6375) by @sapphi-red
+
+### 🧪 Testing
+
+- hmr: include generated bundle for full reloads in snapshots (#6374) by @sapphi-red
+- dev: add test about doing hmr with not being affected by not executed modules (#6360) by @hyf0
+- hmr: hmr patch file generation for `this.addWatchFile` (#5219) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update crate-ci/typos action to v1.38.0 (#6431) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.37.3 (#6429) by @renovate[bot]
+- deps: lock file maintenance npm packages (#6417) by @renovate[bot]
+- deps: update github-actions (#6414) by @renovate[bot]
+- rust/test: sensible heading level for build snapshot of config variant (#6408) by @hyf0
+- rust/test: introduce `SnapshotSection` to organize snapshot content (#6407) by @hyf0
+- rust/test: extract `ArtifactsSnapshot` and `BuildRoundOutput` into standalone files (#6406) by @hyf0
+- rust/test: introduce `ArtifactsSnapshot` to make generating snapshot more clear (#6405) by @hyf0
+- deps: update crate-ci/typos action to v1.37.2 (#6409) by @renovate[bot]
+- fix `GitHub` casing (#6401) by @iiio2
+- rust: remove unused `rolldown_binding_watcher` crate (#6386) by @hyf0
+- deps: update crate-ci/typos action to v1.37.1 (#6391) by @renovate[bot]
+- node: rename `normalizeErrors` into `aggregateBindingErrorsIntoError` (#6389) by @hyf0
+- fix typos (#6382) by @sapphi-red
+- deps: update dependency tsdown to v0.15.6 (#6379) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.37.0 (#6380) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.11 (#6378) by @renovate[bot]
+- add comment to `add_watch_file` that the path should be a normalized absolute path (#6371) by @sapphi-red
+- deps: update dependency rolldown-plugin-dts to v0.16.10 (#6373) by @renovate[bot]
+
+## [1.0.0-beta.41] - 2025-09-29
+
+### 🚀 Features
+
+- support `output.generatedCode.symbols` (#6335) by @IWANABETHATGUY
+- rolldown: oxc v0.93.0 (#6364) by @Boshen
+- rolldown_plugin_vite_html: finish script tag logic (#6355) by @shulaoda
+- rolldown_plugin_vite_html: support inline html proxy (#6353) by @shulaoda
+- rolldown_plugin_vite_html: transform script tag into js import (#6351) by @shulaoda
+- rolldown_plugin_vite_html: overwrite script src url (#6349) by @shulaoda
+- rolldown_plugin_vite_html: remove `vite-ignore` attribute (#6348) by @shulaoda
+- rolldown_plugin_vite_html: use `html5ever` and `markup5ever_rcdom` (#6327) by @shulaoda
+- rust/dev: support `on_output` callback (#6330) by @hyf0
+- rust/dev: support `disable_watcher` (#6329) by @hyf0
+- dev: introduce client/session concept into dev engine (#6297) by @hyf0
+
+### 🐛 Bug Fixes
+
+- 'asset' module type and CJS format produces warnings and wrong output (#6369) by @IWANABETHATGUY
+- inlining constants in CJS by optimization.inlineConst incorrectly inlines non-constant values if the value is assigned more than once (#6328) by @IWANABETHATGUY
+- dev: add `hasLatestBuildOutput` instead of `scheduleBuildIfStale` and add edit-reload test (#6321) by @sapphi-red
+
+### 🚜 Refactor
+
+- rust/dev: rename `HmrManager` to `HmrState` and tweak namings (#6358) by @hyf0
+- rust/dev: use `Bundler` to expose hmr related methods (#6356) by @hyf0
+- rolldown_plugin_vite_html: use `html5gum` instead (#6343) by @shulaoda
+- dev: remove deprecated `new` field from HMR options and related configurations (#6337) by @hyf0
+- dev: remove unused hmr API (#6336) by @hyf0
+- make `cjs_ast_analyzer` immutable for better reuse (#6326) by @IWANABETHATGUY
+- simplify logic for determining entry is_lived (#6325) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- dev: compute depended data incrementally (#6357) by @hyf0
+
+### 🧪 Testing
+
+- rust/hmr: use dev engine to test hmr (#6334) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update notify (#6368) by @sapphi-red
+- deps: lock file maintenance npm packages (#6366) by @renovate[bot]
+- deps: update github-actions (#6365) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.9 (#6354) by @renovate[bot]
+- deps: update dependency tsdown to v0.15.5 (#6350) by @renovate[bot]
+- node: use `catalog:` to unify version of all dependencies (#6339) by @hyf0
+- ci: unify node installation via oxc-project/setup-node (#6338) by @Boshen
+- deps: update crate-ci/typos action to v1.36.3 (#6341) by @renovate[bot]
+- remove unused snapshots (#6331) by @IWANABETHATGUY
+
+## [1.0.0-beta.40] - 2025-09-24
+
+### 🚀 Features
+
+- rolldown: oxc v0.92.0 (#6322) by @Boshen
+- adding partial `MagicString` binding (#6289) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: initialize (#6292) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_react_refresh_wrapper: avoid using cwd to allow using as a callable plugin (#6318) by @sapphi-red
+- rolldown_plugin_transform: resolve tsconfig from absolute path (#6311) by @shulaoda
+
+### 🚜 Refactor
+
+- Construct MagicString with `Cow<str>` instead of `&str` (#6288) by @IWANABETHATGUY
+- throw error if generating oxc runtime helper fails (#6291) by @shulaoda
+
+### 📚 Documentation
+
+- add more description about sourcemapIgnoreList (#6314) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- reduce `sourcemap_ignore_list` js function call (#6313) by @IWANABETHATGUY
+- string_wizard: use memchr to find patterns in `replace` (#6312) by @IWANABETHATGUY
+- simplify sourcemap token processing in collapse_sourcemaps (#6310) by @IWANABETHATGUY
+- rolldown: some minor perf optimization (#6306) by @Brooooooklyn
+- rolldown: fine-tuning the tokio scheduler (#6272) by @Brooooooklyn
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance rust crates (#6302) by @renovate[bot]
+- deps: lock file maintenance npm packages (#6301) by @renovate[bot]
+- use `lto: thin` in profile mode for better profiling experience. (#6320) by @IWANABETHATGUY
+- adjust the tokio runtime config in bench (#6305) by @Brooooooklyn
+- deps: update dependency rolldown-plugin-dts to v0.16.8 (#6307) by @renovate[bot]
+
+## [1.0.0-beta.39] - 2025-09-22
+
+### 🚀 Features
+
+- rolldown: oxc v0.90.0 + other oxc crate updates (#6274) by @Boshen
+- support ignoring `/* @vite-ignore */` comment for dynamic imports (#6264) by @IWANABETHATGUY
+- dev: merge mergeable queued tasks into one (#6253) by @hyf0
+- dev: ignore self imports when computing update for invalidate (#6252) by @sapphi-red
+- support `#__NO_SIDE_EFFECTS__` annotation for export default function declaration (#6239) by @IWANABETHATGUY
+- rolldown_plugin_dynamic_import_vars: respect `@vite-ignore` comment (#6240) by @shulaoda
+- rolldown_plugin_import_glob: support `exhaustive` option (#6236) by @shulaoda
+- cross chunk /_ @**NO_SIDE_EFFECTS** _/ support (#6207) by @IWANABETHATGUY
+- rolldown_plugin_react_refresh_wrapper: make the plugin callable (#6229) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- handle optional chaining in scope hoisting member expression rewriting (#6278) by @shulaoda
+- release: Fix semver commit release format to use plus instead of dash (#6273) by @Copilot
+- dev: `ensure_latest_build_output` should work correctly when `eagerBuild: false` (#6262) by @hyf0
+- browser: does not work in stackblitz (#6257) by @shulaoda
+- only inline constants that are not reassigned (#6247) by @IWANABETHATGUY
+- handle lexical declarations in root scope (#6230) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- move oxc runtime helper generation from `build.rs` to task generator (#6284) by @shulaoda
+- remove unused `SpanExt` (#6266) by @IWANABETHATGUY
+- remove `@rolldown-ignore` ignore comment support (#6265) by @IWANABETHATGUY
+- enhance CommonJsAstType to track property names (#6250) by @IWANABETHATGUY
+- simplify usage for `Address::from` (#6245) by @IWANABETHATGUY
+- remove `stmt_info_idx` in StmtInfo (#6244) by @IWANABETHATGUY
+- extract `CrossModuleOptimizationRunnerContext` in cross_module_optimization (#6243) by @IWANABETHATGUY
+- dev: task-queue based deisgn (#6233) by @hyf0
+- extract immutable context from AstScanner (#6238) by @IWANABETHATGUY
+- dev: rename `WatcherEventService` to `BuildDriverService` (#6232) by @hyf0
+- move FlatOptions to rolldown_common (#6235) by @IWANABETHATGUY
+- extract mutable state from ScopeHoistingFinalizerContext (#6234) by @IWANABETHATGUY
+- wait `this.load` using futures instead of callbacks (#6222) by @sapphi-red
+- rolldown_plugin_transform: remove unused `runtime_resolve_base` option (#6226) by @sapphi-red
+
+### 📚 Documentation
+
+- add "edit this page on GitHub" button (#6241) by @siaeyy
+
+### ⚡ Performance
+
+- rolldown: minor performance optimization (#6271) by @Brooooooklyn
+- rolldown: take advantage of tokio blocking threads (#6270) by @Brooooooklyn
+
+### 🧪 Testing
+
+- dev: add rebuild after HMR case (#6260) by @sapphi-red
+- dev: support full reload in tests (#6259) by @sapphi-red
+- dev: extract waitFor from waitForPathExists (#6261) by @sapphi-red
+- add class like cases for empty function optimizations (#6248) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update github-actions (#6298) by @renovate[bot]
+- deps: update dependency dprint/dprint-plugin-typescript to v0.95.11 (#6296) by @renovate[bot]
+- deps: update dependency dprint/dprint-plugin-markdown to v0.19.0 (#6295) by @renovate[bot]
+- deps: update dependency g-plane/pretty_yaml to v0.5.1 (#6294) by @renovate[bot]
+- use a forked version of openharmony-rs/setup-ohos-sdk (#6290) by @Boshen
+- deps: update dependency tsdown to v0.15.4 (#6286) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.7 (#6285) by @renovate[bot]
+- rust: continue to make `cargo publish --workspace` work (#6281) by @Boshen
+- deps: update dependency tsdown to v0.15.3 (#6280) by @renovate[bot]
+- rust: fixes for `cargo publish --dry-run --workspace` (#6279) by @Boshen
+- deps: update dependency rust to v1.90.0 (#6277) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.6 (#6276) by @renovate[bot]
+- adding tracing for all sub stage in LinkStage:link (#6268) by @IWANABETHATGUY
+- deps: update oxc-project/setup-node action to v1.0.4 (#6258) by @renovate[bot]
+- deps: update github-actions (#6249) by @renovate[bot]
+- deps: update dependency tsdown to v0.15.2 (#6242) by @renovate[bot]
+- dev: output error when the initial bundle failed (#6228) by @sapphi-red
+
+### ❤️ New Contributors
+
+- @siaeyy made their first contribution in [#6241](https://github.com/rolldown/rolldown/pull/6241)
+
+## [1.0.0-beta.38] - 2025-09-15
+
+### 💥 BREAKING CHANGES
+
+- rolldown_plugin_oxc_runtime: embed helpers to support browser environment (#6177) by @shulaoda
+
+### 🚀 Features
+
+- rolldown: oxc v0.89.0 (#6220) by @Boshen
+- rolldown_plugin_esm_external_require: add duplicate external detection (#6202) by @shulaoda
+- cross module noop function optimization (#6199) by @IWANABETHATGUY
+- support to specify `scan_mode` in `bundler.scan` (#6204) by @IWANABETHATGUY
+- warn when transform options override tsconfig compiler options (#6197) by @shulaoda
+- support `false` in `resolve.alias` to ignore resolution (#6203) by @shulaoda
+- cli: remove `getJsonSchema` (#6186) by @shulaoda
+- cli: add Node.js version warning for unsupported versions (#6150) by @Copilot
+- rolldown_plugin_oxc_runtime: include version in virtual module paths (#6179) by @shulaoda
+- add native react-refresh-wrapper plugin (#6144) by @sapphi-red
+- rolldown_plugin_utils: add `to_string_literal` (#6178) by @sapphi-red
+- improve error messages for builtin plugins (#6175) by @shulaoda
+- indent module content in IIFE format (#6174) by @IWANABETHATGUY
+- rolldown_error: improve N-API error handling logic (#6171) by @shulaoda
+- rolldown_error: improve `ByteLocator#byte_offset` (#6169) by @shulaoda
+- dev: skip writing to file (#6148) by @sapphi-red
+- dev: add `skip_write` option (#6151) by @sapphi-red
+- dev: ignore file metadata changes (#6138) by @sapphi-red
+- dev: add PathsMut for debounced PollWatcher (#6139) by @sapphi-red
+- dev: use PathsMut for debounced RecommendedWatcher (#6137) by @sapphi-red
+- improve bundler initialization error handling (#6132) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_vite_resolve: correctly handle Windows drive paths with leading slash (#6209) by @shulaoda
+- allow `jsx.pragmaFrag` instead of `jsx.pragmaFlag` (#6200) by @sapphi-red
+- improve import-glob plugin error handling without panic (#6106) by @hikomoon
+- Panic with "jsx": "preserve" when rewrite a `memberExpression` (#6192) by @IWANABETHATGUY
+- rolldown_error: use `byte_slice` instead of `slice` for correct span handling (#6185) by @shulaoda
+- generate valid identifier for export names with `minifyInternalExports` (#6166) by @sapphi-red
+- useless \_\_export helper usage (#6160) by @IWANABETHATGUY
+- incremental watch modify entry module (#6156) by @IWANABETHATGUY
+- register trace subscriber (#6145) by @sapphi-red
+- json imports error with `eval` or `arguments` in _strict mode_ (#6140) by @IWANABETHATGUY
+- `process` is not defined in repl (#6147) by @IWANABETHATGUY
+
+### 💼 Other
+
+- rolldown: support to build `rolldown` with `.wasm` binding (#6153) by @hyf0
+- rolldown: refactor `build.ts` to prepare to support build `rolldown` package with wasi binding (#6152) by @hyf0
+
+### 🚜 Refactor
+
+- share `FlatOptions` in whole build session (#6211) by @IWANABETHATGUY
+- remove unnecessary `comments` in ScopeHoistingFinalizerContext (#6205) by @IWANABETHATGUY
+- move external string/regex matching from JS to Rust (#6201) by @shulaoda
+- rename `cross_module_inline_const` to `cross_module_optimization` (#6193) by @IWANABETHATGUY
+- rename `class` and `function` visitor to `class_decl`, `function_decl` (#6176) by @IWANABETHATGUY
+- rolldown_error: tweak code (#6168) by @shulaoda
+- improve `BuildDiagnostic` (#6165) by @shulaoda
+- improve `RolldownBuild` (#6136) by @shulaoda
+- rolldown_error: remove unused `EventKind::IoError` (#6134) by @shulaoda
+- rename CustomPathsMut to NotifyPathsMutAdapter and move to utils (#6135) by @hyf0
+
+### 📚 Documentation
+
+- contrib-guide: add profiling instructions for macOS (#6183) by @sapphi-red
+- contrib-guide: update just commands (#6181) by @sapphi-red
+
+### ⚡ Performance
+
+- pre calculate `side_effects_free_function_symbol_ref` (#6206) by @IWANABETHATGUY
+- parallel clone ast (#6167) by @IWANABETHATGUY
+- reserve capacity for rendered modules in `instantiate_chunk` (#6159) by @sapphi-red
+
+### 🧪 Testing
+
+- hmr: ensure each test isolated to be able to be retryed (#6142) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance npm packages (#6219) by @renovate[bot]
+- deps: lock file maintenance rust crates (#6217) by @renovate[bot]
+- deps: update github-actions (#6213) by @renovate[bot]
+- deps: lock file maintenance npm packages (#6215) by @renovate[bot]
+- deps: update github-actions (major) (#6214) by @renovate[bot]
+- tweak wordings (#6208) by @iiio2
+- fix unused import warnings (#6196) by @shulaoda
+- correct deprecated JSDoc reference for jsx option (#6195) by @shulaoda
+- add `if: always()` to wasi-test (#6190) by @sapphi-red
+- skip `@rolldown/browser` build if no node related changes detected (#6189) by @sapphi-red
+- extract wasi build to reusable workflow (#6188) by @sapphi-red
+- deps: update dependency tsdown to v0.15.1 (#6184) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.5 (#6182) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.4 (#6180) by @renovate[bot]
+- dev: implement Debug trait for DevOptions (#6173) by @sapphi-red
+- deps: update dependency rolldown-plugin-dts to v0.16.3 (#6172) by @renovate[bot]
+- update @napi-rs/cli and js binding (#6157) by @Brooooooklyn
+- ci: ensure `@rolldown/browser` build without errors (#6155) by @hyf0
+- ci: ensure running wasi tests correctly (#6154) by @hyf0
+- add more tracing instrumentation (#6149) by @sapphi-red
+- extend timeout for rollup test (#6143) by @IWANABETHATGUY
+- rolldown_error: remove unnecessary `type_aliases.rs` (#6133) by @shulaoda
+
+## [1.0.0-beta.37] - 2025-09-10
+
+### 🚀 Features
+
+- partial align with const inline strategy with oxc in smart mode (#6126) by @IWANABETHATGUY
+- dev: use PathsMut for non-debounced RecommendedWatcher (#6120) by @sapphi-red
+- dev: return whether the build is already scheduled from `scheduleBuildIfStale` method (#6116) by @sapphi-red
+- handle errors from `BundlerBuilder#build` (#6104) by @shulaoda
+- add debounceTickRate option for debounced watchers (#6113) by @hyf0
+- support full build in `incrementalBuild` mode (#6098) by @IWANABETHATGUY
+- add compare_contents_for_polling option to dev watcher (#6108) by @hyf0
+- dev: add `scheduleBuildIfStale` method to DevEngine (#6087) by @sapphi-red
+- dev: return changed files in onHmrUpdates callback (#6086) by @sapphi-red
+- support function config with custom CLI arguments (#6076) by @IWANABETHATGUY
+- improve `MISSING_EXPORT` warning to suggest `type` modifier (#6085) by @sapphi-red
+- crates/rolldown_watcher: introduce `PathsMut` to batch watch/unwatch behaviors (#6075) by @hyf0
+- enable `treeshake.commonjs` by default (#6072) by @IWANABETHATGUY
+- dev: add debounce control and PollWatcher support to DevWatchOptions (#6070) by @hyf0
+
+### 🐛 Bug Fixes
+
+- use kqueue for file watch on mac (#6124) by @sapphi-red
+- use patched notify for better file change event debouncing (#6125) by @sapphi-red
+- support passing all js primitive value for `alias` plugin (#6123) by @IWANABETHATGUY
+- track spans in member expression properties for accurate sourcemaps (#6100) by @IWANABETHATGUY
+- correctly handle inlined CommonJS exports in member expressions (#6090) by @IWANABETHATGUY
+- dev: ensure patch file names to be unique (#6096) by @sapphi-red
+- dev: normalize slash on Windows before comparing paths (#6095) by @sapphi-red
+- dev/watch: debounce duration should default to 10 (#6078) by @hyf0
+
+### 🚜 Refactor
+
+- simplify `__export` runtime helper to create target object internally (#6114) by @IWANABETHATGUY
+- simplify module_namespace construction second try (#6118) by @IWANABETHATGUY
+- simplify module_namespace construction (#5939) by @IWANABETHATGUY
+- optimize member expression creation in AstSnippet (#6091) by @IWANABETHATGUY
+- test-dev-server: sensible watcher configuration for CI env (#6077) by @hyf0
+
+### 🧪 Testing
+
+- dev: apply HMR edits on Windows (#6094) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- Revert "chore: adjust breaking change template of cliff (#6069)" (#6130) by @IWANABETHATGUY
+- test-dev-server: improve hmr test configuration (#6115) by @hyf0
+- deps: update dependency rolldown-plugin-dts to v0.16.2 (#6128) by @renovate[bot]
+- Revert "refactor: simplify module_namespace construction (#5939)" (#6117) by @IWANABETHATGUY
+- test-dev-server: optimize test log output (#6107) by @hyf0
+- enable compare_contents_for_polling and update poll interval for CI test-dev-server (#6110) by @hyf0
+- deps: update dependency vite to v7.1.5 [security] (#6111) by @renovate[bot]
+- fix warnings reported by `just lint` (#6105) by @shulaoda
+- deps: update dependency tsdown to v0.15.0 (#6102) by @renovate[bot]
+- use debug builds for browser tests in CI (#6092) by @hyf0
+- test-dev-server: update polling interval and add retry logic for CI tests (#6088) by @hyf0
+- adjust breaking change template of cliff (#6069) by @IWANABETHATGUY
+
+### ◀️ Revert
+
+- "fix: replace_plugin does not work as expected with .ts config (#5920)" (#6074) by @IWANABETHATGUY
+
+## [1.0.0-beta.36] - 2025-09-08
+
+### 💥 BREAKING CHANGES
+
+- drop CJS format, increase minimum required node (#6025) by @sxzz
+
+### 🚀 Features
+
+- rolldown_plugin_reporter: statically imported dynamic import warning (#6065) by @shulaoda
+- rolldown_plugin_reporter: warn large chunks (#6063) by @shulaoda
+- rolldown: oxc v0.87.0 (#5975) by @Boshen
+
+### 🐛 Bug Fixes
+
+- allow keeping whitespace while enabling minify (#5893) by @sapphi-red
+- dev/watch: build connection between file in `this.addWatchFile` and currently transformed module during transform hook (#6048) by @hyf0
+- validator of `output.minify` (#6062) by @IWANABETHATGUY
+- codspeed rust benchmark ci (#6052) by @IWANABETHATGUY
+- just command in ci (#6045) by @IWANABETHATGUY
+- watch: only consider files read from disk are able to watch (#6037) by @hyf0
+
+### 🚜 Refactor
+
+- dev: introduce `DevWatchOptions` for enhanced file watching configuration (#6057) by @hyf0
+- unify to use `is_in_node_modules` from `rolldown_plugin_utils` (#6066) by @shulaoda
+
+### 🧪 Testing
+
+- rust: ensure unused pure function call got treeshaked (#4524) by @hyf0
+- hmr: tweak improper test (#6034) by @hyf0
+- hmr: add test of editing multiple files in the same timeframe (#6029) by @hyf0
+- hmr: support to edit multiple files in the same timeframe (#6014) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance rust crates (#6003) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5995) by @renovate[bot]
+- add auto-assign PR workflow for organization members (#6058) by @IWANABETHATGUY
+- fix benchmark-node workflow (#6060) by @IWANABETHATGUY
+- adding `test-node-rolldown-only` just command (#6055) by @IWANABETHATGUY
+- just commands in ci (#6056) by @IWANABETHATGUY
+- run test ci when `justfile` is changed (#6049) by @IWANABETHATGUY
+- remove unused warning for conditional compiled`SimplifyMinifyOptions` (#6047) by @IWANABETHATGUY
+- remove auto approval ci (#6051) by @IWANABETHATGUY
+- adding rustfmt components for `repo-validation` (#6053) by @IWANABETHATGUY
+- repo: check format/style in `just lint-rust` (#6050) by @hyf0
+- repo/ai: refine `justfile` (#6038) by @hyf0
+- repo/ai: add `AGENTS.md` and `CLAUDE.md` (#6039) by @hyf0
+- deps: update github-actions (major) (#6041) by @renovate[bot]
+- deps: update github-actions (#6040) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.1 (#6035) by @renovate[bot]
+
+## [1.0.0-beta.35] - 2025-09-05
+
+### 🚀 Features
+
+- rolldown_plugin_vite_css_post: attch vite metadata to chunks (#6011) by @shulaoda
+- rolldown_plugin_vite_css_post: emit a single CSS asset for non–code-split builds (#6005) by @shulaoda
+- rolldown_plugin_vite_css_post: align empty CSS chunk removal logic (#6004) by @shulaoda
+- use frequent characters first for internal export names (#5524) by @AliceLanniste
+- rolldown_plugin_vite_css_post: align partial `generateBundle` logic (#5987) by @shulaoda
+- rolldown_plugin_vite_css_post: align `augmentChunkHash` logic (#5986) by @shulaoda
+- rolldown_watcher: introduce `WatcherConfig` for configurable watcher parameters (#5991) by @hyf0
+- dev: support `import.meta.invalidate` and migrate tests (#5979) by @hyf0
+- dev: adapt `TestDevServer` with `DevEngine` (#5976) by @hyf0
+- propertyWriteSideEffects (#5977) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: complete `transform` logic (#5985) by @shulaoda
+- dev: generate hmr updates for file changes (#5961) by @hyf0
+- rolldown_plugin_vite_css_post: complete `finalize_css` (#5974) by @shulaoda
+- dev: manage cache by `DevEngine` (#5960) by @hyf0
+- rolldown_plugin_vite_css_post: align `hoist_at_rules` (#5967) by @shulaoda
+- rolldown_plugin_vte_css_post: complete `resolve_asset_urls_in_css` (#5958) by @shulaoda
+- rolldown_plugin_utils: support common `to_output_file_path` (#5956) by @shulaoda
+- dev: default to not eager rebuild (#5949) by @hyf0
+- treeshake.propertyReadSideEffects (#5945) by @IWANABETHATGUY
+- improve error message for `this.resolve` and `this.load` (#5596) by @sapphi-red
+- dev: accept `onHmrUpdates` callback (#5942) by @hyf0
+- rolldown_plugin_vite_css_post: align partial `resolve_asset_urls_in_css` (#5929) by @shulaoda
+- mark `__export` runtime helper as pure (#5926) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: extract `finalize_css_chunk` (#5916) by @shulaoda
+- implement inlineConst.pass (#5912) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: align partial legacy logic (#5915) by @shulaoda
+- add inlineConst.pass options (#5911) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: align partial css code split logic (#5906) by @shulaoda
+- inlineConst: safe (#5899) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- rolldown: don't cleanup for browser build (#6024) by @sxzz
+- propertyWriteSideEffects for toplevel staticClassBlock (#5989) by @IWANABETHATGUY
+- handle `obj().prop` when `propertyReadSideEffects: false` (#5988) by @IWANABETHATGUY
+- handle objectSpread when `treeshake.propertyReadSideEffects` is enabled (#5981) by @IWANABETHATGUY
+- \_\_toESM function breaking ES module imports (#5966) by @IWANABETHATGUY
+- merge `typescript.onlyRemoveTypeImports` correctly (#5962) by @shulaoda
+- should not generate `init_mod` when record is a ExportAllDeclaration and importee is a inner concatenate module (#5952) by @IWANABETHATGUY
+- use symbol existance to detect if a plugin is BuiltinPlugin (#5940) by @IWANABETHATGUY
+- handle errors thrown in `onLog` and `onwarn` options (#5931) by @sapphi-red
+- `replace_plugin` does not work as expected with .ts config (#5920) by @IWANABETHATGUY
+- `replace_plugin` support primitive values replacement (#5921) by @IWANABETHATGUY
+- node 20 test version (#5918) by @IWANABETHATGUY
+- trigger trace subscriber cleanup on Node.js side (#5913) by @sapphi-red
+- add friendly deprecation warning for `resolve.tsconfigFilename` (#5908) by @shulaoda
+- inlineConst inlines a var (#5903) by @IWANABETHATGUY
+- types: omit `sourcemap` property from `MinifyOptions` correctly (#5892) by @sapphi-red
+
+### 🚜 Refactor
+
+- hmr: process changed files in one update (#6013) by @hyf0
+- rolldown_plugin_vite_css_post: improve (#6006) by @shulaoda
+- migrate remaining crates from #[allow] to #[expect] attributes (#6002) by @hyf0
+- crates/rolldown_common: migrate from #[allow] to #[expect] attributes (#6001) by @hyf0
+- crates/rolldown_binding: migrate from #[allow] to #[expect] attributes (#6000) by @hyf0
+- crates/rolldown: migrate from #[allow] to #[expect] attributes (#5999) by @hyf0
+- extract all options usage in `impl_visit.rs` into `FlatOptionsFlag` (#5992) by @IWANABETHATGUY
+- rolldown_watcher: distinguish debounced and non-debounced watchers (#5990) by @hyf0
+- dev: only use poll-based watch if required (#5984) by @hyf0
+- dev: use dynamic dispatch watcher (#5982) by @hyf0
+- improve plugin logic relate to `to_output_file_path` (#5959) by @shulaoda
+- make reference_needed_symbols lock free (#5964) by @IWANABETHATGUY
+- tweak module loader code (#5950) by @shulaoda
+- use less memory to store frequently accessed options field (#5948) by @IWANABETHATGUY
+- make `ecma_related` in `NormalModuleTaskResult` non-optional (#5947) by @shulaoda
+- dev: replace `BuildStatus` with `BuildStateMachine` (#5927) by @hyf0
+- rename `inlineConst: 'safe'` to `inlineConst: 'smart'` (#5909) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- add redirect for old plugin development page link (#5963) by @TheAlexLichter
+
+### ⚡ Performance
+
+- rolldown: use allocator pool when minifying chunks (#5978) by @Boshen
+- merge two `PreProcessor` and `EnsureSpanUniqueness` (#5968) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- cjs module lexer for named import external with cjs format (#5970) by @IWANABETHATGUY
+- hmr: import.meta.hot?.accept case (#5935) by @sapphi-red
+- hmr: accept outside circular case (#5938) by @sapphi-red
+- hmr: no accept outside circular dependencies case (#5937) by @sapphi-red
+- hmr: self accept within circular dependencies case (#5936) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update crate-ci/typos action to v1.36.2 (#6015) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to ^0.16.0 (#6023) by @renovate[bot]
+- ci: re-enable WASM tests in CI workflows (#6007) by @hyf0
+- deps: update crate-ci/typos action to v1.35.8 (#6012) by @renovate[bot]
+- clippy: enable allow_attributes lint and migrate to #[expect] (#6008) by @hyf0
+- remove unmaintained AGENTS.md file (#6009) by @hyf0
+- deps: update github-actions (#5993) by @renovate[bot]
+- fix `knip` warnings and remove redundant `@rolldown/testing` (#5973) by @shulaoda
+- deps: update dependency rolldown-plugin-dts to v0.15.10 (#5925) by @renovate[bot]
+- deps: update rust crate tracing-subscriber to v0.3.20 [security] (#5972) by @renovate[bot]
+- fix wasi build failed (#5969) by @shulaoda
+- deps: update crate-ci/typos action to v1.35.7 (#5965) by @renovate[bot]
+- remove redundant code (#5943) by @shulaoda
+- npm trusted publisher (#5953) by @Brooooooklyn
+- deps: update crate-ci/typos action to v1.35.6 (#5957) by @renovate[bot]
+- Revert "feat: mark `__export` runtime helper as pure (#5926)" (#5928) by @IWANABETHATGUY
+- deps: update dependency rolldown-plugin-dts to v0.15.10 (#5900) by @renovate[bot]
+- validator: improve the diagnostic message (#5919) by @shulaoda
+- add more tracing instrumentation (#5914) by @sapphi-red
+- add proper error message when passing unexpected minify options in rust test (#5905) by @IWANABETHATGUY
+- deps: update dependency tsdown to v0.14.2 (#5901) by @renovate[bot]
+- add automatic issue closing (#5895) by @shulaoda
+
+## [1.0.0-beta.34] - 2025-08-25
+
+### 💥 BREAKING CHANGES
+
+- improve merging of top-level `transform` option with `tsconfig` (#5882) by @shulaoda
+- support top-level `tsconfig` (#5842) by @shulaoda
+
+### 🚀 Features
+
+- rolldown_plugin_esm_external_require: export namespace directly for Node builtin modules (#5885) by @shulaoda
+- rolldown_plugin_dynamic_import_vars: warn by default when errors occur (#5866) by @shulaoda
+- support adding note for diagnostic (#5864) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: align partial css chunk logic (#5861) by @shulaoda
+- setup `rolldown_binding_watcher` (#5859) by @hyf0
+- rolldown_plugin_vite_css_post: align css url replace logic (#5857) by @shulaoda
+- node/dev: binding for `DevEngine` (#5852) by @hyf0
+- dev: introduce `DevEngine` to support build for devlopement scenario (#5808) by @hyf0
+- Show a information log to tell built-in features if a plugin covered by built-in features are used (#5845) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: align partial css url replace logic (#5837) by @shulaoda
+- rolldown_plugin_vite_css_post: align CSS chunk concatenation logic (#5836) by @shulaoda
+- rolldown_plugin_transform: support `useDefineForClassFields=false` with `target>=es2022` (#5841) by @sapphi-red
+- expose `esmExternalRequirePlugin` (#5810) by @shulaoda
+- rolldown_plugin_esm_external_require: basic implementation (#5809) by @shulaoda
+- rolldown: oxc v0.82.3 (#5807) by @Boshen
+- expose `oxc_minifier` options (#5804) by @IWANABETHATGUY
+- rolldown_plugin_require_to_import: initialize (#5797) by @shulaoda
+- adjust codegen `initial_indent` for concatenateWrappedModule (#5779) by @IWANABETHATGUY
+- rolldown: align default value of `option.context` (#5745) by @situ2001
+
+### 🐛 Bug Fixes
+
+- topLevelVar option removes class name, causing a TypeError in static block (#5888) by @IWANABETHATGUY
+- a esm module required by other module can't be a inner module of concatenateModuleGroup (#5875) by @IWANABETHATGUY
+- rolldown_plugin_transform: align `lang` logic correctly (#5874) by @shulaoda
+- Runtime error occurs depending on the lazy import order. (#5873) by @IWANABETHATGUY
+- when importee is ts or tsx adding potential false positive note for `missing_export` diagnostic (#5862) by @IWANABETHATGUY
+- hmr: boundary and accept_via was reversed (#5843) by @sapphi-red
+- returning result of this.resolve in resolveId hook impacts bundle size (#5851) by @IWANABETHATGUY
+- rolldown_plugin_transform: set `typescript.removeClassFieldsWithoutInitializer` for `useDefineForClassFields=false` (#5840) by @sapphi-red
+- hmr: `import.meta.hot.accept` in patch file should work (#5823) by @sapphi-red
+- proper handle pife and profiler_names for concatenate_wrapped_modules (#5835) by @IWANABETHATGUY
+- jsx preserve break component which is default export (#5751) by @shulaoda
+- hmr: ensure patch file name to be unique (#5825) by @sapphi-red
+- hmr: re-execute the boundary module rather than the accepted module (#5822) by @sapphi-red
+- Rolldown cannot treeshake unused branch (#5829) by @IWANABETHATGUY
+- `inlineConst` with constant propagation (#5826) by @IWANABETHATGUY
+- don't mangle variable names when `minify: 'dce-only'` is used (#5830) by @sapphi-red
+- return actual normalized minify options (#5818) by @IWANABETHATGUY
+- plugin/vite-resolve: try non-prefixed index before prefixed index (#5801) by @sapphi-red
+- throw a semantic error message instead of panic (#5796) by @AliceLanniste
+- rolldown: run DCE on chunk when `minify: dce-only` (#5792) by @Boshen
+- the import attribute has been removed. (#5794) by @IWANABETHATGUY
+- don't match CRLF for `/./` (#5790) by @IWANABETHATGUY
+- node: allow `output.topLevelVar` by options validator (#5789) by @sapphi-red
+- node: allow `transform.jsx: 'preserve'` by options validator (#5781) by @sapphi-red
+- preserve default export for `preserveModules` (#5780) by @shulaoda
+- browser: sync exports (#5776) by @sxzz
+- rolldown_plugin_transform: skip builtin transform for module id with null byte (#5775) by @hi-ogawa
+
+### 🚜 Refactor
+
+- move common transform types into rolldown_common (#5876) by @shulaoda
+- rolldown_plugin_vite_css_post: extract `finalize_vite_css_urls` (#5860) by @shulaoda
+- rust: make `NotifyWatcher` WASM-compatible (#5855) by @hyf0
+- rust/dev: remove improper deref for `BuildDriver` (#5854) by @hyf0
+- incremental: use `clone_in_with_semantic_ids` for program cloning (#5853) by @shulaoda
+- rolldown_plugin_esm_external_require: tweak code (#5824) by @shulaoda
+- improve `resolve_dependencies` (#5795) by @shulaoda
+- simplify method calls in `PluginContext` (#5785) by @situ2001
+
+### 📚 Documentation
+
+- builtin-plugins: clarify behavior of `esmExternalRequirePlugin` (#5886) by @sapphi-red
+- builtin-plugins: add documentation for `esmExternalRequirePlugin` (#5813) by @shulaoda
+- support extracting doc for reference type (#5834) by @IWANABETHATGUY
+- optimization.inlineConst (#5831) by @IWANABETHATGUY
+- update description for output.minify (#5816) by @IWANABETHATGUY
+- plugins: extract plugins into a separate section (#5812) by @shulaoda
+
+### ⚡ Performance
+
+- string_wizard: reduce allocation (#5793) by @Brooooooklyn
+
+### 🧪 Testing
+
+- hmr: import.meta.hot.accept cases (#5821) by @sapphi-red
+- hmr: static import cases (#5820) by @sapphi-red
+- hmr: no boundary full reload case (#5819) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update `oxc-resolver` to v11.7.0 (#5889) by @shulaoda
+- deps: lock file maintenance (#5880) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5881) by @renovate[bot]
+- deps: update github-actions (#5877) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5879) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5878) by @renovate[bot]
+- bump rolldown-ariadne (#5863) by @IWANABETHATGUY
+- remove usage of `quote_expr`, `quote_stmt` (#5858) by @IWANABETHATGUY
+- vite-tests: run all test suites even if some test suites failed (#5828) by @sapphi-red
+- vite-tests: set `_VITE_TEST_JS_PLUGIN` instead of `_VITE_TEST_NATIVE_PLUGIN` (#5827) by @sapphi-red
+- deps: use `vitepress@^2.0.0-alpha.12` instead (#5811) by @shulaoda
+- deps: update dependency rolldown-plugin-dts to v0.15.7 (#5814) by @renovate[bot]
+- add example with oxc transform styled components plugin (#5800) by @IWANABETHATGUY
+- deprecate top-level `jsx` option in favor of `transform.jsx` (#5783) by @shulaoda
+- deps: update crate-ci/typos action to v1.35.5 (#5786) by @renovate[bot]
+- update default value of options.context (#5777) by @IWANABETHATGUY
+
+### ◀️ Revert
+
+- "fix: jsx preserve break component which is default export (#5764)" (#5856) by @shulaoda
+
+## [1.0.0-beta.33] - 2025-08-18
+
+### 💥 BREAKING CHANGES
+
+- only call `closeBundle` hook when bundling actually happens (#5715) by @shulaoda
+
+### 🚀 Features
+
+- rolldown_plugin_vite_css_post: align transform logic except minify (#5768) by @shulaoda
+- rolldown_plugin_vite_css_post: align html inline css logic (#5767) by @shulaoda
+- support merge cjs ns in module group level (#5760) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: filter transform id (#5766) by @shulaoda
+- rolldown: oxc v0.82.2 (#5754) by @Boshen
+- rollup-test: log error when `pringStatus` (#5744) by @situ2001
+- rolldown_plugin_vite_css_post: initialize (#5743) by @shulaoda
+- rolldown_plugin_vite_css: align `transform` hook logic (#5736) by @shulaoda
+- rolldown_plugin_vite_css: align partial transform hook logic (#5733) by @shulaoda
+- add original wrap_kind (#5729) by @IWANABETHATGUY
+- concatenateWrappedModule (#5724) by @IWANABETHATGUY
+- rolldown: oxc v0.82.1 (#5717) by @Boshen
+- improve error message for `unresolved_import` when platform is `neutral` (#5700) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_transform: merge tsconfig jsx options even when `oxc.jsx.runtime` is set (#5771) by @hi-ogawa
+- jsx preserve break component which is default export (#5764) by @shulaoda
+- rolldown_plugin_asset: should directly stringify raw content (#5749) by @situ2001
+- resolve symbol deconfliction order for cross-chunk imports by @IWANABETHATGUY
+- rolldown_error: improve resolve diagnostic message (#5740) by @shulaoda
+- vitest ci failed (#5741) by @IWANABETHATGUY
+- rolldown: options `context` should be available in renderStart (#5672) by @situ2001
+- ensure lazy module eval order when import variable from other chunk (#5727) by @IWANABETHATGUY
+- wasm build panic on stackblitz (#5723) by @shulaoda
+- plugin/vite-resolve: try non-prefixed id before prefixed id (#5711) by @sapphi-red
+- devtool: shouldn't filter out spans for devtool use case (#5713) by @hyf0
+- plugin/vite-resolve: fallback on more resolution errors that happened when trying with prefix (#5710) by @sapphi-red
+- plugin/vite-resolve: don't consider ids with `npm:` prefix as a built-in module (#5709) by @sapphi-red
+
+### 🚜 Refactor
+
+- rolldown_plugin_json: use common plugin utils (#5769) by @shulaoda
+- hmr: remove unnecessary code of handling runtime module (#5752) by @hyf0
+- hmr: enhance HMR update logic and improve clarity (#5748) by @hyf0
+- improve `ScopeHoistingFinalizerContext` (#5739) by @shulaoda
+- move `finalize_normal_module` into `ScopeHoistingFinalizerContext` (#5738) by @shulaoda
+- private fields `wrap_kind` and `original_wrap_kind` and keep them sync (#5730) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- rolldown_plugin_data_uri: update README (#5746) by @situ2001
+- install guide for minor platforms (#5716) by @sapphi-red
+- update description for platform `neutral` (#5701) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- hmr: only refetch changed modules (#5753) by @hyf0
+- rolldown_plugin_reporter: gzip size computation (#5734) by @IWANABETHATGUY
+- hmr: reuse previous ast for non-changed modules (#5725) by @hyf0
+- rolldown_ecmascript: do not run semantic twice for `dce-only` (#5707) by @Boshen
+
+### 🧪 Testing
+
+- rolldown: should await for `toMatchFileSnapshot` (#5759) by @situ2001
+- hmr: improve test of `import.meta.hot.invalidate` (#5747) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance (#5765) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5763) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5762) by @renovate[bot]
+- deps: update github-actions (#5755) by @renovate[bot]
+- deps: update dependency tinybench to v5 (#5756) by @renovate[bot]
+- deps: update github-actions (major) (#5757) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.35.4 (#5714) by @renovate[bot]
+- prepare-release: regenerate `binding.js` after version bump (#5704) by @shulaoda
+- deps: update dependency tsdown to v0.14.1 (#5705) by @renovate[bot]
+- rollup-tests: skip occasionally failing test case (#5703) by @shulaoda
+- update binding.js (#5702) by @shulaoda
+
+## [1.0.0-beta.32] - 2025-08-11
+
+### 💥 BREAKING CHANGES
+
+- advanceChunks: remove interaction between `advanceChunks` and `preserveEntrySignatures` (#5629) by @hyf0
+- types: align `TreeshakingOptions` type with Rollup (#5592) by @sapphi-red
+
+### 🚀 Features
+
+- rolldown_plugin_manifest: support legacy (#5694) by @shulaoda
+- rolldown_plugin_vite_css: align load hook logic (#5667) by @shulaoda
+- rolldown_plugin_transform: throw error for invalid tsconfig (#5657) by @shulaoda
+- support `context` option (#5631) by @7086cmd
+- rolldown: oxc v0.81.0 (#5642) by @Boshen
+- include plugin name in the message of UNHANDLEABLE_ERRORs that happened in plugins (#5636) by @sapphi-red
+- pass plugin name to log (#5635) by @sapphi-red
+- rolldown_plugin_import_glob: support glob-safe paths (#5640) by @shulaoda
+- rolldown_binding: Add configurable max_blocking_threads with environment variable override (#5559) by @Copilot
+- output better error message for callable plugins (#5632) by @sapphi-red
+- rolldown_plugin_manifest: support names for asset (#5627) by @shulaoda
+- rolldown_plugin_manifest: align the logic related to css entries (#5626) by @shulaoda
+- hmr: handle `import ... from 'external-module'` in rolldown's best (#5599) by @hyf0
+- add array support for `treeshake.moduleSideEffects` option (#5593) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- ensure `./` prefix for relative imports starting with `.` (#5687) by @shulaoda
+- hmr: fix regression test `deconflict_import_bindings` (#5684) by @hyf0
+- hmr: only modules in the propagation chain need to re-execute (#5683) by @hyf0
+- preserve empty `export {}` to ensure correct ESM detection (#5686) by @shulaoda
+- vite test failed (#5675) by @IWANABETHATGUY
+- incorrect module execution order with sideeffectful CJS module (#5661) by @IWANABETHATGUY
+- rollup-tests: update ignored tests for `option.context` (#5669) by @situ2001
+- hmr: ensure correctness of `typeof require === 'function'` (#5651) by @hyf0
+- hmr: rewrite `this` to `exports` for cjs modules (#5641) by @hyf0
+- don't generate namespace reexport code for reexport external record that has been moved to entry point (#5622) by @IWANABETHATGUY
+- esm export \* from 'externalized-dep' generates unnecessary code (#5612) by @IWANABETHATGUY
+- hmr: correct runtime behavior for manual reexports (#5614) by @hyf0
+- ci: resolve potential sync issue in `this.emitFile` (#5611) by @shulaoda
+- hmr: support re-assignment on `module.exports` (#5607) by @hyf0
+- hmr: rewrite `require(...)` to sensible form (#5604) by @hyf0
+- align behavior when returning `undefined` from `treeshake.moduleSideEffects` function (#5595) by @sapphi-red
+
+### 🚜 Refactor
+
+- rolldown_binding: improve the use of `FxHashSet` and `FxHashMap` (#5665) by @shulaoda
+- hmr: move constants to `constants.rs` (#5650) by @hyf0
+- hmr: rewrite `exports,module` to `__rolldown_exports__,__rolldown_module__` (#5647) by @hyf0
+- hmr: migrate `VisitMut` to `Traverse` (#5646) by @hyf0
+- use `bit_index` function to get `RuntimeHelper` bit index (#5634) by @IWANABETHATGUY
+- improve `JsCallback` and `MaybeAsyncJsCallback` (#5628) by @shulaoda
+- use bitflags instead of boolean to represent module_namespace included reason (#5621) by @IWANABETHATGUY
+- rolldown_debug,rolldown_tracing: remove `EnvFilter` (#5231) by @Boshen
+- align parameter name for `treeshake.moduleSideEffects` (#5594) by @sapphi-red
+
+### 📚 Documentation
+
+- contrib-guide: add CPU profile steps (#5677) by @sapphi-red
+- rollup-tests: update README to correct commands (#5658) by @situ2001
+
+### ⚡ Performance
+
+- reduce memory usage when calc none wrapped modules implicit dependency (#5679) by @IWANABETHATGUY
+- hmr: do codegen in parallel (#5590) by @hyf0
+
+### 🧪 Testing
+
+- Runtime error when using rolldown to build a page using tinymce (#5678) by @IWANABETHATGUY
+- rollup: enable testing for `option.context` (#5663) by @situ2001
+- hmr: run patch exectution after the normal execution (#5645) by @sapphi-red
+- hmr: properly execute patch chunks (#5617) by @sapphi-red
+- rust/hmr: hide unnecessary rolldown runtime, hmr module (#5606) by @hyf0
+- rust/hmr: support writting assertion tests (#5598) by @hyf0
+- rust: simplify global variable injection logic (#5597) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance (#5693) by @renovate[bot]
+- deps: lock file maintenance (#5692) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5691) by @renovate[bot]
+- deps: update github-actions (#5688) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5690) by @renovate[bot]
+- deps: update github-actions (major) (#5689) by @renovate[bot]
+- upgrade NAPI-RS to 3.2 (#5680) by @Brooooooklyn
+- deps: update dependency tsdown to v0.14.0 (#5681) by @renovate[bot]
+- clean up basic-vue example (#5676) by @IWANABETHATGUY
+- deps: update crate-ci/typos action to v1.35.3 (#5674) by @renovate[bot]
+- remove duplicate hook tracing (#5673) by @IWANABETHATGUY
+- deps: update dependency tsdown to v0.13.4 (#5668) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.15.6 (#5666) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.35.2 (#5664) by @renovate[bot]
+- deps: update dependency rust to v1.89.0 (#5652) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.15.5 (#5649) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.15.4 (#5638) by @renovate[bot]
+- add `just debug-test` alias to run test without extended test case (#5633) by @IWANABETHATGUY
+- update lable related to auto labeled documentation ci (#5630) by @IWANABETHATGUY
+- clippy: allow `case_sensitive_file_extension_comparisons` (#5625) by @shulaoda
+- fix wasi build failed (#5624) by @sapphi-red
+- use env variable to control whether run extended tests (#5623) by @IWANABETHATGUY
+- remove redundant track_caller (#5620) by @IWANABETHATGUY
+- replace unmaintained goto-bus-stop/setup-zig with mlugg/setup-zig action (#5605) by @Copilot
+- deps: update crate-ci/typos action to v1.35.1 (#5603) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.35.0 (#5601) by @renovate[bot]
+- deps: update dependency tsdown to v0.13.3 (#5602) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.15.3 (#5600) by @renovate[bot]
+
+## [1.0.0-beta.31] - 2025-08-04
+
+### 🚀 Features
+
+- support function for asset_inline_limit (#5453) by @AliceLanniste
+- hmr: generate initializer for `export * from ...` (#5577) by @hyf0
+- hmr: remove meaningless stmt instead of replacing with empty stmt (#5570) by @hyf0
+- option `watch.clearScreen` (#5518) by @situ2001
+- rolldown: oxc v0.80.0 (#5538) by @Boshen
+- plugin/generateBundle: add support for modifying chunk filename (#5564) by @shulaoda
+- assetFileNames: support `name` and `originalFileName` (#5555) by @shulaoda
+- add optional `onInvalidate` schema to validator (#5528) by @situ2001
+- don't throw resolve errors for dynamic import inside try block (#5537) by @shulaoda
+- rolldown: oxc v0.79.0 (#5512) by @Boshen
+- rolldown_plugin_asset: align `render_chunk` logic (#5511) by @shulaoda
+- rolldown_plugin_utls: finish `render_asset_url_in_js` (#5508) by @shulaoda
+- rolldown_plugin_utils: align replacement logic for `__VITE_ASSET__` (#5507) by @shulaoda
+- rolldown_plugin_utils: add partial `render_asset_url_in_js` support (#5504) by @shulaoda
+- expose `sourcemapBaseUrl` from NormalizedOutputOptions (#5513) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- modify output filename correctly in `generateBundle` and `writeBundle` (#5580) by @shulaoda
+- hmr: ensure correct runtime behavior for `export * from ...` (#5578) by @hyf0
+- hmr: repeated imports should point to the same binding (#5571) by @hyf0
+- hmr: handle `export * from ...` (#5566) by @hyf0
+- rolldown_plugin_web_worker_post: handle `import.meta` correctly (#5565) by @shulaoda
+- antd bundle output not correct (#5549) by @IWANABETHATGUY
+- hmr: module namespace object should be included via treeshaking mechanism normally (#5543) by @hyf0
+- plugin/vite-resolve: use `import` / `require` conditions for external modules resolution (#5540) by @sapphi-red
+- rolldown_plugin_asset: InvalidAsset#is should match InvalidAsset::True (#5529) by @AliceLanniste
+- \_\_name lacks require('./chunk-containing-runtime') when format: 'cjs' + keepNames: true (#5526) by @IWANABETHATGUY
+- plugin/vite-resolve: resolve externalized packages with `resolve.externalConditions` (#5491) by @sapphi-red
+- optimization.inlineConst: true does not keep export names when output.minifyInternalExports: true is enabled (#5520) by @IWANABETHATGUY
+- scanner: identify `module.exports.__esModule = true` (#5503) by @overlookmotel
+- error instead of panic if `sourcemapBaseUrl` is an invalid URL (#5514) by @sapphi-red
+
+### 🚜 Refactor
+
+- hmr: use `__rolldown_exports__` as the name for esm module namespace object (#5579) by @hyf0
+- tests: rename `_configName` to `_testName` in configuration files and update variant formatting in snapshots (#5569) by @hyf0
+- rolldown: remove unnecessary comments (#5552) by @situ2001
+- rolldown: Remove `rolldown_rstr` crate and use `CompactStr` directly (#5542) by @Copilot
+- hide namespace statement index knowledge inside StmtInfos (#5545) by @sapphi-red
+- use pascal case when naming bitflags field for `ImportRecordMeta` (#5539) by @IWANABETHATGUY
+- use concat_string! to simplify string concatenation (#5527) by @IWANABETHATGUY
+- use combinator function handle `sourcemap_base_url` parsing (#5517) by @IWANABETHATGUY
+- rolldown_plugin_utils: improve `to_output_file_path_in_js` (#5505) by @shulaoda
+
+### 📚 Documentation
+
+- wording nit (#5521) by @nullxone
+
+### 🧪 Testing
+
+- rust: rename `configName` to `_configName` and add comments (#5568) by @hyf0
+- rust: re-organize `rolldown_testing_config` (#5567) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance npm packages (#5582) by @renovate[bot]
+- deps: lock file maintenance (#5581) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5576) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5574) by @renovate[bot]
+- deps: update github-actions (#5573) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.15.1 (#5572) by @renovate[bot]
+- deps: update dependency tsdown to v0.13.2 (#5562) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to ^0.15.0 (#5563) by @renovate[bot]
+- ai: Add AGENTS.md and GitHub Copilot setup workflow (#5556) by @Copilot
+- deps: update dependency tsdown to v0.13.1 (#5551) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.14.3 (#5544) by @renovate[bot]
+- ensure all diagnostics in self.errors have Severity::Error (#5494) by @sapphi-red
+- vscode: remove `code-spell-checker` extension (#5530) by @shulaoda
+- deps: update dependency rolldown-plugin-dts to v0.14.2 (#5522) by @renovate[bot]
+- add link to the REPL in the reproduction field description (#5519) by @sapphi-red
+- enable some rollup tests (#5515) by @sapphi-red
+
+### ❤️ New Contributors
+
+- @Copilot made their first contribution in [#5556](https://github.com/rolldown/rolldown/pull/5556)
+- @nullxone made their first contribution in [#5521](https://github.com/rolldown/rolldown/pull/5521)
+
+## [1.0.0-beta.30] - 2025-07-30
+
+### 💥 BREAKING CHANGES
+
+- rolldown: remove unfinished module federation support (#5471) by @Boshen
+- disable `strictExecutionOrder` by default (#5436) by @hyf0
+
+### 🚀 Features
+
+- hmr: multiple changes should result to multiple updates (#5500) by @hyf0
+- binding: add memory adjustment hint in fn write (#5375) by @Brooooooklyn
+- store sideEffects information about global var access (#5495) by @IWANABETHATGUY
+- merge side effects detail (#5486) by @IWANABETHATGUY
+- plugin/vite-resolve: add warn / debug logs (#5476) by @sapphi-red
+- plugin/vite-resolve: avoid wrapping errors with napi errors (#5483) by @sapphi-red
+- add `this.fs` support (#5475) by @sapphi-red
+- rolldown_plugin_asset: align `generate_bundle` logic (#5480) by @shulaoda
+- hmr: prepare to launch that batched edits should result to multiple hmr output (#5458) by @hyf0
+- hmr: support `import.meta.hot.invalidate` (#5457) by @hyf0
+- mark all `toESM` as pure (#5461) by @IWANABETHATGUY
+- rolldown_plugin_asset: align load hook logic (#5452) by @shulaoda
+- rolldown_plugin_utils: align `file_to_built_url` (#5450) by @shulaoda
+- rolldown_plugin_utils: align `should_inline` logic (#5308) by @AliceLanniste
+- rolldown_plugin_asset: add partial `file_to_built_url` support (#5445) by @shulaoda
+- expose `optimization.pifeForModuleWrappers` option (#5433) by @sapphi-red
+- add `optimization.pifeForModuleWrappers` option (#5432) by @sapphi-red
+- use PIFE for callback passed to `createCjsInitializer` (#5427) by @sapphi-red
+- use PIFE for callbacks passed to `__commonJSMin` / `_commonJS` wrapper (#5426) by @sapphi-red
+- use PIFE for callback passed to `createEsmInitializer` (#5425) by @sapphi-red
+- use PIFE for callbacks passed to `__esm` wrapper (#5424) by @sapphi-red
+- use PIFE for callbacks passed to `__esmMin` wrapper (#5319) by @sapphi-red
+- rolldown: oxc v0.78.0 (#5421) by @Boshen
+- rolldown: support `output.sourcemapBaseUrl` (#5413) by @situ2001
+- mark all `__commonJS` CallExpression as **Pure** (#5419) by @IWANABETHATGUY
+- rolldown_plugin_alias: warn if alias resolves to non-absolute path (#5417) by @shulaoda
+- rolldown_plugin_asset: align `encode_uri_path` logic (#5410) by @shulaoda
+- add warning and conversion for `import.meta` for non-`esm` output format (#5378) by @7086cmd
+
+### 🐛 Bug Fixes
+
+- use uuid_v4 to generate unique id for hook calls (#5501) by @hyf0
+- modules that are sideeffect free but relies on the execution order is not wrapped (#5498) by @IWANABETHATGUY
+- missing_export warning should not be an hard error (#5493) by @sapphi-red
+- cli: remove unnecessary `await` (#5487) by @situ2001
+- browser: stub fs/promises for browser build (#5484) by @sapphi-red
+- indirect requiring external module is not wrapped by `__toESM` in cjs format (#5454) by @IWANABETHATGUY
+- Panic on reexport external module in CJS format (#5430) by @IWANABETHATGUY
+- handle top-level return statements in CommonJS modules (#5437) by @hyf0
+- panic when using preserveModules: true and certain dependencies (#5415) by @IWANABETHATGUY
+- rolldown_plugin_alias: only replace the first matched alias (#5412) by @shulaoda
+- canonical name not found panic happens with treeshake.commonjs=true (#5409) by @IWANABETHATGUY
+- hmr: shouldn't consider self-accepting module as hmr boundary for its importee (#5405) by @hyf0
+- hmr: should detect hmr boundary correctly (#5400) by @hyf0
+- optimization.inlineConst: true generates invalid code when importing a module statically and dynamically (#5398) by @IWANABETHATGUY
+- top level VarDeclaration is not hoisted when wrapped in `__esm` (#5396) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- use pascal case when naming bitflags field (#5497) by @IWANABETHATGUY
+- test/hmr: use sensible time to wait (#5490) by @hyf0
+- hmr: update message types to use 'hmr:update' (#5489) by @hyf0
+- hmr: replace `HmrOutput` with `HmrUpdate` (#5488) by @hyf0
+- node/hmr: re-organize file structures (#5485) by @hyf0
+- rolldown_plugin_utils: improve `asset_to_data_url` (#5481) by @shulaoda
+- replace pattern match for SideEffectsDetail with bitflags api (#5479) by @IWANABETHATGUY
+- rename stmtSideEffect to SideEffectDetail (#5478) by @IWANABETHATGUY
+- use bitflags store more details about side effects (#5477) by @IWANABETHATGUY
+- node/hmr: tweak package `test-dev-server` (#5462) by @hyf0
+- hmr: tweak naming and add comments (#5459) by @hyf0
+- test/hmr: remove hard-code edited content (#5189) by @hyf0
+- rust: make `Log#code` an `Option` (#5416) by @shulaoda
+- hmr: should mark self-accept module correctly (#5406) by @hyf0
+- hmr: remove unnecessary data during `propagate_update` (#5402) by @hyf0
+- hmr: make hmr patch output less changeable (#5401) by @hyf0
+- `__esm` top level bindings hoisted (#5397) by @IWANABETHATGUY
+- skip fast in esm format when transform import.meta (#5395) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- clarify rolldown-rollup behavior difference around output generation (#5439) by @sapphi-red
+
+### ⚡ Performance
+
+- reduce runtime symbol memory usage and hashtable lookup (#5460) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- hmr: support to run mutiple test fixtures (#5456) by @hyf0
+- basic tests for `optimization.pifeForModuleWrappers` (#5435) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update github-actions (#5509) by @renovate[bot]
+- debug: update default session ID to meaningful `unknown-session` (#5502) by @hyf0
+- deps: update dependency rolldown-plugin-dts to v0.14.2 (#5492) by @renovate[bot]
+- auto generated runtime_helper bitflags (#5474) by @IWANABETHATGUY
+- fix wasi build failed (#5470) by @IWANABETHATGUY
+- deps: lock file maintenance (#5467) by @renovate[bot]
+- deps: lock file maintenance (#5466) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5465) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5464) by @renovate[bot]
+- deps: update github-actions (#5463) by @renovate[bot]
+- export `__commonJSMin` in runtime-base.js (#5455) by @IWANABETHATGUY
+- rolldown_plugin_utils: remove `file_to_dev_url` temporarily (#5446) by @shulaoda
+- rolldown_plugin_asset: move `remove_url_query` into `rolldown_plugin_utils` (#5444) by @shulaoda
+- rolldown: disable aarch64 atomics (#5447) by @Brooooooklyn
+- remove diff with esbuild (#5428) by @IWANABETHATGUY
+- dx/ai: add deepwiki badge to enable automatic refresh (#5423) by @hyf0
+- dx/ai: Use `.cursorignore` to ignore meaningless files for AI (#5422) by @hyf0
+- rolldown_plugin_alias: inline matches and remove redundant comment (#5418) by @shulaoda
+- rolldown_plugin_asset: remove unnecessary comments (#5411) by @shulaoda
+- rolldown_plugin_manifest: remove unnecessary code (#5408) by @shulaoda
+- deps: update dependency tsdown to v0.13.0 (#5392) by @renovate[bot]
+
+## [1.0.0-beta.29] - 2025-07-22
+
+### 🚀 Features
+
+- rolldown_plugin_chunk_import_map: support custom file name (#5383) by @shulaoda
+- rolldown_plugin_chunk_import_map: emit standard import map (#5382) by @shulaoda
+- rolldown_plugin_chunk_import_map: support custom base url (#5381) by @shulaoda
+- support plugin context meta for native plugins (#5371) by @shulaoda
+- rolldown: oxc v0.77.3 (#5367) by @Boshen
+- rolldown_plugin_transform: align sourcemap enable logic (#5348) by @shulaoda
+- plugin_driver: use hook usage for `close_bundle` (#5361) by @shulaoda
+- hmr: attach region comments for hmr patch (#5358) by @hyf0
+- rolldown: add transformHiresSourcemap option (#5346) by @Brooooooklyn
+- rolldown_plugin_web_worker_post: align `transform_ast` hook metadata order to `post` (#5339) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- when preserveEntrySignatures: false is set, output includes a circular import (#5365) by @IWANABETHATGUY
+- do not normalize iife global names (#5228) by @redstonekasi
+- hmr: should not panic for editing modules that contain `import(..)` (#5351) by @hyf0
+- sync ast for newly added modules (#5354) by @IWANABETHATGUY
+- used exports from dynamic imported module are removed incorrectly (#5341) by @IWANABETHATGUY
+- keep top level variables for non-esm format when minify is enabled (#5332) by @sapphi-red
+- rust: correctly return watch option (#5334) by @HigherOrderLogic
+
+### 🚜 Refactor
+
+- rolldown_plugin_chunk_import_map: clarify import map paths and output filename (#5376) by @shulaoda
+- rolldown: `collapse_sourcemaps` does not need to own a Vec (#5352) by @Boshen
+- rolldown_plugin_asset: improve readability for easier maintenance (#5359) by @shulaoda
+- ecmascript: remove unnecessary `allocator.alloc(program)` call (#5350) by @Boshen
+- store ast with same shape as module_table (#5345) by @IWANABETHATGUY
+- simplify `is_dynamic_entry_alive` (#5342) by @IWANABETHATGUY
+- rolldown_plugin_web_worker_post: tweak code organization (#5338) by @shulaoda
+- store `ScopeFlags` instead of `ScopeId` when traverse ast (#5330) by @IWANABETHATGUY
+- simplify `keep_names` VarDeclaration rewrite (#5325) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- experimental: update the description of `chunkImportMap` (#5384) by @shulaoda
+- experiment: add usage documentation for `chunkImportMap` (#5379) by @shulaoda
+
+### ⚡ Performance
+
+- plugin_driver: skip unused hooks early based on hook usage meta (#5363) by @shulaoda
+- rolldown: box `TransformOptions` (#5353) by @Boshen
+
+### 🧪 Testing
+
+- rust: hide runtime module output in snapshots to improve clarity (#5366) by @hyf0
+- node: put minify related tests in a single directory (#5333) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- examples: update `chunk-import-map` (#5385) by @shulaoda
+- add `examples/chunk-import-map` (#5380) by @shulaoda
+- deps: lock file maintenance (#5373) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5372) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5370) by @renovate[bot]
+- deps: update dependency @napi-rs/wasm-runtime to v1 (#5369) by @renovate[bot]
+- deps: update taiki-e/install-action action to v2.56.19 (#5368) by @renovate[bot]
+- extract `HookOrderIndicates` logic (#5362) by @shulaoda
+- rust: remove unnecessary `#[allow(unused)]` (#5360) by @shulaoda
+- deps: update dependency rolldown-plugin-dts to v0.14.1 (#5357) by @renovate[bot]
+- use `debug=1` for profile.dev and profile.test (#5355) by @IWANABETHATGUY
+- deps: update dependency rolldown-plugin-dts to ^0.14.0 (#5349) by @renovate[bot]
+- remove packages/rolldown/npm/\* from workspace config (#5347) by @Brooooooklyn
+- pnpm,justfile: enable pnpm `verifyDepsBeforeRun: install` (#5331) by @Boshen
+- update `build-js-glue` script (#5335) by @btea
+
+### ◀️ Revert
+
+- `test(rust): prevent meaningless snapshot change from bumping oxc runtime versions #5312` (#5336) by @hyf0
+
+### ❤️ New Contributors
+
+- @redstonekasi made their first contribution in [#5228](https://github.com/rolldown/rolldown/pull/5228)
+- @HigherOrderLogic made their first contribution in [#5334](https://github.com/rolldown/rolldown/pull/5334)
+
+## [1.0.0-beta.28] - 2025-07-17
+
+### 🚀 Features
+
+- rolldown: oxc v0.77.2 (#5328) by @Boshen
+- hmr: add `module` and `exports` parameters to CJS initializer functions (#5322) by @hyf0
+- rolldown_plugin_transform: align with `vitejs/rolldown-vite#318` (#5318) by @shulaoda
+- rolldown_plugin_transform: align with `vitejs/rolldown-vite#315` (#5315) by @shulaoda
+- hmr: automatically disable treeshaking in hmr (#5311) by @hyf0
+- hmr: use `trait HmrAstBuilder` to unify ast construction (#5310) by @hyf0
+- rolldown_plugin_chunk_import_map: basic implementation (#5307) by @shulaoda
+- add `watch.onInvalidate` (#5239) by @situ2001
+- rolldown_plugin_chunk_import_map: implement initial `render_chunk` logic (#5306) by @shulaoda
+- rolldown: oxc v0.77.1 (#5304) by @Boshen
+- js: expose `experimental.incrementalBuild` option (#5300) by @IWANABETHATGUY
+- js: support `experimental.onDemandWrapping` option (#5299) by @IWANABETHATGUY
+- support on demand wrapping for entry chunk (#5291) by @IWANABETHATGUY
+- rolldown_plugin_chunk_import_map: initialize (#5289) by @shulaoda
+- show owner module id for "canonical name not found for" errors (#5288) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- only transform VarDeclaration when enable `keepNames` (#5323) by @IWANABETHATGUY
+- keepNames with special Ifstmt (#5320) by @IWANABETHATGUY
+- incremental watch panic when adding dynamic import (#5309) by @IWANABETHATGUY
+- make leaf module wrapping optimization opt-in (#5305) by @IWANABETHATGUY
+- `keepNames` should consider exportNamed function declaration (#5298) by @IWANABETHATGUY
+- undefined `process.versions` for browser build (#5295) by @sxzz
+- sanitizeFileName: entry name should be sanitized (#5283) by @shulaoda
+- minify-internal-exports: ensure minifying internal exports stably (#5281) by @hyf0
+- keep legal and annotation comments for `minify: 'dce-only'` (#5280) by @sapphi-red
+- unstable chunk generation when `preserveEntrySignatures: false` is used (#5274) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- pass the while CodegenOptions to `EcmaCompiler::minify` (#5279) by @sapphi-red
+- avoid iterate `canonical_exports` twice (#5276) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- pluginutils: add README file (#5262) by @TheAlexLichter
+
+### ⚡ Performance
+
+- inline function expression when rewriting `name` property with `keepNames` enabled (#5321) by @IWANABETHATGUY
+- rolldown_sourcemap: cache source id -> source text mapping (#5285) by @Boshen
+- rolldown_sourcemap: disable rayon (#5284) by @Boshen
+
+### 🧪 Testing
+
+- rust: prevent meaningless snapshot change from bumping oxc runtime versions (#5312) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- upgrade to NAPI-RS 3.0 stable (#5324) by @Brooooooklyn
+- infra: add onlyBuiltDependencies (#5287) by @situ2001
+- improve the order of import keys in the exports field (#5314) by @btea
+- deps: update dependency rolldown-plugin-dts to v0.13.14 (#5293) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5267) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5266) by @renovate[bot]
+- deps: update github-actions (#5265) by @renovate[bot]
+
+### ❤️ New Contributors
+
+- @situ2001 made their first contribution in [#5287](https://github.com/rolldown/rolldown/pull/5287)
+
+## [1.0.0-beta.27] - 2025-07-13
+
+### 🚀 Features
+
+- rolldown: support linux-arm64-ohos (#5258) by @Brooooooklyn
+- napi: add `aarch64-linux-android` target (#5141) by @Boshen
+- rolldown: oxc v0.77.0 (#5255) by @Boshen
+
+### 🐛 Bug Fixes
+
+- `this` in CJS is replaced with undefined but should be `exports` (#5244) by @IWANABETHATGUY
+- normalize path from package.json's realpath before matching sideEffects field (#5250) by @sapphi-red
+
+### ⚡ Performance
+
+- don't wrap module if it is leaf module and side effects free when enable `strictExecutionOrder` (#5240) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- upgrade NAPI-RS cli to 3.0.0-alpha.93 (#5243) by @Brooooooklyn
+
+## [1.0.0-beta.26] - 2025-07-10
+
+### 🐛 Bug Fixes
+
+- browser: process is not defined error (#5241) by @sapphi-red
+- plugin/vite-resolve: allow resolving bare specifiers to relative paths for entries (#5230) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: do not enable `full` feature for `tokio` (#5238) by @Boshen
+
+## [1.0.0-beta.25] - 2025-07-10
+
+### 🚀 Features
+
+- hmr: should initialize cjs with correct initializer (#5234) by @hyf0
+- hmr: handle `import(..)` on cjs modules (#5225) by @hyf0
+- support `chunkModulesOrder` (#5227) by @IWANABETHATGUY
+- add `export`s to `rolldown:runtime` (#5224) by @hyf0
+- hmr: support `import(..)` (#5223) by @hyf0
+- add analyzed source code side effects field in ecmaMeta (#5226) by @IWANABETHATGUY
+- hmr: return `undefined` from `generateHmrPatch` when there is no patch (#5218) by @sapphi-red
+- pass `isEntry` to resolveId hook of CallableBuiltinPlugin (#5215) by @sapphi-red
+- pass `isEntry` from `this.resolve` (#5214) by @sapphi-red
+- node: support `OutputOptions#minifyInternalExports` (#5210) by @hyf0
+- rolldown: oxc v0.76.0 (#5212) by @Boshen
+- rust: support `minify_internal_exports` (#5208) by @hyf0
+- support opt-in `topLevelVar` (#5188) by @7086cmd
+- rolldown: oxc-resolver v11.5.0 (yarn pnp) (#5147) by @Boshen
+
+### 🐛 Bug Fixes
+
+- do not optimize interop code for `mod.default` if mod bind from default import (#5232) by @IWANABETHATGUY
+- return `moduleSideEffects` instead of `sideEffects` from callable plugins (#5206) by @sapphi-red
+- return `moduleSideEffects` set by native plugins from `this.resolve` (#5205) by @sapphi-red
+- incorrect output when importing CJS package (#5201) by @IWANABETHATGUY
+- use resolved id instead of module_request when analysis if a module is a json module (#5200) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- use `sort_unstable_by_key` for simple property access (#5233) by @IWANABETHATGUY
+- add Deref impl for TransformPluginContext to access PluginContext (#5221) by @sapphi-red
+- use `BindingHookSideEffects` in CallableBuiltinPlugin (#5204) by @sapphi-red
+- move side effects type bindings logic to rust side (#5203) by @sapphi-red
+- test: improve experience of writing manual integration test (#5186) by @hyf0
+- rust: unify logic of `IntegrationTest` (#5185) by @hyf0
+
+### 🧪 Testing
+
+- rust: automatically run extented test for `minify_internal_exports: true` (#5213) by @hyf0
+- rust: add basic tests for minifying internal exports (#5211) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: oxc-browserslist v2.0.10 and oxc-resolver v11.5.2 (#5222) by @Boshen
+- use jsonc schema for knip config (#5207) by @sapphi-red
+- rust: remove unused code related to `safe_cjs_to_eliminate_interop_default` (#5202) by @shulaoda
+- inject test variant name to rust unit test script (#5195) by @IWANABETHATGUY
+- change CC => TARGET_CC (#5194) by @Brooooooklyn
+- deps: lock file maintenance npm packages (#5191) by @renovate[bot]
+- deps: lock file maintenance (#5193) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5192) by @renovate[bot]
+- deps: update github-actions (#5190) by @renovate[bot]
+- test: remove unnecessary test snapshots (#5183) by @shulaoda
+- rolldown: upgrade to NAPI-RS 3.0.0-beta.12 (#5184) by @Brooooooklyn
+
+## [1.0.0-beta.24] - 2025-07-05
+
+### 🚀 Features
+
+- support `inlineConst` for imported variable (#5165) by @IWANABETHATGUY
+- rust: skip transform hook for modules starts with `rolldown:` (#5169) by @hyf0
+- print rolldown version (#5163) by @btea
+- add optimization.inlineConst option (#5164) by @IWANABETHATGUY
+- hmr: introduce `rolldown_plugin_hmr` to inject runtime code (#5159) by @hyf0
+- rolldown: oxc v0.75.1 (#5157) by @Boshen
+
+### 🐛 Bug Fixes
+
+- generate correct CSS filename in `preserveModules` mode (#5175) by @shulaoda
+- rolldown_plugin_build_import_analysis: avoid `default` keyword error (#5166) by @shulaoda
+- watch: add paths to watcher in batch (#5068) by @branchseer
+- debug: should emit chunk data after computing cross chunk links (#5156) by @hyf0
+- simplify commonjs interop `default` prop optimization (#5142) by @IWANABETHATGUY
+- should include modules contain `exports * from '...'` forcefully if they reexport any wrapped module (#5143) by @hyf0
+- use canonical runtime time for `__name` (#5140) by @IWANABETHATGUY
+- `options.jsx` is ignored when `options.transform` is set (#5137) by @shulaoda
+
+### 🚜 Refactor
+
+- polyfill `flatten_iter` for wasm target (#5180) by @IWANABETHATGUY
+- rolldown_plugin_dynamic_import_vars: remove unnecessary validity checks (#5172) by @shulaoda
+- hmr: remove hmr-related hacky hard-code (#5168) by @hyf0
+- rolldown_plugin_dynamic_import_vars: align with rolldown-vite (#5171) by @shulaoda
+- hmr: use `rolldown:hmr` to load hmr runtime code (#5162) by @hyf0
+- rust: remove special fields of `Asset` (#5155) by @hyf0
+- rust: make `Asset#originate_from` optional (#5153) by @hyf0
+- rust: isolate mutations on assets data (#5152) by @hyf0
+- rust: remove unnecessary usage of index vec on assets (#5151) by @hyf0
+- merge different member expr in `try_rewrite_member_expr` (#5146) by @IWANABETHATGUY
+- remove unused code (#5144) by @IWANABETHATGUY
+- use `self.result.ast_usage` directly (#5135) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- update syntax lowering transform info (#5145) by @TheAlexLichter
+
+### 🧪 Testing
+
+- rust/hmr: hide hmr runtime code in snapshots (#5160) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- rolldown_testing: avoid unnecessary snapshots (#5181) by @shulaoda
+- fix `flatten_iter` compile error (#5179) by @IWANABETHATGUY
+- expose `optimization.inlineConst` option (#5177) by @IWANABETHATGUY
+- infra: update `pnpm-lock.yaml` (#5178) by @shulaoda
+- rust: remove unnecessary crate `rolldown_loader_utils` (#5173) by @shulaoda
+- print build time use green color (#5158) by @btea
+- deps: update dependency rolldown-plugin-dts to v0.13.13 (#5148) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.13.13 (#5138) by @renovate[bot]
+- allow only test without generate snapshot (#5134) by @IWANABETHATGUY
+
+## [1.0.0-beta.23] - 2025-07-01
+
+### 💥 BREAKING CHANGES
+
+- debug: rename debug logs fields to be consitent (#5125) by @antfu
+
+### 🚀 Features
+
+- debug: append `content` for asset data and unify `source` field to `content`. (#5130) by @hyf0
+- debug: emit asset-related data (#5124) by @hyf0
+- commonjs tree shaking. (#5095) by @IWANABETHATGUY
+- rolldown_plugin_wasm_helper: align behaviors for expected functionality (#5120) by @shulaoda
+- remove `experimental.enableComposingJsPlugins` (#5122) by @shulaoda
+- use same option object reference (#5114) by @sapphi-red
+- add util function to inspect why the facade symbol is created (#5115) by @IWANABETHATGUY
+- types: expose `ChunkingContext` type (#5112) by @sapphi-red
+- scan commonjs exports (#5111) by @IWANABETHATGUY
+- debug: remove unneeded source info of render chunk events (#5109) by @hyf0
+- debug: only emit debug information for trace level (#5108) by @hyf0
+- debug: emit chunk related informations (#5106) by @hyf0
+
+### 🐛 Bug Fixes
+
+- debug: add hook render chunk start and end events to Meta enum (#5117) by @hyf0
+
+### 🚜 Refactor
+
+- rust: unify outdated namings (#5127) by @hyf0
+
+### 📚 Documentation
+
+- advanced-chunks: clarify module capturing behavior (#5129) by @hyf0
+
+### 🧪 Testing
+
+- support array output options (#5113) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- remove unused code (#5128) by @IWANABETHATGUY
+- remove unnecessary `skipComposingJsPlugin` (#5123) by @shulaoda
+- deps: update crate-ci/typos action to v1.34.0 (#5119) by @renovate[bot]
+- deps: update NAPI-RS to 3.0.0-beta.11 (#5110) by @shulaoda
+
+## [1.0.0-beta.22] - 2025-06-30
+
+### 🚀 Features
+
+- plugin: use `Log` instead of `BuildDiagnostic` for `PluginContext#log` (#5099) by @shulaoda
+- plugin: support info/warn/debug in native plugin context (#5098) by @shulaoda
+- plugin: support vite plugin custom in `PluginContext#resolve` (#5097) by @shulaoda
+- rolldown_plugin_import_glob: align edge cases with `rolldown-vite` (#5094) by @shulaoda
+- rolldown_plugin_vite_resolve: align subpath import resolution (#5093) by @shulaoda
+- add commonjs tree shake option (#5096) by @IWANABETHATGUY
+- rolldown_plugin_web_worker_post: align with `rolldown-vite` (#5092) by @shulaoda
+- manual-chunks: support `getModuleInfo` (#5087) by @hyf0
+- advanced-chunks: support `getModuleInfo` in `groups.{group}.name` (#5086) by @hyf0
+
+### 🚜 Refactor
+
+- rolldown_loader_utils: inline unnecessary `binary_to_esm` (#5100) by @shulaoda
+
+### ⚡ Performance
+
+- hmr: remove `console.debug` in `runtime.registerModule` (#5091) by @sapphi-red
+- hmr: remove no-op `runtime.__toCommonJS` call (#5089) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance rust crates (#5105) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5104) by @renovate[bot]
+- deps: update rust crate schemars to v1 (#5103) by @renovate[bot]
+- deps: update dependency vite to v7 (#5102) by @renovate[bot]
+- deps: update github-actions (#5101) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.13.12 (#5088) by @renovate[bot]
+
+## [1.0.0-beta.21] - 2025-06-27
+
+### 🚀 Features
+
+- rolldown: oxc_resolver v11.3.0 (#5078) by @Boshen
+- debug: support to emit `meta.json` (#5075) by @hyf0
+- plugin/vite-resolve: support tsconfig paths (#5004) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- plugin/vite-resolve: resolve glob side effects field correctly (#5079) by @sapphi-red
+- rolldown_plugin_transform: don't load tsconfig for files in node_modules (#5074) by @sapphi-red
+- preserveModules: correctly generate absolute chunk file names (#5072) by @shulaoda
+- vite-tests: fix `pnpm install` failure (#5070) by @shulaoda
+
+### 📚 Documentation
+
+- contrib-guide: add memory profile steps (#5053) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- remove `just lint` in `packages/debug/package.json` (#5080) by @hyf0
+- deps: update dependency rolldown-plugin-dts to v0.13.12 (#5077) by @renovate[bot]
+- repo: make `pnpm lint-knip` part of `just lint-node` (#5076) by @hyf0
+- infra: move `insta.yaml` to the workspace root (#5073) by @shulaoda
+
+## [1.0.0-beta.20] - 2025-06-25
+
+### 🚀 Features
+
+- rolldown: oxc v0.75.0 (#5069) by @Boshen
+- rolldown: oxc 0.74.0 (#5047) by @Boshen
+
+### 🐛 Bug Fixes
+
+- vite-tests: avoid crash when `packageJson.pnpm` is undefined (#5066) by @shulaoda
+- JSX preset options not working correctly (#5060) by @shulaoda
+- remove improper jsdoc of builtin define plugin (#5046) by @AliceLanniste
+
+### 🚜 Refactor
+
+- passing vec length directly (#5050) by @ShroXd
+
+### 📚 Documentation
+
+- explain that a chunk may be bigger than `maxSize` (#5014) by @sapphi-red
+- update example about `withFilter` (#5040) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- preallocate smaller vec for hash placeholder finder (#5064) by @sapphi-red
+- reduce temporary memory usage by avoiding output chunk clone until needed (#5058) by @sapphi-red
+- skip empty write bundle hook with `hook_usage` meta (#5057) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency rolldown-plugin-dts to v0.13.12 (#5065) by @renovate[bot]
+- rolldown: upgrade NAPI-RS to 3.0.0-beta.10 (#5063) by @Brooooooklyn
+- bump oxc-resolver to v11.2.1 (#5061) by @Boshen
+- deps: update dependency tsdown to v0.12.9 (#5056) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.13.12 (#5054) by @renovate[bot]
+- remove long-commented-out code (#5048) by @shulaoda
+- deps: lock file maintenance npm packages (#5042) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5043) by @renovate[bot]
+- deps: update taiki-e/install-action action to v2.54.0 (#5045) by @renovate[bot]
+- deps: update taiki-e/install-action action to v2.53.2 (#5041) by @renovate[bot]
+
+## [1.0.0-beta.19] - 2025-06-22
+
+### 🚀 Features
+
+- support `OutputOptions#manualChunks` (#5037) by @hyf0
+- advanced-chunks: support `advancedChunks#gruop#name` to be function (#5035) by @hyf0
+- rolldown_plugin_import_glob: align with `vitejs/vite#20163` (#5034) by @shulaoda
+- rust/advanced-chunks: support `MatchGroup#name` to be dynamic (#5033) by @hyf0
+- rolldown_plugin_build_import_analysis: align with `vitejs/vite#20117` (#5027) by @shulaoda
+- rolldown_plugin_build_import_analysis: align with `vitejs/vite#20115` (#5020) by @shulaoda
+- add validation warning for advanced chunks options without groups (#5009) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- moduleInfo is not updated when entry module is emitted by this.emitFile (#5032) by @IWANABETHATGUY
+- preserveEntrySignatures: false generates circular imports that hangs with TLA (#5029) by @IWANABETHATGUY
+- rolldown_plugin_build_import_analysis: align pure dynamic import handling with rolldown-vite (#5016) by @shulaoda
+- plugin/vite-resolve: normalize leading slash (#5013) by @sapphi-red
+- debug: `build_id` doesn't increase (#5015) by @hyf0
+- side effects in this.emitFile({ type: 'chunk' }) is removed when preserveEntrySignatures: false is set (#5012) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- rolldown_utils: simplify `block_on_spawn_all` (#5019) by @shulaoda
+- use `rolldown_utils::futures::block_on` for `WatcherImpl#start` (#5018) by @shulaoda
+
+### 📚 Documentation
+
+- jsdoc: document `experimental.attachDebugInfo` (#5028) by @hyf0
+- clarify that `advancedChunks` options are in bytes (#5022) by @sapphi-red
+- add a note that sequential conversion may break the code (#5024) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- infra: clean up `dist` before building `rolldown` (#5036) by @hyf0
+- Align status notice in readme with documentation (#5021) by @rijkvanzanten
+
+### ❤️ New Contributors
+
+- @rijkvanzanten made their first contribution in [#5021](https://github.com/rolldown/rolldown/pull/5021)
+
+## [1.0.0-beta.18] - 2025-06-19
+
+### 🚀 Features
+
+- advancedChunks: no need to include dependencies for `PreserveEntrySignatures::False` too (#5005) by @hyf0
+- analyze commonjs module side effects and remove unused module (#5003) by @IWANABETHATGUY
+- specially handling commonjs export stmt side effects (#5002) by @IWANABETHATGUY
+- rolldown: oxc v0.73.2 (#5000) by @Boshen
+- debug: attach both `session_id` and `build_id` to debug events (#4994) by @hyf0
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_import_glob: correctly handle alias glob patterns (#5007) by @shulaoda
+- rolldown_plugin_alias: correctly handle `resolved_id` (#5006) by @shulaoda
+- imported namespace is missing after external import namespace merging (#4999) by @IWANABETHATGUY
+- node: add `experimental.viteMode` to option validator (#4996) by @sapphi-red
+- plugin/vite-resolve: optional peer dep id parse error (#4995) by @sapphi-red
+
+### 🚜 Refactor
+
+- debug: remove extra mechanism for passing `session_id` and unnecessary passing of spans (#5001) by @hyf0
+
+### 📚 Documentation
+
+- update description about directive handling (#4992) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency rolldown-plugin-dts to v0.13.11 (#4863) by @renovate[bot]
+- infra: update changelog configuration in `cliff.toml` (#4961) by @shulaoda
+- infra: add knip to ci (#4991) by @webpro
+
+## [1.0.0-beta.17] - 2025-06-17
+
+### 🚀 Features
+
+- binding: feat(binding): always use the same `BindingBundler` to create `BindingBundlerImpl` for the same `RolldownBuild` by @hyf0 in [#4985](https://github.com/rolldown/rolldown/pull/4985)
+- debug: feat(debug): cache large string by @hyf0 in [#4882](https://github.com/rolldown/rolldown/pull/4882)
+- feat: make require('./foo.json') work as expected even if the json is transformed to JS by a custom plugin by @IWANABETHATGUY in [#4984](https://github.com/rolldown/rolldown/pull/4984)
+- feat: add diagnostic for multiple entries with UMD/IIFE formats by @shulaoda in [#4954](https://github.com/rolldown/rolldown/pull/4954)
+
+### 🐛 Bug Fixes
+
+- plugin/vite-resolve: fix(plugin/vite-resolve): importing an optional peer dep should throw an runtime error by @sapphi-red in [#4980](https://github.com/rolldown/rolldown/pull/4980)
+- fix: upgrade napi, fix wasm url by @sxzz in [#4958](https://github.com/rolldown/rolldown/pull/4958)
+- fix: should rewrite hmr related ast after test if `experimental.hmr` is enabled. by @IWANABETHATGUY in [#4972](https://github.com/rolldown/rolldown/pull/4972)
+
+### 💼 Other
+
+- build: provide `"type": "module"` in `package.json` by @iiio2 in [#4974](https://github.com/rolldown/rolldown/pull/4974)
+
+### 🚜 Refactor
+
+- binding: refactor(binding): rename `Bundler` to `BindingBundleImpl` by @hyf0 in [#4983](https://github.com/rolldown/rolldown/pull/4983)
+- rolldown: refactor(rolldown): migrate to ESM package by @sxzz in [#4959](https://github.com/rolldown/rolldown/pull/4959)
+
+### 📚 Documentation
+
+- docs: explain how to transpile legacy decorators by @hyf0 in [#4989](https://github.com/rolldown/rolldown/pull/4989)
+- code-splitting: docs(code-splitting): make terms bold instead of wrapped with inline code block by @hyf0 in [#4975](https://github.com/rolldown/rolldown/pull/4975)
+- docs: improve advanced chunks by @hyf0 in [#4966](https://github.com/rolldown/rolldown/pull/4966)
+- docs: refine code splitting guide by @sapphi-red in [#4969](https://github.com/rolldown/rolldown/pull/4969)
+
+### 🧪 Testing
+
+- test: place empty `package.json` to prevent all files to be treated as node mode by @sapphi-red in [#4979](https://github.com/rolldown/rolldown/pull/4979)
+
+### ⚙️ Miscellaneous Tasks
+
+- infra: chore(infra): ensure `pnpm install` for common commands by @hyf0 in [#4987](https://github.com/rolldown/rolldown/pull/4987)
+- browser: chore(browser): add `@oxc-project/runtime` by @shulaoda in [#4988](https://github.com/rolldown/rolldown/pull/4988)
+- deps: chore(deps): update dependency tsdown to v0.12.8 by @renovate[bot] in [#4977](https://github.com/rolldown/rolldown/pull/4977)
+- deps: chore(deps): update npm packages (major) by @renovate[bot] in [#4963](https://github.com/rolldown/rolldown/pull/4963)
+- deps: chore(deps): lock file maintenance npm packages by @renovate[bot] in [#4967](https://github.com/rolldown/rolldown/pull/4967)
+- deps: chore(deps): lock file maintenance rust crates by @renovate[bot] in [#4965](https://github.com/rolldown/rolldown/pull/4965)
+- deps: chore(deps): lock file maintenance npm packages by @renovate[bot] in [#4964](https://github.com/rolldown/rolldown/pull/4964)
+- deps: chore(deps): update github-actions by @renovate[bot] in [#4962](https://github.com/rolldown/rolldown/pull/4962)
+
+### ❤️ New Contributors
+
+- @iiio2 made their first contribution in [#4974](https://github.com/rolldown/rolldown/pull/4974)
+
+## [1.0.0-beta.16] - 2025-06-15
+
+### 🚀 Features
+
+- rolldown: feat(rolldown): oxc v0.73.0 by @Boshen in [#4948](https://github.com/rolldown/rolldown/pull/4948)
+- types: feat(types): generate HMR runtime types by @sapphi-red in [#4928](https://github.com/rolldown/rolldown/pull/4928)
+- rolldown_plugin_build_import_analysis: feat(rolldown_plugin_build_import_analysis): align with rolldown-vite by @shulaoda in [#4931](https://github.com/rolldown/rolldown/pull/4931)
+- feat: allow to configure`experimental#attachDebugInfo: 'none'` to disable generating `#region` comments by @TheAlexLichter in [#4918](https://github.com/rolldown/rolldown/pull/4918)
+
+### 🐛 Bug Fixes
+
+- fix: deduplicate entry point by @IWANABETHATGUY in [#4956](https://github.com/rolldown/rolldown/pull/4956)
+- fix: diagnostic message on minified code is too long to be readable by @IWANABETHATGUY in [#4950](https://github.com/rolldown/rolldown/pull/4950)
+- fix: deduplicated entry points when have same `id`, `name`, and `filename` by @IWANABETHATGUY in [#4947](https://github.com/rolldown/rolldown/pull/4947)
+- fix: unbundle does not work with outExtensions by @IWANABETHATGUY in [#4945](https://github.com/rolldown/rolldown/pull/4945)
+- types: fix(types): remove `undefined` from return type of `generateHmrPatch` and `hmrInvalidate` by @sapphi-red in [#4943](https://github.com/rolldown/rolldown/pull/4943)
+- fix: handle error in `hmrInvalidate` by @sapphi-red in [#4942](https://github.com/rolldown/rolldown/pull/4942)
+- rolldown_plugin_build_import_analysis: fix(rolldown_plugin_build_import_analysis): preload helper is imported even if it’s not needed by @shulaoda in [#4936](https://github.com/rolldown/rolldown/pull/4936)
+- hmr: fix(hmr): avoid panic after syntax error by @sapphi-red in [#4898](https://github.com/rolldown/rolldown/pull/4898)
+- strictExecutionOrder: fix(strictExecutionOrder): ensure initialization chain of entry exports by @hyf0 in [#4933](https://github.com/rolldown/rolldown/pull/4933)
+- fix: should not panic when meet a syntax error in watch mode. by @IWANABETHATGUY in [#4926](https://github.com/rolldown/rolldown/pull/4926)
+- fix: regression, id filter normalization for windows is not working by @IWANABETHATGUY in [#4922](https://github.com/rolldown/rolldown/pull/4922)
+- rolldown_plugin_json: fix(rolldown_plugin_json): incorrect default JSON export by @shulaoda in [#4924](https://github.com/rolldown/rolldown/pull/4924)
+
+### 🚜 Refactor
+
+- refactor: avoid unnecessary collect by @IWANABETHATGUY in [#4949](https://github.com/rolldown/rolldown/pull/4949)
+- refactor: get normalized options via binding by @IWANABETHATGUY in [#4938](https://github.com/rolldown/rolldown/pull/4938)
+- refactor: include DevRuntime base class even if custom HMR implementation is passed by @sapphi-red in [#4929](https://github.com/rolldown/rolldown/pull/4929)
+
+### 📚 Documentation
+
+- docs: clarify minifier state by @TheAlexLichter in [#4953](https://github.com/rolldown/rolldown/pull/4953)
+- docs: drafting code splitting by @hyf0 in [#4951](https://github.com/rolldown/rolldown/pull/4951)
+- docs: add link to repl by @sxzz in [#4917](https://github.com/rolldown/rolldown/pull/4917)
+- pluginutils: docs(pluginutils): add example to simple filter functions by @sapphi-red in [#4915](https://github.com/rolldown/rolldown/pull/4915)
+
+### 🧪 Testing
+
+- test: add testcase for normalized output options by @IWANABETHATGUY in [#4939](https://github.com/rolldown/rolldown/pull/4939)
+- hmr: test(hmr): enable `expectExecuted` for `generatePatchError` test by @sapphi-red in [#4937](https://github.com/rolldown/rolldown/pull/4937)
+- test: evaluate hmr tests in node by @sapphi-red in [#4930](https://github.com/rolldown/rolldown/pull/4930)
+- test: add "non used export" hmr test by @sapphi-red in [#4900](https://github.com/rolldown/rolldown/pull/4900)
+- test: enable expectExecuted in HMR tests by @sapphi-red in [#4927](https://github.com/rolldown/rolldown/pull/4927)
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: chore(deps): lock file maintenance npm packages by @renovate[bot] in [#4866](https://github.com/rolldown/rolldown/pull/4866)
+- infra: chore(infra): remove comments related to `cspell` by @shulaoda in [#4940](https://github.com/rolldown/rolldown/pull/4940)
+- ci: remove cargo bench test by @IWANABETHATGUY in [#4925](https://github.com/rolldown/rolldown/pull/4925)
+
+## [1.0.0-beta.15] - 2025-06-11
+
+### 🚀 Features
+
+- feat: make native json plugin callable by @shulaoda in [#4908](https://github.com/rolldown/rolldown/pull/4908)
+- feat: support preserveSignature in `this.emitFile` by @IWANABETHATGUY in [#4895](https://github.com/rolldown/rolldown/pull/4895)
+- rolldown_plugin_module_preload_polyfill: feat(rolldown_plugin_module_preload_polyfill): expose plugin config by @shulaoda in [#4896](https://github.com/rolldown/rolldown/pull/4896)
+
+### 🐛 Bug Fixes
+
+- fix: add missing pathe polyfill by @sxzz in [#4912](https://github.com/rolldown/rolldown/pull/4912)
+- node: fix(node): call options hook for experimental_scan by @sapphi-red in [#4911](https://github.com/rolldown/rolldown/pull/4911)
+- fix: better `NoEntryPoint` error message by @IWANABETHATGUY in [#4903](https://github.com/rolldown/rolldown/pull/4903)
+- fix: fail to bundle when provide entryPoint dynamiclly by @IWANABETHATGUY in [#4902](https://github.com/rolldown/rolldown/pull/4902)
+
+### 🧪 Testing
+
+- pluginutils: test(pluginutils): add query suffix case for `makeIdFiltersToMatchWithQuery` by @sapphi-red in [#4914](https://github.com/rolldown/rolldown/pull/4914)
+- test: copy rollup preserveEntrySignature override-via-plugin test by @IWANABETHATGUY in [#4910](https://github.com/rolldown/rolldown/pull/4910)
+- test: include error in hmr test snapshots by @sapphi-red in [#4899](https://github.com/rolldown/rolldown/pull/4899)
+
+### ⚙️ Miscellaneous Tasks
+
+- chore: update committed dts by @sapphi-red in [#4913](https://github.com/rolldown/rolldown/pull/4913)
+- chore: bump rolldown-ariadne by @IWANABETHATGUY in [#4909](https://github.com/rolldown/rolldown/pull/4909)
+- improve prepare release commit message by @Boshen
+
+## [1.0.0-beta.14] - 2025-06-10
+
+### 💥 BREAKING CHANGES
+
+- refactor!: move preserveEntrySignatures from output to input options by @IWANABETHATGUY in [#4871](https://github.com/rolldown/rolldown/pull/4871)
+
+### 🚀 Features
+
+- strictExecutionOrder: feat(strictExecutionOrder): no need to generate plain chunk imports for addressing side effects by @hyf0 in [#4890](https://github.com/rolldown/rolldown/pull/4890)
+- feat: make wasm fallback plugin callable in node by @shulaoda in [#4885](https://github.com/rolldown/rolldown/pull/4885)
+- rolldown_plugin_module_preload_polyfill: feat(rolldown_plugin_module_preload_polyfill): align with `rolldown-vite` by @shulaoda in [#4884](https://github.com/rolldown/rolldown/pull/4884)
+- attachDebugInfo: feat(attachDebugInfo): improve format and distinguish dynamic entries by @hyf0 in [#4861](https://github.com/rolldown/rolldown/pull/4861)
+
+### 🐛 Bug Fixes
+
+- binding: fix(binding): preserveModules infinity loop by @Brooooooklyn in [#4879](https://github.com/rolldown/rolldown/pull/4879)
+- fix: dynamic import does not return exports when preserveEntrySignatures: false is set and the importee is an entry by @IWANABETHATGUY in [#4891](https://github.com/rolldown/rolldown/pull/4891)
+- fix: preserveEntrySignatures panics with an edge case by @IWANABETHATGUY in [#4877](https://github.com/rolldown/rolldown/pull/4877)
+- fix: directives are missing with `preserveModules` by @IWANABETHATGUY in [#4876](https://github.com/rolldown/rolldown/pull/4876)
+- fix: exports from dynamically imported chunks are removed by @IWANABETHATGUY in [#4875](https://github.com/rolldown/rolldown/pull/4875)
+
+### 🚜 Refactor
+
+- refactor: clearify Chunk entry kind by @IWANABETHATGUY in [#4892](https://github.com/rolldown/rolldown/pull/4892)
+- rolldown_plugin_build_import_analysis: refactor(rolldown_plugin_build_import_analysis): align the logic with `rolldown-vite` by @shulaoda in [#4856](https://github.com/rolldown/rolldown/pull/4856)
+
+### 📚 Documentation
+
+- contrib-guide: docs(contrib-guide): add HMR testing section by @sapphi-red in [#4888](https://github.com/rolldown/rolldown/pull/4888)
+- guide: docs(guide): update release channels - remove nightly, add pkg.pr.new by @Boshen in [#4881](https://github.com/rolldown/rolldown/pull/4881)
+
+### 🧪 Testing
+
+- test: rename `rolldown/topics/hmr/mutiply-entires` to snake case by @sapphi-red in [#4889](https://github.com/rolldown/rolldown/pull/4889)
+- test: add test for #4849 by @sapphi-red in [#4887](https://github.com/rolldown/rolldown/pull/4887)
+- test: setup infra for hmr tests by @sapphi-red in [#4886](https://github.com/rolldown/rolldown/pull/4886)
+
+### ⚙️ Miscellaneous Tasks
+
+- ci: disable publish to nightly by @Boshen in [#4874](https://github.com/rolldown/rolldown/pull/4874)
+- ci: extend Vite tests timeout by @sapphi-red in [#4870](https://github.com/rolldown/rolldown/pull/4870)
+- fix publish-to-npm.yml by @Boshen
+
+### ◀️ Revert
+
+- revert: "refactor(rolldown_plugin_load_fallback): align with rolldown-vite" by @shulaoda in [#4868](https://github.com/rolldown/rolldown/pull/4868)
+
+## [1.0.0-beta.13] - 2025-06-07
+
+### 🚀 Features
+
+- feat: merge same `ImportNamespaceSpecifier` for external module by @IWANABETHATGUY in [#4373](https://github.com/rolldown/rolldown/pull/4373)
+
+### 🐛 Bug Fixes
+
+- ci: disable `generate_release_notes` by @Boshen
+
+### 📚 Documentation
+
+- docs: add MAINTENANCE.md; remove rolldown.rs/contrib-guide/release by @Boshen in [#4854](https://github.com/rolldown/rolldown/pull/4854)
+
+### ⚙️ Miscellaneous Tasks
+
+- add input description to prepare-release.yml by @Boshen
+- fix prepare-release.yml by @Boshen
+- CHANGELOG.md: ci(CHANGELOG.md): use git-cliff to generate changelogs by @Boshen in [#4858](https://github.com/rolldown/rolldown/pull/4858)
+
+## [1.0.0-beta.12](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2025-06-06)
+
+### Features
+
+- `preseveEntrySignature: allow-extension` ([#4800](https://github.com/rolldown/rolldown/issues/4800)) ([83d4d62](https://github.com/rolldown/rolldown/commit/83d4d62121182f3f9f54193d722a73b1dd8290de))
+- **advancedChunks:** only move the captured module itself if `preserveEntrySignatures` is `allow-extension` ([#4847](https://github.com/rolldown/rolldown/issues/4847)) ([57e7f8b](https://github.com/rolldown/rolldown/commit/57e7f8b72bb418cc966c1724d74a820a6433020f))
+- interop `import('some-cjs-module.js')` ([#4816](https://github.com/rolldown/rolldown/issues/4816)) ([b9ac5f0](https://github.com/rolldown/rolldown/commit/b9ac5f03d681dd5e92a71920330506218f2dea65))
+- **rolldown:** oxc v0.72.3 ([#4845](https://github.com/rolldown/rolldown/issues/4845)) ([759525d](https://github.com/rolldown/rolldown/commit/759525d8ef0c674df66e1229413709ce67564287)), closes [#4796](https://github.com/rolldown/rolldown/issues/4796) [#4846](https://github.com/rolldown/rolldown/issues/4846)
+- support preserveEntrySignatures: exports-only ([#4848](https://github.com/rolldown/rolldown/issues/4848)) ([63dc546](https://github.com/rolldown/rolldown/commit/63dc54624124b98fe5ad04c66eb0e0605bb8e852))
+- support preserveEntrySignatures: false ([#4844](https://github.com/rolldown/rolldown/issues/4844)) ([e4e90e9](https://github.com/rolldown/rolldown/commit/e4e90e9373e8a1e9b60003a016d57907cc88b188))
+- take node esm spec into account for dynamic imports in cjs modules that satisfy nodejs ([#4819](https://github.com/rolldown/rolldown/issues/4819)) ([640af3a](https://github.com/rolldown/rolldown/commit/640af3aac4654379766e035ebc420b59536d3281)), closes [#4289](https://github.com/rolldown/rolldown/issues/4289)
+
+### Bug Fixes
+
+- 4818 ([#4828](https://github.com/rolldown/rolldown/issues/4828)) ([c6aaebe](https://github.com/rolldown/rolldown/commit/c6aaebef4772830efb90302847760ebca18a3f60)), closes [#4818](https://github.com/rolldown/rolldown/issues/4818)
+- **bindings:** cargo cache with napi typedef issues ([#4820](https://github.com/rolldown/rolldown/issues/4820)) ([a733205](https://github.com/rolldown/rolldown/commit/a7332057c88f054c7fe93b1123b4b33f17a501e5))
+- **bindings:** update @napi-rs/cli ([#4830](https://github.com/rolldown/rolldown/issues/4830)) ([052fb45](https://github.com/rolldown/rolldown/commit/052fb458abeb71830920a0c7bc3db96a08a44355))
+- **ci:** fix prepare-release permission ([b04b74e](https://github.com/rolldown/rolldown/commit/b04b74e6af4c6ed2744cce636f228775d81a47e6))
+- cjs namespace property optimization access should only apply to ns_alias prop `default` ([#4836](https://github.com/rolldown/rolldown/issues/4836)) ([d811ec5](https://github.com/rolldown/rolldown/commit/d811ec5d9e83f28c059c196ed688c8b0c217b2da))
+- handle error in `generateHmrPatch` ([#4837](https://github.com/rolldown/rolldown/issues/4837)) ([4a9af95](https://github.com/rolldown/rolldown/commit/4a9af950feacfb6a628ef1faa51369aef57d3c42))
+- **hmr:** generate unique import binding ([#4849](https://github.com/rolldown/rolldown/issues/4849)) ([56a2214](https://github.com/rolldown/rolldown/commit/56a22145c32c9eb963dc4aeca3c0b0b88a513145))
+- Preserve default export for preserveModules ([#4814](https://github.com/rolldown/rolldown/issues/4814)) ([b30ab1f](https://github.com/rolldown/rolldown/commit/b30ab1f6899640ff61421ef81ed5d19f76e5ce06)), closes [#4758](https://github.com/rolldown/rolldown/issues/4758)
+- regression with namespace import ([#4825](https://github.com/rolldown/rolldown/issues/4825)) ([f051675](https://github.com/rolldown/rolldown/commit/f0516754de1d3ef107247255f7b8511444f76d5a)), closes [#4824](https://github.com/rolldown/rolldown/issues/4824)
+- **rolldown:** fix double initialization of tracing subscriber ([#4831](https://github.com/rolldown/rolldown/issues/4831)) ([ac2f6bf](https://github.com/rolldown/rolldown/commit/ac2f6bf2eaf54f205a1074ed636d6f3a8e742929))
+- should leave all file extensions (even double) unchanged. ([#4822](https://github.com/rolldown/rolldown/issues/4822)) ([9abc457](https://github.com/rolldown/rolldown/commit/9abc457f4e8e571267b2c59f8b7d5d5902c1c455)), closes [#4702](https://github.com/rolldown/rolldown/issues/4702)
+
+## [1.0.0-beta.11](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2025-06-04)
+
+### Features
+
+- add `index_of_one` utils for `Bitset` ([#4779](https://github.com/rolldown/rolldown/issues/4779)) ([16aff17](https://github.com/rolldown/rolldown/commit/16aff17677e8afa62a829dbda40c6c34181093f2))
+- **advancedChunks:** support function for `output.advancedChunks.groups[].test` ([#4644](https://github.com/rolldown/rolldown/issues/4644)) ([0a177d4](https://github.com/rolldown/rolldown/commit/0a177d4fcdc6a135d100462233cdfa9c17c2503f)), closes [#4477](https://github.com/rolldown/rolldown/issues/4477)
+- **node:** support Rollup-style JSX options ([#4756](https://github.com/rolldown/rolldown/issues/4756)) ([2c4c2a8](https://github.com/rolldown/rolldown/commit/2c4c2a8188e36ddcd9cac4bd5d5cf60f96566edc)), closes [#4752](https://github.com/rolldown/rolldown/issues/4752)
+- **rolldown_plugin_isolated_declaration:** improve diagnostic messages ([#4731](https://github.com/rolldown/rolldown/issues/4731)) ([87188ed](https://github.com/rolldown/rolldown/commit/87188edbcf5520a2a8552b870f348109c8c41875)), closes [#4040](https://github.com/rolldown/rolldown/issues/4040)
+- warn when assignment to bundle is detected ([#4792](https://github.com/rolldown/rolldown/issues/4792)) ([833c4e0](https://github.com/rolldown/rolldown/commit/833c4e0c7cfe8cc30fd590302a2efcd49d8fcb8c))
+
+### Bug Fixes
+
+- allow user call `resolveId` hook in deps of internal runtime module ([#4733](https://github.com/rolldown/rolldown/issues/4733)) ([1995519](https://github.com/rolldown/rolldown/commit/1995519633a5602400b89f3c1bf4d94f08ab6d68))
+- **browser:** fix binding types ([#4488](https://github.com/rolldown/rolldown/issues/4488)) ([287a573](https://github.com/rolldown/rolldown/commit/287a57391a7115a726cb1cfb0dec624153f33ccc)), closes [#4753](https://github.com/rolldown/rolldown/issues/4753) [#4754](https://github.com/rolldown/rolldown/issues/4754) [#4724](https://github.com/rolldown/rolldown/issues/4724)
+- built file references undeclared import_foo$n ([#4745](https://github.com/rolldown/rolldown/issues/4745)) ([cb30e40](https://github.com/rolldown/rolldown/commit/cb30e400570dc1100c0ef983633119b3034ae699)), closes [#4740](https://github.com/rolldown/rolldown/issues/4740)
+- cjs namespace access property optimization ([#4803](https://github.com/rolldown/rolldown/issues/4803)) ([08bf380](https://github.com/rolldown/rolldown/commit/08bf380f2673c44812984641d1bc354a0697ec53))
+- computed property access is converted to static property access when using namespace import ([#4781](https://github.com/rolldown/rolldown/issues/4781)) ([e692385](https://github.com/rolldown/rolldown/commit/e69238501a705cd1e08bbe47559df7bfe1b6378f))
+- include side-effect modules in preserveModules mode ([#4710](https://github.com/rolldown/rolldown/issues/4710)) ([ac4e5db](https://github.com/rolldown/rolldown/commit/ac4e5db3df010c44b3e85337660e66c050bb7157))
+- **infra:** fails to load wasm fallback on WebContainer ([#4770](https://github.com/rolldown/rolldown/issues/4770)) ([5cb498e](https://github.com/rolldown/rolldown/commit/5cb498ea139e066c7b9ed2b1333e33aea1ae11e0)), closes [#4762](https://github.com/rolldown/rolldown/issues/4762)
+- **inlineDynamicImports:** ensure tla module execution correctly ([#4764](https://github.com/rolldown/rolldown/issues/4764)) ([92851ea](https://github.com/rolldown/rolldown/commit/92851eaedf3e2d5eaa612ce6634dac2878a35bc7)), closes [#4610](https://github.com/rolldown/rolldown/issues/4610)
+- **package.json:** fix husky not working ([98c54a1](https://github.com/rolldown/rolldown/commit/98c54a11839a6480d30c9ddcf0ab04fc8b245dc0))
+- renamed exports when enabled preserveModules ([#4728](https://github.com/rolldown/rolldown/issues/4728)) ([4da8973](https://github.com/rolldown/rolldown/commit/4da89732d145a8552a2cc01034c6ca12ae6fc90f)), closes [#4698](https://github.com/rolldown/rolldown/issues/4698)
+- **rolldown_plugin_build_import_analysis:** align `load` hook ([#4742](https://github.com/rolldown/rolldown/issues/4742)) ([10f8e10](https://github.com/rolldown/rolldown/commit/10f8e10afd5f8c057926ef504a598ef84af218bf)), closes [#3983](https://github.com/rolldown/rolldown/issues/3983)
+- test napi-derive file lock ([#4751](https://github.com/rolldown/rolldown/issues/4751)) ([2203f74](https://github.com/rolldown/rolldown/commit/2203f74b8055464b8f450307b3372ce97c1b910d))
+
+## [1.0.0-beta.10](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2025-05-28)
+
+### ⚠ BREAKING CHANGES
+
+- "feat!: always make the default value of `platform` as `browser`" (#4720)
+- **resolve:** add `module` to resolve conditions by default (#4703)
+- **types/resolve:** use literal `'import-statement'` to refer to static import statements instead of `'import'` (#4689)
+- **rust:** merge `target` option into `transform` (#4665)
+- **rust:** merge `jsx` option into `transform` (#4654)
+- always make the default value of `platform` as `browser` (#4611)
+
+### Features
+
+- add preserveEntrySignatures option ([#4640](https://github.com/rolldown/rolldown/issues/4640)) ([3979e2a](https://github.com/rolldown/rolldown/commit/3979e2a5a1e89482a2b1c287fbdc42b238db18c6))
+- always make the default value of `platform` as `browser` ([#4611](https://github.com/rolldown/rolldown/issues/4611)) ([43425a0](https://github.com/rolldown/rolldown/commit/43425a01b4a5549f2b47746aff2385fb23f2bfd0))
+- **binding:** preserveModulesRoot ([#4631](https://github.com/rolldown/rolldown/issues/4631)) ([51df2b7](https://github.com/rolldown/rolldown/commit/51df2b737e941084ede9763b9e0d061bb2fc78d3))
+- **ci:** apply `cargo shear --fix` correctly in autofix ([#4677](https://github.com/rolldown/rolldown/issues/4677)) ([15934eb](https://github.com/rolldown/rolldown/commit/15934eb25e0db4d73cccd2e9418a828f766e2073))
+- **debug:** add `StmtSideEffect` to record the specific reason why a stmt has side effect ([#4671](https://github.com/rolldown/rolldown/issues/4671)) ([5982115](https://github.com/rolldown/rolldown/commit/5982115ae4db2851f231f30c74aadbe5e8a2c2c1))
+- **debug:** emit more details for `Module[#imports](https://github.com/rolldown/rolldown/issues/imports)` ([#4619](https://github.com/rolldown/rolldown/issues/4619)) ([42afd5a](https://github.com/rolldown/rolldown/commit/42afd5aa4f8f8edab142a4b42a277854a4f9a1dd))
+- enable cjs ns merge for react ([#4621](https://github.com/rolldown/rolldown/issues/4621)) ([ddf8da8](https://github.com/rolldown/rolldown/commit/ddf8da885f6999a68bad876df4b1a6db2a6930d4))
+- enable loose mode validate option and give warning ([#4638](https://github.com/rolldown/rolldown/issues/4638)) ([080ce4e](https://github.com/rolldown/rolldown/commit/080ce4eedaf5803a4da09a84e1f9c18498c38df4))
+- **on_demand_wrapping:** don't wrap modules that don't rely on others and have side effect ([#4670](https://github.com/rolldown/rolldown/issues/4670)) ([326e6f5](https://github.com/rolldown/rolldown/commit/326e6f5bd17cac7ef68173d80cb19b67e521bd93))
+- **plugin/json:** only transform module with `moduleType: 'json'` ([#4554](https://github.com/rolldown/rolldown/issues/4554)) ([c69e332](https://github.com/rolldown/rolldown/commit/c69e33224e2f41701acf7fc5a861f398d8a4ddc2))
+- **rolldown_plugin_oxc_runtime:** support automatic resolution of oxc runtime helpers ([#4641](https://github.com/rolldown/rolldown/issues/4641)) ([b09c035](https://github.com/rolldown/rolldown/commit/b09c0350d91cb7da1f5d40a53a94a5300fba5118)), closes [#4597](https://github.com/rolldown/rolldown/issues/4597)
+- **rolldown_plugin_utils:** extract `check_public_file` from `rolldown_plugin_asset` ([#4660](https://github.com/rolldown/rolldown/issues/4660)) ([1b3b8c3](https://github.com/rolldown/rolldown/commit/1b3b8c3e757795a58f709e4a4b57f9fa6a6aafe9))
+- **rolldown_plugin_utils:** extract `file_to_url` from `rolldown_plugin_asset` ([#4663](https://github.com/rolldown/rolldown/issues/4663)) ([40290b5](https://github.com/rolldown/rolldown/commit/40290b573e7434bfe59be1aaff5ec18b5cd896c9))
+- **rolldown_plugin_utils:** support `create_to_import_meta_url_based_relative_runtime` ([#4657](https://github.com/rolldown/rolldown/issues/4657)) ([d77354f](https://github.com/rolldown/rolldown/commit/d77354f590ee89015bb5c042d29a489b7f37b81a))
+- **rolldown_plugin_utils:** support `to_output_file_path_in_js` ([#4659](https://github.com/rolldown/rolldown/issues/4659)) ([9e8c677](https://github.com/rolldown/rolldown/commit/9e8c677d1a60ef8a5198f473dcf44a32f03dbf20))
+- **rolldown:** oxc v0.71.0 and napi beta ([#4618](https://github.com/rolldown/rolldown/issues/4618)) ([76c39c6](https://github.com/rolldown/rolldown/commit/76c39c68177af95243714e375536728ee3de06f4)), closes [#4614](https://github.com/rolldown/rolldown/issues/4614)
+- **rolldown:** oxc v0.72.0 ([#4658](https://github.com/rolldown/rolldown/issues/4658)) ([8371a90](https://github.com/rolldown/rolldown/commit/8371a909a6d27c4ba7ea45adf8ba6982f70131ff))
+- **rolldown:** oxc v0.72.1 and oxc-resolver v11 ([#4718](https://github.com/rolldown/rolldown/issues/4718)) ([79a47fc](https://github.com/rolldown/rolldown/commit/79a47fcda9dd236bad3ba5edc489adc394a3ae89))
+- **rust:** merge `jsx` option into `transform` ([#4654](https://github.com/rolldown/rolldown/issues/4654)) ([4872097](https://github.com/rolldown/rolldown/commit/48720977fa6ff5a1a42522141a779edbef025e14)), closes [#4447](https://github.com/rolldown/rolldown/issues/4447)
+- **rust:** merge `target` option into `transform` ([#4665](https://github.com/rolldown/rolldown/issues/4665)) ([f9aa33a](https://github.com/rolldown/rolldown/commit/f9aa33a83915020468b9901cc9703003389e0979)), closes [#4651](https://github.com/rolldown/rolldown/issues/4651)
+- **rust:** preserveModulesRoot ([#4630](https://github.com/rolldown/rolldown/issues/4630)) ([9f62c77](https://github.com/rolldown/rolldown/commit/9f62c772f7d55d92b94d6ff4f74c8d50e4297e67))
+- support to attach chunk debug information in output ([#4633](https://github.com/rolldown/rolldown/issues/4633)) ([1079582](https://github.com/rolldown/rolldown/commit/10795828dba9cf129c5764381017b766e6cbc9ef))
+
+### Bug Fixes
+
+- `chunk.name` is not sanitized when the chunk is a common chunk ([#4712](https://github.com/rolldown/rolldown/issues/4712)) ([5949f2a](https://github.com/rolldown/rolldown/commit/5949f2a3307192a44b534f6c700dae6f78e84b48)), closes [#4709](https://github.com/rolldown/rolldown/issues/4709)
+- `preserveModules` co exists with multi entrypoints ([#4626](https://github.com/rolldown/rolldown/issues/4626)) ([b46bdea](https://github.com/rolldown/rolldown/commit/b46bdea5d5e80bf82d3e4f94eda0260b6c71c4af)), closes [#4624](https://github.com/rolldown/rolldown/issues/4624)
+- `preserveModules` don't respect relative path ([#4629](https://github.com/rolldown/rolldown/issues/4629)) ([9727493](https://github.com/rolldown/rolldown/commit/972749302ca84d2317d261f88eedd1835d866bb6))
+- **browser:** disable oxc runtime plugin ([#4708](https://github.com/rolldown/rolldown/issues/4708)) ([0ec9e7d](https://github.com/rolldown/rolldown/commit/0ec9e7ddef4df61f017800308be9226426ffef16)), closes [#4707](https://github.com/rolldown/rolldown/issues/4707)
+- **ci:** add missing `just` in warmup workflow ([c6a1eb1](https://github.com/rolldown/rolldown/commit/c6a1eb110f48dbca6b06be7bd83bb9e6fc15de24))
+- **ci:** cache release builds to a different cache key ([a002b24](https://github.com/rolldown/rolldown/commit/a002b2406f2b27065f093e2f6cad407fa82438dd))
+- **ci:** cache warmup should include build artifacts ([#4675](https://github.com/rolldown/rolldown/issues/4675)) ([0f2c3b5](https://github.com/rolldown/rolldown/commit/0f2c3b5951123ff1c102df05abfa074ea53d36a5))
+- **ci:** fix double pnpm cache from `setup-node` ([#4685](https://github.com/rolldown/rolldown/issues/4685)) ([db25788](https://github.com/rolldown/rolldown/commit/db25788e67c3cfaff8989ec467788eaa5444956c))
+- **ci:** fix release build ([#4691](https://github.com/rolldown/rolldown/issues/4691)) ([82620b9](https://github.com/rolldown/rolldown/commit/82620b916544a35dab613141a78e45c598859637))
+- **ci:** fix template-injection in benchmark-rust ([57b2792](https://github.com/rolldown/rolldown/commit/57b27922a3a9ad7c8f5a46335ce676a7d1f9a155))
+- **ci:** fix template-injection in publish-to-npm-for-nightly-canary.yml ([352340f](https://github.com/rolldown/rolldown/commit/352340faa336226a526d993f3a393f7c2ed369c2))
+- **ci:** in metrics, use cache instead of `cargo fetch` ([937eae9](https://github.com/rolldown/rolldown/commit/937eae93c25b0abd05f67ffda2f02b01216bf23d))
+- **ci:** pnpm install --ignore-scripts ([#4696](https://github.com/rolldown/rolldown/issues/4696)) ([e040112](https://github.com/rolldown/rolldown/commit/e0401125b588f74dd9b4164292a83a41146594f1))
+- cjs namespace merge in incremental build ([#4613](https://github.com/rolldown/rolldown/issues/4613)) ([b1c500e](https://github.com/rolldown/rolldown/commit/b1c500e11a9d8b8132e02027d43487e48b5a5e86))
+- dynamic chunk not exported when using preserveModules ([#4650](https://github.com/rolldown/rolldown/issues/4650)) ([d91dfb5](https://github.com/rolldown/rolldown/commit/d91dfb553598b445875e495f9c5ad70ea9e5824c))
+- exported dynamic import is treated as unused ([#4648](https://github.com/rolldown/rolldown/issues/4648)) ([edf5b4e](https://github.com/rolldown/rolldown/commit/edf5b4e1652a7b241ab7f214d29777593f4f8096)), closes [#4646](https://github.com/rolldown/rolldown/issues/4646)
+- generated wrapper stmt info should be always included on demand ([#4639](https://github.com/rolldown/rolldown/issues/4639)) ([ed553e1](https://github.com/rolldown/rolldown/commit/ed553e1e4c8d5a88a3e103307c60c1b6eae2e228))
+- index out of bounds panic at oxc_index-3.0.0 with recent canary version ([#4713](https://github.com/rolldown/rolldown/issues/4713)) ([3fad6f4](https://github.com/rolldown/rolldown/commit/3fad6f497b55345fe2c626692b6e8cc402a31967))
+- **inlineDynamicImports:** ensure tla module execution correctly ([#4627](https://github.com/rolldown/rolldown/issues/4627)) ([e9ef28c](https://github.com/rolldown/rolldown/commit/e9ef28c1c54add876596a31edd8f4137484b6fca))
+- partial cjs namespace merge with chunk split ([#4598](https://github.com/rolldown/rolldown/issues/4598)) ([83a0b40](https://github.com/rolldown/rolldown/commit/83a0b401873c1c57bc38f5f59b870163a9370371))
+- partial merge cjs namespace ([#4595](https://github.com/rolldown/rolldown/issues/4595)) ([0085f4a](https://github.com/rolldown/rolldown/commit/0085f4a4d5d2d25cd33f58a430c591c2c05404a9))
+- removing unused dynamic imported chunks ([#4655](https://github.com/rolldown/rolldown/issues/4655)) ([fe21db7](https://github.com/rolldown/rolldown/commit/fe21db75b99622d62d6bc3db85a99531418f0f5e))
+- **resolve:** add `module` to resolve conditions by default ([#4703](https://github.com/rolldown/rolldown/issues/4703)) ([9727531](https://github.com/rolldown/rolldown/commit/97275318e6f37756509a8f185bf51759e597394f))
+- **rolldown/browser:** auto-resolve oxc runtime helpers ([#4645](https://github.com/rolldown/rolldown/issues/4645)) ([701bbc3](https://github.com/rolldown/rolldown/commit/701bbc3d342e8821a3efef3bc6ef09b7709b475f)), closes [#4641](https://github.com/rolldown/rolldown/issues/4641)
+- **rust:** avoid panic in `into_assignment_target` ([#4688](https://github.com/rolldown/rolldown/issues/4688)) ([6c806ea](https://github.com/rolldown/rolldown/commit/6c806ea2c4310f0b14563aa30573bb87cadc7e22)), closes [#4304](https://github.com/rolldown/rolldown/issues/4304)
+- sort dynamic entires with topological order before tree shake. ([#4694](https://github.com/rolldown/rolldown/issues/4694)) ([bc96622](https://github.com/rolldown/rolldown/commit/bc966224d226f80da7a294fe9befba605f508f24))
+- **strict_execution_order:** runtime module should not be wrapped by default ([#4692](https://github.com/rolldown/rolldown/issues/4692)) ([4008ac0](https://github.com/rolldown/rolldown/commit/4008ac0aa1172ade61174b6d0183e584f60f8b24))
+- **strict_execution_order:** wrapped module should be included on demand ([#4687](https://github.com/rolldown/rolldown/issues/4687)) ([7c21036](https://github.com/rolldown/rolldown/commit/7c210364a7d2bf34f175714a8f015c230f3f054f))
+- strip path for require identifier with `preserveModules` ([#4704](https://github.com/rolldown/rolldown/issues/4704)) ([2ba8e28](https://github.com/rolldown/rolldown/commit/2ba8e2836baa95074e1ba0d07622b867a22b9317)), closes [#4700](https://github.com/rolldown/rolldown/issues/4700)
+- **types/resolve:** use literal `'import-statement'` to refer to static import statements instead of `'import'` ([#4689](https://github.com/rolldown/rolldown/issues/4689)) ([eee51d8](https://github.com/rolldown/rolldown/commit/eee51d8756d2d957445d804f5240a5461b93eba9))
+- **watch:** watch linux path at windows ([#4625](https://github.com/rolldown/rolldown/issues/4625)) ([ed594aa](https://github.com/rolldown/rolldown/commit/ed594aa6b5ae83ff52ae8727568fefbc977971d4))
+
+### Performance Improvements
+
+- change `profile.dev.debug` to improve rust compile times ([#4623](https://github.com/rolldown/rolldown/issues/4623)) ([0312f66](https://github.com/rolldown/rolldown/commit/0312f66401f70a0de261c8a88953f1e6c3227a38))
+- **rolldown:** prevent duplicate text embedding with `include_str!` ([#4664](https://github.com/rolldown/rolldown/issues/4664)) ([8fee5af](https://github.com/rolldown/rolldown/commit/8fee5afe0c6a7870e24f1395e62ca05001554a9b)), closes [#4354](https://github.com/rolldown/rolldown/issues/4354)
+
+### Reverts
+
+- "feat!: always make the default value of `platform` as `browser`" ([#4720](https://github.com/rolldown/rolldown/issues/4720)) ([4021325](https://github.com/rolldown/rolldown/commit/4021325f2b6a5fbf10ed8ed2bfcfa50f33781cfd)), closes [rolldown/rolldown#4611](https://github.com/rolldown/rolldown/issues/4611)
+- "refactor(rolldown_sourcemap): remove unused `SourceJoiner[#prepend](https://github.com/rolldown/rolldown/issues/prepend)_source`" ([#4632](https://github.com/rolldown/rolldown/issues/4632)) ([719ec89](https://github.com/rolldown/rolldown/commit/719ec89f74e2dc1d86c4b3357ba26cdf36c9ecc4)), closes [rolldown/rolldown#4431](https://github.com/rolldown/rolldown/issues/4431)
+- `feat(on_demand_wrapping): don't wrap modules that don't rely on others and have side effect [#4670](https://github.com/rolldown/rolldown/issues/4670)` ([#4686](https://github.com/rolldown/rolldown/issues/4686)) ([8a77ce9](https://github.com/rolldown/rolldown/commit/8a77ce9a7bc3f5dd3f3af56c90b836362b840a8b))
+
+## [1.0.0-beta.9](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2025-05-19)
+
+### ⚠ BREAKING CHANGES
+
+- **rolldown:** update to `oxc@0.70.0` to refine printing comments (#4562)
+- align directive rendering with esbuild (#4557)
+- don't expose `And` class in pluginutils (#4537)
+- add `OutputOptions#legalComments` and remove `OutputOptions#comments` (#4528)
+- expose `withFilter` function via `rolldown/filter` instead of `rolldown` (#4369)
+- allows users to specify filter expressions directly using an array syntax instead of an object with a "custom" key (#4368)
+- use camel cases for `package.json#exports` field (#4366)
+- filter expr binding conversion (#4343)
+
+### Features
+
+- add `OutputOptions[#legal](https://github.com/rolldown/rolldown/issues/legal)Comments` and remove `OutputOptions[#comments](https://github.com/rolldown/rolldown/issues/comments)` ([#4528](https://github.com/rolldown/rolldown/issues/4528)) ([aa7e253](https://github.com/rolldown/rolldown/commit/aa7e253b28627cd99ebb0af666a701c4888e6f76))
+- add watcher.off method to remove event listener ([#4388](https://github.com/rolldown/rolldown/issues/4388)) ([ca23f2d](https://github.com/rolldown/rolldown/commit/ca23f2d5e6a7b93f8069cae7f3b9ebcfe6a6ade7)), closes [#4382](https://github.com/rolldown/rolldown/issues/4382)
+- allow to preserve legal comments with `minify: true` ([#4591](https://github.com/rolldown/rolldown/issues/4591)) ([9a837fc](https://github.com/rolldown/rolldown/commit/9a837fc1cee917796c1dc748abd09236157d8561))
+- allows users to specify filter expressions directly using an array syntax instead of an object with a "custom" key ([#4368](https://github.com/rolldown/rolldown/issues/4368)) ([4a50b6d](https://github.com/rolldown/rolldown/commit/4a50b6d0693b189a1193463b723001670147bf63))
+- better error message for `manualChunks` ([#4530](https://github.com/rolldown/rolldown/issues/4530)) ([5b8c925](https://github.com/rolldown/rolldown/commit/5b8c925613d6b2033aa2b206bd082dba77b3dd69))
+- **builtin-plugin:** expose `webWorkerPostPlugin` ([#4594](https://github.com/rolldown/rolldown/issues/4594)) ([d89470c](https://github.com/rolldown/rolldown/commit/d89470c050333df5e4398036cbf89243bdc1ba4a))
+- cleanUrl rust interpreter ([#4480](https://github.com/rolldown/rolldown/issues/4480)) ([1988c3d](https://github.com/rolldown/rolldown/commit/1988c3dc7e5902d92294b46e9a7330d226853430))
+- **debug:** add `call_id` to load and transform events ([#4296](https://github.com/rolldown/rolldown/issues/4296)) ([432acb3](https://github.com/rolldown/rolldown/commit/432acb39524da9e002f43875c097c11d25f52716))
+- **debug:** distinguish if `resolve_id` hook is called automatically or manually ([#4254](https://github.com/rolldown/rolldown/issues/4254)) ([1b90f35](https://github.com/rolldown/rolldown/commit/1b90f357758f784dd47b6b279950fa34054d01d2))
+- **debug:** emit `ModuleGraphReady` event ([#4515](https://github.com/rolldown/rolldown/issues/4515)) ([29d88da](https://github.com/rolldown/rolldown/commit/29d88dac633f3d6e25fbd690792d24d46b6fe6c4)), closes [#4135](https://github.com/rolldown/rolldown/issues/4135)
+- **debug:** inject `call_id` for each pair of `HookResolveIdCall` events ([#4255](https://github.com/rolldown/rolldown/issues/4255)) ([d93e66e](https://github.com/rolldown/rolldown/commit/d93e66e2e719284d04357511a5da2073b26b8651))
+- expose `isolatedDeclaration` ([#4410](https://github.com/rolldown/rolldown/issues/4410)) ([92d35c5](https://github.com/rolldown/rolldown/commit/92d35c5a03c9505f9aa4e121bb81a4581958428b))
+- expose `loadConfig` in api ([#4428](https://github.com/rolldown/rolldown/issues/4428)) ([9a4338e](https://github.com/rolldown/rolldown/commit/9a4338e8fd596804b88b5caef71730aabaf2ba2b)), closes [#4313](https://github.com/rolldown/rolldown/issues/4313)
+- expose oxc-resolver ([#4485](https://github.com/rolldown/rolldown/issues/4485)) ([8aae298](https://github.com/rolldown/rolldown/commit/8aae298a59d058a2ca1653bcb93b87ff957319c1))
+- filter expr binding conversion ([#4343](https://github.com/rolldown/rolldown/issues/4343)) ([6c73e55](https://github.com/rolldown/rolldown/commit/6c73e55cb14bfbcd6040a05a7deb014abc145bab))
+- filter expression node binding types ([#4340](https://github.com/rolldown/rolldown/issues/4340)) ([684e2b5](https://github.com/rolldown/rolldown/commit/684e2b5403d2c28a07ce9332e4d77eceb7f85ee5))
+- **hmr:** handle import.meta.hot.invalidate ([#4339](https://github.com/rolldown/rolldown/issues/4339)) ([9725513](https://github.com/rolldown/rolldown/commit/9725513b9e223efe3b161b1bf99b6d602d33c00e))
+- **hmr:** support sourcemap ([#4570](https://github.com/rolldown/rolldown/issues/4570)) ([d3b21fe](https://github.com/rolldown/rolldown/commit/d3b21fec55ad512378d237dd849fe49befa95925))
+- implement filter expr filtering ([#4346](https://github.com/rolldown/rolldown/issues/4346)) ([d35f587](https://github.com/rolldown/rolldown/commit/d35f587365e0f23b7852f320cfe39a5af15fb0b7))
+- introduce filter expression ([#4323](https://github.com/rolldown/rolldown/issues/4323)) ([21b9e45](https://github.com/rolldown/rolldown/commit/21b9e457d7e5096d4ec55559e98960a40737cce5))
+- make `BindingMinifyOptions` fields optional ([#4307](https://github.com/rolldown/rolldown/issues/4307)) ([165d0b1](https://github.com/rolldown/rolldown/commit/165d0b1e0e77efe1e8bcda63cb80c890f85aa889)), closes [#4306](https://github.com/rolldown/rolldown/issues/4306)
+- make RolldownBuild.watchFiles to async ([#4520](https://github.com/rolldown/rolldown/issues/4520)) ([4666852](https://github.com/rolldown/rolldown/commit/466685235be8802ba2cf91fc5576b5e00b466069))
+- merge `emitDecoratorMetadata` from tsconfig.json ([#4555](https://github.com/rolldown/rolldown/issues/4555)) ([3f14835](https://github.com/rolldown/rolldown/commit/3f14835a80b8e0621bbb8386ade8772eff37f0ca)), closes [#4552](https://github.com/rolldown/rolldown/issues/4552)
+- move filter related utils to `@rolldown/pluginutils` ([#4429](https://github.com/rolldown/rolldown/issues/4429)) ([f932e9e](https://github.com/rolldown/rolldown/commit/f932e9e5c33e6d132f44c972c6fb18e08ebc2d3d))
+- output.virtualDirname ([#4521](https://github.com/rolldown/rolldown/issues/4521)) ([2e52dbc](https://github.com/rolldown/rolldown/commit/2e52dbc53e0fce99e0eeac56c1994afa59b31435))
+- parse filter expr ([#4338](https://github.com/rolldown/rolldown/issues/4338)) ([e394f40](https://github.com/rolldown/rolldown/commit/e394f405d72eee41b292d062fb499c81af7e3bdb))
+- partial preserveModules impl ([#4456](https://github.com/rolldown/rolldown/issues/4456)) ([a3b1473](https://github.com/rolldown/rolldown/commit/a3b147370cc0547f64101a892d63cd4b1a583216))
+- **plugin/transform:** allow readonly array for options ([#4266](https://github.com/rolldown/rolldown/issues/4266)) ([86482ea](https://github.com/rolldown/rolldown/commit/86482eadb22fda599e8ae43141fde9b116380443))
+- **plugin/vite-resolve:** port changes after Vite 6 ([#4269](https://github.com/rolldown/rolldown/issues/4269)) ([7c1fae3](https://github.com/rolldown/rolldown/commit/7c1fae383c48bed18ea1f67a6423be3327311c63)), closes [#4270](https://github.com/rolldown/rolldown/issues/4270)
+- **plugin:** support code filter for `renderChunk` hook ([#4351](https://github.com/rolldown/rolldown/issues/4351)) ([ef1f137](https://github.com/rolldown/rolldown/commit/ef1f13714dfc5bfccf80827650e94ed4879d7108)), closes [#4231](https://github.com/rolldown/rolldown/issues/4231)
+- **pluginutils:** `Query` filter impl ([#4535](https://github.com/rolldown/rolldown/issues/4535)) ([6c06a1c](https://github.com/rolldown/rolldown/commit/6c06a1c1b4192675f275b0182b8358e09b26c50f))
+- **pluginutils:** add `exactRegex` and `prefixRegex` ([#4458](https://github.com/rolldown/rolldown/issues/4458)) ([7c58822](https://github.com/rolldown/rolldown/commit/7c588222f05d8fdacbc8247f6621c5a9b54cfcbb))
+- **pluginutils:** add `makeIdFiltersToMatchWithQuery` function ([#4469](https://github.com/rolldown/rolldown/issues/4469)) ([75757fa](https://github.com/rolldown/rolldown/commit/75757fa25b795308ffb105287327be1ce97dfbd9))
+- preserveModules ([#4457](https://github.com/rolldown/rolldown/issues/4457)) ([4b0464e](https://github.com/rolldown/rolldown/commit/4b0464e1ab162c2083c66e3ab610b7da9666373b))
+- **rolldown_error:** add necessary `id` for some errors ([#4533](https://github.com/rolldown/rolldown/issues/4533)) ([d4801c4](https://github.com/rolldown/rolldown/commit/d4801c442bd94625e402866e82ca5742dc45017e)), closes [#4427](https://github.com/rolldown/rolldown/issues/4427)
+- **rolldown_plugin_asset_import_meta_url:** initialize `assetImportMetaUrlPlugin` ([#4563](https://github.com/rolldown/rolldown/issues/4563)) ([84c4bac](https://github.com/rolldown/rolldown/commit/84c4bacb03bd872c498661b2f7149722f98270d2))
+- **rolldown_plugin_asset:** align `resolveId` with `rolldown-vite` ([#4545](https://github.com/rolldown/rolldown/issues/4545)) ([d6e2358](https://github.com/rolldown/rolldown/commit/d6e23587d3e33c18b9994d09e3bfc23e1196eb3f))
+- **rolldown_plugin_asset:** initialize asset plugin ([#4541](https://github.com/rolldown/rolldown/issues/4541)) ([51bbd05](https://github.com/rolldown/rolldown/commit/51bbd05ebab2e9eade6bb63bac149f1b9e8039d0))
+- **rolldown_plugin_asset:** partially align `load` hook with `rolldown-vite` ([#4561](https://github.com/rolldown/rolldown/issues/4561)) ([a58cdd9](https://github.com/rolldown/rolldown/commit/a58cdd90edaa0c9ba90eed1db0d0400c8b695b1e))
+- **rolldown_plugin_dynamic_import_vars:** basic support for custom resolver ([#4333](https://github.com/rolldown/rolldown/issues/4333)) ([ad5315f](https://github.com/rolldown/rolldown/commit/ad5315f21185ef7c1329b55a3ba0ed0b269ffbe1)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown_plugin_dynamic_import_vars:** complete basic alignment work ([#4334](https://github.com/rolldown/rolldown/issues/4334)) ([1fd551c](https://github.com/rolldown/rolldown/commit/1fd551cdfdf0aa03069dba0b4f80d2d96bf4c54e)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown_plugin_dynamic_import_vars:** introduce `resolver` option ([#4309](https://github.com/rolldown/rolldown/issues/4309)) ([89aa613](https://github.com/rolldown/rolldown/commit/89aa6134cefa8c9825b397d14d05ebaccf0779fe)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown_plugin_dynamic_import_vars:** prepare for custom resolver ([#4328](https://github.com/rolldown/rolldown/issues/4328)) ([a15677b](https://github.com/rolldown/rolldown/commit/a15677be780012cf3e04f4fb15385d6e1ef225f5)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown_plugin_dynamic_import_vars:** support `include` and `exclude` ([#4288](https://github.com/rolldown/rolldown/issues/4288)) ([c4e6cad](https://github.com/rolldown/rolldown/commit/c4e6cad59043a6242ebe9b9e809b04cbd22446d0)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown_plugin_import_glob:** support brace expansion ([#4121](https://github.com/rolldown/rolldown/issues/4121)) ([54afc8f](https://github.com/rolldown/rolldown/commit/54afc8f95f37aa95fb6b9e365d1327bd6aa68354)), closes [#3982](https://github.com/rolldown/rolldown/issues/3982)
+- **rolldown_plugin_reporter:** align the logic in `renderChunk` hook ([#4464](https://github.com/rolldown/rolldown/issues/4464)) ([db88da2](https://github.com/rolldown/rolldown/commit/db88da218c3094e32d626f15325a14c9625aedd5)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown_plugin_reporter:** basically align behavior with `rolldown-vite` ([#4475](https://github.com/rolldown/rolldown/issues/4475)) ([90102d7](https://github.com/rolldown/rolldown/commit/90102d7b7a74319d2838619f504d661fcb9fff73)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown_plugin_reporter:** further aligned with `rolldown-vite` ([#4476](https://github.com/rolldown/rolldown/issues/4476)) ([3985436](https://github.com/rolldown/rolldown/commit/3985436b66aeffd2e06b6aa3ee666b5794dab1d9)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown_plugin_reporter:** prepare for chunk reporting ([#4449](https://github.com/rolldown/rolldown/issues/4449)) ([e270f24](https://github.com/rolldown/rolldown/commit/e270f244a2f4235933c4f651cddf5c47e8d6f5a9)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown_plugin_web_worker_post:** align with `rolldown-vite` ([#4576](https://github.com/rolldown/rolldown/issues/4576)) ([0d7e06c](https://github.com/rolldown/rolldown/commit/0d7e06c831dc940ffebabc4ac9542f934c67b9bb))
+- **rolldown:** `oxc_resolver` v8 ([#4392](https://github.com/rolldown/rolldown/issues/4392)) ([0de485b](https://github.com/rolldown/rolldown/commit/0de485b2860b5716262c8b83d3e6ccb712105ae8))
+- **rolldown:** bump `oxc_resolver` to v7.0 ([#4367](https://github.com/rolldown/rolldown/issues/4367)) ([63723d5](https://github.com/rolldown/rolldown/commit/63723d59ba9b000e6b07f1f82ab60ba4bc996d62))
+- **rolldown:** expose `experimental` entry for browser ([#4446](https://github.com/rolldown/rolldown/issues/4446)) ([069b04b](https://github.com/rolldown/rolldown/commit/069b04bd0a5d29f380269c679b57784b8b448c64))
+- **rolldown:** expose `ModuleTypes` type ([#4506](https://github.com/rolldown/rolldown/issues/4506)) ([513a17a](https://github.com/rolldown/rolldown/commit/513a17ae165b4ff12a3bebf169f159b3355651e9))
+- **rolldown:** oxc v0.66.0 ([#4275](https://github.com/rolldown/rolldown/issues/4275)) ([35ee0e7](https://github.com/rolldown/rolldown/commit/35ee0e79ff81f83343c56bab75f1df462bf6f323))
+- **rolldown:** oxc v0.68.1 ([#4405](https://github.com/rolldown/rolldown/issues/4405)) ([4d4df59](https://github.com/rolldown/rolldown/commit/4d4df59349a721c113be5f5e1837b39556ea5742))
+- **rolldown:** oxc v0.69.0 ([#4478](https://github.com/rolldown/rolldown/issues/4478)) ([4940c31](https://github.com/rolldown/rolldown/commit/4940c310c118c6c986c2f27b5ecb03c758dbd2da))
+- **rolldown:** oxc v0.76.0 ([#4345](https://github.com/rolldown/rolldown/issues/4345)) ([86ed7c3](https://github.com/rolldown/rolldown/commit/86ed7c3a283997a636bd950a21aa249f9028ca12))
+- **rolldown:** oxc_resolver v9.0.0 ([#4462](https://github.com/rolldown/rolldown/issues/4462)) ([9ef061d](https://github.com/rolldown/rolldown/commit/9ef061d317ac9d7c9b9dd3e1662b5b684e15a709))
+- **rolldown:** update to `oxc@0.70.0` to refine printing comments ([#4562](https://github.com/rolldown/rolldown/issues/4562)) ([1c583fe](https://github.com/rolldown/rolldown/commit/1c583fe976bea726eda3ad3c4aca7910040779bc))
+- **rust:** execute cjs as it is ([#4465](https://github.com/rolldown/rolldown/issues/4465)) ([5becdcf](https://github.com/rolldown/rolldown/commit/5becdcf6104435d60b53b3b6819f4cae8cdd0532))
+- **rust:** impl `Query` filter ([#4542](https://github.com/rolldown/rolldown/issues/4542)) ([8a5f862](https://github.com/rolldown/rolldown/commit/8a5f8621aeb28bc11b0b1e76abb7ad0aa5d4c71c))
+- **rust:** initialize `rolldown_plugin_vite_css` ([#4418](https://github.com/rolldown/rolldown/issues/4418)) ([f2531a6](https://github.com/rolldown/rolldown/commit/f2531a61f9df57a032aa5f8fadac2055d29a9de9))
+- **rust:** support `LegalComments::Inline` ([#4444](https://github.com/rolldown/rolldown/issues/4444)) ([6921d6c](https://github.com/rolldown/rolldown/commit/6921d6c3d2e7384bfc06322c9bdedb4dfc8be393))
+- support extra IdParams and cleanUrl ([#4479](https://github.com/rolldown/rolldown/issues/4479)) ([55a9209](https://github.com/rolldown/rolldown/commit/55a9209fe1426e0bc896d2d4dd7d925f93291fbb))
+- support variadic args for `or` and `and` filter expr ([#4371](https://github.com/rolldown/rolldown/issues/4371)) ([3fe195c](https://github.com/rolldown/rolldown/commit/3fe195c555b056a103b5fbd4fb2931152f36eb63))
+- **types:** allow rollup plugin to be assigned to `plugins` option ([#4568](https://github.com/rolldown/rolldown/issues/4568)) ([42e496f](https://github.com/rolldown/rolldown/commit/42e496f4677d3ef0cf709458cbd1595c7aeaf6db))
+- **types:** expose more watcher related types ([#4383](https://github.com/rolldown/rolldown/issues/4383)) ([21263e5](https://github.com/rolldown/rolldown/commit/21263e57e8ae0051236714914df549dee8d186a6))
+- validate hoistTransitiveImports ([#4262](https://github.com/rolldown/rolldown/issues/4262)) ([ac258d5](https://github.com/rolldown/rolldown/commit/ac258d5f166a02d18a03a320b9ac163368cbedb7))
+- **watcher:** support result.close at bundle end event ([#4423](https://github.com/rolldown/rolldown/issues/4423)) ([f579291](https://github.com/rolldown/rolldown/commit/f579291a9c5232c91efe972c77663376684abd1a))
+- **watch:** support result.close at error event ([#4424](https://github.com/rolldown/rolldown/issues/4424)) ([7bb3956](https://github.com/rolldown/rolldown/commit/7bb3956aa6c9c1c0c60930ac92d6cce59a902dea))
+
+### Bug Fixes
+
+- `asset` ModuleType not available in TypeScript package ([#4489](https://github.com/rolldown/rolldown/issues/4489)) ([8ac92a4](https://github.com/rolldown/rolldown/commit/8ac92a4ecfb9fbc328033f936d6aac98c22af0ff))
+- add debug information for debug wasm binaries ([#4549](https://github.com/rolldown/rolldown/issues/4549)) ([cc66f4b](https://github.com/rolldown/rolldown/commit/cc66f4b7189dfb3a248608d02f5962edb09b11f8))
+- align directive rendering with esbuild ([#4557](https://github.com/rolldown/rolldown/issues/4557)) ([709eb63](https://github.com/rolldown/rolldown/commit/709eb63cb2f9c4b18bf7e36133251104a44cc45d))
+- align resolve extension order with esbuild ([#4277](https://github.com/rolldown/rolldown/issues/4277)) ([6565161](https://github.com/rolldown/rolldown/commit/65651618e7ebcbfe2ba6652ae81321e53a3b4a56))
+- align sanitize_filename with rollup ([#4244](https://github.com/rolldown/rolldown/issues/4244)) ([d53650c](https://github.com/rolldown/rolldown/commit/d53650c52948c411f2aaa9df535e8774f8bfa661))
+- align validator with the actual types for `output.polyfillRequire` / `output.minify.deadCodeElimination` ([#4294](https://github.com/rolldown/rolldown/issues/4294)) ([6e313e1](https://github.com/rolldown/rolldown/commit/6e313e112489e99ee40538e6dcf5b1803b766e5d))
+- chunk level directives rendering ([#4551](https://github.com/rolldown/rolldown/issues/4551)) ([a16881d](https://github.com/rolldown/rolldown/commit/a16881dfa13f25c6725eaa28bb848a7c8484d0c0)), closes [#4548](https://github.com/rolldown/rolldown/issues/4548)
+- **chunk_exports:** Prevent duplicate external module imports ([#4408](https://github.com/rolldown/rolldown/issues/4408)) ([f90a05f](https://github.com/rolldown/rolldown/commit/f90a05f016455a72cf661b6d434bc5e554744e58)), closes [#4406](https://github.com/rolldown/rolldown/issues/4406)
+- chunk.imports should include external imports ([#4315](https://github.com/rolldown/rolldown/issues/4315)) ([62dee06](https://github.com/rolldown/rolldown/commit/62dee0606e8f06223a1b2936db227d3ff05f78ac))
+- **ci:** fix incorrect tag name for lychee-action ([#4352](https://github.com/rolldown/rolldown/issues/4352)) ([2531185](https://github.com/rolldown/rolldown/commit/253118585049e23900dceb1e4f3a0c4ff5d49729))
+- **cli:** `ROLLUP_WATCH` should be set when config is loaded ([#4293](https://github.com/rolldown/rolldown/issues/4293)) ([f845728](https://github.com/rolldown/rolldown/commit/f8457289555112835d4e4f396a44575a4e1c97bf)), closes [#3967](https://github.com/rolldown/rolldown/issues/3967)
+- **cli:** invalid type used with `--target` ([#4407](https://github.com/rolldown/rolldown/issues/4407)) ([8cce9fc](https://github.com/rolldown/rolldown/commit/8cce9fcca07bad471b6a0eb618498abdf10c06e8)), closes [#4387](https://github.com/rolldown/rolldown/issues/4387)
+- consolidate log related types ([#4355](https://github.com/rolldown/rolldown/issues/4355)) ([0174d14](https://github.com/rolldown/rolldown/commit/0174d147eb17d2331ba4ca39adff7bb4e973e784)), closes [#4330](https://github.com/rolldown/rolldown/issues/4330)
+- **debug:** ensure emitting json object per line and correct types ([#4295](https://github.com/rolldown/rolldown/issues/4295)) ([1d1fa3d](https://github.com/rolldown/rolldown/commit/1d1fa3df442ab4a66bfe4b72c3a70ac14866a5fb))
+- don't minify .d.ts related chunk ([#4240](https://github.com/rolldown/rolldown/issues/4240)) ([d984417](https://github.com/rolldown/rolldown/commit/d984417561ae0d3234c7ae77a8ccfe35d556a5bc))
+- dynamic import with backquotes are not bundled ([#4435](https://github.com/rolldown/rolldown/issues/4435)) ([76c6380](https://github.com/rolldown/rolldown/commit/76c63802b9503c8e2c3548fd92334089020b55e7))
+- ensure executing of plain imported cjs, fixes [#4443](https://github.com/rolldown/rolldown/issues/4443) ([#4468](https://github.com/rolldown/rolldown/issues/4468)) ([df9b4ee](https://github.com/rolldown/rolldown/commit/df9b4ee3236dccc9b0fd292b2325ff92d094a928))
+- **hmr:** accpet deps ([#4314](https://github.com/rolldown/rolldown/issues/4314)) ([6aca0ce](https://github.com/rolldown/rolldown/commit/6aca0ce10ee9add434ddcef5f4f4dbbedd1f826c))
+- **hmr:** aovid using quote_stmt, it make sourcemap panic ([#4571](https://github.com/rolldown/rolldown/issues/4571)) ([7b949a0](https://github.com/rolldown/rolldown/commit/7b949a0a1f5427adef9a2be4528f4f33c2c48763))
+- **hmr:** enable incremental_build ([#4298](https://github.com/rolldown/rolldown/issues/4298)) ([7209cf3](https://github.com/rolldown/rolldown/commit/7209cf3ae682860518dfaa1df1f31794eba794d4))
+- **hmr:** export full reload info if reach to hmr root ([#4242](https://github.com/rolldown/rolldown/issues/4242)) ([9b57bd3](https://github.com/rolldown/rolldown/commit/9b57bd30d6fc7cd7fa475a5a849d9e90f4bd9959))
+- **hmr:** hmr chunk execute dependencies before create import.meta.hot ([#4320](https://github.com/rolldown/rolldown/issues/4320)) ([2a06dfe](https://github.com/rolldown/rolldown/commit/2a06dfe488f0b1cb3db0fcf7e30b64faa116c2c1))
+- **hmr:** make sure runtime module imported for each chunk ([#4438](https://github.com/rolldown/rolldown/issues/4438)) ([4d444b0](https://github.com/rolldown/rolldown/commit/4d444b05ca8e441f33c6d19f6f512a465ad96fd1))
+- **hmr:** normalize hmr chunk sourcemap sources path ([#4572](https://github.com/rolldown/rolldown/issues/4572)) ([6691f45](https://github.com/rolldown/rolldown/commit/6691f458bee690f0efd5d90ea9779c92bd958a7c))
+- **hmr:** preserve original `import.meta.hot` when no HMR context exists ([#4391](https://github.com/rolldown/rolldown/issues/4391)) ([bc78fa1](https://github.com/rolldown/rolldown/commit/bc78fa19037424f8fd746dc5df88f64b323edfba)), closes [#4390](https://github.com/rolldown/rolldown/issues/4390) [#4370](https://github.com/rolldown/rolldown/issues/4370)
+- **hmr:** reexport named declaration ([#4319](https://github.com/rolldown/rolldown/issues/4319)) ([3858daa](https://github.com/rolldown/rolldown/commit/3858daa3cbe7983b89d45278e6066dcbf8df9759))
+- **hmr:** register cjs module exports ([#4511](https://github.com/rolldown/rolldown/issues/4511)) ([66f4623](https://github.com/rolldown/rolldown/commit/66f46233a8aeddfed089156d0b379c2a60690e45))
+- **hmr:** remove duplicated import statment ([#4556](https://github.com/rolldown/rolldown/issues/4556)) ([69aebee](https://github.com/rolldown/rolldown/commit/69aebeeaceadbbffd18b83648b5fc4e2f4e035a3))
+- **hmr:** rewrite import default/namespace reference ([#4299](https://github.com/rolldown/rolldown/issues/4299)) ([a0733d0](https://github.com/rolldown/rolldown/commit/a0733d075e020c8ced0df2f94a0da4f5f1cf10aa))
+- **hmr:** rewrite import.meta.hot ([#4370](https://github.com/rolldown/rolldown/issues/4370)) ([7b030ee](https://github.com/rolldown/rolldown/commit/7b030ee361fa5962810070ed36cc05a3fec1ff38))
+- moduleSideEffects function should also apply to external module ([#4305](https://github.com/rolldown/rolldown/issues/4305)) ([77c8935](https://github.com/rolldown/rolldown/commit/77c8935bf7b436353c927be88d355efe76da913f))
+- **node:** add `type` property to `RenderedChunk` ([#4553](https://github.com/rolldown/rolldown/issues/4553)) ([8ca4fde](https://github.com/rolldown/rolldown/commit/8ca4fde1a2a02ded375f837483b882a569da90ed))
+- **node:** ensure comments option got passed to rust ([#4527](https://github.com/rolldown/rolldown/issues/4527)) ([35571e5](https://github.com/rolldown/rolldown/commit/35571e5130e43272703d788b9f15f3473df7c816)), closes [#4491](https://github.com/rolldown/rolldown/issues/4491)
+- **plugin/vite-resolve:** align default externalize logic with Vite ([#4247](https://github.com/rolldown/rolldown/issues/4247)) ([a37e704](https://github.com/rolldown/rolldown/commit/a37e70462a30974dd32b946da94e24d6fef007d9))
+- **plugin/vite-resolve:** external was serialized incorrectly ([#4270](https://github.com/rolldown/rolldown/issues/4270)) ([3a98131](https://github.com/rolldown/rolldown/commit/3a98131b297fff2d84a6042ba3328b50e0c3056e))
+- preserveModules cjs interop ([#4529](https://github.com/rolldown/rolldown/issues/4529)) ([1e7b372](https://github.com/rolldown/rolldown/commit/1e7b3724a6e575007bf474b78ccf108d98294e71))
+- **render_chunk_exports:** add missing semicolon to exported value assignment ([#4498](https://github.com/rolldown/rolldown/issues/4498)) ([8739f25](https://github.com/rolldown/rolldown/commit/8739f25c49e89acf9617fa3f82d29345c114804d)), closes [#4459](https://github.com/rolldown/rolldown/issues/4459)
+- **rolldown_plugin_transform:** use `or` instead of `xor` for `transformOptions.lang` ([#4587](https://github.com/rolldown/rolldown/issues/4587)) ([ef90f2e](https://github.com/rolldown/rolldown/commit/ef90f2e0438a3513dad1fbf35dc576832e593d28))
+- **rolldown_transform_plugin:** incorrect detection of file extension ([#4241](https://github.com/rolldown/rolldown/issues/4241)) ([eae9262](https://github.com/rolldown/rolldown/commit/eae926288fae44e32be5714a1f1232704e3b84d6)), closes [#3881](https://github.com/rolldown/rolldown/issues/3881)
+- **rust:** ramdom segmentation fault ([#4473](https://github.com/rolldown/rolldown/issues/4473)) ([42fd8e2](https://github.com/rolldown/rolldown/commit/42fd8e2ad47a87e7001d32c81cbdbab35838bba0))
+- should not convert module to cjs if there exists toplevel this but no `module`,`exports` used ([#4514](https://github.com/rolldown/rolldown/issues/4514)) ([f606614](https://github.com/rolldown/rolldown/commit/f6066141ee7137041f9537696d3fca6ef7934af7))
+- should not throw for circular cjs imports, fixes [#3529](https://github.com/rolldown/rolldown/issues/3529) ([#4467](https://github.com/rolldown/rolldown/issues/4467)) ([3240812](https://github.com/rolldown/rolldown/commit/324081298a4d4f6552fc09a9eb22c2fb33c863b7))
+- should rewrite jsx_name when jsx: preserve ([#4516](https://github.com/rolldown/rolldown/issues/4516)) ([d95f99e](https://github.com/rolldown/rolldown/commit/d95f99edd4cee8382772f59b9309bd59d7c3551f))
+- should try to resolve `.json` extension by default ([#4276](https://github.com/rolldown/rolldown/issues/4276)) ([e84206b](https://github.com/rolldown/rolldown/commit/e84206b05786d0ce5e19c2e64b18b434cbe37895)), closes [#4274](https://github.com/rolldown/rolldown/issues/4274)
+- transform hook code filter does not work ([#4386](https://github.com/rolldown/rolldown/issues/4386)) ([a720367](https://github.com/rolldown/rolldown/commit/a720367fe66ac9f2d23d773e92dd62843f691f24)), closes [#4379](https://github.com/rolldown/rolldown/issues/4379)
+- use correct `FileTemplate` when enable `preserve_modules` ([#4517](https://github.com/rolldown/rolldown/issues/4517)) ([a779c8c](https://github.com/rolldown/rolldown/commit/a779c8c6bad426c1cde714b51e389e7f1c6a05b0))
+- using original error if normalize original plugin error has error ([#4263](https://github.com/rolldown/rolldown/issues/4263)) ([d378cad](https://github.com/rolldown/rolldown/commit/d378cad79c117bfa8a7fb4d8a7aaccc3727e242c))
+- **watch-cli:** call result.close at bundle end or error ([#4426](https://github.com/rolldown/rolldown/issues/4426)) ([55efe08](https://github.com/rolldown/rolldown/commit/55efe080fcc1a19416bf1c3340b077ec0ebf285b))
+- **watch:** allow call `result.close` multiply times ([#4425](https://github.com/rolldown/rolldown/issues/4425)) ([e19ea12](https://github.com/rolldown/rolldown/commit/e19ea12106e9263f92fe96bb323e209ad88e68ad))
+
+### Performance Improvements
+
+- avoid allocating unnecessary memory in runtime for module_types map ([#4301](https://github.com/rolldown/rolldown/issues/4301)) ([f675391](https://github.com/rolldown/rolldown/commit/f6753919c611dc681525cff2cb3e69732bd27862))
+- enable Wasm 128bit SIMD Extension ([#4484](https://github.com/rolldown/rolldown/issues/4484)) ([9d84ea8](https://github.com/rolldown/rolldown/commit/9d84ea8f66a5d2e6bb9db4776693207097ee377d))
+- reduce wasm release binary size ([#4547](https://github.com/rolldown/rolldown/issues/4547)) ([bf53a10](https://github.com/rolldown/rolldown/commit/bf53a100edf1780d5a5aa41f0bc0459c5696543e))
+- **rename:** reduce some string allocations ([#4487](https://github.com/rolldown/rolldown/issues/4487)) ([c51bc5c](https://github.com/rolldown/rolldown/commit/c51bc5c1433a6cdbf9a009f749ff689f1460d3b2))
+- **rolldown_plugin_alias:** avoid unnecessary `to_string` allocations ([#4268](https://github.com/rolldown/rolldown/issues/4268)) ([bf18d12](https://github.com/rolldown/rolldown/commit/bf18d12bd4cca0e40185138c0753cbd9d445b3f2)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown_plugin_json:** change `register_hook_usage` to return `HookUsage::Transform` ([#4375](https://github.com/rolldown/rolldown/issues/4375)) ([baf6ca1](https://github.com/rolldown/rolldown/commit/baf6ca18763f6d1a2aebfbd4532ca75b72428991)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown:** reduce size of `ModuleLoaderMsg` from 1472 to 24 bytes ([#4496](https://github.com/rolldown/rolldown/issues/4496)) ([71d87e5](https://github.com/rolldown/rolldown/commit/71d87e5a472da0016be4f5581cab505a038828c3))
+- **rolldown:** remove `ArcStr` usages in `finalize_chunks` ([#4494](https://github.com/rolldown/rolldown/issues/4494)) ([4dcaa00](https://github.com/rolldown/rolldown/commit/4dcaa009dfacad091c8485ae012de4317f65b7d8))
+- **rolldown:** speedup `extract_hash_placeholders` with memchr ([#4495](https://github.com/rolldown/rolldown/issues/4495)) ([38fd4b8](https://github.com/rolldown/rolldown/commit/38fd4b8831d62c763c37b84b604530411f03b6f3))
+- **rust:** improve `PreProcessor[#visit](https://github.com/rolldown/rolldown/issues/visit)_export_named_declaration` ([#4419](https://github.com/rolldown/rolldown/issues/4419)) ([f7e95d8](https://github.com/rolldown/rolldown/commit/f7e95d8f612feb696534fef5d5c269dcc5bddf4c))
+
+### Miscellaneous Chores
+
+- don't expose `And` class in pluginutils ([#4537](https://github.com/rolldown/rolldown/issues/4537)) ([985af6d](https://github.com/rolldown/rolldown/commit/985af6d846c0c85a61b19dcdd61d07c880074f38))
+- expose `withFilter` function via `rolldown/filter` instead of `rolldown` ([#4369](https://github.com/rolldown/rolldown/issues/4369)) ([ead9749](https://github.com/rolldown/rolldown/commit/ead9749e14f5f1a3c1119d331f076fbc28027674))
+- use camel cases for `package.json[#exports](https://github.com/rolldown/rolldown/issues/exports)` field ([#4366](https://github.com/rolldown/rolldown/issues/4366)) ([2fa6d40](https://github.com/rolldown/rolldown/commit/2fa6d4067ba6edceeab4d3f841cff6ff690ea160))
+
+# [1.0.0-beta.8](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2025-04-22)
+
+### Bug Fixes
+
+- attach more comments related to export decl ([#4219](https://github.com/rolldown/rolldown/issues/4219)) ([a684277](https://github.com/rolldown/rolldown/commit/a6842777f7ce910fabd8d9d1b418bcb4c2eea221))
+- avoid empty line at the beginning of emitted chunks caused by file without imports ([#4179](https://github.com/rolldown/rolldown/issues/4179)) ([a3b5f54](https://github.com/rolldown/rolldown/commit/a3b5f54581e5a1f93d47249e9f21a474a5f74869)), closes [#4150](https://github.com/rolldown/rolldown/issues/4150)
+- avoid hang if load error ([#4056](https://github.com/rolldown/rolldown/issues/4056)) ([f262f1f](https://github.com/rolldown/rolldown/commit/f262f1f516a2199436bf60b6e67233f96acd2753))
+- avoid load again if load success at concurrent load ([#4156](https://github.com/rolldown/rolldown/issues/4156)) ([821fc82](https://github.com/rolldown/rolldown/commit/821fc8288d7be142e81ee02a812e9ec80cedd548))
+- **build:** handle empty dependencies in rolldown configuration ([#4108](https://github.com/rolldown/rolldown/issues/4108)) ([934d75d](https://github.com/rolldown/rolldown/commit/934d75d75c75a351251056afbc54c443c79a88bf))
+- clear js side cache at bundle fininsh ([#4158](https://github.com/rolldown/rolldown/issues/4158)) ([10afd61](https://github.com/rolldown/rolldown/commit/10afd612d0a63ca295d4ef1a64a14503ddfa2b70))
+- convert severity of missing_export diagnostic to warning when importee module is ts/tsx ([#4147](https://github.com/rolldown/rolldown/issues/4147)) ([57ae80d](https://github.com/rolldown/rolldown/commit/57ae80def5352406eaace6df5d652d7e67080a16))
+- correct bundle size calculation ([#3994](https://github.com/rolldown/rolldown/issues/3994)) ([748d395](https://github.com/rolldown/rolldown/commit/748d395c27f8366e4a7eebbdd0819f50aec65971))
+- correct the behavior when multiple transform filter option are specified ([#4059](https://github.com/rolldown/rolldown/issues/4059)) ([92f7cc6](https://github.com/rolldown/rolldown/commit/92f7cc65534909f84c3d4fe4fdd42d80692ad2ca))
+- **debug:** prevent multiple writes on the same file ([#4117](https://github.com/rolldown/rolldown/issues/4117)) ([9131bdc](https://github.com/rolldown/rolldown/commit/9131bdcf84246e2b15919a5e424866bdf7c4bf8e))
+- deconfilct chunk name after name generated ([#4191](https://github.com/rolldown/rolldown/issues/4191)) ([1534f4a](https://github.com/rolldown/rolldown/commit/1534f4a7f444109b25d7b9b02590b14689de1ae0))
+- don't unwatch files when close watcher ([#4105](https://github.com/rolldown/rolldown/issues/4105)) ([729b6cb](https://github.com/rolldown/rolldown/commit/729b6cb5fe78b6bd3022c7c75f2290d0094e7539)), closes [#4084](https://github.com/rolldown/rolldown/issues/4084)
+- filter should not stabilize args.specifier ([#3972](https://github.com/rolldown/rolldown/issues/3972)) ([85c4bdd](https://github.com/rolldown/rolldown/commit/85c4bdd714af5c9245fc0a9cd3ed7b901f34e2be))
+- filter test case ([#3975](https://github.com/rolldown/rolldown/issues/3975)) ([eeb1005](https://github.com/rolldown/rolldown/commit/eeb10051b0f5ddd144cd3cea5268cc4f332a93c3))
+- **hmr:** should generate correct commonjs wrapper ([#4131](https://github.com/rolldown/rolldown/issues/4131)) ([afae765](https://github.com/rolldown/rolldown/commit/afae76571b3730a8484341936c4e1d1b2b670579)), closes [#4129](https://github.com/rolldown/rolldown/issues/4129)
+- **hmr:** should register cjs exports differing from esm ([#4132](https://github.com/rolldown/rolldown/issues/4132)) ([ca47ca2](https://github.com/rolldown/rolldown/commit/ca47ca2888b0722fbce21cc271d30a359bd392f5))
+- **isolated_declaration:** skip external id ([#4026](https://github.com/rolldown/rolldown/issues/4026)) ([8b7c824](https://github.com/rolldown/rolldown/commit/8b7c8241e4d105fec4a1a51afed14613a206e1d7))
+- make sure flush before write into stdio ([#4157](https://github.com/rolldown/rolldown/issues/4157)) ([85dcb2a](https://github.com/rolldown/rolldown/commit/85dcb2aef20533a21a9ce3a4c70188e8358ff061))
+- named_function_expression_argument ([#4074](https://github.com/rolldown/rolldown/issues/4074)) ([e95a392](https://github.com/rolldown/rolldown/commit/e95a39254b7e9da696854035f69b999019fa19e1)), closes [#4045](https://github.com/rolldown/rolldown/issues/4045) [#4061](https://github.com/rolldown/rolldown/issues/4061)
+- **node:** ensure `this.meta.watchMode` is `true` in watch mode ([#3969](https://github.com/rolldown/rolldown/issues/3969)) ([7ddcaea](https://github.com/rolldown/rolldown/commit/7ddcaea299a491541638ff52cfabe92e4018c3d5)), closes [#3960](https://github.com/rolldown/rolldown/issues/3960)
+- **node:** fix webcontainer fallback for cjs rolldown + silence pkg.pr.new check error ([#3958](https://github.com/rolldown/rolldown/issues/3958)) ([465ee23](https://github.com/rolldown/rolldown/commit/465ee23269f227633941edc62afa41804c21c08e))
+- **node:** resolveId id filter is optional ([#3991](https://github.com/rolldown/rolldown/issues/3991)) ([c7e4434](https://github.com/rolldown/rolldown/commit/c7e443479fec9df0f99e9040fe856cc7b6870e04))
+- preserve leading comments of export default decl ([#4122](https://github.com/rolldown/rolldown/issues/4122)) ([e3ab62a](https://github.com/rolldown/rolldown/commit/e3ab62aaf91a0589b209516aa48bdc9055ef6493)), closes [#4006](https://github.com/rolldown/rolldown/issues/4006)
+- **rolldown_plugin_transform:** incorrect detection of `source_type` ([#4214](https://github.com/rolldown/rolldown/issues/4214)) ([bfe3e9e](https://github.com/rolldown/rolldown/commit/bfe3e9e7ab9434f345d691a0fd41a60e6fa3e736)), closes [#4203](https://github.com/rolldown/rolldown/issues/4203)
+- **rolldown_utils:** normalize ids before filtering ([#3955](https://github.com/rolldown/rolldown/issues/3955)) ([dc245f0](https://github.com/rolldown/rolldown/commit/dc245f0c83a9cb6692ea717cd27f949c6e53ea7f))
+- runtime module should get executed first always ([#3978](https://github.com/rolldown/rolldown/issues/3978)) ([1c679ee](https://github.com/rolldown/rolldown/commit/1c679eef9fa0160254d7725496db0347176d673c)), closes [#3650](https://github.com/rolldown/rolldown/issues/3650)
+- **rust:** `preserve-legal` should correspond to `Comments::PreserveLegal` ([#4137](https://github.com/rolldown/rolldown/issues/4137)) ([cef50bd](https://github.com/rolldown/rolldown/commit/cef50bd09bb7618c9c21ead93d0c93af9323fc12)), closes [#4118](https://github.com/rolldown/rolldown/issues/4118)
+- **rust:** avoid panic when `assetFileNames` hash length exceeds `22` ([#4019](https://github.com/rolldown/rolldown/issues/4019)) ([86710df](https://github.com/rolldown/rolldown/commit/86710dfb7fcc278a94bda48c6c3562bf8118aa0f)), closes [#4016](https://github.com/rolldown/rolldown/issues/4016)
+- **rust:** crashes with object containing `shorthand` to `NaN` ([#4197](https://github.com/rolldown/rolldown/issues/4197)) ([7d55cda](https://github.com/rolldown/rolldown/commit/7d55cdafb69e74fd84cfaa2f0b2c55d480d58dd0)), closes [#4196](https://github.com/rolldown/rolldown/issues/4196) [#4123](https://github.com/rolldown/rolldown/issues/4123)
+- support nested plugin for withFilter ([#4106](https://github.com/rolldown/rolldown/issues/4106)) ([698bd4c](https://github.com/rolldown/rolldown/commit/698bd4c3c355388b3ca1821ccc262ac121327d36))
+- typo in example code ([#4167](https://github.com/rolldown/rolldown/issues/4167)) ([31e3f1b](https://github.com/rolldown/rolldown/commit/31e3f1babb9308fafc42b17ddbd722f85d482ca8))
+- validate hmr option ([#4067](https://github.com/rolldown/rolldown/issues/4067)) ([c1d0963](https://github.com/rolldown/rolldown/commit/c1d096385913793f6e37cdd3b37ebdb03d4c85f0))
+
+### Features
+
+- add `withFilter` util function ([#4087](https://github.com/rolldown/rolldown/issues/4087)) ([c89829d](https://github.com/rolldown/rolldown/commit/c89829d3204b03e7837e6d5e5acd43a94b4602fe))
+- add hmr option binding ([#4053](https://github.com/rolldown/rolldown/issues/4053)) ([cb9a009](https://github.com/rolldown/rolldown/commit/cb9a0094ad31d4d96daab5c25c5a1c75855bbeed))
+- add hmr runtime implement option ([#4115](https://github.com/rolldown/rolldown/issues/4115)) ([dcaa72b](https://github.com/rolldown/rolldown/commit/dcaa72b1e900805618a3dcdb562bec1abd339f07))
+- add hook usage meta ([#4181](https://github.com/rolldown/rolldown/issues/4181)) ([95255cf](https://github.com/rolldown/rolldown/commit/95255cf5f7140af3a1e64be2369832076b94390e))
+- **cli:** enable `using` syntax sugar ([#4202](https://github.com/rolldown/rolldown/issues/4202)) ([59e9a96](https://github.com/rolldown/rolldown/commit/59e9a96ff2a530bc2b49a64b394437f8706dfbcb))
+- **cli:** support `--input` option ([#4201](https://github.com/rolldown/rolldown/issues/4201)) ([6f18af6](https://github.com/rolldown/rolldown/commit/6f18af678f735036b36236ccc2479afd13345cb8)), closes [#4175](https://github.com/rolldown/rolldown/issues/4175)
+- **cli:** support `ROLLUP_WATCH` and `ROLLDOWN_WATCH` environment variables ([#3967](https://github.com/rolldown/rolldown/issues/3967)) ([bc1eba7](https://github.com/rolldown/rolldown/commit/bc1eba75e7046fda952ad3001e7b6c9a2f2b1200)), closes [#3961](https://github.com/rolldown/rolldown/issues/3961)
+- **debug:** add `DebugTracer` for improved tracing management ([#4182](https://github.com/rolldown/rolldown/issues/4182)) ([b8a64bb](https://github.com/rolldown/rolldown/commit/b8a64bbd5888833e4a247de936ec7e919f4e89df))
+- **debug:** add `plugin_index` hook-related events ([#4148](https://github.com/rolldown/rolldown/issues/4148)) ([6a35d00](https://github.com/rolldown/rolldown/commit/6a35d00394e2150aac9a18bc82e7406003bc3464))
+- **debug:** add events about `resolve_id` hook ([#4180](https://github.com/rolldown/rolldown/issues/4180)) ([0735e9a](https://github.com/rolldown/rolldown/commit/0735e9ab69d8a02087fbc7b9bd395f326fe1504c))
+- **debug:** add lifecycle-related events ([#4168](https://github.com/rolldown/rolldown/issues/4168)) ([d9c5457](https://github.com/rolldown/rolldown/commit/d9c54570aecff21b8af326cbdef01f9d523c3946))
+- **debug:** clean up opened files when bundler get dropped ([#4185](https://github.com/rolldown/rolldown/issues/4185)) ([baf201a](https://github.com/rolldown/rolldown/commit/baf201afae746cba82bf80397565cf42d3122e72))
+- **debug:** rename `buildId` to `SessionId` ([#4184](https://github.com/rolldown/rolldown/issues/4184)) ([f67f29f](https://github.com/rolldown/rolldown/commit/f67f29ff3321a8abc815923e961f6cfe496a43dc))
+- **debug:** set up event-based tracking system for bundler actions ([#4094](https://github.com/rolldown/rolldown/issues/4094)) ([bdc799c](https://github.com/rolldown/rolldown/commit/bdc799cbe6d7ace3b37a9e644c6abb1bae50ae58)), closes [#4049](https://github.com/rolldown/rolldown/issues/4049) [#4049](https://github.com/rolldown/rolldown/issues/4049)
+- **debug:** trace load hook actions ([#4103](https://github.com/rolldown/rolldown/issues/4103)) ([0e12b69](https://github.com/rolldown/rolldown/commit/0e12b69aa74fc2a9a35942ddf6925256f3e41317))
+- **debug:** unify naming ([#4183](https://github.com/rolldown/rolldown/issues/4183)) ([211c9df](https://github.com/rolldown/rolldown/commit/211c9df576cd639f03e2802753f5cf8a4e6713a1))
+- **docs:** generate `llms.txt` and `llms-full.txt` ([#3979](https://github.com/rolldown/rolldown/issues/3979)) ([ef1de29](https://github.com/rolldown/rolldown/commit/ef1de299a04abb3a3d26f96e84702b555d57627c))
+- export `ResolveIdExtraOptions` ([#4050](https://github.com/rolldown/rolldown/issues/4050)) ([25f3c61](https://github.com/rolldown/rolldown/commit/25f3c6106c6fdad5558da0acb43acdfc542dc1e6))
+- **hmr/poc:** support HMR on situation that adds modules or modifies import statements ([#3965](https://github.com/rolldown/rolldown/issues/3965)) ([7452fa0](https://github.com/rolldown/rolldown/commit/7452fa03edb3c4cda04baaac0b9f57a5ae047605))
+- **hmr:** allow to configurate connected address of dev server ([#4001](https://github.com/rolldown/rolldown/issues/4001)) ([06fa09d](https://github.com/rolldown/rolldown/commit/06fa09d74ae4a80e23c4b6152838399a257cd2e6))
+- **hmr:** export hmr boundary info ([#4116](https://github.com/rolldown/rolldown/issues/4116)) ([149a7b9](https://github.com/rolldown/rolldown/commit/149a7b9c93492ff2f4e6b284b7ccf4ecc0000d71))
+- **hmr:** prepare hmr support on nodejs ([#4002](https://github.com/rolldown/rolldown/issues/4002)) ([d97c9cc](https://github.com/rolldown/rolldown/commit/d97c9cc5e63264162b4c0bf5f537110ab3647e70))
+- initial implementation of `@rolldown/browser` ([#4112](https://github.com/rolldown/rolldown/issues/4112)) ([a0a7d95](https://github.com/rolldown/rolldown/commit/a0a7d9519e4dd93512c4ebb1e709a75a6b65efbc)), closes [#4012](https://github.com/rolldown/rolldown/issues/4012)
+- **node:** auto fallback wasm binding on webcontainer ([#3922](https://github.com/rolldown/rolldown/issues/3922)) ([c6972f4](https://github.com/rolldown/rolldown/commit/c6972f453c76881b46d50be386a8d9b1c3d43492))
+- **node:** expose `RenderedModule` type ([#3963](https://github.com/rolldown/rolldown/issues/3963)) ([311f70c](https://github.com/rolldown/rolldown/commit/311f70cc45177a067b924dce703b9d3db49ae318))
+- optimize dep unchanged ([#3974](https://github.com/rolldown/rolldown/issues/3974)) ([c586f68](https://github.com/rolldown/rolldown/commit/c586f684d721bc21eada583ebc5fb638f7911727))
+- partial builtin report plugin ([#4136](https://github.com/rolldown/rolldown/issues/4136)) ([6ad31d7](https://github.com/rolldown/rolldown/commit/6ad31d74a76041411de75dfa588f36ba92fc0df2))
+- rolldown_filter_analyzer ([#4232](https://github.com/rolldown/rolldown/issues/4232)) ([d0ad1e9](https://github.com/rolldown/rolldown/commit/d0ad1e9299b9e444dd65512ff0a1c5f653626ed5))
+- **rolldown_plugin_transform:** enable `env` and `assumptions` ([#4211](https://github.com/rolldown/rolldown/issues/4211)) ([73f1910](https://github.com/rolldown/rolldown/commit/73f19108c8b65f8306ddfd1772f15528dbd454bb)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown_plugin_transform:** support `assumptions` option in `transform_options` ([#4209](https://github.com/rolldown/rolldown/issues/4209)) ([932b46f](https://github.com/rolldown/rolldown/commit/932b46f731cb91af734a6b32d0c72f7bdd7672be)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown_plugin_transform:** support `target` option in `transform_options` ([#4210](https://github.com/rolldown/rolldown/issues/4210)) ([e00c4ca](https://github.com/rolldown/rolldown/commit/e00c4ca2ffeccf027bbf5b07e5e234dce6ba2a5c)), closes [#3968](https://github.com/rolldown/rolldown/issues/3968)
+- **rolldown:** oxc v0.65.0 ([#4235](https://github.com/rolldown/rolldown/issues/4235)) ([d63b266](https://github.com/rolldown/rolldown/commit/d63b266fca55edeeeb9d38938ff1a4f824eb67fc)), closes [#4166](https://github.com/rolldown/rolldown/issues/4166) [#4198](https://github.com/rolldown/rolldown/issues/4198)
+- support MinimalPluginContext for outputOptions hook ([#3993](https://github.com/rolldown/rolldown/issues/3993)) ([19eaa2d](https://github.com/rolldown/rolldown/commit/19eaa2d5802016bc6329db34b8623e140e02c7ea))
+- support RolldownBuild#watchFiles ([#4057](https://github.com/rolldown/rolldown/issues/4057)) ([34efde9](https://github.com/rolldown/rolldown/commit/34efde9095521f4aa6ec54df1e668164b0c2ccea))
+
+### Performance Improvements
+
+- aovid unnecessary allocate at PreliminaryFilename new ([#4194](https://github.com/rolldown/rolldown/issues/4194)) ([c391b5e](https://github.com/rolldown/rolldown/commit/c391b5e613dccdd2ff297b77d05dafd602d974fe))
+- avoid clone immutable scoping field ([#3980](https://github.com/rolldown/rolldown/issues/3980)) ([d024a79](https://github.com/rolldown/rolldown/commit/d024a79ef301d57277d138116487ce75d0f4b2b2))
+- avoid lock contention ([#3984](https://github.com/rolldown/rolldown/issues/3984)) ([86fb332](https://github.com/rolldown/rolldown/commit/86fb3326fb8c845628cbd22e14c662248f807ebc))
+- cache renderChunk meta ([#3999](https://github.com/rolldown/rolldown/issues/3999)) ([e117288](https://github.com/rolldown/rolldown/commit/e11728818f6c4fd389308f4b2c1d8503e5ce5af2))
+- code filter contains ([#3973](https://github.com/rolldown/rolldown/issues/3973)) ([acbb339](https://github.com/rolldown/rolldown/commit/acbb3399de9ecbe2e471276cc8792e0128987558))
+- lazy renderChunk meta#chunks ([#4008](https://github.com/rolldown/rolldown/issues/4008)) ([d5262e2](https://github.com/rolldown/rolldown/commit/d5262e21ebafb1ef6a4992b50142bd872dccdce5))
+- make js plugin tracing more accurate ([#4204](https://github.com/rolldown/rolldown/issues/4204)) ([76ba8e5](https://github.com/rolldown/rolldown/commit/76ba8e5e9dea8133ddd7af0980711d5fd2f530cc))
+- **node:** cache properties of `OutputChunk` and `OutputAsset` ([#4063](https://github.com/rolldown/rolldown/issues/4063)) ([f32a14f](https://github.com/rolldown/rolldown/commit/f32a14fdc5efd8eb4e6aed45ce2ff1cd9780655e))
+- **rolldown_plugin_json:** use `concat_string!` instead of `format!` ([#4030](https://github.com/rolldown/rolldown/issues/4030)) ([825c877](https://github.com/rolldown/rolldown/commit/825c877b56a601701d09104521f25af3a5b938bd))
+- **rust:** use `array` instead of `phf_set` ([#4079](https://github.com/rolldown/rolldown/issues/4079)) ([d30dcc5](https://github.com/rolldown/rolldown/commit/d30dcc575ec323b9c49e91d036ec16f14085b5b3))
+- **rust:** use `into_owned` instead of `to_string` to avoid unnecessary allocation ([#4149](https://github.com/rolldown/rolldown/issues/4149)) ([5b4032a](https://github.com/rolldown/rolldown/commit/5b4032ac460644a9f9ae3ed7ad5e51420c5f5565))
+- **rust:** use `phf_set` for large datasets ([#4216](https://github.com/rolldown/rolldown/issues/4216)) ([c2596d3](https://github.com/rolldown/rolldown/commit/c2596d3b89e35e161104600ff745f2ee73c504e4)), closes [#4079](https://github.com/rolldown/rolldown/issues/4079)
+- skip empty hook with `hook_usage` meta ([#4187](https://github.com/rolldown/rolldown/issues/4187)) ([37e71eb](https://github.com/rolldown/rolldown/commit/37e71eb010648a8828c10e70c7300b27c979a2f8))
+- skip empty js hook for js plugin ([#4192](https://github.com/rolldown/rolldown/issues/4192)) ([5e53564](https://github.com/rolldown/rolldown/commit/5e53564babb8b931338d456d98ed72ddcc4e72e7))
+
+# [1.0.0-beta.7](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2025-03-24)
+
+### Bug Fixes
+
+- check dummy record in all import_records.iter ([#3930](https://github.com/rolldown/rolldown/issues/3930)) ([2519603](https://github.com/rolldown/rolldown/commit/25196034858e6be8ec769be230ead12474da89c5))
+- **ci:** fix broken metric workflow ([#3944](https://github.com/rolldown/rolldown/issues/3944)) ([1df6407](https://github.com/rolldown/rolldown/commit/1df64079216086d4bd96ba05bb91a553702a173c))
+- determine a module side effects for `require` a module that can't analyze statically ([#3928](https://github.com/rolldown/rolldown/issues/3928)) ([3909fcb](https://github.com/rolldown/rolldown/commit/3909fcb2f9c23a6b84ce59e4ae93801ca6801ea4)), closes [#3926](https://github.com/rolldown/rolldown/issues/3926)
+- mark export all stmt as side effects free ([#3897](https://github.com/rolldown/rolldown/issues/3897)) ([0f36c01](https://github.com/rolldown/rolldown/commit/0f36c017606efc6736a893cd5b3398a35a6c5066))
+- metrix ci broken ([#3924](https://github.com/rolldown/rolldown/issues/3924)) ([f115e7a](https://github.com/rolldown/rolldown/commit/f115e7a34b264fe83930d6127f833053bbb4ab83))
+- normalize oxc minify keep_names with keep_names option ([#3948](https://github.com/rolldown/rolldown/issues/3948)) ([126f3e0](https://github.com/rolldown/rolldown/commit/126f3e08ec67c6a6025537fac411d67628e06b2b))
+- reuse `JSON.parse` wrapper from `oxc-parser` ([#3904](https://github.com/rolldown/rolldown/issues/3904)) ([1726b6a](https://github.com/rolldown/rolldown/commit/1726b6ac303a0d0efc9b70822d38c5417df09764))
+- **tasks/generator:** ensure `just update-generated-code` runs correctly on `Windows` ([#3900](https://github.com/rolldown/rolldown/issues/3900)) ([ca73e82](https://github.com/rolldown/rolldown/commit/ca73e82817a536ea3c49e7f3641f52405e8b459c))
+- **tasks/generator:** ensure consistent path on `Windows` ([#3901](https://github.com/rolldown/rolldown/issues/3901)) ([df042b0](https://github.com/rolldown/rolldown/commit/df042b0b4034291e53763c3ee736479cfe6eb8ef))
+
+### Features
+
+- add data structure that used for incremental build ([#3932](https://github.com/rolldown/rolldown/issues/3932)) ([8c0b950](https://github.com/rolldown/rolldown/commit/8c0b95028333d0aade29592fc365f2163156e7d0))
+- add HookTransformAstArgs#stable_id ([#3920](https://github.com/rolldown/rolldown/issues/3920)) ([15cb25a](https://github.com/rolldown/rolldown/commit/15cb25af40d189531d3456ab70ffee0e3b7f82de))
+- add isolated_declaration plugin ([#3894](https://github.com/rolldown/rolldown/issues/3894)) ([529a7be](https://github.com/rolldown/rolldown/commit/529a7bee5585e37f5aabc541b23e3384913f91bc))
+- **hmr/poc:** change visited map to use `VisitState` enum for better state management ([#3908](https://github.com/rolldown/rolldown/issues/3908)) ([1fd3698](https://github.com/rolldown/rolldown/commit/1fd3698233f4b2fe960fb9aa1797604cda234471))
+- incremental rebuild ([#3934](https://github.com/rolldown/rolldown/issues/3934)) ([0b03e35](https://github.com/rolldown/rolldown/commit/0b03e352b1795132ec895bf369280e2648fd173b))
+- **isolated_declaration:** add `stripInternal` option ([#3902](https://github.com/rolldown/rolldown/issues/3902)) ([8f5f8f1](https://github.com/rolldown/rolldown/commit/8f5f8f11eb06c497eb50d907d7fd5258ad8fe4de))
+- **isolated-declaration:** emit typing for imported or exported typing module ([#3910](https://github.com/rolldown/rolldown/issues/3910)) ([458a62d](https://github.com/rolldown/rolldown/commit/458a62d78fef46776ca2e8b8990d41a31d69d998))
+- make ScanStageOutput cloneable ([#3923](https://github.com/rolldown/rolldown/issues/3923)) ([47fe675](https://github.com/rolldown/rolldown/commit/47fe67560573aa70544b27f8c763f5b8b96a8284))
+- make transform_ast hook to async ([#3891](https://github.com/rolldown/rolldown/issues/3891)) ([b150e1b](https://github.com/rolldown/rolldown/commit/b150e1b75b467e50836b89251056a92720357bea))
+- **node/hmr:** ensure only invoke hmr process if there are live connections ([#3907](https://github.com/rolldown/rolldown/issues/3907)) ([9cb523f](https://github.com/rolldown/rolldown/commit/9cb523f6195a68e822c7cf41ae7d0fa585e933d7))
+- **node/wasi:** add private `@rolldown/wasi` to prepare to distribute wasm binary in a friendly way ([#3925](https://github.com/rolldown/rolldown/issues/3925)) ([53faf0c](https://github.com/rolldown/rolldown/commit/53faf0c5d4c398d7d9f6c1bddf279ac5c4c071bc))
+- remove unused import(...) if importee doesn't have side-effects ([#3911](https://github.com/rolldown/rolldown/issues/3911)) ([0ac283b](https://github.com/rolldown/rolldown/commit/0ac283bfc0f408e4c4a2ae0579d64b1a397e4e5b)), closes [#2827](https://github.com/rolldown/rolldown/issues/2827)
+- support meta#chunks at render_chunk hook ([#3898](https://github.com/rolldown/rolldown/issues/3898)) ([8fd9481](https://github.com/rolldown/rolldown/commit/8fd94815d2714d90efdcc0c7f4100ed5007f14ae))
+
+### Performance Improvements
+
+- aovid RollupRenderedChunk clone ([#3909](https://github.com/rolldown/rolldown/issues/3909)) ([82749d8](https://github.com/rolldown/rolldown/commit/82749d8c2e7651b662912de0eef985d58cef9731))
+- avoid chunk content clone ([#3916](https://github.com/rolldown/rolldown/issues/3916)) ([c33ea77](https://github.com/rolldown/rolldown/commit/c33ea772dc6c286c53a72ccf18b36cad3866322f))
+- **rolldown_binding:** upgrade napi-build ([#3927](https://github.com/rolldown/rolldown/issues/3927)) ([5da7efb](https://github.com/rolldown/rolldown/commit/5da7efb1c26441859803337f06aa659537588e9a))
+- use `Vec::with_capacity` ([#3938](https://github.com/rolldown/rolldown/issues/3938)) ([113eb98](https://github.com/rolldown/rolldown/commit/113eb985ee6aeccc5a3af4cf31486fc96d11b49e))
+- use multi threaded Runtime on wasi target ([#3876](https://github.com/rolldown/rolldown/issues/3876)) ([fb9cbde](https://github.com/rolldown/rolldown/commit/fb9cbdeeb650e1a47b38e02f9be48e4e6ce8ae4a))
+
+# [1.0.0-beta.6](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2025-03-17)
+
+# [1.0.0-beta.5](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2025-03-17)
+
+### Bug Fixes
+
+- **cli:** fix and improve error message when validating cli options ([#3813](https://github.com/rolldown/rolldown/issues/3813)) ([64993bb](https://github.com/rolldown/rolldown/commit/64993bb64738f530539228201df1f3e98d2ca562))
+- **cli:** remove duplicate error message in stack trace ([#3828](https://github.com/rolldown/rolldown/issues/3828)) ([79fea00](https://github.com/rolldown/rolldown/commit/79fea00530f310ada3a880c8bb0840476d4d9848))
+- dataurl plugin resolve panic ([#3822](https://github.com/rolldown/rolldown/issues/3822)) ([251e281](https://github.com/rolldown/rolldown/commit/251e281cb707277a9eb4d51d8bdcce757a2c8fc6))
+- generate sourcemapMappingUrl reference properly ([#3849](https://github.com/rolldown/rolldown/issues/3849)) ([2b0f20f](https://github.com/rolldown/rolldown/commit/2b0f20f6a0c2bcc7350b0a22c10df7d0d4c528e4)), closes [#3845](https://github.com/rolldown/rolldown/issues/3845)
+- **renovate:** dependencyDashboard is not a preset ([#3862](https://github.com/rolldown/rolldown/issues/3862)) ([607e112](https://github.com/rolldown/rolldown/commit/607e1120df1b07736525f1a87470d7f81906ac7a))
+
+### Features
+
+- calculate relative external module rendered path ([#3855](https://github.com/rolldown/rolldown/issues/3855)) ([e0cd410](https://github.com/rolldown/rolldown/commit/e0cd410a91e78bb36aafa1ac26fc4d56cc02bcb5))
+- emit diagnostic when configuration field conflict ([#3854](https://github.com/rolldown/rolldown/issues/3854)) ([d0e0a63](https://github.com/rolldown/rolldown/commit/d0e0a6386d761fe3010606bd542293c46f3e4715))
+- filter out diagnostics disabled in checks options ([#3846](https://github.com/rolldown/rolldown/issues/3846)) ([4524a58](https://github.com/rolldown/rolldown/commit/4524a58057954b21535f21877a31386b7c83f39a))
+- **hmr/rust:** invoke `transform` hook on affected hmr module ([#3866](https://github.com/rolldown/rolldown/issues/3866)) ([296d605](https://github.com/rolldown/rolldown/commit/296d605c2fc3a037abf8cb2e81d735810704cdf8))
+- **hmr/rust:** reuse existing `ModuleLoader` ([#3865](https://github.com/rolldown/rolldown/issues/3865)) ([b4dd209](https://github.com/rolldown/rolldown/commit/b4dd2094ca211f844915dd5cf90a3c4fec87c448))
+- **hmr:** enhance error handling by wrapping program body in a try-catch block ([#3825](https://github.com/rolldown/rolldown/issues/3825)) ([007805a](https://github.com/rolldown/rolldown/commit/007805ae6942ea96578ff88bedb59f89f29e0c24))
+- **hmr:** inject `ModuleHotContext` for each module ([#3832](https://github.com/rolldown/rolldown/issues/3832)) ([30b9a0b](https://github.com/rolldown/rolldown/commit/30b9a0bf53b7fde22a94c43486880e9d1b1e933c))
+- **hmr:** support HMR on editing non-hmr-boundary module ([#3853](https://github.com/rolldown/rolldown/issues/3853)) ([568197a](https://github.com/rolldown/rolldown/commit/568197a06444809bf44642d88509313ee2735594))
+- **hmr:** wrap module code into a function ([#3851](https://github.com/rolldown/rolldown/issues/3851)) ([8a7b7d1](https://github.com/rolldown/rolldown/commit/8a7b7d11484c1f3d2d604ed8e1ff7ba4752ab26c))
+- memorize importer's idx for each moodule ([#3852](https://github.com/rolldown/rolldown/issues/3852)) ([3a7758f](https://github.com/rolldown/rolldown/commit/3a7758f043c0054f344ef781602eea965b421c29))
+- support absoulte/relative external ([#3834](https://github.com/rolldown/rolldown/issues/3834)) ([d8f0bcb](https://github.com/rolldown/rolldown/commit/d8f0bcbe3bde51cc49fbada75f32560c43f51f95))
+
+### Performance Improvements
+
+- use mimalloc-safe which is maintaining by us ([#3869](https://github.com/rolldown/rolldown/issues/3869)) ([6b9d148](https://github.com/rolldown/rolldown/commit/6b9d148d7b0d5b182cdba42fbc5bafeb80d7c9af))
+
+# [1.0.0-beta.4](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2025-03-11)
+
+### Bug Fixes
+
+- imports with only types are removed even if verbatimModuleSyntax is true ([#3784](https://github.com/rolldown/rolldown/issues/3784)) ([ff8d19d](https://github.com/rolldown/rolldown/commit/ff8d19d25a26f115bcaf7dc3243eb98d7894c057)), closes [#3777](https://github.com/rolldown/rolldown/issues/3777)
+- windows panic ([#3436](https://github.com/rolldown/rolldown/issues/3436)) ([bc5b1e7](https://github.com/rolldown/rolldown/commit/bc5b1e73d48107643150d5492cd3b82c4484c0b9))
+- `keepNames` with function declaration panic ([#3687](https://github.com/rolldown/rolldown/issues/3687)) ([6016b3c](https://github.com/rolldown/rolldown/commit/6016b3cfd91eba5fe0945ed28927b706a0f0d959))
+- add `sequential?: boolean` type for rollup compat ([#3442](https://github.com/rolldown/rolldown/issues/3442)) ([e9daf93](https://github.com/rolldown/rolldown/commit/e9daf9390ddb692f2d4e672eebb83b9a0dc2385d))
+- add wrong is_cjs_reexport flag ([#3532](https://github.com/rolldown/rolldown/issues/3532)) ([c2bcb3d](https://github.com/rolldown/rolldown/commit/c2bcb3d232db048314649959a0ce3c09b8db7d7e))
+- **advanced_chunks:** unexpected behavior with `maxSize` ([#3641](https://github.com/rolldown/rolldown/issues/3641)) ([8b59091](https://github.com/rolldown/rolldown/commit/8b59091161bbcb4626ab41c8e0e22e656f009b5c))
+- avoid generate asset filename panic if emit file with fileName ([#3423](https://github.com/rolldown/rolldown/issues/3423)) ([794a63d](https://github.com/rolldown/rolldown/commit/794a63d0459f9e5e2b5450647d70f9b06ecb9a0c))
+- avoid preliminary filenames conflict ([#3460](https://github.com/rolldown/rolldown/issues/3460)) ([aeb352c](https://github.com/rolldown/rolldown/commit/aeb352cd1120781a787625f570c36d222a4ef810))
+- auto polyfill import.meta.\* in none esm format ([#3454](https://github.com/rolldown/rolldown/issues/3454)) ([287a616](https://github.com/rolldown/rolldown/commit/287a616883fd028f5000942b7aaeff4126f4d3d4))
+- avoid call outputOptions hook at close ([#3601](https://github.com/rolldown/rolldown/issues/3601)) ([48b1b86](https://github.com/rolldown/rolldown/commit/48b1b863e9fddeccbdbbd98641bb28597506e8f5))
+- avoid duplicated `init_esm` call ([#3707](https://github.com/rolldown/rolldown/issues/3707)) ([6eafc2f](https://github.com/rolldown/rolldown/commit/6eafc2f5916625c5d1b5267a4aca55b5ba1b2c1f))
+- build-binding script should reuse passed args ([#3774](https://github.com/rolldown/rolldown/issues/3774)) ([77623da](https://github.com/rolldown/rolldown/commit/77623da18bc9fe63baa6a8b2155afa28c60fdb8e))
+- chunk sorting total order ([#3451](https://github.com/rolldown/rolldown/issues/3451)) ([73116ab](https://github.com/rolldown/rolldown/commit/73116ab642701be42eda64761074e383a9ae801a))
+- chunk.modules should order by exec_order ([#3638](https://github.com/rolldown/rolldown/issues/3638)) ([8219a83](https://github.com/rolldown/rolldown/commit/8219a835bd92d5f7eaa924cd01f8e6719a828ca5))
+- **cjs:** ensure esm namespace always exist ([#3693](https://github.com/rolldown/rolldown/issues/3693)) ([f0301a6](https://github.com/rolldown/rolldown/commit/f0301a65a4a80ea8a43029776627278a77e693be)), closes [#3619](https://github.com/rolldown/rolldown/issues/3619) [#3529](https://github.com/rolldown/rolldown/issues/3529)
+- cli doesn't show config loading error details ([#3464](https://github.com/rolldown/rolldown/issues/3464)) ([e048f55](https://github.com/rolldown/rolldown/commit/e048f557aa4b84f870b58fce76b28c7b0810253e))
+- **cli:** cli default option ([#3613](https://github.com/rolldown/rolldown/issues/3613)) ([93d8731](https://github.com/rolldown/rolldown/commit/93d8731804f253b1ac16c8eb8541148448f072cf))
+- consider require `ExpressionIdentfier` as a import record ([#3428](https://github.com/rolldown/rolldown/issues/3428)) ([2410ee7](https://github.com/rolldown/rolldown/commit/2410ee7927cacdc687ea3089ba6bade26f574bdd)), closes [#3395](https://github.com/rolldown/rolldown/issues/3395)
+- deconflict export alias ([#3457](https://github.com/rolldown/rolldown/issues/3457)) ([fdb55d5](https://github.com/rolldown/rolldown/commit/fdb55d537d1502c9fab0c91365d6c802cc71214b))
+- diagnostic in minified file significantly slow down the build ([#3498](https://github.com/rolldown/rolldown/issues/3498)) ([2efa799](https://github.com/rolldown/rolldown/commit/2efa7998f2a47319c15e4dfaed2e21527bed8e5d)), closes [#3455](https://github.com/rolldown/rolldown/issues/3455)
+- don't enable drop_console when compress is true ([#3639](https://github.com/rolldown/rolldown/issues/3639)) ([2382047](https://github.com/rolldown/rolldown/commit/2382047bfa55c4eb7aaed466c34a1212a0c71a23))
+- entry chunk name should respect sanitizeFileName ([#3618](https://github.com/rolldown/rolldown/issues/3618)) ([4ec8869](https://github.com/rolldown/rolldown/commit/4ec88694630df38f97892604199d9d6289299cd5))
+- escape import/export module name and json key ([#3458](https://github.com/rolldown/rolldown/issues/3458)) ([4ccaf24](https://github.com/rolldown/rolldown/commit/4ccaf24ced490c6ad9c89e3e2d9c2fbe40d5e420))
+- fix `ROLLUP_FILE_URL` for emitted chunks ([#3507](https://github.com/rolldown/rolldown/issues/3507)) ([63b4e88](https://github.com/rolldown/rolldown/commit/63b4e88582f041b7d5ed79964f03928f148600d1))
+- glob import from parent dir ([#3614](https://github.com/rolldown/rolldown/issues/3614)) ([59c5da5](https://github.com/rolldown/rolldown/commit/59c5da53e6f459f929a7040ae7f160f76ffacd33))
+- **glob_import:** return absolute paths for absolute globs ([#3701](https://github.com/rolldown/rolldown/issues/3701)) ([eec83c9](https://github.com/rolldown/rolldown/commit/eec83c9bd9f203d9db91afc8272236bc105419de))
+- **hash:** should calculate hash dependenies correctly ([#3522](https://github.com/rolldown/rolldown/issues/3522)) ([c34d2d4](https://github.com/rolldown/rolldown/commit/c34d2d463e664cd7aee132fd78db887a3a496f58))
+- **hash:** should compute cross chunk dependecis in stable order ([#3524](https://github.com/rolldown/rolldown/issues/3524)) ([52119c7](https://github.com/rolldown/rolldown/commit/52119c74ee42c59ef0913ff22eff7d100823cdc8)), closes [#3453](https://github.com/rolldown/rolldown/issues/3453)
+- load mts config without type module ([#3750](https://github.com/rolldown/rolldown/issues/3750)) ([64998fb](https://github.com/rolldown/rolldown/commit/64998fbb3ac66bb6cfd1dd9ea4420a0c2751e52a))
+- make default sanitizeFilename compatible with rollup ([#3431](https://github.com/rolldown/rolldown/issues/3431)) ([67ec7d7](https://github.com/rolldown/rolldown/commit/67ec7d72901c1e9963d0e498f38033b428d07e19)), closes [#3418](https://github.com/rolldown/rolldown/issues/3418) [#3418](https://github.com/rolldown/rolldown/issues/3418)
+- make diagnostic message for eval build event easier to understand ([#3766](https://github.com/rolldown/rolldown/issues/3766)) ([efafb0f](https://github.com/rolldown/rolldown/commit/efafb0f9bb33623ed46a3f59fbb144a2f9572057)), closes [#3759](https://github.com/rolldown/rolldown/issues/3759)
+- making return type compatible with rollup/parseAst ([#3586](https://github.com/rolldown/rolldown/issues/3586)) ([659cbd3](https://github.com/rolldown/rolldown/commit/659cbd3d42aab91d37db215b46ab1e3c8f2fd559))
+- **manifestPlugin:** manifest fileds should be camelCase ([#3551](https://github.com/rolldown/rolldown/issues/3551)) ([011af34](https://github.com/rolldown/rolldown/commit/011af3468126f70e108ceeb89762ccbdebae91de))
+- **mf:** add remote esm module \_\_esModule flg ([#3569](https://github.com/rolldown/rolldown/issues/3569)) ([22d8cf4](https://github.com/rolldown/rolldown/commit/22d8cf43efd78b7aafac1a4a62ea7586e65662ee))
+- minify with jsx preserve ([#3730](https://github.com/rolldown/rolldown/issues/3730)) ([d6de53c](https://github.com/rolldown/rolldown/commit/d6de53cbde6e1bac517639203bb96d8d118e1eb4))
+- **minify:** disable top_level option for iife format ([#3647](https://github.com/rolldown/rolldown/issues/3647)) ([335d3d6](https://github.com/rolldown/rolldown/commit/335d3d6a6b3b45838f628958bff0735d40d2b1e5))
+- **node:** add rolldown dist typing check ([#3516](https://github.com/rolldown/rolldown/issues/3516)) ([32880da](https://github.com/rolldown/rolldown/commit/32880da1ff944adc143b4461d31b708e1b67c43c))
+- **node:** allow `output.minify: 'dce-only'` ([#3805](https://github.com/rolldown/rolldown/issues/3805)) ([e170e6e](https://github.com/rolldown/rolldown/commit/e170e6e354a893bd552c8cfd2d183c964d0aa7f9))
+- **node:** allow updating sourcemap.debugId by plugins ([#3749](https://github.com/rolldown/rolldown/issues/3749)) ([c83cc30](https://github.com/rolldown/rolldown/commit/c83cc304eaa657710db4459f47f7d91a0572e47e))
+- **node:** EmittedFile type compat ([#3745](https://github.com/rolldown/rolldown/issues/3745)) ([55ddf7d](https://github.com/rolldown/rolldown/commit/55ddf7d2aa2492458951963cdd4c82b021f470bf))
+- **node:** make `in` for additional properties in OutputChunk work ([#3635](https://github.com/rolldown/rolldown/issues/3635)) ([cec60e3](https://github.com/rolldown/rolldown/commit/cec60e34e7bc7bd04bc803253153cca40a0c52d5))
+- **node:** proxy moduleSideEffects for moduleInfo ([#3510](https://github.com/rolldown/rolldown/issues/3510)) ([cc2d779](https://github.com/rolldown/rolldown/commit/cc2d779d10e24b2125319e5a6b0ca77b383a6854)), closes [#2781](https://github.com/rolldown/rolldown/issues/2781)
+- **node:** tsc build only emit declaration ([#3509](https://github.com/rolldown/rolldown/issues/3509)) ([9c0032c](https://github.com/rolldown/rolldown/commit/9c0032c9f72034b63637756a528ea5ba0407a273))
+- NormalizedOutputOptions option ([#3582](https://github.com/rolldown/rolldown/issues/3582)) ([0bfe751](https://github.com/rolldown/rolldown/commit/0bfe751df53e2286992286b2abf2c17288527cb8))
+- NormalizedOutputOptions sourcemapIgnoreList ([#3714](https://github.com/rolldown/rolldown/issues/3714)) ([34556a5](https://github.com/rolldown/rolldown/commit/34556a595ffbfc84587041fe6fe58194ab91ea54))
+- prefix async to runtime helper if module has top level await ([#3696](https://github.com/rolldown/rolldown/issues/3696)) ([c4a1aae](https://github.com/rolldown/rolldown/commit/c4a1aae63f380ba7d21de405d6503593e28d75d3)), closes [#3686](https://github.com/rolldown/rolldown/issues/3686)
+- preserve this for PluginContext#emitFile ([#3683](https://github.com/rolldown/rolldown/issues/3683)) ([ca89c63](https://github.com/rolldown/rolldown/commit/ca89c63178202e85bc43d07a439891050ef56cf1)), closes [#3634](https://github.com/rolldown/rolldown/issues/3634)
+- preserve this for PluginContext#getModuleInfo ([#3634](https://github.com/rolldown/rolldown/issues/3634)) ([8346be7](https://github.com/rolldown/rolldown/commit/8346be737ee073f321e799ba68225ca79a49bda0))
+- regressed from renovate bot ([#3484](https://github.com/rolldown/rolldown/issues/3484)) ([d660852](https://github.com/rolldown/rolldown/commit/d66085222c625182253067a05c8b239f30467034))
+- replace all global `require` to `__require` when necessary ([#3469](https://github.com/rolldown/rolldown/issues/3469)) ([cfcc101](https://github.com/rolldown/rolldown/commit/cfcc101dc6973ca1636f4cf55a88cd462f70a283))
+- **rust:** dynamically importing `JSON` with `output.advancedChunks.groups` ([#3584](https://github.com/rolldown/rolldown/issues/3584)) ([a7e403e](https://github.com/rolldown/rolldown/commit/a7e403efbcd6ae65cbd511241a747afe323b8312)), closes [#3437](https://github.com/rolldown/rolldown/issues/3437) [#3343](https://github.com/rolldown/rolldown/issues/3343)
+- **rust:** generate specified hash length for emitted asset filenames ([#3740](https://github.com/rolldown/rolldown/issues/3740)) ([b770d2c](https://github.com/rolldown/rolldown/commit/b770d2c50e76ef0acfe881478c4075db4f9e93b0)), closes [#3737](https://github.com/rolldown/rolldown/issues/3737)
+- **rust:** only replace specified-length placeholders for the `hash` type ([#3736](https://github.com/rolldown/rolldown/issues/3736)) ([f4abf32](https://github.com/rolldown/rolldown/commit/f4abf324c0fed46742c904ac345726d028e27a64))
+- should consider `void expr` as side effects free if `expr` is side effects free ([#3479](https://github.com/rolldown/rolldown/issues/3479)) ([857a285](https://github.com/rolldown/rolldown/commit/857a2853111071536c2718bfcd10d24ae954ba3e)), closes [#3478](https://github.com/rolldown/rolldown/issues/3478)
+- should generate correct pattern for cross chunk symbols ([#3296](https://github.com/rolldown/rolldown/issues/3296)) ([54fd0f1](https://github.com/rolldown/rolldown/commit/54fd0f1d20b412b33cce40d7f5cd9a054716b57c))
+- **splitting:** indirect external symbol ([#3405](https://github.com/rolldown/rolldown/issues/3405)) ([89db1f3](https://github.com/rolldown/rolldown/commit/89db1f3553e69e7157a11ae196a6a690ec6d1c99))
+- stackblitz merge_transform_options failed ([#3732](https://github.com/rolldown/rolldown/issues/3732)) ([79b9463](https://github.com/rolldown/rolldown/commit/79b9463e1b48bb86ce4ae751a31a9228228d707e))
+- stackoverflow when update cjs module meta ([#3530](https://github.com/rolldown/rolldown/issues/3530)) ([ece5e77](https://github.com/rolldown/rolldown/commit/ece5e773b52c236e15278d08560c787feb6056bb))
+- suppress unresolved require error in try catch block ([#3605](https://github.com/rolldown/rolldown/issues/3605)) ([b546e53](https://github.com/rolldown/rolldown/commit/b546e53adf0d8fecbca8a9f0dddbcb44cb308a99))
+- sync other moduleSideEffects value in ModuleInfo ([#3520](https://github.com/rolldown/rolldown/issues/3520)) ([f65bde3](https://github.com/rolldown/rolldown/commit/f65bde39e6c7e332ba86265a5a5c4e7d40c1ccd6)), closes [#2781](https://github.com/rolldown/rolldown/issues/2781)
+- synchronize js ModuleInfo mutation to rust side ([#3518](https://github.com/rolldown/rolldown/issues/3518)) ([8922436](https://github.com/rolldown/rolldown/commit/892243653c2eb6c9f8aabb38b4279a78051dee3b)), closes [#2781](https://github.com/rolldown/rolldown/issues/2781)
+- syntax error when use top level await with `strict_execution_order` option ([#3512](https://github.com/rolldown/rolldown/issues/3512)) ([558ea78](https://github.com/rolldown/rolldown/commit/558ea78f5fb0784b3806fd712a94fc1e2f249325))
+- **tla:** detecting TLA in top level block scope ([#3552](https://github.com/rolldown/rolldown/issues/3552)) ([747e54d](https://github.com/rolldown/rolldown/commit/747e54d54fc7aeaf6567666b879b8c12bac89849))
+- top level this substitution ([#3567](https://github.com/rolldown/rolldown/issues/3567)) ([89eac9e](https://github.com/rolldown/rolldown/commit/89eac9e18764816e422384b06df114bd3907c99b))
+
+### Features
+
+- `RollupLog` compat of `UNRESOLVED_IMPORT` warning ([#3711](https://github.com/rolldown/rolldown/issues/3711)) ([94f05d4](https://github.com/rolldown/rolldown/commit/94f05d470e8e1d578d55a158bfd02896a2dd2055))
+- add `react`, `react-jsx` and `preserve` jsx option preset ([#3770](https://github.com/rolldown/rolldown/issues/3770)) ([248c024](https://github.com/rolldown/rolldown/commit/248c0248660e3dd27098aae167d2d3b87a1ee87a))
+- add base transform options ([#3564](https://github.com/rolldown/rolldown/issues/3564)) ([5b26e29](https://github.com/rolldown/rolldown/commit/5b26e29e5eaa6a7dd9069808227d2fda8006483a))
+- add better error message for resolve.alias ([#3656](https://github.com/rolldown/rolldown/issues/3656)) ([816859f](https://github.com/rolldown/rolldown/commit/816859ffb70783c63d381eec82f9a8d62e33b8d6)), closes [#3615](https://github.com/rolldown/rolldown/issues/3615)
+- allow mutating `chunk.isEntry` ([#3446](https://github.com/rolldown/rolldown/issues/3446)) ([afa3746](https://github.com/rolldown/rolldown/commit/afa3746e41d5dd4b62dba900b18b0f3c654f38c8))
+- assetFileNames support hashCharacters ([#3495](https://github.com/rolldown/rolldown/issues/3495)) ([56e1615](https://github.com/rolldown/rolldown/commit/56e1615c22302f98db615b6f8d46cec980c683da))
+- auto merge options from tsconfig to transformOption ([#3566](https://github.com/rolldown/rolldown/issues/3566)) ([98969da](https://github.com/rolldown/rolldown/commit/98969daae460cc405f12b0d6b578138eb85523f8))
+- exclude self from glob import ([#3682](https://github.com/rolldown/rolldown/issues/3682)) ([d7c9682](https://github.com/rolldown/rolldown/commit/d7c9682183819c1199865444d3b38d047dcbc066))
+- export `LogOrStringHandler` type ([#3513](https://github.com/rolldown/rolldown/issues/3513)) ([3583675](https://github.com/rolldown/rolldown/commit/35836752635617ce396c547d0cb6feb19a33c2f7)), closes [#3505](https://github.com/rolldown/rolldown/issues/3505)
+- export `moduleRunnerTransform` from `rolldown/experimental` ([#3801](https://github.com/rolldown/rolldown/issues/3801)) ([72c6607](https://github.com/rolldown/rolldown/commit/72c6607dd2efa7e332cc5bf813967a0822184f20))
+- export hookFilter extension types ([#3562](https://github.com/rolldown/rolldown/issues/3562)) ([1e69bf0](https://github.com/rolldown/rolldown/commit/1e69bf0a19f62d06057a4f497c03b1b2650d8962))
+- export more types ([#3505](https://github.com/rolldown/rolldown/issues/3505)) ([1dc9359](https://github.com/rolldown/rolldown/commit/1dc935914ae03ea201d8d3d0ba68cc91cf080d67))
+- expose `transform` options ([#3780](https://github.com/rolldown/rolldown/issues/3780)) ([3302be0](https://github.com/rolldown/rolldown/commit/3302be0092f5c04da34e6c728005ee82d069cfe5))
+- expose more fine-grained minify option ([#3542](https://github.com/rolldown/rolldown/issues/3542)) ([d9529e7](https://github.com/rolldown/rolldown/commit/d9529e77119a4d5396fe1682f6276997ab8c0294))
+- expose sourcemapDebugIds to OutputOptions and CLI ([#3720](https://github.com/rolldown/rolldown/issues/3720)) ([380d428](https://github.com/rolldown/rolldown/commit/380d42885f92b2e9a4534983ef5d55342322738e)), closes [#2516](https://github.com/rolldown/rolldown/issues/2516)
+- generate source maps for css files ([#3285](https://github.com/rolldown/rolldown/issues/3285)) ([eb0a132](https://github.com/rolldown/rolldown/commit/eb0a132eae173625fa1674cbca102a97b4811b6d)), closes [#3242](https://github.com/rolldown/rolldown/issues/3242)
+- **glob_plugin:** ensure query starts with `?` ([#3699](https://github.com/rolldown/rolldown/issues/3699)) ([4c71eed](https://github.com/rolldown/rolldown/commit/4c71eed047d2ac1a26d8138ffbc5a8cc79afc70e))
+- **hmr:** add `experimental#development_mode` ([#3424](https://github.com/rolldown/rolldown/issues/3424)) ([71eabea](https://github.com/rolldown/rolldown/commit/71eabeac1306089a9c4c92b6b4897e9c19f6d08d))
+- **hmr:** add `generate_hmr_patch` method ([#3591](https://github.com/rolldown/rolldown/issues/3591)) ([89ca806](https://github.com/rolldown/rolldown/commit/89ca8060c59882def6349abf6ef022eda11e4775))
+- **hmr:** add `HmrFinalizer` ([#3773](https://github.com/rolldown/rolldown/issues/3773)) ([4666fd5](https://github.com/rolldown/rolldown/commit/4666fd5b036992ee73354a0a8ea674fce2bb206c))
+- **hmr:** add `HmrManager` ([#3662](https://github.com/rolldown/rolldown/issues/3662)) ([6e30664](https://github.com/rolldown/rolldown/commit/6e30664bf14453dcaf6f809e5a68bf3a70e7554c))
+- **hmr:** add binding for `generate_hmr_patch` ([#3661](https://github.com/rolldown/rolldown/issues/3661)) ([6dc69ce](https://github.com/rolldown/rolldown/commit/6dc69ce39d4b5ca649f86da8616db579b17b88ae))
+- **hmr:** add struct `HmrInfo` ([#3593](https://github.com/rolldown/rolldown/issues/3593)) ([4aa9f3f](https://github.com/rolldown/rolldown/commit/4aa9f3fc3eb5252ee059bcb27a5b20cc93014d03))
+- **hmr:** compute affected modules ([#3663](https://github.com/rolldown/rolldown/issues/3663)) ([c5c81e8](https://github.com/rolldown/rolldown/commit/c5c81e8d4339192c067a79d0633c8ba43b24470b))
+- **hmr:** detects defult export and shims `import.meta.hot` ([#3795](https://github.com/rolldown/rolldown/issues/3795)) ([4a3ffed](https://github.com/rolldown/rolldown/commit/4a3ffed6ba633bd71f9635936af7568b1819b6cf))
+- **hmr:** ensure HMR runtime included ([#3595](https://github.com/rolldown/rolldown/issues/3595)) ([1910872](https://github.com/rolldown/rolldown/commit/1910872a4cf7e3a44a02b1f9463e2fd3ee6efdaa))
+- **hmr:** fetch changed modules via `HmrModuleLoader` ([#3671](https://github.com/rolldown/rolldown/issues/3671)) ([8f3be45](https://github.com/rolldown/rolldown/commit/8f3be4530239ca3fb376329a6fcbca9a5518606a))
+- **hmr:** improve handling of `export default` ([#3814](https://github.com/rolldown/rolldown/issues/3814)) ([3e70979](https://github.com/rolldown/rolldown/commit/3e70979c55434135b3d7e74e6f15ce4bd2e3c80c))
+- **hmr:** introduce runtime for hmr ([#3426](https://github.com/rolldown/rolldown/issues/3426)) ([8ac5268](https://github.com/rolldown/rolldown/commit/8ac5268d65a6901b9f7b6d33ddbc3e015de6e39e))
+- **hmr:** node binding for `experimental#development_mode` ([#3425](https://github.com/rolldown/rolldown/issues/3425)) ([7b70903](https://github.com/rolldown/rolldown/commit/7b70903c4c4014c411b614781323274f51b091b5))
+- **hmr:** register module exports in runtime ([#3594](https://github.com/rolldown/rolldown/issues/3594)) ([3a58602](https://github.com/rolldown/rolldown/commit/3a58602ca9eb1d875f59fea0c71b4a689872f6ec))
+- **hmr:** scan `import.meta.hot.accept` ([#3592](https://github.com/rolldown/rolldown/issues/3592)) ([c55dcd3](https://github.com/rolldown/rolldown/commit/c55dcd351edbc1f83b270cae5e899360ae7ed479))
+- **mf:** add manifest option ([#3546](https://github.com/rolldown/rolldown/issues/3546)) ([2215304](https://github.com/rolldown/rolldown/commit/2215304aaf615669e05e2bef68d0a17c2a46c61b))
+- **mf:** add pre order to the resolve_id_meta ([#3652](https://github.com/rolldown/rolldown/issues/3652)) ([23ba9ab](https://github.com/rolldown/rolldown/commit/23ba9ab92055f3353f4fe0b551676ac21f55d23a))
+- **mf:** generate correct name ([#3493](https://github.com/rolldown/rolldown/issues/3493)) ([087273f](https://github.com/rolldown/rolldown/commit/087273f8213ed3da639b09a4ffc4170a71541d38))
+- **mf:** support cjs shared module ([#3565](https://github.com/rolldown/rolldown/issues/3565)) ([66aa97d](https://github.com/rolldown/rolldown/commit/66aa97d9c66a3a8f1e808397e2d30d982580b284))
+- **mf:** support generate remote manifest json ([#3550](https://github.com/rolldown/rolldown/issues/3550)) ([7acd618](https://github.com/rolldown/rolldown/commit/7acd618ea657d4c5dd531d8ff552013be7942f94))
+- **mf:** support getPublicPath option ([#3571](https://github.com/rolldown/rolldown/issues/3571)) ([7d11485](https://github.com/rolldown/rolldown/commit/7d114853375b09a6a1f8cef8b4f3cf4aebef5793))
+- **mf:** support remote expose module is cjs ([#3563](https://github.com/rolldown/rolldown/issues/3563)) ([cf442e9](https://github.com/rolldown/rolldown/commit/cf442e9ca23c3226150aa15cac6b51b73e25934f))
+- **mf:** support shared modules ([#3494](https://github.com/rolldown/rolldown/issues/3494)) ([306867e](https://github.com/rolldown/rolldown/commit/306867ef8188cb9a4a976bf0c0e2dadfe9675371))
+- **mf:** support webpack dst remote ([#3580](https://github.com/rolldown/rolldown/issues/3580)) ([fc7dd8c](https://github.com/rolldown/rolldown/commit/fc7dd8c08276139982957582a191269175140c73))
+- **mf:** using package json version if shared module version is None ([#3514](https://github.com/rolldown/rolldown/issues/3514)) ([8e1bdab](https://github.com/rolldown/rolldown/commit/8e1bdabb98487c365038482292b5a7bd1da2c726))
+- **node/dev-server:** serve output files ([#3421](https://github.com/rolldown/rolldown/issues/3421)) ([c075d4a](https://github.com/rolldown/rolldown/commit/c075d4ac8e942bdc3b9ce306a44700e91e9d36bf))
+- **node/test-dev-server:** apply hmr patch after files change ([#3793](https://github.com/rolldown/rolldown/issues/3793)) ([1a86e2c](https://github.com/rolldown/rolldown/commit/1a86e2c50c26b1952829a21b40dd83057a3c3469))
+- **node:** allow `sourceRoot: null` in sourcemaps ([#3694](https://github.com/rolldown/rolldown/issues/3694)) ([83a587b](https://github.com/rolldown/rolldown/commit/83a587bd9184446af7365d08bfecd406b8bfe537))
+- **node:** init `test-dev-server` package ([#3419](https://github.com/rolldown/rolldown/issues/3419)) ([3cbc6f8](https://github.com/rolldown/rolldown/commit/3cbc6f8b4c8302833546df144f5f5cd7b226403e))
+- **node:** make `parseAst` compatible with rollup ([#3649](https://github.com/rolldown/rolldown/issues/3649)) ([d6a3336](https://github.com/rolldown/rolldown/commit/d6a33365d1e17a040dc19aefe5a53ca4d43bb7e1)), closes [#3630](https://github.com/rolldown/rolldown/issues/3630) [#3630](https://github.com/rolldown/rolldown/issues/3630)
+- **node:** remove `implements` from PluginContext types ([#3804](https://github.com/rolldown/rolldown/issues/3804)) ([c110a2a](https://github.com/rolldown/rolldown/commit/c110a2ab364b35fc89764981a098e01c1f04e175)), closes [#3802](https://github.com/rolldown/rolldown/issues/3802)
+- **node:** split interface for PluginContext types ([#3802](https://github.com/rolldown/rolldown/issues/3802)) ([e71f948](https://github.com/rolldown/rolldown/commit/e71f948e439df6351946d9e4f25402f321a7dda1))
+- omit keys/values in glob import if they're unused ([#3657](https://github.com/rolldown/rolldown/issues/3657)) ([a606288](https://github.com/rolldown/rolldown/commit/a6062886a0115b5a67fc4aaf799ee2e20f75e66f))
+- remove unused dynamic imported chunks ([#3588](https://github.com/rolldown/rolldown/issues/3588)) ([a2fc0fc](https://github.com/rolldown/rolldown/commit/a2fc0fc94a07910f7ae409de16eb52cbc3eb00e3))
+- **rolldown:** support multiple hash placeholder ([#3555](https://github.com/rolldown/rolldown/issues/3555)) ([eec8017](https://github.com/rolldown/rolldown/commit/eec80170b49b13a326d9e5382166b43fe0a79d88)), closes [#2246](https://github.com/rolldown/rolldown/issues/2246) [#3323](https://github.com/rolldown/rolldown/issues/3323)
+- **rust/ecma_utils:** helpers for creating AST more easily ([#3778](https://github.com/rolldown/rolldown/issues/3778)) ([b21ce2f](https://github.com/rolldown/rolldown/commit/b21ce2f73afa422e3fc2a356a729737c357fe58a))
+- **rust/hmr:** create `HmrManager` after bundling when enabling hmr ([#3787](https://github.com/rolldown/rolldown/issues/3787)) ([09f27bf](https://github.com/rolldown/rolldown/commit/09f27bf543650f6fab679d8140f6e590b104504b))
+- **rust/hmr:** improve runtime and generate runnable patch ([#3792](https://github.com/rolldown/rolldown/issues/3792)) ([4511b29](https://github.com/rolldown/rolldown/commit/4511b29215d6ac4ef3739b6cb8ed2517e5cd2109))
+- **rust/hmr:** rewrite import declaration ([#3779](https://github.com/rolldown/rolldown/issues/3779)) ([f0c743f](https://github.com/rolldown/rolldown/commit/f0c743ffa78d02089d8e10e9ba6d99706d959fb7))
+- **rust:** add normalModule to module_parsed hook ([#3560](https://github.com/rolldown/rolldown/issues/3560)) ([964a30d](https://github.com/rolldown/rolldown/commit/964a30d0bf9e1897a0813aa59fe09199f937658e))
+- support `import.meta.ROLLUP_FILE_URL_(referenceId)` ([#3488](https://github.com/rolldown/rolldown/issues/3488)) ([18af1ba](https://github.com/rolldown/rolldown/commit/18af1ba0435cf0c4447bdf9e1357d69065b84714))
+- support `require` with a `TemplateLiteral` argument ([#3450](https://github.com/rolldown/rolldown/issues/3450)) ([d8624bb](https://github.com/rolldown/rolldown/commit/d8624bbabfe1353e85ee8984544da1b2f94a4c33)), closes [#3447](https://github.com/rolldown/rolldown/issues/3447)
+- support negated glob import patterns ([#3624](https://github.com/rolldown/rolldown/issues/3624)) ([9df23df](https://github.com/rolldown/rolldown/commit/9df23df3bc849004cb634b1b8977b046e5c9d734))
+- support RenderedModule.renderedExports ([#3633](https://github.com/rolldown/rolldown/issues/3633)) ([ba68200](https://github.com/rolldown/rolldown/commit/ba682007f94534124ff38d69e6dae910ccb7965a))
+- support sanitizeFileName ([#3418](https://github.com/rolldown/rolldown/issues/3418)) ([1abfb8b](https://github.com/rolldown/rolldown/commit/1abfb8bb9a9533e16499510f50eaacf2a323fbe2))
+- **tla:** await `init` func generated by `__toESM` ([#3537](https://github.com/rolldown/rolldown/issues/3537)) ([fcdbd44](https://github.com/rolldown/rolldown/commit/fcdbd440b7844a681046d649ef82bbc52866de5f))
+- **tla:** remove redundant `await` before `__toESM` ([#3538](https://github.com/rolldown/rolldown/issues/3538)) ([deaa40c](https://github.com/rolldown/rolldown/commit/deaa40cfc01d6e89331b8e9c6a8d02c28b54601e))
+- **tla:** support TLA while enabling strict execution order ([#3528](https://github.com/rolldown/rolldown/issues/3528)) ([9c3c2e6](https://github.com/rolldown/rolldown/commit/9c3c2e6512ff699d1998ca19e32c39b84e8d717f))
+- treeshake.manualPureFunctions ([#3789](https://github.com/rolldown/rolldown/issues/3789)) ([7b0c517](https://github.com/rolldown/rolldown/commit/7b0c517d0e84e5954019698452b3d537c9a1e9f9))
+- treeshake.unknownGlobalSideEffects ([#3790](https://github.com/rolldown/rolldown/issues/3790)) ([9b28db1](https://github.com/rolldown/rolldown/commit/9b28db1e797fb7f7e1b17761a13f0637a6604b6a))
+- validate option ([#3748](https://github.com/rolldown/rolldown/issues/3748)) ([b626079](https://github.com/rolldown/rolldown/commit/b62607931924ffbb21f33be68d7e630f3ade4dcd))
+- validate transform options ([#3781](https://github.com/rolldown/rolldown/issues/3781)) ([c6d591b](https://github.com/rolldown/rolldown/commit/c6d591be0e9f64333049297a549a2bade85972bd))
+- warn when a file is emitted with the same name ([#3503](https://github.com/rolldown/rolldown/issues/3503)) ([4bb775f](https://github.com/rolldown/rolldown/commit/4bb775f37ca8819509b8aa2e9ce5ad0302dabce9))
+- **watcher:** add buildDelay option ([#3608](https://github.com/rolldown/rolldown/issues/3608)) ([2cb8efb](https://github.com/rolldown/rolldown/commit/2cb8efb9cacaf97e6a654e91296235f2ee868dae))
+- **watcher:** debounce invalidate ([#3607](https://github.com/rolldown/rolldown/issues/3607)) ([b17487d](https://github.com/rolldown/rolldown/commit/b17487de653e95fb5d236055c218c4b0a2c5281d))
+- wildcard alias ([#3617](https://github.com/rolldown/rolldown/issues/3617)) ([4b46c6e](https://github.com/rolldown/rolldown/commit/4b46c6ee22a6df82834ef20491331739ce80a6b7))
+
+### Performance Improvements
+
+- **advanced_chunks:** remove unnecessary sorting ([#3655](https://github.com/rolldown/rolldown/issues/3655)) ([b814905](https://github.com/rolldown/rolldown/commit/b814905caa84034b7bfde5bdc0506dea49847e68))
+- avoid unnecessary alloc in to_base64 ([#3462](https://github.com/rolldown/rolldown/issues/3462)) ([92d10c3](https://github.com/rolldown/rolldown/commit/92d10c3224461ed16bc3c6b0b04c05943b6b50fe))
+- **binding:** modules property in RenderedChunk ([#3533](https://github.com/rolldown/rolldown/issues/3533)) ([06b6bbf](https://github.com/rolldown/rolldown/commit/06b6bbf183998e1ed962a29075ae0da105997504))
+- **plugin_dynamic_import_vars:** remove Regex ([#3702](https://github.com/rolldown/rolldown/issues/3702)) ([3337767](https://github.com/rolldown/rolldown/commit/33377678483b33399f7fd4e5bddfb183a4a37843))
+- reduce clone of transform_options ([#3782](https://github.com/rolldown/rolldown/issues/3782)) ([73fa972](https://github.com/rolldown/rolldown/commit/73fa972d814336b73a525ba421f39c0066c1e056))
+- reduce memory alloc for StmtInfo ([#3590](https://github.com/rolldown/rolldown/issues/3590)) ([b0898a8](https://github.com/rolldown/rolldown/commit/b0898a8695d8ec4d0ea29577a7b204d84694f3fb))
+- remove unnecessary to_string ([#3715](https://github.com/rolldown/rolldown/issues/3715)) ([0ba0ac4](https://github.com/rolldown/rolldown/commit/0ba0ac4c2412c689278bb22ea24f2d999ad0be0b))
+- replace data url parse with nom ([#3677](https://github.com/rolldown/rolldown/issues/3677)) ([ca90fa2](https://github.com/rolldown/rolldown/commit/ca90fa2eea5ffc062cef2f16f4b2bc8f02ac3a80))
+- **rolldown_plugin_replace:** replace static Regex with pure function ([#3690](https://github.com/rolldown/rolldown/issues/3690)) ([e1deaff](https://github.com/rolldown/rolldown/commit/e1deaff13a5604a264db0ef275923606ebc75f18))
+- **rolldown_utils:** remove replace placeholder Regex ([#3691](https://github.com/rolldown/rolldown/issues/3691)) ([582886c](https://github.com/rolldown/rolldown/commit/582886c9dfb8ae356e8a84c45f06124ea90fec7d))
+- **rust:** avoid emitted_filenames to hash twice ([#3504](https://github.com/rolldown/rolldown/issues/3504)) ([9404df1](https://github.com/rolldown/rolldown/commit/9404df14656a2e16f7d427bf865877f7fa7b0d78))
+- **rust:** avoid unnecessary `into_owned` on `Cow<str>` ([#3470](https://github.com/rolldown/rolldown/issues/3470)) ([cdeedac](https://github.com/rolldown/rolldown/commit/cdeedacc6fc7ac10ecb41246072c5262b59d4efd))
+- **rust:** avoid unnecessary source clone ([#3815](https://github.com/rolldown/rolldown/issues/3815)) ([a22cfd2](https://github.com/rolldown/rolldown/commit/a22cfd20269b6d1606fc715522bbbebbcdc7a684))
+- **rust:** improve `get_lived_entry` ([#3665](https://github.com/rolldown/rolldown/issues/3665)) ([6e16c3c](https://github.com/rolldown/rolldown/commit/6e16c3c605978dbe4d8e6878799b78de204f0b4d))
+- should not invalidate ModuleOptions if mutate `ModuleInfo` has same id with hook param ([#3519](https://github.com/rolldown/rolldown/issues/3519)) ([370af62](https://github.com/rolldown/rolldown/commit/370af620d44f342c6f2b35408f3486736d02a584))
+
+# [1.0.0-beta.3](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2025-01-23)
+
+### Bug Fixes
+
+- dynamic tree shaking more await syntax ([#3399](https://github.com/rolldown/rolldown/issues/3399)) ([f11bf03](https://github.com/rolldown/rolldown/commit/f11bf037fc427abe939431d960fb32d8ce5fad29)), closes [#3396](https://github.com/rolldown/rolldown/issues/3396)
+- force cjs wrapper to be included in the output ([#3400](https://github.com/rolldown/rolldown/issues/3400)) ([8a5eba0](https://github.com/rolldown/rolldown/commit/8a5eba040b5be2b446b50f9f28d054607e95954b))
+- should not set default value for treeshake in cli normalization ([#3398](https://github.com/rolldown/rolldown/issues/3398)) ([72ddc66](https://github.com/rolldown/rolldown/commit/72ddc66261fc660acbeeb658e8290850909147fd)), closes [#3392](https://github.com/rolldown/rolldown/issues/3392)
+- shouldn't generate unused `__toESM` calls ([#3401](https://github.com/rolldown/rolldown/issues/3401)) ([5deb279](https://github.com/rolldown/rolldown/commit/5deb2793fc9176d31796f224645dccd3890fa1dc))
+- sort function panic due to user-provided comparison function does not correctly implement a total order ([#3384](https://github.com/rolldown/rolldown/issues/3384)) ([4986046](https://github.com/rolldown/rolldown/commit/4986046f594c5fb6663ca7b5bf31663d4e35903e))
+
+### Features
+
+- **mf:** support runtime plugin ([#3377](https://github.com/rolldown/rolldown/issues/3377)) ([83cd091](https://github.com/rolldown/rolldown/commit/83cd091b5ab95b4d949564330e8b59fc3260c89c))
+- PluginContext.getFileName using emitted chunk reference id ([#3409](https://github.com/rolldown/rolldown/issues/3409)) ([9db3240](https://github.com/rolldown/rolldown/commit/9db3240ead7d63651b38ac3ec7495e83c07e1c8f))
+- support function for assetFilenames ([#3397](https://github.com/rolldown/rolldown/issues/3397)) ([242f007](https://github.com/rolldown/rolldown/commit/242f007a5582a620fe54cba0c3ab200649f325ce))
+
+# [1.0.0-beta.2](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2025-01-20)
+
+### Bug Fixes
+
+- bailout module.exports for eliminate interop default property access ([#3369](https://github.com/rolldown/rolldown/issues/3369)) ([4f55359](https://github.com/rolldown/rolldown/commit/4f553596cbf103169546e8c8c1f15368ed262640)), closes [#3364](https://github.com/rolldown/rolldown/issues/3364)
+- **cjs:** named exports if module wrapped ([#3235](https://github.com/rolldown/rolldown/issues/3235)) ([ee80c98](https://github.com/rolldown/rolldown/commit/ee80c98085d36c2949d9ee4734ac900e0b96e68a))
+- **cli:** allow load ts config file that are not in the working directory ([#3238](https://github.com/rolldown/rolldown/issues/3238)) ([fd29aff](https://github.com/rolldown/rolldown/commit/fd29affd53f3c641c5ed1e38a709cfbe2bba3e46)), closes [#3237](https://github.com/rolldown/rolldown/issues/3237)
+- **cli:** call options hook once with multiply output ([#3348](https://github.com/rolldown/rolldown/issues/3348)) ([ae34f38](https://github.com/rolldown/rolldown/commit/ae34f383870acad76e829fc1ab6700b7723ef59b))
+- **cli:** remove config default value ([#3307](https://github.com/rolldown/rolldown/issues/3307)) ([bcb0b35](https://github.com/rolldown/rolldown/commit/bcb0b35fda735a1266378e00854d87b54fbe7e9d))
+- dynamic require by unused function ([#3271](https://github.com/rolldown/rolldown/issues/3271)) ([d07e45c](https://github.com/rolldown/rolldown/commit/d07e45cce088f0f5acee935c496f01797e89094f)), closes [#3268](https://github.com/rolldown/rolldown/issues/3268) [/github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/linker/linker.go#L3220-L3245](https://github.com//github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/linker/linker.go/issues/L3220-L3245)
+- extract `RestElement` in `ObjectPattern` ([#3374](https://github.com/rolldown/rolldown/issues/3374)) ([a65dcfe](https://github.com/rolldown/rolldown/commit/a65dcfedf5d6f2c52fbd173131ed5284567eb82f))
+- **live-bindings:** remove unnecessary bindings for the default export decl ([#3276](https://github.com/rolldown/rolldown/issues/3276)) ([2cb364b](https://github.com/rolldown/rolldown/commit/2cb364b30c36284a2887803eb648ca427d0acf9d))
+- make outdir behavior compatible with rollup if file is used ([#3304](https://github.com/rolldown/rolldown/issues/3304)) ([a1fb0ff](https://github.com/rolldown/rolldown/commit/a1fb0ffbcac5259a3b78a4d8dfa46b9a5862827c))
+- **plugin/json:** tree shake json named exports ([#3346](https://github.com/rolldown/rolldown/issues/3346)) ([b8f0e19](https://github.com/rolldown/rolldown/commit/b8f0e19b2e6b0024e61ae07496a0f988bc195925))
+- run just setup limited node version ([#3305](https://github.com/rolldown/rolldown/issues/3305)) ([14867ce](https://github.com/rolldown/rolldown/commit/14867ce9fdde0ec50692c4c2d77f0072ebce1018))
+- **splitting:** ensure correct \_\_export symbol reference ([#3289](https://github.com/rolldown/rolldown/issues/3289)) ([31cc7b8](https://github.com/rolldown/rolldown/commit/31cc7b82e265ae53797ffabf7dda4c02a1c12b8b))
+- **umd:** should render `exports` correctly ([#3270](https://github.com/rolldown/rolldown/issues/3270)) ([6da18a6](https://github.com/rolldown/rolldown/commit/6da18a67dc6f6713ba519812eeb949496893f5a2)), closes [#3269](https://github.com/rolldown/rolldown/issues/3269)
+- **watcher:** respect file option for BundleEndEventData#output ([#3308](https://github.com/rolldown/rolldown/issues/3308)) ([09a6157](https://github.com/rolldown/rolldown/commit/09a6157e8a0aa5652c294fc940931d6202d4c765))
+
+### Features
+
+- add rolldown_plugin_module_federation crate ([#3328](https://github.com/rolldown/rolldown/issues/3328)) ([d046b47](https://github.com/rolldown/rolldown/commit/d046b47ef9af6900bb5a0b88cdb2013db4147c8d))
+- **advanced_chunks:** support `max_size` option ([#3383](https://github.com/rolldown/rolldown/issues/3383)) ([71c7e93](https://github.com/rolldown/rolldown/commit/71c7e93ae98dde8eb1bf3b0b8639abd49e7b28b3))
+- **advanced-chunks:** support `minModuleSize` and `maxModuleSize` options ([#3361](https://github.com/rolldown/rolldown/issues/3361)) ([1c2ef25](https://github.com/rolldown/rolldown/commit/1c2ef25de32a0d49b2bbfa4b3a0050a7d3c578a2))
+- basic cache ([#3339](https://github.com/rolldown/rolldown/issues/3339)) ([9e86366](https://github.com/rolldown/rolldown/commit/9e86366dffc3cc740541cd0c1d53bafe3441cc9d))
+- **cli:** resolve `rolldown.config` by default when `-c` is unspecified ([#3250](https://github.com/rolldown/rolldown/issues/3250)) ([f90856a](https://github.com/rolldown/rolldown/commit/f90856ad7b4a028369dcd2627c860343910d1333)), closes [#3248](https://github.com/rolldown/rolldown/issues/3248)
+- eliminate unnecessary default property access ([#3312](https://github.com/rolldown/rolldown/issues/3312)) ([cf4c254](https://github.com/rolldown/rolldown/commit/cf4c254ef613ca8dca381ca1831d9f9c122e3d13)), closes [1#L191-L201](https://github.com/1/issues/L191-L201)
+- esm_flag analyzer ([#3257](https://github.com/rolldown/rolldown/issues/3257)) ([3484a68](https://github.com/rolldown/rolldown/commit/3484a686c6aaa883682ab83e77fbe5ddc4005597))
+- export `RolldownPluginOption` type ([#3360](https://github.com/rolldown/rolldown/issues/3360)) ([f24e496](https://github.com/rolldown/rolldown/commit/f24e4969c4849c4b8d3e3fb2d29ee0977f5ca7ce))
+- export parseAst and parseAstAsync from 'rolldown/parseAst' ([#3208](https://github.com/rolldown/rolldown/issues/3208)) ([b2a06cb](https://github.com/rolldown/rolldown/commit/b2a06cbf810a3e411bb6aa51c471f24b7c22844d))
+- give error when using both the file and the dir option ([#3282](https://github.com/rolldown/rolldown/issues/3282)) ([82b4e30](https://github.com/rolldown/rolldown/commit/82b4e3062abaa7e4acf3ee1eea0553c7fd8ef13a))
+- merge generated `__toESM` calls of cjs modules ([#3343](https://github.com/rolldown/rolldown/issues/3343)) ([400b5e4](https://github.com/rolldown/rolldown/commit/400b5e4a3c7955feab5833bb287c36fb82c7ebbf))
+- **mf:** add init host code for entry ([#3365](https://github.com/rolldown/rolldown/issues/3365)) ([fc9d5a5](https://github.com/rolldown/rolldown/commit/fc9d5a5833ea5381af6d1da26de2d967c32bcd11))
+- **mf:** add option ([#3329](https://github.com/rolldown/rolldown/issues/3329)) ([72766d5](https://github.com/rolldown/rolldown/commit/72766d543b6836a93b3fd63d7dcd71e59499ecc6))
+- **mf:** generate remote entry ([#3330](https://github.com/rolldown/rolldown/issues/3330)) ([5cf14c3](https://github.com/rolldown/rolldown/commit/5cf14c352a23865a9d4d3709687935a903997900))
+- **mf:** load remote entry module ([#3366](https://github.com/rolldown/rolldown/issues/3366)) ([5bb588b](https://github.com/rolldown/rolldown/commit/5bb588b1002a7c54ceae10a63bfd8f8935c4c68d))
+- **node:** expose `maxSize` and `maxModuleSize` options ([#3386](https://github.com/rolldown/rolldown/issues/3386)) ([0be6271](https://github.com/rolldown/rolldown/commit/0be627144b29f4c8b90bb1701ac4a381f9081421))
+- **node:** expose moduleFederationPlugin ([#3352](https://github.com/rolldown/rolldown/issues/3352)) ([abc2c0a](https://github.com/rolldown/rolldown/commit/abc2c0a619d61f84b188ad0f7f87871176a88b79))
+- **node:** support `output.target` ([#3254](https://github.com/rolldown/rolldown/issues/3254)) ([b123256](https://github.com/rolldown/rolldown/commit/b1232566d6db04d06b55cedfee27ba0cca63e568)), closes [#3252](https://github.com/rolldown/rolldown/issues/3252)
+- **string_wizard:** add `.hasChanged()` ([#3379](https://github.com/rolldown/rolldown/issues/3379)) ([0d33eef](https://github.com/rolldown/rolldown/commit/0d33eef53148a166b287b99770cdd08fc73ee49f)), closes [/github.com/nuxt/nuxt/pull/30066#issuecomment-2532929079](https://github.com//github.com/nuxt/nuxt/pull/30066/issues/issuecomment-2532929079)
+- support emit chunk at buildStart hook ([#3357](https://github.com/rolldown/rolldown/issues/3357)) ([8c96981](https://github.com/rolldown/rolldown/commit/8c96981fb5e4a8a828cad02edf598dae1e60f306)), closes [/github.com/rolldown/rolldown/pull/3330/files#r1915910715](https://github.com//github.com/rolldown/rolldown/pull/3330/files/issues/r1915910715)
+- support PluginContext emitChunk ([#3327](https://github.com/rolldown/rolldown/issues/3327)) ([dc3fc06](https://github.com/rolldown/rolldown/commit/dc3fc06bccdda2d342c2da25c2e6bfee93b8d9cb)), closes [/github.com/rollup/rollup/blob/master/src/Chunk.ts#L420](https://github.com//github.com/rollup/rollup/blob/master/src/Chunk.ts/issues/L420)
+
+### Performance Improvements
+
+- `into_binding_chunk_modules` when chunk is large ([#3267](https://github.com/rolldown/rolldown/issues/3267)) ([c7582a6](https://github.com/rolldown/rolldown/commit/c7582a6a8848c0281897fb672a05d0ad67e82939))
+- cache raw_source and module_type ([#3341](https://github.com/rolldown/rolldown/issues/3341)) ([6d849ea](https://github.com/rolldown/rolldown/commit/6d849eaa8f567e187769fddd3d79057f87a530ca))
+- improve hook filter related logic in `rolldown_binding` ([#3266](https://github.com/rolldown/rolldown/issues/3266)) ([65e3d8a](https://github.com/rolldown/rolldown/commit/65e3d8ad8d736fc23feb6edf0a911f9505dee529)), closes [#3265](https://github.com/rolldown/rolldown/issues/3265)
+- **link_stage:** improve `LinkStage#sort_modules` ([#3318](https://github.com/rolldown/rolldown/issues/3318)) ([8bb8e93](https://github.com/rolldown/rolldown/commit/8bb8e93c9dddd911d3781ebba2571b996537799a))
+- **link_stage:** improve `LinkStage#wrap_modules` ([#3321](https://github.com/rolldown/rolldown/issues/3321)) ([35fb1f8](https://github.com/rolldown/rolldown/commit/35fb1f881c48fcabe7137ba20e90d02d58cd3c5e)), closes [/github.com/rolldown/rolldown/blob/42ee4c997588b2ee205eceae36b48a18c95aed96/crates/rolldown/src/stages/link_stage/wrapping.rs#L89-L101](https://github.com//github.com/rolldown/rolldown/blob/42ee4c997588b2ee205eceae36b48a18c95aed96/crates/rolldown/src/stages/link_stage/wrapping.rs/issues/L89-L101)
+- parallel `to_module_info` ([#3293](https://github.com/rolldown/rolldown/issues/3293)) ([5571513](https://github.com/rolldown/rolldown/commit/5571513ecf6c6e642e9e7b588acf1b299f38d43c))

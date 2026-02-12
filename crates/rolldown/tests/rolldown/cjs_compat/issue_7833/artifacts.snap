@@ -17,7 +17,7 @@ module.exports = config_default;
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 const require_config = require('./config.js');
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);

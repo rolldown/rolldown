@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region types.mjs
-var types_exports = {};
+var types_exports = /* @__PURE__ */ __exportAll({});
 var init_types = __esmMin((() => {}));
 
 //#endregion

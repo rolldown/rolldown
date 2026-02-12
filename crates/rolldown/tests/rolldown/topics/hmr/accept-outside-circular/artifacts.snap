@@ -8,8 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
-// HIDDEN [rolldown:hmr]
+// HIDDEN [\0rolldown/runtime.js]
 //#region c.js
 var c_exports = /* @__PURE__ */ __exportAll({ c: () => c });
 const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
@@ -32,7 +31,7 @@ const a = { b };
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 assert.strictEqual(a.b.c, "c");
@@ -59,8 +58,7 @@ main_hot.accept((newMod) => {
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
-// HIDDEN [rolldown:hmr]
+// HIDDEN [\0rolldown/runtime.js]
 //#region c.js
 var c_exports = /* @__PURE__ */ __exportAll({ c: () => c });
 const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
@@ -83,7 +81,7 @@ const a = { b };
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 assert.strictEqual(a.b.c, "c");

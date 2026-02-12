@@ -27,12 +27,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 #### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
-// HIDDEN [rolldown:hmr]
+// HIDDEN [\0rolldown/runtime.js]
 //#region main.js
-var main_exports = {};
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+__rolldown_runtime__.registerModule("main.js", {});
 console.log("main.js");
 
 //#endregion

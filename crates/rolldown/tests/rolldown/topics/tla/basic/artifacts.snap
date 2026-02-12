@@ -20,7 +20,7 @@ export { foo };
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var foo;
 var init_lib = __esmMin((async () => {

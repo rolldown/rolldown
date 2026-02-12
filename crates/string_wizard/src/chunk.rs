@@ -37,15 +37,15 @@ impl Chunk<'_> {
 }
 
 impl<'str> Chunk<'str> {
-  pub fn start(&self) -> usize {
+  pub fn start(&self) -> u32 {
     self.span.start()
   }
 
-  pub fn end(&self) -> usize {
+  pub fn end(&self) -> u32 {
     self.span.end()
   }
 
-  pub fn contains(&self, text_index: usize) -> bool {
+  pub fn contains(&self, text_index: u32) -> bool {
     self.start() < text_index && text_index < self.end()
   }
 
@@ -65,7 +65,7 @@ impl<'str> Chunk<'str> {
     self.intro.push_front(content)
   }
 
-  pub fn split<'a>(&'a mut self, text_index: usize) -> Result<Chunk<'str>, String> {
+  pub fn split<'a>(&'a mut self, text_index: u32) -> Result<Chunk<'str>, String> {
     if let Some(ref content) = self.edited_content
       && !content.is_empty()
     {

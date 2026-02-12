@@ -13,6 +13,10 @@ export default defineTest({
       {
         name: 'track-transforms',
         transform(_, id) {
+          // Skip virtual modules (like \0rolldown/runtime.js)
+          if (id.startsWith('\0')) {
+            return;
+          }
           transformedIds.push(id);
           return {
             moduleSideEffects: false
@@ -25,12 +29,15 @@ export default defineTest({
     const relativeIds = transformedIds.map((id) =>
       path.relative(import.meta.dirname, id).replace(/\\/g, '/'),
     )
-    // Self re-export: index.js exports `a as b` from itself
-    // main.js imports `b` -> index.js `a as b` -> index.js `a` -> a.js
-    // b.js should NOT be loaded since a.js's `export { b }` is not used
+    // main.js imports `b` from barrel.
+    // index.js has `export { a as b } from './index'` (self-reference).
+    // This resolves to index.js's `export { a } from './a'`, which loads a.js.
+    // Since `a` is a.js's own export (not a re-export), a.js must be executed,
+    // causing all its import records to be loaded, including `export { b } from './b'`.
     expect(relativeIds).toContain('main.js')
     expect(relativeIds).toContain('barrel/index.js')
     expect(relativeIds).toContain('barrel/a.js')
-    expect(transformedIds.length).toBe(3)
+    expect(relativeIds).toContain('barrel/b.js')
+    expect(transformedIds.length).toBe(4)
   },
 })

@@ -29,10 +29,12 @@ OPTIONS
   --checks.common-js-variable-in-esm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configuration-field-conflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.could-not-clean-directory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.duplicate-shebang  Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.empty-import-meta  Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
   --checks.filename-conflict  Whether to emit warnings when files generated have the same name with different contents.
   --checks.import-is-undefined Whether to emit warnings when an imported variable is not exported.
+  --checks.ineffective-dynamic-import Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.missing-global-name Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missing-name-option-for-iife-export Whether to emit warnings when the \`output.name\` option is missing when needed.
   --checks.mixed-exports      Whether to emit warnings when the way to export values is ambiguous.
@@ -41,9 +43,11 @@ OPTIONS
   --checks.tolerated-transform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolved-entry   Whether to emit warnings when an entrypoint cannot be resolved.
   --checks.unresolved-import  Whether to emit warnings when an import cannot be resolved.
+  --checks.unsupported-tsconfig-option Whether to emit warnings when a tsconfig option or combination of options is not supported.
   --chunk-file-names <name>   Name pattern for emitted secondary chunks.
   --clean-dir                 Clean output directory before emitting output.
   --code-splitting <code-splitting>Code splitting options (true, false, or object).
+  --comments <comments>       Control comments in the output.
   --context <context>         The entity top-level \`this\` represents.
   --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.
   --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.
@@ -64,7 +68,7 @@ OPTIONS
   --input <input>             Entry file.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
   --keep-names                Keep function and class names after bundling.
-  --legal-comments <legal-comments>Control comments in the output.
+  --legal-comments <legal-comments>Control legal comments in the output.
   --log-level <log-level>     Log level (silent, info, debug, warn).
   --make-absolute-externals-relative Prevent normalization of external imports.
   --minify-internal-exports   Minify internal exports.
@@ -85,19 +89,22 @@ OPTIONS
   --shim-missing-exports      Create shim variables for missing exports.
   --sourcemap-base-url <sourcemap-base-url>Base URL used to prefix sourcemap paths.
   --sourcemap-debug-ids       Inject sourcemap debug IDs.
+  --strict-execution-order    Lets modules be executed in the order they are declared.
   --top-level-var             Rewrite top-level declarations to use \`var\`.
   --transform.assumptions.ignore-function-length .
   --transform.assumptions.no-document-all .
   --transform.assumptions.object-rest-no-symbols .
   --transform.assumptions.pure-getters .
   --transform.assumptions.set-public-class-fields .
-  --transform.decorators.emit-decorator-metadata .
-  --transform.decorators.legacy .
+  --transform.decorator.emit-decorator-metadata .
+  --transform.decorator.legacy .
   --transform.define <transform.define>Define global variables (syntax: key=value,key2=value2).
   --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
   --transform.jsx <transform.jsx>.
+  --transform.plugins.styled-components <transform.plugins.styled-components>.
+  --transform.plugins.tagged-template-escape .
   --transform.target <transform.target>The JavaScript target environment.
   --transform.typescript.allow-declare-fields .
   --transform.typescript.allow-namespaces .
@@ -106,6 +113,7 @@ OPTIONS
   --transform.typescript.jsx-pragma <transform.typescript.jsx-pragma>.
   --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
   --transform.typescript.only-remove-type-imports .
+  --transform.typescript.remove-class-fields-without-initializer .
   --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
   --tsconfig <tsconfig>       Path to the tsconfig.json file.
   --virtual-dirname <virtual-dirname>.
@@ -178,6 +186,7 @@ exports[`cli options for bundling > should handle multiple define arguments with
 exports[`cli options for bundling > should handle negative boolean options 1`] = `
 "(function(exports, node_fs) {
 
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region index.ts
 	const nonExternal = "nonExternal";

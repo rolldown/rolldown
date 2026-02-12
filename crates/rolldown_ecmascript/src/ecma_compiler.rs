@@ -34,7 +34,7 @@ impl EcmaCompiler {
             ret.errors,
             &source.clone(),
             id,
-            &Severity::Error,
+            Severity::Error,
             EventKind::ParseError,
           ))
         } else {
@@ -73,7 +73,7 @@ impl EcmaCompiler {
             errors,
             &source.clone(),
             id,
-            &Severity::Error,
+            Severity::Error,
             EventKind::ParseError,
           )),
         }
@@ -82,17 +82,14 @@ impl EcmaCompiler {
   }
 
   pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn {
-    let legal =
-      if options.print_legal_comments { LegalComment::Inline } else { LegalComment::None };
+    let legal = if options.comments.legal { LegalComment::Inline } else { LegalComment::None };
     Codegen::new()
       .with_options(CodegenOptions {
         comments: CommentOptions {
           normal: false,
           legal,
-          // These option will be configurable when we begin to support `ignore-annotations`
-          // https://esbuild.github.io/api/#ignore-annotations
-          jsdoc: true,
-          annotation: true,
+          jsdoc: options.comments.jsdoc,
+          annotation: options.comments.annotation,
         },
         initial_indent: options.initial_indent,
         source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
@@ -140,8 +137,15 @@ fn basic_test() {
 #[derive(Debug, Default)]
 
 pub struct PrintOptions {
-  pub print_legal_comments: bool,
+  pub comments: PrintCommentsOptions,
   pub filename: String,
   pub sourcemap: bool,
   pub initial_indent: u32,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct PrintCommentsOptions {
+  pub legal: bool,
+  pub annotation: bool,
+  pub jsdoc: bool,
 }

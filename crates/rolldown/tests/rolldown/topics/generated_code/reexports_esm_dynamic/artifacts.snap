@@ -8,15 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region lib.mjs
-var lib_exports = /* @__PURE__ */ __exportAll({}, 1);
+var lib_exports = /* @__PURE__ */ __exportAll({});
 import * as import_foo from "foo";
 __reExport(lib_exports, import_foo);
 
 //#endregion
 //#region reexports.mjs
-var reexports_exports = /* @__PURE__ */ __exportAll({}, 1);
+var reexports_exports = /* @__PURE__ */ __exportAll({});
 __reExport(reexports_exports, lib_exports);
 
 //#endregion
@@ -33,17 +33,17 @@ assert.equal(String(reexports_exports), "[object Module]");
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 
 //#region lib.mjs
-var lib_exports = /* @__PURE__ */ __exportAll({}, 1);
+var lib_exports = /* @__PURE__ */ __exportAll({});
 __reExport(lib_exports, require("foo"));
 
 //#endregion
 //#region reexports.mjs
-var reexports_exports = /* @__PURE__ */ __exportAll({}, 1);
+var reexports_exports = /* @__PURE__ */ __exportAll({});
 __reExport(reexports_exports, lib_exports);
 
 //#endregion

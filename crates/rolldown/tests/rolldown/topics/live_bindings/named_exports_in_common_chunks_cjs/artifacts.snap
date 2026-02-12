@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## async-entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 const require_main = require('./main.js');
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
@@ -28,6 +28,7 @@ node_assert.default.strictEqual(require_main.count, require_main.count);
 ## main.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region shared.js
 let count = 0;

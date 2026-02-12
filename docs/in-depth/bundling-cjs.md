@@ -30,7 +30,7 @@ module.exports = { value: 'foo' };
 When bundled, it produces:
 
 ```js
-// #region rolldown:runtime
+// #region \0rolldown/runtime.js
 // ...runtime code
 // #endregion
 
@@ -68,7 +68,7 @@ module.exports = { value: 'foo' };
 Bundled output:
 
 ```js
-// #region rolldown:runtime
+// #region \0rolldown/runtime.js
 // ...runtime code
 // #endregion
 

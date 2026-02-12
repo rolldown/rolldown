@@ -1,7 +1,7 @@
 # Getting Started
 
-:::warning 🚧 Beta Software
-Rolldown is currently in beta status. While it can already handle most production use cases, there may still be bugs and rough edges. Most notably, the built-in minification feature is still in early work-in-progress status.
+:::warning 🚧 Release Candidate
+Rolldown is currently in RC status. While it can already handle most production use cases, there may still be bugs and rough edges. Most notably, the built-in minification feature is still in early work-in-progress status.
 :::
 
 :::tip Looking for specific use cases?
@@ -80,7 +80,7 @@ If you are using a platform that a prebuilt binary is not distributed, you have 
 
 ### Release Channels
 
-- [latest](https://www.npmjs.com/package/rolldown?activeTab=versions): currently `1.0.0-beta.*`.
+- [latest](https://www.npmjs.com/package/rolldown?activeTab=versions): currently `1.0.0-rc.*`.
 - [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown): continuously released from the `main` branch. Install with `npm i https://pkg.pr.new/rolldown@sha` where `sha` is a successful build listed on [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown).
 
 ## Using the CLI
@@ -139,7 +139,7 @@ To avoid typing the long command, we can move it inside an npm script:
     "build": "rolldown src/main.js --file bundle.js"
   },
   "devDependencies": {
-    "rolldown": "^1.0.0-beta.1"
+    "rolldown": "^1.0.0-rc.1"
   }
 }
 ```
@@ -179,7 +179,7 @@ Next, in the npm script, we can instruct Rolldown to use the config file with th
     "build": "rolldown -c"
   },
   "devDependencies": {
-    "rolldown": "^1.0.0-beta.1"
+    "rolldown": "^1.0.0-rc.1"
   }
 }
 ```
@@ -211,6 +211,10 @@ export default defineConfig([
 ## Using Plugins
 
 Rolldown's plugin API is identical to that of Rollup's, so you can reuse most of the existing Rollup plugins when using Rolldown. That said, Rolldown provides many [built-in features](./notable-features) that make it unnecessary to use plugins.
+
+Also Rolldown provides some builtin plugins that can be used for some use cases. See [Builtin Plugins](/builtin-plugins/) for more information.
+
+Community plugins that are published to npm are listed in [Vite Plugin Registry](https://registry.vite.dev/plugins).
 
 ## Using the API
 

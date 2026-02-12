@@ -7,6 +7,6 @@ const { parse } = require('cjs-module-lexer');
 const parsed = parse(fs.readFileSync(path.resolve(import.meta.dirname, 'dist/main.js'), 'utf8'));
 parsed.exports.sort();
 assert.deepStrictEqual(parsed, {
-  exports: [ '__esModule', 'a', 'b', '😈', 'default'].sort(),
+  exports: ['a', 'b', '😈', 'default'].sort(),
   reexports: [],
 })

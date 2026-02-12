@@ -1,4 +1,4 @@
-use oxc::span::Atom;
+use oxc::span::{Atom, Ident};
 
 // Special global variable `exports` in CommonJS modules
 pub const CJS_EXPORTS_REF: &str = "exports";
@@ -18,5 +18,6 @@ pub const CJS_ROLLDOWN_MODULE_REF: &str = "__rolldown_module__";
 pub const CJS_EXPORTS_REF_ATOM: Atom<'static> = Atom::new_const(CJS_EXPORTS_REF);
 pub const CJS_MODULE_REF_ATOM: Atom<'static> = Atom::new_const(CJS_MODULE_REF);
 pub const CJS_REQUIRE_REF_ATOM: Atom<'static> = Atom::new_const(CJS_REQUIRE_REF);
-pub const CJS_ROLLDOWN_EXPORTS_REF_ATOM: Atom<'static> = Atom::new_const(CJS_ROLLDOWN_EXPORTS_REF);
-pub const CJS_ROLLDOWN_MODULE_REF_ATOM: Atom<'static> = Atom::new_const(CJS_ROLLDOWN_MODULE_REF);
+pub const CJS_ROLLDOWN_MODULE_REF_IDENT: Ident<'static> = Ident::new_const(CJS_ROLLDOWN_MODULE_REF);
+pub const CJS_ROLLDOWN_EXPORTS_REF_IDENT: Ident<'static> =
+  Ident::new_const(CJS_ROLLDOWN_EXPORTS_REF);

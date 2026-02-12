@@ -59,7 +59,7 @@ fn worker_iife(path: &str) -> String {
 }
 
 pub fn partial_encode_url_path(url: &str) -> Cow<'_, str> {
-  if url.starts_with("data:") {
+  if rolldown_utils::dataurl::is_data_url(url) {
     return Cow::Borrowed(url);
   }
   let file_path = rolldown_utils::url::clean_url(url);

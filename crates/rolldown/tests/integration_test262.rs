@@ -198,7 +198,7 @@ fn create_bundler_options(test_file: &Path, test_folder: &Path) -> BundlerOption
     format: Some(rolldown::OutputFormat::Esm),
     platform: Some(rolldown::Platform::Node),
     keep_names: Some(true),
-    generated_code: Some(rolldown::GeneratedCodeOptions { preset: None, symbols: true }),
+    generated_code: Some(rolldown::GeneratedCodeOptions { symbols: true }),
     ..Default::default()
   }
 }

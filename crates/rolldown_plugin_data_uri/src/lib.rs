@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use rolldown_common::ModuleType;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookUsage, Plugin, PluginContext,
+  HookResolveIdReturn, HookUsage, Plugin, PluginContext, SharedLoadPluginContext,
 };
 use rolldown_utils::{
   dashmap::FxDashMap,
@@ -66,7 +66,7 @@ impl Plugin for DataUriPlugin {
     Ok(None)
   }
 
-  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if is_data_url(args.id) {
       let Some(resolved) = self.resolved_data_uri.get(args.id) else {
         return Ok(None);

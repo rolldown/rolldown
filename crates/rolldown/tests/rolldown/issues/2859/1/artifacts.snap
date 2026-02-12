@@ -60,7 +60,7 @@ exports.foo = foo;
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 let assert = require("assert");
 assert = __toESM(assert);
 

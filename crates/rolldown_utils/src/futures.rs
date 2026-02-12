@@ -34,6 +34,7 @@ where
   }
 }
 
+#[expect(clippy::collection_is_never_read)]
 async fn _test_block_on_spawn_all_non_static_future() {
   let mut words = String::new();
   let non_static_future = async {

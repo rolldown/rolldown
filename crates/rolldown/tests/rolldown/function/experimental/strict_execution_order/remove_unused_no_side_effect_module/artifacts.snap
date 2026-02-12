@@ -23,7 +23,7 @@ nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should 
 ```js
 import nodeAssert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region main.js
 var init_main = __esmMin((() => {
 	nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");

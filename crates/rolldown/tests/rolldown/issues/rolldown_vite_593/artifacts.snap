@@ -1,0 +1,70 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## component.js
+
+```js
+import { n as setInnerHtml, t as htmlEscape } from "./shared.js";
+
+//#region component.js
+var Component = class {
+	constructor(name) {
+		this.name = name;
+	}
+	render(el) {
+		setInnerHtml(el, htmlEscape(this.name));
+	}
+};
+
+//#endregion
+export { Component };
+```
+
+## safehtml.js
+
+```js
+import { r as SafeHtml } from "./shared.js";
+
+export { SafeHtml };
+```
+
+## shared.js
+
+```js
+//#region browser.js
+function isIE() {
+	return compareVersions("11", "10") >= 0;
+}
+
+//#endregion
+//#region safehtml.js
+var SafeHtml = class {
+	constructor(html) {
+		this.html = html;
+		this.isIE = isIE();
+	}
+	unwrap() {
+		return this.html;
+	}
+};
+
+//#endregion
+//#region safe.js
+function setInnerHtml(elem, html) {
+	if (html instanceof SafeHtml) elem.innerHTML = html.unwrap();
+}
+
+//#endregion
+//#region shared.js
+function compareVersions(a, b) {
+	return a > b ? 1 : a < b ? -1 : 0;
+}
+function htmlEscape(str) {
+	return str.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+}
+
+//#endregion
+export { setInnerHtml as n, SafeHtml as r, htmlEscape as t };
+```

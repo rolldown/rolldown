@@ -1,6 +1,7 @@
 mod ast_snippet;
 mod extensions;
 mod scope;
+mod source_utils;
 
 pub use crate::{
   ast_snippet::AstSnippet,
@@ -10,4 +11,5 @@ pub use crate::{
     jsx::JsxExt, statement_ext::StatementExt,
   },
   scope::is_top_level,
+  source_utils::contains_script_closing_tag,
 };

@@ -131,6 +131,11 @@ impl BundleCoordinator {
           let _ = self.schedule_build_if_stale().await;
         }
         CoordinatorMsg::Close => {
+          // Wait for any running bundling task to complete before exiting
+          // to avoid the task panicking when it tries to send BundleCompleted
+          if let Some(bundling_future) = self.current_bundling_future.take() {
+            bundling_future.await;
+          }
           break;
         }
       }

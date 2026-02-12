@@ -28,7 +28,8 @@ pub use crate::{
     Plugin,
   },
   plugin_context::{
-    PluginContext, SharedNativePluginContext, SharedTransformPluginContext, TransformPluginContext,
+    LoadPluginContext, PluginContext, SharedLoadPluginContext, SharedNativePluginContext,
+    SharedTransformPluginContext, TransformPluginContext,
   },
   plugin_driver::{PluginDriver, PluginDriverFactory, SharedPluginDriver},
   pluginable::Pluginable,

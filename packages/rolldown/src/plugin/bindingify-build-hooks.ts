@@ -26,6 +26,7 @@ import {
   type PluginHookWithBindingExt,
 } from './bindingify-plugin-hook-meta';
 import type { PluginHooks, SourceDescription } from './index';
+import { LoadPluginContextImpl } from './load-plugin-context';
 import { PluginContextImpl } from './plugin-context';
 import { TransformPluginContextImpl } from './transform-plugin-context';
 
@@ -324,15 +325,16 @@ export function bindingifyLoad(
   return {
     plugin: async (ctx, id) => {
       const ret = await handler.call(
-        new PluginContextImpl(
+        new LoadPluginContextImpl(
           args.outputOptions,
-          ctx,
+          ctx.inner(),
           args.plugin,
           args.pluginContextData,
+          ctx,
+          id,
           args.onLog,
           args.logLevel,
           args.watchMode,
-          id,
         ),
         id,
       );

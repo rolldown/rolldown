@@ -1,13 +1,20 @@
 import * as v from 'valibot';
 import type {
+  CodegenOptions,
   CompressOptions,
+  CompressOptionsKeepNames,
   MangleOptions,
   MangleOptionsKeepNames,
-  MinifyOptions,
   PreRenderedChunk,
 } from '../binding.cjs';
-import type { LogOrStringHandler } from '../log/logging';
 import type {
+  LogLevel,
+  LogLevelOption,
+  LogLevelWithError,
+  LogOrStringHandler,
+} from '../log/logging';
+import type {
+  DevModeOptions,
   ExternalOption,
   ExternalOptionFunction,
   InputOptions,
@@ -27,15 +34,41 @@ import type {
   PathsFunction,
   PreRenderedAsset,
   SanitizeFileNameFunction,
+  MinifyOptions,
+  ModuleFormat,
+  CodeSplittingOptions,
+  GeneratedCodePreset,
+  GeneratedCodeOptions,
 } from '../options/output-options';
 import type { RolldownOutputPluginOption, RolldownPluginOption } from '../plugin';
 import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
 import type { RenderedChunk } from '../types/rolldown-output';
-import type { AnyFn } from '../types/utils';
+import type { AnyFn, StringOrRegExp } from '../types/utils';
 import { flattenValibotSchema } from './flatten-valibot-schema';
 import { styleText } from './style-text';
+import type {
+  ChecksOptions,
+  InputOption,
+  ModuleTypes,
+  RollupLogWithString,
+  TransformOptions,
+  TreeshakingOptions,
+  WatcherOptions,
+} from '..';
+
+type IsSchemaSubType<
+  SubTypeSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>,
+  SuperType,
+> = [SuperType, keyof SuperType] extends [
+  v.InferInput<SubTypeSchema>,
+  keyof v.InferInput<SubTypeSchema>,
+]
+  ? true
+  : false;
+function isTypeTrue<_T extends true>() {}
 
 const StringOrRegExpSchema = v.union([v.string(), v.instance(RegExp)]);
+isTypeTrue<IsSchemaSubType<typeof StringOrRegExpSchema, StringOrRegExp>>();
 
 // A helper function to create a valibot schema for a function. It assumes the
 // passed function is a properly defined function type with expected argument and return
@@ -46,12 +79,16 @@ function vFunction<T extends AnyFn>(): v.GenericSchema<T> {
 }
 
 const LogLevelSchema = v.union([v.literal('debug'), v.literal('info'), v.literal('warn')]);
+isTypeTrue<IsSchemaSubType<typeof LogLevelSchema, LogLevel>>();
 
 const LogLevelOptionSchema = v.union([LogLevelSchema, v.literal('silent')]);
+isTypeTrue<IsSchemaSubType<typeof LogLevelOptionSchema, LogLevelOption>>();
 const LogLevelWithErrorSchema = v.union([LogLevelSchema, v.literal('error')]);
+isTypeTrue<IsSchemaSubType<typeof LogLevelWithErrorSchema, LogLevelWithError>>();
 
 const RollupLogSchema = v.any();
 const RollupLogWithStringSchema = v.union([RollupLogSchema, v.string()]);
+isTypeTrue<IsSchemaSubType<typeof RollupLogWithStringSchema, RollupLogWithString>>();
 
 /// --- InputSchema ---
 
@@ -60,18 +97,21 @@ const InputOptionSchema = v.union([
   v.array(v.string()),
   v.record(v.string(), v.string()),
 ]);
+isTypeTrue<IsSchemaSubType<typeof InputOptionSchema, InputOption>>();
 
 const ExternalOptionFunctionSchema = v.pipe(
   vFunction<ExternalOptionFunction>(),
   v.args(v.tuple([v.string(), v.optional(v.string()), v.boolean()])),
   v.returns(v.nullish(v.boolean())),
-) satisfies v.GenericSchema<ExternalOptionFunction>;
+);
+isTypeTrue<IsSchemaSubType<typeof ExternalOptionFunctionSchema, ExternalOptionFunction>>();
 
 const ExternalOptionSchema = v.union([
   StringOrRegExpSchema,
   v.array(StringOrRegExpSchema),
   ExternalOptionFunctionSchema,
-]) satisfies v.GenericSchema<ExternalOption>;
+]);
+isTypeTrue<IsSchemaSubType<typeof ExternalOptionSchema, ExternalOption>>();
 
 const ModuleTypesSchema = v.record(
   v.string(),
@@ -90,6 +130,7 @@ const ModuleTypesSchema = v.record(
     v.literal('tsx'),
   ]),
 );
+isTypeTrue<IsSchemaSubType<typeof ModuleTypesSchema, ModuleTypes>>();
 
 const JsxOptionsSchema = v.strictObject({
   runtime: v.pipe(
@@ -101,14 +142,27 @@ const JsxOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Toggles whether to throw an error when a tag name uses an XML namespace'),
   ),
+  pure: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Mark JSX elements and top-level React method calls as pure for tree shaking.'),
+  ),
   importSource: v.pipe(
     v.optional(v.string()),
     v.description('Import the factory of element and fragment if mode is classic'),
   ),
   pragma: v.pipe(v.optional(v.string()), v.description('Jsx element transformation')),
   pragmaFrag: v.pipe(v.optional(v.string()), v.description('Jsx fragment transformation')),
-  refresh: v.pipe(v.optional(v.boolean()), v.description('Enable react fast refresh')),
+  refresh: v.pipe(
+    v.optional(v.union([v.boolean(), v.any()])),
+    v.description('Enable react fast refresh'),
+  ),
 });
+isTypeTrue<
+  IsSchemaSubType<
+    typeof JsxOptionsSchema,
+    Exclude<TransformOptions['jsx'], string | false | undefined>
+  >
+>();
 
 const HelperModeSchema = v.union([v.literal('Runtime'), v.literal('External')]);
 
@@ -116,10 +170,16 @@ const DecoratorOptionSchema = v.object({
   legacy: v.optional(v.boolean()),
   emitDecoratorMetadata: v.optional(v.boolean()),
 });
+isTypeTrue<
+  IsSchemaSubType<typeof DecoratorOptionSchema, Exclude<TransformOptions['decorator'], undefined>>
+>();
 
 const HelpersSchema = v.object({
   mode: v.optional(HelperModeSchema),
 });
+isTypeTrue<
+  IsSchemaSubType<typeof HelpersSchema, Exclude<TransformOptions['helpers'], undefined>>
+>();
 
 const RewriteImportExtensionsSchema = v.union([
   v.literal('rewrite'),
@@ -132,6 +192,7 @@ const TypescriptSchema = v.object({
   onlyRemoveTypeImports: v.optional(v.boolean()),
   allowNamespaces: v.optional(v.boolean()),
   allowDeclareFields: v.optional(v.boolean()),
+  removeClassFieldsWithoutInitializer: v.optional(v.boolean()),
   declaration: v.optional(
     v.object({
       stripInternal: v.optional(v.boolean()),
@@ -140,6 +201,10 @@ const TypescriptSchema = v.object({
   ),
   rewriteImportExtensions: v.optional(RewriteImportExtensionsSchema),
 });
+isTypeTrue<
+  IsSchemaSubType<typeof TypescriptSchema, Exclude<TransformOptions['typescript'], undefined>>
+>();
+
 const AssumptionsSchema = v.object({
   ignoreFunctionLength: v.optional(v.boolean()),
   noDocumentAll: v.optional(v.boolean()),
@@ -147,11 +212,23 @@ const AssumptionsSchema = v.object({
   pureGetters: v.optional(v.boolean()),
   setPublicClassFields: v.optional(v.boolean()),
 });
+isTypeTrue<
+  IsSchemaSubType<typeof AssumptionsSchema, Exclude<TransformOptions['assumptions'], undefined>>
+>();
+
+const TransformPluginsSchema = v.object({
+  styledComponents: v.optional(v.any()),
+  taggedTemplateEscape: v.optional(v.boolean()),
+});
+isTypeTrue<
+  IsSchemaSubType<typeof TransformPluginsSchema, Exclude<TransformOptions['plugins'], undefined>>
+>();
+
 const TransformOptionsSchema = v.object({
   assumptions: v.optional(AssumptionsSchema),
   typescript: v.optional(TypescriptSchema),
   helpers: v.optional(HelpersSchema),
-  decorators: v.optional(DecoratorOptionSchema),
+  decorator: v.optional(DecoratorOptionSchema),
   jsx: v.optional(
     v.union([
       v.literal(false),
@@ -177,9 +254,11 @@ const TransformOptionsSchema = v.object({
     v.optional(v.array(v.string())),
     v.description('Remove labeled statements with these label names'),
   ),
+  plugins: v.pipe(v.optional(TransformPluginsSchema), v.description('Third-party plugins to use')),
 });
+isTypeTrue<IsSchemaSubType<typeof TransformOptionsSchema, TransformOptions>>();
 
-const WatchOptionsSchema = v.strictObject({
+const WatcherOptionsSchema = v.strictObject({
   chokidar: v.optional(
     v.never(`The "watch.chokidar" option is deprecated, please use "watch.notify" instead of it`),
   ),
@@ -201,12 +280,13 @@ const WatchOptionsSchema = v.strictObject({
     v.description('Whether to clear the screen when a rebuild is triggered'),
   ),
   onInvalidate: v.pipe(
-    v.optional(v.pipe(v.function(), v.args(v.tuple([v.string()])))),
+    v.optional(vFunction<Exclude<WatcherOptions['onInvalidate'], undefined>>()),
     v.description(
       'An optional function that will be called immediately every time a module changes that is part of the build.',
     ),
   ),
 });
+isTypeTrue<IsSchemaSubType<typeof WatcherOptionsSchema, WatcherOptions>>();
 
 const ChecksOptionsSchema = v.strictObject({
   circularDependency: v.pipe(
@@ -289,55 +369,83 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when plugins take significant time during the build process',
     ),
   ),
+  duplicateShebang: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warnings when both the code and postBanner contain shebang'),
+  ),
+  unsupportedTsconfigOption: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a tsconfig option or combination of options is not supported',
+    ),
+  ),
+  ineffectiveDynamicImport: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting',
+    ),
+  ),
 });
+isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 
 const CompressOptionsKeepNamesSchema = v.strictObject({
   function: v.boolean(),
   class: v.boolean(),
 });
+isTypeTrue<IsSchemaSubType<typeof CompressOptionsKeepNamesSchema, CompressOptionsKeepNames>>();
+
+const CompressTreeshakeOptionsSchema = v.strictObject({
+  annotations: v.optional(v.boolean()),
+  manualPureFunctions: v.optional(v.array(v.string())),
+  propertyReadSideEffects: v.optional(v.union([v.boolean(), v.literal('always')])),
+  unknownGlobalSideEffects: v.optional(v.boolean()),
+  invalidImportSideEffects: v.optional(v.boolean()),
+});
+isTypeTrue<
+  IsSchemaSubType<
+    typeof CompressTreeshakeOptionsSchema,
+    Exclude<CompressOptions['treeshake'], undefined>
+  >
+>();
 
 const CompressOptionsSchema = v.strictObject({
-  target: v.optional(
-    v.union([
-      v.literal('esnext'),
-      v.literal('es2015'),
-      v.literal('es2016'),
-      v.literal('es2017'),
-      v.literal('es2018'),
-      v.literal('es2019'),
-      v.literal('es2020'),
-      v.literal('es2021'),
-      v.literal('es2022'),
-      v.literal('es2023'),
-      v.literal('es2024'),
-    ]),
-  ),
+  target: v.optional(v.union([v.string(), v.array(v.string())])),
   dropConsole: v.optional(v.boolean()),
   dropDebugger: v.optional(v.boolean()),
   keepNames: v.optional(CompressOptionsKeepNamesSchema),
   unused: v.optional(v.union([v.boolean(), v.literal('keep_assign')])),
-}) satisfies v.GenericSchema<CompressOptions>;
+  joinVars: v.optional(v.boolean()),
+  sequences: v.optional(v.boolean()),
+  dropLabels: v.optional(v.array(v.string())),
+  maxIterations: v.optional(v.number()),
+  treeshake: v.optional(CompressTreeshakeOptionsSchema),
+});
+isTypeTrue<IsSchemaSubType<typeof CompressOptionsSchema, CompressOptions>>();
 
 const MangleOptionsKeepNamesSchema = v.strictObject({
   function: v.boolean(),
   class: v.boolean(),
-}) satisfies v.GenericSchema<MangleOptionsKeepNames>;
+});
+isTypeTrue<IsSchemaSubType<typeof MangleOptionsKeepNamesSchema, MangleOptionsKeepNames>>();
 
 const MangleOptionsSchema = v.strictObject({
   toplevel: v.optional(v.boolean()),
   keepNames: v.optional(v.union([v.boolean(), MangleOptionsKeepNamesSchema])),
   debug: v.optional(v.boolean()),
 }) satisfies v.GenericSchema<MangleOptions>;
+isTypeTrue<IsSchemaSubType<typeof MangleOptionsSchema, MangleOptions>>();
 
 const CodegenOptionsSchema = v.strictObject({
   removeWhitespace: v.optional(v.boolean()),
 });
+isTypeTrue<IsSchemaSubType<typeof CodegenOptionsSchema, CodegenOptions>>();
 
 const MinifyOptionsSchema = v.strictObject({
   compress: v.optional(v.union([v.boolean(), CompressOptionsSchema])),
   mangle: v.optional(v.union([v.boolean(), MangleOptionsSchema])),
   codegen: v.optional(v.union([v.boolean(), CodegenOptionsSchema])),
-}) satisfies v.GenericSchema<MinifyOptions>;
+});
+isTypeTrue<IsSchemaSubType<typeof MinifyOptionsSchema, MinifyOptions>>();
 
 const ResolveOptionsSchema = v.strictObject({
   alias: v.optional(
@@ -352,22 +460,27 @@ const ResolveOptionsSchema = v.strictObject({
   mainFiles: v.optional(v.array(v.string())),
   modules: v.optional(v.array(v.string())),
   symlinks: v.optional(v.boolean()),
-  yarnPnp: v.optional(v.boolean()),
+  tsconfigFilename: v.optional(v.string()),
 });
+isTypeTrue<
+  IsSchemaSubType<typeof ResolveOptionsSchema, Exclude<InputOptions['resolve'], undefined>>
+>();
 
-// TODO: moduleSideEffects
-const TreeshakingOptionsSchema = v.union([
-  v.boolean(),
-  v.looseObject({
-    annotations: v.optional(v.boolean()),
-    manualPureFunctions: v.optional(v.array(v.string())),
-    unknownGlobalSideEffects: v.optional(v.boolean()),
-    invalidImportSideEffects: v.optional(v.boolean()),
-    commonjs: v.optional(v.boolean()),
-    propertyReadSideEffects: v.optional(v.union([v.literal(false), v.literal('always')])),
-    propertyWriteSideEffects: v.optional(v.union([v.literal(false), v.literal('always')])),
-  }),
-]);
+const TreeshakingOptionsSchema = v.strictObject({
+  // TODO: stricter typing
+  moduleSideEffects: v.optional(v.any()),
+  annotations: v.optional(v.boolean()),
+  // valibot does not infer readonly arrays
+  manualPureFunctions: v.optional(
+    v.custom<readonly string[]>((input) => v.is(v.array(v.string()), input), 'string array'),
+  ),
+  unknownGlobalSideEffects: v.optional(v.boolean()),
+  invalidImportSideEffects: v.optional(v.boolean()),
+  commonjs: v.optional(v.boolean()),
+  propertyReadSideEffects: v.optional(v.union([v.literal(false), v.literal('always')])),
+  propertyWriteSideEffects: v.optional(v.union([v.literal(false), v.literal('always')])),
+});
+isTypeTrue<IsSchemaSubType<typeof TreeshakingOptionsSchema, TreeshakingOptions>>();
 
 const OptimizationOptionsSchema = v.strictObject({
   inlineConst: v.pipe(
@@ -386,17 +499,20 @@ const OptimizationOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Use PIFE pattern for module wrappers'),
   ),
-}) satisfies v.GenericSchema<OptimizationOptions>;
+});
+isTypeTrue<IsSchemaSubType<typeof OptimizationOptionsSchema, OptimizationOptions>>();
 
 const LogOrStringHandlerSchema = v.pipe(
   vFunction<LogOrStringHandler>(),
   v.args(v.tuple([LogLevelWithErrorSchema, RollupLogWithStringSchema])),
-) satisfies v.GenericSchema<LogOrStringHandler>;
+);
+isTypeTrue<IsSchemaSubType<typeof LogOrStringHandlerSchema, LogOrStringHandler>>();
 
 const OnLogSchema = v.pipe(
   vFunction<OnLogFunction>(),
   v.args(v.tuple([LogLevelSchema, RollupLogSchema, LogOrStringHandlerSchema])),
-) satisfies v.GenericSchema<OnLogFunction>;
+);
+isTypeTrue<IsSchemaSubType<typeof OnLogSchema, OnLogFunction>>();
 
 const OnwarnSchema = v.pipe(
   vFunction<OnwarnFunction>(),
@@ -416,7 +532,8 @@ const OnwarnSchema = v.pipe(
       ),
     ]),
   ),
-) satisfies v.GenericSchema<OnwarnFunction>;
+);
+isTypeTrue<IsSchemaSubType<typeof OnwarnSchema, OnwarnFunction>>();
 
 const DevModeSchema = v.union([
   v.boolean(),
@@ -427,6 +544,7 @@ const DevModeSchema = v.union([
     lazy: v.optional(v.boolean()),
   }),
 ]);
+isTypeTrue<IsSchemaSubType<typeof DevModeSchema, DevModeOptions>>();
 
 const InputOptionsSchema = v.strictObject({
   input: v.optional(InputOptionSchema),
@@ -448,7 +566,7 @@ const InputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Create shim variables for missing exports'),
   ),
-  treeshake: v.optional(TreeshakingOptionsSchema),
+  treeshake: v.optional(v.union([v.boolean(), TreeshakingOptionsSchema])),
   optimization: v.optional(OptimizationOptionsSchema),
   logLevel: v.pipe(
     v.optional(LogLevelOptionSchema),
@@ -467,17 +585,13 @@ const InputOptionsSchema = v.strictObject({
   ),
   experimental: v.optional(
     v.strictObject({
-      enableComposingJsPlugins: v.optional(v.boolean()),
       viteMode: v.optional(v.boolean()),
       resolveNewUrlToAsset: v.optional(v.boolean()),
-      strictExecutionOrder: v.optional(v.boolean()),
-      onDemandWrapping: v.optional(v.boolean()),
-      incrementalBuild: v.optional(v.boolean()),
       devMode: v.optional(DevModeSchema),
+      chunkModulesOrder: v.optional(v.union([v.literal('module-id'), v.literal('exec-order')])),
       attachDebugInfo: v.optional(
         v.union([v.literal('none'), v.literal('simple'), v.literal('full')]),
       ),
-      chunkModulesOrder: v.optional(v.union([v.literal('module-id'), v.literal('exec-order')])),
       chunkImportMap: v.optional(
         v.union([
           v.boolean(),
@@ -487,13 +601,15 @@ const InputOptionsSchema = v.strictObject({
           }),
         ]),
       ),
+      onDemandWrapping: v.optional(v.boolean()),
+      incrementalBuild: v.optional(v.boolean()),
       nativeMagicString: v.optional(v.boolean()),
       chunkOptimization: v.optional(v.boolean()),
       lazyBarrel: v.optional(v.boolean()),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),
-  watch: v.optional(v.union([WatchOptionsSchema, v.literal(false)])),
+  watch: v.optional(v.union([WatcherOptionsSchema, v.literal(false)])),
   checks: v.optional(ChecksOptionsSchema),
   devtools: v.pipe(
     v.optional(
@@ -515,11 +631,16 @@ const InputOptionsSchema = v.strictObject({
       ]),
     ),
   ),
+  context: v.pipe(
+    v.optional(v.string()),
+    v.description('The value of `this` at the top level of each module.'),
+  ),
   tsconfig: v.pipe(
     v.optional(v.union([v.boolean(), v.string()])),
     v.description('Path to the tsconfig.json file.'),
   ),
-}) satisfies v.GenericSchema<InputOptions>;
+});
+isTypeTrue<IsSchemaSubType<typeof InputOptionsSchema, InputOptions>>();
 
 const InputCliOverrideSchema = v.strictObject({
   input: v.pipe(v.optional(v.array(v.string())), v.description('Entry file')),
@@ -560,18 +681,21 @@ const ModuleFormatSchema = v.union([
   v.literal('iife'),
   v.literal('umd'),
 ]);
+isTypeTrue<IsSchemaSubType<typeof ModuleFormatSchema, ModuleFormat>>();
 
 const AddonFunctionSchema = v.pipe(
   vFunction<AddonFunction>(),
   v.args(v.tuple([v.custom<RenderedChunk>(() => true)])),
   v.returnsAsync(v.unionAsync([v.string(), v.pipeAsync(v.promise(), v.awaitAsync(), v.string())])),
-) satisfies v.GenericSchema<AddonFunction>;
+);
+isTypeTrue<IsSchemaSubType<typeof AddonFunctionSchema, AddonFunction>>();
 
 const ChunkFileNamesFunctionSchema = v.pipe(
   vFunction<ChunkFileNamesFunction>(),
   v.args(v.tuple([v.custom<PreRenderedChunk>(() => true)])),
   v.returns(v.string()),
-) satisfies v.GenericSchema<ChunkFileNamesFunction>;
+);
+isTypeTrue<IsSchemaSubType<typeof ChunkFileNamesFunctionSchema, ChunkFileNamesFunction>>();
 
 const ChunkFileNamesSchema = v.union([v.string(), ChunkFileNamesFunctionSchema]);
 
@@ -579,7 +703,8 @@ const AssetFileNamesFunctionSchema = v.pipe(
   vFunction<AssetFileNamesFunction>(),
   v.args(v.tuple([v.custom<PreRenderedAsset>(() => true)])),
   v.returns(v.string()),
-) satisfies v.GenericSchema<AssetFileNamesFunction>;
+);
+isTypeTrue<IsSchemaSubType<typeof AssetFileNamesFunctionSchema, AssetFileNamesFunction>>();
 
 const AssetFileNamesSchema = v.union([v.string(), AssetFileNamesFunctionSchema]);
 
@@ -587,7 +712,8 @@ const SanitizeFileNameFunctionSchema = v.pipe(
   vFunction<SanitizeFileNameFunction>(),
   v.args(v.tuple([v.string()])),
   v.returns(v.string()),
-) satisfies v.GenericSchema<SanitizeFileNameFunction>;
+);
+isTypeTrue<IsSchemaSubType<typeof SanitizeFileNameFunctionSchema, SanitizeFileNameFunction>>();
 
 const SanitizeFileNameSchema = v.union([v.boolean(), SanitizeFileNameFunctionSchema]);
 
@@ -595,31 +721,36 @@ const GlobalsFunctionSchema = v.pipe(
   vFunction<GlobalsFunction>(),
   v.args(v.tuple([v.string()])),
   v.returns(v.string()),
-) satisfies v.GenericSchema<GlobalsFunction>;
+);
+isTypeTrue<IsSchemaSubType<typeof GlobalsFunctionSchema, GlobalsFunction>>();
 
 const PathsFunctionSchema = v.pipe(
   vFunction<PathsFunction>(),
   v.args(v.tuple([v.string()])),
   v.returns(v.string()),
-) satisfies v.GenericSchema<PathsFunction>;
+);
+isTypeTrue<IsSchemaSubType<typeof PathsFunctionSchema, PathsFunction>>();
 
 const ManualChunksFunctionSchema = v.pipe(
   vFunction<ManualChunksFunction>(),
   v.args(v.tuple([v.string(), v.object({})])),
   v.returns(v.nullish(v.string())),
-) satisfies v.GenericSchema<ManualChunksFunction>;
+);
+isTypeTrue<IsSchemaSubType<typeof ManualChunksFunctionSchema, ManualChunksFunction>>();
 
 const AdvancedChunksNameFunctionSchema = v.pipe(
   vFunction<CodeSplittingNameFunction>(),
   v.args(v.tuple([v.string(), v.object({})])),
   v.returns(v.nullish(v.string())),
-) satisfies v.GenericSchema<CodeSplittingNameFunction>;
+);
+isTypeTrue<IsSchemaSubType<typeof AdvancedChunksNameFunctionSchema, CodeSplittingNameFunction>>();
 
 const AdvancedChunksTestFunctionSchema = v.pipe(
   vFunction<CodeSplittingTestFunction>(),
   v.args(v.tuple([v.string()])),
   v.returns(v.union([v.boolean(), v.void(), v.undefined()])),
-) satisfies v.GenericSchema<CodeSplittingTestFunction>;
+);
+isTypeTrue<IsSchemaSubType<typeof AdvancedChunksTestFunctionSchema, CodeSplittingTestFunction>>();
 
 const AdvancedChunksSchema = v.strictObject({
   includeDependenciesRecursively: v.optional(v.boolean()),
@@ -639,24 +770,28 @@ const AdvancedChunksSchema = v.strictObject({
         maxSize: v.optional(v.number()),
         minModuleSize: v.optional(v.number()),
         maxModuleSize: v.optional(v.number()),
+        entriesAware: v.optional(v.boolean()),
       }),
     ),
   ),
 });
+isTypeTrue<IsSchemaSubType<typeof AdvancedChunksSchema, CodeSplittingOptions>>();
 
 const GeneratedCodePresetSchema = v.union([v.literal('es5'), v.literal('es2015')]);
+isTypeTrue<IsSchemaSubType<typeof GeneratedCodePresetSchema, GeneratedCodePreset>>();
 
 const GeneratedCodeOptionsSchema = v.strictObject({
   symbols: v.pipe(
     v.optional(v.boolean()),
     v.description('Whether to use Symbol.toStringTag for namespace objects'),
   ),
-  preset: GeneratedCodePresetSchema,
+  preset: v.optional(GeneratedCodePresetSchema),
   profilerNames: v.pipe(
     v.optional(v.boolean()),
     v.description('Whether to add readable names to internal variables for profiling purposes'),
   ),
 });
+isTypeTrue<IsSchemaSubType<typeof GeneratedCodeOptionsSchema, GeneratedCodeOptions>>();
 
 const OutputOptionsSchema = v.strictObject({
   dir: v.pipe(
@@ -748,6 +883,19 @@ const OutputOptionsSchema = v.strictObject({
   advancedChunks: v.optional(AdvancedChunksSchema),
   legalComments: v.pipe(
     v.optional(v.union([v.literal('none'), v.literal('inline')])),
+    v.description('Control legal comments in the output'),
+  ),
+  comments: v.pipe(
+    v.optional(
+      v.union([
+        v.boolean(),
+        v.strictObject({
+          legal: v.optional(v.boolean()),
+          annotation: v.optional(v.boolean()),
+          jsdoc: v.optional(v.boolean()),
+        }),
+      ]),
+    ),
     v.description('Control comments in the output'),
   ),
   plugins: v.optional(v.custom<RolldownOutputPluginOption>(() => true)),
@@ -775,7 +923,12 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Keep function and class names after bundling'),
   ),
-}) satisfies v.GenericSchema<OutputOptions>;
+  strictExecutionOrder: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Lets modules be executed in the order they are declared.'),
+  ),
+});
+isTypeTrue<IsSchemaSubType<typeof OutputOptionsSchema, OutputOptions>>();
 
 const getAddonDescription = (placement: 'bottom' | 'top', wrapper: 'inside' | 'outside') => {
   return `Code to insert the ${styleText(

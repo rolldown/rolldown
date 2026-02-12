@@ -21,14 +21,15 @@ pub mod circular_reexport;
 pub mod commonjs_variable_in_esm;
 pub mod configuration_field_conflict;
 pub mod could_not_clean_directory;
+pub mod duplicate_shebang;
 pub mod empty_import_meta;
 pub mod eval;
-pub mod export_undefined_variable;
 pub mod external_entry;
 pub mod filename_conflict;
 pub mod forbid_const_assign;
 pub mod illegal_identifier_as_name;
 pub mod import_is_undefined;
+pub mod ineffective_dynamic_import;
 pub mod invalid_define_config;
 pub mod invalid_export_option;
 pub mod invalid_option;
@@ -42,12 +43,16 @@ pub mod plugin_error;
 pub mod plugin_timings;
 pub mod prefer_builtin_feature;
 pub mod resolve_error;
+pub mod runtime_module_symbol_not_found;
+pub mod tsconfig_error;
 pub mod unhandleable_error;
 pub mod unloadable_dependency;
 pub mod unresolved_entry;
 pub mod unsupported_feature;
+pub mod unsupported_tsconfig_option;
+pub mod untranspiled_syntax;
 
-pub trait BuildEvent: Debug + Sync + Send + AsAnyMut {
+pub trait BuildEvent: Debug + Sync + Send + AsAny + AsAnyMut {
   fn kind(&self) -> EventKind;
 
   fn message(&self, opts: &DiagnosticOptions) -> String;
@@ -80,6 +85,16 @@ where
 {
   fn from(e: T) -> Self {
     Box::new(e)
+  }
+}
+
+pub trait AsAny {
+  fn as_any(&self) -> &dyn Any;
+}
+
+impl<T: 'static + BuildEvent> AsAny for T {
+  fn as_any(&self) -> &dyn Any {
+    self
   }
 }
 

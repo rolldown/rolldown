@@ -6,7 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+// HIDDEN [\0rolldown/runtime.js]
 let foo = require("./foo");
 foo = __toESM(foo);
 

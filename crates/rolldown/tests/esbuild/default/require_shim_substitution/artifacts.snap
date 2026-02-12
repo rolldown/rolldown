@@ -21,7 +21,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region example.json
 var require_example = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { "works": true };

@@ -40,7 +40,7 @@ impl<'text> MagicString<'text> {
     let to: CowStr<'text> = to.into();
     let matches = memchr::memmem::find_iter(self.source.as_bytes(), from.as_bytes())
       .take(options.count)
-      .map(|start| (start, start + from.len()))
+      .map(|start| (start as u32, (start + from.len()) as u32))
       .collect::<Vec<_>>();
     for (match_start, end) in matches {
       self.update_with(

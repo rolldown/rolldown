@@ -38,7 +38,7 @@ pub enum StringOrRegexMatchKind<'a> {
 }
 
 impl StringOrRegex {
-  pub fn new(value: String, flag: &Option<String>) -> anyhow::Result<Self> {
+  pub fn new(value: String, flag: Option<&String>) -> anyhow::Result<Self> {
     if let Some(flag) = flag {
       let regex = HybridRegex::with_flags(&value, flag)?;
       Ok(Self::Regex(regex))
@@ -121,7 +121,7 @@ pub fn normalize_path(path: &str) -> Cow<'_, str> {
   }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum FilterResult {
   /// `Match(true)` means it is matched by `included`,
   /// `Match(false)` means it is matched by `excluded`
@@ -197,11 +197,11 @@ mod tests {
 
     #[expect(clippy::unnecessary_wraps)]
     fn glob_filter(value: &str) -> Option<[StringOrRegex; 1]> {
-      Some([StringOrRegex::new(value.to_string(), &None).unwrap()])
+      Some([StringOrRegex::new(value.to_string(), None).unwrap()])
     }
     #[expect(clippy::unnecessary_wraps)]
     fn regex_filter(value: &str) -> Option<[StringOrRegex; 1]> {
-      Some([StringOrRegex::new(value.to_string(), &Some(String::new())).unwrap()])
+      Some([StringOrRegex::new(value.to_string(), Some(&String::new())).unwrap()])
     }
 
     let foo_js = "foo.js";
@@ -326,11 +326,11 @@ filter: {:?}, id: {id}",
 
     #[expect(clippy::unnecessary_wraps)]
     fn string_filter(value: &str) -> Option<[StringOrRegex; 1]> {
-      Some([StringOrRegex::new(value.to_string(), &None).unwrap()])
+      Some([StringOrRegex::new(value.to_string(), None).unwrap()])
     }
     #[expect(clippy::unnecessary_wraps)]
     fn regex_filter(value: &str) -> Option<[StringOrRegex; 1]> {
-      Some([StringOrRegex::new(value.to_string(), &Some(String::new())).unwrap()])
+      Some([StringOrRegex::new(value.to_string(), Some(&String::new())).unwrap()])
     }
 
     let cases = [

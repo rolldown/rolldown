@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## compromise.js
+
+```js
+//#region compromise/nlp.js
+const nlp = function() {
+	console.log(666);
+};
+nlp.plugin = function() {
+	return this;
+};
+
+//#endregion
+//#region compromise/one.js
+nlp.extend = function() {
+	return 666;
+};
+var one_default = nlp;
+
+//#endregion
+//#region compromise/index.js
+var compromise_default = one_default;
+
+//#endregion
+export { compromise_default as default };
+```
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region main.js
+const nlp = (await import("./compromise.js")).default;
+assert.strictEqual(nlp.extend(), 666);
+
+//#endregion
+```

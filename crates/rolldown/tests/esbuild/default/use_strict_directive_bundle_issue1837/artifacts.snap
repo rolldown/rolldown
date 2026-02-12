@@ -24,7 +24,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function(process, node_assert) {
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 process = __toESM(process);
 node_assert = __toESM(node_assert);
 

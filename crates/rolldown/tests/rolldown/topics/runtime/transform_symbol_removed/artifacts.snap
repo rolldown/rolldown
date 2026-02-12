@@ -1,0 +1,11 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## RUNTIME_MODULE_SYMBOL_NOT_FOUND
+
+```text
+[RUNTIME_MODULE_SYMBOL_NOT_FOUND] Error: Failed to resolve runtime symbol(s) "__exportAll", "__toCommonJS" after the runtime module was modified by plugin(s): runtime-breaking-plugin. Please review these plugins to ensure they do not accidentally remove or rename runtime utilities.
+
+```

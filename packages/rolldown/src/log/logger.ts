@@ -2,7 +2,7 @@ import path from 'node:path';
 import type { InputOptions } from '../options/input-options';
 import type { Plugin } from '../plugin';
 import { getSortedPlugins } from '../plugin/plugin-driver';
-import { VERSION } from '../version';
+import { VERSION } from '../constants';
 import {
   type LoggingFunction,
   type LogHandler,

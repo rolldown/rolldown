@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lib.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -27,6 +27,7 @@ exports.__toESM = __toESM;
 ## main.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 const require_lib$1 = require('./lib.js');
 let node_assert = require("node:assert");
 node_assert = require_lib$1.__toESM(node_assert);

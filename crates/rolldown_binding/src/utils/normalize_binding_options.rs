@@ -47,7 +47,7 @@ fn normalize_generated_code_option(
     }
     None => GeneratedCodeOptions::default(),
   };
-  Ok(GeneratedCodeOptions { symbols: value.symbols.unwrap_or(v.symbols), ..v })
+  Ok(GeneratedCodeOptions { symbols: value.symbols.unwrap_or(v.symbols) })
 }
 
 fn normalize_addon_option(
@@ -460,6 +460,7 @@ pub fn normalize_binding_options(
             max_module_size: item.max_module_size,
             min_module_size: item.min_module_size,
             max_size: item.max_size,
+            entries_aware: item.entries_aware,
           })
           .collect::<Vec<_>>()
       }),
@@ -479,6 +480,14 @@ pub fn normalize_binding_options(
         )),
       })
       .transpose()?,
+    comments: output_options.comments.map(|c| match c {
+      napi::Either::A(b) => rolldown::CommentsOptions { legal: b, annotation: b, jsdoc: b },
+      napi::Either::B(obj) => rolldown::CommentsOptions {
+        legal: obj.legal.unwrap_or(true),
+        annotation: obj.annotation.unwrap_or(true),
+        jsdoc: obj.jsdoc.unwrap_or(true),
+      },
+    }),
     drop_labels: input_options.drop_labels,
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
@@ -528,21 +537,24 @@ pub fn normalize_binding_options(
             .and_then(|plugin| plugin.remove(&index))
             .unwrap_or_default();
           let worker_manager = worker_manager.as_ref().unwrap();
-          ParallelJsPlugin::new_shared(plugins, Arc::clone(worker_manager))
+          Ok(ParallelJsPlugin::new_shared(plugins, Arc::clone(worker_manager)))
         },
         |plugin| match plugin {
-          Either::A(plugin_options) => JsPlugin::new_shared(plugin_options),
+          Either::A(plugin_options) => Ok(JsPlugin::new_shared(plugin_options)),
           Either::B(builtin) => {
             // Needs to save the name, since `try_into` will consume the ownership
             let name = format!("{:?}", builtin.__name);
-            builtin
-              .try_into()
-              .unwrap_or_else(|err| panic!("Should convert to builtin plugin: {name} \n {err}"))
+            builtin.try_into().map_err(|err| {
+              napi::Error::new(
+                napi::Status::InvalidArg,
+                format!("Failed to convert builtin plugin '{name}': {err}"),
+              )
+            })
           }
         },
       )
     })
-    .collect::<Vec<_>>();
+    .collect::<Result<Vec<_>, _>>()?;
 
   #[cfg(target_family = "wasm")]
   let plugins: Vec<SharedPluginable> = input_options
@@ -551,17 +563,20 @@ pub fn normalize_binding_options(
     .chain(output_options.plugins)
     .filter_map(|plugin| {
       plugin.map(|plugin| match plugin {
-        Either::A(plugin_options) => JsPlugin::new_shared(plugin_options),
+        Either::A(plugin_options) => Ok(JsPlugin::new_shared(plugin_options)),
         Either::B(builtin) => {
           // Needs to save the name, since `try_into` will consume the ownership
           let name = format!("{:?}", builtin.__name);
-          builtin
-            .try_into()
-            .unwrap_or_else(|err| panic!("Should convert to builtin plugin: {name} \n {err}"))
+          builtin.try_into().map_err(|err| {
+            napi::Error::new(
+              napi::Status::InvalidArg,
+              format!("Failed to convert builtin plugin '{name}': {err}"),
+            )
+          })
         }
       })
     })
-    .collect::<Vec<_>>();
+    .collect::<Result<Vec<_>, _>>()?;
 
   Ok(BundlerConfig::new(bundler_options, plugins))
 }

@@ -8,8 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import nodeAssert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
-// HIDDEN [rolldown:hmr]
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo.cjs
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.cjs");
@@ -19,10 +18,9 @@ var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({});
 var import_foo, main_hot;
 var init_main = __esmMin((() => {
-	init_rolldown_hmr();
 	import_foo = require_foo();
 	main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 	__rolldown_runtime__.registerModule("main.js", { exports: main_exports });

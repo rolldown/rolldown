@@ -2,12 +2,9 @@ import { extendConfig } from '@voidzero-dev/vitepress-theme/config';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { type DefaultTheme, defineConfig } from 'vitepress';
-import {
-  groupIconMdPlugin,
-  groupIconVitePlugin,
-  localIconLoader,
-} from 'vitepress-plugin-group-icons';
+import { groupIconMdPlugin, groupIconVitePlugin } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
+import { addOgImage } from 'vitepress-plugin-og';
 import { hooksGraphPlugin } from './markdown-hooks-graph.ts';
 
 const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
@@ -77,13 +74,14 @@ const sidebarForInDepth: DefaultTheme.SidebarItem[] = [
         text: 'Non ESM Output Formats',
         link: '/in-depth/non-esm-output-formats.md',
       },
+      { text: 'Dead Code Elimination', link: '/in-depth/dead-code-elimination.md' },
+      { text: 'Lazy Barrel Optimization', link: '/in-depth/lazy-barrel-optimization.md' },
       { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
       {
         text: 'Why Plugin Hook Filter',
         link: '/in-depth/why-plugin-hook-filter.md',
       },
       { text: 'Directives', link: '/in-depth/directives.md' },
-      { text: 'Lazy Barrel Optimization', link: '/in-depth/lazy-barrel-optimization.md' },
     ],
   },
 ];
@@ -404,7 +402,6 @@ const config = defineConfig({
         customIcon: {
           homebrew: 'logos:homebrew',
           cargo: 'vscode-icons:file-type-cargo',
-          rolldown: localIconLoader(import.meta.url, '../public/logo-without-border.svg'),
         },
       }) as any,
       llmstxt({
@@ -420,10 +417,18 @@ const config = defineConfig({
       await hooksGraphPlugin(md);
     },
   },
-  transformPageData(pageData) {
+  async transformPageData(pageData, ctx) {
     // Disable "Edit this page on GitHub" for auto-generated reference docs
     if (pageData.relativePath.startsWith('reference/')) {
       pageData.frontmatter.editLink = false;
+    }
+
+    // Automatically handle OG images for all markdown files.
+    if (!pageData.frontmatter.image && pageData.relativePath !== 'index.md') {
+      await addOgImage(pageData, ctx, {
+        domain: 'https://rolldown.rs',
+        maxTitleSizePerLine: 16,
+      });
     }
   },
 });

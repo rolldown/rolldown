@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
 var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
 
@@ -40,7 +40,7 @@ Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region foo.js
 var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
@@ -77,7 +77,7 @@ Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))
 ```js
 (function() {
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region foo.js
 	var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));

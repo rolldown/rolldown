@@ -527,6 +527,48 @@ impl GenerateStage<'_> {
                 let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
                 imports_from_other_chunks.entry(importee_chunk_id).or_default();
               });
+
+            // Also check direct imports from all modules in this chunk to modules in other chunks.
+            // This handles cases where the bit-based check above misses cross-chunk dependencies:
+            // 1. Entry A imports entry B - entry B's chunk bits don't contain entry A's bit
+            // 2. Dynamic chunk imports a module that was inlined into another chunk
+            //
+            // We need to check ALL modules in the chunk because non-entry modules may be
+            // inlined into the entry chunk and their imports need to be preserved.
+            for &module_idx in &chunk.modules {
+              let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+                continue;
+              };
+              for rec in &module.import_records {
+                if rec.kind == ImportKind::DynamicImport {
+                  continue;
+                }
+                let Some(importee_module_idx) = rec.resolved_module else {
+                  continue;
+                };
+                if !self.link_output.module_table[importee_module_idx]
+                  .side_effects()
+                  .has_side_effects()
+                {
+                  continue;
+                }
+                let Some(importee_chunk_idx) = chunk_graph.module_to_chunk[importee_module_idx]
+                else {
+                  continue;
+                };
+                if importee_chunk_idx == chunk_id {
+                  continue;
+                }
+                // Skip if already covered by the bit-based check above
+                let importee_chunk = &chunk_graph.chunk_table[importee_chunk_idx];
+                if importee_chunk.bits.has_bit(*importer_chunk_bit) {
+                  continue;
+                }
+                index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
+                let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
+                imports_from_other_chunks.entry(importee_chunk_idx).or_default();
+              }
+            }
           }
         }
       });

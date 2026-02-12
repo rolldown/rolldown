@@ -3,22 +3,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## _virtual/rolldown_runtime.js
+## _virtual/_rolldown/runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
+exports.__exportAll = __exportAll;
 exports.__reExport = __reExport;
 ```
 
 ## main.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+const require_runtime = require('./_virtual/_rolldown/runtime.js');
 require('./server.js');
 
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ require_runtime.__exportAll({});
 
 //#endregion
 
@@ -35,7 +36,7 @@ Object.keys(external_lib).forEach(function (k) {
 ## server.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+const require_runtime = require('./_virtual/_rolldown/runtime.js');
 
 
 var external_lib = require("external-lib");

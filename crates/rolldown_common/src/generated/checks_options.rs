@@ -29,6 +29,9 @@ pub struct ChecksOptions {
   pub prefer_builtin_feature: Option<bool>,
   pub could_not_clean_directory: Option<bool>,
   pub plugin_timings: Option<bool>,
+  pub duplicate_shebang: Option<bool>,
+  pub unsupported_tsconfig_option: Option<bool>,
+  pub ineffective_dynamic_import: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -93,6 +96,18 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     );
     flag
       .set(rolldown_error::EventKindSwitcher::PluginTimings, value.plugin_timings.unwrap_or(true));
+    flag.set(
+      rolldown_error::EventKindSwitcher::DuplicateShebang,
+      value.duplicate_shebang.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::UnsupportedTsconfigOption,
+      value.unsupported_tsconfig_option.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::IneffectiveDynamicImport,
+      value.ineffective_dynamic_import.unwrap_or(true),
+    );
     flag
   }
 }

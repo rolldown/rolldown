@@ -11,6 +11,7 @@ class A {
   constructor() {
 (function(exports) {
 
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region main.js
 	const a = 1;

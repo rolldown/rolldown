@@ -106,6 +106,10 @@ export interface EmittedPrebuiltChunk {
   type: 'prebuilt-chunk';
   fileName: string;
   /**
+   * A semantic name for the chunk. If not provided, `fileName` will be used.
+   */
+  name?: string;
+  /**
    * The code of this chunk.
    */
   code: string;
@@ -120,6 +124,18 @@ export interface EmittedPrebuiltChunk {
    */
   map?: SourceMap;
   sourcemapFileName?: string;
+  /**
+   * The module id of the facade module for this chunk, if any.
+   */
+  facadeModuleId?: string;
+  /**
+   * Whether this chunk corresponds to an entry point.
+   */
+  isEntry?: boolean;
+  /**
+   * Whether this chunk corresponds to a dynamic entry point.
+   */
+  isDynamicEntry?: boolean;
 }
 
 /** @inline @category Plugin APIs */
@@ -356,10 +372,14 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     if (file.type === 'prebuilt-chunk') {
       return this.context.emitPrebuiltChunk({
         fileName: file.fileName,
+        name: file.name,
         code: file.code,
         exports: file.exports,
         map: bindingifySourcemap(file.map),
         sourcemapFileName: file.sourcemapFileName,
+        facadeModuleId: file.facadeModuleId,
+        isEntry: file.isEntry,
+        isDynamicEntry: file.isDynamicEntry,
       });
     }
     if (file.type === 'chunk') {

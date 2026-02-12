@@ -1,6 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: indirect.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
 # Assets
 
 ## main.js
@@ -9,7 +18,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { read } from "node:fs";
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region indirect.js
 var indirect_exports = /* @__PURE__ */ __exportAll({ read: () => read });
 

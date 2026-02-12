@@ -6,6 +6,7 @@ export { value as fooValue } from './foo';
 if (import.meta.hot) {
   import.meta.hot.accept((newExports) => {
     assert.deepEqual(newExports, {
+      [Symbol.toStringTag]: 'Module',
       fooValue: 'edited-foo',
       barValue: 'edited-bar',
     });

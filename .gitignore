@@ -157,6 +157,7 @@ pkg/
 # vitepress
 docs/.vitepress/cache
 docs/reference
+docs/public/og
 
 # ci release avoid lerna error: Working tree has uncommitted changes
 crates/rolldown_binding/artifacts/
@@ -183,3 +184,5 @@ CLAUDE.local.md
 # workaround for https://github.com/anthropics/claude-code/issues/4928
 nul
 
+# Zed local config
+.zed

@@ -1,4 +1,5 @@
-use oxc_transform_napi::TransformOptions;
+use oxc::transformer::{HelperLoaderMode, HelperLoaderOptions};
+use oxc_transform_napi::{HelperMode, TransformOptions};
 use rolldown_common::{
   BundlerTransformOptions, CompilerAssumptions, DecoratorOptions, Either,
   IsolatedDeclarationsOptions, JsxOptions, PluginsOptions, ReactRefreshOptions,
@@ -25,8 +26,6 @@ pub fn normalize_binding_transform_options(options: TransformOptions) -> Bundler
         import_source: jsx.import_source,
         pragma: jsx.pragma,
         pragma_frag: jsx.pragma_frag,
-        use_built_ins: jsx.use_built_ins,
-        use_spread: jsx.use_spread,
         refresh,
       })
     }
@@ -87,5 +86,26 @@ pub fn normalize_binding_transform_options(options: TransformOptions) -> Bundler
     }),
   });
 
-  BundlerTransformOptions { jsx, target, decorator, typescript, assumptions, plugins }
+  let helpers = options.helpers.map(|h| HelperLoaderOptions {
+    mode: h
+      .mode
+      .map(|mode| match mode {
+        HelperMode::Runtime => HelperLoaderMode::Runtime,
+        HelperMode::External => HelperLoaderMode::External,
+      })
+      .unwrap_or_default(),
+    module_name: HelperLoaderOptions::default().module_name,
+  });
+
+  BundlerTransformOptions {
+    jsx,
+    #[cfg(debug_assertions)]
+    jsx_preset: None,
+    target,
+    decorator,
+    typescript,
+    assumptions,
+    plugins,
+    helpers,
+  }
 }

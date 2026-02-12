@@ -323,13 +323,13 @@ impl From<ModuleLoaderOutput> for ScanStageOutput {
       flat_options,
     } = module_loader_output;
     ScanStageOutput {
+      module_table,
+      index_ecma_ast,
       entry_points,
       symbol_ref_db,
       runtime,
       warnings,
-      index_ecma_ast,
       dynamic_import_exports_usage_map,
-      module_table,
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
       flat_options,

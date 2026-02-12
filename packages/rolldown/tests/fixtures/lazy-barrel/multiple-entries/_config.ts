@@ -14,6 +14,10 @@ export default defineTest({
       {
         name: 'track-transforms',
         transform(_, id) {
+          // Skip virtual modules (like \0rolldown/runtime.js)
+          if (id.startsWith('\0')) {
+            return;
+          }
           transformedIds.push(id);
           return {
             moduleSideEffects: false

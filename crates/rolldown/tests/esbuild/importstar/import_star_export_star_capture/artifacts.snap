@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
 const foo$1 = 123;
 
@@ -19,7 +19,10 @@ var bar_exports = /* @__PURE__ */ __exportAll({ foo: () => foo$1 });
 //#endregion
 //#region entry.js
 let foo = 234;
-assert.deepEqual(bar_exports, { foo: 123 });
+assert.deepEqual(bar_exports, {
+	[Symbol.toStringTag]: "Module",
+	foo: 123
+});
 assert.equal(foo$1, 123);
 assert.equal(foo, 234);
 

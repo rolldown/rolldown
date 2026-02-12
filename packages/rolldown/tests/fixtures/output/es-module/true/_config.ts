@@ -1,6 +1,9 @@
+import { createRequire } from 'node:module';
 import type { OutputChunk as RolldownOutputChunk } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 
 export default defineTest({
   config: {
@@ -11,13 +14,13 @@ export default defineTest({
     },
   },
   afterTest: (output) => {
+    fs.writeFileSync(path.join(import.meta.dirname, 'dist/package.json'), '{ "type": "commonjs" }');
+    const require = createRequire(import.meta.url);
     expect(
       output.output
-        .filter(({ type }) => type === 'chunk')
+        .filter((output): output is RolldownOutputChunk => output.type === 'chunk' && output.isEntry)
         .every((chunk) =>
-          (chunk as RolldownOutputChunk).code.includes(
-            "Object.defineProperty(exports, '__esModule', { value: true });",
-          )
+          require(`./dist/${chunk.fileName}`).__esModule
         ),
     ).toBe(true);
   },

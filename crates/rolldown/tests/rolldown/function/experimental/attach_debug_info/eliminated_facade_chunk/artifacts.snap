@@ -1,15 +1,31 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: dynamic-a.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: dynamic-b.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
 # Assets
 
 ## main.js
 
 ```js
 //! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
-//! Eliminated Facade Chunk: [Chunk-Name: unnamed] [Entry-Module-Id: dynamic-b.js] [Reason: Dynamic entry chunk merged into user-defined entry chunk]
 //! Eliminated Facade Chunk: [Chunk-Name: unnamed] [Entry-Module-Id: dynamic-a.js] [Reason: Dynamic entry chunk merged into user-defined entry chunk]
-// HIDDEN [rolldown:runtime]
+//! Eliminated Facade Chunk: [Chunk-Name: unnamed] [Entry-Module-Id: dynamic-b.js] [Reason: Dynamic entry chunk merged into user-defined entry chunk]
+// HIDDEN [\0rolldown/runtime.js]
 //#region dynamic-a.js
 var dynamic_a_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 const a = "dynamic-a";

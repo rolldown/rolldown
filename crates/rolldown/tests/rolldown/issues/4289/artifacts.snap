@@ -24,7 +24,7 @@ export default require_lib();
 ```js
 import nodeAssert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region non-node-mode.js
 async function main$1() {
 	const exports = await import("./lib.js").then((m) => /* @__PURE__ */ __toESM(m.default));
@@ -92,7 +92,8 @@ Object.defineProperty(exports, 'default', {
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 
@@ -145,7 +146,7 @@ exports.__commonJSMin = __commonJSMin;
 ```js
 import nodeAssert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });

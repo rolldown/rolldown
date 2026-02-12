@@ -483,7 +483,15 @@ impl LinkStage<'_> {
                     }
                   }
                   canonical_ref = self.symbols.canonical_ref_for(export_symbol.symbol_ref);
-                  canonical_ref_owner = self.module_table[canonical_ref.owner].as_normal().unwrap();
+                  // If the canonical ref points to an external module, we can't resolve
+                  // further properties statically. Break out of the loop and let the
+                  // remaining properties be accessed at runtime.
+                  let Some(normal_module) = self.module_table[canonical_ref.owner].as_normal()
+                  else {
+                    cursor += 1;
+                    break;
+                  };
+                  canonical_ref_owner = normal_module;
                   cursor += 1;
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }

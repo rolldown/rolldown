@@ -20,7 +20,7 @@ use super::events::bundler_initialize_error::BundlerInitializeError;
 use super::events::cannot_call_namespace::CannotCallNamespace;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
-use super::events::export_undefined_variable::ExportUndefinedVariable;
+use super::events::duplicate_shebang::DuplicateShebang;
 use super::events::filename_conflict::FilenameConflict;
 use super::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use super::events::import_is_undefined::ImportIsUndefined;
@@ -33,9 +33,13 @@ use super::events::plugin_error::{CausedPlugin, PluginError};
 use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::resolve_error::DiagnosableResolveError;
+
+use super::events::tsconfig_error::TsConfigError;
 use super::events::unhandleable_error::UnhandleableError;
 use super::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use super::events::unsupported_feature::UnsupportedFeature;
+use super::events::unsupported_tsconfig_option::UnsupportedTsconfigOption;
+use super::events::untranspiled_syntax::UntranspiledSyntax;
 use super::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
@@ -105,7 +109,7 @@ impl BuildDiagnostic {
     context: Option<UnloadableDependencyContext>,
     reason: ArcStr,
   ) -> Self {
-    Self::new_inner(UnloadableDependency { resolved, context, reason })
+    Self::new_inner(UnloadableDependency { reason, resolved, context })
   }
 
   pub fn circular_dependency(paths: Vec<String>) -> Self {
@@ -165,7 +169,7 @@ impl BuildDiagnostic {
     entry_module: ArcStr,
     export_keys: Vec<ArcStr>,
   ) -> Self {
-    Self::new_inner(InvalidExportOption { export_mode, export_keys, entry_module })
+    Self::new_inner(InvalidExportOption { export_mode, entry_module, export_keys })
   }
 
   pub fn filename_conflict(filename: ArcStr) -> Self {
@@ -203,7 +207,7 @@ impl BuildDiagnostic {
     span: Span,
     error_message: String,
   ) -> Self {
-    Self::new_inner(UnsupportedFeature { filename, source, span, error_message })
+    Self::new_inner(UnsupportedFeature { source, filename, span, error_message })
   }
 
   pub fn empty_import_meta(
@@ -239,7 +243,7 @@ impl BuildDiagnostic {
     diagnostics: T,
     source: &ArcStr,
     id: &str,
-    severity: &Severity,
+    severity: Severity,
     event_kind: EventKind,
   ) -> Vec<Self>
   where
@@ -284,7 +288,7 @@ impl BuildDiagnostic {
   }
 
   pub fn eval(filename: String, source: ArcStr, span: Span) -> Self {
-    Self::new_inner(Eval { filename, span, source })
+    Self::new_inner(Eval { span, source, filename })
   }
 
   pub fn configuration_field_conflict(
@@ -301,21 +305,32 @@ impl BuildDiagnostic {
     })
   }
 
-  pub fn export_undefined_variable(
-    filename: String,
+  pub fn assign_to_import(
+    filename: ArcStr,
     source: ArcStr,
     span: Span,
     name: ArcStr,
+    import_decl_span: Option<Span>,
+    imported_name: Option<ArcStr>,
   ) -> Self {
-    Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
+    Self::new_inner(AssignToImport {
+      filename,
+      source,
+      span,
+      name,
+      import_decl_span,
+      imported_name,
+    })
   }
 
-  pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
-    Self::new_inner(AssignToImport { filename, source, span, name })
-  }
-
-  pub fn cannot_call_namespace(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
-    Self::new_inner(CannotCallNamespace { filename, source, span, name })
+  pub fn cannot_call_namespace(
+    filename: ArcStr,
+    source: ArcStr,
+    span: Span,
+    name: ArcStr,
+    declaration_span: Span,
+  ) -> Self {
+    Self::new_inner(CannotCallNamespace { filename, source, span, name, declaration_span })
   }
 
   pub fn prefer_builtin_feature(
@@ -353,6 +368,10 @@ impl BuildDiagnostic {
     Self::new_inner(UnhandleableError(err))
   }
 
+  pub fn untranspiled_syntax(filename: String, syntax_kind: &'static str) -> Self {
+    Self::new_inner(UntranspiledSyntax { filename, syntax_kind })
+  }
+
   pub fn bundler_initialize_error(message: String, hint: Option<String>) -> Self {
     Self::new_inner(BundlerInitializeError { message, hint })
   }
@@ -367,5 +386,41 @@ impl BuildDiagnostic {
 
   pub fn plugin_timings(plugins: Vec<PluginTimingInfo>) -> Self {
     Self::new_inner(PluginTimings { plugins })
+  }
+
+  pub fn duplicate_shebang(filename: String) -> Self {
+    Self::new_inner(DuplicateShebang { filename })
+  }
+
+  pub fn tsconfig_error(file_path: String, reason: ResolveError) -> Self {
+    Self::new_inner(TsConfigError { file_paths: vec![file_path], reason })
+  }
+
+  pub fn unsupported_tsconfig_option(message: String) -> Self {
+    Self::new_inner(UnsupportedTsconfigOption { message })
+  }
+
+  pub fn runtime_module_symbol_not_found(
+    symbol_names: Vec<String>,
+    modified_by_plugins: Vec<String>,
+  ) -> Self {
+    Self::new_inner(super::events::runtime_module_symbol_not_found::RuntimeModuleSymbolNotFound {
+      symbol_names,
+      modified_by_plugins,
+    })
+  }
+
+  pub fn ineffective_dynamic_import(
+    module_id: String,
+    mut static_importers: Vec<String>,
+    mut dynamic_importers: Vec<String>,
+  ) -> Self {
+    static_importers.sort();
+    dynamic_importers.sort();
+    Self::new_inner(super::events::ineffective_dynamic_import::IneffectiveDynamicImport {
+      module_id,
+      static_importers,
+      dynamic_importers,
+    })
   }
 }

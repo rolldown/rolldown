@@ -18,6 +18,7 @@ export { test as "\n\"\\'" };
 ### main.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 let external = require("external");
 
 exports["\n\"\\'"] = external["\n\"\\'"];

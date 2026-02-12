@@ -6,9 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region esm.js
-var esm_exports = {};
+var esm_exports = /* @__PURE__ */ __exportAll({});
 var init_esm = __esmMin((() => {}));
 
 //#endregion

@@ -19,7 +19,7 @@ Object.defineProperty(exports, 'default', {
 ## lib2.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -45,6 +45,7 @@ Object.defineProperty(exports, 'require_lib', {
 ## main.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 const require_lib$1 = require('./lib2.js');
 let node_assert = require("node:assert");
 node_assert = require_lib$1.__toESM(node_assert);

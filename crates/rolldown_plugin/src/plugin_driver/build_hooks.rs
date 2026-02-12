@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
-  HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver, TransformPluginContext,
+  HookResolveIdReturn, HookTransformArgs, LoadPluginContext, PluginContext, PluginDriver,
+  TransformPluginContext,
   pluginable::HookTransformAstReturn,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
@@ -11,7 +12,7 @@ use crate::{
 use anyhow::{Context, Result};
 use rolldown_common::{
   ModuleInfo, ModuleType, NormalModule, PluginIdx, SharedNormalizedBundlerOptions,
-  SourcemapChainElement, SourcemapHires, side_effects::HookSideEffects,
+  SourcemapChainElement, side_effects::HookSideEffects,
 };
 use rolldown_devtools::{action, trace_action};
 use rolldown_error::CausedPlugin;
@@ -176,8 +177,9 @@ impl PluginDriver {
           plugin_id: plugin_idx.raw(),
           call_id: "${call_id}",
         });
+        let load_ctx = Arc::new(LoadPluginContext::new(ctx.clone(), args.module_idx));
         let start = self.start_timing();
-        let result = plugin.call_load(ctx, args).await;
+        let result = plugin.call_load(load_ctx, args).await;
         self.record_timing(plugin_idx, start);
         if let Some(r) = result? {
           trace_action!(action::HookLoadCallEnd {
@@ -225,6 +227,7 @@ impl PluginDriver {
     side_effects: &mut Option<HookSideEffects>,
     module_type: &mut ModuleType,
     magic_string_tx: Option<Arc<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>>,
+    code_changed_by_plugins: &mut Option<Vec<String>>,
   ) -> Result<String> {
     let mut code = original_code;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
@@ -268,6 +271,11 @@ impl PluginDriver {
           *side_effects = Some(v);
         }
         if let Some(v) = r.code {
+          if let Some(changed_by) = code_changed_by_plugins {
+            if v != code {
+              changed_by.push(plugin.call_name().to_string());
+            }
+          }
           code = v;
           trace_action!(action::HookTransformCallEnd {
             action: "HookTransformCallEnd",
@@ -323,10 +331,8 @@ impl PluginDriver {
       } else {
         // If sourcemap is empty and code has changed, need to create one remapping original code.
         let magic_string = MagicString::new(original_code);
-        let hires =
-          self.options.experimental.transform_hires_sourcemap.unwrap_or(SourcemapHires::Boundary);
         Some(magic_string.source_map(SourceMapOptions {
-          hires: hires.into(),
+          hires: string_wizard::Hires::Boundary,
           include_content: true,
           source: id.into(),
         }))
@@ -340,18 +346,18 @@ impl PluginDriver {
     for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_ast_meta)
     {
+      // Reconstructing the struct is necessary because `args.ast` is moved and reassigned each iteration
+      #[expect(clippy::unnecessary_struct_initialization)]
+      let transform_args = HookTransformAstArgs {
+        cwd: args.cwd,
+        ast: args.ast,
+        id: args.id,
+        stable_id: args.stable_id,
+        is_user_defined_entry: args.is_user_defined_entry,
+        module_type: args.module_type,
+      };
       args.ast = plugin
-        .call_transform_ast(
-          ctx,
-          HookTransformAstArgs {
-            cwd: args.cwd,
-            ast: args.ast,
-            id: args.id,
-            stable_id: args.stable_id,
-            is_user_defined_entry: args.is_user_defined_entry,
-            module_type: args.module_type,
-          },
-        )
+        .call_transform_ast(ctx, transform_args)
         .instrument(debug_span!("transform_ast_hook", plugin_name = plugin.call_name().as_ref()))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?;

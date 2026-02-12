@@ -13,8 +13,8 @@ impl<'text> MagicString<'text> {
   /// A shorthand for `update_with(start, end, content, Default::default())`;
   pub fn update(
     &mut self,
-    start: usize,
-    end: usize,
+    start: u32,
+    end: u32,
     content: impl Into<CowStr<'text>>,
   ) -> Result<&mut Self, String> {
     self.update_with(start, end, content, Default::default())
@@ -22,8 +22,8 @@ impl<'text> MagicString<'text> {
 
   pub fn update_with(
     &mut self,
-    start: usize,
-    end: usize,
+    start: u32,
+    end: u32,
     content: impl Into<CowStr<'text>>,
     opts: UpdateOptions,
   ) -> Result<&mut Self, String> {
@@ -34,8 +34,8 @@ impl<'text> MagicString<'text> {
 
   pub(super) fn inner_update_with(
     &mut self,
-    start: usize,
-    end: usize,
+    start: u32,
+    end: u32,
     content: CowStr<'text>,
     opts: UpdateOptions,
     error_if_start_equal_end: bool,
@@ -64,9 +64,12 @@ impl<'text> MagicString<'text> {
       return Ok(self);
     };
 
-    while rest_chunk_idx != end_idx {
+    loop {
       let rest_chunk = &mut self.chunks[rest_chunk_idx];
       rest_chunk.edit("".into(), Default::default());
+      if rest_chunk_idx == end_idx {
+        break;
+      }
       rest_chunk_idx = rest_chunk.next.unwrap();
     }
     Ok(self)

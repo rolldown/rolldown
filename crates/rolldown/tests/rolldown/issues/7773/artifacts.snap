@@ -6,7 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -39,7 +40,8 @@ Object.defineProperty(exports, 'dayjs2', {
   typeof define === 'function' && define.amd ? define(['exports'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.test = {})));
 })(this, function(exports) {
-// HIDDEN [rolldown:runtime]
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 	var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {

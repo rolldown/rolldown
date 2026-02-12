@@ -12,6 +12,7 @@ class A {
 this.namespace = this.namespace || {};
 this.namespace.module = (function(exports) {
 
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region foo.js
 	const value = 1;

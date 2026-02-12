@@ -44,7 +44,7 @@ export { require_a as n, require_b as t };
 ## rolldown-runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 export { __commonJSMin as t };
 ```
 
@@ -93,6 +93,6 @@ export { require_a as n, require_b as t };
 ### rolldown-runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 export { __commonJSMin as t };
 ```

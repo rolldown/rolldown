@@ -1,7 +1,6 @@
 use std::ptr::addr_of;
 
 use rolldown_common::{ExportsKind, ImportKind, ImportRecordMeta, Module, OutputFormat, WrapKind};
-use rustc_hash::FxHashSet;
 
 use crate::utils::external_import_interop::import_record_needs_interop;
 
@@ -10,7 +9,6 @@ use super::LinkStage;
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn determine_module_exports_kind(&mut self) {
-    let entry_ids_set = self.entries.iter().map(|e| e.idx).collect::<FxHashSet<_>>();
     self.module_table.modules.iter().filter_map(Module::as_normal).for_each(|importer| {
       // TODO(hyf0): should check if importer is a js module
       importer
@@ -84,7 +82,7 @@ impl LinkStage<'_> {
           }
         });
 
-      let is_entry = entry_ids_set.contains(&importer.idx);
+      let is_entry = self.entries.contains_key(&importer.idx);
       if matches!(importer.exports_kind, ExportsKind::CommonJs)
         && (!is_entry || matches!(self.options.format, OutputFormat::Esm))
       {

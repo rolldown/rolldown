@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 var init_main = __esmMin((() => {
 //#region setup.js
@@ -29,7 +29,7 @@ init_main();
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 var init_main = __esmMin((() => {
 //#region setup.js
@@ -52,7 +52,7 @@ init_main();
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 var init_main = __esmMin(() => {
 //#region setup.js

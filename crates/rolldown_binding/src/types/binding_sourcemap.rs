@@ -5,7 +5,7 @@ use napi::Either;
 // - Pass to JS: `From<JSONSourceMap>` impl (line 61) used in hook outputs
 // - Receive from JS: `TryFrom<BindingSourcemap>` impl (line 10) used in JsOutputChunk
 #[napi_derive::napi(object)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BindingSourcemap {
   pub inner: Either<String, BindingJsonSourcemap>,
 }
@@ -26,7 +26,7 @@ impl TryFrom<BindingSourcemap> for rolldown_sourcemap::SourceMap {
 // - Part of BindingSourcemap Either type, used in both directions
 // - Pass to JS: Created in From<JSONSourceMap> impl (line 64)
 // - Receive from JS: Converted in TryFrom<BindingSourcemap> impl (line 16)
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 #[napi_derive::napi(object)]
 pub struct BindingJsonSourcemap {
   pub file: Option<String>,
@@ -64,19 +64,23 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
   }
 }
 
-impl From<rolldown_sourcemap::JSONSourceMap> for BindingSourcemap {
+impl From<rolldown_sourcemap::JSONSourceMap> for BindingJsonSourcemap {
   fn from(value: rolldown_sourcemap::JSONSourceMap) -> Self {
     Self {
-      inner: Either::B(BindingJsonSourcemap {
-        file: value.file,
-        mappings: Some(value.mappings),
-        source_root: value.source_root,
-        sources: Some(value.sources.into_iter().map(Some).collect()),
-        sources_content: value.sources_content,
-        names: Some(value.names),
-        debug_id: value.debug_id,
-        x_google_ignore_list: value.x_google_ignore_list,
-      }),
+      file: value.file,
+      mappings: Some(value.mappings),
+      source_root: value.source_root,
+      sources: Some(value.sources.into_iter().map(Some).collect()),
+      sources_content: value.sources_content,
+      names: Some(value.names),
+      debug_id: value.debug_id,
+      x_google_ignore_list: value.x_google_ignore_list,
     }
+  }
+}
+
+impl From<rolldown_sourcemap::JSONSourceMap> for BindingSourcemap {
+  fn from(value: rolldown_sourcemap::JSONSourceMap) -> Self {
+    Self { inner: Either::B(value.into()) }
   }
 }

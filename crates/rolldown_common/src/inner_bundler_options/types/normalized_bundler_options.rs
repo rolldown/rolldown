@@ -11,6 +11,7 @@ use rolldown_error::EventKindSwitcher;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::code_splitting_mode::CodeSplittingMode;
+use super::comments::CommentsOptions;
 use super::experimental_options::ExperimentalOptions;
 use super::generated_code_options::GeneratedCodeOptions;
 use super::legal_comments::LegalComments;
@@ -94,6 +95,7 @@ pub struct NormalizedBundlerOptions {
   pub profiler_names: bool,
   pub watch: WatchOption,
   pub legal_comments: LegalComments,
+  pub comments: CommentsOptions,
   pub drop_labels: FxHashSet<String>,
   pub polyfill_require: bool,
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
@@ -170,6 +172,7 @@ impl Default for NormalizedBundlerOptions {
       profiler_names: Default::default(),
       watch: Default::default(),
       legal_comments: LegalComments::None,
+      comments: CommentsOptions::default(),
       drop_labels: Default::default(),
       polyfill_require: Default::default(),
       defer_sync_scan_data: Default::default(),

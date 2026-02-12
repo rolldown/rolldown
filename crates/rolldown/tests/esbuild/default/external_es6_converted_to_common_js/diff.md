@@ -66,7 +66,7 @@ init_e();
 import * as ns$1 from "x";
 import { ns } from "x";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({ ns: () => ns$1 });
 var init_a = __esmMin((() => {}));
@@ -88,7 +88,7 @@ var init_d = __esmMin((() => {}));
 
 //#endregion
 //#region e.js
-var e_exports = {};
+var e_exports = /* @__PURE__ */ __exportAll({});
 import * as import_x from "x";
 __reExport(e_exports, import_x);
 var init_e = __esmMin((() => {}));
@@ -154,14 +154,15 @@ init_e();
 -var init_d = __esm({
 -    "d.js"() {}
 -});
-+var init_d = __esmMin(() => {});
- var e_exports = {};
+-var e_exports = {};
 -import * as x_star from "x";
 -var init_e = __esm({
 -    "e.js"() {
 -        __reExport(e_exports, x_star);
 -    }
 -});
++var init_d = __esmMin(() => {});
++var e_exports = __exportAll({});
 +import * as import_x from "x";
 +__reExport(e_exports, import_x);
 +var init_e = __esmMin(() => {});

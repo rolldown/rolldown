@@ -21,7 +21,7 @@ node_assert.default.strictEqual(import_shared.default.value, 42);
 ## rolldown-runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 Object.defineProperty(exports, '__commonJSMin', {
   enumerable: true,

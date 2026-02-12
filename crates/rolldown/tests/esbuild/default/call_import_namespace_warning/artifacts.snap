@@ -9,6 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 [CANNOT_CALL_NAMESPACE] Warning: Cannot call a namespace ("a").
    ╭─[ js.js:4:1 ]
    │
+ 1 │ import * as a from "a"
+   │             ┬  
+   │             ╰── "a" is imported as a namespace here
+   │ 
  4 │ a()
    │ ─┬─  
    │  ╰─── This will cause an error at runtime because "a" is a module namespace object and not a function. Consider changing "a" to a default import instead.
@@ -22,6 +26,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 [CANNOT_CALL_NAMESPACE] Warning: Cannot call a namespace ("a").
    ╭─[ ts.ts:4:1 ]
    │
+ 1 │ import * as a from "a"
+   │             ┬  
+   │             ╰── "a" is imported as a namespace here
+   │ 
  4 │ a()
    │ ─┬─  
    │  ╰─── This will cause an error at runtime because "a" is a module namespace object and not a function. Consider changing "a" to a default import instead.

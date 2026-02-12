@@ -57,7 +57,7 @@ init_main();
 ## rolldown-runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 export { __exportAll as n, __esmMin as t };
 ```
 

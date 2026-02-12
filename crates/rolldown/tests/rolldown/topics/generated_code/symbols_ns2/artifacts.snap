@@ -23,14 +23,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
-var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a }, 1);
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 const a = 1e3;
 
 //#endregion
 //#region a.js
-var a_exports = /* @__PURE__ */ __exportAll({ ns: () => lib_exports }, 1);
+var a_exports = /* @__PURE__ */ __exportAll({ ns: () => lib_exports });
 
 //#endregion
 //#region main.js
@@ -49,17 +49,17 @@ assert.equal(String(lib_exports), "[object Module]");
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 let assert = require("assert");
 assert = __toESM(assert);
 
 //#region lib.js
-var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a }, 1);
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 const a = 1e3;
 
 //#endregion
 //#region a.js
-var a_exports = /* @__PURE__ */ __exportAll({ ns: () => lib_exports }, 1);
+var a_exports = /* @__PURE__ */ __exportAll({ ns: () => lib_exports });
 
 //#endregion
 //#region main.js
@@ -102,16 +102,16 @@ assert.default.equal(String(lib_exports), "[object Module]");
 ```js
 (function(assert) {
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 assert = __toESM(assert);
 
 //#region lib.js
-	var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a }, 1);
+	var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 	const a = 1e3;
 
 //#endregion
 //#region a.js
-	var a_exports = /* @__PURE__ */ __exportAll({ ns: () => lib_exports }, 1);
+	var a_exports = /* @__PURE__ */ __exportAll({ ns: () => lib_exports });
 
 //#endregion
 //#region main.js

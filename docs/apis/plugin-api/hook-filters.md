@@ -1,11 +1,10 @@
 # Plugin Hook Filters
 
-> [!note]
-> For more details about **why you need plugin hook filter** please refer [why-plugin-hook-filter](/in-depth/why-plugin-hook-filter)
+Hook filters allow Rolldown to skip unnecessary Rust-to-JS calls by evaluating filter conditions on the Rust side before invoking your plugin. This improves performance and enables better parallelization. See [Why Plugin Hook Filters](/in-depth/why-plugin-hook-filter) for more details.
 
-One important thing to note for JavaScript plugins in Rolldown is that every plugin hook call incurs a small communication overhead between Rust and the JavaScript runtime (i.e. Node.js).
+## Basic Usage
 
-Consider the following plugin:
+Instead of checking conditions inside your hook:
 
 ```js{5}
 export default function myPlugin() {
@@ -23,13 +22,9 @@ export default function myPlugin() {
 }
 ```
 
-Line 5 is a very common pattern in Rollup plugins: check the file extension of a module inside the plugin hook to determine whether it needs to be processed.
+Use the object hook format with a `filter` property:
 
-However, this would be sub-optimal in a Rust bundler like Rolldown. Imagine this plugin is used in a large app with thousands of modules - Rolldown would have to invoke a Rust-to-JS call for every module, and in many cases just for the plugin to find out it doesn't actually need to do anything. Due to the single-threaded nature of JavaScript, unnecessary Rust-to-JS calls can also de-optimize parallelization.
-
-Ideally, we want to be able to determine whether a plugin hook needs to be invoked at all without leaving Rust. This is why Rolldown augments Rollup plugin's object hook format with the additional `filter` property. The above plugin can be updated to:
-
-```js{5}
+```js{5-7}
 export default function myPlugin() {
   return {
     name: 'example',
@@ -37,7 +32,7 @@ export default function myPlugin() {
       filter: {
         id: /\.data$/
       },
-      handler (code) {
+      handler(code) {
         // perform actual transform
         return transformedCode
       },
@@ -46,9 +41,15 @@ export default function myPlugin() {
 }
 ```
 
-Rolldown can now compile and execute the regular expression on the Rust side, and can avoid invoking JS if the filter does not match.
+Rolldown evaluates the filter on the Rust side and only calls your handler when the filter matches.
 
-In addition to `id`, you can also filter based on `moduleType` and the module's source code. The `filter` property works similarly to [`createFilter` from `@rollup/pluginutils`](https://github.com/rollup/plugins/blob/master/packages/pluginutils/README.md#createfilter). Here are some important details:
+::: tip
+[`@rolldown/pluginutils`](https://www.npmjs.com/package/@rolldown/pluginutils) exports some utilities for hook filters like `exactRegex` and `prefixRegex`.
+:::
+
+## Filter Properties
+
+In addition to `id`, you can also filter based on `moduleType` and the module's source code. The `filter` property works similarly to [`createFilter` from `@rollup/pluginutils`](https://github.com/rollup/plugins/blob/master/packages/pluginutils/README.md#createfilter).
 
 - If multiple values are passed to `include`, the filter matches if **any** of them match.
 - If a filter has both `include` and `exclude`, `exclude` takes precedence.
@@ -66,22 +67,49 @@ In addition to `id`, you can also filter based on `moduleType` and the module's 
   }
   ```
 
-See [`HookFilter`](/reference/Interface.HookFilter) for more details.
-
 The following properties are supported by each hook:
 
 - `resolveId` hook: `id`
 - `load` hook: `id`
 - `transform` hook: `id`, `moduleType`, `code`
 
+See [`HookFilter`](/reference/Interface.HookFilter) as well.
+
 > [!NOTE]
 > `id` is treated as a glob pattern when you pass a `string`, and treated as a regular expression when you pass a `RegExp`.
 > In the `resolve` hook, `id` must be a `RegExp`. `string`s are not allowed.
 > This is because the `id` value in `resolveId` is the exact text written in the import statement and usually not an absolute path, while glob patterns are designed to match absolute paths.
 
-## Improving interoperability
+## Composable Filters
 
-Plugin hook filters are supported in Rollup 4.38.0+, Vite 6.3.0+, and all versions of Rolldown. However, if you're authoring a plugin that needs to support older versions of Rollup (< 4.38.0) or Vite (< 6.3.0), you can provide a fallback implementation that works in both environments.
+For more complex filtering logic, Rolldown provides composable filter expressions via the [`@rolldown/pluginutils`](https://github.com/rolldown/rolldown/tree/main/packages/pluginutils) package. These allow you to build filters using logical operators like `and`, `or`, and `not`.
+
+```js
+import { and, id, include, moduleType } from '@rolldown/pluginutils';
+
+export default function myPlugin() {
+  return {
+    name: 'my-plugin',
+    transform: {
+      filter: [include(and(id(/\.ts$/), moduleType('ts')))],
+      handler(code, id) {
+        // Only called for .ts files with moduleType 'ts'
+        return transformedCode;
+      },
+    },
+  };
+}
+```
+
+See the [`@rolldown/pluginutils` README](https://github.com/rolldown/rolldown/tree/main/packages/pluginutils#readme) for the full API reference.
+
+## Interoperability
+
+Plugin hook filters are supported in Rollup 4.38.0+, Vite 6.3.0+, and all versions of Rolldown.
+
+### Supporting Older Versions
+
+If you're authoring a plugin that needs to support older versions of Rollup (< 4.38.0) or Vite (< 6.3.0), you can provide a fallback implementation that works in both environments.
 
 The strategy is to use the object hook format with filters when available, and fall back to a regular function that checks conditions internally for older versions:
 
@@ -117,8 +145,10 @@ This approach ensures your plugin will:
 > [!TIP]
 > When supporting older versions, keep both the filter pattern and the internal check in sync to avoid confusion.
 
-::: tip `moduleType` filter is not supported by Rollup / Vite 7 and below
+### `moduleType` Filter
 
-[Module Type concept](/in-depth/module-types) does not exist in Rollup / Vite 7 and below. For that reason, `moduleType` filter is not supported by those tools and will be ignored.
+The [Module Type concept](/in-depth/module-types) does not exist in Rollup / Vite 7 and below. For that reason, the `moduleType` filter is not supported by those tools and will be ignored.
 
-:::
+### Composable Filters
+
+Composable filters are currently only supported in Rolldown. They are not yet supported in Vite, Rolldown-Vite, or unplugin.

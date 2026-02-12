@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region a.js
 var fn$1 = /* @__PURE__ */ __name(() => {}, "fn");
 assert.strictEqual(fn$1.name, "fn");

@@ -10,7 +10,7 @@ use rolldown_utils::replace_all_placeholder::{ReplaceAllPlaceholder, Replacer};
 /// - Starts with "/" (Unix absolute path)
 /// - Starts with "./" or "../" (relative paths)
 /// - Is an absolute path (e.g., "C:/" on Windows)
-fn is_path_fragment(name: &str) -> bool {
+pub fn is_path_fragment(name: &str) -> bool {
   if name.is_empty() {
     return false;
   }

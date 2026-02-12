@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
 const x = 1;
 
@@ -26,6 +26,7 @@ var common_exports = /* @__PURE__ */ __exportAll({
 //#endregion
 //#region entry.js
 assert.deepEqual(common_exports, {
+	[Symbol.toStringTag]: "Module",
 	x: 1,
 	z: 4
 });

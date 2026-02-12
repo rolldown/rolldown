@@ -2,9 +2,7 @@ use std::{ops::Deref, sync::Arc};
 
 use crate::PluginContext;
 use arcstr::ArcStr;
-use rolldown_common::{
-  ModuleIdx, PluginIdx, SourceMapGenMsg, SourcemapChainElement, SourcemapHires,
-};
+use rolldown_common::{ModuleIdx, PluginIdx, SourceMapGenMsg, SourcemapChainElement};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 use rolldown_utils::unique_arc::WeakRef;
 use std::sync::mpsc;
@@ -59,14 +57,8 @@ impl TransformPluginContext {
 
   fn create_sourcemap(&self) -> SourceMap {
     let magic_string = MagicString::new(self.original_code.as_str());
-    let hires = self
-      .inner
-      .options()
-      .experimental
-      .transform_hires_sourcemap
-      .unwrap_or(SourcemapHires::Boundary);
     magic_string.source_map(SourceMapOptions {
-      hires: hires.into(),
+      hires: string_wizard::Hires::Boundary,
       include_content: true,
       source: self.id.as_str().into(),
     })
@@ -76,10 +68,16 @@ impl TransformPluginContext {
   ///
   /// * file - The file to add as a watch dependency. This should be a normalized absolute path.
   pub fn add_watch_file(&self, file: &str) {
-    // Call the parent method to add to global watch files
+    // Skip all operations for virtual modules (starting with \0)
+    // Virtual modules can't be refetched from disk during HMR
+    if self.id.starts_with('\0') {
+      return;
+    }
+
+    // Add to global watch files
     self.inner.add_watch_file(file);
 
-    // Also add to this module's transform dependencies
+    // Add to this module's transform dependencies
     if let crate::PluginContext::Native(ctx) = &self.inner {
       if let Some(plugin_driver) = ctx.plugin_driver.upgrade() {
         plugin_driver.add_transform_dependency(self.module_idx, file);

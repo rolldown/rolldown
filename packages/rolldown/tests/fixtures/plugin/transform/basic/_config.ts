@@ -24,7 +24,7 @@ export default defineTest({
   },
   afterTest: (output) => {
     expect.assertions(4);
-    expect(transformFn).toHaveBeenCalledTimes(2);
+    expect(transformFn).toHaveBeenCalledTimes(3);
     expect(output.output[0].code).contains('transformed');
   },
 });

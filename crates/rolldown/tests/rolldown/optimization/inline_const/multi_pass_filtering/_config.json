@@ -1,0 +1,10 @@
+{
+  "config": {
+    "minify": "dceOnly",
+    "optimization": {
+      "inlineConst": {
+        "pass": 3
+      }
+    }
+  }
+}

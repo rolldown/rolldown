@@ -11,6 +11,7 @@ mod module_loader;
 mod source_map_gen_msg;
 mod type_aliases;
 mod types;
+mod utils;
 
 /// This module is to help `rolldown` crate could export types related bundler options easily.
 /// `rolldown` crate could use `pub use rolldown_common::bundler_options::*;` to export all types, so we don't need write
@@ -32,12 +33,13 @@ pub mod bundler_options {
       chunk_import_map::ChunkImportMap,
       chunk_modules_order::ChunkModulesOrderBy,
       code_splitting_mode::CodeSplittingMode,
+      comments::CommentsOptions,
       defer_sync_scan_data_option::DeferSyncScanDataOption,
       dev_mode_options::DevModeOptions,
       devtools_options::DevtoolsOptions,
       es_module_flag::EsModuleFlag,
-      experimental_options::{ExperimentalOptions, SourcemapHires},
-      filename_template::FilenameTemplate,
+      experimental_options::ExperimentalOptions,
+      filename_template::{FilenameTemplate, is_path_fragment},
       generated_code_options::GeneratedCodeOptions,
       hash_characters::HashCharacters,
       inject_import::InjectImport,
@@ -85,8 +87,13 @@ pub mod bundler_options {
         PropertyWriteSideEffects, TreeshakeOptions,
       },
       tsconfig::TsConfig,
+      tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig,
       watch_option::{NotifyOption, OnInvalidate, WatchOption},
     },
+  };
+
+  pub use crate::utils::enhanced_transform::{
+    EnhancedTransformOptions, EnhancedTransformResult, TsconfigOption, enhanced_transform,
   };
 }
 
@@ -147,9 +154,6 @@ pub use crate::{
   types::asset_meta::{InstantiationKind, SourcemapAssetMeta},
   types::ast_scope_idx::AstScopeIdx,
   types::ast_scopes::AstScopes,
-  types::barrel_state::{
-    BarrelInfo, BarrelModuleState, BarrelState, ImportedExports, try_extract_barrel_info,
-  },
   types::bundle_mode::BundleMode,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
@@ -175,6 +179,10 @@ pub use crate::{
   types::ins_chunk_idx::InsChunkIdx,
   types::instantiated_chunk::InstantiatedChunk,
   types::interop::Interop,
+  types::lazy_barrel::{
+    BarrelInfo, BarrelState, ExportSource, ImportedExports, LazyBarrelInfo,
+    try_extract_lazy_barrel_info,
+  },
   types::member_expr_ref::{MemberExprObjectReferencedType, MemberExprRef},
   types::member_expr_ref_resolution::MemberExprRefResolution,
   types::module_def_format::ModuleDefFormat,
@@ -215,3 +223,5 @@ pub use crate::{
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;
+#[cfg(debug_assertions)]
+pub use types::idx_ext::IdxDebugExt;

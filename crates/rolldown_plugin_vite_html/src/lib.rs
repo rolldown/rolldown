@@ -70,7 +70,8 @@ impl Plugin for ViteHtmlPlugin {
     Ok(())
   }
 
-  #[expect(clippy::too_many_lines)]
+  // html5gum::Span uses usize for start/end, but we know HTML files are < 4GB
+  #[expect(clippy::too_many_lines, clippy::cast_possible_truncation)]
   async fn transform(
     &self,
     ctx: rolldown_plugin::SharedTransformPluginContext,
@@ -125,247 +126,243 @@ impl Plugin for ViteHtmlPlugin {
       let dom = html::parser::parse_html(&html);
       let mut stack = vec![dom.document];
       while let Some(node) = stack.pop() {
-        match &node.data {
-          html::sink::NodeData::Element { name, attrs, span } => {
-            let elem_span = span.get();
-            let mut should_remove = false;
-            if &**name == "script" {
-              let mut src = None;
-              let mut is_async = false;
-              let mut is_module = false;
-              let mut is_ignored = false;
-              for attr in attrs.borrow().iter() {
-                match &*attr.name {
-                  "src" => {
-                    if src.is_none() {
-                      src = Some((attr.value.clone(), attr.span));
-                    }
+        if let html::sink::NodeData::Element { name, attrs, span } = &node.data {
+          let elem_span = span.get();
+          let mut should_remove = false;
+          if &**name == "script" {
+            let mut src = None;
+            let mut is_async = false;
+            let mut is_module = false;
+            let mut is_ignored = false;
+            for attr in attrs.borrow().iter() {
+              match &*attr.name {
+                "src" => {
+                  if src.is_none() {
+                    src = Some((attr.value.clone(), attr.span));
                   }
-                  "type" if attr.value == "module" => {
-                    is_module = true;
-                  }
-                  "async" => {
-                    is_async = true;
-                  }
-                  "vite-ignore" => {
-                    is_ignored = true;
-                    s.remove(attr.span.start, attr.span.end)
-                      .expect("remove should not fail in html plugin");
-                  }
-                  _ => {}
                 }
+                "type" if attr.value == "module" => {
+                  is_module = true;
+                }
+                "async" => {
+                  is_async = true;
+                }
+                "vite-ignore" => {
+                  is_ignored = true;
+                  s.remove(attr.span.start as u32, attr.span.end as u32)
+                    .expect("remove should not fail in html plugin");
+                }
+                _ => {}
               }
-              if !is_ignored {
-                let is_public_file = src.as_ref().is_some_and(|(s, _)| {
-                  rolldown_plugin_utils::check_public_file(s, &self.public_dir).is_some()
-                });
-                if is_public_file && let Some((ref url, span)) = src {
-                  overwrite_attrs.push((url.to_owned(), span, true));
-                }
-                if is_module {
-                  inline_module_count += 1;
-                  if let Some((url, _)) = src.as_ref()
-                    && !is_public_file
-                    && !utils::is_excluded_url(url)
-                  {
-                    set_modules.push(url.clone());
-                    // add `<script type="module" src="..."/>` as an import
-                    js.push_str(&rolldown_utils::concat_string!(
-                      "import ",
-                      rolldown_plugin_utils::to_string_literal(url),
-                      "\n"
-                    ));
-                    should_remove = true;
-                  } else if let Some(node) = node.children.borrow_mut().pop() {
-                    let html::sink::NodeData::Text { contents, .. } = &node.data else {
-                      panic!("Expected text node but received: {:#?}", node.data);
-                    };
-                    self.add_to_html_proxy_cache(
-                      &ctx,
-                      public_path.clone(),
-                      inline_module_count - 1,
-                      HTMLProxyMapItem { code: contents.into(), map: None },
-                    );
-                    js.push_str(&rolldown_utils::concat_string!(
-                      "import \"",
-                      id,
-                      "?html-proxy&index=",
-                      itoa::Buffer::new().format(inline_module_count - 1),
-                      ".js\"\n"
-                    ));
-                    should_remove = true;
-                  }
-                  every_script_is_async = every_script_is_async && is_async;
-                  some_scripts_are_async = some_scripts_are_async || is_async;
-                  some_scripts_are_defer = some_scripts_are_defer || !is_async;
-                } else if let Some((url, _)) = src.as_ref()
+            }
+            if !is_ignored {
+              let is_public_file = src.as_ref().is_some_and(|(s, _)| {
+                rolldown_plugin_utils::check_public_file(s, &self.public_dir).is_some()
+              });
+              if is_public_file && let Some((ref url, span)) = src {
+                overwrite_attrs.push((url.to_owned(), span, true));
+              }
+              if is_module {
+                inline_module_count += 1;
+                if let Some((url, _)) = src.as_ref()
                   && !is_public_file
+                  && !utils::is_excluded_url(url)
                 {
-                  if !utils::is_excluded_url(url) {
-                    let message = rolldown_utils::concat_string!(
-                      "<script src='",
-                      url,
-                      "'> in '",
-                      public_path,
-                      "' can't be bundled without type='module' attribute"
-                    );
-                    ctx.warn(LogWithoutPlugin { message, ..Default::default() });
-                  }
+                  set_modules.push(url.clone());
+                  // add `<script type="module" src="..."/>` as an import
+                  js.push_str(&rolldown_utils::concat_string!(
+                    "import ",
+                    rolldown_plugin_utils::to_string_literal(url),
+                    "\n"
+                  ));
+                  should_remove = true;
                 } else if let Some(node) = node.children.borrow_mut().pop() {
-                  let html::sink::NodeData::Text { contents, span } = &node.data else {
+                  let html::sink::NodeData::Text { contents, .. } = &node.data else {
                     panic!("Expected text node but received: {:#?}", node.data);
                   };
-                  if utils::constant::INLINE_IMPORT.is_match(contents) {
-                    let allocator = oxc::allocator::Allocator::default();
-                    let parser_ret = oxc::parser::Parser::new(
-                      &allocator,
-                      contents,
-                      oxc::span::SourceType::default(),
-                    )
-                    .parse();
-                    if parser_ret.panicked
-                      && let Some(err) = parser_ret
-                        .errors
-                        .iter()
-                        .find(|e| e.severity == oxc::diagnostics::Severity::Error)
-                    {
-                      return Err(anyhow::anyhow!(format!(
-                        "Failed to parse inline script in '{}': {:?}",
-                        public_path, err.message
-                      )));
-                    }
-                    let mut visitor = utils::ScriptInlineImportVisitor {
-                      offset: span.start,
-                      script_urls: &mut script_urls,
-                    };
-                    visitor.visit_program(&parser_ret.program);
-                  }
+                  self.add_to_html_proxy_cache(
+                    &ctx,
+                    public_path.clone(),
+                    inline_module_count - 1,
+                    HTMLProxyMapItem { code: contents.into(), map: None },
+                  );
+                  js.push_str(&rolldown_utils::concat_string!(
+                    "import \"",
+                    id,
+                    "?html-proxy&index=",
+                    itoa::Buffer::new().format(inline_module_count - 1),
+                    ".js\"\n"
+                  ));
+                  should_remove = true;
                 }
-              }
-            }
-
-            // Handle attributes like src/href
-            if matches!(
-              &**name,
-              "audio"
-                | "embed"
-                | "img"
-                | "image"
-                | "input"
-                | "link"
-                | "meta"
-                | "object"
-                | "source"
-                | "track"
-                | "use"
-                | "video"
-            ) {
-              let attrs_borrowed = attrs.borrow();
-              if let Some(attr) = attrs_borrowed.iter().find(|a| &*a.name == "vite-ignore") {
-                s.remove(attr.span.start, attr.span.end)
-                  .expect("remove should not fail in html plugin");
-              } else {
-                // Collect all attributes into a map for filtering
-                let attr_map = attrs_borrowed
-                  .iter()
-                  .filter_map(|a| (!a.value.is_empty()).then_some((a.name.as_ref(), a)))
-                  .collect::<FxHashMap<_, _>>();
-
-                // Define which attributes to process based on element type
-                let (src_attrs, srcset_attrs): (&[&str], &[&str]) = match &**name {
-                  "audio" | "embed" | "input" | "track" => (&["src"], &[]),
-                  "img" | "source" => (&["src"], &["srcset"]),
-                  "image" | "use" => (&["href", "xlink:href"], &[]),
-                  "link" => (&["href"], &["imagesrcset"]),
-                  "meta" => (&["content"], &[]),
-                  "object" => (&["data"], &[]),
-                  "video" => (&["src", "poster"], &[]),
-                  _ => unreachable!("Element type should be matched in outer condition"),
+                every_script_is_async = every_script_is_async && is_async;
+                some_scripts_are_async = some_scripts_are_async || is_async;
+                some_scripts_are_defer = some_scripts_are_defer || !is_async;
+              } else if let Some((url, _)) = src.as_ref()
+                && !is_public_file
+              {
+                if !utils::is_excluded_url(url) {
+                  let message = rolldown_utils::concat_string!(
+                    "<script src='",
+                    url,
+                    "'> in '",
+                    public_path,
+                    "' can't be bundled without type='module' attribute"
+                  );
+                  ctx.warn(LogWithoutPlugin { message, ..Default::default() });
+                }
+              } else if let Some(node) = node.children.borrow_mut().pop() {
+                let html::sink::NodeData::Text { contents, span } = &node.data else {
+                  panic!("Expected text node but received: {:#?}", node.data);
                 };
-
-                // Process srcset attributes (complex, multi-URL handling)
-                for srcset_attr in srcset_attrs {
-                  if let Some(attr) = attr_map.get(srcset_attr) {
-                    srcset_tasks.push((attr.value.clone(), attr.span));
+                if utils::constant::INLINE_IMPORT.is_match(contents) {
+                  let allocator = oxc::allocator::Allocator::default();
+                  let parser_ret = oxc::parser::Parser::new(
+                    &allocator,
+                    contents,
+                    oxc::span::SourceType::default(),
+                  )
+                  .parse();
+                  if parser_ret.panicked
+                    && let Some(err) = parser_ret
+                      .errors
+                      .iter()
+                      .find(|e| e.severity == oxc::diagnostics::Severity::Error)
+                  {
+                    return Err(anyhow::anyhow!(format!(
+                      "Failed to parse inline script in '{}': {:?}",
+                      public_path, err.message
+                    )));
                   }
-                }
-
-                // Process src/href attributes
-                for src_attr in src_attrs {
-                  if let Some(attr) = attr_map.get(src_attr) {
-                    let decode_url =
-                      rolldown_plugin_utils::uri::decode_uri(&attr.value).into_owned();
-                    if rolldown_plugin_utils::check_public_file(&decode_url, &self.public_dir)
-                      .is_some()
-                    {
-                      overwrite_attrs.push((decode_url, attr.span, true));
-                    } else if !utils::is_excluded_url(&decode_url) {
-                      if &**name == "link"
-                        && rolldown_plugin_utils::css::is_css_request(&decode_url)
-                        && !(attr_map.contains_key("media") || attr_map.contains_key("disabled"))
-                      {
-                        js.push_str("import ");
-                        js.push_str(&rolldown_plugin_utils::to_string_literal(&decode_url));
-                        js.push_str(";\n");
-                        style_urls.push((decode_url, elem_span));
-                      } else {
-                        let should_inline = (&**name == "link"
-                          && attr_map.get("rel").is_some_and(|attr| {
-                            utils::parse_rel_attr(&attr.value).into_iter().any(|v| {
-                              ["icon", "apple-touch-icon", "apple-touch-startup-image", "manifest"]
-                                .contains(&v.as_str())
-                            })
-                          }))
-                        .then_some(false);
-                        src_tasks.push((decode_url, attr.span, should_inline));
-                      }
-                    }
-                  }
+                  let mut visitor = utils::ScriptInlineImportVisitor {
+                    offset: span.start,
+                    script_urls: &mut script_urls,
+                  };
+                  visitor.visit_program(&parser_ret.program);
                 }
               }
-            }
-
-            // Handle <tag style="..." />
-            if let Some(attr) = attrs.borrow().iter().find(|a| {
-              &*a.name == "style" && (a.value.contains("url(") || a.value.contains("image-set("))
-            }) {
-              self.handle_style_tag_or_attribute(
-                &mut s,
-                &mut js,
-                &id,
-                &ctx,
-                public_path.clone(),
-                &mut inline_module_count,
-                true,
-                (attr.value.as_str(), attr.span),
-              )?;
-            }
-
-            // Handle <style>...</style>
-            if &**name == "style"
-              && let Some(node) = node.children.borrow_mut().pop()
-            {
-              let html::sink::NodeData::Text { ref contents, span } = node.data else {
-                panic!("Expected text node but received: {:#?}", node.data);
-              };
-              self.handle_style_tag_or_attribute(
-                &mut s,
-                &mut js,
-                &id,
-                &ctx,
-                public_path.clone(),
-                &mut inline_module_count,
-                false,
-                (contents, span),
-              )?;
-            }
-
-            if should_remove {
-              s.remove(elem_span.start, elem_span.end)
-                .expect("remove should not fail in html plugin");
             }
           }
-          _ => {}
+
+          // Handle attributes like src/href
+          if matches!(
+            &**name,
+            "audio"
+              | "embed"
+              | "img"
+              | "image"
+              | "input"
+              | "link"
+              | "meta"
+              | "object"
+              | "source"
+              | "track"
+              | "use"
+              | "video"
+          ) {
+            let attrs_borrowed = attrs.borrow();
+            if let Some(attr) = attrs_borrowed.iter().find(|a| &*a.name == "vite-ignore") {
+              s.remove(attr.span.start as u32, attr.span.end as u32)
+                .expect("remove should not fail in html plugin");
+            } else {
+              // Collect all attributes into a map for filtering
+              let attr_map = attrs_borrowed
+                .iter()
+                .filter_map(|a| (!a.value.is_empty()).then_some((a.name.as_ref(), a)))
+                .collect::<FxHashMap<_, _>>();
+
+              // Define which attributes to process based on element type
+              let (src_attrs, srcset_attrs): (&[&str], &[&str]) = match &**name {
+                "audio" | "embed" | "input" | "track" => (&["src"], &[]),
+                "img" | "source" => (&["src"], &["srcset"]),
+                "image" | "use" => (&["href", "xlink:href"], &[]),
+                "link" => (&["href"], &["imagesrcset"]),
+                "meta" => (&["content"], &[]),
+                "object" => (&["data"], &[]),
+                "video" => (&["src", "poster"], &[]),
+                _ => unreachable!("Element type should be matched in outer condition"),
+              };
+
+              // Process srcset attributes (complex, multi-URL handling)
+              for srcset_attr in srcset_attrs {
+                if let Some(attr) = attr_map.get(srcset_attr) {
+                  srcset_tasks.push((attr.value.clone(), attr.span));
+                }
+              }
+
+              // Process src/href attributes
+              for src_attr in src_attrs {
+                if let Some(attr) = attr_map.get(src_attr) {
+                  let decode_url = rolldown_plugin_utils::uri::decode_uri(&attr.value).into_owned();
+                  if rolldown_plugin_utils::check_public_file(&decode_url, &self.public_dir)
+                    .is_some()
+                  {
+                    overwrite_attrs.push((decode_url, attr.span, true));
+                  } else if !utils::is_excluded_url(&decode_url) {
+                    if &**name == "link"
+                      && rolldown_plugin_utils::css::is_css_request(&decode_url)
+                      && !(attr_map.contains_key("media") || attr_map.contains_key("disabled"))
+                    {
+                      js.push_str("import ");
+                      js.push_str(&rolldown_plugin_utils::to_string_literal(&decode_url));
+                      js.push_str(";\n");
+                      style_urls.push((decode_url, elem_span));
+                    } else {
+                      let should_inline = (&**name == "link"
+                        && attr_map.get("rel").is_some_and(|attr| {
+                          utils::parse_rel_attr(&attr.value).into_iter().any(|v| {
+                            ["icon", "apple-touch-icon", "apple-touch-startup-image", "manifest"]
+                              .contains(&v.as_str())
+                          })
+                        }))
+                      .then_some(false);
+                      src_tasks.push((decode_url, attr.span, should_inline));
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          // Handle <tag style="..." />
+          if let Some(attr) = attrs.borrow().iter().find(|a| {
+            &*a.name == "style" && (a.value.contains("url(") || a.value.contains("image-set("))
+          }) {
+            self.handle_style_tag_or_attribute(
+              &mut s,
+              &mut js,
+              &id,
+              &ctx,
+              public_path.clone(),
+              &mut inline_module_count,
+              true,
+              (attr.value.as_str(), attr.span),
+            )?;
+          }
+
+          // Handle <style>...</style>
+          if &**name == "style"
+            && let Some(node) = node.children.borrow_mut().pop()
+          {
+            let html::sink::NodeData::Text { ref contents, span } = node.data else {
+              panic!("Expected text node but received: {:#?}", node.data);
+            };
+            self.handle_style_tag_or_attribute(
+              &mut s,
+              &mut js,
+              &id,
+              &ctx,
+              public_path.clone(),
+              &mut inline_module_count,
+              false,
+              (contents, span),
+            )?;
+          }
+
+          if should_remove {
+            s.remove(elem_span.start as u32, elem_span.end as u32)
+              .expect("remove should not fail in html plugin");
+          }
         }
         for child in node.children.borrow().iter() {
           stack.push(Rc::clone(child));
@@ -423,7 +420,7 @@ impl Plugin for ViteHtmlPlugin {
       } else {
         continue;
       };
-      s.update(range.start, range.end, partial_encode_url_path(&url).into_owned())
+      s.update(range.start as u32, range.end as u32, partial_encode_url_path(&url).into_owned())
         .expect("update should not fail in html plugin");
     }
 
@@ -438,7 +435,8 @@ impl Plugin for ViteHtmlPlugin {
     for (url, span, resolved) in resolved_style_urls {
       match resolved?.ok() {
         Some(_) => {
-          s.remove(span.start, span.end).expect("remove should not fail in html plugin");
+          s.remove(span.start as u32, span.end as u32)
+            .expect("remove should not fail in html plugin");
         }
         None => {
           ctx.warn(LogWithoutPlugin {

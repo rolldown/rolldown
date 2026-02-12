@@ -111,8 +111,9 @@ impl ViteCSSPostPlugin {
         };
 
         if let Some(url) = url_cache.inner.get(&id) {
+          #[expect(clippy::cast_possible_truncation)]
           magic_string
-            .update(index, start + pos + 2, url.clone())
+            .update(index as u32, (start + pos + 2) as u32, url.clone())
             .expect("update should not fail in css post plugin");
           continue;
         }
@@ -163,8 +164,9 @@ impl ViteCSSPostPlugin {
           .to_asset_url_in_js()?;
 
         url_cache.inner.insert(id, url.clone());
+        #[expect(clippy::cast_possible_truncation)]
         magic_string
-          .update(index, start + pos + 2, url)
+          .update(index as u32, (start + pos + 2) as u32, url)
           .expect("update should not fail in css post plugin");
       }
     }
@@ -285,9 +287,10 @@ impl ViteCSSPostPlugin {
           ";document.head.appendChild(__vite_style__);"
         );
 
+        #[expect(clippy::cast_possible_truncation)]
         magic_string
           .get_or_insert_with(|| string_wizard::MagicString::new(&ctx.args.code))
-          .append_right(injection_point, inject_code);
+          .append_right(injection_point as u32, inject_code);
       }
     } else {
       ctx.meta().get::<CSSChunkCache>().expect("CSSChunkCache missing").inner.insert(
@@ -372,7 +375,10 @@ impl ViteCSSPostPlugin {
             .0
             .get(hash)
             .ok_or_else(|| {
-              anyhow::anyhow!("Can't find the cache of {}", &css_chunk[range.clone()])
+              anyhow::anyhow!(
+                "Can't find the cache of {}",
+                &css_chunk[(range.start as usize)..(range.end as usize)]
+              )
             })?
             .to_string();
 
@@ -444,13 +450,17 @@ impl ViteCSSPostPlugin {
 
     let mut s = string_wizard::MagicString::new(css);
     for matched in AT_IMPORT_RE.find_iter(&css_without_comments) {
-      s.remove(matched.start(), matched.end()).expect("remove should not fail in css post plugin");
+      #[expect(clippy::cast_possible_truncation)]
+      s.remove(matched.start() as u32, matched.end() as u32)
+        .expect("remove should not fail in css post plugin");
       s.append_left(0, matched.as_str());
     }
 
     let mut found_charset = false;
     for matched in AT_CHARSET_RE.find_iter(&css_without_comments) {
-      s.remove(matched.start(), matched.end()).expect("remove should not fail in css post plugin");
+      #[expect(clippy::cast_possible_truncation)]
+      s.remove(matched.start() as u32, matched.end() as u32)
+        .expect("remove should not fail in css post plugin");
       if !found_charset {
         s.prepend(matched.as_str());
         found_charset = true;
@@ -540,7 +550,7 @@ impl ViteCSSPostPlugin {
   pub async fn emit_non_codesplit_css_bundle(
     &self,
     ctx: &PluginContext,
-    bundle: &mut [Output],
+    bundle: &[Output],
   ) -> anyhow::Result<()> {
     if !self.css_code_split && !self.has_emitted.load(Ordering::Relaxed) {
       fn collect(
@@ -590,7 +600,7 @@ impl ViteCSSPostPlugin {
       let mut dynamic_imports = FxIndexSet::default();
       // The bundle is guaranteed to be deterministic, if not then we have a bug in rollup.
       // So we use it to ensure a deterministic order of styles
-      for output in bundle.iter() {
+      for output in bundle {
         if let Output::Chunk(chunk) = output
           && chunk.is_entry
         {

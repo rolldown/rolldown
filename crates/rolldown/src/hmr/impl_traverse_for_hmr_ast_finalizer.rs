@@ -6,7 +6,7 @@ use oxc::{
 use oxc_traverse::Traverse;
 use rolldown_ecmascript::{
   CJS_EXPORTS_REF_ATOM, CJS_MODULE_REF_ATOM, CJS_ROLLDOWN_EXPORTS_REF,
-  CJS_ROLLDOWN_EXPORTS_REF_ATOM, CJS_ROLLDOWN_MODULE_REF_ATOM,
+  CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF_IDENT,
 };
 use rolldown_ecmascript_utils::ExpressionExt;
 
@@ -78,7 +78,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           self
             .snippet
             .builder
-            .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_REF_ATOM),
+            .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_REF_IDENT),
           NONE,
           NONE,
           false,
@@ -87,17 +87,22 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           false,
         ),
       );
-      params.items.push(self.snippet.builder.formal_parameter(
-        SPAN,
-        self.builder.vec(),
-        self.snippet.builder.binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_REF_ATOM),
-        NONE,
-        NONE,
-        false,
-        None,
-        false,
-        false,
-      ));
+      params.items.push(
+        self.snippet.builder.formal_parameter(
+          SPAN,
+          self.builder.vec(),
+          self
+            .snippet
+            .builder
+            .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_REF_IDENT),
+          NONE,
+          NONE,
+          false,
+          None,
+          false,
+          false,
+        ),
+      );
     }
     // function () { [user code] }
     let mut user_code_wrapper = self.snippet.builder.alloc_function(
@@ -182,14 +187,14 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node: &mut oxc::ast::ast::Expression<'ast>,
     ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
-    if matches!(node, ast::Expression::ThisExpression(_)) && ctx.is_current_scope_valid_for_tla() {
-      // Rewrite this to `undefined` or `exports`
-      if self.module.exports_kind.is_commonjs() {
-        // Rewrite this to `exports`
-        *node = self.snippet.id_ref_expr(CJS_ROLLDOWN_EXPORTS_REF, SPAN);
-      } else {
-        // Rewrite this to `undefined`
-        *node = self.snippet.void_zero();
+    // Rewrite top-level `this` to `exports` for CommonJS modules
+    // Use `this_expr_replace_map` from scanning to avoid rewriting `this` inside classes
+    if let ast::Expression::ThisExpression(this_expr) = node {
+      if self.module.ecma_view.this_expr_replace_map.contains_key(&this_expr.span) {
+        if self.module.exports_kind.is_commonjs() {
+          *node = self.snippet.id_ref_expr(CJS_ROLLDOWN_EXPORTS_REF, SPAN);
+          return;
+        }
       }
     }
 
@@ -203,10 +208,10 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           }
         } else if ident.name == CJS_EXPORTS_REF_ATOM {
           // Rewrite `exports` to `__rolldown_exports__`
-          ident.name = CJS_ROLLDOWN_EXPORTS_REF_ATOM;
+          ident.name = CJS_ROLLDOWN_EXPORTS_REF_IDENT;
         } else if ident.name == CJS_MODULE_REF_ATOM {
           // Rewrite `module` to `__rolldown_module__`
-          ident.name = CJS_ROLLDOWN_MODULE_REF_ATOM;
+          ident.name = CJS_ROLLDOWN_MODULE_REF_IDENT;
         }
       }
     }
@@ -214,19 +219,5 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     self.try_rewrite_dynamic_import(node);
     self.try_rewrite_require(node, ctx);
     self.rewrite_import_meta_hot(node);
-  }
-}
-
-trait TraverseCtxExt<'ast> {
-  fn is_current_scope_valid_for_tla(&self) -> bool;
-}
-
-impl<'ast> TraverseCtxExt<'ast> for oxc_traverse::TraverseCtx<'ast, ()> {
-  fn is_current_scope_valid_for_tla(&self) -> bool {
-    let scoping = self.scoping();
-    scoping
-      .scope_ancestors(self.current_scope_id())
-      .map(|scope_id| scoping.scope_flags(scope_id))
-      .all(|scope_flags| scope_flags.is_block() || scope_flags.is_top())
   }
 }

@@ -29,7 +29,7 @@ export default defineTest({
     expect(output.output[0].code).toMatchInlineSnapshot(`
       "(function(exports, node_path) {
 
-      Object.defineProperty(exports, '__esModule', { value: true });
+      Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
 
       //#region main.js
       	var main_default = node_path.join;

@@ -121,7 +121,7 @@ impl LinkStage<'_> {
     // collect all modules that has dynamic import record
     // two dimension map module_idx -> stmt_idx -> dynamic_import_expression_address
     let mut module_idx_and_stmt_idx_to_dynamic_import_expr_addr_map = FxHashMap::default();
-    self.entries.iter().for_each(|entry| {
+    self.entries.values().flatten().for_each(|entry| {
       entry.related_stmt_infos.iter().for_each(
         |(module_idx, stmt_idx, address, _import_record_idx)| {
           module_idx_and_stmt_idx_to_dynamic_import_expr_addr_map
@@ -133,23 +133,51 @@ impl LinkStage<'_> {
         },
       );
     });
+    // Track modules to process in subsequent passes. None means process all modules (first pass).
+    let mut modules_to_process: Option<FxHashSet<ModuleIdx>> = None;
     while ctx.config.pass > 0 && ctx.changed {
       ctx.config.pass -= 1;
       ctx.changed = false;
-      self.run(
+      let new_constant_refs = self.run(
         &mut ctx,
         &mut constant_symbol_map,
         &module_idx_and_stmt_idx_to_dynamic_import_expr_addr_map,
         &mut unreachable_addresses,
+        modules_to_process.as_ref(),
       );
       if !ctx.changed {
         break;
       }
+      modules_to_process = Some(self.find_modules_referencing_constants(&new_constant_refs));
     }
     self.global_constant_symbol_map = constant_symbol_map;
     // Return all unreachable import expression addresses instead of add it as a field of LinkStage,
     // Because this set is only used include statement stage.
     unreachable_addresses
+  }
+
+  /// Find all modules that have imports resolving to any of the given constant canonical refs.
+  fn find_modules_referencing_constants(
+    &self,
+    new_constant_refs: &FxHashSet<SymbolRef>,
+  ) -> FxHashSet<ModuleIdx> {
+    if new_constant_refs.is_empty() {
+      return FxHashSet::default();
+    }
+
+    self
+      .module_table
+      .iter()
+      .filter_map(|module| {
+        let normal_module = module.as_normal()?;
+        // Check if any of the module's named imports resolve to a newly discovered constant
+        let references_new_constant = normal_module.named_imports.keys().any(|local_symbol_ref| {
+          let canonical_ref = self.symbols.canonical_ref_for(*local_symbol_ref);
+          new_constant_refs.contains(&canonical_ref)
+        });
+        references_new_constant.then_some(normal_module.idx)
+      })
+      .collect()
   }
 
   fn run(
@@ -158,11 +186,15 @@ impl LinkStage<'_> {
     constant_symbol_map: &mut FxHashMap<SymbolRef, ConstExportMeta>,
     module_idx_and_stmt_idx_to_dynamic_import_expr_addr_map: &ModuleIdxAndStmtIdxToDynamicImportExprAddrMap,
     all_unreachable_addresses: &mut FxHashSet<Address>,
-  ) {
+    modules_to_process: Option<&FxHashSet<ModuleIdx>>,
+  ) -> FxHashSet<SymbolRef> {
     let mutation_result: Vec<MutationResult> = self
       .sorted_modules
       .par_iter()
       .filter_map(|item| {
+        if modules_to_process.is_some_and(|filter| !filter.contains(item)) {
+          return None;
+        }
         let module = self.module_table[*item].as_normal()?;
         let module_idx = module.idx;
         let ast =
@@ -236,6 +268,7 @@ impl LinkStage<'_> {
       })
       .collect();
 
+    let mut new_constant_refs = FxHashSet::default();
     for (side_effect_mutations, local_constants, unreachable_addresses) in mutation_result {
       if let Some((module_idx, mutations)) = side_effect_mutations {
         if let Some(module) = self.module_table[module_idx].as_normal_mut() {
@@ -247,12 +280,14 @@ impl LinkStage<'_> {
 
       if !local_constants.is_empty() {
         cross_module_inline_const_ctx.changed = true;
+        new_constant_refs.extend(local_constants.keys().copied());
         constant_symbol_map.extend(local_constants);
       }
 
       // Collect all unreachable import expression addresses
       all_unreachable_addresses.extend(unreachable_addresses);
     }
+    new_constant_refs
   }
 }
 

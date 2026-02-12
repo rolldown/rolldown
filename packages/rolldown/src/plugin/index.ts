@@ -87,8 +87,8 @@ interface SpecifiedModuleOptions {
    * 1. {@linkcode Plugin.transform | transform} hook's returned `moduleSideEffects` option
    * 2. {@linkcode Plugin.load | load} hook's returned `moduleSideEffects` option
    * 3. {@linkcode Plugin.resolveId | resolveId} hook's returned `moduleSideEffects` option
-   * 4. `sideEffects` field in the `package.json` file
-   * 5. {@linkcode TreeshakingOptions.moduleSideEffects | treeshake.moduleSideEffects} option
+   * 4. {@linkcode TreeshakingOptions.moduleSideEffects | treeshake.moduleSideEffects} option
+   * 5. `sideEffects` field in the `package.json` file
    * 6. `true` (default)
    */
   moduleSideEffects?: ModuleSideEffects | null;
@@ -131,6 +131,11 @@ export interface SourceDescription
 
 /** @inline */
 export interface ResolveIdExtraOptions {
+  /**
+   * Plugin-specific options.
+   *
+   * See [Custom resolver options section](https://rolldown.rs/apis/plugin-api/inter-plugin-communication#custom-resolver-options) for more details.
+   */
   custom?: CustomPluginOptions;
   /**
    * Whether this is resolution for an entry point.
@@ -138,6 +143,17 @@ export interface ResolveIdExtraOptions {
    * {@include ./docs/plugin-hooks-resolveid-isentry.md}
    */
   isEntry: boolean;
+  /**
+   * The kind of import being resolved.
+   *
+   * - `import-statement`: `import { foo } from './lib.js';`
+   * - `dynamic-import`: `import('./lib.js')`
+   * - `require-call`: `require('./lib.js')`
+   * - `import-rule`: `@import 'bg-color.css'` (experimental)
+   * - `url-token`: `url('./icon.png')` (experimental)
+   * - `new-url`: `new URL('./worker.js', import.meta.url)` (experimental)
+   * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})` (experimental)
+   */
   kind: BindingHookResolveIdExtraArgs['kind'];
 }
 
@@ -288,7 +304,19 @@ export interface FunctionPluginHooks {
    */
   [DEFINED_HOOK_NAMES.resolveDynamicImport]: (
     this: PluginContext,
+    /**
+     * The importee exactly as it is written in the import statement.
+     *
+     * For example, given `import('./foo.js')`, the `source` will be `"./foo.js"`.
+     *
+     * In Rollup, this parameter can also be an AST node. But Rolldown always provides a string.
+     */
     source: string,
+    /**
+     * The fully resolved id of the importing module.
+     *
+     * This will be `undefined` when {@linkcode PluginContext.resolve | this.resolve(source, undefined, { kind: 'dynamic-import' })} is called.
+     */
     importer: string | undefined,
   ) => ResolveIdResult;
 
@@ -309,6 +337,8 @@ export interface FunctionPluginHooks {
    * Note that it's possible to return only properties and no code transformations.
    *
    * You can use {@linkcode PluginContext.getModuleInfo | this.getModuleInfo()} to find out the previous values of `meta`, `moduleSideEffects` inside this hook.
+   *
+   * {@include ./docs/plugin-hooks-transform.md}
    *
    * @group Build Hooks
    */

@@ -21,7 +21,7 @@ jobs:
       version_changed: ${{ steps.version.outputs.changed }}
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: taiki-e/checkout-action@afad4df3ab3122b166e8226ac83be4d981fb64e8 # v1.3.2
+      - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
 
       - name: Check version changes
         uses: EndBug/version-check@5102328418c0130d66ca712d755c303e93368ce2 # v2.1.7
@@ -52,7 +52,7 @@ jobs:
     permissions:
       id-token: write # for `npm publish --provenance`
     steps:
-      - uses: taiki-e/checkout-action@afad4df3ab3122b166e8226ac83be4d981fb64e8 # v1.3.2
+      - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
 
       - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 
@@ -120,7 +120,7 @@ jobs:
     permissions:
       contents: write # for softprops/action-gh-release@v1
     steps:
-      - uses: taiki-e/checkout-action@afad4df3ab3122b166e8226ac83be4d981fb64e8 # v1.3.2
+      - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
 
       - name: Get changelog from commit body
         id: changelog

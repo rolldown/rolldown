@@ -33,7 +33,7 @@ impl Plugin for ViteHtmlInlineProxyPlugin {
 
   async fn load(
     &self,
-    ctx: &rolldown_plugin::PluginContext,
+    ctx: rolldown_plugin::SharedLoadPluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     // Pattern: /[?&]html-proxy=?(?:&inline-css)?(?:&style-attr)?&index=(\d+)\.(?:js|css)$/

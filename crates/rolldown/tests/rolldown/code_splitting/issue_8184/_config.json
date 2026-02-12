@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "dbp-1",
+        "import": "./dbp-1.js"
+      },
+      {
+        "name": "dbp-activity-showcase",
+        "import": "./dbp-activity-showcase.js"
+      }
+    ]
+  }
+}

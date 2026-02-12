@@ -32,7 +32,7 @@ export { value as normalLibValue, value$1 as tlaLibValue };
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region normal-dep.js
 var value$3;
 var init_normal_dep = __esmMin((() => {

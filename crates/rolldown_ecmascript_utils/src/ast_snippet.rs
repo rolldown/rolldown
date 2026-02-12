@@ -30,6 +30,7 @@ impl<'ast> AstSnippet<'ast> {
     self.builder.allocator
   }
 
+  #[inline]
   pub fn atom(&self, value: &str) -> Atom<'ast> {
     self.builder.atom(value)
   }

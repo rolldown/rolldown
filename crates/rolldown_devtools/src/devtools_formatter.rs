@@ -80,7 +80,7 @@ where
     inject_context_data(&mut action_value, &found_context_fields);
 
     let session_id =
-      found_context_fields.get("session_id").map(String::as_str).unwrap_or(DEFAULT_SESSION_ID);
+      found_context_fields.get("session_id").map_or(DEFAULT_SESSION_ID, String::as_str);
 
     std::fs::create_dir_all(format!("node_modules/.rolldown/{session_id}")).ok();
 

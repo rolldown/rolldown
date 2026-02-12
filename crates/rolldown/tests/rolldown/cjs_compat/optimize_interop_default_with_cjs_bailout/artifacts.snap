@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region json.js
 var json_exports = /* @__PURE__ */ __exportAll({ default: () => json_default });
 var json_default;

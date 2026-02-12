@@ -58,9 +58,9 @@ init_foo();
 ## foo.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
-var foo_exports = {};
+var foo_exports = /* @__PURE__ */ __exportAll({});
 var default$1, x, y;
 var init_foo = __esmMin((() => {
 	console.log("no exports here");
@@ -73,19 +73,11 @@ var init_foo = __esmMin((() => {
 export { y as a, x as i, foo_exports as n, __toCommonJS as o, init_foo as r, default$1 as t };
 ```
 
-## foo2.js
-
-```js
-import { r as init_foo } from "./foo.js";
-
-init_foo();
-```
-
 ## import.js
 
 ```js
 //#region import.js
-console.log(import("./foo2.js"));
+console.log(import("./foo.js").then((n) => (n.r(), n.n)));
 
 //#endregion
 ```

@@ -11,8 +11,6 @@ pub struct BindingExperimentalOptions {
   pub chunk_import_map: Option<Either<bool, BindingChunkImportMap>>,
   pub on_demand_wrapping: Option<bool>,
   pub incremental_build: Option<bool>,
-  #[napi(ts_type = "boolean | 'boundary'")]
-  pub transform_hires_sourcemap: Option<Either<bool, String>>,
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<bool>,
   pub lazy_barrel: Option<bool>,
@@ -34,23 +32,6 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
         Either::B(v) => Some(v.into()),
       }),
       on_demand_wrapping: value.on_demand_wrapping,
-      transform_hires_sourcemap: if let Some(v) = value.transform_hires_sourcemap {
-        match v {
-          Either::A(v) => Some(rolldown_common::SourcemapHires::Boolean(v)),
-          Either::B(v) => {
-            if v == "boundary" {
-              Some(rolldown_common::SourcemapHires::Boundary)
-            } else {
-              return Err(napi::Error::new(
-                napi::Status::InvalidArg,
-                format!("Invalid transform hires sourcemap: {v}"),
-              ));
-            }
-          }
-        }
-      } else {
-        Some(rolldown_common::SourcemapHires::Boundary)
-      },
       native_magic_string: value.native_magic_string,
       chunk_optimization: value.chunk_optimization,
       lazy_barrel: value.lazy_barrel,

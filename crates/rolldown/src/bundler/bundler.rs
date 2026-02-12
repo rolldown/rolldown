@@ -63,6 +63,11 @@ impl Bundler {
     self.closed = false;
   }
 
+  #[cfg(feature = "experimental")]
+  pub fn reset_closed_for_watch_mode_experimental(&mut self) {
+    self.reset_closed_for_watch_mode();
+  }
+
   pub(super) async fn inner_close(&mut self) -> Result<()> {
     if self.closed {
       return Ok(());

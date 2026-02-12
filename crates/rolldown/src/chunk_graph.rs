@@ -88,7 +88,9 @@ impl ChunkGraph {
       let mut runtime_related = vec![];
       for &module_idx in &chunk.modules {
         let module = &link_output.module_table[module_idx];
-        if module.id().as_str().starts_with("rolldown:") {
+        if module.id().as_str().starts_with("rolldown:")
+          || module.id().as_str().starts_with("\0rolldown/")
+        {
           runtime_related.push(module_idx);
           continue;
         }

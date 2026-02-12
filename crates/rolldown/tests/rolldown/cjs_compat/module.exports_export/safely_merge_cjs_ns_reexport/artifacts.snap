@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region node_modules/this-is-only-used-for-testing/index.js
 var require_this_is_only_used_for_testing = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	function CJS() {}

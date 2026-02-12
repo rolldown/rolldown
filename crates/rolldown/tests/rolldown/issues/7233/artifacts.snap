@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## _virtual/rolldown_runtime.js
+## _virtual/_rolldown/runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 exports.__exportAll = __exportAll;
 exports.__reExport = __reExport;
@@ -15,12 +15,13 @@ exports.__reExport = __reExport;
 ## index.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+const require_runtime = require('./_virtual/_rolldown/runtime.js');
 require('./server.js');
 let zod = require("zod");
 
 //#region index.ts
-var _7233_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
+var _7233_exports = /* @__PURE__ */ require_runtime.__exportAll({
 	object: () => zod.object,
 	string: () => zod.string
 });
@@ -50,7 +51,7 @@ Object.keys(zod).forEach(function (k) {
 ## server.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+const require_runtime = require('./_virtual/_rolldown/runtime.js');
 let zod = require("zod");
 
 

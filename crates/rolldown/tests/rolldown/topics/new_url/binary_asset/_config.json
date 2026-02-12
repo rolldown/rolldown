@@ -1,0 +1,8 @@
+{
+  "config": {
+    "dir": "dist",
+    "experimental": {
+      "resolveNewUrlToAsset": true
+    }
+  }
+}

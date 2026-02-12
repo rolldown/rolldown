@@ -27,6 +27,10 @@ export default defineTest({
           }
         },
         transform(_, id) {
+          // Skip virtual modules (like \0rolldown/runtime.js)
+          if (id.startsWith('\0')) {
+            return;
+          }
           idList.push(id);
         },
       },

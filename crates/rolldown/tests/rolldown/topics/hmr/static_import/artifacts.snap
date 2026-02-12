@@ -8,8 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
-// HIDDEN [rolldown:hmr]
+// HIDDEN [\0rolldown/runtime.js]
 //#region modules/dep-cjs.js
 var require_dep_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const dep_cjs_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-cjs.js");
@@ -75,7 +74,7 @@ const value = "esm-namespace";
 
 //#endregion
 //#region hmr.js
-var hmr_exports = {};
+var hmr_exports = /* @__PURE__ */ __exportAll({});
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 assert.strictEqual(import_dep_cjs_default.default, "cjs-default");
@@ -86,7 +85,10 @@ assert.deepStrictEqual(import_dep_cjs_namespace, {
 	value: "cjs-namespace",
 	default: { value: "cjs-namespace" }
 });
-assert.deepStrictEqual(dep_esm_namespace_exports, { value: "esm-namespace" });
+assert.deepEqual(dep_esm_namespace_exports, {
+	[Symbol.toStringTag]: "Module",
+	value: "esm-namespace"
+});
 hmr_hot.accept((mod) => {
 	if (mod) {
 		console.log(".hmr", mod.foo);
@@ -95,7 +97,7 @@ hmr_hot.accept((mod) => {
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
@@ -134,7 +136,10 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 			value: "cjs-namespace",
 			default: { value: "cjs-namespace" }
 		});
-		import_node_assert_00.default.deepStrictEqual(import_dep_esm_namespace_08, { value: "esm-namespace" });
+		import_node_assert_00.default.deepEqual(import_dep_esm_namespace_08, {
+			[Symbol.toStringTag]: "Module",
+			value: "esm-namespace"
+		});
 		hot_hmr.accept((mod) => {
 			if (mod) {
 				console.log(".hmr", mod.foo);

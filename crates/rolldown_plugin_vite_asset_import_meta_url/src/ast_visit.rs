@@ -10,7 +10,7 @@ use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::inject_query;
 
 pub struct NewUrlVisitor<'a, 'b, 'ast> {
-  pub urls: &'a mut Vec<(String, Range<usize>, &'b str)>,
+  pub urls: &'a mut Vec<(String, Range<u32>, &'b str)>,
   pub s: &'a mut Option<string_wizard::MagicString<'b>>,
   pub code: &'b str,
   pub ctx: &'a PluginContext,
@@ -96,8 +96,8 @@ impl<'ast> VisitMut<'ast> for NewUrlVisitor<'_, '_, 'ast> {
             );
 
             s.update(
-              template.span.start as usize,
-              template.span.end as usize,
+              template.span.start,
+              template.span.end,
               rolldown_utils::concat_string!(
                 "(import.meta.glob('",
                 glob,
@@ -116,7 +116,7 @@ impl<'ast> VisitMut<'ast> for NewUrlVisitor<'_, '_, 'ast> {
       };
 
       let span = span.shrink(1);
-      self.urls.push((url, span.start as usize..span.end as usize, it.span.source_text(self.code)));
+      self.urls.push((url, span.start..span.end, it.span.source_text(self.code)));
     }
     walk_new_expression(self, it);
   }

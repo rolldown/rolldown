@@ -14,6 +14,10 @@ export default defineTest({
       {
         name: 'test-magic-string-caching',
         transform(code, id, meta) {
+          // Skip virtual modules (like \0rolldown/runtime.js)
+          if (id.startsWith('\0')) {
+            return null;
+          }
           if (!meta?.magicString) {
             return null;
           }

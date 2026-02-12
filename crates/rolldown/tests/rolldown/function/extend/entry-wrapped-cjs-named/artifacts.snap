@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region main.js
 var require_main = /* @__PURE__ */ __commonJSMin((() => {
 	require_main();
@@ -24,7 +24,7 @@ export default require_main();
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region main.js
 var require_main = /* @__PURE__ */ __commonJSMin((() => {
@@ -49,7 +49,7 @@ Object.defineProperty(exports, 'default', {
 ```js
 (function(exports) {
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region main.js
 	var require_main = /* @__PURE__ */ __commonJSMin((() => {
@@ -78,7 +78,7 @@ Object.defineProperty(exports, 'default', {
   typeof define === 'function' && define.amd ? define(['exports'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.module = global.module || {})));
 })(this, function(exports) {
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region main.js
 	var require_main = /* @__PURE__ */ __commonJSMin((() => {

@@ -539,7 +539,7 @@ export default require_top_level_this_cjs();
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region top-level-this-cjs.jsx
 var require_top_level_this_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	var _jsxFileName = "top-level-this-cjs.jsx";

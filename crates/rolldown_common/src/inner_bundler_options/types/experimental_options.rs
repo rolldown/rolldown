@@ -8,30 +8,6 @@ use super::chunk_import_map::ChunkImportMap;
 use super::chunk_modules_order::ChunkModulesOrderBy;
 use super::dev_mode_options::DevModeOptions;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "deserialize_bundler_options", derive(Deserialize, JsonSchema))]
-#[cfg_attr(feature = "deserialize_bundler_options", serde(rename_all = "camelCase"))]
-pub enum SourcemapHires {
-  #[cfg_attr(feature = "deserialize_bundler_options", schemars(with = "bool"))]
-  Boolean(bool),
-  Boundary,
-}
-
-impl From<SourcemapHires> for string_wizard::Hires {
-  fn from(value: SourcemapHires) -> Self {
-    match value {
-      SourcemapHires::Boolean(value) => {
-        if value {
-          string_wizard::Hires::True
-        } else {
-          string_wizard::Hires::False
-        }
-      }
-      SourcemapHires::Boundary => string_wizard::Hires::Boundary,
-    }
-  }
-}
-
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(
   feature = "deserialize_bundler_options",
@@ -47,7 +23,6 @@ pub struct ExperimentalOptions {
   pub chunk_import_map: Option<ChunkImportMap>,
   pub chunk_modules_order: Option<ChunkModulesOrderBy>,
   pub on_demand_wrapping: Option<bool>,
-  pub transform_hires_sourcemap: Option<SourcemapHires>,
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<bool>,
   pub lazy_barrel: Option<bool>,

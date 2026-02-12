@@ -10,6 +10,12 @@ import type { TreeshakingOptions } from '../types/module-side-effects';
 import type { NullValue, StringOrRegExp } from '../types/utils';
 import type { ChecksOptions } from './generated/checks-options';
 import type { TransformOptions } from './transform-options';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { watch } from '../api/watch/index';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { Plugin } from '../plugin';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { RolldownBuild } from '../api/rolldown/rolldown-build';
 
 /**
  * @inline
@@ -49,7 +55,7 @@ export type ModuleTypes = Record<
 
 export interface WatcherOptions {
   /**
-   * Whether to skip the `bundle.write()` step when a rebuild is triggered.
+   * Whether to skip the {@linkcode RolldownBuild.write | bundle.write()} step when a rebuild is triggered.
    * @default false
    */
   skipWrite?: boolean;
@@ -62,6 +68,11 @@ export interface WatcherOptions {
    * that Rolldown will only trigger a rebuild if there was no change for the
    * configured number of milliseconds. If several configurations are watched,
    * Rolldown will use the largest configured build delay.
+   *
+   * This option is useful if you use a tool that regenerates multiple source files
+   * very slowly. Rebuilding immediately after the first change could cause Rolldown
+   * to generate a broken intermediate build before generating a successful final
+   * build, which can be confusing and distracting.
    *
    * @default 0
    */
@@ -131,7 +142,7 @@ export interface WatcherOptions {
    * An optional function that will be called immediately every time
    * a module changes that is part of the build.
    *
-   * This is different from the `watchChange` plugin hook, which is
+   * This is different from the {@linkcode Plugin.watchChange | watchChange} plugin hook, which is
    * only called once the running build has finished. This may for
    * instance be used to prevent additional steps from being performed
    * if we know another build will be started anyway once the current
@@ -246,6 +257,21 @@ export interface InputOptions {
    * Falsy plugins will be ignored, which can be used to easily activate or deactivate plugins. Nested plugins will be flattened. Async plugins will be awaited and resolved.
    *
    * See [Plugin API document](https://rolldown.rs/apis/plugin-api) for more details about creating plugins.
+   *
+   * @example
+   * ```js
+   * import { defineConfig } from 'rolldown'
+   *
+   * export default defineConfig({
+   *   plugins: [
+   *     examplePlugin1(),
+   *     // Conditional plugins
+   *     process.env.ENV1 && examplePlugin2(),
+   *     // Nested plugins arrays are flattened
+   *     [examplePlugin3(), examplePlugin4()],
+   *   ]
+   * })
+   * ```
    */
   plugins?: RolldownPluginOption;
   /**
@@ -272,7 +298,7 @@ export interface InputOptions {
      * }
      * ```
      * > [!WARNING]
-     * > `resolve.alias` will not call `resolveId` hooks of other plugin.
+     * > `resolve.alias` will not call [`resolveId`](/reference/Interface.Plugin#resolveid) hooks of other plugin.
      * > If you want to call `resolveId` hooks of other plugin, use `viteAliasPlugin` from `rolldown/experimental` instead.
      * > You could find more discussion in [this issue](https://github.com/rolldown/rolldown/issues/3615)
      */
@@ -380,6 +406,8 @@ export interface InputOptions {
   /**
    * Controls tree-shaking (dead code elimination).
    *
+   * See the [In-depth Dead Code Elimination Guide](https://rolldown.rs/in-depth/dead-code-elimination) for more details.
+   *
    * When `false`, tree-shaking will be disabled.
    * When `true`, it is equivalent to setting each options to the default value.
    *
@@ -430,7 +458,20 @@ export interface InputOptions {
   /**
    * Maps file patterns to module types, controlling how files are processed.
    *
-   * This is conceptually similar to esbuild's loader option, allowing you to specify how different file extensions should be handled.
+   * This is conceptually similar to [esbuild's `loader`](https://esbuild.github.io/api/#loader) option, allowing you to specify how each file extensions should be handled.
+   *
+   * See [the In-Depth Guide](https://rolldown.rs/in-depth/module-types) for more details.
+   *
+   * @example
+   * ```js
+   * import { defineConfig } from 'rolldown'
+   *
+   * export default defineConfig({
+   *   moduleTypes: {
+   *     '.frag': 'text',
+   *   }
+   * })
+   * ```
    */
   moduleTypes?: ModuleTypes;
   /**
@@ -498,6 +539,8 @@ export interface InputOptions {
      * - `full`: Attach detailed debug information to the output bundle. These comments are using legal comment syntax, so they won't be removed by the minifier.
      *
      * @default 'simple'
+     *
+     * {@include ./docs/experimental-attach-debug-info.md}
      */
     attachDebugInfo?: AttachDebugOptions;
     /**
@@ -549,6 +592,7 @@ export interface InputOptions {
      * @default false
      */
     chunkImportMap?: boolean | { baseUrl?: string; fileName?: string };
+
     /**
      * Enable on-demand wrapping of modules.
      * @default false
@@ -560,11 +604,6 @@ export interface InputOptions {
      * @default false
      */
     incrementalBuild?: boolean;
-    /**
-     * Enable high-resolution source maps for transform operations.
-     * @default false
-     */
-    transformHiresSourcemap?: boolean | 'boundary';
     /**
      * Use native Rust implementation of MagicString for source map generation.
      *
@@ -647,7 +686,9 @@ export interface InputOptions {
   /**
    * Watch mode related options.
    *
-   * These options only take effect when running with the `--watch` flag, or using `rolldown.watch()` API.
+   * These options only take effect when running with the [`--watch`](/apis/cli#w-watch) flag, or using {@linkcode watch | watch()} API.
+   *
+   * @experimental
    */
   watch?: WatcherOptions | false;
   /**

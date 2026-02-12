@@ -6,6 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lib.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region lib.js
 const foo = "foo_value";
@@ -19,7 +20,8 @@ exports.foo = foo;
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+// HIDDEN [\0rolldown/runtime.js]
 const require_lib = require('./lib.js');
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);

@@ -3,32 +3,42 @@ use std::fmt::Write as _;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 use std::sync::Arc;
 
-use oxc::ast::NONE;
 use oxc::ast::ast::{
-  Argument, ArrayExpressionElement, Expression, FormalParameterKind, ImportOrExportKind,
-  NumberBase, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
+  self, Argument, ArrayExpressionElement, Expression, ObjectPropertyKind, PropertyKey, PropertyKind,
 };
-use oxc::ast_visit::{VisitMut, walk_mut};
-use oxc::span::{SPAN, Span};
+use oxc::ast_visit::{Visit, walk};
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
+use string_wizard::MagicString;
 use sugar_path::SugarPath;
 
-pub struct GlobImportVisit<'ast, 'a> {
+pub struct GlobImportVisit<'a> {
   pub ctx: &'a PluginContext,
   pub id: &'a str,
   pub root: &'a PathBuf,
-  pub ast_builder: oxc::ast::AstBuilder<'ast>,
   pub restore_query_extension: bool,
   pub current: usize,
-  pub import_decls: oxc::allocator::Vec<'ast, Statement<'ast>>,
+  pub code: &'a str,
+  pub magic_string: Option<MagicString<'a>>,
+  pub import_decls: Vec<String>,
 }
 
-impl<'ast> VisitMut<'ast> for GlobImportVisit<'ast, '_> {
-  fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
-    self.transform_glob_import(expr, ImportGlobOmitType::None);
-    walk_mut::walk_expression(self, expr);
+impl<'ast> Visit<'ast> for GlobImportVisit<'_> {
+  fn visit_program(&mut self, it: &ast::Program<'ast>) {
+    walk::walk_program(self, it);
+    if !self.import_decls.is_empty() {
+      self
+        .magic_string
+        .get_or_insert_with(|| MagicString::new(self.code))
+        .prepend(self.import_decls.join("\n"));
+    }
+  }
+  fn visit_expression(&mut self, expr: &Expression<'ast>) {
+    if self.transform_glob_import(expr, ImportGlobOmitType::None) {
+      return;
+    }
+    walk::walk_expression(self, expr);
   }
 }
 
@@ -93,17 +103,23 @@ impl<'a> PathWithGlob<'a> {
   }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum ImportGlobOmitType {
   Keys,
   Values,
   None,
 }
 
-impl<'ast> GlobImportVisit<'ast, '_> {
-  fn transform_glob_import(&mut self, expr: &mut Expression<'ast>, omit_type: ImportGlobOmitType) {
-    let Some(call_expr) = expr.as_call_expression_mut() else { return };
-    let Some(mem_expr) = call_expr.callee.as_static_member_expr_mut() else { return };
+impl<'ast> GlobImportVisit<'_> {
+  fn transform_glob_import(
+    &mut self,
+    expr: &Expression<'ast>,
+    omit_type: ImportGlobOmitType,
+  ) -> bool {
+    let Some(call_expr) = expr.as_call_expression() else { return false };
+    let ast::Expression::StaticMemberExpression(ref mem_expr) = call_expr.callee else {
+      return false;
+    };
 
     match &mem_expr.object {
       Expression::Identifier(id)
@@ -112,11 +128,11 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         let omit_type = match mem_expr.property.name.as_str() {
           "keys" => ImportGlobOmitType::Values,
           "values" => ImportGlobOmitType::Keys,
-          _ => return,
+          _ => return false,
         };
-        let [arg] = call_expr.arguments.as_mut_slice() else { return };
-        let Some(arg_expr) = arg.as_expression_mut() else { return };
-        self.transform_glob_import(arg_expr, omit_type);
+        let [arg] = call_expr.arguments.as_slice() else { return false };
+        let Some(arg_expr) = arg.as_expression() else { return false };
+        self.transform_glob_import(arg_expr, omit_type)
       }
       Expression::MetaProperty(p)
         if mem_expr.property.name == "glob"
@@ -132,7 +148,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         }
 
         // import.meta.glob('./dir/*.js')
-        let Some(arg) = call_expr.arguments.first() else { return };
+        let Some(arg) = call_expr.arguments.first() else { return true };
 
         // {
         //   './dir/ind.js': __glob__0_0_,
@@ -140,12 +156,13 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         //   './dir/bar.js': () => import('./dir/bar.js?raw').then((m) => m.setup),
         // }
         if self.eval_glob_expr(arg, &mut files, &options).is_some() {
-          *expr = self.generate_glob_object_expression(&files, &options, omit_type, call_expr.span);
+          self.generate_glob_object_expression(&files, &options, omit_type, call_expr.span);
         }
 
         self.current += 1;
+        true
       }
-      _ => {}
+      _ => false,
     }
   }
 
@@ -154,8 +171,8 @@ impl<'ast> GlobImportVisit<'ast, '_> {
     files: &[ImportGlobFileData],
     options: &ImportGlobOptions,
     omit_type: ImportGlobOmitType,
-    span: Span,
-  ) -> Expression<'ast> {
+    span: oxc::span::Span,
+  ) {
     let properties = files.iter().enumerate().map(|(index, file_data)| {
       let import_path = &file_data.import_path;
       let formatted_file = if let Some(query) = &options.query {
@@ -171,8 +188,8 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         Cow::Borrowed(import_path)
       };
 
-      let value = if matches!(omit_type, ImportGlobOmitType::Values) {
-        self.ast_builder.expression_numeric_literal(SPAN, 0.0, None, NumberBase::Decimal)
+      let value: Cow<'_, str> = if matches!(omit_type, ImportGlobOmitType::Values) {
+        Cow::Borrowed("0")
       } else if options.eager {
         // import * as __import_glob__0_0_ from './dir/foo.js'
         // const modules = {
@@ -185,134 +202,23 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         );
 
         let module_specifier = match options.import.as_deref() {
-          Some("default") => {
-            self.ast_builder.import_declaration_specifier_import_default_specifier(
-              SPAN,
-              self.ast_builder.binding_identifier(SPAN, self.ast_builder.atom(&name)),
-            )
-          }
           Some("*") | None => {
-            self.ast_builder.import_declaration_specifier_import_namespace_specifier(
-              SPAN,
-              self.ast_builder.binding_identifier(SPAN, self.ast_builder.atom(&name)),
-            )
+            format!("* as {name}")
           }
-          Some(import) => self.ast_builder.import_declaration_specifier_import_specifier(
-            SPAN,
-            self
-              .ast_builder
-              .module_export_name_identifier_reference(SPAN, self.ast_builder.atom(import)),
-            self.ast_builder.binding_identifier(SPAN, self.ast_builder.atom(&name)),
-            ImportOrExportKind::Value,
-          ),
+          Some(import) => format!("{{ {import} as {name} }}"),
         };
 
-        self.import_decls.push(Statement::from(
-          self.ast_builder.module_declaration_import_declaration(
-            SPAN,
-            Some(self.ast_builder.vec1(module_specifier)),
-            self.ast_builder.string_literal(
-              Span::default(),
-              self.ast_builder.atom(formatted_file.as_str()),
-              None,
-            ),
-            None,
-            NONE,
-            ImportOrExportKind::Value,
-          ),
-        ));
+        self.import_decls.push(format!("import {module_specifier} from \"{formatted_file}\";"));
 
-        self.ast_builder.expression_identifier(SPAN, self.ast_builder.atom(&name))
+        Cow::Owned(name)
       } else {
-        // import('./dir/bar.js')
-        let mut import_expression = self.ast_builder.expression_import(
-          SPAN,
-          self.ast_builder.expression_string_literal(
-            Span::default(),
-            self.ast_builder.atom(formatted_file.as_str()),
-            None,
-          ),
-          None,
-          None,
-        );
-
-        // import('./dir/foo.js').then((m) => m.setup)
-        if let Some(import) = &options.import {
-          if import != "*" {
-            import_expression = self.ast_builder.expression_call(
-              SPAN,
-              Expression::from(self.ast_builder.member_expression_static(
-                SPAN,
-                import_expression,
-                self.ast_builder.identifier_name(SPAN, "then"),
-                false,
-              )),
-              NONE,
-              self.ast_builder.vec1(
-                self
-                  .ast_builder
-                  .expression_arrow_function(
-                    SPAN,
-                    true,
-                    false,
-                    NONE,
-                    self.ast_builder.formal_parameters(
-                      SPAN,
-                      FormalParameterKind::ArrowFormalParameters,
-                      self.ast_builder.vec1(self.ast_builder.formal_parameter(
-                        SPAN,
-                        self.ast_builder.vec(),
-                        self.ast_builder.binding_pattern_binding_identifier(SPAN, "m"),
-                        NONE,
-                        Option::<Expression<'ast>>::None,
-                        false,
-                        None,
-                        false,
-                        false,
-                      )),
-                      NONE,
-                    ),
-                    NONE,
-                    self.ast_builder.function_body(
-                      SPAN,
-                      self.ast_builder.vec(),
-                      self.ast_builder.vec1(self.ast_builder.statement_expression(
-                        SPAN,
-                        Expression::from(self.ast_builder.member_expression_static(
-                          SPAN,
-                          self.ast_builder.expression_identifier(SPAN, "m"),
-                          self.ast_builder.identifier_name(SPAN, self.ast_builder.atom(import)),
-                          false,
-                        )),
-                      )),
-                    ),
-                  )
-                  .into(),
-              ),
-              false,
-            );
-          }
-        }
-
         // () => import('./dir/bar.js') or () => import('./dir/foo.js').then((m) => m.setup)
-        self.ast_builder.expression_arrow_function(
-          SPAN,
-          true,
-          false,
-          NONE,
-          self.ast_builder.formal_parameters(
-            SPAN,
-            FormalParameterKind::ArrowFormalParameters,
-            self.ast_builder.vec(),
-            NONE,
-          ),
-          NONE,
-          self.ast_builder.function_body(
-            SPAN,
-            self.ast_builder.vec(),
-            self.ast_builder.vec1(self.ast_builder.statement_expression(SPAN, import_expression)),
-          ),
-        )
+        Cow::Owned(match options.import.as_deref() {
+          Some(import) if import != "*" => {
+            format!("() => import(\"{formatted_file}\").then((m) => m[\"{import}\"])")
+          }
+          _ => format!("() => import(\"{formatted_file}\")"),
+        })
       };
 
       if let Some(file_path) = &file_data.file_path {
@@ -322,33 +228,40 @@ impl<'ast> GlobImportVisit<'ast, '_> {
       }
     });
 
-    if matches!(omit_type, ImportGlobOmitType::Keys) {
-      let elements = properties.map(|(_, value)| ArrayExpressionElement::from(value));
-      let elements = self.ast_builder.vec_from_iter(elements);
-      self.ast_builder.expression_array(span, elements)
-    } else {
-      let properties = properties.map(|(file, value)| {
-        self.ast_builder.object_property_kind_object_property(
-          SPAN,
-          PropertyKind::Init,
-          PropertyKey::from(self.ast_builder.expression_string_literal(
-            Span::default(),
-            self.ast_builder.atom(file),
-            None,
-          )),
-          value,
-          false,
-          false,
-          false,
+    // Preserve line breaks from original code for sourcemap alignment
+    let line_breaks = "\n".repeat(span.source_text(self.code).matches('\n').count());
+    let replacement = match omit_type {
+      ImportGlobOmitType::Keys => {
+        format!(
+          "[{}{line_breaks}]",
+          properties.map(|(_, value)| value).collect::<Vec<_>>().join(",")
         )
-      });
-      let properties = self.ast_builder.vec_from_iter(properties);
-      self.ast_builder.expression_object(span, properties)
-    }
+      }
+      ImportGlobOmitType::Values => format!(
+        "{{{}{line_breaks}}}",
+        properties
+          .map(|(file, value)| format!("\"{file}\": {value}"))
+          .collect::<Vec<_>>()
+          .join(",")
+      ),
+      ImportGlobOmitType::None => format!(
+        "/* #__PURE__ */ Object.assign({{{}{line_breaks}}})",
+        properties
+          .map(|(file, value)| format!("\"{file}\": {value}"))
+          .collect::<Vec<_>>()
+          .join(",")
+      ),
+    };
+
+    self
+      .magic_string
+      .get_or_insert_with(|| string_wizard::MagicString::new(self.code))
+      .update(span.start, span.end, replacement)
+      .expect("update should not fail in import glob plugin");
   }
 }
 
-impl GlobImportVisit<'_, '_> {
+impl GlobImportVisit<'_> {
   fn is_virtual_module(&self) -> bool {
     // https://vite.dev/guide/api-plugin.html#virtual-modules-convention
     self.id.starts_with("virtual:") || self.id.starts_with('\0') || !self.id.contains('/')
@@ -383,20 +296,24 @@ impl GlobImportVisit<'_, '_> {
           rolldown_plugin::PluginContextResolveOptions { custom, ..Default::default() }
         }),
       );
-      if let Ok(result) = rolldown_utils::futures::block_on(future) {
-        let id: Cow<'_, str> = match result {
-          Ok(resolved_id) => Cow::Owned(resolved_id.id.to_string()),
-          Err(_) => Cow::Borrowed(glob),
-        };
-        let path = Path::new(id.as_ref());
-        if path.is_absolute() && path.starts_with(root) {
-          return Some(PathWithGlob::new(id.to_string(), glob));
-        }
+
+      let resolved_id = rolldown_utils::futures::block_on(future)
+        .ok()
+        .and_then(Result::ok)
+        .map(|resolved| resolved.id.to_string());
+
+      if let Some(ref id) = resolved_id
+        && Path::new(id.as_str()).is_absolute()
+      {
+        return Some(PathWithGlob::new(id.clone(), glob));
       }
 
       self.ctx.warn(LogWithoutPlugin {
         message: format!(
-          "Invalid glob pattern: `{glob}` in file '{}'. Glob patterns must start with:\n  • '/' for absolute paths from project root\n  • './' or '../' for relative paths\n  • '**/' for recursive matching from project root\n  • '#' for subpath imports (with '*' wildcard)",
+          "Invalid glob pattern: `{glob}`{} in file '{}'. Glob patterns must start with:\n  • '/' for absolute paths from project root\n  • './' or '../' for relative paths\n  • '**/' for recursive matching from project root\n  • '#' for subpath imports (with '*' wildcard)",
+         resolved_id
+              .map(|id| format!(" (resolved: `{id}`)"))
+              .unwrap_or_default(),
           self.id.relative(self.root).display()
         ),
         ..Default::default()
@@ -646,8 +563,8 @@ impl GlobImportVisit<'_, '_> {
               let ObjectPropertyKind::ObjectProperty(p) = prop else { continue };
 
               let key = match &p.key {
-                PropertyKey::StringLiteral(key) => key.value,
-                PropertyKey::StaticIdentifier(ident) => ident.name,
+                PropertyKey::StringLiteral(key) => key.value.as_str(),
+                PropertyKey::StaticIdentifier(ident) => ident.name.as_str(),
                 _ => continue,
               };
 

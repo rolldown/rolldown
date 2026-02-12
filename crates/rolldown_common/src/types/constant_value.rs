@@ -21,8 +21,7 @@ pub struct ConstExportMeta {
   pub value: ConstantValue,
   /// For now we only support esm and commonjs format, so `bool` is enough.
   pub commonjs_export: bool,
-  /// If `true`, it's safe to inline this constant value whether in **inlineConst mode** `'all'` or
-  /// `'smart'`
+  /// If `true`, it's safe to inline this constant value regardless of **inlineConst mode**
   pub safe_to_inline: bool,
 }
 

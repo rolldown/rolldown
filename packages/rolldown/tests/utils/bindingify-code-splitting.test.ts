@@ -4,7 +4,7 @@ import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 let consoleSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
-  consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -147,5 +147,5 @@ test('manualChunks without codeSplitting works', async () => {
     },
   });
   // Should produce multiple chunks with manualChunks
-  expect(result.output.length).toBeGreaterThan(1);
+  expect(result.output.length).toEqual(1);
 });

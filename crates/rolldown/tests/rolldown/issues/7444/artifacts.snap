@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import * as m$1 from "d";
 import * as m from "c";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = m$1.default;

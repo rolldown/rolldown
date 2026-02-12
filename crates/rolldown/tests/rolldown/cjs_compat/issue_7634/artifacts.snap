@@ -6,7 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region baz.js
 var baz_exports = /* @__PURE__ */ __exportAll({ baz: () => baz });

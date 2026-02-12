@@ -5,8 +5,8 @@ impl<'text> MagicString<'text> {
   /// positions from `start` to `end`.
   ///
   /// If `end` is `None`, it defaults to the original string length.
-  pub fn slice(&self, start: usize, end: Option<usize>) -> Result<String, String> {
-    let original_len = self.source.len();
+  pub fn slice(&self, start: u32, end: Option<u32>) -> Result<String, String> {
+    let original_len = self.source.len() as u32;
 
     // Default end to original length
     let end = end.unwrap_or(original_len);
@@ -58,7 +58,7 @@ impl<'text> MagicString<'text> {
         return Err(format!("Cannot use replaced character {} as slice end anchor.", end));
       }
 
-      let slice_start = if idx == start_chunk_idx { start - chunk.start() } else { 0 };
+      let slice_start = if idx == start_chunk_idx { (start - chunk.start()) as usize } else { 0 };
 
       let content = if let Some(ref edited) = chunk.edited_content {
         edited.as_ref()
@@ -66,7 +66,12 @@ impl<'text> MagicString<'text> {
         chunk.span.text(&self.source)
       };
 
-      let slice_end = if contains_end { content.len() + end - chunk.end() } else { content.len() };
+      let slice_end = if contains_end {
+        // end <= chunk.end() when contains_end is true, so we subtract
+        content.len() - (chunk.end() - end) as usize
+      } else {
+        content.len()
+      };
 
       result.push_str(&content[slice_start..slice_end]);
 

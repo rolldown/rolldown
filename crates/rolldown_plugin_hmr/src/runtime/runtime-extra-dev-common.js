@@ -1,11 +1,4 @@
 // @ts-check
-import {
-  __exportAll,
-  __reExport,
-  __toCommonJS,
-  __toESM,
-  // @ts-expect-error
-} from 'rolldown:runtime';
 
 class Module {
   /**
@@ -106,18 +99,23 @@ export class DevRuntime {
     mod || cb((mod = { exports: {} }).exports, mod), mod.exports
   );
   /** @internal */
+  // @ts-expect-error The variable will be injected at build time.
   __toESM = __toESM;
   /** @internal */
+  // @ts-expect-error The variable will be injected at build time.
   __toCommonJS = __toCommonJS;
   /** @internal */
+  // @ts-expect-error The variable will be injected at build time.
   __exportAll = __exportAll;
   /**
    * @param {boolean} [isNodeMode]
    * @returns {(mod: any) => any}
    * @internal
    */
+  // @ts-expect-error The variable will be injected at build time.
   __toDynamicImportESM = (isNodeMode) => (mod) => __toESM(mod.default, isNodeMode);
   /** @internal */
+  // @ts-expect-error The variable will be injected at build time.
   __reExport = __reExport;
 
   sendModuleRegisteredMessage = (() => {

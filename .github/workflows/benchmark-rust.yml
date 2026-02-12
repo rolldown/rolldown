@@ -35,7 +35,7 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready'))
     runs-on: ubuntu-latest
     steps:
-      - uses: taiki-e/checkout-action@afad4df3ab3122b166e8226ac83be4d981fb64e8 # v1.3.2
+      - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
 
       - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 
@@ -53,7 +53,7 @@ jobs:
         run: cargo codspeed build -p bench --features codspeed
 
       - name: Run the benchmarks
-        uses: CodSpeedHQ/action@0700edb451d0e9f2426f99bd6977027e550fb2a6 # v4.7.0
+        uses: CodSpeedHQ/action@9a74b6ba663684052277e8f342b5eb99c7442a03 # v4.10.5
         with:
           run: cargo codspeed run -p bench
           token: ${{ secrets.CODSPEED_TOKEN }}
@@ -73,7 +73,7 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready')
     runs-on: ubuntu-latest
     steps:
-      - uses: taiki-e/checkout-action@afad4df3ab3122b166e8226ac83be4d981fb64e8 # v1.3.2
+      - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
 
       - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 
@@ -90,7 +90,7 @@ jobs:
         run: cargo bench -p bench -- --save-baseline pr
 
       - name: Checkout Target Branch
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           clean: false
           ref: ${{ github.event.pull_request.base.ref }}

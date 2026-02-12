@@ -254,10 +254,7 @@ impl SymbolRefDb {
     canonical_names: &'a FxHashMap<SymbolRef, CompactStr>,
   ) -> &'a str {
     let canonical_ref = self.canonical_ref_for(refer);
-    canonical_names
-      .get(&canonical_ref)
-      .map(CompactStr::as_str)
-      .unwrap_or_else(|| canonical_ref.name(self))
+    canonical_names.get(&canonical_ref).map_or_else(|| canonical_ref.name(self), CompactStr::as_str)
   }
 
   pub fn get(&self, refer: SymbolRef) -> &SymbolRefDataClassic {

@@ -36,7 +36,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ keep/value-namespace-merged.ts:5:13 ]
    │
  5 │     export let num = 0
@@ -49,7 +49,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ keep/value-namespace.ts:2:13 ]
    │
  2 │     export let num = 0
@@ -78,7 +78,6 @@ var foo$3 = class foo$3 {
 		this.x = new foo$3();
 	}
 };
-var interface_merged_default = foo$3;
 let bar$10 = 123;
 
 //#endregion
@@ -140,7 +139,7 @@ var entry_default = [
 	bar$12,
 	dl_def,
 	bar$11,
-	interface_merged_default,
+	foo$3,
 	bar$10,
 	interface_nested_default,
 	bar$9,

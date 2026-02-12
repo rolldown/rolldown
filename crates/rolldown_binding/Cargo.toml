@@ -22,14 +22,18 @@ async-channel = { workspace = true }
 dashmap = { workspace = true }
 derive_more = { workspace = true }
 futures = { workspace = true }
+indexmap = { workspace = true }
 itertools = { workspace = true }
 napi = { workspace = true }
 napi-derive = { workspace = true }
 num_cpus = { workspace = true }
 oxc = { workspace = true }
+oxc_napi = { workspace = true }
 oxc_minify_napi = { workspace = true }
 oxc_parser_napi = { workspace = true }
+oxc_resolver = { workspace = true }
 oxc_resolver_napi = { workspace = true }
+oxc_sourcemap = { workspace = true }
 oxc_transform_napi = { workspace = true }
 rolldown = { workspace = true, features = ["experimental"] }
 rolldown_common = { workspace = true }
@@ -37,6 +41,7 @@ rolldown_dev = { workspace = true }
 rolldown_devtools = { workspace = true }
 rolldown_error = { workspace = true, features = ["napi"] }
 rolldown_plugin = { workspace = true }
+rolldown_plugin_bundle_analyzer = { workspace = true }
 rolldown_plugin_esm_external_require = { workspace = true }
 rolldown_plugin_isolated_declaration = { workspace = true }
 rolldown_plugin_replace = { workspace = true }
@@ -54,7 +59,6 @@ rolldown_plugin_vite_reporter = { workspace = true }
 rolldown_plugin_vite_resolve = { workspace = true }
 rolldown_plugin_vite_transform = { workspace = true }
 rolldown_plugin_vite_wasm_fallback = { workspace = true }
-rolldown_plugin_vite_wasm_helper = { workspace = true }
 rolldown_plugin_vite_web_worker_post = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_tracing = { workspace = true }

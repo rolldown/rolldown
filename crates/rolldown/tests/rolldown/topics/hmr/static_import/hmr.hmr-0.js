@@ -18,7 +18,10 @@ assert.deepStrictEqual(cjsNamespace, {
   value: 'cjs-namespace',
   default: { value: 'cjs-namespace' }
 })
-assert.deepStrictEqual(esmNamespace, { value: 'esm-namespace' })
+assert.deepEqual(esmNamespace, {
+  [Symbol.toStringTag]: 'Module',
+  value: 'esm-namespace'
+})
 
 import.meta.hot.accept((mod) => {
   if (mod) {

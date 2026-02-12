@@ -48,7 +48,7 @@ init_entry2();
 ## run-dep.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region run-dep.js
 var init_run_dep = __esmMin((() => {
 	global.foo.log();

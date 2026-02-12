@@ -304,6 +304,15 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
+  pub fn comments(&self) -> crate::options::BindingCommentsOptions {
+    crate::options::BindingCommentsOptions {
+      legal: Some(self.inner.comments.legal),
+      annotation: Some(self.inner.comments.annotation),
+      jsdoc: Some(self.inner.comments.jsdoc),
+    }
+  }
+
+  #[napi(getter)]
   pub fn preserve_modules(&self) -> bool {
     self.inner.preserve_modules
   }

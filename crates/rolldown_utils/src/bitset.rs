@@ -27,18 +27,13 @@ impl BitSet {
       self.entries[i] |= e;
     }
   }
+
   // It is safe to convert `usize` to `u32` here because we ensure that the bitset is created with a maximum bit count that fits within `u32`.
   #[expect(clippy::cast_possible_truncation)]
-  pub fn index_of_one(&self) -> Vec<u32> {
-    let mut result = Vec::new();
-    for (i, &e) in self.entries.iter().enumerate() {
-      for j in 0..8 {
-        if e & (1 << j) != 0 {
-          result.push((i * 8 + j) as u32);
-        }
-      }
-    }
-    result
+  pub fn index_of_one(&self) -> impl Iterator<Item = u32> + '_ {
+    self.entries.iter().enumerate().flat_map(|(i, &e)| {
+      (0..8u32).filter(move |&j| e & (1 << j) != 0).map(move |j| (i as u32) * 8 + j)
+    })
   }
 }
 
@@ -113,6 +108,6 @@ mod tests {
     bits.set_bit(13);
     bits.set_bit(15);
 
-    assert_eq!(bits.index_of_one(), vec![1, 5, 8, 10, 13, 15]);
+    assert_eq!(bits.index_of_one().collect::<Vec<_>>(), vec![1, 5, 8, 10, 13, 15]);
   }
 }

@@ -64,15 +64,16 @@ impl MagicString<'_> {
 
 fn precompute_utf16_index_map(
   source: &str,
-  byte_indices: impl Iterator<Item = usize>,
-) -> FxHashMap<usize, usize> {
-  let mut byte_indices: Vec<usize> = byte_indices.collect();
+  byte_indices: impl Iterator<Item = u32>,
+) -> FxHashMap<u32, u32> {
+  let mut byte_indices: Vec<u32> = byte_indices.collect();
   byte_indices.sort();
-  let mut index = 0;
-  let mut index_utf16 = 0;
-  let mut map: FxHashMap<usize, usize> = Default::default();
+  let mut index: u32 = 0;
+  let mut index_utf16: u32 = 0;
+  let mut map: FxHashMap<u32, u32> = Default::default();
   for &i in &byte_indices {
-    index_utf16 += source[index..i].chars().map(|c| c.len_utf16()).sum::<usize>();
+    index_utf16 +=
+      source[index as usize..i as usize].chars().map(|c| c.len_utf16() as u32).sum::<u32>();
     index = i;
     map.insert(i, index_utf16);
   }

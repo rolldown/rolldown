@@ -21,6 +21,9 @@ pub struct BindingChecksOptions {
   pub prefer_builtin_feature: Option<bool>,
   pub could_not_clean_directory: Option<bool>,
   pub plugin_timings: Option<bool>,
+  pub duplicate_shebang: Option<bool>,
+  pub unsupported_tsconfig_option: Option<bool>,
+  pub ineffective_dynamic_import: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -42,6 +45,9 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       prefer_builtin_feature: value.prefer_builtin_feature,
       could_not_clean_directory: value.could_not_clean_directory,
       plugin_timings: value.plugin_timings,
+      duplicate_shebang: value.duplicate_shebang,
+      unsupported_tsconfig_option: value.unsupported_tsconfig_option,
+      ineffective_dynamic_import: value.ineffective_dynamic_import,
     }
   }
 }

@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region import.js
-var import_exports = /* @__PURE__ */ __exportAll({ default: () => import_default }, 1);
+var import_exports = /* @__PURE__ */ __exportAll({ default: () => import_default });
 var import_default = "hi";
 
 //#endregion
@@ -28,12 +28,12 @@ assert.equal(String(import_exports), "[object Module]");
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 let assert = require("assert");
 assert = __toESM(assert);
 
 //#region import.js
-var import_exports = /* @__PURE__ */ __exportAll({ default: () => import_default }, 1);
+var import_exports = /* @__PURE__ */ __exportAll({ default: () => import_default });
 var import_default = "hi";
 
 //#endregion
@@ -62,11 +62,11 @@ assert.default.equal(String(import_exports), "[object Module]");
 ```js
 (function(assert) {
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 assert = __toESM(assert);
 
 //#region import.js
-	var import_exports = /* @__PURE__ */ __exportAll({ default: () => import_default }, 1);
+	var import_exports = /* @__PURE__ */ __exportAll({ default: () => import_default });
 	var import_default = "hi";
 
 //#endregion

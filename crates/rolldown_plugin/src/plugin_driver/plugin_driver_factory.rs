@@ -3,7 +3,9 @@ use std::sync::{Arc, Weak};
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_index::IndexVec;
-use rolldown_common::{SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions};
+use rolldown_common::{
+  ModuleIdx, SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
+};
 use rolldown_resolver::Resolver;
 use rolldown_utils::dashmap::FxDashSet;
 
@@ -34,6 +36,7 @@ impl PluginDriverFactory {
     session: &rolldown_devtools::Session,
     initial_bundle_span: &Arc<tracing::Span>,
     module_infos: SharedModuleInfoDashMap,
+    transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   ) -> Arc<crate::plugin_driver::PluginDriver> {
     let watch_files = Arc::new(FxDashSet::default());
     let meta = Arc::new(PluginContextMeta::default());
@@ -98,10 +101,9 @@ impl PluginDriverFactory {
         file_emitter: Arc::clone(file_emitter),
         watch_files,
         module_infos,
-        transform_dependencies: Arc::new(DashMap::default()),
+        transform_dependencies,
         context_load_completion_manager: ContextLoadCompletionManager::default(),
         tx,
-        options: Arc::clone(options),
         hook_timing_collector: hook_timing_collector.clone(),
       }
     })

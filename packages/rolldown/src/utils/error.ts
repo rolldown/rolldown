@@ -25,7 +25,7 @@ export function normalizeBindingResult<T>(container: BindingResult<T>): T | Erro
   return container as T;
 }
 
-function normalizeBindingError(e: BindingError): Error {
+export function normalizeBindingError(e: BindingError): Error {
   return e.type === 'JsError'
     ? e.field0
     : Object.assign(new Error(), {

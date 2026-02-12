@@ -101,7 +101,7 @@ export interface MangleOptions {
   /**
    * Pass `true` to mangle names declared in the top level scope.
    *
-   * @default false
+   * @default true for modules and commonjs, otherwise false
    */
   toplevel?: boolean
   /**
@@ -314,9 +314,17 @@ export type ImportNameKind = /** `import { x } from "mod"` */
 'Default';
 
 /**
- * Parse asynchronously.
+ * Parse JS/TS source asynchronously on a separate thread.
  *
- * Note: This function can be slower than `parseSync` due to the overhead of spawning a thread.
+ * Note that not all of the workload can happen on a separate thread.
+ * Parsing on Rust side does happen in a separate thread, but deserialization of the AST to JS objects
+ * has to happen on current thread. This synchronous deserialization work typically outweighs
+ * the asynchronous parsing by a factor of between 3 and 20.
+ *
+ * i.e. the majority of the workload cannot be parallelized by using this method.
+ *
+ * Generally `parseSync` is preferable to use as it does not have the overhead of spawning a thread.
+ * If you need to parallelize parsing multiple files, it is recommended to use worker threads.
  */
 export declare function parse(filename: string, sourceText: string, options?: ParserOptions | undefined | null): Promise<ParseResult>
 
@@ -361,7 +369,16 @@ export interface ParserOptions {
   showSemanticErrors?: boolean
 }
 
-/** Parse synchronously. */
+/**
+ * Parse JS/TS source synchronously on current thread.
+ *
+ * This is generally preferable over `parse` (async) as it does not have the overhead
+ * of spawning a thread, and the majority of the workload cannot be parallelized anyway
+ * (see `parse` documentation for details).
+ *
+ * If you need to parallelize parsing multiple files, it is recommended to use worker threads
+ * with `parseSync` rather than using `parse`.
+ */
 export declare function parseSync(filename: string, sourceText: string, options?: ParserOptions | undefined | null): ParseResult
 
 /** Returns `true` if raw transfer is supported on this platform. */
@@ -906,7 +923,7 @@ export declare function isolatedDeclarationSync(filename: string, sourceText: st
 /**
  * Configure how TSX and JSX are transformed.
  *
- * @see {@link https://babeljs.io/docs/babel-plugin-transform-react-jsx#options}
+ * @see {@link https://oxc.rs/docs/guide/usage/transformer/jsx}
  */
 export interface JsxOptions {
   /**
@@ -922,8 +939,6 @@ export interface JsxOptions {
    * Emit development-specific information, such as `__source` and `__self`.
    *
    * @default false
-   *
-   * @see {@link https://babeljs.io/docs/babel-plugin-transform-react-jsx-development}
    */
   development?: boolean
   /**
@@ -937,11 +952,7 @@ export interface JsxOptions {
    */
   throwIfNamespace?: boolean
   /**
-   * Enables `@babel/plugin-transform-react-pure-annotations`.
-   *
-   * It will mark JSX elements and top-level React method calls as pure for tree shaking.
-   *
-   * @see {@link https://babeljs.io/docs/en/babel-plugin-transform-react-pure-annotations}
+   * Mark JSX elements and top-level React method calls as pure for tree shaking.
    *
    * @default true
    */
@@ -971,23 +982,6 @@ export interface JsxOptions {
    * @default 'React.Fragment'
    */
   pragmaFrag?: string
-  /**
-   * When spreading props, use `Object.assign` directly instead of an extend helper.
-   *
-   * Only used for `classic` {@link runtime}.
-   *
-   * @default false
-   */
-  useBuiltIns?: boolean
-  /**
-   * When spreading props, use inline object with spread elements directly
-   * instead of an extend helper or Object.assign.
-   *
-   * Only used for `classic` {@link runtime}.
-   *
-   * @default false
-   */
-  useSpread?: boolean
   /**
    * Enable React Fast Refresh .
    *
@@ -1080,7 +1074,7 @@ export interface ReactRefreshOptions {
 /**
  * Configure how styled-components are transformed.
  *
- * @see {@link https://styled-components.com/docs/tooling#babel-plugin}
+ * @see {@link https://oxc.rs/docs/guide/usage/transformer/plugins#styled-components}
  */
 export interface StyledComponentsOptions {
   /**
@@ -1199,9 +1193,15 @@ export interface TransformOptions {
   sourcemap?: boolean
   /** Set assumptions in order to produce smaller output. */
   assumptions?: CompilerAssumptions
-  /** Configure how TypeScript is transformed. */
+  /**
+   * Configure how TypeScript is transformed.
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/typescript}
+   */
   typescript?: TypeScriptOptions
-  /** Configure how TSX and JSX are transformed. */
+  /**
+   * Configure how TSX and JSX are transformed.
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/jsx}
+   */
   jsx?: 'preserve' | JsxOptions
   /**
    * Sets the target environment for the generated JavaScript.
@@ -1215,18 +1215,27 @@ export interface TransformOptions {
    *
    * @default `esnext` (No transformation)
    *
-   * @see [esbuild#target](https://esbuild.github.io/api/#target)
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/lowering#target}
    */
   target?: string | Array<string>
   /** Behaviour for runtime helpers. */
   helpers?: Helpers
-  /** Define Plugin */
+  /**
+   * Define Plugin
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#define}
+   */
   define?: Record<string, string>
-  /** Inject Plugin */
+  /**
+   * Inject Plugin
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#inject}
+   */
   inject?: Record<string, string | [string, string]>
   /** Decorator plugin */
   decorator?: DecoratorOptions
-  /** Third-party plugins to use. */
+  /**
+   * Third-party plugins to use.
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/plugins}
+   */
   plugins?: PluginsOptions
 }
 
@@ -1439,6 +1448,11 @@ export declare class BindingDevEngine {
   compileEntry(moduleId: string, clientId: string): Promise<string>
 }
 
+export declare class BindingLoadPluginContext {
+  inner(): BindingPluginContext
+  addWatchFile(file: string): void
+}
+
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
   get filename(): string | null
@@ -1554,6 +1568,7 @@ export declare class BindingNormalizedOptions {
   get polyfillRequire(): boolean
   get minify(): false | 'dce-only' | MinifyOptions
   get legalComments(): 'none' | 'inline'
+  get comments(): BindingCommentsOptions
   get preserveModules(): boolean
   get preserveModulesRoot(): string | undefined
   get virtualDirname(): string
@@ -1693,6 +1708,26 @@ export declare class TraceSubscriberGuard {
   close(): void
 }
 
+/**
+ * Cache for tsconfig resolution to avoid redundant file system operations.
+ *
+ * The cache stores resolved tsconfig configurations keyed by their file paths.
+ * When transforming multiple files in the same project, tsconfig lookups are
+ * deduplicated, improving performance.
+ */
+export declare class TsconfigCache {
+  /** Create a new transform cache with auto tsconfig discovery enabled. */
+  constructor()
+  /**
+   * Clear the cache.
+   *
+   * Call this when tsconfig files have changed to ensure fresh resolution.
+   */
+  clear(): void
+  /** Get the number of cached entries. */
+  size(): number
+}
+
 export interface AliasItem {
   find: string
   replacements: Array<string | undefined | null>
@@ -1713,7 +1748,8 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
+export type BindingBuiltinPluginName =  'builtin:bundle-analyzer'|
+'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
 'builtin:replace'|
 'builtin:vite-alias'|
@@ -1729,8 +1765,12 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-resolve'|
 'builtin:vite-transform'|
 'builtin:vite-wasm-fallback'|
-'builtin:vite-wasm-helper'|
 'builtin:vite-web-worker-post';
+
+export interface BindingBundleAnalyzerPluginConfig {
+  /** Output filename for the analysis data (default: "analyze-data.json") */
+  fileName?: string
+}
 
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
@@ -1761,6 +1801,9 @@ export interface BindingChecksOptions {
   preferBuiltinFeature?: boolean
   couldNotCleanDirectory?: boolean
   pluginTimings?: boolean
+  duplicateShebang?: boolean
+  unsupportedTsconfigOption?: boolean
+  ineffectiveDynamicImport?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -1776,6 +1819,32 @@ export declare enum BindingChunkModuleOrderBy {
 export interface BindingClientHmrUpdate {
   clientId: string
   update: BindingHmrUpdate
+}
+
+export interface BindingCommentsOptions {
+  legal?: boolean
+  annotation?: boolean
+  jsdoc?: boolean
+}
+
+export interface BindingCompilerOptions {
+  baseUrl?: string
+  paths?: Record<string, Array<string>>
+  experimentalDecorators?: boolean
+  emitDecoratorMetadata?: boolean
+  useDefineForClassFields?: boolean
+  rewriteRelativeImportExtensions?: boolean
+  jsx?: string
+  jsxFactory?: string
+  jsxFragmentFactory?: string
+  jsxImportSource?: string
+  verbatimModuleSyntax?: boolean
+  preserveValueImports?: boolean
+  importsNotUsedAsValues?: string
+  target?: string
+  module?: string
+  allowJs?: boolean
+  rootDirs?: Array<string>
 }
 
 export interface BindingDeferSyncScanData {
@@ -1822,10 +1891,140 @@ export interface BindingEmittedChunk {
 
 export interface BindingEmittedPrebuiltChunk {
   fileName: string
+  name?: string
   code: string
   exports?: Array<string>
   map?: BindingSourcemap
   sourcemapFileName?: string
+  facadeModuleId?: string
+  isEntry?: boolean
+  isDynamicEntry?: boolean
+}
+
+/** Enhanced transform options with tsconfig and inputMap support. */
+export interface BindingEnhancedTransformOptions {
+  /** Treat the source text as 'js', 'jsx', 'ts', 'tsx', or 'dts'. */
+  lang?: 'js' | 'jsx' | 'ts' | 'tsx' | 'dts'
+  /** Treat the source text as 'script', 'module', 'commonjs', or 'unambiguous'. */
+  sourceType?: 'script' | 'module' | 'commonjs' | 'unambiguous' | undefined
+  /**
+   * The current working directory. Used to resolve relative paths in other
+   * options.
+   */
+  cwd?: string
+  /**
+   * Enable source map generation.
+   *
+   * When `true`, the `sourceMap` field of transform result objects will be populated.
+   *
+   * @default false
+   */
+  sourcemap?: boolean
+  /** Set assumptions in order to produce smaller output. */
+  assumptions?: CompilerAssumptions
+  /**
+   * Configure how TypeScript is transformed.
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/typescript}
+   */
+  typescript?: TypeScriptOptions
+  /**
+   * Configure how TSX and JSX are transformed.
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/jsx}
+   */
+  jsx?: 'preserve' | JsxOptions
+  /**
+   * Sets the target environment for the generated JavaScript.
+   *
+   * The lowest target is `es2015`.
+   *
+   * Example:
+   *
+   * * `'es2015'`
+   * * `['es2020', 'chrome58', 'edge16', 'firefox57', 'node12', 'safari11']`
+   *
+   * @default `esnext` (No transformation)
+   *
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/lowering#target}
+   */
+  target?: string | Array<string>
+  /** Behaviour for runtime helpers. */
+  helpers?: Helpers
+  /**
+   * Define Plugin
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#define}
+   */
+  define?: Record<string, string>
+  /**
+   * Inject Plugin
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#inject}
+   */
+  inject?: Record<string, string | [string, string]>
+  /** Decorator plugin */
+  decorator?: DecoratorOptions
+  /**
+   * Third-party plugins to use.
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/plugins}
+   */
+  plugins?: PluginsOptions
+  /**
+   * Configure tsconfig handling.
+   * - true: Auto-discover and load the nearest tsconfig.json
+   * - TsconfigRawOptions: Use the provided inline tsconfig options
+   */
+  tsconfig?: boolean | BindingTsconfigRawOptions
+  /** An input source map to collapse with the output source map. */
+  inputMap?: SourceMap
+}
+
+/** Result of the enhanced transform API. */
+export interface BindingEnhancedTransformResult {
+  /**
+   * The transformed code.
+   *
+   * If parsing failed, this will be an empty string.
+   */
+  code: string
+  /**
+   * The source map for the transformed code.
+   *
+   * This will be set if {@link BindingEnhancedTransformOptions#sourcemap} is `true`.
+   */
+  map?: SourceMap
+  /**
+   * The `.d.ts` declaration file for the transformed code. Declarations are
+   * only generated if `declaration` is set to `true` and a TypeScript file
+   * is provided.
+   *
+   * If parsing failed and `declaration` is set, this will be an empty string.
+   *
+   * @see {@link TypeScriptOptions#declaration}
+   * @see [declaration tsconfig option](https://www.typescriptlang.org/tsconfig/#declaration)
+   */
+  declaration?: string
+  /**
+   * Declaration source map. Only generated if both
+   * {@link TypeScriptOptions#declaration declaration} and
+   * {@link BindingEnhancedTransformOptions#sourcemap sourcemap} are set to `true`.
+   */
+  declarationMap?: SourceMap
+  /**
+   * Helpers used.
+   *
+   * @internal
+   *
+   * Example:
+   *
+   * ```text
+   * { "_objectSpread": "@oxc-project/runtime/helpers/objectSpread2" }
+   * ```
+   */
+  helpersUsed: Record<string, string>
+  /** Parse and transformation errors. */
+  errors: Array<BindingError>
+  /** Parse and transformation warnings. */
+  warnings: Array<BindingError>
+  /** Paths to tsconfig files that were loaded during transformation. */
+  tsconfigFilePaths: Array<string>
 }
 
 export type BindingError =
@@ -1858,7 +2057,6 @@ export interface BindingExperimentalOptions {
   chunkImportMap?: boolean | BindingChunkImportMap
   onDemandWrapping?: boolean
   incrementalBuild?: boolean
-  transformHiresSourcemap?: boolean | 'boundary'
   nativeMagicString?: boolean
   chunkOptimization?: boolean
   lazyBarrel?: boolean
@@ -2088,6 +2286,7 @@ export interface BindingMatchGroup {
   minModuleSize?: number
   maxModuleSize?: number
   maxSize?: number
+  entriesAware?: boolean
 }
 
 export interface BindingModulePreloadOptions {
@@ -2152,6 +2351,7 @@ export interface BindingOutputOptions {
   minify?: boolean | 'dce-only' | MinifyOptions
   manualCodeSplitting?: BindingManualCodeSplittingOptions
   legalComments?: 'none' | 'inline'
+  comments?: boolean | BindingCommentsOptions
   polyfillRequire?: boolean
   preserveModules?: boolean
   virtualDirname?: string
@@ -2205,7 +2405,7 @@ export interface BindingPluginOptions {
   resolveIdFilter?: BindingHookFilter
   resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImportMeta?: BindingPluginHookMeta
-  load?: (ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  load?: (ctx: BindingLoadPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   loadMeta?: BindingPluginHookMeta
   loadFilter?: BindingHookFilter
   transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
@@ -2358,6 +2558,50 @@ export interface BindingTreeshake {
   propertyWriteSideEffects?: BindingPropertyWriteSideEffects
 }
 
+export interface BindingTsconfig {
+  files?: Array<string>
+  include?: Array<string>
+  exclude?: Array<string>
+  compilerOptions: BindingCompilerOptions
+}
+
+/** TypeScript compiler options for inline tsconfig configuration. */
+export interface BindingTsconfigCompilerOptions {
+  /** Specifies the JSX factory function to use. */
+  jsx?: 'react' | 'react-jsx' | 'react-jsxdev' | 'preserve' | 'react-native'
+  /** Specifies the JSX factory function. */
+  jsxFactory?: string
+  /** Specifies the JSX fragment factory function. */
+  jsxFragmentFactory?: string
+  /** Specifies the module specifier for JSX imports. */
+  jsxImportSource?: string
+  /** Enables experimental decorators. */
+  experimentalDecorators?: boolean
+  /** Enables decorator metadata emission. */
+  emitDecoratorMetadata?: boolean
+  /** Preserves module structure of imports/exports. */
+  verbatimModuleSyntax?: boolean
+  /** Configures how class fields are emitted. */
+  useDefineForClassFields?: boolean
+  /** The ECMAScript target version. */
+  target?: string
+  /** @deprecated Use verbatimModuleSyntax instead. */
+  preserveValueImports?: boolean
+  /** @deprecated Use verbatimModuleSyntax instead. */
+  importsNotUsedAsValues?: 'remove' | 'preserve' | 'error'
+}
+
+/** Raw tsconfig options for inline configuration. */
+export interface BindingTsconfigRawOptions {
+  /** TypeScript compiler options. */
+  compilerOptions?: BindingTsconfigCompilerOptions
+}
+
+export interface BindingTsconfigResult {
+  tsconfig: BindingTsconfig
+  tsconfigFilePaths: Array<string>
+}
+
 export interface BindingViteAliasPluginAlias {
   find: BindingStringOrRegex
   replacement: string
@@ -2385,24 +2629,16 @@ export interface BindingViteBuildImportAnalysisPluginV2Config {
 }
 
 export interface BindingViteDynamicImportVarsPluginConfig {
+  sourcemap?: boolean
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   resolver?: (id: string, importer: string) => MaybePromise<string | undefined>
-  isV2?: BindingViteDynamicImportVarsPluginV2Config
-}
-
-export interface BindingViteDynamicImportVarsPluginV2Config {
-  sourcemap: boolean
 }
 
 export interface BindingViteImportGlobPluginConfig {
   root?: string
-  restoreQueryExtension?: boolean
-  isV2?: BindingViteImportGlobPluginV2Config
-}
-
-export interface BindingViteImportGlobPluginV2Config {
   sourcemap?: boolean
+  restoreQueryExtension?: boolean
 }
 
 export interface BindingViteJsonPluginConfig {
@@ -2497,18 +2733,6 @@ export interface BindingViteTransformPluginConfig {
   yarnPnp?: boolean
 }
 
-export interface BindingViteWasmHelperPluginConfig {
-  decodedBase: string
-  v2?: BindingViteWasmHelperPluginV2Config
-}
-
-export interface BindingViteWasmHelperPluginV2Config {
-  root: string
-  isLib: boolean
-  publicDir: string
-  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
-}
-
 export interface BindingWatchOption {
   skipWrite?: boolean
   include?: Array<BindingStringOrRegex>
@@ -2517,7 +2741,47 @@ export interface BindingWatchOption {
   onInvalidate?: ((id: string) => void) | undefined
 }
 
+export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
+
 export declare function createTokioRuntime(blockingThreads?: number | undefined | null): void
+
+/**
+ * Transpile a JavaScript or TypeScript into a target ECMAScript version, asynchronously.
+ *
+ * Note: This function can be slower than `transformSync` due to the overhead of spawning a thread.
+ *
+ * @param filename The name of the file being transformed. If this is a
+ * relative path, consider setting the {@link TransformOptions#cwd} option.
+ * @param sourceText The source code to transform.
+ * @param options The transform options including tsconfig and inputMap. See {@link
+ * BindingEnhancedTransformOptions} for more information.
+ * @param cache Optional tsconfig cache for reusing resolved tsconfig across multiple transforms.
+ * Only used when tsconfig auto-discovery is enabled.
+ *
+ * @returns a promise that resolves to an object containing the transformed code,
+ * source maps, and any errors that occurred during parsing or transformation.
+ *
+ * @experimental
+ */
+export declare function enhancedTransform(filename: string, sourceText: string, options?: BindingEnhancedTransformOptions | undefined | null, cache?: TsconfigCache | undefined | null): Promise<BindingEnhancedTransformResult>
+
+/**
+ * Transpile a JavaScript or TypeScript into a target ECMAScript version.
+ *
+ * @param filename The name of the file being transformed. If this is a
+ * relative path, consider setting the {@link TransformOptions#cwd} option.
+ * @param sourceText The source code to transform.
+ * @param options The transform options including tsconfig and inputMap. See {@link
+ * BindingEnhancedTransformOptions} for more information.
+ * @param cache Optional tsconfig cache for reusing resolved tsconfig across multiple transforms.
+ * Only used when tsconfig auto-discovery is enabled.
+ *
+ * @returns an object containing the transformed code, source maps, and any errors
+ * that occurred during parsing or transformation.
+ *
+ * @experimental
+ */
+export declare function enhancedTransformSync(filename: string, sourceText: string, options?: BindingEnhancedTransformOptions | undefined | null, cache?: TsconfigCache | undefined | null): BindingEnhancedTransformResult
 
 export interface ExtensionAliasItem {
   target: string
@@ -2603,6 +2867,9 @@ export interface PreRenderedChunk {
 }
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+
+/** @hidden This is only expected to be used by Vite */
+export declare function resolveTsconfig(filename: string, cache?: TsconfigCache | undefined | null): BindingTsconfigResult | null
 
 /**
  * Shutdown the tokio runtime manually.

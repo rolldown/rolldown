@@ -23,9 +23,9 @@ pub struct BindingBundler {
 #[napi]
 impl BindingBundler {
   #[napi(constructor)]
-  pub fn new() -> napi::Result<Self> {
+  pub fn new() -> Self {
     let inner = ClassicBundler::new();
-    Ok(Self { inner, last_bundle_handle: None })
+    Self { inner, last_bundle_handle: None }
   }
 
   #[napi]

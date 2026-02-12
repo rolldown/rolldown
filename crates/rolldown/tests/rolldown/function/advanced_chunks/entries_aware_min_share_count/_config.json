@@ -1,0 +1,32 @@
+{
+  "_comment": "With entriesAware: true + minShareCount: 2, modules are split by entry reachability and filtered by share count. Expected: formatDate (bits={A,B}, shared by 2) -> utils chunk for A+B, deepClone (bits={B,C}, shared by 2) -> separate utils chunk for B+C, debounce (bits={A}, shared by 1) -> does NOT meet minShareCount, stays inlined in entry-a.",
+  "config": {
+    "input": [
+      {
+        "name": "entry-a",
+        "import": "./entry-a.js"
+      },
+      {
+        "name": "entry-b",
+        "import": "./entry-b.js"
+      },
+      {
+        "name": "entry-c",
+        "import": "./entry-c.js"
+      }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "utils",
+          "test": "utils",
+          "minShareCount": 2,
+          "entriesAware": true
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  }
+}

@@ -6,29 +6,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bar.js
 
 ```js
-import { t as bar_default } from "./bar2.js";
-
-export { bar_default as default };
-```
-
-## bar2.js
-
-```js
+// HIDDEN [\0rolldown/runtime.js]
 //#region bar.mjs
+var bar_exports = /* @__PURE__ */ __exportAll({ default: () => "bar" });
 var bar_default = "bar";
 
 //#endregion
-export { bar_default as t };
+export { bar_exports as n, bar_default as t };
 ```
 
 ## main.js
 
 ```js
-import { t as bar_default } from "./bar2.js";
+import { t as bar_default } from "./bar.js";
 import assert from "node:assert";
 
 //#region main.js
-const glob = { "./bar.css": () => import("./bar.js") };
+const glob = { "./bar.css": () => import("./bar.js").then((n) => n.n) };
 const globEager = { "./bar.css": "bar" };
 assert.strictEqual(globEager["./bar.css"], "bar");
 

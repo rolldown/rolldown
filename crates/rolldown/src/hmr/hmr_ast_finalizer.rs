@@ -223,7 +223,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             } else {
               // export { foo, bar as bar2 }
               decl.specifiers.iter().for_each(|specifier| {
-                if let Some(symbol_id) = scoping.get_root_binding(&specifier.local.name()) {
+                if let Some(symbol_id) = scoping.get_root_binding(specifier.local.name().into()) {
                   self
                     .named_exports
                     .insert(specifier.exported.name(), NamedExport { local_binding: symbol_id });
@@ -594,6 +594,57 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       // Not a normal module, skip
       return;
     };
+
+    // Handle lazy proxy modules - rewrite to lazy entry import pattern
+    // For dynamic imports to lazy proxies, we need to trigger lazy loading via /@vite/lazy endpoint
+    // TODO: hyf0 should switch to a more robust way to identify lazy proxy modules
+    if importee.id.contains("?rolldown-lazy=1") {
+      // Build: encodeURIComponent(importee.id)
+      let encode_call = ast::Expression::CallExpression(self.builder.alloc_call_expression(
+        SPAN,
+        self.snippet.id_ref_expr("encodeURIComponent", SPAN),
+        NONE,
+        self.builder.vec1(ast::Argument::StringLiteral(self.builder.alloc_string_literal(
+          SPAN,
+          self.builder.atom(&importee.id),
+          None,
+        ))),
+        false,
+      ));
+
+      // Build template literal: `/@vite/lazy?id=${encodeURIComponent(importee.id)}&clientId=${__rolldown_runtime__.clientId}`
+      let url_expr = {
+        let quasis = self.builder.vec_from_iter([
+          self.builder.template_element(
+            SPAN,
+            ast::TemplateElementValue { raw: self.builder.atom("/@vite/lazy?id="), cooked: None },
+            false,
+            false,
+          ),
+          self.builder.template_element(
+            SPAN,
+            ast::TemplateElementValue { raw: self.builder.atom("&clientId="), cooked: None },
+            false,
+            false,
+          ),
+          self.builder.template_element(
+            SPAN,
+            ast::TemplateElementValue { raw: self.builder.atom(""), cooked: None },
+            true,
+            false,
+          ),
+        ]);
+        let expressions = self.builder.vec_from_iter([
+          encode_call,
+          self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "clientId"),
+        ]);
+        self.builder.expression_template_literal(SPAN, quasis, expressions)
+      };
+
+      *it = self.builder.expression_import(SPAN, url_expr, None, None);
+      return;
+    }
+
     // FIXME: consider about CommonJS interop
     let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
 

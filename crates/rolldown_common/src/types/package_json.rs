@@ -18,7 +18,7 @@ impl PackageJson {
         PackageType::CommonJs => "commonjs",
         PackageType::Module => "module",
       }),
-      side_effects: oxc_pkg_json.side_effects().as_ref().and_then(SideEffects::from_resolver),
+      side_effects: oxc_pkg_json.side_effects().as_ref().map(SideEffects::from_resolver),
       realpath: oxc_pkg_json.realpath.clone(),
     }
   }

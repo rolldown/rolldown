@@ -13,6 +13,7 @@ pub struct CannotCallNamespace {
   pub source: ArcStr,
   pub span: Span,
   pub name: ArcStr,
+  pub declaration_span: Span,
 }
 
 impl BuildEvent for CannotCallNamespace {
@@ -32,10 +33,16 @@ impl BuildEvent for CannotCallNamespace {
     let filename = opts.stabilize_path(&*self.filename);
 
     let file_id = diagnostic.add_file(filename, self.source.clone());
-    diagnostic.add_label(
-      &file_id,
-      self.span.start..self.span.end,
-      format!("This will cause an error at runtime because \"{}\" is a module namespace object and not a function. Consider changing \"{}\" to a default import instead.", self.name, self.name)
-    );
+    diagnostic
+      .add_label(
+        &file_id,
+        self.span.start..self.span.end,
+        format!("This will cause an error at runtime because \"{}\" is a module namespace object and not a function. Consider changing \"{}\" to a default import instead.", self.name, self.name)
+      )
+      .add_label(
+        &file_id,
+        self.declaration_span.start..self.declaration_span.end,
+        format!("\"{}\" is imported as a namespace here", self.name)
+      );
   }
 }

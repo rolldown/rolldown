@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
-// HIDDEN [rolldown:hmr]
+// HIDDEN [\0rolldown/runtime.js]
 //#region dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
@@ -19,7 +18,7 @@ if (dep_hot) {
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 console.log(value);
@@ -74,8 +73,7 @@ console.log(value);
 #### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
-// HIDDEN [rolldown:hmr]
+// HIDDEN [\0rolldown/runtime.js]
 //#region dep.js
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
@@ -87,7 +85,7 @@ if (dep_hot) {
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 console.log(value);

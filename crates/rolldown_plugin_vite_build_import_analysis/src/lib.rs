@@ -16,7 +16,7 @@ use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookRenderChunkOutput, HookResolveIdArgs,
   HookResolveIdOutput, HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn,
-  HookUsage, Plugin, PluginContext,
+  HookUsage, Plugin, PluginContext, SharedLoadPluginContext,
 };
 use rolldown_plugin_utils::{
   AssetUrlResult, ModulePreload, RenderBuiltUrl, ToOutputFilePathEnv,
@@ -82,7 +82,7 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
     )
   }
 
-  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     Ok((args.id == PRELOAD_HELPER_ID).then_some(HookLoadOutput {
       code: self.preload_code.clone(),
       side_effects: Some(HookSideEffects::False),
@@ -361,9 +361,10 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
               }
             }
 
+            #[expect(clippy::cast_possible_truncation)]
             s.update(
-              marker_start,
-              marker_start + 16, // __VITE_PRELOAD__
+              marker_start as u32,
+              (marker_start + 16) as u32, // __VITE_PRELOAD__
               if render_deps.is_empty() {
                 "[]".to_string()
               } else {
@@ -390,8 +391,9 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
           );
           // inject extra code at the top or next line of hashbang
           if chunk.code.starts_with("#!") {
+            #[expect(clippy::cast_possible_truncation)]
             s.prepend_left(
-              chunk.code.find('\n').map(|pos| pos + 1).unwrap_or_default(),
+              chunk.code.find('\n').map(|pos| pos + 1).unwrap_or_default() as u32,
               map_deps_code,
             );
           } else {
@@ -403,7 +405,8 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
         // all the markers regardless
         for (start, _) in chunk.code.match_indices("__VITE_PRELOAD__") {
           if !rewrote_marker_start_pos.contains(&start) {
-            s.update(start, start + 16, "void 0")
+            #[expect(clippy::cast_possible_truncation)]
+            s.update(start as u32, (start + 16) as u32, "void 0")
               .expect("update should not fail in build import analysis plugin");
           }
         }

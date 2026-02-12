@@ -13,9 +13,7 @@ export default defineTest({
           return id.replace('@', path.resolve(import.meta.dirname, './dir/a'));
         },
       }),
-      viteImportGlobPlugin({
-        root: path.resolve(import.meta.dirname),
-      }),
+      viteImportGlobPlugin(),
     ],
   },
   async afterTest() {

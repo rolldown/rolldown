@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region foo.bar/index.js
+var require_foo_bar = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.foo = "foo";
+}));
+
+//#endregion
+//#region main.js
+var import_foo_bar = /* @__PURE__ */ __toESM(require_foo_bar());
+console.log(import_foo_bar.default);
+
+//#endregion
+```

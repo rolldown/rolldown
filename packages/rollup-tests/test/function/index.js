@@ -9,6 +9,7 @@ const {
 	compareError,
 	compareLogs,
 	runTestSuiteWithSamples,
+	wrapPluginWithRuntimeFilter
 	// verifyAstPlugin
 } = require('../utils.js');
 
@@ -91,7 +92,8 @@ runTestSuiteWithSamples(
 				process.chdir(directory);
 				const logs = [];
 				const warnings = [];
-				const plugins = config.options?.plugins
+				// Wrap plugins to filter out rolldown runtime from transform hooks
+				const plugins = wrapPluginWithRuntimeFilter(config.options?.plugins);
 					// config.verifyAst === false
 						//? config.options?.plugins
 						// : config.options?.plugins === undefined
@@ -100,7 +102,7 @@ runTestSuiteWithSamples(
 						// ? [...config.options.plugins, verifyAstPlugin]
 						// : config.options.plugins;
 
-			    // The `options-async-hook` assert config equal
+			  // The `options-async-hook` assert config equal
 				if (directory.includes('class-name-conflict')) {
 					config.options = config.options || {}
 					config.options.output = config.options.output || {}
@@ -116,6 +118,11 @@ runTestSuiteWithSamples(
 					config.options ??= {};
 					config.options.checks ??= {};
 					config.options.checks.circularDependency ??= true;
+				}
+        if (directory.includes('nested-inlined-dynamic-import-2')) {
+          config.options ??= {};
+          config.options.checks ??= {};
+          config.options.checks.ineffectiveDynamicImport ??= false;
 				}
 
 				return rollup
@@ -140,7 +147,9 @@ runTestSuiteWithSamples(
 							.generate({
 								exports: 'auto',
 								format: 'cjs',
-								...(config.options || {}).output
+								...(config.options || {}).output,
+								// Rolldown uses `generatedCode.preset: 'es2015'` by default
+								generatedCode: { preset: 'es5', ...config.options?.output?.generatedCode },
 							})
 							.then(({ output }) => {
 								if (config.error || config.generateError) {

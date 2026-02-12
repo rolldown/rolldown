@@ -19,7 +19,7 @@ export default defineTest({
     const id = join(import.meta.dirname, 'main.js');
     expect(e.message).toContain(`\
 [plugin my-plugin] ${id}:1:4
-RollupError: my-error
+RolldownError: my-error
 1: xxx;
        ^
 2: yyy;

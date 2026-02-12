@@ -6,9 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as clear } from "./repro12.js";
-import { n as clear$1$1, t as clear$1 } from "./repro22.js";
-import { n as clear$1$2, r as clear$2$1, t as clear$2 } from "./repro32.js";
+import { t as clear } from "./repro1.js";
+import { n as clear$1$1, t as clear$1 } from "./repro2.js";
+import { n as clear$1$2, r as clear$2$1, t as clear$2 } from "./repro3.js";
 
 //#region main.js
 var main_default = [
@@ -18,9 +18,9 @@ var main_default = [
 	clear$2,
 	clear$1$2,
 	clear$2$1,
-	() => import("./repro1.js").then(console.log),
-	() => import("./repro2.js").then(console.log),
-	() => import("./repro3.js").then(console.log)
+	() => import("./repro1.js").then((n) => n.n).then(console.log),
+	() => import("./repro2.js").then((n) => n.r).then(console.log),
+	() => import("./repro3.js").then((n) => n.i).then(console.log)
 ];
 
 //#endregion
@@ -30,56 +30,55 @@ export { main_default as default };
 ## repro1.js
 
 ```js
-import { t as clear } from "./repro12.js";
+import { t as __exportAll } from "./rolldown-runtime.js";
 
-export { clear };
-```
-
-## repro12.js
-
-```js
 //#region repro1.js
+var repro1_exports = /* @__PURE__ */ __exportAll({ clear: () => clear });
 const clear = "repro1_clear";
 
 //#endregion
-export { clear as t };
+export { repro1_exports as n, clear as t };
 ```
 
 ## repro2.js
 
 ```js
-import { n as clear$1, t as clear } from "./repro22.js";
+import { t as __exportAll } from "./rolldown-runtime.js";
 
-export { clear, clear$1 };
-```
-
-## repro22.js
-
-```js
 //#region repro2.js
+var repro2_exports = /* @__PURE__ */ __exportAll({
+	clear: () => clear,
+	clear$1: () => clear$1
+});
 const clear$1 = "repro2_clear$1";
 const clear = "repro2_clear";
 
 //#endregion
-export { clear$1 as n, clear as t };
+export { clear$1 as n, repro2_exports as r, clear as t };
 ```
 
 ## repro3.js
 
 ```js
-import { n as clear$1, r as clear$2, t as clear } from "./repro32.js";
+import { t as __exportAll } from "./rolldown-runtime.js";
 
-export { clear, clear$1, clear$2 };
-```
-
-## repro32.js
-
-```js
 //#region repro3.js
+var repro3_exports = /* @__PURE__ */ __exportAll({
+	clear: () => clear,
+	clear$1: () => clear$1,
+	clear$2: () => clear$2
+});
 const clear$2 = "repro3_clear$2";
 const clear$1 = "repro3_clear$1";
 const clear = "repro3_clear";
 
 //#endregion
-export { clear$1 as n, clear$2 as r, clear as t };
+export { repro3_exports as i, clear$1 as n, clear$2 as r, clear as t };
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
 ```

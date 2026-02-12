@@ -1,0 +1,10 @@
+{
+  "config": {
+    "external": [
+      "quill",
+      "mod"
+    ],
+    "format": "umd",
+    "name": "EditorLib"
+  }
+}

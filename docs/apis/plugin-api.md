@@ -236,6 +236,18 @@ The following Output Generation Hooks are supported by Rollup, but not by Rolldo
 
 A number of utility functions and informational bits can be accessed from within most hooks via `this`. See the [`PluginContext`](/reference/Interface.PluginContext) type for more information.
 
+## Supporting TypeScript and JSX
+
+To achieve optimal performance, Rolldown runs the internal transform which transforms TypeScript and JSX to JavaScript after the [`transform`](/reference/Interface.Plugin#transform) hooks are called. This means the plugins using `transform` hook need to support TypeScript and JSX. Basically, there are two ways to achieve this.
+
+### Handling TypeScript and JSX Syntax
+
+[`this.parse`](/reference/Interface.PluginContext#parse) supports parsing TypeScript and JSX by passing the `lang` option. This should allow the plugin to process TypeScript and JSX easily.
+
+### Transforming TypeScript and JSX beforehand
+
+If processing TypeScript and JSX AST is not an option, you can still transform them to JavaScript by using the `transform` function exposed from `rolldown/experimental`. Note that this has an additional overhead.
+
 ## Notable Differences from Rollup
 
 While Rolldown's plugin interface is largely compatible with Rollup's, there are some important behavioral differences to be aware of:

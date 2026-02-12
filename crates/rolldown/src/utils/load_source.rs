@@ -1,7 +1,7 @@
 use std::{borrow::Cow, path::Path};
 
 use rolldown_common::{
-  ModuleType, NormalizedBundlerOptions, ResolvedId, SourcemapChainElement, StrOrBytes,
+  ModuleIdx, ModuleType, NormalizedBundlerOptions, ResolvedId, SourcemapChainElement, StrOrBytes,
   side_effects::HookSideEffects,
 };
 use rolldown_fs::FileSystem;
@@ -19,9 +19,10 @@ pub async fn load_source<Fs: FileSystem + 'static>(
   options: &NormalizedBundlerOptions,
   asserted_module_type: Option<&ModuleType>,
   is_read_from_disk: &mut bool,
+  module_idx: ModuleIdx,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
-  let (maybe_source, maybe_module_type) =
-    match plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await? {
+  let (maybe_source, mut maybe_module_type) =
+    match plugin_driver.load(&HookLoadArgs { id: &resolved_id.id, module_idx }).await? {
       Some(load_hook_output) => {
         sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
         if let Some(v) = load_hook_output.side_effects {
@@ -39,15 +40,14 @@ pub async fn load_source<Fs: FileSystem + 'static>(
       }
     };
 
+  // If we're given a specific module type to use
   if let Some(asserted) = asserted_module_type {
-    let is_type_conflicted = match &maybe_module_type {
-      None => false,
-      Some(user_specified_type) if user_specified_type == asserted => false,
-      _ => true,
-    };
+    let is_type_conflicted =
+      maybe_module_type.as_ref().is_some_and(|user_specified_type| user_specified_type != asserted);
     if is_type_conflicted {
       // TODO: emit a warning about the type conflict
     }
+    maybe_module_type = Some(asserted.clone());
   }
   if maybe_source.is_some() {
     *is_read_from_disk = false;
@@ -133,11 +133,8 @@ pub async fn load_source<Fs: FileSystem + 'static>(
       }
     }
     (None, Some(ty)) => {
-      if asserted_module_type.is_some() {
-        Ok((read_file_by_module_type(resolved_id.id.as_path(), &ty, fs).await?, ty))
-      } else {
-        unreachable!("Invalid state")
-      }
+      assert!(asserted_module_type.is_some(), "Invalid state");
+      Ok((read_file_by_module_type(resolved_id.id.as_path(), &ty, fs).await?, ty))
     }
   }
 }

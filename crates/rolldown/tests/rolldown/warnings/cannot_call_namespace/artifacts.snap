@@ -9,6 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 [CANNOT_CALL_NAMESPACE] Warning: Cannot call a namespace ("ns").
    ╭─[ main.js:3:1 ]
    │
+ 1 │ import * as ns from './foo.js'
+   │             ─┬  
+   │              ╰── "ns" is imported as a namespace here
+   │ 
  3 │ ns()
    │ ──┬─  
    │   ╰─── This will cause an error at runtime because "ns" is a module namespace object and not a function. Consider changing "ns" to a default import instead.
@@ -22,6 +26,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 [CANNOT_CALL_NAMESPACE] Warning: Cannot call a namespace ("ns").
    ╭─[ main.js:4:1 ]
    │
+ 1 │ import * as ns from './foo.js'
+   │             ─┬  
+   │              ╰── "ns" is imported as a namespace here
+   │ 
  4 │ ns``
    │ ──┬─  
    │   ╰─── This will cause an error at runtime because "ns" is a module namespace object and not a function. Consider changing "ns" to a default import instead.
@@ -34,7 +42,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ test: () => test });
 const test = 1;

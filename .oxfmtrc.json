@@ -26,6 +26,7 @@
     "packages/vite-tests",
     "scripts/snap-diff/stats",
     "scripts/snap-diff/summary",
-    "scripts/src/esbuild-tests/snap-diff/**/*.md"
+    "scripts/src/esbuild-tests/snap-diff/**/*.md",
+    "packages/debug/src/generated/**"
   ]
 }

@@ -1,1 +1,10 @@
 too-many-lines-threshold = 200
+
+# We don't have any downstream users, we don't care about external API changes,
+# and this makes the codebase cleaner
+avoid-breaking-exported-api = false
+
+disallowed-methods = [
+  { path = "std::collections::HashMap::new", reason = "prefer FxHashMap", replacement = "rustc_hash::FxHashMap::default" },
+  { path = "std::collections::HashSet::new", reason = "prefer FxHashSet", replacement = "rustc_hash::FxHashSet::default" },
+]

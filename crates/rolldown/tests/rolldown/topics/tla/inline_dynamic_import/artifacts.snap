@@ -6,24 +6,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region c.js
-var c_exports = /* @__PURE__ */ __exportAll({ default: () => c_default });
-var _default, c_default;
+var c_exports = /* @__PURE__ */ __exportAll({ default: () => _default });
+var _default;
 var init_c = __esmMin((() => {
 	_default = { aaa: { bbb: [
 		"/demo/",
 		"b",
 		"c"
 	] } };
-	c_default = _default;
 }));
 
 //#endregion
 //#region b.js
 async function getEnv() {
 	console.log(111, ccc);
-	return c_default.aaa.bbb[0];
+	return _default.aaa.bbb[0];
 }
 var ccc;
 var init_b = __esmMin((async () => {

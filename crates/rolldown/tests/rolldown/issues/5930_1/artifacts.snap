@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## _virtual/rolldown_runtime.js
+## _virtual/_rolldown/runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 exports.__commonJSMin = __commonJSMin;
 exports.__toESM = __toESM;
@@ -15,28 +15,27 @@ exports.__toESM = __toESM;
 ## entry.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+const require_runtime = require('./_virtual/_rolldown/runtime.js');
 const require_rule$1 = require('./rule.js');
 let node_assert = require("node:assert");
-node_assert = require_rolldown_runtime.__toESM(node_assert);
+node_assert = require_runtime.__toESM(node_assert);
 
 //#region main.js
-var import_rule = /* @__PURE__ */ require_rolldown_runtime.__toESM(require_rule$1);
+var import_rule = /* @__PURE__ */ require_runtime.__toESM(require_rule$1);
 const plugin = { mod: import_rule.default };
 node_assert.default.strictEqual(plugin.mod.meta, 19);
-var main_default = plugin;
 
 //#endregion
-module.exports = main_default;
+module.exports = plugin;
 ```
 
 ## lib.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+const require_runtime = require('./_virtual/_rolldown/runtime.js');
 
 //#region lib.js
-var require_lib = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
+var require_lib = /* @__PURE__ */ require_runtime.__commonJSMin(((exports, module) => {
 	module.exports = {};
 }));
 
@@ -52,11 +51,11 @@ Object.defineProperty(exports, 'default', {
 ## rule.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+const require_runtime = require('./_virtual/_rolldown/runtime.js');
 const require_lib$1 = require('./lib.js');
 
 //#region rule.js
-var require_rule = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
+var require_rule = /* @__PURE__ */ require_runtime.__commonJSMin(((exports, module) => {
 	const mod = require_lib$1.default;
 	module.exports = {
 		meta: 4 + String(mod).length,

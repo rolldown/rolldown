@@ -1,6 +1,7 @@
-use crate::types::diagnostic_options::DiagnosticOptions;
 use arcstr::ArcStr;
 use oxc::span::Span;
+
+use crate::types::diagnostic_options::DiagnosticOptions;
 
 use super::BuildEvent;
 

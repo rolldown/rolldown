@@ -30,7 +30,7 @@ console.log(foo);
 ## shared.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region shared.js
 var require_shared = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 123;

@@ -101,27 +101,41 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     &self,
     target: &mut ast::SimpleAssignmentTarget<'ast>,
   ) -> Option<()> {
-    // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
-    if let ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(target_id_ref) = target {
-      let reference_id = target_id_ref.reference_id.get()?;
-      let symbol_id = self.scope.symbol_id_for(reference_id)?;
+    match target {
+      // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
+      ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(target_id_ref) => {
+        let reference_id = target_id_ref.reference_id.get()?;
+        let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
-      let symbol_ref = (self.ctx.idx, symbol_id).into();
-      let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
-      let symbol = self.ctx.symbol_db.get(canonical_ref);
+        let symbol_ref = (self.ctx.idx, symbol_id).into();
+        let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+        let symbol = self.ctx.symbol_db.get(canonical_ref);
 
-      if let Some(ns_alias) = &symbol.namespace_alias {
-        *target = ast::SimpleAssignmentTarget::from(self.snippet.literal_prop_access_member_expr(
-          self.canonical_name_for(ns_alias.namespace_ref),
-          &ns_alias.property_name,
-        ));
-      } else {
-        let canonical_name = self.canonical_name_for(canonical_ref);
-        if target_id_ref.name != canonical_name {
-          target_id_ref.name = self.snippet.atom(canonical_name);
+        if let Some(ns_alias) = &symbol.namespace_alias {
+          *target =
+            ast::SimpleAssignmentTarget::from(self.snippet.literal_prop_access_member_expr(
+              self.canonical_name_for(ns_alias.namespace_ref),
+              &ns_alias.property_name,
+            ));
+        } else {
+          let canonical_name = self.canonical_name_for(canonical_ref);
+          if target_id_ref.name != canonical_name {
+            target_id_ref.name = self.snippet.atom(canonical_name).into();
+          }
+          target_id_ref.reference_id.take();
         }
-        target_id_ref.reference_id.take();
       }
+      // Handle member expression assignment targets like `import_src.log = value`
+      // When the object is a default import from CJS (has namespace_alias with property_name "default"),
+      // we need to rewrite `import_src.log = value` to `import_src.default.log = value`
+      // because __toESM creates getter-only properties that can't be assigned to.
+      ast::SimpleAssignmentTarget::StaticMemberExpression(_)
+      | ast::SimpleAssignmentTarget::ComputedMemberExpression(_) => {
+        if let Some(new_target) = self.try_rewrite_cjs_member_expr_assignment_target(target) {
+          *target = new_target;
+        }
+      }
+      _ => {}
     }
     None
   }
@@ -135,7 +149,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           if let Some(symbol_id) = ident.symbol_id.get() {
             let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name {
-              ident.name = self.snippet.atom(canonical_name);
+              ident.name = self.snippet.atom(canonical_name).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();
@@ -150,7 +164,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           if let Some(symbol_id) = ident.symbol_id.get() {
             let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name {
-              ident.name = self.snippet.atom(canonical_name);
+              ident.name = self.snippet.atom(canonical_name).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();

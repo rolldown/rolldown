@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ typescript-namespace.tsx:1:35 ]
    │
  1 │ export namespace Foo { export let foo = <div/> }
@@ -213,7 +213,7 @@ export { Foo };
 ```js
 import { jsxDEV } from "react/jsx-dev-runtime";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region top-level-this-cjs.jsx
 var require_top_level_this_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	var _jsxFileName = "top-level-this-cjs.jsx";

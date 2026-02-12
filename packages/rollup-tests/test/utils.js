@@ -580,5 +580,45 @@ exports.replaceDirectoryInStringifiedObject = function replaceDirectoryInStringi
 // 			: value
 // 		: value;
 
+/**
+ * Wraps plugins to exclude \0rolldown/runtime.js from transform hooks.
+ * This is needed because Rolldown exposes the runtime to transform hooks,
+ * but Rollup test plugins don't expect this internal module.
+ * @param {Plugin | Plugin[] | Promise<Plugin> | undefined | null} plugin
+ * @returns {Plugin | Plugin[] | Promise<Plugin> | undefined | null}
+ */
+function wrapPluginWithRuntimeFilter(plugin) {
+	// Handle null, undefined, and other falsy values
+	if (plugin == null) return plugin;
+
+	// Handle promises - wrap the resolved value
+	if (plugin instanceof Promise) {
+		return plugin.then(wrapPluginWithRuntimeFilter);
+	}
+
+	// Handle arrays (which may be nested)
+	if (Array.isArray(plugin)) {
+		return plugin.map(wrapPluginWithRuntimeFilter);
+	}
+
+	// Handle non-object values
+	if (typeof plugin !== 'object') return plugin;
+
+	const wrapped = { ...plugin };
+
+	if (plugin.transform) {
+		const original = plugin.transform;
+		// Wrap with Rolldown's filter format - exclude only the rolldown runtime
+		wrapped.transform = {
+			filter: { id: { exclude: [/^\0rolldown\/runtime/] } },
+			handler: typeof original === 'function' ? original : original.handler
+		};
+	}
+
+	return wrapped;
+}
+
+exports.wrapPluginWithRuntimeFilter = wrapPluginWithRuntimeFilter;
+
 // Fake require test runner exports.
 require.cache[join(__dirname, '../../../rollup/test/utils.js')] = { exports };

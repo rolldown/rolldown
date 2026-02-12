@@ -10,7 +10,7 @@ fn basic() {
     .unwrap()
     .update_with(3, 4, "d", update_options.clone())
     .unwrap()
-    .update_with(input.len() - 4, input.len() - 1, "h1", update_options.clone())
+    .update_with((input.len() - 4) as u32, (input.len() - 1) as u32, "h1", update_options)
     .unwrap();
 
   let sm = s.source_map(SourceMapOptions { include_content: true, ..Default::default() });

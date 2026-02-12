@@ -12,7 +12,7 @@ export * from "ext-file"
 
 export * from "ext-folder"
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region file.js
 const file = {};
 

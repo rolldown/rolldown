@@ -24,25 +24,27 @@ struct SerializableSourceMap<'a> {
 
 #[derive(Clone)]
 struct CharToByteMapper {
-  char_to_byte: Vec<usize>,
+  char_to_byte: Vec<u32>,
 }
 
 impl CharToByteMapper {
+  #[expect(clippy::cast_possible_truncation)]
   fn new(s: &str) -> Self {
     let mut char_to_byte = Vec::with_capacity(s.chars().count() + 1);
     char_to_byte.push(0); // char 0 is at byte 0
 
-    let mut byte_offset = 0;
+    let mut byte_offset = 0u32;
     for ch in s.chars() {
-      byte_offset += ch.len_utf16();
+      byte_offset += ch.len_utf16() as u32;
       char_to_byte.push(byte_offset);
     }
 
     Self { char_to_byte }
   }
 
-  fn char_to_byte(&self, char_offset: usize) -> Option<usize> {
-    self.char_to_byte.get(char_offset).copied()
+  #[inline]
+  fn char_to_byte(&self, char_offset: u32) -> Option<u32> {
+    self.char_to_byte.get(char_offset as usize).copied()
   }
 
   /// Returns the character count (number of characters in the string).
@@ -282,32 +284,28 @@ impl BindingMagicString<'_> {
 
   #[napi]
   pub fn prepend_left<'s>(&'s mut self, this: This<'s>, index: u32, content: String) -> This<'s> {
-    let byte_index =
-      self.char_to_byte_mapper.char_to_byte(index as usize).expect("Invalid character index");
+    let byte_index = self.char_to_byte_mapper.char_to_byte(index).expect("Invalid character index");
     self.inner.prepend_left(byte_index, content);
     this
   }
 
   #[napi]
   pub fn prepend_right<'s>(&'s mut self, this: This<'s>, index: u32, content: String) -> This<'s> {
-    let byte_index =
-      self.char_to_byte_mapper.char_to_byte(index as usize).expect("Invalid character index");
+    let byte_index = self.char_to_byte_mapper.char_to_byte(index).expect("Invalid character index");
     self.inner.prepend_right(byte_index, content);
     this
   }
 
   #[napi]
   pub fn append_left<'s>(&'s mut self, this: This<'s>, index: u32, content: String) -> This<'s> {
-    let byte_index =
-      self.char_to_byte_mapper.char_to_byte(index as usize).expect("Invalid character index");
+    let byte_index = self.char_to_byte_mapper.char_to_byte(index).expect("Invalid character index");
     self.inner.append_left(byte_index, content);
     this
   }
 
   #[napi]
   pub fn append_right<'s>(&'s mut self, this: This<'s>, index: u32, content: String) -> This<'s> {
-    let byte_index =
-      self.char_to_byte_mapper.char_to_byte(index as usize).expect("Invalid character index");
+    let byte_index = self.char_to_byte_mapper.char_to_byte(index).expect("Invalid character index");
     self.inner.append_right(byte_index, content);
     this
   }
@@ -321,9 +319,8 @@ impl BindingMagicString<'_> {
     content: String,
   ) -> napi::Result<This<'s>> {
     let start_byte =
-      self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
-    let end_byte =
-      self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
+      self.char_to_byte_mapper.char_to_byte(start).expect("Invalid start character index");
+    let end_byte = self.char_to_byte_mapper.char_to_byte(end).expect("Invalid end character index");
     self
       .inner
       .update_with(
@@ -349,7 +346,8 @@ impl BindingMagicString<'_> {
 
   #[napi]
   pub fn length(&self) -> u32 {
-    #[expect(clippy::cast_possible_truncation)]
+    // MagicString::len() returns usize (length of generated output)
+    #[expect(clippy::cast_possible_truncation, reason = "files are < 4GB")]
     {
       self.inner.len() as u32
     }
@@ -363,9 +361,8 @@ impl BindingMagicString<'_> {
   #[napi]
   pub fn remove<'s>(&'s mut self, this: This<'s>, start: u32, end: u32) -> napi::Result<This<'s>> {
     let start_byte =
-      self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
-    let end_byte =
-      self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
+      self.char_to_byte_mapper.char_to_byte(start).expect("Invalid start character index");
+    let end_byte = self.char_to_byte_mapper.char_to_byte(end).expect("Invalid end character index");
     self.inner.remove(start_byte, end_byte).map_err(napi::Error::from_reason)?;
     Ok(this)
   }
@@ -379,9 +376,8 @@ impl BindingMagicString<'_> {
     content: String,
   ) -> napi::Result<This<'s>> {
     let start_byte =
-      self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
-    let end_byte =
-      self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
+      self.char_to_byte_mapper.char_to_byte(start).expect("Invalid start character index");
+    let end_byte = self.char_to_byte_mapper.char_to_byte(end).expect("Invalid end character index");
     self.inner.update(start_byte, end_byte, content).map_err(napi::Error::from_reason)?;
     Ok(this)
   }
@@ -395,11 +391,9 @@ impl BindingMagicString<'_> {
     to: u32,
   ) -> napi::Result<This<'s>> {
     let start_byte =
-      self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
-    let end_byte =
-      self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
-    let to_byte =
-      self.char_to_byte_mapper.char_to_byte(to as usize).expect("Invalid to character index");
+      self.char_to_byte_mapper.char_to_byte(start).expect("Invalid start character index");
+    let end_byte = self.char_to_byte_mapper.char_to_byte(end).expect("Invalid end character index");
+    let to_byte = self.char_to_byte_mapper.char_to_byte(to).expect("Invalid to character index");
     self.inner.relocate(start_byte, end_byte, to_byte).map_err(napi::Error::from_reason)?;
     Ok(this)
   }
@@ -490,9 +484,8 @@ impl BindingMagicString<'_> {
   #[napi]
   pub fn snip(&self, start: u32, end: u32) -> napi::Result<Self> {
     let start_byte =
-      self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
-    let end_byte =
-      self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
+      self.char_to_byte_mapper.char_to_byte(start).expect("Invalid start character index");
+    let end_byte = self.char_to_byte_mapper.char_to_byte(end).expect("Invalid end character index");
     Ok(Self {
       inner: self.inner.snip(start_byte, end_byte).map_err(napi::Error::from_reason)?,
       char_to_byte_mapper: self.char_to_byte_mapper.clone(),
@@ -509,16 +502,17 @@ impl BindingMagicString<'_> {
     let end = self.char_to_byte_mapper.normalize_index(end);
 
     // Convert character indices to byte indices
+    // indices are non-negative after normalize_index and files are < 4GB
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     let start_byte = self
       .char_to_byte_mapper
-      .char_to_byte(start as usize)
+      .char_to_byte(start as u32)
       .ok_or_else(|| napi::Error::from_reason("Character is out of bounds"))?;
 
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     let end_byte = self
       .char_to_byte_mapper
-      .char_to_byte(end as usize)
+      .char_to_byte(end as u32)
       .ok_or_else(|| napi::Error::from_reason("Character is out of bounds"))?;
 
     self.inner.reset(start_byte, end_byte).map_err(napi::Error::from_reason)?;
@@ -539,13 +533,13 @@ impl BindingMagicString<'_> {
     let end = self.char_to_byte_mapper.normalize_index(end);
 
     // Convert character indices to byte indices
+    // indices are non-negative after normalize_index and files are < 4GB
+    #[expect(clippy::cast_possible_truncation)]
+    let source_len = self.inner.source().len() as u32;
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-    let start_byte =
-      self.char_to_byte_mapper.char_to_byte(start as usize).unwrap_or(self.inner.source().len());
-
+    let start_byte = self.char_to_byte_mapper.char_to_byte(start as u32).unwrap_or(source_len);
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-    let end_byte =
-      self.char_to_byte_mapper.char_to_byte(end as usize).unwrap_or(self.inner.source().len());
+    let end_byte = self.char_to_byte_mapper.char_to_byte(end as u32).unwrap_or(source_len);
 
     self.inner.slice(start_byte, Some(end_byte)).map_err(napi::Error::from_reason)
   }

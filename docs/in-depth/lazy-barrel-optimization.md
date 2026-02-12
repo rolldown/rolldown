@@ -15,11 +15,11 @@ Button;
 
 | Metric               | Without lazy barrel | With lazy barrel |
 | -------------------- | ------------------- | ---------------- |
-| Modules compiled     | 2986                | 300              |
+| Modules compiled     | 2986                | 250              |
 | Build time (macOS)   | ~65ms               | ~28ms            |
 | Build time (Windows) | ~210ms              | ~50ms            |
 
-By enabling lazy barrel, Rolldown reduces the number of compiled modules by **90%** and speeds up the build by **2-4x**.
+By enabling lazy barrel, Rolldown reduces the number of compiled modules by **92%** and speeds up the build by **2-4x**.
 
 ::: tip
 You can reproduce this benchmark using the [lazy-barrel example](https://github.com/rolldown/benchmarks/tree/main/examples/lazy-barrel).
@@ -51,24 +51,52 @@ With lazy barrel optimization:
 
 Lazy barrel optimization works with various export patterns:
 
-### Named re-exports
-
-```js
-export { Component } from './Component';
-export { helper as utils } from './helper';
-export { default as Button } from './Button';
-```
-
 ### Star re-exports
 
 ```js
 export * from './components';
 ```
 
+### Named re-exports
+
+```js
+export { Component } from './Component';
+export { helper as utils } from './helper';
+export { default as Button } from './Button';
+export { Button as default } from './Button';
+```
+
+### Namespace re-exports
+
+```js
+export * as ns from './module';
+```
+
+### Import-then-export patterns
+
+```js
+// Equivalent to `export { a } from './a'`
+import { a } from './a';
+export { a };
+
+// Equivalent to `export { a as default } from './a'`
+import { a } from './a';
+export { a as default };
+
+// Equivalent to `export * as ns from './module'`
+import * as ns from './module';
+export { ns };
+
+// Equivalent to `export { default as b } from './b'`
+import b from './b';
+export { b };
+```
+
 ### Mixed exports
 
 ```js
 export { a } from './a';
+export * as ns from './b';
 export * from './others';
 export * from './more';
 ```
@@ -76,6 +104,51 @@ export * from './more';
 When an import can be found in named exports, star exports are not searched, avoiding unnecessary module loading.
 
 However, if the import is not found in named exports, all star re-exports will be loaded to resolve it. If those star re-exported modules are also barrel modules, only the specific import specifier will be loaded from them.
+
+:::: warning Re-export vs Own export for default
+`export { Button as default } from './Button.js'` and `import { Button } from './Button.js'; export default Button` are **not equivalent**.
+
+In the former case, the value exported is synced with the value in `Button.js`. This is because it points to the same variable.
+
+In the latter case, the value exported is not synced with the value in `Button.js`. This is because `export default ...` creates a new variable.
+
+This example shows the difference:
+
+::: code-group
+
+```js [main.js]
+import { Button, increment } from './Button.js';
+import ExportDefaultButton, { ReExportedButton } from './re-exporter.js';
+
+console.log(Button); // 1
+console.log(ReExportedButton); // 1
+console.log(ExportDefaultButton); // 1
+
+increment();
+
+console.log(Button); // 2
+console.log(ReExportedButton); // 2
+console.log(ExportDefaultButton); // 1
+```
+
+```js [re-exporter.js]
+import { Button } from './Button.js';
+export default Button;
+
+export { Button as ReExportedButton } from './Button.js';
+```
+
+```js [Button.js]
+export let Button = 1;
+export const increment = () => {
+  Button++;
+};
+```
+
+:::
+
+For this reason, `export default ...` is considered an own export and may prevent the optimization (see [Own exports](#own-exports-non-pure-re-export-barrels)).
+::::
 
 ## Advanced scenarios
 
@@ -119,33 +192,6 @@ export { b } from './b'; // b.js will be loaded
 
 However, if `b.js` is also a barrel module, its unused exports will still be optimized.
 
-### Non-re-export imports
-
-When a barrel module contains non-re-export imports, those imported modules will always be loaded:
-
-```js
-// barrel/index.js
-import { a } from './a'; // a.js is loaded (actual import)
-export { b } from './b'; // b.js may or may not be loaded
-export function helper() {
-  return a;
-}
-```
-
-However, if `./a` is also a barrel module, lazy barrel optimization still applies to it, only loading the exports that are actually used (`a` in this case).
-
-### Side-effect imports
-
-The following patterns are treated as having side effects, so the target module will always be loaded:
-
-```js
-import './module'; // side-effect import
-import {} from './module'; // empty import
-export {} from './module'; // empty re-export
-```
-
-If the target module is a barrel module, the barrel itself is loaded but its re-exported modules are **not** loaded.
-
 ### Unused import specifiers
 
 By default, even if an imported specifier is not used, its corresponding module will still be loaded:
@@ -170,6 +216,38 @@ export default {
 };
 ```
 
+### Own exports (non-pure re-export barrels)
+
+When a barrel module has its own exports (not just re-exports), all its import records must be loaded when any own export is used:
+
+```js
+// barrel/index.js
+import './a';
+import { b } from './b';
+export { c } from './c';
+export { d } from './d';
+
+console.log(b);
+
+export const index = 'index'; // own export
+export default b; // `default` is an own export
+
+// main.js
+import { index, c } from './barrel';
+// or import b, { c } from './barrel';
+```
+
+In this case, when `index` is imported: `a.js`, `b.js`, `c.js`, and `d.js` are all loaded:
+
+- `import './a'` - `a.js` is loaded with no specifier requested
+- `import { b } from './b'` - `b.js` is loaded with `b` requested
+- `export { c } from './c'` - `c.js` is loaded with `c` requested (because main.js imports `c`)
+- `export { d } from './d'` - `d.js` is loaded with no specifier requested (like `import './d'`, since `d` is not imported in main.js)
+
+This happens because `moduleSideEffects` can only be determined after the transform hook, but lazy barrel decisions are made at the load stage. When the barrel must execute (due to own exports being used), all its imports must be loaded to ensure correct behavior.
+
+If the loaded modules (`a.js`, `b.js`, etc.) are also barrel modules, lazy barrel optimization still applies to them recursively based on whether specifiers are requested.
+
 ## Configuration
 
 Enable lazy barrel optimization in your Rolldown configuration:
@@ -185,11 +263,29 @@ export default {
 
 ## Requirements
 
-For lazy barrel optimization to work, barrel modules needs to be marked as side-effect-free explicitly. While Rolldown performs side-effect analysis, it requires to read the modules imported from the barrel files. By marking the barrel modules as side-effect-free, Rolldown can rely on that fact and apply the optimization:
+For lazy barrel optimization to work, barrel modules need to be marked as side-effect-free explicitly:
 
 1. **Package declaration**: Adding `"sideEffects": false` to `package.json`
 
-2. **Bundler configuration**: Using the `treeshake.moduleSideEffects` option
+2. **Rolldown plugin hooks**: Returning `moduleSideEffects: false` from `resolveId`, `load`, or `transform` hooks
+
+```js
+// rolldown.config.js
+export default {
+  plugins: [
+    {
+      name: 'mark-barrel-side-effect-free',
+      transform(code, id) {
+        if (id.includes('/barrel/')) {
+          return { moduleSideEffects: false };
+        }
+      },
+    },
+  ],
+};
+```
+
+3. **Rolldown configuration**: Using the `treeshake.moduleSideEffects` option
 
 ```js
 // rolldown.config.js
@@ -226,10 +322,10 @@ Lazy barrel optimization is particularly beneficial when:
 
 - Your codebase has many barrel modules (common in component libraries)
 - Barrel modules re-export many modules but consumers typically use only a few
-- You're importing from large component libraries like antd or material-ui
 
 ## Limitations
 
 - Barrel modules with side effects cannot be optimized
 - Unmatched named imports require loading all star re-exports to resolve
 - Entry files, `import * as ns`, `import('..')`, `require('..')`, etc. will cause the barrel module to load all its exports
+- When a barrel has its own exports (not just re-exports), using any own export causes all its import records to be loaded

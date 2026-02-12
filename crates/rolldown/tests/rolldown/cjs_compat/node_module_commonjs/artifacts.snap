@@ -6,20 +6,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## commonjs.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region commonjs.js
 var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1;
 }));
 
 //#endregion
-export { __reExport as n, __toESM as r, require_commonjs as t };
+export { __toESM as i, __exportAll as n, __reExport as r, require_commonjs as t };
 ```
 
 ## entry.js
 
 ```js
-import { r as __toESM, t as require_commonjs } from "./commonjs.js";
+import { i as __toESM, t as require_commonjs } from "./commonjs.js";
 
 //#region entry.js
 var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs(), 1);
@@ -31,10 +31,10 @@ console.log(import_commonjs.default);
 ## main.js
 
 ```js
-import { n as __reExport, r as __toESM, t as require_commonjs } from "./commonjs.js";
+import { i as __toESM, n as __exportAll, r as __reExport, t as require_commonjs } from "./commonjs.js";
 
 //#region star-export.js
-var star_export_exports = {};
+var star_export_exports = /* @__PURE__ */ __exportAll({});
 __reExport(star_export_exports, /* @__PURE__ */ __toESM(require_commonjs(), 1));
 
 //#endregion

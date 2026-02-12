@@ -12,10 +12,25 @@ pub trait ChunkDebugExt {
   );
 }
 pub enum ChunkCreationReason<'a> {
-  ManualCodeSplittingGroup(&'a str, u32),
-  PreserveModules { is_user_defined_entry: bool, module_stable_id: &'a str },
-  Entry { is_user_defined_entry: bool, entry_module_id: &'a str, name: Option<&'a ArcStr> },
-  CommonChunk { bits: &'a BitSet, link_output: &'a LinkStageOutput },
+  ManualCodeSplittingGroup {
+    name: &'a str,
+    group_index: u32,
+    bits: Option<&'a BitSet>,
+    link_output: &'a LinkStageOutput,
+  },
+  PreserveModules {
+    is_user_defined_entry: bool,
+    module_stable_id: &'a str,
+  },
+  Entry {
+    is_user_defined_entry: bool,
+    entry_module_id: &'a str,
+    name: Option<&'a ArcStr>,
+  },
+  CommonChunk {
+    bits: &'a BitSet,
+    link_output: &'a LinkStageOutput,
+  },
 }
 
 impl ChunkDebugExt for Chunk {
@@ -25,7 +40,7 @@ impl ChunkDebugExt for Chunk {
     options: &NormalizedBundlerOptions,
   ) {
     match reason {
-      ChunkCreationReason::ManualCodeSplittingGroup(_name, group_index) => {
+      ChunkCreationReason::ManualCodeSplittingGroup { group_index, .. } => {
         *self.chunk_reason_type = ChunkReasonType::ManualCodeSplitting { group_index };
       }
       ChunkCreationReason::PreserveModules { .. } => {
@@ -44,8 +59,14 @@ impl ChunkDebugExt for Chunk {
     }
 
     let reason = match reason {
-      ChunkCreationReason::ManualCodeSplittingGroup(name, _group_index) => {
-        format!("ManualCodeSplitting: [Group-Name: {name}]")
+      ChunkCreationReason::ManualCodeSplittingGroup { name, bits, link_output, .. } => {
+        let entries_info = bits
+          .map(|bits| {
+            let entries = resolve_bits_to_entry_names(bits, link_output);
+            format!(" [Entries: {entries}]")
+          })
+          .unwrap_or_default();
+        format!("ManualCodeSplitting: [Group-Name: {name}]{entries_info}")
       }
       ChunkCreationReason::PreserveModules { is_user_defined_entry, module_stable_id } => {
         format!(
@@ -64,23 +85,28 @@ impl ChunkDebugExt for Chunk {
         }
       }
       ChunkCreationReason::CommonChunk { bits, link_output } => {
-        let entries = link_output
-          .entries
-          .iter()
-          .enumerate()
-          .filter_map(|(index, entry_point)| {
-            if bits.has_bit(index.try_into().unwrap()) {
-              let entry_module = &link_output.module_table[entry_point.idx];
-              Some(entry_module.stable_id().to_string())
-            } else {
-              None
-            }
-          })
-          .join(", ");
+        let entries = resolve_bits_to_entry_names(bits, link_output);
         format!("Common Chunk: [Shared-By: {entries}]")
       }
     };
 
     self.debug_info.push(ChunkDebugInfo::CreateReason(reason));
   }
+}
+
+fn resolve_bits_to_entry_names(bits: &BitSet, link_output: &LinkStageOutput) -> String {
+  link_output
+    .entries
+    .iter()
+    .flat_map(|(idx, entries)| entries.iter().map(move |_| idx))
+    .enumerate()
+    .filter_map(|(index, &module_idx)| {
+      if bits.has_bit(index.try_into().unwrap()) {
+        let entry_module = &link_output.module_table[module_idx];
+        Some(entry_module.stable_id().to_string())
+      } else {
+        None
+      }
+    })
+    .join(", ")
 }

@@ -30,8 +30,9 @@ function createTestingLogger() {
   ];
   const ret: Record<string, any> = Object.create(null);
   for (const type of types) {
+    // Use a wrapper function to allow spying in tests
     // oxlint-disable-next-line no-console
-    ret[type] = console.log;
+    ret[type] = (...args: unknown[]) => console.log(...args);
   }
   return ret;
 }

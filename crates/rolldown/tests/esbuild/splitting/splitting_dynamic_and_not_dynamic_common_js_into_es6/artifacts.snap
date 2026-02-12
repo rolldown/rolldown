@@ -1,6 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: foo.js is dynamically imported by entry.js but also statically imported by entry.js, dynamic import will not move module into another chunk.
+
+```
+
 # Assets
 
 ## entry.js
@@ -8,7 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.bar = 123;

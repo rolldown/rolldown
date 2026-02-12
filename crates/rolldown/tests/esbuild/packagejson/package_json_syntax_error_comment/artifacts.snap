@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Errors
 
@@ -12,7 +11,7 @@ snapshot_kind: text
    │
  1 │ import fn from 'demo-pkg'
    │                ─────┬────  
-   │                     ╰────── JSON parse error
+   │                     ╰────── JSON parse error in 'node_modules/demo-pkg/package.json'
 ───╯
 
 ```

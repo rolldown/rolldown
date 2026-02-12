@@ -79,7 +79,7 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
             external: rule.external,
           });
         }
-        ModuleSideEffects::ModuleSideEffectsRules(ret)
+        ModuleSideEffects::Rules(ret)
       }
       Either4::D(ts_fn) => {
         ModuleSideEffects::Function(Arc::new(move |id: &str, is_external: bool| {

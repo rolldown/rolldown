@@ -45,18 +45,15 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     }
   }
 
-  match raw_options.format {
-    Some(format @ (OutputFormat::Umd | OutputFormat::Iife)) => {
-      if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(true))) {
-        warnings.push(
-          BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedCodeSplittingFormat(
-            format.to_string(),
-          ))
-          .with_severity_warning(),
-        );
-      }
+  if let Some(format @ (OutputFormat::Umd | OutputFormat::Iife)) = raw_options.format {
+    if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(true))) {
+      warnings.push(
+        BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedCodeSplittingFormat(
+          format.to_string(),
+        ))
+        .with_severity_warning(),
+      );
     }
-    _ => {}
   }
 
   if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(false))) {
@@ -321,6 +318,11 @@ pub fn prepare_build_context(
       }
     }
 
+    #[cfg(debug_assertions)]
+    if let Some(preset) = raw_transform_options.jsx_preset.clone() {
+      jsx_preset = preset;
+    }
+
     // Create TransformOptions based on tsconfig mode:
     // - Auto: Create Raw mode (will resolve tsconfig per file)
     // - None/Manual: Create Normal mode (resolve tsconfig once now)
@@ -426,6 +428,16 @@ pub fn prepare_build_context(
     checks: raw_options.checks.unwrap_or_default().into(),
     watch: raw_options.watch.unwrap_or_default(),
     legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Inline),
+    comments: {
+      let mut comments = raw_options.comments.unwrap_or_default();
+      // When `comments` option is not explicitly set, `legalComments` can override `comments.legal`
+      if raw_options.comments.is_none() {
+        if let Some(legal) = raw_options.legal_comments {
+          comments.legal = matches!(legal, LegalComments::Inline);
+        }
+      }
+      comments
+    },
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),
     keep_names: raw_options.keep_names.unwrap_or_default(),
     polyfill_require: raw_options.polyfill_require.unwrap_or(true),

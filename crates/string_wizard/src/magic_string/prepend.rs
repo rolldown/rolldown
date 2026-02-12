@@ -8,11 +8,7 @@ impl<'text> MagicString<'text> {
     self
   }
 
-  pub fn prepend_left(
-    &mut self,
-    text_index: usize,
-    content: impl Into<CowStr<'text>>,
-  ) -> &mut Self {
+  pub fn prepend_left(&mut self, text_index: u32, content: impl Into<CowStr<'text>>) -> &mut Self {
     // Note: by_end_mut only errors when splitting an already-edited chunk,
     // but prepend operations don't require splitting edited chunks in practice.
     // We use expect here as this is an internal invariant.
@@ -23,11 +19,7 @@ impl<'text> MagicString<'text> {
     self
   }
 
-  pub fn prepend_right(
-    &mut self,
-    text_index: usize,
-    content: impl Into<CowStr<'text>>,
-  ) -> &mut Self {
+  pub fn prepend_right(&mut self, text_index: u32, content: impl Into<CowStr<'text>>) -> &mut Self {
     // Note: by_start_mut only errors when splitting an already-edited chunk,
     // but prepend operations don't require splitting edited chunks in practice.
     // We use expect here as this is an internal invariant.

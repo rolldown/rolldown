@@ -43,19 +43,18 @@ bitflags::bitflags! {
     }
 }
 
-bitflags::bitflags! {
-  /// Tracks post-optimization operations applied to chunks during code splitting.
-  #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-    pub struct PostChunkOptimizationOperation: u8 {
-        /// The chunk has been removed and merged into another chunk.
-        /// e.g., a dynamic chunk merged into a common chunk or user-defined entry chunk.
-        const Removed = 1;
-        /// The chunk's exports should be preserved in the target chunk.
-        /// e.g., an emitted chunk with `preserveEntrySignatures: 'allow-extension'` merged into
-        /// a manual chunks group - all exports should be preserved even though the original
-        /// emitted chunk is removed.
-        const PreserveExports = 1 << 1;
-    }
+/// Tracks post-optimization operations applied to chunks during code splitting.
+/// A chunk present in the map has been removed and merged into another chunk.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PostChunkOptimizationOperation {
+  /// The chunk has been removed and merged into another chunk.
+  /// e.g., a dynamic chunk merged into a common chunk or user-defined entry chunk.
+  Removed,
+  /// The chunk has been removed, but its exports should be preserved in the target chunk.
+  /// e.g., an emitted chunk with `preserveEntrySignatures: 'allow-extension'` merged into
+  /// a manual chunks group - all exports should be preserved even though the original
+  /// emitted chunk is removed.
+  RemovedWithPreservedExports,
 }
 
 impl ChunkMeta {
@@ -204,7 +203,7 @@ impl Chunk {
   }
 
   pub async fn generate_preliminary_filename(
-    &mut self,
+    &self,
     options: &NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
     chunk_name: &ArcStr,

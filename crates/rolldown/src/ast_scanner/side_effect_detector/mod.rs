@@ -50,7 +50,7 @@ impl<'a> SideEffectDetector<'a> {
     ident_ref.reference_id.get().is_some_and(|reference_id| self.scope.is_unresolved(reference_id))
   }
 
-  fn analyze_statement<'ast>(&self, stmt: &Statement<'ast>) -> AnalysisResult {
+  fn analyze_statement(&self, stmt: &Statement<'_>) -> AnalysisResult {
     let scan = ScanState::from_statement(
       stmt,
       self.scope,
@@ -71,7 +71,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn analyze_expression<'ast>(&self, expr: &Expression<'ast>) -> AnalysisResult {
+  fn analyze_expression(&self, expr: &Expression<'_>) -> AnalysisResult {
     let scan = ScanState::from_expression(
       expr,
       self.scope,
@@ -154,7 +154,7 @@ impl<'a> SideEffectDetector<'a> {
     .then_some(&assign_expr.right)
   }
 
-  pub fn detect_side_effect_of_stmt<'ast>(&self, stmt: &Statement<'ast>) -> SideEffectDetail {
+  pub fn detect_side_effect_of_stmt(&self, stmt: &Statement<'_>) -> SideEffectDetail {
     if let Some(rhs_expr) = self.get_pure_cjs_assignment_rhs(stmt) {
       let rhs_analysis = self.analyze_expression(rhs_expr);
       let mut detail = SideEffectDetail::PureCjs;
@@ -194,7 +194,7 @@ impl<'a> GlobalContext<'a> for DetectorContext<'_, '_> {
   }
 }
 
-impl<'a> MayHaveSideEffectsContext<'a> for DetectorContext<'_, '_> {
+impl MayHaveSideEffectsContext<'_> for DetectorContext<'_, '_> {
   fn annotations(&self) -> bool {
     !self.detector.flat_options.ignore_annotations()
   }
@@ -271,7 +271,7 @@ impl<'a> ScanState<'a> {
   }
 }
 
-impl<'scan, 'ast> Visit<'ast> for ScanState<'scan> {
+impl<'ast> Visit<'ast> for ScanState<'_> {
   fn visit_function(
     &mut self,
     _it: &oxc::ast::ast::Function<'ast>,

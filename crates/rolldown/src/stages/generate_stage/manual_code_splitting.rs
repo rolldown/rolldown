@@ -49,12 +49,7 @@ impl ModuleGroup {
 }
 
 impl GenerateStage<'_> {
-  #[expect(
-    clippy::too_many_lines,
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    clippy::cast_possible_wrap
-  )] // TODO(hyf0): refactor
+  #[expect(clippy::too_many_lines)] // TODO(hyf0): refactor
   pub async fn apply_manual_code_splitting(
     &self,
     index_splitting_info: &IndexSplittingInfo,
@@ -228,85 +223,38 @@ impl GenerateStage<'_> {
         .map_or(chunking_options.max_size, Some)
       {
         if this_module_group.sizes > allow_max_size {
-          // If the size of the group is larger than the max size, we should split the group into smaller groups.
           let mut modules = this_module_group.modules.iter().copied().collect::<Vec<_>>();
-          modules.sort_by_key(|module_idx| {
-            (
-              // smaller size goes first
-              self.link_output.module_table[*module_idx].size(),
-              self.link_output.module_table[*module_idx].stable_id(),
-              self.link_output.module_table[*module_idx].exec_order(),
-            )
+          // Split by lexical relevance first (stable module id), then by size constraints.
+          modules.sort_by(|lhs, rhs| {
+            let lhs_module = &self.link_output.module_table[*lhs];
+            let rhs_module = &self.link_output.module_table[*rhs];
+            lhs_module
+              .stable_id()
+              .cmp(rhs_module.stable_id())
+              .then(lhs_module.exec_order().cmp(&rhs_module.exec_order()))
           });
-          // Make sure we sort the modules based on size in the end. Since we compute new group size from left to right, if a giant
-          // module is at the most left, it may cause a split-able group can't be split.
 
-          let mut left_size = 0f64;
-          let mut next_left_index = 0isize;
-          let mut right_size = 0f64;
-          let mut next_right_index = (modules.len() - 1) as isize;
-          let modules_len = modules.len() as isize;
-
-          while left_size < allow_min_size && next_left_index < modules_len {
-            left_size +=
-              self.link_output.module_table[modules[next_left_index as usize]].size() as f64;
-            next_left_index += 1;
-          }
-
-          while right_size < allow_min_size && next_right_index >= 0 {
-            right_size +=
-              self.link_output.module_table[modules[next_right_index as usize]].size() as f64;
-            next_right_index -= 1;
-          }
-          if next_right_index + 1 < next_left_index {
-            // For example:
-            // [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-            //          r^    l^
-            // Left contains [0, 1, 2, 3, 4].
-            // Right contains [4, 5, 6, 7, 8, 9].
-            // There's a overlap [4] in both groups.
-            // That is the group can't be split into two groups with both satisfied the min size requirement.
-            // In this case, we just ignore the max size requirement and keep the group as a whole.
-          } else {
-            // TODO: Though, [0..next_left_index] is a valid group, we want to find a best split index that makes files in left group are in the same disk location.
-            let mut split_size = left_size;
-            while next_left_index <= next_right_index {
-              let next_size = self.link_output.module_table.modules
-                [modules[next_left_index as usize]]
-                .size() as f64;
-              if split_size > 0.0 && split_size + next_size > allow_max_size {
-                break;
-              }
-              split_size += next_size;
-              next_left_index += 1;
-            }
-            while next_left_index <= next_right_index && next_right_index >= 0 {
-              right_size += self.link_output.module_table.modules
-                [modules[next_right_index as usize]]
-                .size() as f64;
-              next_right_index -= 1;
-            }
-
-            if next_right_index != -1 && next_left_index != modules_len {
-              // - next_right_index == -1
-              // - next_left_index == modules.len()
-              // They mean that either left or right group is empty, which is not allowed.
-              module_groups.push(ModuleGroup {
-                name: this_module_group.name.clone(),
-                match_group_index: this_module_group.match_group_index,
-                modules: modules[..next_left_index as usize].iter().copied().collect(),
-                priority: this_module_group.priority,
-                sizes: split_size,
-              });
-              module_groups.push(ModuleGroup {
-                name: this_module_group.name.clone(),
-                match_group_index: this_module_group.match_group_index,
-                modules: modules[next_left_index as usize..].iter().copied().collect(),
-                priority: this_module_group.priority,
-                sizes: right_size,
-              });
-              continue;
-            }
+          if let Some((split_index, left_size, right_size)) = find_relevance_split_index(
+            &modules,
+            &self.link_output.module_table,
+            allow_min_size,
+            allow_max_size,
+          ) {
+            module_groups.push(ModuleGroup {
+              name: this_module_group.name.clone(),
+              match_group_index: this_module_group.match_group_index,
+              modules: modules[..split_index].iter().copied().collect(),
+              priority: this_module_group.priority,
+              sizes: left_size,
+            });
+            module_groups.push(ModuleGroup {
+              name: this_module_group.name.clone(),
+              match_group_index: this_module_group.match_group_index,
+              modules: modules[split_index..].iter().copied().collect(),
+              priority: this_module_group.priority,
+              sizes: right_size,
+            });
+            continue;
           }
         }
       }
@@ -364,6 +312,116 @@ impl GenerateStage<'_> {
     }
     Ok(())
   }
+}
+
+#[expect(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here.
+fn module_size(module_idx: ModuleIdx, module_table: &ModuleTable) -> f64 {
+  module_table[module_idx].size() as f64
+}
+
+/// Similarity differences within this threshold are treated as insignificant ties,
+/// allowing size-based criteria to decide. Value of 10 equals one character position's
+/// max score, absorbing digit-level ASCII noise while preserving directory boundary signals.
+const SIMILARITY_SIGNIFICANCE_THRESHOLD: i32 = 10;
+
+fn stable_id_similarity(lhs: &str, rhs: &str) -> i32 {
+  lhs.as_bytes().iter().zip(rhs.as_bytes()).fold(0, |acc, (lhs_char, rhs_char)| {
+    acc + (10 - (i32::from(*lhs_char) - i32::from(*rhs_char)).abs()).max(0)
+  })
+}
+
+fn find_relevance_split_index(
+  modules: &[ModuleIdx],
+  module_table: &ModuleTable,
+  min_size: f64,
+  max_size: f64,
+) -> Option<(usize, f64, f64)> {
+  if modules.len() < 2 {
+    return None;
+  }
+
+  let keys = modules
+    .iter()
+    .map(|module_idx| module_table[*module_idx].stable_id().as_str())
+    .collect::<Vec<_>>();
+  let sizes =
+    modules.iter().map(|module_idx| module_size(*module_idx, module_table)).collect::<Vec<_>>();
+  pick_relevance_split_index(&keys, &sizes, min_size, max_size)
+}
+
+fn pick_relevance_split_index(
+  keys: &[&str],
+  sizes: &[f64],
+  min_size: f64,
+  max_size: f64,
+) -> Option<(usize, f64, f64)> {
+  debug_assert_eq!(keys.len(), sizes.len());
+  if keys.len() < 2 || sizes.len() < 2 {
+    return None;
+  }
+
+  let mut prefix_sizes = Vec::with_capacity(sizes.len() + 1);
+  prefix_sizes.push(0.0);
+  for size in sizes {
+    let next_size = prefix_sizes.last().copied().unwrap_or_default() + *size;
+    prefix_sizes.push(next_size);
+  }
+
+  let total_size = prefix_sizes.last().copied().unwrap_or_default();
+
+  // Find the leftmost split point that can satisfy min_size for the left group.
+  let mut left_bound = 1;
+  while left_bound < sizes.len() && prefix_sizes[left_bound] < min_size {
+    left_bound += 1;
+  }
+
+  // Find the rightmost split point that can satisfy min_size for the right group.
+  let mut right_bound = sizes.len() - 1;
+  while right_bound > 0 && total_size - prefix_sizes[right_bound] < min_size {
+    right_bound -= 1;
+  }
+
+  if left_bound > right_bound {
+    return None;
+  }
+
+  let mut best_split_index = None;
+  let mut best_similarity = i32::MAX;
+  let mut best_oversized_side_count = usize::MAX;
+  let mut best_max_side_size = f64::INFINITY;
+
+  for split_index in left_bound..=right_bound {
+    let left_size = prefix_sizes[split_index];
+    let right_size = total_size - left_size;
+    if left_size < min_size || right_size < min_size {
+      continue;
+    }
+
+    let similarity = stable_id_similarity(keys[split_index - 1], keys[split_index]);
+    let oversized_side_count =
+      usize::from(left_size > max_size) + usize::from(right_size > max_size);
+    let max_side_size = left_size.max(right_size);
+
+    let is_better = if (best_similarity - similarity).abs() > SIMILARITY_SIGNIFICANCE_THRESHOLD {
+      similarity < best_similarity
+    } else if oversized_side_count != best_oversized_side_count {
+      oversized_side_count < best_oversized_side_count
+    } else {
+      max_side_size < best_max_side_size
+    };
+
+    if is_better {
+      best_split_index = Some(split_index);
+      best_similarity = similarity;
+      best_oversized_side_count = oversized_side_count;
+      best_max_side_size = max_side_size;
+    }
+  }
+
+  let split_index = best_split_index?;
+  let left_size = prefix_sizes[split_index];
+  let right_size = total_size - left_size;
+  Some((split_index, left_size, right_size))
 }
 
 fn derive_entries_aware_chunk_name(
@@ -451,5 +509,108 @@ fn add_module_and_dependencies_to_group_recursively(
         recursively,
       );
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::{pick_relevance_split_index, stable_id_similarity};
+
+  struct SplitCase<'a> {
+    keys: &'a [&'a str],
+    sizes: &'a [f64],
+    min_size: f64,
+    max_size: f64,
+    /// Expected (left_group, right_group) after splitting, or None if no valid split.
+    expected: Option<(&'a [&'a str], &'a [&'a str])>,
+  }
+
+  fn assert_split(case: &SplitCase) {
+    let similarities: Vec<i32> =
+      case.keys.windows(2).map(|w| stable_id_similarity(w[0], w[1])).collect();
+    let result = pick_relevance_split_index(case.keys, case.sizes, case.min_size, case.max_size);
+    match (result, case.expected) {
+      (Some((split, _, _)), Some(expected)) => {
+        let (left, right) = (&case.keys[..split], &case.keys[split..]);
+        assert_eq!((left, right), expected, "similarities: {similarities:?}",);
+      }
+      (None, None) => {}
+      (Some((split, _, _)), None) => {
+        panic!(
+          "expected no split, but got split at {split}: ({:?}, {:?})\nsimilarities: {similarities:?}",
+          &case.keys[..split],
+          &case.keys[split..],
+        );
+      }
+      (None, Some(expected)) => {
+        panic!(
+          "expected split ({:?}, {:?}), but got None\nsimilarities: {similarities:?}",
+          expected.0, expected.1,
+        );
+      }
+    }
+  }
+
+  #[test]
+  fn similarity_prefers_low_stable_id_boundary() {
+    assert_split(&SplitCase {
+      keys: &[
+        "src/components/button.js",
+        "src/components/modal.js",
+        "node_modules/react/index.js",
+        "node_modules/react-dom/index.js",
+      ],
+      sizes: &[10.0, 10.0, 10.0, 10.0],
+      min_size: 10.0,
+      max_size: 100.0,
+      expected: Some((
+        &["src/components/button.js", "src/components/modal.js"],
+        &["node_modules/react/index.js", "node_modules/react-dom/index.js"],
+      )),
+    });
+  }
+
+  #[test]
+  fn threshold_prefers_size_over_insignificant_similarity_difference() {
+    // Digit noise: gap=3 (<10), tie → size picks smaller max side.
+    assert_split(&SplitCase {
+      keys: &["size-15.js", "size-20.js", "size-41.js"],
+      sizes: &[15.0, 20.0, 41.0],
+      min_size: 0.0,
+      max_size: 40.0,
+      expected: Some((&["size-15.js", "size-20.js"], &["size-41.js"])),
+    });
+    // Lowest similarity at index 1, but gap=1 (<10) → size wins.
+    assert_split(&SplitCase {
+      keys: &["ab0.js", "aa9.js", "aa0.js"],
+      sizes: &[10.0, 10.0, 30.0],
+      min_size: 0.0,
+      max_size: 25.0,
+      expected: Some((&["ab0.js", "aa9.js"], &["aa0.js"])),
+    });
+  }
+
+  #[test]
+  fn significant_similarity_gap_still_wins_over_size() {
+    // Directory boundary: gap=17 (>10), similarity wins despite worse size.
+    assert_split(&SplitCase {
+      keys: &["src/a.js", "lib/b.js", "lib/c.js"],
+      sizes: &[10.0, 10.0, 30.0],
+      min_size: 0.0,
+      max_size: 25.0,
+      expected: Some((&["src/a.js"], &["lib/b.js", "lib/c.js"])),
+    });
+  }
+
+  #[test]
+  fn min_size_prevents_split() {
+    // Clear directory boundary exists, but any split would create a side < min_size.
+    assert_split(&SplitCase {
+      keys: &["src/a.js", "lib/b.js", "lib/c.js"],
+      sizes: &[3.0, 3.0, 3.0],
+      min_size: 5.0,
+      max_size: 10.0,
+      expected: None,
+    });
   }
 }

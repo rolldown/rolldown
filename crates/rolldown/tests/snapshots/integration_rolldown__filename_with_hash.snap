@@ -4018,6 +4018,12 @@ expression: output
 - main-!~{000}~.js => main-D94g3AZq.js
 - common_b-!~{001}~.js => common_b-C19ByyLz.js
 
+# tests/rolldown/function/advanced_chunks/similarity_max_size
+
+- main-!~{000}~.js => main-Iby7IDO-.js
+- vendor-similarity-!~{003}~.js => vendor-similarity-Dr0g2X-x.js
+- vendor-similarity-!~{001}~.js => vendor-similarity-cN77Fijl.js
+
 # tests/rolldown/function/advanced_chunks/split_node_modules
 
 - main-!~{000}~.js => main-Cds2SNwN.js

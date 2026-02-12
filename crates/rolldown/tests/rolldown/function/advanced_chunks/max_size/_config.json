@@ -6,7 +6,7 @@
           // `size-15.js`, `size-20` and `size-41.js` will be captured
           "test": "size-.*\\.js",
           "name": "40max-size",
-          // `size-15.js` and `size-20.js` will be grouped into one chunk (35 <= 40), and `size-41.js` into another, because adding `size-41.js` would exceed `maxSize`.
+          // `size-15.js` and `size-20.js` will be grouped into one chunk, and `size-41.js` into another, because the similarity difference is insignificant so size-based tiebreaking picks the better distribution.
           "maxSize": 40
         }
       ]

@@ -5,6 +5,8 @@ pub trait PathExt {
 
   fn expect_to_slash(&self) -> String;
 
+  fn is_in_node_modules(&self) -> bool;
+
   fn representative_file_name(&self) -> Cow<'_, str>;
 }
 
@@ -25,6 +27,10 @@ impl PathExt for Path {
     path
       .unwrap_or_else(|| panic!("Failed to convert {:?} to slash str", self.display()))
       .into_owned()
+  }
+
+  fn is_in_node_modules(&self) -> bool {
+    self.components().any(|comp| comp.as_os_str() == "node_modules")
   }
 
   /// It doesn't ensure the file name is a valid identifier in JS.

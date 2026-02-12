@@ -3471,6 +3471,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_plugin_utils",
+ "rolldown_std_utils",
  "rolldown_utils",
  "rustc-hash",
  "serde",

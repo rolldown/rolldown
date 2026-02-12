@@ -1,3 +1,27 @@
+use std::{
+  borrow::Cow,
+  env,
+  future::Future,
+  path::{Path, PathBuf},
+  pin::Pin,
+  sync::Arc,
+};
+
+use anyhow::anyhow;
+use arcstr::ArcStr;
+use derive_more::Debug;
+use owo_colors::OwoColorize;
+use rustc_hash::FxHashSet;
+use sugar_path::SugarPath;
+
+use rolldown_common::{ImportKind, WatcherChangeKind, side_effects::HookSideEffects};
+use rolldown_plugin::{
+  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
+  HookResolveIdReturn, HookUsage, Plugin, PluginContext, typedmap::TypedMapKey,
+};
+use rolldown_std_utils::PathExt as _;
+use rolldown_utils::{dataurl::is_data_url, pattern_filter::StringOrRegex};
+
 use crate::{
   ResolveOptionsExternal,
   builtin::{BuiltinChecker, is_node_like_builtin},
@@ -9,26 +33,6 @@ use crate::{
     normalize_leading_slashes, normalize_path,
   },
 };
-use anyhow::anyhow;
-use arcstr::ArcStr;
-use derive_more::Debug;
-use owo_colors::OwoColorize;
-use rolldown_common::{ImportKind, WatcherChangeKind, side_effects::HookSideEffects};
-use rolldown_plugin::{
-  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookUsage, Plugin, PluginContext, typedmap::TypedMapKey,
-};
-use rolldown_utils::{dataurl::is_data_url, pattern_filter::StringOrRegex};
-use rustc_hash::FxHashSet;
-use std::{
-  borrow::Cow,
-  env,
-  future::Future,
-  path::{Path, PathBuf},
-  pin::Pin,
-  sync::Arc,
-};
-use sugar_path::SugarPath;
 
 const FS_PREFIX: &str = "/@fs/";
 
@@ -347,7 +351,7 @@ impl Plugin for ViteResolvePlugin {
       if let Some(mut result) = result {
         if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier
           && !scan
-          && rolldown_plugin_utils::is_in_node_modules(Path::new(result.id.as_str()))
+          && result.id.as_path().is_in_node_modules()
         {
           let finalized = finalize_bare_specifier(&result.id, &id, args.importer)
             .await?

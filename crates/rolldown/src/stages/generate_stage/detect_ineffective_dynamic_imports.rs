@@ -1,15 +1,10 @@
-use std::path::Path;
-
 use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
+use rolldown_std_utils::PathExt as _;
 use sugar_path::SugarPath as _;
 
 use crate::chunk_graph::ChunkGraph;
 
 use super::GenerateStage;
-
-fn is_in_node_modules(id: &Path) -> bool {
-  id.components().any(|comp| comp.as_os_str() == "node_modules")
-}
 
 impl GenerateStage<'_> {
   pub fn detect_ineffective_dynamic_imports(&mut self, chunk_graph: &ChunkGraph) {
@@ -33,7 +28,7 @@ impl GenerateStage<'_> {
         }
 
         let has_ineffective = module.ecma_view.dynamic_importers.iter().any(|importer_id| {
-          !is_in_node_modules(importer_id.as_path())
+          !importer_id.as_path().is_in_node_modules()
             && pre_rendered_chunk.module_ids.contains(importer_id)
         });
 

@@ -1,4 +1,3 @@
-use self::render_chunk_exports::get_chunk_export_names;
 use arcstr::ArcStr;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkMeta, ModuleId, ModuleIdx, PreserveEntrySignatures, RenderedModule,
@@ -38,7 +37,7 @@ pub fn generate_pre_rendered_chunk(
       .iter()
       .map(|id| graph.module_table[*id].id().as_str().into())
       .collect(),
-    exports: get_chunk_export_names(chunk, graph),
+    exports: render_chunk_exports::get_chunk_export_names(chunk, graph),
   }
 }
 

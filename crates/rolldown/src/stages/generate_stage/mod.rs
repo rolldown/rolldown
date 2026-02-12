@@ -14,6 +14,7 @@ use rolldown_common::{
   ImportMetaRolldownAssetReplacer, Module, OutputExports, PreliminaryFilename,
   RenderedConcatenatedModuleParts, RollupPreRenderedAsset, SymbolRef, SymbolRefFlags,
 };
+use rolldown_error::EventKindSwitcher;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{PathBufExt, PathExt, representative_file_name_for_preserve_modules};
 use rolldown_utils::{
@@ -60,7 +61,6 @@ mod chunk_ext;
 mod chunk_optimizer;
 mod code_splitting;
 mod compute_cross_chunk_links;
-mod detect_ineffective_dynamic_imports;
 mod manual_code_splitting;
 mod minify_chunks;
 mod on_demand_wrapping;
@@ -105,12 +105,13 @@ impl<'a> GenerateStage<'a> {
 
     let mut warnings = vec![];
     self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings)?;
+    let index_chunk_id_to_name =
+      self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph, &mut warnings).await?;
+
     if !warnings.is_empty() {
       self.link_output.warnings.extend(warnings);
     }
 
-    let index_chunk_id_to_name =
-      self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
     self.patch_asset_modules(&chunk_graph);
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
@@ -212,7 +213,6 @@ impl<'a> GenerateStage<'a> {
     });
 
     self.apply_transfer_parts_mutation(&mut chunk_graph, transfer_parts_rendered_maps);
-    self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph).await
   }
 
@@ -223,6 +223,7 @@ impl<'a> GenerateStage<'a> {
   async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
+    warnings: &mut Vec<BuildDiagnostic>,
   ) -> BuildResult<FxHashMap<ChunkIdx, ArcStr>> {
     let modules = &self.link_output.module_table.modules;
 
@@ -368,6 +369,34 @@ impl<'a> GenerateStage<'a> {
         .insert(*chunk_id, pre_generated_chunk_name.representative_chunk_name.clone());
       let pre_rendered_chunk =
         generate_pre_rendered_chunk(chunk, &pre_generated_chunk_name.chunk_name, self.link_output);
+
+      if !self.options.code_splitting.is_disabled()
+        && self.options.checks.contains(EventKindSwitcher::IneffectiveDynamicImport)
+      {
+        for module_idx in &chunk.modules {
+          let Some(module) = self.link_output.module_table[*module_idx].as_normal() else {
+            continue;
+          };
+          if module.ecma_view.importers.is_empty() || module.ecma_view.dynamic_importers.is_empty()
+          {
+            continue;
+          }
+          let has_ineffective = module.ecma_view.dynamic_importers.iter().any(|importer_id| {
+            !importer_id.as_path().is_in_node_modules()
+              && pre_rendered_chunk.module_ids.contains(importer_id)
+          });
+          if has_ineffective {
+            warnings.push(
+              BuildDiagnostic::ineffective_dynamic_import(
+                module.id.to_string(),
+                module.ecma_view.importers.iter().map(ToString::to_string).collect(),
+                module.ecma_view.dynamic_importers.iter().map(ToString::to_string).collect(),
+              )
+              .with_severity_warning(),
+            );
+          }
+        }
+      }
 
       let preliminary_filename = chunk
         .generate_preliminary_filename(

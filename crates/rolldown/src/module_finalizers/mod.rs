@@ -26,7 +26,7 @@ use rolldown_ecmascript_utils::{
 
 mod finalizer_context;
 mod impl_visit_mut;
-pub use finalizer_context::{FinalizerMutableState, ScopeHoistingFinalizerContext};
+pub use finalizer_context::ScopeHoistingFinalizerContext;
 use oxc::span::{CompactStr, Ident};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};

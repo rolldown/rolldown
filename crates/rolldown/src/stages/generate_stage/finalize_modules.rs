@@ -1,19 +1,13 @@
 use std::sync::Arc;
 
 use rolldown_common::{
-  ConcatenateWrappedModuleKind, EcmaViewMeta, PrependRenderedImport,
-  RenderedConcatenatedModuleParts, SymbolRef, SymbolRefFlags,
+  ConcatenateWrappedModuleKind, EcmaViewMeta, PrependRenderedImport, SymbolRef, SymbolRefFlags,
 };
-use rolldown_utils::{
-  index_vec_ext::IndexVecExt as _, indexmap::FxIndexMap, rayon::ParallelIterator as _,
-};
+use rolldown_utils::{index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as _};
 use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::debug_span;
 
-use crate::{
-  chunk_graph::ChunkGraph,
-  module_finalizers::{FinalizerMutableState, ScopeHoistingFinalizerContext},
-};
+use crate::{chunk_graph::ChunkGraph, module_finalizers::ScopeHoistingFinalizerContext};
 
 use super::GenerateStage;
 
@@ -79,28 +73,10 @@ impl GenerateStage<'_> {
             safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
             used_symbol_refs: &self.link_output.used_symbol_refs,
           };
-          let mutable_state = FinalizerMutableState {
-            cur_stmt_index: 0,
-            keep_name_statement_to_insert: Vec::new(),
-            needs_hosted_top_level_binding: false,
-            module_namespace_included: self
-              .link_output
-              .used_symbol_refs
-              .contains(&module.namespace_object_ref),
-            transferred_import_record: chunk
-              .remove_map
-              .get(&module.idx)
-              .cloned()
-              .map(|idxs| {
-                idxs.into_iter().map(|idx| (idx, String::new())).collect::<FxIndexMap<_, _>>()
-              })
-              .unwrap_or_default(),
-            rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
-          };
 
           let concatenated_wrapped_module_kind = ctx.linking_info.concatenated_wrapped_module_kind;
           let (transferred_import_record, rendered_concatenated_wrapped_module_parts) =
-            ctx.finalize_normal_module(ast, ast_scope, mutable_state);
+            ctx.finalize_normal_module(ast, ast_scope);
 
           (!transferred_import_record.is_empty()
             || !matches!(concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None))

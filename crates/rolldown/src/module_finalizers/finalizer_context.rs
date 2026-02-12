@@ -9,16 +9,7 @@ pub type FinalizerMutableFields = (
   RenderedConcatenatedModuleParts,     // rendered_concatenated_wrapped_module_parts
 );
 
-pub struct FinalizerMutableState {
-  pub cur_stmt_index: usize,
-  pub keep_name_statement_to_insert: Vec<(usize, CompactStr, CompactStr)>,
-  pub needs_hosted_top_level_binding: bool,
-  pub module_namespace_included: bool,
-  pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
-  pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
-}
-
-use oxc::{ast_visit::VisitMut as _, span::CompactStr};
+use oxc::ast_visit::VisitMut as _;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -57,14 +48,25 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
     self,
     ast: &'me mut EcmaAst,
     ast_scope: &'me AstScopes,
-    mutable_state: FinalizerMutableState,
   ) -> FinalizerMutableFields {
     ast.program.with_mut(move |fields| {
       let (oxc_program, alloc) = (fields.program, fields.allocator);
 
+      let module_namespace_included =
+        self.used_symbol_refs.contains(&self.module.namespace_object_ref);
+
       let need_inline_json_prop = matches!(self.module.module_type, ModuleType::Json)
         && !self.module.exports_kind.is_commonjs()
-        && !mutable_state.module_namespace_included;
+        && !module_namespace_included;
+
+      let transferred_import_record = self
+        .chunk
+        .remove_map
+        .get(&self.idx)
+        .cloned()
+        .map(|idxs| idxs.into_iter().map(|idx| (idx, String::new())).collect::<FxIndexMap<_, _>>())
+        .unwrap_or_default();
+
       let mut finalizer = ScopeHoistingFinalizer {
         alloc,
         ctx: self,
@@ -74,13 +76,12 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         scope_stack: vec![],
         top_level_var_bindings: FxIndexSet::default(),
         state: TraverseState::empty(),
-        cur_stmt_index: mutable_state.cur_stmt_index,
-        keep_name_statement_to_insert: mutable_state.keep_name_statement_to_insert,
-        needs_hosted_top_level_binding: mutable_state.needs_hosted_top_level_binding,
-        module_namespace_included: mutable_state.module_namespace_included,
-        transferred_import_record: mutable_state.transferred_import_record,
-        rendered_concatenated_wrapped_module_parts: mutable_state
-          .rendered_concatenated_wrapped_module_parts,
+        cur_stmt_index: 0,
+        keep_name_statement_to_insert: vec![],
+        needs_hosted_top_level_binding: false,
+        module_namespace_included,
+        transferred_import_record,
+        rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
       };
       finalizer.visit_program(oxc_program);

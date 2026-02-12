@@ -409,4 +409,18 @@ impl BuildDiagnostic {
       modified_by_plugins,
     })
   }
+
+  pub fn ineffective_dynamic_import(
+    module_id: String,
+    mut static_importers: Vec<String>,
+    mut dynamic_importers: Vec<String>,
+  ) -> Self {
+    static_importers.sort();
+    dynamic_importers.sort();
+    Self::new_inner(super::events::ineffective_dynamic_import::IneffectiveDynamicImport {
+      module_id,
+      static_importers,
+      dynamic_importers,
+    })
+  }
 }

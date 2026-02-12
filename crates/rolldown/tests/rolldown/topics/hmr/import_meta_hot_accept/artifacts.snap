@@ -1,6 +1,22 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: array_accept/child.js is dynamically imported by array_accept/parent.js but also statically imported by array_accept/parent.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: single_accept/child.js is dynamically imported by single_accept/parent.js but also statically imported by single_accept/parent.js, dynamic import will not move module into another chunk.
+
+```
+
 # Assets
 
 ## main.js

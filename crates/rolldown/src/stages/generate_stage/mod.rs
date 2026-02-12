@@ -60,6 +60,7 @@ mod chunk_ext;
 mod chunk_optimizer;
 mod code_splitting;
 mod compute_cross_chunk_links;
+mod detect_ineffective_dynamic_imports;
 mod manual_code_splitting;
 mod minify_chunks;
 mod on_demand_wrapping;
@@ -211,6 +212,7 @@ impl<'a> GenerateStage<'a> {
     });
 
     self.apply_transfer_parts_mutation(&mut chunk_graph, transfer_parts_rendered_maps);
+    self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph).await
   }
 

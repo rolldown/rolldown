@@ -1,6 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: foo.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
 # Assets
 
 ## main.js
@@ -24,6 +33,15 @@ Promise.resolve().then(() => foo_exports).then((mod) => {
 ```
 
 # Variant: [format: Cjs]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: foo.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
 
 ## Assets
 

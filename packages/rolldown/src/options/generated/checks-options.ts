@@ -153,4 +153,10 @@ export interface ChecksOptions {
    * @default true
    * */
   unsupportedTsconfigOption?: boolean;
+
+  /**
+   * Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
+   * @default true
+   * */
+  ineffectiveDynamicImport?: boolean;
 }

@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
-// HIDDEN [rolldown:hmr]
 //#region modules/dep-cjs.js
 var require_dep_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const dep_cjs_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-cjs.js");

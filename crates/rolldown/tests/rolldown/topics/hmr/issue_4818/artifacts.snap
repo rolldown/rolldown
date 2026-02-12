@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-// HIDDEN [rolldown:hmr]
 //#region foo.json
 var foo_exports = /* @__PURE__ */ __exportAll({
 	default: () => foo_default,

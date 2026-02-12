@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-// HIDDEN [rolldown:hmr]
 //#region common.js
 var common_exports = /* @__PURE__ */ __exportAll({ prefix: () => prefix });
 const common_hot = __rolldown_runtime__.createModuleHotContext("common.js");

@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-// HIDDEN [rolldown:hmr]
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
@@ -25,9 +24,8 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 //#region main.js
-var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+__rolldown_runtime__.registerModule("main.js", {});
 require_a();
 require_b();
 

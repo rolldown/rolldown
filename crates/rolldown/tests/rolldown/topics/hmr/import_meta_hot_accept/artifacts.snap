@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
-// HIDDEN [rolldown:hmr]
 //#region self_accept.js
 var self_accept_exports = /* @__PURE__ */ __exportAll({ foo: () => foo$1 });
 const self_accept_hot = __rolldown_runtime__.createModuleHotContext("self_accept.js");

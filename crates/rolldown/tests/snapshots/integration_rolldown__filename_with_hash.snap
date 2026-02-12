@@ -3967,8 +3967,9 @@ expression: output
 
 # tests/rolldown/function/advanced_chunks/max_size
 
-- main-!~{000}~.js => main-CtCvKpFG.js
-- 40max-size-!~{001}~.js => 40max-size-DW0VEBit.js
+- main-!~{000}~.js => main-DcX7aCDC.js
+- 40max-size-!~{001}~.js => 40max-size-CU-Uxq5V.js
+- 40max-size-!~{003}~.js => 40max-size-DM3xDrIe.js
 
 # tests/rolldown/function/advanced_chunks/max_size2
 
@@ -3979,8 +3980,9 @@ expression: output
 
 # tests/rolldown/function/advanced_chunks/max_size3
 
-- main-!~{000}~.js => main-Bl-mjDB_.js
-- 42max-size-!~{001}~.js => 42max-size-CyNLMSnx.js
+- main-!~{000}~.js => main-CNQ1zr8K.js
+- 42max-size-!~{003}~.js => 42max-size-BTwrW0Un.js
+- 42max-size-!~{001}~.js => 42max-size-Bal5MwKW.js
 
 # tests/rolldown/function/advanced_chunks/min_module_size
 

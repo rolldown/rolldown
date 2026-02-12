@@ -270,15 +270,15 @@ impl GenerateStage<'_> {
           } else {
             // TODO: Though, [0..next_left_index] is a valid group, we want to find a best split index that makes files in left group are in the same disk location.
             let mut split_size = left_size;
-            loop {
-              if next_left_index <= next_right_index && split_size < allow_max_size {
-                split_size += self.link_output.module_table.modules
-                  [modules[next_left_index as usize]]
-                  .size() as f64;
-                next_left_index += 1;
-              } else {
+            while next_left_index <= next_right_index {
+              let next_size = self.link_output.module_table.modules
+                [modules[next_left_index as usize]]
+                .size() as f64;
+              if split_size > 0.0 && split_size + next_size > allow_max_size {
                 break;
               }
+              split_size += next_size;
+              next_left_index += 1;
             }
             while next_left_index <= next_right_index && next_right_index >= 0 {
               right_size += self.link_output.module_table.modules

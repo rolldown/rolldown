@@ -336,7 +336,6 @@ impl GenerateStage<'_> {
         }
         let chunk_idxs: Vec<_> = bits
           .index_of_one()
-          .into_iter()
           .map(ChunkIdx::from_raw)
           // Some of the bits maybe not created yet, so filter it out.
           // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313

@@ -5,8 +5,8 @@ use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Asset, ChunkIdx, ConcatenateWrappedModuleKind, EmittedChunkInfo, InstantiationKind,
-  ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk,
-  PostChunkOptimizationOperation, SharedFileEmitter, SymbolRef,
+  ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter,
+  SymbolRef,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult};
@@ -181,12 +181,7 @@ impl GenerateStage<'_> {
         .filter_map(|(idx, module_id_to_codegen_ret)| {
           let chunk_idx =
             ChunkIdx::from_raw(u32::try_from(idx).expect("chunk index should fit in u32"));
-          if chunk_graph
-            .post_chunk_optimization_operations
-            .get(&chunk_idx)
-            .map(|flag| flag.contains(PostChunkOptimizationOperation::Removed))
-            .unwrap_or(false)
-          {
+          if chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx) {
             return None;
           }
           let chunk = chunk_graph.chunk_table.get(chunk_idx)?;

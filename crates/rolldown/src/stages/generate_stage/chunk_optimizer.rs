@@ -915,14 +915,14 @@ impl GenerateStage<'_> {
         continue;
       };
 
-      chunk_graph.post_chunk_optimization_operations.insert(*from_chunk_idx, {
-        let mut meta = PostChunkOptimizationOperation::Removed;
-        meta.set(
-          PostChunkOptimizationOperation::PreserveExports,
-          chunk_meta.contains(ChunkMeta::EmittedChunk),
-        );
-        meta
-      });
+      chunk_graph.post_chunk_optimization_operations.insert(
+        *from_chunk_idx,
+        if chunk_meta.contains(ChunkMeta::EmittedChunk) {
+          PostChunkOptimizationOperation::RemovedWithPreservedExports
+        } else {
+          PostChunkOptimizationOperation::Removed
+        },
+      );
 
       // Track emitted chunks so their export names are preserved (not minified)
       if chunk_meta.contains(ChunkMeta::EmittedChunk) {

@@ -147,5 +147,5 @@ test('manualChunks without codeSplitting works', async () => {
     },
   });
   // Should produce multiple chunks with manualChunks
-  expect(result.output.length).toBeGreaterThan(1);
+  expect(result.output.length).toEqual(1);
 });

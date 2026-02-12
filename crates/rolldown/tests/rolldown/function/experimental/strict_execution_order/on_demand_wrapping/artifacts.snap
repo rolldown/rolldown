@@ -6,15 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { t as require_dynamic } from "./dynamic2.js";
-
-export default require_dynamic();
-
-```
-
-## dynamic2.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region dynamic.js
 var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -23,13 +14,15 @@ var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 }));
 
 //#endregion
+export default require_dynamic();
+
 export { __esmMin as n, require_dynamic as t };
 ```
 
 ## main.js
 
 ```js
-import { n as __esmMin, t as require_dynamic } from "./dynamic2.js";
+import { n as __esmMin, t as require_dynamic } from "./dynamic.js";
 import { strictEqual } from "node:assert";
 
 function foo() {

@@ -12,7 +12,7 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason,
-  PreserveEntrySignatures, SymbolRef, WrapKind,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
@@ -182,8 +182,12 @@ impl GenerateStage<'_> {
 
     chunk_graph
       .chunk_table
-      .iter_mut()
-      .sorted_by(|a, b| {
+      .iter_mut_enumerated()
+      .filter(|(chunk_idx, _chunk)| {
+        chunk_graph.post_chunk_optimization_operations.get(chunk_idx).copied()
+          != Some(PostChunkOptimizationOperation::Removed)
+      })
+      .sorted_by(|(_ai, a), (_bi, b)| {
         let a_should_be_first = Ordering::Less;
         let b_should_be_first = Ordering::Greater;
 
@@ -224,7 +228,7 @@ impl GenerateStage<'_> {
         }
       })
       .enumerate()
-      .for_each(|(i, chunk)| {
+      .for_each(|(i, (_chunk_idx, chunk))| {
         chunk.exec_order = i.try_into().expect("Too many chunks, u32 overflowed.");
       });
     // The esbuild using `Chunk#bits` to sorted chunks, but the order of `Chunk#bits` is not stable, eg `BitSet(0) 00000001_00000000` > `BitSet(8) 00000000_00000001`. It couldn't ensure the order of dynamic chunks and common chunks.
@@ -844,39 +848,6 @@ impl GenerateStage<'_> {
         if allow_chunk_optimization {
           temp_chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
         }
-      } else if normal_module.is_user_defined_entry
-        && self.link_output.metas[normal_module.idx].wrap_kind().is_none()
-        // Don't apply this optimization when multiple entries point to the same module
-        // (duplicate entries). In that case, we need the normal chunk optimization to
-        // ensure the second entry properly imports from the first.
-        && self
-          .link_output
-          .entries
-          .get(&normal_module.idx)
-          .is_some_and(|entries| entries.len() <= 1)
-      {
-        // User-defined entry modules that are NOT wrapped should stay in their own entry chunk,
-        // even when reachable from multiple entries. This avoids creating unnecessary
-        // common chunks that would turn the entry into a facade.
-        //
-        // Wrapped modules (CJS or ESM wrapping for circular dependencies) need to go through
-        // the normal chunk optimization to ensure proper execution semantics.
-        let entry_chunk_idx = chunk_graph.entry_module_to_entry_chunk.get(&normal_module.idx);
-        debug_assert!(
-          entry_chunk_idx.is_some(),
-          "User-defined entry module should have an entry chunk"
-        );
-        if let Some(&entry_chunk_idx) = entry_chunk_idx {
-          chunk_graph.add_module_to_chunk(
-            normal_module.idx,
-            entry_chunk_idx,
-            self.link_output.metas[normal_module.idx].depended_runtime_helper,
-          );
-
-          if allow_chunk_optimization {
-            temp_chunk_graph.add_module_to_chunk(normal_module.idx, entry_chunk_idx);
-          }
-        }
       } else if allow_chunk_optimization {
         temp_chunk_graph.init_module_assignment(normal_module.idx, bits);
       } else {
@@ -898,7 +869,6 @@ impl GenerateStage<'_> {
 
     if allow_chunk_optimization {
       temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
-
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,

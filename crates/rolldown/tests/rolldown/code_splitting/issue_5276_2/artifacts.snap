@@ -42,7 +42,7 @@ load();
 
 ## Assets
 
-### imp2.js
+### imp.js
 
 ```js
 const require_rolldown_runtime = require('./rolldown-runtime.js');
@@ -80,7 +80,7 @@ Object.defineProperty(exports, 'imp_exports', {
 
 ```js
 const require_rolldown_runtime = require('./rolldown-runtime.js');
-const require_imp = require('./imp2.js');
+const require_imp = require('./imp.js');
 let node_assert = require("node:assert");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
 
@@ -88,7 +88,7 @@ node_assert = require_rolldown_runtime.__toESM(node_assert);
 node_assert.default.strictEqual(require_imp.imp2, 2);
 node_assert.default.strictEqual(require_imp.imp22, 22);
 const load = async () => {
-	Promise.resolve().then(() => require("./imp2.js")).then((n) => n.imp_exports).then((m) => {
+	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp_exports).then((m) => {
 		node_assert.default.strictEqual(m.imp22, 22);
 	});
 };

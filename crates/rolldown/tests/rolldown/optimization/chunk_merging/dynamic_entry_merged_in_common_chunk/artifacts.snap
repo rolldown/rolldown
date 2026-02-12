@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## imp2.js
+## imp.js
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
@@ -25,7 +25,7 @@ import assert from "node:assert";
 
 //#region main.js
 const load = async () => {
-	import("./imp2.js").then((n) => /* @__PURE__ */ __toESM(n.t())).then((m) => {
+	import("./imp.js").then((n) => /* @__PURE__ */ __toESM(n.t())).then((m) => {
 		assert.strictEqual(m.imp, 1);
 	});
 };
@@ -45,7 +45,7 @@ export { __toESM as n, __commonJSMin as t };
 
 ## Assets
 
-### imp2.js
+### imp.js
 
 ```js
 const require_rolldown_runtime = require('./rolldown-runtime.js');
@@ -73,7 +73,7 @@ node_assert = require_rolldown_runtime.__toESM(node_assert);
 
 //#region main.js
 const load = async () => {
-	Promise.resolve().then(() => require("./imp2.js")).then((n) => /* @__PURE__ */ require_rolldown_runtime.__toESM(n.require_imp())).then((m) => {
+	Promise.resolve().then(() => require("./imp.js")).then((n) => /* @__PURE__ */ require_rolldown_runtime.__toESM(n.require_imp())).then((m) => {
 		node_assert.default.strictEqual(m.imp, 1);
 	});
 };

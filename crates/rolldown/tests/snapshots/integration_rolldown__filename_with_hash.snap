@@ -761,12 +761,12 @@ expression: output
 
 # tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle
 
-- a-!~{000}~.js => a-mALZYjWR.js
-- b-!~{001}~.js => b-DR3Jp0zR.js
+- a-!~{000}~.js => a-CpDAQlp9.js
+- b-!~{001}~.js => b-BS8icH4l.js
 - c-!~{002}~.js => c-DbAYnqxj.js
 - d-!~{003}~.js => d-erhulghW.js
 - e-!~{004}~.js => e-BluWtRWc.js
-- chunk-!~{005}~.js => chunk-CCMGRua-.js
+- b-!~{005}~.js => b-WEHixoCp.js
 
 # tests/esbuild/default/export_fs_browser
 
@@ -3198,8 +3198,8 @@ expression: output
 
 # tests/esbuild/splitting/splitting_circular_reference_issue251
 
-- a-!~{000}~.js => a-ihDTYBUr.js
-- b-!~{001}~.js => b-B789AAGM.js
+- a-!~{000}~.js => a-Cg-4jZHa.js
+- b-!~{001}~.js => b-ChRetgD2.js
 
 # tests/esbuild/splitting/splitting_cross_chunk_assignment_dependencies
 
@@ -4095,7 +4095,7 @@ expression: output
 
 # tests/rolldown/function/experimental/attach_debug_info/eliminated_facade_chunk
 
-- main-!~{000}~.js => main-BKRlWjLT.js
+- main-!~{000}~.js => main-Bs4DH1B3.js
 
 # tests/rolldown/function/experimental/attach_debug_info/full
 
@@ -4181,9 +4181,8 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/on_demand_wrapping
 
-- dynamic-!~{001}~.js => dynamic-CM3qXnG5.js
-- main-!~{000}~.js => main-B5wcXUVp.js
-- dynamic-!~{002}~.js => dynamic-COv7SEvg.js
+- dynamic-!~{001}~.js => dynamic-Xel8onEt.js
+- main-!~{000}~.js => main-ByUjAZkr.js
 
 # tests/rolldown/function/experimental/strict_execution_order/react-like
 
@@ -4823,10 +4822,10 @@ expression: output
 
 # tests/rolldown/issues/3438
 
-- main-!~{000}~.js => main-Bme1_4Jw.js
-- repro1-!~{005}~.js => repro1-pR1uhGPo.js
-- repro2-!~{009}~.js => repro2-mDWsVtgE.js
-- repro3-!~{00d}~.js => repro3-CYHFWu8G.js
+- main-!~{000}~.js => main-ULyDPtdE.js
+- repro1-!~{003}~.js => repro1-BasDKn2G.js
+- repro2-!~{005}~.js => repro2-BVJqbvNd.js
+- repro3-!~{007}~.js => repro3-CHITd3Cb.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BulwG9Fz.js
 
 # tests/rolldown/issues/3456
@@ -5196,6 +5195,12 @@ expression: output
 
 - main-!~{000}~.js => main-h6-DlyQZ.js
 
+# tests/rolldown/issues/rolldown_vite_593
+
+- component-!~{000}~.js => component-BTnTnY-f.js
+- safehtml-!~{001}~.js => safehtml-Dr7btxC3.js
+- shared-!~{002}~.js => shared-CfwZqeIy.js
+
 # tests/rolldown/misc/ambiguous_star_export
 
 - main-!~{000}~.js => main-Brk4weCb.js
@@ -5433,14 +5438,14 @@ expression: output
 
 # tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_common_chunk
 
-- main-!~{000}~.js => main-DyO0mWoB.js
-- imp-!~{005}~.js => imp-CNvo_7yO.js
+- main-!~{000}~.js => main-D9wmxZTp.js
+- imp-!~{003}~.js => imp-EL0KnFlK.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-Cn2vKvQI.js
 
 # tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_common_chunk2
 
-- main-!~{000}~.js => main-BBmAMTJO.js
-- imp-!~{005}~.js => imp-C-8esCQj.js
+- main-!~{000}~.js => main-Cu9aPJzs.js
+- imp-!~{003}~.js => imp-yF_llMOy.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-LBLeim20.js
 
 # tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_user_defined_entry
@@ -6451,8 +6456,8 @@ expression: output
 
 # tests/rolldown/tree_shaking/issue_4682
 
-- main-!~{000}~.js => main-BB5CNVCj.js
-- dynamic-!~{005}~.js => dynamic-Cs9abkYc.js
+- main-!~{000}~.js => main-DlNrw6EF.js
+- dynamic-!~{003}~.js => dynamic-jIK3n6pC.js
 - static-!~{001}~.js => static-DSarUgD0.js
 
 # tests/rolldown/tree_shaking/json_default_import

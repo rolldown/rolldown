@@ -101,7 +101,7 @@ export interface NormalizedOutputOptions {
   /** @see {@linkcode OutputOptions.virtualDirname | virtualDirname} */
   virtualDirname: string;
   /** @see {@linkcode OutputOptions.preserveModulesRoot | preserveModulesRoot} */
-  preserveModulesRoot?: string;
+  preserveModulesRoot: string | undefined;
   /** @see {@linkcode OutputOptions.topLevelVar | topLevelVar} */
   topLevelVar?: boolean;
   /** @see {@linkcode OutputOptions.minifyInternalExports | minifyInternalExports} */

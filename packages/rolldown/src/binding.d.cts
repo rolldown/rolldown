@@ -2423,9 +2423,9 @@ export interface BindingPluginOptions {
   renderStartMeta?: BindingPluginHookMeta
   renderError?: (ctx: BindingPluginContext, error: BindingError[]) => void
   renderErrorMeta?: BindingPluginHookMeta
-  generateBundle?: (ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
+  generateBundle?: (ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   generateBundleMeta?: BindingPluginHookMeta
-  writeBundle?: (ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
+  writeBundle?: (ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   writeBundleMeta?: BindingPluginHookMeta
   closeBundle?: (ctx: BindingPluginContext, error?: BindingError[]) => MaybePromise<VoidNullable>
   closeBundleMeta?: BindingPluginHookMeta

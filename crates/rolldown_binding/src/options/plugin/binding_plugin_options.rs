@@ -140,7 +140,7 @@ pub struct BindingPluginOptions {
   pub render_error_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
+    ts_type = "(ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
   pub generate_bundle: Option<
     MaybeAsyncJsCallback<
@@ -151,7 +151,7 @@ pub struct BindingPluginOptions {
   pub generate_bundle_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
+    ts_type = "(ctx: BindingPluginContext, bundle: BindingResult<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
   pub write_bundle: Option<
     MaybeAsyncJsCallback<

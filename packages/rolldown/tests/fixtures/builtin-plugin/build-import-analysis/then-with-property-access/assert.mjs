@@ -1,4 +1,3 @@
-// @ts-nocheck
 import assert from 'node:assert';
 import { a, b } from './dist/main';
 

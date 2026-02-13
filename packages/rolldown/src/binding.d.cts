@@ -2082,8 +2082,8 @@ export interface BindingHmrBoundaryOutput {
 }
 
 export type BindingHmrUpdate =
-  | { type: 'Patch', code: string, filename: string, sourcemap?: string, sourcemapFilename?: string, hmrBoundaries: Array<BindingHmrBoundaryOutput> }
-  | { type: 'FullReload', reason?: string }
+  | { type: 'Patch', code: string, filename: string, sourcemap?: string, sourcemapFilename?: string, hmrBoundaries: Array<BindingHmrBoundaryOutput>, hasSkippedBoundary: boolean, modulesToUpdateCount: number }
+  | { type: 'FullReload', reason?: string, hasSkippedBoundary: boolean }
   | { type: 'Noop' }
 
 export interface BindingHookFilter {

@@ -4,12 +4,13 @@ use std::{
 };
 
 use rolldown::{BundlerOptions, InputItem, Log, LogLevel, LogWithoutPlugin, OnLog};
-use rolldown_plugin::{HookUsage, Plugin, PluginContext};
+use rolldown_plugin::{Plugin, PluginContext, RegisterHook};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 #[derive(Debug)]
 struct TestPlugin;
 
+#[RegisterHook]
 impl Plugin for TestPlugin {
   fn name(&self) -> Cow<'static, str> {
     "TestPlugin".into()
@@ -24,10 +25,6 @@ impl Plugin for TestPlugin {
     ctx.warn(LogWithoutPlugin { message: "warn".to_owned(), ..Default::default() });
     ctx.debug(LogWithoutPlugin { message: "debug".to_owned(), ..Default::default() });
     Ok(())
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::BuildStart
   }
 }
 

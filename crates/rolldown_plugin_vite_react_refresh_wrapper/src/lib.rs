@@ -3,7 +3,7 @@ use std::{borrow::Cow, fmt::Write, sync::LazyLock};
 use arcstr::ArcStr;
 use regex::Regex;
 use rolldown_plugin::{
-  HookResolveIdOutput, HookTransformOutput, HookUsage, Plugin, PluginHookMeta, PluginOrder,
+  HookResolveIdOutput, HookTransformOutput, Plugin, PluginHookMeta, PluginOrder, RegisterHook,
 };
 use rolldown_plugin_utils::to_string_literal;
 use rolldown_utils::pattern_filter::{FilterResult, StringOrRegex, filter};
@@ -95,6 +95,7 @@ function $RefreshSig$() {{ return RefreshRuntime.createSignatureFunctionForTrans
   }
 }
 
+#[RegisterHook]
 impl Plugin for ViteReactRefreshWrapperPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     Cow::Borrowed("builtin:vite-react-refresh-wrapper")
@@ -138,10 +139,6 @@ impl Plugin for ViteReactRefreshWrapperPlugin {
       return Ok(None);
     };
     Ok(Some(HookTransformOutput { code: Some(new_code), map: None, ..Default::default() }))
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId | HookUsage::Transform
   }
 }
 

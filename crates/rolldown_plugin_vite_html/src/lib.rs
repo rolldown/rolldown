@@ -12,7 +12,7 @@ use cow_utils::CowUtils as _;
 use html5gum::Span;
 use oxc::ast_visit::Visit;
 use rolldown_common::side_effects::HookSideEffects;
-use rolldown_plugin::{HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
+use rolldown_plugin::{HookTransformOutput, LogWithoutPlugin, Plugin, RegisterHook};
 use rolldown_plugin_utils::{
   AssetUrlResult, ModulePreload, RenderBuiltUrl, ToOutputFilePathEnv, UsizeOrFunction,
   constants::{CSSBundleName, HTMLProxyMapItem},
@@ -52,13 +52,10 @@ pub struct ViteHtmlPlugin {
   pub html_result_map: FxDashMap<(String, String), (String, bool)>,
 }
 
+#[RegisterHook]
 impl Plugin for ViteHtmlPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-html")
-  }
-
-  fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
-    HookUsage::BuildStart | HookUsage::Transform | HookUsage::GenerateBundle
   }
 
   async fn build_start(

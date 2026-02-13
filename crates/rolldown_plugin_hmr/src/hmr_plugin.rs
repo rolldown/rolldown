@@ -1,19 +1,16 @@
 use rolldown_common::{Platform, RUNTIME_MODULE_KEY, ResolvedExternal};
 use rolldown_plugin::{
-  HookResolveIdOutput, HookTransformArgs, HookTransformOutput, HookTransformReturn, HookUsage,
-  Plugin, SharedTransformPluginContext,
+  HookResolveIdOutput, HookTransformArgs, HookTransformOutput, HookTransformReturn, Plugin,
+  RegisterHook, SharedTransformPluginContext,
 };
 
 #[derive(Debug)]
 pub struct HmrPlugin;
 
+#[RegisterHook]
 impl Plugin for HmrPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     "builtin:hmr".into()
-  }
-
-  fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
-    HookUsage::Transform | HookUsage::ResolveId
   }
 
   async fn resolve_id(

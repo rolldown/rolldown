@@ -4,20 +4,17 @@ use std::borrow::Cow;
 
 use oxc::ast_visit::VisitMut;
 use rolldown_ecmascript_utils::AstSnippet;
-use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
+use rolldown_plugin::{Plugin, PluginHookMeta, PluginOrder, RegisterHook};
 
 use crate::ast_visitor::WebWorkerPostVisitor;
 
 #[derive(Debug)]
 pub struct ViteWebWorkerPostPlugin;
 
+#[RegisterHook]
 impl Plugin for ViteWebWorkerPostPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-web-worker-post")
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::TransformAst
   }
 
   async fn transform_ast(

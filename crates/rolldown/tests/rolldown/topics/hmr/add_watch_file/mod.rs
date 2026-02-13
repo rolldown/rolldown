@@ -1,12 +1,13 @@
 use std::{borrow::Cow, fs, sync::Arc};
 
 use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions, InputItem};
-use rolldown_plugin::{HookUsage, Plugin};
+use rolldown_plugin::{Plugin, RegisterHook};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 use sugar_path::SugarPath;
 #[derive(Debug)]
 struct TestPlugin;
 
+#[RegisterHook]
 impl Plugin for TestPlugin {
   fn name(&self) -> Cow<'static, str> {
     "TestPlugin".into()
@@ -25,10 +26,6 @@ impl Plugin for TestPlugin {
       &format!("\"{}\"", content.replace('\n', "\\n")),
     );
     Ok(Some(rolldown_plugin::HookTransformOutput { code: Some(new_code), ..Default::default() }))
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform
   }
 }
 

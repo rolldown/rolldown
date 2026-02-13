@@ -4,7 +4,7 @@ use rolldown::{BundlerOptions, InputItem, PreserveEntrySignatures};
 use rolldown_common::{
   EmittedChunk, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, MatchGroupTest,
 };
-use rolldown_plugin::{HookUsage, Plugin, PluginContext};
+use rolldown_plugin::{Plugin, PluginContext, RegisterHook};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 use rolldown_utils::js_regex::HybridRegex;
 
@@ -13,6 +13,7 @@ use rolldown_utils::js_regex::HybridRegex;
 #[derive(Debug)]
 struct EmitChunkPlugin;
 
+#[RegisterHook]
 impl Plugin for EmitChunkPlugin {
   fn name(&self) -> Cow<'static, str> {
     "emit-chunk-plugin".into()
@@ -46,10 +47,6 @@ impl Plugin for EmitChunkPlugin {
       })
       .await?;
     Ok(())
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::BuildStart
   }
 }
 

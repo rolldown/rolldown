@@ -3,12 +3,13 @@ use std::{borrow::Cow, sync::Arc};
 use anyhow::Ok;
 use rolldown::{AssetFilenamesOutputOption, BundlerOptions, InputItem};
 use rolldown_common::EmittedAsset;
-use rolldown_plugin::{HookUsage, Plugin, PluginContext};
+use rolldown_plugin::{Plugin, PluginContext, RegisterHook};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 #[derive(Debug)]
 struct TestPlugin;
 
+#[RegisterHook]
 impl Plugin for TestPlugin {
   fn name(&self) -> Cow<'static, str> {
     "test-plugin".into()
@@ -31,10 +32,6 @@ impl Plugin for TestPlugin {
     )?;
 
     Ok(None)
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::RenderChunk
   }
 }
 

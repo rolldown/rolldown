@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use rolldown_common::ModuleType;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookUsage, Plugin, PluginContext, SharedLoadPluginContext,
+  HookResolveIdReturn, Plugin, PluginContext, RegisterHook, SharedLoadPluginContext,
 };
 use rolldown_utils::{
   dashmap::FxDashMap,
@@ -22,6 +22,7 @@ pub struct DataUriPlugin {
   resolved_data_uri: FxDashMap<String, ResolvedDataUri>,
 }
 
+#[RegisterHook]
 impl Plugin for DataUriPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:data-uri")
@@ -80,9 +81,5 @@ impl Plugin for DataUriPlugin {
     } else {
       Ok(None)
     }
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId | HookUsage::Load
   }
 }

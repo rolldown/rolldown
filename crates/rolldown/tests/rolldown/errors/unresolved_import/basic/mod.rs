@@ -2,13 +2,14 @@ use std::{borrow::Cow, sync::Arc};
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
-  HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin, PluginContext,
+  HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext, RegisterHook,
 };
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 #[derive(Debug)]
 struct UnresolvedImport;
 
+#[RegisterHook]
 impl Plugin for UnresolvedImport {
   fn name(&self) -> Cow<'static, str> {
     "unresolved-import-basic".into()
@@ -27,10 +28,6 @@ impl Plugin for UnresolvedImport {
       }));
     }
     Ok(None)
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId
   }
 }
 

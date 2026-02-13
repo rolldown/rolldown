@@ -14,7 +14,7 @@ use cow_utils::CowUtils;
 use rolldown_common::{
   ModuleType, NormalizedBundlerOptions, Output, StrOrBytes, side_effects::HookSideEffects,
 };
-use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
+use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, Plugin, RegisterHook};
 use rolldown_plugin_utils::{
   RenderBuiltUrl, ToOutputFilePathEnv,
   constants::{
@@ -67,18 +67,10 @@ pub struct ViteCSSPostPlugin {
   pub has_emitted: AtomicBool,
 }
 
+#[RegisterHook]
 impl Plugin for ViteCSSPostPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     std::borrow::Cow::Borrowed("builtin:vite-css-post")
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::BuildStart
-      | HookUsage::Transform
-      | HookUsage::RenderStart
-      | HookUsage::RenderChunk
-      | HookUsage::AugmentChunkHash
-      | HookUsage::GenerateBundle
   }
 
   async fn build_start(

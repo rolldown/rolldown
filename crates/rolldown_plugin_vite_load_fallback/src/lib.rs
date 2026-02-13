@@ -1,13 +1,14 @@
 use std::borrow::Cow;
 
 use rolldown_plugin::{
-  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookUsage, Plugin, SharedLoadPluginContext,
+  HookLoadArgs, HookLoadOutput, HookLoadReturn, Plugin, RegisterHook, SharedLoadPluginContext,
 };
 use rolldown_utils::dataurl::is_data_url;
 
 #[derive(Debug)]
 pub struct ViteLoadFallbackPlugin;
 
+#[RegisterHook]
 impl Plugin for ViteLoadFallbackPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-load-fallback")
@@ -28,9 +29,5 @@ impl Plugin for ViteLoadFallbackPlugin {
     ctx.add_watch_file(path);
 
     Ok(Some(HookLoadOutput { code: code.into(), ..Default::default() }))
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Load
   }
 }

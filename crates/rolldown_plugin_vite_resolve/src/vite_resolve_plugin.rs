@@ -17,7 +17,7 @@ use sugar_path::SugarPath;
 use rolldown_common::{ImportKind, WatcherChangeKind, side_effects::HookSideEffects};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookUsage, Plugin, PluginContext, typedmap::TypedMapKey,
+  HookResolveIdReturn, Plugin, PluginContext, RegisterHook, typedmap::TypedMapKey,
 };
 use rolldown_std_utils::PathExt as _;
 use rolldown_utils::{dataurl::is_data_url, pattern_filter::StringOrRegex};
@@ -212,6 +212,7 @@ impl ViteResolvePlugin {
   }
 }
 
+#[RegisterHook]
 impl Plugin for ViteResolvePlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("rolldown:vite-resolve")
@@ -561,10 +562,6 @@ impl Plugin for ViteResolvePlugin {
       WatcherChangeKind::Update => {}
     };
     Ok(())
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId | HookUsage::Load | HookUsage::WatchChange
   }
 }
 

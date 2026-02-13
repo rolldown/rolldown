@@ -5,7 +5,7 @@ mod utils;
 use std::{borrow::Cow, path::PathBuf, pin::Pin, sync::Arc};
 
 use oxc::ast_visit::VisitMut;
-use rolldown_plugin::{HookUsage, Plugin};
+use rolldown_plugin::{Plugin, RegisterHook};
 use rolldown_plugin_utils::{FileToUrlEnv, UsizeOrFunction};
 use rolldown_utils::dataurl::is_data_url;
 use sugar_path::SugarPath as _;
@@ -32,13 +32,10 @@ pub struct ViteAssetImportMetaUrlPlugin {
   pub asset_inline_limit: UsizeOrFunction,
 }
 
+#[RegisterHook]
 impl Plugin for ViteAssetImportMetaUrlPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-asset-import-meta-url")
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform
   }
 
   async fn transform(

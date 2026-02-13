@@ -3,7 +3,7 @@ mod utils;
 use std::borrow::Cow;
 
 use rolldown_common::ModuleType;
-use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin};
+use rolldown_plugin::{HookTransformOutput, Plugin, RegisterHook};
 use rolldown_plugin_utils::{constants, data_to_esm, is_special_query};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::concat_string;
@@ -24,6 +24,7 @@ pub enum ViteJsonPluginStringify {
   False,
 }
 
+#[RegisterHook]
 impl Plugin for ViteJsonPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-json")
@@ -75,9 +76,5 @@ impl Plugin for ViteJsonPlugin {
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))
-  }
-
-  fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
-    HookUsage::Transform
   }
 }

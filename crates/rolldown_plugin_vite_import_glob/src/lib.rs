@@ -4,7 +4,7 @@ use std::{borrow::Cow, path::PathBuf};
 
 use oxc::ast_visit::Visit;
 use rolldown_common::ModuleType;
-use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin};
+use rolldown_plugin::{HookTransformOutput, Plugin, RegisterHook};
 use sugar_path::SugarPath as _;
 
 #[derive(Debug, Default)]
@@ -16,13 +16,10 @@ pub struct ViteImportGlobPlugin {
   pub restore_query_extension: bool,
 }
 
+#[RegisterHook]
 impl Plugin for ViteImportGlobPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-import-glob")
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform
   }
 
   async fn transform(

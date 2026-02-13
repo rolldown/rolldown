@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use rolldown_common::{OutputFormat, side_effects::HookSideEffects};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookUsage, Plugin, PluginContext, SharedLoadPluginContext,
+  HookResolveIdReturn, Plugin, PluginContext, RegisterHook, SharedLoadPluginContext,
 };
 
 const MODULE_PRELOAD_POLYFILL: &str = "vite/modulepreload-polyfill";
@@ -15,6 +15,7 @@ pub struct ViteModulePreloadPolyfillPlugin {
   pub is_server: bool,
 }
 
+#[RegisterHook]
 impl Plugin for ViteModulePreloadPolyfillPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-module-preload-polyfill")
@@ -43,9 +44,5 @@ impl Plugin for ViteModulePreloadPolyfillPlugin {
         }
       }
     }))
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId | HookUsage::Load
   }
 }

@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, ImplItem, ItemImpl};
+use syn::{ImplItem, ItemImpl, parse_macro_input};
 
 /// Automatically generates the `register_hook_usage` method for Plugin implementations.
 ///

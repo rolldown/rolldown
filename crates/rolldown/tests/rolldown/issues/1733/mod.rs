@@ -2,7 +2,7 @@ use std::{borrow::Cow, sync::Arc};
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
-  HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin, PluginContext,
+  HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext, RegisterHook,
 };
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 use sugar_path::SugarPath;
@@ -10,6 +10,7 @@ use sugar_path::SugarPath;
 #[derive(Debug)]
 struct ExternalCss;
 
+#[RegisterHook]
 impl Plugin for ExternalCss {
   fn name(&self) -> Cow<'static, str> {
     "external-css".into()
@@ -29,10 +30,6 @@ impl Plugin for ExternalCss {
       }));
     }
     Ok(None)
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId
   }
 }
 

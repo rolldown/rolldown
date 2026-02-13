@@ -2,7 +2,7 @@ use std::{borrow::Cow, sync::Arc};
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_common::RUNTIME_MODULE_KEY;
-use rolldown_plugin::{HookTransformReturn, HookUsage, Plugin, SharedTransformPluginContext};
+use rolldown_plugin::{HookTransformReturn, Plugin, RegisterHook, SharedTransformPluginContext};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 /// A plugin that removes `__exportAll` and `__toCommonJS` from the runtime module,
@@ -10,6 +10,7 @@ use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 #[derive(Debug)]
 struct RuntimeBreakingPlugin;
 
+#[RegisterHook]
 impl Plugin for RuntimeBreakingPlugin {
   fn name(&self) -> Cow<'static, str> {
     "runtime-breaking-plugin".into()
@@ -32,10 +33,6 @@ impl Plugin for RuntimeBreakingPlugin {
       }));
     }
     Ok(None)
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform
   }
 }
 

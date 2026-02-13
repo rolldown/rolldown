@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path};
 
 use cow_utils::CowUtils;
 use rolldown_plugin::{
-  HookResolveIdOutput, HookUsage, Plugin, PluginContext, PluginContextResolveOptions,
+  HookResolveIdOutput, Plugin, PluginContext, PluginContextResolveOptions, RegisterHook,
 };
 use rolldown_utils::pattern_filter::StringOrRegex;
 
@@ -20,6 +20,7 @@ pub struct Alias {
   pub replacement: String,
 }
 
+#[RegisterHook]
 impl Plugin for ViteAliasPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-alias")
@@ -72,9 +73,5 @@ impl Plugin for ViteAliasPlugin {
         HookResolveIdOutput::from_id(specifier)
       }
     }))
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId
   }
 }

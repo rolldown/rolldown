@@ -2,7 +2,7 @@ use std::{borrow::Cow, path::Path, sync::Arc};
 
 use arcstr::ArcStr;
 use rolldown_common::{EmittedAsset, Output, OutputChunk};
-use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
+use rolldown_plugin::{HookNoopReturn, Plugin, PluginContext, RegisterHook};
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
@@ -88,13 +88,10 @@ pub(crate) struct ModuleData {
   pub(crate) importers: Option<Vec<usize>>,
 }
 
+#[RegisterHook]
 impl Plugin for BundleAnalyzerPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:bundle-analyzer")
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::GenerateBundle
   }
 
   async fn generate_bundle(

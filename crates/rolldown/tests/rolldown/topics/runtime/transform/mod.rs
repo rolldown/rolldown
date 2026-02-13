@@ -8,7 +8,7 @@ use std::{
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_common::RUNTIME_MODULE_KEY;
-use rolldown_plugin::{HookBuildStartArgs, HookNoopReturn, HookUsage, Plugin, PluginContext};
+use rolldown_plugin::{HookBuildStartArgs, HookNoopReturn, Plugin, PluginContext, RegisterHook};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 /// Per-build state stored in PluginContextMeta to avoid race conditions
@@ -22,6 +22,7 @@ struct RuntimeTransformState {
 #[derive(Debug)]
 struct RuntimeTransformPlugin;
 
+#[RegisterHook]
 impl Plugin for RuntimeTransformPlugin {
   fn name(&self) -> Cow<'static, str> {
     "runtime-transform-plugin".into()
@@ -65,10 +66,6 @@ impl Plugin for RuntimeTransformPlugin {
       return Err(anyhow::anyhow!("Transform hook was not called for the runtime module"));
     }
     Ok(())
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::BuildStart | HookUsage::Transform | HookUsage::BuildEnd
   }
 }
 

@@ -2,19 +2,16 @@ use std::{borrow::Cow, sync::Arc};
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_error::BatchedBuildDiagnostic;
-use rolldown_plugin::{HookUsage, Plugin, PluginContext};
+use rolldown_plugin::{Plugin, PluginContext, RegisterHook};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 #[derive(Debug)]
 struct PluginErrorTest;
 
+#[RegisterHook]
 impl Plugin for PluginErrorTest {
   fn name(&self) -> Cow<'static, str> {
     "plugin-error-test".into()
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::BuildStart
   }
 
   async fn build_start(

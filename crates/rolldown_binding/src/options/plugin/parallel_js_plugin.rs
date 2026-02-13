@@ -8,9 +8,9 @@ use std::sync::Arc;
 use futures::future::{self, BoxFuture};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_plugin::__inner::Pluginable;
-use rolldown_plugin::HookUsage;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_plugin::Plugin;
+use rolldown_plugin::RegisterHook;
 
 use crate::worker_manager::WorkerManager;
 
@@ -75,6 +75,7 @@ impl ParallelJsPlugin {
 }
 
 #[cfg(not(target_family = "wasm"))]
+#[RegisterHook]
 impl Plugin for ParallelJsPlugin {
   fn name(&self) -> Cow<'static, str> {
     self.first_plugin().call_name()
@@ -176,9 +177,5 @@ impl Plugin for ParallelJsPlugin {
     } else {
       Ok(())
     }
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::all()
   }
 }

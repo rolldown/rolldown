@@ -4,7 +4,7 @@ use std::sync::{Arc, OnceLock};
 use arcstr::ArcStr;
 use oxc::ast_visit::VisitMut;
 use rolldown_common::{ImportKind, ModuleId};
-use rolldown_plugin::{HookResolveIdOutput, HookUsage, Plugin, PluginContextResolveOptions};
+use rolldown_plugin::{HookResolveIdOutput, Plugin, PluginContextResolveOptions, RegisterHook};
 use rolldown_utils::dashmap::FxDashSet;
 
 use crate::runtime_injector::{
@@ -61,13 +61,10 @@ impl LazyCompilationPlugin {
   }
 }
 
+#[RegisterHook]
 impl Plugin for LazyCompilationPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     "lazy-compilation".into()
-  }
-
-  fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
-    HookUsage::BuildStart | HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst
   }
 
   async fn build_start(

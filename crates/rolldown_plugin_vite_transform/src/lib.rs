@@ -10,7 +10,7 @@ use oxc::semantic::SemanticBuilder;
 use oxc::transformer::Transformer;
 use rolldown_common::{BundlerTransformOptions, ModuleType};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
-use rolldown_plugin::{HookUsage, Plugin, SharedTransformPluginContext};
+use rolldown_plugin::{Plugin, RegisterHook, SharedTransformPluginContext};
 use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, url::clean_url};
 
 #[derive(Debug, Default)]
@@ -38,6 +38,7 @@ impl ViteTransformPlugin {
 }
 
 /// only handle ecma like syntax, `jsx`,`tsx`,`ts`
+#[RegisterHook]
 impl Plugin for ViteTransformPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-transform")
@@ -103,9 +104,5 @@ impl Plugin for ViteTransformPlugin {
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform
   }
 }

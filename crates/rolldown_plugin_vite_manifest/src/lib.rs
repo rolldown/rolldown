@@ -3,7 +3,7 @@ mod utils;
 use std::{borrow::Cow, collections::BTreeMap, path::Path, pin::Pin, sync::Arc};
 
 use rolldown_common::{EmittedAsset, NormalizedBundlerOptions, Output};
-use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
+use rolldown_plugin::{HookNoopReturn, Plugin, PluginContext, RegisterHook};
 use rolldown_plugin_utils::constants::{CSSEntriesCache, ViteMetadata};
 use rolldown_utils::rustc_hash::FxHashMapExt as _;
 use rustc_hash::FxHashMap;
@@ -27,6 +27,7 @@ pub struct ViteManifestPlugin {
   pub css_entries: Arc<CssEntriesFn>,
 }
 
+#[RegisterHook]
 impl Plugin for ViteManifestPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-manifest")
@@ -139,9 +140,5 @@ impl Plugin for ViteManifestPlugin {
     // }
 
     Ok(())
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::GenerateBundle
   }
 }

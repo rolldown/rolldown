@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use nodejs_built_in_modules::is_nodejs_builtin_module;
 use rolldown_common::{ImportKind, ResolvedExternal};
-use rolldown_plugin::{HookLoadOutput, HookResolveIdOutput, HookUsage, Plugin};
+use rolldown_plugin::{HookLoadOutput, HookResolveIdOutput, Plugin, RegisterHook};
 use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, rustc_hash::FxHashSetExt as _};
 use rustc_hash::FxHashSet;
 
@@ -14,19 +14,10 @@ pub struct EsmExternalRequirePlugin {
   pub skip_duplicate_check: bool,
 }
 
+#[RegisterHook]
 impl Plugin for EsmExternalRequirePlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:esm-external-require")
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    if self.external.is_empty() {
-      HookUsage::empty()
-    } else if self.skip_duplicate_check {
-      HookUsage::ResolveId | HookUsage::Load
-    } else {
-      HookUsage::BuildStart | HookUsage::ResolveId | HookUsage::Load
-    }
   }
 
   async fn build_start(

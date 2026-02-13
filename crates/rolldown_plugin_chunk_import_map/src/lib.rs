@@ -6,7 +6,7 @@ use std::{
 
 use arcstr::ArcStr;
 use rolldown_common::{EmittedAsset, Output};
-use rolldown_plugin::{HookRenderChunkOutput, HookUsage, Plugin};
+use rolldown_plugin::{HookRenderChunkOutput, Plugin, RegisterHook};
 use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::{HASH_PLACEHOLDER_LEFT_FINDER, find_hash_placeholders},
@@ -24,13 +24,10 @@ pub struct ChunkImportMapPlugin {
   pub chunk_import_map: FxDashMap<ArcStr, String>,
 }
 
+#[RegisterHook]
 impl Plugin for ChunkImportMapPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:chunk-import-map")
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::RenderChunk | HookUsage::GenerateBundle
   }
 
   async fn render_chunk(

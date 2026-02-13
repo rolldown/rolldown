@@ -3,7 +3,7 @@ use std::sync::Arc;
 use rolldown::BundlerOptions;
 
 use rolldown_plugin::{
-  HookTransformArgs, HookTransformReturn, HookUsage, Plugin, SharedTransformPluginContext,
+  HookTransformArgs, HookTransformReturn, Plugin, RegisterHook, SharedTransformPluginContext,
 };
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
@@ -12,6 +12,7 @@ use std::sync::Mutex;
 #[derive(Debug)]
 struct TestPlugin(Arc<Mutex<Option<String>>>);
 
+#[RegisterHook]
 impl Plugin for TestPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     "test-plugin".into()
@@ -25,10 +26,6 @@ impl Plugin for TestPlugin {
     let mut code = self.0.lock().unwrap();
     *code = Some(args.code.clone());
     Ok(None)
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform
   }
 }
 

@@ -3185,7 +3185,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rolldown_plugin",
- "syn 2.0.114",
+ "syn",
 ]
 
 [[package]]

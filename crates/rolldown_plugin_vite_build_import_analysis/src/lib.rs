@@ -15,8 +15,8 @@ use rolldown_common::{Output, side_effects::HookSideEffects};
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookRenderChunkOutput, HookResolveIdArgs,
-  HookResolveIdOutput, HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn,
-  HookUsage, Plugin, PluginContext, SharedLoadPluginContext,
+  HookResolveIdOutput, HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, Plugin,
+  PluginContext, RegisterHook, SharedLoadPluginContext,
 };
 use rolldown_plugin_utils::{
   AssetUrlResult, ModulePreload, RenderBuiltUrl, ToOutputFilePathEnv,
@@ -54,21 +54,10 @@ pub struct ViteBuildImportAnalysisPlugin {
   pub v2: Option<ViteBuildImportAnalysisPluginV2>,
 }
 
+#[RegisterHook]
 impl Plugin for ViteBuildImportAnalysisPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-build-import-analysis")
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    if self.v2.is_some() {
-      HookUsage::ResolveId
-        | HookUsage::Load
-        | HookUsage::TransformAst
-        | HookUsage::RenderChunk
-        | HookUsage::GenerateBundle
-    } else {
-      HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst
-    }
   }
 
   async fn resolve_id(

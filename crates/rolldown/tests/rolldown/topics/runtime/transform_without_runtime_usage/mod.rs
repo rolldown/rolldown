@@ -2,7 +2,7 @@ use std::{borrow::Cow, sync::Arc};
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_common::RUNTIME_MODULE_KEY;
-use rolldown_plugin::{HookUsage, Plugin};
+use rolldown_plugin::{Plugin, RegisterHook};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 /// Plugin that injects a side-effectful `console.log` into the runtime module,
@@ -11,6 +11,7 @@ use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 #[derive(Debug)]
 struct TransformWithoutRuntimeUsagePlugin;
 
+#[RegisterHook]
 impl Plugin for TransformWithoutRuntimeUsagePlugin {
   fn name(&self) -> Cow<'static, str> {
     "transform-without-runtime-usage-plugin".into()
@@ -30,10 +31,6 @@ impl Plugin for TransformWithoutRuntimeUsagePlugin {
       }));
     }
     Ok(None)
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform
   }
 }
 

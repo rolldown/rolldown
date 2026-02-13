@@ -1,10 +1,13 @@
 use std::borrow::Cow;
 
-use rolldown_plugin::{HookLoadArgs, HookLoadReturn, HookUsage, Plugin, SharedLoadPluginContext};
+use rolldown_plugin::{
+  HookLoadArgs, HookLoadReturn, Plugin, RegisterHook, SharedLoadPluginContext,
+};
 
 #[derive(Debug)]
 pub struct ViteWasmFallbackPlugin;
 
+#[RegisterHook]
 impl Plugin for ViteWasmFallbackPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-wasm-fallback")
@@ -21,9 +24,5 @@ impl Plugin for ViteWasmFallbackPlugin {
       ))?;
     }
     Ok(None)
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Load
   }
 }

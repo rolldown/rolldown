@@ -8,7 +8,7 @@ use oxc::ast_visit::Visit;
 use rolldown_common::ModuleType;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookTransformOutput, HookUsage, Plugin, PluginContext,
+  HookResolveIdReturn, HookTransformOutput, Plugin, PluginContext, RegisterHook,
   SharedLoadPluginContext,
 };
 use rolldown_utils::{
@@ -32,13 +32,10 @@ pub struct ViteDynamicImportVarsPlugin {
   pub resolver: Option<Arc<ResolverFn>>,
 }
 
+#[RegisterHook]
 impl Plugin for ViteDynamicImportVarsPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-dynamic-import-vars")
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId | HookUsage::Load | HookUsage::Transform
   }
 
   async fn resolve_id(

@@ -2,12 +2,13 @@ use std::{borrow::Cow, sync::Arc};
 
 use rolldown::{BundlerOptions, InputItem, PreserveEntrySignatures};
 use rolldown_common::EmittedChunk;
-use rolldown_plugin::{HookUsage, Plugin};
+use rolldown_plugin::{Plugin, RegisterHook};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 #[derive(Debug)]
 struct Test;
 
+#[RegisterHook]
 impl Plugin for Test {
   fn name(&self) -> Cow<'static, str> {
     "test".into()
@@ -37,10 +38,6 @@ impl Plugin for Test {
         .await?;
     }
     Ok(None)
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform
   }
 }
 

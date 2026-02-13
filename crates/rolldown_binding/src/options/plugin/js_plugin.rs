@@ -8,7 +8,7 @@ use crate::types::{
 use anyhow::Context;
 use napi::bindgen_prelude::FnArgs;
 use rolldown_common::NormalModule;
-use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin, typedmap::TypedMapKey};
+use rolldown_plugin::{__inner::SharedPluginable, Plugin, RegisterHook, typedmap::TypedMapKey};
 use rolldown_utils::filter_expression::filter_exprs_interpreter;
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 use tracing::{Instrument, debug_span};
@@ -58,6 +58,7 @@ impl JsPlugin {
   }
 }
 
+#[RegisterHook]
 impl Plugin for JsPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Owned(self.name.clone())
@@ -625,9 +626,5 @@ impl Plugin for JsPlugin {
 
   fn close_watcher_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
     self.close_watcher_meta.as_ref().map(Into::into)
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::from_bits(self.inner.hook_usage).expect("Failed to register hook usage")
   }
 }

@@ -2,8 +2,8 @@ use std::{borrow::Cow, sync::Arc};
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
-  CustomField, HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin,
-  PluginContext, PluginContextResolveOptions, typedmap::TypedMapKey,
+  CustomField, HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext,
+  PluginContextResolveOptions, RegisterHook, typedmap::TypedMapKey,
 };
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 #[derive(Debug)]
@@ -18,6 +18,7 @@ impl TypedMapKey for MyArg {
   type Value = String;
 }
 
+#[RegisterHook]
 impl Plugin for TestPluginCaller {
   fn name(&self) -> Cow<'static, str> {
     "TestPluginCaller".into()
@@ -52,15 +53,12 @@ impl Plugin for TestPluginCaller {
       Ok(None)
     }
   }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::all()
-  }
 }
 
 #[derive(Debug)]
 struct TestPluginReceiver;
 
+#[RegisterHook]
 impl Plugin for TestPluginReceiver {
   fn name(&self) -> Cow<'static, str> {
     "TestPluginReceiver".into()
@@ -76,10 +74,6 @@ impl Plugin for TestPluginReceiver {
       return Ok(Some(HookResolveIdOutput { id: value.as_str().into(), ..Default::default() }));
     }
     Ok(None)
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId
   }
 }
 

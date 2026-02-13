@@ -4,7 +4,7 @@ use std::{borrow::Cow, path::PathBuf, sync::Arc};
 
 use derive_more::Debug;
 use rolldown_common::{ModuleType, Output, side_effects::HookSideEffects};
-use rolldown_plugin::{HookUsage, Plugin};
+use rolldown_plugin::{Plugin, RegisterHook};
 use rolldown_plugin_utils::{
   AssetCache, FileToUrlEnv, PublicAssetUrlCache, RenderAssetUrlInJsEnv, RenderBuiltUrl,
   ToOutputFilePathEnv, UsizeOrFunction, check_public_file, constants::CSSEntriesCache,
@@ -32,17 +32,10 @@ pub struct ViteAssetPlugin {
   pub handled_asset_ids: FxDashSet<String>,
 }
 
+#[RegisterHook]
 impl Plugin for ViteAssetPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-asset")
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::BuildStart
-      | HookUsage::ResolveId
-      | HookUsage::Load
-      | HookUsage::RenderChunk
-      | HookUsage::GenerateBundle
   }
 
   async fn build_start(

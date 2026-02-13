@@ -1,6 +1,8 @@
 use std::{future::Future, path::PathBuf, pin::Pin, sync::Arc};
 
-use rolldown_plugin::{HookLoadOutput, HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
+use rolldown_plugin::{
+  HookLoadOutput, HookTransformOutput, LogWithoutPlugin, Plugin, RegisterHook,
+};
 use rolldown_plugin_utils::{
   FileToUrlEnv, PublicFileToBuiltUrlEnv, UsizeOrFunction, check_public_file,
   constants::CSSModuleCache, css::is_css_request, find_special_query, inject_query,
@@ -51,13 +53,10 @@ pub struct ViteCSSPlugin {
   pub asset_inline_limit: UsizeOrFunction,
 }
 
+#[RegisterHook]
 impl Plugin for ViteCSSPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     std::borrow::Cow::Borrowed("builtin:vite-css")
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::BuildStart | HookUsage::Load | HookUsage::Transform
   }
 
   async fn build_start(

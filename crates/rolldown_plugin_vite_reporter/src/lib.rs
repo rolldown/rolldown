@@ -14,7 +14,7 @@ use std::{
 use cow_utils::CowUtils;
 use owo_colors::{OwoColorize, Stream};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use rolldown_plugin::{HookUsage, Plugin, PluginContext};
+use rolldown_plugin::{Plugin, PluginContext, RegisterHook};
 use sugar_path::SugarPath as _;
 
 #[derive(Debug)]
@@ -36,6 +36,7 @@ pub struct ViteReporterPlugin {
   pub latest_checkpoint: Arc<RwLock<Instant>>,
 }
 
+#[RegisterHook]
 impl Plugin for ViteReporterPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-reporter")
@@ -358,15 +359,5 @@ impl Plugin for ViteReporterPlugin {
   ) -> rolldown_plugin::HookNoopReturn {
     let _ = utils::clear_line();
     Ok(())
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    let hook_usage = HookUsage::RenderStart | HookUsage::RenderChunk | HookUsage::WriteBundle;
-    if self.should_log_info {
-      let usage = hook_usage | HookUsage::Transform | HookUsage::BuildStart | HookUsage::BuildEnd;
-      if self.is_tty { usage | HookUsage::GenerateBundle } else { usage }
-    } else {
-      hook_usage
-    }
   }
 }

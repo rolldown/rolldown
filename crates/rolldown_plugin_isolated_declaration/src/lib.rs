@@ -9,7 +9,7 @@ use oxc::{
 };
 use rolldown_common::{ModuleType, ResolvedExternal};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
-use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
+use rolldown_plugin::{Plugin, PluginHookMeta, PluginOrder, RegisterHook};
 use sugar_path::SugarPath;
 use type_import_visitor::TypeImportVisitor;
 
@@ -20,6 +20,7 @@ pub struct IsolatedDeclarationPlugin {
   pub strip_internal: bool,
 }
 
+#[RegisterHook]
 impl Plugin for IsolatedDeclarationPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:isolated-declaration")
@@ -84,9 +85,5 @@ impl Plugin for IsolatedDeclarationPlugin {
   // The rolldown strip types at the end of the build process, make sure to run this plugin before that.
   fn transform_ast_meta(&self) -> Option<PluginHookMeta> {
     Some(PluginHookMeta { order: Some(PluginOrder::Post) })
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::TransformAst
   }
 }

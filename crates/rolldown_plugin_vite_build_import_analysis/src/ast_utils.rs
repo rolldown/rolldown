@@ -102,6 +102,34 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     true
   }
 
+  /// transform `await import('foo').then((m) => m.prop)`
+  /// to `await __vitePreload(() => import('foo').then((m) => m.prop), ...)`
+  pub fn rewrite_await_import_then_expr(&mut self, expr: &mut oxc::ast::ast::AwaitExpression<'a>) -> bool {
+    // Check if the argument is a CallExpression with .then()
+    let Expression::CallExpression(ref mut call_expr) = expr.argument else {
+      return false;
+    };
+    
+    let Expression::StaticMemberExpression(ref callee) = call_expr.callee else {
+      return false;
+    };
+    
+    // Check if it's .then() on an ImportExpression
+    if callee.property.name != "then"
+      || !matches!(callee.object, Expression::ImportExpression(_))
+    {
+      return false;
+    }
+    
+    // Wrap the entire import().then() expression
+    let import_then_expr = expr.argument.take_in(self.snippet.alloc());
+    expr.argument = self.vite_preload_call(Argument::from(
+      self.snippet.only_return_arrow_expr(import_then_expr),
+    ));
+    
+    true
+  }
+
   /// transform `import('foo')`
   /// to `__vitePreload(() => import('foo'),...)`
   pub fn rewrite_import_expr(&self, expr: &mut Expression<'a>) -> bool {

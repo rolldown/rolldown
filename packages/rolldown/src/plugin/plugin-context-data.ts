@@ -53,7 +53,11 @@ export class PluginContextData {
     if (!option) {
       const raw: ModuleOptions = {
         moduleSideEffects: null,
-        meta: {},
+        meta: {
+          commonjs: {
+            isCommonJS: false,
+          },
+        },
       };
       this.moduleOptionMap.set(id, raw);
       return raw;

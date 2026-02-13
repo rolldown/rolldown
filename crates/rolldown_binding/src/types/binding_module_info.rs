@@ -12,6 +12,7 @@ pub struct BindingModuleInfo {
   pub dynamically_imported_ids: Vec<String>,
   pub exports: Vec<String>,
   pub is_entry: bool,
+  pub is_commonjs: bool,
 }
 
 #[napi]
@@ -28,6 +29,7 @@ impl BindingModuleInfo {
         .map(ToString::to_string)
         .collect(),
       is_entry: inner.is_entry,
+      is_commonjs: inner.is_commonjs,
       exports: inner.exports.iter().map(ToString::to_string).collect(),
       inner,
     }

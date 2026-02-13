@@ -114,10 +114,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     if callee.property.name != "then" || !matches!(callee.object, Expression::ImportExpression(_)) {
       return false;
     }
-
-    // Walk the arguments to ensure nested imports are also transformed
     walk_arguments(self, &mut call_expr.arguments);
-
     let import_then_expr = expr.argument.take_in(self.snippet.alloc());
     expr.argument =
       self.vite_preload_call(Argument::from(self.snippet.only_return_arrow_expr(import_then_expr)));

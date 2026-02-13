@@ -1,5 +1,4 @@
 // Test various .then((m) => m.prop) patterns
-import assert from 'node:assert';
 
 // Pattern 1: With await keyword
 const a = await import('./lib.js').then((m) => m.foo);

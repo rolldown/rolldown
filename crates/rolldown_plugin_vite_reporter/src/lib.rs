@@ -32,7 +32,6 @@ pub struct ViteReporterPlugin {
   pub chunk_limit: usize,
   pub report_compressed_size: bool,
   pub chunk_count: AtomicU32,
-  pub compressed_count: AtomicU32,
   pub has_rendered_chunk: AtomicBool,
   pub has_transformed: AtomicBool,
   pub transformed_count: AtomicU32,
@@ -114,7 +113,6 @@ impl Plugin for ViteReporterPlugin {
     _args: &rolldown_plugin::HookRenderStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     self.chunk_count.store(0, Ordering::SeqCst);
-    self.compressed_count.store(0, Ordering::SeqCst);
     Ok(())
   }
 
@@ -152,21 +150,15 @@ impl Plugin for ViteReporterPlugin {
 
       let mut log_entries = Vec::with_capacity(args.bundle.len());
 
-      if self.report_compressed_size && self.log_info.is_some() {
-        if self.is_tty {
-          utils::write_line("computing gzip size (0)...");
-        } else {
-          utils::log_info("computing gzip size...");
-        }
+      if self.report_compressed_size {
+        utils::log_info("computing gzip size...");
       }
-      let pre_compute_size = args
-        .bundle
-        .par_iter()
-        .map(|output| {
-          if !self.report_compressed_size {
-            return None;
-          }
-          match output {
+
+      let pre_compute_size = self.report_compressed_size.then(|| {
+        args
+          .bundle
+          .par_iter()
+          .map(|output| match output {
             rolldown_common::Output::Chunk(chunk) => {
               utils::compute_gzip_size(chunk.code.as_bytes())
             }
@@ -180,16 +172,10 @@ impl Plugin for ViteReporterPlugin {
                 is_css || utils::COMPRESSIBLE_ASSETS.iter().any(|s| asset.filename.ends_with(s));
               if is_compressible { utils::compute_gzip_size(asset.source.as_bytes()) } else { None }
             }
-          }
-        })
-        .collect::<Vec<_>>();
+          })
+          .collect::<Vec<_>>()
+      });
 
-      if self.report_compressed_size && self.is_tty {
-        utils::write_line(&format!(
-          "computing gzip size ({})...",
-          itoa::Buffer::new().format(pre_compute_size.iter().filter(|s| s.is_some()).count())
-        ));
-      }
       for (idx, output) in args.bundle.iter().enumerate() {
         let log_entry = match output {
           rolldown_common::Output::Chunk(chunk) => utils::LogEntry {
@@ -197,7 +183,7 @@ impl Plugin for ViteReporterPlugin {
             size: chunk.code.len(),
             group: utils::AssetGroup::JS,
             map_size: chunk.map.as_ref().map(|m| m.to_json_string().len()),
-            compressed_size: pre_compute_size[idx],
+            compressed_size: pre_compute_size.as_ref().and_then(|v| v[idx]),
           },
           rolldown_common::Output::Asset(asset) => {
             if asset.filename.ends_with(".map") {
@@ -212,7 +198,7 @@ impl Plugin for ViteReporterPlugin {
               size: asset.source.as_bytes().len(),
               group,
               map_size: None,
-              compressed_size: pre_compute_size[idx],
+              compressed_size: pre_compute_size.as_ref().and_then(|v| v[idx]),
             }
           }
         };

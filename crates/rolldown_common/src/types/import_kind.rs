@@ -32,29 +32,30 @@ impl TryFrom<&str> for ImportKind {
   type Error = String;
 
   fn try_from(value: &str) -> Result<Self, Self::Error> {
-    match value {
-      "import-statement" => Ok(Self::Import),
-      "dynamic-import" => Ok(Self::DynamicImport),
-      "require-call" => Ok(Self::Require),
-      "import-rule" => Ok(Self::AtImport),
-      "url-import" => Ok(Self::UrlImport),
-      _ => Err(format!("Invalid import kind: {value:?}")),
-    }
+    Ok(match value {
+      "import-statement" => Self::Import,
+      "dynamic-import" => Self::DynamicImport,
+      "require-call" => Self::Require,
+      "import-rule" => Self::AtImport,
+      "url-token" => Self::UrlImport,
+      "new-url" => Self::NewUrl,
+      "hot-accept" => Self::HotAccept,
+      _ => return Err(format!("Invalid import kind: {value:?}")),
+    })
   }
 }
 
 impl Display for ImportKind {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/ast/ast.go#L42
     match self {
+      Self::NewUrl => write!(f, "new-url"),
+      Self::HotAccept => write!(f, "hot-accept"),
+      // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/ast/ast.go#L42
       Self::Import => write!(f, "import-statement"),
       Self::DynamicImport => write!(f, "dynamic-import"),
       Self::Require => write!(f, "require-call"),
-      // TODO(hyf0): check if this literal is the same as esbuild's
       Self::AtImport => write!(f, "import-rule"),
-      ImportKind::UrlImport => write!(f, "url-token"),
-      ImportKind::NewUrl => write!(f, "new-url"),
-      ImportKind::HotAccept => write!(f, "hot-accept"),
+      Self::UrlImport => write!(f, "url-token"),
     }
   }
 }

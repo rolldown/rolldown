@@ -15,9 +15,14 @@ const CHARACTERS_BASE64: &[u8] =
 
 const CHARACTERS_BASE16: &[u8] = b"0123456789abcdef";
 
+/// Hash input with xxh3_128, then encode with the given base.
+#[inline]
 pub fn xxhash_with_base(input: &[u8], base: u8) -> String {
-  let hash = if input.len() == 16 { input } else { &xxh3_128(input).to_le_bytes() };
+  encode_hash_with_base(&xxh3_128(input).to_le_bytes(), base)
+}
 
+/// Encode pre-hashed 128-bit digest with the given base.
+pub fn encode_hash_with_base(hash: &[u8; 16], base: u8) -> String {
   let chars = match base {
     64 => CHARACTERS_BASE64,
     36 => &CHARACTERS_BASE64[26..(26 + 36)],
@@ -26,7 +31,6 @@ pub fn xxhash_with_base(input: &[u8], base: u8) -> String {
       unreachable!()
     }
   };
-
   to_string(hash, base, chars).unwrap()
 }
 

@@ -11,7 +11,7 @@ use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::{HASH_PLACEHOLDER_LEFT_FINDER, find_hash_placeholders},
   rustc_hash::FxHashMapExt as _,
-  xxhash::xxhash_with_base,
+  xxhash::encode_hash_with_base,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use xxhash_rust::xxh3::Xxh3;
@@ -67,7 +67,7 @@ impl Plugin for ChunkImportMapPlugin {
             hasher
           }
         };
-        let hash = xxhash_with_base(&hasher.digest128().to_le_bytes(), base);
+        let hash = encode_hash_with_base(&hasher.digest128().to_le_bytes(), base);
         let mut chunk_id = chunk.filename.to_string();
         for (start, end, placeholder) in hash_placeholders {
           let hash = hash[..end - start].to_string();

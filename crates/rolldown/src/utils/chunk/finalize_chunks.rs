@@ -20,7 +20,7 @@ use rolldown_utils::{
   rayon::{
     IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
   },
-  xxhash::{xxhash_base64_url, xxhash_with_base},
+  xxhash::{encode_hash_with_base, xxhash_base64_url},
 };
 use rustc_hash::FxHashMap;
 use xxhash_rust::xxh3::Xxh3;
@@ -105,7 +105,7 @@ pub async fn finalize_assets(
       });
 
       let digested = hasher.digest128();
-      (xxhash_with_base(&digested.to_le_bytes(), hash_base), digested)
+      (encode_hash_with_base(&digested.to_le_bytes(), hash_base), digested)
     })
     .collect::<Vec<_>>()
     .into();

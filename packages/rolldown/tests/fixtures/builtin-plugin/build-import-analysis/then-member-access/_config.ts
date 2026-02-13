@@ -1,3 +1,4 @@
+import type { OutputChunk } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { viteBuildImportAnalysisPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
@@ -33,6 +34,17 @@ export default defineTest({
         expect(item.code).to.includes('.then((m) => m.foo)');
         expect(item.code).to.includes('.then((m) => m.bar)');
         expect(item.code).to.includes('.then((m) => m.nested.value)');
+      }
+    });
+    
+    // Check tree-shaking: unused exports should not be in the main chunk
+    output.output.forEach((item) => {
+      if (item.type === 'chunk' && item.name === 'main') {
+        const code = (item as OutputChunk).code;
+        // The unused export should not be used in the main chunk
+        // It may still be exported from lib.js, but shouldn't be accessed
+        expect(code.match(/\.unused\b/g)).toBeNull();
+        expect(code.match(/\bunused:/g)).toBeNull();
       }
     });
   },

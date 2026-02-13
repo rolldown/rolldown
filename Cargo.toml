@@ -265,10 +265,10 @@ oxc_resolver_napi = { version = "11.15.0", default-features = false, features = 
 oxc_sourcemap = { version = "6" } # https://github.com/oxc-project/oxc-sourcemap
 
 [patch.crates-io]
-oxc = { path = "/Users/boshen/oxc/oxc3/crates/oxc" }
-oxc_allocator = { path = "/Users/boshen/oxc/oxc3/crates/oxc_allocator" }
-oxc_ecmascript = { path = "/Users/boshen/oxc/oxc3/crates/oxc_ecmascript" }
-oxc_traverse = { path = "/Users/boshen/oxc/oxc3/crates/oxc_traverse" }
+oxc = { git = "https://github.com/oxc-project/oxc.git", rev = "b0242963f7b6cb36369e88aa50c5c02a4cf13aba" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc.git", rev = "b0242963f7b6cb36369e88aa50c5c02a4cf13aba" }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc.git", rev = "b0242963f7b6cb36369e88aa50c5c02a4cf13aba" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc.git", rev = "b0242963f7b6cb36369e88aa50c5c02a4cf13aba" }
 
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.

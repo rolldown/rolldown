@@ -3441,7 +3441,9 @@ dependencies = [
 name = "rolldown_plugin_vite_reporter"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "cow-utils",
+ "derive_more",
  "flate2",
  "itoa",
  "num-format",

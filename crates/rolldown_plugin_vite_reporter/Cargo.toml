@@ -17,7 +17,9 @@ doctest = false
 workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
 cow-utils = { workspace = true }
+derive_more = { workspace = true }
 flate2 = { workspace = true }
 itoa = { workspace = true }
 num-format = { workspace = true }

@@ -2681,9 +2681,9 @@ export interface BindingViteReporterPluginConfig {
   isLib: boolean
   assetsDir: string
   chunkLimit: number
-  shouldLogInfo: boolean
   warnLargeChunks: boolean
   reportCompressedSize: boolean
+  logInfo?: (msg: string) => void
 }
 
 export interface BindingViteResolvePluginConfig {

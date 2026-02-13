@@ -36,9 +36,8 @@ export default defineTest({
         expect(preloadCount).to.be.greaterThanOrEqual(2);
       }
       if (item.type === 'chunk' && item.name === 'lib1') {
-        // foo should be present since it's accessed in the then callback
-        expect(item.code).to.include('foo');
-        // Verify tree-shaking: unused1 should not be in the lib1 chunk
+        // Verify tree-shaking: foo and unused1 should not be in the lib1 chunk
+        expect(item.code).to.not.include('foo');
         expect(item.code).to.not.include('unused1');
       }
       if (item.type === 'chunk' && item.name === 'lib2') {

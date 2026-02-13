@@ -27,6 +27,17 @@ struct ModuleGroup {
   sizes: f64,
 }
 
+/// Used to track what created the module group
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct ModuleGroupOrigin {
+  match_group_index: usize,
+  name: ArcStr,
+}
+
+/// Unique for each module group
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct ModuleGroupId(ModuleGroupOrigin, Option<BitSet>);
+
 oxc_index::define_index_type! {
   pub struct ModuleGroupIdx = u32;
 }
@@ -72,8 +83,7 @@ impl GenerateStage<'_> {
     }
 
     let mut index_module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::new();
-    let mut name_to_module_group: FxHashMap<(usize, ArcStr, Option<BitSet>), ModuleGroupIdx> =
-      FxHashMap::default();
+    let mut group_idx_by_id: FxHashMap<ModuleGroupId, ModuleGroupIdx> = FxHashMap::default();
     let metas = &self.link_output.metas;
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
     {
@@ -132,14 +142,15 @@ impl GenerateStage<'_> {
 
         let entries_aware = match_group.entries_aware.unwrap_or(false);
         let bits_key = if entries_aware { Some(splitting_info.bits.clone()) } else { None };
-        let unique_key = (match_group_index, group_name.clone(), bits_key);
+        let module_group_origin = ModuleGroupOrigin { match_group_index, name: group_name.clone() };
+        let module_group_id = ModuleGroupId(module_group_origin.clone(), bits_key);
 
-        let module_group_idx = name_to_module_group.entry(unique_key).or_insert_with(|| {
+        let module_group_idx = group_idx_by_id.entry(module_group_id).or_insert_with(|| {
           index_module_groups.push(ModuleGroup {
             modules: FxHashSet::default(),
-            match_group_index,
+            match_group_index: module_group_origin.match_group_index,
             priority: match_group.priority.unwrap_or(0),
-            name: group_name.clone(),
+            name: module_group_origin.name.clone(),
             sizes: 0.0,
           })
         });

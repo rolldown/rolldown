@@ -100,6 +100,7 @@ impl ModuleTask {
         code: None,
         id: id.clone(),
         is_entry: self.is_user_defined_entry,
+        is_commonjs: false,
         importers: FxIndexSet::default(),
         dynamic_importers: FxIndexSet::default(),
         imported_ids: FxIndexSet::default(),

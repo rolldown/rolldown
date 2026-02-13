@@ -24,7 +24,6 @@ export default defineTest({
         isRelativeBase: false,
       }),
     ],
-    external: ['node:assert'],
   },
   async afterTest(output) {
     await import('./assert.mjs');

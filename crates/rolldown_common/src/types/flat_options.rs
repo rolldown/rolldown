@@ -7,6 +7,9 @@ bitflags! {
   /// which also make accessing frequently used options faster.
   pub struct FlatOptions: u16 {
     const IgnoreAnnotations = 1 << 0;
+    /// If set, JSX syntax is preserved in the output rather than being transformed.
+    /// Determined per-module during transformation based on the resolved tsconfig
+    /// (e.g. a module's `tsconfig.json` specifies `"jsx": "preserve"`).
     const JsxPreserve = 1 << 1;
     const IsManualPureFunctionsEmpty = 1 << 2;
     /// If the flag is set, it means the `treeshake.property_read_side_effects` is `Always`.
@@ -40,7 +43,6 @@ impl FlatOptions {
   pub fn from_shared_options(options: &SharedNormalizedBundlerOptions) -> Self {
     let mut flags = Self::empty();
     flags.set(Self::IgnoreAnnotations, !options.treeshake.annotations());
-    flags.set(Self::JsxPreserve, options.transform_options.is_jsx_preserve());
     flags
       .set(Self::IsManualPureFunctionsEmpty, options.treeshake.manual_pure_functions().is_none());
     flags.set(

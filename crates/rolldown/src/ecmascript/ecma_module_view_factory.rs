@@ -1,6 +1,8 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, FlatOptions, ImportRecordIdx, ModuleType, RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, SideEffectDetail, side_effects::{DeterminedSideEffects, HookSideEffects}
+  EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, FlatOptions, ImportRecordIdx,
+  ModuleType, RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, SideEffectDetail,
+  side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathExt;
@@ -24,7 +26,7 @@ pub async fn create_ecma_view(
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
   let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects } = args;
-  let ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings , preserve_jsx} =
+  let ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings, preserve_jsx } =
     parse_to_ecma_ast(ctx, source).await?;
   ctx.flat_options.set(FlatOptions::JsxPreserve, preserve_jsx);
   ctx.warnings.extend(warnings);
@@ -141,7 +143,7 @@ pub async fn create_ecma_view(
     json_module_none_self_reference_included_symbol: None,
   };
 
-  let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage };
+  let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage, preserve_jsx };
   Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records })
 }
 

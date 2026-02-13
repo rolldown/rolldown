@@ -31,6 +31,8 @@ pub struct ParseToEcmaAstResult {
   pub scoping: Scoping,
   pub has_lazy_export: bool,
   pub warnings: Vec<BuildDiagnostic>,
+  /// Whether JSX syntax should be preserved in the output, determined per-module
+  /// during transformation based on the resolved tsconfig.
   pub preserve_jsx: bool,
 }
 

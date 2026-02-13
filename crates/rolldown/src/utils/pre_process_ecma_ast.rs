@@ -15,7 +15,6 @@ use rolldown_ecmascript::{EcmaAst, WithMutFields};
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
 
-use crate::types::module_factory::CreateModuleContext;
 use crate::types::oxc_parse_type::OxcParseType;
 
 use super::parse_to_ecma_ast::ParseToEcmaAstResult;
@@ -103,7 +102,6 @@ impl PreProcessEcmaAst {
     // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
     let is_not_js = !matches!(parsed_type, OxcParseType::Js);
     let mut preserve_jsx = false;
-    dbg!(&bundle_options.transform_options.jsx_preset);
     if is_not_js
       || bundle_options.transform_options.should_transform_js()
       // Run transformer on JS files containing `</script` to handle tagged template literals.

@@ -45,6 +45,7 @@ export default defineTest({
       item.type === 'chunk' && item.fileName.includes('lib')
     ) as OutputChunk | undefined;
     
+    expect(libChunk).toBeDefined();
     if (libChunk) {
       // Verify expected exports are present
       expect(libChunk.code).toContain('foo');

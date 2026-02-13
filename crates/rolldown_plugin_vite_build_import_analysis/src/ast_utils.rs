@@ -3,8 +3,8 @@ use oxc::{
   ast::{
     NONE,
     ast::{
-      Argument, BindingPattern, CallExpression, Declaration, Expression, FormalParameterKind,
-      Statement, StaticMemberExpression, VariableDeclarationKind,
+      Argument, AwaitExpression, BindingPattern, CallExpression, Declaration, Expression,
+      FormalParameterKind, Statement, StaticMemberExpression, VariableDeclarationKind,
     },
   },
   ast_visit::walk_mut::walk_arguments,
@@ -104,10 +104,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 
   /// transform `await import('foo').then((m) => m.prop)`
   /// to `await __vitePreload(() => import('foo').then((m) => m.prop), ...)`
-  pub fn rewrite_await_import_then_expr(
-    &self,
-    expr: &mut oxc::ast::ast::AwaitExpression<'a>,
-  ) -> bool {
+  pub fn rewrite_await_import_then_expr(&mut self, expr: &mut AwaitExpression<'a>) -> bool {
     let Expression::CallExpression(ref mut call_expr) = expr.argument else {
       return false;
     };
@@ -117,6 +114,9 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     if callee.property.name != "then" || !matches!(callee.object, Expression::ImportExpression(_)) {
       return false;
     }
+
+    // Walk the arguments to ensure nested imports are also transformed
+    walk_arguments(self, &mut call_expr.arguments);
 
     let import_then_expr = expr.argument.take_in(self.snippet.alloc());
     expr.argument =

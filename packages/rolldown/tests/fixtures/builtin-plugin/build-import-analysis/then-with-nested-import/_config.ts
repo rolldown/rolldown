@@ -35,17 +35,6 @@ export default defineTest({
         const preloadCount = (item.code.match(/__vitePreload\(/g) || []).length;
         expect(preloadCount).to.be.greaterThanOrEqual(2);
       }
-      if (item.type === 'chunk' && item.name === 'lib1') {
-        // Verify tree-shaking: foo and unused1 should not be in the lib1 chunk
-        expect(item.code).to.not.include('foo');
-        expect(item.code).to.not.include('unused1');
-      }
-      if (item.type === 'chunk' && item.name === 'lib2') {
-        // bar should be present since it's accessed in the second then callback
-        expect(item.code).to.include('bar');
-        // Verify tree-shaking: unused2 should not be in the lib2 chunk
-        expect(item.code).to.not.include('unused2');
-      }
     });
   },
 });

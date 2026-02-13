@@ -1,9 +1,6 @@
 use std::{
   path::PathBuf,
-  sync::{
-    Arc, RwLock,
-    atomic::{AtomicBool, AtomicU32},
-  },
+  sync::{Arc, RwLock, atomic::AtomicU32},
   time::Instant,
 };
 
@@ -38,8 +35,6 @@ impl From<BindingViteReporterPluginConfig> for ViteReporterPlugin {
       warn_large_chunks: config.warn_large_chunks,
       report_compressed_size: config.report_compressed_size,
       chunk_count: AtomicU32::new(0),
-      has_rendered_chunk: AtomicBool::new(false),
-      has_transformed: AtomicBool::new(false),
       transformed_count: AtomicU32::new(0),
       latest_checkpoint: Arc::new(RwLock::new(Instant::now())),
       log_info: config.log_info.map(|log_info| -> Arc<LogInfoFn> {

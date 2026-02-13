@@ -7,7 +7,7 @@ use std::{
   pin::Pin,
   sync::{
     Arc, RwLock,
-    atomic::{AtomicBool, AtomicU32, Ordering},
+    atomic::{AtomicU32, Ordering},
   },
   time::{Duration, Instant},
 };
@@ -32,8 +32,6 @@ pub struct ViteReporterPlugin {
   pub chunk_limit: usize,
   pub report_compressed_size: bool,
   pub chunk_count: AtomicU32,
-  pub has_rendered_chunk: AtomicBool,
-  pub has_transformed: AtomicBool,
   pub transformed_count: AtomicU32,
   pub latest_checkpoint: Arc<RwLock<Instant>>,
   #[debug(skip)]
@@ -51,7 +49,6 @@ impl Plugin for ViteReporterPlugin {
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     let transformed_count = self.transformed_count.fetch_add(1, Ordering::SeqCst);
-
     if self.is_tty {
       if args.id.contains('?') {
         return Ok(None);
@@ -62,7 +59,7 @@ impl Plugin for ViteReporterPlugin {
       if duration > Duration::from_millis(100) {
         utils::write_line(&format!(
           "transforming ({}) {}",
-          itoa::Buffer::new().format(transformed_count),
+          itoa::Buffer::new().format(transformed_count + 1),
           Path::new(args.id)
             .relative(&self.root)
             .to_string_lossy()
@@ -71,12 +68,9 @@ impl Plugin for ViteReporterPlugin {
 
         *self.latest_checkpoint.write().unwrap() = now;
       }
-    } else if !self.has_transformed.load(Ordering::Relaxed) {
+    } else if transformed_count == 0 {
       utils::write_line("transforming...");
     }
-
-    self.has_transformed.store(true, Ordering::Release);
-
     Ok(None)
   }
 
@@ -85,6 +79,7 @@ impl Plugin for ViteReporterPlugin {
     _ctx: &PluginContext,
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
+    self.chunk_count.store(0, Ordering::SeqCst);
     self.transformed_count.store(0, Ordering::SeqCst);
     Ok(())
   }
@@ -107,31 +102,19 @@ impl Plugin for ViteReporterPlugin {
     Ok(())
   }
 
-  async fn render_start(
-    &self,
-    _ctx: &PluginContext,
-    _args: &rolldown_plugin::HookRenderStartArgs<'_>,
-  ) -> rolldown_plugin::HookNoopReturn {
-    self.chunk_count.store(0, Ordering::SeqCst);
-    Ok(())
-  }
-
   async fn render_chunk(
     &self,
     _ctx: &PluginContext,
     _args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
     let chunk_count = self.chunk_count.fetch_add(1, Ordering::SeqCst);
-    if self.log_info.is_some() {
-      if self.is_tty {
-        utils::write_line(&format!(
-          "rendering chunks ({})...",
-          itoa::Buffer::new().format(chunk_count)
-        ));
-      } else if !self.has_rendered_chunk.load(Ordering::Relaxed) {
-        utils::log_info("rendering chunks...");
-      }
-      self.has_rendered_chunk.store(true, Ordering::Release);
+    if self.is_tty {
+      utils::write_line(&format!(
+        "rendering chunks ({})...",
+        itoa::Buffer::new().format(chunk_count + 1)
+      ));
+    } else if chunk_count == 0 {
+      utils::log_info("rendering chunks...");
     }
     Ok(None)
   }
@@ -349,12 +332,19 @@ impl Plugin for ViteReporterPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    let hook_usage = HookUsage::RenderStart | HookUsage::RenderChunk | HookUsage::WriteBundle;
+    let mut usage = HookUsage::empty();
     if self.log_info.is_some() {
-      let usage = hook_usage | HookUsage::Transform | HookUsage::BuildStart | HookUsage::BuildEnd;
-      if self.is_tty { usage | HookUsage::GenerateBundle } else { usage }
-    } else {
-      hook_usage
+      usage |= HookUsage::Transform
+        | HookUsage::BuildStart
+        | HookUsage::BuildEnd
+        | HookUsage::RenderChunk
+        | HookUsage::WriteBundle;
+      if self.is_tty {
+        usage |= HookUsage::GenerateBundle;
+      }
+    } else if self.warn_large_chunks {
+      usage |= HookUsage::WriteBundle;
     }
+    usage
   }
 }

@@ -9,13 +9,13 @@ use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
   EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
   ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  UserDefinedEntryMeta, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use crate::{
   SharedOptions, SharedResolver,
@@ -50,7 +50,7 @@ pub struct NormalizedScanStageOutput {
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
-  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  pub user_defined_entry_modules: FxHashMap<ModuleIdx, UserDefinedEntryMeta>,
 }
 
 impl NormalizedScanStageOutput {
@@ -125,7 +125,7 @@ pub struct ScanStageOutput {
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
-  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  pub user_defined_entry_modules: FxHashMap<ModuleIdx, UserDefinedEntryMeta>,
 }
 
 impl ScanStage {

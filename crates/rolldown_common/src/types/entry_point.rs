@@ -16,6 +16,14 @@ pub struct EntryPoint {
   pub related_stmt_infos: Vec<(ModuleIdx, StmtInfoIdx, Address, ImportRecordIdx)>,
 }
 
+bitflags::bitflags! {
+  #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+  pub struct UserDefinedEntryMeta: u8 {
+    const UserDefined = 1;
+    const EmittedUserDefined = 1 << 1;
+  }
+}
+
 #[derive(Debug, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum EntryPointKind {
   UserDefined = 0,

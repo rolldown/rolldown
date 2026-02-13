@@ -16,7 +16,7 @@ use rolldown_common::{
   Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
   PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief,
   RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, SymbolRefDb,
-  SymbolRefDbForModule,
+  SymbolRefDbForModule, UserDefinedEntryMeta,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{
@@ -26,8 +26,7 @@ use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
-use rolldown_utils::rustc_hash::FxHashSetExt;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
 use tracing::Instrument;
 
 use crate::module_loader::module_task::ModuleTaskOwner;
@@ -125,7 +124,7 @@ pub struct ModuleLoaderOutput {
   /// e.g. https://stackblitz.com/edit/rolldown-rolldown-starter-stackblitz-jqg7vnkw?file=rolldown.config.mjs,src%2Findex.js,package.json
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
-  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  pub user_defined_entry_modules: FxHashMap<ModuleIdx, UserDefinedEntryMeta>,
 }
 
 impl Drop for ModuleLoader<'_> {
@@ -291,10 +290,11 @@ impl<'a> ModuleLoader<'a> {
 
     // Store the already consider as entry module
     let mut entry_points = FxIndexSet::default();
-    let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
+    let mut user_defined_entry_ids: FxHashMap<ModuleIdx, UserDefinedEntryMeta> =
+      FxHashMap::with_capacity_and_hasher(user_defined_entries.len(), FxBuildHasher);
     for (name, resolved_id) in user_defined_entries.iter().cloned() {
       let idx = self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries);
-      user_defined_entry_ids.insert(idx);
+      user_defined_entry_ids.entry(idx).or_default().insert(UserDefinedEntryMeta::UserDefined);
       entry_points.insert(EntryPoint {
         idx,
         name,
@@ -451,7 +451,7 @@ impl<'a> ModuleLoader<'a> {
               dynamic_import_exports_usage_pairs.push((idx, usage));
             }
             if matches!(raw_rec.kind, ImportKind::DynamicImport)
-              && !user_defined_entry_ids.contains(&idx)
+              && !user_defined_entry_ids.contains_key(&idx)
             {
               match dynamic_import_entry_ids.entry(idx) {
                 Entry::Vacant(vac) => match raw_rec.dynamic_import_expr_info.as_ref() {
@@ -585,7 +585,10 @@ impl<'a> ModuleLoader<'a> {
             overrode_preserve_entry_signature_map.insert(module_idx, preserve_entry_signatures);
           }
 
-          user_defined_entry_ids.insert(module_idx);
+          user_defined_entry_ids
+            .entry(module_idx)
+            .or_default()
+            .insert(UserDefinedEntryMeta::EmittedUserDefined);
 
           let entry = EntryPoint {
             name: data.name.clone(),
@@ -691,7 +694,7 @@ impl<'a> ModuleLoader<'a> {
       };
       self.shared_context.plugin_driver.set_module_info(
         &module.id,
-        Arc::new(module.to_module_info(None, user_defined_entry_ids.contains(&module.idx))),
+        Arc::new(module.to_module_info(None, user_defined_entry_ids.contains_key(&module.idx))),
       );
     });
 
@@ -790,7 +793,7 @@ impl<'a> ModuleLoader<'a> {
   fn trace_import_chain_from_modules(
     &self,
     importer_id: &str,
-    user_defined_entry_ids: &FxHashSet<ModuleIdx>,
+    user_defined_entry_ids: &FxHashMap<ModuleIdx, UserDefinedEntryMeta>,
   ) -> Vec<String> {
     let importer_module_id = ModuleId::new(importer_id);
     let Some(visit_state) = self.cache.module_id_to_idx.get(&importer_module_id) else {
@@ -815,7 +818,7 @@ impl<'a> ModuleLoader<'a> {
         }
       }
 
-      if user_defined_entry_ids.contains(&idx) {
+      if user_defined_entry_ids.contains_key(&idx) {
         break;
       }
 

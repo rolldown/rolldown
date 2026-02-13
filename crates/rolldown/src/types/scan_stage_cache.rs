@@ -3,6 +3,7 @@ use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
   BarrelState, GetLocalDbMut, ImporterRecord, Module, ModuleId, ModuleIdx, StableModuleId,
+  UserDefinedEntryMeta,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -159,7 +160,10 @@ impl ScanStageCache {
       };
       let idx = visit_state.idx();
       if cache.module_table.modules.get(idx).is_some() {
-        user_defined_entry_modules.insert(idx);
+        user_defined_entry_modules
+          .entry(idx)
+          .or_default()
+          .insert(UserDefinedEntryMeta::UserDefined);
       }
     }
     cache.user_defined_entry_modules = user_defined_entry_modules;

@@ -1290,6 +1290,14 @@
             "boolean",
             "null"
           ]
+        },
+        "entriesAwareMergeThreshold": {
+          "description": "Only effective when `entriesAware` is set to `true`.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
         }
       },
       "additionalProperties": false,

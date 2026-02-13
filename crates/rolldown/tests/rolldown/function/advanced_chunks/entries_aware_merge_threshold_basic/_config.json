@@ -1,0 +1,33 @@
+{
+  "_comment": "With entriesAware: true + entriesAwareMergeThreshold, only one small entries-aware subgroup should be merged into a larger neighboring subgroup. Expected: 2 vendor chunks where `vendor~entry-a~entry-b` contains both shared-by-a and shared-by-ab.",
+  "config": {
+    "input": [
+      {
+        "name": "entry-a",
+        "import": "./entry-a.js"
+      },
+      {
+        "name": "entry-b",
+        "import": "./entry-b.js"
+      },
+      {
+        "name": "entry-c",
+        "import": "./entry-c.js"
+      }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "vendor",
+          "test": "shared-by",
+          "entriesAware": true,
+          "entriesAwareMergeThreshold": 28
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "hiddenRuntimeModule": true
+}

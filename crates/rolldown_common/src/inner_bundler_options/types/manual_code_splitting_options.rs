@@ -52,6 +52,8 @@ pub struct MatchGroup {
   pub min_module_size: Option<f64>,
   pub max_module_size: Option<f64>,
   pub entries_aware: Option<bool>,
+  /// Only effective when `entriesAware` is set to `true`.
+  pub entries_aware_merge_threshold: Option<f64>,
 }
 
 type MatchGroupTestFn = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static>>

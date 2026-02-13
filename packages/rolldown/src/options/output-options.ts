@@ -867,6 +867,16 @@ export type CodeSplittingGroup = {
    * @default false
    */
   entriesAware?: boolean;
+  /**
+   * Size threshold in bytes for merging small `entriesAware` subgroups into the
+   * closest neighboring subgroup.
+   *
+   * This option only works when {@linkcode CodeSplittingGroup.entriesAware | entriesAware}
+   * is `true`. Set to `0` to disable subgroup merging.
+   *
+   * @default 0
+   */
+  entriesAwareMergeThreshold?: number;
 };
 
 /**

@@ -39,6 +39,7 @@ pub struct BindingMatchGroup {
   pub max_module_size: Option<f64>,
   pub max_size: Option<f64>,
   pub entries_aware: Option<bool>,
+  pub entries_aware_merge_threshold: Option<f64>,
 }
 
 #[napi_derive::napi]

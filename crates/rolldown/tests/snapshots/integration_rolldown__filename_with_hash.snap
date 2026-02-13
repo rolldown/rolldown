@@ -3927,6 +3927,14 @@ expression: output
 - entry-c-!~{002}~.js => entry-c-Bg5GIhoe.js
 - vendor-!~{003}~.js => vendor-stCDKbV-.js
 
+# tests/rolldown/function/advanced_chunks/entries_aware_merge_threshold_basic
+
+- entry-a-!~{000}~.js => entry-a-BCSuIoVp.js
+- entry-b-!~{001}~.js => entry-b-DcpHyi0E.js
+- entry-c-!~{002}~.js => entry-c-Bl_CCreA.js
+- vendor~entry-a~entry-b-!~{005}~.js => vendor~entry-a~entry-b-CXLCP0zo.js
+- vendor~entry-a~entry-b~entry-c-!~{003}~.js => vendor~entry-a~entry-b~entry-c-BqP-AGpR.js
+
 # tests/rolldown/function/advanced_chunks/entries_aware_min_share_count
 
 - entry-a-!~{000}~.js => entry-a-DMEV0smO.js

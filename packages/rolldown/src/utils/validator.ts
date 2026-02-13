@@ -771,6 +771,7 @@ const AdvancedChunksSchema = v.strictObject({
         minModuleSize: v.optional(v.number()),
         maxModuleSize: v.optional(v.number()),
         entriesAware: v.optional(v.boolean()),
+        entriesAwareMergeThreshold: v.optional(v.number()),
       }),
     ),
   ),

@@ -461,6 +461,7 @@ pub fn normalize_binding_options(
             min_module_size: item.min_module_size,
             max_size: item.max_size,
             entries_aware: item.entries_aware,
+            entries_aware_merge_threshold: item.entries_aware_merge_threshold,
           })
           .collect::<Vec<_>>()
       }),

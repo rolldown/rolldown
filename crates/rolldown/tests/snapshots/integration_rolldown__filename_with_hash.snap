@@ -3848,7 +3848,7 @@ expression: output
 
 # tests/rolldown/code_splitting/format_cjs_with_esm_require_esm
 
-- main1-!~{000}~.js => main1-Cat2taJQ.js
+- main1-!~{000}~.js => main1-BPEdzKb_.js
 - main2-!~{001}~.js => main2-C8FUhn_n.js
 - chunk-!~{002}~.js => chunk-BFU93yk6.js
 
@@ -5184,6 +5184,10 @@ expression: output
 # tests/rolldown/issues/8120
 
 - main-!~{000}~.js => main-8iRAOpBT.js
+
+# tests/rolldown/issues/8299
+
+- main-!~{000}~.js => main-eeGHUsim.js
 
 # tests/rolldown/issues/duplicate_default_export
 

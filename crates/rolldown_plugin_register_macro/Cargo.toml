@@ -1,0 +1,23 @@
+[package]
+name = "rolldown_plugin_register_macro"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+publish = true
+repository.workspace = true
+description = "Procedural macro to auto-generate register_hook_usage for Rolldown plugins"
+
+[lib]
+proc-macro = true
+
+[lints]
+workspace = true
+
+[dependencies]
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true, features = ["full", "parsing", "visit"] }
+
+[dev-dependencies]
+rolldown_plugin = { workspace = true }

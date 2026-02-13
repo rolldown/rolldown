@@ -33,6 +33,7 @@ rolldown_common = { workspace = true }
 rolldown_devtools = { workspace = true }
 rolldown_ecmascript = { workspace = true }
 rolldown_error = { workspace = true }
+rolldown_plugin_register_macro = { workspace = true }
 rolldown_resolver = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_utils = { workspace = true }

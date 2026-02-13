@@ -3069,6 +3069,7 @@ dependencies = [
  "rolldown_devtools",
  "rolldown_ecmascript",
  "rolldown_error",
+ "rolldown_plugin_register_macro",
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_utils",
@@ -3175,6 +3176,16 @@ dependencies = [
  "phf",
  "rolldown_plugin",
  "rolldown_utils",
+]
+
+[[package]]
+name = "rolldown_plugin_register_macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "rolldown_plugin",
+ "syn 2.0.114",
 ]
 
 [[package]]

@@ -1,5 +1,5 @@
 [workspace]
-members = ["./crates/*", "tasks/*"]
+members = ["./crates/*", "crates/rolldown_plugin_register_macro", "tasks/*"]
 resolver = "3"
 
 [workspace.package]
@@ -107,6 +107,7 @@ rolldown_error = { version = "0.1.0", path = "crates/rolldown_error" }
 rolldown_fs = { version = "0.1.0", path = "crates/rolldown_fs" }
 rolldown_fs_watcher = { version = "0.1.0", path = "crates/rolldown_fs_watcher" }
 rolldown_plugin = { version = "0.1.0", path = "crates/rolldown_plugin" }
+rolldown_plugin_register_macro = { version = "0.1.0", path = "crates/rolldown_plugin_register_macro" }
 rolldown_plugin_chunk_import_map = { version = "0.1.0", path = "crates/rolldown_plugin_chunk_import_map" }
 rolldown_plugin_bundle_analyzer = { version = "0.1.0", path = "crates/rolldown_plugin_bundle_analyzer" }
 rolldown_plugin_data_uri = { version = "0.1.0", path = "crates/rolldown_plugin_data_uri" }

@@ -8,6 +8,7 @@ mod types;
 mod utils;
 
 pub use rolldown_common::{Log, LogWithoutPlugin};
+pub use rolldown_plugin_register_macro::RegisterHook;
 pub use typedmap;
 
 /// Only for usage by the rolldown's crate. Do not use this directly.

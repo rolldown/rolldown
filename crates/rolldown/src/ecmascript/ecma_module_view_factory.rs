@@ -1,8 +1,6 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleType,
-  RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, SideEffectDetail,
-  side_effects::{DeterminedSideEffects, HookSideEffects},
+  EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, FlatOptions, ImportRecordIdx, ModuleType, RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, SideEffectDetail, side_effects::{DeterminedSideEffects, HookSideEffects}
 };
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathExt;
@@ -26,9 +24,9 @@ pub async fn create_ecma_view(
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
   let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects } = args;
-  let ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings } =
+  let ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings , preserve_jsx} =
     parse_to_ecma_ast(ctx, source).await?;
-
+  ctx.flat_options.set(FlatOptions::JsxPreserve, preserve_jsx);
   ctx.warnings.extend(warnings);
 
   let module_id = ctx.resolved_id.id.clone();

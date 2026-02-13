@@ -31,6 +31,7 @@ pub struct ParseToEcmaAstResult {
   pub scoping: Scoping,
   pub has_lazy_export: bool,
   pub warnings: Vec<BuildDiagnostic>,
+  pub preserve_jsx: bool,
 }
 
 pub async fn parse_to_ecma_ast(

@@ -214,7 +214,6 @@ impl ModuleTask {
       debug_id: self.resolved_id.debug_id(&self.ctx.options.cwd),
       idx: self.module_idx,
       exec_order: u32::MAX,
-      is_user_defined_entry: self.is_user_defined_entry,
       module_type: module_type.clone(),
       ecma_view,
       css_view,
@@ -222,7 +221,8 @@ impl ModuleTask {
       originative_resolved_id: self.resolved_id.clone(),
     };
 
-    let module_info = Arc::new(module.to_module_info(Some(&raw_import_records)));
+    let module_info =
+      Arc::new(module.to_module_info(Some(&raw_import_records), self.is_user_defined_entry));
     self.ctx.plugin_driver.set_module_info(&module.id, Arc::clone(&module_info));
     self.ctx.plugin_driver.module_parsed(Arc::clone(&module_info), &module).await?;
     self.ctx.plugin_driver.mark_context_load_modules_loaded(module.id.clone());

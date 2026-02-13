@@ -116,7 +116,10 @@ impl GenerateStage<'_> {
         );
         chunk.add_creation_reason(
           ChunkCreationReason::PreserveModules {
-            is_user_defined_entry: module.is_user_defined_entry,
+            is_user_defined_entry: self
+              .link_output
+              .user_defined_entry_modules
+              .contains(&module.idx),
             module_stable_id: &module.stable_id,
           },
           self.options,
@@ -654,7 +657,9 @@ impl GenerateStage<'_> {
         if !self.link_output.metas[item.idx].is_included {
           return None;
         }
-        if self.options.preserve_modules || item.is_user_defined_entry {
+        if self.options.preserve_modules
+          || self.link_output.user_defined_entry_modules.contains(&item.idx)
+        {
           Path::new(item.id.as_ref()).is_absolute().then_some(item.id.as_ref())
         } else {
           None
@@ -717,7 +722,8 @@ impl GenerateStage<'_> {
         module.idx,
       );
 
-      let preserve_entry_signature = if module.is_user_defined_entry {
+      let is_user_defined_entry = self.link_output.user_defined_entry_modules.contains(&module.idx);
+      let preserve_entry_signature = if is_user_defined_entry {
         match finalized_preserve_entry_signatures {
           PreserveEntrySignatures::AllowExtension
           | PreserveEntrySignatures::Strict
@@ -758,7 +764,7 @@ impl GenerateStage<'_> {
       );
       chunk.add_creation_reason(
         ChunkCreationReason::Entry {
-          is_user_defined_entry: module.is_user_defined_entry,
+          is_user_defined_entry,
           entry_module_id: &module.debug_id,
           name: entry_point.name.as_ref(),
         },

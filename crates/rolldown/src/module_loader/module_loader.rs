@@ -125,6 +125,7 @@ pub struct ModuleLoaderOutput {
   /// e.g. https://stackblitz.com/edit/rolldown-rolldown-starter-stackblitz-jqg7vnkw?file=rolldown.config.mjs,src%2Findex.js,package.json
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
+  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
 }
 
 impl Drop for ModuleLoader<'_> {
@@ -364,12 +365,7 @@ impl<'a> ModuleLoader<'a> {
           } = *task_result;
           all_warnings.extend(warnings);
 
-          // Make this.emitFile generated module as user defined entry if needed
           let module_idx = module.idx();
-          if user_defined_entry_ids.contains(&module_idx) {
-            let normal_module = module.as_normal_mut().expect("should be normal module");
-            normal_module.is_user_defined_entry = true;
-          }
 
           // remove importers from previous scan
           if !self.is_full_scan
@@ -577,19 +573,7 @@ impl<'a> ModuleLoader<'a> {
 
           let module_idx = match result {
             Ok(resolved_id) => {
-              let idx =
-                self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries);
-              // Make this.emitFile generated module as user defined entry if needed
-              if let Some(module) = self
-                .intermediate_normal_modules
-                .modules
-                .get_mut(idx)
-                .as_mut()
-                .and_then(|module| module.as_normal_mut())
-              {
-                module.is_user_defined_entry = true;
-              }
-              idx
+              self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries)
             }
             Err(e) => {
               errors.push(e);
@@ -705,10 +689,10 @@ impl<'a> ModuleLoader<'a> {
       let Some(module) = module.as_normal() else {
         return;
       };
-      self
-        .shared_context
-        .plugin_driver
-        .set_module_info(&module.id, Arc::new(module.to_module_info(None)));
+      self.shared_context.plugin_driver.set_module_info(
+        &module.id,
+        Arc::new(module.to_module_info(None, user_defined_entry_ids.contains(&module.idx))),
+      );
     });
 
     // Collect module indices from emitted entries to filter dynamic imports
@@ -758,6 +742,7 @@ impl<'a> ModuleLoader<'a> {
         &mut self.new_added_modules_from_partial_scan,
       ),
       flat_options: self.flat_options,
+      user_defined_entry_modules: user_defined_entry_ids,
     })
   }
 

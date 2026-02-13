@@ -75,6 +75,7 @@ pub struct LinkStageOutput {
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
+  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
 }
 
 #[derive(Debug)]
@@ -99,6 +100,7 @@ pub struct LinkStage<'a> {
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub flat_options: FlatOptions,
   pub side_effects_free_function_symbol_ref: FxHashSet<SymbolRef>,
+  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -185,6 +187,7 @@ impl<'a> LinkStage<'a> {
       entry_point_to_reference_ids: scan_stage_output.entry_point_to_reference_ids,
       flat_options: scan_stage_output.flat_options,
       side_effects_free_function_symbol_ref: FxHashSet::default(),
+      user_defined_entry_modules: scan_stage_output.user_defined_entry_modules,
     }
   }
 
@@ -224,6 +227,7 @@ impl<'a> LinkStage<'a> {
       entry_point_to_reference_ids: self.entry_point_to_reference_ids,
       global_constant_symbol_map: self.global_constant_symbol_map,
       normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
+      user_defined_entry_modules: self.user_defined_entry_modules,
     }
   }
 

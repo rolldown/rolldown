@@ -160,7 +160,6 @@ impl RuntimeModuleTask {
 
       debug_id: stabilize_id(RUNTIME_MODULE_KEY, &self.ctx.options.cwd),
       exec_order: u32::MAX,
-      is_user_defined_entry: false,
       module_type,
 
       ecma_view: EcmaView {

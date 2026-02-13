@@ -148,6 +148,22 @@ impl ScanStageCache {
       }
     }
 
+    // Recompute user-defined entry modules for this build instead of monotonically extending.
+    // `scan_stage_output.user_defined_entry_modules` only contains entries discovered in the
+    // current scan (e.g. changed modules + emitted entries), so we additionally keep configured
+    // root entries that remain valid in cache.
+    let mut user_defined_entry_modules = scan_stage_output.user_defined_entry_modules;
+    for user_defined_entry_id in &self.user_defined_entry {
+      let Some(visit_state) = self.module_id_to_idx.get(user_defined_entry_id) else {
+        continue;
+      };
+      let idx = visit_state.idx();
+      if cache.module_table.modules.get(idx).is_some() {
+        user_defined_entry_modules.insert(idx);
+      }
+    }
+    cache.user_defined_entry_modules = user_defined_entry_modules;
+
     Ok(())
   }
 
@@ -196,6 +212,7 @@ impl ScanStageCache {
       overrode_preserve_entry_signature_map: cache.overrode_preserve_entry_signature_map.clone(),
       entry_point_to_reference_ids: cache.entry_point_to_reference_ids.clone(),
       flat_options: cache.flat_options,
+      user_defined_entry_modules: cache.user_defined_entry_modules.clone(),
     }
   }
 }

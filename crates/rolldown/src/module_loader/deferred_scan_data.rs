@@ -41,7 +41,12 @@ pub async fn defer_sync_scan_data(
         let resolved_id = resolver
           // other params except `source_id` is not important, since we need `package_json`
           // from `resolved_id` to re analyze the side effects
-          .resolve(None, source_id.as_str(), ImportKind::Import, normal.is_user_defined_entry)
+          .resolve(
+            None,
+            source_id.as_str(),
+            ImportKind::Import,
+            scan_stage_output.user_defined_entry_modules.contains(&module_idx),
+          )
           .expect("Should have resolved id")
           .into();
         normalize_side_effects(

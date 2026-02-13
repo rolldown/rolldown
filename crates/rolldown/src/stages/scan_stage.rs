@@ -15,7 +15,7 @@ use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   SharedOptions, SharedResolver,
@@ -50,6 +50,7 @@ pub struct NormalizedScanStageOutput {
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
+  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
 }
 
 impl NormalizedScanStageOutput {
@@ -77,6 +78,7 @@ impl NormalizedScanStageOutput {
       overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map.clone(),
       entry_point_to_reference_ids: self.entry_point_to_reference_ids.clone(),
       flat_options: self.flat_options,
+      user_defined_entry_modules: self.user_defined_entry_modules.clone(),
     }
   }
 }
@@ -106,6 +108,7 @@ impl TryFrom<ScanStageOutput> for NormalizedScanStageOutput {
       overrode_preserve_entry_signature_map: value.overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: value.entry_point_to_reference_ids,
       flat_options: value.flat_options,
+      user_defined_entry_modules: value.user_defined_entry_modules,
     })
   }
 }
@@ -122,6 +125,7 @@ pub struct ScanStageOutput {
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
+  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
 }
 
 impl ScanStage {
@@ -321,6 +325,7 @@ impl From<ModuleLoaderOutput> for ScanStageOutput {
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
       flat_options,
+      user_defined_entry_modules,
     } = module_loader_output;
     ScanStageOutput {
       module_table,
@@ -333,6 +338,7 @@ impl From<ModuleLoaderOutput> for ScanStageOutput {
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
       flat_options,
+      user_defined_entry_modules,
     }
   }
 }

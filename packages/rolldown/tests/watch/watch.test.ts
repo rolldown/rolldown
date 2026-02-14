@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { RolldownWatcher } from 'rolldown';
-import { watch } from 'rolldown';
+import { rolldown, watch } from 'rolldown';
 import { sleep, waitUtil } from 'rolldown-tests/utils';
 import { expect, onTestFinished, test, vi } from 'vitest';
 
@@ -790,6 +790,99 @@ test.sequential('watch close immediately', async () => {
 
   await watcher.close();
 });
+
+test.sequential(
+  'ids loaded via load hook should not be watched',
+  async () => {
+    const dirname = 'watchFiles-load-hook';
+    createTestWithMultiFiles(dirname, {
+      'main.js': `import './loaded.js'`,
+      'loaded.js': `console.log('on disk')`,
+    });
+    const cwd = path.join(import.meta.dirname, 'temp', dirname);
+
+    const bundle = await rolldown({
+      cwd,
+      input: 'main.js',
+      plugins: [
+        {
+          name: 'test-load',
+          load(id) {
+            if (id.endsWith('loaded.js')) {
+              return `console.log('from load hook')`;
+            }
+          },
+        },
+      ],
+    });
+    await bundle.generate();
+    const watchFiles = await bundle.watchFiles;
+    await bundle.close();
+
+    const normalized = watchFiles.map((f) => f.replace(/\\/g, '/'));
+    expect(normalized).toContainEqual(
+      expect.stringContaining('main.js'),
+    );
+    expect(normalized).not.toContainEqual(
+      expect.stringContaining('loaded.js'),
+    );
+  },
+);
+
+test.sequential('ids loaded by file read should be watched', async () => {
+  const dirname = 'watchFiles-file-read';
+  createTestWithMultiFiles(dirname, {
+    'main.js': `import './dep.js'`,
+    'dep.js': `console.log('dep')`,
+  });
+  const cwd = path.join(import.meta.dirname, 'temp', dirname);
+
+  const bundle = await rolldown({ cwd, input: 'main.js' });
+  await bundle.generate();
+  const watchFiles = await bundle.watchFiles;
+  await bundle.close();
+
+  const normalized = watchFiles.map((f) => f.replace(/\\/g, '/'));
+  expect(normalized).toContainEqual(expect.stringContaining('main.js'));
+  expect(normalized).toContainEqual(expect.stringContaining('dep.js'));
+});
+
+test.sequential(
+  'ids added via addWatchFile should be watched',
+  async () => {
+    const dirname = 'watchFiles-addWatchFile';
+    createTestWithMultiFiles(dirname, {
+      'main.js': `console.log('hello')`,
+      'external.txt': 'some data',
+    });
+    const cwd = path.join(import.meta.dirname, 'temp', dirname);
+    const externalFile = path.join(cwd, 'external.txt');
+
+    const bundle = await rolldown({
+      cwd,
+      input: 'main.js',
+      plugins: [
+        {
+          name: 'test-addWatchFile',
+          buildStart() {
+            this.addWatchFile(externalFile);
+          },
+        },
+      ],
+    });
+    await bundle.generate();
+    const watchFiles = await bundle.watchFiles;
+    await bundle.close();
+
+    const normalized = watchFiles.map((f) => f.replace(/\\/g, '/'));
+    expect(normalized).toContainEqual(
+      expect.stringContaining('main.js'),
+    );
+    expect(normalized).toContainEqual(
+      expect.stringContaining('external.txt'),
+    );
+  },
+);
 
 async function createTestInputAndOutput(dirname: string, content?: string) {
   const dir = path.join(import.meta.dirname, 'temp', dirname);

@@ -45,7 +45,7 @@ pub async fn defer_sync_scan_data(
             None,
             source_id.as_str(),
             ImportKind::Import,
-            scan_stage_output.user_defined_entry_modules.contains(&module_idx),
+            scan_stage_output.user_defined_entry_modules.contains_key(&module_idx),
           )
           .expect("Should have resolved id")
           .into();

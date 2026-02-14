@@ -5,7 +5,7 @@ use oxc_index::IndexVec;
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
   ConstExportMeta, EntryPoint, EntryPointKind, FlatOptions, ImportKind, ModuleIdx, ModuleTable,
-  PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
+  PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb, UserDefinedEntryMeta,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
@@ -75,7 +75,7 @@ pub struct LinkStageOutput {
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
-  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  pub user_defined_entry_modules: FxHashMap<ModuleIdx, UserDefinedEntryMeta>,
 }
 
 #[derive(Debug)]
@@ -100,7 +100,7 @@ pub struct LinkStage<'a> {
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub flat_options: FlatOptions,
   pub side_effects_free_function_symbol_ref: FxHashSet<SymbolRef>,
-  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  pub user_defined_entry_modules: FxHashMap<ModuleIdx, UserDefinedEntryMeta>,
 }
 
 impl<'a> LinkStage<'a> {

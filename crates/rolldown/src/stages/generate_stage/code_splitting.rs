@@ -119,7 +119,7 @@ impl GenerateStage<'_> {
             is_user_defined_entry: self
               .link_output
               .user_defined_entry_modules
-              .contains(&module.idx),
+              .contains_key(&module.idx),
             module_stable_id: &module.stable_id,
           },
           self.options,
@@ -658,7 +658,7 @@ impl GenerateStage<'_> {
           return None;
         }
         if self.options.preserve_modules
-          || self.link_output.user_defined_entry_modules.contains(&item.idx)
+          || self.link_output.user_defined_entry_modules.contains_key(&item.idx)
         {
           Path::new(item.id.as_ref()).is_absolute().then_some(item.id.as_ref())
         } else {
@@ -722,7 +722,8 @@ impl GenerateStage<'_> {
         module.idx,
       );
 
-      let is_user_defined_entry = self.link_output.user_defined_entry_modules.contains(&module.idx);
+      let is_user_defined_entry =
+        self.link_output.user_defined_entry_modules.contains_key(&module.idx);
       let preserve_entry_signature = if is_user_defined_entry {
         match finalized_preserve_entry_signatures {
           PreserveEntrySignatures::AllowExtension

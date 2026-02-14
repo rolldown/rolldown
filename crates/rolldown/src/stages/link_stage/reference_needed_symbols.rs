@@ -293,7 +293,7 @@ impl LinkStage<'_> {
       }
     }
 
-    self.symbols =
-      SymbolRefDb::new(self.options.transform_options.is_jsx_preserve()).with_inner(symbols_inner);
+    let is_jsx_preserve = self.symbols.is_jsx_preserve;
+    self.symbols = SymbolRefDb::new(is_jsx_preserve).with_inner(symbols_inner);
   }
 }

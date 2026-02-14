@@ -5202,6 +5202,11 @@ expression: output
 - component-!~{001}~.js => component-CixrEwhh.js
 - main-!~{000}~.js => main-BuFdI7Y3.js
 
+# tests/rolldown/issues/8318_2
+
+- component-!~{001}~.js => component-CixrEwhh.js
+- main-!~{000}~.js => main-BuFdI7Y3.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-D8FPxBSA.js

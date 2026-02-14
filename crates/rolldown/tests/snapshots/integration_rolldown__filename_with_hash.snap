@@ -3885,6 +3885,13 @@ expression: output
 - a-!~{004}~.js => a-Cth2Ajcb.js
 - dbp-2-!~{006}~.js => dbp-2-DLoK7iE_.js
 
+# tests/rolldown/code_splitting/redundant_facade_side_effect_import
+
+- main-!~{001}~.js => main-DSU_ad9X.js
+- sorter-!~{000}~.js => sorter-BTrahW75.js
+- resolve-chunk-!~{002}~.js => resolve-chunk-GG2UOsRv.js
+- sorter-chunk-!~{004}~.js => sorter-chunk-UVqCtK9h.js
+
 # tests/rolldown/dce/conditional_exports
 
 - main-!~{000}~.js => main-B-9hzRYa.js

@@ -55,7 +55,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   fn visit_expression(&mut self, expr: &mut Expression<'a>) {
     if self.insert_preload {
       let is_rewritten = match expr {
-        Expression::CallExpression(expr) => self.rewrite_call_expr(expr),
+        Expression::CallExpression(_) => self.rewrite_call_expr(expr),
         Expression::StaticMemberExpression(expr) => self.rewrite_member_expr(expr),
         _ => self.rewrite_import_expr(expr),
       };

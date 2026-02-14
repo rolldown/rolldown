@@ -1531,6 +1531,7 @@ export declare class BindingModuleInfo {
   dynamicallyImportedIds: Array<string>
   exports: Array<string>
   isEntry: boolean
+  inputFormat: 'esm' | 'cjs' | 'unknown'
   get code(): string | null
 }
 

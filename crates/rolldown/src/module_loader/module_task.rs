@@ -6,9 +6,9 @@ use oxc_index::IndexVec;
 use sugar_path::SugarPath as _;
 
 use rolldown_common::{
-  FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule,
-  NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, SourcemapChainElement, StrOrBytes,
-  try_extract_lazy_barrel_info,
+  ExportsKind, FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
+  NormalModule, NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, SourcemapChainElement,
+  StrOrBytes, try_extract_lazy_barrel_info,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
@@ -105,6 +105,7 @@ impl ModuleTask {
         imported_ids: FxIndexSet::default(),
         dynamically_imported_ids: FxIndexSet::default(),
         exports: vec![],
+        exports_kind: ExportsKind::None,
       }),
     );
 

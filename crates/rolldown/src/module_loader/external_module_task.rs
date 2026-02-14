@@ -2,7 +2,8 @@ use std::{path::Path, sync::Arc};
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  ExternalModuleTaskResult, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ResolvedExternal, ResolvedId,
+  ExportsKind, ExternalModuleTaskResult, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ResolvedExternal,
+  ResolvedId,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
@@ -61,6 +62,7 @@ impl ExternalModuleTask {
         imported_ids: FxIndexSet::default(),
         dynamically_imported_ids: FxIndexSet::default(),
         exports: vec![],
+        exports_kind: ExportsKind::None,
       }),
     );
 

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use futures::future::join_all;
-use oxc_index::IndexVec;
+use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleId, ModuleType,
   NormalizedBundlerOptions, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
@@ -13,6 +13,7 @@ use rolldown_error::{
 use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::ecmascript::{self};
+use rustc_hash::FxHashMap;
 
 use crate::{SharedOptions, SharedResolver};
 
@@ -60,12 +61,29 @@ pub async fn resolve_dependencies(
   warnings: &mut Vec<BuildDiagnostic>,
   module_type: &ModuleType,
 ) -> BuildResult<IndexVec<ImportRecordIdx, ResolvedId>> {
-  let jobs = dependencies.iter_enumerated().map(async |(idx, item)| {
+  // NOTE: this dedupes the identical (specifier, kind) resolve calls
+  let dedup_map: FxHashMap<(&str, ImportKind), ImportRecordIdx> = dependencies
+    .iter_enumerated()
+    .map(|(idx, item)| ((item.module_request.as_str(), item.kind), idx))
+    .collect();
+
+  let jobs = dedup_map.values().map(|&idx| async move {
+    let item = &dependencies[idx];
     let importer = &self_resolved_id.id;
     let specifier = &item.module_request;
     resolve_id(options, resolver, plugin_driver, importer, specifier, item.kind)
       .await
       .map(|id| (idx, id))
+  });
+  let mut sparse_results: IndexVec<ImportRecordIdx, Option<Result<ResolvedId, ResolveError>>> =
+    index_vec![None; dependencies.len()];
+  for result in join_all(jobs).await {
+    let (idx, resolved) = result?;
+    sparse_results[idx] = Some(resolved);
+  }
+  let resolved_results = dependencies.iter().map(|dep| {
+    let repr_idx = dedup_map[&(dep.module_request.as_str(), dep.kind)];
+    sparse_results[repr_idx].as_ref().expect("dedup representative should be resolved")
   });
 
   // FIXME: if the import records came from css view, but source from ecma view,
@@ -73,17 +91,14 @@ pub async fn resolve_dependencies(
   let is_css_module = matches!(module_type, ModuleType::Css);
   let mut ret = IndexVec::with_capacity(dependencies.len());
   let mut build_errors = vec![];
-  for resolved_id in join_all(jobs).await {
-    let (idx, resolved_id) = resolved_id?;
-
+  for (dep, resolved_id) in dependencies.iter().zip(resolved_results) {
     match resolved_id {
       Ok(info) => {
-        ret.push(info);
+        ret.push(info.clone());
       }
       Err(e) => {
-        let dep = &dependencies[idx];
         let specifier = &dep.module_request;
-        match &e {
+        match e {
           ResolveError::NotFound(..) => {
             // NOTE: IN_TRY_CATCH_BLOCK meta if it is a `require` import
             // record

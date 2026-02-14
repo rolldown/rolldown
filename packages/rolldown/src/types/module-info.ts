@@ -40,4 +40,11 @@ export interface ModuleInfo extends ModuleOptions {
    * Whether this module is a user- or plugin-defined entry point.
    */
   isEntry: boolean;
+  /**
+   * The detected format of the module.
+   * - "esm" for ES modules (has `import`/`export` statements)
+   * - "cjs" for CommonJS modules (uses `module.exports`, `exports`, or top-level `return`)
+   * - "unknown" when the format could not be determined from the module's syntax
+   */
+  inputFormat: 'esm' | 'cjs' | 'unknown';
 }

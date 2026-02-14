@@ -7,6 +7,7 @@ pub mod binding_log;
 pub mod binding_log_level;
 pub mod binding_magic_string;
 pub mod binding_module_info;
+pub mod binding_new_watcher_event;
 pub mod binding_normalized_options;
 pub mod binding_output_asset;
 pub mod binding_output_chunk;

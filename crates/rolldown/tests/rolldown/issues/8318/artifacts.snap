@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## component.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+
+//#region component.jsx
+function Greeting() {
+	return <div>Hello</div>;
+}
+
+//#endregion
+exports.Greeting = Greeting;
+```
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+const require_component = require('./component.js');
+
+//#region main.jsx
+function App() {
+	return <div><require_component.Greeting /></div>;
+}
+
+//#endregion
+exports.App = App;
+```

@@ -471,9 +471,18 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             Expression::Identifier(ident_ref) => {
               *it = ast::JSXElementName::IdentifierReference(ident_ref);
             }
+            Expression::StaticMemberExpression(member_expr) => {
+              *it = ast::JSXElementName::MemberExpression(oxc::allocator::Box::new_in(
+                JSXMemberExpression::from_ast(member_expr.unbox(), self.alloc).unwrap(),
+                self.alloc,
+              ));
+            }
+            Expression::ThisExpression(this_expr) => {
+              *it = ast::JSXElementName::ThisExpression(this_expr);
+            }
             _ => {
               unreachable!(
-                "Should always rewrite to Identifier for JsxElementName::IdentifierReference"
+                "Should always rewrite to Identifier, StaticMemberExpression, or ThisExpression for JsxElementName::IdentifierReference"
               )
             }
           }

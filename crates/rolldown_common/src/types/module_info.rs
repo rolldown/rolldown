@@ -14,5 +14,5 @@ pub struct ModuleInfo {
   pub imported_ids: FxIndexSet<ModuleId>,
   pub dynamically_imported_ids: FxIndexSet<ModuleId>,
   pub exports: Vec<CompactStr>,
-  pub exports_kind: ExportsKind,
+  pub input_format: ExportsKind,
 }

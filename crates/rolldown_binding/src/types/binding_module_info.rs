@@ -20,7 +20,7 @@ pub struct BindingModuleInfo {
 #[napi]
 impl BindingModuleInfo {
   pub fn new(inner: Arc<rolldown_common::ModuleInfo>) -> Self {
-    let input_format = match inner.exports_kind {
+    let input_format = match inner.input_format {
       ExportsKind::Esm => "esm",
       ExportsKind::CommonJs => "cjs",
       ExportsKind::None => "unknown",

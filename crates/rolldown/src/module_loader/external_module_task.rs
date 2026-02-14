@@ -62,7 +62,7 @@ impl ExternalModuleTask {
         imported_ids: FxIndexSet::default(),
         dynamically_imported_ids: FxIndexSet::default(),
         exports: vec![],
-        exports_kind: ExportsKind::None,
+        input_format: ExportsKind::None,
       }),
     );
 

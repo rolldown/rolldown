@@ -1,8 +1,13 @@
 import assert from 'node:assert'
 import { a } from './a'
 
-assert.strictEqual(a.b.c, 'c')
+globalThis.acceptOutsideCircularExecCount ??= 0
+globalThis.acceptOutsideCircularExecCount++
 
-import.meta.hot.accept((newMod) => {
-  assert.strictEqual(newMod.a.b.c, 'cc')
-})
+if (globalThis.acceptOutsideCircularExecCount === 1) {
+  assert.strictEqual(a.b.c, 'c')
+} else {
+  assert.strictEqual(a.b.c, 'cc')
+}
+
+import.meta.hot.accept(() => {})

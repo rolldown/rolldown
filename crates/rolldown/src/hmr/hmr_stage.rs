@@ -112,6 +112,7 @@ impl<'a> HmrStage<'a> {
     if !caller.is_hmr_self_accepting_module() {
       return Ok(HmrUpdate::FullReload {
         reason: "not self accepting for this invalidation".to_string(),
+        has_skipped_boundary: false,
       });
     }
 
@@ -123,6 +124,7 @@ impl<'a> HmrStage<'a> {
           "There are no importers to handle `import.meta.hot.invalidate()` called by `{}`",
           caller.stable_id
         ),
+        has_skipped_boundary: false,
       });
     }
 
@@ -297,6 +299,7 @@ impl<'a> HmrStage<'a> {
       let update = if prerequisites.require_full_reload {
         HmrUpdate::FullReload {
           reason: prerequisites.full_reload_reason.unwrap_or_else(|| "Unknown reason".to_string()),
+          has_skipped_boundary: prerequisites.has_skipped_boundary,
         }
       } else {
         self.render_hmr_patch_from_prerequisites(prerequisites, &new_added_modules).await?
@@ -626,11 +629,14 @@ impl<'a> HmrStage<'a> {
       modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
     }
 
+    let has_skipped_boundary = hmr_prerequisites.has_skipped_boundary;
+
     if hmr_prerequisites.require_full_reload {
       return Ok(HmrUpdate::FullReload {
         reason: hmr_prerequisites
           .full_reload_reason
           .unwrap_or_else(|| "Unknown reason".to_string()),
+        has_skipped_boundary,
       });
     }
 
@@ -810,6 +816,8 @@ impl<'a> HmrStage<'a> {
             .clone(),
         })
         .collect(),
+      has_skipped_boundary,
+      modules_to_update_count: u32::try_from(modules_to_be_updated.len()).unwrap_or(u32::MAX),
     }))
   }
 
@@ -818,6 +826,7 @@ impl<'a> HmrStage<'a> {
     hmr_prerequisites: HmrPrerequisites,
     new_added_modules: &FxIndexSet<ModuleIdx>,
   ) -> BuildResult<HmrUpdate> {
+    let has_skipped_boundary = hmr_prerequisites.has_skipped_boundary;
     let mut modules_to_be_updated = hmr_prerequisites.modules_to_be_updated;
 
     // Extend with newly added modules from refetch
@@ -1001,7 +1010,84 @@ impl<'a> HmrStage<'a> {
             .clone(),
         })
         .collect(),
+      has_skipped_boundary,
+      modules_to_update_count: u32::try_from(modules_to_be_updated.len()).unwrap_or(u32::MAX),
     }))
+  }
+
+  /// Check if a candidate HMR boundary node is within a circular import chain.
+  /// If so, the boundary should be skipped so propagation continues outward
+  /// to find a boundary outside the cycle.
+  ///
+  /// Ported from Vite's `isNodeWithinCircularImports`.
+  ///
+  /// `node_idx` is the candidate boundary module.
+  /// `node_chain` is the HMR propagation path (from the changed file to this node).
+  /// The function DFS-es through `node_idx`'s importers to see if any of them
+  /// appear in `node_chain`, which would indicate a circular import involving the boundary.
+  fn is_node_within_circular_imports(
+    &self,
+    node_idx: ModuleIdx,
+    node_chain: &FxIndexSet<ModuleIdx>,
+  ) -> bool {
+    self.is_node_within_circular_imports_inner(
+      node_idx,
+      node_chain,
+      &mut vec![node_idx],
+      &mut FxHashSet::default(),
+    )
+  }
+
+  fn is_node_within_circular_imports_inner(
+    &self,
+    node_idx: ModuleIdx,
+    node_chain: &FxIndexSet<ModuleIdx>,
+    current_chain: &mut Vec<ModuleIdx>,
+    traversed: &mut FxHashSet<ModuleIdx>,
+  ) -> bool {
+    if !traversed.insert(node_idx) {
+      return false;
+    }
+    let Module::Normal(module) = &self.module_table().modules[node_idx] else {
+      return false;
+    };
+    for &importer_idx in &module.importers_idx {
+      // A module importing itself is safe
+      if importer_idx == node_idx {
+        continue;
+      }
+
+      // If this importer is in the propagation chain, we found a circular import
+      if node_chain.contains(&importer_idx) {
+        tracing::trace!("[HmrStage] circular imports detected: {}", {
+          let pos = node_chain.get_index_of(&importer_idx).unwrap_or(0);
+          node_chain.as_slice()[pos..]
+            .iter()
+            .chain(current_chain[1..].iter())
+            .chain(std::iter::once(&importer_idx))
+            .map(|idx| self.module_table().modules[*idx].stable_id().as_ref())
+            .collect::<Vec<_>>()
+            .join(" -> ")
+        });
+        return true;
+      }
+
+      // Continue recursively if this importer isn't already in our DFS path
+      if !current_chain.contains(&importer_idx) {
+        current_chain.push(importer_idx);
+        let result = self.is_node_within_circular_imports_inner(
+          importer_idx,
+          node_chain,
+          current_chain,
+          traversed,
+        );
+        current_chain.pop();
+        if result {
+          return true;
+        }
+      }
+    }
+    false
   }
 
   fn propagate_update(
@@ -1010,6 +1096,7 @@ impl<'a> HmrStage<'a> {
     hmr_boundaries: &mut FxIndexSet<HmrBoundary>,
     propagate_stack: &mut Vec<ModuleIdx>,
     modules_to_be_updated: &mut FxIndexSet<ModuleIdx>,
+    boundary_skipped: &mut bool,
     client: &ClientHmrInput,
   ) -> PropagateUpdateStatus {
     modules_to_be_updated.insert(module_idx);
@@ -1019,36 +1106,28 @@ impl<'a> HmrStage<'a> {
       return PropagateUpdateStatus::ReachHmrBoundary;
     };
 
-    if let Some(circular_start_index) = propagate_stack
-      .iter()
-      .enumerate()
-      .find_map(|(index, each_module_idx)| (module_idx == *each_module_idx).then_some(index))
-    {
-      // Jumping into this branch means we have a circular dependency.
-      // X -> Y means X imports Y. and we have
-      // A -> B -> C -> D(edited)
-      // C -> B
-      // When we reach to C again, the stack contains [D, C, B]
-      let cycle_chain = propagate_stack[circular_start_index..]
-        .iter()
-        .copied()
-        .chain(std::iter::once(module_idx))
-        // Note: our traversal is done by reaching `importers`, so the vec order is opposite to the import order.
-        .rev()
-        .collect::<Vec<_>>();
-
-      return PropagateUpdateStatus::Circular(cycle_chain);
-    }
+    let mut node_chain: FxIndexSet<ModuleIdx> =
+      propagate_stack.iter().copied().chain(std::iter::once(module_idx)).collect();
 
     if module.is_hmr_self_accepting_module() {
+      if !self.is_node_within_circular_imports(module_idx, &node_chain) {
+        tracing::trace!(
+          "[HmrStage] module {} is self-accepting, stop propagation here",
+          module.stable_id,
+        );
+        hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: module_idx });
+        return PropagateUpdateStatus::ReachHmrBoundary;
+      }
+      *boundary_skipped = true;
       tracing::trace!(
-        "[HmrStage] module {} is self-accepting, stop propagation here",
+        "[HmrStage] module {} is self-accepting but within circular imports, skipping boundary",
         module.stable_id,
       );
-      hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: module_idx });
-      return PropagateUpdateStatus::ReachHmrBoundary;
-    } else if module.importers_idx.is_empty() {
-      // This module is not self-accepting and doesn't have any potential importer that might accept its update
+    }
+
+    if module.importers_idx.is_empty() {
+      // This module is not self-accepting (or is within circular) and doesn't have any potential
+      // importer that might accept its update
       return PropagateUpdateStatus::NoBoundary(module_idx);
     }
 
@@ -1059,6 +1138,11 @@ impl<'a> HmrStage<'a> {
       .sort_by_key(|importer_idx| self.module_table().modules[*importer_idx].stable_id());
 
     for importer_idx in importers_idx {
+      // Skip circular back-edges to avoid infinite recursion
+      if propagate_stack.contains(&importer_idx) {
+        continue;
+      }
+
       let Module::Normal(importer) = &self.module_table().modules[importer_idx] else {
         continue;
       };
@@ -1075,14 +1159,25 @@ impl<'a> HmrStage<'a> {
       }
 
       if importer.can_accept_hmr_dependency_for(&module.id) {
+        node_chain.insert(importer_idx);
+        if !self.is_node_within_circular_imports(importer_idx, &node_chain) {
+          tracing::trace!(
+            "[HmrStage] importer {} can accept update for dependency {}, stop propagation here",
+            importer.stable_id,
+            module.stable_id,
+          );
+          modules_to_be_updated.insert(module_idx);
+          hmr_boundaries.insert(HmrBoundary { boundary: importer_idx, accepted_via: module_idx });
+          node_chain.pop();
+          continue;
+        }
+        node_chain.pop();
+        *boundary_skipped = true;
         tracing::trace!(
-          "[HmrStage] importer {} can accept update for dependency {}, stop propagation here",
+          "[HmrStage] importer {} can accept dependency {} but is within circular imports, skipping",
           importer.stable_id,
           module.stable_id,
         );
-        modules_to_be_updated.insert(module_idx);
-        hmr_boundaries.insert(HmrBoundary { boundary: importer_idx, accepted_via: module_idx });
-        continue;
       }
 
       propagate_stack.push(module_idx);
@@ -1091,6 +1186,7 @@ impl<'a> HmrStage<'a> {
         hmr_boundaries,
         propagate_stack,
         modules_to_be_updated,
+        boundary_skipped,
         client,
       );
       propagate_stack.pop();
@@ -1122,6 +1218,7 @@ impl<'a> HmrStage<'a> {
     let mut require_full_reload = false;
     let mut full_reload_reason = None;
     let mut modules_to_be_updated = FxIndexSet::default();
+    let mut has_skipped_boundary = false;
 
     for stale_module in stale_modules.iter().copied() {
       if require_full_reload {
@@ -1138,35 +1235,18 @@ impl<'a> HmrStage<'a> {
         // If this module is not registered, we simply ignore it.
         continue;
       }
+      let mut boundary_skipped = false;
       let propagate_update_status = self.propagate_update(
         stale_module,
         &mut boundaries,
         &mut vec![],
         &mut modules_to_be_updated,
+        &mut boundary_skipped,
         client,
       );
+      has_skipped_boundary |= boundary_skipped;
 
       match propagate_update_status {
-        PropagateUpdateStatus::Circular(cycle_chain) => {
-          tracing::trace!(
-            "[HmrStage] detected {} propagate into a circular import chain\n - chain: {:#?}",
-            self.module_table().modules[stale_module].stable_id(),
-            cycle_chain
-              .iter()
-              .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
-              .collect::<Vec<_>>(),
-          );
-          require_full_reload = true;
-          full_reload_reason = Some(format!(
-            "circular import chain: {}",
-            cycle_chain
-              .iter()
-              .map(|module_idx| self.module_table().modules[*module_idx].stable_id().as_str())
-              .collect::<Vec<_>>()
-              .join(" -> ")
-          ));
-          break;
-        }
         PropagateUpdateStatus::NoBoundary(idx) => {
           tracing::trace!(
             "[HmrStage] detected {} propagate update to {} which has no hmr boundary",
@@ -1187,19 +1267,6 @@ impl<'a> HmrStage<'a> {
         }
       }
 
-      // If import.meta.hot.invalidate was already called on that module for the same update,
-      // it means any importer of that module can't hot update. We should fall back to full reload.
-      if let Some(first_invalidated_by) = first_invalidated_by.as_ref() {
-        if boundaries.iter().any(|boundary| {
-          self.module_table().modules[boundary.accepted_via].stable_id().as_str()
-            == *first_invalidated_by
-        }) {
-          require_full_reload = true;
-          // full_reload_reason = Some("circular import invalidate".to_string());
-          continue;
-        }
-      }
-
       hmr_boundaries.extend(boundaries);
     }
 
@@ -1208,6 +1275,7 @@ impl<'a> HmrStage<'a> {
       modules_to_be_updated,
       require_full_reload,
       full_reload_reason,
+      has_skipped_boundary,
     }
   }
 }
@@ -1218,10 +1286,10 @@ struct HmrPrerequisites {
   modules_to_be_updated: FxIndexSet<ModuleIdx>,
   require_full_reload: bool,
   full_reload_reason: Option<String>,
+  has_skipped_boundary: bool,
 }
 
 enum PropagateUpdateStatus {
-  Circular(Vec<ModuleIdx>), // The circular dependency chain
   ReachHmrBoundary,
   NoBoundary(ModuleIdx),
 }

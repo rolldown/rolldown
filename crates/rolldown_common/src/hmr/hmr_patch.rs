@@ -7,4 +7,6 @@ pub struct HmrPatch {
   pub sourcemap: Option<String>,
   pub sourcemap_filename: Option<String>,
   pub hmr_boundaries: Vec<HmrBoundaryOutput>,
+  pub has_skipped_boundary: bool,
+  pub modules_to_update_count: u32,
 }

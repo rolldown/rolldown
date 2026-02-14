@@ -1,2 +1,2 @@
-// This module has no exports syntax, so inputFormat should be "unknown"
+// This module has no exports syntax, but since the package has "type": "module", inputFormat should be "esm"
 console.log('side effect');

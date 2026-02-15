@@ -31,7 +31,7 @@
     "lint-staged": "^16.1.2",
     "oxfmt": "^0.32.0",
     "oxlint": "^1.31.0",
-    "oxlint-tsgolint": "0.12.2",
+    "oxlint-tsgolint": "0.13.0",
     "playwright-chromium": "^1.56.1",
     "publint": "^0.3.16",
     "remove-unused-vars": "^0.0.12",

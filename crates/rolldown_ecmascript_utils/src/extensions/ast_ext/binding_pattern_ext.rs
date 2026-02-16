@@ -62,6 +62,7 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
               AssignmentTargetRest {
                 span: rest.span,
                 target: rest.unbox().argument.into_assignment_target(alloc),
+                ..AssignmentTargetRest::dummy(alloc)
               },
               alloc,
             )
@@ -82,11 +83,13 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
               AssignmentTargetRest {
                 span: rest.span,
                 target: rest.unbox().argument.into_assignment_target(alloc),
+                ..AssignmentTargetRest::dummy(alloc)
               },
               alloc,
             )
           }),
           elements: oxc::allocator::Vec::with_capacity_in(arr_pat.elements.len(), alloc),
+          ..ArrayAssignmentTarget::dummy(alloc)
         };
         arr_pat.elements.take_in(alloc).into_iter().for_each(|binding_pat| {
           arr_target.elements.push(binding_pat.map(|binding_pat| match binding_pat {
@@ -97,6 +100,7 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
                   span: assign_pat.span,
                   init: assign_pat.right,
                   binding: assign_pat.left.into_assignment_target(alloc),
+                  ..AssignmentTargetWithDefault::dummy(alloc)
                 }
                 .into_in(alloc),
               )

@@ -4,7 +4,7 @@ use oxc::ast::AstType;
 use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression};
 use oxc::span::{Atom, CompactStr};
 use oxc::{
-  allocator::{self, IntoIn, TakeIn},
+  allocator::{self, Dummy as _, IntoIn, TakeIn},
   ast::{
     NONE,
     ast::{self, BindingPattern, Expression, SimpleAssignmentTarget, Statement},
@@ -591,6 +591,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                   binding: ast::AssignmentTarget::from(target),
                   init,
                   span: Span::default(),
+                  ..ast::AssignmentTargetWithDefault::dummy(self.alloc)
                 }
                 .into_in(self.alloc),
               )
@@ -599,6 +600,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             },
             span: Span::default(),
             computed: false,
+            ..ast::AssignmentTargetPropertyProperty::dummy(self.alloc)
           }
           .into_in(self.alloc),
         );

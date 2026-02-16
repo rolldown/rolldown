@@ -18,6 +18,7 @@ use rolldown_utils::rayon::{
   IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
 };
 
+use rolldown_utils::IndexBitSet;
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -64,7 +65,7 @@ pub struct IncludeContext<'a> {
   pub normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
   /// It is necessary since we can't mutate `module.meta` during the tree shaking process.
   /// see [rolldown_common::ecmascript::ecma_view::EcmaViewMeta]
-  pub bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
+  pub bailout_cjs_tree_shaking_modules: IndexBitSet<ModuleIdx>,
   pub may_partial_namespace: bool,
   pub module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
   pub json_module_none_self_reference_included_symbol: FxHashMap<ModuleIdx, FxHashSet<SymbolRef>>,
@@ -98,7 +99,7 @@ impl<'a> IncludeContext<'a> {
       constant_symbol_map,
       options,
       normal_symbol_exports_chain_map,
-      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
+      bailout_cjs_tree_shaking_modules: IndexBitSet::new(modules.len()),
       may_partial_namespace: false,
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
@@ -190,7 +191,7 @@ impl LinkStage<'_> {
           return;
         }
       };
-      context.bailout_cjs_tree_shaking_modules.insert(module.idx);
+      context.bailout_cjs_tree_shaking_modules.set_bit(module.idx);
       let meta = &self.metas[entry.idx];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, _came_from_cjs)| {
@@ -217,7 +218,10 @@ impl LinkStage<'_> {
       // We extract bailout_modules first to avoid borrowing conflict:
       // passing `context` requires a mutable borrow, which conflicts with
       // borrowing `context.bailout_cjs_tree_shaking_modules` inside the call.
-      let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
+      let bailout_modules = std::mem::replace(
+        &mut context.bailout_cjs_tree_shaking_modules,
+        IndexBitSet::new(context.modules.len()),
+      );
       include_cjs_bailout_exports(context, &self.metas, bailout_modules);
 
       dynamic_entries.iter().for_each(|entry| {
@@ -356,12 +360,12 @@ impl LinkStage<'_> {
   fn process_and_retain_dynamic_entry(
     &self,
     entry: &EntryPoint,
-    cycled_idx: &FxHashSet<ModuleIdx>,
+    cycled_idx: &IndexBitSet<ModuleIdx>,
     context: &mut IncludeContext,
     unused_record_idxs: &mut Vec<(ModuleIdx, ImportRecordIdx)>,
     unreachable_import_expression_addr: &FxHashSet<Address>,
   ) -> bool {
-    if !cycled_idx.contains(&entry.idx) {
+    if !cycled_idx.has_bit(entry.idx) {
       if let Some(item) = self.is_dynamic_entry_alive(
         entry,
         context.is_included_vec,
@@ -423,7 +427,7 @@ impl LinkStage<'_> {
   fn sort_dynamic_entries_by_topological_order(
     &self,
     dynamic_entries: &mut [EntryPoint],
-  ) -> FxHashSet<ModuleIdx> {
+  ) -> IndexBitSet<ModuleIdx> {
     let mut graph: DiGraphMap<ModuleIdx, ()> = DiGraphMap::new();
 
     // TODO: Since we don't skip visited node, If a project has a lot of dynamic entries,
@@ -432,10 +436,10 @@ impl LinkStage<'_> {
     for entry in dynamic_entries.iter() {
       let mut entry_module_idx = entry.idx;
       let cur = entry_module_idx;
-      let mut visited = FxHashSet::default();
+      let mut visited = IndexBitSet::new(self.module_table.modules.len());
       self.construct_dynamic_entry_graph(&mut graph, &mut visited, &mut entry_module_idx, cur);
     }
-    let mut cycled_dynamic_entries = FxHashSet::default();
+    let mut cycled_dynamic_entries = IndexBitSet::new(self.module_table.modules.len());
     // https://docs.rs/petgraph/latest/petgraph/algo/fn.tarjan_scc.html
     // the order of struct connected component is sorted by reverse topological sort.
     let idx_to_order_map = petgraph::algo::tarjan_scc(&graph)
@@ -461,14 +465,14 @@ impl LinkStage<'_> {
   fn construct_dynamic_entry_graph(
     &self,
     g: &mut DiGraphMap<ModuleIdx, ()>,
-    visited: &mut FxHashSet<ModuleIdx>,
+    visited: &mut IndexBitSet<ModuleIdx>,
     root_node: &mut ModuleIdx,
     cur_node: ModuleIdx,
   ) -> Option<()> {
-    if visited.contains(&cur_node) {
+    if visited.has_bit(cur_node) {
       return Some(());
     }
-    visited.insert(cur_node);
+    visited.set_bit(cur_node);
     let module = self.module_table[cur_node].as_normal()?;
     for rec in &module.import_records {
       let Some(module_idx) = rec.resolved_module else {
@@ -685,12 +689,12 @@ pub fn include_symbol(
     if let Some(idx) =
       ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
     {
-      ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
+      ctx.bailout_cjs_tree_shaking_modules.set_bit(*idx);
     }
     if ctx.modules[canonical_ref.owner].as_normal().map(|m| m.namespace_object_ref)
       == Some(canonical_ref)
     {
-      ctx.bailout_cjs_tree_shaking_modules.insert(canonical_ref.owner);
+      ctx.bailout_cjs_tree_shaking_modules.set_bit(canonical_ref.owner);
     }
   }
 
@@ -701,7 +705,7 @@ pub fn include_symbol(
       ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
     {
       if !ctx.may_partial_namespace && namespace_alias.property_name.as_str() == "default" {
-        ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
+        ctx.bailout_cjs_tree_shaking_modules.set_bit(*idx);
       } else {
         // handle case:
         // ```js
@@ -815,7 +819,7 @@ pub fn include_statement(
         return;
       }
       if !module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
-        ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
+        ctx.bailout_cjs_tree_shaking_modules.set_bit(module_idx);
       }
     });
   let mut include_kind = if stmt_info.meta.contains(StmtInfoMeta::ReExportDynamicExports) {

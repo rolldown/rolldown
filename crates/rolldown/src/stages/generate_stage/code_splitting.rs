@@ -16,11 +16,8 @@ use rolldown_common::{
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
-  BitSet, commondir,
-  index_vec_ext::IndexVecRefExt,
-  indexmap::FxIndexMap,
-  rayon::ParallelIterator,
-  rustc_hash::{FxHashMapExt, FxHashSetExt},
+  BitSet, IndexBitSet, commondir, index_vec_ext::IndexVecRefExt, indexmap::FxIndexMap,
+  rayon::ParallelIterator, rustc_hash::FxHashMapExt,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -326,13 +323,14 @@ impl GenerateStage<'_> {
           }
         }
         // All modules that we need to ensure the initialization order.
-        let mut modules_need_to_check: FxHashSet<ModuleIdx> = FxHashSet::default();
+        let mut modules_need_to_check: IndexBitSet<ModuleIdx> =
+          IndexBitSet::new(self.link_output.module_table.modules.len());
         let mut max_length = 0;
         for (none_wrapped, dep_length) in &none_wrapped_module_to_wrapped_dependency_length {
-          modules_need_to_check.insert(*none_wrapped);
+          modules_need_to_check.set_bit(*none_wrapped);
           max_length = max_length.max(*dep_length);
         }
-        modules_need_to_check.extend(&wrapped_modules[0..max_length]);
+        modules_need_to_check.extend(wrapped_modules[0..max_length].iter().copied());
 
         if modules_need_to_check.is_empty() {
           // No wrapped modules or none wrapped modules that depends on wrapped modules, so we can
@@ -354,11 +352,11 @@ impl GenerateStage<'_> {
               rec.resolved_module.map(|module_idx| (rec_idx, rec, module_idx))
             })
             .for_each(|(rec_idx, rec, module_idx)| {
-              if rec.kind == ImportKind::Import && modules_need_to_check.contains(&module_idx) {
+              if rec.kind == ImportKind::Import && modules_need_to_check.has_bit(module_idx) {
                 module_init_position.entry(module_idx).or_insert((*idx, rec_idx));
               }
             });
-          if module_init_position.len() == modules_need_to_check.len() {
+          if module_init_position.len() == modules_need_to_check.bit_count() as usize {
             break;
           }
         }
@@ -582,7 +580,8 @@ impl GenerateStage<'_> {
         (!entry_external_module_map.is_empty()).then_some((idx, entry_external_module_map))
       })
       .collect::<Vec<(ChunkIdx, FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>)>>();
-    let mut invalidated_modules = FxHashSet::default();
+    let modules_len = self.link_output.module_table.modules.len();
+    let mut invalidated_modules = IndexBitSet::new(modules_len);
     for (chunk_idx, entry_external_module_map) in module_to_entry_level_external_rec_list_maps {
       let mut entry_level_external_modules = FxHashSet::default();
       for (module_idx, rec_list) in entry_external_module_map {
@@ -612,7 +611,7 @@ impl GenerateStage<'_> {
           .module_namespace_included_reason
           .contains(ModuleNamespaceIncludedReason::Unknown)
         {
-          invalidated_modules.insert(module.idx);
+          invalidated_modules.set_bit(module.idx);
         }
       }
       let mut vec = entry_level_external_modules.into_iter().collect_vec();
@@ -620,11 +619,12 @@ impl GenerateStage<'_> {
       chunk_graph.chunk_table[chunk_idx].entry_level_external_module_idx = vec;
     }
     // re propagate `meta.has_dynamic_exports` for affect modules
-    let mut q = invalidated_modules.iter().copied().collect::<VecDeque<_>>();
+    let mut q = invalidated_modules.index_of_one().collect::<VecDeque<_>>();
     while let Some(idx) = q.pop_front() {
-      if !invalidated_modules.insert(idx) {
+      if invalidated_modules.has_bit(idx) {
         continue;
       }
+      invalidated_modules.set_bit(idx);
       let Module::Normal(module) = &self.link_output.module_table[idx] else {
         continue;
       };
@@ -635,7 +635,7 @@ impl GenerateStage<'_> {
       return;
     }
 
-    let mut visited = FxHashSet::with_capacity(invalidated_modules.len());
+    let mut visited = IndexBitSet::new(modules_len);
     for module_idx in invalidated_modules.clone() {
       propagate_has_dynamic_exports(
         module_idx,
@@ -929,13 +929,13 @@ fn propagate_has_dynamic_exports(
   target: ModuleIdx,
   modules: &IndexModules,
   linking_infos: &mut LinkingMetadataVec,
-  visited_modules: &mut FxHashSet<ModuleIdx>,
-  invalidate_modules: &mut FxHashSet<ModuleIdx>,
+  visited_modules: &mut IndexBitSet<ModuleIdx>,
+  invalidate_modules: &mut IndexBitSet<ModuleIdx>,
 ) -> bool {
-  if !invalidate_modules.contains(&target) || visited_modules.contains(&target) {
+  if !invalidate_modules.has_bit(target) || visited_modules.has_bit(target) {
     return linking_infos[target].has_dynamic_exports;
   }
-  visited_modules.insert(target);
+  visited_modules.set_bit(target);
 
   let has_dynamic_exports = match &modules[target] {
     Module::Normal(module) => {
@@ -967,6 +967,6 @@ fn propagate_has_dynamic_exports(
   };
 
   linking_infos[target].has_dynamic_exports = has_dynamic_exports;
-  invalidate_modules.remove(&target);
+  invalidate_modules.clear_bit(target);
   has_dynamic_exports
 }

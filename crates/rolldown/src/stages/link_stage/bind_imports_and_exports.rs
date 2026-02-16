@@ -12,13 +12,14 @@ use rolldown_common::{
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_utils::{
+  IndexBitSet,
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
   index_vec_ext::{IndexVecExt, IndexVecRefExt},
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
 
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use crate::{SharedOptions, types::linking_metadata::LinkingMetadataVec};
 
@@ -164,13 +165,12 @@ impl LinkStage<'_> {
       }
       meta.resolved_exports = resolved_exports;
     });
-    let side_effects_modules = self
-      .module_table
-      .modules
-      .iter_enumerated()
-      .filter(|(_, item)| item.side_effects().has_side_effects())
-      .map(|(idx, _)| idx)
-      .collect::<FxHashSet<ModuleIdx>>();
+    let mut side_effects_modules = IndexBitSet::new(self.module_table.modules.len());
+    for (idx, item) in self.module_table.modules.iter_enumerated() {
+      if item.side_effects().has_side_effects() {
+        side_effects_modules.set_bit(idx);
+      }
+    }
     let mut normal_symbol_exports_chain_map = FxHashMap::default();
     let mut binding_ctx = BindImportsAndExportsContext {
       index_modules: &self.module_table.modules,
@@ -383,7 +383,7 @@ impl LinkStage<'_> {
   /// The final pointed `SymbolRef` of `foo_ns.bar_ns.c` is the `c` in `bar.js`.
   fn resolve_member_expr_refs(
     &mut self,
-    side_effects_modules: &FxHashSet<ModuleIdx>,
+    side_effects_modules: &IndexBitSet<ModuleIdx>,
     normal_symbol_exports_chain_map: &FxHashMap<SymbolRef, Vec<SymbolRef>>,
   ) {
     let warnings = append_only_vec::AppendOnlyVec::new();
@@ -477,7 +477,7 @@ impl LinkStage<'_> {
                   {
                     depended_refs.extend(chains);
                     for item in chains {
-                      if side_effects_modules.contains(&item.owner) {
+                      if side_effects_modules.has_bit(item.owner) {
                         side_effects_dependency.push(item.owner);
                       }
                     }
@@ -602,7 +602,7 @@ struct BindImportsAndExportsContext<'a> {
   pub external_import_binding_merger:
     FxHashMap<ModuleIdx, FxHashMap<CompactStr, IndexSet<SymbolRef>>>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
-  pub side_effects_modules: &'a FxHashSet<ModuleIdx>,
+  pub side_effects_modules: &'a IndexBitSet<ModuleIdx>,
   pub normal_symbol_exports_chain_map: &'a mut FxHashMap<SymbolRef, Vec<SymbolRef>>,
 }
 
@@ -708,7 +708,7 @@ impl BindImportsAndExportsContext<'_> {
         }
         MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports }) => {
           for r in &reexports {
-            if self.side_effects_modules.contains(&r.owner) {
+            if self.side_effects_modules.has_bit(r.owner) {
               self.metas[module_idx].dependencies.insert(r.owner);
             }
           }

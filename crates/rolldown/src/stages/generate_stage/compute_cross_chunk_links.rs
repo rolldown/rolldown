@@ -13,6 +13,7 @@ use rolldown_common::{
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
   PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolIdExt, SymbolRef, WrapKind,
 };
+use rolldown_utils::IndexBitSet;
 use rolldown_utils::concat_string;
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -25,7 +26,7 @@ type IndexChunkImportsFromExternalModules =
   IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<(ModuleIdx, NamedImport)>>>;
 type IndexChunkAllImportsFromExternalModules = IndexVec<ChunkIdx, FxIndexSet<ModuleIdx>>;
 type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashMap<SymbolRef, Vec<CompactStr>>>;
-type IndexCrossChunkImports = IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>;
+type IndexCrossChunkImports = IndexVec<ChunkIdx, IndexBitSet<ChunkIdx>>;
 type IndexCrossChunkDynamicImports = IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>;
 type IndexImportsFromOtherChunks =
   IndexVec<ChunkIdx, FxHashMap<ChunkIdx, Vec<CrossChunkImportItem>>>;
@@ -44,7 +45,7 @@ impl GenerateStage<'_> {
 
     let mut index_imports_from_other_chunks: IndexImportsFromOtherChunks = index_vec![FxHashMap::<ChunkIdx, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunk_table.len()];
     let mut index_cross_chunk_imports: IndexCrossChunkImports =
-      index_vec![FxHashSet::default(); chunk_graph.chunk_table.len()];
+      index_vec![IndexBitSet::new(chunk_graph.chunk_table.len()); chunk_graph.chunk_table.len()];
     let mut index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
 
@@ -72,8 +73,7 @@ impl GenerateStage<'_> {
         // added during chunk merging optimization (PR #7194).
         // See: https://github.com/rolldown/rolldown/issues/7297
         let mut cross_chunk_imports = cross_chunk_imports
-          .iter()
-          .copied()
+          .index_of_one()
           .chain(chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks.keys().copied())
           .collect::<Vec<_>>();
         cross_chunk_imports.sort_by_cached_key(|chunk_id| {
@@ -404,8 +404,8 @@ impl GenerateStage<'_> {
             if let Some(set) =
               chunk_graph.common_chunk_exported_facade_chunk_namespace.get(&chunk_id)
             {
-              for dynamic_entry_module in set {
-                let meta = &self.link_output.metas[*dynamic_entry_module];
+              for dynamic_entry_module in set.index_of_one() {
+                let meta = &self.link_output.metas[dynamic_entry_module];
                 match meta.wrap_kind() {
                   WrapKind::Cjs => {
                     // For CJS modules, export only wrapper_ref (require_xxx)
@@ -421,14 +421,14 @@ impl GenerateStage<'_> {
                       index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
                     }
                     index_chunk_exported_symbols[chunk_id]
-                      .entry(SymbolId::module_namespace_symbol_ref(*dynamic_entry_module))
+                      .entry(SymbolId::module_namespace_symbol_ref(dynamic_entry_module))
                       .or_default();
                   }
                   WrapKind::None => {
                     // For non-wrapped modules, export only namespace
                     // Generated code: `import('./chunk.js').then((n) => n.namespace)`
                     index_chunk_exported_symbols[chunk_id]
-                      .entry(SymbolId::module_namespace_symbol_ref(*dynamic_entry_module))
+                      .entry(SymbolId::module_namespace_symbol_ref(dynamic_entry_module))
                       .or_default();
                   }
                 }
@@ -479,7 +479,7 @@ impl GenerateStage<'_> {
           });
           // Check if the import is from another chunk
           if chunk_id != importee_chunk_idx {
-            index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
+            index_cross_chunk_imports[chunk_id].set_bit(importee_chunk_idx);
             let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
             imports_from_other_chunks
               .entry(importee_chunk_idx)
@@ -506,7 +506,7 @@ impl GenerateStage<'_> {
                 let Some(importee_chunk_idx) = chunk_graph.module_to_chunk[module_idx] else {
                   return;
                 };
-                index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
+                index_cross_chunk_imports[chunk_id].set_bit(importee_chunk_idx);
                 let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
                 imports_from_other_chunks.entry(importee_chunk_idx).or_default();
               });
@@ -523,7 +523,7 @@ impl GenerateStage<'_> {
                   && importee_chunk.has_side_effect(&self.link_output.module_table)
               })
               .for_each(|(importee_chunk_id, _)| {
-                index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
+                index_cross_chunk_imports[chunk_id].set_bit(importee_chunk_id);
                 let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
                 imports_from_other_chunks.entry(importee_chunk_id).or_default();
               });
@@ -564,7 +564,7 @@ impl GenerateStage<'_> {
                 if importee_chunk.bits.has_bit(*importer_chunk_bit) {
                   continue;
                 }
-                index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
+                index_cross_chunk_imports[chunk_id].set_bit(importee_chunk_idx);
                 let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
                 imports_from_other_chunks.entry(importee_chunk_idx).or_default();
               }
@@ -614,7 +614,7 @@ impl GenerateStage<'_> {
         // Also preserve exports from AllowExtension emitted chunks that were merged into this chunk
         if let Some(modules) = preserve_export_names_modules.get(&chunk_id) {
           let exported_chunk_symbols = &index_chunk_exported_symbols[chunk_id];
-          for &module_idx in modules {
+          for module_idx in modules.index_of_one() {
             let module_meta = &self.link_output.metas[module_idx];
             module_meta.canonical_exports(false).for_each(|(name, export)| {
               let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);

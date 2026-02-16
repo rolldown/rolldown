@@ -16,6 +16,7 @@ use rolldown_common::{
   SymbolRefFlags,
 };
 use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
+use rolldown_utils::IndexBitSet;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -134,7 +135,7 @@ impl LinkStage<'_> {
       );
     });
     // Track modules to process in subsequent passes. None means process all modules (first pass).
-    let mut modules_to_process: Option<FxHashSet<ModuleIdx>> = None;
+    let mut modules_to_process: Option<IndexBitSet<ModuleIdx>> = None;
     while ctx.config.pass > 0 && ctx.changed {
       ctx.config.pass -= 1;
       ctx.changed = false;
@@ -160,24 +161,25 @@ impl LinkStage<'_> {
   fn find_modules_referencing_constants(
     &self,
     new_constant_refs: &FxHashSet<SymbolRef>,
-  ) -> FxHashSet<ModuleIdx> {
+  ) -> IndexBitSet<ModuleIdx> {
+    let mut result = IndexBitSet::new(self.module_table.modules.len());
     if new_constant_refs.is_empty() {
-      return FxHashSet::default();
+      return result;
     }
-
-    self
-      .module_table
-      .iter()
-      .filter_map(|module| {
-        let normal_module = module.as_normal()?;
-        // Check if any of the module's named imports resolve to a newly discovered constant
-        let references_new_constant = normal_module.named_imports.keys().any(|local_symbol_ref| {
-          let canonical_ref = self.symbols.canonical_ref_for(*local_symbol_ref);
-          new_constant_refs.contains(&canonical_ref)
-        });
-        references_new_constant.then_some(normal_module.idx)
-      })
-      .collect()
+    for module in self.module_table.iter() {
+      let Some(normal_module) = module.as_normal() else {
+        continue;
+      };
+      // Check if any of the module's named imports resolve to a newly discovered constant
+      let references_new_constant = normal_module.named_imports.keys().any(|local_symbol_ref| {
+        let canonical_ref = self.symbols.canonical_ref_for(*local_symbol_ref);
+        new_constant_refs.contains(&canonical_ref)
+      });
+      if references_new_constant {
+        result.set_bit(normal_module.idx);
+      }
+    }
+    result
   }
 
   fn run(
@@ -186,13 +188,13 @@ impl LinkStage<'_> {
     constant_symbol_map: &mut FxHashMap<SymbolRef, ConstExportMeta>,
     module_idx_and_stmt_idx_to_dynamic_import_expr_addr_map: &ModuleIdxAndStmtIdxToDynamicImportExprAddrMap,
     all_unreachable_addresses: &mut FxHashSet<Address>,
-    modules_to_process: Option<&FxHashSet<ModuleIdx>>,
+    modules_to_process: Option<&IndexBitSet<ModuleIdx>>,
   ) -> FxHashSet<SymbolRef> {
     let mutation_result: Vec<MutationResult> = self
       .sorted_modules
       .par_iter()
       .filter_map(|item| {
-        if modules_to_process.is_some_and(|filter| !filter.contains(item)) {
+        if modules_to_process.is_some_and(|filter| !filter.has_bit(*item)) {
           return None;
         }
         let module = self.module_table[*item].as_normal()?;

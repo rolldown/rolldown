@@ -5,7 +5,7 @@ use rolldown_common::{
   Specifier, SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
+use rolldown_utils::{IndexBitSet, concat_string, ecmascript::to_module_import_export_name};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -250,7 +250,8 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       None,
     ));
   });
-  let mut rendered_external_import_namespace_modules = FxHashSet::default();
+  let mut rendered_external_import_namespace_modules =
+    IndexBitSet::new(ctx.link_output.module_table.modules.len());
   // render external imports
   ctx.chunk.direct_imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
     let importee = &ctx.link_output.module_table[*importee_id]
@@ -334,7 +335,7 @@ fn render_named_imports<'a, I>(
   importee: &ExternalModule,
   named_imports: I,
   is_importee_rendered: &mut bool,
-  rendered_external_import_namespace_modules: &mut FxHashSet<ModuleIdx>,
+  rendered_external_import_namespace_modules: &mut IndexBitSet<ModuleIdx>,
   with_clause: Option<(ModuleIdx, ImportRecordIdx)>,
 ) -> String
 where
@@ -354,10 +355,10 @@ where
         .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
       match &named_import.imported {
         Specifier::Star => {
-          if rendered_external_import_namespace_modules.contains(&importee.idx) {
+          if rendered_external_import_namespace_modules.has_bit(importee.idx) {
             return None;
           }
-          rendered_external_import_namespace_modules.insert(importee.idx);
+          rendered_external_import_namespace_modules.set_bit(importee.idx);
           *is_importee_rendered = true;
           s.push_str("import * as ");
           s.push_str(alias);

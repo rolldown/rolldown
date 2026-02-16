@@ -8,7 +8,7 @@ use rolldown_common::{
   FacadeChunkEliminationReason, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTable,
   PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, StmtInfos, WrapKind,
 };
-use rolldown_utils::{BitSet, indexmap::FxIndexMap};
+use rolldown_utils::{BitSet, IndexBitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -245,8 +245,9 @@ impl GenerateStage<'_> {
   fn construct_static_entry_to_reached_dynamic_entries_map(
     &self,
     chunk_graph: &ChunkGraph,
-  ) -> FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> {
-    let mut ret: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> = FxHashMap::default();
+  ) -> FxHashMap<ChunkIdx, IndexBitSet<ChunkIdx>> {
+    let chunks_len = chunk_graph.chunk_table.len();
+    let mut ret: FxHashMap<ChunkIdx, IndexBitSet<ChunkIdx>> = FxHashMap::default();
     let dynamic_entry_modules = chunk_graph
       .chunk_table
       .iter_enumerated()
@@ -280,7 +281,10 @@ impl GenerateStage<'_> {
         for dep_idx in module.import_records.iter().filter_map(|r| r.resolved_module) {
           // Can't put it at the beginning of the loop,
           if let Some(chunk_idx) = dynamic_entry_modules.get(&dep_idx) {
-            ret.entry(entry_chunk_idx).or_default().insert(*chunk_idx);
+            ret
+              .entry(entry_chunk_idx)
+              .or_insert_with(|| IndexBitSet::new(chunks_len))
+              .set_bit(*chunk_idx);
           }
           q.push_back(dep_idx);
         }
@@ -302,11 +306,11 @@ impl GenerateStage<'_> {
     input_base: &ArcStr,
     temp_chunk_graph: &mut ChunkOptimizationGraph,
   ) {
-    let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
+    let static_entry_chunk_reference: FxHashMap<ChunkIdx, IndexBitSet<ChunkIdx>> =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
 
-    let entry_chunk_idx =
-      chunk_graph.chunk_table.iter_enumerated().map(|(idx, _)| idx).collect::<FxHashSet<_>>();
+    let entry_chunk_idx: IndexBitSet<ChunkIdx> =
+      chunk_graph.chunk_table.iter_enumerated().map(|(idx, _)| idx).collect();
     // Calculate on demand to avoid add a new field on each NormalModule.
     let dynamic_entry_to_dynamic_importers: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>> = {
       // Get dynamic entry modules from chunk_table, then find matched entry points
@@ -347,7 +351,7 @@ impl GenerateStage<'_> {
           .map(ChunkIdx::from_raw)
           // Some of the bits maybe not created yet, so filter it out.
           // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
-          .filter(|idx| entry_chunk_idx.contains(idx))
+          .filter(|idx| entry_chunk_idx.has_bit(*idx))
           .collect();
 
         let merge_target = Self::try_insert_into_existing_chunk(
@@ -511,7 +515,7 @@ impl GenerateStage<'_> {
   /// Returns `Some(ChunkIdx)` if a suitable merge target is found, `None` otherwise.
   fn try_insert_into_existing_chunk(
     chunk_idxs: &[ChunkIdx],
-    entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
+    entry_chunk_reference: &FxHashMap<ChunkIdx, IndexBitSet<ChunkIdx>>,
     chunk_graph: &ChunkGraph,
     module_table: &ModuleTable,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
@@ -549,7 +553,7 @@ impl GenerateStage<'_> {
       // If not, we cannot merge the shared modules into the user-defined entry chunk because
       // the dynamic entries would not be able to access the shared modules.
       let all_dynamic_entries_reachable =
-        dynamic_entry.iter().all(|idx| reached_dynamic_chunk.is_some_and(|set| set.contains(idx)));
+        dynamic_entry.iter().all(|idx| reached_dynamic_chunk.is_some_and(|set| set.has_bit(*idx)));
       if !all_dynamic_entries_reachable {
         return None;
       }
@@ -894,14 +898,17 @@ impl GenerateStage<'_> {
       constant_symbol_map: &self.link_output.global_constant_symbol_map,
       options: self.options,
       normal_symbol_exports_chain_map: &self.link_output.normal_symbol_exports_chain_map,
-      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
+      bailout_cjs_tree_shaking_modules: IndexBitSet::new(
+        self.link_output.module_table.modules.len(),
+      ),
       may_partial_namespace: false,
       module_namespace_included_reason: &mut module_namespace_reason_vec,
       inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
     };
 
-    let mut runtime_dependent_chunks = FxHashSet::default();
+    let mut runtime_dependent_chunks = IndexBitSet::new(chunk_graph.chunk_table.len());
+    let modules_len = self.link_output.module_table.modules.len();
 
     let mut needs_export_all_helper = false;
     for elimination in &facade_eliminations {
@@ -937,8 +944,8 @@ impl GenerateStage<'_> {
         chunk_graph
           .common_chunk_preserve_export_names_modules
           .entry(*to_chunk_idx)
-          .or_default()
-          .insert(*entry_module_idx);
+          .or_insert_with(|| IndexBitSet::new(modules_len))
+          .set_bit(*entry_module_idx);
       }
 
       // If a chunk is not dynamically imported, we don't need to simulate a facade chunk.
@@ -948,8 +955,8 @@ impl GenerateStage<'_> {
       chunk_graph
         .common_chunk_exported_facade_chunk_namespace
         .entry(*to_chunk_idx)
-        .or_default()
-        .insert(*entry_module_idx);
+        .or_insert_with(|| IndexBitSet::new(modules_len))
+        .set_bit(*entry_module_idx);
 
       // Add debug info about eliminated facade chunk to target chunk
       if self.options.experimental.is_attach_debug_info_full() || self.options.devtools {
@@ -973,7 +980,7 @@ impl GenerateStage<'_> {
         if let Some(wrapper_ref) = self.link_output.metas[*entry_module_idx].wrapper_ref {
           include_symbol(context, wrapper_ref, SymbolIncludeReason::SimulatedFacadeChunk);
         }
-        runtime_dependent_chunks.insert(*to_chunk_idx);
+        runtime_dependent_chunks.set_bit(*to_chunk_idx);
       }
       if matches!(wrap_kind, WrapKind::Esm | WrapKind::None) {
         include_symbol(
@@ -985,7 +992,7 @@ impl GenerateStage<'_> {
           .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
         let target_chunk = &mut chunk_graph.chunk_table[*to_chunk_idx];
         target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
-        runtime_dependent_chunks.insert(*to_chunk_idx);
+        runtime_dependent_chunks.set_bit(*to_chunk_idx);
         needs_export_all_helper = true;
       }
     }
@@ -1006,7 +1013,7 @@ impl GenerateStage<'_> {
     {
       // If only one common chunk was appended with dynamic entry module, we just put runtime module into that chunk.
       // Else create a new common chunk to store runtime module.
-      let runtime_chunk_idx = match runtime_dependent_chunks.len() {
+      let runtime_chunk_idx = match runtime_dependent_chunks.bit_count() as usize {
         1 => runtime_dependent_chunks.into_iter().next().unwrap(),
         _ => {
           let runtime_chunk = Chunk::new(
@@ -1043,7 +1050,7 @@ impl GenerateStage<'_> {
   fn apply_common_chunk_merges(
     chunk_graph: &mut ChunkGraph,
     common_chunk_merges: &[CommonChunkMerge],
-    runtime_dependent_chunks: &mut FxHashSet<ChunkIdx>,
+    runtime_dependent_chunks: &mut IndexBitSet<ChunkIdx>,
   ) {
     for merge in common_chunk_merges {
       let from_chunk = &mut chunk_graph.chunk_table[merge.from_chunk_idx];
@@ -1072,27 +1079,30 @@ impl GenerateStage<'_> {
       if let Some(modules) =
         chunk_graph.common_chunk_exported_facade_chunk_namespace.remove(&merge.from_chunk_idx)
       {
-        chunk_graph
-          .common_chunk_exported_facade_chunk_namespace
-          .entry(merge.to_chunk_idx)
-          .or_default()
-          .extend(modules);
+        match chunk_graph.common_chunk_exported_facade_chunk_namespace.entry(merge.to_chunk_idx) {
+          Entry::Occupied(mut e) => e.get_mut().union(&modules),
+          Entry::Vacant(e) => {
+            e.insert(modules);
+          }
+        }
       }
 
       // Retarget preserved export names
       if let Some(modules) =
         chunk_graph.common_chunk_preserve_export_names_modules.remove(&merge.from_chunk_idx)
       {
-        chunk_graph
-          .common_chunk_preserve_export_names_modules
-          .entry(merge.to_chunk_idx)
-          .or_default()
-          .extend(modules);
+        match chunk_graph.common_chunk_preserve_export_names_modules.entry(merge.to_chunk_idx) {
+          Entry::Occupied(mut e) => e.get_mut().union(&modules),
+          Entry::Vacant(e) => {
+            e.insert(modules);
+          }
+        }
       }
 
       // Retarget runtime_dependent_chunks so runtime is placed in the correct chunk
-      if runtime_dependent_chunks.remove(&merge.from_chunk_idx) {
-        runtime_dependent_chunks.insert(merge.to_chunk_idx);
+      if runtime_dependent_chunks.has_bit(merge.from_chunk_idx) {
+        runtime_dependent_chunks.clear_bit(merge.from_chunk_idx);
+        runtime_dependent_chunks.set_bit(merge.to_chunk_idx);
       }
     }
   }

@@ -28,9 +28,10 @@ mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use oxc::span::{CompactStr, Ident};
+use rolldown_utils::IndexBitSet;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
 use crate::hmr::utils::HmrAstBuilder;
@@ -83,7 +84,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub scope: &'me AstScopes,
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
-  pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
+  pub generated_init_esm_importee_ids: IndexBitSet<ModuleIdx>,
   pub scope_stack: Vec<ScopeFlags>,
   pub state: TraverseState,
   pub top_level_var_bindings: FxIndexSet<Ident<'ast>>,
@@ -217,11 +218,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if matches!(
           importee_linking_info.concatenated_wrapped_module_kind,
           ConcatenateWrappedModuleKind::Inner
-        ) || self.generated_init_esm_importee_ids.contains(&importee.idx)
+        ) || self.generated_init_esm_importee_ids.has_bit(importee.idx)
         {
           return true;
         }
-        self.generated_init_esm_importee_ids.insert(importee.idx);
+        self.generated_init_esm_importee_ids.set_bit(importee.idx);
         // `init_foo`
         let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(
           importee_linking_info.wrapper_ref.unwrap(),
@@ -1714,7 +1715,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .chunk_graph
       .common_chunk_exported_facade_chunk_namespace
       .get(&importee_chunk_idx)
-      .is_some_and(|set| set.contains(&importee_idx));
+      .is_some_and(|set| set.has_bit(importee_idx));
 
     if !needs_namespace_extraction {
       return None;

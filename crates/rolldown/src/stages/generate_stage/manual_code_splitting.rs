@@ -11,8 +11,8 @@ use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, MatchGroup, MatchGroupTest, Module, ModuleIdx, ModuleTable,
 };
 use rolldown_error::BuildResult;
-use rolldown_utils::{BitSet, xxhash::xxhash_with_base};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rolldown_utils::{BitSet, IndexBitSet, xxhash::xxhash_with_base};
+use rustc_hash::FxHashMap;
 
 use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
 
@@ -27,7 +27,7 @@ use super::{
 struct ModuleGroup {
   name: ArcStr,
   match_group_index: usize,
-  modules: FxHashSet<ModuleIdx>,
+  modules: IndexBitSet<ModuleIdx>,
   priority: u32,
   sizes: f64,
   entries_aware_bits: Option<BitSet>,
@@ -47,14 +47,16 @@ struct ModuleGroupId(ModuleGroupOrigin, Option<BitSet>);
 impl ModuleGroup {
   #[expect(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
   pub fn add_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
-    if self.modules.insert(module_idx) {
+    if !self.modules.has_bit(module_idx) {
+      self.modules.set_bit(module_idx);
       self.sizes += module_table[module_idx].size() as f64;
     }
   }
 
   #[expect(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
   pub fn remove_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
-    if self.modules.remove(&module_idx) {
+    if self.modules.has_bit(module_idx) {
+      self.modules.clear_bit(module_idx);
       self.sizes -= module_table[module_idx].size() as f64;
       self.sizes = f64::max(self.sizes, 0.0);
     }
@@ -161,7 +163,7 @@ impl GenerateStage<'_> {
             module_groups.insert(
               module_group_key,
               ModuleGroup {
-                modules: FxHashSet::default(),
+                modules: IndexBitSet::new(self.link_output.module_table.modules.len()),
                 match_group_index: module_group_origin.match_group_index,
                 priority: match_group.priority.unwrap_or(0),
                 name: module_group_origin.name.clone(),
@@ -187,7 +189,7 @@ impl GenerateStage<'_> {
           normal_module.idx,
           &self.link_output.metas,
           &self.link_output.module_table,
-          &mut FxHashSet::default(),
+          &mut IndexBitSet::new(self.link_output.module_table.modules.len()),
           include_dependencies_recursively,
         );
       }
@@ -270,7 +272,7 @@ impl GenerateStage<'_> {
         .map_or(chunking_options.max_size, Some)
       {
         if this_module_group.sizes > allow_max_size {
-          let mut modules = this_module_group.modules.iter().copied().collect::<Vec<_>>();
+          let mut modules = this_module_group.modules.index_of_one().collect::<Vec<_>>();
           // Split by lexical relevance first (stable module id), then by size constraints.
           modules.sort_by(|lhs, rhs| {
             let lhs_module = &self.link_output.module_table[*lhs];
@@ -309,7 +311,7 @@ impl GenerateStage<'_> {
       }
 
       let first_module_bits = &index_splitting_info
-        [this_module_group.modules.iter().next().copied().expect("must have one")]
+        [this_module_group.modules.index_of_one().next().expect("must have one")]
       .bits;
 
       let entries_aware =
@@ -347,7 +349,7 @@ impl GenerateStage<'_> {
 
       let chunk_idx = chunk_graph.add_chunk(chunk);
 
-      this_module_group.modules.iter().copied().for_each(|module_idx| {
+      this_module_group.modules.index_of_one().for_each(|module_idx| {
         module_groups.iter_mut().for_each(|group| {
           group.remove_module(module_idx, &self.link_output.module_table);
         });
@@ -493,7 +495,7 @@ fn merge_module_groups(
     return;
   };
 
-  to_group.modules.extend(from_group.modules.drain());
+  to_group.modules.extend(from_group.modules);
   to_group.sizes = sum_group_sizes(&to_group.modules, module_table);
   if let Some(from_bits) = from_group.entries_aware_bits.take() {
     match &mut to_group.entries_aware_bits {
@@ -523,8 +525,8 @@ fn bump_version(version_by_key: &mut FxHashMap<u32, u32>, key: u32) {
 }
 
 #[expect(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here.
-fn sum_group_sizes(modules: &FxHashSet<ModuleIdx>, module_table: &ModuleTable) -> f64 {
-  modules.iter().map(|module_idx| module_table[*module_idx].size() as f64).sum()
+fn sum_group_sizes(modules: &IndexBitSet<ModuleIdx>, module_table: &ModuleTable) -> f64 {
+  modules.index_of_one().map(|module_idx| module_table[module_idx].size() as f64).sum()
 }
 
 #[expect(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here.
@@ -691,10 +693,11 @@ fn add_module_and_dependencies_to_group_recursively(
   module_idx: ModuleIdx,
   module_metas: &LinkingMetadataVec,
   module_table: &ModuleTable,
-  visited: &mut FxHashSet<ModuleIdx>,
+  visited: &mut IndexBitSet<ModuleIdx>,
   recursively: bool,
 ) {
-  let is_visited = !visited.insert(module_idx);
+  let is_visited = visited.has_bit(module_idx);
+  visited.set_bit(module_idx);
 
   if is_visited {
     return;
@@ -707,8 +710,6 @@ fn add_module_and_dependencies_to_group_recursively(
   if !module_metas[module_idx].is_included {
     return;
   }
-
-  visited.insert(module_idx);
 
   module_group.add_module(module_idx, module_table);
   if recursively {

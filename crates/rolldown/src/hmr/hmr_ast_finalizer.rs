@@ -14,10 +14,11 @@ use rolldown_common::{
 use rolldown_ecmascript::CJS_REQUIRE_REF_ATOM;
 use rolldown_ecmascript_utils::{AstSnippet, BindingIdentifierExt, ExpressionExt};
 use rolldown_utils::{
+  IndexBitSet,
   ecmascript::is_validate_identifier_name,
   indexmap::{FxIndexMap, FxIndexSet},
 };
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use crate::hmr::utils::{HmrAstBuilder, MODULE_EXPORTS_NAME_FOR_ESM};
 
@@ -55,7 +56,7 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub exports: oxc::allocator::Vec<'ast, ObjectPropertyKind<'ast>>,
   pub re_export_all_dependencies: FxIndexSet<ModuleIdx>,
   pub dependencies: FxIndexSet<ModuleIdx>,
-  pub imports: FxHashSet<ModuleIdx>,
+  pub imports: IndexBitSet<ModuleIdx>,
   pub generated_static_import_infos: FxHashMap<ModuleIdx, String>,
   // We need to store the static import statements for external separately, so we could put them outside of the `try` block.
   pub generated_static_import_stmts_from_external: FxIndexMap<ModuleIdx, ast::Statement<'ast>>,
@@ -465,10 +466,10 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     binding_name: &str,
     span: Span,
   ) -> Option<Statement<'ast>> {
-    if self.imports.contains(&importee.idx()) {
+    if self.imports.has_bit(importee.idx()) {
       return None;
     }
-    self.imports.insert(importee.idx());
+    self.imports.set_bit(importee.idx());
 
     // Use stable module ID for consistent runtime lookup
     let id = importee.stable_id();

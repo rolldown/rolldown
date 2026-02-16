@@ -21,7 +21,7 @@ use rolldown_sourcemap::{Source, SourceJoiner, SourceMapSource};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
-  concat_string,
+  IndexBitSet, concat_string,
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelIterator, ParallelIterator},
 };
@@ -470,7 +470,7 @@ impl<'a> HmrStage<'a> {
             affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
             use_pife_for_module_wrappers,
             dependencies: FxIndexSet::default(),
-            imports: FxHashSet::default(),
+            imports: IndexBitSet::new(modules.len()),
             generated_static_import_infos: FxHashMap::default(),
             re_export_all_dependencies: FxIndexSet::default(),
             generated_static_import_stmts_from_external: FxIndexMap::default(),
@@ -708,7 +708,7 @@ impl<'a> HmrStage<'a> {
             affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
             use_pife_for_module_wrappers,
             dependencies: FxIndexSet::default(),
-            imports: FxHashSet::default(),
+            imports: IndexBitSet::new(modules.len()),
             generated_static_import_infos: FxHashMap::default(),
             re_export_all_dependencies: FxIndexSet::default(),
             generated_static_import_stmts_from_external: FxIndexMap::default(),
@@ -899,7 +899,7 @@ impl<'a> HmrStage<'a> {
             affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
             use_pife_for_module_wrappers,
             dependencies: FxIndexSet::default(),
-            imports: FxHashSet::default(),
+            imports: IndexBitSet::new(modules.len()),
             generated_static_import_infos: FxHashMap::default(),
             re_export_all_dependencies: FxIndexSet::default(),
             generated_static_import_stmts_from_external: FxIndexMap::default(),

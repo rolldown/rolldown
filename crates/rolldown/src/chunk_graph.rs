@@ -5,7 +5,8 @@ use rolldown_common::{
   Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
   PostChunkOptimizationOperation, RuntimeHelper, SymbolRef,
 };
-use rustc_hash::{FxHashMap, FxHashSet};
+use rolldown_utils::IndexBitSet;
+use rustc_hash::FxHashMap;
 
 use crate::{SharedOptions, stages::link_stage::LinkStageOutput};
 
@@ -20,10 +21,10 @@ pub struct ChunkGraph {
   /// If the namespace is merged, `Key` is the original namespace symbol, and `Value` is the linked namespace symbol.
   pub finalized_cjs_ns_map_idx_vec: IndexVec<ChunkIdx, FxHashMap<SymbolRef, SymbolRef>>,
   pub chunk_idx_to_reference_ids: FxHashMap<ChunkIdx, Vec<ArcStr>>,
-  pub common_chunk_exported_facade_chunk_namespace: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
+  pub common_chunk_exported_facade_chunk_namespace: FxHashMap<ChunkIdx, IndexBitSet<ModuleIdx>>,
   /// Modules from emitted chunks with AllowExtension that were merged into common chunks.
   /// Their export names should be preserved (not minified).
-  pub common_chunk_preserve_export_names_modules: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
+  pub common_chunk_preserve_export_names_modules: FxHashMap<ChunkIdx, IndexBitSet<ModuleIdx>>,
   /// Tracks chunks that have been removed during post-optimization of code splitting.
   ///
   /// Since chunks are stored in an `IndexVec`, we have two options when removing chunks:

@@ -4,8 +4,9 @@ use rolldown_common::{
   Chunk, ChunkKind, ConcatenateWrappedModuleKind, EcmaViewMeta, ImportKind, ModuleGroup, ModuleIdx,
   WrapKind,
 };
+use rolldown_utils::IndexBitSet;
 use rolldown_utils::rustc_hash::FxHashMapExt;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use crate::chunk_graph::ChunkGraph;
 
@@ -53,19 +54,20 @@ impl GenerateStage<'_> {
   #[allow(dead_code)]
   fn inline_entry_chunk_wrapping(&mut self, chunk: &Chunk) {
     // All modules in entry chunk must be reachable from a entry module.
-    let mut boundary_module = chunk
-      .exports_to_other_chunks
-      .keys()
-      .map(|symbol_ref| self.link_output.symbol_db.canonical_ref_for(*symbol_ref).owner)
-      .collect::<FxHashSet<_>>();
+    let modules_len = self.link_output.module_table.modules.len();
+    let mut boundary_module = IndexBitSet::new(modules_len);
+    for symbol_ref in chunk.exports_to_other_chunks.keys() {
+      boundary_module.set_bit(self.link_output.symbol_db.canonical_ref_for(*symbol_ref).owner);
+    }
 
-    let chunk_modules_set = chunk.modules.iter().copied().collect::<FxHashSet<_>>();
+    let mut chunk_modules_set = IndexBitSet::new(modules_len);
+    chunk_modules_set.extend(chunk.modules.iter().copied());
     for idx in &chunk.modules {
       let Some(normal_module) = self.link_output.module_table[*idx].as_normal() else {
         continue;
       };
       if normal_module.exports_kind.is_commonjs() {
-        boundary_module.insert(*idx);
+        boundary_module.set_bit(*idx);
       }
       let mut bailout_importer = false;
       normal_module
@@ -73,11 +75,11 @@ impl GenerateStage<'_> {
         .iter()
         .filter_map(|rec| rec.resolved_module.map(|module_idx| (rec, module_idx)))
         .for_each(|(rec, module_idx)| {
-          if chunk_modules_set.contains(&module_idx) {
+          if chunk_modules_set.has_bit(module_idx) {
             // 1. `import('./esm.js')` when `code_splitting` is disabled
             // 2. `require('./esm.js')`
             if rec.kind == ImportKind::Require || rec.kind == ImportKind::DynamicImport {
-              boundary_module.insert(module_idx);
+              boundary_module.set_bit(module_idx);
             }
           }
           let Some(normal) = self.link_output.module_table[module_idx].as_normal() else {
@@ -91,13 +93,13 @@ impl GenerateStage<'_> {
         });
 
       if bailout_importer {
-        boundary_module.insert(*idx);
+        boundary_module.set_bit(*idx);
       }
     }
 
     self.expand_boundary(&mut boundary_module, &chunk_modules_set);
     for module_idx in &chunk.modules {
-      if boundary_module.contains(module_idx) {
+      if boundary_module.has_bit(*module_idx) {
         // If the module is a boundary module, we can't inline it.
         continue;
       }
@@ -112,21 +114,24 @@ impl GenerateStage<'_> {
   #[allow(dead_code)]
   fn expand_boundary(
     &self,
-    boundary_modules: &mut FxHashSet<ModuleIdx>,
-    chunk_modules: &FxHashSet<ModuleIdx>,
+    boundary_modules: &mut IndexBitSet<ModuleIdx>,
+    chunk_modules: &IndexBitSet<ModuleIdx>,
   ) {
-    let mut visited = FxHashSet::default();
-    let mut q = std::mem::take(boundary_modules).into_iter().collect::<VecDeque<_>>();
+    let modules_len = self.link_output.module_table.modules.len();
+    let mut visited = IndexBitSet::new(modules_len);
+    let mut q = std::mem::replace(boundary_modules, IndexBitSet::new(modules_len))
+      .into_iter()
+      .collect::<VecDeque<_>>();
     while let Some(module_idx) = q.pop_front() {
-      if visited.contains(&module_idx) {
+      if visited.has_bit(module_idx) {
         continue;
       }
-      visited.insert(module_idx);
+      visited.set_bit(module_idx);
       let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
         continue;
       };
       module.import_records.iter().filter_map(|rec| rec.resolved_module).for_each(|importee_idx| {
-        if chunk_modules.contains(&importee_idx) {
+        if chunk_modules.has_bit(importee_idx) {
           q.push_back(importee_idx);
         }
       });
@@ -136,11 +141,9 @@ impl GenerateStage<'_> {
 
   fn concatenate_wrapping_modules(&mut self, chunk: &mut Chunk) {
     // Those modules could only be a group root.
-    let mut root_only = chunk
-      .exports_to_other_chunks
-      .keys()
-      .map(|symbol| symbol.owner)
-      .collect::<FxHashSet<ModuleIdx>>();
+    let modules_len = self.link_output.module_table.modules.len();
+    let mut root_only = IndexBitSet::new(modules_len);
+    root_only.extend(chunk.exports_to_other_chunks.keys().map(|symbol| symbol.owner));
 
     let mut module_to_exec_order = FxHashMap::with_capacity(chunk.modules.len());
     for module_idx in &chunk.modules {
@@ -149,16 +152,16 @@ impl GenerateStage<'_> {
       let meta = &self.link_output.metas[*module_idx];
       if matches!(meta.wrap_kind(), WrapKind::Cjs | WrapKind::None) || meta.required_by_other_module
       {
-        root_only.insert(*module_idx);
+        root_only.set_bit(*module_idx);
       }
     }
     let mut module_groups = vec![];
     let mut module_idx_to_group_idx = FxHashMap::default();
     // higher exec_order usually means module is more closed to entry point
     // lower exec_order means module is more closed to the leaf node of the chunk.
-    let mut visited = FxHashSet::default();
+    let mut visited = IndexBitSet::new(modules_len);
     for module_idx in chunk.modules.iter().rev() {
-      if visited.contains(module_idx) {
+      if visited.has_bit(*module_idx) {
         continue;
       }
       if matches!(self.link_output.metas[*module_idx].wrap_kind(), WrapKind::Cjs | WrapKind::None) {
@@ -195,31 +198,33 @@ impl GenerateStage<'_> {
   fn expand_module_group(
     &self,
     module_to_exec_order: &FxHashMap<ModuleIdx, u32>,
-    root_only: &FxHashSet<ModuleIdx>,
-    visited: &mut FxHashSet<ModuleIdx>,
+    root_only: &IndexBitSet<ModuleIdx>,
+    visited: &mut IndexBitSet<ModuleIdx>,
     entry: ModuleIdx,
   ) -> ModuleGroup {
     // This function is used to expand module group, so that we can concatenate
     // all modules in the group.
+    let modules_len = self.link_output.module_table.modules.len();
     let mut q = VecDeque::from_iter([entry]);
-    let mut groups = FxHashSet::default();
+    let mut groups = IndexBitSet::new(modules_len);
     while let Some(module_idx) = q.pop_front() {
-      if !visited.insert(module_idx) {
+      if visited.has_bit(module_idx) {
         continue;
       }
-      groups.insert(module_idx);
+      visited.set_bit(module_idx);
+      groups.set_bit(module_idx);
       for dep in self.link_output.metas[module_idx]
         .dependencies
         .iter()
-        .filter(|idx| module_to_exec_order.contains_key(idx) && !root_only.contains(idx))
+        .filter(|idx| module_to_exec_order.contains_key(idx) && !root_only.has_bit(**idx))
       {
         q.push_back(*dep);
       }
     }
 
-    let mut prune_set = FxHashSet::default();
-    for module_idx in &groups {
-      let Some(module) = self.link_output.module_table[*module_idx].as_normal() else {
+    let mut prune_set = IndexBitSet::new(modules_len);
+    for module_idx in groups.index_of_one() {
+      let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
         continue;
       };
       module
@@ -227,16 +232,16 @@ impl GenerateStage<'_> {
         .iter()
         .filter(|importer_idx| {
           // If the importer is not in the group, we can prune it.
-          !groups.contains(importer_idx) && module_to_exec_order.contains_key(importer_idx)
+          !groups.has_bit(**importer_idx) && module_to_exec_order.contains_key(importer_idx)
         })
         .for_each(|importer_idx| {
-          prune_set.insert(*importer_idx);
+          prune_set.set_bit(*importer_idx);
         });
     }
 
     for module_idx in prune_set {
-      groups.remove(&module_idx);
-      visited.remove(&module_idx);
+      groups.clear_bit(module_idx);
+      visited.clear_bit(module_idx);
     }
 
     ModuleGroup { modules: groups.into_iter().collect(), entry }

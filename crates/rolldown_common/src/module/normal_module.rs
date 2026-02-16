@@ -15,6 +15,7 @@ use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_sourcemap::collapse_sourcemaps;
+use rolldown_utils::IndexBitSet;
 use rustc_hash::FxHashSet;
 use string_wizard::SourceMapOptions;
 
@@ -123,16 +124,16 @@ impl NormalModule {
   // https://tc39.es/ecma262/#sec-getexportednames
   pub fn get_exported_names<'modules>(
     &'modules self,
-    export_star_set: &mut FxHashSet<ModuleIdx>,
+    export_star_set: &mut IndexBitSet<ModuleIdx>,
     modules: &'modules IndexModules,
     include_default: bool,
     ret: &mut FxHashSet<&'modules CompactStr>,
   ) {
-    if export_star_set.contains(&self.idx) {
+    if export_star_set.has_bit(self.idx) {
       return;
     }
 
-    export_star_set.insert(self.idx);
+    export_star_set.set_bit(self.idx);
 
     self
       .star_export_module_ids()

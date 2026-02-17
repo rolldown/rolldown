@@ -70,7 +70,7 @@ impl NormalizedTreeshakeOptions {
   }
 
   pub fn invalid_import_side_effects(&self) -> bool {
-    self.as_ref().and_then(|item| item.invalid_import_side_effects).unwrap_or(true)
+    self.as_ref().and_then(|item| item.invalid_import_side_effects).unwrap_or(false)
   }
 
   pub fn commonjs(&self) -> bool {

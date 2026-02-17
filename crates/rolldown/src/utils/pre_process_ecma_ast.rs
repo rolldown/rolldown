@@ -157,10 +157,12 @@ impl PreProcessEcmaAst {
     if bundle_options.treeshake.is_some() && !has_lazy_export {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         let scoping = self.recreate_scoping(&mut scoping, program);
+        let mut treeshake = TreeShakeOptions::from(&bundle_options.treeshake);
+        treeshake.invalid_import_side_effects = true;
         // NOTE: `CompressOptions::dead_code_elimination` will remove `ParenthesizedExpression`s from the AST.
         let options = CompressOptions {
           target: bundle_options.transform_options.target.clone(),
-          treeshake: TreeShakeOptions::from(&bundle_options.treeshake),
+          treeshake,
           ..CompressOptions::dce()
         };
         Compressor::new(allocator).dead_code_elimination_with_scoping(program, scoping, options);

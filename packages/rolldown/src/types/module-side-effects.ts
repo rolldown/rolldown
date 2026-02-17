@@ -118,7 +118,7 @@ export type TreeshakingOptions = {
    *
    * See [related Oxc documentation](https://oxc.rs/docs/guide/usage/minifier/dead-code-elimination#ignoring-invalid-import-statement-side-effects) for more details.
    *
-   * @default true
+   * @default false
    */
   invalidImportSideEffects?: boolean;
   /**

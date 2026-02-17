@@ -7,39 +7,39 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region default.jsx
-console.log(/* @__PURE__ */ React.createElement("]", null));
+console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
 
 //#endregion
 //#region null.jsx
-console.log(/* @__PURE__ */ React.createElement(null, null));
+console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
 
 //#endregion
 //#region boolean.jsx
-console.log(/* @__PURE__ */ React.createElement(true, null));
+console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
 
 //#endregion
 //#region number.jsx
-console.log(/* @__PURE__ */ React.createElement(123, null));
+console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
 
 //#endregion
 //#region string-single-empty.jsx
-console.log(/* @__PURE__ */ React.createElement('', null));
+console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
 
 //#endregion
 //#region string-double-empty.jsx
-console.log(/* @__PURE__ */ React.createElement("", null));
+console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
 
 //#endregion
 //#region string-single-punctuation.jsx
-console.log(/* @__PURE__ */ React.createElement('[', null));
+console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
 
 //#endregion
 //#region string-double-punctuation.jsx
-console.log(/* @__PURE__ */ React.createElement("[", null));
+console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
 
 //#endregion
 //#region string-template.jsx
-console.log(/* @__PURE__ */ React.createElement(``, null));
+console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
 
 //#endregion
 ```

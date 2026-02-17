@@ -36,6 +36,7 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
                 span: binding_id.span,
                 ..IdentifierReference::dummy(alloc)
               },
+              ..AssignmentTargetPropertyIdentifier::dummy(alloc)
             }
             .into_in(alloc),
           )
@@ -49,10 +50,12 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
                   span: assign_pat.span,
                   init: assign_pat.right,
                   binding: assign_pat.left.into_assignment_target(alloc),
+                  ..AssignmentTargetWithDefault::dummy(alloc)
                 }
                 .into_in(alloc),
               ),
               computed: self.computed,
+              ..AssignmentTargetPropertyProperty::dummy(alloc)
             }
             .into_in(alloc),
           )
@@ -70,6 +73,7 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
                 span: id.span,
                 ..IdentifierReference::dummy(alloc)
               },
+              ..AssignmentTargetPropertyIdentifier::dummy(alloc)
             }
             .into_in(alloc),
           )
@@ -80,6 +84,7 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
               span: self.span,
               binding: AssignmentTargetMaybeDefault::from(self.value.into_assignment_target(alloc)),
               computed: self.computed,
+              ..AssignmentTargetPropertyProperty::dummy(alloc)
             }
             .into_in(alloc),
           )
@@ -107,14 +112,17 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
                     AssignmentTargetRest {
                       span: rest.span,
                       target: rest.unbox().argument.into_assignment_target(alloc),
+                      ..AssignmentTargetRest::dummy(alloc)
                     },
                     alloc,
                   )
                 }),
+                ..ArrayAssignmentTarget::dummy(alloc)
               }
               .into_in(alloc),
             ),
             computed: self.computed,
+            ..AssignmentTargetPropertyProperty::dummy(alloc)
           }
           .into_in(alloc),
         )
@@ -139,14 +147,17 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
                     AssignmentTargetRest {
                       span: rest.span,
                       target: rest.unbox().argument.into_assignment_target(alloc),
+                      ..AssignmentTargetRest::dummy(alloc)
                     },
                     alloc,
                   )
                 }),
+                ..ObjectAssignmentTarget::dummy(alloc)
               }
               .into_in(alloc),
             ),
             computed: self.computed,
+            ..AssignmentTargetPropertyProperty::dummy(alloc)
           }
           .into_in(alloc),
         )

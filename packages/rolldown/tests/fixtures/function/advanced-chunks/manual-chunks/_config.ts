@@ -21,8 +21,8 @@ export default defineTest({
   },
   afterTest(output) {
     function findChunkStartWith(prefix: string) {
-      const finded = output.output.find(chunk =>
-        chunk.type === 'chunk' && chunk.fileName.startsWith(prefix)
+      const finded = output.output.find(
+        (chunk) => chunk.type === 'chunk' && chunk.fileName.startsWith(prefix),
       );
       if (!finded) {
         throw new Error(`chunk ${prefix} not found`);
@@ -35,9 +35,7 @@ export default defineTest({
     const ui = findChunkStartWith('ui-');
     const otherLibs = findChunkStartWith('other-libs-');
 
-    expect(ui.moduleIds).toMatchObject([
-      /lib-ui[\\/]index.js$/,
-    ]);
+    expect(ui.moduleIds).toMatchObject([/lib-ui[\\/]index.js$/]);
 
     expect(otherLibs.moduleIds).toMatchObject([
       /lib-npm-a[\\/]index.js$/,

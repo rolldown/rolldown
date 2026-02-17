@@ -1,4 +1,4 @@
-import config from "./config.js";
-import assert from "node:assert";
+import config from './config.js';
+import assert from 'node:assert';
 
-assert.deepStrictEqual(config, { name: "example" });
+assert.deepStrictEqual(config, { name: 'example' });

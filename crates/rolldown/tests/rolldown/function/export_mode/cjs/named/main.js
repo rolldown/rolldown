@@ -1,5 +1,5 @@
-import example from './mod.js'
+import example from './mod.js';
 export function a() {
-  return 'named'
+  return 'named';
 }
-export default example()
+export default example();

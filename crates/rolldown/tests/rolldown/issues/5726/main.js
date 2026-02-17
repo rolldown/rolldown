@@ -1,2 +1,2 @@
-import { a} from './lib'
-console.log(`a: `, a)
+import { a } from './lib';
+console.log(`a: `, a);

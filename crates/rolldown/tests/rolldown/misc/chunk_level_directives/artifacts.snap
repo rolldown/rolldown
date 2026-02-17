@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry2.js
 
 ```js
-"use entry2";
+'use entry2';
 
 import { t as a } from "./shared.js";
 
@@ -19,7 +19,7 @@ console.log(`a: `, a);
 ## main.js
 
 ```js
-"use entry";
+'use entry';
 
 import { t as a } from "./shared.js";
 

@@ -1,1 +1,1 @@
-export * from 'external-lib'
+export * from 'external-lib';

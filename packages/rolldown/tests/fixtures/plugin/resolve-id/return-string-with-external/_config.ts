@@ -8,17 +8,19 @@ export default defineTest({
   config: {
     input: entry,
     external: /\.\/bar.js/,
-    plugins: [{
-      name: 'test',
-      resolveId(source) {
-        if (source === './foo') {
-          return './bar.js';
-        }
+    plugins: [
+      {
+        name: 'test',
+        resolveId(source) {
+          if (source === './foo') {
+            return './bar.js';
+          }
+        },
+        buildEnd() {
+          const target = [...this.getModuleIds()].find((v) => v === './bar.js');
+          expect(target).toBeDefined();
+        },
       },
-      buildEnd() {
-        const target = [...this.getModuleIds()].find((v) => v === './bar.js');
-        expect(target).toBeDefined();
-      },
-    }],
+    ],
   },
 });

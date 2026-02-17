@@ -1,3 +1,3 @@
-import B from "./b";
+import B from './b';
 
 export { B };

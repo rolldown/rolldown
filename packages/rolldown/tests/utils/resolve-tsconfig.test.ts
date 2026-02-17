@@ -10,9 +10,7 @@ describe('resolveTsconfig', () => {
     const result = resolveTsconfig(path.join(fixtures, 'test1.ts'));
     expect(result).not.toBeNull();
     expect(result!.tsconfig.compilerOptions).toBeDefined();
-    expect(result!.tsconfig.compilerOptions.useDefineForClassFields).toBe(
-      false,
-    );
+    expect(result!.tsconfig.compilerOptions.useDefineForClassFields).toBe(false);
     expect(result!.tsconfigFilePaths.length).toBeGreaterThan(0);
     expect(result!.tsconfigFilePaths[0]).toContain('tsconfig.json');
   });
@@ -40,15 +38,11 @@ describe('resolveTsconfig', () => {
   });
 
   it('should resolve extended tsconfig options', () => {
-    const result = resolveTsconfig(
-      path.join(fixtures, 'extends', 'test.ts'),
-    );
+    const result = resolveTsconfig(path.join(fixtures, 'extends', 'test.ts'));
     expect(result).not.toBeNull();
     // Own option from extends/tsconfig.json
     expect(result!.tsconfig.compilerOptions.experimentalDecorators).toBe(true);
     // Inherited option from parent tsconfig.json
-    expect(result!.tsconfig.compilerOptions.useDefineForClassFields).toBe(
-      false,
-    );
+    expect(result!.tsconfig.compilerOptions.useDefineForClassFields).toBe(false);
   });
 });

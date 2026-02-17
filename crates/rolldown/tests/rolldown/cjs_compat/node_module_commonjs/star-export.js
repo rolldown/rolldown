@@ -1,1 +1,1 @@
-export * from './commonjs'
+export * from './commonjs';

@@ -1,3 +1,4 @@
-FOO && (function() {
-  console.log('foo');
-}());
+FOO &&
+  (function () {
+    console.log('foo');
+  })();

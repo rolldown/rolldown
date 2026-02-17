@@ -22,8 +22,8 @@ export default defineTest({
   },
   afterTest(output) {
     function findChunkStartWith(prefix: string) {
-      return output.output.find(chunk =>
-        chunk.type === 'chunk' && chunk.fileName.startsWith(prefix)
+      return output.output.find(
+        (chunk) => chunk.type === 'chunk' && chunk.fileName.startsWith(prefix),
       );
     }
     const ab = findChunkStartWith('ab-');
@@ -33,14 +33,8 @@ export default defineTest({
       throw new Error('should be chunk');
     }
 
-    expect(ab.moduleIds).toMatchObject([
-      /a.js$/,
-      /b.js$/,
-    ]);
+    expect(ab.moduleIds).toMatchObject([/a.js$/, /b.js$/]);
 
-    expect(cd.moduleIds).toMatchObject([
-      /c.js$/,
-      /d.js$/,
-    ]);
+    expect(cd.moduleIds).toMatchObject([/c.js$/, /d.js$/]);
   },
 });

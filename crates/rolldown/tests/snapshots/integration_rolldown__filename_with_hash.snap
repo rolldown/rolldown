@@ -3756,7 +3756,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/optimize_interop_default_with_cjs_bailout
 
-- main-!~{000}~.js => main-Bxeg3rjp.js
+- main-!~{000}~.js => main-BU9KKTu9.js
 
 # tests/rolldown/cjs_compat/optimize_interop_default_with_cjs_bailout2
 
@@ -3929,10 +3929,11 @@ expression: output
 
 # tests/rolldown/function/advanced_chunks/entries_aware_merge_threshold_basic
 
-- entry-a-!~{000}~.js => entry-a-BCSuIoVp.js
-- entry-b-!~{001}~.js => entry-b-DcpHyi0E.js
+- entry-a-!~{000}~.js => entry-a-CVGHl5mr.js
+- entry-b-!~{001}~.js => entry-b-DATC1jMt.js
 - entry-c-!~{002}~.js => entry-c-Bl_CCreA.js
-- vendor~entry-a~entry-b-!~{005}~.js => vendor~entry-a~entry-b-CXLCP0zo.js
+- vendor~entry-a-!~{007}~.js => vendor~entry-a-DipU1Ht5.js
+- vendor~entry-a~entry-b-!~{005}~.js => vendor~entry-a~entry-b-BmTP0xqS.js
 - vendor~entry-a~entry-b~entry-c-!~{003}~.js => vendor~entry-a~entry-b~entry-c-BqP-AGpR.js
 
 # tests/rolldown/function/advanced_chunks/entries_aware_min_share_count
@@ -4618,7 +4619,7 @@ expression: output
 
 # tests/rolldown/function/module_types/json/object_with_reserved_key
 
-- main-!~{000}~.js => main-DuL9VPap.js
+- main-!~{000}~.js => main-CAenU4G3.js
 
 # tests/rolldown/function/module_types/jsx
 
@@ -4973,7 +4974,7 @@ expression: output
 
 # tests/rolldown/issues/5482
 
-- main-!~{000}~.js => main-D4oup9vL.js
+- main-!~{000}~.js => main-C-tURDLZ.js
 
 # tests/rolldown/issues/5531
 
@@ -4987,7 +4988,7 @@ expression: output
 
 # tests/rolldown/issues/5696
 
-- main-!~{000}~.js => main-DghMYgvA.js
+- main-!~{000}~.js => main-B6w3pnIs.js
 
 # tests/rolldown/issues/5726
 
@@ -5083,7 +5084,7 @@ expression: output
 
 # tests/rolldown/issues/6879
 
-- main-!~{000}~.js => main-9vfNU47B.js
+- main-!~{000}~.js => main-BPZoliXk.js
 
 # tests/rolldown/issues/6880
 
@@ -5200,7 +5201,7 @@ expression: output
 # tests/rolldown/issues/8318
 
 - component-!~{001}~.js => component-CixrEwhh.js
-- main-!~{000}~.js => main-BuFdI7Y3.js
+- main-!~{000}~.js => main-DqXBZld1.js
 
 # tests/rolldown/issues/8345
 
@@ -5265,8 +5266,8 @@ expression: output
 
 # tests/rolldown/misc/chunk_level_directives
 
-- entry2-!~{001}~.js => entry2-DmmqtisX.js
-- main-!~{000}~.js => main-DqG9LQpA.js
+- entry2-!~{001}~.js => entry2-D5qxTIR-.js
+- main-!~{000}~.js => main-ClhOhUps.js
 - shared-!~{002}~.js => shared-y1NHBW2S.js
 
 # tests/rolldown/misc/cjs_entry_as_dependency
@@ -5941,9 +5942,9 @@ expression: output
 - common-imported-by-js-!~{001}~.js => common-imported-by-js-DsZiLHqL.js
 - entry-a-!~{003}~.js => entry-a-Dbwzc532.js
 - entry-b-!~{005}~.js => entry-b-Des6Dhm7.js
-- common-imported-by-js-3UMIoWax.css
-- entry-a-8OKRPxLR.css
-- entry-b-Cew00OlC.css
+- common-imported-by-js-Be4eWNLx.css
+- entry-a-BjuMQh5H.css
+- entry-b-Dp4e6u9E.css
 
 # tests/rolldown/topics/css/basic
 
@@ -6194,7 +6195,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/parenthesized_default_export
 
-- main-!~{000}~.js => main-SoUxYi_K.js
+- main-!~{000}~.js => main-Ck0mwzGB.js
 
 # tests/rolldown/topics/live_bindings/default_export_binding
 
@@ -6518,7 +6519,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/property_read_side_effects
 
-- main-!~{000}~.js => main-C0lpz1W8.js
+- main-!~{000}~.js => main-eb8DBxC5.js
 
 # tests/rolldown/tree_shaking/property_write_side_effects
 

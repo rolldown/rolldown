@@ -1,4 +1,4 @@
-import assert from "node:assert";
+import assert from 'node:assert';
 
 var count = 100;
 export default function () {}

@@ -1,10 +1,10 @@
 const require = (await import('node:module')).createRequire(import.meta.url);
-const assert = require('assert')
-const main = require('./dist/main.js')
+const assert = require('assert');
+const main = require('./dist/main.js');
 
-main.reset()
-assert.strictEqual(main.count, 0)
-main.inc()
-assert.strictEqual(main.count, 1)
-main.inc()
-assert.strictEqual(main.count, 2)
+main.reset();
+assert.strictEqual(main.count, 0);
+main.inc();
+assert.strictEqual(main.count, 1);
+main.inc();
+assert.strictEqual(main.count, 2);

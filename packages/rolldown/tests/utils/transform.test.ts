@@ -1,9 +1,5 @@
 import path from 'node:path';
-import {
-  transform,
-  transformSync,
-  TsconfigCache,
-} from 'rolldown/utils';
+import { transform, transformSync, TsconfigCache } from 'rolldown/utils';
 import { expect, describe, it } from 'vitest';
 
 describe('enhanced transform', () => {
@@ -87,10 +83,7 @@ describe('enhanced transform', () => {
     });
 
     it('should auto-discover tsconfig by default (no tsconfig option) - sync', () => {
-      const result = transformSync(
-        path.join(fixtures, 'test1.ts'),
-        'export const a: number = 1;',
-      );
+      const result = transformSync(path.join(fixtures, 'test1.ts'), 'export const a: number = 1;');
       expect(result.code).toBe('export const a = 1;\n');
       expect(result.errors).toHaveLength(0);
       expect(result.tsconfigFilePaths.length).toBeGreaterThan(0);
@@ -121,11 +114,9 @@ describe('enhanced transform', () => {
     });
 
     it('should auto-discover tsconfig with explicit tsconfig: true (sync)', () => {
-      const result = transformSync(
-        path.join(fixtures, 'test1.ts'),
-        'export const a: number = 1;',
-        { tsconfig: true },
-      );
+      const result = transformSync(path.join(fixtures, 'test1.ts'), 'export const a: number = 1;', {
+        tsconfig: true,
+      });
       expect(result.code).toBe('export const a = 1;\n');
       expect(result.errors).toHaveLength(0);
       expect(result.tsconfigFilePaths.length).toBeGreaterThan(0);
@@ -400,11 +391,9 @@ describe('enhanced transform', () => {
 
   describe('sourceType option', () => {
     it('should treat code as module', async () => {
-      const result = await transform(
-        'test.ts',
-        'export const x: number = 1;',
-        { sourceType: 'module' },
-      );
+      const result = await transform('test.ts', 'export const x: number = 1;', {
+        sourceType: 'module',
+      });
       expect(result.errors).toHaveLength(0);
       expect(result.code).toContain('export');
     });
@@ -425,41 +414,35 @@ describe('enhanced transform', () => {
     });
 
     it('should treat code as unambiguous', async () => {
-      const result = await transform(
-        'test.ts',
-        'export const x: number = 1;',
-        { sourceType: 'unambiguous' },
-      );
+      const result = await transform('test.ts', 'export const x: number = 1;', {
+        sourceType: 'unambiguous',
+      });
       expect(result.errors).toHaveLength(0);
       expect(result.code).toContain('export');
     });
 
     it('should work with sourceType module (sync)', () => {
-      const result = transformSync(
-        'test.ts',
-        'export const x: number = 1;',
-        { sourceType: 'module' },
-      );
+      const result = transformSync('test.ts', 'export const x: number = 1;', {
+        sourceType: 'module',
+      });
       expect(result.errors).toHaveLength(0);
       expect(result.code).toContain('export');
     });
 
     it('should combine lang and sourceType', async () => {
-      const result = await transform(
-        'file.js',
-        'export const x: number = 1;',
-        { lang: 'ts', sourceType: 'module' },
-      );
+      const result = await transform('file.js', 'export const x: number = 1;', {
+        lang: 'ts',
+        sourceType: 'module',
+      });
       expect(result.errors).toHaveLength(0);
       expect(result.code).toBe('export const x = 1;\n');
     });
 
     it('should combine lang and sourceType (sync)', () => {
-      const result = transformSync(
-        'file.js',
-        'export const x: number = 1;',
-        { lang: 'ts', sourceType: 'module' },
-      );
+      const result = transformSync('file.js', 'export const x: number = 1;', {
+        lang: 'ts',
+        sourceType: 'module',
+      });
       expect(result.errors).toHaveLength(0);
       expect(result.code).toBe('export const x = 1;\n');
     });

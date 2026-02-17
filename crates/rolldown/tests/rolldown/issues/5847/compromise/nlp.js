@@ -1,7 +1,7 @@
 const nlp = function () {
-  console.log(666)
-}
+  console.log(666);
+};
 nlp.plugin = function () {
-  return this
-}
-export default nlp
+  return this;
+};
+export default nlp;

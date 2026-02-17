@@ -1,3 +1,3 @@
-import * as d from './b.js'
+import * as d from './b.js';
 
-export default d.result()
+export default d.result();

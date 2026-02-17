@@ -7,7 +7,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        load: function(id) {
+        load: function (id) {
           let code = fs.readFileSync(id).toString();
           return {
             code,

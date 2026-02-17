@@ -21,11 +21,7 @@ const pluginB = Promise.resolve({
 
 module.exports = defineTest({
   config: {
-    plugins: [
-      [Promise.resolve(pluginA)],
-      [undefined, Promise.resolve([null])],
-      ,
-    ],
+    plugins: [[Promise.resolve(pluginA)], [undefined, Promise.resolve([null])], ,],
   },
   afterTest: (output) => {
     import('./assert.mjs');

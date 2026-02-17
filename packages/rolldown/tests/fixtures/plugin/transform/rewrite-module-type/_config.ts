@@ -9,7 +9,7 @@ export default defineTest({
     plugins: [
       {
         name: 'rewrite-module-type',
-        transform: function(code, id, meta) {
+        transform: function (code, id, meta) {
           return {
             moduleType: 'ts',
           };

@@ -1,1 +1,1 @@
-export const Client = []
+export const Client = [];

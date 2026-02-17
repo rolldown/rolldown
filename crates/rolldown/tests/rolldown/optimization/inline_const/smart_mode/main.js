@@ -5,18 +5,17 @@ import {
   primitiveNull,
   primitiveUndefined,
   longString,
-  shortString
+  shortString,
 } from './constants.js';
-
 
 console.log(mode, one, bool, primitiveNull, primitiveUndefined, longString, shortString);
 
 if (one || mode || bool || primitiveNull || primitiveUndefined || longString || shortString) {
-  console.log('test')
+  console.log('test');
 }
 
 if (process.env.NODE_ENV === mode) {
-  console.log('production')
+  console.log('production');
 }
 
 export function test() {
@@ -26,4 +25,3 @@ export function test() {
   var five = mode ?? 'five';
   return two + three + four + five;
 }
-

@@ -1,2 +1,2 @@
-import foo from './foo.cjs'
-input.works = foo.default.bar === 123
+import foo from './foo.cjs';
+input.works = foo.default.bar === 123;

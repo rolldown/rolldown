@@ -1,7 +1,7 @@
-import {shared} from './shared.js'
+import { shared } from './shared.js';
 
 function main() {
   shared();
 }
 
-main()
+main();

@@ -1,4 +1,4 @@
-import * as fs from 'fs'
-import * as nodeFs from 'node:fs'
+import * as fs from 'fs';
+import * as nodeFs from 'node:fs';
 
-console.log(fs, nodeFs, require('path'), require('node:path'))
+console.log(fs, nodeFs, require('path'), require('node:path'));

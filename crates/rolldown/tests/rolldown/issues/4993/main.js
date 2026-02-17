@@ -1,4 +1,4 @@
-import * as Rollup from 'rollup'
-import {} from './pluginContainer.js'
+import * as Rollup from 'rollup';
+import {} from './pluginContainer.js';
 
-export { Rollup }
+export { Rollup };

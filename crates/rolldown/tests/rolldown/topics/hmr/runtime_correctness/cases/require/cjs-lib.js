@@ -1,18 +1,18 @@
-exports.foo  = 'foo'
-this.bar = 'bar'
+exports.foo = 'foo';
+this.bar = 'bar';
 
 class Noop {
-  static baz2 = (this.baz3 = 'wrong')
+  static baz2 = (this.baz3 = 'wrong');
   static {
-    this.baz = 'bar'
+    this.baz = 'bar';
   }
 }
 
-console.log(Noop)
+console.log(Noop);
 
 {
-  const exports = {}
-  this.qux = 'qux'
+  const exports = {};
+  this.qux = 'qux';
 }
 
-import 'trigger-dep'
+import 'trigger-dep';

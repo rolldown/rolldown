@@ -5,7 +5,7 @@ import { expect } from 'vitest';
 let plugins: RolldownPlugin[] = [
   {
     name: 'test-plugin',
-    transform: function(code, id, meta) {
+    transform: function (code, id, meta) {
       if (id.endsWith('foo.js')) {
         expect(code).toStrictEqual('');
         expect(meta.moduleType).toEqual('js');

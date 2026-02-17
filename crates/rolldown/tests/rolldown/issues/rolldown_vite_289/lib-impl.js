@@ -1,7 +1,5 @@
-
-
 export function foo() {
-  return fn()
+  return fn();
 }
 
-const fn = () => 1
+const fn = () => 1;

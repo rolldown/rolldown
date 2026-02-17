@@ -1,1 +1,1 @@
-console.log("don't write snapshot")
+console.log("don't write snapshot");

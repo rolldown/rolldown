@@ -1,2 +1,2 @@
-import './utils/formatDate'
-import './utils/deepClone'
+import './utils/formatDate';
+import './utils/deepClone';

@@ -62,10 +62,6 @@ export default defineTest({
     calls.length = 0;
   },
   afterTest: () => {
-    expect(calls).toStrictEqual([
-      'test-plugin',
-      'test-plugin-2',
-      'test-plugin-3',
-    ]);
+    expect(calls).toStrictEqual(['test-plugin', 'test-plugin-2', 'test-plugin-3']);
   },
 });

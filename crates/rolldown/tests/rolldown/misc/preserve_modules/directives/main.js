@@ -1,5 +1,5 @@
 'use client';
 
-import { MyPage } from './mod.js'
+import { MyPage } from './mod.js';
 
-console.log(MyPage)
+console.log(MyPage);

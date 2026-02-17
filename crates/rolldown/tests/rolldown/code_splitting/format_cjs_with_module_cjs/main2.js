@@ -1,4 +1,4 @@
-import { share } from './share'
-import assert from 'node:assert'
+import { share } from './share';
+import assert from 'node:assert';
 
-assert.equal(share(), 1)
+assert.equal(share(), 1);

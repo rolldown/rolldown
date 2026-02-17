@@ -4,6 +4,6 @@ export const red = {
 
 export const green = {
   k: {
-    v: 0
-  }
+    v: 0,
+  },
 };

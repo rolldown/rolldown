@@ -11,8 +11,7 @@ export default defineTest({
         load(id) {
           if (id.endsWith('.json')) {
             return {
-              code: 'export const foo = "bar";' +
-                'export default {200: "ok", foo}',
+              code: 'export const foo = "bar";' + 'export default {200: "ok", foo}',
               moduleType: 'js',
             };
           }

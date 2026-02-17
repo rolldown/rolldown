@@ -2,6 +2,6 @@
  * legal comment
  */
 
-"use strict";
+'use strict';
 
-export const foo = 'foo'
+export const foo = 'foo';

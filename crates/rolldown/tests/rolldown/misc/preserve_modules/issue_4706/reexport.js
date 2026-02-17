@@ -1,1 +1,1 @@
-import('./dynamic.js')
+import('./dynamic.js');

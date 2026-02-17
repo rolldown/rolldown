@@ -1,1 +1,1 @@
-import './share-by-3'
+import './share-by-3';

@@ -1,6 +1,5 @@
+import { foo, bar } from './sub/index.js';
 
-import { foo, bar } from './sub/index.js'
+console.log(foo, bar);
 
-console.log(foo,  bar)
-
-import.meta.hot.accept()
+import.meta.hot.accept();

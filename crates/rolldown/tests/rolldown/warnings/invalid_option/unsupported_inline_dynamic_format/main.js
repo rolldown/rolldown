@@ -1,1 +1,1 @@
-import('./lib.js').then(console.log)
+import('./lib.js').then(console.log);

@@ -1,2 +1,2 @@
-exports.__esModule = true
-exports.bar = 123
+exports.__esModule = true;
+exports.bar = 123;

@@ -1,5 +1,5 @@
-import { getEnv } from './b.js'
+import { getEnv } from './b.js';
 
 export const buildDevConfig = async () => {
-  return await getEnv()
-}
+  return await getEnv();
+};

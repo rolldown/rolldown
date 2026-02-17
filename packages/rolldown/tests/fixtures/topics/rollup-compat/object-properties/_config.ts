@@ -28,9 +28,7 @@ export default defineTest({
       expect(typeof chunk.__rolldown_external_memory_handle__).toBe('function');
 
       // Verify it's not enumerable (doesn't appear in Object.keys)
-      expect(Object.keys(chunk)).not.toContain(
-        '__rolldown_external_memory_handle__',
-      );
+      expect(Object.keys(chunk)).not.toContain('__rolldown_external_memory_handle__');
 
       // Verify the property descriptor shows enumerable: false
       // The method is on the prototype, so we need to check the prototype chain
@@ -51,9 +49,7 @@ export default defineTest({
       expect(typeof asset.__rolldown_external_memory_handle__).toBe('function');
 
       // Verify it's not enumerable (doesn't appear in Object.keys)
-      expect(Object.keys(asset)).not.toContain(
-        '__rolldown_external_memory_handle__',
-      );
+      expect(Object.keys(asset)).not.toContain('__rolldown_external_memory_handle__');
 
       // Verify the property descriptor shows enumerable: false
       // The method is on the prototype, so we need to check the prototype chain
@@ -70,9 +66,7 @@ export default defineTest({
     expect(typeof output.__rolldown_external_memory_handle__).toBe('function');
 
     // Verify it's not enumerable (doesn't appear in Object.keys)
-    expect(Object.keys(output)).not.toContain(
-      '__rolldown_external_memory_handle__',
-    );
+    expect(Object.keys(output)).not.toContain('__rolldown_external_memory_handle__');
 
     // Verify the property descriptor shows enumerable: false
     // The method is on the prototype, so we need to check the prototype chain

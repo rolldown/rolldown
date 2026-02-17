@@ -1,7 +1,7 @@
-import assert from "node:assert"
+import assert from 'node:assert';
 
-export const foo = 'foo'
+export const foo = 'foo';
 
-import.meta.hot?.accept(mod => {
-  assert.strictEqual(mod.foo, 'foo')
-})
+import.meta.hot?.accept((mod) => {
+  assert.strictEqual(mod.foo, 'foo');
+});

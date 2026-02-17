@@ -18,8 +18,6 @@ export default defineTest({
   },
   catchError(error: any) {
     expect(error.message).toContain('Invalid substitution ');
-    expect(error.message).toContain(
-      'can be neither absolute nor relative path',
-    );
+    expect(error.message).toContain('can be neither absolute nor relative path');
   },
 });

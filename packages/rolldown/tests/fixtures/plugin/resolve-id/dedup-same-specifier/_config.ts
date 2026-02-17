@@ -1,7 +1,7 @@
-import { defineTest } from 'rolldown-tests'
-import { expect, vi } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect, vi } from 'vitest';
 
-const resolveIdFn = vi.fn()
+const resolveIdFn = vi.fn();
 
 export default defineTest({
   sequential: true,
@@ -12,7 +12,7 @@ export default defineTest({
         name: 'test-plugin',
         resolveId(id) {
           if (id === './foo') {
-            resolveIdFn()
+            resolveIdFn();
           }
         },
       },
@@ -20,6 +20,6 @@ export default defineTest({
   },
   afterTest: () => {
     // './foo' is imported 3 times but resolve_id should only be called once
-    expect(resolveIdFn).toHaveBeenCalledTimes(1)
+    expect(resolveIdFn).toHaveBeenCalledTimes(1);
   },
-})
+});

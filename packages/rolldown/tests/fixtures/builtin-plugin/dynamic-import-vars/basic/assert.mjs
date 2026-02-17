@@ -1,12 +1,6 @@
 // @ts-nocheck
 import assert from 'node:assert';
-import {
-  multiDirs,
-  noFile,
-  singleDir,
-  withAlias,
-  withIgnoreTag,
-} from './dist/main';
+import { multiDirs, noFile, singleDir, withAlias, withIgnoreTag } from './dist/main';
 
 singleDir('module-a-1').then((m) => {
   assert.strictEqual(m.default, 'a-1');
@@ -25,10 +19,7 @@ multiDirs('b', 'module-b-1').then((m) => {
 });
 
 noFile('module-c-1').catch((e) => {
-  assert.strictEqual(
-    e.message,
-    'Unknown variable dynamic import: ./dir/c/module-c-1.js',
-  );
+  assert.strictEqual(e.message, 'Unknown variable dynamic import: ./dir/c/module-c-1.js');
 });
 
 withAlias('module-a-1').then((m) => {
@@ -37,8 +28,6 @@ withAlias('module-a-1').then((m) => {
 
 // Vitest transforms `import(..)` to `vite_ssr_dynamic_import(..)`
 assert.strictEqual(
-  withIgnoreTag.toString().match(
-    /\(\s*\/\*\s*@vite-ignore\s*\*\/\s*`([^`]+)`\s*\)/,
-  )[1],
+  withIgnoreTag.toString().match(/\(\s*\/\*\s*@vite-ignore\s*\*\/\s*`([^`]+)`\s*\)/)[1],
   './dir/a/${name}.js',
 );

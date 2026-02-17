@@ -1,4 +1,4 @@
-import cjs from 'this-is-only-used-for-testing'
+import cjs from 'this-is-only-used-for-testing';
 export default function test() {
-  return cjs
+  return cjs;
 }

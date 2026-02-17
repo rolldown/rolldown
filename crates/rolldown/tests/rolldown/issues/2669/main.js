@@ -1,23 +1,23 @@
 export function nested1() {
   function x() {}
   function x$1() {
-    x()
+    x();
   }
   function x$1$1() {
-    x()
+    x();
   }
   return [x, x$1, x$1$1];
 }
 
 export function nested2() {
   function x$1$1() {
-    x()
+    x();
   }
   function x$1() {
-    x()
+    x();
   }
   function x() {}
   return [x, x$1, x$1$1];
 }
 
-export const x = "x";
+export const x = 'x';

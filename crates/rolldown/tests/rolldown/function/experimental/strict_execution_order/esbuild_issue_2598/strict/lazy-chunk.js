@@ -1,3 +1,3 @@
-import {foo} from './user-lib';
+import { foo } from './user-lib';
 
 foo();

@@ -1,1 +1,1 @@
-export const onMount = () => { }
+export const onMount = () => {};

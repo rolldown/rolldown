@@ -1,3 +1,3 @@
-import { foo } from "./router.mjs";
+import { foo } from './router.mjs';
 
-globalThis.result = [foo]
+globalThis.result = [foo];

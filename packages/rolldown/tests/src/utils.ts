@@ -22,21 +22,15 @@ assert(
   `${workspaceRoot('pnpm-workspace.yaml')} does not exist`,
 );
 export function getOutputChunkNames(output: RollupOutput) {
-  return output.output
-    .filter((chunk) => chunk.type === 'chunk')
-    .map((chunk) => chunk.fileName);
+  return output.output.filter((chunk) => chunk.type === 'chunk').map((chunk) => chunk.fileName);
 }
 
 export function getOutputChunk(output: RollupOutput): RolldownOutputChunk[] {
-  return output.output.filter(
-    (chunk) => chunk.type === 'chunk',
-  ) as RolldownOutputChunk[];
+  return output.output.filter((chunk) => chunk.type === 'chunk') as RolldownOutputChunk[];
 }
 
 export function getOutputAsset(output: RollupOutput): RolldownOutputAsset[] {
-  return output.output.filter(
-    (chunk) => chunk.type === 'asset',
-  ) as RolldownOutputAsset[];
+  return output.output.filter((chunk) => chunk.type === 'asset') as RolldownOutputAsset[];
 }
 
 export function getOutputFileNames(output: RollupOutput) {
@@ -82,9 +76,7 @@ export function getLocation(source: string, search: string | number) {
   var lineStart = 0;
   var index;
 
-  const charIndex = typeof search === 'number'
-    ? search
-    : source.indexOf(search);
+  const charIndex = typeof search === 'number' ? search : source.indexOf(search);
 
   for (index = 0; index < length_; index += 1) {
     var line = lines[index];

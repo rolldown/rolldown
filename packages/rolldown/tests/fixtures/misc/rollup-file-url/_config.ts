@@ -37,14 +37,11 @@ export default defineTest({
   afterTest: async () => {
     const mod = await import('./dist/entries/main.mjs' as string);
     const assetPath = fileURLToPath(mod.default);
-    expect(
-      path.relative(import.meta.dirname, assetPath).replace(/\\/g, '/'),
-    ).toBe('dist/assets/main-test.svg');
-    const emitted = fs.readFileSync(assetPath, 'utf-8');
-    const original = fs.readFileSync(
-      path.join(import.meta.dirname, 'main.svg'),
-      'utf-8',
+    expect(path.relative(import.meta.dirname, assetPath).replace(/\\/g, '/')).toBe(
+      'dist/assets/main-test.svg',
     );
+    const emitted = fs.readFileSync(assetPath, 'utf-8');
+    const original = fs.readFileSync(path.join(import.meta.dirname, 'main.svg'), 'utf-8');
     expect(emitted).toBe(original);
   },
 });

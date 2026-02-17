@@ -1,4 +1,4 @@
-import assert from 'node:assert'
+import assert from 'node:assert';
 
-const nlp = (await import('./compromise')).default
-assert.strictEqual(nlp.extend(), 666)
+const nlp = (await import('./compromise')).default;
+assert.strictEqual(nlp.extend(), 666);

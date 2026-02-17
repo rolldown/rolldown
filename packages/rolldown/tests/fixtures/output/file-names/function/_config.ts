@@ -1,7 +1,4 @@
-import type {
-  OutputChunk as RolldownOutputChunk,
-  PreRenderedChunk,
-} from 'rolldown';
+import type { OutputChunk as RolldownOutputChunk, PreRenderedChunk } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
@@ -30,24 +27,18 @@ export default defineTest({
     },
   },
   afterTest: (output) => {
-    expect(
-      output.output.find((chunk) => (chunk as RolldownOutputChunk).isEntry)
-        ?.fileName,
-    ).toBe('main-test.js');
-    expect(
-      output.output.find((chunk) => !(chunk as RolldownOutputChunk).isEntry)
-        ?.fileName,
-    ).toBe('test-chunk.js');
+    expect(output.output.find((chunk) => (chunk as RolldownOutputChunk).isEntry)?.fileName).toBe(
+      'main-test.js',
+    );
+    expect(output.output.find((chunk) => !(chunk as RolldownOutputChunk).isEntry)?.fileName).toBe(
+      'test-chunk.js',
+    );
 
     expect(
-      output.output.find(
-        (chunk) => (chunk as RolldownOutputChunk).fileName === 'main-test.css',
-      ),
+      output.output.find((chunk) => (chunk as RolldownOutputChunk).fileName === 'main-test.css'),
     ).toBeTruthy();
     expect(
-      output.output.find(
-        (chunk) => (chunk as RolldownOutputChunk).fileName === 'test-chunk.css',
-      ),
+      output.output.find((chunk) => (chunk as RolldownOutputChunk).fileName === 'test-chunk.css'),
     ).toBeTruthy();
 
     expect(preRenderedEntry).toMatchObject({
@@ -56,10 +47,7 @@ export default defineTest({
       isDynamicEntry: false,
       exports: [],
       facadeModuleId: expect.stringMatching(/main\.js$/),
-      moduleIds: [
-        expect.stringMatching(/main\.css$/),
-        expect.stringMatching(/main\.js$/),
-      ],
+      moduleIds: [expect.stringMatching(/main\.css$/), expect.stringMatching(/main\.js$/)],
     });
 
     expect(preRenderedChunk).toMatchObject({
@@ -68,10 +56,7 @@ export default defineTest({
       isDynamicEntry: true,
       exports: ['hello'],
       facadeModuleId: expect.stringMatching(/test\.js$/),
-      moduleIds: [
-        expect.stringMatching(/test\.css$/),
-        expect.stringMatching(/test\.js$/),
-      ],
+      moduleIds: [expect.stringMatching(/test\.css$/), expect.stringMatching(/test\.js$/)],
     });
   },
 });

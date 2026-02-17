@@ -1,2 +1,2 @@
-export const dd = "dd";
-console.log("./dd.js");
+export const dd = 'dd';
+console.log('./dd.js');

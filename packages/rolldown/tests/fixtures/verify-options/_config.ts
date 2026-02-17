@@ -107,9 +107,7 @@ export default defineTest({
       expect(option.sourcemapIgnoreList).toStrictEqual(sourcemapIgnoreList);
       expect(option.legalComments).toBe('inline');
       expect(option.preserveModules).toBe(false);
-      expect(option.preserveModulesRoot).toStrictEqual(
-        path.join(__dirname, 'src'),
-      );
+      expect(option.preserveModulesRoot).toStrictEqual(path.join(__dirname, 'src'));
       expect(option.virtualDirname).toBe('virtual');
       expect(option.minifyInternalExports).toBe(true);
     });

@@ -1,2 +1,2 @@
-import './main.css'
-export default 'hello, world'
+import './main.css';
+export default 'hello, world';

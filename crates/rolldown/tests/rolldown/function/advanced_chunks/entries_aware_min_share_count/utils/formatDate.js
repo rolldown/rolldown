@@ -1,1 +1,1 @@
-console.log('formatDate')
+console.log('formatDate');

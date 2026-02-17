@@ -1,6 +1,5 @@
-import mod from "./commonjs.js";
-import assert from "node:assert";
-
+import mod from './commonjs.js';
+import assert from 'node:assert';
 
 // Don't optimize those cases
 assert.equal(mod.foo, 1);

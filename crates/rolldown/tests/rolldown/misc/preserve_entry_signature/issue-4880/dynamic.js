@@ -1,6 +1,6 @@
-import assert from "node:assert";
+import assert from 'node:assert';
 
 (async () => {
-	const mod = await import("./foo.js");
-	assert.strictEqual(mod.default, "foo");
+  const mod = await import('./foo.js');
+  assert.strictEqual(mod.default, 'foo');
 })();

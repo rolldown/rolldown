@@ -1,1 +1,1 @@
-export const value = 'main'
+export const value = 'main';

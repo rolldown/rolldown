@@ -1,3 +1,3 @@
-import * as ns from "./lib";
+import * as ns from './lib';
 
 console.log(ns);

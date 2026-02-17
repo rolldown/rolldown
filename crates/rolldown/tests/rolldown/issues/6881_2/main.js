@@ -1,2 +1,1 @@
-import("./lib.js");
-
+import('./lib.js');

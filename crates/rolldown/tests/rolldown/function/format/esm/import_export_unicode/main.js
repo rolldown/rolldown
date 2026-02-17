@@ -1,3 +1,3 @@
-import { '😈' as devil } from './foo'
+import { '😈' as devil } from './foo';
 
-export { devil as '😈' }
+export { devil as '😈' };

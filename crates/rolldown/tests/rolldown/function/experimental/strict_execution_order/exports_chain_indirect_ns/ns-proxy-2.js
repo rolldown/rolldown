@@ -1,3 +1,3 @@
-import { star } from './ns-proxy'
+import { star } from './ns-proxy';
 
-export { star }
+export { star };

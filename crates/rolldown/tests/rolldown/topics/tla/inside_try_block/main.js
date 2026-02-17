@@ -1,1 +1,1 @@
-export { foo } from "./lib.js";
+export { foo } from './lib.js';

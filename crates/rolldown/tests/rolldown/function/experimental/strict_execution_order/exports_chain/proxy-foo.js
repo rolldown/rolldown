@@ -1,3 +1,3 @@
-import { value as foo } from './lib-foo'
+import { value as foo } from './lib-foo';
 
-export { foo }
+export { foo };

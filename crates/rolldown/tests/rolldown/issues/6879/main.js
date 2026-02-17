@@ -1,2 +1,2 @@
-"use strict";
+'use strict';
 exports.foo = 'foo';

@@ -1,3 +1,3 @@
-import assert from 'node:assert'
-import { a } from './commonjs.js'
-assert.equal(a, 1)
+import assert from 'node:assert';
+import { a } from './commonjs.js';
+assert.equal(a, 1);

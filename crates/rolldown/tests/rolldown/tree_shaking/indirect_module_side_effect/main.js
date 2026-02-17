@@ -1,1 +1,1 @@
-import './proxy'
+import './proxy';

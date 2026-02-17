@@ -1,1 +1,1 @@
-export const value = 'esm-namespace'
+export const value = 'esm-namespace';

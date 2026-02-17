@@ -1,8 +1,8 @@
-import assert from 'node:assert'
+import assert from 'node:assert';
 class Example {
   static {
-    this.prop = new Example('bar')
-    assert.strictEqual(Example.prop.foo, 'bar')
+    this.prop = new Example('bar');
+    assert.strictEqual(Example.prop.foo, 'bar');
   }
 
   constructor(foo) {

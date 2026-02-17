@@ -1,1 +1,1 @@
-exports.b = 'b'
+exports.b = 'b';

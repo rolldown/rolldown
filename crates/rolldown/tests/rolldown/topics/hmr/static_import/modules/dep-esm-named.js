@@ -1,1 +1,1 @@
-export const named = 'esm-named'
+export const named = 'esm-named';

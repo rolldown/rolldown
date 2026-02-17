@@ -1,8 +1,6 @@
 {
   "visualizeSourcemap": true,
   "config": {
-    "external": [
-      "node:assert"
-    ]
+    "external": ["node:assert"]
   }
 }

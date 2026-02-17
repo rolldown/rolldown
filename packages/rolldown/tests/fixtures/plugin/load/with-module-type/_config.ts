@@ -7,7 +7,7 @@ export default defineTest({
     plugins: [
       {
         name: 'rewrite-module-type',
-        load: function(id) {
+        load: function (id) {
           debugger;
           return {
             code: fs.readFileSync(id, 'utf-8'),

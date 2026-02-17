@@ -1,1 +1,1 @@
-export default 'js'
+export default 'js';

@@ -1,4 +1,4 @@
-import foo from './cjs'
-console.log(foo)
+import foo from './cjs';
+console.log(foo);
 
-export {}
+export {};

@@ -1,2 +1,2 @@
-import './share'
-import('./dynamic')
+import './share';
+import('./dynamic');

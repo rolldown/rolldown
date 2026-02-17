@@ -14,7 +14,6 @@ export default defineTest({
     },
   },
   afterTest: (output) => {
-    expect(output.output[0].code.endsWith(footerTxt + '\n' + postFooterTxt))
-      .toBe(true);
+    expect(output.output[0].code.endsWith(footerTxt + '\n' + postFooterTxt)).toBe(true);
   },
 });

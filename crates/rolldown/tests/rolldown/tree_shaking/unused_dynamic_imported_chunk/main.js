@@ -1,3 +1,2 @@
-import './dep.js'
-console.log('entry')
-
+import './dep.js';
+console.log('entry');

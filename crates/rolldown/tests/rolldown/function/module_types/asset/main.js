@@ -1,3 +1,3 @@
-import filePath from './foo.txt'
+import filePath from './foo.txt';
 
-export default filePath
+export default filePath;

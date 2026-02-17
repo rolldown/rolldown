@@ -1,1 +1,1 @@
-export const a = "dynamic-a";
+export const a = 'dynamic-a';

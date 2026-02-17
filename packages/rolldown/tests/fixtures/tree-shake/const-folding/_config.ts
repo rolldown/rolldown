@@ -8,10 +8,7 @@ export default defineTest({
       {
         name: 'replace NODE_ENV',
         transform: (code, id) => {
-          const res = code.replace(
-            'process.env.NODE_ENV',
-            JSON.stringify('development'),
-          );
+          const res = code.replace('process.env.NODE_ENV', JSON.stringify('development'));
           return res;
         },
       },

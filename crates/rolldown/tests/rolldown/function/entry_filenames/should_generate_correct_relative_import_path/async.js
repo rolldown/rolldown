@@ -1,1 +1,1 @@
-export const value = 'async'
+export const value = 'async';

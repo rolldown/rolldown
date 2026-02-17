@@ -1,1 +1,1 @@
-export default 'esm-default'
+export default 'esm-default';

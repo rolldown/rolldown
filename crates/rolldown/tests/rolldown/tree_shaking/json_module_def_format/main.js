@@ -1,3 +1,3 @@
-const a = require('./test.json')
+const a = require('./test.json');
 
-console.log(`a: `, a)
+console.log(`a: `, a);

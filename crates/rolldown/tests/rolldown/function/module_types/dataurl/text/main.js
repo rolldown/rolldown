@@ -1,4 +1,4 @@
 import assert from 'node:assert';
-import value from './text.data'
+import value from './text.data';
 
-assert(typeof value === 'string' && value.startsWith('data:text/plain;charset=utf-8,'))
+assert(typeof value === 'string' && value.startsWith('data:text/plain;charset=utf-8,'));

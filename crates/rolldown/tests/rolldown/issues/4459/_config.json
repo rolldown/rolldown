@@ -3,8 +3,6 @@
   "config": {
     "format": "umd",
     "name": "Lib",
-    "external": [
-      "es-toolkit"
-    ]
+    "external": ["es-toolkit"]
   }
 }

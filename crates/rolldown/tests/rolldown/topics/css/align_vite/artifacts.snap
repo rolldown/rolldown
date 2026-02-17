@@ -3,15 +3,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## common-imported-by-js-BWCTboZO.css
+## common-imported-by-js-Bn6VocNp.css
 
 ```css
 body {
-  background-color: "common-imported-by-css";
+  background-color: 'common-imported-by-css';
 }
+
 body {
-  background-color: "common-imported-by-js";
+  background-color: 'common-imported-by-js';
 }
+
 
 ```
 
@@ -21,17 +23,18 @@ body {
 
 ```
 
-## entry-a-CrhZOoNM.css
+## entry-a-ByqQIZ30.css
 
 ```css
 
 body {
-  background-color: "entry-a";
+  background-color: 'entry-a';
 }
 
 body {
-  background-color: "a-only";
+  background-color: 'a-only';
 }
+
 
 ```
 
@@ -46,17 +49,18 @@ console.log("entry-a");
 //#endregion
 ```
 
-## entry-b-fpA6EH7c.css
+## entry-b-BZLahjlx.css
 
 ```css
 
 body {
-  background-color: "entry-b";
+  background-color: 'entry-b';
 }
 
 body {
-  background-color: "b-only";
+  background-color: 'b-only';
 }
+
 
 ```
 

@@ -1,2 +1,2 @@
-export const foo = 'foo'
-export default 'main'
+export const foo = 'foo';
+export default 'main';

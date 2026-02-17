@@ -1,1 +1,1 @@
-import './hmr.js'
+import './hmr.js';

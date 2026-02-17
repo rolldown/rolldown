@@ -1,5 +1,5 @@
-import './init.js'
-import './foo.js'
-import './bar.js'
+import './init.js';
+import './foo.js';
+import './bar.js';
 
-console.log(globalThis.array)
+console.log(globalThis.array);

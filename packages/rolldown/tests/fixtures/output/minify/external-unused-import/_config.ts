@@ -3,7 +3,7 @@ import { assert, expect } from 'vitest';
 
 export default defineTest({
   config: {
-    external: ["external"],
+    external: ['external'],
     output: {
       minify: true,
     },

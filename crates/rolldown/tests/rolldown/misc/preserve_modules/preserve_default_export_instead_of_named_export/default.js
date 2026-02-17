@@ -1,2 +1,2 @@
-const foo = 42
-export default foo
+const foo = 42;
+export default foo;

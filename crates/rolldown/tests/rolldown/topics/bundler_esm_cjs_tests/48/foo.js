@@ -1,1 +1,1 @@
-module.exports = { bar: 123, __esModule: true }
+module.exports = { bar: 123, __esModule: true };

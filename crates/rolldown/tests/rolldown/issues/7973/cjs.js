@@ -1,2 +1,2 @@
-exports.a = "original";
-exports.b = "original";
+exports.a = 'original';
+exports.b = 'original';

@@ -1,1 +1,1 @@
-console.log('shared-by-abc')
+console.log('shared-by-abc');

@@ -6,5 +6,6 @@ const { parse } = require('cjs-module-lexer');
 
 const parsed = parse(fs.readFileSync(path.resolve(import.meta.dirname, 'dist/main.js'), 'utf8'));
 assert.deepStrictEqual(parsed, {
-  exports: ['readFileSync'], reexports: ['external']
-})
+  exports: ['readFileSync'],
+  reexports: ['external'],
+});

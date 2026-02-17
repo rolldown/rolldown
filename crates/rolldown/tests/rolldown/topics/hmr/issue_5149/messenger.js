@@ -4,13 +4,7 @@ import { prefix } from './common.js';
 import { prefix as p2 } from './common.js';
 import { prefix as p3 } from './common.js';
 
-export let msg = [
-  prefix,
-  foo,
-  bar,
-  p2,
-  p3,
-].join(",")
+export let msg = [prefix, foo, bar, p2, p3].join(',');
 export function sayMessage() {
   console.log(msg);
 }

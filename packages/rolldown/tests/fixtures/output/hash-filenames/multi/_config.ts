@@ -13,23 +13,23 @@ export default defineTest({
     },
   },
   afterTest: (output) => {
-    const hash_entry = output.output
-      .find((chunk) => (chunk as RolldownOutputChunk).isEntry)
-      ?.fileName.match(/-([a-f0-9]+)-([a-f0-9]+)\.js$/) || [];
-    const hash_chunk = output.output
-      .find((chunk) => !(chunk as RolldownOutputChunk).isEntry)
-      ?.fileName.match(/-([a-f0-9]+)-([a-f0-9]+)\.js$/) || [];
+    const hash_entry =
+      output.output
+        .find((chunk) => (chunk as RolldownOutputChunk).isEntry)
+        ?.fileName.match(/-([a-f0-9]+)-([a-f0-9]+)\.js$/) || [];
+    const hash_chunk =
+      output.output
+        .find((chunk) => !(chunk as RolldownOutputChunk).isEntry)
+        ?.fileName.match(/-([a-f0-9]+)-([a-f0-9]+)\.js$/) || [];
 
-    const hash_css_entry = output.output
-      .find(
-        (chunk) => chunk.fileName.startsWith('main') && chunk.type === 'asset',
-      )
-      ?.fileName.match(/-([a-f0-9]+)-([a-f0-9]+)\.css$/) || [];
-    const hash_css_chunk = output.output
-      .find(
-        (chunk) => chunk.fileName.startsWith('test') && chunk.type === 'asset',
-      )
-      ?.fileName.match(/-([a-f0-9]+)-([a-f0-9]+)\.css$/) || [];
+    const hash_css_entry =
+      output.output
+        .find((chunk) => chunk.fileName.startsWith('main') && chunk.type === 'asset')
+        ?.fileName.match(/-([a-f0-9]+)-([a-f0-9]+)\.css$/) || [];
+    const hash_css_chunk =
+      output.output
+        .find((chunk) => chunk.fileName.startsWith('test') && chunk.type === 'asset')
+        ?.fileName.match(/-([a-f0-9]+)-([a-f0-9]+)\.css$/) || [];
 
     expect(hash_entry[1]).toHaveLength(8);
     expect(hash_entry[2]).toHaveLength(6);

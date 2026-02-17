@@ -1,2 +1,2 @@
-import foo from './foo.js'
-input.works = foo === 123
+import foo from './foo.js';
+input.works = foo === 123;

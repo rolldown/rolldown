@@ -25,29 +25,27 @@ export default defineTest({
     ],
   },
   afterTest: (output) => {
-    const hash_entry = output.output
-      .find((chunk) => (chunk as RolldownOutputChunk).isEntry)
-      ?.fileName.match(/-([a-zA-Z0-9_-]+)\.js$/) || [];
-    const hash_chunk = output.output
-      .find((chunk) => !(chunk as RolldownOutputChunk).isEntry)
-      ?.fileName.match(/-([a-zA-Z0-9_-]+)\.js$/) || [];
+    const hash_entry =
+      output.output
+        .find((chunk) => (chunk as RolldownOutputChunk).isEntry)
+        ?.fileName.match(/-([a-zA-Z0-9_-]+)\.js$/) || [];
+    const hash_chunk =
+      output.output
+        .find((chunk) => !(chunk as RolldownOutputChunk).isEntry)
+        ?.fileName.match(/-([a-zA-Z0-9_-]+)\.js$/) || [];
 
-    const hash_css_entry = output.output
-      .find(
-        (chunk) => chunk.fileName.startsWith('main') && chunk.type === 'asset',
-      )
-      ?.fileName.match(/-([a-zA-Z0-9_-]+)\.css$/) || [];
-    const hash_css_chunk = output.output
-      .find(
-        (chunk) => chunk.fileName.startsWith('test') && chunk.type === 'asset',
-      )
-      ?.fileName.match(/-([a-zA-Z0-9_-]+)\.css$/) || [];
-    const hash_asset = output.output
-      .find(
-        (chunk) =>
-          chunk.fileName.startsWith('emitted') && chunk.type === 'asset',
-      )
-      ?.fileName.match(/-([a-zA-Z0-9_-]+)\.txt$/) || [];
+    const hash_css_entry =
+      output.output
+        .find((chunk) => chunk.fileName.startsWith('main') && chunk.type === 'asset')
+        ?.fileName.match(/-([a-zA-Z0-9_-]+)\.css$/) || [];
+    const hash_css_chunk =
+      output.output
+        .find((chunk) => chunk.fileName.startsWith('test') && chunk.type === 'asset')
+        ?.fileName.match(/-([a-zA-Z0-9_-]+)\.css$/) || [];
+    const hash_asset =
+      output.output
+        .find((chunk) => chunk.fileName.startsWith('emitted') && chunk.type === 'asset')
+        ?.fileName.match(/-([a-zA-Z0-9_-]+)\.txt$/) || [];
 
     expect(hash_entry[1]).toHaveLength(6);
     expect(hash_chunk[1]).toHaveLength(7);

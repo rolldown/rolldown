@@ -1,3 +1,3 @@
-console.log(1)
+console.log(1);
 
-export default 1
+export default 1;

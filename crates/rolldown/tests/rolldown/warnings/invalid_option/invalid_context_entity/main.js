@@ -1,1 +1,1 @@
-this.a = 1
+this.a = 1;

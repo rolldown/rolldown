@@ -1,2 +1,2 @@
-import './utils/formatDate'
-import './utils/debounce'
+import './utils/formatDate';
+import './utils/debounce';

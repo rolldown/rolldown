@@ -1,3 +1,3 @@
-const devil = 'devil'
+const devil = 'devil';
 
-export { devil as '😈' }
+export { devil as '😈' };

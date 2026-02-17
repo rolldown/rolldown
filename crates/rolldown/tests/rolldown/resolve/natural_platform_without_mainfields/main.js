@@ -1,6 +1,4 @@
-import { a } from "foo";
-import assert from 'node:assert'
+import { a } from 'foo';
+import assert from 'node:assert';
 
-
-assert.strictEqual(a, 1000)
-
+assert.strictEqual(a, 1000);

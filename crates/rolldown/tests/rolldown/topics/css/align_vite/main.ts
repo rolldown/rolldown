@@ -1,2 +1,2 @@
-import('./entry-a')
-import('./entry-b')
+import('./entry-a');
+import('./entry-b');

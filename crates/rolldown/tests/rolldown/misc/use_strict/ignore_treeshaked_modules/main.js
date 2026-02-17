@@ -1,2 +1,2 @@
-import './shaked.js'
-module.exports = {}
+import './shaked.js';
+module.exports = {};

@@ -1,3 +1,2 @@
-
-import './trigger-error'
-import './trigger-wrapping'
+import './trigger-error';
+import './trigger-wrapping';

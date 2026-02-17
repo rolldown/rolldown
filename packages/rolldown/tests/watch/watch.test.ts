@@ -56,9 +56,7 @@ test.sequential('watch', async () => {
     // Test update event
     fs.writeFileSync(input, `import './foo.js'; console.log(2)`);
     await waitUtil(() => {
-      expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
-        true,
-      );
+      expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true);
       // The different platform maybe emit multiple events
       expect(watchChangeUpdateFn).toBeCalled();
     });
@@ -86,9 +84,7 @@ test.sequential('watch', async () => {
 });
 
 test.sequential('watch files after scan stage', async () => {
-  const { input, output } = await createTestInputAndOutput(
-    'watch-files-after-scan',
-  );
+  const { input, output } = await createTestInputAndOutput('watch-files-after-scan');
   const watcher = watch({
     input,
     output: { file: output },
@@ -106,9 +102,7 @@ test.sequential('watch files after scan stage', async () => {
   await waitBuildFinished(watcher);
 
   await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
-      true,
-    );
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true);
   });
 });
 
@@ -125,9 +119,7 @@ test.sequential('watch close', async () => {
   fs.writeFileSync(input, 'console.log(3)');
   await waitUtil(() => {
     // The watcher is closed, so the output file should not be updated
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(
-      true,
-    );
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true);
   });
 });
 
@@ -206,9 +198,7 @@ test.sequential('watch event', async () => {
 });
 
 test.sequential('watch event off', async () => {
-  const { input, outputDir } = await createTestInputAndOutput(
-    'watch-event-off',
-  );
+  const { input, outputDir } = await createTestInputAndOutput('watch-event-off');
   const watcher = watch({
     input,
     output: { dir: outputDir },
@@ -231,9 +221,7 @@ test.sequential('watch event off', async () => {
 });
 
 test.sequential('watch BUNDLE_END event result.close() + closeBundle', async () => {
-  const { input, outputDir } = await createTestInputAndOutput(
-    'watch-event-close-closeBundle',
-  );
+  const { input, outputDir } = await createTestInputAndOutput('watch-event-close-closeBundle');
   const closeBundleFn = vi.fn();
   const watcher = watch({
     input,
@@ -314,9 +302,7 @@ test.sequential('watch BUNDLE_END event output + "file" option', async () => {
 });
 
 test.sequential('watch event avoid deadlock #2806', async () => {
-  const { input, output } = await createTestInputAndOutput(
-    'watch-event-avoid-dead-lock',
-  );
+  const { input, output } = await createTestInputAndOutput('watch-event-avoid-dead-lock');
   const watcher = watch({
     input,
     output: { file: output },
@@ -394,11 +380,7 @@ console.log(a)
 `,
     'foo.js': `export const a = 10000`,
   });
-  const cwd = path.join(
-    import.meta.dirname,
-    'temp',
-    'incremental-watch-modify-entry-module',
-  );
+  const cwd = path.join(import.meta.dirname, 'temp', 'incremental-watch-modify-entry-module');
   const watcher = watch({
     cwd,
     input: 'main.js',
@@ -433,11 +415,7 @@ test.sequential('watch sync ast of newly added ast', async () => {
     'd1.js': `export const a = 1`,
     'd2.js': `export const b = 2`,
   });
-  const cwd = path.join(
-    import.meta.dirname,
-    'temp',
-    'sync-ast-of-newly-added-modules',
-  );
+  const cwd = path.join(import.meta.dirname, 'temp', 'sync-ast-of-newly-added-modules');
   const watcher = watch({
     cwd,
     input: 'main.js',
@@ -483,9 +461,7 @@ test.sequential('watch buildDelay', async () => {
   // sleep 200ms to wait the build finished, if the buildDelay is working, the restartFn should be called once
   await sleep(200);
   await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(5)')).toBe(
-      true,
-    );
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(5)')).toBe(true);
     expect(restartFn).toBeCalledTimes(1);
   });
 });
@@ -543,9 +519,7 @@ test.sequential('watch include/exclude', async () => {
   fs.writeFileSync(input, 'console.log(2)');
   await waitUtil(() => {
     // The input is excluded, so the output file should not be updated
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(
-      true,
-    );
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true);
   });
 });
 
@@ -572,18 +546,13 @@ test.sequential('watch onInvalidate', async () => {
 
   await waitUtil(() => {
     expect(onInvalidateFn).toBeCalled();
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
-      true,
-    );
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true);
   });
 });
 
 test.sequential('error handling', async () => {
   // first build error, the watching could be work with recover error
-  const { input, output } = await createTestInputAndOutput(
-    'error-handling',
-    'conso le.log(1)',
-  );
+  const { input, output } = await createTestInputAndOutput('error-handling', 'conso le.log(1)');
 
   const watcher = watch({
     input,
@@ -616,16 +585,12 @@ test.sequential('error handling', async () => {
   // It should be working if the changes are fixed error
   fs.writeFileSync(input, 'console.log(3)');
   await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(3)')).toBe(
-      true,
-    );
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(3)')).toBe(true);
   });
 });
 
 test.sequential('error handling + plugin error', async () => {
-  const { input, output } = await createTestInputAndOutput(
-    'error-handling-plugin-error',
-  );
+  const { input, output } = await createTestInputAndOutput('error-handling-plugin-error');
   const watcher = watch({
     input,
     output: { file: output },
@@ -661,11 +626,10 @@ test.sequential('error handling + plugin error', async () => {
 });
 
 test.sequential('watch multiply options', async () => {
-  const { input, output, outputDir } = await createTestInputAndOutput(
-    'watch-multiply-options',
+  const { input, output, outputDir } = await createTestInputAndOutput('watch-multiply-options');
+  const { input: foo, outputDir: fooOutputDir } = await createTestInputAndOutput(
+    'watch-multiply-options-foo',
   );
-  const { input: foo, outputDir: fooOutputDir } =
-    await createTestInputAndOutput('watch-multiply-options-foo');
   const watcher = watch([
     {
       input,
@@ -688,28 +652,20 @@ test.sequential('watch multiply options', async () => {
   // here should using waitBuildFinished to wait the build finished, because the `input` could be finished before `foo`
   // await waitBuildFinished(watcher)
   await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(
-      true,
-    );
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true);
   });
 
   fs.writeFileSync(input, 'console.log(2)');
   await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
-      true,
-    );
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true);
     // Only the input corresponding bundler is rebuild
     expect(events[0]).toEqual(outputDir);
   });
 });
 
 test.sequential('warning for multiply notify options', async () => {
-  const { input, output } = await createTestInputAndOutput(
-    'watch-multiply-options-warning',
-  );
-  const { input: foo } = await createTestInputAndOutput(
-    'watch-multiply-options-warning-foo',
-  );
+  const { input, output } = await createTestInputAndOutput('watch-multiply-options-warning');
+  const { input: foo } = await createTestInputAndOutput('watch-multiply-options-warning-foo');
   const onLogFn = vi.fn();
   const watcher = watch([
     {
@@ -750,9 +706,7 @@ test.sequential('warning for multiply notify options', async () => {
 
 if (process.platform === 'win32') {
   test.sequential('watch linux path at windows #4385', async () => {
-    const { input, output } = await createTestInputAndOutput(
-      'watch-linux-path-at-windows',
-    );
+    const { input, output } = await createTestInputAndOutput('watch-linux-path-at-windows');
     const watcher = watch({
       input,
       output: { file: output },
@@ -772,17 +726,13 @@ if (process.platform === 'win32') {
     // edit file
     fs.writeFileSync(input, 'console.log(2)');
     await waitUtil(() => {
-      expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
-        true,
-      );
+      expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true);
     });
   });
 }
 
 test.sequential('watch close immediately', async () => {
-  const { input, output } = await createTestInputAndOutput(
-    'watch-close-immediately',
-  );
+  const { input, output } = await createTestInputAndOutput('watch-close-immediately');
   const watcher = watch({
     input,
     output: { file: output },
@@ -791,43 +741,36 @@ test.sequential('watch close immediately', async () => {
   await watcher.close();
 });
 
-test.sequential(
-  'ids loaded via load hook should not be watched',
-  async () => {
-    const dirname = 'watchFiles-load-hook';
-    createTestWithMultiFiles(dirname, {
-      'main.js': `import './loaded.js'`,
-      'loaded.js': `console.log('on disk')`,
-    });
-    const cwd = path.join(import.meta.dirname, 'temp', dirname);
+test.sequential('ids loaded via load hook should not be watched', async () => {
+  const dirname = 'watchFiles-load-hook';
+  createTestWithMultiFiles(dirname, {
+    'main.js': `import './loaded.js'`,
+    'loaded.js': `console.log('on disk')`,
+  });
+  const cwd = path.join(import.meta.dirname, 'temp', dirname);
 
-    const bundle = await rolldown({
-      cwd,
-      input: 'main.js',
-      plugins: [
-        {
-          name: 'test-load',
-          load(id) {
-            if (id.endsWith('loaded.js')) {
-              return `console.log('from load hook')`;
-            }
-          },
+  const bundle = await rolldown({
+    cwd,
+    input: 'main.js',
+    plugins: [
+      {
+        name: 'test-load',
+        load(id) {
+          if (id.endsWith('loaded.js')) {
+            return `console.log('from load hook')`;
+          }
         },
-      ],
-    });
-    await bundle.generate();
-    const watchFiles = await bundle.watchFiles;
-    await bundle.close();
+      },
+    ],
+  });
+  await bundle.generate();
+  const watchFiles = await bundle.watchFiles;
+  await bundle.close();
 
-    const normalized = watchFiles.map((f) => f.replace(/\\/g, '/'));
-    expect(normalized).toContainEqual(
-      expect.stringContaining('main.js'),
-    );
-    expect(normalized).not.toContainEqual(
-      expect.stringContaining('loaded.js'),
-    );
-  },
-);
+  const normalized = watchFiles.map((f) => f.replace(/\\/g, '/'));
+  expect(normalized).toContainEqual(expect.stringContaining('main.js'));
+  expect(normalized).not.toContainEqual(expect.stringContaining('loaded.js'));
+});
 
 test.sequential('ids loaded by file read should be watched', async () => {
   const dirname = 'watchFiles-file-read';
@@ -847,42 +790,35 @@ test.sequential('ids loaded by file read should be watched', async () => {
   expect(normalized).toContainEqual(expect.stringContaining('dep.js'));
 });
 
-test.sequential(
-  'ids added via addWatchFile should be watched',
-  async () => {
-    const dirname = 'watchFiles-addWatchFile';
-    createTestWithMultiFiles(dirname, {
-      'main.js': `console.log('hello')`,
-      'external.txt': 'some data',
-    });
-    const cwd = path.join(import.meta.dirname, 'temp', dirname);
-    const externalFile = path.join(cwd, 'external.txt');
+test.sequential('ids added via addWatchFile should be watched', async () => {
+  const dirname = 'watchFiles-addWatchFile';
+  createTestWithMultiFiles(dirname, {
+    'main.js': `console.log('hello')`,
+    'external.txt': 'some data',
+  });
+  const cwd = path.join(import.meta.dirname, 'temp', dirname);
+  const externalFile = path.join(cwd, 'external.txt');
 
-    const bundle = await rolldown({
-      cwd,
-      input: 'main.js',
-      plugins: [
-        {
-          name: 'test-addWatchFile',
-          buildStart() {
-            this.addWatchFile(externalFile);
-          },
+  const bundle = await rolldown({
+    cwd,
+    input: 'main.js',
+    plugins: [
+      {
+        name: 'test-addWatchFile',
+        buildStart() {
+          this.addWatchFile(externalFile);
         },
-      ],
-    });
-    await bundle.generate();
-    const watchFiles = await bundle.watchFiles;
-    await bundle.close();
+      },
+    ],
+  });
+  await bundle.generate();
+  const watchFiles = await bundle.watchFiles;
+  await bundle.close();
 
-    const normalized = watchFiles.map((f) => f.replace(/\\/g, '/'));
-    expect(normalized).toContainEqual(
-      expect.stringContaining('main.js'),
-    );
-    expect(normalized).toContainEqual(
-      expect.stringContaining('external.txt'),
-    );
-  },
-);
+  const normalized = watchFiles.map((f) => f.replace(/\\/g, '/'));
+  expect(normalized).toContainEqual(expect.stringContaining('main.js'));
+  expect(normalized).toContainEqual(expect.stringContaining('external.txt'));
+});
 
 async function createTestInputAndOutput(dirname: string, content?: string) {
   const dir = path.join(import.meta.dirname, 'temp', dirname);
@@ -895,10 +831,7 @@ async function createTestInputAndOutput(dirname: string, content?: string) {
   return { input, output, dir, outputDir };
 }
 
-async function createTestWithMultiFiles(
-  dirname: string,
-  files: Record<string, string>,
-) {
+async function createTestWithMultiFiles(dirname: string, files: Record<string, string>) {
   const dir = path.join(import.meta.dirname, 'temp', dirname);
   fs.mkdirSync(dir, { recursive: true });
   for (const [fileName, content] of Object.entries(files)) {
@@ -907,10 +840,7 @@ async function createTestWithMultiFiles(
   }
 }
 
-async function waitBuildFinished(
-  watcher: RolldownWatcher,
-  updateFn?: () => void,
-) {
+async function waitBuildFinished(watcher: RolldownWatcher, updateFn?: () => void) {
   return new Promise<void>((resolve, reject) => {
     let listened = false;
     watcher.on('event', (event) => {

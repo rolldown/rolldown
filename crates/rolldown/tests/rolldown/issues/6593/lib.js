@@ -1,4 +1,4 @@
-var _pluginFactory = require("./plugin.js");
+var _pluginFactory = require('./plugin.js');
 
 module.exports = _pluginFactory.makePlugin;
 

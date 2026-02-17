@@ -1,1 +1,1 @@
-import './shared-by-abc'
+import './shared-by-abc';

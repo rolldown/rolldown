@@ -1,2 +1,2 @@
-const content = import.meta.getContent('./input.txt')
-console.log(content)
+const content = import.meta.getContent('./input.txt');
+console.log(content);

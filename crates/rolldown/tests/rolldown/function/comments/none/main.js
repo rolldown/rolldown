@@ -4,7 +4,9 @@
  * @param {string} name
  * @returns {string}
  */
-function hello(name) { return name; }
+function hello(name) {
+  return name;
+}
 
 /** JSDoc on variable */
 const foo = 'bar';

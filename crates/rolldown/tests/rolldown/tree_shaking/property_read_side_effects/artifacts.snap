@@ -27,6 +27,8 @@ function test() {
 }
 API_ENDPOINTS[unknown];
 test().a.b.c;
+test().a.b.c;
+test()?.a?.b.c;
 test()?.a?.b.c;
 const { d } = console.log("side effect") || someObject;
 const { e } = (() => {

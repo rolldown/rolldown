@@ -1,1 +1,1 @@
-exports.named = 'cjs-named'
+exports.named = 'cjs-named';

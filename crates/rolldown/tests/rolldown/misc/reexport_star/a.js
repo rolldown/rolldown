@@ -1,1 +1,1 @@
-export const abc = undefined
+export const abc = undefined;

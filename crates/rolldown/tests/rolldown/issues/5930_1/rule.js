@@ -1,9 +1,9 @@
-const mod = require("./lib");
+const mod = require('./lib');
 
 module.exports = {
   // [Object object]
-  meta: "rule".length + String(mod).length,
+  meta: 'rule'.length + String(mod).length,
   create: function () {
-    console.log("loaded rule");
+    console.log('loaded rule');
   },
 };

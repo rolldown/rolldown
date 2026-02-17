@@ -1,5 +1,5 @@
-import { missing } from './foo'
+import { missing } from './foo';
 
-require('./foo')
+require('./foo');
 
-export { missing }
+export { missing };

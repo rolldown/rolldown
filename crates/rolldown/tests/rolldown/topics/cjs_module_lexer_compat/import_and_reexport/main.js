@@ -1,7 +1,5 @@
-import { readFileSync } from 'external'
+import { readFileSync } from 'external';
 
-export * from 'external'
+export * from 'external';
 
-export {
-  readFileSync
-}
+export { readFileSync };

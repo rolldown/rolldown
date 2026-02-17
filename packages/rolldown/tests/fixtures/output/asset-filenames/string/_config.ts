@@ -33,9 +33,6 @@ export default defineTest({
     ],
   },
   afterTest: (output) => {
-    expect(getOutputAssetNames(output)).toStrictEqual([
-      'emitted.txt',
-      'emitted2.txt',
-    ]);
+    expect(getOutputAssetNames(output)).toStrictEqual(['emitted.txt', 'emitted2.txt']);
   },
 });

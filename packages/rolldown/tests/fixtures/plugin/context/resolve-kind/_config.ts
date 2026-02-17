@@ -12,7 +12,7 @@ export default defineTest({
         name: 'test-plugin-context',
         async buildStart(this) {
           const ret = await this.resolve('./sub.js', undefined, {
-            kind: 'require-call'
+            kind: 'require-call',
           });
           if (!ret) {
             throw new Error('resolve failed');

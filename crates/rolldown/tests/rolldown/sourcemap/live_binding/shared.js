@@ -1,3 +1,3 @@
 export function shared() {
-  console.trace("shared")
+  console.trace('shared');
 }

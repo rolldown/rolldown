@@ -1,1 +1,1 @@
-export const Promise = 'promise-shim'
+export const Promise = 'promise-shim';

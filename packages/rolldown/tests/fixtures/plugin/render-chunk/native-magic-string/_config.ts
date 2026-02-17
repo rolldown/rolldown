@@ -15,9 +15,7 @@ export default defineTest({
         name: 'test-render-chunk-magic-string',
         renderChunk(code, _chunk, _options, meta) {
           if (!meta?.magicString) {
-            throw new Error(
-              'magicString should be available when nativeMagicString is enabled',
-            );
+            throw new Error('magicString should be available when nativeMagicString is enabled');
           }
 
           meta.magicString.replaceAll('name', 'userName');

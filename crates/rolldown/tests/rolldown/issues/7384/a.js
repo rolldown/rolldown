@@ -1,3 +1,3 @@
-import assert from 'node:assert'
+import assert from 'node:assert';
 import { t } from './mod';
-assert.strictEqual(t.t, 1)
+assert.strictEqual(t.t, 1);

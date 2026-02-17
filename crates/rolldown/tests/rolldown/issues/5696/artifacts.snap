@@ -16,7 +16,11 @@ var Foo_default = () => Foo();
 
 //#endregion
 //#region main.jsx
-console.log(<><Bar /><Foo /><Foo_default /></>);
+console.log(<>
+    <Bar />
+    <Foo />
+    <Foo_default />
+  </>);
 
 //#endregion
 ```

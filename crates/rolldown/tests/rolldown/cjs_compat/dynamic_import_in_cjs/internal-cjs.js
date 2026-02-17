@@ -1,4 +1,4 @@
 module.exports = {
   value: 42,
-  hello: "world"
+  hello: 'world',
 };

@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //! User-defined Entry: [Entry-Module-Id: entry-a.js] [Name: Some("entry-a")]
 import "./vendor~entry-a~entry-b~entry-c.js";
 import "./vendor~entry-a~entry-b.js";
+import "./vendor~entry-a.js";
 
 ```
 
@@ -29,16 +30,22 @@ import "./vendor~entry-a~entry-b~entry-c.js";
 
 ```
 
+## vendor~entry-a.js
+
+```js
+//! ManualCodeSplitting: [Group-Name: vendor] [Entries: entry-a.js]
+//#region shared-by-a.js
+console.log("shared-by-a");
+
+//#endregion
+```
+
 ## vendor~entry-a~entry-b.js
 
 ```js
 //! ManualCodeSplitting: [Group-Name: vendor] [Entries: entry-a.js, entry-b.js]
 //#region shared-by-ab.js
 console.log("shared-by-ab");
-
-//#endregion
-//#region shared-by-a.js
-console.log("shared-by-a");
 
 //#endregion
 ```

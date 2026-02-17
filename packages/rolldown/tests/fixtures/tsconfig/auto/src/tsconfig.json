@@ -7,14 +7,10 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "@app/*": [
-        "foo/*"
-      ]
+      "@app/*": ["foo/*"]
     },
     "jsx": "react",
     "jsxFactory": "f"
   },
-  "include": [
-    "foo.tsx"
-  ]
+  "include": ["foo.tsx"]
 }

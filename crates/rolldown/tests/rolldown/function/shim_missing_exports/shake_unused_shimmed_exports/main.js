@@ -1,3 +1,3 @@
-import { missing, unusedMissing } from './foo'
+import { missing, unusedMissing } from './foo';
 
-export { missing }
+export { missing };

@@ -2,7 +2,9 @@
   "config": {
     "external": ["node:assert"]
   },
-  "configVariants": [{
-    "strictExecutionOrder": true
-  }]
+  "configVariants": [
+    {
+      "strictExecutionOrder": true
+    }
+  ]
 }

@@ -18,10 +18,10 @@ export default defineTest({
     const require = createRequire(import.meta.url);
     expect(
       output.output
-        .filter((output): output is RolldownOutputChunk => output.type === 'chunk' && output.isEntry)
-        .every((chunk) =>
-          !require(`./dist/${chunk.fileName}`).__esModule
-        ),
+        .filter(
+          (output): output is RolldownOutputChunk => output.type === 'chunk' && output.isEntry,
+        )
+        .every((chunk) => !require(`./dist/${chunk.fileName}`).__esModule),
     ).toBe(true);
   },
 });

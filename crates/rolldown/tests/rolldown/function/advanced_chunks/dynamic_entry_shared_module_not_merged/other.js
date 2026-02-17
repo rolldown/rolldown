@@ -1,1 +1,1 @@
-import "./shared.js";
+import './shared.js';

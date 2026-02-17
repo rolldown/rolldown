@@ -1,2 +1,1 @@
-
 globalThis.a = 2;

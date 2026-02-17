@@ -1,8 +1,8 @@
-import path from 'node:path'
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
+import path from 'node:path';
+import { expect } from 'vitest';
+import { defineTest } from 'rolldown-tests';
 
-const transformedIds: string[] = []
+const transformedIds: string[] = [];
 
 export default defineTest({
   config: {
@@ -19,8 +19,8 @@ export default defineTest({
           }
           transformedIds.push(id);
           return {
-            moduleSideEffects: false
-          }
+            moduleSideEffects: false,
+          };
         },
       },
     ],
@@ -28,16 +28,16 @@ export default defineTest({
   afterTest: () => {
     const relativeIds = transformedIds.map((id) =>
       path.relative(import.meta.dirname, id).replace(/\\/g, '/'),
-    )
+    );
     // main.js imports `b` from barrel.
     // index.js has `export { a as b } from './index'` (self-reference).
     // This resolves to index.js's `export { a } from './a'`, which loads a.js.
     // Since `a` is a.js's own export (not a re-export), a.js must be executed,
     // causing all its import records to be loaded, including `export { b } from './b'`.
-    expect(relativeIds).toContain('main.js')
-    expect(relativeIds).toContain('barrel/index.js')
-    expect(relativeIds).toContain('barrel/a.js')
-    expect(relativeIds).toContain('barrel/b.js')
-    expect(transformedIds.length).toBe(4)
+    expect(relativeIds).toContain('main.js');
+    expect(relativeIds).toContain('barrel/index.js');
+    expect(relativeIds).toContain('barrel/a.js');
+    expect(relativeIds).toContain('barrel/b.js');
+    expect(transformedIds.length).toBe(4);
   },
-})
+});

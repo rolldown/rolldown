@@ -1,3 +1,3 @@
 export function func() {
-  return "This is a shared function";
+  return 'This is a shared function';
 }

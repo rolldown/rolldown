@@ -1,8 +1,5 @@
 {
   "config": {
-    "external": [
-      "node:module",
-      "node:assert"
-    ]
+    "external": ["node:module", "node:assert"]
   }
 }

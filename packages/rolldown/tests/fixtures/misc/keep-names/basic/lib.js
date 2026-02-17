@@ -1,5 +1,3 @@
-export class Test {
-}
+export class Test {}
 
-export function test() {
-}
+export function test() {}

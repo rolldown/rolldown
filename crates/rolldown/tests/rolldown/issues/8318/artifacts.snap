@@ -25,7 +25,9 @@ const require_component = require('./component.js');
 
 //#region main.jsx
 function App() {
-	return <div><require_component.Greeting /></div>;
+	return <div>
+      <require_component.Greeting />
+    </div>;
 }
 
 //#endregion

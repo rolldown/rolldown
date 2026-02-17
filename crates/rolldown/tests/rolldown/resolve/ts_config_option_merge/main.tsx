@@ -1,17 +1,15 @@
-import {add} from '@/util'
+import { add } from '@/util';
 
 function first() {
-  return function (...args: any[]) {}
+  return function (...args: any[]) {};
 }
 
 class Foo {
   @first()
   method(@first() test: string) {
-    return test
+    return test;
   }
 }
 
-
-
-console.log(<Div/>)
-console.log(`add(1, 2): `, add(1, 2))
+console.log(<Div />);
+console.log(`add(1, 2): `, add(1, 2));

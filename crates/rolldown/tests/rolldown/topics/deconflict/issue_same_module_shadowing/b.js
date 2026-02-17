@@ -1,6 +1,6 @@
-export const conflict = 3
+export const conflict = 3;
 
 export function getB() {
-  let conflict$1 = 4
-  return conflict
+  let conflict$1 = 4;
+  return conflict;
 }

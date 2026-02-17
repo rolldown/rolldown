@@ -9,4 +9,4 @@ export function inc() {
 }
 
 // `export default [expr]` doesn't create live binding for `default` export.
-export default count
+export default count;

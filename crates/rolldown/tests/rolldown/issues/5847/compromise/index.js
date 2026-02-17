@@ -1,2 +1,2 @@
-import nlp from './one.js'
-export default nlp
+import nlp from './one.js';
+export default nlp;

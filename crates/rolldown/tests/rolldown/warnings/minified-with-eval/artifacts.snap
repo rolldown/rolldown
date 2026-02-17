@@ -7,9 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [EVAL] Warning: Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
- - Use of direct `eval` here. in main.js at 560..564
-  │ 
-  │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+    ╭─[ main.js:41:1 ]
+    │
+ 41 │ eval();
+    │ ──┬─  
+    │   ╰─── Use of direct `eval` here.
+    │ 
+    │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+────╯
 
 ```
 

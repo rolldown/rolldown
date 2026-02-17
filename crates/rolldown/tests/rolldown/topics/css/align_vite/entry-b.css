@@ -1,5 +1,5 @@
-@import url("common-imported-by-css.css");
+@import url('common-imported-by-css.css');
 
 body {
-  background-color: "entry-b";
+  background-color: 'entry-b';
 }

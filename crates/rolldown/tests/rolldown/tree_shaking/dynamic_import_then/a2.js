@@ -1,2 +1,2 @@
-export const thing = "thing";
-export const stuff = "stuff";
+export const thing = 'thing';
+export const stuff = 'stuff';

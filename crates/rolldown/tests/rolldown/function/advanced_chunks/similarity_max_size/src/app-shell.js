@@ -1,1 +1,1 @@
-console.log("app shell");
+console.log('app shell');

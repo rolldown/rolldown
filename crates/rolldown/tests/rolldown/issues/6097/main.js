@@ -1,4 +1,4 @@
-import assert from 'node:assert'
+import assert from 'node:assert';
 import json from './a.json';
 class Message {
   id;

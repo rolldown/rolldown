@@ -1,1 +1,1 @@
-import("./3.js");
+import('./3.js');

@@ -1,1 +1,1 @@
-import './cjs-dep2'
+import './cjs-dep2';

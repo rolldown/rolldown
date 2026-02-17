@@ -10,9 +10,7 @@
         "import": "main2.js"
       }
     ],
-    "external": [
-      "node:assert"
-    ],
-    "format":"cjs"
+    "external": ["node:assert"],
+    "format": "cjs"
   }
 }

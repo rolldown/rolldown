@@ -1,3 +1,3 @@
-module.exports = function() {
-  console.log('util')
-}
+module.exports = function () {
+  console.log('util');
+};

@@ -13,7 +13,7 @@ var foo_default = { "null": null };
 
 //#endregion
 //#region main.js
-assert.deepStrictEqual(foo_default, { "null": null });
+assert.deepStrictEqual(foo_default, { null: null });
 
 //#endregion
 ```

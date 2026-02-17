@@ -1,4 +1,3 @@
-export const foo = 'foo-index'
+export const foo = 'foo-index';
 
-
-import 'trigger-dep'
+import 'trigger-dep';

@@ -1,1 +1,1 @@
-export default 'foo2'
+export default 'foo2';

@@ -1,4 +1,4 @@
-import * as ns from './foo.js'
+import * as ns from './foo.js';
 
-ns()
-ns``
+ns();
+ns``;

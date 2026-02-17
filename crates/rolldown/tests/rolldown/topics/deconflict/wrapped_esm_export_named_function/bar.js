@@ -1,3 +1,3 @@
-import { foo } from './foo'
+import { foo } from './foo';
 
-export default { foo }
+export default { foo };

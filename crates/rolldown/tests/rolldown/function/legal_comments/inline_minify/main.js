@@ -10,7 +10,7 @@ export function hello() {}
  * @license Bar v11.0.0
  * MIT License
  */
-export const bar = "bar"
+export const bar = 'bar';
 
 /*! Bundle license information: */
-console.log("hello")
+console.log('hello');

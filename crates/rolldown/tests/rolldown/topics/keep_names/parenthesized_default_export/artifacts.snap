@@ -22,7 +22,7 @@ var dep_class_default = class {
 
 //#endregion
 //#region dep-arrow.js
-var dep_arrow_default = /* @__PURE__ */ __name((() => {}), "default");
+var dep_arrow_default = /* @__PURE__ */ __name(() => {}, "default");
 
 //#endregion
 //#region dep-named-default.js

@@ -1,5 +1,5 @@
-import { ObjectElement } from './dist/main.js'
-import assert from 'node:assert'
+import { ObjectElement } from './dist/main.js';
+import assert from 'node:assert';
 
 function hasCycleUsingJSON(obj) {
   try {
@@ -13,4 +13,7 @@ function hasCycleUsingJSON(obj) {
   }
 }
 
-assert.ok(hasCycleUsingJSON(ObjectElement), 'ObjectElement should have a cycle when using JSON.stringify');
+assert.ok(
+  hasCycleUsingJSON(ObjectElement),
+  'ObjectElement should have a cycle when using JSON.stringify',
+);

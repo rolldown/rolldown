@@ -1,1 +1,1 @@
-export * from './bar.js'
+export * from './bar.js';

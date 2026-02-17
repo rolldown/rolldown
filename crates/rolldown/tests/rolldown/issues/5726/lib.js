@@ -1,3 +1,3 @@
-export * from './counter.js'
+export * from './counter.js';
 
-console.log('test')
+console.log('test');

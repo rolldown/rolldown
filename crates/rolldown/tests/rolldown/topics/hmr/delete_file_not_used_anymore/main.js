@@ -1,1 +1,1 @@
-import './parent.js'
+import './parent.js';

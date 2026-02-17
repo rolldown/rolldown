@@ -1,7 +1,7 @@
-import cjs from 'this-is-only-used-for-testing'
+import cjs from 'this-is-only-used-for-testing';
 // The `import_cjs` should not be declared twice
 function test() {
-  return cjs
+  return cjs;
 }
 
-export default  test;
+export default test;

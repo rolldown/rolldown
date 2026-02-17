@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use nodejs_built_in_modules::is_nodejs_builtin_module;
-use rolldown_common::{ImportKind, ResolvedExternal};
+use rolldown_common::{ImportKind, OutputFormat, ResolvedExternal};
 use rolldown_plugin::{HookLoadOutput, HookResolveIdOutput, HookUsage, Plugin};
 use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, rustc_hash::FxHashSetExt as _};
 use rustc_hash::FxHashSet;
@@ -109,7 +109,7 @@ impl Plugin for EsmExternalRequirePlugin {
     });
 
     if is_external {
-      if !ctx.options().format.is_esm() || args.kind != ImportKind::Require {
+      if matches!(ctx.options().format, OutputFormat::Cjs) || args.kind != ImportKind::Require {
         return Ok(Some(HookResolveIdOutput {
           id: args.specifier.into(),
           external: Some(ResolvedExternal::Bool(true)),

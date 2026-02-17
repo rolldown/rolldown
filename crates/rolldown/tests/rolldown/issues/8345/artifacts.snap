@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib/prod.js
+var require_prod = /* @__PURE__ */ __commonJSMin(((exports) => {
+	var a = 1;
+	var b = 2;
+	exports.a = a, exports.b = b;
+}));
+
+//#endregion
+//#region lib/dev.js
+var require_dev = /* @__PURE__ */ __commonJSMin(((exports) => {
+	var a = 1;
+	var b = 2;
+	exports.a = a;
+	exports.b = b;
+}));
+
+//#endregion
+//#region lib/index.js
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	if (process.env.NODE_ENV === "production") module.exports = require_prod();
+	else module.exports = require_dev();
+}));
+
+//#endregion
+//#region main.js
+const lib = require_lib();
+assert.strictEqual(typeof lib.a, "number", "lib.a should be a number");
+assert.strictEqual(typeof lib.b, "number", "lib.b should be a number");
+assert.strictEqual(lib.a, 1);
+assert.strictEqual(lib.b, 2);
+
+//#endregion
+export {  };
+```

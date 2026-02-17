@@ -814,7 +814,32 @@ pub fn include_statement(
       {
         return;
       }
-      if !module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
+      if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
+        // When the importer is a CJS re-export (`module.exports = require('./mod')`),
+        // we normally skip bailout since resolved_exports tracks needed exports.
+        // However, for conditional re-export patterns like:
+        //   if (cond) module.exports = require('./a');
+        //   else module.exports = require('./b');
+        // resolved_exports only captures one branch, causing the other branch's
+        // `exports.xxx = value` statements to be incorrectly tree-shaken.
+        // Detect this by checking if the importer requires multiple CJS modules.
+        let has_more_than_one_cjs_requires = module
+          .import_records
+          .iter()
+          .filter(|rec| {
+            matches!(rec.kind, ImportKind::Require)
+              && rec.resolved_module.is_some_and(|idx| {
+                ctx.modules[idx]
+                  .as_normal()
+                  .is_some_and(|m| matches!(m.exports_kind, ExportsKind::CommonJs))
+              })
+          })
+          .nth(1)
+          .is_some();
+        if has_more_than_one_cjs_requires {
+          ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
+        }
+      } else {
         ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
       }
     });

@@ -8,13 +8,18 @@ use std::{
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Chunk, ChunkKind, ChunkingContext, MatchGroup, MatchGroupTest, Module, ModuleIdx, ModuleTable,
+  Chunk, ChunkKind, ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupTest,
+  Module, ModuleIdx, ModuleTable,
 };
 use rolldown_error::BuildResult;
+use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{BitSet, xxhash::xxhash_with_base};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
+use crate::{
+  SharedOptions, chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput,
+  types::linking_metadata::LinkingMetadataVec,
+};
 
 use super::{
   GenerateStage,
@@ -61,48 +66,69 @@ impl ModuleGroup {
   }
 }
 
-impl GenerateStage<'_> {
-  #[expect(clippy::too_many_lines)] // TODO(hyf0): refactor
-  pub async fn apply_manual_code_splitting(
-    &self,
-    index_splitting_info: &IndexSplittingInfo,
-    module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
-    chunk_graph: &mut ChunkGraph,
-    input_base: &ArcStr,
-  ) -> BuildResult<()> {
-    let Some(chunking_options) = &self.options.manual_code_splitting else {
-      return Ok(());
-    };
+struct ManualSplitter<'a> {
+  link_output: &'a LinkStageOutput,
+  index_splitting_info: &'a IndexSplittingInfo,
+  options: &'a SharedOptions,
+  chunking_options: &'a ManualCodeSplittingOptions,
+  match_groups: Vec<&'a MatchGroup>,
+  plugin_driver: &'a SharedPluginDriver,
+  input_base: &'a ArcStr,
+  chunk_graph: &'a mut ChunkGraph,
+  module_to_assigned: &'a mut IndexVec<ModuleIdx, bool>,
+}
 
-    let Some(match_groups) =
-      chunking_options.groups.as_ref().map(|inner| inner.iter().collect::<Vec<_>>())
-    else {
-      return Ok(());
-    };
+impl ManualSplitter<'_> {
+  async fn split(&mut self) -> BuildResult<()> {
+    let (mut module_groups, entries_aware_groups_by_origin) = self.build_module_groups().await?;
 
-    if match_groups.is_empty() {
+    if module_groups.values().all(|group| group.modules.is_empty()) {
       return Ok(());
     }
 
+    self.extract_runtime_chunk(&mut module_groups);
+
+    if !entries_aware_groups_by_origin.is_empty() {
+      merge_entries_aware_subgroups(
+        &mut module_groups,
+        &entries_aware_groups_by_origin,
+        &self.match_groups,
+        &self.link_output.module_table,
+      );
+    }
+
+    let module_groups = self.into_priority_sorted_groups(module_groups);
+    if module_groups.is_empty() {
+      return Ok(());
+    }
+
+    self.convert_groups_to_chunks(module_groups);
+    Ok(())
+  }
+
+  async fn build_module_groups(
+    &self,
+  ) -> BuildResult<(FxHashMap<u32, ModuleGroup>, FxHashMap<ModuleGroupOrigin, Vec<u32>>)> {
+    let metas = &self.link_output.metas;
     let mut module_groups: FxHashMap<u32, ModuleGroup> = FxHashMap::default();
     let mut group_key_by_id: FxHashMap<ModuleGroupId, u32> = FxHashMap::default();
     let mut entries_aware_groups_by_origin: FxHashMap<ModuleGroupOrigin, Vec<u32>> =
       FxHashMap::default();
     let mut next_group_key: u32 = 0;
-    let metas = &self.link_output.metas;
+
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
     {
       if !metas[normal_module.idx].is_included {
         continue;
       }
 
-      if module_to_assigned[normal_module.idx] {
+      if self.module_to_assigned[normal_module.idx] {
         continue;
       }
 
-      let splitting_info = &index_splitting_info[normal_module.idx];
+      let splitting_info = &self.index_splitting_info[normal_module.idx];
 
-      for (match_group_index, match_group) in match_groups.iter().copied().enumerate() {
+      for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
         let is_matched = match &match_group.test {
           None => true,
           Some(MatchGroupTest::Regex(reg)) => reg.matches(&normal_module.id),
@@ -116,9 +142,9 @@ impl GenerateStage<'_> {
         }
 
         let allow_min_module_size =
-          match_group.min_module_size.map_or(chunking_options.min_module_size, Some);
+          match_group.min_module_size.map_or(self.chunking_options.min_module_size, Some);
         let allow_max_module_size =
-          match_group.max_module_size.map_or(chunking_options.max_module_size, Some);
+          match_group.max_module_size.map_or(self.chunking_options.max_module_size, Some);
 
         let is_min_module_size_satisfied = allow_min_module_size
           .is_none_or(|min_module_size| normal_module.size() >= min_module_size);
@@ -130,7 +156,7 @@ impl GenerateStage<'_> {
         }
 
         if let Some(allow_min_share_count) =
-          match_group.min_share_count.map_or(chunking_options.min_share_count, Some)
+          match_group.min_share_count.map_or(self.chunking_options.min_share_count, Some)
         {
           if splitting_info.share_count < allow_min_share_count {
             continue;
@@ -180,7 +206,7 @@ impl GenerateStage<'_> {
         };
 
         let include_dependencies_recursively =
-          chunking_options.include_dependencies_recursively.unwrap_or(true);
+          self.chunking_options.include_dependencies_recursively.unwrap_or(true);
 
         add_module_and_dependencies_to_group_recursively(
           module_groups.get_mut(&module_group_key).expect("group key should exist"),
@@ -193,12 +219,12 @@ impl GenerateStage<'_> {
       }
     }
 
-    if module_groups.values().all(|group| group.modules.is_empty()) {
-      // If no module group is found, we just return instead of creating a unnecessary runtime chunk.
-      return Ok(());
-    }
+    Ok((module_groups, entries_aware_groups_by_origin))
+  }
 
+  fn extract_runtime_chunk(&mut self, module_groups: &mut FxHashMap<u32, ModuleGroup>) {
     // Manually pull out the runtime module into a standalone chunk.
+    let metas = &self.link_output.metas;
     let runtime_module_idx = self.link_output.runtime.id();
     assert!(
       matches!(&self.link_output.module_table[runtime_module_idx], Module::Normal(_)),
@@ -209,38 +235,36 @@ impl GenerateStage<'_> {
       let runtime_chunk = Chunk::new(
         Some("rolldown-runtime".into()),
         None,
-        index_splitting_info[runtime_module_idx].bits.clone(),
+        self.index_splitting_info[runtime_module_idx].bits.clone(),
         vec![],
         ChunkKind::Common,
-        input_base.clone(),
+        self.input_base.clone(),
         None,
       );
-      let chunk_idx = chunk_graph.add_chunk(runtime_chunk);
+      let chunk_idx = self.chunk_graph.add_chunk(runtime_chunk);
       module_groups.values_mut().for_each(|group| {
         group.remove_module(runtime_module_idx, &self.link_output.module_table);
       });
-      chunk_graph.chunk_table[chunk_idx].bits.union(&index_splitting_info[runtime_module_idx].bits);
-      chunk_graph.add_module_to_chunk(
+      self.chunk_graph.chunk_table[chunk_idx]
+        .bits
+        .union(&self.index_splitting_info[runtime_module_idx].bits);
+      self.chunk_graph.add_module_to_chunk(
         runtime_module_idx,
         chunk_idx,
         self.link_output.metas[runtime_module_idx].depended_runtime_helper,
       );
-      module_to_assigned[runtime_module_idx] = true;
+      self.module_to_assigned[runtime_module_idx] = true;
     }
+  }
 
-    if !entries_aware_groups_by_origin.is_empty() {
-      merge_entries_aware_subgroups(
-        &mut module_groups,
-        &entries_aware_groups_by_origin,
-        &match_groups,
-        &self.link_output.module_table,
-      );
-    }
-
+  fn into_priority_sorted_groups(
+    &self,
+    module_groups: FxHashMap<u32, ModuleGroup>,
+  ) -> Vec<ModuleGroup> {
     let mut module_groups =
       module_groups.into_values().filter(|group| !group.modules.is_empty()).collect::<Vec<_>>();
     if module_groups.is_empty() {
-      return Ok(());
+      return module_groups;
     }
 
     // - Higher priority group goes first.
@@ -251,116 +275,172 @@ impl GenerateStage<'_> {
       Reverse((Reverse(item.priority), item.match_group_index, item.name.clone()))
     });
 
-    while let Some(this_module_group) = module_groups.pop() {
-      if this_module_group.modules.is_empty() {
+    module_groups
+  }
+
+  fn convert_groups_to_chunks(&mut self, mut module_groups: Vec<ModuleGroup>) {
+    while let Some(group) = module_groups.pop() {
+      if group.modules.is_empty() {
         continue;
       }
 
-      let allow_min_size = match_groups[this_module_group.match_group_index]
+      let allow_min_size = self.match_groups[group.match_group_index]
         .min_size
-        .map_or(chunking_options.min_size, Some)
+        .map_or(self.chunking_options.min_size, Some)
         .unwrap_or(0.0);
 
-      if this_module_group.sizes < allow_min_size {
+      if group.sizes < allow_min_size {
         continue;
       }
 
-      if let Some(allow_max_size) = match_groups[this_module_group.match_group_index]
+      if let Some(allow_max_size) = self.match_groups[group.match_group_index]
         .max_size
-        .map_or(chunking_options.max_size, Some)
+        .map_or(self.chunking_options.max_size, Some)
       {
-        if this_module_group.sizes > allow_max_size {
-          let mut modules = this_module_group.modules.iter().copied().collect::<Vec<_>>();
-          // Split by lexical relevance first (stable module id), then by size constraints.
-          modules.sort_by(|lhs, rhs| {
-            let lhs_module = &self.link_output.module_table[*lhs];
-            let rhs_module = &self.link_output.module_table[*rhs];
-            lhs_module
-              .stable_id()
-              .cmp(rhs_module.stable_id())
-              .then(lhs_module.exec_order().cmp(&rhs_module.exec_order()))
-          });
-
-          if let Some((split_index, left_size, right_size)) = find_relevance_split_index(
-            &modules,
-            &self.link_output.module_table,
-            allow_min_size,
-            allow_max_size,
-          ) {
-            module_groups.push(ModuleGroup {
-              name: this_module_group.name.clone(),
-              match_group_index: this_module_group.match_group_index,
-              modules: modules[..split_index].iter().copied().collect(),
-              priority: this_module_group.priority,
-              sizes: left_size,
-              entries_aware_bits: this_module_group.entries_aware_bits.clone(),
-            });
-            module_groups.push(ModuleGroup {
-              name: this_module_group.name.clone(),
-              match_group_index: this_module_group.match_group_index,
-              modules: modules[split_index..].iter().copied().collect(),
-              priority: this_module_group.priority,
-              sizes: right_size,
-              entries_aware_bits: this_module_group.entries_aware_bits.clone(),
-            });
+        if group.sizes > allow_max_size {
+          if let Some((left, right)) =
+            self.try_split_oversized_group(&group, allow_min_size, allow_max_size)
+          {
+            module_groups.push(left);
+            module_groups.push(right);
             continue;
           }
         }
       }
 
-      let first_module_bits = &index_splitting_info
-        [this_module_group.modules.iter().next().copied().expect("must have one")]
-      .bits;
-
-      let entries_aware =
-        match_groups[this_module_group.match_group_index].entries_aware.unwrap_or(false);
-      let chunk_bits = if entries_aware {
-        this_module_group.entries_aware_bits.as_ref().unwrap_or(first_module_bits)
-      } else {
-        first_module_bits
-      };
-
-      let chunk_name = if entries_aware {
-        derive_entries_aware_chunk_name(&this_module_group.name, chunk_bits, self.link_output)
-      } else {
-        this_module_group.name.clone()
-      };
-
-      let mut chunk = Chunk::new(
-        Some(chunk_name),
-        None,
-        chunk_bits.clone(),
-        vec![],
-        ChunkKind::Common,
-        input_base.clone(),
-        None,
-      );
-      chunk.add_creation_reason(
-        ChunkCreationReason::ManualCodeSplittingGroup {
-          name: &this_module_group.name,
-          group_index: this_module_group.match_group_index.try_into().unwrap(),
-          bits: if entries_aware { Some(chunk_bits) } else { None },
-          link_output: self.link_output,
-        },
-        self.options,
-      );
-
-      let chunk_idx = chunk_graph.add_chunk(chunk);
-
-      this_module_group.modules.iter().copied().for_each(|module_idx| {
-        module_groups.iter_mut().for_each(|group| {
-          group.remove_module(module_idx, &self.link_output.module_table);
-        });
-        chunk_graph.chunk_table[chunk_idx].bits.union(&index_splitting_info[module_idx].bits);
-        chunk_graph.add_module_to_chunk(
-          module_idx,
-          chunk_idx,
-          self.link_output.metas[module_idx].depended_runtime_helper,
-        );
-        module_to_assigned[module_idx] = true;
-      });
+      self.emit_chunk_from_group(&group, &mut module_groups);
     }
-    Ok(())
+  }
+
+  fn try_split_oversized_group(
+    &self,
+    group: &ModuleGroup,
+    min_size: f64,
+    max_size: f64,
+  ) -> Option<(ModuleGroup, ModuleGroup)> {
+    let mut modules = group.modules.iter().copied().collect::<Vec<_>>();
+    // Split by lexical relevance first (stable module id), then by size constraints.
+    modules.sort_by(|lhs, rhs| {
+      let lhs_module = &self.link_output.module_table[*lhs];
+      let rhs_module = &self.link_output.module_table[*rhs];
+      lhs_module
+        .stable_id()
+        .cmp(rhs_module.stable_id())
+        .then(lhs_module.exec_order().cmp(&rhs_module.exec_order()))
+    });
+
+    let (split_index, left_size, right_size) =
+      find_relevance_split_index(&modules, &self.link_output.module_table, min_size, max_size)?;
+
+    Some((
+      ModuleGroup {
+        name: group.name.clone(),
+        match_group_index: group.match_group_index,
+        modules: modules[..split_index].iter().copied().collect(),
+        priority: group.priority,
+        sizes: left_size,
+        entries_aware_bits: group.entries_aware_bits.clone(),
+      },
+      ModuleGroup {
+        name: group.name.clone(),
+        match_group_index: group.match_group_index,
+        modules: modules[split_index..].iter().copied().collect(),
+        priority: group.priority,
+        sizes: right_size,
+        entries_aware_bits: group.entries_aware_bits.clone(),
+      },
+    ))
+  }
+
+  fn emit_chunk_from_group(&mut self, group: &ModuleGroup, remaining_groups: &mut [ModuleGroup]) {
+    let first_module_bits =
+      &self.index_splitting_info[group.modules.iter().next().copied().expect("must have one")].bits;
+
+    let entries_aware = self.match_groups[group.match_group_index].entries_aware.unwrap_or(false);
+    let chunk_bits = if entries_aware {
+      group.entries_aware_bits.as_ref().unwrap_or(first_module_bits)
+    } else {
+      first_module_bits
+    };
+
+    let chunk_name = if entries_aware {
+      derive_entries_aware_chunk_name(&group.name, chunk_bits, self.link_output)
+    } else {
+      group.name.clone()
+    };
+
+    let mut chunk = Chunk::new(
+      Some(chunk_name),
+      None,
+      chunk_bits.clone(),
+      vec![],
+      ChunkKind::Common,
+      self.input_base.clone(),
+      None,
+    );
+    chunk.add_creation_reason(
+      ChunkCreationReason::ManualCodeSplittingGroup {
+        name: &group.name,
+        group_index: group.match_group_index.try_into().unwrap(),
+        bits: if entries_aware { Some(chunk_bits) } else { None },
+        link_output: self.link_output,
+      },
+      self.options,
+    );
+
+    let chunk_idx = self.chunk_graph.add_chunk(chunk);
+
+    group.modules.iter().copied().for_each(|module_idx| {
+      remaining_groups.iter_mut().for_each(|remaining| {
+        remaining.remove_module(module_idx, &self.link_output.module_table);
+      });
+      self.chunk_graph.chunk_table[chunk_idx]
+        .bits
+        .union(&self.index_splitting_info[module_idx].bits);
+      self.chunk_graph.add_module_to_chunk(
+        module_idx,
+        chunk_idx,
+        self.link_output.metas[module_idx].depended_runtime_helper,
+      );
+      self.module_to_assigned[module_idx] = true;
+    });
+  }
+}
+
+impl GenerateStage<'_> {
+  pub async fn apply_manual_code_splitting(
+    &self,
+    index_splitting_info: &IndexSplittingInfo,
+    module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
+    chunk_graph: &mut ChunkGraph,
+    input_base: &ArcStr,
+  ) -> BuildResult<()> {
+    let Some(chunking_options) = &self.options.manual_code_splitting else {
+      return Ok(());
+    };
+
+    let Some(match_groups) =
+      chunking_options.groups.as_ref().map(|inner| inner.iter().collect::<Vec<_>>())
+    else {
+      return Ok(());
+    };
+
+    if match_groups.is_empty() {
+      return Ok(());
+    }
+
+    let mut splitter = ManualSplitter {
+      link_output: self.link_output,
+      index_splitting_info,
+      options: self.options,
+      chunking_options,
+      match_groups,
+      plugin_driver: self.plugin_driver,
+      input_base,
+      chunk_graph,
+      module_to_assigned,
+    };
+    splitter.split().await
   }
 }
 
@@ -402,7 +482,7 @@ fn merge_entries_aware_subgroups(
       let Some(group) = module_groups.get(&group_key) else {
         continue;
       };
-      if is_unqualified(group.sizes, threshold) && !group.modules.is_empty() {
+      if is_below_merge_threshold(group.sizes, threshold) && !group.modules.is_empty() {
         unqualified_heap.push(Reverse((
           OrderedSize(group.sizes),
           group_key,
@@ -417,7 +497,7 @@ fn merge_entries_aware_subgroups(
       };
       if candidate_group.modules.is_empty()
         || candidate_version != current_version(&version_by_key, candidate_key)
-        || !is_unqualified(candidate_group.sizes, threshold)
+        || !is_below_merge_threshold(candidate_group.sizes, threshold)
       {
         continue;
       }
@@ -464,7 +544,8 @@ fn merge_entries_aware_subgroups(
       let Some(target_group) = module_groups.get(&target_key) else {
         continue;
       };
-      if is_unqualified(target_group.sizes, threshold) && !target_group.modules.is_empty() {
+      if is_below_merge_threshold(target_group.sizes, threshold) && !target_group.modules.is_empty()
+      {
         unqualified_heap.push(Reverse((
           OrderedSize(target_group.sizes),
           target_key,
@@ -509,7 +590,7 @@ fn symmetric_difference_count(lhs: &BitSet, rhs: &BitSet) -> usize {
   lhs_extra + rhs_extra
 }
 
-fn is_unqualified(size: f64, threshold: f64) -> bool {
+fn is_below_merge_threshold(size: f64, threshold: f64) -> bool {
   size > 0.0 && size < threshold
 }
 

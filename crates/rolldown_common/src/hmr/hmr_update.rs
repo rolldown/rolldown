@@ -5,6 +5,7 @@ pub enum HmrUpdate {
   Patch(HmrPatch),
   FullReload {
     reason: String,
+    has_skipped_boundary: bool,
   },
   /// For the hmr request, there're no actual actions that need to be done.
   Noop,

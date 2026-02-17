@@ -310,7 +310,7 @@ impl IntegrationTest {
                     fs::write(&output_path, &patch.code).unwrap();
                     patch_chunks.push(format!("./{}", patch.filename));
                   }
-                  rolldown_common::HmrUpdate::FullReload { reason } => {
+                  rolldown_common::HmrUpdate::FullReload { reason, .. } => {
                     assert!(
                       !self.should_execute_output(),
                       "execute_output should be false when full reload happens; reason: {reason:?}"

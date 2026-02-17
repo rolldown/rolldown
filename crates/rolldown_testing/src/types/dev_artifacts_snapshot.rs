@@ -155,6 +155,13 @@ impl DevArtifactsSnapshot {
     // Type-specific metadata
     match hmr_update {
       HmrUpdate::Patch(hmr_patch) => {
+        if hmr_patch.has_skipped_boundary {
+          meta_section.add_content("\n- has skipped boundary: true");
+          meta_section.add_content(&format!(
+            "\n- modules to update count: {}",
+            hmr_patch.modules_to_update_count
+          ));
+        }
         let mut boundaries = SnapshotSection::with_title("Hmr Boundaries");
         let meta = hmr_patch
           .hmr_boundaries
@@ -168,7 +175,10 @@ impl DevArtifactsSnapshot {
         boundaries.add_content(&meta.join("\n"));
         meta_section.add_child(boundaries);
       }
-      HmrUpdate::FullReload { reason } => {
+      HmrUpdate::FullReload { reason, has_skipped_boundary } => {
+        if *has_skipped_boundary {
+          meta_section.add_content("\n- has skipped boundary: true");
+        }
         let reason = reason.replace(cwd_str, "$CWD");
         meta_section.add_content(&format!("\n- reason: {reason}"));
       }

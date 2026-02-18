@@ -9,3 +9,4 @@ export {
   type TsconfigRawOptions,
   type TsconfigCompilerOptions,
 } from './utils/transform';
+export { Visitor, type VisitorObject } from './utils/visitor';

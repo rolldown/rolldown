@@ -17,8 +17,8 @@ use rolldown::{
   AddonOutputOption, AssetFilenamesOutputOption, BundlerConfig, BundlerOptions,
   ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
   IsExternal, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType,
-  OptimizationOption, OutputExports, OutputFormat, Platform, RawMinifyOptions,
-  RawMinifyOptionsDetailed, SanitizeFilename, TsConfig,
+  OptimizationOption, OutputExports, OutputFormat, Platform, RawCompressOptions, RawMangleOptions,
+  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -385,21 +385,36 @@ pub fn normalize_binding_options(
           }
         }
         napi::bindgen_prelude::Either3::C(opts) => {
-          Ok(RawMinifyOptions::Object(RawMinifyOptionsDetailed {
-            options: oxc::minifier::MinifierOptions::try_from(&opts)
-              .map_err(|_| napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))?,
-            default_target: matches!(
+          {
+            let mangle = match &opts.mangle {
+              Some(Either::A(false)) => None,
+              None | Some(Either::A(true)) => Some(oxc::minifier::MangleOptions::default()),
+              Some(Either::B(o)) => Some(oxc::minifier::MangleOptions::from(o)),
+            };
+            let compress = match &opts.compress {
+              Some(Either::A(false)) => None,
+              None | Some(Either::A(true)) => Some(oxc::minifier::CompressOptions::default()),
+              Some(Either::B(o)) => Some(oxc::minifier::CompressOptions::try_from(o).map_err(|_| {
+                napi::Error::new(napi::Status::InvalidArg, "Invalid compress option")
+              })?),
+            };
+            let default_target = matches!(
               opts.compress,
               Some(
                 Either::A(true) | Either::B(oxc_minify_napi::CompressOptions { target: None, .. })
               )
-            ),
-            remove_whitespace: match &opts.codegen {
-              None => true,
-              Some(Either::A(bool)) => *bool,
-              Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
-            },
-          }))
+            );
+            Ok(RawMinifyOptions::Object(RawMinifyOptionsDetailed {
+              mangle: mangle.map(|o| RawMangleOptions { top_level: o.top_level, keep_names: Some(o.keep_names), debug: Some(o.debug) }),
+              compress: compress.map(|c| RawCompressOptions { target: Some(c.target), drop_debugger: Some(c.drop_debugger), drop_console: Some(c.drop_console), join_vars: Some(c.join_vars), sequences: Some(c.sequences), unused: Some(c.unused), keep_names: Some(c.keep_names), treeshake: Some(c.treeshake), drop_labels: Some(c.drop_labels), max_iterations: c.max_iterations }),
+              default_target,
+              remove_whitespace: match &opts.codegen {
+                None => true,
+                Some(Either::A(bool)) => *bool,
+                Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
+              },
+            }))
+          }
         }
       })
       .transpose()?,

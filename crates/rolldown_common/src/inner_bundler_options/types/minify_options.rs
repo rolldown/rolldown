@@ -1,13 +1,66 @@
 use crate::{NormalizedBundlerOptions, OutputFormat};
 use oxc::{
   mangler::{MangleOptions, MangleOptionsKeepNames},
-  minifier::{CompressOptions, CompressOptionsKeepNames, TreeShakeOptions},
+  minifier::{CompressOptions, CompressOptionsKeepNames, CompressOptionsUnused, TreeShakeOptions},
   transformer::EngineTargets,
 };
+use rustc_hash::FxHashSet;
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::Deserialize;
+
+#[derive(Default, Debug, Clone)]
+pub struct RawMangleOptions {
+  pub top_level: Option<bool>,
+  pub keep_names: Option<MangleOptionsKeepNames>,
+  pub debug: Option<bool>,
+}
+
+impl RawMangleOptions {
+  #[must_use]
+  pub fn into_mangle_options(self) -> MangleOptions {
+    let default = MangleOptions::default();
+    MangleOptions {
+      top_level: self.top_level.or(default.top_level),
+      keep_names: self.keep_names.unwrap_or(default.keep_names),
+      debug: self.debug.unwrap_or(default.debug),
+    }
+  }
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct RawCompressOptions {
+  pub target: Option<EngineTargets>,
+  pub drop_debugger: Option<bool>,
+  pub drop_console: Option<bool>,
+  pub join_vars: Option<bool>,
+  pub sequences: Option<bool>,
+  pub unused: Option<CompressOptionsUnused>,
+  pub keep_names: Option<CompressOptionsKeepNames>,
+  pub treeshake: Option<TreeShakeOptions>,
+  pub drop_labels: Option<FxHashSet<String>>,
+  pub max_iterations: Option<u8>,
+}
+
+impl RawCompressOptions {
+  #[must_use]
+  pub fn into_compress_options(self) -> CompressOptions {
+    let default = CompressOptions::default();
+    CompressOptions {
+      target: self.target.unwrap_or(default.target),
+      drop_debugger: self.drop_debugger.unwrap_or(default.drop_debugger),
+      drop_console: self.drop_console.unwrap_or(default.drop_console),
+      join_vars: self.join_vars.unwrap_or(default.join_vars),
+      sequences: self.sequences.unwrap_or(default.sequences),
+      unused: self.unused.unwrap_or(default.unused),
+      keep_names: self.keep_names.unwrap_or(default.keep_names),
+      treeshake: self.treeshake.unwrap_or(default.treeshake),
+      drop_labels: self.drop_labels.unwrap_or(default.drop_labels),
+      max_iterations: self.max_iterations.or(default.max_iterations),
+    }
+  }
+}
 
 #[derive(Debug, Clone)]
 pub enum RawMinifyOptions {
@@ -18,7 +71,8 @@ pub enum RawMinifyOptions {
 
 #[derive(Debug, Clone)]
 pub struct RawMinifyOptionsDetailed {
-  pub options: oxc::minifier::MinifierOptions,
+  pub mangle: Option<RawMangleOptions>,
+  pub compress: Option<RawCompressOptions>,
   pub default_target: bool,
   pub remove_whitespace: bool,
 }
@@ -71,16 +125,20 @@ impl RawMinifyOptions {
           }),
         })
       }
-      RawMinifyOptions::Object(value) => MinifyOptions::Enabled((
-        {
-          let mut opts = value.options;
+      RawMinifyOptions::Object(value) => {
+        let mangle = value.mangle.map(RawMangleOptions::into_mangle_options);
+        let compress = value.compress.map(|c| {
+          let mut c = c.into_compress_options();
           if value.default_target {
-            opts.compress.get_or_insert_default().target = options.transform_options.target.clone();
+            c.target = options.transform_options.target.clone();
           }
-          opts
-        },
-        value.remove_whitespace,
-      )),
+          c
+        });
+        MinifyOptions::Enabled((
+          oxc::minifier::MinifierOptions { mangle, compress },
+          value.remove_whitespace,
+        ))
+      }
     }
     //
   }

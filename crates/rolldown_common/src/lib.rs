@@ -52,7 +52,10 @@ pub mod bundler_options {
       manual_code_splitting_options::{
         ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, MatchGroupTest,
       },
-      minify_options::{MinifyOptions, RawMinifyOptions, RawMinifyOptionsDetailed},
+      minify_options::{
+        MinifyOptions, RawCompressOptions, RawMangleOptions, RawMinifyOptions,
+        RawMinifyOptionsDetailed,
+      },
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},
       on_log::{Log, LogLocation, LogWithoutPlugin, OnLog},

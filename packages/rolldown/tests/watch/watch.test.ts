@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { RolldownWatcher } from 'rolldown';
 import { rolldown, watch } from 'rolldown';
-import { sleep, waitUtil } from 'rolldown-tests/utils';
+import { sleep } from 'rolldown-tests/utils';
 import { expect, onTestFinished, test, vi } from 'vitest';
 
 test.sequential('watch', async () => {
@@ -55,23 +55,17 @@ test.sequential('watch', async () => {
 
     // Test update event
     fs.writeFileSync(input, `import './foo.js'; console.log(2)`);
-    await waitUtil(() => {
-      expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true);
-      // The different platform maybe emit multiple events
-      expect(watchChangeUpdateFn).toBeCalled();
-    });
+    await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(2)');
+    // The different platform maybe emit multiple events
+    expect(watchChangeUpdateFn).toBeCalled();
 
     // Test delete event
     fs.unlinkSync(foo);
-    await waitUtil(() => {
-      expect(watchChangeDeleteFn).toBeCalled();
-    });
+    await expect.poll(() => watchChangeDeleteFn).toBeCalled();
 
     // Test create event
     fs.writeFileSync(foo, 'export const foo = 2');
-    await waitUtil(() => {
-      expect(watchChangeCreateFn).toBeCalled();
-    });
+    await expect.poll(() => watchChangeCreateFn).toBeCalled();
   } catch (e) {
     errored = true;
     throw e;
@@ -101,9 +95,7 @@ test.sequential('watch files after scan stage', async () => {
   // should run build once
   await waitBuildFinished(watcher);
 
-  await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true);
-  });
+  await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(2)');
 });
 
 test.sequential('watch close', async () => {
@@ -117,10 +109,8 @@ test.sequential('watch close', async () => {
   await watcher.close();
   // edit file
   fs.writeFileSync(input, 'console.log(3)');
-  await waitUtil(() => {
-    // The watcher is closed, so the output file should not be updated
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true);
-  });
+  // The watcher is closed, so the output file should not be updated
+  await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
 });
 
 test.sequential('watch event', async () => {
@@ -159,30 +149,30 @@ test.sequential('watch event', async () => {
       }
     });
 
-    await waitUtil(() => {
-      // test first build event
-      expect(events).toEqual([
+    // test first build event
+    await expect
+      .poll(() => events)
+      .toEqual([
         { code: 'START' },
         { code: 'BUNDLE_START' },
         { code: 'BUNDLE_END' },
         { code: 'END' },
       ]);
-    });
 
     // edit file
     events.length = 0;
     fs.writeFileSync(input, 'console.log(3)');
-    await waitUtil(() => {
-      // Note: The different platform maybe emit multiple events
-      expect(events).toEqual([
+    // Note: The different platform maybe emit multiple events
+    await expect
+      .poll(() => events)
+      .toEqual([
         { code: 'START' },
         { code: 'BUNDLE_START' },
         { code: 'BUNDLE_END' },
         { code: 'END' },
       ]);
-      expect(restartFn).toBeCalled();
-      expect(changeFn).toBeCalled();
-    });
+    expect(restartFn).toBeCalled();
+    expect(changeFn).toBeCalled();
   } catch (e) {
     errored = true;
     throw e;
@@ -190,9 +180,7 @@ test.sequential('watch event', async () => {
     await watcher.close();
     if (!errored) {
       // the listener is called with async
-      await waitUtil(() => {
-        expect(closeFn).toBeCalled();
-      });
+      await expect.poll(() => closeFn).toBeCalled();
     }
   }
 });
@@ -274,9 +262,8 @@ test.sequential('watch ERROR event result.close() + closeBundle', async () => {
   });
   onTestFinished(() => watcher.close());
 
-  await waitUtil(() => {
-    expect(closeBundleFn).toBeCalledTimes(2); // build error call once + result.close() call once
-  });
+  // build error call once + result.close() call once
+  await expect.poll(() => closeBundleFn).toBeCalledTimes(2);
 });
 
 test.sequential('watch BUNDLE_END event output + "file" option', async () => {
@@ -295,10 +282,8 @@ test.sequential('watch BUNDLE_END event output + "file" option', async () => {
     }
   });
 
-  await waitUtil(() => {
-    // test first build event
-    expect(eventFn).toBeCalled();
-  });
+  // test first build event
+  await expect.poll(() => eventFn).toBeCalled();
 });
 
 test.sequential('watch event avoid deadlock #2806', async () => {
@@ -326,9 +311,7 @@ test.sequential('watch event avoid deadlock #2806', async () => {
   await waitBuildFinished(watcher);
 
   fs.writeFileSync(input, 'console.log(2)');
-  await waitUtil(() => {
-    expect(testFn).toBeCalled();
-  });
+  await expect.poll(() => testFn).toBeCalled();
 });
 
 test.sequential('watch skipWrite', async () => {
@@ -460,10 +443,8 @@ test.sequential('watch buildDelay', async () => {
 
   // sleep 200ms to wait the build finished, if the buildDelay is working, the restartFn should be called once
   await sleep(200);
-  await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(5)')).toBe(true);
-    expect(restartFn).toBeCalledTimes(1);
-  });
+  await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(5)');
+  expect(restartFn).toBeCalledTimes(1);
 });
 
 test.sequential('PluginContext addWatchFile', async () => {
@@ -497,9 +478,7 @@ test.sequential('PluginContext addWatchFile', async () => {
 
   // edit file
   fs.writeFileSync(foo, 'console.log(2)\n');
-  await waitUtil(() => {
-    expect(changeFn).toBeCalled();
-  });
+  await expect.poll(() => changeFn).toBeCalled();
 });
 
 test.sequential('watch include/exclude', async () => {
@@ -517,10 +496,8 @@ test.sequential('watch include/exclude', async () => {
 
   // edit file
   fs.writeFileSync(input, 'console.log(2)');
-  await waitUtil(() => {
-    // The input is excluded, so the output file should not be updated
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true);
-  });
+  // The input is excluded, so the output file should not be updated
+  await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
 });
 
 test.sequential('watch onInvalidate', async () => {
@@ -544,10 +521,8 @@ test.sequential('watch onInvalidate', async () => {
   // edit file
   fs.writeFileSync(input, 'console.log(2)');
 
-  await waitUtil(() => {
-    expect(onInvalidateFn).toBeCalled();
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true);
-  });
+  await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(2)');
+  expect(onInvalidateFn).toBeCalled();
 });
 
 test.sequential('error handling', async () => {
@@ -565,28 +540,22 @@ test.sequential('error handling', async () => {
       errors.push(event.error.message);
     }
   });
-  await waitUtil(() => {
-    // First build should error
-    expect(errors.length).toBe(1);
-    expect(errors[0].includes('PARSE_ERROR')).toBe(true);
-  });
+  // First build should error
+  await expect.poll(() => errors.length).toBe(1);
+  expect(errors[0]).toContain('PARSE_ERROR');
 
   fs.writeFileSync(input, 'console.log(2)');
   await waitBuildFinished(watcher);
 
   // failed again
   fs.writeFileSync(input, 'conso le.log(1)');
-  await waitUtil(() => {
-    // The different platform maybe emit multiple events
-    expect(errors.length > 0).toBe(true);
-    expect(errors[0].includes('PARSE_ERROR')).toBe(true);
-  });
+  // The different platform maybe emit multiple events
+  await expect.poll(() => errors.length).toBeGreaterThan(0);
+  expect(errors[0]).toContain('PARSE_ERROR');
 
   // It should be working if the changes are fixed error
   fs.writeFileSync(input, 'console.log(3)');
-  await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(3)')).toBe(true);
-  });
+  await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(3)');
 });
 
 test.sequential('error handling + plugin error', async () => {
@@ -610,19 +579,16 @@ test.sequential('error handling + plugin error', async () => {
       errors.push(event.error.message);
     }
   });
-  await waitUtil(() => {
-    // First build should error
-    expect(errors.length).toBe(1); // the revert change maybe emit the change event caused it failed
-    expect(errors[0].includes('plugin error')).toBe(true);
-  });
+  // First build should error
+  // the revert change maybe emit the change event caused it failed
+  await expect.poll(() => errors.length).toBe(1);
+  expect(errors[0]).toContain('plugin error');
 
   errors.length = 0;
   fs.writeFileSync(input, 'console.log(2)');
-  await waitUtil(() => {
-    // The different platform maybe emit multiple events
-    expect(errors.length > 0).toBe(true);
-    expect(errors[0].includes('plugin error')).toBe(true);
-  });
+  // The different platform maybe emit multiple events
+  await expect.poll(() => errors.length).toBeGreaterThan(0);
+  expect(errors[0]).toContain('plugin error');
 });
 
 test.sequential('watch multiply options', async () => {
@@ -651,16 +617,12 @@ test.sequential('watch multiply options', async () => {
 
   // here should using waitBuildFinished to wait the build finished, because the `input` could be finished before `foo`
   // await waitBuildFinished(watcher)
-  await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(true);
-  });
+  await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
 
   fs.writeFileSync(input, 'console.log(2)');
-  await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true);
-    // Only the input corresponding bundler is rebuild
-    expect(events[0]).toEqual(outputDir);
-  });
+  await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(2)');
+  // Only the input corresponding bundler is rebuild
+  expect(events[0]).toEqual(outputDir);
 });
 
 test.sequential('warning for multiply notify options', async () => {
@@ -699,9 +661,7 @@ test.sequential('warning for multiply notify options', async () => {
   ]);
   onTestFinished(() => watcher.close());
 
-  await waitUtil(() => {
-    expect(onLogFn).toBeCalled();
-  });
+  await expect.poll(() => onLogFn).toBeCalled();
 });
 
 if (process.platform === 'win32') {
@@ -725,9 +685,7 @@ if (process.platform === 'win32') {
 
     // edit file
     fs.writeFileSync(input, 'console.log(2)');
-    await waitUtil(() => {
-      expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(true);
-    });
+    await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(2)');
   });
 }
 

@@ -2,8 +2,8 @@ import { stripAnsi } from 'consola/utils';
 import { $, execa } from 'execa';
 import fs from 'node:fs';
 import path from 'node:path';
-import { testsDir, waitUtil } from 'rolldown-tests/utils';
-import { describe, expect, it, test } from 'vitest';
+import { testsDir } from 'rolldown-tests/utils';
+import { describe, expect, it, test, vi } from 'vitest';
 
 function cliFixturesDir(...joined: string[]) {
   return testsDir('cli/fixtures', ...joined);
@@ -328,7 +328,7 @@ describe('watch cli', () => {
       reject: false,
       cancelSignal: controller.signal,
     })`rolldown index.ts -d dist -w -s`;
-    await waitUtil(() => {
+    await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true);
     });
@@ -343,7 +343,7 @@ describe('watch cli', () => {
       reject: false,
       cancelSignal: controller.signal,
     })`rolldown -c rolldown.config.ts -d watch-dist-options -w`;
-    await waitUtil(() => {
+    await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-options/esm.js'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'watch-dist-options/cjs.js'))).toBe(true);
     });
@@ -358,7 +358,7 @@ describe('watch cli', () => {
       reject: false,
       cancelSignal: controller.signal,
     })`rolldown -c rolldown.config.ts -d watch-dist-output -w`;
-    await waitUtil(() => {
+    await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-output/esm.js'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'watch-dist-output/cjs.js'))).toBe(true);
     });

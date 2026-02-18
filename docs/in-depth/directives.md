@@ -10,7 +10,7 @@ The `"use strict"` directive is a directive that tells the JavaScript engine to 
 
 Since ES modules are always in strict mode, Rolldown does not output any `"use strict"` directive for `output.format: 'es'`. As a side note, this means code that is not in strict mode are forced to be in strict mode for ES module format output.
 
-When `output.format` is not `esm`, Rolldown will output the `"use strict"` directive for any of the following cases:
+When `output.format` is not `'es'`, Rolldown will output the `"use strict"` directive for any of the following cases:
 
 - The directive is not in the top-level scope and not inside strict mode scope ([REPL](https://repl.rolldown.rs/#eNptjk0KAyEMha8SsrGF4gGE3mQ24mhxsMmgsR0YvHu1pT+LbpJ8L+G97BjQ7Bhp9pteypgJzZdP6Dr6beUsRQdmOEOo5CQygT0cYZ8IQNXioUiOTtTg7KVmAtXvO7eJuo9HI7n6dsLMKc18J+2YQrxo+cT+2fw+ALMPtibpoXnEcJW1inkjQOB8tV1QbinqJbbRngVbz751s2TFF8H2AIc5VRY=))
 - The directive is in the top-level scope and the module is a entry module ([REPL](https://repl.rolldown.rs/#eNptUEtuhDAMvYqVDVCN6Kobuuw12FBwpqmCQx2nTYVy9zGD5qPRbJK8Z7+PshprutU4mjC333F7k+lu+GBGhVWKCFHYjVK99+TmJbDA1/+C/JE+ESyHGar2Nf6kgVF121ZPY6AYPLY+HOvrcv3WNDpVZzSdcMJyMFfdJf9GPC3QE+ZzhQntkLyATTSKCwS7sM4NrD0BMEpiggwvkFVXNFfjOHg/hT9qtaB1x7vcJ5O9wEPe2vNmH5IsSboLBLCB50GJatQ/2MmyXefDFM3+VTM/CEYx5QSMo4I7))

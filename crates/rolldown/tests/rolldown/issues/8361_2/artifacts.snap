@@ -1,0 +1,80 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: b.js is dynamically imported by b.js but also statically imported by a.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## a.js
+
+```js
+import "./cjs.js";
+import "./b.js";
+import "./a2.js";
+
+```
+
+## a2.js
+
+```js
+import { t as require_cjs } from "./cjs.js";
+
+//#region a.js
+var import_cjs = require_cjs();
+
+//#endregion
+```
+
+## b.js
+
+```js
+import { n as __exportAll, r as __toESM } from "./chunk.js";
+
+//#region b.js
+var b_exports = /* @__PURE__ */ __exportAll({ foo2: () => foo2 });
+function foo2() {
+	import("./a.js");
+	Promise.resolve().then(() => b_exports);
+}
+import("./cjs.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
+
+//#endregion
+export { b_exports as t };
+```
+
+## chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __toESM as r, __commonJSMin as t };
+```
+
+## cjs.js
+
+```js
+import { t as __commonJSMin } from "./chunk.js";
+
+//#region cjs.js
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = 42;
+}));
+
+//#endregion
+export { require_cjs as t };
+```
+
+## main.js
+
+```js
+import "./cjs.js";
+import "./b.js";
+import "./a2.js";
+
+```

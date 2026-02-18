@@ -172,35 +172,45 @@ impl ChunkOptimizationGraph {
   ///
   /// Returns `true` if the merge would create a cycle, `false` if it's safe to merge.
   ///
-  /// A circular dependency would occur if `target_chunk` is a transitive dependency of `source_chunk`.
+  /// After merging, the combined chunk has deps = `source.deps ∪ target.deps`, and any chunk
+  /// that previously depended on `source` now depends on `target`. A cycle exists iff `target`
+  /// is reachable from `source.deps ∪ target.deps` in the resulting graph.
+  ///
+  /// We approximate this by doing a BFS from `source.deps ∪ target.deps`, treating any chunk
+  /// that depends on `source` as also pointing to `target` (since after the merge they would).
+  /// If `target` is reachable, the merge would create a cycle.
+  ///
   /// This is similar to Rollup's check in `getAdditionalSizeIfNoTransitiveDependencyOrNonCorrelatedSideEffect`.
   pub fn would_create_circular_dependency(
     &self,
     source_chunk_idx: ChunkIdx,
     target_chunk_idx: ChunkIdx,
   ) -> bool {
-    // BFS to check if target_chunk is reachable from source_chunk's dependencies
-    let mut chunks_to_check: VecDeque<ChunkIdx> =
-      self.chunks[source_chunk_idx].dependencies.iter().copied().collect();
+    // Start BFS from the combined deps of source and target.
+    let mut queue: VecDeque<ChunkIdx> = self.chunks[source_chunk_idx]
+      .dependencies
+      .iter()
+      .chain(self.chunks[target_chunk_idx].dependencies.iter())
+      .copied()
+      .collect();
     let mut visited = FxHashSet::default();
 
-    while let Some(dep_chunk_idx) = chunks_to_check.pop_front() {
-      if dep_chunk_idx == target_chunk_idx {
-        // Found target_chunk in the transitive dependencies of source_chunk
-        // Merging would create a circular dependency
+    while let Some(chunk_idx) = queue.pop_front() {
+      if chunk_idx == target_chunk_idx {
         return true;
       }
-
-      if visited.contains(&dep_chunk_idx) {
+      if !visited.insert(chunk_idx) {
         continue;
       }
-      visited.insert(dep_chunk_idx);
-
-      // Add this chunk's dependencies to the queue
-      for &next_dep in &self.chunks[dep_chunk_idx].dependencies {
-        if !visited.contains(&next_dep) {
-          chunks_to_check.push_back(next_dep);
+      for &dep in &self.chunks[chunk_idx].dependencies {
+        if !visited.contains(&dep) {
+          queue.push_back(dep);
         }
+      }
+      // Any chunk that depends on source will depend on target after the merge.
+      // Simulate this by also queuing target when we encounter such a chunk.
+      if self.chunks[chunk_idx].dependencies.contains(&source_chunk_idx) {
+        queue.push_back(target_chunk_idx);
       }
     }
 

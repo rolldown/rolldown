@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: b.js is dynamically imported by b.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## b.js
+
+```js
+import { n as __exportAll, r as __toESM } from "./chunk.js";
+
+//#region b.js
+var b_exports = /* @__PURE__ */ __exportAll({});
+import("./cjs.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
+Promise.resolve().then(() => b_exports);
+
+//#endregion
+export { b_exports as t };
+```
+
+## chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __toESM as r, __commonJSMin as t };
+```
+
+## cjs.js
+
+```js
+import { t as __commonJSMin } from "./chunk.js";
+
+//#region cjs.js
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = 42;
+}));
+
+//#endregion
+export { require_cjs as t };
+```
+
+## main.js
+
+```js
+import { t as require_cjs } from "./cjs.js";
+import "./b.js";
+
+//#region main.js
+var import_cjs = require_cjs();
+
+//#endregion
+```

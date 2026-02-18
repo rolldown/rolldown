@@ -5207,6 +5207,22 @@ expression: output
 
 - main-!~{000}~.js => main-DPjwW0Tl.js
 
+# tests/rolldown/issues/8361
+
+- main-!~{000}~.js => main-B2i8H1Po.js
+- b-!~{005}~.js => b-BHsKkFnm.js
+- chunk-!~{001}~.js => chunk-BuzPwJy5.js
+- cjs-!~{003}~.js => cjs-IJCXeZRo.js
+
+# tests/rolldown/issues/8361_2
+
+- main-!~{000}~.js => main-D8AQcGPg.js
+- a-!~{007}~.js => a-BVUmNxb0.js
+- a-!~{009}~.js => a-Bek-cFpT.js
+- b-!~{005}~.js => b-Tw4qy3nc.js
+- chunk-!~{001}~.js => chunk-BuzPwJy5.js
+- cjs-!~{003}~.js => cjs-IJCXeZRo.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-D8FPxBSA.js

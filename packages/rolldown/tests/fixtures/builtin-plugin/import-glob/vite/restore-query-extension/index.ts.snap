@@ -1,6 +1,6 @@
 import { n as name, t as a_exports } from "./a.js";
 import { n as name$1, t as b_exports } from "./b.js";
-import { n as name$2, t as modules_exports } from "./modules.js";
+import { n as modules_exports, r as name$2 } from "./modules2.js";
 import { t as a_default } from "./a2.js";
 import { t as b_default } from "./b2.js";
 
@@ -8,7 +8,7 @@ import { t as b_default } from "./b2.js";
 const basic = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": () => import("./a.js").then((n) => n.t),
 	"./modules/b.ts": () => import("./b.js").then((n) => n.t),
-	"./modules/index.ts": () => import("./modules.js").then((n) => n.t)
+	"./modules/index.ts": () => import("./modules.js")
 });
 const basicWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
@@ -18,7 +18,7 @@ const basicWithObjectKeys = Object.keys({
 const basicWithObjectValues = Object.values([
 	() => import("./a.js").then((n) => n.t),
 	() => import("./b.js").then((n) => n.t),
-	() => import("./modules.js").then((n) => n.t)
+	() => import("./modules.js")
 ]);
 const basicEager = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": a_exports,
@@ -62,7 +62,7 @@ const namedEagerWithObjectValues = Object.values([
 const namedDefault = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": () => import("./a.js").then((n) => n.t).then((m) => m["default"]),
 	"./modules/b.ts": () => import("./b.js").then((n) => n.t).then((m) => m["default"]),
-	"./modules/index.ts": () => import("./modules.js").then((n) => n.t).then((m) => m["default"])
+	"./modules/index.ts": () => import("./modules.js").then((m) => m["default"])
 });
 const namedDefaultWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
@@ -72,7 +72,7 @@ const namedDefaultWithObjectKeys = Object.keys({
 const namedDefaultWithObjectValues = Object.values([
 	() => import("./a.js").then((n) => n.t).then((m) => m["default"]),
 	() => import("./b.js").then((n) => n.t).then((m) => m["default"]),
-	() => import("./modules.js").then((n) => n.t).then((m) => m["default"])
+	() => import("./modules.js").then((m) => m["default"])
 ]);
 const eagerAs = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": a_default,
@@ -101,7 +101,7 @@ const cleverCwd2 = /* @__PURE__ */ Object.assign({
 const customBase = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": () => import("./a.js").then((n) => n.t),
 	"./modules/b.ts": () => import("./b.js").then((n) => n.t),
-	"./modules/index.ts": () => import("./modules.js").then((n) => n.t),
+	"./modules/index.ts": () => import("./modules.js"),
 	"./sibling.ts": () => import("./sibling.js")
 });
 const customRootBase = /* @__PURE__ */ Object.assign({

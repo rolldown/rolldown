@@ -13,7 +13,7 @@ pub struct BindingModuleInfo {
   pub dynamically_imported_ids: Vec<String>,
   pub exports: Vec<String>,
   pub is_entry: bool,
-  #[napi(ts_type = "'esm' | 'cjs' | 'unknown'")]
+  #[napi(ts_type = "'es' | 'cjs' | 'unknown'")]
   pub input_format: String,
 }
 
@@ -21,7 +21,7 @@ pub struct BindingModuleInfo {
 impl BindingModuleInfo {
   pub fn new(inner: Arc<rolldown_common::ModuleInfo>) -> Self {
     let input_format = match inner.input_format {
-      ExportsKind::Esm => "esm",
+      ExportsKind::Esm => "es",
       ExportsKind::CommonJs => "cjs",
       ExportsKind::None => "unknown",
     };

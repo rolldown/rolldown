@@ -2,7 +2,7 @@
 
 ##### ES Module
 
-[ES modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules) (ESM) are the official JavaScript module standard. When `output.format: 'esm'` is used, the bundle will use `export` syntax like this:
+[ES modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules) (ESM) are the official JavaScript module standard. When `output.format: 'es'` is used, the bundle will use `export` syntax like this:
 
 ```js
 function exportedFunction() {

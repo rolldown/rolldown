@@ -1,35 +1,18 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## INEFFECTIVE_DYNAMIC_IMPORT
-
-```text
-[INEFFECTIVE_DYNAMIC_IMPORT] Warning: lib.js is dynamically imported by entry.js but also statically imported by entry.js, dynamic import will not move module into another chunk.
-
-```
-
 # Assets
 
 ## entry.js
 
 ```js
+import { i as __esmMin, n as init_lib, t as a } from "./lib.js";
 import assert from "node:assert";
 
-// HIDDEN [\0rolldown/runtime.js]
-//#region lib.js
-var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a });
-var a;
-var init_lib = __esmMin((() => {
-	a = 123;
-}));
-
-//#endregion
 //#region entry.js
 var init_entry = __esmMin((() => {
 	init_lib();
-	Promise.resolve().then(() => (init_lib(), lib_exports)).then((mod) => {
+	import("./lib.js").then((n) => (n.n(), n.r)).then((mod) => {
 		assert.strictEqual(mod.a, 123);
 		assert.strictEqual(a, 123);
 	});
@@ -39,25 +22,49 @@ var init_entry = __esmMin((() => {
 init_entry();
 ```
 
-# Variant: [format: Cjs]
+## lib.js
 
-## warnings
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a });
+var a;
+var init_lib = __esmMin((() => {
+	a = 123;
+}));
 
-### INEFFECTIVE_DYNAMIC_IMPORT
-
-```text
-[INEFFECTIVE_DYNAMIC_IMPORT] Warning: lib.js is dynamically imported by entry.js but also statically imported by entry.js, dynamic import will not move module into another chunk.
-
+//#endregion
+export { __esmMin as i, init_lib as n, lib_exports as r, a as t };
 ```
+
+# Variant: [format: Cjs]
 
 ## Assets
 
 ### entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+const require_lib = require('./lib.js');
 let node_assert = require("node:assert");
-node_assert = __toESM(node_assert);
+node_assert = require_lib.__toESM(node_assert);
+
+//#region entry.js
+var init_entry = require_lib.__esmMin((() => {
+	require_lib.init_lib();
+	Promise.resolve().then(() => require("./lib.js")).then((n) => (n.init_lib(), n.lib_exports)).then((mod) => {
+		node_assert.default.strictEqual(mod.a, 123);
+		node_assert.default.strictEqual(require_lib.a, 123);
+	});
+}));
+
+//#endregion
+init_entry();
+```
+
+### lib.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a });
@@ -67,15 +74,34 @@ var init_lib = __esmMin((() => {
 }));
 
 //#endregion
-//#region entry.js
-var init_entry = __esmMin((() => {
-	init_lib();
-	Promise.resolve().then(() => (init_lib(), lib_exports)).then((mod) => {
-		node_assert.default.strictEqual(mod.a, 123);
-		node_assert.default.strictEqual(a, 123);
-	});
-}));
-
-//#endregion
-init_entry();
+Object.defineProperty(exports, '__esmMin', {
+  enumerable: true,
+  get: function () {
+    return __esmMin;
+  }
+});
+Object.defineProperty(exports, '__toESM', {
+  enumerable: true,
+  get: function () {
+    return __toESM;
+  }
+});
+Object.defineProperty(exports, 'a', {
+  enumerable: true,
+  get: function () {
+    return a;
+  }
+});
+Object.defineProperty(exports, 'init_lib', {
+  enumerable: true,
+  get: function () {
+    return init_lib;
+  }
+});
+Object.defineProperty(exports, 'lib_exports', {
+  enumerable: true,
+  get: function () {
+    return lib_exports;
+  }
+});
 ```

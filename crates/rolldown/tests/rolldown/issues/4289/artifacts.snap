@@ -3,10 +3,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
+## chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as n, __commonJSMin as t };
+```
+
 ## lib.js
 
 ```js
-import { t as __commonJSMin } from "./main.js";
+import { t as __commonJSMin } from "./chunk.js";
 
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -22,9 +29,9 @@ export default require_lib();
 ## main.js
 
 ```js
+import { n as __toESM, t as __commonJSMin } from "./chunk.js";
 import nodeAssert from "node:assert";
 
-// HIDDEN [\0rolldown/runtime.js]
 //#region non-node-mode.js
 async function main$1() {
 	const exports = await import("./lib.js").then((m) => /* @__PURE__ */ __toESM(m.default));
@@ -62,20 +69,38 @@ var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJSMin(((exports
 var import_node_mode_by_cjs_extension = require_node_mode_by_cjs_extension();
 
 //#endregion
-export { __commonJSMin as t };
 ```
 
 # Variant: [format: Cjs]
 
 ## Assets
 
+### chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+
+Object.defineProperty(exports, '__commonJSMin', {
+  enumerable: true,
+  get: function () {
+    return __commonJSMin;
+  }
+});
+Object.defineProperty(exports, '__toESM', {
+  enumerable: true,
+  get: function () {
+    return __toESM;
+  }
+});
+```
+
 ### lib.js
 
 ```js
-const require_main = require('./main.js');
+const require_chunk = require('./chunk.js');
 
 //#region lib.js
-var require_lib = /* @__PURE__ */ require_main.__commonJSMin(((exports) => {
+var require_lib = /* @__PURE__ */ require_chunk.__commonJSMin(((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.parse = "parse";
 }));
@@ -92,14 +117,13 @@ Object.defineProperty(exports, 'default', {
 ### main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-// HIDDEN [\0rolldown/runtime.js]
+const require_chunk = require('./chunk.js');
 let node_assert = require("node:assert");
-node_assert = __toESM(node_assert);
+node_assert = require_chunk.__toESM(node_assert);
 
 //#region non-node-mode.js
 async function main$1() {
-	const exports = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lib.js").default));
+	const exports = await Promise.resolve().then(() => /* @__PURE__ */ require_chunk.__toESM(require("./lib.js").default));
 	node_assert.default.deepEqual(Object.keys(exports).sort(), ["parse"]);
 	node_assert.default.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
 	node_assert.default.strictEqual(exports.default, void 0, "Target has __esModule, so no auto-generated default export");
@@ -109,7 +133,7 @@ main$1();
 //#endregion
 //#region node-mode-by-mjs-extension.mjs
 async function main() {
-	const exports = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lib.js").default, 1));
+	const exports = await Promise.resolve().then(() => /* @__PURE__ */ require_chunk.__toESM(require("./lib.js").default, 1));
 	node_assert.default.deepEqual(Object.keys(exports).sort(), ["default", "parse"]);
 	node_assert.default.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
 	node_assert.default.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
@@ -118,9 +142,9 @@ main();
 
 //#endregion
 //#region node-mode-by-cjs-extension.cjs
-var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+var require_node_mode_by_cjs_extension = /* @__PURE__ */ require_chunk.__commonJSMin(((exports, module) => {
 	async function main() {
-		const exports$1 = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lib.js").default, 1));
+		const exports$1 = await Promise.resolve().then(() => /* @__PURE__ */ require_chunk.__toESM(require("./lib.js").default, 1));
 		node_assert.default.deepEqual(Object.keys(exports$1).sort(), ["default", "parse"]);
 		node_assert.default.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
 		node_assert.default.strictEqual(exports$1.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
@@ -134,7 +158,6 @@ var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJSMin(((exports
 var import_node_mode_by_cjs_extension = require_node_mode_by_cjs_extension();
 
 //#endregion
-exports.__commonJSMin = __commonJSMin;
 ```
 
 # Variant: [inline_dynamic_imports: true]

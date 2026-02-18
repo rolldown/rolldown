@@ -3,13 +3,32 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
+## chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+
+Object.defineProperty(exports, '__commonJSMin', {
+  enumerable: true,
+  get: function () {
+    return __commonJSMin;
+  }
+});
+Object.defineProperty(exports, '__toESM', {
+  enumerable: true,
+  get: function () {
+    return __toESM;
+  }
+});
+```
+
 ## internal-cjs.js
 
 ```js
-const require_main = require('./main.js');
+const require_chunk = require('./chunk.js');
 
 //#region internal-cjs.js
-var require_internal_cjs = /* @__PURE__ */ require_main.__commonJSMin(((exports, module) => {
+var require_internal_cjs = /* @__PURE__ */ require_chunk.__commonJSMin(((exports, module) => {
 	module.exports = {
 		value: 42,
 		hello: "world"
@@ -41,13 +60,12 @@ exports.value = value;
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+const require_chunk = require('./chunk.js');
 
 //#region main.js
-Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("external"))).then(console.log);
+Promise.resolve().then(() => /* @__PURE__ */ require_chunk.__toESM(require("external"))).then(console.log);
 Promise.resolve().then(() => require("./internal.js")).then(console.log);
-Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./internal-cjs.js").default)).then(console.log);
+Promise.resolve().then(() => /* @__PURE__ */ require_chunk.__toESM(require("./internal-cjs.js").default)).then(console.log);
 
 //#endregion
-exports.__commonJSMin = __commonJSMin;
 ```

@@ -1,34 +1,32 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## INEFFECTIVE_DYNAMIC_IMPORT
-
-```text
-[INEFFECTIVE_DYNAMIC_IMPORT] Warning: foo.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
-
-```
-
 # Assets
 
-## main.js
+## foo.js
 
 ```js
-import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 const foo = 1;
 
 //#endregion
+export { foo_exports as t };
+```
+
+## main.js
+
+```js
+import { t as foo_exports } from "./foo.js";
+import assert from "node:assert";
+
 //#region main.js
 assert.deepEqual(foo_exports, {
 	[Symbol.toStringTag]: "Module",
 	foo: 1
 });
-Promise.resolve().then(() => foo_exports).then((mod) => {
+import("./foo.js").then((n) => n.t).then((mod) => {
 	assert.deepEqual(mod, foo_exports);
 });
 
@@ -37,4 +35,5 @@ Promise.resolve().then(() => foo_exports).then((mod) => {
 
 # Output Stats
 
+- foo.js, is_entry false, is_dynamic_entry false, exports ["t"]
 - main.js, is_entry true, is_dynamic_entry false, exports []

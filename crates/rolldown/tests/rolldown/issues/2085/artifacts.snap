@@ -16,17 +16,17 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 
 //#endregion
 //#region a.js
+var a_exports = /* @__PURE__ */ __exportAll({ default: () => import_b._default });
 var import_b = require_b();
 
 //#endregion
-var b_default = import_b._default;
-export { b_default as default, import_b as t };
+export { import_b as n, a_exports as t };
 ```
 
 ## c.js
 
 ```js
-import { t as import_b } from "./a.js";
+import { n as import_b } from "./a.js";
 
 //#region c.js
 function c_default(tag, options) {
@@ -46,7 +46,7 @@ import assert from "node:assert";
 import("./c.js").then((mod) => {
 	assert.strictEqual(mod.default()(), "f");
 });
-import("./a.js").then((mod) => {
+import("./a.js").then((n) => n.t).then((mod) => {
 	assert.strictEqual(mod.default(), "f");
 });
 

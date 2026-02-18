@@ -331,6 +331,7 @@ impl GenerateStage<'_> {
       }
       map
     };
+    let runtime_module_idx = self.link_output.runtime.id();
     // First pass: collect chunk assignment decisions
     // (bits, temp_chunk_idx, chunk_idxs, merge_target)
     let assignments: Vec<_> = temp_chunk_graph
@@ -350,14 +351,26 @@ impl GenerateStage<'_> {
           .filter(|idx| entry_chunk_idx.contains(idx))
           .collect();
 
-        let merge_target = Self::try_insert_into_existing_chunk(
-          &chunk_idxs,
-          &static_entry_chunk_reference,
-          chunk_graph,
-          &self.link_output.module_table,
-          &dynamic_entry_to_dynamic_importers,
-          temp_chunk,
-        );
+        // Don't merge chunks containing the runtime module into entry chunks.
+        // Runtime helpers (e.g., __commonJSMin) are used at module evaluation time by other
+        // chunks. If the runtime is merged into an entry chunk, those other chunks import
+        // runtime helpers from the entry chunk while the entry chunk also imports them,
+        // creating a circular dependency that causes runtime helpers to be undefined.
+        let contains_runtime =
+          temp_chunk.modules.contains(&runtime_module_idx);
+
+        let merge_target = if contains_runtime {
+          None
+        } else {
+          Self::try_insert_into_existing_chunk(
+            &chunk_idxs,
+            &static_entry_chunk_reference,
+            chunk_graph,
+            &self.link_output.module_table,
+            &dynamic_entry_to_dynamic_importers,
+            temp_chunk,
+          )
+        };
 
         Some((bits.clone(), *temp_chunk_idx, chunk_idxs, merge_target))
       })

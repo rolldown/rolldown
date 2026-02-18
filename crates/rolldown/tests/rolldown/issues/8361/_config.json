@@ -1,0 +1,8 @@
+{
+  "config": {
+    "experimental": {
+      "chunkOptimization": true
+    }
+  },
+  "expectExecuted": true
+}

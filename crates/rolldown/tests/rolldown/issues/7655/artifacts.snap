@@ -6,10 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-const require_main = require('./main.js');
+const require_chunk = require('./chunk.js');
 
 //#region a.js
-var require_a = /* @__PURE__ */ require_main.__commonJSMin(((exports, module) => {
+var require_a = /* @__PURE__ */ require_chunk.__commonJSMin(((exports, module) => {
 	module.exports = {
 		value: 42,
 		hello: "world"
@@ -25,14 +25,32 @@ Object.defineProperty(exports, 'default', {
 });
 ```
 
-## main.js
+## chunk.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 
+Object.defineProperty(exports, '__commonJSMin', {
+  enumerable: true,
+  get: function () {
+    return __commonJSMin;
+  }
+});
+Object.defineProperty(exports, '__toESM', {
+  enumerable: true,
+  get: function () {
+    return __toESM;
+  }
+});
+```
+
+## main.js
+
+```js
+const require_chunk = require('./chunk.js');
+
 //#region main.js
-Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./a.js").default)).then((m) => console.log(m.default));
+Promise.resolve().then(() => /* @__PURE__ */ require_chunk.__toESM(require("./a.js").default)).then((m) => console.log(m.default));
 
 //#endregion
-exports.__commonJSMin = __commonJSMin;
 ```

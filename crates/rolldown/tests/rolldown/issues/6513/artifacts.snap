@@ -3,14 +3,39 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
+## chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+
+Object.defineProperty(exports, '__commonJSMin', {
+  enumerable: true,
+  get: function () {
+    return __commonJSMin;
+  }
+});
+Object.defineProperty(exports, '__esmMin', {
+  enumerable: true,
+  get: function () {
+    return __esmMin;
+  }
+});
+Object.defineProperty(exports, '__toESM', {
+  enumerable: true,
+  get: function () {
+    return __toESM;
+  }
+});
+```
+
 ## dynamic.js
 
 ```js
-const require_main = require('./main.js');
+const require_chunk = require('./chunk.js');
 
 //#region dynamic.js
 var ddd;
-var init_dynamic = require_main.__esmMin((() => {
+var init_dynamic = require_chunk.__esmMin((() => {
 	ddd = 100;
 }));
 
@@ -22,13 +47,12 @@ exports.ddd = ddd;
 ## main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-// HIDDEN [\0rolldown/runtime.js]
+const require_chunk = require('./chunk.js');
 let node_assert = require("node:assert");
-node_assert = __toESM(node_assert);
+node_assert = require_chunk.__toESM(node_assert);
 
 //#region lib.js
-var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
+var require_lib = /* @__PURE__ */ require_chunk.__commonJSMin(((exports) => {
 	const remoteProvider = async function() {
 		return await Promise.resolve().then(() => require("./dynamic.js"));
 	};
@@ -43,5 +67,4 @@ var import_lib = require_lib();
 })();
 
 //#endregion
-exports.__esmMin = __esmMin;
 ```

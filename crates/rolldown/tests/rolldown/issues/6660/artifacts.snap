@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## c.js
 
 ```js
-import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./index.js";
+import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./chunk.js";
 
 //#region d.js
 var d_exports = /* @__PURE__ */ __exportAll({ loadEventStreamCapability: () => loadEventStreamCapability });
@@ -31,10 +31,17 @@ export default require_c();
 
 ```
 
+## chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as a, __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+```
+
 ## e.js
 
 ```js
-import { n as __esmMin } from "./index.js";
+import { n as __esmMin } from "./chunk.js";
 
 //#region e.js
 var init_e = __esmMin((() => {
@@ -48,7 +55,8 @@ init_e();
 ## index.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { a as __toESM, t as __commonJSMin } from "./chunk.js";
+
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.defaultProvider = async function test() {
@@ -62,5 +70,4 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 require_b();
 
 //#endregion
-export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 ```

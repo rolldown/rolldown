@@ -33,7 +33,7 @@ exports.exportedValue = exportedValue;
 
 Entry points with ES module exports will be converted to use getters on `exports` to preserve [live binding semantics](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#imported_values_can_only_be_modified_by_the_exporter).
 
-CommonJS is useful when targeting Node.js environments that don't support ES modules, or when integrating with older packages that expect CommonJS. For most use cases, `esm` format is preferred because it's the JavaScript standard, has better interoperability across environments, and enables static analysis for tree-shaking.
+CommonJS is useful when targeting Node.js environments that don't support ES modules, or when integrating with older packages that expect CommonJS. For most use cases, `es` format is preferred because it's the JavaScript standard, has better interoperability across environments, and enables static analysis for tree-shaking.
 
 ##### IIFE
 
@@ -52,7 +52,7 @@ var MyLibrary = (function () {
 
 When using `<script>` tags without `type="module"`, code executes in the global scope, which means variables from different scripts can conflict with each other. IIFE solves this by creating a private function scope that encapsulates all internal variables, while exposing only a single global variable (e.g., `jQuery`, `_`, `React`).
 
-IIFE is useful for drop-in scripts and widgets that need to work anywhere with a single `<script>` tag, or for libraries that want to expose one clean global (like analytics snippets or embeddable widgets). For most use cases, especially libraries, `esm` format is preferred because it's the JavaScript standard, has better interoperability across environments, and enables static analysis for tree-shaking.
+IIFE is useful for drop-in scripts and widgets that need to work anywhere with a single `<script>` tag, or for libraries that want to expose one clean global (like analytics snippets or embeddable widgets). For most use cases, especially libraries, `es` format is preferred because it's the JavaScript standard, has better interoperability across environments, and enables static analysis for tree-shaking.
 
 ##### UMD
 
@@ -77,4 +77,4 @@ IIFE is useful for drop-in scripts and widgets that need to work anywhere with a
 });
 ```
 
-UMD was popular before ES modules became widely supported, as it allowed a single build to work everywhere. Today, UMD is largely unnecessary as ES modules are supported in all modern browsers and Node.js, and bundlers handle module interop automatically. The format also adds runtime overhead and is harder to statically analyze. For new projects, use `esm` format instead.
+UMD was popular before ES modules became widely supported, as it allowed a single build to work everywhere. Today, UMD is largely unnecessary as ES modules are supported in all modern browsers and Node.js, and bundlers handle module interop automatically. The format also adds runtime overhead and is harder to statically analyze. For new projects, use `es` format instead.

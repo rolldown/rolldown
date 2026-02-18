@@ -356,8 +356,7 @@ impl GenerateStage<'_> {
         // chunks. If the runtime is merged into an entry chunk, those other chunks import
         // runtime helpers from the entry chunk while the entry chunk also imports them,
         // creating a circular dependency that causes runtime helpers to be undefined.
-        let contains_runtime =
-          temp_chunk.modules.contains(&runtime_module_idx);
+        let contains_runtime = temp_chunk.modules.contains(&runtime_module_idx);
 
         let merge_target = if contains_runtime {
           None

@@ -17,11 +17,11 @@ export default defineTest({
           switch (filename) {
             case 'main.js':
               // main.js has both import and export, so it's ESM
-              expect(moduleInfo.inputFormat).toBe('esm');
+              expect(moduleInfo.inputFormat).toBe('es');
               break;
             case 'esm.js':
               // esm.js has export, so it's ESM
-              expect(moduleInfo.inputFormat).toBe('esm');
+              expect(moduleInfo.inputFormat).toBe('es');
               break;
             case 'cjs.js':
               // cjs.js uses module.exports, so it's CommonJS
@@ -30,7 +30,7 @@ export default defineTest({
             case 'side-effect.js':
               // side-effect.js has no module syntax, but parent package.json has "type": "module"
               // so it's detected as ESM based on the package.json type field
-              expect(moduleInfo.inputFormat).toBe('esm');
+              expect(moduleInfo.inputFormat).toBe('es');
               break;
             case 'unknown.js':
               // unknown.js has no module syntax and its package.json has no "type" field

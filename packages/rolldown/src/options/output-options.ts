@@ -156,7 +156,7 @@ export interface OutputOptions {
    * - `'iife'` stands for [Immediately Invoked Function Expression](https://developer.mozilla.org/en-US/docs/Glossary/IIFE).
    * - `'umd'` stands for [Universal Module Definition](https://github.com/umdjs/umd).
    *
-   * @default 'esm'
+   * @default 'es'
    *
    * {@include ./docs/output-format.md}
    */

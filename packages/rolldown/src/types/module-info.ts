@@ -47,5 +47,5 @@ export interface ModuleInfo extends ModuleOptions {
    * - "cjs" for CommonJS modules (uses `module.exports`, `exports`, top-level `return`, or is defined as CommonJS by module metadata)
    * - "unknown" when the format could not be determined from either syntax or module definition metadata
    */
-  inputFormat: 'esm' | 'cjs' | 'unknown';
+  inputFormat: 'es' | 'cjs' | 'unknown';
 }

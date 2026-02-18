@@ -13,6 +13,7 @@ use crate::{
   types::{binding_rendered_chunk::BindingRenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
 };
 use napi::bindgen_prelude::{Either, Either3, FnArgs};
+use oxc::transformer::EngineTargets;
 use rolldown::{
   AddonOutputOption, AssetFilenamesOutputOption, BundlerConfig, BundlerOptions,
   ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
@@ -143,6 +144,45 @@ fn normalize_paths_option(
       let id = id.to_string();
       func.invoke_sync((id,).into()).map_err(anyhow::Error::from)
     })),
+  })
+}
+
+fn napi_compress_options_to_raw_compress_options(
+  o: &oxc_minify_napi::CompressOptions,
+) -> Result<RawCompressOptions, String> {
+  Ok(RawCompressOptions {
+    target: o
+      .target
+      .as_ref()
+      .map(|t| -> Result<EngineTargets, String> {
+        match t {
+          Either::A(s) => Ok(EngineTargets::from_target(s)?),
+          Either::B(list) => Ok(EngineTargets::from_target_list(list)?),
+        }
+      })
+      .transpose()?,
+    drop_console: o.drop_console,
+    drop_debugger: o.drop_debugger,
+    join_vars: o.join_vars,
+    sequences: o.sequences,
+    unused: o
+      .unused
+      .as_ref()
+      .map(|u| {
+        Ok(match u {
+          Either::A(true) => oxc::minifier::CompressOptionsUnused::Remove,
+          Either::A(false) => oxc::minifier::CompressOptionsUnused::Keep,
+          Either::B(s) => match s.as_str() {
+            "keep_assign" => oxc::minifier::CompressOptionsUnused::KeepAssign,
+            _ => return Err(format!("Invalid unused option: `{s}`.")),
+          },
+        })
+      })
+      .transpose()?,
+    keep_names: o.keep_names.as_ref().map(Into::into),
+    treeshake: o.treeshake.as_ref().map(TryFrom::try_from).transpose()?,
+    drop_labels: o.drop_labels.as_ref().map(|labels| labels.iter().cloned().collect()),
+    max_iterations: o.max_iterations,
   })
 }
 
@@ -388,26 +428,27 @@ pub fn normalize_binding_options(
           {
             let mangle = match &opts.mangle {
               Some(Either::A(false)) => None,
-              None | Some(Either::A(true)) => Some(oxc::minifier::MangleOptions::default()),
-              Some(Either::B(o)) => Some(oxc::minifier::MangleOptions::from(o)),
+              None | Some(Either::A(true)) => Some(RawMangleOptions::default()),
+              Some(Either::B(o)) => Some(RawMangleOptions {
+                top_level: o.toplevel,
+                keep_names: o.keep_names.as_ref().map(|k| match k {
+                    Either::A(false) => oxc::mangler::MangleOptionsKeepNames::all_false(),
+                    Either::A(true) => oxc::mangler::MangleOptionsKeepNames::all_true(),
+                    Either::B(o) => oxc::mangler::MangleOptionsKeepNames {
+                      function: o.function,
+                      class: o.class,
+                    },
+                }),
+              }),
             };
             let compress = match &opts.compress {
               Some(Either::A(false)) => None,
-              None | Some(Either::A(true)) => Some(oxc::minifier::CompressOptions::default()),
-              Some(Either::B(o)) => Some(oxc::minifier::CompressOptions::try_from(o).map_err(|_| {
-                napi::Error::new(napi::Status::InvalidArg, "Invalid compress option")
-              })?),
+              None | Some(Either::A(true)) => Some(RawCompressOptions::default()),
+              Some(Either::B(o)) => Some(napi_compress_options_to_raw_compress_options(o).map_err(|err| napi::Error::new(napi::Status::InvalidArg, err))?),
             };
-            let default_target = matches!(
-              opts.compress,
-              Some(
-                Either::A(true) | Either::B(oxc_minify_napi::CompressOptions { target: None, .. })
-              )
-            );
             Ok(RawMinifyOptions::Object(RawMinifyOptionsDetailed {
-              mangle: mangle.map(|o| RawMangleOptions { top_level: o.top_level, keep_names: Some(o.keep_names), debug: Some(o.debug) }),
-              compress: compress.map(|c| RawCompressOptions { target: Some(c.target), drop_debugger: Some(c.drop_debugger), drop_console: Some(c.drop_console), join_vars: Some(c.join_vars), sequences: Some(c.sequences), unused: Some(c.unused), keep_names: Some(c.keep_names), treeshake: Some(c.treeshake), drop_labels: Some(c.drop_labels), max_iterations: c.max_iterations }),
-              default_target,
+              mangle,
+              compress,
               remove_whitespace: match &opts.codegen {
                 None => true,
                 Some(Either::A(bool)) => *bool,

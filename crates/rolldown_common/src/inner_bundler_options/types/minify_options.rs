@@ -14,17 +14,20 @@ use serde::Deserialize;
 pub struct RawMangleOptions {
   pub top_level: Option<bool>,
   pub keep_names: Option<MangleOptionsKeepNames>,
-  pub debug: Option<bool>,
 }
 
 impl RawMangleOptions {
   #[must_use]
-  pub fn into_mangle_options(self) -> MangleOptions {
-    let default = MangleOptions::default();
+  pub fn into_mangle_options(self, keep_names: bool, output_format: OutputFormat) -> MangleOptions {
     MangleOptions {
-      top_level: self.top_level.or(default.top_level),
-      keep_names: self.keep_names.unwrap_or(default.keep_names),
-      debug: self.debug.unwrap_or(default.debug),
+      // IIFE need to preserve top level names
+      top_level: Some(self.top_level.unwrap_or(!matches!(output_format, OutputFormat::Iife))),
+      keep_names: self.keep_names.unwrap_or(if keep_names {
+        MangleOptionsKeepNames::all_true()
+      } else {
+        MangleOptionsKeepNames::all_false()
+      }),
+      debug: false,
     }
   }
 }
@@ -45,19 +48,28 @@ pub struct RawCompressOptions {
 
 impl RawCompressOptions {
   #[must_use]
-  pub fn into_compress_options(self) -> CompressOptions {
-    let default = CompressOptions::default();
+  pub fn into_compress_options(
+    self,
+    target: EngineTargets,
+    keep_names: bool,
+    treeshake: TreeShakeOptions,
+  ) -> CompressOptions {
+    let smallest = CompressOptions::smallest();
     CompressOptions {
-      target: self.target.unwrap_or(default.target),
-      drop_debugger: self.drop_debugger.unwrap_or(default.drop_debugger),
-      drop_console: self.drop_console.unwrap_or(default.drop_console),
-      join_vars: self.join_vars.unwrap_or(default.join_vars),
-      sequences: self.sequences.unwrap_or(default.sequences),
-      unused: self.unused.unwrap_or(default.unused),
-      keep_names: self.keep_names.unwrap_or(default.keep_names),
-      treeshake: self.treeshake.unwrap_or(default.treeshake),
-      drop_labels: self.drop_labels.unwrap_or(default.drop_labels),
-      max_iterations: self.max_iterations.or(default.max_iterations),
+      target: self.target.unwrap_or(target),
+      drop_debugger: self.drop_debugger.unwrap_or(smallest.drop_debugger),
+      drop_console: self.drop_console.unwrap_or(smallest.drop_console),
+      join_vars: self.join_vars.unwrap_or(smallest.join_vars),
+      sequences: self.sequences.unwrap_or(smallest.sequences),
+      unused: self.unused.unwrap_or(smallest.unused),
+      keep_names: self.keep_names.unwrap_or(if keep_names {
+        CompressOptionsKeepNames::all_true()
+      } else {
+        CompressOptionsKeepNames::all_false()
+      }),
+      treeshake: self.treeshake.unwrap_or(treeshake),
+      drop_labels: self.drop_labels.unwrap_or(smallest.drop_labels),
+      max_iterations: self.max_iterations.or(smallest.max_iterations),
     }
   }
 }
@@ -73,7 +85,6 @@ pub enum RawMinifyOptions {
 pub struct RawMinifyOptionsDetailed {
   pub mangle: Option<RawMangleOptions>,
   pub compress: Option<RawCompressOptions>,
-  pub default_target: bool,
   pub remove_whitespace: bool,
 }
 
@@ -93,19 +104,12 @@ impl RawMinifyOptions {
       RawMinifyOptions::Bool(value) => {
         if value {
           let keep_names = options.keep_names;
-          let mangle = MangleOptions {
-            // IIFE need to preserve top level names
-            top_level: Some(!matches!(options.format, OutputFormat::Iife)),
-            keep_names: MangleOptionsKeepNames { function: keep_names, class: keep_names },
-            debug: false,
-          };
-
-          let compress = CompressOptions {
-            target: options.transform_options.target.clone(),
-            keep_names: CompressOptionsKeepNames { function: keep_names, class: keep_names },
-            treeshake: TreeShakeOptions::from(&options.treeshake),
-            ..CompressOptions::smallest()
-          };
+          let mangle = RawMangleOptions::default().into_mangle_options(keep_names, options.format);
+          let compress = RawCompressOptions::default().into_compress_options(
+            options.transform_options.target.clone(),
+            keep_names,
+            TreeShakeOptions::from(&options.treeshake),
+          );
           MinifyOptions::Enabled((
             oxc::minifier::MinifierOptions { mangle: Some(mangle), compress: Some(compress) },
             true,
@@ -126,13 +130,14 @@ impl RawMinifyOptions {
         })
       }
       RawMinifyOptions::Object(value) => {
-        let mangle = value.mangle.map(RawMangleOptions::into_mangle_options);
+        let mangle =
+          value.mangle.map(|m| m.into_mangle_options(options.keep_names, options.format));
         let compress = value.compress.map(|c| {
-          let mut c = c.into_compress_options();
-          if value.default_target {
-            c.target = options.transform_options.target.clone();
-          }
-          c
+          c.into_compress_options(
+            options.transform_options.target.clone(),
+            options.keep_names,
+            TreeShakeOptions::from(&options.treeshake),
+          )
         });
         MinifyOptions::Enabled((
           oxc::minifier::MinifierOptions { mangle, compress },
@@ -171,6 +176,26 @@ impl MinifyOptions {
   #[must_use]
   pub fn is_enabled(&self) -> bool {
     !matches!(self, Self::Disabled)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn object_all_true_equals_bool_true() {
+    let options = NormalizedBundlerOptions::default();
+
+    let from_bool = RawMinifyOptions::Bool(true).normalize(&options);
+    let from_object = RawMinifyOptions::Object(RawMinifyOptionsDetailed {
+      mangle: Some(RawMangleOptions::default()),
+      compress: Some(RawCompressOptions::default()),
+      remove_whitespace: true,
+    })
+    .normalize(&options);
+
+    assert_eq!(format!("{from_bool:?}"), format!("{from_object:?}"));
   }
 }
 

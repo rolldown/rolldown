@@ -112,6 +112,7 @@ impl NormalModule {
         }
         exports
       },
+      input_format: self.ecma_view.exports_kind,
     }
   }
 

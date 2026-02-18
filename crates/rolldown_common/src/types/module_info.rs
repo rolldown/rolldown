@@ -2,7 +2,7 @@ use arcstr::ArcStr;
 use oxc::span::CompactStr;
 use rolldown_utils::indexmap::FxIndexSet;
 
-use crate::ModuleId;
+use crate::{ExportsKind, ModuleId};
 
 #[derive(Debug)]
 pub struct ModuleInfo {
@@ -14,4 +14,5 @@ pub struct ModuleInfo {
   pub imported_ids: FxIndexSet<ModuleId>,
   pub dynamically_imported_ids: FxIndexSet<ModuleId>,
   pub exports: Vec<CompactStr>,
+  pub input_format: ExportsKind,
 }

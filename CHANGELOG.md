@@ -1,4 +1,98 @@
 
+## [1.0.0-rc.5] - 2026-02-18
+
+### 🚀 Features
+
+- add `Visitor` to `rolldown/utils` (#8373) by @sapphi-red
+- module-info: add `inputFormat` property to `ModuleInfo` (#8329) by @shulaoda
+- default `treeshake.invalid_import_side_effects` to `false` (#8357) by @sapphi-red
+- rolldown_utils: add `IndexBitSet` (#8343) by @sapphi-red
+- rolldown_utils: add more methods and trait impls to BitSet (#8342) by @sapphi-red
+- rolldown_plugin_vite_build_import_analysis: add support for `await import().then((m) => m.prop)` (#8328) by @sapphi-red
+- rolldown_plugin_vite_reporter: support custom logger for build infos (#7652) by @shulaoda
+- rust/mcs: support `entriesAwareMergeThreshold` (#8312) by @hyf0
+- mcs: `maxSize` will split the oversized chunk with taking file relevance into account (#8277) by @hyf0
+- rolldown_plugin_vite_import_glob: support template literal in glob import patterns (#8298) by @shulaoda
+- rolldown_plugin_chunk_import_map: output importmap without spaces (#8297) by @sapphi-red
+- add INEFFECTIVE_DYNAMIC_IMPORT warning in core (#8284) by @shulaoda
+- mcs: generate more readable name for `entriesAware` chunks (#8275) by @hyf0
+- mcs: support `entriesAware` (#8274) by @hyf0
+
+### 🐛 Bug Fixes
+
+- improve circular dependency detection in chunk optimizer (#8371) by @IWANABETHATGUY
+- align `minify.compress: true` and `minify.mangle: true` with `minify: true` (#8367) by @sapphi-red
+- rolldown_plugin_esm_external_require: apply conversion to UMD and IIFE outputs (#8359) by @sapphi-red
+- cjs: bailout treeshaking on cjs modules that have multiple re-exports (#8348) by @hyf0
+- handle member expression and this expression in JSX element name rewriting (#8323) by @IWANABETHATGUY
+- pad `encode_hash_with_base` output to fixed length to prevent slice panics (#8320) by @shulaoda
+- `xxhash_with_base` skips hashing when input is exactly 16 bytes (#8319) by @shulaoda
+- complete `ImportKind::try_from` with missing variants and correct `url-import` to `url-token` (#8310) by @shulaoda
+- mark Node.js builtin modules as side-effect-free when resolved via `external` config (#8304) by @IWANABETHATGUY
+- mcs: `maxSize` should split chunks correctly based on sizes (#8289) by @hyf0
+
+### 🚜 Refactor
+
+- introduce `RawMangleOptions` and `RawCompressOptions` (#8366) by @sapphi-red
+- mcs: refactor `apply_manual_code_splitting` into `ManualSplitter` (#8346) by @hyf0
+- rolldown_plugin_vite_reporter: simplify hook registration and remove redundant state (#8322) by @shulaoda
+- use set to store user defined entry modules (#8315) by @IWANABETHATGUY
+- rust/mcs: collect groups into map at first for having clean and performant operations (#8313) by @hyf0
+- mcs: introduce newtype `ModuleGroupOrigin` and `ModuleGroupId` (#8311) by @hyf0
+- remove unnecessary `FinalizerMutableState` struct (#8303) by @shulaoda
+- move module finalization into `finalize_modules` (#8302) by @shulaoda
+- extract `apply_transfer_parts_mutation` into its own module (#8301) by @shulaoda
+- move ESM format check into `determine_export_mode` (#8294) by @shulaoda
+- remove `warnings` field from `GenerateContext` (#8293) by @shulaoda
+- extract util function remove clippy supression (#8290) by @IWANABETHATGUY
+- move `is_in_node_modules` to `PathExt` trait in `rolldown_std_utils` (#8286) by @shulaoda
+- rolldown_plugin_vite_reporter: remove unnecessary ineffective dynamic import detection logic (#8285) by @shulaoda
+- dev: inject hmr runtime to `\0rolldown/runtime.js` (#8234) by @hyf0
+- improve naming in chunk_optimizer (#8287) by @IWANABETHATGUY
+- simplify PostChunkOptimizationOperation from bitflags to enum (#8283) by @IWANABETHATGUY
+- optimize BitSet.index_of_one to return iterator instead of Vec (#8282) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- change default value in `format` JSDoc from `'esm'` to `'es'` (#8372) by @shulaoda
+- in-depth: remove `invalidImportSideEffects` option mention from lazy barrel optimization doc (#8355) by @sapphi-red
+- mcs: clarify `minSize` constraints (#8279) by @ShroXd
+
+### ⚡ Performance
+
+- use IndexVec for chunk TLA detection (#8341) by @sapphi-red
+- only invoke single resolve call for the same specifier and import kind (#8332) by @sapphi-red
+- rolldown_plugin_vite_reporter: skip gzip computation when `report_compressed_size` is disabled (#8321) by @shulaoda
+
+### 🧪 Testing
+
+- use `vi.waitFor` and `expect.poll` instead of custom `waitUtil` function (#8369) by @sapphi-red
+- rolldown_plugin_esm_external_require_plugin: add tests (#8358) by @sapphi-red
+- add watch file tests (#8330) by @sapphi-red
+- rolldown_plugin_vite_build_import_analysis: add test for dynamic import treeshaking (#8327) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- prepare-release: skip workflow on forked repositories (#8368) by @shulaoda
+- format more files (#8360) by @sapphi-red
+- deps: update oxc to v0.114.0 (#8347) by @camc314
+- deps: update test262 submodule for tests (#8354) by @sapphi-red
+- deps: update crate-ci/typos action to v1.43.5 (#8350) by @renovate[bot]
+- deps: update oxc apps (#8351) by @renovate[bot]
+- rolldown_plugin_vite_reporter: remove unnecessary README.md (#8334) by @shulaoda
+- deps: update npm packages (#8338) by @renovate[bot]
+- deps: update rust crates (#8339) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.13.0 (#8337) by @renovate[bot]
+- deps: update github-actions (#8336) by @renovate[bot]
+- deps: update napi to v3.8.3 (#8331) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.12.2 (#8325) by @renovate[bot]
+- remove unnecessary transform.decorator (#8314) by @IWANABETHATGUY
+- deps: update dependency rust to v1.93.1 (#8305) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.12.1 (#8300) by @renovate[bot]
+- deps: update oxc apps (#8296) by @renovate[bot]
+- docs: don't skip for build runs without cache (#8281) by @sapphi-red
+
+
 ## [1.0.0-rc.4] - 2026-02-11
 
 ### 🚀 Features

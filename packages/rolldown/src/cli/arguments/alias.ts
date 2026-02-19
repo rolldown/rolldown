@@ -15,6 +15,11 @@ export interface OptionConfig {
   default?: string | boolean;
   hint?: string;
   reverse?: boolean;
+  /**
+   * Whether this option requires a value.
+   * If true, an error will be thrown if the option is used without a value.
+   */
+  requireValue?: boolean;
 }
 
 export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
@@ -33,6 +38,7 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   },
   dir: {
     abbreviation: 'd',
+    requireValue: true,
   },
   file: {
     abbreviation: 'o',

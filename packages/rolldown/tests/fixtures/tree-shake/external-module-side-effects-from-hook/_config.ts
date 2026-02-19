@@ -10,7 +10,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        resolveId: function (id, importer, options) {
+        resolveId: function (id, _importer, _options) {
           if (id === 'external') {
             return {
               id,

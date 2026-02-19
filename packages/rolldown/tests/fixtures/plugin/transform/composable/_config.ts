@@ -1,4 +1,4 @@
-import { Plugin as RolldownPlugin } from 'rolldown';
+import type { Plugin as RolldownPlugin } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 

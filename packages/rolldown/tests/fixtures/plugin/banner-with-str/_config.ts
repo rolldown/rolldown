@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { defineTest } from 'rolldown-tests';
-import { expect, vi } from 'vitest';
+import { expect } from 'vitest';
 
 const entry = path.join(__dirname, './main.js');
 

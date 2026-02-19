@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { RenderedChunk } from 'rolldown';
+import type { RenderedChunk } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { getOutputChunk } from 'rolldown-tests/utils';
 import { expect } from 'vitest';

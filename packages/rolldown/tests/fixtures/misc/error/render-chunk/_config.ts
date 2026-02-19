@@ -1,5 +1,5 @@
 import { defineTest } from 'rolldown-tests';
-import { assert, expect } from 'vitest';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {

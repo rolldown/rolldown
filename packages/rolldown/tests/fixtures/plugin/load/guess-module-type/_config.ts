@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 import { defineTest } from 'rolldown-tests';
 
 export default defineTest({

@@ -14,7 +14,7 @@ export default defineTest({
         name: 'inject',
       },
     ],
-    onwarn(warning, ctx) {
+    onwarn(warning, _ctx) {
       warnings.push(stripAnsi(warning.message));
     },
   },

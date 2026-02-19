@@ -26,7 +26,7 @@ export default defineTest({
       },
       {
         name: 'test-plugin-2',
-        async buildStart(config) {
+        async buildStart(_config) {
           await sleepAsync(100);
           buildStartFn2();
         },

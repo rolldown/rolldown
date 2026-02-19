@@ -10,7 +10,7 @@ export default defineTest({
         name: 'test-plugin',
         load: {
           filter: [include(importerId(/main\.js$/))],
-          handler(id) {
+          handler(_id) {
             return null;
           },
         },

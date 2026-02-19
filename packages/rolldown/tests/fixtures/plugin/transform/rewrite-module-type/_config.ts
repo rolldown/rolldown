@@ -1,7 +1,4 @@
 import { defineTest } from 'rolldown-tests';
-import { expect, vi } from 'vitest';
-
-const transformFn = vi.fn();
 
 export default defineTest({
   config: {
@@ -9,7 +6,7 @@ export default defineTest({
     plugins: [
       {
         name: 'rewrite-module-type',
-        transform: function (code, id, meta) {
+        transform: function (_code, _id, _meta) {
           return {
             moduleType: 'ts',
           };
@@ -17,7 +14,7 @@ export default defineTest({
       },
     ],
   },
-  afterTest: async (output) => {
+  afterTest: async (_output) => {
     await import('./assert.mjs');
   },
 });

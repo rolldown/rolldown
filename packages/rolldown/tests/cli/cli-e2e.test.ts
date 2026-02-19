@@ -184,6 +184,26 @@ describe('cli options for bundling', () => {
     const status = await $({ cwd })`rolldown 1.ts -d .`;
     expect(status.exitCode).toBe(0);
   });
+
+  it('should error when -o option is used without a value', async () => {
+    const cwd = cliFixturesDir('cli-multi-entries');
+    try {
+      await $({ cwd })`rolldown 1.ts -o`;
+      expect.unreachable();
+    } catch (error: any) {
+      expect(error.stdout).toContain('Option `--file` requires a value');
+    }
+  });
+
+  it('should error when --file option is used without a value', async () => {
+    const cwd = cliFixturesDir('cli-multi-entries');
+    try {
+      await $({ cwd })`rolldown 1.ts --file`;
+      expect.unreachable();
+    } catch (error: any) {
+      expect(error.stdout).toContain('Option `--file` requires a value');
+    }
+  });
 });
 
 describe('config', () => {

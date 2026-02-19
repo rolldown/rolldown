@@ -1,5 +1,5 @@
 import { defineTest } from 'rolldown-tests';
-import { stripVTControlCharacters } from 'util';
+import { stripVTControlCharacters } from 'node:util';
 import { expect } from 'vitest';
 
 export default defineTest({

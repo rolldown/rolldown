@@ -7,7 +7,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test',
-        async resolveId(specifier, importer, _extraArgs) {
+        async resolveId(specifier, _importer, _extraArgs) {
           if (specifier === 'dep') {
             return {
               id: nodePath.resolve(import.meta.dirname, 'node_modules/dep/lib.js'),

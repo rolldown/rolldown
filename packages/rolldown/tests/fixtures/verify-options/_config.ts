@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { NormalizedInputOptions, NormalizedOutputOptions } from 'rolldown';
+import type { NormalizedInputOptions, NormalizedOutputOptions } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 

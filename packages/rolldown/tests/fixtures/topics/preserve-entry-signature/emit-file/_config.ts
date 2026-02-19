@@ -1,12 +1,11 @@
 import { defineTest } from 'rolldown-tests';
-import { expect } from 'vitest';
 
 export default defineTest({
   config: {
     plugins: [
       {
         name: 'test-plugin',
-        buildStart(opt) {
+        buildStart(_opt) {
           this.emitFile({
             type: 'chunk',
             id: './main.js',
@@ -18,7 +17,7 @@ export default defineTest({
     ],
     output: {},
   },
-  afterTest: async (output) => {
+  afterTest: async (_output) => {
     await import('./_test.mjs');
   },
 });

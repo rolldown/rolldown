@@ -4,5 +4,6 @@
     "paths": {
       "@/*": ["alias/*"]
     }
-  }
+  },
+  "exclude": ["_config.ts"]
 }

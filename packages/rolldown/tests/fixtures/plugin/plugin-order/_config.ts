@@ -1,5 +1,5 @@
 import { defineTest } from 'rolldown-tests';
-import { Plugin } from 'rolldown-tests/types';
+import type { Plugin } from 'rolldown-tests/types';
 import { expect } from 'vitest';
 
 const plugins: Plugin[] = [];

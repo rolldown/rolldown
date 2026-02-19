@@ -7,7 +7,7 @@ export default defineTest({
     plugins: [
       {
         name: 'replace NODE_ENV',
-        transform: (code, id) => {
+        transform: (code, _id) => {
           const res = code.replace('process.env.NODE_ENV', JSON.stringify('development'));
           return res;
         },

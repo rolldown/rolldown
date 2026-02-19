@@ -1,5 +1,6 @@
 import { defineTest } from 'rolldown-tests';
 import { bundleAnalyzerPlugin } from 'rolldown/experimental';
+import type { OutputAsset } from 'rolldown';
 import { expect } from 'vitest';
 
 export default defineTest({
@@ -8,8 +9,7 @@ export default defineTest({
   },
   async afterTest(output) {
     const asset = output.output.find(
-      (o): o is import('rolldown').OutputAsset =>
-        o.type === 'asset' && o.fileName === 'analyze-data.json',
+      (o): o is OutputAsset => o.type === 'asset' && o.fileName === 'analyze-data.json',
     );
     expect(asset).toBeDefined();
     const data = JSON.parse(asset!.source as string);

@@ -9,7 +9,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        resolveId: function (id, importer, options) {
+        resolveId: function (id, _importer, _options) {
           if (id === 'foo') {
             return {
               id,
@@ -32,7 +32,7 @@ export default defineTest({
       },
     ],
   },
-  afterTest: (output) => {
+  afterTest: (_output) => {
     expect(loadFn).toHaveBeenCalledTimes(2);
   },
 });

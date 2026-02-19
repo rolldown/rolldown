@@ -1,6 +1,6 @@
 import type { LogLevel, RollupLog } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
-import { expect, vi } from 'vitest';
+import { expect } from 'vitest';
 
 const logs: Array<{ level: LogLevel; log: RollupLog }> = [];
 

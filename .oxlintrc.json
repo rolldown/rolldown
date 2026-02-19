@@ -5,6 +5,7 @@
     "crates/**",
     "packages/rollup-tests/**",
     "packages/rolldown/tests/fixtures/**",
+    "!packages/rolldown/tests/fixtures/**/_config.ts",
     "packages/rolldown/tests/stability/**",
     "packages/rolldown/tests/magic-string/*.test.ts",
     "packages/rolldown/src/binding.*",

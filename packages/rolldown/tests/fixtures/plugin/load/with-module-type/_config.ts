@@ -8,7 +8,6 @@ export default defineTest({
       {
         name: 'rewrite-module-type',
         load: function (id) {
-          debugger;
           return {
             code: fs.readFileSync(id, 'utf-8'),
             moduleType: 'ts',
@@ -17,7 +16,7 @@ export default defineTest({
       },
     ],
   },
-  afterTest: async (output) => {
+  afterTest: async (_output) => {
     await import('./assert.mjs');
   },
 });

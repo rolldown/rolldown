@@ -4,14 +4,14 @@ import { expect, vi } from 'vitest';
 const transformFn = vi.fn();
 
 export default defineTest({
-  sequential: true,
   config: {
     plugins: [
       {
         name: 'test-plugin',
         transform: function (code, id, meta) {
-          transformFn();
-          if (id.endsWith('foo.js')) {
+          const isFooJS = id.endsWith('foo.js');
+          transformFn(isFooJS);
+          if (isFooJS) {
             expect(code).toStrictEqual('');
             expect(meta.moduleType).toEqual('js');
             return {
@@ -22,9 +22,9 @@ export default defineTest({
       },
     ],
   },
-  afterTest: (output) => {
-    expect.assertions(4);
+  afterTest(output) {
     expect(transformFn).toHaveBeenCalledTimes(3);
+    expect(transformFn.mock.calls.filter((args) => args[0] === true).length).toBe(1);
     expect(output.output[0].code).contains('transformed');
   },
 });

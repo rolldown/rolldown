@@ -218,13 +218,7 @@ impl Bundle {
     if is_full_scan_mode {
       let mut output: NormalizedScanStageOutput =
         output.try_into().expect("Should be able to convert to NormalizedScanStageOutput");
-      defer_sync_scan_data(
-        &self.options,
-        &self.resolver,
-        &self.cache.module_id_to_idx,
-        &mut output,
-      )
-      .await?;
+      defer_sync_scan_data(&self.options, &self.cache.module_id_to_idx, &mut output).await?;
       if is_incremental {
         self.cache.set_snapshot(output.make_copy());
       }
@@ -232,7 +226,7 @@ impl Bundle {
     }
 
     self.cache.merge(output)?;
-    self.cache.update_defer_sync_data(&self.options, &self.resolver).await?;
+    self.cache.update_defer_sync_data(&self.options).await?;
     Ok(self.cache.create_output())
   }
 

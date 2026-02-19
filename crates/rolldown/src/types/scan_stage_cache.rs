@@ -10,7 +10,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use crate::{
-  SharedOptions, SharedResolver,
+  SharedOptions,
   module_loader::{deferred_scan_data::defer_sync_scan_data, module_loader::VisitState},
   stages::scan_stage::{NormalizedScanStageOutput, ScanStageOutput},
 };
@@ -46,14 +46,10 @@ impl ScanStageCache {
     self.snapshot.take()
   }
 
-  pub async fn update_defer_sync_data(
-    &mut self,
-    options: &SharedOptions,
-    resolver: &SharedResolver,
-  ) -> BuildResult<()> {
+  pub async fn update_defer_sync_data(&mut self, options: &SharedOptions) -> BuildResult<()> {
     let snapshot = self.take_snapshot();
     if let Some(mut snapshot) = snapshot {
-      defer_sync_scan_data(options, resolver, &self.module_id_to_idx, &mut snapshot).await?;
+      defer_sync_scan_data(options, &self.module_id_to_idx, &mut snapshot).await?;
       self.set_snapshot(snapshot);
     }
     Ok(())

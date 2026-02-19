@@ -1,4 +1,3 @@
-use rolldown_common::ImportKind;
 use rolldown_common::ModuleId;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_error::BuildResult;
@@ -6,11 +5,10 @@ use rustc_hash::FxHashMap;
 
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 use crate::module_loader::module_loader::VisitState;
-use crate::{SharedOptions, SharedResolver, stages::scan_stage::NormalizedScanStageOutput};
+use crate::{SharedOptions, stages::scan_stage::NormalizedScanStageOutput};
 
 pub async fn defer_sync_scan_data(
   options: &SharedOptions,
-  resolver: &SharedResolver,
   module_id_to_idx: &FxHashMap<ModuleId, VisitState>,
   scan_stage_output: &mut NormalizedScanStageOutput,
 ) -> BuildResult<()> {
@@ -36,22 +34,11 @@ pub async fn defer_sync_scan_data(
       Some(HookSideEffects::False) => DeterminedSideEffects::UserDefined(false),
       Some(HookSideEffects::NoTreeshake) => DeterminedSideEffects::NoTreeshake,
       _ => {
-        // for Some(HookSideEffects::True) and None, we need to re resolve module source_id,
-        // get package_json and re analyze the side effects
-        let resolved_id = resolver
-          // other params except `source_id` is not important, since we need `package_json`
-          // from `resolved_id` to re analyze the side effects
-          .resolve(
-            None,
-            source_id.as_str(),
-            ImportKind::Import,
-            scan_stage_output.user_defined_entry_modules.contains(&module_idx),
-          )
-          .expect("Should have resolved id")
-          .into();
+        // for Some(HookSideEffects::True) and None,
+        // we need to re analyze the side effects
         normalize_side_effects(
           options,
-          &resolved_id,
+          &normal.originative_resolved_id,
           Some(&normal.stmt_infos),
           Some(&normal.module_type),
           data.side_effects,

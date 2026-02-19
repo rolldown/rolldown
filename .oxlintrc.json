@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["import", "jsdoc", "unicorn", "typescript", "oxc"],
+  "jsPlugins": ["./scripts/lint/index.ts"],
   "ignorePatterns": [
     "crates/**",
     "packages/rollup-tests/**",
@@ -67,6 +68,12 @@
             "allow": ["warn", "error", "debug", "info"]
           }
         ]
+      }
+    },
+    {
+      "files": ["**/packages/rolldown/tests/fixtures/context/default-value/_config.ts"],
+      "rules": {
+        "rolldown-custom/ban-expect-assertions": "error"
       }
     }
   ]

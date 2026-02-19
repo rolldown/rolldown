@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@oxc-node/cli": "catalog:",
+    "@oxlint/plugins": "^1.48.0",
     "acorn": "catalog:",
     "astring": "catalog:",
     "diff": "catalog:",

@@ -91,10 +91,17 @@ export function parseCliArguments(): NormalizedCliOptions & {
       let type = originalInfo.type;
       if (type === 'string' && typeof option.value !== 'string') {
         let opt = option as { name: string };
+        // Check if this option requires a value
+        let config = Object.getOwnPropertyDescriptor(alias, opt.name)?.value as OptionConfig;
+        if (config?.requireValue) {
+          logger.error(
+            `Option \`--${camelCaseToKebabCase(opt.name)}\` requires a value but none was provided.`,
+          );
+          process.exit(1);
+        }
         // We should use the default value.
-        let defaultValue = Object.getOwnPropertyDescriptor(alias, opt.name)?.value as OptionConfig;
         Object.defineProperty(values, opt.name, {
-          value: defaultValue.default ?? '',
+          value: config?.default ?? '',
           enumerable: true,
           configurable: true,
           writable: true,

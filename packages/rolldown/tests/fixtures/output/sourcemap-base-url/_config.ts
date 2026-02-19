@@ -4,7 +4,6 @@ import { expect } from 'vitest';
 
 // TODO It is much better if defineTest can be an array of testsConfigs. Thus we can reuse same input for multiple tests.
 export default defineTest({
-  sequential: true,
   config: {
     input: ['main.js'],
     output: {

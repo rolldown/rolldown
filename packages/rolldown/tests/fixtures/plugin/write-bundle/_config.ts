@@ -41,7 +41,6 @@ export default defineTest({
       {
         name: 'test-plugin-2',
         writeBundle: {
-          sequential: true,
           async handler() {
             calls.push('test-plugin-2');
           },

@@ -37,7 +37,6 @@ const nestedPlugin: RolldownPluginOption = [
 ];
 
 export default defineTest({
-  sequential: true,
   config: {
     // Without this override, the transform function will be called 9 times
     plugins: [

@@ -4,7 +4,6 @@ import { assert, expect, vi } from 'vitest';
 const fn = vi.fn();
 
 export default defineTest({
-  sequential: true,
   config: {
     output: {
       banner(chunk) {

@@ -5,7 +5,6 @@ const fn = vi.fn();
 import { getOutputChunkNames } from 'rolldown-tests/utils';
 
 export default defineTest({
-  sequential: true,
   config: {
     input: ['main.js', 'entry.js'],
     plugins: [

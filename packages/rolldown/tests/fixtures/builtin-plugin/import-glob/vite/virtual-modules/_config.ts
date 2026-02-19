@@ -6,7 +6,6 @@ import { expect } from 'vitest';
 const root = path.join(path.dirname(path.resolve(import.meta.dirname)), 'fixtures/a');
 
 export default defineTest({
-  sequential: true,
   config: {
     input: './index.ts',
     output: {

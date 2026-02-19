@@ -21,11 +21,6 @@ export interface TestConfig<
 > {
   skip?: boolean;
   retry?: number;
-  /**
-   * Mark this test to run sequentially instead of concurrently.
-   * Use this for tests that have shared state (e.g., module-level vi.fn()).
-   */
-  sequential?: boolean;
   config?: RolldownOptions & { output?: OutputOpts };
   beforeTest?: () => Promise<void> | void;
   afterTest?: (output: OutputOptsToOutput<OutputOpts>) => Promise<void> | void;

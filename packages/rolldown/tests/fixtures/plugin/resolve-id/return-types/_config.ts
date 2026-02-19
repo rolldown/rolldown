@@ -12,7 +12,6 @@ const returnString = vi.fn();
 const returnObjId = vi.fn();
 
 export default defineTest({
-  sequential: true,
   config: {
     input: entry,
     plugins: [

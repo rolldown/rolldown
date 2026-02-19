@@ -8,7 +8,6 @@ const emittedChunkPreliminaryFilenames: string[] = [],
   emittedChunkFilenames: string[] = [];
 
 export default defineTest({
-  sequential: true,
   config: {
     output: {
       entryFileNames: '[name].[hash].js',

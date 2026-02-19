@@ -6,7 +6,6 @@ import { viteImportGlobPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
-  sequential: true,
   config: {
     plugins: [
       viteImportGlobPlugin(),

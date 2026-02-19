@@ -4,7 +4,6 @@ import { SourceMapConsumer } from 'source-map';
 import { expect } from 'vitest';
 
 export default defineTest({
-  sequential: true,
   config: {
     output: {
       sourcemap: 'inline',

@@ -4,7 +4,6 @@ import { globSync } from 'glob';
 import path from 'node:path';
 
 export default defineTest({
-  sequential: true,
   config: {
     input: ['src/main/index.js', 'src/bar/bar.js', 'src/foo/foo.js'],
     output: {

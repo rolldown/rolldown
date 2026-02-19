@@ -4,7 +4,6 @@ import { expect, vi } from 'vitest';
 let names: string[] = [];
 let fn = vi.fn(() => {});
 export default defineTest({
-  sequential: true,
   config: {
     input: ['./main.js'],
     plugins: [

@@ -4,7 +4,6 @@ import { isolatedDeclarationPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
-  sequential: true,
   config: {
     input: 'main.ts',
     plugins: [

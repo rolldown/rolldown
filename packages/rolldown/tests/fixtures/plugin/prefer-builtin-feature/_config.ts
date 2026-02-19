@@ -4,7 +4,6 @@ import { expect } from 'vitest';
 
 let warnings: string[] = [];
 export default defineTest({
-  sequential: true,
   config: {
     plugins: [
       {

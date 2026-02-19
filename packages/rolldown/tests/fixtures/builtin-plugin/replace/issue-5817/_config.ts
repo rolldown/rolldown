@@ -3,7 +3,6 @@ import { replacePlugin } from 'rolldown/plugins';
 import { expect } from 'vitest';
 
 export default defineTest({
-  sequential: true,
   config: {
     plugins: [
       replacePlugin({

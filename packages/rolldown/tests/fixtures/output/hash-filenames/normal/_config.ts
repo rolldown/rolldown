@@ -7,7 +7,6 @@ import { expect } from 'vitest';
 const renderChunks: RenderedChunk[] = [];
 
 export default defineTest({
-  sequential: true,
   config: {
     input: ['main.js', 'entry.js'],
     output: {

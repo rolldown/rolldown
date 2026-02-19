@@ -2,7 +2,6 @@ import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 export default defineTest({
-  sequential: true,
   retry: 3, // FIXME: this test is flaky (https://github.com/rolldown/rolldown/issues/6737)
   config: {
     external: ['d3', 'd4'],

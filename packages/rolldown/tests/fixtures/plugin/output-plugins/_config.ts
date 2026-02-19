@@ -7,7 +7,6 @@ const renderStartFn = vi.fn();
 const onLogFn = vi.fn();
 
 export default defineTest({
-  sequential: true,
   config: {
     output: {
       plugins: [

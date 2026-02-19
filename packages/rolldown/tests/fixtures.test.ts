@@ -11,8 +11,6 @@ function main() {
     eager: true,
   });
   for (const [testConfigPath, testConfig] of Object.entries(testConfigPaths)) {
-    if (testConfig.sequential) continue;
-
     const dirPath = path.dirname(testConfigPath);
     const testName = dirPath.replace('./fixtures/', '');
 

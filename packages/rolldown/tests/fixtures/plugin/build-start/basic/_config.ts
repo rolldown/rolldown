@@ -5,7 +5,6 @@ const buildStartFn = vi.fn();
 const buildStartFn2 = vi.fn();
 
 export default defineTest({
-  sequential: true,
   config: {
     plugins: [
       {

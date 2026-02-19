@@ -10,7 +10,6 @@ export function cleanUrl(url: string): string {
 }
 
 export default defineTest({
-  sequential: true,
   config: {
     plugins: [
       {

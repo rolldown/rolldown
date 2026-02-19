@@ -7,7 +7,6 @@ const entry = path.join(__dirname, './main.js');
 const resolveDynamicImport = vi.fn();
 
 export default defineTest({
-  sequential: true,
   config: {
     input: entry,
     plugins: [

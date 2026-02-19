@@ -4,7 +4,6 @@ import { viteManifestPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
-  sequential: true,
   config: {
     output: {
       chunkFileNames: '[name].js',

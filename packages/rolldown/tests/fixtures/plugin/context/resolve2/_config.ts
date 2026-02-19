@@ -5,7 +5,6 @@ const fnA = vi.fn();
 const fnB = vi.fn();
 
 export default defineTest({
-  sequential: true,
   config: {
     plugins: [
       {

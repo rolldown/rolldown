@@ -5,7 +5,6 @@ const postBanner = '#!/usr/bin/env bun\n/* version 1.0.0 */';
 const onLogFn = vi.fn();
 
 export default defineTest({
-  sequential: true,
   config: {
     output: {
       postBanner,

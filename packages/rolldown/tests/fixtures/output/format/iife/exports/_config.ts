@@ -5,7 +5,6 @@ import { expect } from 'vitest';
 const logs: Array<{ level: LogLevel; log: RollupLog }> = [];
 
 export default defineTest({
-  sequential: true,
   config: {
     external: /node:path/,
     output: {

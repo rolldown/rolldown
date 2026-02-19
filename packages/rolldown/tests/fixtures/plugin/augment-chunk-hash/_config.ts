@@ -6,7 +6,6 @@ import { expect, vi } from 'vitest';
 const fn = vi.fn();
 
 export default defineTest({
-  sequential: true,
   config: {
     input: ['main.js', 'entry.js'],
     output: {

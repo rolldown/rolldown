@@ -9,7 +9,6 @@ const foo = path.join(__dirname, './foo.js');
 const renderChunkFn = vi.fn();
 
 export default defineTest({
-  sequential: true,
   config: {
     input: entry,
     plugins: [

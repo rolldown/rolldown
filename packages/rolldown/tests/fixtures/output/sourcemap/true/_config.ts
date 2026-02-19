@@ -3,7 +3,6 @@ import { getOutputFileNames } from 'rolldown-tests/utils';
 import { expect } from 'vitest';
 
 export default defineTest({
-  sequential: true,
   config: {
     input: ['main.js'],
     output: {

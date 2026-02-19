@@ -133,14 +133,11 @@ impl BundlingTask {
       .map(|(p, event)| (p.to_string_lossy().to_string(), *event))
       .collect::<FxIndexMap<_, _>>();
 
-    // Build ClientHmrInput for each client
-    // Store client sessions to keep data alive during HMR computation
-    let client_sessions: Vec<_> = self.dev_context.clients.iter().collect();
-
+    let client_sessions = self.dev_context.clients.lock().await;
     let client_inputs: Vec<ClientHmrInput> = client_sessions
       .iter()
-      .map(|client| ClientHmrInput {
-        client_id: client.key(),
+      .map(|(client_key, client)| ClientHmrInput {
+        client_id: client_key,
         executed_modules: &client.executed_modules,
       })
       .collect();

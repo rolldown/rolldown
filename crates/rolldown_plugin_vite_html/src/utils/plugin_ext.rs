@@ -324,7 +324,7 @@ impl ViteHtmlPlugin {
             .get::<PublicAssetUrlCache>()
             .ok_or_else(|| anyhow::anyhow!("PublicAssetUrlCache missing"))?;
 
-          let filename = cache.0.get(hash).unwrap();
+          let filename = cache.0.get(hash).unwrap().to_owned();
           let uri =
             self.to_output_file_path(&filename, assets_base, true, relative_url_path).await?;
 

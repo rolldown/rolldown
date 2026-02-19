@@ -234,7 +234,7 @@ impl IntegrationTest {
       // Run initial build (step 0)
       build_results_by_steps.lock().unwrap().push(vec![]);
       dev_engine.run().await.unwrap();
-      dev_engine.create_client_for_testing();
+      dev_engine.create_client_for_testing().await;
 
       // Process HMR steps
       for hmr_edit_files in hmr_steps {

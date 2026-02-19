@@ -8,7 +8,8 @@ mod watcher_event_handler;
 
 use std::sync::Arc;
 
-use rolldown_utils::dashmap::FxDashMap;
+use rustc_hash::FxHashMap;
+use tokio::sync::Mutex;
 pub use {
   crate::{
     dev_context::BundlingFuture,
@@ -23,4 +24,6 @@ pub use {
 
 use crate::types::client_session::ClientSession;
 
-pub type SharedClients = Arc<FxDashMap<String, ClientSession>>;
+// Multiple clients are not accessed from multiple threads simultaneously
+// so we use a Mutex<FxHashMap> instead of a DashMap
+pub type SharedClients = Arc<Mutex<FxHashMap<String, ClientSession>>>;

@@ -8,3 +8,42 @@ disallowed-methods = [
   { path = "std::collections::HashMap::new", reason = "prefer FxHashMap", replacement = "rustc_hash::FxHashMap::default" },
   { path = "std::collections::HashSet::new", reason = "prefer FxHashSet", replacement = "rustc_hash::FxHashSet::default" },
 ]
+
+### await-holding-invalid-types
+## we can remove these if https://github.com/xacrimon/dashmap/issues/348 lands
+
+[[await-holding-invalid-types]]
+path = "dashmap::mapref::one::Ref"
+reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
+
+[[await-holding-invalid-types]]
+path = "dashmap::mapref::one::RefMut"
+reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
+
+[[await-holding-invalid-types]]
+path = "dashmap::mapref::one::MappedRef"
+reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
+
+[[await-holding-invalid-types]]
+path = "dashmap::mapref::entry::Entry"
+reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
+
+[[await-holding-invalid-types]]
+path = "dashmap::mapref::multiple::RefMulti"
+reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
+
+[[await-holding-invalid-types]]
+path = "dashmap::mapref::multiple::RefMutMulti"
+reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
+
+[[await-holding-invalid-types]]
+path = "dashmap::iter::Iter"
+reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
+
+[[await-holding-invalid-types]]
+path = "dashmap::iter::IterMut"
+reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
+
+[[await-holding-invalid-types]]
+path = "dashmap::iter::OwningIter"
+reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"

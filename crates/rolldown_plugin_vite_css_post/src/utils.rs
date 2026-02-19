@@ -118,7 +118,7 @@ impl ViteCSSPostPlugin {
           continue;
         }
 
-        let Some(style) = css_styles.inner.get(&id) else {
+        let Some(style) = css_styles.inner.get(&id).map(|s| s.to_owned()) else {
           return Err(anyhow::anyhow!("CSS content for  '{id}' was not found"));
         };
 
@@ -130,7 +130,7 @@ impl ViteCSSPostPlugin {
         let content = self
           .resolve_asset_urls_in_css(
             ctx,
-            style.as_str(),
+            &style,
             &css_asset_name,
             &ctx.args.options.asset_filenames,
           )

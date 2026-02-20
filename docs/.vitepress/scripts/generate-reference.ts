@@ -45,9 +45,9 @@ async function runTypedoc(entryPoints: string[]): Promise<void> {
     plugin: [
       'typedoc-plugin-markdown',
       'typedoc-vitepress-theme',
+      path.join(import.meta.dirname, 'custom-theme-plugin.ts'),
       'typedoc-plugin-merge-modules',
       path.join(import.meta.dirname, 'extract-options-plugin.ts'),
-      path.join(import.meta.dirname, 'custom-theme-plugin.ts'),
     ],
     theme: 'customTheme',
     out: './reference',

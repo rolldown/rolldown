@@ -1,13 +1,43 @@
 // Reference: https://github.com/typedoc2md/typedoc-plugin-markdown/blob/typedoc-plugin-markdown%404.9.0/packages/typedoc-plugin-markdown/internal-docs/custom-theme.md
 
-import { ReflectionKind, type Application, type Reflection } from 'typedoc';
+import fs from 'node:fs';
+import path from 'node:path';
+import { Converter, ReflectionKind, type Application, type Reflection } from 'typedoc';
 import {
   type MarkdownPageEvent,
   MarkdownTheme,
   MarkdownThemeContext,
 } from 'typedoc-plugin-markdown';
 
+const symbolSubpathMap = new Map<number, string>();
+
 export function load(app: Application) {
+  const root = path.resolve(import.meta.dirname, '../../..');
+  const pkgDir = path.join(root, 'packages/rolldown');
+
+  const pkgJson: { exports: Record<string, { dev?: string }> } = JSON.parse(
+    fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf-8'),
+  );
+  const sourceToSubpath = Object.fromEntries(
+    Object.entries(pkgJson.exports)
+      .filter(([key, entry]) => entry.dev && key !== '.')
+      .map(([key, entry]) => [path.resolve(pkgDir, entry.dev!), key]),
+  );
+
+  // Capture module membership before merge plugin runs
+  app.converter.on(Converter.EVENT_RESOLVE_BEGIN, (context) => {
+    for (const mod of context.project.children ?? []) {
+      if (!mod.kindOf(ReflectionKind.Module)) continue;
+      const sourcePath = mod.sources?.[0]?.fullFileName;
+      if (!sourcePath) continue;
+      const subpath = sourceToSubpath[path.resolve(sourcePath)];
+      if (!subpath) continue;
+      for (const child of mod.children ?? []) {
+        symbolSubpathMap.set(child.id, `rolldown/${subpath.slice(2)}`);
+      }
+    }
+  });
+
   app.renderer.defineTheme('customTheme', CustomTheme);
 }
 
@@ -41,6 +71,14 @@ class CustomThemeContext extends MarkdownThemeContext {
       signatureTitle: (model, _options) => {
         const md: string[] = [];
 
+        if (model.parent && model.parent === this.page.model) {
+          // skip properties / methods
+          const subpath = symbolSubpathMap.get(model.parent.id);
+          if (subpath) {
+            md.push(`- **Exported from**: \`${subpath}\``);
+          }
+        }
+
         const params = (model.parameters || [])
           .map((param: any) => {
             const optional = param.flags?.isOptional ? '?' : '';
@@ -62,6 +100,15 @@ class CustomThemeContext extends MarkdownThemeContext {
       declarationTitle: (model) => {
         // https://github.com/typedoc2md/typedoc-plugin-markdown/blob/typedoc-plugin-markdown%404.9.0/packages/typedoc-plugin-markdown/src/theme/context/partials/member.declarationTitle.ts#L6
         const md: string[] = [];
+
+        if (model === this.page.model) {
+          // skip properties
+          const subpath = symbolSubpathMap.get(model.id);
+          if (subpath) {
+            md.push(`- **Exported from**: \`${subpath}\``);
+          }
+        }
+
         const declarationType = this.helpers.getDeclarationType(model);
 
         // Format type

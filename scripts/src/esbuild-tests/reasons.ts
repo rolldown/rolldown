@@ -222,4 +222,27 @@ export const ignoreReasons: Record<string, string> = {
 
   'default/line_limit_minified': 'irrelevant: lineLimit option will not be supported',
   'default/line_limit_not_minified': 'irrelevant: lineLimit option will not be supported',
+
+  'dce/tree_shaking_js_with_associated_css':
+    'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
+  'dce/tree_shaking_js_with_associated_css_export_star_side_effects_false':
+    'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
+  'dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js':
+    'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
+  'dce/tree_shaking_js_with_associated_css_re_export_side_effects_false':
+    'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
+  'dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js':
+    'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
+  'dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false':
+    'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
+  'dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js':
+    'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
+  'default/entry_names_chunk_names_ext_placeholder':
+    'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
+  'default/legal_comments_modify_indent':
+    'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
+  'default/metafile_no_bundle':
+    'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
+  'loader/loader_data_url_text_css':
+    'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
 };

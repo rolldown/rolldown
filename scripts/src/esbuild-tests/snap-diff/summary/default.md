@@ -58,7 +58,6 @@
 ## [dynamic_import_with_expression_cjs](../../../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_expression_cjs)
 ## [dynamic_import_with_template_iife](../../../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_template_iife)
 ## [empty_export_clause_bundle_as_common_js_issue910](../../../../../crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910)
-## [entry_names_chunk_names_ext_placeholder](../../../../../crates/rolldown/tests/esbuild/default/entry_names_chunk_names_ext_placeholder)
 ## [es6_from_common_js](../../../../../crates/rolldown/tests/esbuild/default/es6_from_common_js)
 ## [export_chain](../../../../../crates/rolldown/tests/esbuild/default/export_chain)
 ## [export_forms_common_js](../../../../../crates/rolldown/tests/esbuild/default/export_forms_common_js)
@@ -112,7 +111,6 @@
 ## [keep_names_class_static_name](../../../../../crates/rolldown/tests/esbuild/default/keep_names_class_static_name)
 ## [keep_names_tree_shaking](../../../../../crates/rolldown/tests/esbuild/default/keep_names_tree_shaking)
 ## [legal_comments_merge_duplicates_issue4139](../../../../../crates/rolldown/tests/esbuild/default/legal_comments_merge_duplicates_issue4139)
-## [legal_comments_modify_indent](../../../../../crates/rolldown/tests/esbuild/default/legal_comments_modify_indent)
 ## [mangle_no_quoted_props](../../../../../crates/rolldown/tests/esbuild/default/mangle_no_quoted_props)
 ## [mangle_no_quoted_props_minify_syntax](../../../../../crates/rolldown/tests/esbuild/default/mangle_no_quoted_props_minify_syntax)
 ## [mangle_props](../../../../../crates/rolldown/tests/esbuild/default/mangle_props)
@@ -133,7 +131,6 @@
 ## [mangle_quoted_props](../../../../../crates/rolldown/tests/esbuild/default/mangle_quoted_props)
 ## [mangle_quoted_props_minify_syntax](../../../../../crates/rolldown/tests/esbuild/default/mangle_quoted_props_minify_syntax)
 ## [many_entry_points](../../../../../crates/rolldown/tests/esbuild/default/many_entry_points)
-## [metafile_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/metafile_no_bundle)
 ## [minified_bundle_common_js](../../../../../crates/rolldown/tests/esbuild/default/minified_bundle_common_js)
 ## [minified_bundle_ending_with_important_semicolon](../../../../../crates/rolldown/tests/esbuild/default/minified_bundle_ending_with_important_semicolon)
 ## [minified_bundle_es6](../../../../../crates/rolldown/tests/esbuild/default/minified_bundle_es6)
@@ -230,6 +227,8 @@
 # Ignored Cases
 ## [define_import_meta_es5](../../../../../crates/rolldown/tests/esbuild/default/define_import_meta_es5)
   target: 'es5' is not supported
+## [entry_names_chunk_names_ext_placeholder](../../../../../crates/rolldown/tests/esbuild/default/entry_names_chunk_names_ext_placeholder)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
 ## [entry_names_no_slash_after_dir](../../../../../crates/rolldown/tests/esbuild/default/entry_names_no_slash_after_dir)
   irrelevant: Rolldown does not have [dir] placeholder for `entryFileNames`
 ## [entry_names_non_portable_character](../../../../../crates/rolldown/tests/esbuild/default/entry_names_non_portable_character)
@@ -254,10 +253,14 @@
   due to multi pass transformer arch, `import.meta` injected by JSX transform cannot be replaced by the define plugin (define runs before JSX transform)
 ## [jsx_import_meta_value](../../../../../crates/rolldown/tests/esbuild/default/jsx_import_meta_value)
   due to multi pass transformer arch, `import.meta` injected by JSX transform cannot be replaced by the define plugin (define runs before JSX transform)
+## [legal_comments_modify_indent](../../../../../crates/rolldown/tests/esbuild/default/legal_comments_modify_indent)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
 ## [line_limit_minified](../../../../../crates/rolldown/tests/esbuild/default/line_limit_minified)
   irrelevant: lineLimit option will not be supported
 ## [line_limit_not_minified](../../../../../crates/rolldown/tests/esbuild/default/line_limit_not_minified)
   irrelevant: lineLimit option will not be supported
+## [metafile_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/metafile_no_bundle)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
 ## [package_alias](../../../../../crates/rolldown/tests/esbuild/default/package_alias)
   resolve alias behavior difference
 ## [package_alias_match_longest](../../../../../crates/rolldown/tests/esbuild/default/package_alias_match_longest)

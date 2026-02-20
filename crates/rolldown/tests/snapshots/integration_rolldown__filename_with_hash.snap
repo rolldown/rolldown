@@ -498,39 +498,6 @@ expression: output
 
 - entry-!~{000}~.js => entry-lY98ZT6Q.js
 
-# tests/esbuild/dce/tree_shaking_js_with_associated_css
-
-- test-!~{000}~.js => test-sX8nGcU9.js
-- test.css
-
-# tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false
-
-- test-!~{000}~.js => test-yeOFFMpt.js
-- test.css
-
-# tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js
-
-- test-!~{000}~.js => test-yeOFFMpt.js
-- test.css
-
-# tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false
-
-- test-!~{000}~.js => test-yeOFFMpt.js
-- test.css
-
-# tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js
-
-- test-!~{000}~.js => test-yeOFFMpt.js
-- test.css
-
-# tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false
-
-- test-!~{000}~.js => test-Dyjr570a.js
-
-# tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js
-
-- test-!~{000}~.js => test-Dyjr570a.js
-
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field
 
 - entry-!~{000}~.js => entry-iLfiLH_u.js
@@ -730,14 +697,6 @@ expression: output
 # tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910
 
 - entry-!~{000}~.js => entry-DPAZSZVd.js
-
-# tests/esbuild/default/entry_names_chunk_names_ext_placeholder
-
-- entries_entry1-!~{000}~.js => entries_entry1-BrOZww3p.js
-- entries_entry2-!~{001}~.js => entries_entry2-C7KJbxrn.js
-- shared-!~{002}~.js => shared-Ds_P6XZ5.js
-- entries_entry1.css
-- entries_entry2.css
 
 # tests/esbuild/default/es6_from_common_js
 
@@ -1077,108 +1036,9 @@ expression: output
 
 - entry-!~{000}~.js => entry-BypZESSg.js
 
-# tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
-
-- entry-!~{000}~.js => entry-BTd9lvOr.js
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry2.css
-
-# tests/esbuild/default/legal_comments_avoid_slash_tag_external
-
-- entry-!~{000}~.js => entry-BTd9lvOr.js
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry2.css
-
-# tests/esbuild/default/legal_comments_avoid_slash_tag_inline
-
-- entry-!~{000}~.js => entry-BTd9lvOr.js
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry2.css
-
-# tests/esbuild/default/legal_comments_end_of_file
-
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-hLKeUIUi.js
-- entry2.css
-
-# tests/esbuild/default/legal_comments_escape_slash_script_and_style_end_of_file
-
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-LU-wjSii.js
-- entry2.css
-
-# tests/esbuild/default/legal_comments_escape_slash_script_and_style_external
-
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-LU-wjSii.js
-- entry2.css
-
-# tests/esbuild/default/legal_comments_external
-
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-hLKeUIUi.js
-- entry2.css
-
-# tests/esbuild/default/legal_comments_inline
-
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-hLKeUIUi.js
-- entry2.css
-
-# tests/esbuild/default/legal_comments_linked
-
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-hLKeUIUi.js
-- entry2.css
-
-# tests/esbuild/default/legal_comments_many_end_of_file
-
-- entry-!~{000}~.js => entry-Czd54jDv.js
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry2.css
-
-# tests/esbuild/default/legal_comments_many_linked
-
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-pSvoMqhS.js
-- entry2.css
-
 # tests/esbuild/default/legal_comments_merge_duplicates_issue4139
 
 - entry_js-!~{000}~.js => entry_js-GP_-VWxw.js
-
-# tests/esbuild/default/legal_comments_modify_indent
-
-- entry-!~{000}~.js => entry-B161_kiz.js
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry2.css
-
-# tests/esbuild/default/legal_comments_no_escape_slash_script_end_of_file
-
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-LU-wjSii.js
-- entry2.css
-
-# tests/esbuild/default/legal_comments_no_escape_slash_style_end_of_file
-
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-LU-wjSii.js
-- entry2.css
-
-# tests/esbuild/default/legal_comments_none
-
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-hLKeUIUi.js
-- entry2.css
-
-# tests/esbuild/default/line_limit_not_minified
-
-- script-!~{000}~.js => script-BvhlB48x.js
-- style-!~{001}~.js => style--PNW2bZZ.js
-- x-!~{002}~.js => x-u4pDCUSC.js
-- assets/x-3IosnrVQ.file
-- assets/x-DYoL-ZzY.copy
-- style.css
 
 # tests/esbuild/default/mangle_no_quoted_props
 
@@ -1324,32 +1184,6 @@ expression: output
 # tests/esbuild/default/metafile_import_with_type_json
 
 - entry-!~{000}~.js => entry-hKBp-jZT.js
-
-# tests/esbuild/default/metafile_no_bundle
-
-- entry-!~{000}~.js => entry-C13dRJIN.js
-- entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry2.css
-
-# tests/esbuild/default/metafile_various_cases
-
-- entry-!~{000}~.js => entry-B9KJXeI9.js
-- entry-!~{001}~.js => entry-C8lVrsYF.js
-- copy-!~{002}~.js => copy-DDA5F9k1.js
-- dynamic-!~{005}~.js => dynamic-BHpZ7YgO.js
-- assets/file-C2vEMN7j.file
-- entry2.css
-
-# tests/esbuild/default/metafile_very_long_external_paths
-
-- bytesInOutput should be at least 99 (1)-!~{000}~.js => bytesInOutput should be at least 99 (1)-DclVTQmJ.js
-- bytesInOutput should be at least 99 (2)-!~{002}~.js => bytesInOutput should be at least 99 (2)-C1dmrv4X.js
-- bytesInOutput should be at least 99 (3)-!~{003}~.js => bytesInOutput should be at least 99 (3)-BXK8AoIB.js
-- bytesInOutput should be at least 99-!~{004}~.js => bytesInOutput should be at least 99-DkNbQH6H.js
-- 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-!~{006}~.js => 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-BT4URTuB.js
-- assets/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-Dnygiwvn.file
-- assets/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-BDtJkR0u.file
-- bytesInOutput should be at least 99.css
 
 # tests/esbuild/default/minified_bundle_common_js
 
@@ -2256,12 +2090,6 @@ expression: output
 
 - entry-!~{000}~.js => entry-U-T_4fGO.js
 
-# tests/esbuild/loader/empty_loader_css
-
-- entry-!~{000}~.js => entry-CMXZovLt.js
-- entry.css
-- entry.css.map
-
 # tests/esbuild/loader/empty_loader_js
 
 - entry-!~{000}~.js => entry-BRN7v5en.js
@@ -2302,12 +2130,6 @@ expression: output
 # tests/esbuild/loader/loader_bundle_with_type_json_only_default_export
 
 - entry-!~{000}~.js => entry-CMXZovLt.js
-
-# tests/esbuild/loader/loader_copy_with_bundle_from_css
-
-- src_entry-!~{000}~.js => src_entry-CBhomylh.js
-- assets/some-C_XH274v.file
-- src_entry.css
 
 # tests/esbuild/loader/loader_copy_with_format
 
@@ -2351,16 +2173,6 @@ expression: output
 
 - entry-!~{000}~.js => entry-BJ6IJEqD.js
 
-# tests/esbuild/loader/loader_data_url_text_css
-
-- entry-!~{000}~.js => entry-CMXZovLt.js
-- entry.css
-
-# tests/esbuild/loader/loader_data_url_text_css_cannot_import
-
-- entry-!~{000}~.js => entry-CMXZovLt.js
-- entry.css
-
 # tests/esbuild/loader/loader_data_url_text_java_script
 
 - entry-!~{000}~.js => entry-BlqvTVHi.js
@@ -2400,16 +2212,6 @@ expression: output
 - assets/test-1P-S1VxP.txt
 - assets/test-BknXfcJ_.txt
 
-# tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
-
-- entries_entry-!~{000}~.js => entries_entry-DQU8DgDM.js
-- entries_other_entry-!~{001}~.js => entries_other_entry-CZZwsQqx.js
-- common-!~{002}~.js => common-DW_Sz7VT.js
-- assets/common-DRmw-xSi.png
-- common-CYCQ3zN8.css
-- entries_entry.css
-- entries_other_entry.css
-
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_js
 
 - entries_entry-!~{000}~.js => entries_entry-C96ef8TY.js
@@ -2417,44 +2219,20 @@ expression: output
 - common-!~{002}~.js => common-DIxq4YAk.js
 - assets/common-DRmw-xSi.png
 
-# tests/esbuild/loader/loader_file_public_path_asset_names_css
-
-- entries/entry-!~{000}~.js => entries/entry-DpoBBbNJ.js
-- assets/image-7R51b9Yh.png
-- entries/entry.css
-
 # tests/esbuild/loader/loader_file_public_path_asset_names_js
 
 - entries/entry-!~{000}~.js => entries/entry-JftZY87w.js
 - assets/image-7R51b9Yh.png
-
-# tests/esbuild/loader/loader_file_public_path_css
-
-- entries/entry-!~{000}~.js => entries/entry-DpoBBbNJ.js
-- assets/image-7R51b9Yh.png
-- entries/entry.css
 
 # tests/esbuild/loader/loader_file_public_path_js
 
 - entries/entry-!~{000}~.js => entries/entry-JftZY87w.js
 - assets/image-7R51b9Yh.png
 
-# tests/esbuild/loader/loader_file_relative_path_asset_names_css
-
-- entries/entry-!~{000}~.js => entries/entry-DpoBBbNJ.js
-- assets/image-7R51b9Yh.png
-- entries/entry.css
-
 # tests/esbuild/loader/loader_file_relative_path_asset_names_js
 
 - entries/entry-!~{000}~.js => entries/entry-JftZY87w.js
 - assets/image-7R51b9Yh.png
-
-# tests/esbuild/loader/loader_file_relative_path_css
-
-- entries/entry-!~{000}~.js => entries/entry-DG22QWWP.js
-- entries/entry.css
-- image-DzFdYDYb.png
 
 # tests/esbuild/loader/loader_file_relative_path_js
 
@@ -4363,19 +4141,9 @@ expression: output
 
 - main-!~{000}~.js => main-BFyeiS8B.js
 
-# tests/rolldown/function/file/css
-
-- out.css => out.css
-- dist/out.css
-
 # tests/rolldown/function/file/js
 
 - out.js => out.js
-
-# tests/rolldown/function/file/js_css
-
-- out.css => out.css
-- dist/out.css
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 
@@ -4868,11 +4636,6 @@ expression: output
 # tests/rolldown/issues/376
 
 - main-!~{000}~.js => main-B7HeseNe.js
-
-# tests/rolldown/issues/3821
-
-- main-!~{000}~.js => main-Fv4vYntb.js
-- main.css
 
 # tests/rolldown/issues/4006
 
@@ -5649,12 +5412,6 @@ expression: output
 
 - entry-!~{000}~.js => entry-CjdEvG-s.js
 
-# tests/rolldown/sourcemap/css_sourcemap_reference
-
-- main-!~{000}~.js => main-Fv4vYntb.js
-- main.css
-- main.css.map
-
 # tests/rolldown/sourcemap/debug_ids
 
 - assets/main.js => assets/main.js
@@ -5959,27 +5716,6 @@ expression: output
 # tests/rolldown/topics/cjs_module_lexer_compat/import_and_reexport
 
 - main-!~{000}~.js => main-CebfAfqX.js
-
-# tests/rolldown/topics/css/align_vite
-
-- main-!~{000}~.js => main-X654ryY_.js
-- common-imported-by-js-!~{001}~.js => common-imported-by-js-DsZiLHqL.js
-- entry-a-!~{003}~.js => entry-a-Dbwzc532.js
-- entry-b-!~{005}~.js => entry-b-Des6Dhm7.js
-- common-imported-by-js-Be4eWNLx.css
-- entry-a-BjuMQh5H.css
-- entry-b-Dp4e6u9E.css
-
-# tests/rolldown/topics/css/basic
-
-- main-!~{000}~.js => main-Css_tiXh.js
-- assets/test-DE53Xtiu.png
-- main.css
-
-# tests/rolldown/topics/css/css_entries
-
-- main-!~{000}~.js => main-Fv4vYntb.js
-- main.css
 
 # tests/rolldown/topics/deconflict/basic
 

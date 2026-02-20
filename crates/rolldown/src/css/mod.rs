@@ -10,6 +10,7 @@ use rolldown_common::{
   CssRenderer, CssView, ImportKind, ImportRecordIdx, ModuleIdx, RawImportRecord, SymbolRef,
 };
 
+#[expect(dead_code)]
 pub fn create_css_view(
   _id: &str,
   source: &ArcStr,

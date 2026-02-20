@@ -18,7 +18,6 @@ use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSe
 
 use crate::{
   asset::create_asset_view,
-  css::create_css_view,
   ecmascript::ecma_module_view_factory::{CreateEcmaViewReturn, create_ecma_view},
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
   utils::{load_source::load_source, transform_source::transform_source},
@@ -129,12 +128,10 @@ impl ModuleTask {
         (Some(asset_view), None)
       }
       ModuleType::Css => {
-        let css_source: ArcStr = source.try_into_string()?.into();
-        // FIXME: This makes creating `EcmaView` rely on creating `CssView` first, while they should be done in parallel.
-        let (css_view, css_raw_import_records) = create_css_view(&stable_id, &css_source);
-        raw_import_records = css_raw_import_records;
-        source = StrOrBytes::Str(String::new());
-        (None, Some(css_view))
+        Err(anyhow::anyhow!(
+          "Bundling CSS is no longer supported (experimental support has been removed). See https://github.com/rolldown/rolldown/issues/4271 for details."
+        ))?;
+        unreachable!()
       }
       _ => (None, None),
     };

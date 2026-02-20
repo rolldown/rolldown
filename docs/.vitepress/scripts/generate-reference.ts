@@ -55,7 +55,7 @@ async function runTypedoc(entryPoints: string[]): Promise<void> {
     readme: 'none',
     excludeInternal: true,
     excludeExternals: true,
-    externalPattern: ['**/packages/pluginutils/**'],
+    externalPattern: ['**/packages/pluginutils/**', '**/node_modules/**/@oxc-project/types/**'],
 
     hideBreadcrumbs: true,
     flattenOutputFiles: true,

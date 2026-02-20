@@ -324,20 +324,33 @@ impl IntegrationTest {
 
           // Execute output if needed
           let bundler_options = dev_engine.bundler_options().await;
+          let config_name = named_options
+            .config_name
+            .as_deref()
+            .map(Some)
+            .unwrap_or(self.test_meta.config_name.as_deref());
           if self.should_execute_output() {
             Self::execute_output_assets(
               &bundler_options,
               &debug_title,
               &patch_chunks,
-              named_options
-                .config_name
-                .as_deref()
-                .map(Some)
-                .unwrap_or(self.test_meta.config_name.as_deref()),
+              config_name,
+              true,
             );
-          } else if !self.test_meta.skip_syntax_validation {
-            // When not executing output, validate that all JS chunks are syntactically valid
-            Self::validate_output_chunks_syntax(output, &bundler_options);
+          } else {
+            if self.test_meta.write_to_disk {
+              Self::execute_output_assets(
+                &bundler_options,
+                &debug_title,
+                &patch_chunks,
+                config_name,
+                false,
+              );
+            }
+            if !self.test_meta.skip_syntax_validation {
+              // When not executing output, validate that all JS chunks are syntactically valid
+              Self::validate_output_chunks_syntax(output, &bundler_options);
+            }
           }
         }
         Err(errs) => {
@@ -414,20 +427,21 @@ impl IntegrationTest {
             !self.test_meta.expect_error,
             "Expected the bundling to be failed with diagnosable errors, but got success"
           );
+          let config_name = named_options
+            .config_name
+            .as_deref()
+            .map(Some)
+            .unwrap_or(self.test_meta.config_name.as_deref());
           if self.should_execute_output() {
-            Self::execute_output_assets(
-              bundler.options(),
-              &debug_title,
-              &[],
-              named_options
-                .config_name
-                .as_deref()
-                .map(Some)
-                .unwrap_or(self.test_meta.config_name.as_deref()),
-            );
-          } else if !self.test_meta.skip_syntax_validation {
-            // When not executing output, validate that all JS chunks are syntactically valid
-            Self::validate_output_chunks_syntax(output, bundler.options());
+            Self::execute_output_assets(bundler.options(), &debug_title, &[], config_name, true);
+          } else {
+            if self.test_meta.write_to_disk {
+              Self::execute_output_assets(bundler.options(), &debug_title, &[], config_name, false);
+            }
+            if !self.test_meta.skip_syntax_validation {
+              // When not executing output, validate that all JS chunks are syntactically valid
+              Self::validate_output_chunks_syntax(output, bundler.options());
+            }
           }
         }
         Err(errs) => {
@@ -554,6 +568,7 @@ impl IntegrationTest {
     test_title: &str,
     patch_chunks: &[String],
     config_name: Option<&str>,
+    execute_compiled_entries: bool,
   ) {
     let cwd = options.cwd.clone();
     let dist_folder = cwd.join(&options.out_dir);
@@ -597,6 +612,8 @@ impl IntegrationTest {
 
     if test_script.exists() {
       node_command.arg(test_script);
+    } else if !execute_compiled_entries {
+      return;
     } else {
       // make sure to set this: https://github.com/nodejs/node/issues/59374
       node_command.arg("--input-type=module");

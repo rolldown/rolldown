@@ -13,6 +13,9 @@ use rolldown_utils::dashmap::FxDashMap;
 /// The cache stores resolved tsconfig configurations keyed by their file paths.
 /// When transforming multiple files in the same project, tsconfig lookups are
 /// deduplicated, improving performance.
+///
+/// @category Utilities
+/// @experimental
 #[napi]
 pub struct TsconfigCache {
   resolver: Arc<Resolver>,

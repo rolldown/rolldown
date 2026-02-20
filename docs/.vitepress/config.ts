@@ -94,6 +94,10 @@ const importantAPIs: (string | undefined)[] = [
   '/Interface.PluginContext.md',
   '/Variable.VERSION.md',
   '/Function.defineConfig.md',
+  '/Function.minify.md',
+  '/Function.parse.md',
+  '/Function.transform.md',
+  '/Class.Visitor.md',
 ];
 
 function getTypedocSidebar() {

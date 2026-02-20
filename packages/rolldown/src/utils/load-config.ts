@@ -126,6 +126,14 @@ function tryStatSync(file: string): fs.Stats | undefined {
   }
 }
 
+/**
+ * Load config from a file in a way that Rolldown does.
+ *
+ * @param configPath The path to the config file. If empty, it will look for `rolldown.config` with supported extensions in the current working directory.
+ * @returns The loaded config export
+ *
+ * @category Config
+ */
 export async function loadConfig(configPath: string): Promise<ConfigExport> {
   const ext = path.extname((configPath = configPath || (await findConfigFileNameInCwd())));
 

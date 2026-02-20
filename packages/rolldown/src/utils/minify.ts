@@ -3,23 +3,36 @@ import {
   minifySync as originalMinifySync,
   collapseSourcemaps,
   type MinifyOptions as OriginalMinifyOptions,
-  type MinifyResult,
+  type MinifyResult as OriginalMinifyResult,
   type SourceMap,
 } from '../binding.cjs';
 import { bindingifySourcemap } from '../types/sourcemap';
 
-type MinifyOptions = OriginalMinifyOptions & {
+/**
+ * Options for minification.
+ *
+ * @category Utilities
+ */
+export interface MinifyOptions extends OriginalMinifyOptions {
   inputMap?: SourceMap;
-};
+}
+
+/**
+ * The result of minification.
+ *
+ * @category Utilities
+ */
+export interface MinifyResult extends OriginalMinifyResult {}
 
 /**
  * Minify asynchronously.
  *
- * Note: This function can be slower than `minifySync` due to the overhead of spawning a thread.
+ * Note: This function can be slower than {@linkcode minifySync} due to the overhead of spawning a thread.
  *
+ * @category Utilities
  * @experimental
  */
-async function minify(
+export async function minify(
   filename: string,
   sourceText: string,
   options?: MinifyOptions | null,
@@ -38,9 +51,10 @@ async function minify(
 /**
  * Minify synchronously.
  *
+ * @category Utilities
  * @experimental
  */
-function minifySync(
+export function minifySync(
   filename: string,
   sourceText: string,
   options?: MinifyOptions | null,
@@ -55,6 +69,3 @@ function minifySync(
   }
   return result;
 }
-
-export { minify, minifySync };
-export type { MinifyOptions, MinifyResult };

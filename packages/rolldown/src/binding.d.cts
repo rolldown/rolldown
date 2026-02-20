@@ -1715,6 +1715,9 @@ export declare class TraceSubscriberGuard {
  * The cache stores resolved tsconfig configurations keyed by their file paths.
  * When transforming multiple files in the same project, tsconfig lookups are
  * deduplicated, improving performance.
+ *
+ * @category Utilities
+ * @experimental
  */
 export declare class TsconfigCache {
   /** Create a new transform cache with auto tsconfig discovery enabled. */
@@ -2567,7 +2570,11 @@ export interface BindingTsconfig {
   compilerOptions: BindingCompilerOptions
 }
 
-/** TypeScript compiler options for inline tsconfig configuration. */
+/**
+ * TypeScript compiler options for inline tsconfig configuration.
+ *
+ * @category Utilities
+ */
 export interface BindingTsconfigCompilerOptions {
   /** Specifies the JSX factory function to use. */
   jsx?: 'react' | 'react-jsx' | 'react-jsxdev' | 'preserve' | 'react-native'
@@ -2593,7 +2600,11 @@ export interface BindingTsconfigCompilerOptions {
   importsNotUsedAsValues?: 'remove' | 'preserve' | 'error'
 }
 
-/** Raw tsconfig options for inline configuration. */
+/**
+ * Raw tsconfig options for inline configuration.
+ *
+ * @category Utilities
+ */
 export interface BindingTsconfigRawOptions {
   /** TypeScript compiler options. */
   compilerOptions?: BindingTsconfigCompilerOptions

@@ -1,7 +1,35 @@
 import type { RolldownLog } from './log/logging';
 
+/**
+ * @param filters A list of log filters to apply
+ * @returns A function that tests whether a log should be output
+ *
+ * @category Config
+ */
 export type GetLogFilter = (filters: string[]) => (log: RolldownLog) => boolean;
 
+/**
+ * A helper function to generate log filters using the same syntax as the CLI.
+ *
+ * @example
+ * ```ts
+ * import { defineConfig } from 'rolldown';
+ * import { getLogFilter } from 'rolldown/getLogFilter';
+ *
+ * const logFilter = getLogFilter(['code:FOO', 'code:BAR']);
+ *
+ * export default defineConfig({
+ * 	input: 'main.js',
+ * 	onLog(level, log, handler) {
+ * 		if (logFilter(log)) {
+ * 			handler(level, log);
+ * 		}
+ * 	}
+ * });
+ * ```
+ *
+ * @category Config
+ */
 const getLogFilter: GetLogFilter = (filters) => {
   if (filters.length === 0) return () => true;
   const normalizedFilters = filters.map((filter) =>

@@ -54,12 +54,21 @@ async function runTypedoc(entryPoints: string[]): Promise<void> {
     entryPoints,
     readme: 'none',
     excludeInternal: true,
+    excludeExternals: true,
+    externalPattern: ['**/packages/pluginutils/**'],
 
     hideBreadcrumbs: true,
     flattenOutputFiles: true,
     expandObjects: true,
 
-    categoryOrder: ['Programmatic APIs', 'Plugin APIs', '*'],
+    categoryOrder: [
+      'Programmatic APIs',
+      'Plugin APIs',
+      'Config',
+      'Builtin Plugins',
+      'Utilities',
+      '*',
+    ],
 
     docsRoot: './reference',
     sidebar: {

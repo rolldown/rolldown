@@ -101,7 +101,7 @@ impl PreProcessEcmaAst {
     // Step 3: Transform TypeScript and jsx.
     // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
     let is_not_js = !matches!(parsed_type, OxcParseType::Js);
-
+    let mut preserve_jsx = false;
     if is_not_js
       || bundle_options.transform_options.should_transform_js()
       // Run transformer on JS files containing `</script` to handle tagged template literals.
@@ -113,6 +113,9 @@ impl PreProcessEcmaAst {
         let transform_options = bundle_options
           .transform_options
           .options_for_file(is_not_js.then_some(Path::new(resolved_id)), &mut warnings)?;
+        if !transform_options.jsx.jsx_plugin {
+          preserve_jsx = true;
+        }
 
         let scoping = self.recreate_scoping(&mut scoping, program);
         let ret = Transformer::new(allocator, Path::new(stable_id), &transform_options)
@@ -176,7 +179,7 @@ impl PreProcessEcmaAst {
       self.recreate_scoping(&mut None, program)
     });
 
-    Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings })
+    Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings, preserve_jsx })
   }
 
   fn recreate_scoping(&mut self, scoping: &mut Option<Scoping>, program: &Program<'_>) -> Scoping {

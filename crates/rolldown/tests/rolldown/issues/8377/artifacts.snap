@@ -7,8 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region main.jsx
-const main = <Component>Hello, World!</Component>;
+const foo = <div />;
 
 //#endregion
-export { main };
+export { foo };
 ```

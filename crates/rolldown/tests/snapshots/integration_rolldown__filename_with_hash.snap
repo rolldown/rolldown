@@ -5194,6 +5194,10 @@ expression: output
 
 - main-!~{000}~.js => main-8iRAOpBT.js
 
+# tests/rolldown/issues/8216
+
+- main-!~{000}~.js => main-BEIwxpN4.js
+
 # tests/rolldown/issues/8299
 
 - main-!~{000}~.js => main-eeGHUsim.js
@@ -5222,6 +5226,10 @@ expression: output
 - b-!~{005}~.js => b-Tw4qy3nc.js
 - chunk-!~{001}~.js => chunk-BuzPwJy5.js
 - cjs-!~{003}~.js => cjs-IJCXeZRo.js
+
+# tests/rolldown/issues/8377
+
+- main-!~{000}~.js => main-BBnK1pph.js
 
 # tests/rolldown/issues/duplicate_default_export
 

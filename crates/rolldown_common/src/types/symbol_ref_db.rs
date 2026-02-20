@@ -135,13 +135,15 @@ impl DerefMut for SymbolRefDbForModule {
 // Information about symbols for all modules
 #[derive(Debug, Default)]
 pub struct SymbolRefDb {
-  pub is_jsx_preserve: bool,
+  /// Fast-path optimization: set to `true` when any module has JSX preserve enabled.
+  /// This avoids checking per-symbol flags in `link()` when no modules use JSX preserve.
+  has_module_preserve_jsx: bool,
   inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
 }
 
 impl SymbolRefDb {
-  pub fn new(is_jsx_preserve: bool) -> Self {
-    Self { inner: IndexVec::default(), is_jsx_preserve }
+  pub fn new() -> Self {
+    Self { inner: IndexVec::default(), has_module_preserve_jsx: false }
   }
 
   #[must_use]
@@ -174,7 +176,7 @@ impl SymbolRefDb {
         create_reason: inner.create_reason.clone(),
       }));
     }
-    Self { inner: vec, is_jsx_preserve: self.is_jsx_preserve }
+    Self { inner: vec, has_module_preserve_jsx: self.has_module_preserve_jsx }
   }
 }
 
@@ -214,6 +216,19 @@ impl SymbolRefDb {
     self.inner[module_idx] = Some(local_db);
   }
 
+  /// Returns whether any module uses JSX preserve mode.
+  #[inline]
+  pub fn has_module_preserve_jsx(&self) -> bool {
+    self.has_module_preserve_jsx
+  }
+
+  /// Mark that at least one module uses JSX preserve mode.
+  /// This is used as a fast-path optimization in `link()`.
+  #[inline]
+  pub fn set_has_module_preserve_jsx(&mut self) {
+    self.has_module_preserve_jsx = true;
+  }
+
   pub fn create_facade_root_symbol_ref(&mut self, owner: ModuleIdx, name: &str) -> SymbolRef {
     self.ensure_exact_capacity(owner);
     self.inner[owner].unpack_ref_mut().create_facade_root_symbol_ref(name)
@@ -228,7 +243,7 @@ impl SymbolRefDb {
       return;
     }
     self.get_mut(base_root).link = Some(target_root);
-    if self.is_jsx_preserve
+    if self.has_module_preserve_jsx
       && base_root
         .flags(self)
         .is_some_and(|flags| flags.contains(SymbolRefFlags::MustStartWithCapitalLetterForJSX))

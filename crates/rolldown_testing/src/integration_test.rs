@@ -114,7 +114,7 @@ impl IntegrationTest {
     for output in &bundle_output.assets {
       if let Output::Chunk(chunk) = output {
         let allocator = oxc::allocator::Allocator::default();
-        let ret = Parser::new(&allocator, &chunk.code, source_type)
+        let ret = Parser::new(&allocator, &chunk.code, source_type.with_jsx(true))
           .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
           .parse();
 

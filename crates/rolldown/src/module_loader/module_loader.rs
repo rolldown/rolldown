@@ -152,7 +152,7 @@ impl<'a> ModuleLoader<'a> {
     }
 
     let flat_options = FlatOptions::from_shared_options(&options);
-    let symbol_ref_db = SymbolRefDb::new(options.transform_options.is_jsx_preserve());
+    let symbol_ref_db = SymbolRefDb::new();
     let meta = TaskContextMeta {
       replace_global_define_config: if options.define.is_empty() {
         None
@@ -358,7 +358,8 @@ impl<'a> ModuleLoader<'a> {
           let NormalModuleTaskResult {
             mut module,
             mut barrel_info,
-            ecma_related: EcmaRelated { ast, symbols, mut dynamic_import_rec_exports_usage },
+            ecma_related:
+              EcmaRelated { ast, symbols, mut dynamic_import_rec_exports_usage, preserve_jsx },
             resolved_deps,
             raw_import_records,
             warnings,
@@ -491,6 +492,9 @@ impl<'a> ModuleLoader<'a> {
           }
 
           self.symbol_ref_db.store_local_db(module_idx, symbols);
+          if preserve_jsx {
+            self.symbol_ref_db.set_has_module_preserve_jsx();
+          }
           self.remaining -= 1;
         }
         ModuleLoaderMsg::ExternalModuleDone(task_result) => {

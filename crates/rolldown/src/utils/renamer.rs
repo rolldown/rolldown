@@ -168,7 +168,7 @@ impl<'name> Renamer<'name> {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     let canonical_name = canonical_ref.name(self.symbol_db);
 
-    let original_name = if self.symbol_db.is_jsx_preserve
+    let original_name = if self.symbol_db.has_module_preserve_jsx()
       && canonical_ref
         .flags(self.symbol_db)
         .is_some_and(|flags| flags.contains(SymbolRefFlags::MustStartWithCapitalLetterForJSX))

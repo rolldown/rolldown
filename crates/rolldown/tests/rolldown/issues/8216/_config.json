@@ -11,5 +11,5 @@
       "jsxPreset": "enable"
     }
   },
-  "expectError": true
+  "expectExecuted": false
 }

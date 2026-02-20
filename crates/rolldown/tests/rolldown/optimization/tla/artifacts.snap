@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry1.js
+
+```js
+//#region entry1.js
+const x = await import("./shared.js");
+
+//#endregion
+export { x };
+```
+
+## entry2.js
+
+```js
+import { t as foo } from "./shared2.js";
+
+export { foo };
+```
+
+## shared.js
+
+```js
+import { t as foo } from "./shared2.js";
+
+export { foo };
+```
+
+## shared2.js
+
+```js
+//#region shared.js
+const foo = 1e3;
+
+//#endregion
+export { foo as t };
+```

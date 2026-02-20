@@ -1680,12 +1680,10 @@ expression: output
 
 # tests/esbuild/default/top_level_await_allowed_import_with_splitting
 
-- entry-!~{000}~.js => entry-gDVpDR8o.js
-- a-!~{009}~.js => a-BLSSHOs9.js
-- b-!~{005}~.js => b-C4OoNJaI.js
-- b-!~{007}~.js => b-Dutt_QGh.js
-- c-!~{003}~.js => c-B0LwjMet.js
-- c-!~{001}~.js => c-Lg3JRgwR.js
+- entry-!~{000}~.js => entry-D_P5Yt5h.js
+- a-!~{005}~.js => a-BSwkLfMF.js
+- b-!~{003}~.js => b-B8eR6oMr.js
+- c-!~{001}~.js => c-lvW2cisU.js
 
 # tests/esbuild/default/top_level_await_allowed_import_without_splitting
 
@@ -5602,6 +5600,13 @@ expression: output
 - a-!~{000}~.js => a-BlI4VyMA.js
 - b-!~{001}~.js => b-BEAVLJSl.js
 - common-!~{002}~.js => common-CyjycInd.js
+
+# tests/rolldown/optimization/tla
+
+- entry1-!~{000}~.js => entry1-Cpv0LB0l.js
+- entry2-!~{001}~.js => entry2-BuMFXzdp.js
+- shared-!~{004}~.js => shared-DMzqjTsg.js
+- shared-!~{002}~.js => shared-MfhUbl1A.js
 
 # tests/rolldown/resolve/add_module_condition_by_default
 

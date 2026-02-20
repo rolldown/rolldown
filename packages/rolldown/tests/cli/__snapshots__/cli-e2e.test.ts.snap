@@ -49,8 +49,6 @@ OPTIONS
   --code-splitting <code-splitting>Code splitting options (true, false, or object).
   --comments <comments>       Control comments in the output.
   --context <context>         The entity top-level \`this\` represents.
-  --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.
-  --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.
   --cwd <cwd>                 Current working directory.
   --devtools.session-id <devtools.session-id>Used to name the build.
   --dynamic-import-in-cjs     Dynamic import in CJS output.

@@ -54,7 +54,7 @@ pub async fn parse_to_ecma_ast(
   let is_user_defined_entry = ctx.is_user_defined_entry;
 
   let (has_lazy_export, source, parsed_type) =
-    pre_process_source(path, source, module_type, is_user_defined_entry, options)?;
+    pre_process_source(path, source, module_type, options)?;
 
   let oxc_source_type = {
     let default = pure_esm_js_oxc_source_type();
@@ -117,10 +117,9 @@ fn pre_process_source(
   path: &Path,
   source: StrOrBytes,
   module_type: &ModuleType,
-  is_user_defined_entry: bool,
   options: &NormalizedBundlerOptions,
 ) -> BuildResult<(bool, Cow<'static, str>, OxcParseType)> {
-  let mut has_lazy_export = matches!(
+  let has_lazy_export = matches!(
     module_type,
     ModuleType::Json
       | ModuleType::Text
@@ -134,12 +133,7 @@ fn pre_process_source(
       Cow::Owned(source.try_into_string()?)
     }
     ModuleType::Css => {
-      if is_user_defined_entry {
-        Cow::Borrowed("export {}")
-      } else {
-        has_lazy_export = true;
-        Cow::Borrowed("({})")
-      }
+      unreachable!("CSS modules should error before reaching parse_to_ecma_ast")
     }
     ModuleType::Text => {
       let text = source.try_into_string()?;

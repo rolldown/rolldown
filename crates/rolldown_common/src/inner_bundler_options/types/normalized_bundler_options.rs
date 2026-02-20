@@ -51,8 +51,6 @@ pub struct NormalizedBundlerOptions {
   pub module_types: FxHashMap<Cow<'static, str>, ModuleType>,
   // --- Output
   pub name: Option<String>,
-  pub css_entry_filenames: ChunkFilenamesOutputOption,
-  pub css_chunk_filenames: ChunkFilenamesOutputOption,
   pub entry_filenames: ChunkFilenamesOutputOption,
   pub chunk_filenames: ChunkFilenamesOutputOption,
   pub asset_filenames: AssetFilenamesOutputOption,
@@ -130,8 +128,6 @@ impl Default for NormalizedBundlerOptions {
       shim_missing_exports: Default::default(),
       module_types: Default::default(),
       name: Default::default(),
-      css_entry_filenames: ChunkFilenamesOutputOption::String(String::new()),
-      css_chunk_filenames: ChunkFilenamesOutputOption::String(String::new()),
       entry_filenames: ChunkFilenamesOutputOption::String(String::new()),
       chunk_filenames: ChunkFilenamesOutputOption::String(String::new()),
       asset_filenames: AssetFilenamesOutputOption::String(String::new()),

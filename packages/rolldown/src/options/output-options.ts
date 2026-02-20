@@ -354,18 +354,6 @@ export interface OutputOptions {
    */
   chunkFileNames?: string | ChunkFileNamesFunction;
   /**
-   * @default '[name].css'
-   * @experimental
-   * @hidden not ready for public usage yet
-   */
-  cssEntryFileNames?: string | ChunkFileNamesFunction;
-  /**
-   * @default '[name]-[hash].css'
-   * @experimental
-   * @hidden not ready for public usage yet
-   */
-  cssChunkFileNames?: string | ChunkFileNamesFunction;
-  /**
    * Whether to enable chunk name sanitization (removal of non-URL-safe characters like `\0`, `?` and `*`).
    *
    * Set `false` to disable the sanitization. You can also provide a custom sanitization function.

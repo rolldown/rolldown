@@ -8,7 +8,6 @@ const entry = path.join(__dirname, './main.js');
 const allInputOptions: NormalizedInputOptions[] = [];
 const allOutputOptions: NormalizedOutputOptions[] = [];
 
-const cssChunkFileNames = () => '[name]-[hash].css';
 const chunkFileNames = () => '[name]-[hash].js';
 const footer = () => '/* footer */';
 const outputPlugin = {
@@ -24,8 +23,6 @@ export default defineTest({
     context: 'window',
     output: {
       name: 'test',
-      cssEntryFileNames: '[name].css',
-      cssChunkFileNames,
       entryFileNames: '[name].js',
       chunkFileNames,
       assetFileNames: 'assets/[name]-[hash][extname]',
@@ -82,8 +79,6 @@ export default defineTest({
 
     allOutputOptions.forEach((option) => {
       expect(option.name).toBe('test');
-      expect(option.cssEntryFileNames).toBe('[name].css');
-      expect(option.cssChunkFileNames).toStrictEqual(cssChunkFileNames);
       expect(option.entryFileNames).toBe('[name].js');
       expect(option.chunkFileNames).toStrictEqual(chunkFileNames);
       expect(option.assetFileNames).toBe('assets/[name]-[hash][extname]');

@@ -566,15 +566,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "css-module-lexer"
-version = "0.0.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b51940c54c6ca015d3add383571ec5610114466eb67aa0a27096e1dcf3c9e29"
-dependencies = [
- "smallvec",
-]
-
-[[package]]
 name = "ctor"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2755,7 +2746,6 @@ dependencies = [
  "bitflags 2.11.0",
  "commondir",
  "cow-utils",
- "css-module-lexer",
  "dashmap",
  "dunce",
  "futures",

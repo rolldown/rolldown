@@ -853,8 +853,6 @@ const OutputOptionsSchema = v.strictObject({
   assetFileNames: v.optional(AssetFileNamesSchema),
   entryFileNames: v.optional(ChunkFileNamesSchema),
   chunkFileNames: v.optional(ChunkFileNamesSchema),
-  cssEntryFileNames: v.optional(ChunkFileNamesSchema),
-  cssChunkFileNames: v.optional(ChunkFileNamesSchema),
   sanitizeFileName: v.optional(SanitizeFileNameSchema),
   minify: v.pipe(
     v.optional(v.union([v.boolean(), v.literal('dce-only'), MinifyOptionsSchema])),
@@ -948,14 +946,6 @@ const OutputCliOverrideSchema = v.strictObject({
   chunkFileNames: v.pipe(
     v.optional(v.string()),
     v.description('Name pattern for emitted secondary chunks'),
-  ),
-  cssEntryFileNames: v.pipe(
-    v.optional(v.string()),
-    v.description('Name pattern for emitted css entry chunks'),
-  ),
-  cssChunkFileNames: v.pipe(
-    v.optional(v.string()),
-    v.description('Name pattern for emitted css secondary chunks'),
   ),
   sanitizeFileName: v.pipe(v.optional(v.boolean()), v.description('Sanitize file name')),
   banner: v.pipe(v.optional(v.string()), v.description(getAddonDescription('top', 'outside'))),

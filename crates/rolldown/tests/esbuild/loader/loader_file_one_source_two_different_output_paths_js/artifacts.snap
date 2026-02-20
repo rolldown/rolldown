@@ -3,13 +3,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/common-CHxUrMdU.png
+## assets/common-CnHCZ2rs.png
 
 ## common.js
 
 ```js
 //#region shared/common.png
-var common_default = "assets/common-CHxUrMdU.png";
+var common_default = "assets/common-CnHCZ2rs.png";
 
 //#endregion
 //#region shared/common.js

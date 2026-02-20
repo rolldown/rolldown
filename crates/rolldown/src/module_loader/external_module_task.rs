@@ -48,7 +48,7 @@ impl ExternalModuleTask {
   async fn run_inner(&self) -> BuildResult<()> {
     let resolved_id = &self.resolved_id;
     let external_module_side_effects =
-      normalize_side_effects(&self.ctx.options, resolved_id, None, None, resolved_id.side_effects)
+      normalize_side_effects(&self.ctx.options, resolved_id, None, resolved_id.side_effects)
         .await?;
     let id = resolved_id.id.clone();
     self.ctx.plugin_driver.set_module_info(

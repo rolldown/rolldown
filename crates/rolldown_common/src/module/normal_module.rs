@@ -1,6 +1,5 @@
 use std::{fmt::Debug, sync::Arc};
 
-use crate::css::css_view::CssView;
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
   AssetView, DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx,
@@ -30,7 +29,6 @@ pub struct NormalModule {
   pub repr_name: String,
   pub module_type: ModuleType,
   pub ecma_view: EcmaView,
-  pub css_view: Option<CssView>,
   pub asset_view: Option<AssetView>,
   pub originative_resolved_id: ResolvedId,
 }

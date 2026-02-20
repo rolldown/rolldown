@@ -137,12 +137,6 @@ pub async fn finalize_assets(
         let (_, debug_id) = index_final_hashes[asset_idx];
         ecma_meta.debug_id = debug_id;
       }
-      if let InstantiationKind::Css(css_meta) = &mut instantiated_chunk.kind {
-        css_meta.filename = filename.clone();
-        let (_, debug_id) = index_final_hashes[asset_idx];
-        css_meta.debug_id = debug_id;
-      }
-
       if let StrOrBytes::Str(content) = &mut instantiated_chunk.content {
         if let Cow::Owned(replaced) = replace_placeholder_with_hash(
           content,
@@ -227,33 +221,6 @@ pub async fn finalize_assets(
           Some(concat_string!(asset.filename, ".map"))
         };
         ecma_meta.sourcemap_filename = sourcemap_filename;
-        asset.content = code.into();
-      }
-      InstantiationKind::Css(css_meta) => {
-        let asset_code = mem::take(&mut asset.content);
-        let mut code = asset_code.try_into_string()?;
-        if let Some(map) = asset.map.as_mut() {
-          if let Some(sourcemap_asset) = process_code_and_sourcemap(
-            options,
-            &mut code,
-            map,
-            &css_meta.file_dir,
-            asset.filename.as_str(),
-            css_meta.debug_id,
-            /*is_css*/ true,
-          )
-          .await?
-          {
-            derived_asset = Ok(Some(Asset {
-              originate_from: None,
-              content: sourcemap_asset.source,
-              filename: sourcemap_asset.filename,
-              map: None,
-              meta: InstantiationKind::None,
-            }));
-          }
-        }
-
         asset.content = code.into();
       }
       InstantiationKind::None | InstantiationKind::Sourcemap(_) => {}

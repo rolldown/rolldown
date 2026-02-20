@@ -53,12 +53,6 @@ pub struct BindingOutputOptions<'env> {
   #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
   pub chunk_file_names: Option<ChunkFileNamesOutputOption>,
   #[debug(skip)]
-  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
-  pub css_entry_file_names: Option<ChunkFileNamesOutputOption>,
-  #[debug(skip)]
-  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
-  pub css_chunk_file_names: Option<ChunkFileNamesOutputOption>,
-  #[debug(skip)]
   #[napi(ts_type = "boolean | ((name: string) => string)")]
   pub sanitize_file_name: Option<SanitizeFileName>,
   // amd: NormalizedAmdOptions;

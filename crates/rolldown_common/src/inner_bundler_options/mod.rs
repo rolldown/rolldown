@@ -80,18 +80,6 @@ pub struct BundlerOptions {
   pub chunk_filenames: Option<ChunkFilenamesOutputOption>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
-    serde(default, deserialize_with = "deserialize_chunk_filenames"),
-    schemars(with = "Option<String>")
-  )]
-  pub css_entry_filenames: Option<ChunkFilenamesOutputOption>,
-  #[cfg_attr(
-    feature = "deserialize_bundler_options",
-    serde(default, deserialize_with = "deserialize_chunk_filenames"),
-    schemars(with = "Option<String>")
-  )]
-  pub css_chunk_filenames: Option<ChunkFilenamesOutputOption>,
-  #[cfg_attr(
-    feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_asset_filenames"),
     schemars(with = "Option<String>")
   )]

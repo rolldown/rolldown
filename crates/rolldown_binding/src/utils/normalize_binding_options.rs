@@ -312,8 +312,6 @@ pub fn normalize_binding_options(
     asset_filenames: normalize_asset_file_names_option(output_options.asset_file_names)?,
     entry_filenames: normalize_chunk_file_names_option(output_options.entry_file_names)?,
     chunk_filenames: normalize_chunk_file_names_option(output_options.chunk_file_names)?,
-    css_entry_filenames: normalize_chunk_file_names_option(output_options.css_entry_file_names)?,
-    css_chunk_filenames: normalize_chunk_file_names_option(output_options.css_chunk_file_names)?,
     sanitize_filename: normalize_sanitize_filename(output_options.sanitize_file_name)?,
     dir: output_options.dir,
     file: output_options.file,

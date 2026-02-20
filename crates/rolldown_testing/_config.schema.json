@@ -146,18 +146,6 @@
             "null"
           ]
         },
-        "cssEntryFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "cssChunkFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
         "assetFilenames": {
           "type": [
             "string",

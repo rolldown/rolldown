@@ -74,24 +74,6 @@ impl BindingNormalizedOptions {
     self.inner.name.as_deref()
   }
 
-  // Some options can be set to `None`, and these values are converted to `null` in JavaScript.
-  // To distinguish them from regular None values, `undefined` is used to represent unsupported functions
-  #[napi(getter)]
-  pub fn css_entry_filenames(&self) -> Either<&str, Undefined> {
-    match &self.inner.css_entry_filenames {
-      rolldown::ChunkFilenamesOutputOption::String(inner) => Either::A(inner),
-      rolldown::ChunkFilenamesOutputOption::Fn(_) => Either::B(()),
-    }
-  }
-
-  #[napi(getter)]
-  pub fn css_chunk_filenames(&self) -> Either<&str, Undefined> {
-    match &self.inner.css_chunk_filenames {
-      rolldown::ChunkFilenamesOutputOption::String(inner) => Either::A(inner),
-      rolldown::ChunkFilenamesOutputOption::Fn(_) => Either::B(()),
-    }
-  }
-
   #[napi(getter)]
   pub fn entry_filenames(&self) -> Either<&str, Undefined> {
     match &self.inner.entry_filenames {

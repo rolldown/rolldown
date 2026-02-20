@@ -40,7 +40,6 @@ pub async fn defer_sync_scan_data(
           options,
           &normal.originative_resolved_id,
           Some(&normal.stmt_infos),
-          Some(&normal.module_type),
           data.side_effects,
         )
         .await?

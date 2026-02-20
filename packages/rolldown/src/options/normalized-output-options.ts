@@ -46,10 +46,6 @@ export interface NormalizedOutputOptions {
   sourcemap: boolean | 'inline' | 'hidden';
   /** @see {@linkcode OutputOptions.sourcemapBaseUrl | sourcemapBaseUrl} */
   sourcemapBaseUrl: string | undefined;
-  /** @see {@linkcode OutputOptions.cssEntryFileNames | cssEntryFileNames} */
-  cssEntryFileNames: string | ChunkFileNamesFunction;
-  /** @see {@linkcode OutputOptions.cssChunkFileNames | cssChunkFileNames} */
-  cssChunkFileNames: string | ChunkFileNamesFunction;
   /** @see {@linkcode OutputOptions.codeSplitting | codeSplitting} */
   codeSplitting: boolean;
   /** @deprecated Use `codeSplitting` instead. */
@@ -158,16 +154,6 @@ export class NormalizedOutputOptionsImpl
   @lazyProp
   get sourcemapBaseUrl(): string | undefined {
     return this.inner.sourcemapBaseUrl ?? undefined;
-  }
-
-  @lazyProp
-  get cssEntryFileNames(): string | ChunkFileNamesFunction {
-    return this.inner.cssEntryFilenames || this.outputOptions.cssEntryFileNames!;
-  }
-
-  @lazyProp
-  get cssChunkFileNames(): string | ChunkFileNamesFunction {
-    return this.inner.cssChunkFilenames || this.outputOptions.cssChunkFileNames!;
   }
 
   @lazyProp

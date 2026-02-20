@@ -5,8 +5,8 @@ use futures::future::try_join_all;
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
-  ChunkIdx, ChunkKind, CssAssetNameReplacer, ImportMetaRolldownAssetReplacer, Module,
-  OutputExports, PreliminaryFilename, RollupPreRenderedAsset,
+  ChunkIdx, ChunkKind, ImportMetaRolldownAssetReplacer, Module, OutputExports, PreliminaryFilename,
+  RollupPreRenderedAsset,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -130,7 +130,6 @@ impl<'a> GenerateStage<'a> {
   /// Notices:
   /// - Should generate filenames that are stable cross builds and os.
   #[tracing::instrument(level = "debug", skip_all)]
-  #[expect(clippy::too_many_lines)]
   async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
@@ -290,16 +289,6 @@ impl<'a> GenerateStage<'a> {
         )
         .await?;
 
-      let css_preliminary_filename = chunk
-        .generate_css_preliminary_filename(
-          self.options,
-          &pre_rendered_chunk,
-          &pre_generated_chunk_name.chunk_filename,
-          &mut hash_placeholder_generator,
-          &used_name_counts,
-        )
-        .await?;
-
       // Defer chunk name assignment to make sure at this point only entry chunk have a name
       // if user provided one.
       chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
@@ -357,46 +346,23 @@ impl<'a> GenerateStage<'a> {
           .absolutize_with(self.options.cwd.join(&self.options.out_dir))
           .expect_into_string(),
       );
-      chunk.css_absolute_preliminary_filename = Some(
-        css_preliminary_filename
-          .absolutize_with(self.options.cwd.join(&self.options.out_dir))
-          .expect_into_string(),
-      );
       chunk.preliminary_filename = Some(preliminary_filename);
-      chunk.css_preliminary_filename = Some(css_preliminary_filename);
     }
     Ok(index_chunk_id_to_representative_name)
   }
 
   pub fn patch_asset_modules(&mut self, chunk_graph: &ChunkGraph) {
     chunk_graph.chunk_table.iter().for_each(|chunk| {
-      let mut module_idx_to_filenames = FxHashMap::default();
       // replace asset name in ecma view
       chunk.asset_preliminary_filenames.iter().for_each(|(module_idx, preliminary)| {
         let Module::Normal(module) = &mut self.link_output.module_table[*module_idx] else {
           return;
         };
         let asset_filename: ArcStr = preliminary.as_str().into();
-        module.ecma_view.mutations.push(Arc::new(ImportMetaRolldownAssetReplacer {
-          asset_filename: asset_filename.clone(),
-        }));
-        module_idx_to_filenames.insert(module_idx, asset_filename);
-      });
-      // replace asset name in css view
-      chunk.modules.iter().for_each(|module_idx| {
-        let module = &mut self.link_output.module_table[*module_idx];
-        if let Some(css_view) =
-          module.as_normal_mut().and_then(|normal_module| normal_module.css_view.as_mut())
-        {
-          for (idx, rec) in css_view.import_records.iter_enumerated() {
-            if let Some(asset_filename) = module_idx_to_filenames.get(&rec.into_resolved_module()) {
-              let span = css_view.record_idx_to_span[idx];
-              css_view
-                .mutations
-                .push(Arc::new(CssAssetNameReplacer { span, asset_name: asset_filename.clone() }));
-            }
-          }
-        }
+        module
+          .ecma_view
+          .mutations
+          .push(Arc::new(ImportMetaRolldownAssetReplacer { asset_filename }));
       });
     });
   }

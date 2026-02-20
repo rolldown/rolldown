@@ -3,29 +3,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/foo-DX_UVeUe.txt
+## assets/foo-ClFdlyrm.txt
 
 ```txt
 foo
 ```
 
-## chunks/dep-DGfnxe7V.js
+## chunks/dep-BZUTziCU.js
 
 ```js
-import "./foo-GNO-ZiAj.js";
+import "./foo-CWkpIYf3.js";
 
 //#region dep.js
-const url = new URL("../assets/foo-DX_UVeUe.txt", import.meta.url);
+const url = new URL("../assets/foo-ClFdlyrm.txt", import.meta.url);
 
 //#endregion
 export { url };
 ```
 
-## chunks/foo-GNO-ZiAj.js
+## chunks/foo-CWkpIYf3.js
 
 ```js
 //#region foo.txt
-var foo_default = "assets/foo-DX_UVeUe.txt";
+var foo_default = "assets/foo-ClFdlyrm.txt";
 
 //#endregion
 ```
@@ -33,11 +33,11 @@ var foo_default = "assets/foo-DX_UVeUe.txt";
 ## main.js
 
 ```js
-import "./chunks/foo-GNO-ZiAj.js";
+import "./chunks/foo-CWkpIYf3.js";
 
 //#region main.js
-const url = new URL("assets/foo-DX_UVeUe.txt", import.meta.url);
-const dep = import("./chunks/dep-DGfnxe7V.js");
+const url = new URL("assets/foo-ClFdlyrm.txt", import.meta.url);
+const dep = import("./chunks/dep-BZUTziCU.js");
 
 //#endregion
 export { dep, url };

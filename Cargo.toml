@@ -156,7 +156,6 @@ blake3 = "1.8.2"
 commondir = "1.0.0"
 cow-utils = "0.1.3"
 criterion2 = { version = "3.0.0", default-features = false }
-css-module-lexer = "0.0.15"
 dashmap = "6.1.0"
 derive_more = { version = "2.0.1", features = ["debug"] }
 dunce = "1.0.5" # Normalize Windows paths to the most compatible format, avoiding UNC where possible

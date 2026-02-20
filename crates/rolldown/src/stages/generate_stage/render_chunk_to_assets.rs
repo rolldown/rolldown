@@ -19,7 +19,6 @@ use crate::{
   BundleOutput,
   asset::asset_generator::AssetGenerator,
   chunk_graph::ChunkGraph,
-  css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
   type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
   types::generator::{GenerateContext, GenerateOutput, Generator},
@@ -96,15 +95,6 @@ impl GenerateStage<'_> {
             map,
             sourcemap_filename: ecma_meta.sourcemap_filename,
             preliminary_filename: ecma_meta.preliminary_filename.to_string(),
-          })));
-        }
-        InstantiationKind::Css(_css_meta) => {
-          let code = code.try_into_string()?;
-          output.push(Output::Asset(Arc::new(OutputAsset {
-            filename: filename.clone(),
-            source: code.into(),
-            original_file_names: vec![],
-            names: vec![],
           })));
         }
         InstantiationKind::Sourcemap(sourcemap_meta) => {
@@ -203,21 +193,6 @@ impl GenerateStage<'_> {
             let ecma_chunks = ecma_chunks_future.await?;
             Ok(ecma_chunks)
           });
-          let css_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
-            let mut css_ctx = GenerateContext {
-              chunk_idx,
-              chunk,
-              options: self.options,
-              link_output: self.link_output,
-              chunk_graph,
-              plugin_driver: self.plugin_driver,
-              module_id_to_codegen_ret: vec![],
-              render_export_items_index_vec: &index_vec![],
-            };
-            let css_chunks_future = CssGenerator::instantiate_chunk(&mut css_ctx);
-            let css_chunks = css_chunks_future.await?;
-            Ok(css_chunks)
-          });
           let asset_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
             let mut asset_ctx = GenerateContext {
               chunk_idx,
@@ -233,7 +208,7 @@ impl GenerateStage<'_> {
             let asset_chunks = asset_chunks_future.await?;
             Ok(asset_chunks)
           });
-          [ecma_chunks_future, css_chunks_future, asset_chunks_future]
+          [ecma_chunks_future, asset_chunks_future]
         }),
     )
     .await?

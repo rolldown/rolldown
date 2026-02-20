@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use oxc::span::Span;
-use oxc_index::IndexVec;
 use sugar_path::SugarPath as _;
 
 use rolldown_common::{
@@ -119,13 +118,12 @@ impl ModuleTask {
       .await?;
 
     let stable_id = id.stabilize(&self.ctx.options.cwd);
-    let mut raw_import_records = IndexVec::default();
 
-    let (asset_view, css_view) = match module_type {
+    let asset_view = match module_type {
       ModuleType::Asset => {
         let asset_view = create_asset_view(source);
         source = StrOrBytes::Str(String::new());
-        (Some(asset_view), None)
+        Some(asset_view)
       }
       ModuleType::Css => {
         Err(anyhow::anyhow!(
@@ -133,7 +131,7 @@ impl ModuleTask {
         ))?;
         unreachable!()
       }
-      _ => (None, None),
+      _ => None,
     };
 
     let mut warnings = vec![];
@@ -161,9 +159,7 @@ impl ModuleTask {
       raw_import_records: ecma_raw_import_records,
     } = ret;
 
-    if css_view.is_none() {
-      raw_import_records = ecma_raw_import_records;
-    }
+    let raw_import_records = ecma_raw_import_records;
 
     let resolved_deps = resolve_dependencies(
       &self.resolved_id,
@@ -177,21 +173,19 @@ impl ModuleTask {
     )
     .await?;
 
-    if css_view.is_none() {
-      for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
-        match record.kind {
-          ImportKind::Import | ImportKind::Require | ImportKind::NewUrl => {
-            ecma_view.imported_ids.insert(info.id.clone());
-          }
-          ImportKind::DynamicImport => {
-            ecma_view.dynamically_imported_ids.insert(info.id.clone());
-          }
-          ImportKind::HotAccept => {
-            ecma_view.hmr_info.deps.insert(info.id.clone());
-          }
-          // for a none css module, we should not have `at-import` or `url-import`
-          ImportKind::AtImport | ImportKind::UrlImport => unreachable!(),
+    for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
+      match record.kind {
+        ImportKind::Import | ImportKind::Require | ImportKind::NewUrl => {
+          ecma_view.imported_ids.insert(info.id.clone());
         }
+        ImportKind::DynamicImport => {
+          ecma_view.dynamically_imported_ids.insert(info.id.clone());
+        }
+        ImportKind::HotAccept => {
+          ecma_view.hmr_info.deps.insert(info.id.clone());
+        }
+        // for a none css module, we should not have `at-import` or `url-import`
+        ImportKind::AtImport | ImportKind::UrlImport => unreachable!(),
       }
     }
 
@@ -214,7 +208,6 @@ impl ModuleTask {
       exec_order: u32::MAX,
       module_type: module_type.clone(),
       ecma_view,
-      css_view,
       asset_view,
       originative_resolved_id: self.resolved_id.clone(),
     };

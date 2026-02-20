@@ -1541,8 +1541,6 @@ export declare class BindingNormalizedOptions {
   get platform(): 'node' | 'browser' | 'neutral'
   get shimMissingExports(): boolean
   get name(): string | null
-  get cssEntryFilenames(): string | undefined
-  get cssChunkFilenames(): string | undefined
   get entryFilenames(): string | undefined
   get chunkFilenames(): string | undefined
   get assetFilenames(): string | undefined
@@ -2325,8 +2323,6 @@ export interface BindingOutputOptions {
   assetFileNames?: string | ((chunk: BindingPreRenderedAsset) => string)
   entryFileNames?: string | ((chunk: PreRenderedChunk) => string)
   chunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
-  cssEntryFileNames?: string | ((chunk: PreRenderedChunk) => string)
-  cssChunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sanitizeFileName?: boolean | ((name: string) => string)
   banner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   postBanner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)

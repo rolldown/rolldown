@@ -21,8 +21,6 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     assetFileNames,
     entryFileNames,
     chunkFileNames,
-    cssEntryFileNames,
-    cssChunkFileNames,
     banner,
     footer,
     postBanner,
@@ -81,8 +79,6 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     assetFileNames: bindingifyAssetFilenames(assetFileNames),
     entryFileNames,
     chunkFileNames,
-    cssEntryFileNames,
-    cssChunkFileNames,
     // TODO(sapphi-red): support parallel plugins
     plugins: [],
     minify: outputOptions.minify,

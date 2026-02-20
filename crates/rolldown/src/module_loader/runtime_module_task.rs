@@ -198,7 +198,6 @@ impl RuntimeModuleTask {
         import_attribute_map: FxHashMap::default(),
         json_module_none_self_reference_included_symbol: None,
       },
-      css_view: None,
       asset_view: None,
       // TODO(hyf0/hmr): We might need to find a better way to handle this.
       originative_resolved_id: resolved_id,

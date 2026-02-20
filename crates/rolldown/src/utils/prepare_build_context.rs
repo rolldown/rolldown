@@ -383,12 +383,6 @@ pub fn prepare_build_context(
     asset_filenames: raw_options
       .asset_filenames
       .unwrap_or_else(|| "assets/[name]-[hash][extname]".to_string().into()),
-    css_entry_filenames: raw_options
-      .css_entry_filenames
-      .unwrap_or_else(|| "[name].css".to_string().into()),
-    css_chunk_filenames: raw_options
-      .css_chunk_filenames
-      .unwrap_or_else(|| "[name]-[hash].css".to_string().into()),
     sanitize_filename: raw_options.sanitize_filename.unwrap_or_default(),
     banner: raw_options.banner,
     footer: raw_options.footer,

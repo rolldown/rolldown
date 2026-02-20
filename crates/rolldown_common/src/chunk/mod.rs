@@ -76,8 +76,6 @@ pub struct Chunk {
   pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
-  pub css_preliminary_filename: Option<PreliminaryFilename>,
-  pub css_absolute_preliminary_filename: Option<String>,
   pub asset_preliminary_filenames: FxIndexMap<ModuleIdx, PreliminaryFilename>,
   pub asset_absolute_preliminary_filenames: FxIndexMap<ModuleIdx, String>,
   pub canonical_names: FxHashMap<SymbolRef, CompactStr>,
@@ -183,25 +181,6 @@ impl Chunk {
     Ok(FilenameTemplate::new(ret, pattern_name))
   }
 
-  pub async fn css_filename_template(
-    &self,
-    options: &NormalizedBundlerOptions,
-    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
-  ) -> anyhow::Result<FilenameTemplate> {
-    // Emitted chunks should always use chunk_filenames, not entry_filenames
-    let is_entry = matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk));
-
-    let ret = if is_entry {
-      options.css_entry_filenames.call(rollup_pre_rendered_chunk).await?
-    } else {
-      options.css_chunk_filenames.call(rollup_pre_rendered_chunk).await?
-    };
-
-    let pattern_name = if is_entry { "cssEntryFileNames" } else { "cssChunkFileNames" };
-
-    Ok(FilenameTemplate::new(ret, pattern_name))
-  }
-
   pub async fn generate_preliminary_filename(
     &self,
     options: &NormalizedBundlerOptions,
@@ -276,48 +255,6 @@ impl Chunk {
       PathBuf::from(options.virtual_dirname.as_str()).join(p)
     };
     Cow::Owned(p.to_slash_lossy().into_owned())
-  }
-
-  pub async fn generate_css_preliminary_filename(
-    &self,
-    options: &NormalizedBundlerOptions,
-    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
-    chunk_name: &ArcStr,
-    hash_placeholder_generator: &mut HashPlaceholderGenerator,
-    used_name_counts: &FxDashMap<ArcStr, u32>,
-  ) -> anyhow::Result<PreliminaryFilename> {
-    if let Some(file) = &options.file {
-      let mut file = PathBuf::from(file);
-      file.set_extension("css");
-      return Ok(PreliminaryFilename::new(
-        file.into_os_string().into_string().unwrap().into(),
-        None,
-      ));
-    }
-
-    let filename_template = self.css_filename_template(options, rollup_pre_rendered_chunk).await?;
-    let has_hash_pattern = filename_template.has_hash_pattern();
-
-    let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
-    let hash_replacer = has_hash_pattern.then(|| {
-      let pattern_name = filename_template.pattern_name();
-      |len: Option<usize>| {
-        let hash = hash_placeholder_generator.generate(len, pattern_name)?;
-        if let Some(hash_placeholder) = hash_placeholder.as_mut() {
-          hash_placeholder.push(hash.clone());
-        }
-        Ok(hash)
-      }
-    });
-    let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
-
-    let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
-      .into();
-
-    let name = make_unique_name(&filename, used_name_counts);
-
-    Ok(PreliminaryFilename::new(name, hash_placeholder))
   }
 
   pub fn user_defined_entry_module_idx(&self) -> Option<ModuleIdx> {

@@ -1,6 +1,5 @@
 mod asset;
 mod chunk;
-mod css;
 mod ecmascript;
 mod file_emitter;
 mod generated;
@@ -114,10 +113,6 @@ pub use crate::{
       module_group::ModuleGroup,
       preliminary_filename::PreliminaryFilename,
     },
-  },
-  css::{
-    css_asset_meta::CssAssetMeta,
-    css_view::{CssAssetNameReplacer, CssRenderer, CssView},
   },
   ecmascript::{
     comment_annotation::get_leading_comment,

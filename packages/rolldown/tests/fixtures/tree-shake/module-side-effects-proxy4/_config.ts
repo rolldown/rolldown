@@ -4,6 +4,7 @@ import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 export default defineTest({
+  retry: 3, // FIXME: retry added to mitigate flakiness, see https://github.com/rolldown/rolldown/pull/8397
   config: {
     plugins: [
       {

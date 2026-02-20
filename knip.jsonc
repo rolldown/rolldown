@@ -29,7 +29,7 @@
         ".vitepress/scripts/extract-options-plugin.ts", // used as a string path in TypeDoc plugin config
         ".vitepress/scripts/custom-theme-plugin.ts", // used as a string path in TypeDoc plugin config
       ],
-      "ignoreDependencies": ["typedoc-vitepress-theme"],
+      "ignoreDependencies": ["typedoc-plugin-merge-modules", "typedoc-vitepress-theme"],
     },
     "packages/bench": {
       "entry": ["vue-entry.js"],

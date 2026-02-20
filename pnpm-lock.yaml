@@ -333,6 +333,9 @@ importers:
       typedoc-plugin-markdown:
         specifier: ^4.9.0
         version: 4.10.0(typedoc@0.28.16(typescript@5.9.3))
+      typedoc-plugin-merge-modules:
+        specifier: ^7.0.0
+        version: 7.0.0(typedoc@0.28.16(typescript@5.9.3))
       typedoc-vitepress-theme:
         specifier: ^1.1.2
         version: 1.1.2(typedoc-plugin-markdown@4.10.0(typedoc@0.28.16(typescript@5.9.3)))
@@ -6348,6 +6351,11 @@ packages:
     peerDependencies:
       typedoc: 0.28.x
 
+  typedoc-plugin-merge-modules@7.0.0:
+    resolution: {integrity: sha512-DQyfbbPNBElhpdpGrlkS+CrhGD3iooDjp/PHT8O1D/jumLCB+7XAY3jHiqob7d01o25EfwEOJWVwJK+9J6WlBg==}
+    peerDependencies:
+      typedoc: 0.28.x
+
   typedoc-vitepress-theme@1.1.2:
     resolution: {integrity: sha512-hQvCZRr5uKDqY1bRuY1+eNTNn6d4TE4OP5pnw65Y7WGgajkJW9X1/lVJK2UJpcwCmwkdjw1QIO49H9JQlxWhhw==}
     peerDependencies:
@@ -11908,6 +11916,10 @@ snapshots:
   type-level-regexp@0.1.17: {}
 
   typedoc-plugin-markdown@4.10.0(typedoc@0.28.16(typescript@5.9.3)):
+    dependencies:
+      typedoc: 0.28.16(typescript@5.9.3)
+
+  typedoc-plugin-merge-modules@7.0.0(typedoc@0.28.16(typescript@5.9.3)):
     dependencies:
       typedoc: 0.28.16(typescript@5.9.3)
 

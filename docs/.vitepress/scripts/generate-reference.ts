@@ -1,16 +1,35 @@
-import { copyFile, rm } from 'node:fs/promises';
+import { copyFile, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { Application, type TypeDocOptions } from 'typedoc';
 import type { PluginOptions } from 'typedoc-plugin-markdown';
+
+const root = path.resolve(import.meta.dirname, '../../..');
+
 console.log('📚 Generating reference...');
 
+const exportPaths = await discoverExports();
+const allEntryPoints = exportPaths.map((p) => p.replaceAll('\\', '/'));
+
 // Generate API documentation
-await runTypedoc();
+await runTypedoc(allEntryPoints);
 console.log('✅ Reference generated successfully!');
 
 await rm('reference/index.md', { force: true });
 await copyFile('.vitepress/theme/components/api.index.md', 'reference/index.md');
 console.log('📚 New index added successfully');
+
+async function discoverExports(): Promise<string[]> {
+  const excludedExports = new Set(['./experimental', './parallelPlugin']);
+
+  const pkgJsonPath = path.join(root, 'packages/rolldown/package.json');
+  const pkgJson: { exports: Record<string, { dev?: string }> } = JSON.parse(
+    await readFile(pkgJsonPath, 'utf-8'),
+  );
+  return Object.entries(pkgJson.exports).flatMap(([key, entry]) => {
+    if (excludedExports.has(key) || !entry.dev) return [];
+    return path.join(root, 'packages/rolldown', entry.dev);
+  });
+}
 
 type TypedocVitepressThemeOptions = {
   docsRoot?: string;
@@ -20,20 +39,19 @@ type TypedocVitepressThemeOptions = {
 /**
  * Run TypeDoc with the specified tsconfig
  */
-async function runTypedoc(): Promise<void> {
-  const root = path.resolve(import.meta.dirname, '../../..');
-
+async function runTypedoc(entryPoints: string[]): Promise<void> {
   const options: TypeDocOptions & PluginOptions & TypedocVitepressThemeOptions = {
     tsconfig: path.join(root, 'packages/rolldown/tsconfig.json'),
     plugin: [
       'typedoc-plugin-markdown',
       'typedoc-vitepress-theme',
+      'typedoc-plugin-merge-modules',
       path.join(import.meta.dirname, 'extract-options-plugin.ts'),
       path.join(import.meta.dirname, 'custom-theme-plugin.ts'),
     ],
     theme: 'customTheme',
     out: './reference',
-    entryPoints: [path.join(root, 'packages/rolldown/src/index.ts').replaceAll('\\', '/')],
+    entryPoints,
     readme: 'none',
     excludeInternal: true,
 

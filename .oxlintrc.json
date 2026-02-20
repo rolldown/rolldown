@@ -71,7 +71,7 @@
       }
     },
     {
-      "files": ["**/packages/rolldown/tests/fixtures/context/default-value/_config.ts"],
+      "files": ["**/packages/rolldown/tests/fixtures/**/_config.ts"],
       "rules": {
         "rolldown-custom/ban-expect-assertions": "error"
       }

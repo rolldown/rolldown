@@ -12,7 +12,7 @@ export default defineConfig({
         },
         {
           name: 'ui-vendor',
-          test: /node_modules[\\/](antd|@mui)/,
+          test: /node_modules[\\/](antd|element-plus)/,
           priority: 15,
         },
         {

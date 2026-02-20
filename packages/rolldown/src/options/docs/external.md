@@ -63,7 +63,7 @@ export default {
   external: ['vue', 'react', 'react-dom'],
 
   // Package name patterns
-  external: [/^vue/, /^react/, /^@mui/],
+  external: [/^vue/, /^react/, /^antd/],
 
   // All bare module IDs (not starting with `.` or `/`)
   external: /^[^./]/,

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { testsDir } from 'rolldown-tests/utils';
 import { describe, expect, it, test, vi } from 'vitest';
+import { normalizeArgv } from '../../src/cli/arguments/index.js';
 
 function cliFixturesDir(...joined: string[]) {
   return testsDir('cli/fixtures', ...joined);
@@ -93,6 +94,15 @@ describe('cli options for bundling', () => {
     const status = await $({
       cwd,
     })`rolldown index.ts --module-types .123=text --module-types notjson=json --module-types .b64=base64 -d dist`;
+    expect(status.exitCode).toBe(0);
+    expect(cleanStdout(status.stdout)).toMatchSnapshot();
+  });
+
+  it('should handle camelCase object options (--moduleTypes)', async () => {
+    const cwd = cliFixturesDir('cli-option-object');
+    const status = await $({
+      cwd,
+    })`rolldown index.ts --moduleTypes .123=text --moduleTypes notjson=json --moduleTypes .b64=base64 -d dist`;
     expect(status.exitCode).toBe(0);
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
@@ -434,5 +444,45 @@ describe('watch cli', () => {
     const cwd = cliFixturesDir('watch-mode');
     const status = await $({ cwd })`rolldown -w -c`;
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
+  });
+});
+
+describe('normalizeArgv', () => {
+  it('should convert camelCase long options to kebab-case', () => {
+    expect(normalizeArgv(['--moduleTypes', '.png=dataurl'])).toEqual([
+      '--module-types',
+      '.png=dataurl',
+    ]);
+  });
+
+  it('should convert camelCase long options with = to kebab-case', () => {
+    expect(normalizeArgv(['--moduleTypes=.png=dataurl'])).toEqual(['--module-types=.png=dataurl']);
+  });
+
+  it('should preserve args after -- verbatim', () => {
+    expect(normalizeArgv(['--moduleTypes', '.png=dataurl', '--', '--someArg'])).toEqual([
+      '--module-types',
+      '.png=dataurl',
+      '--',
+      '--someArg',
+    ]);
+  });
+
+  it('should not normalize camelCase args after --', () => {
+    expect(normalizeArgv(['--minify', '--', '--moduleTypes', '--camelCase=value'])).toEqual([
+      '--minify',
+      '--',
+      '--moduleTypes',
+      '--camelCase=value',
+    ]);
+  });
+
+  it('should pass through short options and positionals unchanged', () => {
+    expect(normalizeArgv(['-m', 'index.ts', '-d', 'dist'])).toEqual([
+      '-m',
+      'index.ts',
+      '-d',
+      'dist',
+    ]);
   });
 });

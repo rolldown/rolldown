@@ -56,10 +56,48 @@ export const options: {
     }),
 );
 
+/**
+ * Normalize argv to convert camelCase long options to kebab-case.
+ * This ensures options like `--moduleTypes` are recognized the same as `--module-types`.
+ * Args after `--` (end-of-options delimiter) are preserved verbatim.
+ */
+export function normalizeArgv(argv: string[]): string[] {
+  const result: string[] = [];
+  let endOfOptions = false;
+  for (const arg of argv) {
+    if (endOfOptions) {
+      result.push(arg);
+      continue;
+    }
+    if (arg === '--') {
+      endOfOptions = true;
+      result.push(arg);
+      continue;
+    }
+    // Only process long options (--option or --option=value)
+    if (!arg.startsWith('--')) {
+      result.push(arg);
+      continue;
+    }
+    const eqIndex = arg.indexOf('=', 2);
+    if (eqIndex === -1) {
+      // --optionName → --option-name
+      result.push(`--${camelCaseToKebabCase(arg.slice(2))}`);
+    } else {
+      // --optionName=value → --option-name=value
+      const name = arg.slice(2, eqIndex);
+      const value = arg.slice(eqIndex);
+      result.push(`--${camelCaseToKebabCase(name)}${value}`);
+    }
+  }
+  return result;
+}
+
 export function parseCliArguments(): NormalizedCliOptions & {
   rawArgs: Record<string, any>;
 } {
   const { values, tokens, positionals } = parseArgs({
+    args: normalizeArgv(process.argv.slice(2)),
     options,
     tokens: true,
     allowPositionals: true,

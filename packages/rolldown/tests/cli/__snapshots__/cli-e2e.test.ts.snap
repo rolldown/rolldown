@@ -175,6 +175,12 @@ console.log("2");
 //#endregion"
 `;
 
+exports[`cli options for bundling > should handle camelCase object options (--moduleTypes) 1`] = `
+"<DIR>/index.js  chunk │ size: 0.27 kB
+
+"
+`;
+
 exports[`cli options for bundling > should handle multiple define arguments with comma-separated syntax 1`] = `
 "<DIR>/index.js  chunk │ size: 0.10 kB
 

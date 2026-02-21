@@ -49,6 +49,7 @@ bitflags::bitflags! {
     }
 }
 
+#[expect(clippy::struct_excessive_bools)]
 pub struct IncludeContext<'a> {
   pub modules: &'a IndexModules,
   pub symbols: &'a SymbolRefDb,
@@ -66,6 +67,9 @@ pub struct IncludeContext<'a> {
   /// see [rolldown_common::ecmascript::ecma_view::EcmaViewMeta]
   pub bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
   pub may_partial_namespace: bool,
+  /// Tracks whether any new module was included during the current convergence iteration.
+  /// Used to detect fixpoint without O(N) scanning of `is_module_included_vec`.
+  pub module_inclusion_changed: bool,
   pub module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
   pub json_module_none_self_reference_included_symbol: FxHashMap<ModuleIdx, FxHashSet<SymbolRef>>,
 }
@@ -100,6 +104,7 @@ impl<'a> IncludeContext<'a> {
       normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       may_partial_namespace: false,
+      module_inclusion_changed: false,
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
     }
@@ -209,10 +214,10 @@ impl LinkStage<'_> {
 
     let mut unused_record_idxs = vec![];
     let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
-    let mut previous_included_module_count =
-      context.is_module_included_vec.iter().filter(|item| **item).count();
     let mut included_dynamic_entry = FxHashSet::default();
     loop {
+      context.module_inclusion_changed = false;
+
       // It could be safely take since it is no more used.
       // We extract bailout_modules first to avoid borrowing conflict:
       // passing `context` requires a mutable borrow, which conflicts with
@@ -236,14 +241,9 @@ impl LinkStage<'_> {
         }
       });
 
-      let current_included_module_count =
-        context.is_module_included_vec.iter().filter(|item| **item).count();
-
-      if current_included_module_count == previous_included_module_count {
+      if !context.module_inclusion_changed {
         break;
       }
-
-      previous_included_module_count = current_included_module_count;
     }
 
     dynamic_entries.retain(|entry| included_dynamic_entry.contains(&entry.idx));
@@ -578,6 +578,7 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
   }
 
   ctx.is_module_included_vec[module.idx] = true;
+  ctx.module_inclusion_changed = true;
 
   if module.idx == ctx.runtime_idx && !module.side_effects.has_side_effects() {
     // Unmodified runtime: statements included only via references.

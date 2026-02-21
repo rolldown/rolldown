@@ -906,6 +906,7 @@ impl GenerateStage<'_> {
       normal_symbol_exports_chain_map: &self.link_output.normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       may_partial_namespace: false,
+      module_inclusion_changed: false,
       module_namespace_included_reason: &mut module_namespace_reason_vec,
       inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
       json_module_none_self_reference_included_symbol: FxHashMap::default(),

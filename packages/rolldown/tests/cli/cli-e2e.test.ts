@@ -97,6 +97,15 @@ describe('cli options for bundling', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
+  it('should handle copy module type', async () => {
+    const cwd = cliFixturesDir('cli-option-copy');
+    const status = await $({
+      cwd,
+    })`rolldown index.js --module-types .node=copy -d dist`;
+    expect(status.exitCode).toBe(0);
+    expect(cleanStdout(status.stdout)).toMatchSnapshot();
+  });
+
   it('should handle negative boolean options', async () => {
     const cwd = cliFixturesDir('cli-option-no-external-live-bindings');
     const status = await $({

@@ -327,7 +327,7 @@ pub fn prepare_build_context(
     // - Auto: Create Raw mode (will resolve tsconfig per file)
     // - None/Manual: Create Normal mode (resolve tsconfig once now)
     match tsconfig {
-      ref v @ TsConfig::Manual(ref path) => {
+      TsConfig::Manual(ref path) => {
         // Manual mode: Resolve tsconfig now and create Normal mode
         let resolved_tsconfig = resolver.resolve_tsconfig(&path).map_err(|err| {
           anyhow::anyhow!("Failed to resolve `tsconfig` option: {}", path.display()).context(err)
@@ -344,18 +344,18 @@ pub fn prepare_build_context(
           )
         } else {
           TransformOptions::new_raw(
-            RawTransformOptions::new(raw_transform_options, v.clone()),
+            RawTransformOptions::new(raw_transform_options, Arc::clone(&resolver) as _),
             target,
             jsx_preset,
           )
         })
       }
-      v @ TsConfig::Auto(is_auto) => {
+      TsConfig::Auto(is_auto) => {
         Box::new(if is_auto {
           // Auto mode: Create Raw mode TransformOptions
           // Each file will find its nearest tsconfig during compilation
           TransformOptions::new_raw(
-            RawTransformOptions::new(raw_transform_options, v),
+            RawTransformOptions::new(raw_transform_options, Arc::clone(&resolver) as _),
             target,
             jsx_preset,
           )

@@ -1,0 +1,52 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/hello-CUbDYdKJ.txt
+
+## main.js
+
+```js
+import data from "./assets/hello-CUbDYdKJ.txt";
+
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+const data2 = __require("./assets/hello-CUbDYdKJ.txt");
+console.log(data, data2);
+
+//#endregion
+//# sourceMappingURL=main.js.map
+```
+
+# Output Stats
+
+- main.js, is_entry true, is_dynamic_entry false, exports []
+
+# Sourcemap Visualizer
+
+```
+- ../main.js
+(1:0) "const " --> (10:5) " "
+(1:6) "data2 = require(" --> (10:6) "data2"
+(1:6) "data2 = require(" --> (10:11) " "
+(1:6) "data2 = require(" --> (10:12) "="
+(1:6) "data2 = require(" --> (10:13) " "
+(1:6) "data2 = require(" --> (10:14) "__require"
+(1:6) "data2 = require(" --> (10:23) "("
+(1:22) "'./hello.txt')" --> (10:24) "\""
+(1:22) "'./hello.txt')" --> (10:25) "./assets/hello-CUbDYdKJ.txt"
+(1:22) "'./hello.txt')" --> (10:52) "\""
+(1:22) "'./hello.txt')" --> (10:53) ")"
+(1:36) ";\n" --> (10:54) ";\n"
+(2:0) "console." --> (11:0) "console"
+(2:0) "console." --> (11:7) "."
+(2:8) "log(" --> (11:8) "log"
+(2:8) "log(" --> (11:11) "("
+(2:12) "data, " --> (11:12) "data"
+(2:12) "data, " --> (11:16) ","
+(2:12) "data, " --> (11:17) " "
+(2:18) "data2)" --> (11:18) "data2"
+(2:18) "data2)" --> (11:23) ")"
+(2:24) ";\n" --> (11:24) ";\n"
+```

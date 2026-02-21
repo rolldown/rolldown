@@ -1,0 +1,12 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".txt": "copy"
+    },
+    "entryFilenames": "nested/chunks/[name].js",
+    "assetFilenames": "deep/assets/[name]-[hash][extname]"
+  },
+  "expectExecuted": false,
+  "snapshotOutputStats": true,
+  "visualizeSourcemap": true
+}

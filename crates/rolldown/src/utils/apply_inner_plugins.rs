@@ -49,5 +49,11 @@ pub fn apply_inner_plugins(
 
   user_plugins.push(Arc::new(rolldown_plugin_data_uri::DataUriPlugin::default()));
 
+  let copy_module_plugin =
+    rolldown_plugin_copy_module::CopyModulePlugin::new(&options.module_types);
+  if copy_module_plugin.is_active() {
+    user_plugins.push(Arc::new(copy_module_plugin));
+  }
+
   ApplyInnerPluginsReturn { lazy_compilation_context }
 }

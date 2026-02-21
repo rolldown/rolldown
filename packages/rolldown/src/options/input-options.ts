@@ -51,6 +51,7 @@ export type ModuleTypes = Record<
   | 'empty'
   | 'css'
   | 'asset'
+  | 'copy'
 >;
 
 export interface WatcherOptions {

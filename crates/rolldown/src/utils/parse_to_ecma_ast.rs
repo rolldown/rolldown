@@ -171,6 +171,13 @@ fn pre_process_source(
       ))
     }
     ModuleType::Empty => Cow::Borrowed(""),
+    ModuleType::Copy => {
+      return Err(anyhow::format_err!(
+        "Encountered a module with type `copy` during AST parsing. \
+         Modules with type `copy` must be handled by the builtin CopyModulePlugin before this stage; \
+         please check your plugin and loader configuration."
+      ))?;
+    }
     ModuleType::Custom(custom_type) => {
       // TODO: should provide friendly error message to say that this type is not supported by rolldown.
       // Users should handle this type in load/transform hooks

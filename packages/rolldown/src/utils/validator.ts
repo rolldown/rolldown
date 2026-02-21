@@ -119,6 +119,7 @@ const ModuleTypesSchema = v.record(
     v.literal('asset'),
     v.literal('base64'),
     v.literal('binary'),
+    v.literal('copy'),
     v.literal('css'),
     v.literal('dataurl'),
     v.literal('empty'),

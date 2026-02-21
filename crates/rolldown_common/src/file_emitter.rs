@@ -278,6 +278,7 @@ impl FileEmitter {
     bundle: &mut Vec<Output>,
     warnings: &mut Vec<BuildDiagnostic>,
   ) {
+    let mut additional_assets = Vec::new();
     self.files.iter_mut().for_each(|mut file| {
       let (key, value) = file.pair_mut();
       if self.emitted_files.contains(key) {
@@ -297,13 +298,16 @@ impl FileEmitter {
 
       let mut original_file_names = std::mem::take(&mut value.original_file_names);
       original_file_names.sort_unstable();
-      bundle.push(Output::Asset(Arc::new(OutputAsset {
+      additional_assets.push(Output::Asset(Arc::new(OutputAsset {
         filename: value.filename.clone(),
         names,
         original_file_names,
         source: std::mem::take(&mut value.source),
       })));
     });
+    // Sort to ensure deterministic output order regardless of DashMap iteration order
+    additional_assets.sort_unstable_by(|a, b| a.filename().cmp(b.filename()));
+    bundle.extend(additional_assets);
 
     // Add prebuilt chunks to the bundle
     self.prebuilt_chunks.iter().for_each(|prebuilt_chunk| {

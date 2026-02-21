@@ -2775,6 +2775,7 @@ dependencies = [
  "rolldown_fs",
  "rolldown_plugin",
  "rolldown_plugin_chunk_import_map",
+ "rolldown_plugin_copy_module",
  "rolldown_plugin_data_uri",
  "rolldown_plugin_hmr",
  "rolldown_plugin_lazy_compilation",
@@ -3124,6 +3125,22 @@ dependencies = [
  "rustc-hash",
  "serde_json",
  "xxhash-rust",
+]
+
+[[package]]
+name = "rolldown_plugin_copy_module"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arcstr",
+ "memchr",
+ "rolldown_common",
+ "rolldown_plugin",
+ "rolldown_utils",
+ "rustc-hash",
+ "string_wizard",
+ "sugar_path",
+ "tokio",
 ]
 
 [[package]]

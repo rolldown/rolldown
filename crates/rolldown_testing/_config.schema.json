@@ -687,7 +687,8 @@
             "binary",
             "empty",
             "css",
-            "asset"
+            "asset",
+            "copy"
           ]
         },
         {

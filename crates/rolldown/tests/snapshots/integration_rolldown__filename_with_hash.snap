@@ -4344,6 +4344,19 @@ expression: output
 
 - main-!~{000}~.js => main-8zKCbqBt.js
 
+# tests/rolldown/function/module_types/copy/basic
+
+- main-!~{000}~.js => main-B1eEk7A-.js
+- main-B1eEk7A-.js.map
+- assets/hello-CUbDYdKJ.txt
+
+# tests/rolldown/function/module_types/copy/nested_path
+
+- nested/chunks/main.js => nested/chunks/main.js
+- nested/chunks/main.js.map
+- deep/assets/deep-DYZ8IeH_.txt
+- deep/assets/root-DcToKNib.txt
+
 # tests/rolldown/function/module_types/dataurl/binary
 
 - main-!~{000}~.js => main-umvyerzh.js

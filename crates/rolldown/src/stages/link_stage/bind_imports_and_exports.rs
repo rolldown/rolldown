@@ -22,7 +22,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{SharedOptions, types::linking_metadata::LinkingMetadataVec};
 
-use super::LinkStage;
+use super::{ExternalImportBindingLinkPlan, LinkStage};
 
 #[derive(Clone, Debug)]
 struct ImportTracker {
@@ -180,6 +180,7 @@ impl LinkStage<'_> {
       errors: Vec::default(),
       warnings: Vec::default(),
       external_import_binding_merger: FxHashMap::default(),
+      external_import_binding_link_plan: FxHashMap::default(),
       side_effects_modules: &side_effects_modules,
       normal_symbol_exports_chain_map: &mut normal_symbol_exports_chain_map,
       external_import_namespace_merger: FxHashMap::default(),
@@ -188,12 +189,21 @@ impl LinkStage<'_> {
       binding_ctx.match_imports_with_exports(module.idx());
     });
 
-    self.errors.extend(binding_ctx.errors);
-    self.warnings.extend(binding_ctx.warnings);
+    let BindImportsAndExportsContext {
+      errors,
+      warnings,
+      external_import_binding_merger,
+      external_import_binding_link_plan,
+      external_import_namespace_merger,
+      ..
+    } = binding_ctx;
 
-    self.external_import_namespace_merger = binding_ctx.external_import_namespace_merger;
+    self.errors.extend(errors);
+    self.warnings.extend(warnings);
 
-    for (module_idx, map) in &binding_ctx.external_import_binding_merger {
+    self.external_import_namespace_merger = external_import_namespace_merger;
+
+    for (module_idx, map) in &external_import_binding_merger {
       for (key, symbol_set) in map {
         let name = if key.as_str() == "default" {
           let key = symbol_set
@@ -207,10 +217,19 @@ impl LinkStage<'_> {
           Cow::Owned(legal_name.as_ref().into())
         };
         let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, &name);
+        self
+          .external_import_binding_link_plan
+          .entry((*module_idx, key.clone()))
+          .or_default()
+          .facade_symbol_ref = Some(target_symbol);
         for symbol_ref in symbol_set {
           self.symbols.link(*symbol_ref, target_symbol);
         }
       }
+    }
+    for (key, plan) in external_import_binding_link_plan {
+      let entry = self.external_import_binding_link_plan.entry(key).or_default();
+      entry.symbols.extend(plan.symbols);
     }
 
     self.metas.par_iter_mut().for_each(|meta| {
@@ -599,8 +618,18 @@ struct BindImportsAndExportsContext<'a> {
   pub options: &'a SharedOptions,
   pub errors: Vec<BuildDiagnostic>,
   pub warnings: Vec<BuildDiagnostic>,
+  /// Collects non-re-exported named imports from external modules (e.g. `import { foo } from 'ext'`
+  /// where `foo` is only used internally). These are eagerly merged after binding: a facade symbol
+  /// is created per (module, name) pair and all local references are linked to it.
   pub external_import_binding_merger:
     FxHashMap<ModuleIdx, FxHashMap<CompactStr, IndexSet<SymbolRef>>>,
+  /// Collects re-exported named imports from external modules (e.g. `export { foo } from 'ext'`).
+  /// These cannot be eagerly merged because they may span multiple chunks. Instead, they are
+  /// deferred to the chunk-level merging pass during code splitting.
+  pub external_import_binding_link_plan:
+    FxHashMap<(ModuleIdx, CompactStr), ExternalImportBindingLinkPlan>,
+  /// Collects namespace imports from external modules (`import * as ns from 'ext'`).
+  /// Deferred to chunk-level merging during code splitting.
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   pub side_effects_modules: &'a FxHashSet<ModuleIdx>,
   pub normal_symbol_exports_chain_map: &'a mut FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -624,8 +653,12 @@ impl BindImportsAndExportsContext<'_> {
       let Some(resolved_module_idx) = rec.resolved_module else { continue };
       let is_external = matches!(self.index_modules[resolved_module_idx], Module::External(_));
 
+      // For ESM output with external modules, collect imports into mergers so that
+      // multiple imports of the same binding from the same external module can be
+      // deduplicated into a single import statement during code generation.
       if is_esm && is_external {
         match named_import.imported {
+          // `import * as ns from 'ext'` — track namespace imports per external module.
           Specifier::Star => {
             self
               .external_import_namespace_merger
@@ -633,6 +666,9 @@ impl BindImportsAndExportsContext<'_> {
               .or_default()
               .insert(*imported_as_ref);
           }
+          // `import { foo } from 'ext'` where `foo` is NOT re-exported by this module.
+          // These are internal-only usages and will get a facade symbol created for them
+          // later so that all local references share one import binding.
           Specifier::Literal(ref name)
             if self.metas[module_idx]
               .resolved_exports
@@ -647,7 +683,21 @@ impl BindImportsAndExportsContext<'_> {
               .or_default()
               .insert(*imported_as_ref);
           }
-          Specifier::Literal(_) => {}
+          // `import { foo } from 'ext'` where `foo` IS also re-exported by this module
+          // (i.e. `export { foo } from 'ext'`). Unlike purely internal imports, these
+          // cannot be eagerly merged here at the module level because re-exported
+          // bindings may end up in different chunks. Merging symbols across chunk
+          // boundaries would cause deconfliction issues. Instead, they are collected
+          // and deferred to the chunk-level merging pass in `merge_external_import_symbols`
+          // during code splitting, where same-chunk symbols can be safely linked.
+          Specifier::Literal(ref name) => {
+            self
+              .external_import_binding_link_plan
+              .entry((resolved_module_idx, name.clone()))
+              .or_default()
+              .symbols
+              .insert(*imported_as_ref);
+          }
         }
       }
       let ret = self.match_import_with_export(

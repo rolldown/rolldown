@@ -137,6 +137,10 @@ fn resolve_id(
   import_kind: ImportKind,
   is_user_defined_entry: bool,
 ) -> Result<ResolvedId, ResolveError> {
+  // Data URL modules have no filesystem location, so imports from them cannot be resolved.
+  if importer.is_some_and(|id| id.starts_with("\0rolldown/data-url:")) {
+    return Err(ResolveError::NotFound(specifier.to_string()));
+  }
   let resolved =
     resolver.resolve(importer.map(Path::new), specifier, import_kind, is_user_defined_entry);
 

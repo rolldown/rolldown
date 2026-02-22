@@ -6,19 +6,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region <data:text/javascript,console.log('%31%32%33')>
+//#region \0rolldown/data-url:ZkuZVdK78XLI6cN2c0BGHA
 console.log("123");
 
 //#endregion
-//#region <data:text/javascript;base64,Y29uc29sZS5sb2coMjM0KQ==>
+//#region \0rolldown/data-url:oDiUunfrO2vRNyOIvD8nnQ
 console.log(234);
 
 //#endregion
-//#region <data:text/javascript;charset=UTF-8,console.log(%31%32%33)>
+//#region \0rolldown/data-url:A662MVPSaNNmeB3z2giORg
 console.log(123);
 
 //#endregion
-//#region <data:text/javascript;charset=UTF-8;base64,Y29uc29sZS5sb2coMjM0KQ==>
+//#region \0rolldown/data-url:Qp-Cu7zrDBXspSQAeE5jdw
 console.log(234);
 
 //#endregion

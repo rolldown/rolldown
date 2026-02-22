@@ -5,3 +5,5 @@ One common problem is that this mechanism will also apply to imports like `impor
 Choosing `false` will keep all paths as absolute paths in the output.
 
 Note that when a relative path is directly marked as "external" using the [`external`](/reference/InputOptions.external) option, then it will be the same relative path in the output. When it is resolved first via a plugin or Rollup core and then marked as external, the above logic will apply.
+
+See the [External Modules Guide](https://rolldown.rs/in-depth/external-modules) for a detailed explanation of how this option interacts with the `external` option and plugin hooks.

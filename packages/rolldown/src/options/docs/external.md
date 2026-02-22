@@ -69,3 +69,5 @@ export default {
   external: /^[^./]/,
 };
 ```
+
+See the [External Modules Guide](https://rolldown.rs/in-depth/external-modules) for a detailed explanation of how externals are resolved and how the output path is determined.

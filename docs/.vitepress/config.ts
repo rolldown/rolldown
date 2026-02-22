@@ -81,6 +81,7 @@ const sidebarForInDepth: DefaultTheme.SidebarItem[] = [
         text: 'Why Plugin Hook Filter',
         link: '/in-depth/why-plugin-hook-filter.md',
       },
+      { text: 'External Modules', link: '/in-depth/external-modules.md' },
       { text: 'Directives', link: '/in-depth/directives.md' },
     ],
   },

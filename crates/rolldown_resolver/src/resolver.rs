@@ -216,10 +216,7 @@ impl<Fs: FileSystem> Resolver<Fs> {
 }
 
 impl<Fs: FileSystem + Send + Sync> TsconfigFinder for Resolver<Fs> {
-  fn find_tsconfig(
-    &self,
-    path: &Path,
-  ) -> Result<Option<Arc<OxcTsConfig>>, ResolveError> {
+  fn find_tsconfig(&self, path: &Path) -> Result<Option<Arc<OxcTsConfig>>, ResolveError> {
     self.default_resolver.find_tsconfig(path)
   }
 }

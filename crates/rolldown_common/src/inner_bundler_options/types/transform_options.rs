@@ -18,10 +18,8 @@ use crate::BundlerTransformOptions;
 /// reuse the main resolver's cached tsconfig lookups instead of maintaining
 /// a separate resolver instance.
 pub trait TsconfigFinder: Send + Sync {
-  fn find_tsconfig(
-    &self,
-    path: &Path,
-  ) -> Result<Option<Arc<oxc_resolver::TsConfig>>, ResolveError>;
+  fn find_tsconfig(&self, path: &Path)
+  -> Result<Option<Arc<oxc_resolver::TsConfig>>, ResolveError>;
 }
 
 #[derive(Debug, Default, Clone)]
@@ -70,11 +68,7 @@ impl RawTransformOptions {
     base_options: BundlerTransformOptions,
     tsconfig_finder: Arc<dyn TsconfigFinder>,
   ) -> Self {
-    Self {
-      base_options: Arc::new(base_options),
-      cache: FxDashMap::default(),
-      tsconfig_finder,
-    }
+    Self { base_options: Arc::new(base_options), cache: FxDashMap::default(), tsconfig_finder }
   }
 
   pub fn get_or_create_for_tsconfig(

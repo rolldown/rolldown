@@ -22,7 +22,7 @@ pub fn apply_inner_plugins(
   user_plugins: &mut Vec<SharedPluginable>,
 ) -> ApplyInnerPluginsReturn {
   let mut before_user_plugins: Vec<SharedPluginable> = vec![
-    Arc::new(rolldown_plugin_data_uri::DataUriPlugin::default()),
+    Arc::new(rolldown_plugin_data_url::DataUrlPlugin::default()),
     Arc::new(rolldown_plugin_oxc_runtime::OxcRuntimePlugin),
   ];
 

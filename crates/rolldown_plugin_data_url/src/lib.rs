@@ -14,19 +14,19 @@ use rolldown_utils::{
 };
 
 #[derive(Debug)]
-pub struct ResolvedDataUri {
+pub struct ResolvedDataUrl {
   pub data: ArcStr,
   pub module_type: ModuleType,
 }
 
 #[derive(Debug, Default)]
-pub struct DataUriPlugin {
-  resolved_data_uri: FxDashMap<ArcStr, ResolvedDataUri>,
+pub struct DataUrlPlugin {
+  resolved_data_url: FxDashMap<ArcStr, ResolvedDataUrl>,
 }
 
-impl Plugin for DataUriPlugin {
+impl Plugin for DataUrlPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:data-uri")
+    Cow::Borrowed("builtin:data-url")
   }
 
   fn register_hook_usage(&self) -> HookUsage {
@@ -69,7 +69,7 @@ impl Plugin for DataUriPlugin {
       let id: ArcStr =
         format!("\0rolldown/data-url:{}", xxhash_base64_url(args.specifier.as_bytes())).into();
 
-      self.resolved_data_uri.insert(id.clone(), ResolvedDataUri { data, module_type });
+      self.resolved_data_url.insert(id.clone(), ResolvedDataUrl { data, module_type });
 
       return Ok(Some(HookResolveIdOutput { id, ..Default::default() }));
     }
@@ -82,7 +82,7 @@ impl Plugin for DataUriPlugin {
   }
 
   async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    let Some(resolved) = self.resolved_data_uri.get(args.id) else {
+    let Some(resolved) = self.resolved_data_url.get(args.id) else {
       return Ok(None);
     };
 

@@ -12,7 +12,7 @@ use oxc_resolver::{
 };
 use rolldown_common::{
   ImportKind, ModuleDefFormat, ModuleId, PackageJson, Platform, ResolveOptions, ResolvedId,
-  TsConfig,
+  TsConfig, TsconfigFinder,
 };
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_utils::dashmap::FxDashMap;
@@ -212,6 +212,12 @@ impl<Fs: FileSystem> Resolver<Fs> {
     let specifier_path = self.cwd.join(specifier).normalize();
     let fallback = resolver.resolve(importer_dir, &specifier_path.to_string_lossy());
     if fallback.is_ok() { fallback } else { original_resolution }
+  }
+}
+
+impl<Fs: FileSystem + Send + Sync> TsconfigFinder for Resolver<Fs> {
+  fn find_tsconfig(&self, path: &Path) -> Result<Option<Arc<OxcTsConfig>>, ResolveError> {
+    self.default_resolver.find_tsconfig(path)
   }
 }
 

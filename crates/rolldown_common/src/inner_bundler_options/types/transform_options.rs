@@ -1,4 +1,5 @@
 use std::{
+  fmt,
   ops::{Deref, DerefMut},
   path::{Path, PathBuf},
   sync::Arc,
@@ -6,12 +7,20 @@ use std::{
 
 use dashmap::Entry;
 use oxc::transformer::{ESFeature, EngineTargets, TransformOptions as OxcTransformOptions};
-use oxc_resolver::{ResolveOptions, Resolver, TsconfigDiscovery, TsconfigOptions};
+use oxc_resolver::ResolveError;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::dashmap::FxDashMap;
 
 use super::tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig;
-use crate::{BundlerTransformOptions, TsConfig};
+use crate::BundlerTransformOptions;
+
+/// Trait for finding tsconfig.json files, allowing the transform phase to
+/// reuse the main resolver's cached tsconfig lookups instead of maintaining
+/// a separate resolver instance.
+pub trait TsconfigFinder: Send + Sync {
+  fn find_tsconfig(&self, path: &Path)
+  -> Result<Option<Arc<oxc_resolver::TsConfig>>, ResolveError>;
+}
 
 #[derive(Debug, Default, Clone)]
 pub enum JsxPreset {
@@ -24,31 +33,43 @@ pub enum JsxPreset {
   Preserve,
 }
 
-/// Transform options with auto tsconfig discovery and caching
-#[derive(Debug, Clone)]
+/// Transform options with auto tsconfig discovery and caching.
+///
+/// Uses a shared `TsconfigFinder` (typically backed by the main bundler resolver)
+/// to avoid redundant filesystem walks for tsconfig discovery.
 pub struct RawTransformOptions {
   pub base_options: Arc<BundlerTransformOptions>,
   /// Cache key: tsconfig path, or empty PathBuf for files without tsconfig
   pub cache: FxDashMap<PathBuf, Arc<OxcTransformOptions>>,
-  resolver: Arc<Resolver>,
+  tsconfig_finder: Arc<dyn TsconfigFinder>,
+}
+
+impl fmt::Debug for RawTransformOptions {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.debug_struct("RawTransformOptions")
+      .field("base_options", &self.base_options)
+      .field("cache", &self.cache)
+      .field("tsconfig_finder", &"TsconfigFinder")
+      .finish()
+  }
+}
+
+impl Clone for RawTransformOptions {
+  fn clone(&self) -> Self {
+    Self {
+      base_options: Arc::clone(&self.base_options),
+      cache: self.cache.clone(),
+      tsconfig_finder: Arc::clone(&self.tsconfig_finder),
+    }
+  }
 }
 
 impl RawTransformOptions {
-  pub fn new(base_options: BundlerTransformOptions, tsconfig: TsConfig) -> Self {
-    Self {
-      base_options: Arc::new(base_options),
-      cache: FxDashMap::default(),
-      resolver: Arc::new(Resolver::new(ResolveOptions {
-        tsconfig: match tsconfig {
-          TsConfig::Auto(v) => v.then_some(TsconfigDiscovery::Auto),
-          TsConfig::Manual(config_file) => Some(TsconfigDiscovery::Manual(TsconfigOptions {
-            config_file,
-            references: oxc_resolver::TsconfigReferences::Auto,
-          })),
-        },
-        ..Default::default()
-      })),
-    }
+  pub fn new(
+    base_options: BundlerTransformOptions,
+    tsconfig_finder: Arc<dyn TsconfigFinder>,
+  ) -> Self {
+    Self { base_options: Arc::new(base_options), cache: FxDashMap::default(), tsconfig_finder }
   }
 
   pub fn get_or_create_for_tsconfig(
@@ -139,7 +160,7 @@ impl TransformOptions {
       TransformOptionsInner::Raw(raw) => {
         let tsconfig = match file_path {
           Some(path) => raw
-            .resolver
+            .tsconfig_finder
             .find_tsconfig(path)
             .map_err(|err| BuildDiagnostic::tsconfig_error(path.display().to_string(), err))?,
           None => None,

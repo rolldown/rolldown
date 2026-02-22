@@ -2,7 +2,7 @@ use std::{borrow::Borrow, path::Path};
 
 use arcstr::ArcStr;
 use rolldown_std_utils::PathExt as _;
-use sugar_path::SugarPath as _;
+use rolldown_utils::path::relative_to_slash;
 
 use crate::ModuleId;
 
@@ -38,8 +38,8 @@ impl StableModuleId {
   }
 
   fn with_arc_str(id: ArcStr, cwd: &Path) -> Self {
-    let arc_str: ArcStr = if id.as_path().is_absolute() {
-      id.relative(cwd).as_path().expect_to_slash().into()
+    let arc_str: ArcStr = if Path::new(id.as_str()).is_absolute() {
+      relative_to_slash(id.as_str(), cwd.expect_to_str()).into()
     } else if id.starts_with('\0') {
       id.replace('\0', "\\0").into()
     } else {

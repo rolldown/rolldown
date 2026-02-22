@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use oxc::span::Span;
-use sugar_path::SugarPath as _;
 
 use rolldown_common::{
   ExportsKind, FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
@@ -13,7 +12,9 @@ use rolldown_error::{
   BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
 };
 use rolldown_std_utils::PathExt as _;
-use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
+use rolldown_utils::{
+  dataurl::is_data_url, ecmascript::legitimize_identifier_name, indexmap::FxIndexSet,
+};
 
 use crate::{
   asset::create_asset_view,
@@ -189,7 +190,7 @@ impl ModuleTask {
       }
     }
 
-    let repr_name = self.resolved_id.id.as_path().representative_file_name();
+    let repr_name = std::path::Path::new(self.resolved_id.id.as_str()).representative_file_name();
     let repr_name = legitimize_identifier_name(&repr_name).into_owned();
 
     // Build lazy barrel info if the experimental flag is enabled
@@ -199,11 +200,19 @@ impl ModuleTask {
       None
     };
 
+    let debug_id = if is_data_url(&self.resolved_id.id) {
+      format!("<{}>", self.resolved_id.id.as_str())
+    } else if self.resolved_id.ignored {
+      format!("(ignored) {}", stable_id.as_str())
+    } else {
+      stable_id.as_str().to_string()
+    };
+
     let module = NormalModule {
       repr_name,
       stable_id,
       id,
-      debug_id: self.resolved_id.debug_id(&self.ctx.options.cwd),
+      debug_id,
       idx: self.module_idx,
       exec_order: u32::MAX,
       module_type: module_type.clone(),

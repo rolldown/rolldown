@@ -1,11 +1,12 @@
 use std::path::Path;
 
 use rolldown_std_utils::PathExt as _;
-use sugar_path::SugarPath as _;
+
+use crate::path::relative_to_slash;
 
 pub fn stabilize_id(module_id: &str, cwd: &Path) -> String {
-  if module_id.as_path().is_absolute() {
-    module_id.relative(cwd).as_path().expect_to_slash()
+  if Path::new(module_id).is_absolute() {
+    relative_to_slash(module_id, cwd.expect_to_str())
   } else if module_id.starts_with('\0') {
     // handle virtual modules
     module_id.replace('\0', "\\0")

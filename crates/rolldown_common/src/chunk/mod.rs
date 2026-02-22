@@ -23,9 +23,9 @@ use rolldown_utils::{
   hash_placeholder::HashPlaceholderGenerator,
   indexmap::{FxIndexMap, FxIndexSet},
   make_unique_name::make_unique_name,
+  path::relative_to_slash,
 };
 use rustc_hash::FxHashMap;
-use sugar_path::SugarPath;
 
 use self::types::{
   cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,
@@ -145,19 +145,20 @@ impl Chunk {
       .absolute_preliminary_filename
       .as_ref()
       .expect("importee chunk should have absolute_preliminary_filename");
-    let import_path = self.relative_path_for(importee_filename.as_path());
+    let import_path = self.relative_path_for(Path::new(importee_filename));
     if import_path.starts_with("../") { import_path } else { format!("./{import_path}") }
   }
 
   pub fn relative_path_for(&self, target: &Path) -> String {
-    let source_dir = self
-      .absolute_preliminary_filename
-      .as_ref()
-      .expect("chunk should have absolute_preliminary_filename")
-      .as_path()
-      .parent()
-      .expect("absolute_preliminary_filename should have a parent directory");
-    target.relative(source_dir).as_path().expect_to_slash()
+    let source_dir = Path::new(
+      self
+        .absolute_preliminary_filename
+        .as_ref()
+        .expect("chunk should have absolute_preliminary_filename"),
+    )
+    .parent()
+    .expect("absolute_preliminary_filename should have a parent directory");
+    relative_to_slash(target.expect_to_str(), source_dir.expect_to_str())
   }
 
   pub async fn filename_template(
@@ -242,7 +243,7 @@ impl Chunk {
     }
 
     let p = PathBuf::from(chunk_name);
-    let p = if p.is_absolute() {
+    if p.is_absolute() {
       if let Some(ref preserve_modules_root) = options.preserve_modules_root {
         if chunk_name.starts_with(preserve_modules_root) {
           return Cow::Borrowed(
@@ -250,11 +251,11 @@ impl Chunk {
           );
         }
       }
-      p.relative(self.input_base.as_str())
+      Cow::Owned(relative_to_slash(chunk_name, self.input_base.as_str()))
     } else {
-      PathBuf::from(options.virtual_dirname.as_str()).join(p)
-    };
-    Cow::Owned(p.to_slash_lossy().into_owned())
+      let joined = PathBuf::from(options.virtual_dirname.as_str()).join(p);
+      Cow::Owned(joined.expect_to_slash())
+    }
   }
 
   pub fn user_defined_entry_module_idx(&self) -> Option<ModuleIdx> {

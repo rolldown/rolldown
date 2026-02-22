@@ -2151,7 +2151,7 @@ expression: output
 
 # tests/esbuild/loader/loader_data_url_application_json
 
-- entry-!~{000}~.js => entry-DxkwWC22.js
+- entry-!~{000}~.js => entry-AJwPng1x.js
 
 # tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 
@@ -2175,15 +2175,11 @@ expression: output
 
 # tests/esbuild/loader/loader_data_url_text_java_script
 
-- entry-!~{000}~.js => entry-BlqvTVHi.js
-
-# tests/esbuild/loader/loader_data_url_text_java_script_cannot_import
-
-- entry-!~{000}~.js => entry-DLwL520U.js
+- entry-!~{000}~.js => entry-D_5EfHds.js
 
 # tests/esbuild/loader/loader_data_url_text_java_script_plus_character
 
-- entry-!~{000}~.js => entry-O0UN5aFb.js
+- entry-!~{000}~.js => entry-Cdiqy0po.js
 
 # tests/esbuild/loader/loader_data_url_unknown_mime
 
@@ -4558,7 +4554,7 @@ expression: output
 
 # tests/rolldown/issues/2300
 
-- main-!~{000}~.js => main-CFS0RCIR.js
+- main-!~{000}~.js => main-C6FU2ULk.js
 
 # tests/rolldown/issues/2669
 

@@ -139,7 +139,9 @@ fn is_not_absolute_external(
 }
 
 fn normalize_relative_external_id(cwd: &Path, specifier: &str, importer: Option<&str>) -> ArcStr {
-  if !is_relative(specifier) || importer.is_some_and(is_data_url) {
+  if !is_relative(specifier)
+    || importer.is_some_and(|id| is_data_url(id) || id.starts_with("\0rolldown/data-url:"))
+  {
     return specifier.into();
   }
   let path = if let Some(importer) = importer {

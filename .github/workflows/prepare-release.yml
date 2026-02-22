@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 0 # for changelog
           persist-credentials: true # for create-pull-request
 
-      - uses: taiki-e/install-action@288875dd3d64326724fa6d9593062d9f8ba0b131 # v2.67.30
+      - uses: taiki-e/install-action@f92912fad184299a31e22ad070a5059fd07d4f59 # v2.68.7
         with:
           tool: just
 
@@ -47,7 +47,7 @@ jobs:
 
       - name: Generate changelog via git cliff
         id: changelog
-        uses: orhun/git-cliff-action@e16f179f0be49ecdfe63753837f20b9531642772 # v4.7.0
+        uses: orhun/git-cliff-action@c93ef52f3d0ddcdcc9bd5447d98d458a11cd4f72 # v4.7.1
         env:
           # Used to make request to GitHub without ratelimits.
           # `secrets.GIT_CLIFF_TOKEN` only has read permission.

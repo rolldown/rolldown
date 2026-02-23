@@ -333,6 +333,7 @@ impl<'a> GenerateStage<'a> {
             module.idx,
             preliminary
               .absolutize_with(self.options.cwd.join(&self.options.out_dir))
+              .into_owned()
               .expect_into_string(),
           );
           chunk.asset_preliminary_filenames.insert(module.idx, preliminary);
@@ -344,6 +345,7 @@ impl<'a> GenerateStage<'a> {
       chunk.absolute_preliminary_filename = Some(
         preliminary_filename
           .absolutize_with(self.options.cwd.join(&self.options.out_dir))
+          .into_owned()
           .expect_into_string(),
       );
       chunk.preliminary_filename = Some(preliminary_filename);

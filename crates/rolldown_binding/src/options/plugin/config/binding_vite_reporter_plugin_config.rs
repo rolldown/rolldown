@@ -27,7 +27,7 @@ pub struct BindingViteReporterPluginConfig {
 impl From<BindingViteReporterPluginConfig> for ViteReporterPlugin {
   fn from(config: BindingViteReporterPluginConfig) -> Self {
     Self {
-      root: PathBuf::from(config.root).normalize(),
+      root: PathBuf::from(config.root).normalize().into_owned(),
       is_lib: config.is_lib,
       is_tty: config.is_tty,
       assets_dir: config.assets_dir,

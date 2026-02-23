@@ -25,7 +25,7 @@ impl TsConfig {
   pub fn with_base(self, base: &Path) -> Self {
     match self {
       Self::Auto(_) => self,
-      Self::Manual(path) => Self::Manual(base.join(path).normalize()),
+      Self::Manual(path) => Self::Manual(base.join(path).normalize().into_owned()),
     }
   }
 }

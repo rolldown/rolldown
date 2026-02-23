@@ -9,6 +9,6 @@ pub fn check_public_file(path: &str, public_dir: &str) -> Option<PathBuf> {
     return None;
   }
   let path = &clean_url(path)[1..];
-  let file = Path::new(public_dir).join(path).normalize();
+  let file = Path::new(public_dir).join(path).normalize().into_owned();
   (file.starts_with(public_dir) && file.exists()).then_some(file)
 }

@@ -12,7 +12,7 @@ async fn main() {
       InputItem { import: "./other-entry.js".to_string(), ..Default::default() },
       InputItem { name: Some("third-entry".to_string()), import: "./third-entry.js".to_string() },
     ]),
-    cwd: Some(workspace::crate_dir("rolldown").join("./examples/basic").normalize()),
+    cwd: Some(workspace::crate_dir("rolldown").join("./examples/basic").normalize().into_owned()),
     sourcemap: Some(SourceMapType::File),
     ..Default::default()
   })

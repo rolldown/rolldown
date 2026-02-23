@@ -209,7 +209,8 @@ impl<Fs: FileSystem> Resolver<Fs> {
       .unwrap_or(self.cwd.as_path());
 
     // Try resolving relative to cwd as a fallback
-    let specifier_path = self.cwd.join(specifier).normalize();
+    let joined = self.cwd.join(specifier);
+    let specifier_path = joined.normalize();
     let fallback = resolver.resolve(importer_dir, &specifier_path.to_string_lossy());
     if fallback.is_ok() { fallback } else { original_resolution }
   }

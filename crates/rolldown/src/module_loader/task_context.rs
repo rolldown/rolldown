@@ -13,6 +13,10 @@ pub struct TaskContext {
   pub fs: OsFileSystem,
   pub plugin_driver: SharedPluginDriver,
   pub meta: TaskContextMeta,
+  /// Limits concurrent filesystem I/O to avoid APFS global kernel lock contention on macOS.
+  /// On macOS, too many threads calling open() concurrently causes severe lock contention
+  /// due to the APFS global kernel lock, degrading open() latency by 4x+.
+  pub fs_semaphore: tokio::sync::Semaphore,
 }
 
 pub struct TaskContextMeta {

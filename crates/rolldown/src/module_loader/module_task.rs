@@ -107,15 +107,27 @@ impl ModuleTask {
       }),
     );
 
+    // Scope 1: Acquire the semaphore for file loading (filesystem I/O).
+    // This reduces APFS kernel lock contention from ~240 concurrent open() calls to ~num_cpus.
+    // The permit is released before CPU-bound parsing to avoid holding it unnecessarily
+    // and to prevent deadlocks when plugins call `this.load()` during transform hooks.
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
-    let (mut source, module_type) = self
-      .load_source_without_cache(
-        &mut sourcemap_chain,
-        &mut hook_side_effects,
-        self.magic_string_tx.clone(),
-      )
-      .await?;
+    let (mut source, module_type) = {
+      let _fs_permit = self
+        .ctx
+        .fs_semaphore
+        .acquire()
+        .await
+        .map_err(|err| BuildDiagnostic::unhandleable_error(err.into()))?;
+      self
+        .load_source_without_cache(
+          &mut sourcemap_chain,
+          &mut hook_side_effects,
+          self.magic_string_tx.clone(),
+        )
+        .await?
+    };
 
     let stable_id = id.stabilize(&self.ctx.options.cwd);
 
@@ -136,6 +148,8 @@ impl ModuleTask {
 
     let mut warnings = vec![];
 
+    // CPU-bound work: OXC parsing, semantic analysis, AST transforms, etc.
+    // No filesystem permit held here to maximize parallelism.
     let ret = create_ecma_view(
       &mut CreateModuleContext {
         stable_id: &stable_id,
@@ -161,17 +175,27 @@ impl ModuleTask {
 
     let raw_import_records = ecma_raw_import_records;
 
-    let resolved_deps = resolve_dependencies(
-      &self.resolved_id,
-      &self.ctx.options,
-      &self.ctx.resolver,
-      &self.ctx.plugin_driver,
-      &raw_import_records,
-      ecma_view.source.clone(),
-      &mut warnings,
-      &module_type,
-    )
-    .await?;
+    // Scope 2: Acquire the semaphore for dependency resolution (filesystem I/O).
+    // The resolver performs synchronous stat/open/read calls for each dependency.
+    let resolved_deps = {
+      let _fs_permit = self
+        .ctx
+        .fs_semaphore
+        .acquire()
+        .await
+        .map_err(|err| BuildDiagnostic::unhandleable_error(err.into()))?;
+      resolve_dependencies(
+        &self.resolved_id,
+        &self.ctx.options,
+        &self.ctx.resolver,
+        &self.ctx.plugin_driver,
+        &raw_import_records,
+        ecma_view.source.clone(),
+        &mut warnings,
+        &module_type,
+      )
+      .await?
+    };
 
     for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
       match record.kind {

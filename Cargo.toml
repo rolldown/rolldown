@@ -204,7 +204,9 @@ serde_yaml = "0.9.34"
 simdutf8 = "0.1.5"
 smallvec = "1.15.0"
 string_cache = "0.9.0"
-sugar_path = { version = "1.2.1", features = ["cached_current_dir"] }
+sugar_path = { git = "https://github.com/hyf0/sugar_path", rev = "72a97fe4c120d30158c2c2e44f96cb697fa42250", features = [
+  "cached_current_dir",
+] }
 terminal_size = "0.4.2"
 testing_macros = "1.0.0"
 tokio = { version = "1.45.0", default-features = false }

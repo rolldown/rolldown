@@ -6,9 +6,8 @@ use rolldown_common::{
 };
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathExt;
-use rolldown_utils::{
-  ecmascript::legitimize_identifier_name, indexmap::FxIndexSet, path::relative_to_slash,
-};
+use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
+use sugar_path::SugarPath;
 
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
@@ -34,7 +33,7 @@ pub async fn create_ecma_view(
 
   let module_id = ctx.resolved_id.id.clone();
 
-  let repr_name = std::path::Path::new(module_id.as_str()).representative_file_name();
+  let repr_name = module_id.as_path().representative_file_name();
   let repr_name = legitimize_identifier_name(&repr_name);
 
   let scanner = AstScanner::new(
@@ -208,10 +207,9 @@ pub fn lazy_check_side_effects(
     .and_then(|p| {
       // the glob expr is based on parent path of package.json, which is package path
       // so we should use the relative path of the module to package path
-      let pkg_dir = p.realpath().parent()?;
       let module_path_relative_to_package =
-        relative_to_slash(resolved_id.id.as_str(), pkg_dir.expect_to_str());
-      p.check_side_effects_for(&module_path_relative_to_package)
+        resolved_id.id.as_path().relative(p.realpath().parent()?);
+      p.check_side_effects_for(&module_path_relative_to_package.to_string_lossy())
         .map(DeterminedSideEffects::UserDefined)
     })
     .unwrap_or_else(|| {

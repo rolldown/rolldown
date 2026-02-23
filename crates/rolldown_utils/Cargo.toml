@@ -19,7 +19,6 @@ harness = false
 name = "concat_string"
 path = "bench/concat_string.rs"
 
-
 [lints]
 workspace = true
 

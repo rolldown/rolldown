@@ -5,8 +5,7 @@ use oxc::ast::CommentKind;
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_sourcemap::SourceMap;
-use rolldown_std_utils::PathExt;
-use rolldown_utils::path::relative_to_slash;
+use sugar_path::SugarPath;
 use url::Url;
 
 use super::uuid::uuid_v4_string_from_u128;
@@ -28,31 +27,21 @@ pub async fn process_code_and_sourcemap(
   let map_filename = format!("{filename}.map");
   let map_path = file_dir.join(&map_filename);
 
-  // Pre-compute relative sources once to avoid redundant relative path calculations
-  let file_dir_str = file_dir.expect_to_str();
-  let relative_sources: Vec<String> = map
-    .get_sources()
-    .map(|source| {
-      if Path::new(source.as_ref()).is_absolute() {
-        relative_to_slash(source, file_dir_str)
-      } else {
-        source.to_string()
-      }
-    })
-    .collect();
-
   if let Some(source_map_ignore_list) = &options.sourcemap_ignore_list {
     let mut x_google_ignore_list = vec![];
-    for (index, source) in relative_sources.iter().enumerate() {
+    for (index, source) in map.get_sources().enumerate() {
+      let source = source.as_path().relative(file_dir);
       let should_ignore = match source_map_ignore_list {
         rolldown_common::SourceMapIgnoreList::Boolean(_)
         | rolldown_common::SourceMapIgnoreList::StringOrRegex(_) => {
           // Fast path: no async overhead for static values (boolean/string/regex)
-          source_map_ignore_list.exec_static(source)
+          source_map_ignore_list.exec_static(source.to_string_lossy().as_ref())
         }
         rolldown_common::SourceMapIgnoreList::Fn(_) => {
           // Slow path: async function call only when needed
-          source_map_ignore_list.exec_dynamic(source, map_path.to_string_lossy().as_ref()).await?
+          source_map_ignore_list
+            .exec_dynamic(source.to_string_lossy().as_ref(), map_path.to_string_lossy().as_ref())
+            .await?
         }
       };
 
@@ -68,18 +57,14 @@ pub async fn process_code_and_sourcemap(
 
   if let Some(sourcemap_path_transform) = &options.sourcemap_path_transform {
     let map_path = map_path.to_string_lossy();
-    let sources = try_join_all(relative_sources.into_iter().map(async |relative_source| {
-      // On Windows, the transform callback expects OS-native separators (e.g. `..\main.js`)
-      // since user code uses `path.sep` for matching. Convert `/` back to `\` before calling.
-      #[cfg(windows)]
-      let callback_source = relative_source.replace('/', "\\");
-      #[cfg(not(windows))]
-      let callback_source = relative_source;
-      let source = sourcemap_path_transform.call(&callback_source, map_path.as_ref()).await?;
+    let sources = try_join_all(map.get_sources().map(async |source| {
+      let source = source.as_path().relative(file_dir);
+      let source =
+        sourcemap_path_transform.call(source.to_string_lossy().as_ref(), map_path.as_ref()).await?;
       #[cfg(windows)]
       {
-        // Normalize the windows path back to forward slashes for the sourcemap.
-        Ok::<_, anyhow::Error>(source.replace('\\', "/"))
+        // Normalize the windows path.
+        Ok::<_, anyhow::Error>(source.replace(std::path::MAIN_SEPARATOR, "/"))
       }
       #[cfg(not(windows))]
       {
@@ -89,8 +74,20 @@ pub async fn process_code_and_sourcemap(
     .await?;
 
     map.set_sources(sources);
+  } else if cfg!(windows) {
+    // Normalize the windows path at final.
+    let sources = map
+      .get_sources()
+      .map(|x| x.as_path().relative(file_dir).to_slash_lossy().to_string())
+      .collect::<Vec<_>>();
+    map.set_sources(sources);
   } else {
-    map.set_sources(relative_sources);
+    map.set_sources(
+      map
+        .get_sources()
+        .map(|x| x.as_path().relative(file_dir).to_string_lossy().into_owned())
+        .collect::<Vec<_>>(),
+    );
   }
 
   if options.sourcemap_debug_ids && options.sourcemap.is_some() {

@@ -26,6 +26,14 @@ pub fn apply_inner_plugins(
     Arc::new(rolldown_plugin_oxc_runtime::OxcRuntimePlugin),
   ];
 
+  if let Some(config) = &options.experimental.chunk_import_map {
+    before_user_plugins.push(Arc::new(rolldown_plugin_chunk_import_map::ChunkImportMapPlugin {
+      base_url: config.base_url.clone(),
+      file_name: config.file_name.clone(),
+      ..Default::default()
+    }));
+  }
+
   let mut lazy_compilation_context = None;
 
   if let Some(dev_mode) = &options.experimental.dev_mode {
@@ -35,14 +43,6 @@ pub fn apply_inner_plugins(
       lazy_compilation_context = Some(plugin.context());
       before_user_plugins.push(Arc::new(plugin));
     }
-  }
-
-  if let Some(config) = &options.experimental.chunk_import_map {
-    before_user_plugins.push(Arc::new(rolldown_plugin_chunk_import_map::ChunkImportMapPlugin {
-      base_url: config.base_url.clone(),
-      file_name: config.file_name.clone(),
-      ..Default::default()
-    }));
   }
 
   if !before_user_plugins.is_empty() {

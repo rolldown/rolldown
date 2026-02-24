@@ -80,7 +80,7 @@ If you are using a platform that a prebuilt binary is not distributed, you have 
 
 ### Release Channels
 
-- [latest](https://www.npmjs.com/package/rolldown?activeTab=versions): currently `1.0.0-rc.*`.
+- [latest](https://npmx.dev/package/rolldown#versions): currently `1.0.0-rc.*`.
 - [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown): continuously released from the `main` branch. Install with `npm i https://pkg.pr.new/rolldown@sha` where `sha` is a successful build listed on [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown).
 
 ## Using the CLI

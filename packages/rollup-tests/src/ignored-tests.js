@@ -70,6 +70,16 @@ const ignoreTests = [
   "rollup@function@error-parse-unknown-extension: throws with an extended error message when failing to parse a file without .(m)js extension",
   "rollup@function@error-parse-json: throws with an extended error message when failing to parse a file with \".json\" extension",
 
+  // ## Assigning to bundle is not supported
+  "rollup@function@error-file-name-absolute-path: throws when a plugin adds an absolute file name to the output bundle",
+  "rollup@function@error-file-name-deep-traversal: throws when a file name resolves outside the output directory after normalizing deep \"..\" segments",
+  "rollup@function@error-file-name-dot-dot: throws when a plugin adds \"..\" as a file name to the output bundle",
+  "rollup@function@error-file-name-escaped-via-filename-property: throws when a plugin sets a safe bundle key but an escaping fileName property",
+  "rollup@function@error-file-name-path-traversal-plugin: throws when a plugin adds a path traversal file name to the output bundle",
+  "rollup@function@error-file-name-windows-absolute-path: throws when a plugin adds a Windows-style absolute file name to the output bundle",
+  "rollup@function@file-name-double-dot-prefix-is-valid: allows file names that start with \"..\" but are not path traversal sequences",
+  "rollup@function@file-name-leading-dot-slash-is-valid: allows file names with a leading \"./\" prefix",
+
   // ## warning / error differences
   "rollup@function@plugin-hook-filters: plugin hook filter is supported", // Rolldown has additional `EMPTY_IMPORT_META` warning
   "rollup@function@generate-bundle-mutation: handles adding or deleting symbols in generateBundle", // rolldown outputs a warning when assigning to bundle[foo]

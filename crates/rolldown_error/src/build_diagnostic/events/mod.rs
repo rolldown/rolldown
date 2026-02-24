@@ -26,6 +26,7 @@ pub mod empty_import_meta;
 pub mod eval;
 pub mod external_entry;
 pub mod filename_conflict;
+pub mod filename_outside_output_directory;
 pub mod forbid_const_assign;
 pub mod illegal_identifier_as_name;
 pub mod import_is_undefined;

@@ -42,16 +42,17 @@ pub enum EventKind {
   ///
   /// {@include ../docs/checks-filename-conflict.md}
   FilenameConflict = 15,
+  FilenameOutsideOutputDirectoryError = 16,
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // --- These kinds are derived from esbuild
-  AssignToImportError = 16,
+  AssignToImportError = 17,
   /// Whether to emit warnings when a CommonJS variable is used in an ES module.
   ///
   /// CommonJS variables like `module` and `exports` are treated as global variables in ES modules and may not work as expected.
   ///
   /// {@include ../docs/checks-commonjs-variable-in-esm.md}
-  CommonJsVariableInEsm = 17,
+  CommonJsVariableInEsm = 18,
   /// Whether to emit warnings when an imported variable is not exported.
   ///
   /// If the code is importing a variable that is not exported by the imported module, the value will always be `undefined`. This might be a mistake in the code.
@@ -132,6 +133,9 @@ impl Display for EventKind {
       EventKind::UnresolvedEntry => write!(f, "UNRESOLVED_ENTRY"),
       EventKind::UnresolvedImport => write!(f, "UNRESOLVED_IMPORT"),
       EventKind::FilenameConflict => write!(f, "FILE_NAME_CONFLICT"),
+      EventKind::FilenameOutsideOutputDirectoryError => {
+        write!(f, "FILE_NAME_OUTSIDE_OUTPUT_DIRECTORY")
+      }
 
       // --- Derived from esbuild
       EventKind::AssignToImportError => write!(f, "ASSIGN_TO_IMPORT"),

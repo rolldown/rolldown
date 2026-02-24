@@ -22,6 +22,7 @@ use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
 use super::events::duplicate_shebang::DuplicateShebang;
 use super::events::filename_conflict::FilenameConflict;
+use super::events::filename_outside_output_directory::FilenameOutsideOutputDirectory;
 use super::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use super::events::import_is_undefined::ImportIsUndefined;
 use super::events::invalid_define_config::InvalidDefineConfig;
@@ -174,6 +175,10 @@ impl BuildDiagnostic {
 
   pub fn filename_conflict(filename: ArcStr) -> Self {
     Self::new_inner(FilenameConflict { filename })
+  }
+
+  pub fn filename_outside_output_directory(filename: String) -> Self {
+    Self::new_inner(FilenameOutsideOutputDirectory { filename })
   }
 
   // Esbuild

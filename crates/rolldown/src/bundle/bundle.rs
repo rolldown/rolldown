@@ -21,7 +21,8 @@ use rolldown_plugin::{
   HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
 use rolldown_utils::dashmap::FxDashSet;
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
+use sugar_path::SugarPath;
 
 #[expect(
   clippy::struct_field_names,
@@ -262,6 +263,15 @@ impl Bundle {
       .generate_bundle(&mut output.assets, is_write, &self.options, &mut output.warnings)
       .await?;
 
+    for asset in &output.assets {
+      if is_filename_outside_output_dir(asset.filename()) {
+        return Err(
+          vec![BuildDiagnostic::filename_outside_output_directory(asset.filename().to_string())]
+            .into(),
+        );
+      }
+    }
+
     if let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache {
       invalidate_js_side_cache.call().await?;
     }
@@ -364,4 +374,22 @@ impl Bundle {
       output
     })
   }
+}
+
+/// Check if a filename would escape the output directory.
+///
+/// Rejects absolute paths and paths that normalize to a location outside the
+/// output directory (e.g. via `..` traversal).
+fn is_filename_outside_output_dir(filename: &str) -> bool {
+  if Path::new(filename).is_absolute() {
+    return true;
+  }
+
+  let normalized = filename.normalize();
+  let normalized = normalized.to_string_lossy();
+
+  normalized == "."
+    || normalized == ".."
+    || normalized.starts_with("../")
+    || normalized.starts_with("..\\")
 }

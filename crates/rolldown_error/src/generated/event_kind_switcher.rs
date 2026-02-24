@@ -20,8 +20,9 @@ bitflags! {
     const UnresolvedEntry = 1 << 13;
     const UnresolvedImport = 1 << 14;
     const FilenameConflict = 1 << 15;
-    const AssignToImportError = 1 << 16;
-    const CommonJsVariableInEsm = 1 << 17;
+    const FilenameOutsideOutputDirectoryError = 1 << 16;
+    const AssignToImportError = 1 << 17;
+    const CommonJsVariableInEsm = 1 << 18;
     const ImportIsUndefined = 1 << 19;
     const UnsupportedFeatureError = 1 << 20;
     const EmptyImportMeta = 1 << 21;

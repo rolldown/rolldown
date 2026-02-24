@@ -50,4 +50,12 @@ impl BuildEvent for PluginError {
     }
     diagnostic.kind = self.plugin.name.to_string();
   }
+
+  #[cfg(feature = "napi")]
+  fn as_napi_error(&self) -> Option<&napi::Error> {
+    // If the inner error chain contains a napi::Error (e.g. a plugin threw a JS exception),
+    // expose it so the original JS error object is returned to the caller instead of a
+    // plain-text representation.
+    self.error.downcast_ref::<napi::Error>()
+  }
 }

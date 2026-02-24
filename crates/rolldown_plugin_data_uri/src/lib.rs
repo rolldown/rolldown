@@ -4,7 +4,8 @@ use arcstr::ArcStr;
 use rolldown_common::ModuleType;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookUsage, Plugin, PluginContext, SharedLoadPluginContext,
+  HookResolveIdReturn, HookUsage, Plugin, PluginContext, PluginHookMeta, PluginOrder,
+  SharedLoadPluginContext,
 };
 use rolldown_utils::{
   dashmap::FxDashMap,
@@ -25,6 +26,15 @@ pub struct DataUriPlugin {
 impl Plugin for DataUriPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:data-uri")
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::ResolveId | HookUsage::Load
+  }
+
+  fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
+    // Users might have other plugins to handle data URLs, we should give them a chance to do so by resolving data URLs as late as possible.
+    Some(PluginHookMeta { order: Some(PluginOrder::PinPost) })
   }
 
   async fn resolve_id(
@@ -66,6 +76,11 @@ impl Plugin for DataUriPlugin {
     Ok(None)
   }
 
+  fn load_meta(&self) -> Option<PluginHookMeta> {
+    // If a `data URL` is resolved by this plugin, we want to provide the content directly without letting other plugins or rolldown to handle it.
+    Some(PluginHookMeta { order: Some(PluginOrder::Pre) })
+  }
+
   async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if is_data_url(args.id) {
       let Some(resolved) = self.resolved_data_uri.get(args.id) else {
@@ -80,9 +95,5 @@ impl Plugin for DataUriPlugin {
     } else {
       Ok(None)
     }
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId | HookUsage::Load
   }
 }

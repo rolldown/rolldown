@@ -21,8 +21,10 @@ pub fn apply_inner_plugins(
   options: &NormalizedBundlerOptions,
   user_plugins: &mut Vec<SharedPluginable>,
 ) -> ApplyInnerPluginsReturn {
-  let mut before_user_plugins: Vec<SharedPluginable> =
-    vec![Arc::new(rolldown_plugin_oxc_runtime::OxcRuntimePlugin)];
+  let mut before_user_plugins: Vec<SharedPluginable> = vec![
+    Arc::new(rolldown_plugin_data_uri::DataUriPlugin::default()),
+    Arc::new(rolldown_plugin_oxc_runtime::OxcRuntimePlugin),
+  ];
 
   let mut lazy_compilation_context = None;
 
@@ -46,8 +48,6 @@ pub fn apply_inner_plugins(
   if !before_user_plugins.is_empty() {
     user_plugins.splice(0..0, before_user_plugins);
   }
-
-  user_plugins.push(Arc::new(rolldown_plugin_data_uri::DataUriPlugin::default()));
 
   let copy_module_plugin =
     rolldown_plugin_copy_module::CopyModulePlugin::new(&options.module_types);

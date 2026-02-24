@@ -151,7 +151,12 @@ impl<Fs: FileSystem> Resolver<Fs> {
     };
 
     let mut resolution = if let Some(importer) = importer {
-      resolve_file_from_importer(selected_resolver, importer, &self.cwd, specifier)
+      // check if `is_absolute` to avoid extra `join` overhead
+      if importer.is_absolute() {
+        selected_resolver.resolve_file(importer, specifier)
+      } else {
+        selected_resolver.resolve_file(self.cwd.join(importer), specifier)
+      }
     } else {
       selected_resolver.resolve(self.cwd.as_path(), specifier)
     };
@@ -216,22 +221,6 @@ impl<Fs: FileSystem> Resolver<Fs> {
   }
 }
 
-fn resolve_file_from_importer<Fs: FileSystem>(
-  resolver: &ResolverGeneric<Fs>,
-  importer: &Path,
-  cwd: &Path,
-  specifier: &str,
-) -> Result<Resolution, ResolveError> {
-  // check if `is_absolute` to avoid extra `join` overhead
-  if importer.is_absolute() {
-    resolver.resolve_file(importer, specifier)
-  } else {
-    resolver.resolve_file(cwd.join(importer), specifier)
-  }
-}
-
-/// Infer module format from file extension and package.json type field
-/// Reference: https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L1446-L1460
 fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
   let fmt = ModuleDefFormat::from_path(info.path());
   if !matches!(fmt, ModuleDefFormat::Unknown) {

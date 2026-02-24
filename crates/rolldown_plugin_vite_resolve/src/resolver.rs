@@ -281,7 +281,12 @@ impl Resolver {
 
     let inner_resolver = if external { &self.inner_for_external } else { &self.inner };
     let result = if let Some(importer) = importer {
-      resolve_file_from_importer(inner_resolver, importer, &self.root, specifier)
+      // check if `is_absolute` to avoid extra `join` overhead
+      if Path::new(importer).is_absolute() {
+        inner_resolver.resolve_file(importer, specifier)
+      } else {
+        inner_resolver.resolve_file(self.root.join(importer), specifier)
+      }
     } else {
       inner_resolver.resolve(&self.root, specifier)
     };
@@ -321,7 +326,12 @@ impl Resolver {
     // this allows resolving `@pkg/pkg/foo.scss` to `@pkg/pkg/_foo.scss`, which is probably not allowed by sass's resolver
     // but that's an edge case so we ignore it here
     if let Some(importer) = importer {
-      resolve_file_from_importer(inner_resolver, importer, &self.root, path_with_prefix)
+      // check if `is_absolute` to avoid extra `join` overhead
+      if Path::new(importer).is_absolute() {
+        inner_resolver.resolve_file(importer, path_with_prefix)
+      } else {
+        inner_resolver.resolve_file(self.root.join(importer), path_with_prefix)
+      }
     } else {
       inner_resolver.resolve(&self.root, path_with_prefix)
     }
@@ -483,20 +493,6 @@ impl Resolver {
 
   pub fn clear_cache(&self) {
     self.inner.clear_cache();
-  }
-}
-
-fn resolve_file_from_importer(
-  resolver: &oxc_resolver::Resolver,
-  importer: &str,
-  root: &Path,
-  specifier: &str,
-) -> Result<oxc_resolver::Resolution, oxc_resolver::ResolveError> {
-  // check if `is_absolute` to avoid extra `join` overhead
-  if Path::new(importer).is_absolute() {
-    resolver.resolve_file(importer, specifier)
-  } else {
-    resolver.resolve_file(root.join(importer), specifier)
   }
 }
 

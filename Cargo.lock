@@ -2762,7 +2762,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_plugin_chunk_import_map",
  "rolldown_plugin_copy_module",
- "rolldown_plugin_data_uri",
+ "rolldown_plugin_data_url",
  "rolldown_plugin_hmr",
  "rolldown_plugin_lazy_compilation",
  "rolldown_plugin_oxc_runtime",
@@ -3130,7 +3130,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_plugin_data_uri"
+name = "rolldown_plugin_data_url"
 version = "0.1.0"
 dependencies = [
  "arcstr",

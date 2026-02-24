@@ -32,7 +32,9 @@ async fn main() {
   let config = BundlerConfig::new(
     BundlerOptions {
       input: Some(vec!["./entry.js".to_string().into()]),
-      cwd: Some(rolldown_workspace::crate_dir("rolldown").join("./examples/basic").normalize()),
+      cwd: Some(
+        rolldown_workspace::crate_dir("rolldown").join("./examples/basic").normalize().into_owned(),
+      ),
       experimental: Some(ExperimentalOptions {
         incremental_build: Some(true),
         ..Default::default()

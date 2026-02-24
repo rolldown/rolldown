@@ -110,11 +110,7 @@ impl ModuleTask {
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
     let (mut source, module_type) = self
-      .load_source_without_cache(
-        &mut sourcemap_chain,
-        &mut hook_side_effects,
-        self.magic_string_tx.clone(),
-      )
+      .load_source(&mut sourcemap_chain, &mut hook_side_effects, self.magic_string_tx.clone())
       .await?;
 
     let stable_id = id.stabilize(&self.ctx.options.cwd);
@@ -235,7 +231,7 @@ impl ModuleTask {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  async fn load_source_without_cache(
+  async fn load_source(
     &self,
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
     hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,

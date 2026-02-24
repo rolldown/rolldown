@@ -118,6 +118,7 @@ impl PluginHookOrders {
   ) -> Vec<PluginIdx> {
     let mut pre_plugins = Vec::new();
     let mut post_plugins = Vec::new();
+    let mut pin_post_plugins = Vec::new();
     let mut normal_plugins = Vec::with_capacity(index_plugins.len());
     for (idx, plugin) in index_plugins.iter_enumerated() {
       let Some(meta) = get_hook_meta(idx, plugin) else { continue };
@@ -126,10 +127,13 @@ impl PluginHookOrders {
         Some(meta) => match meta.order {
           Some(PluginOrder::Pre) => pre_plugins.push(idx),
           Some(PluginOrder::Post) => post_plugins.push(idx),
+          Some(PluginOrder::PinPost) => pin_post_plugins.push(idx),
           None => normal_plugins.push(idx),
         },
       }
     }
-    [pre_plugins, normal_plugins, post_plugins].concat()
+    // Reverse so first-seen plugin runs last (pinned to the very end)
+    pin_post_plugins.reverse();
+    [pre_plugins, normal_plugins, post_plugins, pin_post_plugins].concat()
   }
 }

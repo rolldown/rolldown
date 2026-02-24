@@ -3,6 +3,7 @@ import path from 'node:path';
 import type {
   BindingHookFilter,
   BindingHookResolveIdOutput,
+  BindingPluginContext,
   BindingPluginOptions,
 } from '../binding.cjs';
 import { BindingMagicString } from '../binding.cjs';
@@ -30,6 +31,21 @@ import { LoadPluginContextImpl } from './load-plugin-context';
 import { PluginContextImpl } from './plugin-context';
 import { TransformPluginContextImpl } from './transform-plugin-context';
 
+function createPluginContext(
+  args: BindingifyPluginArgs,
+  ctx: BindingPluginContext,
+): PluginContextImpl {
+  return new PluginContextImpl(
+    args.outputOptions,
+    ctx,
+    args.plugin,
+    args.pluginContextData,
+    args.onLog,
+    args.logLevel,
+    args.watchMode,
+  );
+}
+
 export function bindingifyBuildStart(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['buildStart']> {
@@ -42,15 +58,7 @@ export function bindingifyBuildStart(
   return {
     plugin: async (ctx, opts) => {
       await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        createPluginContext(args, ctx),
         args.pluginContextData.getInputOptions(opts),
       );
     },
@@ -69,15 +77,7 @@ export function bindingifyBuildEnd(
   return {
     plugin: async (ctx, err) => {
       await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        createPluginContext(args, ctx),
         err ? aggregateBindingErrorsIntoJsError(err) : undefined,
       );
     },
@@ -102,15 +102,7 @@ export function bindingifyResolveId(
           : undefined;
 
       const ret = await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        createPluginContext(args, ctx),
         specifier,
         importer ?? undefined,
         {
@@ -164,15 +156,7 @@ export function bindingifyResolveDynamicImport(
   return {
     plugin: async (ctx, specifier, importer) => {
       const ret = await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        createPluginContext(args, ctx),
         specifier,
         importer ?? undefined,
       );
@@ -397,15 +381,7 @@ export function bindingifyModuleParsed(
   return {
     plugin: async (ctx, moduleInfo) => {
       await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        createPluginContext(args, ctx),
         transformModuleInfo(moduleInfo, args.pluginContextData.getModuleOption(moduleInfo.id)),
       );
     },

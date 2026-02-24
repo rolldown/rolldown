@@ -151,11 +151,7 @@ impl<Fs: FileSystem> Resolver<Fs> {
     };
 
     let mut resolution = if let Some(importer) = importer {
-      if importer.is_absolute() {
-        selected_resolver.resolve_file(importer, specifier)
-      } else {
-        selected_resolver.resolve_file(self.cwd.join(importer), specifier)
-      }
+      resolve_file_from_importer(selected_resolver, importer, &self.cwd, specifier)
     } else {
       selected_resolver.resolve(self.cwd.as_path(), specifier)
     };
@@ -217,6 +213,20 @@ impl<Fs: FileSystem> Resolver<Fs> {
     let specifier_path = joined.normalize();
     let fallback = resolver.resolve(importer_dir, &specifier_path.to_string_lossy());
     if fallback.is_ok() { fallback } else { original_resolution }
+  }
+}
+
+fn resolve_file_from_importer<Fs: FileSystem>(
+  resolver: &ResolverGeneric<Fs>,
+  importer: &Path,
+  cwd: &Path,
+  specifier: &str,
+) -> Result<Resolution, ResolveError> {
+  // check if `is_absolute` to avoid extra `join` overhead
+  if importer.is_absolute() {
+    resolver.resolve_file(importer, specifier)
+  } else {
+    resolver.resolve_file(cwd.join(importer), specifier)
   }
 }
 

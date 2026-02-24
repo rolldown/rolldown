@@ -151,7 +151,12 @@ impl<Fs: FileSystem> Resolver<Fs> {
     };
 
     let mut resolution = if let Some(importer) = importer {
-      selected_resolver.resolve_file(self.cwd.join(importer), specifier)
+      // check if `is_absolute` to avoid extra `join` overhead
+      if importer.is_absolute() {
+        selected_resolver.resolve_file(importer, specifier)
+      } else {
+        selected_resolver.resolve_file(self.cwd.join(importer), specifier)
+      }
     } else {
       selected_resolver.resolve(self.cwd.as_path(), specifier)
     };

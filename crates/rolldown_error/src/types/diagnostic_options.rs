@@ -18,10 +18,12 @@ impl DiagnosticOptions {
   /// Example: `/Users/you/project/src/index.js` -> `src/index.js` (if cwd is `/Users/you/project`)
   pub fn stabilize_path(&self, path: impl AsRef<Path>) -> String {
     let path = path.as_ref();
-    if path.is_absolute() {
+    let result = if path.is_absolute() {
       path.relative(&self.cwd).to_slash_lossy().into_owned()
     } else {
       path.to_string_lossy().to_string()
-    }
+    };
+    // Escape virtual module prefix (\0 → \\0) so null bytes don't appear in diagnostics
+    if result.contains('\0') { result.replace('\0', "\\0") } else { result }
   }
 }

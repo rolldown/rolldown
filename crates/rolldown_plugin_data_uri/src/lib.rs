@@ -10,6 +10,7 @@ use rolldown_plugin::{
 use rolldown_utils::{
   dashmap::FxDashMap,
   dataurl::{is_data_url, parse_data_url},
+  xxhash::xxhash_base64_url,
 };
 
 #[derive(Debug)]
@@ -20,7 +21,7 @@ pub struct ResolvedDataUri {
 
 #[derive(Debug, Default)]
 pub struct DataUriPlugin {
-  resolved_data_uri: FxDashMap<String, ResolvedDataUri>,
+  resolved_data_uri: FxDashMap<ArcStr, ResolvedDataUri>,
 }
 
 impl Plugin for DataUriPlugin {
@@ -65,13 +66,12 @@ impl Plugin for DataUriPlugin {
         urlencoding::decode(parsed.data)?.as_ref().into()
       };
 
-      self
-        .resolved_data_uri
-        .insert(args.specifier.to_string(), ResolvedDataUri { data, module_type });
+      let id: ArcStr =
+        format!("\0rolldown/data-url:{}", xxhash_base64_url(args.specifier.as_bytes())).into();
 
-      // Return the specifier as the id to tell rolldown that this data url is handled by the plugin.
-      // Don't fallback to the default resolve behavior and mark it as external.
-      return Ok(Some(HookResolveIdOutput { id: args.specifier.into(), ..Default::default() }));
+      self.resolved_data_uri.insert(id.clone(), ResolvedDataUri { data, module_type });
+
+      return Ok(Some(HookResolveIdOutput { id, ..Default::default() }));
     }
     Ok(None)
   }
@@ -82,18 +82,14 @@ impl Plugin for DataUriPlugin {
   }
 
   async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    if is_data_url(args.id) {
-      let Some(resolved) = self.resolved_data_uri.get(args.id) else {
-        return Ok(None);
-      };
+    let Some(resolved) = self.resolved_data_uri.get(args.id) else {
+      return Ok(None);
+    };
 
-      Ok(Some(HookLoadOutput {
-        code: resolved.data.clone(),
-        module_type: Some(resolved.module_type.clone()),
-        ..Default::default()
-      }))
-    } else {
-      Ok(None)
-    }
+    Ok(Some(HookLoadOutput {
+      code: resolved.data.clone(),
+      module_type: Some(resolved.module_type.clone()),
+      ..Default::default()
+    }))
   }
 }

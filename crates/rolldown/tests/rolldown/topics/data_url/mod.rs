@@ -1,0 +1,1 @@
+mod plugin_resolve_import_from_data_url_module;

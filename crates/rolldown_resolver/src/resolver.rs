@@ -221,6 +221,8 @@ impl<Fs: FileSystem> Resolver<Fs> {
   }
 }
 
+/// Infer module format from file extension and package.json type field
+/// Reference: https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L1446-L1460
 fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
   let fmt = ModuleDefFormat::from_path(info.path());
   if !matches!(fmt, ModuleDefFormat::Unknown) {

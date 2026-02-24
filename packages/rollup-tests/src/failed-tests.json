@@ -5,5 +5,15 @@
   "rollup@form@namespace-optimization-in-operator: it does static optimization of internal namespaces when checking whether an export exists",
   "rollup@function@catch-scope-nested-deconflicting: deconflicts nested catch scope parameters correctly",
   "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
+  "rollup@function@error-file-name-absolute-path: throws when a plugin adds an absolute file name to the output bundle",
+  "rollup@function@error-file-name-deep-traversal: throws when a file name resolves outside the output directory after normalizing deep \"..\" segments",
+  "rollup@function@error-file-name-dot-dot: throws when a plugin adds \"..\" as a file name to the output bundle",
+  "rollup@function@error-file-name-dot: throws when entryFileNames is \".\"",
+  "rollup@function@error-file-name-escaped-via-filename-property: throws when a plugin sets a safe bundle key but an escaping fileName property",
+  "rollup@function@error-file-name-path-traversal-plugin: throws when a plugin adds a path traversal file name to the output bundle",
+  "rollup@function@error-file-name-path-traversal: throws when entryFileNames contains a mid-path traversal sequence",
+  "rollup@function@error-file-name-windows-absolute-path: throws when a plugin adds a Windows-style absolute file name to the output bundle",
+  "rollup@function@file-name-double-dot-prefix-is-valid: allows file names that start with \"..\" but are not path traversal sequences",
+  "rollup@function@file-name-leading-dot-slash-is-valid: allows file names with a leading \"./\" prefix",
   "rollup@function@resolveid-recursive-call: skipSelf: true option in resolveId hook option should skip the plugin if it has been called before with the same id and importer, see #5768 for more details"
 ]

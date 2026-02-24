@@ -44,7 +44,7 @@ export default function myPlugin() {
 Rolldown evaluates the filter on the Rust side and only calls your handler when the filter matches.
 
 ::: tip
-[`@rolldown/pluginutils`](https://www.npmjs.com/package/@rolldown/pluginutils) exports some utilities for hook filters like `exactRegex` and `prefixRegex`.
+[`@rolldown/pluginutils`](https://npmx.dev/package/@rolldown/pluginutils) exports some utilities for hook filters like `exactRegex` and `prefixRegex`.
 :::
 
 ## Filter Properties

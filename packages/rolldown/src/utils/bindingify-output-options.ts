@@ -44,6 +44,10 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     strictExecutionOrder,
   } = outputOptions;
 
+  if (legalComments != null) {
+    logger.warn('`legalComments` option is deprecated, please use `comments.legal` instead.');
+  }
+
   // Handle codeSplitting and inlineDynamicImports
   const { inlineDynamicImports, advancedChunks } = bindingifyCodeSplitting(
     outputOptions.codeSplitting,

@@ -1,4 +1,76 @@
 
+## [1.0.0-rc.6] - 2026-02-25
+
+### 💥 BREAKING CHANGES
+
+- css: remove `css_entry_filenames` , `css_chunk_filenames` and related code (#8402) by @hyf0
+- css: drop builtin CSS bundling to explore alternative solutions (#8399) by @hyf0
+
+### 🚀 Features
+
+- rust/data-url: use hash as id for data url modules to prevent long string overhead (#8420) by @hyf0
+- validate bundle stays within output dir (#8441) by @sapphi-red
+- rust: support `PluginOrder::PinPost` (#8417) by @hyf0
+- support `ModuleType:Copy` (#8407) by @hyf0
+- expose `ESTree` types from `rolldown/utils` (#8400) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- plugin/chunk-import-map: ensure `render_chunk_meta` run after users plugin (#8422) by @hyf0
+- rust: correct hooks order of `DataUriPlugin` (#8418) by @hyf0
+- `jsx.preserve` should also considering tsconfig json preserve (#8324) by @IWANABETHATGUY
+- `deferred_scan_data.rs "Should have resolved id: NotFound"` error (#8379) by @sapphi-red
+- cli: require value for `--dir`/`-d` and `--file`/`-o` (#8378) by @Copilot
+- dev: avoid mutex deadlock caused by inconsistent lock order (#8370) by @sapphi-red
+
+### 🚜 Refactor
+
+- rust: rename `rolldown_plugin_data_uri` to `rolldown_plugin_data_url` (#8421) by @hyf0
+- bindingify-build-hook: extract helper for PluginContextImpl (#8438) by @ShroXd
+- give source loading a proper name (#8436) by @IWANABETHATGUY
+- ban holding DashMap refs across awaits (#8362) by @sapphi-red
+
+### 📚 Documentation
+
+- replace npmjs package links with npmx.dev (#8439) by @Boshen
+- reference: add `Exported from` for values / types exported from subpath exports (#8394) by @sapphi-red
+- add JSDocs for APIs exposed from subpath exports (#8393) by @sapphi-red
+- reference: generate reference pages for APIs exposed from subpath exports (#8392) by @sapphi-red
+- avoid pipe character in codeSplitting example to fix broken rendering (#8391) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- avoid redundant PathBuf allocations in resolve paths (#8435) by @Brooooooklyn
+- bump to `sugar_path@2` (#8432) by @hyf0
+- use flag-based convergence detection in include_statements (#8412) by @Brooooooklyn
+
+### 🧪 Testing
+
+- execute `_test.mjs` even if `executeOutput` is false (#8398) by @sapphi-red
+- add retry to tree-shake/module-side-effects-proxy4 as it is flaky (#8397) by @sapphi-red
+- avoid `expect.assertions()` as it is not concurrent test friendly (#8383) by @sapphi-red
+- disable `mockReset` option (#8382) by @sapphi-red
+- fix flaky failure caused by concurrent resolveId calls (#8381) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update rollup submodule for tests to v4.59.0 (#8433) by @sapphi-red
+- deps: update test262 submodule for tests (#8434) by @sapphi-red
+- deps: update oxc to v0.115.0 (#8430) by @renovate[bot]
+- deps: update oxc apps (#8429) by @renovate[bot]
+- deps: update npm packages (#8426) by @renovate[bot]
+- deps: update rust crate owo-colors to v4.3.0 (#8428) by @renovate[bot]
+- deps: update github-actions (#8424) by @renovate[bot]
+- deps: update rust crates (#8425) by @renovate[bot]
+- deps: update oxc resolver to v11.18.0 (#8406) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.14.2 (#8405) by @renovate[bot]
+- ban `expect.assertions` in all fixture tests (#8395) by @sapphi-red
+- deps: update oxc apps (#8389) by @renovate[bot]
+- ban `expect.assertions` in fixture tests (#8387) by @sapphi-red
+- enable lint for `_config.ts` files (#8386) by @sapphi-red
+- deps: update dependency oxlint-tsgolint to v0.14.1 (#8385) by @renovate[bot]
+
+
 ## [1.0.0-rc.5] - 2026-02-18
 
 ### 🚀 Features

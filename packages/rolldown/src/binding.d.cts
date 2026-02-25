@@ -509,6 +509,20 @@ export declare class ResolverFactory {
    * This method automatically discovers tsconfig.json by traversing parent directories.
    */
   resolveFileAsync(file: string, request: string): Promise<ResolveResult>
+  /**
+   * Synchronously resolve `specifier` for TypeScript declaration files.
+   *
+   * `file` is the absolute path to the containing file.
+   * Uses TypeScript's `moduleResolution: "bundler"` algorithm.
+   */
+  resolveDtsSync(file: string, request: string): ResolveResult
+  /**
+   * Asynchronously resolve `specifier` for TypeScript declaration files.
+   *
+   * `file` is the absolute path to the containing file.
+   * Uses TypeScript's `moduleResolution: "bundler"` algorithm.
+   */
+  resolveDtsAsync(file: string, request: string): Promise<ResolveResult>
 }
 
 /** Node.js builtin module when `Options::builtin_modules` is enabled. */
@@ -691,6 +705,15 @@ export interface NapiResolveOptions {
    * Default `true`
    */
   symlinks?: boolean
+  /**
+   * Whether to read the `NODE_PATH` environment variable and append its entries to `modules`.
+   *
+   * `NODE_PATH` is a deprecated Node.js feature that is not part of ESM resolution.
+   * Set this to `false` to disable the behavior.
+   *
+   * Default `true`
+   */
+  nodePath?: boolean
   /**
    * Whether to parse [module.builtinModules](https://nodejs.org/api/module.html#modulebuiltinmodules) or not.
    * For example, "zlib" will throw [crate::ResolveError::Builtin] when set to true.

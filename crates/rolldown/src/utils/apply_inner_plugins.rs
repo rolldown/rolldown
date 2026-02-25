@@ -22,6 +22,7 @@ pub fn apply_inner_plugins(
   user_plugins: &mut Vec<SharedPluginable>,
 ) -> ApplyInnerPluginsReturn {
   let mut before_user_plugins: Vec<SharedPluginable> = vec![
+    Arc::new(rolldown_plugin_copy_module::CopyModulePlugin::new(&options.module_types)),
     Arc::new(rolldown_plugin_data_url::DataUrlPlugin::default()),
     Arc::new(rolldown_plugin_oxc_runtime::OxcRuntimePlugin),
   ];
@@ -47,12 +48,6 @@ pub fn apply_inner_plugins(
 
   if !before_user_plugins.is_empty() {
     user_plugins.splice(0..0, before_user_plugins);
-  }
-
-  let copy_module_plugin =
-    rolldown_plugin_copy_module::CopyModulePlugin::new(&options.module_types);
-  if copy_module_plugin.is_active() {
-    user_plugins.push(Arc::new(copy_module_plugin));
   }
 
   ApplyInnerPluginsReturn { lazy_compilation_context }

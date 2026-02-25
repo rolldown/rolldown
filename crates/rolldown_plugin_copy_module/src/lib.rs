@@ -46,6 +46,12 @@ impl Plugin for CopyModulePlugin {
     HookUsage::ResolveId | HookUsage::RenderChunk
   }
 
+  fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
+    // Run before users' resolve_id hooks to ensure:
+    // - For matched modules, to handle it correctly without users' interference.
+    Some(PluginHookMeta { order: Some(PluginOrder::Pre) })
+  }
+
   async fn resolve_id(
     &self,
     ctx: &PluginContext,
@@ -118,6 +124,12 @@ impl Plugin for CopyModulePlugin {
     }))
   }
 
+  fn render_chunk_meta(&self) -> Option<PluginHookMeta> {
+    // Run before users' render_chunk hooks to ensure:
+    // - The placeholder IDs are replaced before any user hooks, so they won't see the placeholder IDs and won't interfere with our processing.
+    Some(PluginHookMeta { order: Some(PluginOrder::Pre) })
+  }
+
   async fn render_chunk(
     &self,
     ctx: &PluginContext,
@@ -178,10 +190,6 @@ impl Plugin for CopyModulePlugin {
     } else {
       Ok(None)
     }
-  }
-
-  fn render_chunk_meta(&self) -> Option<PluginHookMeta> {
-    Some(PluginHookMeta { order: Some(PluginOrder::Post) })
   }
 }
 

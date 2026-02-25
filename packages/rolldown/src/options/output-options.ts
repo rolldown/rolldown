@@ -556,6 +556,8 @@ export interface OutputOptions {
    *
    * For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/in-depth/manual-code-splitting).
    *
+   * {@include ./docs/output-code-splitting.md}
+   *
    * @example
    * **Basic vendor chunk**
    * ```js
@@ -573,7 +575,7 @@ export interface OutputOptions {
    *   },
    * });
    * ```
-   * {@include ./docs/output-code-splitting.md}
+   * {@include ./docs/output-code-splitting-example.md}
    *
    * @default true
    */

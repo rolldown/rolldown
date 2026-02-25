@@ -1,53 +1,5 @@
-**Multiple chunk groups with priorities**
+:::warning
 
-```js
-export default defineConfig({
-  output: {
-    codeSplitting: {
-      groups: [
-        {
-          name: 'react-vendor',
-          test: /node_modules[\\/]react/,
-          priority: 20,
-        },
-        {
-          name: 'ui-vendor',
-          test: /node_modules[\\/]antd/,
-          priority: 15,
-        },
-        {
-          name: 'vendor',
-          test: /node_modules/,
-          priority: 10,
-        },
-        {
-          name: 'common',
-          minShareCount: 2,
-          minSize: 10000,
-          priority: 5,
-        },
-      ],
-    },
-  },
-});
-```
+Be aware that manual code splitting can change the behavior of the application if side effects are triggered before the corresponding modules are actually used. You can change the chunking configuration to group some modules so that the modules are reordered, or you can use the [`output.strictExecutionOrder`](https://rolldown.rs/reference/OutputOptions.strictExecutionOrder) option to ensure that modules are executed in the order they are imported with the cost of a slight increase in bundle size.
 
-**Size-based splitting**
-
-```js
-export default defineConfig({
-  output: {
-    codeSplitting: {
-      groups: [
-        {
-          name: 'large-libs',
-          test: /node_modules/,
-          minSize: 100000, // 100KB
-          maxSize: 250000, // 250KB
-          priority: 10,
-        },
-      ],
-    },
-  },
-});
-```
+:::

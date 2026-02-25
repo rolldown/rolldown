@@ -8,6 +8,6 @@
     ],
     "chunkFilenames": "[name].js"
   },
-  "snapshotOutputStats": true,
+  "snapshot": false,
   "expectExecuted": false
 }

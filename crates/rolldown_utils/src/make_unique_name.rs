@@ -1,8 +1,9 @@
-use std::ffi::OsStr;
+use std::{borrow::Cow, ffi::OsStr};
 
 use arcstr::ArcStr;
+use cow_utils::CowUtils as _;
 use dashmap::Entry;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::{concat_string, dashmap::FxDashMap};
 
@@ -40,9 +41,12 @@ pub fn make_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>
     .unwrap_or_default();
   let file_name = &name[..name.len() - extension.len()];
   loop {
-    // Use lowercase key for case-insensitive conflict detection to handle
-    // case-insensitive filesystems (e.g. macOS APFS, Windows NTFS)
-    let lowercase_candidate: ArcStr = candidate.to_lowercase().into();
+    // Lowercase key for case-insensitive filesystems (macOS APFS, Windows NTFS).
+    // When already lowercase, reuse the `candidate` Arc directly to avoid allocation.
+    let lowercase_candidate: ArcStr = match candidate.as_str().cow_to_ascii_lowercase() {
+      Cow::Borrowed(_) => candidate,
+      Cow::Owned(s) => s.into(),
+    };
     match used_name_counts.entry(lowercase_candidate) {
       Entry::Occupied(mut occ) => {
         // This name is already used
@@ -56,8 +60,9 @@ pub fn make_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>
       }
       Entry::Vacant(vac) => {
         // This is the first time we see this name
+        let name = vac.key().clone();
         vac.insert(2);
-        break candidate;
+        break name;
       }
     }
   }

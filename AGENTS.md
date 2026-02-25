@@ -9,6 +9,14 @@ Rolldown is a JavaScript/TypeScript bundler written in Rust and TypeScript, desi
 
 </tips>
 
+# Spec-Driven Development
+
+Design docs live in `meta/design/`. They capture high-level vision and design intent, giving both humans and AI a shared understanding of what the system should be.
+
+When a design doc exists for a topic, treat it as the source of truth — read it before coding, update it before changing the design. When there isn't one, just code.
+
+- **Format:** See `meta/design/template.md` for the suggested format. Keep it freeform — one concept per file, link between docs, no rigid structure required.
+
 # Architecture
 
 ## Three-Layer Architecture
@@ -35,6 +43,7 @@ Rust Core (crates/rolldown)
 - `packages/rolldown-tests`: Test suite for the `rolldown` package using Vitest.
 - `packages/rollup-tests`: Compatibility test suite for Rollup plugins.
 - `docs/`: Documentation site built with VitePress.
+- `meta/design/`: Design documents. See the "Spec-Driven Development" section above.
 
 ## Auto-generated or Submodule Files
 

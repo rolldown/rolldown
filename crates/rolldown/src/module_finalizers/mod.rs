@@ -939,11 +939,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         Some(ast::SimpleAssignmentTarget::StaticMemberExpression(final_access))
       }
       CjsMemberProperty::Computed(expr) => {
-        let expr_clone = expr.clone_in(self.alloc);
+        // Finalize the computed key expression (e.g. inline constants) so that an
+        // inlined value is emitted instead of a reference to a tree-shaken binding.
+        let finalized_expr = match expr {
+          ast::Expression::Identifier(ident_ref) => self
+            .try_rewrite_identifier_reference_expr(ident_ref, false)
+            .unwrap_or_else(|| expr.clone_in(self.alloc)),
+          _ => expr.clone_in(self.alloc),
+        };
         let final_access = self.snippet.builder.alloc_computed_member_expression(
           SPAN,
           default_access,
-          expr_clone,
+          finalized_expr,
           false,
         );
         Some(ast::SimpleAssignmentTarget::ComputedMemberExpression(final_access))

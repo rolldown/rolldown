@@ -9,6 +9,7 @@ use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprObjectReferencedType,
   MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
   OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  SymbolRefFlags,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_utils::{
@@ -381,6 +382,7 @@ impl LinkStage<'_> {
   /// export const c = 1;
   /// ```
   /// The final pointed `SymbolRef` of `foo_ns.bar_ns.c` is the `c` in `bar.js`.
+  #[expect(clippy::too_many_lines)]
   fn resolve_member_expr_refs(
     &mut self,
     side_effects_modules: &FxHashSet<ModuleIdx>,
@@ -395,6 +397,7 @@ impl LinkStage<'_> {
         Module::Normal(module) => {
           let mut resolved_map = FxHashMap::default();
           let mut side_effects_dependency = vec![];
+          let mut written_cjs_exports: Vec<SymbolRef> = vec![];
           module.stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
@@ -539,11 +542,15 @@ impl LinkStage<'_> {
                           })
                       })
                   {
-                    target_commonjs_exported_symbol = Some((
-                      m.symbol_ref,
-                      member_expr_ref.prop_and_span_list[cursor].0 == "default",
-                    ));
+                    let is_default = member_expr_ref.prop_and_span_list[cursor].0 == "default";
+                    target_commonjs_exported_symbol = Some((m.symbol_ref, is_default));
                     depended_refs.push(m.symbol_ref);
+                    // If this member expression is a write (e.g. `cjs.c = 'abcd'`), the
+                    // CJS exported symbol should not be inlined as a constant since its
+                    // value may change at runtime.
+                    if member_expr_ref.is_write {
+                      written_cjs_exports.push(m.symbol_ref);
+                    }
                   }
                 }
 
@@ -575,16 +582,45 @@ impl LinkStage<'_> {
             });
           });
 
-          (resolved_map, side_effects_dependency)
+          (resolved_map, side_effects_dependency, written_cjs_exports)
         }
-        Module::External(_) => (FxHashMap::default(), vec![]),
+        Module::External(_) => (FxHashMap::default(), vec![], vec![]),
       })
       .collect::<Vec<_>>();
 
     debug_assert_eq!(self.metas.len(), resolved_meta_data.len());
     self.warnings.extend(warnings);
+    // Remove CJS exported symbols that are written to by importers from the constant map
+    // to prevent incorrect inlining of mutated values.
+    // First, collect statically-known written symbols gathered during resolution above.
+    // Then, for imports flagged with `HasComputedMemberWrite` (dynamic computed writes like
+    // `cjs[name] = value`, or writes through `ns.default`), bail out all CJS exports of the
+    // target module since we can't determine which specific property is affected.
+    let mut written_cjs_export_symbols: Vec<SymbolRef> = Vec::new();
+    for (meta, (_, _, written_cjs_exports)) in self.metas.iter().zip(resolved_meta_data.iter()) {
+      written_cjs_export_symbols.extend(written_cjs_exports);
+      for (import_symbol, cjs_module_idx) in
+        meta.named_import_to_cjs_module.iter().chain(meta.import_record_ns_to_cjs_module.iter())
+      {
+        if import_symbol
+          .flags(&self.symbols)
+          .is_some_and(|f| f.contains(SymbolRefFlags::HasComputedMemberWrite))
+        {
+          written_cjs_export_symbols.extend(
+            self.metas[*cjs_module_idx]
+              .resolved_exports
+              .values()
+              .filter(|e| e.came_from_cjs)
+              .map(|e| e.symbol_ref),
+          );
+        }
+      }
+    }
+    for symbol_ref in &written_cjs_export_symbols {
+      self.global_constant_symbol_map.remove(symbol_ref);
+    }
     self.metas.iter_mut().zip(resolved_meta_data).for_each(
-      |(meta, (resolved_map, side_effects_dependency))| {
+      |(meta, (resolved_map, side_effects_dependency, _))| {
         meta.resolved_member_expr_refs = resolved_map;
         meta.dependencies.extend(side_effects_dependency);
       },

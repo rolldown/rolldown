@@ -21,6 +21,8 @@ pub struct MemberExprRef {
   /// Used during symbol renaming to find the scope where the reference occurs,
   /// enabling detection of potential shadowing by nested scope bindings.
   pub reference_id: Option<ReferenceId>,
+  /// Whether this member expression is in a write context (assignment target).
+  pub is_write: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -37,8 +39,16 @@ impl MemberExprRef {
     span: Span,
     obj_ref_type: MemberExprObjectReferencedType,
     reference_id: Option<ReferenceId>,
+    is_write: bool,
   ) -> Self {
-    Self { object_ref, prop_and_span_list, span, object_ref_type: obj_ref_type, reference_id }
+    Self {
+      object_ref,
+      prop_and_span_list,
+      span,
+      object_ref_type: obj_ref_type,
+      reference_id,
+      is_write,
+    }
   }
 
   /// This method is tricky, use it with care.

@@ -31,6 +31,11 @@ bitflags::bitflags! {
     const MustStartWithCapitalLetterForJSX = 1 << 2;
     /// If the SymbolRef points to a side-effects-free function
     const SideEffectsFreeFunction = 1 << 3;
+    /// This symbol (a CJS default/namespace import) has a member expression write where the
+    /// specific property cannot be statically determined (e.g. `cjs[name] = value`) or
+    /// where the write goes through the namespace default (e.g. `ns.default.a = value`).
+    /// All CJS exports of the target module should not be inlined as constants.
+    const HasComputedMemberWrite = 1 << 4;
   }
 }
 

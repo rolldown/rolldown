@@ -127,6 +127,8 @@ bitflags::bitflags! {
         /// If current position all parent scopes are block scope or top level scope.
         /// A cache state of [AstScanner::is_valid_tla_scope]
         const TopLevel = 1 << 1;
+        /// Set when traversing a member expression that is an assignment target (write context).
+        const MemberExprIsWrite = 1 << 2;
     }
 }
 
@@ -951,9 +953,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     span: Span,
     obj_ref_type: MemberExprObjectReferencedType,
     reference_id: Option<ReferenceId>,
+    is_write: bool,
   ) {
     self.current_stmt_info.referenced_symbols.push(
-      MemberExprRef::new(object_ref, prop_and_span_list, span, obj_ref_type, reference_id).into(),
+      MemberExprRef::new(
+        object_ref,
+        prop_and_span_list,
+        span,
+        obj_ref_type,
+        reference_id,
+        is_write,
+      )
+      .into(),
     );
   }
 

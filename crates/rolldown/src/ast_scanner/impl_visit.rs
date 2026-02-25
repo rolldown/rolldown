@@ -51,20 +51,21 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_simple_assignment_target(&mut self, it: &ast::SimpleAssignmentTarget<'ast>) {
-    if !self.immutable_ctx.flat_options.property_write_side_effects()
-      && self.traverse_state.contains(TraverseState::TopLevel)
-    {
-      match it {
-        ast::SimpleAssignmentTarget::ComputedMemberExpression(_)
-        | ast::SimpleAssignmentTarget::StaticMemberExpression(_) => {
-          let pre = self.traverse_state;
+    match it {
+      ast::SimpleAssignmentTarget::ComputedMemberExpression(_)
+      | ast::SimpleAssignmentTarget::StaticMemberExpression(_) => {
+        let pre = self.traverse_state;
+        self.traverse_state.insert(TraverseState::MemberExprIsWrite);
+        if !self.immutable_ctx.flat_options.property_write_side_effects()
+          && pre.contains(TraverseState::TopLevel)
+        {
           self.traverse_state.insert(TraverseState::RootSymbolReferenceStmtInfoId);
-          walk::walk_simple_assignment_target(self, it);
-          self.traverse_state = pre;
-          return;
         }
-        _ => {}
+        walk::walk_simple_assignment_target(self, it);
+        self.traverse_state = pre;
+        return;
       }
+      _ => {}
     }
     walk::walk_simple_assignment_target(self, it);
   }
@@ -629,14 +630,37 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           {
             if !span.is_unspanned() {
               is_inserted_before = true;
+
+              if matches!(ty, MemberExprObjectReferencedType::Namespace)
+                && self.traverse_state.contains(TraverseState::MemberExprIsWrite)
+                && props[0].0 == "default"
+              {
+                // Write through namespace default (e.g. `ns.default.a = value`). Since
+                // `ns.default` is the raw CJS exports object, any property write on it may
+                // affect all `ns.xxx` reads. Mark the symbol so all CJS exports of the target
+                // module are bailed out from constant inlining.
+                let symbol_ref_flags = root_symbol_id.flags_mut(&mut self.result.symbol_ref_db);
+                *symbol_ref_flags |= SymbolRefFlags::HasComputedMemberWrite;
+              }
               self.add_member_expr_reference(
                 root_symbol_id,
                 props,
                 span,
                 ty,
                 ident_ref.reference_id.get(),
+                self.traverse_state.contains(TraverseState::MemberExprIsWrite),
               );
             }
+          } else if self.traverse_state.contains(TraverseState::MemberExprIsWrite)
+            && matches!(
+              ty,
+              MemberExprObjectReferencedType::Default | MemberExprObjectReferencedType::Namespace
+            )
+          {
+            // Computed member write (e.g. `cjs[name] = value`) where the key is dynamic.
+            // Mark the import symbol so all CJS exports of the target module won't be inlined.
+            let symbol_ref_flags = root_symbol_id.flags_mut(&mut self.result.symbol_ref_db);
+            *symbol_ref_flags |= SymbolRefFlags::HasComputedMemberWrite;
           }
         }
         if !is_inserted_before {

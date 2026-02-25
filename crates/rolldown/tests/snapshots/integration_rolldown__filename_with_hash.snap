@@ -4967,7 +4967,7 @@ expression: output
 
 # tests/rolldown/issues/7973
 
-- main-!~{000}~.js => main-qNuVh7Yy.js
+- main-!~{000}~.js => main-6ueLaSos.js
 
 # tests/rolldown/issues/8053
 

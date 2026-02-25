@@ -103,8 +103,17 @@ export type CodeSplittingTestFunction = (id: string) => boolean | undefined | vo
 export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
 
 export interface CommentsOptions {
+  /**
+   * Comments that contain `@license`, `@preserve` or start with `//!` or `/*!`
+   */
   legal?: boolean;
+  /**
+   * Comments that contain `@__PURE__`, `@__NO_SIDE_EFFECTS__` or `@vite-ignore`
+   */
   annotation?: boolean;
+  /**
+   * JSDoc comments
+   */
   jsdoc?: boolean;
 }
 
@@ -602,14 +611,13 @@ export interface OutputOptions {
    * - `true`: Preserve legal, annotation, and JSDoc comments (default)
    * - `false`: Strip all comments
    * - Object: Granular control over comment categories
-   *   - `legal`: `@license`, `@preserve`, `//!`, `/*!`
-   *   - `annotation`: `@__PURE__`, `@__NO_SIDE_EFFECTS__`, `@vite-ignore`
-   *   - `jsdoc`: JSDoc comments
    *
    * Note: Regular line and block comments without these markers
    * are always removed regardless of this option.
    *
    * When both `legalComments` and `comments.legal` are set, `comments.legal` takes priority.
+   *
+   * {@include ./docs/output-comments.md}
    *
    * @default true
    */

@@ -3,7 +3,8 @@ use std::{borrow::Cow, path::Path};
 use json_escape_simd::escape;
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
 use rolldown_common::{
-  ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes, json_value_to_ecma_ast,
+  ModuleDefFormat, ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes,
+  json_value_to_ecma_ast,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -16,14 +17,22 @@ use super::pre_process_ecma_ast::PreProcessEcmaAst;
 use crate::types::{module_factory::CreateModuleContext, oxc_parse_type::OxcParseType};
 
 #[inline]
-fn pure_esm_js_oxc_source_type() -> OxcSourceType {
-  let pure_esm_js = OxcSourceType::default().with_module(true);
-  debug_assert!(pure_esm_js.is_javascript());
-  debug_assert!(!pure_esm_js.is_jsx());
-  debug_assert!(pure_esm_js.is_module());
-  debug_assert!(pure_esm_js.is_strict());
-
-  pure_esm_js
+fn pure_esm_js_oxc_source_type(module_def_format: ModuleDefFormat) -> OxcSourceType {
+  let default_source_type = OxcSourceType::default();
+  debug_assert!(default_source_type.is_javascript());
+  debug_assert!(!default_source_type.is_jsx());
+  match module_def_format {
+    ModuleDefFormat::Cjs | ModuleDefFormat::Cts | ModuleDefFormat::CjsPackageJson => {
+      default_source_type.with_commonjs(true)
+    }
+    ModuleDefFormat::EsmMjs | ModuleDefFormat::EsmMts | ModuleDefFormat::EsmPackageJson => {
+      default_source_type.with_module(true)
+    }
+    ModuleDefFormat::Unknown => {
+      // treat unknown format as ESM for now: https://github.com/rolldown/rolldown/issues/7009
+      default_source_type.with_module(true)
+    }
+  }
 }
 
 pub struct ParseToEcmaAstResult {
@@ -57,7 +66,7 @@ pub async fn parse_to_ecma_ast(
     pre_process_source(path, source, module_type, options)?;
 
   let oxc_source_type = {
-    let default = pure_esm_js_oxc_source_type();
+    let default = pure_esm_js_oxc_source_type(resolved_id.module_def_format);
     match parsed_type {
       OxcParseType::Js => default,
       OxcParseType::Jsx => default.with_jsx(!options.transform_options.is_jsx_disabled()),

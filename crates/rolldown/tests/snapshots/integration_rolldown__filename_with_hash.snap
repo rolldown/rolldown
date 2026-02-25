@@ -4660,8 +4660,8 @@ expression: output
 
 # tests/rolldown/issues/4289
 
-- main-!~{000}~.js => main-d6x-NxY7.js
-- lib-!~{001}~.js => lib-jm3gYqNp.js
+- main-!~{000}~.js => main-ckJZUoDu.js
+- lib-!~{001}~.js => lib-BpjDadci.js
 
 # tests/rolldown/issues/4324
 
@@ -4881,6 +4881,18 @@ expression: output
 - main-!~{000}~.js => main-pQ4221YB.js
 - _virtual/_rolldown/runtime-!~{001}~.js => _virtual/_rolldown/runtime-Fau4GV7D.js
 - server/index-!~{002}~.js => server/index-Da8_eDWm.js
+
+# tests/rolldown/issues/7009/cjs
+
+- main-!~{000}~.js => main-CgjitbJ5.js
+
+# tests/rolldown/issues/7009/cts
+
+- main-!~{000}~.js => main-B4u3m95-.js
+
+# tests/rolldown/issues/7009/js_type_commonjs
+
+- main-!~{000}~.js => main-CO96sClh.js
 
 # tests/rolldown/issues/7021
 
@@ -5956,7 +5968,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/issue_7507/src
 
-- index-!~{000}~.js => index-EsnM9fHZ.js
+- index-!~{000}~.js => index-BPcqbtIz.js
 
 # tests/rolldown/topics/keep_names/issue_7852
 

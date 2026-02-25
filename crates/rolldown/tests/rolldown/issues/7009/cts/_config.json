@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./index.cts"
+      }
+    ],
+    "format": "cjs"
+  },
+  "expectExecuted": false
+}

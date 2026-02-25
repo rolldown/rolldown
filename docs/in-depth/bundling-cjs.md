@@ -200,6 +200,12 @@ If you find an issue that seems to be caused by this incompatibility, try using 
 
 If the heuristic is not working for you, you can use the code in the section above that handles both interpretations. If the import is in a dependency, we recommend to raise an issue to the dependency. In the meantime, you can use [`patch-package`](https://github.com/ds300/patch-package) or [`pnpm patch`](https://pnpm.io/cli/patch) or alternatives as an escape hatch.
 
+### Strict Mode Applied to `.js` files without `"type": "commonjs"` in `package.json`
+
+For files ending with `.js` that do not have `"type": "commonjs"` in the closest `package.json`, Rolldown incorrectly parses the file as ESM ([#7009](https://github.com/rolldown/rolldown/issues/7009)). This means that syntaxes only allowed in non-strict mode (sloppy mode) will be rejected.
+
+For now, you can change the file extension to `.cjs` or add `"type": "commonjs"` to the closest `package.json` as a workaround.
+
 ## Future Plans
 
 Rolldown's first-class support for CommonJS modules enables several potential optimizations:

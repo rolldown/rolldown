@@ -1,4 +1,4 @@
-import nodeAssert from 'node:assert';
+const nodeAssert = require('node:assert');
 
 async function main() {
   const exports = await import('./lib.js');

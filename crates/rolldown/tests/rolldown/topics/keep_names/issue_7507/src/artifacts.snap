@@ -6,10 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## index.js
 
 ```js
-import assert from "node:assert";
+import { createRequire } from "node:module";
 
 // HIDDEN [\0rolldown/runtime.js]
-//#region bar.cjs
+//#region bar.mjs
+var bar_exports = /* @__PURE__ */ __exportAll({ test: () => test$1 });
 var test$1;
 var init_bar = __esmMin((() => {
 	test$1 = /* @__PURE__ */ __name(() => {
@@ -18,7 +19,8 @@ var init_bar = __esmMin((() => {
 }));
 
 //#endregion
-//#region foo.cjs
+//#region foo.mjs
+var foo_exports = /* @__PURE__ */ __exportAll({ default: () => test });
 function test() {
 	return { test: "foo" };
 }
@@ -27,13 +29,15 @@ var init_foo = __esmMin((() => {}));
 //#endregion
 //#region index.cjs
 var require_src = /* @__PURE__ */ __commonJSMin((() => {
-	init_bar();
-	init_foo();
-	assert.strictEqual(test$1.name, "test");
+	const assert = __require("node:assert");
+	const { test: barTest } = (init_bar(), __toCommonJS(bar_exports));
+	const { default: test } = (init_foo(), __toCommonJS(foo_exports));
+	assert.strictEqual(barTest.name, "test");
 	assert.strictEqual(test.name, "test");
 }));
 
 //#endregion
 export default require_src();
 
+export {  };
 ```

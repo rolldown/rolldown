@@ -3814,6 +3814,12 @@ expression: output
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BulwG9Fz.js
 - ui-!~{002}~.js => ui-fMjzpq9q.js
 
+# tests/rolldown/function/case_insensitive_chunk_filenames
+
+- main-!~{000}~.js => main-CUIRTbLx.js
+- Edit.js => Edit.js
+- edit2.js => edit2.js
+
 # tests/rolldown/function/comments/none
 
 - main-!~{000}~.js => main-Cs2f_zjc.js

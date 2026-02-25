@@ -40,7 +40,10 @@ pub fn make_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>
     .unwrap_or_default();
   let file_name = &name[..name.len() - extension.len()];
   loop {
-    match used_name_counts.entry(candidate.clone()) {
+    // Use lowercase key for case-insensitive conflict detection to handle
+    // case-insensitive filesystems (e.g. macOS APFS, Windows NTFS)
+    let lowercase_candidate: ArcStr = candidate.to_lowercase().into();
+    match used_name_counts.entry(lowercase_candidate) {
       Entry::Occupied(mut occ) => {
         // This name is already used
         let next_count = *occ.get();
@@ -53,9 +56,8 @@ pub fn make_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>
       }
       Entry::Vacant(vac) => {
         // This is the first time we see this name
-        let name = vac.key().clone();
         vac.insert(2);
-        break name;
+        break candidate;
       }
     }
   }
@@ -102,5 +104,22 @@ mod tests {
 
     let unique_name = make_unique_name(&ArcStr::from("foo.d.js"), &used_name_counts);
     assert_eq!(unique_name.as_str(), "foo2.d.js");
+  }
+
+  #[test]
+  fn case_insensitive() {
+    let used_name_counts = FxDashMap::default();
+
+    // "Edit.js" is registered first (keeps original case)
+    let unique_name = make_unique_name(&ArcStr::from("Edit.js"), &used_name_counts);
+    assert_eq!(unique_name.as_str(), "Edit.js");
+
+    // "edit.js" conflicts with "Edit.js" on case-insensitive filesystems
+    let unique_name = make_unique_name(&ArcStr::from("edit.js"), &used_name_counts);
+    assert_eq!(unique_name.as_str(), "edit2.js");
+
+    // "EDIT.js" also conflicts
+    let unique_name = make_unique_name(&ArcStr::from("EDIT.js"), &used_name_counts);
+    assert_eq!(unique_name.as_str(), "EDIT3.js");
   }
 }

@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "chunkFilenames": "[name].js"
+  },
+  "snapshotOutputStats": true,
+  "expectExecuted": false
+}

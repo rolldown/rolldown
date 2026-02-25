@@ -43,8 +43,8 @@ pub fn make_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>
   loop {
     // Lowercase key for case-insensitive filesystems (macOS APFS, Windows NTFS).
     // When already lowercase, reuse the `candidate` Arc directly to avoid allocation.
-    let lowercase_candidate: ArcStr = match candidate.as_str().cow_to_ascii_lowercase() {
-      Cow::Borrowed(_) => candidate,
+    let lowercase_candidate = match candidate.as_str().cow_to_ascii_lowercase() {
+      Cow::Borrowed(_) => candidate.clone(),
       Cow::Owned(s) => s.into(),
     };
     match used_name_counts.entry(lowercase_candidate) {
@@ -59,10 +59,8 @@ pub fn make_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>
         ));
       }
       Entry::Vacant(vac) => {
-        // This is the first time we see this name
-        let name = vac.key().clone();
         vac.insert(2);
-        break name;
+        break candidate;
       }
     }
   }

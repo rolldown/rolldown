@@ -11,6 +11,38 @@ pub use source_joiner::SourceJoiner;
 
 pub use crate::source::{Source, SourceMapSource};
 
+/// Adjust all destination (generated) line numbers in a sourcemap by subtracting `subtract` from
+/// them. This is useful when a prefix (such as a shebang line) has been extracted from the content
+/// that the sourcemap was originally generated for, and the sourcemap needs to be re-anchored to
+/// the new content without the prefix.
+pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, subtract: u32) -> SourceMap {
+  if subtract == 0 {
+    return sourcemap;
+  }
+  let tokens: Box<[Token]> = sourcemap
+    .get_tokens()
+    .map(|token| {
+      Token::new(
+        token.get_dst_line().saturating_sub(subtract),
+        token.get_dst_col(),
+        token.get_src_line(),
+        token.get_src_col(),
+        token.get_source_id(),
+        token.get_name_id(),
+      )
+    })
+    .collect();
+  SourceMap::new(
+    sourcemap.get_file().cloned(),
+    sourcemap.get_names().cloned().collect(),
+    sourcemap.get_source_root().map(str::to_owned),
+    sourcemap.get_sources().cloned().collect(),
+    sourcemap.get_source_contents().map(|c| c.cloned()).collect(),
+    tokens,
+    None,
+  )
+}
+
 use rolldown_utils::rustc_hash::FxHashMapExt;
 
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>

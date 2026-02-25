@@ -1,5 +1,5 @@
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_sourcemap::{SourceJoiner, SourceMapSource};
+use rolldown_sourcemap::{SourceJoiner, SourceMapSource, adjust_sourcemap_dst_lines};
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::type_alias::IndexInstantiatedChunks;
@@ -57,7 +57,13 @@ impl GenerateStage<'_> {
           let rest_content = &content[shebang_end..];
           // Add the rest of the content
           if let Some(source_map) = chunk.map.take() {
-            source_joiner.append_source(SourceMapSource::new(rest_content.to_string(), source_map));
+            // When a shebang is present, the sourcemap was generated for the full content
+            // (with the shebang at line 0), but `rest_content` starts after the shebang.
+            // Subtract the shebang line count from all generated line numbers so that the
+            // sourcemap is correctly anchored to `rest_content`.
+            let adjusted_map =
+              if has_shebang { adjust_sourcemap_dst_lines(source_map, 1) } else { source_map };
+            source_joiner.append_source(SourceMapSource::new(rest_content.to_string(), adjusted_map));
           } else {
             source_joiner.append_source(rest_content);
           }

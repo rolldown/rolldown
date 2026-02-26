@@ -14,7 +14,7 @@ pub use crate::source::{Source, SourceMapSource};
 /// Strips the first `lines` destination lines from the sourcemap, decrementing all remaining
 /// destination line numbers accordingly. Used to re-anchor a sourcemap after removing a
 /// prefix (e.g. a shebang line) from the generated code.
-pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, lines: u32) -> SourceMap {
+pub fn adjust_sourcemap_dst_lines(sourcemap: &SourceMap, lines: u32) -> SourceMap {
   debug_assert!(lines > 0, "lines should be greater than 0 to adjust sourcemap");
 
   let tokens: Box<[Token]> = sourcemap
@@ -37,7 +37,7 @@ pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, lines: u32) -> SourceMap
     sourcemap.get_names().cloned().collect(),
     sourcemap.get_source_root().map(str::to_owned),
     sourcemap.get_sources().cloned().collect(),
-    sourcemap.get_source_contents().map(|c| c.cloned()).collect(),
+    sourcemap.get_source_contents().map(|c| c.map(Arc::clone)).collect(),
     tokens,
     None,
   )

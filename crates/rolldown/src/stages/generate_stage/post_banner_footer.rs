@@ -62,7 +62,7 @@ impl GenerateStage<'_> {
             // Subtract the shebang line count from all generated line numbers so that the
             // sourcemap is correctly anchored to `rest_content`.
             let adjusted_map =
-              if has_shebang { adjust_sourcemap_dst_lines(source_map, 1) } else { source_map };
+              if has_shebang { adjust_sourcemap_dst_lines(&source_map, 1) } else { source_map };
             source_joiner
               .append_source(SourceMapSource::new(rest_content.to_string(), adjusted_map));
           } else {

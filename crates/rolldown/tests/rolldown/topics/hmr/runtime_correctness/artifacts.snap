@@ -103,7 +103,7 @@ assert.strictEqual(requiredUmdLib.foo, "foo");
 //#region cases/manual_reexport/lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({
 	Globals: () => Globals,
-	value: () => value
+	value: () => "lib"
 });
 init_trigger_dep();
 const lib_hot = __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/lib.js");
@@ -115,7 +115,7 @@ const value = "lib";
 //#region cases/manual_reexport/barrel.js
 var barrel_exports = /* @__PURE__ */ __exportAll({
 	Globals: () => Globals,
-	value: () => value
+	value: () => "lib"
 });
 init_trigger_dep();
 const barrel_hot = __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/barrel.js");
@@ -127,12 +127,12 @@ var manual_reexport_exports = /* @__PURE__ */ __exportAll({});
 init_trigger_dep();
 const manual_reexport_hot = __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/index.js");
 __rolldown_runtime__.registerModule("cases/manual_reexport/index.js", { exports: manual_reexport_exports });
-assert.strictEqual(value, "lib");
+assert.strictEqual("lib", "lib");
 assert.strictEqual(Globals, Object);
 
 //#endregion
 //#region cases/deconflict_import_bindings/foo.mjs
-var foo_exports$1 = /* @__PURE__ */ __exportAll({ foo: () => foo$1 });
+var foo_exports$1 = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
 init_trigger_dep();
 const foo_hot$1 = __rolldown_runtime__.createModuleHotContext("cases/deconflict_import_bindings/foo.mjs");
 __rolldown_runtime__.registerModule("cases/deconflict_import_bindings/foo.mjs", { exports: foo_exports$1 });
@@ -152,7 +152,7 @@ var deconflict_import_bindings_exports = /* @__PURE__ */ __exportAll({});
 init_trigger_dep();
 const deconflict_import_bindings_hot = __rolldown_runtime__.createModuleHotContext("cases/deconflict_import_bindings/index.js");
 __rolldown_runtime__.registerModule("cases/deconflict_import_bindings/index.js", { exports: deconflict_import_bindings_exports });
-assert.strictEqual(foo$1, "foo");
+assert.strictEqual("foo", "foo");
 assert.strictEqual(foo, "foo-index");
 
 //#endregion

@@ -8,14 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-//#region c.js
-let x = 1;
-let y = 2;
-
-//#endregion
 //#region entry.js
-assert.equal(x, 1);
-assert.equal(y, 2);
+assert.equal(1, 1);
+assert.equal(2, 2);
 
 //#endregion
 ```

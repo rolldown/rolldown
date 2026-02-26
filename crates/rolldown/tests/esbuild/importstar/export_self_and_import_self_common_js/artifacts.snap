@@ -10,7 +10,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 // HIDDEN [\0rolldown/runtime.js]
 
 //#region entry.js
-var entry_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var entry_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
 const foo = 123;
 console.log(entry_exports);
 

@@ -15,20 +15,20 @@ function getA(x) {
 	function inner() {
 		return conflict$1;
 	}
-	return conflict$2 + inner() - x;
+	return 1 + inner() - x;
 }
 
 //#endregion
 //#region b.js
 const conflict = 3;
 function getB() {
-	return conflict;
+	return 3;
 }
 
 //#endregion
 //#region main.js
-assert.equal(conflict$2, 1);
-assert.equal(conflict, 3);
+assert.equal(1, 1);
+assert.equal(3, 3);
 assert.equal(getA(1), 2);
 assert.equal(getB(), 3);
 

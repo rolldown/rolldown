@@ -211,7 +211,7 @@ export type OptimizationOptions = {
    * console.log(API_URL);
    * ```
    *
-   * @default false
+   * @default { mode: 'smart', pass: 1 }
    */
   inlineConst?: boolean | { mode?: 'all' | 'smart'; pass?: number };
 

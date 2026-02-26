@@ -6,12 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region foo.js
-const bar = "bar";
-
-//#endregion
 //#region main.js
-console.log(bar);
+console.log("bar");
 
 //#endregion
 ```

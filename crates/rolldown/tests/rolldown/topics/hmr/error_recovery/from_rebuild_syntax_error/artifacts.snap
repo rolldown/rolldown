@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region dep.js
-var dep_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
 const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
 __rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
 const value = "dep";
@@ -21,7 +21,7 @@ if (dep_hot) {
 var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-console.log(value);
+console.log("dep");
 
 //#endregion
 ```
@@ -75,7 +75,7 @@ console.log(value);
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region dep.js
-var dep_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
 const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
 __rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
 const value = "dep";
@@ -88,7 +88,7 @@ if (dep_hot) {
 var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-console.log(value);
+console.log("dep");
 
 //#endregion
 ```

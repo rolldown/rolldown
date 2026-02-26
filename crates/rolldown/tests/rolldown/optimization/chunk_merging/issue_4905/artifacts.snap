@@ -19,12 +19,12 @@ import { strictEqual } from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
 const foo = "foo";
 
 //#endregion
 //#region main.js
-strictEqual(foo, "foo");
+strictEqual("foo", "foo");
 Promise.resolve().then(() => foo_exports).then((mod) => {
 	strictEqual(mod.foo, "foo");
 });
@@ -52,12 +52,12 @@ Promise.resolve().then(() => foo_exports).then((mod) => {
 let node_assert = require("node:assert");
 
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
 const foo = "foo";
 
 //#endregion
 //#region main.js
-(0, node_assert.strictEqual)(foo, "foo");
+(0, node_assert.strictEqual)("foo", "foo");
 Promise.resolve().then(() => foo_exports).then((mod) => {
 	(0, node_assert.strictEqual)(mod.foo, "foo");
 });

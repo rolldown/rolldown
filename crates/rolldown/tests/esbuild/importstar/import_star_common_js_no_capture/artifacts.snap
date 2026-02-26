@@ -19,8 +19,8 @@ var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
 //#region entry.js
 var import_foo = /* @__PURE__ */ __toESM(require_foo());
 let foo = 234;
-node_assert.default.equal(import_foo.foo, 123);
-node_assert.default.equal(import_foo.foo, 123);
+node_assert.default.equal(123, 123);
+node_assert.default.equal(123, 123);
 node_assert.default.equal(foo, 234);
 
 //#endregion

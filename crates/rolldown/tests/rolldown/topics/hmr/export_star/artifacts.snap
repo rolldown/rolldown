@@ -9,8 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region sub/foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({
-	foo: () => foo,
-	named: () => named$2
+	foo: () => "foo",
+	named: () => "foo"
 });
 const foo_hot = __rolldown_runtime__.createModuleHotContext("sub/foo.js");
 __rolldown_runtime__.registerModule("sub/foo.js", { exports: foo_exports });
@@ -20,8 +20,8 @@ const named$2 = "foo";
 //#endregion
 //#region sub/bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({
-	bar: () => bar,
-	named: () => named$1
+	bar: () => "bar",
+	named: () => "bar"
 });
 const bar_hot = __rolldown_runtime__.createModuleHotContext("sub/bar.js");
 __rolldown_runtime__.registerModule("sub/bar.js", { exports: bar_exports });
@@ -38,8 +38,8 @@ const named = "named";
 //#endregion
 //#region sub/index.js
 var sub_exports = /* @__PURE__ */ __exportAll({
-	bar: () => bar,
-	foo: () => foo,
+	bar: () => "bar",
+	foo: () => "foo",
 	named: () => named
 });
 const sub_hot = __rolldown_runtime__.createModuleHotContext("sub/index.js");
@@ -50,7 +50,7 @@ __rolldown_runtime__.registerModule("sub/index.js", { exports: sub_exports });
 var hmr_exports = /* @__PURE__ */ __exportAll({});
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
-console.log(foo, bar);
+console.log("foo", "bar");
 hmr_hot.accept();
 
 //#endregion

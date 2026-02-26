@@ -29,7 +29,7 @@ export { x };
 import { x } from "./mod1.js";
 
 //#region mod2.js
-const y = x + 1;
+const y = 1 + 1;
 
 //#endregion
 export { y };

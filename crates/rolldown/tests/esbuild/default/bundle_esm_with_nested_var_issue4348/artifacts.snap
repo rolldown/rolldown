@@ -9,16 +9,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({
-	a: () => a,
-	b: () => b,
-	c: () => c,
-	d: () => d,
-	e: () => e,
-	f: () => f,
-	g: () => g,
-	h: () => h,
-	i: () => i,
-	j: () => j
+	a: () => "a",
+	b: () => "b",
+	c: () => "c",
+	d: () => "d",
+	e: () => "e",
+	f: () => "f",
+	g: () => "g",
+	h: () => "h",
+	i: () => "i",
+	j: () => "j"
 });
 var a, b, c, d, e, x, f, g, h, i, j;
 var init_foo = __esmMin((() => {

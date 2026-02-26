@@ -45,8 +45,8 @@ const ignoreWithObjectKeys = Object.keys({
 });
 const ignoreWithObjectValues = Object.values([() => import("./a.js").then((n) => n.t), () => import("./b.js").then((n) => n.t)]);
 const namedEager = /* @__PURE__ */ Object.assign({
-	"./modules/a.ts": name,
-	"./modules/b.ts": name$1,
+	"./modules/a.ts": "a",
+	"./modules/b.ts": "b",
 	"./modules/index.ts": name$2
 });
 const namedEagerWithObjectKeys = Object.keys({
@@ -55,8 +55,8 @@ const namedEagerWithObjectKeys = Object.keys({
 	"./modules/index.ts": 0
 });
 const namedEagerWithObjectValues = Object.values([
-	name,
-	name$1,
+	"a",
+	"b",
 	name$2
 ]);
 const namedDefault = /* @__PURE__ */ Object.assign({

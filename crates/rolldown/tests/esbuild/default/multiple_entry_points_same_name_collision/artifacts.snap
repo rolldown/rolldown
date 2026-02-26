@@ -6,10 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a_entry.js
 
 ```js
-import { t as foo } from "./common.js";
-
 //#region a/entry.js
-console.log(foo);
+console.log(123);
 
 //#endregion
 ```
@@ -17,20 +15,8 @@ console.log(foo);
 ## b_entry.js
 
 ```js
-import { t as foo } from "./common.js";
-
 //#region b/entry.js
-console.log(foo);
+console.log(123);
 
 //#endregion
-```
-
-## common.js
-
-```js
-//#region common.js
-let foo = 123;
-
-//#endregion
-export { foo as t };
 ```

@@ -8,19 +8,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region imp1.js
-var imp1_exports = /* @__PURE__ */ __exportAll({ imp1: () => imp1 });
+var imp1_exports = /* @__PURE__ */ __exportAll({ imp1: () => 1 });
 const imp1 = 1;
 
 //#endregion
 //#region imp2.js
-var imp2_exports = /* @__PURE__ */ __exportAll({ imp2: () => imp2 });
+var imp2_exports = /* @__PURE__ */ __exportAll({
+	imp2: () => 2,
+	imp22: () => 22
+});
 const imp2 = 2;
 
 //#endregion
 //#region imp3.js
 var imp3_exports = /* @__PURE__ */ __exportAll({
-	imp3: () => imp3,
-	imp33: () => imp33
+	imp3: () => 3,
+	imp33: () => 33
 });
 const imp3 = 3;
 const imp33 = 33;
@@ -136,19 +139,22 @@ load();
 const require_rolldown_runtime = require('./rolldown-runtime.js');
 
 //#region imp1.js
-var imp1_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ imp1: () => imp1 });
+var imp1_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ imp1: () => 1 });
 const imp1 = 1;
 
 //#endregion
 //#region imp2.js
-var imp2_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ imp2: () => imp2 });
+var imp2_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
+	imp2: () => 2,
+	imp22: () => 22
+});
 const imp2 = 2;
 
 //#endregion
 //#region imp3.js
 var imp3_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
-	imp3: () => imp3,
-	imp33: () => imp33
+	imp3: () => 3,
+	imp33: () => 33
 });
 const imp3 = 3;
 const imp33 = 33;

@@ -26,7 +26,7 @@ import assert from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
 //#region self_accept.js
-var self_accept_exports = /* @__PURE__ */ __exportAll({ foo: () => foo$1 });
+var self_accept_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
 const self_accept_hot = __rolldown_runtime__.createModuleHotContext("self_accept.js");
 __rolldown_runtime__.registerModule("self_accept.js", { exports: self_accept_exports });
 const foo$1 = "foo";
@@ -36,7 +36,7 @@ self_accept_hot.accept((mod) => {
 
 //#endregion
 //#region single_accept/child.js
-var child_exports$1 = /* @__PURE__ */ __exportAll({ count: () => count$3 });
+var child_exports$1 = /* @__PURE__ */ __exportAll({ count: () => 0 });
 const child_hot$1 = __rolldown_runtime__.createModuleHotContext("single_accept/child.js");
 __rolldown_runtime__.registerModule("single_accept/child.js", { exports: child_exports$1 });
 const count$3 = 0;
@@ -50,7 +50,7 @@ globalThis.singleAcceptAcceptCount ??= 0;
 globalThis.singleAcceptParentExecuteCount ??= 0;
 globalThis.singleAcceptParentExecuteCount++;
 assert.strictEqual(globalThis.singleAcceptParentExecuteCount, 1);
-let count$2 = count$3;
+let count$2 = 0;
 parent_hot$1.accept("single_accept/child.js", (mod) => {
 	count$2 = mod.count;
 	globalThis.singleAcceptAcceptCount++;
@@ -63,7 +63,7 @@ process.on("beforeExit", (code) => {
 
 //#endregion
 //#region array_accept/child.js
-var child_exports = /* @__PURE__ */ __exportAll({ count: () => count$1 });
+var child_exports = /* @__PURE__ */ __exportAll({ count: () => 0 });
 const child_hot = __rolldown_runtime__.createModuleHotContext("array_accept/child.js");
 __rolldown_runtime__.registerModule("array_accept/child.js", { exports: child_exports });
 const count$1 = 0;
@@ -77,7 +77,7 @@ globalThis.arrayAcceptAcceptCount ??= 0;
 globalThis.arrayAcceptParentExecuteCount ??= 0;
 globalThis.arrayAcceptParentExecuteCount++;
 assert.strictEqual(globalThis.arrayAcceptParentExecuteCount, 1);
-let count = count$1;
+let count = 0;
 parent_hot.accept(["array_accept/child.js"], ([mod]) => {
 	count = mod.count;
 	globalThis.arrayAcceptAcceptCount++;
@@ -90,7 +90,7 @@ process.on("beforeExit", (code) => {
 
 //#endregion
 //#region optional_chaining.js
-var optional_chaining_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var optional_chaining_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
 const optional_chaining_hot = __rolldown_runtime__.createModuleHotContext("optional_chaining.js");
 __rolldown_runtime__.registerModule("optional_chaining.js", { exports: optional_chaining_exports });
 const foo = "foo";

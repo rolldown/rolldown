@@ -11,7 +11,7 @@ import assert from "assert";
 //#region main.js
 const num = 0;
 const config = (num) => num;
-assert.equal(num, 0);
+assert.equal(0, 0);
 assert.equal(config(42), 42);
 
 //#endregion

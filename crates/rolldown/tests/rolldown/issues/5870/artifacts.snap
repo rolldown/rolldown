@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
-var lib_exports = /* @__PURE__ */ __exportAll({ constant: () => constant });
+var lib_exports = /* @__PURE__ */ __exportAll({ constant: () => 1 });
 var constant;
 var init_lib = __esmMin((() => {
 	constant = 1;
@@ -22,7 +22,7 @@ init_lib();
 
 //#endregion
 //#region log.js
-assert.strictEqual(constant, 1);
+assert.strictEqual(1, 1);
 
 //#endregion
 //#region commonjs.cjs
@@ -48,7 +48,7 @@ import assert from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
-var lib_exports = /* @__PURE__ */ __exportAll({ constant: () => constant });
+var lib_exports = /* @__PURE__ */ __exportAll({ constant: () => 1 });
 var constant;
 var init_lib = __esmMin((() => {
 	constant = 1;
@@ -69,7 +69,7 @@ var init_main = __esmMin((() => {
 
 //#endregion
 //#region log.js
-	assert.strictEqual(constant, 1);
+	assert.strictEqual(1, 1);
 
 //#endregion
 //#region main.js

@@ -3,6 +3,9 @@ import { expect } from 'vitest';
 
 export default defineTest({
   config: {
+    optimization: {
+      inlineConst: false,
+    },
     output: {
       codeSplitting: {
         groups: [

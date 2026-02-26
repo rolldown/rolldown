@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
 //#region bar.js
-var bar_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
+var bar_exports = /* @__PURE__ */ __exportAll({ bar: () => 123 });
 const bar = 123;
 
 //#endregion

@@ -6,11 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import "ext1";
-import "ext2";
-
 //#region main.js
-console.log("foo");
+if (false) console.log("should not see me in bundle!");
+else console.log("flag is false correctly");
 
 //#endregion
 ```

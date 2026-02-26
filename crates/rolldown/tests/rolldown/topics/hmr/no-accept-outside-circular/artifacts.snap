@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
 //#region c.js
-var c_exports = /* @__PURE__ */ __exportAll({ c: () => c });
+var c_exports = /* @__PURE__ */ __exportAll({ c: () => "c" });
 const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
 __rolldown_runtime__.registerModule("c.js", { exports: c_exports });
 const c = "c";
@@ -20,7 +20,7 @@ const c = "c";
 var b_exports = /* @__PURE__ */ __exportAll({ b: () => b });
 const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
 __rolldown_runtime__.registerModule("b.js", { exports: b_exports });
-const b = { c };
+const b = { c: "c" };
 
 //#endregion
 //#region a.js
@@ -57,7 +57,7 @@ import assert from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
 //#region c.js
-var c_exports = /* @__PURE__ */ __exportAll({ c: () => c });
+var c_exports = /* @__PURE__ */ __exportAll({ c: () => "cc" });
 const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
 __rolldown_runtime__.registerModule("c.js", { exports: c_exports });
 const c = "cc";
@@ -67,7 +67,7 @@ const c = "cc";
 var b_exports = /* @__PURE__ */ __exportAll({ b: () => b });
 const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
 __rolldown_runtime__.registerModule("b.js", { exports: b_exports });
-const b = { c };
+const b = { c: "cc" };
 
 //#endregion
 //#region a.js

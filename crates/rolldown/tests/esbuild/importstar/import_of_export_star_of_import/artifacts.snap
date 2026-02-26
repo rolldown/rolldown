@@ -8,10 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-//#region baz.js
-const value = 123;
-
-//#endregion
 //#region foo.js
 statement();
 statement();
@@ -20,7 +16,7 @@ statement();
 
 //#endregion
 //#region entry.js
-assert.equal(value, 123);
+assert.equal(123, 123);
 
 //#endregion
 ```

@@ -26,7 +26,7 @@ var require_cjs_module = /* @__PURE__ */ __commonJSMin(((exports) => {
 //#endregion
 //#region main.js
 var import_cjs_module = /* @__PURE__ */ __toESM(require_cjs_module());
-assert.strictEqual(import_cjs_module.value, 42);
+assert.strictEqual(42, 42);
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs_module())).then((mod) => {
 	assert.strictEqual(mod.value, 42);
 	assert.strictEqual(mod.default.value, 42);
@@ -67,7 +67,7 @@ var require_cjs_module = /* @__PURE__ */ __commonJSMin(((exports) => {
 //#endregion
 //#region main.js
 var import_cjs_module = /* @__PURE__ */ __toESM(require_cjs_module());
-node_assert.default.strictEqual(import_cjs_module.value, 42);
+node_assert.default.strictEqual(42, 42);
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs_module())).then((mod) => {
 	node_assert.default.strictEqual(mod.value, 42);
 	node_assert.default.strictEqual(mod.default.value, 42);

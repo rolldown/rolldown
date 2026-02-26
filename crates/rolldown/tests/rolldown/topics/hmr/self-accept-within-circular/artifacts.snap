@@ -10,11 +10,11 @@ import assert from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
 //#region c.js
-var c_exports = /* @__PURE__ */ __exportAll({ c: () => c });
+var c_exports = /* @__PURE__ */ __exportAll({ c: () => "c" });
 const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
 __rolldown_runtime__.registerModule("c.js", { exports: c_exports });
 const c = "c";
-assert.strictEqual(c, "c");
+assert.strictEqual("c", "c");
 c_hot.accept((nextExports) => {
 	assert.strictEqual(nextExports.c, "c");
 });
@@ -24,7 +24,7 @@ c_hot.accept((nextExports) => {
 var b_exports = /* @__PURE__ */ __exportAll({ b: () => b });
 const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
 __rolldown_runtime__.registerModule("b.js", { exports: b_exports });
-const b = { c };
+const b = { c: "c" };
 
 //#endregion
 //#region a.js

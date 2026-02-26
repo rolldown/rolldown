@@ -13,7 +13,7 @@ import assert from "node:assert";
 var foo_exports = /* @__PURE__ */ __exportAll({
 	a: () => a,
 	a1: () => a1,
-	a2: () => a2,
+	a2: () => "baz",
 	a3: () => a3,
 	b: () => b,
 	bar: () => bar,

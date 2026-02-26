@@ -23,7 +23,7 @@ console.log("test");
 
 //#endregion
 //#region main.js
-console.log(`a: `, a);
+console.log(`a: `, 100);
 
 //#endregion
 ```

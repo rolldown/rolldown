@@ -13,11 +13,10 @@ statement();
 statement();
 statement();
 statement();
-const bar = 123;
 
 //#endregion
 //#region entry.js
-assert.equal(bar, 123);
+assert.equal(123, 123);
 
 //#endregion
 ```

@@ -11,9 +11,9 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({
-	bar: () => bar,
+	bar: () => "bar",
 	default: () => esm_default,
-	foo: () => foo
+	foo: () => "foo"
 });
 var foo, bar, esm_default;
 var init_esm = __esmMin((() => {

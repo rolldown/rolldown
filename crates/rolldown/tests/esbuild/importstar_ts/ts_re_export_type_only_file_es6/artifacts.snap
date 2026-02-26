@@ -18,12 +18,8 @@ console.log("some code");
 console.log("some code");
 
 //#endregion
-//#region values.ts
-let foo = 123;
-
-//#endregion
 //#region entry.ts
-console.log(foo);
+console.log(123);
 
 //#endregion
 ```

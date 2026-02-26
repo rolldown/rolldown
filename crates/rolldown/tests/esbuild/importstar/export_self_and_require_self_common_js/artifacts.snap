@@ -10,7 +10,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 // HIDDEN [\0rolldown/runtime.js]
 
 //#region entry.js
-var entry_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var entry_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
 var foo;
 var init_entry = __esmMin((() => {
 	foo = 123;

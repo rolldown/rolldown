@@ -25,7 +25,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 
 //#endregion
 //#region b.js
-	var b_exports = /* @__PURE__ */ __exportAll({ xyz: () => xyz });
+	var b_exports = /* @__PURE__ */ __exportAll({ xyz: () => null });
 	const xyz = null;
 
 //#endregion

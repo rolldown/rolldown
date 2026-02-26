@@ -6,10 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region a.js
-const a = 100;
-
-//#endregion
 //#region c.js
 function test() {}
 const c = test();
@@ -21,7 +17,7 @@ const e = test2();
 
 //#endregion
 //#region main.js
-console.log(`a: `, a);
+console.log(`a: `, 100);
 
 //#endregion
 ```

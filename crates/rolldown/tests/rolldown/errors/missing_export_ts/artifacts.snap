@@ -23,12 +23,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region foo.ts
-let bar = 123;
-
-//#endregion
 //#region main.ts
-var main_default = [dc_def, bar];
+var main_default = [dc_def, 123];
 
 //#endregion
 export { main_default as default };

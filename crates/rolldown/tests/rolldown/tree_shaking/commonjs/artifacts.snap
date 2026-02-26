@@ -70,12 +70,12 @@ var require_indirect_common_js = /* @__PURE__ */ __commonJSMin(((exports, module
 //#endregion
 //#region main.js
 var import_indirect_common_js = /* @__PURE__ */ __toESM(require_indirect_common_js());
-assert.equal(import_basic_ns.a, "basic-a");
-assert.equal(import_basic_ref_with_named_default.a, "basic-ref-with-named-default-a");
-assert.equal(export_star_from_cjs_exports.a, "export-star-from-cjs-a");
+assert.equal("basic-a", "basic-a");
+assert.equal("basic-ref-with-named-default-a", "basic-ref-with-named-default-a");
+assert.equal("export-star-from-cjs-a", "export-star-from-cjs-a");
 assert.equal(named_import_export_star_from_cjs_exports.a, "named-import-export-star-from-cjs-a");
-assert.equal(reexport_exports.a, "nested-export-star-from-cjs-a");
-assert.equal(import_indirect_common_js.a, "react-like-a");
+assert.equal("nested-export-star-from-cjs-a", "nested-export-star-from-cjs-a");
+assert.equal("react-like-a", "react-like-a");
 
 //#endregion
 ```

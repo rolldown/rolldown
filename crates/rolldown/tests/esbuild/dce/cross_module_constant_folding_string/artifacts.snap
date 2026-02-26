@@ -6,27 +6,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## const-entry.js
 
 ```js
-//#region const-constants.js
-const a = "foo";
-const b = "bar";
-
-//#endregion
 //#region const-entry.js
-console.log([typeof b], [a + b], [
-	a < b,
-	a > b,
-	a <= b,
-	a >= b,
-	a == b,
-	a != b,
-	a === b,
-	a !== b
+console.log([typeof "bar"], ["foo" + "bar"], [
+	"foo" < "bar",
+	"foo" > "bar",
+	"foo" <= "bar",
+	"foo" >= "bar",
+	"foo" == "bar",
+	"foo" != "bar",
+	"foo" === "bar",
+	"foo" !== "bar"
 ], [
-	a && b,
-	a || b,
-	a ?? b,
-	a ? "y" : "n",
-	!b ? "y" : "n"
+	"foo" && "bar",
+	"foo" || "bar",
+	"foo" ?? "bar",
+	"foo" ? "y" : "n",
+	!"bar" ? "y" : "n"
 ]);
 
 //#endregion
@@ -68,9 +63,6 @@ console.log([typeof x.b], [x.a + x.b], [
 
 ```js
 //#region nested-constants.ts
-const a = "foo";
-const b = "bar";
-const c = "baz";
 let x = /* @__PURE__ */ function(x) {
 	x["a"] = "FOO";
 	x["b"] = "BAR";
@@ -81,7 +73,7 @@ let x = /* @__PURE__ */ function(x) {
 //#endregion
 //#region nested-entry.ts
 console.log({
-	"should be foobarbaz": a + b + c,
+	"should be foobarbaz": "foo" + "bar" + "baz",
 	"should be FOOBARBAZ": x.a + x.b + x.c
 });
 

@@ -42,7 +42,7 @@ console.log("static no-treeshake");
 
 //#endregion
 //#region static.js
-var static_exports = /* @__PURE__ */ __exportAll({});
+var static_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
 
 //#endregion
 export { static_exports as t };

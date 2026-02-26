@@ -6,48 +6,43 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## const-entry.js
 
 ```js
-//#region const-constants.js
-const a = 3;
-const b = 6;
-
-//#endregion
 //#region const-entry.js
 console.log([
-	+b,
-	-b,
-	~b,
-	!b,
-	typeof b
+	+6,
+	-6,
+	~6,
+	!6,
+	typeof 6
 ], [
-	a + b,
-	a - b,
-	a * b,
-	a / b,
-	a % b,
-	a ** b
+	3 + 6,
+	3 - 6,
+	3 * 6,
+	3 / 6,
+	3 % 6,
+	3 ** 6
 ], [
-	a < b,
-	a > b,
-	a <= b,
-	a >= b,
-	a == b,
-	a != b,
-	a === b,
-	a !== b
+	3 < 6,
+	3 > 6,
+	3 <= 6,
+	3 >= 6,
+	3 == 6,
+	3 != 6,
+	3 === 6,
+	3 !== 6
 ], [
-	b << 1,
-	b >> 1,
-	b >>> 1
+	6 << 1,
+	6 >> 1,
+	6 >>> 1
 ], [
-	a & b,
-	a | b,
-	a ^ b
+	3 & 6,
+	3 | 6,
+	3 ^ 6
 ], [
-	a && b,
-	a || b,
-	a ?? b,
-	a ? "y" : "n",
-	!b ? "y" : "n"
+	3 && 6,
+	3 || 6,
+	3 ?? 6,
+	3 ? "y" : "n",
+	!6 ? "y" : "n"
 ]);
 
 //#endregion
@@ -110,9 +105,6 @@ console.log([
 
 ```js
 //#region nested-constants.ts
-const a = 2;
-const b = 4;
-const c = 8;
 let x = /* @__PURE__ */ function(x) {
 	x[x["a"] = 16] = "a";
 	x[x["b"] = 32] = "b";
@@ -123,7 +115,7 @@ let x = /* @__PURE__ */ function(x) {
 //#endregion
 //#region nested-entry.ts
 console.log({
-	"should be 4": ~(~a & ~b) & (b | c),
+	"should be 4": ~(~2 & ~4) & (4 | 8),
 	"should be 32": ~(~x.a & ~x.b) & (x.b | x.c)
 });
 

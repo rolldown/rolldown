@@ -11,6 +11,9 @@ export default defineTest({
       sourcemap: true,
       sourcemapBaseUrl: 'https://example.com/foo/bar',
     },
+    optimization: {
+      inlineConst: false,
+    },
   },
   afterTest: function (output) {
     expect(getOutputFileNames(output)).toStrictEqual(['main.js', 'main.js.map']);

@@ -6,12 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## src_entry.js
 
 ```js
-//#region node_modules/d/index.js
-const foo = 123;
-
-//#endregion
 //#region src/entry.js
-console.log(foo);
+console.log(123);
 
 //#endregion
 ```

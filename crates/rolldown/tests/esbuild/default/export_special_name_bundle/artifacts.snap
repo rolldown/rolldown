@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.mjs
-var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => __proto__ });
+var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => 123 });
 var __proto__;
 var init_lib = __esmMin((() => {
 	__proto__ = 123;

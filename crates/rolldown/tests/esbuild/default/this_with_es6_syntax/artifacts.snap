@@ -21,7 +21,7 @@ console.log(void 0);
 
 //#endregion
 //#region dummy.js
-var dummy_exports = /* @__PURE__ */ __exportAll({ dummy: () => dummy });
+var dummy_exports = /* @__PURE__ */ __exportAll({ dummy: () => 123 });
 var dummy;
 var init_dummy = __esmMin((() => {
 	dummy = 123;

@@ -10,6 +10,9 @@ export default defineTest({
   sequential: true,
   config: {
     input: ['main.js', 'entry.js'],
+    optimization: {
+      inlineConst: false,
+    },
     output: {
       entryFileNames: '[name]-[hash].js',
       chunkFileNames: '[name]-[hash].js',

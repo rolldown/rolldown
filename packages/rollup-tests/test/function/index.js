@@ -118,6 +118,9 @@ runTestSuiteWithSamples(
 					config.options ??= {};
 					config.options.checks ??= {};
 					config.options.checks.circularDependency ??= true;
+					// Disable inlineConst for rollup tests, see https://github.com/rolldown/rolldown/issues/8100
+					config.options.optimization ??= {};
+					config.options.optimization.inlineConst ??= false;
 				}
         if (directory.includes('nested-inlined-dynamic-import-2')) {
           config.options ??= {};

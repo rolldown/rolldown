@@ -6,12 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region \0rolldown/data-url:mCqIXq0ZcOnBu61tWW9mRQ
-var data_url_mCqIXq0ZcOnBu61tWW9mRQ_default = "hi";
-
-//#endregion
 //#region main.js
-console.log(data_url_mCqIXq0ZcOnBu61tWW9mRQ_default);
+console.log("hi");
 
 //#endregion
 ```

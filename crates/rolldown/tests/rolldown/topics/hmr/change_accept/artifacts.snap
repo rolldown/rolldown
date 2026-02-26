@@ -26,7 +26,7 @@ import assert from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
 //#region child.js
-var child_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var child_exports = /* @__PURE__ */ __exportAll({ foo: () => 0 });
 const child_hot = __rolldown_runtime__.createModuleHotContext("child.js");
 __rolldown_runtime__.registerModule("child.js", { exports: child_exports });
 const foo = 0;

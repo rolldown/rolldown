@@ -19,7 +19,7 @@ var require_dep_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 //#endregion
 //#region modules/dep-esm.js
 var import_dep_cjs = require_dep_cjs();
-var dep_esm_exports = /* @__PURE__ */ __exportAll({ value: () => value$1 });
+var dep_esm_exports = /* @__PURE__ */ __exportAll({ value: () => "esm" });
 const dep_esm_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-esm.js");
 __rolldown_runtime__.registerModule("modules/dep-esm.js", { exports: dep_esm_exports });
 const value$1 = "esm";

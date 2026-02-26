@@ -12,7 +12,7 @@ var esm_exports = /* @__PURE__ */ __exportAll({
 	default: () => esm_default_fn$1,
 	esm_named_class: () => esm_named_class,
 	esm_named_fn: () => esm_named_fn,
-	esm_named_var: () => esm_named_var
+	esm_named_var: () => 1
 });
 function esm_default_fn$1() {}
 function esm_named_fn() {}
@@ -38,7 +38,7 @@ var require_commonjs$1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 //#region main.js
 var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs$1());
 init_esm();
-console.log(import_commonjs.default, esm_default_fn$1, esm_named_var, esm_named_fn, esm_named_class);
+console.log(import_commonjs.default, esm_default_fn$1, 1, esm_named_fn, esm_named_class);
 const require_commonjs = () => {};
 function esm_default_fn() {}
 console.log(require_commonjs, esm_default_fn);

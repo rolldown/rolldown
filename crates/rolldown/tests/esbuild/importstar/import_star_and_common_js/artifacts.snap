@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
 var foo;
 var init_foo = __esmMin((() => {
 	foo = 123;
@@ -20,7 +20,7 @@ var init_foo = __esmMin((() => {
 //#region entry.js
 init_foo();
 const ns2 = (init_foo(), __toCommonJS(foo_exports));
-assert.equal(foo, 123);
+assert.equal(123, 123);
 assert.equal(ns2.foo, 123);
 
 //#endregion

@@ -21,7 +21,7 @@ export default defineTest({
 
       //#region lib.js
       var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-      	module.exports = 1e3;
+      	module.exports = () => {};
       }));
 
       //#endregion

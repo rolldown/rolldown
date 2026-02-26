@@ -6,21 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a/index.js
 
 ```js
-import { a } from "../child.js";
-
 //#region main.js
-const b = a + 1;
+const b = 1 + 1;
 
 //#endregion
 export { b };
-```
-
-## child.js
-
-```js
-//#region child.js
-const a = 1;
-
-//#endregion
-export { a };
 ```

@@ -42,7 +42,7 @@ let foo = 123;
 
 //#endregion
 //#region entry.js
-console.log(_foo, foo);
+console.log(_foo, 123);
 let ns = 123;
 
 //#endregion

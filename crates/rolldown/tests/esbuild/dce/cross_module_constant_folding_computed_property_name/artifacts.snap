@@ -6,15 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## const-entry_js.js
 
 ```js
-//#region const-constants.js
-const a = 456;
-const b = "xyz";
-
-//#endregion
 //#region const-entry.js
 console.log({
-	[a]: a,
-	[b]: b
+	[456]: 456,
+	["xyz"]: "xyz"
 });
 
 //#endregion

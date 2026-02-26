@@ -6,14 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region inject.js
-let foo = 1;
-let bar = 2;
-let baz = 3;
-
-//#endregion
 //#region entry.js
-console.log(foo, bar, baz, bar.baz, foo.bar);
+console.log(1, 2, 3, 2 .baz, 1 .bar);
 
 //#endregion
 ```

@@ -20,7 +20,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
-	var lib_exports = /* @__PURE__ */ __exportAll({ default: () => lib_default });
+	var lib_exports = /* @__PURE__ */ __exportAll({ default: () => 2 });
 	var lib_default;
 	var init_lib = __esmMin((() => {
 		lib_default = 2;

@@ -25,7 +25,7 @@ var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 function test() {
-	return import_commonjs.version;
+	return 1;
 }
 
 var import_commonjs;
@@ -36,7 +36,7 @@ var init_main = __esmMin((() => {
 //#endregion
 //#region main.js
 	assert.equal(import_commonjs.createReactElement(), "div");
-	assert.equal(import_commonjs.version.toString(), "1");
+	assert.equal(1 .toString(), "1");
 	assert.equal(test().toString(), "1");
 
 //#endregion

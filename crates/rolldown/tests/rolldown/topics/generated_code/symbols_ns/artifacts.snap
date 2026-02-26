@@ -10,7 +10,7 @@ import assert from "assert";
 
 // HIDDEN [\0rolldown/runtime.js]
 //#region import.js
-var import_exports = /* @__PURE__ */ __exportAll({ default: () => import_default });
+var import_exports = /* @__PURE__ */ __exportAll({ default: () => "hi" });
 var import_default = "hi";
 
 //#endregion
@@ -33,7 +33,7 @@ let assert = require("assert");
 assert = __toESM(assert);
 
 //#region import.js
-var import_exports = /* @__PURE__ */ __exportAll({ default: () => import_default });
+var import_exports = /* @__PURE__ */ __exportAll({ default: () => "hi" });
 var import_default = "hi";
 
 //#endregion
@@ -66,7 +66,7 @@ assert.default.equal(String(import_exports), "[object Module]");
 assert = __toESM(assert);
 
 //#region import.js
-	var import_exports = /* @__PURE__ */ __exportAll({ default: () => import_default });
+	var import_exports = /* @__PURE__ */ __exportAll({ default: () => "hi" });
 	var import_default = "hi";
 
 //#endregion

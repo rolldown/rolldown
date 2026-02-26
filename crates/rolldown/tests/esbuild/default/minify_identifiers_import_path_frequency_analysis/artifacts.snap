@@ -6,12 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## import.js
 
 ```js
-//#region WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ.js
-var WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ_default = 123;
-
-//#endregion
 //#region import.js
-console.log(WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ_default, "no identifier in this file should be named W, X, Y, or Z");
+console.log(123, "no identifier in this file should be named W, X, Y, or Z");
 
 //#endregion
 ```

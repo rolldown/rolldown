@@ -23,10 +23,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { imported } from "somewhere";
 
-//#region constants.js
-const constant = 123;
-
-//#endregion
 //#region empty.js
 var undef = void 0;
 
@@ -42,7 +38,7 @@ _ = class Outer {
 			@unbound @unbound() unbound;
 		},
 		class {
-			@constant @constant() constant;
+			@(123) @(123()) constant;
 		},
 		class {
 			@undef @undef() undef;

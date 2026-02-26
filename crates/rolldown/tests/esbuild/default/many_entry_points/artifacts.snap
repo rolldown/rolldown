@@ -6,10 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## e00.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e00.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -17,10 +15,8 @@ console.log(shared_default);
 ## e01.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e01.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -28,10 +24,8 @@ console.log(shared_default);
 ## e02.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e02.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -39,10 +33,8 @@ console.log(shared_default);
 ## e03.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e03.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -50,10 +42,8 @@ console.log(shared_default);
 ## e04.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e04.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -61,10 +51,8 @@ console.log(shared_default);
 ## e05.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e05.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -72,10 +60,8 @@ console.log(shared_default);
 ## e06.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e06.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -83,10 +69,8 @@ console.log(shared_default);
 ## e07.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e07.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -94,10 +78,8 @@ console.log(shared_default);
 ## e08.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e08.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -105,10 +87,8 @@ console.log(shared_default);
 ## e09.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e09.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -116,10 +96,8 @@ console.log(shared_default);
 ## e10.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e10.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -127,10 +105,8 @@ console.log(shared_default);
 ## e11.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e11.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -138,10 +114,8 @@ console.log(shared_default);
 ## e12.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e12.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -149,10 +123,8 @@ console.log(shared_default);
 ## e13.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e13.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -160,10 +132,8 @@ console.log(shared_default);
 ## e14.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e14.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -171,10 +141,8 @@ console.log(shared_default);
 ## e15.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e15.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -182,10 +150,8 @@ console.log(shared_default);
 ## e16.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e16.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -193,10 +159,8 @@ console.log(shared_default);
 ## e17.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e17.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -204,10 +168,8 @@ console.log(shared_default);
 ## e18.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e18.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -215,10 +177,8 @@ console.log(shared_default);
 ## e19.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e19.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -226,10 +186,8 @@ console.log(shared_default);
 ## e20.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e20.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -237,10 +195,8 @@ console.log(shared_default);
 ## e21.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e21.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -248,10 +204,8 @@ console.log(shared_default);
 ## e22.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e22.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -259,10 +213,8 @@ console.log(shared_default);
 ## e23.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e23.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -270,10 +222,8 @@ console.log(shared_default);
 ## e24.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e24.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -281,10 +231,8 @@ console.log(shared_default);
 ## e25.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e25.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -292,10 +240,8 @@ console.log(shared_default);
 ## e26.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e26.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -303,10 +249,8 @@ console.log(shared_default);
 ## e27.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e27.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -314,10 +258,8 @@ console.log(shared_default);
 ## e28.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e28.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -325,10 +267,8 @@ console.log(shared_default);
 ## e29.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e29.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -336,10 +276,8 @@ console.log(shared_default);
 ## e30.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e30.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -347,10 +285,8 @@ console.log(shared_default);
 ## e31.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e31.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -358,10 +294,8 @@ console.log(shared_default);
 ## e32.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e32.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -369,10 +303,8 @@ console.log(shared_default);
 ## e33.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e33.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -380,10 +312,8 @@ console.log(shared_default);
 ## e34.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e34.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -391,10 +321,8 @@ console.log(shared_default);
 ## e35.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e35.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -402,10 +330,8 @@ console.log(shared_default);
 ## e36.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e36.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -413,10 +339,8 @@ console.log(shared_default);
 ## e37.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e37.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -424,10 +348,8 @@ console.log(shared_default);
 ## e38.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e38.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
 ```
@@ -435,20 +357,8 @@ console.log(shared_default);
 ## e39.js
 
 ```js
-import { t as shared_default } from "./shared.js";
-
 //#region e39.js
-console.log(shared_default);
+console.log(123);
 
 //#endregion
-```
-
-## shared.js
-
-```js
-//#region shared.js
-var shared_default = 123;
-
-//#endregion
-export { shared_default as t };
 ```

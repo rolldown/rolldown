@@ -14,7 +14,7 @@ node_assert = require_rolldown_runtime.__toESM(node_assert);
 //#region main.js
 var init_main = require_rolldown_runtime.__esmMin((() => {
 	require_shared.init_shared();
-	node_assert.default.strictEqual(require_shared.value, 42);
+	node_assert.default.strictEqual(42, 42);
 }));
 
 //#endregion
@@ -46,22 +46,13 @@ Object.defineProperty(exports, '__toESM', {
 const require_rolldown_runtime = require('./rolldown-runtime.js');
 
 //#region shared.js
-var value;
-var init_shared = require_rolldown_runtime.__esmMin((() => {
-	value = 42;
-}));
+var init_shared = require_rolldown_runtime.__esmMin((() => {}));
 
 //#endregion
 Object.defineProperty(exports, 'init_shared', {
   enumerable: true,
   get: function () {
     return init_shared;
-  }
-});
-Object.defineProperty(exports, 'value', {
-  enumerable: true,
-  get: function () {
-    return value;
   }
 });
 ```

@@ -6,12 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region shared.js
-const foo = 1;
-
-//#endregion
 //#region main.js
-assert.strictEqual(foo, 1);
+assert.strictEqual(1, 1);
 
 //#endregion
 ```

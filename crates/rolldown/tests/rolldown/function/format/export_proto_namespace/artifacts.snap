@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
-var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => __proto__ });
+var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => 123 });
 const __proto__ = 123;
 
 //#endregion
@@ -26,7 +26,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 // HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
-var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => __proto__ });
+var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => 123 });
 const __proto__ = 123;
 
 //#endregion
@@ -51,7 +51,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 // HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
-	var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => __proto__ });
+	var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => 123 });
 	const __proto__ = 123;
 
 //#endregion
@@ -82,7 +82,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 // HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
-	var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => __proto__ });
+	var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => 123 });
 	const __proto__ = 123;
 
 //#endregion

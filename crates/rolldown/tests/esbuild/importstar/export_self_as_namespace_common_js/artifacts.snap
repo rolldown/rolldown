@@ -11,7 +11,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region entry.js
 var entry_exports = /* @__PURE__ */ __exportAll({
-	foo: () => foo,
+	foo: () => 123,
 	ns: () => entry_exports
 });
 const foo = 123;

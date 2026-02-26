@@ -10,7 +10,7 @@ import { foo as foo$1 } from "./entry2.js";
 import assert from "node:assert";
 
 //#region main.js
-const foo = () => foo$1;
+const foo = () => 0;
 assert.strictEqual(foo.name, "foo");
 
 //#endregion

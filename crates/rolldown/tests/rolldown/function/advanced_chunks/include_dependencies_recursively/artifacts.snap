@@ -33,17 +33,14 @@ export { __esmMin as t };
 import { t as __esmMin } from "./rolldown-runtime.js";
 
 //#region bar.js
-var bar;
-var init_bar = __esmMin((() => {
-	bar = "bar";
-}));
+var init_bar = __esmMin((() => {}));
 
 //#endregion
 //#region foo.js
 var foo;
 var init_foo = __esmMin((() => {
 	init_bar();
-	foo = "foo " + bar;
+	foo = "foo " + "bar";
 }));
 
 //#endregion

@@ -28,7 +28,7 @@ node_assert = __toESM(node_assert);
 
 //#region main.js
 node_assert.default.strictEqual(require_lib.foo, "foo_value");
-node_assert.default.strictEqual(require_lib.bar, 42);
+node_assert.default.strictEqual(42, 42);
 
 //#endregion
 exports.bar = require_lib.bar;

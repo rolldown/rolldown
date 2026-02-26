@@ -18,7 +18,7 @@ var init_foo = __esmMin((async () => {
 //#region main.js
 var init_main = __esmMin((async () => {
 	await init_foo();
-	console.log(foo);
+	console.log(123);
 }));
 
 //#endregion

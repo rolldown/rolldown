@@ -9,6 +9,9 @@ export default defineTest({
     output: {
       sourcemap: true,
     },
+    optimization: {
+      inlineConst: false,
+    },
   },
   afterTest: function (output) {
     expect(getOutputFileNames(output)).toStrictEqual(['main.js', 'main.js.map']);

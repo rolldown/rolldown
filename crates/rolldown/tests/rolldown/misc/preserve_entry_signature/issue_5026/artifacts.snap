@@ -18,10 +18,8 @@ globalThis.result.push("ready");
 ## page.js
 
 ```js
-import { n as foo } from "./router.js";
-
 //#region page.mjs
-globalThis.result = [foo];
+globalThis.result = ["foo"];
 
 //#endregion
 ```
@@ -38,8 +36,7 @@ const createRouter = (page) => {
 	page().then(() => readyResolve());
 	return { isReady };
 };
-const foo = "foo";
 
 //#endregion
-export { foo as n, createRouter as t };
+export { createRouter as t };
 ```

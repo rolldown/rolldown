@@ -6,10 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { t as value } from "./main.js";
-
 //#region dynamic.js
-console.log(`shared: `, value);
+console.log(`shared: `, "lib");
 
 //#endregion
 ```
@@ -38,16 +36,11 @@ export { value as t };
 ## main.js
 
 ```js
-//#region lib.js
-const value = "lib";
-
-//#endregion
 //#region main.js
 import("./dynamic.js");
-console.log(`shared: `, value);
+console.log(`shared: `, "lib");
 
 //#endregion
-export { value as t };
 ```
 
 ## main2.js

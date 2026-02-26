@@ -102,17 +102,19 @@ pub fn normalize_optimization_option(
   platform: Platform,
 ) -> NormalizedOptimizationConfig {
   let option = option.unwrap_or_default();
-  let inline_const = option.inline_const.and_then(|inline_const| match inline_const {
-    InlineConstOption::Bool(true) => {
+  let inline_const = match option.inline_const {
+    // Default: smart mode with 1 pass
+    None => Some(NormalizedInlineConstConfig { mode: InlineConstMode::Smart, pass: 1 }),
+    Some(InlineConstOption::Bool(true)) => {
       Some(NormalizedInlineConstConfig { mode: InlineConstMode::All, pass: 1 })
     }
-    InlineConstOption::Bool(false) => None,
-    InlineConstOption::Config(config) => {
+    Some(InlineConstOption::Bool(false)) => None,
+    Some(InlineConstOption::Config(config)) => {
       let mode = config.mode.unwrap_or(InlineConstMode::All);
       let pass = config.pass;
       Some(NormalizedInlineConstConfig { mode, pass })
     }
-  });
+  };
 
   NormalizedOptimizationConfig {
     inline_const,

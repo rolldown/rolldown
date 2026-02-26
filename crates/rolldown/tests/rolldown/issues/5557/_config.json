@@ -1,6 +1,9 @@
 {
   "config": {
-    "preserveModules": true
+    "preserveModules": true,
+    "optimization": {
+      "inlineConst": false
+    }
   },
   "snapshot": false
 }

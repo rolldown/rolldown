@@ -15,7 +15,7 @@ var init_a = __esmMin((() => {
 
 //#endregion
 //#region b.js
-var b_exports = /* @__PURE__ */ __exportAll({ xyz: () => xyz });
+var b_exports = /* @__PURE__ */ __exportAll({ xyz: () => null });
 var xyz;
 var init_b = __esmMin((() => {
 	xyz = null;
@@ -27,12 +27,12 @@ var commonjs_exports = /* @__PURE__ */ __exportAll({
 	C: () => Class,
 	Class: () => Class,
 	Fn: () => Fn,
-	abc: () => abc,
+	abc: () => void 0,
 	b: () => b_exports,
-	c: () => c,
-	default: () => commonjs_default,
-	l: () => l,
-	v: () => v
+	c: () => 234,
+	default: () => 123,
+	l: () => 234,
+	v: () => 234
 });
 function Fn() {}
 var commonjs_default, v, l, c, Class;

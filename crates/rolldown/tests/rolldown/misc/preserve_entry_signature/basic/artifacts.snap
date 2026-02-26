@@ -6,10 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { t as value } from "./main.js";
-
 //#region dynamic.js
-console.log(`shared: `, value);
+console.log(`shared: `, 100);
 
 //#endregion
 ```
@@ -17,17 +15,13 @@ console.log(`shared: `, value);
 ## main.js
 
 ```js
-//#region lib.js
-const value = 100;
-
-//#endregion
 //#region main.js
 import("./dynamic.js");
-console.log(`shared: `, value);
-const unused = value;
+console.log(`shared: `, 100);
+const unused = 100;
 
 //#endregion
-export { value as t, unused };
+export { unused };
 ```
 
 # Variant: [preserve_entry_signatures: Strict]
@@ -37,33 +31,19 @@ export { value as t, unused };
 ### dynamic.js
 
 ```js
-import { t as value } from "./lib.js";
-
 //#region dynamic.js
-console.log(`shared: `, value);
+console.log(`shared: `, 100);
 
 //#endregion
-```
-
-### lib.js
-
-```js
-//#region lib.js
-const value = 100;
-
-//#endregion
-export { value as t };
 ```
 
 ### main.js
 
 ```js
-import { t as value } from "./lib.js";
-
 //#region main.js
 import("./dynamic.js");
-console.log(`shared: `, value);
-const unused = value;
+console.log(`shared: `, 100);
+const unused = 100;
 
 //#endregion
 export { unused };
@@ -76,10 +56,8 @@ export { unused };
 ### dynamic.js
 
 ```js
-import { t as value } from "./main.js";
-
 //#region dynamic.js
-console.log(`shared: `, value);
+console.log(`shared: `, 100);
 
 //#endregion
 ```
@@ -87,14 +65,9 @@ console.log(`shared: `, value);
 ### main.js
 
 ```js
-//#region lib.js
-const value = 100;
-
-//#endregion
 //#region main.js
 import("./dynamic.js");
-console.log(`shared: `, value);
+console.log(`shared: `, 100);
 
 //#endregion
-export { value as t };
 ```

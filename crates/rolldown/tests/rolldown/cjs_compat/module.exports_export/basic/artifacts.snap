@@ -11,10 +11,10 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({
-	__esModule: () => __esModule,
-	bar: () => bar,
+	__esModule: () => true,
+	bar: () => "bar",
 	default: () => esm_default,
-	foo: () => foo,
+	foo: () => "foo",
 	"module.exports": () => moduleExports
 });
 var foo, bar, esm_default, __esModule, moduleExports;

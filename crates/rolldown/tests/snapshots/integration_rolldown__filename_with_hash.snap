@@ -6168,6 +6168,10 @@ expression: output
 
 - main-!~{000}~.js => main-C5lnHHjB.js
 
+# tests/rolldown/tree_shaking/commonjs_inline_const_computed_key_write_object
+
+- main-!~{000}~.js => main-CB4A8mp9.js
+
 # tests/rolldown/tree_shaking/commonjs_mixed
 
 - main-!~{000}~.js => main-Cxy4FYVM.js

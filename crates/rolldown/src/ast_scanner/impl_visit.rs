@@ -8,11 +8,10 @@ use oxc::{
   semantic::{ScopeFlags, SymbolId},
   span::{GetSpan, Span},
 };
-use rolldown_common::StmtInfoIdx;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  MemberExprObjectReferencedType, OutputFormat, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta,
-  SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
+  MemberExprObjectReferencedType, OutputFormat, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoIdx,
+  StmtInfoMeta, SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
@@ -68,6 +67,23 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       _ => {}
     }
     walk::walk_simple_assignment_target(self, it);
+  }
+
+  fn visit_computed_member_expression(&mut self, it: &ast::ComputedMemberExpression<'ast>) {
+    if self.traverse_state.contains(TraverseState::MemberExprIsWrite) {
+      let kind = AstKind::ComputedMemberExpression(self.alloc(it));
+      self.enter_node(kind);
+      // In assignment targets, only the member object is written.
+      // The computed key expression is evaluated as a read.
+      let pre = self.traverse_state;
+      self.visit_expression(&it.object);
+      self.traverse_state.remove(TraverseState::MemberExprIsWrite);
+      self.visit_expression(&it.expression);
+      self.traverse_state = pre;
+      self.leave_node(kind);
+      return;
+    }
+    walk::walk_computed_member_expression(self, it);
   }
 
   fn visit_program(&mut self, program: &ast::Program<'ast>) {

@@ -123,7 +123,7 @@ impl ResolverConfig {
       main_fields,
       main_files: resolve_options.main_files.unwrap_or_else(|| vec!["index".to_string()]),
       modules: resolve_options.modules.unwrap_or_else(|| vec!["node_modules".into()]),
-      node_path: true,
+      node_path: false,
       resolve_to_context: false,
       prefer_relative: false,
       prefer_absolute: false,

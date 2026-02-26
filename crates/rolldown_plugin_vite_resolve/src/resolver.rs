@@ -185,6 +185,7 @@ fn get_resolve_options(
     } else {
       vec!["index".to_string()]
     },
+    node_path: false,
     prefer_relative: additional_options.prefer_relative,
     roots: if base_options.as_src { vec![base_options.root.clone()] } else { vec![] },
     symlinks: !base_options.preserve_symlinks,

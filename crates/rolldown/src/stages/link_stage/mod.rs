@@ -1,5 +1,7 @@
 use arcstr::ArcStr;
+use indexmap::IndexSet;
 use itertools::Itertools;
+use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
@@ -54,6 +56,17 @@ pub struct SafelyMergeCjsNsInfo {
   pub needs_interop: bool,
 }
 
+/// Tracks a set of symbols that import the same named binding from the same external module,
+/// so they can be linked together (deduplicated) during chunk-level merging in code splitting.
+#[derive(Debug, Default)]
+pub struct ExternalImportBindingLinkPlan {
+  /// All symbol refs that import this particular (external module, export name) pair.
+  pub symbols: IndexSet<SymbolRef>,
+  /// If set, a facade symbol was created during eager merging for non-re-exported imports.
+  /// Chunk-level merging will link symbols to this facade instead of picking one from the group.
+  pub facade_symbol_ref: Option<SymbolRef>,
+}
+
 #[derive(Debug)]
 pub struct LinkStageOutput {
   pub module_table: ModuleTable,
@@ -68,7 +81,14 @@ pub struct LinkStageOutput {
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
+  /// Maps each external module to the set of namespace import symbols (`import * as ns`)
+  /// that reference it. Used during chunk-level merging to deduplicate namespace imports.
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
+  /// Maps each (external module, export name) pair to a link plan containing all symbols
+  /// that import that binding. Consumed during chunk-level merging in code splitting to
+  /// deduplicate named imports of the same external binding within each chunk.
+  pub external_import_binding_link_plan:
+    FxHashMap<(ModuleIdx, CompactStr), ExternalImportBindingLinkPlan>,
   /// https://rollupjs.org/plugin-development/#this-emitfile
   /// Used to store `preserveSignature` specified with `this.emitFile` in plugins.
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
@@ -94,7 +114,11 @@ pub struct LinkStage<'a> {
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
+  /// See [`LinkStageOutput::external_import_namespace_merger`].
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
+  /// See [`LinkStageOutput::external_import_binding_link_plan`].
+  pub external_import_binding_link_plan:
+    FxHashMap<(ModuleIdx, CompactStr), ExternalImportBindingLinkPlan>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
@@ -182,6 +206,7 @@ impl<'a> LinkStage<'a> {
       safely_merge_cjs_ns_map: FxHashMap::default(),
       normal_symbol_exports_chain_map: FxHashMap::default(),
       external_import_namespace_merger: FxHashMap::default(),
+      external_import_binding_link_plan: FxHashMap::default(),
       overrode_preserve_entry_signature_map: scan_stage_output
         .overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: scan_stage_output.entry_point_to_reference_ids,
@@ -223,6 +248,7 @@ impl<'a> LinkStage<'a> {
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
       safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
       external_import_namespace_merger: self.external_import_namespace_merger,
+      external_import_binding_link_plan: self.external_import_binding_link_plan,
       overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: self.entry_point_to_reference_ids,
       global_constant_symbol_map: self.global_constant_symbol_map,

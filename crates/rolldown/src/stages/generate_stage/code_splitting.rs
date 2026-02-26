@@ -151,35 +151,7 @@ impl GenerateStage<'_> {
         .split_chunks(&mut index_splitting_info, &mut chunk_graph, &mut bits_to_chunk, &input_base)
         .await?;
     }
-    // Merge external import namespaces at chunk level.
-    for symbol_set in self.link_output.external_import_namespace_merger.values() {
-      for (_, mut group) in symbol_set
-        .iter()
-        .filter_map(|item| {
-          let module = self.link_output.module_table[item.owner].as_normal()?;
-          self.link_output.metas[module.idx].is_included.then_some(item)
-        })
-        .into_group_map_by(|item| {
-          chunk_graph.module_to_chunk[item.owner].expect("should have chunk idx")
-        })
-      {
-        if group.len() <= 1 {
-          continue;
-        }
-        group.sort_unstable_by_key(|item| self.link_output.module_table[item.owner].exec_order());
-        let Some(idx) =
-          group.iter().position(|item| self.link_output.used_symbol_refs.contains(item))
-        else {
-          continue;
-        };
-        // In the extreme case, idx would eq to group.len() - 1, which means the first symbol is the only one that is used.
-        // `idx + 1` would eq to len of the group, the iteration is still safe,
-        // https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=38bb53e79b4f7aaa73ef9d6b4cfb3cc2
-        for symbol in &group[idx + 1..] {
-          self.link_output.symbol_db.link(**symbol, *group[idx]);
-        }
-      }
-    }
+    self.merge_external_import_symbols(&chunk_graph);
 
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
 
@@ -261,6 +233,76 @@ impl GenerateStage<'_> {
     self.find_entry_level_external_module(&mut chunk_graph);
 
     Ok(chunk_graph)
+  }
+
+  /// Merge external import symbols at chunk level.
+  ///
+  /// This handles two cases:
+  /// 1. External import namespace symbols (`import * as ns from "ext"`) - merged within the same chunk
+  /// 2. External named import bindings (`import { a } from "ext"` and `export { a } from "ext"`) -
+  ///    normalized in link stage and merged here within each chunk.
+  fn merge_external_import_symbols(&mut self, chunk_graph: &ChunkGraph) {
+    // Merge external import namespaces at chunk level.
+    for symbol_set in self.link_output.external_import_namespace_merger.values() {
+      for (_, mut group) in symbol_set
+        .iter()
+        .filter_map(|item| {
+          let module = self.link_output.module_table[item.owner].as_normal()?;
+          self.link_output.metas[module.idx].is_included.then_some(item)
+        })
+        .into_group_map_by(|item| {
+          chunk_graph.module_to_chunk[item.owner].expect("should have chunk idx")
+        })
+      {
+        if group.len() <= 1 {
+          continue;
+        }
+        group.sort_unstable_by_key(|item| self.link_output.module_table[item.owner].exec_order());
+        let Some(idx) =
+          group.iter().position(|item| self.link_output.used_symbol_refs.contains(item))
+        else {
+          continue;
+        };
+        for symbol in &group[idx + 1..] {
+          self.link_output.symbol_db.link(**symbol, *group[idx]);
+        }
+      }
+    }
+
+    // Merge external named import bindings at chunk level.
+    for plan in self.link_output.external_import_binding_link_plan.values() {
+      for (_, mut group) in plan
+        .symbols
+        .iter()
+        .filter_map(|item| {
+          let module = self.link_output.module_table[item.owner].as_normal()?;
+          self.link_output.metas[module.idx].is_included.then_some(item)
+        })
+        .into_group_map_by(|item| {
+          chunk_graph.module_to_chunk[item.owner].expect("should have chunk idx")
+        })
+      {
+        if let Some(facade_ref) = plan.facade_symbol_ref {
+          for symbol in &group {
+            self.link_output.symbol_db.link(**symbol, facade_ref);
+          }
+          continue;
+        }
+
+        if group.len() <= 1 {
+          continue;
+        }
+        group.sort_unstable_by_key(|item| self.link_output.module_table[item.owner].exec_order());
+        let Some(idx) =
+          group.iter().position(|item| self.link_output.used_symbol_refs.contains(item))
+        else {
+          continue;
+        };
+        for symbol in &group[idx + 1..] {
+          self.link_output.symbol_db.link(**symbol, *group[idx]);
+        }
+      }
+    }
   }
 
   pub fn ensure_lazy_module_initialization_order(&self, chunk_graph: &mut ChunkGraph) {

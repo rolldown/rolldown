@@ -8,6 +8,7 @@ Watch mode monitors source files and automatically rebuilds when changes are det
 
 - **JS API aligns with Rollup** — The TypeScript surface (events, options, plugin hooks, lifecycle ordering) should match Rollup's behavior unless there's a technical reason not to. Divergences are documented explicitly.
 - **Rust code follows Rust idioms** — The Rust core should feel native: ownership-driven, enum state machines, trait-based extensibility, no unnecessary `Arc`/`Mutex` beyond what the architecture requires.
+- **Consistent naming across the stack** — Rollup defines the canonical event/concept names (e.g. `BUNDLE_START`/`BUNDLE_END`). The Rust side should use the same terminology so there's a clean 1:1 mapping and no mental translation at the NAPI boundary.
 
 ## API Contract
 
@@ -127,7 +128,7 @@ rolldown_watcher/
 ├── watch_coordinator.rs  // WatchCoordinator (actor + event loop)
 ├── watch_task.rs         // WatchTask (bundler + fs watcher) + WatchTaskIdx + BuildOutcome
 ├── handler.rs            // WatcherEventHandler async trait
-├── event.rs              // WatchEvent, WatchStartEventData, WatchEndEventData, WatchErrorEventData
+├── event.rs              // WatchEvent, BundleStartEventData, BundleEndEventData, WatchErrorEventData
 ├── state.rs              // WatcherState enum + transitions + ChangeEntry
 └── msg.rs                // WatcherMsg enum (FsEvent, Close)
 ```

@@ -6,7 +6,7 @@ mod watch_coordinator;
 mod watch_task;
 mod watcher;
 
-pub use event::{WatchEndEventData, WatchErrorEventData, WatchEvent, WatchStartEventData};
+pub use event::{BundleEndEventData, BundleStartEventData, WatchErrorEventData, WatchEvent};
 pub use handler::WatcherEventHandler;
 pub use state::ChangeEntry;
 pub use watch_task::WatchTaskIdx;

@@ -95,12 +95,12 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
 
     for task_index in self.tasks.indices() {
       let task = &self.tasks[task_index];
-      self.handler.on_event(WatchEvent::TaskStart(task.start_event_data(task_index))).await;
+      self.handler.on_event(WatchEvent::BundleStart(task.start_event_data(task_index))).await;
 
       let task = &mut self.tasks[task_index];
       match task.build(task_index).await {
         Ok(BuildOutcome::Success(data)) => {
-          self.handler.on_event(WatchEvent::TaskEnd(data)).await;
+          self.handler.on_event(WatchEvent::BundleEnd(data)).await;
         }
         Ok(BuildOutcome::Error(data)) => {
           self.handler.on_event(WatchEvent::Error(data)).await;
@@ -121,7 +121,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   /// 2. For each task and each changed file: task.call_watch_change
   /// 3. handler.on_restart
   /// 4. handler.on_event(Start)
-  /// 5. For each task needing rebuild: TaskStart → build → TaskEnd/Error
+  /// 5. For each task needing rebuild: BundleStart → build → BundleEnd/Error
   /// 6. handler.on_event(End)
   /// 7. drain_buffered_events
   async fn run_build_sequence(&mut self, changes: Vec<ChangeEntry>) {
@@ -149,12 +149,12 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
       }
 
       let task = &self.tasks[task_index];
-      self.handler.on_event(WatchEvent::TaskStart(task.start_event_data(task_index))).await;
+      self.handler.on_event(WatchEvent::BundleStart(task.start_event_data(task_index))).await;
 
       let task = &mut self.tasks[task_index];
       match task.build(task_index).await {
         Ok(BuildOutcome::Success(data)) => {
-          self.handler.on_event(WatchEvent::TaskEnd(data)).await;
+          self.handler.on_event(WatchEvent::BundleEnd(data)).await;
         }
         Ok(BuildOutcome::Error(data)) => {
           self.handler.on_event(WatchEvent::Error(data)).await;

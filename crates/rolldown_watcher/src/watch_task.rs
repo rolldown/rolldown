@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex as TokioMutex;
 
-use crate::event::{WatchEndEventData, WatchErrorEventData, WatchStartEventData};
+use crate::event::{BundleEndEventData, BundleStartEventData, WatchErrorEventData};
 
 oxc_index::define_index_type! {
   pub struct WatchTaskIdx = u32;
@@ -87,7 +87,7 @@ impl WatchTask {
     self.needs_rebuild = false;
 
     match result {
-      Ok(_output) => Ok(BuildOutcome::Success(WatchEndEventData {
+      Ok(_output) => Ok(BuildOutcome::Success(BundleEndEventData {
         task_index,
         output: self.options.cwd.join(&self.options.out_dir).to_string_lossy().into_owned(),
         duration,
@@ -106,8 +106,8 @@ impl WatchTask {
   }
 
   /// Start event data for this task
-  pub(crate) fn start_event_data(&self, task_index: WatchTaskIdx) -> WatchStartEventData {
-    WatchStartEventData { task_index }
+  pub(crate) fn start_event_data(&self, task_index: WatchTaskIdx) -> BundleStartEventData {
+    BundleStartEventData { task_index }
   }
 
   /// Update watched files by adding new ones to the fs watcher.
@@ -209,7 +209,7 @@ pub enum BuildOutcome {
   /// Build was skipped (no rebuild needed)
   Skipped,
   /// Build succeeded
-  Success(WatchEndEventData),
+  Success(BundleEndEventData),
   /// Build had errors (but didn't fail fatally)
   Error(WatchErrorEventData),
 }

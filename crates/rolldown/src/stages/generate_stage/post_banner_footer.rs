@@ -63,7 +63,8 @@ impl GenerateStage<'_> {
             // sourcemap is correctly anchored to `rest_content`.
             let adjusted_map =
               if has_shebang { adjust_sourcemap_dst_lines(source_map, 1) } else { source_map };
-            source_joiner.append_source(SourceMapSource::new(rest_content.to_string(), adjusted_map));
+            source_joiner
+              .append_source(SourceMapSource::new(rest_content.to_string(), adjusted_map));
           } else {
             source_joiner.append_source(rest_content);
           }

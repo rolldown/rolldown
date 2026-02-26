@@ -11,19 +11,18 @@ pub use source_joiner::SourceJoiner;
 
 pub use crate::source::{Source, SourceMapSource};
 
-/// Adjust all destination (generated) line numbers in a sourcemap by subtracting `subtract` from
-/// them. This is useful when a prefix (such as a shebang line) has been extracted from the content
-/// that the sourcemap was originally generated for, and the sourcemap needs to be re-anchored to
-/// the new content without the prefix.
-pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, subtract: u32) -> SourceMap {
-  if subtract == 0 {
-    return sourcemap;
-  }
+/// Strips the first `lines` destination lines from the sourcemap, decrementing all remaining
+/// destination line numbers accordingly. Used to re-anchor a sourcemap after removing a
+/// prefix (e.g. a shebang line) from the generated code.
+pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, lines: u32) -> SourceMap {
+  debug_assert!(lines > 0, "lines should be greater than 0 to adjust sourcemap");
+
   let tokens: Box<[Token]> = sourcemap
     .get_tokens()
+    .filter(|t| t.get_dst_line() >= lines)
     .map(|token| {
       Token::new(
-        token.get_dst_line().saturating_sub(subtract),
+        token.get_dst_line() - lines,
         token.get_dst_col(),
         token.get_src_line(),
         token.get_src_col(),
@@ -32,6 +31,7 @@ pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, subtract: u32) -> Source
       )
     })
     .collect();
+
   SourceMap::new(
     sourcemap.get_file().cloned(),
     sourcemap.get_names().cloned().collect(),

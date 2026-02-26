@@ -54,6 +54,26 @@ export type ModuleTypes = Record<
   | 'copy'
 >;
 
+export interface WatcherFileWatcherOptions {
+  /**
+   * Whether to use polling-based file watching instead of native OS events.
+   *
+   * Polling is useful for environments where native FS events are unreliable,
+   * such as network mounts, Docker volumes, or WSL2.
+   *
+   * @default false
+   */
+  usePolling?: boolean;
+  /**
+   * Interval between each poll in milliseconds.
+   *
+   * This option is only used when {@linkcode usePolling} is `true`.
+   *
+   * @default 100
+   */
+  pollInterval?: number;
+}
+
 export interface WatcherOptions {
   /**
    * Whether to skip the {@linkcode RolldownBuild.write | bundle.write()} step when a rebuild is triggered.
@@ -79,32 +99,13 @@ export interface WatcherOptions {
    */
   buildDelay?: number;
   /**
-   * An optional object of options that will be passed to the [notify](https://github.com/rolldown/notify) file watcher.
+   * File watcher options for configuring how file changes are detected.
    */
-  notify?: {
-    /**
-     * Interval between each re-scan attempt in milliseconds.
-     *
-     * This option is only used when polling backend is used.
-     *
-     * @default 30_000
-     */
-    pollInterval?: number;
-    /**
-     * Whether to compare file contents when checking for changes.
-     *
-     * This is especially important for pseudo filesystems like those on Linux
-     * under `/sys` and `/proc` which are not obligated to respect any other
-     * filesystem norms such as modification timestamps, file sizes, etc. By
-     * enabling this feature, performance will be significantly impacted as
-     * all files will need to be read and hashed at each interval.
-     *
-     * This option is only used when polling backend is used.
-     *
-     * @default false
-     */
-    compareContents?: boolean;
-  };
+  watcher?: WatcherFileWatcherOptions;
+  /**
+   * @deprecated Use {@linkcode watcher} instead.
+   */
+  notify?: WatcherFileWatcherOptions;
   /**
    * Filter to limit the file-watching to certain files.
    *

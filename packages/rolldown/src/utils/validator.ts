@@ -259,21 +259,25 @@ const TransformOptionsSchema = v.object({
 });
 isTypeTrue<IsSchemaSubType<typeof TransformOptionsSchema, TransformOptions>>();
 
+const WatcherFileWatcherOptionsSchema = v.strictObject({
+  usePolling: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Use polling-based file watching instead of native OS events'),
+  ),
+  pollInterval: v.pipe(
+    v.optional(v.number()),
+    v.description('Poll interval in milliseconds (only used when usePolling is true)'),
+  ),
+});
+
 const WatcherOptionsSchema = v.strictObject({
   chokidar: v.optional(
-    v.never(`The "watch.chokidar" option is deprecated, please use "watch.notify" instead of it`),
+    v.never(`The "watch.chokidar" option is deprecated, please use "watch.watcher" instead of it`),
   ),
   exclude: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
   include: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
-  notify: v.pipe(
-    v.optional(
-      v.strictObject({
-        compareContents: v.optional(v.boolean()),
-        pollInterval: v.optional(v.number()),
-      }),
-    ),
-    v.description('Notify options'),
-  ),
+  watcher: v.optional(WatcherFileWatcherOptionsSchema),
+  notify: v.optional(WatcherFileWatcherOptionsSchema),
   skipWrite: v.pipe(v.optional(v.boolean()), v.description('Skip the bundle.write() step')),
   buildDelay: v.pipe(v.optional(v.number()), v.description('Throttle watch rebuilds')),
   clearScreen: v.pipe(

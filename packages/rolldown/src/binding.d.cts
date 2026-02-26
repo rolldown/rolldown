@@ -1689,9 +1689,14 @@ export declare class BindingTransformPluginContext {
 }
 
 export declare class BindingWatcher {
-  constructor(options: Array<BindingBundlerOptions>, notifyOption?: BindingNotifyOption | undefined | null)
-  close(): Promise<void>
+  constructor(options: Array<BindingBundlerOptions>)
   start(listener: (data: BindingWatcherEvent) => void): Promise<void>
+  /**
+   * Returns a Promise that resolves when the watcher closes.
+   * The pending Promise keeps Node.js event loop alive (replaces setInterval hack).
+   */
+  waitForClose(): Promise<void>
+  close(): Promise<void>
 }
 
 /**
@@ -1709,10 +1714,10 @@ export declare class BindingWatcherChangeData {
 
 export declare class BindingWatcherEvent {
   eventKind(): string
-  watchChangeData(): BindingWatcherChangeData
-  bundleEndData(): BindingBundleEndEventData
   bundleEventKind(): string
+  bundleEndData(): BindingBundleEndEventData
   bundleErrorData(): BindingBundleErrorEventData
+  watchChangeData(): BindingWatcherChangeData
 }
 
 export declare class ParallelJsPluginRegistry {
@@ -2333,11 +2338,6 @@ export interface BindingModuleSideEffectsRule {
   external?: boolean | undefined
 }
 
-export interface BindingNotifyOption {
-  pollInterval?: number
-  compareContents?: boolean
-}
-
 export interface BindingOptimization {
   inlineConst?: boolean | BindingInlineConstConfig
   pifeForModuleWrappers?: boolean
@@ -2772,6 +2772,8 @@ export interface BindingWatchOption {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   buildDelay?: number
+  usePolling?: boolean
+  pollInterval?: number
   onInvalidate?: ((id: string) => void) | undefined
 }
 

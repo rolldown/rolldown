@@ -1434,6 +1434,17 @@
           "format": "uint32",
           "minimum": 0
         },
+        "usePolling": {
+          "type": "boolean"
+        },
+        "pollInterval": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
         "include": {
           "type": [
             "array",
@@ -1455,7 +1466,8 @@
       },
       "additionalProperties": false,
       "required": [
-        "skipWrite"
+        "skipWrite",
+        "usePolling"
       ]
     },
     "LegalComments": {

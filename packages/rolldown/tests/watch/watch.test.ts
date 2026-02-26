@@ -1,9 +1,37 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { RolldownWatcher } from 'rolldown';
-import { rolldown, watch } from 'rolldown';
+import type { RolldownWatcher, WatchOptions } from 'rolldown';
+import { rolldown, watch as _watch } from 'rolldown';
 import { sleep } from 'rolldown-tests/utils';
 import { expect, onTestFinished, test, vi } from 'vitest';
+
+// Wrap watch() to inject usePolling for CI stability.
+// PollWatcher uses whole-second mtime comparison, so file edits
+// must use editFile() to ensure mtime crosses a second boundary.
+function watch(input: WatchOptions | WatchOptions[]) {
+  const options = Array.isArray(input) ? input : [input];
+  for (const opt of options) {
+    const existing = opt.watch && typeof opt.watch === 'object' ? opt.watch : {};
+    opt.watch = {
+      ...existing,
+      watcher: { usePolling: true, pollInterval: 50, ...existing.watcher },
+    };
+  }
+  return _watch(Array.isArray(input) ? options : options[0]);
+}
+
+// Write a file with a 1s sleep beforehand to ensure the PollWatcher's
+// whole-second mtime comparison detects the change.
+async function editFile(filePath: string, content: string) {
+  await sleep(1000);
+  fs.writeFileSync(filePath, content);
+}
+
+// Delete a file with a 1s sleep beforehand (same mtime-boundary reason).
+async function deleteFile(filePath: string) {
+  await sleep(1000);
+  fs.unlinkSync(filePath);
+}
 
 test.sequential('watch', async () => {
   const { input, output, dir } = await createTestInputAndOutput('watch');
@@ -54,17 +82,17 @@ test.sequential('watch', async () => {
     await waitBuildFinished(watcher);
 
     // Test update event
-    fs.writeFileSync(input, `import './foo.js'; console.log(2)`);
+    await editFile(input, `import './foo.js'; console.log(2)`);
     await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(2)');
     // The different platform maybe emit multiple events
     expect(watchChangeUpdateFn).toBeCalled();
 
     // Test delete event
-    fs.unlinkSync(foo);
+    await deleteFile(foo);
     await expect.poll(() => watchChangeDeleteFn).toBeCalled();
 
     // Test create event
-    fs.writeFileSync(foo, 'export const foo = 2');
+    await editFile(foo, 'export const foo = 2');
     await expect.poll(() => watchChangeCreateFn).toBeCalled();
   } catch (e) {
     errored = true;
@@ -79,6 +107,8 @@ test.sequential('watch', async () => {
 
 test.sequential('watch files after scan stage', async () => {
   const { input, output } = await createTestInputAndOutput('watch-files-after-scan');
+  // Ensure file mtime is in a previous second so PollWatcher detects the renderStart write
+  await sleep(1000);
   const watcher = watch({
     input,
     output: { file: output },
@@ -161,7 +191,7 @@ test.sequential('watch event', async () => {
 
     // edit file
     events.length = 0;
-    fs.writeFileSync(input, 'console.log(3)');
+    await editFile(input, 'console.log(3)');
     // Note: The different platform maybe emit multiple events
     await expect
       .poll(() => events)
@@ -203,7 +233,7 @@ test.sequential('watch event off', async () => {
   eventFn.mockClear();
   watcher.off('event', eventFn);
 
-  fs.writeFileSync(input, 'console.log(12)');
+  await editFile(input, 'console.log(12)');
   await waitBuildFinished(watcher);
   expect(eventFn).not.toHaveBeenCalled();
 });
@@ -232,7 +262,7 @@ test.sequential('watch BUNDLE_END event result.close() + closeBundle', async () 
   expect(closeBundleFn).toBeCalledTimes(1);
 
   // The `result.close` could be call multiply times.
-  fs.writeFileSync(input, 'console.log(3)');
+  await editFile(input, 'console.log(3)');
   await waitBuildFinished(watcher);
   expect(closeBundleFn).toBeCalledTimes(2);
 });
@@ -310,7 +340,7 @@ test.sequential('watch event avoid deadlock #2806', async () => {
 
   await waitBuildFinished(watcher);
 
-  fs.writeFileSync(input, 'console.log(2)');
+  await editFile(input, 'console.log(2)');
   await expect.poll(() => testFn).toBeCalled();
 });
 
@@ -350,7 +380,7 @@ test.sequential('#5260', async () => {
 
   watcher.clear('event');
 
-  fs.writeFileSync(path.join(cwd, 'main.js'), `import('./foo.js')`);
+  await editFile(path.join(cwd, 'main.js'), `import('./foo.js')`);
 
   await waitBuildFinished(watcher);
 });
@@ -380,7 +410,7 @@ console.log(a)
   watcher.clear('event');
   expect(fs.readdirSync(path.join(cwd, 'dist'))).toHaveLength(1);
 
-  fs.writeFileSync(
+  await editFile(
     path.join(cwd, 'main.js'),
     `
 import {a} from './foo.js'
@@ -414,7 +444,7 @@ test.sequential('watch sync ast of newly added ast', async () => {
 
   watcher.clear('event');
 
-  fs.writeFileSync(
+  await editFile(
     path.join(cwd, 'main.js'),
     `import ('./d1.js').then(console.log);import ('./d2.js').then(console.log)`,
   );
@@ -437,6 +467,8 @@ test.sequential('watch buildDelay', async () => {
   const restartFn = vi.fn();
   watcher.on('restart', restartFn);
 
+  // Sleep to ensure mtime crosses second boundary from initial creation
+  await sleep(1000);
   fs.writeFileSync(input, 'console.log(4)');
   await sleep(20);
   fs.writeFileSync(input, 'console.log(5)');
@@ -477,7 +509,7 @@ test.sequential('PluginContext addWatchFile', async () => {
   });
 
   // edit file
-  fs.writeFileSync(foo, 'console.log(2)\n');
+  await editFile(foo, 'console.log(2)\n');
   await expect.poll(() => changeFn).toBeCalled();
 });
 
@@ -495,7 +527,7 @@ test.sequential('watch include/exclude', async () => {
   await waitBuildFinished(watcher);
 
   // edit file
-  fs.writeFileSync(input, 'console.log(2)');
+  await editFile(input, 'console.log(2)');
   // The input is excluded, so the output file should not be updated
   await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
 });
@@ -519,7 +551,7 @@ test.sequential('watch onInvalidate', async () => {
   await waitBuildFinished(watcher);
 
   // edit file
-  fs.writeFileSync(input, 'console.log(2)');
+  await editFile(input, 'console.log(2)');
 
   await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(2)');
   expect(onInvalidateFn).toBeCalled();
@@ -544,17 +576,17 @@ test.sequential('error handling', async () => {
   await expect.poll(() => errors.length).toBe(1);
   expect(errors[0]).toContain('PARSE_ERROR');
 
-  fs.writeFileSync(input, 'console.log(2)');
+  await editFile(input, 'console.log(2)');
   await waitBuildFinished(watcher);
 
   // failed again
-  fs.writeFileSync(input, 'conso le.log(1)');
+  await editFile(input, 'conso le.log(1)');
   // The different platform maybe emit multiple events
   await expect.poll(() => errors.length).toBeGreaterThan(0);
   expect(errors[0]).toContain('PARSE_ERROR');
 
   // It should be working if the changes are fixed error
-  fs.writeFileSync(input, 'console.log(3)');
+  await editFile(input, 'console.log(3)');
   await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(3)');
 });
 
@@ -585,7 +617,7 @@ test.sequential('error handling + plugin error', async () => {
   expect(errors[0]).toContain('plugin error');
 
   errors.length = 0;
-  fs.writeFileSync(input, 'console.log(2)');
+  await editFile(input, 'console.log(2)');
   // The different platform maybe emit multiple events
   await expect.poll(() => errors.length).toBeGreaterThan(0);
   expect(errors[0]).toContain('plugin error');
@@ -619,7 +651,7 @@ test.sequential('watch multiply options', async () => {
   // await waitBuildFinished(watcher)
   await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
 
-  fs.writeFileSync(input, 'console.log(2)');
+  await editFile(input, 'console.log(2)');
   await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(2)');
   // Only the input corresponding bundler is rebuild
   expect(events[0]).toEqual(outputDir);
@@ -634,8 +666,9 @@ test.sequential('warning for multiply notify options', async () => {
       input,
       output: { file: output },
       watch: {
-        notify: {
-          compareContents: false,
+        watcher: {
+          usePolling: true,
+          pollInterval: 50,
         },
       },
     },
@@ -643,8 +676,9 @@ test.sequential('warning for multiply notify options', async () => {
       input: foo,
       output: { file: output },
       watch: {
-        notify: {
-          compareContents: true,
+        watcher: {
+          usePolling: true,
+          pollInterval: 100,
         },
       },
       plugins: [
@@ -653,7 +687,7 @@ test.sequential('warning for multiply notify options', async () => {
           onLog: (level, log) => {
             onLogFn();
             expect(level).toBe('warn');
-            expect(log.code).toBe('MULTIPLY_NOTIFY_OPTION');
+            expect(log.code).toBe('MULTIPLE_WATCHER_OPTION');
           },
         },
       ],
@@ -684,7 +718,7 @@ if (process.platform === 'win32') {
     await waitBuildFinished(watcher);
 
     // edit file
-    fs.writeFileSync(input, 'console.log(2)');
+    await editFile(input, 'console.log(2)');
     await expect.poll(() => fs.readFileSync(output, 'utf-8')).toContain('console.log(2)');
   });
 }

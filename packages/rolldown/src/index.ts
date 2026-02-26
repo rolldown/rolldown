@@ -26,6 +26,7 @@ import type {
   InputOptions,
   ModuleTypes,
   OptimizationOptions,
+  WatcherFileWatcherOptions,
   WatcherOptions,
 } from './options/input-options';
 import type { TransformOptions } from './options/transform-options';
@@ -217,6 +218,7 @@ export type {
   TransformResult,
   TreeshakingOptions,
   WarningHandlerWithDefault,
+  WatcherFileWatcherOptions,
   WatcherOptions,
   WatchOptions,
 };

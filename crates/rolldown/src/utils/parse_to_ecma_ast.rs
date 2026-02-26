@@ -22,13 +22,11 @@ fn pure_esm_js_oxc_source_type(module_def_format: ModuleDefFormat) -> OxcSourceT
   debug_assert!(default_source_type.is_javascript());
   debug_assert!(!default_source_type.is_jsx());
   match module_def_format {
-    ModuleDefFormat::Cjs | ModuleDefFormat::Cts | ModuleDefFormat::CjsPackageJson => {
-      default_source_type.with_commonjs(true)
-    }
+    ModuleDefFormat::Cjs | ModuleDefFormat::Cts => default_source_type.with_commonjs(true),
     ModuleDefFormat::EsmMjs | ModuleDefFormat::EsmMts | ModuleDefFormat::EsmPackageJson => {
       default_source_type.with_module(true)
     }
-    ModuleDefFormat::Unknown => {
+    ModuleDefFormat::CjsPackageJson | ModuleDefFormat::Unknown => {
       // treat unknown format as ESM for now: https://github.com/rolldown/rolldown/issues/7009
       default_source_type.with_module(true)
     }

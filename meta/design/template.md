@@ -1,5 +1,8 @@
 <!-- This template is a preference, not a hard requirement. -->
 <!-- Write in whatever structure best conveys the design. -->
+<!-- When implementing or fixing something described in a design doc, -->
+<!-- link the relevant GitHub issue/PR in commit messages or comments -->
+<!-- so progress is traceable. -->
 
 # [Concept Name]
 

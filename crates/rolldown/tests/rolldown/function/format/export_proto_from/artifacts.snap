@@ -7,8 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { __proto__ } from "x";
-
 export { __proto__ };
+
 ```
 
 # Variant: cjs: [entry_filenames: "main.cjs"] [format: Cjs]
@@ -18,15 +18,15 @@ export { __proto__ };
 ### main.cjs
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 let x = require("x");
-
-Object.defineProperty(exports, '__proto__', {
-  enumerable: true,
-  get: function () {
-    return x.__proto__;
-  }
+Object.defineProperty(exports, "__proto__", {
+	enumerable: true,
+	get: function() {
+		return x.__proto__;
+	}
 });
+
 ```
 
 # Variant: iife: [entry_filenames: "main.cjs"] [format: Iife]
@@ -37,18 +37,17 @@ Object.defineProperty(exports, '__proto__', {
 
 ```js
 var bundle = (function(exports, x) {
-
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-Object.defineProperty(exports, '__proto__', {
-  enumerable: true,
-  get: function () {
-    return x.__proto__;
-  }
-});
-return exports;
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	Object.defineProperty(exports, "__proto__", {
+		enumerable: true,
+		get: function() {
+			return x.__proto__;
+		}
+	});
+	return exports;
 })({}, x);
 globalThis.bundle = bundle;
+
 ```
 
 # Variant: umd: [entry_filenames: "main.cjs"] [format: Umd]
@@ -59,17 +58,15 @@ globalThis.bundle = bundle;
 
 ```js
 (function(global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports, require('x')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'x'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.bundle = {}), global.x));
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require("x")) : typeof define === "function" && define.amd ? define(["exports", "x"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.bundle = {}, global.x));
 })(this, function(exports, x) {
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	Object.defineProperty(exports, "__proto__", {
+		enumerable: true,
+		get: function() {
+			return x.__proto__;
+		}
+	});
+});
 
-Object.defineProperty(exports, '__proto__', {
-  enumerable: true,
-  get: function () {
-    return x.__proto__;
-  }
-});
-});
 ```

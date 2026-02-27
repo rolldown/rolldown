@@ -6,23 +6,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 let foo = require("foo");
 foo = __toESM(foo);
 let bar = require("bar");
 bar = __toESM(bar);
+Object.defineProperty(exports, "bar", {
+	enumerable: true,
+	get: function() {
+		return bar.default;
+	}
+});
+Object.defineProperty(exports, "foo", {
+	enumerable: true,
+	get: function() {
+		return foo.default;
+	}
+});
 
-Object.defineProperty(exports, 'bar', {
-  enumerable: true,
-  get: function () {
-    return bar.default;
-  }
-});
-Object.defineProperty(exports, 'foo', {
-  enumerable: true,
-  get: function () {
-    return foo.default;
-  }
-});
 ```

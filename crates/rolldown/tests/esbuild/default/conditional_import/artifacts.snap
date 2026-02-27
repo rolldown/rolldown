@@ -7,22 +7,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __toESM } from "./chunk.js";
-
 //#region a.js
 x ? import("a") : y ? import("./import.js").then((m) => /* @__PURE__ */ __toESM(m.default)) : import("c");
-
 //#endregion
+
 ```
 
 ## b.js
 
 ```js
 import { n as __toESM } from "./chunk.js";
-
 //#region b.js
 x ? y ? import("a") : import("./import.js").then((m) => /* @__PURE__ */ __toESM(m.default)) : import(c);
-
 //#endregion
+
 ```
 
 ## chunk.js
@@ -30,18 +28,17 @@ x ? y ? import("a") : import("./import.js").then((m) => /* @__PURE__ */ __toESM(
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 export { __toESM as n, __commonJSMin as t };
+
 ```
 
 ## import.js
 
 ```js
 import { t as __commonJSMin } from "./chunk.js";
-
 //#region import.js
 var require_import = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 213;
 }));
-
 //#endregion
 export default require_import();
 

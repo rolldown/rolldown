@@ -45,7 +45,7 @@ function _foo() {
 			try {
 				for (var _iterator2 = _asyncIterator(y), _step2; _iteratorAbruptCompletion2 = !(_step2 = yield _awaitAsyncGenerator(_iterator2.next())).done; _iteratorAbruptCompletion2 = false) try {
 					var _usingCtx3 = _usingCtx();
-					const x = _usingCtx3.a(_step2.value);
+					_usingCtx3.a(_step2.value);
 				} catch (_) {
 					_usingCtx3.e = _;
 				} finally {
@@ -97,7 +97,7 @@ foo = _wrapAsyncGenerator(function* () {
 		try {
 			for (var _iterator4 = _asyncIterator(y), _step4; _iteratorAbruptCompletion4 = !(_step4 = yield _awaitAsyncGenerator(_iterator4.next())).done; _iteratorAbruptCompletion4 = false) try {
 				var _usingCtx5 = _usingCtx();
-				const x = _usingCtx5.a(_step4.value);
+				_usingCtx5.a(_step4.value);
 			} catch (_) {
 				_usingCtx5.e = _;
 			} finally {
@@ -148,7 +148,7 @@ foo = { bar() {
 			try {
 				for (var _iterator6 = _asyncIterator(y), _step6; _iteratorAbruptCompletion6 = !(_step6 = yield _awaitAsyncGenerator(_iterator6.next())).done; _iteratorAbruptCompletion6 = false) try {
 					var _usingCtx7 = _usingCtx();
-					const x = _usingCtx7.a(_step6.value);
+					_usingCtx7.a(_step6.value);
 				} catch (_) {
 					_usingCtx7.e = _;
 				} finally {
@@ -171,114 +171,6 @@ foo = { bar() {
 		}
 	})();
 } };
-var Foo = class {
-	bar() {
-		return _wrapAsyncGenerator(function* () {
-			try {
-				var _usingCtx8 = _usingCtx();
-				yield;
-				yield x;
-				yield* _asyncGeneratorDelegate(_asyncIterator(x));
-				const x = _usingCtx8.a(yield _awaitAsyncGenerator(y));
-				var _iteratorAbruptCompletion7 = false;
-				var _didIteratorError7 = false;
-				var _iteratorError7;
-				try {
-					for (var _iterator7 = _asyncIterator(y), _step7; _iteratorAbruptCompletion7 = !(_step7 = yield _awaitAsyncGenerator(_iterator7.next())).done; _iteratorAbruptCompletion7 = false) _step7.value;
-				} catch (err) {
-					_didIteratorError7 = true;
-					_iteratorError7 = err;
-				} finally {
-					try {
-						if (_iteratorAbruptCompletion7 && _iterator7.return != null) yield _awaitAsyncGenerator(_iterator7.return());
-					} finally {
-						if (_didIteratorError7) throw _iteratorError7;
-					}
-				}
-				var _iteratorAbruptCompletion8 = false;
-				var _didIteratorError8 = false;
-				var _iteratorError8;
-				try {
-					for (var _iterator8 = _asyncIterator(y), _step8; _iteratorAbruptCompletion8 = !(_step8 = yield _awaitAsyncGenerator(_iterator8.next())).done; _iteratorAbruptCompletion8 = false) try {
-						var _usingCtx9 = _usingCtx();
-						const x = _usingCtx9.a(_step8.value);
-					} catch (_) {
-						_usingCtx9.e = _;
-					} finally {
-						yield _awaitAsyncGenerator(_usingCtx9.d());
-					}
-				} catch (err) {
-					_didIteratorError8 = true;
-					_iteratorError8 = err;
-				} finally {
-					try {
-						if (_iteratorAbruptCompletion8 && _iterator8.return != null) yield _awaitAsyncGenerator(_iterator8.return());
-					} finally {
-						if (_didIteratorError8) throw _iteratorError8;
-					}
-				}
-			} catch (_) {
-				_usingCtx8.e = _;
-			} finally {
-				yield _awaitAsyncGenerator(_usingCtx8.d());
-			}
-		})();
-	}
-};
-Foo = class {
-	bar() {
-		return _wrapAsyncGenerator(function* () {
-			try {
-				var _usingCtx10 = _usingCtx();
-				yield;
-				yield x;
-				yield* _asyncGeneratorDelegate(_asyncIterator(x));
-				const x = _usingCtx10.a(yield _awaitAsyncGenerator(y));
-				var _iteratorAbruptCompletion9 = false;
-				var _didIteratorError9 = false;
-				var _iteratorError9;
-				try {
-					for (var _iterator9 = _asyncIterator(y), _step9; _iteratorAbruptCompletion9 = !(_step9 = yield _awaitAsyncGenerator(_iterator9.next())).done; _iteratorAbruptCompletion9 = false) _step9.value;
-				} catch (err) {
-					_didIteratorError9 = true;
-					_iteratorError9 = err;
-				} finally {
-					try {
-						if (_iteratorAbruptCompletion9 && _iterator9.return != null) yield _awaitAsyncGenerator(_iterator9.return());
-					} finally {
-						if (_didIteratorError9) throw _iteratorError9;
-					}
-				}
-				var _iteratorAbruptCompletion10 = false;
-				var _didIteratorError10 = false;
-				var _iteratorError10;
-				try {
-					for (var _iterator10 = _asyncIterator(y), _step10; _iteratorAbruptCompletion10 = !(_step10 = yield _awaitAsyncGenerator(_iterator10.next())).done; _iteratorAbruptCompletion10 = false) try {
-						var _usingCtx11 = _usingCtx();
-						const x = _usingCtx11.a(_step10.value);
-					} catch (_) {
-						_usingCtx11.e = _;
-					} finally {
-						yield _awaitAsyncGenerator(_usingCtx11.d());
-					}
-				} catch (err) {
-					_didIteratorError10 = true;
-					_iteratorError10 = err;
-				} finally {
-					try {
-						if (_iteratorAbruptCompletion10 && _iterator10.return != null) yield _awaitAsyncGenerator(_iterator10.return());
-					} finally {
-						if (_didIteratorError10) throw _iteratorError10;
-					}
-				}
-			} catch (_) {
-				_usingCtx10.e = _;
-			} finally {
-				yield _awaitAsyncGenerator(_usingCtx10.d());
-			}
-		})();
-	}
-};
-
 //#endregion
+
 ```

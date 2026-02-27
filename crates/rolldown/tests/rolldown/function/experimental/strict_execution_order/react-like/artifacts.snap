@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region react.js
 var require_react = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -16,31 +15,25 @@ var require_react = /* @__PURE__ */ __commonJSMin(((exports) => {
 	};
 	exports.version = 1;
 }));
-
 //#endregion
 //#region commonjs.js
 var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = require_react();
 }));
-
 //#endregion
 function test() {
 	return 1;
 }
-
 var import_commonjs;
-var init_main = __esmMin((() => {
-//#region lib.js
+__esmMin((() => {
+	//#region lib.js
 	import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
-
-//#endregion
-//#region main.js
+	//#endregion
+	//#region main.js
 	assert.equal(import_commonjs.createReactElement(), "div");
 	assert.equal(1 .toString(), "1");
 	assert.equal(test().toString(), "1");
+	//#endregion
+}))();
 
-//#endregion
-}));
-
-init_main();
 ```

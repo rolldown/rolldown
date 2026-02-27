@@ -29,6 +29,6 @@ var Foo = class {
 __decorate([dec], Foo.prototype, _x2, void 0);
 __decorate([dec], Foo.prototype, _y2, void 0);
 new Foo();
-
 //#endregion
+
 ```

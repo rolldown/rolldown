@@ -25,9 +25,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { a } from "foo";
 import assert from "node:assert";
-
 //#region main.js
 assert.strictEqual(a, 1e3);
-
 //#endregion
+
 ```

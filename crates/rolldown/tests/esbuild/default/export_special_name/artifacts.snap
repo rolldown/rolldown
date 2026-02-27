@@ -6,14 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-//#region entry.mjs
-const __proto__ = 123;
-
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 //#endregion
-Object.defineProperty(exports, '__proto__', {
-  enumerable: true,
-  value: __proto__
+Object.defineProperty(exports, "__proto__", {
+	enumerable: true,
+	value: 123
 });
+
 ```

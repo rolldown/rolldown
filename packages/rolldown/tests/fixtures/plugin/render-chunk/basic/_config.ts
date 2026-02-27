@@ -53,6 +53,7 @@ export default defineTest({
       },
     ],
     output: {
+      minify: false,
       sourcemap: true,
     },
   },

@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region a.js
 const A = 10;
-
 //#endregion
 export { A };
+
 ```
 
 ## b.js
@@ -18,23 +18,23 @@ export { A };
 ```js
 //#region b.js
 const A = 10;
-
 //#endregion
 export { A };
+
 ```
 
 ## entrya.js
 
 ```js
 import { A } from "./a.js";
-
 export { A };
+
 ```
 
 ## entryb.js
 
 ```js
 import { A } from "./b.js";
-
 export { A };
+
 ```

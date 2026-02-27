@@ -7,10 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 var module = (function() {
-
-// HIDDEN [\0rolldown/runtime.js]
-
-//#region mod.js
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region mod.js
 	var default_exports = /* @__PURE__ */ __exportAll({
 		add: () => add,
 		subtract: () => subtract
@@ -21,8 +19,8 @@ var module = (function() {
 	function subtract(a, b) {
 		return a - b;
 	}
-
-//#endregion
-return default_exports;
+	//#endregion
+	return default_exports;
 })();
+
 ```

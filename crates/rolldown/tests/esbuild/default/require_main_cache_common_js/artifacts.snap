@@ -7,17 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-
 //#region is-main.js
 var require_is_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = require.main === module;
 }));
-
 //#endregion
 //#region entry.js
 console.log("is main:", require.main === module);
 console.log(require_is_main());
 console.log("cache:", require.cache);
-
 //#endregion
+
 ```

@@ -12,6 +12,7 @@ Object.getOwnPropertyDescriptor;
 Object.getOwnPropertyNames;
 Object.prototype.hasOwnProperty;
 let foo;
+//#endregion
 export { foo };
 
 ```

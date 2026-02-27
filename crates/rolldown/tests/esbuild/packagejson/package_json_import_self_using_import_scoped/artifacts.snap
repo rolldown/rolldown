@@ -7,12 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 //#region src/index.js
 var src_default = "index";
 assert.equal(src_default, "index");
 assert.equal("foo", "foo");
-
 //#endregion
 export { src_default as default };
+
 ```

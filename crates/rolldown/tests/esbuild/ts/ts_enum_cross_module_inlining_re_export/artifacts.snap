@@ -19,7 +19,6 @@ let c = /* @__PURE__ */ function(c) {
 	c["x"] = "c";
 	return c;
 }({});
-
 //#endregion
 //#region entry.js
 console.log([
@@ -27,6 +26,6 @@ console.log([
 	b.x,
 	c.x
 ]);
-
 //#endregion
+
 ```

@@ -9,25 +9,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
+	__rolldown_runtime__.createModuleHotContext("a.js");
 	__rolldown_runtime__.registerModule("a.js", module);
 	console.log("a");
 }));
-
 //#endregion
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
+	__rolldown_runtime__.createModuleHotContext("b.js");
 	__rolldown_runtime__.registerModule("b.js", module);
 	console.log("b");
 }));
-
-//#endregion
-//#region main.js
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", {});
 require_a();
 require_b();
-
 //#endregion
+
 ```

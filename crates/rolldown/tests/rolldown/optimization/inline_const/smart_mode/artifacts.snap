@@ -6,23 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region constants.js
-const mode = "production";
-const longString = "1234";
-
 //#endregion
 //#region main.js
-console.log(mode, 1, true, null, void 0, longString, "123");
-if (1 || "production" || true || null || void 0 || "1234" || "123") console.log("test");
-if ("production" === "production") console.log("production");
+console.log("production", 1, true, null, void 0, "1234", "123");
+console.log("test");
+console.log("production");
 function test() {
-	var two = "production" === 1 ? "two" : "unused two";
-	var three = "production" === 1 || "unused three";
-	var four = "production" === 1 && "four";
-	var five = "production" ?? "five";
-	return two + three + four + five;
+	return "unused twounused threefalseproduction";
 }
-
 //#endregion
 export { test };
+
 ```

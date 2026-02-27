@@ -11,7 +11,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 var init_init = __esmMin((() => {
 	globalThis.array = [];
 }));
-
 //#endregion
 //#region foo.js
 var init_foo = __esmMin((() => {
@@ -22,7 +21,6 @@ var init_foo = __esmMin((() => {
 		}, 100);
 	}
 }));
-
 //#endregion
 //#region bar.js
 var init_bar = __esmMin((() => {
@@ -31,16 +29,12 @@ var init_bar = __esmMin((() => {
 		globalThis.array.push(foo);
 	}
 }));
-
 //#endregion
-//#region main.js
-var init_main = __esmMin((() => {
+__esmMin((() => {
 	init_init();
 	init_foo();
 	init_bar();
 	console.log(globalThis.array);
-}));
+}))();
 
-//#endregion
-init_main();
 ```

@@ -9,8 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region src/after-preload-dynamic.js
 import("./dynamic-foo.js");
 console.log("after preload dynamic");
-
 //#endregion
+
 ```
 
 ## before-preload-dynamic.js
@@ -19,8 +19,8 @@ console.log("after preload dynamic");
 //#region src/before-preload-dynamic.js
 import("./dynamic-foo.js");
 console.log("before preload dynamic");
-
 //#endregion
+
 ```
 
 ## dynamic-foo.js
@@ -28,8 +28,8 @@ console.log("before preload dynamic");
 ```js
 //#region src/dynamic-foo.js
 console.log("dynamic-foo");
-
 //#endregion
+
 ```
 
 ## entry.js

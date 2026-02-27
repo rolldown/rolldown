@@ -7,11 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as foo } from "./main.js";
-
 //#region lazy-chunk.js
 foo();
-
 //#endregion
+
 ```
 
 ## main.js
@@ -19,18 +18,16 @@ foo();
 ```js
 //#region polyfill.js
 Object.somePolyfilledFunction = () => {};
-
 //#endregion
 //#region user-lib.js
 Object.somePolyfilledFunction();
 async function foo() {
 	return import("./lazy-chunk.js");
 }
-
 //#endregion
 //#region main.js
 foo();
-
 //#endregion
 export { foo as t };
+
 ```

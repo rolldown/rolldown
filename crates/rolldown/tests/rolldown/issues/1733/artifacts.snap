@@ -7,11 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "rewritten-./static.css";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region entry.js
 import("rewritten-./dynamic.css");
 __require("rewritten-./some.css");
-
 //#endregion
+
 ```

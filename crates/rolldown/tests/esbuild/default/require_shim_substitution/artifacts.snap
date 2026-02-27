@@ -26,7 +26,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_example = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { "works": true };
 }));
-
 //#endregion
 //#region entry.js
 var require_entry = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -45,7 +44,6 @@ var require_entry = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		import(window.SOME_PATH)
 	]);
 }));
-
 //#endregion
 export default require_entry();
 

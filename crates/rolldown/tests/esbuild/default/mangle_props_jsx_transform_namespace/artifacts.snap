@@ -27,7 +27,7 @@ var entry_default = [
 	/* @__PURE__ */ React.createElement("KEEP:THIS_", null),
 	/* @__PURE__ */ React.createElement("foo", { "KEEP:THIS_": true })
 ];
-
 //#endregion
 export { entry_default as default };
+
 ```

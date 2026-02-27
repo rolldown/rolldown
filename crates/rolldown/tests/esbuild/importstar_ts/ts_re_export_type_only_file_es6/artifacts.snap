@@ -8,18 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region types1.ts
 console.log("some code");
-
 //#endregion
 //#region types2.ts
 console.log("some code");
-
 //#endregion
 //#region types3.ts
 console.log("some code");
-
 //#endregion
 //#region entry.ts
 console.log(123);
-
 //#endregion
+
 ```

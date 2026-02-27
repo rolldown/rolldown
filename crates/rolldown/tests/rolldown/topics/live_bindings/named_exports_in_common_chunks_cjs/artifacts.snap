@@ -7,10 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-const require_main = require('./main.js');
+const require_main = require("./main.js");
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
-
 //#region async-entry.js
 require_main.reset();
 node_assert.default.strictEqual(require_main.count, 0);
@@ -21,15 +20,14 @@ node_assert.default.strictEqual(require_main.count, require_main.count);
 require_main.inc();
 node_assert.default.strictEqual(require_main.count, 2);
 node_assert.default.strictEqual(require_main.count, require_main.count);
-
 //#endregion
+
 ```
 
 ## main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 //#region shared.js
 let count = 0;
 function reset() {
@@ -38,18 +36,17 @@ function reset() {
 function inc() {
 	count += 1;
 }
-
 //#endregion
 //#region main.js
 Promise.resolve().then(() => require("./async-entry.js"));
-
 //#endregion
-Object.defineProperty(exports, 'count', {
-  enumerable: true,
-  get: function () {
-    return count;
-  }
+Object.defineProperty(exports, "count", {
+	enumerable: true,
+	get: function() {
+		return count;
+	}
 });
 exports.inc = inc;
 exports.reset = reset;
+
 ```

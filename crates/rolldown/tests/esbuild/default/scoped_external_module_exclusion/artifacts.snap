@@ -36,11 +36,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { Foo } from "@scope/foo";
 import { Bar } from "@scope/foo/bar";
-
 //#region index.js
 const foo = new Foo();
 const bar = new Bar();
-
 //#endregion
 export { bar, foo };
+
 ```

@@ -8,14 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## common.js
 
 ```js
-//#region shared/common.png
-var common_default = "assets/common-CnHCZ2rs.png";
-
 //#endregion
 //#region shared/common.js
-console.log(common_default);
-
+console.log("assets/common-CnHCZ2rs.png");
 //#endregion
+
 ```
 
 ## entries_entry.js

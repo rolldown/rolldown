@@ -9,11 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region internal.js
 let ok = true;
-
 //#endregion
 //#region very-nested.js
 let nested$1 = 2;
-
 //#endregion
 //#region nested.js
 var nested_exports = /* @__PURE__ */ __exportAll({
@@ -21,7 +19,7 @@ var nested_exports = /* @__PURE__ */ __exportAll({
 	"very nested name": () => 2
 });
 let nested = 1;
-
 //#endregion
 export { nested_exports as "name space", nested as "nested name", ok as "not ok", ok, nested$1 as "very nested name" };
+
 ```

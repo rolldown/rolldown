@@ -27,8 +27,8 @@ var TemplateExpressions = /* @__PURE__ */ function(TemplateExpressions) {
 	return TemplateExpressions;
 }(TemplateExpressions || {});
 console.log(TemplateExpressions.NULL, TemplateExpressions.TRUE, TemplateExpressions.FALSE, TemplateExpressions.BIGINT);
-
 //#endregion
+
 ```
 
 ## supported.js
@@ -81,6 +81,6 @@ var Foo = /* @__PURE__ */ function(Foo) {
 	return Foo;
 }(Foo || {});
 console.log(Foo.X0, Foo.X1, Foo.X2, Foo.X3, Foo.X4, Foo.X5, Foo.X6, Foo.X7, Foo.X8, Foo.X9, Foo.X10, Foo.X11, Foo.X12, Foo.X13, Foo.X14, Foo.X15, Foo.X16, Foo.X17, Foo.X18, Foo.X19, Foo.X20, Foo.X21, Foo.X22, Foo.X23, Foo.X24, Foo.X25, Foo.X26, Foo.X27, Foo.X28, Foo.X29, Foo.X30, Foo.X31, Foo.X32, Foo.X33, Foo.X34, Foo.X35, Foo.X36, Foo.X37, Foo.X38, Foo.X39, Foo.X40, Foo.X41);
-
 //#endregion
+
 ```

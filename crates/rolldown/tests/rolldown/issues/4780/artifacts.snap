@@ -6,17 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region colors.js
-const red = { 500: 500 };
-const green = { k: { v: 0 } };
-
 //#endregion
 //#region main.js
 const foo = {
-	bar: red["500"],
-	foo: green.k.v
+	bar: { 500: 500 }["500"],
+	foo: { k: { v: 0 } }.k.v
 };
-
 //#endregion
 export { foo };
+
 ```

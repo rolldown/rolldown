@@ -8,13 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 export { __toESM as n, __commonJSMin as t };
+
 ```
 
 ## lib.js
 
 ```js
 import { t as __commonJSMin } from "./chunk.js";
-
 //#region plugin.js
 var require_plugin = /* @__PURE__ */ __commonJSMin(((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
@@ -23,15 +23,12 @@ var require_plugin = /* @__PURE__ */ __commonJSMin(((exports) => {
 		return { name: "plugin" };
 	}
 }));
-
 //#endregion
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var _pluginFactory = require_plugin();
-	module.exports = _pluginFactory.makePlugin;
+	module.exports = require_plugin().makePlugin;
 	module.exports.postcss = true;
 }));
-
 //#endregion
 export default require_lib();
 
@@ -42,10 +39,9 @@ export default require_lib();
 ```js
 import { n as __toESM } from "./chunk.js";
 import assert from "node:assert";
-
 //#region entry.js
 const mod = await import("./lib.js").then((m) => /* @__PURE__ */ __toESM(m.default));
 assert.strictEqual(mod.default().name, "plugin");
-
 //#endregion
+
 ```

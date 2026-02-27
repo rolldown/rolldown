@@ -23,16 +23,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function(global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(require('node:path'), require('node:fs')) :
-  typeof define === 'function' && define.amd ? define(['node:path', 'node:fs'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.node_path,global.node_fs));
+	typeof exports === "object" && typeof module !== "undefined" ? factory(require("node:path"), require("node:fs")) : typeof define === "function" && define.amd ? define(["node:path", "node:fs"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.node_path, global.node_fs));
 })(this, function(node_path, node_fs) {
-// HIDDEN [\0rolldown/runtime.js]
-node_path = __toESM(node_path);
-
-//#region main.js
+	// HIDDEN [\0rolldown/runtime.js]
+	node_path = __toESM(node_path);
+	//#region main.js
 	console.log(node_path.default);
-
-//#endregion
+	//#endregion
 });
+
 ```

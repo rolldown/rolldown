@@ -10,7 +10,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 const fn = () => {
 	console.log("side effect");
 };
-
 //#endregion
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
@@ -45,6 +44,6 @@ var StaticParameter = class {
 	static foo(bar) {}
 };
 __decorate([__decorateParam(0, fn)], StaticParameter, "foo", null);
-
 //#endregion
+
 ```

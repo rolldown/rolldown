@@ -13,12 +13,11 @@ const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 const foo = "hello";
 hmr_hot.accept(() => {});
-
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-
 //#endregion
+
 ```

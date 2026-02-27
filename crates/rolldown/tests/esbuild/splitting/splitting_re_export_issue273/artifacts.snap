@@ -8,15 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region a.js
 const a = 1;
-
 //#endregion
 export { a };
+
 ```
 
 ## b.js
 
 ```js
 import { a } from "./a.js";
-
 export { a };
+
 ```

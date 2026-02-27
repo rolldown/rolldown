@@ -6,61 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
-var A = class {
-	static foo;
-};
-var B = class {
-	static name;
-};
-var C = class {
-	static name() {}
-};
-var D = class {
-	static get name() {}
-};
-var E = class {
-	static set name(x) {}
-};
-var F = class {
-	static ["name"] = 0;
-};
-let a = class a {
-	static foo;
-};
-let b = class b {
-	static name;
-};
-let c = class c {
-	static name() {}
-};
-let d = class d {
-	static get name() {}
-};
-let e = class e {
-	static set name(x) {}
-};
-let f = class f {
-	static ["name"] = 0;
-};
-let a2 = class {
-	static foo;
-};
-let b2 = class {
-	static name;
-};
-let c2 = class {
-	static name() {}
-};
-let d2 = class {
-	static get name() {}
-};
-let e2 = class {
-	static set name(x) {}
-};
-let f2 = class {
-	static ["name"] = 0;
-};
-
 //#endregion
+
 ```

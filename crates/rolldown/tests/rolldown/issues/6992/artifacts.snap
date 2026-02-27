@@ -8,27 +8,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 export { __exportAll, __reExport };
+
 ```
 
 ## main.js
 
 ```js
-import { __exportAll, __reExport } from "./_virtual/_rolldown/runtime.js";
+import "./_virtual/_rolldown/runtime.js";
 import "./server/index.js";
-
-export * from "@sentry/node"
-
-//#region main.js
-var main_exports = /* @__PURE__ */ __exportAll({});
-
+export * from "@sentry/node";
 //#endregion
+
 ```
 
 ## server/index.js
 
 ```js
-import { __exportAll, __reExport } from "../_virtual/_rolldown/runtime.js";
-
-export * from "@sentry/node"
+import "../_virtual/_rolldown/runtime.js";
+export * from "@sentry/node";
 
 ```

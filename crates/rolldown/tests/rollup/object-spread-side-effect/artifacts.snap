@@ -7,13 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-
 //#region main.js
 let result = "FAIL";
 ({ ...{ get prop() {
 	result = "PASS";
 } } });
 assert.strictEqual(result, "PASS");
-
 //#endregion
+
 ```

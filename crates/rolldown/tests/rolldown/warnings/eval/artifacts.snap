@@ -25,6 +25,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region main.js
 console.log(eval("let a = 100"));
-
 //#endregion
+
 ```

@@ -9,19 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
-
-//#region foo.js
-var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
+(/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 123;
-}));
-
-//#endregion
-//#region entry.js
-var import_foo = /* @__PURE__ */ __toESM(require_foo());
+})))();
 let foo = 234;
 node_assert.default.equal(123, 123);
 node_assert.default.equal(123, 123);
 node_assert.default.equal(foo, 234);
-
 //#endregion
+
 ```

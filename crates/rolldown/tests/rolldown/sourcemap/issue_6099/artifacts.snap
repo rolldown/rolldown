@@ -7,54 +7,41 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.version = "1.0.0";
-	Object.defineProperty(exports, "version", { get() {
-		throw new Error("see stacktrace");
-	} });
-}));
 
-//#endregion
-//#region main.js
-var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
-const foo = import_cjs.version.startsWith("1");
-console.log(foo);
-
-//#endregion
 //# sourceMappingURL=main.js.map
 ```
 
 # Sourcemap Visualizer
 
 ```
-- ../cjs.js
-(0:0) "exports." --> (30:0) "\texports."
-(0:8) "version = " --> (30:9) "version = "
-(0:18) "'1.0.0';\n" --> (30:19) "\"1.0.0\";\n"
-(1:0) "Object." --> (31:0) "\tObject."
-(1:7) "defineProperty(" --> (31:8) "defineProperty("
-(1:22) "exports, " --> (31:23) "exports, "
-(1:31) "'version', " --> (31:32) "\"version\", "
-(1:42) "{\n" --> (31:43) "{ "
-(2:2) "get() " --> (31:45) "get() "
-(2:8) "{\n" --> (31:51) "{\n"
-(3:4) "throw " --> (32:0) "\t\tthrow "
-(3:10) "new " --> (32:8) "new "
-(3:14) "Error(" --> (32:12) "Error("
-(3:20) "'see stacktrace')" --> (32:18) "\"see stacktrace\")"
-(3:37) ";\n" --> (32:35) ";\n"
-(5:1) ")" --> (33:4) ")"
-(5:2) ";\n" --> (33:5) ";\n"
 - ../main.js
-(2:0) "const " --> (39:0) "const "
-(2:6) "foo = mod." --> (39:6) "foo = import_cjs."
-(2:16) "version." --> (39:23) "version."
-(2:24) "startsWith(" --> (39:31) "startsWith("
-(2:35) "'1')" --> (39:42) "\"1\")"
-(2:39) ";\n" --> (39:46) ";\n"
-(3:0) "console." --> (40:0) "console."
-(3:8) "log(" --> (40:8) "log("
-(3:12) "foo)" --> (40:12) "foo)"
-(3:16) ";\n" --> (40:16) ";\n"
+(2:0) "const " --> (22:0) "const "
+(2:6) "foo = mod.version.startsWith('1');\n" --> (22:6) "foo = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {\n"
+- ../cjs.js
+(0:0) "exports." --> (23:0) "\texports."
+(0:8) "version = " --> (23:9) "version = "
+(0:18) "'1.0.0';\n" --> (23:19) "\"1.0.0\";\n"
+(1:0) "Object." --> (24:0) "\tObject."
+(1:7) "defineProperty(" --> (24:8) "defineProperty("
+(1:22) "exports, " --> (24:23) "exports, "
+(1:31) "'version', " --> (24:32) "\"version\", "
+(1:42) "{\n" --> (24:43) "{ "
+(2:2) "get() " --> (24:45) "get() "
+(2:8) "{\n" --> (24:51) "{\n"
+(3:4) "throw " --> (25:0) "\t\tthrow "
+(3:10) "new " --> (25:8) "new "
+(3:14) "Error(" --> (25:12) "Error("
+(3:20) "'see stacktrace')" --> (25:18) "\"see stacktrace\")"
+(3:37) ";\n" --> (25:35) ";\n"
+(5:1) ")" --> (26:4) ")"
+(5:2) ";\n" --> (26:5) ";\n"
+- ../main.js
+(2:16) "version." --> (27:9) "version."
+(2:24) "startsWith(" --> (27:17) "startsWith("
+(2:35) "'1')" --> (27:28) "\"1\")"
+(2:39) ";\n" --> (27:32) ";\n"
+(3:0) "console." --> (28:0) "console."
+(3:8) "log(" --> (28:8) "log("
+(3:12) "foo)" --> (28:12) "foo)"
+(3:16) ";\n" --> (28:16) ";\n"
 ```

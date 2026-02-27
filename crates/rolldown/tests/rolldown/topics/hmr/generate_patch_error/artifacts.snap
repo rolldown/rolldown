@@ -17,28 +17,24 @@ function text$1(el, text) {
 	console.log(el, text);
 }
 hmr_hot.accept((mod) => {
-	if (mod) {
-		console.log(".hmr", mod.foo);
-	}
+	if (mod) console.log(".hmr", mod.foo);
 });
-
 //#endregion
 //#region sub.js
 var sub_exports = /* @__PURE__ */ __exportAll({});
-const sub_hot = __rolldown_runtime__.createModuleHotContext("sub.js");
+__rolldown_runtime__.createModuleHotContext("sub.js");
 __rolldown_runtime__.registerModule("sub.js", { exports: sub_exports });
 text(".app", "hello");
 function text(el, text) {
 	console.log(el, text);
 }
-
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-
 //#endregion
+
 ```
 
 # HMR Step 0

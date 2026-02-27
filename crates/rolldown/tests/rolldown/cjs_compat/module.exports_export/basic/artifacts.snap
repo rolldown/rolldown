@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({
@@ -16,27 +15,17 @@ var esm_exports = /* @__PURE__ */ __exportAll({
 	default: () => esm_default,
 	foo: () => "foo",
 	"module.exports": () => moduleExports
-});
-var foo, bar, esm_default, __esModule, moduleExports;
+}), esm_default, moduleExports;
 var init_esm = __esmMin((() => {
-	foo = "foo";
-	bar = "bar";
 	esm_default = { default: "default-value" };
-	__esModule = true;
 	moduleExports = { foo: "foo" };
 }));
-
-//#endregion
-//#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const esm = (init_esm(), __toCommonJS(esm_exports));
-	module.exports = esm;
-}));
-
 //#endregion
 //#region main.js
-var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
+var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = (init_esm(), __toCommonJS(esm_exports));
+})))());
 assert.deepStrictEqual(import_cjs.default, { foo: "foo" });
-
 //#endregion
+
 ```

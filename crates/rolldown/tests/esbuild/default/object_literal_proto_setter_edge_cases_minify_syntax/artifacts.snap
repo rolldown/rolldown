@@ -34,62 +34,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## import-computed.js
 
 ```js
-import { __proto__, bar } from "foo";
-
-//#region import-computed.js
-function foo() {
-	console.log("this must not become \"{ __proto__: ... }\":", {
-		["__proto__"]: __proto__,
-		["bar"]: bar
-	});
-}
-
+import "foo";
 //#endregion
+
 ```
 
 ## import-normal.js
 
 ```js
-import { __proto__, bar } from "foo";
-
-//#region import-normal.js
-function foo() {
-	console.log("this must not become \"{ __proto__ }\":", {
-		__proto__: __proto__,
-		bar
-	});
-}
-
+import "foo";
 //#endregion
+
 ```
 
 ## local-computed.js
 
 ```js
-//#region local-computed.js
-function foo(__proto__, bar) {
-	{
-		let __proto__, bar;
-		console.log("this must not become \"{ __proto__: ... }\":", {
-			["__proto__"]: __proto__,
-			["bar"]: bar
-		});
-	}
-}
-
 //#endregion
+
 ```
 
 ## local-normal.js
 
 ```js
-//#region local-normal.js
-function foo(__proto__, bar) {
-	console.log("this must not become \"{ __proto__ }\":", {
-		__proto__: __proto__,
-		bar
-	});
-}
-
 //#endregion
+
 ```

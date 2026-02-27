@@ -20,8 +20,8 @@ console.log([
 	dot.chain,
 	dot.chain
 ]);
-
 //#endregion
+
 ```
 
 ## write.js
@@ -41,6 +41,6 @@ console.log([
 	dot.chain = 0,
 	dot.chain = 0
 ]);
-
 //#endregion
+
 ```

@@ -12,11 +12,10 @@ var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e3;
 	globalThis.a = 1e3;
 }));
-
 //#endregion
 export default require_dynamic();
-
 export { require_dynamic as t };
+
 ```
 
 ## main.js
@@ -24,16 +23,13 @@ export { require_dynamic as t };
 ```js
 import { t as require_dynamic } from "./dynamic.js";
 import { strictEqual } from "node:assert";
-
-//#region sideeffects.js
-var import_dynamic = require_dynamic();
+require_dynamic();
 globalThis.a = 2;
-
 //#endregion
 //#region main.js
 const a = globalThis.a;
 strictEqual(a, 2);
-
 //#endregion
 export { a };
+
 ```

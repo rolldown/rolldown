@@ -6,19 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region a.js
-const onMount = () => {};
-
 //#endregion
 //#region main.js
-function _page($$payload, $$props) {
-	/* @__PURE__ */ onMount(async () => {
-		const b = await void 0;
-		const c = await void 0;
-		console.log(b.default, c.default);
-	});
-}
-
+function _page($$payload, $$props) {}
 //#endregion
 export { _page as default };
+
 ```

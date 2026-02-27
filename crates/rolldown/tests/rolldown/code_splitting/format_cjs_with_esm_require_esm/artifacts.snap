@@ -7,49 +7,40 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
 
-Object.defineProperty(exports, '__esmMin', {
-  enumerable: true,
-  get: function () {
-    return __esmMin;
-  }
-});
-Object.defineProperty(exports, '__exportAll', {
-  enumerable: true,
-  get: function () {
-    return __exportAll;
-  }
-});
-Object.defineProperty(exports, '__toESM', {
-  enumerable: true,
-  get: function () {
-    return __toESM;
-  }
-});
 ```
 
 ## main1.js
 
 ```js
-const require_chunk = require('./chunk.js');
+require("./chunk.js");
 
 ```
 
 ## main2.js
 
 ```js
-const require_chunk = require('./chunk.js');
-
-//#region esm.js
-var esm_exports = /* @__PURE__ */ require_chunk.__exportAll({ share: () => share });
-function share() {
-	return 1;
-}
-var init_esm = require_chunk.__esmMin((() => {}));
-
 //#endregion
 //#region main2.js
-init_esm();
-
+require("./chunk.js").__esmMin((() => {}))();
 //#endregion
+
 ```

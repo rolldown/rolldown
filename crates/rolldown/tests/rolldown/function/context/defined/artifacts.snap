@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-const window = {}
-
+const window = {};
 //#region main.js
 window.a = 2;
 assert(window.a, 2);
@@ -15,6 +14,6 @@ function a() {
 	this.b = 3;
 }
 a();
-
 //#endregion
+
 ```

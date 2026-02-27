@@ -12,7 +12,7 @@ function hello(name) {
 }
 const foo = "bar";
 const x = 1;
-
 //#endregion
 export { foo, hello, x };
+
 ```

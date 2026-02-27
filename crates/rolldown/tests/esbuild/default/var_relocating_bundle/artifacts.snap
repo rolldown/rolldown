@@ -14,8 +14,8 @@ function x() {
 	for (var { j, x: [k] } in {});
 }
 x();
-
 //#endregion
+
 ```
 
 ## function.js
@@ -29,8 +29,8 @@ function x() {
 	for (var { j, x: [k] } in {});
 }
 x();
-
 //#endregion
+
 ```
 
 ## let.js
@@ -41,8 +41,8 @@ for (let e of []);
 for (let { f, x: [g] } of []);
 for (let h in {});
 for (let { j, x: [k] } in {});
-
 //#endregion
+
 ```
 
 ## nested.js
@@ -53,8 +53,8 @@ for (var e of []);
 for (var { f, x: [g] } of []);
 for (var h in {});
 for (var { j, x: [k] } in {});
-
 //#endregion
+
 ```
 
 ## top-level.js
@@ -65,6 +65,6 @@ for (var e of []);
 for (var { f, x: [g] } of []);
 for (var h in {});
 for (var { j, x: [k] } in {});
-
 //#endregion
+
 ```

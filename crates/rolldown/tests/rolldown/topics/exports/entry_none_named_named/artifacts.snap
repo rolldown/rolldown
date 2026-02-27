@@ -6,31 +6,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lib.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 //#region lib.js
 const foo = "foo_value";
 const bar = 42;
-
 //#endregion
 exports.bar = bar;
 exports.foo = foo;
+
 ```
 
 ## main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-const require_lib = require('./lib.js');
+const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
-
 //#region main.js
 node_assert.default.strictEqual(require_lib.foo, "foo_value");
 node_assert.default.strictEqual(42, 42);
-
 //#endregion
 exports.bar = require_lib.bar;
 exports.foo = require_lib.foo;
+
 ```

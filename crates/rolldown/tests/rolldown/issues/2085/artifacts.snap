@@ -7,41 +7,35 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region b.js
-var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
+//#region a.js
+var import_b = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports._default = function test() {
 		return "f";
 	};
-}));
-
-//#endregion
-//#region a.js
-var import_b = require_b();
-
+})))();
 //#endregion
 var b_default = import_b._default;
 export { b_default as default, import_b as t };
+
 ```
 
 ## c.js
 
 ```js
 import { t as import_b } from "./a.js";
-
 //#region c.js
 function c_default(tag, options) {
 	return import_b._default;
 }
-
 //#endregion
 export { c_default as default };
+
 ```
 
 ## main.js
 
 ```js
 import assert from "node:assert";
-
 //#region main.js
 import("./c.js").then((mod) => {
 	assert.strictEqual(mod.default()(), "f");
@@ -49,6 +43,6 @@ import("./c.js").then((mod) => {
 import("./a.js").then((mod) => {
 	assert.strictEqual(mod.default(), "f");
 });
-
 //#endregion
+
 ```

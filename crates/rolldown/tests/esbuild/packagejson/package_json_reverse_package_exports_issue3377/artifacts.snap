@@ -22,10 +22,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { setupWorker } from "msw/browser";
-
 //#region lib/msw-config.ts
 setupWorker();
-
 //#endregion
-export {  };
+export {};
+
 ```

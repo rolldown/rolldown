@@ -7,12 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import nodeAssert from "node:assert";
-
 //#region main.js
 nodeAssert.strictEqual("production", "production");
 (function(process) {
 	nodeAssert.strictEqual(process.env.NODE_ENV, void 0);
 })({ env: {} });
-
 //#endregion
+
 ```

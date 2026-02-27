@@ -22,10 +22,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 let somewhere = require("somewhere");
-
 //#region empty.js
 var undef = void 0;
-
 //#endregion
 //#region entry.js
 _ = class Outer {
@@ -57,6 +55,6 @@ _ = class Outer {
 		}
 	];
 };
-
 //#endregion
+
 ```

@@ -6,76 +6,72 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lib.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-const require_lib = require('./lib2.js');
-
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_lib = require("./lib2.js");
 require_lib.init_lib();
 exports.bar = require_lib.bar;
 exports.foo = require_lib.foo;
+
 ```
 
 ## lib2.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-
 //#region lib.js
 var foo, bar;
 var init_lib = __esmMin((() => {
 	foo = "foo_value";
 	bar = 42;
 }));
-
 //#endregion
-Object.defineProperty(exports, '__esmMin', {
-  enumerable: true,
-  get: function () {
-    return __esmMin;
-  }
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
 });
-Object.defineProperty(exports, '__toESM', {
-  enumerable: true,
-  get: function () {
-    return __toESM;
-  }
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
 });
-Object.defineProperty(exports, 'bar', {
-  enumerable: true,
-  get: function () {
-    return bar;
-  }
+Object.defineProperty(exports, "bar", {
+	enumerable: true,
+	get: function() {
+		return bar;
+	}
 });
-Object.defineProperty(exports, 'foo', {
-  enumerable: true,
-  get: function () {
-    return foo;
-  }
+Object.defineProperty(exports, "foo", {
+	enumerable: true,
+	get: function() {
+		return foo;
+	}
 });
-Object.defineProperty(exports, 'init_lib', {
-  enumerable: true,
-  get: function () {
-    return init_lib;
-  }
+Object.defineProperty(exports, "init_lib", {
+	enumerable: true,
+	get: function() {
+		return init_lib;
+	}
 });
+
 ```
 
 ## main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-const require_lib = require('./lib2.js');
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_lib = require("./lib2.js");
 let node_assert = require("node:assert");
 node_assert = require_lib.__toESM(node_assert);
-
-//#region main.js
-var init_main = require_lib.__esmMin((() => {
+//#endregion
+require_lib.__esmMin((() => {
 	require_lib.init_lib();
 	node_assert.default.strictEqual(require_lib.foo, "foo_value");
 	node_assert.default.strictEqual(42, 42);
-}));
-
-//#endregion
-init_main();
+}))();
 exports.bar = require_lib.bar;
 exports.foo = require_lib.foo;
+
 ```

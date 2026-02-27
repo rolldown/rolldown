@@ -9,36 +9,32 @@ source: crates/rolldown_testing/src/integration_test.rs
 foo
 ```
 
-## chunks/dep-BZUTziCU.js
+## chunks/dep-BeOjfgdq.js
 
 ```js
-import "./foo-CWkpIYf3.js";
-
+import "./foo-Dloy8F6P.js";
 //#region dep.js
 const url = new URL("../assets/foo-ClFdlyrm.txt", import.meta.url);
-
 //#endregion
 export { url };
+
 ```
 
-## chunks/foo-CWkpIYf3.js
+## chunks/foo-Dloy8F6P.js
 
 ```js
-//#region foo.txt
-var foo_default = "assets/foo-ClFdlyrm.txt";
-
 //#endregion
+
 ```
 
 ## main.js
 
 ```js
-import "./chunks/foo-CWkpIYf3.js";
-
+import "./chunks/foo-Dloy8F6P.js";
 //#region main.js
 const url = new URL("assets/foo-ClFdlyrm.txt", import.meta.url);
-const dep = import("./chunks/dep-BZUTziCU.js");
-
+const dep = import("./chunks/dep-BeOjfgdq.js");
 //#endregion
 export { dep, url };
+
 ```

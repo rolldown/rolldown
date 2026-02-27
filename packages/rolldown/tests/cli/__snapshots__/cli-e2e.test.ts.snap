@@ -164,15 +164,15 @@ exports[`cli options for bundling > should handle \`--input\` and positional arg
 
 //#region 1.ts
 console.log("1");
-
 //#endregion
+
 
 |→ 2.js:
 
 //#region 2.js
 console.log("2");
-
-//#endregion"
+//#endregion
+"
 `;
 
 exports[`cli options for bundling > should handle multiple define arguments with comma-separated syntax 1`] = `
@@ -183,32 +183,28 @@ exports[`cli options for bundling > should handle multiple define arguments with
 
 exports[`cli options for bundling > should handle negative boolean options 1`] = `
 "(function(exports, node_fs) {
-
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-//#region index.ts
-	const nonExternal = "nonExternal";
-
-//#endregion
-exports.nonExternal = nonExternal;
-exports.read = node_fs.read;
-exports.readFile = node_fs.readFile;
-exports.readFileSync = node_fs.readFileSync;
-exports.readSync = node_fs.readSync;
-return exports;
-})({}, node_fs);"
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	//#endregion
+	exports.nonExternal = "nonExternal";
+	exports.read = node_fs.read;
+	exports.readFile = node_fs.readFile;
+	exports.readFileSync = node_fs.readFileSync;
+	exports.readSync = node_fs.readSync;
+	return exports;
+})({}, node_fs);
+"
 `;
 
 exports[`cli options for bundling > should handle nested options 1`] = `
 "//#region index.js
 var cli_option_nested_default = defined;
-
 //#endregion
-export { cli_option_nested_default as default };"
+export { cli_option_nested_default as default };
+"
 `;
 
 exports[`cli options for bundling > should handle pass \`-s\` options 1`] = `
-"<DIR>/index.js.map  asset │ size: 0.20 kB
+"<DIR>/index.js.map  asset │ size: 0.21 kB
 <DIR>/index.js      chunk │ size: 0.19 kB
 
 "
@@ -233,13 +229,13 @@ exports[`cli options for bundling > should handle single boolean short options 1
 `;
 
 exports[`cli options for bundling > should handle single object options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.27 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle single string options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.13 kB
+"<DIR>/index.js  chunk │ size: 0.12 kB
 
 "
 `;

@@ -7,45 +7,31 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-
-Object.defineProperty(exports, '__commonJSMin', {
-  enumerable: true,
-  get: function () {
-    return __commonJSMin;
-  }
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
 });
+
 ```
 
 ## main.js
 
 ```js
-const require_chunk = require('./chunk.js');
-
-//#region cjs-dep.js
-var require_cjs_dep = /* @__PURE__ */ require_chunk.__commonJSMin(((exports, module) => {
+(/* @__PURE__ */ require("./chunk.js").__commonJSMin(((exports, module) => {
 	module.exports = console.log("cjs-dep");
-}));
-
+})))();
 //#endregion
-//#region main.js
-var import_cjs_dep = require_cjs_dep();
 
-//#endregion
 ```
 
 ## main2.js
 
 ```js
-const require_chunk = require('./chunk.js');
-
-//#region cjs-dep2.js
-var require_cjs_dep2 = /* @__PURE__ */ require_chunk.__commonJSMin(((exports, module) => {
+(/* @__PURE__ */ require("./chunk.js").__commonJSMin(((exports, module) => {
 	module.exports = console.log("cjs-dep2");
-}));
-
+})))();
 //#endregion
-//#region main2.js
-var import_cjs_dep2 = require_cjs_dep2();
 
-//#endregion
 ```

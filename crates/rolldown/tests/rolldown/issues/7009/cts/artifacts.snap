@@ -6,12 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-
 //#region index.cts
 exports.foo = function a() {
 	return "foo";
 };
 arguments = 1;
-
 //#endregion
+
 ```

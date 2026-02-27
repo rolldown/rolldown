@@ -21,9 +21,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region entry.js
 console.log(require("url").pathToFileURL(__filename).href, {}.path);
-
 //#endregion
+
 ```

@@ -99,15 +99,12 @@ var foo$3 = class foo$3 {
 		this.x = new foo$3();
 	}
 };
-
 //#endregion
 //#region keep/interface-nested.ts
 var interface_nested_default = foo;
-
 //#endregion
 //#region keep/type-nested.ts
 var type_nested_default = foo;
-
 //#endregion
 //#region keep/value-namespace.ts
 let foo$2;
@@ -115,7 +112,6 @@ let foo$2;
 	_foo.num = 0;
 })(foo$2 || (foo$2 = {}));
 var value_namespace_default = foo$2;
-
 //#endregion
 //#region keep/value-namespace-merged.ts
 let foo$1;
@@ -123,7 +119,6 @@ let foo$1;
 	_foo.num = 0;
 })(foo$1 || (foo$1 = {}));
 var value_namespace_merged_default = foo$1;
-
 //#endregion
 //#region entry.ts
 var entry_default = [
@@ -148,9 +143,9 @@ var entry_default = [
 	123,
 	123
 ];
-
 //#endregion
 export { entry_default as default };
+
 ```
 ### diff
 ```diff

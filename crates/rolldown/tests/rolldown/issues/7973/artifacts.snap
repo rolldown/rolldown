@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -15,13 +14,11 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.b = "original";
 	exports.c = "ab";
 }));
-
 //#endregion
 //#region cjs_ns.js
 var require_cjs_ns = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "n1";
 }));
-
 //#endregion
 //#region main.js
 var import_cjs = /* @__PURE__ */ __toESM(require_cjs(), 1);
@@ -38,7 +35,7 @@ assert.strictEqual(import_cjs.c, "abcd");
 assert.strictEqual(import_cjs_ns.a, "n1");
 import_cjs_ns.default.a = "ns1";
 assert.strictEqual(import_cjs_ns.a, "ns1");
-
 //#endregion
-export {  };
+export {};
+
 ```

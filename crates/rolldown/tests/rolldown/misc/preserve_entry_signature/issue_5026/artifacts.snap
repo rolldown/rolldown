@@ -7,12 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as createRouter } from "./router.js";
-
 //#region main.js
 await createRouter(() => import("./page.js")).isReady;
 globalThis.result.push("ready");
-
 //#endregion
+
 ```
 
 ## page.js
@@ -20,8 +19,8 @@ globalThis.result.push("ready");
 ```js
 //#region page.mjs
 globalThis.result = ["foo"];
-
 //#endregion
+
 ```
 
 ## router.js
@@ -36,7 +35,7 @@ const createRouter = (page) => {
 	page().then(() => readyResolve());
 	return { isReady };
 };
-
 //#endregion
 export { createRouter as t };
+
 ```

@@ -14,8 +14,8 @@ console.log(`
   especial
   replaced.doSomething()
 `);
-
 //#endregion
+
 //# sourceMappingURL=input.js.map
 ```
 

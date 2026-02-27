@@ -7,9 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function() {
-
-
-//#region entry.js
+	//#region entry.js
 	typeof x <= "u" && y;
 	typeof x < "u" && y;
 	typeof x >= "u" || y;
@@ -42,7 +40,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 	"u" > typeof x || x;
 	"u" <= typeof x && x;
 	"u" < typeof x && x;
-
-//#endregion
+	//#endregion
 })();
+
 ```

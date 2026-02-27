@@ -17,8 +17,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region c.js
 import("./a2.js");
-
 //#endregion
+
 ```
 
 ## a2.js
@@ -39,18 +39,8 @@ import "./a.js";
 
 ```js
 import "./a.js";
-
 // HIDDEN [\0rolldown/runtime.js]
-//#region x.js
-var require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = 42;
-}));
 
-//#endregion
-//#region b.js
-var import_x = require_x();
-
-//#endregion
 ```
 
 ## dbp-activity-showcase.js
@@ -58,6 +48,6 @@ var import_x = require_x();
 ```js
 //#region dbp-activity-showcase.js
 import("./dbp-2.js");
-
 //#endregion
+
 ```

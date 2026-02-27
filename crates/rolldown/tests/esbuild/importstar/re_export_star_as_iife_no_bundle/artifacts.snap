@@ -29,17 +29,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 var mod = (function(exports, foo) {
-
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-// HIDDEN [\0rolldown/runtime.js]
-foo = __toESM(foo);
-
-Object.defineProperty(exports, 'out', {
-  enumerable: true,
-  get: function () {
-    return foo;
-  }
-});
-return exports;
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	foo = __toESM(foo);
+	Object.defineProperty(exports, "out", {
+		enumerable: true,
+		get: function() {
+			return foo;
+		}
+	});
+	return exports;
 })({}, foo);
+
 ```

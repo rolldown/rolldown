@@ -9,34 +9,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region imp1.js
 var imp1_exports = /* @__PURE__ */ __exportAll({ imp1: () => 1 });
-const imp1 = 1;
-
 //#endregion
 //#region imp2.js
 var imp2_exports = /* @__PURE__ */ __exportAll({
 	imp2: () => 2,
 	imp22: () => 22
 });
-const imp2 = 2;
-
 //#endregion
 //#region imp3.js
 var imp3_exports = /* @__PURE__ */ __exportAll({
 	imp3: () => 3,
 	imp33: () => 33
 });
-const imp3 = 3;
-const imp33 = 33;
-
 //#endregion
 export { imp2_exports as n, imp1_exports as r, imp3_exports as t };
+
 ```
 
 ## main.js
 
 ```js
 import assert from "node:assert";
-
 //#region main.js
 const load = async () => {
 	import("./imp.js").then((n) => n.r).then((m) => {
@@ -53,8 +46,8 @@ const load = async () => {
 	});
 };
 load();
-
 //#endregion
+
 ```
 
 # Variant: disableChunkOptimization: [chunk_optimization: false]
@@ -66,49 +59,46 @@ load();
 ```js
 //#region imp1.js
 const imp1 = 1;
-
 //#endregion
 //#region imp2.js
 const imp2 = 2;
-
 //#endregion
 //#region imp3.js
 const imp3 = 3;
 const imp33 = 33;
-
 //#endregion
 export { imp1 as i, imp33 as n, imp2 as r, imp3 as t };
+
 ```
 
 ### imp1.js
 
 ```js
 import { i as imp1 } from "./imp.js";
-
 export { imp1 };
+
 ```
 
 ### imp2.js
 
 ```js
 import { r as imp2 } from "./imp.js";
-
 export { imp2 };
+
 ```
 
 ### imp3.js
 
 ```js
 import { n as imp33, t as imp3 } from "./imp.js";
-
 export { imp3, imp33 };
+
 ```
 
 ### main.js
 
 ```js
 import assert from "node:assert";
-
 //#region main.js
 const load = async () => {
 	import("./imp1.js").then((m) => {
@@ -125,8 +115,8 @@ const load = async () => {
 	});
 };
 load();
-
 //#endregion
+
 ```
 
 # Variant: [format: Cjs]
@@ -136,57 +126,49 @@ load();
 ### imp.js
 
 ```js
-const require_rolldown_runtime = require('./rolldown-runtime.js');
-
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 //#region imp1.js
 var imp1_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ imp1: () => 1 });
-const imp1 = 1;
-
 //#endregion
 //#region imp2.js
 var imp2_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
 	imp2: () => 2,
 	imp22: () => 22
 });
-const imp2 = 2;
-
 //#endregion
 //#region imp3.js
 var imp3_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
 	imp3: () => 3,
 	imp33: () => 33
 });
-const imp3 = 3;
-const imp33 = 33;
-
 //#endregion
-Object.defineProperty(exports, 'imp1_exports', {
-  enumerable: true,
-  get: function () {
-    return imp1_exports;
-  }
+Object.defineProperty(exports, "imp1_exports", {
+	enumerable: true,
+	get: function() {
+		return imp1_exports;
+	}
 });
-Object.defineProperty(exports, 'imp2_exports', {
-  enumerable: true,
-  get: function () {
-    return imp2_exports;
-  }
+Object.defineProperty(exports, "imp2_exports", {
+	enumerable: true,
+	get: function() {
+		return imp2_exports;
+	}
 });
-Object.defineProperty(exports, 'imp3_exports', {
-  enumerable: true,
-  get: function () {
-    return imp3_exports;
-  }
+Object.defineProperty(exports, "imp3_exports", {
+	enumerable: true,
+	get: function() {
+		return imp3_exports;
+	}
 });
+
 ```
 
 ### main.js
 
 ```js
-const require_rolldown_runtime = require('./rolldown-runtime.js');
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 let node_assert = require("node:assert");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
-
 //#region main.js
 const load = async () => {
 	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp1_exports).then((m) => {
@@ -203,25 +185,25 @@ const load = async () => {
 	});
 };
 load();
-
 //#endregion
+
 ```
 
 ### rolldown-runtime.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
 
-Object.defineProperty(exports, '__exportAll', {
-  enumerable: true,
-  get: function () {
-    return __exportAll;
-  }
-});
-Object.defineProperty(exports, '__toESM', {
-  enumerable: true,
-  get: function () {
-    return __toESM;
-  }
-});
 ```

@@ -9,10 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => 123 });
-const __proto__ = 123;
-
 //#endregion
 export { lib_exports as lib };
+
 ```
 
 # Variant: cjs: [entry_filenames: "main.cjs"] [format: Cjs]
@@ -22,20 +21,18 @@ export { lib_exports as lib };
 ### main.cjs
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => 123 });
-const __proto__ = 123;
-
 //#endregion
-Object.defineProperty(exports, 'lib', {
-  enumerable: true,
-  get: function () {
-    return lib_exports;
-  }
+Object.defineProperty(exports, "lib", {
+	enumerable: true,
+	get: function() {
+		return lib_exports;
+	}
 });
+
 ```
 
 # Variant: iife: [entry_filenames: "main.cjs"] [format: Iife]
@@ -46,24 +43,21 @@ Object.defineProperty(exports, 'lib', {
 
 ```js
 var bundle = (function(exports) {
-
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-// HIDDEN [\0rolldown/runtime.js]
-
-//#region lib.js
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region lib.js
 	var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => 123 });
-	const __proto__ = 123;
-
-//#endregion
-Object.defineProperty(exports, 'lib', {
-  enumerable: true,
-  get: function () {
-    return lib_exports;
-  }
-});
-return exports;
+	//#endregion
+	Object.defineProperty(exports, "lib", {
+		enumerable: true,
+		get: function() {
+			return lib_exports;
+		}
+	});
+	return exports;
 })({});
 globalThis.bundle = bundle;
+
 ```
 
 # Variant: umd: [entry_filenames: "main.cjs"] [format: Umd]
@@ -74,23 +68,19 @@ globalThis.bundle = bundle;
 
 ```js
 (function(global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
-  typeof define === 'function' && define.amd ? define(['exports'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.bundle = {})));
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.bundle = {}));
 })(this, function(exports) {
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-// HIDDEN [\0rolldown/runtime.js]
-
-//#region lib.js
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region lib.js
 	var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => 123 });
-	const __proto__ = 123;
+	//#endregion
+	Object.defineProperty(exports, "lib", {
+		enumerable: true,
+		get: function() {
+			return lib_exports;
+		}
+	});
+});
 
-//#endregion
-Object.defineProperty(exports, 'lib', {
-  enumerable: true,
-  get: function () {
-    return lib_exports;
-  }
-});
-});
 ```

@@ -11,19 +11,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
 const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
 __rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
-const value = "dep";
-if (dep_hot) {
-	dep_hot.accept();
-}
-
+if (dep_hot) dep_hot.accept();
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 console.log("dep");
-
 //#endregion
+
 ```
 
 # HMR Step 0
@@ -78,17 +74,13 @@ console.log("dep");
 var dep_exports = /* @__PURE__ */ __exportAll({ value: () => "dep" });
 const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
 __rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
-const value = "dep";
-if (dep_hot) {
-	dep_hot.accept();
-}
-
+if (dep_hot) dep_hot.accept();
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 console.log("dep");
-
 //#endregion
+
 ```

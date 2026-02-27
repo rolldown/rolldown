@@ -7,30 +7,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region foo.js
-var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
-
-//#endregion
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1;
 }));
-
-//#endregion
-//#region esm.js
-var esm_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
-var value;
-var init_esm = __esmMin((() => {
-	value = 1;
-}));
-
+__esmMin((() => {}));
 //#endregion
 //#region main.js
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
-
 //#endregion
+
 ```
 
 # Variant: [format: Cjs]
@@ -41,31 +29,18 @@ Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-
-//#region foo.js
-var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
-
-//#endregion
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1;
 }));
-
-//#endregion
-//#region esm.js
-var esm_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
-var value;
-var init_esm = __esmMin((() => {
-	value = 1;
-}));
-
+__esmMin((() => {}));
 //#endregion
 //#region main.js
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
-
 //#endregion
+
 ```
 
 # Variant: [format: Iife]
@@ -76,32 +51,18 @@ Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))
 
 ```js
 (function() {
-
-// HIDDEN [\0rolldown/runtime.js]
-
-//#region foo.js
-	var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
-
-//#endregion
-//#region cjs.js
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region cjs.js
 	var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		module.exports = 1;
 	}));
-
-//#endregion
-//#region esm.js
-	var esm_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
-	var value;
-	var init_esm = __esmMin((() => {
-		value = 1;
-	}));
-
-//#endregion
-//#region main.js
+	__esmMin((() => {}));
+	//#endregion
+	//#region main.js
 	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 	Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));
 	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
-
-//#endregion
+	//#endregion
 })();
+
 ```

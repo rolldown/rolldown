@@ -47,7 +47,6 @@ let e_str = /* @__PURE__ */ function(e_str) {
 	e_str["x"] = "abc";
 	return e_str;
 }({});
-
 //#endregion
 //#region entry.ts
 inlined = [
@@ -64,6 +63,6 @@ not_inlined = [
 	d_str?.["x"],
 	e_str
 ];
-
 //#endregion
+
 ```

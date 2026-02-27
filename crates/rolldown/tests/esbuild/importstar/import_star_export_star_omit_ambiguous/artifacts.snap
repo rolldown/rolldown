@@ -7,14 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region common.js
 var common_exports = /* @__PURE__ */ __exportAll({
 	x: () => 1,
 	z: () => 4
 });
-
 //#endregion
 //#region entry.js
 assert.deepEqual(common_exports, {
@@ -22,6 +20,6 @@ assert.deepEqual(common_exports, {
 	x: 1,
 	z: 4
 });
-
 //#endregion
+
 ```

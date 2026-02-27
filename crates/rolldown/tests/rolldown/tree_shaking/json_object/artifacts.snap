@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,13 +7,9 @@ snapshot_kind: text
 
 ```js
 import assert from "node:assert";
-
-//#region foo.json
-var shouldBeReserved = "shouldBeReserved";
-
 //#endregion
 //#region main.js
-assert.equal(shouldBeReserved, "shouldBeReserved");
-
+assert.equal("shouldBeReserved", "shouldBeReserved");
 //#endregion
+
 ```

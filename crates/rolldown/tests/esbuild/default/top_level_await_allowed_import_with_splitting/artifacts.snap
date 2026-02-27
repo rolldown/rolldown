@@ -37,8 +37,8 @@ import "./c2.js";
 ```js
 //#region c.js
 await 0;
-
 //#endregion
+
 ```
 
 ## entry.js
@@ -50,6 +50,6 @@ import("./b.js");
 import("./c.js");
 import("./entry.js");
 await 0;
-
 //#endregion
+
 ```

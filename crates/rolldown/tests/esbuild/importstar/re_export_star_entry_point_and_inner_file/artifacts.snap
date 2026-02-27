@@ -6,26 +6,26 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-
 //#region inner.js
 var inner_exports = /* @__PURE__ */ __exportAll({});
 __reExport(inner_exports, require("b"));
-
 //#endregion
-Object.defineProperty(exports, 'inner', {
-  enumerable: true,
-  get: function () {
-    return inner_exports;
-  }
+Object.defineProperty(exports, "inner", {
+	enumerable: true,
+	get: function() {
+		return inner_exports;
+	}
 });
 var a = require("a");
-Object.keys(a).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return a[k]; }
-  });
+Object.keys(a).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return a[k];
+		}
+	});
 });
 
 ```

@@ -6,17 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region esm.js
-var esm_exports = /* @__PURE__ */ __exportAll({});
+Object.defineProperty;
+var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
 var init_esm = __esmMin((() => {}));
-
 //#endregion
 //#region main.js
 init_esm();
 init_esm();
-
 //#endregion
+
 //# sourceMappingURL=main.js.map
 ```
 

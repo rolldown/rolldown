@@ -13,7 +13,6 @@ var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		return a + b;
 	};
 }));
-
 //#endregion
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -21,17 +20,12 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		return a + b;
 	};
 }));
-
-//#endregion
-//#region commonjs.js
-var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = Math.random() < .5 ? require_a() : require_b();
-}));
-
 //#endregion
 //#region main.js
-var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
+var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = Math.random() < .5 ? require_a() : require_b();
+})))());
 assert.equal(import_commonjs.default.call({}, 1, 2), 3);
-
 //#endregion
+
 ```

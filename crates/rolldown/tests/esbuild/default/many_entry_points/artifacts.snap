@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region e00.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e01.js
@@ -17,8 +17,8 @@ console.log(123);
 ```js
 //#region e01.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e02.js
@@ -26,8 +26,8 @@ console.log(123);
 ```js
 //#region e02.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e03.js
@@ -35,8 +35,8 @@ console.log(123);
 ```js
 //#region e03.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e04.js
@@ -44,8 +44,8 @@ console.log(123);
 ```js
 //#region e04.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e05.js
@@ -53,8 +53,8 @@ console.log(123);
 ```js
 //#region e05.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e06.js
@@ -62,8 +62,8 @@ console.log(123);
 ```js
 //#region e06.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e07.js
@@ -71,8 +71,8 @@ console.log(123);
 ```js
 //#region e07.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e08.js
@@ -80,8 +80,8 @@ console.log(123);
 ```js
 //#region e08.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e09.js
@@ -89,8 +89,8 @@ console.log(123);
 ```js
 //#region e09.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e10.js
@@ -98,8 +98,8 @@ console.log(123);
 ```js
 //#region e10.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e11.js
@@ -107,8 +107,8 @@ console.log(123);
 ```js
 //#region e11.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e12.js
@@ -116,8 +116,8 @@ console.log(123);
 ```js
 //#region e12.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e13.js
@@ -125,8 +125,8 @@ console.log(123);
 ```js
 //#region e13.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e14.js
@@ -134,8 +134,8 @@ console.log(123);
 ```js
 //#region e14.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e15.js
@@ -143,8 +143,8 @@ console.log(123);
 ```js
 //#region e15.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e16.js
@@ -152,8 +152,8 @@ console.log(123);
 ```js
 //#region e16.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e17.js
@@ -161,8 +161,8 @@ console.log(123);
 ```js
 //#region e17.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e18.js
@@ -170,8 +170,8 @@ console.log(123);
 ```js
 //#region e18.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e19.js
@@ -179,8 +179,8 @@ console.log(123);
 ```js
 //#region e19.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e20.js
@@ -188,8 +188,8 @@ console.log(123);
 ```js
 //#region e20.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e21.js
@@ -197,8 +197,8 @@ console.log(123);
 ```js
 //#region e21.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e22.js
@@ -206,8 +206,8 @@ console.log(123);
 ```js
 //#region e22.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e23.js
@@ -215,8 +215,8 @@ console.log(123);
 ```js
 //#region e23.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e24.js
@@ -224,8 +224,8 @@ console.log(123);
 ```js
 //#region e24.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e25.js
@@ -233,8 +233,8 @@ console.log(123);
 ```js
 //#region e25.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e26.js
@@ -242,8 +242,8 @@ console.log(123);
 ```js
 //#region e26.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e27.js
@@ -251,8 +251,8 @@ console.log(123);
 ```js
 //#region e27.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e28.js
@@ -260,8 +260,8 @@ console.log(123);
 ```js
 //#region e28.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e29.js
@@ -269,8 +269,8 @@ console.log(123);
 ```js
 //#region e29.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e30.js
@@ -278,8 +278,8 @@ console.log(123);
 ```js
 //#region e30.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e31.js
@@ -287,8 +287,8 @@ console.log(123);
 ```js
 //#region e31.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e32.js
@@ -296,8 +296,8 @@ console.log(123);
 ```js
 //#region e32.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e33.js
@@ -305,8 +305,8 @@ console.log(123);
 ```js
 //#region e33.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e34.js
@@ -314,8 +314,8 @@ console.log(123);
 ```js
 //#region e34.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e35.js
@@ -323,8 +323,8 @@ console.log(123);
 ```js
 //#region e35.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e36.js
@@ -332,8 +332,8 @@ console.log(123);
 ```js
 //#region e36.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e37.js
@@ -341,8 +341,8 @@ console.log(123);
 ```js
 //#region e37.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e38.js
@@ -350,8 +350,8 @@ console.log(123);
 ```js
 //#region e38.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## e39.js
@@ -359,6 +359,6 @@ console.log(123);
 ```js
 //#region e39.js
 console.log(123);
-
 //#endregion
+
 ```

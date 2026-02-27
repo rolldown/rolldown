@@ -8,16 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 let external_pkg = require("external-pkg");
 let external_pkg2 = require("external-pkg2");
-
 //#region replacement.js
 let replace = { test() {} };
 let replace2 = { test() {} };
-
 //#endregion
 //#region inject.js
 let obj = {};
-let sideEffects = console.log("side effects");
-
+console.log("side effects");
 //#endregion
 //#region entry.js
 console.log("this should be renamed");
@@ -31,6 +28,6 @@ console.log(replace2.test);
 console.log(collide);
 console.log(external_pkg.re_export);
 console.log(external_pkg2.re.export);
-
 //#endregion
+
 ```

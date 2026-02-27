@@ -1,5 +1,7 @@
+//#region main.js
 function hello(opts) {
 	console.log(opts === null || opts === void 0 ? void 0 : opts.name);
 	opts == null || opts.name;
 }
+//#endregion
 export { hello };

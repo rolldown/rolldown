@@ -7,13 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
-//#region text.data
-var text_default = "IidgKz0vQCMkJCVeJiooCuS9oOWlve+8jOS4lueVjArQn9GA0LjQstC10YIg0LzQuNGACuOBk+OCk+OBq+OBoeOBr+S4lueVjAo=";
-
 //#endregion
 //#region main.js
-assert(typeof text_default === "string");
-
+assert(true);
 //#endregion
+
 ```

@@ -7,16 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region 1aaa.js
 var _1aaa_exports = /* @__PURE__ */ __exportAll({ default: () => a });
 const a = "shared.js";
-
 //#endregion
 //#region main.js
 assert.equal("index.js", "index.js");
 console.log(_1aaa_exports);
-
 //#endregion
+
 ```

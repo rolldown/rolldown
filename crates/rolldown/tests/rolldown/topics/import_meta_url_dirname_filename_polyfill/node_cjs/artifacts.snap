@@ -9,13 +9,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
-
 //#region main.js
 node_assert.default.equal(require("url").pathToFileURL(__filename), require("url").pathToFileURL(__filename).href);
 node_assert.default.equal(__dirname, __dirname);
 node_assert.default.equal(__filename, __filename);
-
 //#endregion
+
 //# sourceMappingURL=main.js.map
 ```
 
@@ -23,21 +22,33 @@ node_assert.default.equal(__filename, __filename);
 
 ```
 - ../main.js
-(2:0) "assert." --> (31:0) "node_assert.default."
-(2:7) "equal(" --> (31:20) "equal("
-(2:13) "require(" --> (31:26) "require("
-(2:21) "'url')" --> (31:34) "\"url\")"
-(2:27) "." --> (31:40) "."
-(2:28) "pathToFileURL(" --> (31:41) "pathToFileURL("
-(2:42) "__filename)" --> (31:55) "__filename)"
-(2:53) ", import.meta.url)" --> (31:66) ", require(\"url\").pathToFileURL(__filename).href)"
-(2:71) ";\n" --> (31:114) ";\n"
-(3:0) "assert." --> (32:0) "node_assert.default."
-(3:7) "equal(" --> (32:20) "equal("
-(3:13) "__dirname, import.meta.dirname)" --> (32:26) "__dirname, __dirname)"
-(3:44) ";\n" --> (32:47) ";\n"
-(4:0) "assert." --> (33:0) "node_assert.default."
-(4:7) "equal(" --> (33:20) "equal("
-(4:13) "__filename, import.meta.filename)" --> (33:26) "__filename, __filename)"
-(4:46) ";\n" --> (33:49) ";\n"
+(2:0) "assert." --> (25:0) "node_assert."
+(2:0) "assert." --> (25:12) "default."
+(2:7) "equal(" --> (25:20) "equal("
+(2:13) "require(" --> (25:26) "require("
+(2:21) "'url')" --> (25:34) "\"url\")"
+(2:27) "." --> (25:40) "."
+(2:28) "pathToFileURL(" --> (25:41) "pathToFileURL("
+(2:42) "__filename)" --> (25:55) "__filename)"
+(2:53) ", import.meta.url)" --> (25:66) ", "
+(2:53) ", import.meta.url)" --> (25:68) "require("
+(2:53) ", import.meta.url)" --> (25:76) "\"url\")"
+(2:53) ", import.meta.url)" --> (25:82) "."
+(2:53) ", import.meta.url)" --> (25:83) "pathToFileURL("
+(2:53) ", import.meta.url)" --> (25:97) "__filename)"
+(2:53) ", import.meta.url)" --> (25:108) "."
+(2:53) ", import.meta.url)" --> (25:109) "href)"
+(2:71) ";\n" --> (25:114) ";\n"
+(3:0) "assert." --> (26:0) "node_assert."
+(3:0) "assert." --> (26:12) "default."
+(3:7) "equal(" --> (26:20) "equal("
+(3:13) "__dirname, import.meta.dirname)" --> (26:26) "__dirname, "
+(3:13) "__dirname, import.meta.dirname)" --> (26:37) "__dirname)"
+(3:44) ";\n" --> (26:47) ";\n"
+(4:0) "assert." --> (27:0) "node_assert."
+(4:0) "assert." --> (27:12) "default."
+(4:7) "equal(" --> (27:20) "equal("
+(4:13) "__filename, import.meta.filename)" --> (27:26) "__filename, "
+(4:13) "__filename, import.meta.filename)" --> (27:38) "__filename)"
+(4:46) ";\n" --> (27:49) ";\n"
 ```

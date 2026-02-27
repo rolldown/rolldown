@@ -7,22 +7,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "./shared.js";
-
 //#region a.js
 console.log(1);
-
 //#endregion
+
 ```
 
 ## b.js
 
 ```js
 import "./shared.js";
-
 //#region b.js
 console.log(2);
-
 //#endregion
+
 ```
 
 ## shared.js
@@ -30,6 +28,6 @@ console.log(2);
 ```js
 //#region shared.js
 console.log("side effect");
-
 //#endregion
+
 ```

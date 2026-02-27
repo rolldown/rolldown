@@ -22,11 +22,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "foo";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region entry.js
 var require_entry = /* @__PURE__ */ __commonJSMin((() => {}));
-
 //#endregion
 export default require_entry();
 

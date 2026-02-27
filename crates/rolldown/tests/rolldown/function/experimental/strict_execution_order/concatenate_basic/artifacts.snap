@@ -7,19 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-
-var init_main = __esmMin((() => {
-//#region setup.js
-	globalThis.globalValue = "foo";
-
-//#endregion
-//#region main.js
+	//#region main.js
 	console.log("main");
+	//#endregion
+}))();
 
-//#endregion
-}));
-
-init_main();
 ```
 
 # Variant: [profiler_names: false]
@@ -30,19 +22,11 @@ init_main();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-
-var init_main = __esmMin((() => {
-//#region setup.js
-	globalThis.globalValue = "foo";
-
-//#endregion
-//#region main.js
+	//#region main.js
 	console.log("main");
+	//#endregion
+}))();
 
-//#endregion
-}));
-
-init_main();
 ```
 
 # Variant: [pife_for_module_wrappers: false]
@@ -53,17 +37,9 @@ init_main();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-
-var init_main = __esmMin(() => {
-//#region setup.js
-	globalThis.globalValue = "foo";
-
-//#endregion
-//#region main.js
+	//#region main.js
 	console.log("main");
+	//#endregion
+})();
 
-//#endregion
-});
-
-init_main();
 ```

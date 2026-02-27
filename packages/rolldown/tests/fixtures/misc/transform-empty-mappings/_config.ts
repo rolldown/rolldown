@@ -40,10 +40,10 @@ export default defineTest({
           "source": "../dep1.js",
         },
         {
-          "column": null,
-          "line": null,
+          "column": 15,
+          "line": 1,
           "name": null,
-          "source": null,
+          "source": "../dep1.js",
         },
         {
           "column": 15,

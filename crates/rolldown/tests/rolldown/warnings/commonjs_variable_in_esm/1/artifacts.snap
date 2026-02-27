@@ -50,7 +50,7 @@ module.exports = {};
 typeof module === "object" ? module.exports : exports;
 const a = 1;
 const e = 1;
-
 //#endregion
 export { a, e };
+
 ```

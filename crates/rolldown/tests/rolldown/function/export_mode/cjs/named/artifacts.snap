@@ -6,21 +6,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
-
+Object.defineProperties(exports, {
+	__esModule: { value: true },
+	[Symbol.toStringTag]: { value: "Module" }
+});
 //#region mod.js
 function example() {
 	return "named";
 }
-
 //#endregion
 //#region main.js
 function a() {
 	return "named";
 }
 var main_default = example();
-
 //#endregion
 exports.a = a;
 exports.default = main_default;
+
 ```

@@ -7,34 +7,30 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as main, t as import_sub } from "./main2.js";
-
 var sub = import_sub.sub;
 export { main, sub };
+
 ```
 
 ## main.js
 
 ```js
 import { n as main, t as import_sub } from "./main2.js";
-
 var sub = import_sub.sub;
 export { main, sub };
+
 ```
 
 ## main2.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region sub.cjs
-var require_sub = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports.sub = "sub";
-}));
-
-//#endregion
 //#region main.js
-var import_sub = require_sub();
+var import_sub = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports.sub = "sub";
+})))();
 const main = "main";
-
 //#endregion
 export { main as n, import_sub as t };
+
 ```

@@ -1,5 +1,6 @@
 {
   "config": {
+    "minify": false,
     "treeshake": false
   },
   "configVariants": [

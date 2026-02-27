@@ -16,12 +16,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => 1 });
-const foo = 1;
-
 //#endregion
 //#region main.js
 assert.deepEqual(foo_exports, {
@@ -31,8 +28,8 @@ assert.deepEqual(foo_exports, {
 Promise.resolve().then(() => foo_exports).then((mod) => {
 	assert.deepEqual(mod, foo_exports);
 });
-
 //#endregion
+
 ```
 
 # Output Stats

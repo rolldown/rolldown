@@ -8,6 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region \0rolldown/data-url:qNNXL4tBrgsN63AaYWHDHw
 console.log(3);
-
 //#endregion
+
 ```

@@ -16,15 +16,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function(exports) {
-
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-//#region main.js
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	//#region main.js
 	const a = 1;
 	const b = 2;
-
-//#endregion
-exports.a = a;
-exports.b = b;
+	//#endregion
+	exports.a = a;
+	exports.b = b;
 })(this[""] = this[""] || {});
+
 ```

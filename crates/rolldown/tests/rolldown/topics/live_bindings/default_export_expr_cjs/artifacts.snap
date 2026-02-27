@@ -6,8 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
-
+Object.defineProperties(exports, {
+	__esModule: { value: true },
+	[Symbol.toStringTag]: { value: "Module" }
+});
 //#region main.js
 let count = 0;
 function reset() {
@@ -17,9 +19,9 @@ function inc() {
 	count += 1;
 }
 var main_default = count;
-
 //#endregion
 exports.default = main_default;
 exports.inc = inc;
 exports.reset = reset;
+
 ```

@@ -6,12 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## input.js
 
 ```js
-//#region input.js
-if ("object" !== "undefined" && "object" === "object" && "production" === "production") {
-	console.log("production");
-}
-
+console.log("production");
 //#endregion
+
 //# sourceMappingURL=input.js.map
 ```
 
@@ -19,16 +16,8 @@ if ("object" !== "undefined" && "object" === "object" && "production" === "produ
 
 ```
 - ../input.js
-(0:0) "if (\n" --> (1:0) "if ("
-(1:2) "typeof process !== " --> (1:4) "\"object\" !== "
-(1:21) "'undefined' &&\n" --> (1:17) "\"undefined\" && "
-(2:2) "typeof process.env === " --> (1:32) "\"object\" === "
-(2:25) "'object' &&\n" --> (1:45) "\"object\" && "
-(3:2) "process.env.NODE_ENV === " --> (1:57) "\"production\" === "
-(3:27) "'production'\n" --> (1:74) "\"production\") "
-(4:2) "{\n" --> (1:88) "{\n"
-(5:2) "console." --> (2:0) "\tconsole."
-(5:10) "log(" --> (2:9) "log("
-(5:14) "'production')" --> (2:13) "\"production\")"
-(5:27) ";\n" --> (2:26) ";\n"
+(5:2) "console." --> (0:0) "console."
+(5:10) "log(" --> (0:8) "log("
+(5:14) "'production')" --> (0:12) "\"production\")"
+(5:27) ";\n" --> (0:25) ";\n"
 ```

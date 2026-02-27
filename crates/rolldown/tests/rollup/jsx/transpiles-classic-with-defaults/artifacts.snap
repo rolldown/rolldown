@@ -17,6 +17,6 @@ console.log(/* @__PURE__ */ React.createElement(Foo, {
 	...obj,
 	key: "1"
 }));
-
 //#endregion
+
 ```

@@ -6,24 +6,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-export * from "ext-index"
-
-export * from "ext-file"
-
-export * from "ext-folder"
-
-// HIDDEN [\0rolldown/runtime.js]
+export * from "ext-index";
+export * from "ext-file";
+export * from "ext-folder";
+Object.defineProperty;
+Object.getOwnPropertyDescriptor;
+Object.getOwnPropertyNames;
+Object.prototype.hasOwnProperty;
+//#endregion
 //#region file.js
 const file = {};
-
 //#endregion
 //#region folder.js
 const folder = {};
-
 //#endregion
 //#region main.js
 const index = {};
-
 //#endregion
 export { file, folder, index };
+
 ```

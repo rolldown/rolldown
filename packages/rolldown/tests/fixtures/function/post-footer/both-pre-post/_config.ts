@@ -9,6 +9,7 @@ const postFooter = () => postFooterTxt;
 export default defineTest({
   config: {
     output: {
+      minify: false,
       footer,
       postFooter,
     },

@@ -12,29 +12,22 @@ var foo_exports = /* @__PURE__ */ __exportAll({
 	foo: () => "foo",
 	named: () => "foo"
 });
-const foo_hot = __rolldown_runtime__.createModuleHotContext("sub/foo.js");
+__rolldown_runtime__.createModuleHotContext("sub/foo.js");
 __rolldown_runtime__.registerModule("sub/foo.js", { exports: foo_exports });
-const foo = "foo";
-const named$2 = "foo";
-
 //#endregion
 //#region sub/bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({
 	bar: () => "bar",
 	named: () => "bar"
 });
-const bar_hot = __rolldown_runtime__.createModuleHotContext("sub/bar.js");
+__rolldown_runtime__.createModuleHotContext("sub/bar.js");
 __rolldown_runtime__.registerModule("sub/bar.js", { exports: bar_exports });
-const bar = "bar";
-const named$1 = "bar";
-
 //#endregion
 //#region sub/named.js
 var named_exports = /* @__PURE__ */ __exportAll({ named: () => named });
-const named_hot = __rolldown_runtime__.createModuleHotContext("sub/named.js");
+__rolldown_runtime__.createModuleHotContext("sub/named.js");
 __rolldown_runtime__.registerModule("sub/named.js", { exports: named_exports });
 const named = "named";
-
 //#endregion
 //#region sub/index.js
 var sub_exports = /* @__PURE__ */ __exportAll({
@@ -42,9 +35,8 @@ var sub_exports = /* @__PURE__ */ __exportAll({
 	foo: () => "foo",
 	named: () => named
 });
-const sub_hot = __rolldown_runtime__.createModuleHotContext("sub/index.js");
+__rolldown_runtime__.createModuleHotContext("sub/index.js");
 __rolldown_runtime__.registerModule("sub/index.js", { exports: sub_exports });
-
 //#endregion
 //#region hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({});
@@ -52,18 +44,17 @@ const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 console.log("foo", "bar");
 hmr_hot.accept();
-
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 text(".app", "hello");
 function text(el, text) {
 	console.log(el, text);
 }
-
 //#endregion
+
 ```
 
 # HMR Step 0

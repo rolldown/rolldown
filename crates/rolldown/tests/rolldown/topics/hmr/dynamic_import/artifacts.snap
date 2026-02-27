@@ -7,14 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __commonJSMin } from "./main.js";
-
 //#region exist-dep-cjs.js
 var require_exist_dep_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const exist_dep_cjs_hot = __rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
+	__rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
 	__rolldown_runtime__.registerModule("exist-dep-cjs.js", module);
 	exports.value = "exist-cjs";
 }));
-
 //#endregion
 export default require_exist_dep_cjs();
 
@@ -24,15 +22,14 @@ export default require_exist_dep_cjs();
 
 ```js
 import { n as __exportAll } from "./main.js";
-
 //#region exist-dep-esm.js
 var exist_dep_esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
-const exist_dep_esm_hot = __rolldown_runtime__.createModuleHotContext("exist-dep-esm.js");
+__rolldown_runtime__.createModuleHotContext("exist-dep-esm.js");
 __rolldown_runtime__.registerModule("exist-dep-esm.js", { exports: exist_dep_esm_exports });
 const value = "exist-esm";
-
 //#endregion
 export { value };
+
 ```
 
 ## main.js
@@ -48,19 +45,16 @@ async function foo() {
 	await import("./exist-dep-esm.js").then(console.log);
 }
 hmr_hot.accept((mod) => {
-	if (mod) {
-		console.log(".hmr", mod.foo);
-	}
+	if (mod) console.log(".hmr", mod.foo);
 });
-
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-
 //#endregion
 export { __exportAll as n, __commonJSMin as t };
+
 ```
 
 # HMR Step 0

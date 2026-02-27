@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region main.js
 const __proto__ = 123;
-
 //#endregion
 export { __proto__ };
+
 ```
 
 # Variant: cjs: [entry_filenames: "main.cjs"] [format: Cjs]
@@ -20,16 +20,13 @@ export { __proto__ };
 ### main.cjs
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-//#region main.js
-const __proto__ = 123;
-
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 //#endregion
-Object.defineProperty(exports, '__proto__', {
-  enumerable: true,
-  value: __proto__
+Object.defineProperty(exports, "__proto__", {
+	enumerable: true,
+	value: 123
 });
+
 ```
 
 # Variant: iife: [entry_filenames: "main.cjs"] [format: Iife]
@@ -40,20 +37,16 @@ Object.defineProperty(exports, '__proto__', {
 
 ```js
 var bundle = (function(exports) {
-
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-//#region main.js
-	const __proto__ = 123;
-
-//#endregion
-Object.defineProperty(exports, '__proto__', {
-  enumerable: true,
-  value: __proto__
-});
-return exports;
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	//#endregion
+	Object.defineProperty(exports, "__proto__", {
+		enumerable: true,
+		value: 123
+	});
+	return exports;
 })({});
 globalThis.bundle = bundle;
+
 ```
 
 # Variant: umd: [entry_filenames: "main.cjs"] [format: Umd]
@@ -64,19 +57,14 @@ globalThis.bundle = bundle;
 
 ```js
 (function(global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
-  typeof define === 'function' && define.amd ? define(['exports'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.bundle = {})));
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.bundle = {}));
 })(this, function(exports) {
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-//#region main.js
-	const __proto__ = 123;
-
-//#endregion
-Object.defineProperty(exports, '__proto__', {
-  enumerable: true,
-  value: __proto__
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	//#endregion
+	Object.defineProperty(exports, "__proto__", {
+		enumerable: true,
+		value: 123
+	});
 });
-});
+
 ```

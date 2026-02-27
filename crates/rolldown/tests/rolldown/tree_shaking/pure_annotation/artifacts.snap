@@ -8,16 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region c.js
 function test() {}
-const c = test();
-
+test();
 //#endregion
 //#region d.js
 function test2() {}
-const e = test2();
-
+test2();
 //#endregion
 //#region main.js
 console.log(`a: `, 100);
-
 //#endregion
+
 ```

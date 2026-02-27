@@ -41,35 +41,32 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## cjs-in-esm.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 //#region cjs-in-esm.js
 let foo = 1;
 exports.foo = 2;
 module.exports = 3;
-
 //#endregion
 exports.foo = foo;
+
 ```
 
 ## import-in-cjs.js
 
 ```js
 let bar = require("bar");
-
 //#region import-in-cjs.js
 exports.foo = bar.foo;
 module.exports = bar.foo;
-
 //#endregion
+
 ```
 
 ## no-warnings-here.js
 
 ```js
-
 //#region no-warnings-here.js
 console.log(module, exports);
-
 //#endregion
+
 ```

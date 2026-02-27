@@ -20,7 +20,6 @@ export * as fromB from "./b";
 ### rolldown
 ```js
 import { n as b_exports } from "./b2.js";
-
 //#region a.js
 var a_default = 123;
 var varName = 234;
@@ -30,9 +29,9 @@ function Func2() {}
 var Class2 = class {};
 function Func() {}
 var Class = class {};
-
 //#endregion
 export { Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_default as default, b_exports as fromB, letName, varName };
+
 ```
 ### diff
 ```diff
@@ -72,8 +71,8 @@ export default function() {
 ### rolldown
 ```js
 import { t as b_default } from "./b2.js";
-
 export { b_default as default };
+
 ```
 ### diff
 ```diff
@@ -96,9 +95,9 @@ export default function o() {
 ```js
 //#region c.js
 function foo() {}
-
 //#endregion
 export { foo as default };
+
 ```
 ### diff
 ```diff
@@ -121,9 +120,9 @@ export default class {
 ```js
 //#region d.js
 var d_default = class {};
-
 //#endregion
 export { d_default as default };
+
 ```
 ### diff
 ```diff
@@ -146,9 +145,9 @@ export default class o {
 ```js
 //#region e.js
 var Foo = class {};
-
 //#endregion
 export { Foo as default };
+
 ```
 ### diff
 ```diff

@@ -28,10 +28,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.js
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", {});
-console.log("main.js");
 
-//#endregion
 ```

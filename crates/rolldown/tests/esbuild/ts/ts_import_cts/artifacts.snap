@@ -7,14 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region required.cjs
-var require_required = /* @__PURE__ */ __commonJSMin((() => {
-	console.log("works");
-}));
-
-//#endregion
 //#region entry.ts
-require_required();
-
+(/* @__PURE__ */ __commonJSMin((() => {
+	console.log("works");
+})))();
 //#endregion
+
 ```

@@ -7,7 +7,6 @@ var _rolldown_dynamic_import_helper_default = (glob, path, segments) => {
 		(typeof queueMicrotask === "function" ? queueMicrotask : setTimeout)(reject.bind(null, /* @__PURE__ */ new Error("Unknown variable dynamic import: " + path + (path.split("/").length !== segments ? ". Note that variables only represent file names one level deep." : ""))));
 	});
 };
-
 //#endregion
 //#region main.js
 function basic(base) {
@@ -58,6 +57,5 @@ function withParentDirAndItself(name) {
 function withMultiParentDirAndItself(name) {
 	return _rolldown_dynamic_import_helper_default(import.meta.glob("../../plugins/dynamicImportVar/*.js"), `../../plugins/dynamicImportVar/${name}.js`, 5);
 }
-
 //#endregion
 export { aliasPath, aliasPathWithMultiParentDir, basic, wildcardInUrl, wildcardInVariables, wildcardInWorker, withMultiParentDirAndItself, withParentDirAndItself, withQuery, withQueryRaw, withQueryUrl };

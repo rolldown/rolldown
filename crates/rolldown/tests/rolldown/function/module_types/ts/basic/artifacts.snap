@@ -11,7 +11,7 @@ const A = "hello";
 const B = function() {
 	console.log(A);
 };
-
 //#endregion
 export { A, B };
+
 ```

@@ -74,9 +74,10 @@ impl RawCompressOptions {
   }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum RawMinifyOptions {
   Bool(bool),
+  #[default]
   DeadCodeEliminationOnly,
   Object(RawMinifyOptionsDetailed),
 }
@@ -146,12 +147,6 @@ impl RawMinifyOptions {
       }
     }
     //
-  }
-}
-
-impl Default for RawMinifyOptions {
-  fn default() -> Self {
-    RawMinifyOptions::Bool(false)
   }
 }
 

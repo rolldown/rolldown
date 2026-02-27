@@ -6,12 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region export.js
-var export_default = { foo: 1 };
-
 //#endregion
 //#region main.js
-export_default.foo;
-
+({ foo: 1 }).foo;
 //#endregion
+
 ```

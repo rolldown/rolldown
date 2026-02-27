@@ -23,14 +23,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region child.js
 var child_exports = /* @__PURE__ */ __exportAll({ foo: () => 0 });
-const child_hot = __rolldown_runtime__.createModuleHotContext("child.js");
+__rolldown_runtime__.createModuleHotContext("child.js");
 __rolldown_runtime__.registerModule("child.js", { exports: child_exports });
-const foo = 0;
-
 //#endregion
 //#region parent.js
 var parent_exports = /* @__PURE__ */ __exportAll({});
@@ -43,15 +40,14 @@ process.on("beforeExit", (code) => {
 	if (code !== 0) return;
 	assert(!globalThis.oldAcceptWasCalled);
 });
-
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 main_hot.accept("parent.js", () => {});
-
 //#endregion
+
 ```
 
 # HMR Step 0

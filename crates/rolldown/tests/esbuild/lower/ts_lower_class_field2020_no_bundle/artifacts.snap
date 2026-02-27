@@ -19,6 +19,6 @@ var Foo = class {
 	}
 };
 Foo.s_foo = 123;
-
 //#endregion
+
 ```

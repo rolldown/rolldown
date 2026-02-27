@@ -11,25 +11,24 @@ const foo = "foo";
 let bar = "";
 bar = "bar";
 var lib_default = "default";
-
 //#endregion
 export { bar, lib_default as default, foo };
+
 ```
 
 ## main.js
 
 ```js
 import assert from "assert";
-
 //#region main.js
 import("./lib.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
 	foo: "foo",
 	bar: "bar",
 	default: "default"
 }));
-
 //#endregion
-export {  };
+export {};
+
 ```
 
 # Variant: [format: Cjs]
@@ -39,22 +38,21 @@ export {  };
 ### lib.js
 
 ```js
-
 //#region lib.js
 const foo = "foo";
 let bar = "";
 bar = "bar";
 var lib_default = "default";
-
 //#endregion
-Object.defineProperty(exports, 'bar', {
-  enumerable: true,
-  get: function () {
-    return bar;
-  }
+Object.defineProperty(exports, "bar", {
+	enumerable: true,
+	get: function() {
+		return bar;
+	}
 });
 exports.default = lib_default;
 exports.foo = foo;
+
 ```
 
 ### main.js
@@ -63,13 +61,12 @@ exports.foo = foo;
 // HIDDEN [\0rolldown/runtime.js]
 let assert = require("assert");
 assert = __toESM(assert);
-
 //#region main.js
 Promise.resolve().then(() => require("./lib.js")).then((exports) => assert.default.deepStrictEqual({ ...exports }, {
 	foo: "foo",
 	bar: "bar",
 	default: "default"
 }));
-
 //#endregion
+
 ```

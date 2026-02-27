@@ -22,6 +22,6 @@ __decorate([dec(3)], Foo, "prop3", null);
 __decorate([dec(4)], Foo, "prop4_", null);
 __decorate([dec(5)], Foo, "prop5", null);
 __decorate([dec(6)], Foo, "prop6_", null);
-
 //#endregion
+
 ```

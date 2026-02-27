@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region dynamic.js
 console.log(`shared: `, 100);
-
 //#endregion
+
 ```
 
 ## main.js
@@ -19,9 +19,9 @@ console.log(`shared: `, 100);
 import("./dynamic.js");
 console.log(`shared: `, 100);
 const unused = 100;
-
 //#endregion
 export { unused };
+
 ```
 
 # Variant: [preserve_entry_signatures: Strict]
@@ -33,8 +33,8 @@ export { unused };
 ```js
 //#region dynamic.js
 console.log(`shared: `, 100);
-
 //#endregion
+
 ```
 
 ### main.js
@@ -44,9 +44,9 @@ console.log(`shared: `, 100);
 import("./dynamic.js");
 console.log(`shared: `, 100);
 const unused = 100;
-
 //#endregion
 export { unused };
+
 ```
 
 # Variant: [preserve_entry_signatures: False]
@@ -58,8 +58,8 @@ export { unused };
 ```js
 //#region dynamic.js
 console.log(`shared: `, 100);
-
 //#endregion
+
 ```
 
 ### main.js
@@ -68,6 +68,6 @@ console.log(`shared: `, 100);
 //#region main.js
 import("./dynamic.js");
 console.log(`shared: `, 100);
-
 //#endregion
+
 ```

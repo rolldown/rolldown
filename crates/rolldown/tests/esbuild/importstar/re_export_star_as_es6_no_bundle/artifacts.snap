@@ -22,6 +22,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import * as out from "foo";
-
 export { out };
+
 ```

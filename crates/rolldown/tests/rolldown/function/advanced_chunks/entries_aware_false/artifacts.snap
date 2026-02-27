@@ -33,14 +33,12 @@ import "./vendor.js";
 //! ManualCodeSplitting: [Group-Name: vendor]
 //#region shared-by-abc.js
 console.log("shared-by-abc");
-
 //#endregion
 //#region shared-by-ab.js
 console.log("shared-by-ab");
-
 //#endregion
 //#region shared-by-a.js
 console.log("shared-by-a");
-
 //#endregion
+
 ```

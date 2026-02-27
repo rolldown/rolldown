@@ -9,24 +9,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region common.js
 var common_exports = /* @__PURE__ */ __exportAll({ prefix: () => prefix });
-const common_hot = __rolldown_runtime__.createModuleHotContext("common.js");
+__rolldown_runtime__.createModuleHotContext("common.js");
 __rolldown_runtime__.registerModule("common.js", { exports: common_exports });
 const prefix = "prefix:";
-
 //#endregion
 //#region foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
-const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
+__rolldown_runtime__.createModuleHotContext("foo.js");
 __rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
 const foo = prefix + "foo";
-
 //#endregion
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
-const bar_hot = __rolldown_runtime__.createModuleHotContext("bar.js");
+__rolldown_runtime__.createModuleHotContext("bar.js");
 __rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
 const bar = prefix + "bar";
-
 //#endregion
 //#region messenger.js
 var messenger_exports = /* @__PURE__ */ __exportAll({
@@ -45,21 +42,18 @@ let msg = [
 function sayMessage() {
 	console.log(msg);
 }
-if (messenger_hot) {
-	messenger_hot.accept((mod) => {
-		console.log("replaced with new msg: ", mod.msg);
-		msg = mod.msg;
-	});
-}
-
+if (messenger_hot) messenger_hot.accept((mod) => {
+	console.log("replaced with new msg: ", mod.msg);
+	msg = mod.msg;
+});
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 sayMessage();
-
 //#endregion
+
 ```
 
 # HMR Step 0

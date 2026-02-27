@@ -10,8 +10,8 @@ keepThisButRemoveTheIIFE;
 var someVar;
 ((x) => {})(someVar);
 stuff();
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -78,8 +78,8 @@ use(isNotPure);
 		notPure();
 	} };
 })();
-
 //#endregion
+
 ```
 ### diff
 ```diff

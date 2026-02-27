@@ -6,29 +6,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## cube.js
 
 ```js
-let preact = require("preact");
+require("preact");
 
 ```
 
 ## lib.js
 
 ```js
-require('./cube.js');
-let preact = require("preact");
+require("./cube.js");
+require("preact");
 
 ```
 
 ## main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-require('./lib.js');
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+require("./lib.js");
 let preact = require("preact");
-
-Object.defineProperty(exports, 'createContext', {
-  enumerable: true,
-  get: function () {
-    return preact.createContext;
-  }
+Object.defineProperty(exports, "createContext", {
+	enumerable: true,
+	get: function() {
+		return preact.createContext;
+	}
 });
+
 ```

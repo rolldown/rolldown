@@ -12,14 +12,9 @@ function test(a) {
 	return a + "-test";
 }
 console.log(a$1);
-
-//#endregion
-//#region other.js
-const a = "from-other";
-
 //#endregion
 //#region main.js
-console.log(a, test("x"));
-
+console.log("from-other", test("x"));
 //#endregion
+
 ```

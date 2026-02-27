@@ -8,31 +8,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region internal.js
 const internal = "internal";
-
 //#endregion
 export { internal as t };
+
 ```
 
 ## main.js
 
 ```js
 import { t as internal } from "./internal.js";
-
 //#region main.js
 const main = internal;
-
 //#endregion
 export { main };
+
 ```
 
 ## main2.js
 
 ```js
 import { t as internal } from "./internal.js";
-
 //#region main2.js
 const main2 = internal;
-
 //#endregion
 export { main2 };
+
 ```

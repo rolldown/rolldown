@@ -13,23 +13,17 @@ var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.sideEffect = {};
 	module.exports = sideEffect;
 }));
-
 //#endregion
 //#region dep-b.js
 var init_dep_b = __esmMin((() => {
 	sideEffect.touched = true;
 }));
-
 //#endregion
-//#region main.js
-var import_dep_a;
-var init_main = __esmMin((() => {
-	import_dep_a = require_dep_a();
+__esmMin((() => {
+	require_dep_a();
 	init_dep_b();
-}));
+}))();
 
-//#endregion
-init_main();
 ```
 
 # Variant: [on_demand_wrapping: true]
@@ -46,20 +40,13 @@ var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.sideEffect = {};
 	module.exports = sideEffect;
 }));
-
-//#endregion
-
-var import_dep_a;
-var init_main = __esmMin((() => {
-//#region dep-b.js
+__esmMin((() => {
+	//#region dep-b.js
 	sideEffect.touched = true;
+	//#endregion
+	//#region main.js
+	require_dep_a();
+	//#endregion
+}))();
 
-//#endregion
-//#region main.js
-	import_dep_a = require_dep_a();
-
-//#endregion
-}));
-
-init_main();
 ```

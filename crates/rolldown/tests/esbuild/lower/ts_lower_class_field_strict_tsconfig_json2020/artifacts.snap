@@ -8,7 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region loose/index.ts
 var loose_default = class {};
-
 //#endregion
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
@@ -20,10 +19,9 @@ var strict_default = class {
 		_defineProperty(this, "foo", void 0);
 	}
 };
-
 //#endregion
 //#region entry.js
 console.log(loose_default, strict_default);
-
 //#endregion
+
 ```

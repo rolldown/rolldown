@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region dep1.js
 var dep1_default = () => import("./dep2.js");
-
 //#endregion
 export { dep1_default as default };
+
 ```
 
 ## dep2.js
@@ -18,9 +18,9 @@ export { dep1_default as default };
 ```js
 //#region dep2.js
 var dep2_default = "dep2";
-
 //#endregion
 export { dep2_default as default };
+
 ```
 
 ## main.js
@@ -28,7 +28,7 @@ export { dep2_default as default };
 ```js
 //#region main.js
 var main_default = () => import("./dep1.js");
-
 //#endregion
 export { main_default as default };
+
 ```

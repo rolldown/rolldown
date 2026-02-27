@@ -9,9 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region imp.js
 const imp = 1;
 const imp2 = 2;
-
 //#endregion
 export { imp, imp2 };
+
 ```
 
 ## main.js
@@ -23,6 +23,6 @@ const load = async () => {
 	console.log(result.imp);
 };
 load();
-
 //#endregion
+
 ```

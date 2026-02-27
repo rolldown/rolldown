@@ -8,7 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region lib.js
 const Client = [];
-
 //#endregion
 //#region main.js
 const Config = (Client) => {
@@ -16,6 +15,6 @@ const Config = (Client) => {
 };
 console.log(`Client: `, Client);
 Config();
-
 //#endregion
+
 ```

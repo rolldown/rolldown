@@ -7,26 +7,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region commonjs.js
 var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = 1;
 }));
-
 //#endregion
 //#region commonjs2.js
 var require_commonjs2 = /* @__PURE__ */ __commonJSMin(((exports) => {}));
-
 //#endregion
 //#region proxy.js
 var proxy_exports = /* @__PURE__ */ __exportAll({});
 __reExport(proxy_exports, /* @__PURE__ */ __toESM(require_commonjs()));
 __reExport(proxy_exports, /* @__PURE__ */ __toESM(require_commonjs2()));
-
 //#endregion
 //#region main.js
 assert.equal(proxy_exports.a, 1);
-
 //#endregion
+
 ```

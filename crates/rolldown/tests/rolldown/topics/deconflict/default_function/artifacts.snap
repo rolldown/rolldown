@@ -7,24 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-
 //#region foo.js
 const a$2 = 1;
 function foo$1(a$1) {
 	console.log(a$1, a$2);
 }
-
-//#endregion
-//#region bar.js
-var bar_default = { foo: foo$1 };
-
-//#endregion
-//#region main.js
-const a = 2;
-const { foo } = bar_default;
+const { foo } = { foo: foo$1 };
 assert.strictEqual(typeof foo, "function");
-
 //#endregion
+
 //# sourceMappingURL=main.js.map
 ```
 
@@ -32,35 +23,32 @@ assert.strictEqual(typeof foo, "function");
 
 ```
 - ../foo.js
-(0:0) "const " --> (3:0) "const "
-(0:6) "a = " --> (3:6) "a$2 = "
-(0:10) "1;\n" --> (3:12) "1;\n"
-(2:0) "export default function " --> (4:0) "function "
-(2:24) "foo(" --> (4:9) "foo$1("
-(2:28) "a$1) " --> (4:15) "a$1) "
-(2:33) "{\n" --> (4:20) "{\n"
-(3:2) "console." --> (5:0) "\tconsole."
-(3:10) "log(" --> (5:9) "log("
-(3:14) "a$1, " --> (5:13) "a$1, "
-(3:19) "a)" --> (5:18) "a$2)"
-(3:21) ";\n" --> (5:22) ";\n"
-- ../bar.js
-(2:0) "export default " --> (10:0) "var bar_default = "
-(2:15) "{ " --> (10:18) "{ "
-(2:17) "foo }" --> (10:20) "foo: foo$1 }"
-(2:22) ";\n" --> (10:32) ";\n"
+(0:0) "const " --> (2:0) "const "
+(0:6) "a = " --> (2:6) "a$2 = "
+(0:10) "1;\n" --> (2:12) "1;\n"
+(2:0) "export default function " --> (3:0) "function "
+(2:24) "foo(" --> (3:9) "foo$1("
+(2:28) "a$1) " --> (3:15) "a$1) "
+(2:33) "{\n" --> (3:20) "{\n"
+(3:2) "console." --> (4:0) "\tconsole."
+(3:10) "log(" --> (4:9) "log("
+(3:14) "a$1, " --> (4:13) "a$1, "
+(3:19) "a)" --> (4:18) "a$2)"
+(3:21) ";\n" --> (4:22) ";\n"
 - ../main.js
-(3:0) "const " --> (14:0) "const "
-(3:6) "a = " --> (14:6) "a = "
-(3:10) "2; // make foo `a` conflict\n" --> (14:10) "2;\n"
-(5:0) "const " --> (15:0) "const "
-(5:6) "{ " --> (15:6) "{ "
-(5:8) "foo } = " --> (15:8) "foo } = "
-(5:16) "bar;\n" --> (15:16) "bar_default;\n"
-(7:0) "assert." --> (16:0) "assert."
-(7:7) "strictEqual(" --> (16:7) "strictEqual("
-(7:19) "typeof " --> (16:19) "typeof "
-(7:26) "foo, " --> (16:26) "foo, "
-(7:31) "'function')" --> (16:31) "\"function\")"
-(7:42) ";\n" --> (16:42) ";\n"
+(5:0) "const " --> (6:0) "const "
+(5:6) "{ " --> (6:6) "{ "
+(5:8) "foo } = bar;\n" --> (6:8) "foo } = "
+- ../bar.js
+(2:15) "{ " --> (6:16) "{ "
+(2:17) "foo }" --> (6:18) "foo: "
+(2:17) "foo }" --> (6:23) "foo$1 }"
+(2:22) ";\n" --> (6:30) ";\n"
+- ../main.js
+(7:0) "assert." --> (7:0) "assert."
+(7:7) "strictEqual(" --> (7:7) "strictEqual("
+(7:19) "typeof " --> (7:19) "typeof "
+(7:26) "foo, " --> (7:26) "foo, "
+(7:31) "'function')" --> (7:31) "\"function\")"
+(7:42) ";\n" --> (7:42) ";\n"
 ```

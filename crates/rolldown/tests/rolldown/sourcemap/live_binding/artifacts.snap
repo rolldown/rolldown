@@ -6,43 +6,41 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main1.js
 
 ```js
-const require_shared = require('./shared.js');
-
+const require_shared = require("./shared.js");
 //#region main1.js
 function main() {
 	require_shared.shared();
 }
 main();
-
 //#endregion
+
 //# sourceMappingURL=main1.js.map
 ```
 
 ## main2.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-const require_shared = require('./shared.js');
-
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_shared = require("./shared.js");
 exports.shared = require_shared.shared;
+
 ```
 
 ## shared.js
 
 ```js
-
 //#region shared.js
 function shared() {
 	console.trace("shared");
 }
-
 //#endregion
-Object.defineProperty(exports, 'shared', {
-  enumerable: true,
-  get: function () {
-    return shared;
-  }
+Object.defineProperty(exports, "shared", {
+	enumerable: true,
+	get: function() {
+		return shared;
+	}
 });
+
 //# sourceMappingURL=shared.js.map
 ```
 
@@ -50,20 +48,21 @@ Object.defineProperty(exports, 'shared', {
 
 ```
 - ../main1.js
-(2:0) "function " --> (3:0) "function "
-(2:9) "main() " --> (3:9) "main() "
-(2:16) "{\n" --> (3:16) "{\n"
-(3:2) "shared()" --> (4:0) "\trequire_shared.shared()"
-(3:10) ";\n" --> (4:24) ";\n"
-(6:0) "main()" --> (6:0) "main()"
-(6:6) ";\n" --> (6:6) ";\n"
+(2:0) "function " --> (2:0) "function "
+(2:9) "main() " --> (2:9) "main() "
+(2:16) "{\n" --> (2:16) "{\n"
+(3:2) "shared()" --> (3:0) "\trequire_shared."
+(3:2) "shared()" --> (3:16) "shared()"
+(3:10) ";\n" --> (3:24) ";\n"
+(6:0) "main()" --> (5:0) "main()"
+(6:6) ";\n" --> (5:6) ";\n"
 
 - ../shared.js
-(0:0) "export function " --> (2:0) "function "
-(0:16) "shared() " --> (2:9) "shared() "
-(0:25) "{\n" --> (2:18) "{\n"
-(1:2) "console." --> (3:0) "\tconsole."
-(1:10) "trace(" --> (3:9) "trace("
-(1:16) "'shared')" --> (3:15) "\"shared\")"
-(1:25) ";\n" --> (3:24) ";\n"
+(0:0) "export function " --> (1:0) "function "
+(0:16) "shared() " --> (1:9) "shared() "
+(0:25) "{\n" --> (1:18) "{\n"
+(1:2) "console." --> (2:0) "\tconsole."
+(1:10) "trace(" --> (2:9) "trace("
+(1:16) "'shared')" --> (2:15) "\"shared\")"
+(1:25) ";\n" --> (2:24) ";\n"
 ```

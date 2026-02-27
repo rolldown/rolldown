@@ -7,11 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import nodeAssert from "node:assert";
-
 //#region main.js
 nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
-
 //#endregion
+
 ```
 
 # Variant: [strict_execution_order: true]
@@ -22,13 +21,9 @@ nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should 
 
 ```js
 import nodeAssert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.js
-var init_main = __esmMin((() => {
+__esmMin((() => {
 	nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
-}));
+}))();
 
-//#endregion
-init_main();
 ```

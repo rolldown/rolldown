@@ -7,13 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as __commonJSMin } from "./chunk.js";
-
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var foo = { bar: 123 };
-	module.exports = foo;
+	module.exports = { bar: 123 };
 }));
-
 //#endregion
 export default require_a();
 
@@ -23,13 +20,10 @@ export default require_a();
 
 ```js
 import { t as __commonJSMin } from "./chunk.js";
-
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var exports = { bar: 123 };
-	module.exports = exports;
+	module.exports = { bar: 123 };
 }));
-
 //#endregion
 export default require_b();
 
@@ -39,13 +33,10 @@ export default require_b();
 
 ```js
 import { t as __commonJSMin } from "./chunk.js";
-
 //#region c.js
 var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
-	var module = { bar: 123 };
-	exports.foo = module;
+	exports.foo = { bar: 123 };
 }));
-
 //#endregion
 export default require_c();
 
@@ -56,4 +47,5 @@ export default require_c();
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 export { __commonJSMin as t };
+
 ```

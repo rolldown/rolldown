@@ -6,16 +6,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region foo.ts
-var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
+Object.create;
+Object.defineProperty;
+Object.getOwnPropertyDescriptor;
+Object.getOwnPropertyNames;
+Object.getPrototypeOf;
+Object.prototype.hasOwnProperty;
+var __commonJSMin = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
+(/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 123;
-}));
-
-//#endregion
-//#region entry.ts
-var import_foo = /* @__PURE__ */ __toESM(require_foo());
+})))();
 console.log(123, 123, 234);
-
 //#endregion
+
 ```

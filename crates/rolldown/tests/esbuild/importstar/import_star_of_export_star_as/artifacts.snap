@@ -7,16 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ bar: () => 123 });
-const bar = 123;
-
 //#endregion
 //#region foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ bar_ns: () => bar_exports });
-
 //#endregion
 //#region entry.js
 console.log(foo_exports);
@@ -27,6 +23,6 @@ assert.deepEqual(foo_exports, {
 		bar: 123
 	}
 });
-
 //#endregion
+
 ```

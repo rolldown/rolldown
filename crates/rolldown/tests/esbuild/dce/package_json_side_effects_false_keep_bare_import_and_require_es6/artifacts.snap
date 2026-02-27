@@ -6,19 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## src_entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region node_modules/demo-pkg/index.js
-var demo_pkg_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
-var foo;
-var init_demo_pkg = __esmMin((() => {
-	foo = 123;
-	console.log("hello");
-}));
-
+Object.defineProperty;
+var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
 //#endregion
 //#region src/entry.js
-init_demo_pkg();
+__esmMin((() => {
+	console.log("hello");
+}))();
 console.log("unused import");
-
 //#endregion
+
 ```

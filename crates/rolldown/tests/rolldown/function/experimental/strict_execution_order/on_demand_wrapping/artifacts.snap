@@ -12,11 +12,10 @@ var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e3;
 	globalThis.a = 1e3;
 }));
-
 //#endregion
 export default require_dynamic();
-
 export { __esmMin as n, require_dynamic as t };
+
 ```
 
 ## main.js
@@ -24,28 +23,22 @@ export { __esmMin as n, require_dynamic as t };
 ```js
 import { n as __esmMin, t as require_dynamic } from "./dynamic.js";
 import { strictEqual } from "node:assert";
-
 function foo() {
 	return 100;
 }
-
-var import_dynamic, a;
-var init_main = __esmMin((() => {
-//#region sideeffects.js
+var a;
+__esmMin((() => {
+	//#region sideeffects.js
 	globalThis.a = 2;
-
-//#endregion
-//#region esm.js
-	import_dynamic = require_dynamic();
+	//#endregion
+	//#region esm.js
+	require_dynamic();
 	a = globalThis.a;
 	strictEqual(a, 2);
-
-//#endregion
-//#region main.js
+	//#endregion
+	//#region main.js
 	console.log(`mod.foo: `, foo);
+	//#endregion
+}))();
 
-//#endregion
-}));
-
-init_main();
 ```

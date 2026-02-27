@@ -8,12 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region bar.jsx
 const Bar = () => <div>Bar</div>;
-
 //#endregion
 //#region foo.jsx
 const Foo = () => <div>Foo</div>;
 var Foo_default = () => Foo();
-
 //#endregion
 //#region main.jsx
 console.log(<>
@@ -21,6 +19,6 @@ console.log(<>
     <Foo />
     <Foo_default />
   </>);
-
 //#endregion
+
 ```

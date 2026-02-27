@@ -7,9 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-
-//#region a.js
-const conflict$2 = 1;
 function getA(x) {
 	let conflict$1 = x + 1;
 	function inner() {
@@ -17,20 +14,15 @@ function getA(x) {
 	}
 	return 1 + inner() - x;
 }
-
-//#endregion
-//#region b.js
-const conflict = 3;
 function getB() {
 	return 3;
 }
-
 //#endregion
 //#region main.js
 assert.equal(1, 1);
 assert.equal(3, 3);
 assert.equal(getA(1), 2);
 assert.equal(getB(), 3);
-
 //#endregion
+
 ```

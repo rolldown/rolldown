@@ -22,12 +22,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ x: () => 123 });
-const x = 123;
-
 //#endregion
 //#region entry.js
 assert.deepEqual(bar_exports, {
@@ -35,6 +32,6 @@ assert.deepEqual(bar_exports, {
 	x: 123
 });
 assert.equal(void 0, void 0);
-
 //#endregion
+
 ```

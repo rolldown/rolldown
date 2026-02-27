@@ -19,7 +19,6 @@ const someObject = {
 	e: 5,
 	nested: { deep: "value" }
 };
-
 //#endregion
 //#region main.js
 function test() {
@@ -36,7 +35,7 @@ const { e } = (() => {
 	return someObject;
 })();
 var main_default = {};
-
 //#endregion
 export { main_default as default };
+
 ```

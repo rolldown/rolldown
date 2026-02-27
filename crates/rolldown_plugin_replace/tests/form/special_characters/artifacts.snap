@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region input.js
 console.log(1);
-
 //#endregion
+
 //# sourceMappingURL=input.js.map
 ```
 

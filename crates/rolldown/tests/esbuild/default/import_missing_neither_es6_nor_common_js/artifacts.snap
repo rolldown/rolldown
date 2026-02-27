@@ -48,11 +48,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { r as init_foo } from "./foo.js";
-
 //#region bare.js
 init_foo();
-
 //#endregion
+
 ```
 
 ## foo.js
@@ -68,9 +67,9 @@ var init_foo = __esmMin((() => {
 	x = void 0;
 	y = void 0;
 }));
-
 //#endregion
 export { y as a, x as i, foo_exports as n, __toCommonJS as o, init_foo as r, default$1 as t };
+
 ```
 
 ## import.js
@@ -78,53 +77,49 @@ export { y as a, x as i, foo_exports as n, __toCommonJS as o, init_foo as r, def
 ```js
 //#region import.js
 console.log(import("./foo.js").then((n) => (n.r(), n.n)));
-
 //#endregion
+
 ```
 
 ## named.js
 
 ```js
 import { a as y, i as x, r as init_foo, t as default$1 } from "./foo.js";
-
 //#region named.js
 init_foo();
 console.log(default$1(x, y));
-
 //#endregion
+
 ```
 
 ## require.js
 
 ```js
 import { n as foo_exports, o as __toCommonJS, r as init_foo } from "./foo.js";
-
 //#region require.js
 console.log((init_foo(), __toCommonJS(foo_exports)));
-
 //#endregion
+
 ```
 
 ## star-capture.js
 
 ```js
 import { n as foo_exports, r as init_foo } from "./foo.js";
-
 //#region star-capture.js
 init_foo();
 console.log(foo_exports);
-
 //#endregion
+
 ```
 
 ## star.js
 
 ```js
 import { r as init_foo } from "./foo.js";
-
 //#region star.js
 init_foo();
 console.log((void 0)(void 0, void 0));
-
 //#endregion
+
 ```

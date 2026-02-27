@@ -11,13 +11,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {};
 }));
-
 //#endregion
 //#region main.js
 require_cjs();
 require_cjs();
-
 //#endregion
+
 //# sourceMappingURL=main.js.map
 ```
 
@@ -25,8 +24,8 @@ require_cjs();
 
 ```
 - ../cjs.js
-(0:0) "module." --> (6:0) "\tmodule."
-(0:7) "exports = " --> (6:8) "exports = "
-(0:17) "{}" --> (6:18) "{}"
-(0:19) ";\n" --> (6:20) ";\n"
+(0:0) "module." --> (5:0) "\tmodule."
+(0:7) "exports = " --> (5:8) "exports = "
+(0:17) "{}" --> (5:18) "{}"
+(0:19) ";\n" --> (5:20) ";\n"
 ```

@@ -24,6 +24,6 @@ __decorate([dec(3)], Foo.prototype, null, void 0);
 __decorate([dec(4)], Foo.prototype, null, void 0);
 __decorate([dec(5)], Foo.prototype, null, void 0);
 __decorate([dec(6)], Foo.prototype, null, void 0);
-
 //#endregion
+
 ```

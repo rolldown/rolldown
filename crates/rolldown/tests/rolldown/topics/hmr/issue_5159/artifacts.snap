@@ -8,17 +8,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __exportAll } from "./main.js";
 import { t as trim } from "./string.js";
-
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ default: () => bar_default });
-const bar_hot = __rolldown_runtime__.createModuleHotContext("bar.js");
+__rolldown_runtime__.createModuleHotContext("bar.js");
 __rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
 function bar_default() {
 	return trim("Route Bar");
 }
-
 //#endregion
 export { bar_default as default };
+
 ```
 
 ## foo.js
@@ -26,55 +25,44 @@ export { bar_default as default };
 ```js
 import { t as __exportAll } from "./main.js";
 import { n as unused, t as trim } from "./string.js";
-
 //#region utils/index.js
 var utils_exports = /* @__PURE__ */ __exportAll({
 	trim: () => trim,
 	unused: () => unused
 });
-const utils_hot = __rolldown_runtime__.createModuleHotContext("utils/index.js");
+__rolldown_runtime__.createModuleHotContext("utils/index.js");
 __rolldown_runtime__.registerModule("utils/index.js", { exports: utils_exports });
-
 //#endregion
 //#region foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ default: () => foo_default });
-const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
+__rolldown_runtime__.createModuleHotContext("foo.js");
 __rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
 function foo_default() {
 	return trim("Route Foo");
 }
-
 //#endregion
 export { foo_default as default };
+
 ```
 
 ## main.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.js
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", {});
-const routes = {
-	foo: import("./foo.js"),
-	bar: import("./bar.js")
-};
-
-//#endregion
 export { __exportAll as t };
+
 ```
 
 ## string.js
 
 ```js
 import { t as __exportAll } from "./main.js";
-
 //#region utils/string.js
 var string_exports = /* @__PURE__ */ __exportAll({
 	trim: () => trim,
 	unused: () => unused
 });
-const string_hot = __rolldown_runtime__.createModuleHotContext("utils/string.js");
+__rolldown_runtime__.createModuleHotContext("utils/string.js");
 __rolldown_runtime__.registerModule("utils/string.js", { exports: string_exports });
 function trim(s) {
 	return s.trim();
@@ -82,7 +70,7 @@ function trim(s) {
 function unused() {
 	return "unused";
 }
-
 //#endregion
 export { unused as n, trim as t };
+
 ```

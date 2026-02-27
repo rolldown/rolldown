@@ -10,9 +10,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 const render = async () => {
 	return "render";
 };
-
 //#endregion
 export { render };
+
 ```
 
 ## main.js
@@ -20,7 +20,7 @@ export { render };
 ```js
 //#region main.js
 const foo = async () => await import("./dagre.js");
-
 //#endregion
 export { foo };
+
 ```

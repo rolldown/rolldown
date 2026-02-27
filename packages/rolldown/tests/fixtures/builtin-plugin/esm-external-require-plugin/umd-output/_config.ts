@@ -5,6 +5,7 @@ import { expect } from 'vitest';
 export default defineTest({
   config: {
     output: {
+      minify: false,
       format: 'umd',
     },
     plugins: [esmExternalRequirePlugin({ external: ['ext'] })],

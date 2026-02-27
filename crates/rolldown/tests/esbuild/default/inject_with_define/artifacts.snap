@@ -6,13 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region inject.js
-let second = "success (identifier)";
-let second2 = "success (dot name)";
-
 //#endregion
 //#region entry.js
-console.log(true, true, second === "success (identifier)", second2 === "success (dot name)");
-
+console.log(true, true, true, true);
 //#endregion
+
 ```

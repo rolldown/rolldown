@@ -7,28 +7,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-
 exports.__exportAll = __exportAll;
 exports.__reExport = __reExport;
+
 ```
 
 ## main.js
 
 ```js
-const require_runtime = require('./_virtual/_rolldown/runtime.js');
-require('./server.js');
-
-//#region main.js
-var main_exports = /* @__PURE__ */ require_runtime.__exportAll({});
-
+require("./_virtual/_rolldown/runtime.js");
+require("./server.js");
 //#endregion
-
 var external_lib = require("external-lib");
-Object.keys(external_lib).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return external_lib[k]; }
-  });
+Object.keys(external_lib).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return external_lib[k];
+		}
+	});
 });
 
 ```
@@ -36,15 +33,15 @@ Object.keys(external_lib).forEach(function (k) {
 ## server.js
 
 ```js
-const require_runtime = require('./_virtual/_rolldown/runtime.js');
-
-
+require("./_virtual/_rolldown/runtime.js");
 var external_lib = require("external-lib");
-Object.keys(external_lib).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return external_lib[k]; }
-  });
+Object.keys(external_lib).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return external_lib[k];
+		}
+	});
 });
 
 ```

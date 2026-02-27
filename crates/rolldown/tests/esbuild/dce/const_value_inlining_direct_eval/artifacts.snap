@@ -58,8 +58,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 	const x = 1;
 	console.log(x, eval("x"));
 })();
-
 //#endregion
+
 ```
 
 ## nested-no-eval.js
@@ -67,8 +67,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region nested-no-eval.js
 console.log(1, evil("x"));
-
 //#endregion
+
 ```
 
 ## top-level-eval.js
@@ -77,8 +77,8 @@ console.log(1, evil("x"));
 //#region top-level-eval.js
 const x = 1;
 console.log(x, eval("x"));
-
 //#endregion
+
 ```
 
 ## top-level-no-eval.js
@@ -86,8 +86,8 @@ console.log(x, eval("x"));
 ```js
 //#region top-level-no-eval.js
 console.log(1, evil("x"));
-
 //#endregion
+
 ```
 
 ## ts-namespace-eval.js
@@ -99,8 +99,8 @@ let z;
 	const x = _z.x = 1;
 	console.log(x, eval("x"));
 })(z || (z = {}));
-
 //#endregion
+
 ```
 
 ## ts-namespace-no-eval.js
@@ -112,6 +112,6 @@ let y;
 	const x = _y.x = 1;
 	console.log(x, evil("x"));
 })(y || (y = {}));
-
 //#endregion
+
 ```

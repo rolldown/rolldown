@@ -6,40 +6,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry_js.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({
-	a: () => "a",
-	b: () => "b",
-	c: () => "c",
-	d: () => "d",
-	e: () => "e",
-	f: () => "f",
-	g: () => "g",
-	h: () => "h",
-	i: () => "i",
-	j: () => "j"
-});
-var a, b, c, d, e, x, f, g, h, i, j;
-var init_foo = __esmMin((() => {
-	a = "a";
-	b = "b";
-	c = "c";
-	d = "d";
-	e = "e";
-	x = 1;
-	while (x--) f = "f";
-	do
-		g = "g";
-	while (0);
-	for (; x++;) h = "h";
-	for (var y in "y") i = "i";
-	for (var y of "y") j = "j";
-}));
-
+Object.defineProperty;
+var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res), x;
 //#endregion
 //#region entry.js
-init_foo();
-
+__esmMin((() => {
+	x = 1;
+	while (x--);
+	do	;
+while (0);
+	for (; x++;);
+	for (var y in "y");
+	for (var y of "y");
+}))();
 //#endregion
+
 ```

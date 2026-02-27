@@ -9,23 +9,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({ a: () => 100 });
-var a$1;
-var init_esm = __esmMin((() => {
-	a$1 = 100;
-}));
-
+var init_esm = __esmMin((() => {}));
 //#endregion
 //#region main.js
 init_esm();
-1, init_esm();
-var a = (1, init_esm(), __toCommonJS(esm_exports));
+init_esm();
+init_esm(), __toCommonJS(esm_exports);
 (init_esm(), __toCommonJS(esm_exports)).default;
-function foo() {
-	return init_esm(), __toCommonJS(esm_exports);
-}
-console.log((1, init_esm(), 1));
-console.log((1, init_esm(), __toCommonJS(esm_exports)));
-console.log((1, (init_esm(), __toCommonJS(esm_exports)) + 1, 200));
-
+console.log((init_esm(), 1));
+console.log((init_esm(), __toCommonJS(esm_exports)));
+console.log(((init_esm(), __toCommonJS(esm_exports)) + 1, 200));
 //#endregion
+
 ```

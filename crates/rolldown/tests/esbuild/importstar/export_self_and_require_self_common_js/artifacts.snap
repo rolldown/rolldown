@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-
 //#region entry.js
 var entry_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
 var foo;
@@ -16,8 +15,8 @@ var init_entry = __esmMin((() => {
 	foo = 123;
 	console.log((init_entry(), __toCommonJS(entry_exports)));
 }));
-
 //#endregion
 init_entry();
 exports.foo = foo;
+
 ```

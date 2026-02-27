@@ -12,14 +12,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import shallow from "../../deep/assets/root-DcToKNib.txt";
 import deep from "../../deep/assets/deep-DYZ8IeH_.txt";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region main.js
 const shallowReq = __require("../../deep/assets/root-DcToKNib.txt");
 const deepReq = __require("../../deep/assets/deep-DYZ8IeH_.txt");
 console.log(shallow, deep, shallowReq, deepReq);
-
 //#endregion
+
 //# sourceMappingURL=main.js.map
 ```
 
@@ -31,45 +30,20 @@ console.log(shallow, deep, shallowReq, deepReq);
 
 ```
 - ../../../main.js
-(2:0) "const " --> (11:5) " "
-(2:6) "shallowReq = require(" --> (11:6) "shallowReq"
-(2:6) "shallowReq = require(" --> (11:16) " "
-(2:6) "shallowReq = require(" --> (11:17) "="
-(2:6) "shallowReq = require(" --> (11:18) " "
-(2:6) "shallowReq = require(" --> (11:19) "__require"
-(2:6) "shallowReq = require(" --> (11:28) "("
-(2:27) "'./root.txt')" --> (11:29) "\""
-(2:27) "'./root.txt')" --> (11:30) "../../deep/assets/root-DcToKNib.txt"
-(2:27) "'./root.txt')" --> (11:65) "\""
-(2:27) "'./root.txt')" --> (11:66) ")"
-(2:40) ";\n" --> (11:67) ";\n"
-(3:0) "const " --> (12:0) "const"
-(3:0) "const " --> (12:5) " "
-(3:6) "deepReq = require(" --> (12:6) "deepReq"
-(3:6) "deepReq = require(" --> (12:13) " "
-(3:6) "deepReq = require(" --> (12:14) "="
-(3:6) "deepReq = require(" --> (12:15) " "
-(3:6) "deepReq = require(" --> (12:16) "__require"
-(3:6) "deepReq = require(" --> (12:25) "("
-(3:24) "'./a/b/c/deep.txt')" --> (12:26) "\""
-(3:24) "'./a/b/c/deep.txt')" --> (12:27) "../../deep/assets/deep-DYZ8IeH_.txt"
-(3:24) "'./a/b/c/deep.txt')" --> (12:62) "\""
-(3:24) "'./a/b/c/deep.txt')" --> (12:63) ")"
-(3:43) ";\n" --> (12:64) ";\n"
-(4:0) "console." --> (13:0) "console"
-(4:0) "console." --> (13:7) "."
-(4:8) "log(" --> (13:8) "log"
-(4:8) "log(" --> (13:11) "("
-(4:12) "shallow, " --> (13:12) "shallow"
-(4:12) "shallow, " --> (13:19) ","
-(4:12) "shallow, " --> (13:20) " "
-(4:21) "deep, " --> (13:21) "deep"
-(4:21) "deep, " --> (13:25) ","
-(4:21) "deep, " --> (13:26) " "
-(4:27) "shallowReq, " --> (13:27) "shallowReq"
-(4:27) "shallowReq, " --> (13:37) ","
-(4:27) "shallowReq, " --> (13:38) " "
-(4:39) "deepReq)" --> (13:39) "deepReq"
-(4:39) "deepReq)" --> (13:46) ")"
-(4:47) ";\n" --> (13:47) ";\n"
+(2:6) "shallowReq = require(" --> (9:6) "shallowReq = "
+(2:6) "shallowReq = require(" --> (9:19) "__require("
+(2:27) "'./root.txt')" --> (9:29) "\"../../deep/assets/root-DcToKNib.txt\")"
+(2:40) ";\n" --> (9:67) ";\n"
+(3:0) "const " --> (10:0) "const "
+(3:6) "deepReq = require(" --> (10:6) "deepReq = "
+(3:6) "deepReq = require(" --> (10:16) "__require("
+(3:24) "'./a/b/c/deep.txt')" --> (10:26) "\"../../deep/assets/deep-DYZ8IeH_.txt\")"
+(3:43) ";\n" --> (10:64) ";\n"
+(4:0) "console." --> (11:0) "console."
+(4:8) "log(" --> (11:8) "log("
+(4:12) "shallow, " --> (11:12) "shallow, "
+(4:21) "deep, " --> (11:21) "deep, "
+(4:27) "shallowReq, " --> (11:27) "shallowReq, "
+(4:39) "deepReq)" --> (11:39) "deepReq)"
+(4:47) ";\n" --> (11:47) ";\n"
 ```

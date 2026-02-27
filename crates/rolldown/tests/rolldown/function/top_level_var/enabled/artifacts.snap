@@ -21,6 +21,6 @@ function second_level() {
 	console.log(secondLevelLet, secondLevelVar, secondLevelConst, new SecondLevelClass());
 }
 second_level();
-
 //#endregion
+
 ```

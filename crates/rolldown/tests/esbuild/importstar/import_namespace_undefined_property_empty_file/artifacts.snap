@@ -63,31 +63,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region empty.cjs
 var require_empty = /* @__PURE__ */ __commonJSMin((() => {}));
-
 //#endregion
 export { __toESM as n, require_empty as t };
+
 ```
 
 ## entry-default.js
 
 ```js
 import { n as __toESM, t as require_empty } from "./empty.js";
-
 //#region entry-default.js
 var import_empty = /* @__PURE__ */ __toESM(require_empty());
 console.log(void 0, void 0, import_empty.default);
-
 //#endregion
+
 ```
 
 ## entry-nope.js
 
 ```js
 import { n as __toESM, t as require_empty } from "./empty.js";
-
 //#region entry-nope.js
 var import_empty = /* @__PURE__ */ __toESM(require_empty());
 console.log(void 0, void 0, import_empty.nope);
-
 //#endregion
+
 ```

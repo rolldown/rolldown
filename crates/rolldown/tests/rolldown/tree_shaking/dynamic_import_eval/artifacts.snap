@@ -26,9 +26,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region a.js
 const a = "a";
 const b = "b";
-
 //#endregion
 export { a, b };
+
 ```
 
 ## lib2.js
@@ -37,9 +37,9 @@ export { a, b };
 //#region b.js
 const c = "c";
 const d = "d";
-
 //#endregion
 export { c, d };
+
 ```
 
 ## main.js
@@ -49,6 +49,6 @@ export { c, d };
 const ns = await import("./lib.js");
 eval("ns.a");
 import("./lib2.js").then((res) => {});
-
 //#endregion
+
 ```

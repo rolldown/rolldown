@@ -16,17 +16,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { Fragment, jsx } from "react/jsx-runtime";
-
 // HIDDEN [\0rolldown/runtime.js]
-//#region custom-react.js
-var require_custom_react = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = {};
-}));
-
-//#endregion
 //#region entry.jsx
-var import_custom_react = require_custom_react();
+var import_custom_react = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {};
+})))();
 console.log(/* @__PURE__ */ jsx("div", { jsx: import_custom_react.jsx }), /* @__PURE__ */ jsx(Fragment, { children: /* @__PURE__ */ jsx(import_custom_react.Fragment, {}) }));
-
 //#endregion
+
 ```

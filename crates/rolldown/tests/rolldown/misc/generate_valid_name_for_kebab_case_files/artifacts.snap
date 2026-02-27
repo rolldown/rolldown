@@ -11,7 +11,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_react_dom = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "react-dom";
 }));
-
 //#endregion
 export default require_react_dom();
 

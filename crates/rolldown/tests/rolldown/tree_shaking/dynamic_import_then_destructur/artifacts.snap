@@ -8,6 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region main.js
 Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null })).then(({ foo: x, thing: a }) => []);
-
 //#endregion
+
 ```

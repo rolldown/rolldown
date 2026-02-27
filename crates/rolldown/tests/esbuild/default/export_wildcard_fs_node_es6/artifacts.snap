@@ -6,13 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-export * from "fs"
-
-export * from "./external"
-
+export * from "fs";
+export * from "./external";
 //#region internal.js
 let foo = 123;
-
 //#endregion
 export { foo };
+
 ```

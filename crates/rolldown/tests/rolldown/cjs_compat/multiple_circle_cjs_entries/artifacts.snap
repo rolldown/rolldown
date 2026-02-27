@@ -9,28 +9,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var import_a = require_a();
+	require_a();
 	module.exports = "b";
 }));
-
 //#endregion
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var import_b = require_b();
+	require_b();
 	module.exports = "a";
 }));
-
 //#endregion
 export default require_a();
-
 export { require_b as t };
+
 ```
 
 ## b.js
 
 ```js
 import { t as require_b } from "./a.js";
-
 export default require_b();
 
 ```

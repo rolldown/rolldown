@@ -6,23 +6,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry1.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 //#region entry1.js
-const a = 42 + 1;
-
+const a = 43;
 //#endregion
 exports.a = a;
+
 ```
 
 ## entry2.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 //#region entry2.js
-const b = 42 + 2;
-
+const b = 44;
 //#endregion
 exports.b = b;
+
 ```

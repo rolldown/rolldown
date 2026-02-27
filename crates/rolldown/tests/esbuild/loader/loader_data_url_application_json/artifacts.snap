@@ -6,29 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region \0rolldown/data-url:2sIfhqSWlzaAHOZh4OtugA
-var data_url_2sIfhqSWlzaAHOZh4OtugA_default = "123";
-
-//#endregion
-//#region \0rolldown/data-url:Zc9opCw73EFYe8tLmXMbQA
-var data_url_Zc9opCw73EFYe8tLmXMbQA_default = { works: true };
-
-//#endregion
-//#region \0rolldown/data-url:2aX92f-tk6SUzQNEPgBe-w
-var data_url_2aX92f_tk6SUzQNEPgBe_w_default = 123;
-
-//#endregion
-//#region \0rolldown/data-url:VArahB_JWxTNyEv16je5Vg
-var data_url_VArahB_JWxTNyEv16je5Vg_default = { works: true };
-
 //#endregion
 //#region entry.js
 console.log([
-	data_url_2sIfhqSWlzaAHOZh4OtugA_default,
-	data_url_Zc9opCw73EFYe8tLmXMbQA_default,
-	data_url_2aX92f_tk6SUzQNEPgBe_w_default,
-	data_url_VArahB_JWxTNyEv16je5Vg_default
+	"123",
+	{ works: true },
+	123,
+	{ works: true }
 ]);
-
 //#endregion
+
 ```

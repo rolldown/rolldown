@@ -15,7 +15,7 @@ function hello(name) {
 }
 //! Legal bang comment
 const foo = "bar";
-
 //#endregion
 export { foo, hello };
+
 ```

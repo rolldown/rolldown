@@ -31,7 +31,7 @@ impl GenerateStage<'_> {
           let codegen_options = CodegenOptions {
             minify: remove_whitespace,
             comments: CommentOptions {
-              normal: false,
+              normal: !remove_whitespace,
               jsdoc: options.comments.jsdoc && !remove_whitespace,
               annotation: options.comments.annotation && !remove_whitespace,
               legal: if options.comments.legal || !remove_whitespace {

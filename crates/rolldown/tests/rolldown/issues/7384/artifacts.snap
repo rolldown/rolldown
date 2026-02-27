@@ -11,20 +11,17 @@ let _babel_types = require("@babel/types");
 _babel_types = __toESM(_babel_types);
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
-
 //#region mod.js
 var _7384_exports = /* @__PURE__ */ __exportAll({ t: () => _babel_types });
-
 //#endregion
 //#region a.js
 node_assert.default.strictEqual(_babel_types.t, 1);
-
 //#endregion
 //#region b.js
 const { t } = _7384_exports;
 node_assert.default.strictEqual(t.t, 1);
-
 //#endregion
+
 ```
 
 # Variant: [format: Esm]
@@ -36,19 +33,16 @@ node_assert.default.strictEqual(t.t, 1);
 ```js
 import * as t$1 from "@babel/types";
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region mod.js
 var _7384_exports = /* @__PURE__ */ __exportAll({ t: () => t$1 });
-
 //#endregion
 //#region a.js
 assert.strictEqual(t$1.t, 1);
-
 //#endregion
 //#region b.js
 const { t } = _7384_exports;
 assert.strictEqual(t.t, 1);
-
 //#endregion
+
 ```

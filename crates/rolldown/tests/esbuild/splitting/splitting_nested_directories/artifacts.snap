@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region pageA/page.js
 console.log(123);
-
 //#endregion
+
 ```
 
 ## pageB_page.js
@@ -17,6 +17,6 @@ console.log(123);
 ```js
 //#region pageB/page.js
 console.log(-123);
-
 //#endregion
+
 ```

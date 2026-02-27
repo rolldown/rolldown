@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region json.js
 var json_exports = /* @__PURE__ */ __exportAll({ default: () => json_default });
@@ -15,24 +14,18 @@ var json_default;
 var init_json = __esmMin((() => {
 	json_default = JSON.parse("[1, 2, 3]");
 }));
-
 //#endregion
-//#region commonjs.js
-var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+//#region main.js
+var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
 	var __importDefault = exports && exports.__importDefault || function(mod) {
 		return mod && mod.__esModule ? mod : { default: mod };
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
-	const timezones_json_1 = __importDefault((init_json(), __toCommonJS(json_exports)));
-	exports.default = timezones_json_1.default;
+	exports.default = __importDefault((init_json(), __toCommonJS(json_exports))).default;
 	exports.foo = 1;
-}));
-
-//#endregion
-//#region main.js
-var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
+})))());
 assert.deepEqual(import_commonjs.default.slice(1), [2, 3], "should import JSON file as expected");
 assert.equal(1, 1);
-
 //#endregion
+
 ```

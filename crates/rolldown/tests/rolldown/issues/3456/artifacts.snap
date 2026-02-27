@@ -7,8 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { "\n\"\\'" as test } from "external";
-
 export { test as "\n\"\\'" };
+
 ```
 
 # Variant: [format: Cjs]
@@ -18,8 +18,8 @@ export { test as "\n\"\\'" };
 ### main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 let external = require("external");
-
 exports["\n\"\\'"] = external["\n\"\\'"];
+
 ```

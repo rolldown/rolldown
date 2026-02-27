@@ -7,16 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region index.js
 var require_require_parent_dir_common_js = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 123;
 }));
-
 //#endregion
 //#region dir/entry.js
 assert.deepEqual(require_require_parent_dir_common_js(), 123);
-
 //#endregion
+
 ```

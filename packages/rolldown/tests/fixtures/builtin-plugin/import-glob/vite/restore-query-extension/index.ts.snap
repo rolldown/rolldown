@@ -1,9 +1,8 @@
-import { n as name, t as a_exports } from "./a.js";
-import { n as name$1, t as b_exports } from "./b.js";
+import { t as a_exports } from "./a.js";
+import { t as b_exports } from "./b.js";
 import { n as modules_exports, r as name$2 } from "./modules2.js";
 import { t as a_default } from "./a2.js";
 import { t as b_default } from "./b2.js";
-
 //#region ../fixtures/a/index.ts
 const basic = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": () => import("./a.js").then((n) => n.t),
@@ -114,6 +113,5 @@ const customBaseParent = /* @__PURE__ */ Object.assign({
 	"../b/b.ts": () => import("./b3.js"),
 	"../b/index.ts": () => import("./b4.js")
 });
-
 //#endregion
 export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, customBase, customBaseParent, customQueryString, customRootBase, eagerAs, excludeSelf, excludeSelfRaw, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule, rootMixedRelative };

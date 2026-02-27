@@ -6,12 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region foo.json
-var foo_default = {};
-
 //#endregion
 //#region entry.js
-console.log(foo_default);
-
+console.log({});
 //#endregion
+
 ```

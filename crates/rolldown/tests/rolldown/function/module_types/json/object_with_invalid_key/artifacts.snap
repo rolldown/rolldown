@@ -7,14 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 //#region foo.json
 var _ = 1;
 var foo_default = { "😈": _ };
-
 //#endregion
 //#region main.js
 assert.deepStrictEqual(foo_default, { "😈": _ });
-
 //#endregion
+
 ```

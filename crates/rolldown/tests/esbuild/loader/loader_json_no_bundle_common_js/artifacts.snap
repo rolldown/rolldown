@@ -15,8 +15,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## test.js
 
 ```js
-Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
-
+Object.defineProperties(exports, {
+	__esModule: { value: true },
+	[Symbol.toStringTag]: { value: "Module" }
+});
 //#region test.json
 var test = 123;
 var invalid_identifier = true;
@@ -24,24 +26,24 @@ var test_default = {
 	test,
 	"invalid-identifier": invalid_identifier
 };
-
 //#endregion
-Object.defineProperty(exports, 'default', {
-  enumerable: true,
-  get: function () {
-    return test_default;
-  }
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return test_default;
+	}
 });
-Object.defineProperty(exports, 'invalid-identifier', {
-  enumerable: true,
-  get: function () {
-    return invalid_identifier;
-  }
+Object.defineProperty(exports, "invalid-identifier", {
+	enumerable: true,
+	get: function() {
+		return invalid_identifier;
+	}
 });
-Object.defineProperty(exports, 'test', {
-  enumerable: true,
-  get: function () {
-    return test;
-  }
+Object.defineProperty(exports, "test", {
+	enumerable: true,
+	get: function() {
+		return test;
+	}
 });
+
 ```

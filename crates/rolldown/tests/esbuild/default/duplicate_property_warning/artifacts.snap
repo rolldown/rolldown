@@ -14,7 +14,6 @@ console.log({
 	a2: true,
 	a2: 3
 }));
-
 //#endregion
 //#region node_modules/inside-node-modules/index.jsx
 console.log({
@@ -24,6 +23,6 @@ console.log({
 	c2: true,
 	c2: 3
 }));
-
 //#endregion
+
 ```

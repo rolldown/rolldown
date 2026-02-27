@@ -7,10 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 //#region main.js
 assert.equal(500, 500);
 assert.equal(100, 100);
-
 //#endregion
+
 ```

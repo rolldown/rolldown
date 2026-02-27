@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 export { __name as t };
+
 ```
 
 ## main.js
@@ -15,13 +16,11 @@ export { __name as t };
 ```js
 import { t as __name } from "./chunk.js";
 import assert from "node:assert";
-
 //#region dep.js
 function dep_default() {
 	return "anonymous default function";
 }
 __name(dep_default, "default");
-
 //#endregion
 //#region dep-class.js
 var dep_class_default = class {
@@ -32,7 +31,6 @@ var dep_class_default = class {
 		this.type = "anonymous default class";
 	}
 };
-
 //#endregion
 //#region main.js
 var count = 100;
@@ -44,9 +42,9 @@ var main_default = class {
 	}
 };
 assert.strictEqual(count, 100);
-
 //#endregion
 export { main_default as default };
+
 ```
 
 ## main2.js
@@ -54,13 +52,12 @@ export { main_default as default };
 ```js
 import { t as __name } from "./chunk.js";
 import assert from "node:assert";
-
 //#region main2.js
 var count = 100;
 function main2_default() {}
 __name(main2_default, "default");
 assert.strictEqual(count, 100);
-
 //#endregion
 export { main2_default as default };
+
 ```

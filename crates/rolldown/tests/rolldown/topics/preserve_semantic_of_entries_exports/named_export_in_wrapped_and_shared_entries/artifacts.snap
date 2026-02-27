@@ -7,18 +7,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as init_main, r as main_default, t as foo } from "./main.js";
-
 init_main();
 export { main_default as default, foo };
+
 ```
 
 ## entry2.js
 
 ```js
 import { n as init_main, r as main_default, t as foo } from "./main.js";
-
 init_main();
 export { main_default as default, foo };
+
 ```
 
 ## main.js
@@ -36,7 +36,7 @@ var init_main = __esmMin((() => {
 	main_default = "main";
 	console.log((init_main(), __toCommonJS(main_exports)));
 }));
-
 //#endregion
 export { init_main as n, main_default as r, foo as t };
+
 ```

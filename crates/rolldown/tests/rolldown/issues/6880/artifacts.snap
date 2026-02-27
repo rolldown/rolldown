@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-
 //#region main.js
 const assert = require("assert");
 exports.foo = function a() {
@@ -14,6 +13,6 @@ exports.foo = function a() {
 	return "foo";
 };
 assert.strict(exports.foo.toString().includes("\"use strict\";"));
-
 //#endregion
+
 ```

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,9 +8,8 @@ snapshot_kind: text
 ```js
 import foo from "/Users/user/project/file.txt?foo";
 import bar from "/Users/user/project/file.txt#bar";
-
 //#region entry.js
 console.log(foo, bar);
-
 //#endregion
+
 ```

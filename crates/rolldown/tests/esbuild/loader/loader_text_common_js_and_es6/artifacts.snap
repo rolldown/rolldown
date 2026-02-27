@@ -7,22 +7,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region y.txt
 var y_default = "y";
-
-//#endregion
-//#region x.txt
-var require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "x";
-}));
-
 //#endregion
 //#region entry.js
-const x_txt = require_x();
+const x_txt = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "x";
+})))();
 assert.equal(x_txt, "x");
 assert.equal(y_default, "y");
-
 //#endregion
+
 ```

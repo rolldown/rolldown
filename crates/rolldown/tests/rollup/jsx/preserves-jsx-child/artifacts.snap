@@ -8,15 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region other1.js
 console.log("wrong Foo 1");
-
 //#endregion
 //#region jsx.js
 const Foo = () => {};
 console.log(<Foo><Foo /></Foo>);
-
 //#endregion
 //#region other2.js
 console.log("wrong Foo 2");
-
 //#endregion
+
 ```

@@ -14,7 +14,6 @@ let a = /* @__PURE__ */ function(a) {
 	a[a["non_constant"] = foo] = "non_constant";
 	return a;
 }({});
-
 //#endregion
 //#region entry.ts
 console.log([
@@ -23,6 +22,6 @@ console.log([
 	a.explicit_string,
 	a.non_constant
 ]);
-
 //#endregion
+
 ```

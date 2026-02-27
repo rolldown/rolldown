@@ -127,12 +127,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import * as ns from "foo";
 import def, { a, a2, b } from "foo";
-
 //#region entry.js
 const imp = [import("foo"), function() {
 	return import("foo");
 }];
 console.log(ns, a, b, def, def, ns, def, a2, b, imp);
-
 //#endregion
+
 ```

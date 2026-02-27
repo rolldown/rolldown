@@ -13,8 +13,8 @@ function foo() {
 	console.log(x, x, y, y);
 }
 assert(foo() !== void 0);
-
 //#endregion
+
 ```
 
 ## backwards-reference-top-level.js
@@ -24,8 +24,8 @@ assert(foo() !== void 0);
 const x = y;
 const y = 1;
 console.log(x, x, y, y);
-
 //#endregion
+
 ```
 
 ## comment-before.js
@@ -37,8 +37,8 @@ console.log(x, x, y, y);
 	const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }
-
 //#endregion
+
 ```
 
 ## debugger-before.js
@@ -50,8 +50,8 @@ console.log(x, x, y, y);
 	const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }
-
 //#endregion
+
 ```
 
 ## directive-before.js
@@ -64,8 +64,8 @@ function nested() {
 	x = [REMOVE, REMOVE];
 }
 assert(nested() !== void 0);
-
 //#endregion
+
 ```
 
 ## disabled-tdz.js
@@ -77,8 +77,8 @@ const x_keep = 1;
 function foo() {
 	return x_keep;
 }
-
 //#endregion
+
 ```
 
 ## exprs-before.js
@@ -87,8 +87,8 @@ function foo() {
 //#region exprs-before.js
 function nested() {}
 assert(nested() !== void 0);
-
 //#endregion
+
 ```
 
 ## issue-3125.js
@@ -101,8 +101,8 @@ function foo() {
 	return f();
 }
 assert(foo() !== void 0);
-
 //#endregion
+
 ```
 
 ## namespace-export.js
@@ -115,8 +115,8 @@ let ns;
 	const y_keep = _ns.y_keep = 2;
 	console.log(x_REMOVE, x_REMOVE, y_keep, y_keep);
 })(ns || (ns = {}));
-
 //#endregion
+
 ```
 
 ## nested-block.js
@@ -131,8 +131,8 @@ let ns;
 	const s_keep = "";
 	console.log(REMOVE_n, REMOVE_n, REMOVE_u, REMOVE_u, REMOVE_i, REMOVE_i, REMOVE_f, REMOVE_f, s_keep, s_keep);
 }
-
 //#endregion
+
 ```
 
 ## nested-function.js
@@ -148,8 +148,8 @@ function nested() {
 	console.log(REMOVE_n, REMOVE_n, REMOVE_u, REMOVE_u, REMOVE_i, REMOVE_i, REMOVE_f, REMOVE_f, s_keep, s_keep);
 }
 assert(nested() !== void 0);
-
 //#endregion
+
 ```
 
 ## semicolon-before.js
@@ -160,8 +160,8 @@ assert(nested() !== void 0);
 	const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }
-
 //#endregion
+
 ```
 
 ## top-level.js
@@ -174,8 +174,8 @@ const i_keep = 1234567;
 const f_keep = 123.456;
 const s_keep = "";
 console.log(n_keep, n_keep, u_keep, u_keep, i_keep, i_keep, f_keep, f_keep, s_keep, s_keep);
-
 //#endregion
+
 ```
 
 ## type-before.js
@@ -186,6 +186,6 @@ console.log(n_keep, n_keep, u_keep, u_keep, i_keep, i_keep, f_keep, f_keep, s_ke
 	const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }
-
 //#endregion
+
 ```

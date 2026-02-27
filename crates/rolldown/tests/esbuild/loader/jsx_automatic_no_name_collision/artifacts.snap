@@ -30,9 +30,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 require("@remix-run/react");
 require("react");
-
 //#region entry.jsx
 ({ ...y }), z;
-
 //#endregion
+
 ```

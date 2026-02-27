@@ -20,10 +20,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 /*!
 * INDEX.TS (ABOVE EXPORT)
 */
-var main_default = "foo" + "bar";
+var main_default = "foobar";
 /*!
 * INDEX.TS (BELOW EXPORT)
 */
-
 export { main_default as default };
+
 ```

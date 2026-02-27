@@ -16,32 +16,20 @@ var esm_exports = /* @__PURE__ */ __exportAll({
 });
 function esm_default_fn$1() {}
 function esm_named_fn() {}
-function hoisted_fn() {
-	const bar = 1;
-}
-var esm_named_var, esm_named_class, hoisted_var, hoisted_class;
+var esm_named_class;
 var init_esm = __esmMin((() => {
-	esm_named_var = 1;
 	esm_named_class = class {};
-	hoisted_var = 1;
-	hoisted_class = class {};
 }));
-
-//#endregion
-//#region commonjs.js
-var require_commonjs$1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var value = (init_esm(), __toCommonJS(esm_exports));
-	module.exports = value;
-}));
-
 //#endregion
 //#region main.js
-var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs$1());
+var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = (init_esm(), __toCommonJS(esm_exports));
+})))());
 init_esm();
 console.log(import_commonjs.default, esm_default_fn$1, 1, esm_named_fn, esm_named_class);
 const require_commonjs = () => {};
 function esm_default_fn() {}
 console.log(require_commonjs, esm_default_fn);
-
 //#endregion
+
 ```

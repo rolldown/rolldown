@@ -13,6 +13,6 @@ function id(x) {
 }
 empty();
 id(123);
-
 //#endregion
+
 ```

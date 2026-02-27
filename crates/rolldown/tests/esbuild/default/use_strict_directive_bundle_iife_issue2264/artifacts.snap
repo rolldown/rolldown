@@ -15,17 +15,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-'use strict';
-
+"use strict";
 (function(exports) {
-
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-//#region entry.js
-	let a = 1;
-
-//#endregion
-exports.a = a;
-return exports;
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	//#endregion
+	exports.a = 1;
+	return exports;
 })({});
+
 ```

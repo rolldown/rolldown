@@ -18,8 +18,8 @@ var init_main = __esmMin((() => {
 	main_default = "main";
 	console.log((init_main(), __toCommonJS(main_exports)));
 }));
-
 //#endregion
 init_main();
 export { main_default as default, foo };
+
 ```

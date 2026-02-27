@@ -15,7 +15,6 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		get: () => () => ({ a })
 	});
 }));
-
 //#endregion
 //#region a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -25,7 +24,6 @@ var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		get: () => () => ({ b })
 	});
 }));
-
 //#endregion
 //#region main.mjs
 var import_a = /* @__PURE__ */ __toESM(require_a(), 1);
@@ -34,6 +32,6 @@ console.log({
 	a: import_a.default,
 	b: import_b.default
 });
-
 //#endregion
+
 ```

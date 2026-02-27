@@ -31,6 +31,6 @@ foo(bar);
 new foo(bar);
 /* @__PURE__ */ foo() ** foo();
 /* @__PURE__ */ new foo() ** foo();
-
 //#endregion
+
 ```

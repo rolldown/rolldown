@@ -100,8 +100,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region 1.js
 if (foo) {}
-
 //#endregion
+
 ```
 
 ## 2.js
@@ -112,8 +112,8 @@ if (foo) {
 	function x() {}
 	eval("");
 }
-
 //#endregion
+
 ```
 
 ## 3.js
@@ -124,8 +124,8 @@ if (foo) {
 	function x() {}
 	if (bar) eval("");
 }
-
 //#endregion
+
 ```
 
 ## 4.js
@@ -136,8 +136,8 @@ if (foo) {
 	eval("");
 	function x() {}
 }
-
 //#endregion
+
 ```
 
 ## 5.js
@@ -145,8 +145,8 @@ if (foo) {
 ```js
 //#region 5.js
 if (foo) {}
-
 //#endregion
+
 ```
 
 ## 6.js
@@ -157,8 +157,8 @@ if (foo) {
 	function x() {}
 	eval("");
 }
-
 //#endregion
+
 ```
 
 ## 7.js
@@ -169,8 +169,8 @@ if (foo) {
 	function x() {}
 	if (bar) eval("");
 }
-
 //#endregion
+
 ```
 
 ## 8.js
@@ -181,6 +181,6 @@ if (foo) {
 	eval("");
 	function x() {}
 }
-
 //#endregion
+
 ```

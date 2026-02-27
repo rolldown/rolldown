@@ -7,53 +7,47 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-
 exports.__commonJSMin = __commonJSMin;
 exports.__toESM = __toESM;
+
 ```
 
 ## entry.js
 
 ```js
-const require_runtime = require('./_virtual/_rolldown/runtime.js');
-const require_rule$1 = require('./rule.js');
+const require_runtime = require("./_virtual/_rolldown/runtime.js");
+const require_rule$1 = require("./rule.js");
 let node_assert = require("node:assert");
 node_assert = require_runtime.__toESM(node_assert);
-
-//#region main.js
-var import_rule = /* @__PURE__ */ require_runtime.__toESM(require_rule$1);
-const plugin = { mod: import_rule.default };
+const plugin = { mod: (/* @__PURE__ */ require_runtime.__toESM(require_rule$1)).default };
 node_assert.default.strictEqual(plugin.mod.meta, 19);
-
 //#endregion
 module.exports = plugin;
+
 ```
 
 ## lib.js
 
 ```js
-const require_runtime = require('./_virtual/_rolldown/runtime.js');
-
 //#region lib.js
-var require_lib = /* @__PURE__ */ require_runtime.__commonJSMin(((exports, module) => {
+var require_lib = /* @__PURE__ */ require("./_virtual/_rolldown/runtime.js").__commonJSMin(((exports, module) => {
 	module.exports = {};
 }));
-
 //#endregion
-Object.defineProperty(exports, 'default', {
-  enumerable: true,
-  get: function () {
-    return require_lib();
-  }
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return require_lib();
+	}
 });
+
 ```
 
 ## rule.js
 
 ```js
-const require_runtime = require('./_virtual/_rolldown/runtime.js');
-const require_lib$1 = require('./lib.js');
-
+const require_runtime = require("./_virtual/_rolldown/runtime.js");
+const require_lib$1 = require("./lib.js");
 //#region rule.js
 var require_rule = /* @__PURE__ */ require_runtime.__commonJSMin(((exports, module) => {
 	const mod = require_lib$1.default;
@@ -64,7 +58,6 @@ var require_rule = /* @__PURE__ */ require_runtime.__commonJSMin(((exports, modu
 		}
 	};
 }));
-
 //#endregion
 module.exports = require_rule();
 

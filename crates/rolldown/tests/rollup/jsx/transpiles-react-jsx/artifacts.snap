@@ -166,10 +166,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 import { createElement } from "react";
-
 //#region other1.js
 console.log("wrong Foo 1", "wrong obj 1", "wrong jsx 1", "wrong jsxs 1");
-
 //#endregion
 //#region jsx.js
 const Foo = () => {};
@@ -360,10 +358,9 @@ console.log(/* @__PURE__ */ jsxs("div", { children: [
 	/* @__PURE__ */ jsx(Fragment, { children: /* @__PURE__ */ jsx("div", {}) }),
 	/* @__PURE__ */ jsx(Fragment, { children: /* @__PURE__ */ jsx("div", {}) })
 ] }));
-
 //#endregion
 //#region other2.js
 console.log("wrong Foo 2", "wrong obj 2", "wrong jsx 2", "wrong jsxs 2");
-
 //#endregion
+
 ```

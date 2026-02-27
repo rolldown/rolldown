@@ -8,44 +8,44 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region const-entry.js
 console.log([
-	+6,
+	6,
 	-6,
-	~6,
-	!6,
-	typeof 6
+	-7,
+	false,
+	"number"
 ], [
-	3 + 6,
-	3 - 6,
-	3 * 6,
+	9,
+	-3,
+	18,
 	3 / 6,
 	3 % 6,
 	3 ** 6
 ], [
-	3 < 6,
-	3 > 6,
-	3 <= 6,
-	3 >= 6,
-	3 == 6,
-	3 != 6,
-	3 === 6,
-	3 !== 6
+	true,
+	false,
+	true,
+	false,
+	false,
+	true,
+	false,
+	true
 ], [
-	6 << 1,
-	6 >> 1,
-	6 >>> 1
+	12,
+	3,
+	3
 ], [
-	3 & 6,
-	3 | 6,
-	3 ^ 6
+	2,
+	7,
+	5
 ], [
-	3 && 6,
-	3 || 6,
-	3 ?? 6,
-	3 ? "y" : "n",
-	!6 ? "y" : "n"
+	6,
+	3,
+	3,
+	"y",
+	"n"
 ]);
-
 //#endregion
+
 ```
 
 ## enum-entry.js
@@ -57,7 +57,6 @@ let x = /* @__PURE__ */ function(x) {
 	x[x["b"] = 6] = "b";
 	return x;
 }({});
-
 //#endregion
 //#region enum-entry.ts
 console.log([
@@ -97,8 +96,8 @@ console.log([
 	x.a ? "y" : "n",
 	!x.b ? "y" : "n"
 ]);
-
 //#endregion
+
 ```
 
 ## nested-entry.js
@@ -111,13 +110,12 @@ let x = /* @__PURE__ */ function(x) {
 	x[x["c"] = 64] = "c";
 	return x;
 }({});
-
 //#endregion
 //#region nested-entry.ts
 console.log({
-	"should be 4": ~(~2 & ~4) & (4 | 8),
+	"should be 4": 4,
 	"should be 32": ~(~x.a & ~x.b) & (x.b | x.c)
 });
-
 //#endregion
+
 ```

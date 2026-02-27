@@ -7,11 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 var module = (function(exports) {
-
-Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
-// HIDDEN [\0rolldown/runtime.js]
-
-//#region mod.js
+	Object.defineProperties(exports, {
+		__esModule: { value: true },
+		[Symbol.toStringTag]: { value: "Module" }
+	});
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region mod.js
 	var named_exports = /* @__PURE__ */ __exportAll({
 		add: () => add,
 		subtract: () => subtract
@@ -22,21 +23,20 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 	function subtract(a, b) {
 		return a - b;
 	}
-
-//#endregion
-//#region main.js
+	//#endregion
+	//#region main.js
 	function aaa() {
 		return "aaa";
 	}
-
-//#endregion
-exports.aaa = aaa;
-Object.defineProperty(exports, 'default', {
-  enumerable: true,
-  get: function () {
-    return named_exports;
-  }
-});
-return exports;
+	//#endregion
+	exports.aaa = aaa;
+	Object.defineProperty(exports, "default", {
+		enumerable: true,
+		get: function() {
+			return named_exports;
+		}
+	});
+	return exports;
 })({});
+
 ```

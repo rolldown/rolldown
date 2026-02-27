@@ -36,7 +36,6 @@ let d_keep = /* @__PURE__ */ function(d_keep) {
 	return d_keep;
 }({});
 let e_keep = {};
-
 //#endregion
 //#region entry.ts
 console.log([
@@ -51,6 +50,6 @@ console.log([
 	d_keep.y,
 	e_keep.x
 ]);
-
 //#endregion
+
 ```

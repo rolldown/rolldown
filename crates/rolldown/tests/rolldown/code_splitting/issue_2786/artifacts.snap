@@ -23,17 +23,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region share.js
 var share_exports$1 = /* @__PURE__ */ __exportAll({ default: () => share_default$1 });
 var share_default$1 = "shared";
-
 //#endregion
 //#region share.json
 var share_exports = /* @__PURE__ */ __exportAll({ default: () => share_default });
 var share_default = {};
-
 //#endregion
 //#region main.js
 assert.strictEqual(share_default$1, "shared");
@@ -47,6 +44,6 @@ Promise.resolve().then(() => share_exports).then((mod) => {
 	assert.deepEqual(JSON.parse(JSON.stringify(mod)), { default: {} });
 	console.log(mod);
 });
-
 //#endregion
+
 ```

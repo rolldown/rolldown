@@ -14,7 +14,7 @@ let Foo = {
 	hello_: "hello, world"
 };
 var entry_default = <Foo.Bar_ text_={Foo.hello_}></Foo.Bar_>;
-
 //#endregion
 export { entry_default as default };
+
 ```

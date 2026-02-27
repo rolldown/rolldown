@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { t as clear } from "./repro1.js";
 import { n as clear$1$1, t as clear$1 } from "./repro2.js";
 import { n as clear$1$2, r as clear$2$1, t as clear$2 } from "./repro3.js";
-
 //#region main.js
 var main_default = [
 	clear,
@@ -22,29 +21,27 @@ var main_default = [
 	() => import("./repro2.js").then((n) => n.r).then(console.log),
 	() => import("./repro3.js").then((n) => n.i).then(console.log)
 ];
-
 //#endregion
 export { main_default as default };
+
 ```
 
 ## repro1.js
 
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
-
 //#region repro1.js
 var repro1_exports = /* @__PURE__ */ __exportAll({ clear: () => clear });
 const clear = "repro1_clear";
-
 //#endregion
 export { repro1_exports as n, clear as t };
+
 ```
 
 ## repro2.js
 
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
-
 //#region repro2.js
 var repro2_exports = /* @__PURE__ */ __exportAll({
 	clear: () => clear,
@@ -52,16 +49,15 @@ var repro2_exports = /* @__PURE__ */ __exportAll({
 });
 const clear$1 = "repro2_clear$1";
 const clear = "repro2_clear";
-
 //#endregion
 export { clear$1 as n, repro2_exports as r, clear as t };
+
 ```
 
 ## repro3.js
 
 ```js
 import { t as __exportAll } from "./rolldown-runtime.js";
-
 //#region repro3.js
 var repro3_exports = /* @__PURE__ */ __exportAll({
 	clear: () => clear,
@@ -71,9 +67,9 @@ var repro3_exports = /* @__PURE__ */ __exportAll({
 const clear$2 = "repro3_clear$2";
 const clear$1 = "repro3_clear$1";
 const clear = "repro3_clear";
-
 //#endregion
 export { repro3_exports as i, clear$1 as n, clear$2 as r, clear as t };
+
 ```
 
 ## rolldown-runtime.js
@@ -81,4 +77,5 @@ export { repro3_exports as i, clear$1 as n, clear$2 as r, clear as t };
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 export { __exportAll as t };
+
 ```

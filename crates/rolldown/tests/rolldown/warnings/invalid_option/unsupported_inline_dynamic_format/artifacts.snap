@@ -16,20 +16,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function() {
-
-// HIDDEN [\0rolldown/runtime.js]
-
-//#region lib.js
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region lib.js
 	var lib_exports = /* @__PURE__ */ __exportAll({ default: () => 2 });
-	var lib_default;
-	var init_lib = __esmMin((() => {
-		lib_default = 2;
-	}));
-
-//#endregion
-//#region main.js
+	var init_lib = __esmMin((() => {}));
+	//#endregion
+	//#region main.js
 	Promise.resolve().then(() => (init_lib(), lib_exports)).then(console.log);
-
-//#endregion
+	//#endregion
 })();
+
 ```

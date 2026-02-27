@@ -7,11 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as lib_default } from "./splited_lib.js";
-
 //#region main.js
 console.log("lib", lib_default);
-
 //#endregion
+
 ```
 
 ## splited_lib.js
@@ -19,7 +18,7 @@ console.log("lib", lib_default);
 ```js
 //#region lib.js
 var lib_default = "hello, world";
-
 //#endregion
 export { lib_default as t };
+
 ```

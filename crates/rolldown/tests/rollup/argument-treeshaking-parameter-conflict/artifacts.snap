@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region dep.js
 let value = 0;
 const mutate = () => value++;
-
 //#endregion
 //#region main.js
 function test(mutate$1) {
@@ -17,6 +16,6 @@ function test(mutate$1) {
 }
 test();
 assert.strictEqual(value, 1);
-
 //#endregion
+
 ```

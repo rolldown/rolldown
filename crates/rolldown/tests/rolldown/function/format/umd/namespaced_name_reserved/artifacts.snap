@@ -7,16 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function(global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
-  typeof define === 'function' && define.amd ? define(['exports'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global["1"] = global["1"] || {},global["1"]["2"] = {})));
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory((global["1"] = global["1"] || {}, global["1"]["2"] = {})));
 })(this, function(exports) {
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-//#region foo.js
-	const value = 1;
-
-//#endregion
-exports.value = value;
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	//#endregion
+	exports.value = 1;
 });
+
 ```

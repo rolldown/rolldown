@@ -12,6 +12,6 @@ var BaseNode = class extends Callable {
 	[(void 0).id] = this;
 };
 console.log(`BaseNode: `, BaseNode);
-
 //#endregion
+
 ```

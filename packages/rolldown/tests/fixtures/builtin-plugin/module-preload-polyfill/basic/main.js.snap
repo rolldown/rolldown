@@ -28,5 +28,4 @@
 		fetch(link.href, fetchOpts);
 	}
 })();
-
 //#endregion

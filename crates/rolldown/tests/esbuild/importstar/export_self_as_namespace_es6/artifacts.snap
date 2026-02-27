@@ -13,7 +13,7 @@ var entry_exports = /* @__PURE__ */ __exportAll({
 	ns: () => entry_exports
 });
 const foo = 123;
-
 //#endregion
 export { foo, entry_exports as ns };
+
 ```

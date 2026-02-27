@@ -17,7 +17,7 @@ function inc() {
 	x += 1;
 }
 var file_default = x;
-
 //#endregion
 export { file_exports as file };
+
 ```

@@ -7,13 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 var module = (function() {
-
-
-//#region main.js
-	var main_default = "banner";
-
-//#endregion
-return main_default;
-// outro
+	//#endregion
+	return "banner";
+	// outro
 })();
+
 ```

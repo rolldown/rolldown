@@ -6,12 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region binary.txt
-var binary_default = "data:application/octet-stream;base64,/w==";
-
 //#endregion
 //#region entry.js
-console.log(binary_default);
-
+console.log("data:application/octet-stream;base64,/w==");
 //#endregion
+
 ```

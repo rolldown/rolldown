@@ -9,11 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region foo.ts
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
-const foo = 123;
-
 //#endregion
 //#region entry.ts
 console.log(foo_exports, 123, 234);
-
 //#endregion
+
 ```

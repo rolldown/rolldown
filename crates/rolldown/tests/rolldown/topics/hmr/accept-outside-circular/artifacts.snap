@@ -7,28 +7,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region c.js
 var c_exports = /* @__PURE__ */ __exportAll({ c: () => "c" });
-const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
+__rolldown_runtime__.createModuleHotContext("c.js");
 __rolldown_runtime__.registerModule("c.js", { exports: c_exports });
-const c = "c";
-
 //#endregion
 //#region b.js
 var b_exports = /* @__PURE__ */ __exportAll({ b: () => b });
-const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
+__rolldown_runtime__.createModuleHotContext("b.js");
 __rolldown_runtime__.registerModule("b.js", { exports: b_exports });
 const b = { c: "c" };
-
 //#endregion
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => a });
-const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
+__rolldown_runtime__.createModuleHotContext("a.js");
 __rolldown_runtime__.registerModule("a.js", { exports: a_exports });
 const a = { b };
-
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
@@ -38,8 +33,8 @@ assert.strictEqual(a.b.c, "c");
 main_hot.accept((newMod) => {
 	assert.strictEqual(newMod.a.b.c, "cc");
 });
-
 //#endregion
+
 ```
 
 # HMR Step 0
@@ -57,28 +52,23 @@ main_hot.accept((newMod) => {
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region c.js
 var c_exports = /* @__PURE__ */ __exportAll({ c: () => "cc" });
-const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
+__rolldown_runtime__.createModuleHotContext("c.js");
 __rolldown_runtime__.registerModule("c.js", { exports: c_exports });
-const c = "cc";
-
 //#endregion
 //#region b.js
 var b_exports = /* @__PURE__ */ __exportAll({ b: () => b });
-const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
+__rolldown_runtime__.createModuleHotContext("b.js");
 __rolldown_runtime__.registerModule("b.js", { exports: b_exports });
 const b = { c: "cc" };
-
 //#endregion
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => a });
-const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
+__rolldown_runtime__.createModuleHotContext("a.js");
 __rolldown_runtime__.registerModule("a.js", { exports: a_exports });
 const a = { b };
-
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
@@ -88,6 +78,6 @@ assert.strictEqual(a.b.c, "c");
 main_hot.accept((newMod) => {
 	assert.strictEqual(newMod.a.b.c, "cc");
 });
-
 //#endregion
+
 ```

@@ -7,9 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { createRequire } from "node:module";
-
 //#region main.js
 createRequire(import.meta.url)("node:assert").equal(1, 1);
-
 //#endregion
+
 ```

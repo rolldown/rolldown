@@ -7,27 +7,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const cjs_hot = __rolldown_runtime__.createModuleHotContext("cjs.js");
+//#region esm.js
+var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	__rolldown_runtime__.createModuleHotContext("cjs.js");
 	__rolldown_runtime__.registerModule("cjs.js", module);
 	module.exports.value = "cjs";
-}));
-
-//#endregion
-//#region esm.js
-var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
+})))());
 var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
-const esm_hot = __rolldown_runtime__.createModuleHotContext("esm.js");
+__rolldown_runtime__.createModuleHotContext("esm.js");
 __rolldown_runtime__.registerModule("esm.js", { exports: esm_exports });
 const value = "main";
-
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 console.log(import_cjs, esm_exports);
-
 //#endregion
+
 ```

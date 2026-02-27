@@ -9,16 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
-
 //#region reexports.mjs
 var reexports_exports = /* @__PURE__ */ __exportAll({});
 __reExport(reexports_exports, require("foo"));
-
 //#endregion
 //#region main.mjs
 node_assert.default.equal(String(reexports_exports), "[object Module]");
-
 //#endregion
+
 ```
 
 # Variant: [format: Esm]
@@ -29,16 +27,14 @@ node_assert.default.equal(String(reexports_exports), "[object Module]");
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region reexports.mjs
 var reexports_exports = /* @__PURE__ */ __exportAll({});
 import * as import_foo from "foo";
 __reExport(reexports_exports, import_foo);
-
 //#endregion
 //#region main.mjs
 assert.equal(String(reexports_exports), "[object Module]");
-
 //#endregion
+
 ```

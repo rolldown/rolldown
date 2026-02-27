@@ -8,7 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 import { createElement } from "react";
-
 //#region main.js
 const Foo = () => {};
 const obj = { key: "2" };
@@ -20,6 +19,6 @@ console.log(/* @__PURE__ */ createElement(Foo, {
 	...obj,
 	key: "1"
 }));
-
 //#endregion
+
 ```

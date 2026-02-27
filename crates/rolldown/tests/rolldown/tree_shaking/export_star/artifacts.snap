@@ -9,10 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region export-star.js
 var export_star_exports = /* @__PURE__ */ __exportAll({ foo: () => 1 });
-
 //#endregion
 //#region main.js
 console.log(export_star_exports);
-
 //#endregion
+
 ```

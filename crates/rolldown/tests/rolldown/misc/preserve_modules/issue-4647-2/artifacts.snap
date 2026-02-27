@@ -7,8 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { a } from "./mod.js";
-
 export { a };
+
 ```
 
 ## dynamic2.js
@@ -16,9 +16,9 @@ export { a };
 ```js
 //#region dynamic2.js
 const a = "a";
-
 //#endregion
 export { a };
+
 ```
 
 ## entry2.js
@@ -26,9 +26,9 @@ export { a };
 ```js
 //#region entry2.js
 var entry2_default = import("./dynamic.js");
-
 //#endregion
 export { entry2_default as default };
+
 ```
 
 ## main.js
@@ -37,9 +37,9 @@ export { entry2_default as default };
 //#region main.js
 const mod = () => import("./dynamic.js");
 const { a } = await import("./dynamic2.js");
-
 //#endregion
 export { a, mod };
+
 ```
 
 ## mod.js
@@ -47,7 +47,7 @@ export { a, mod };
 ```js
 //#region mod.js
 const a = 1e3;
-
 //#endregion
 export { a };
+
 ```

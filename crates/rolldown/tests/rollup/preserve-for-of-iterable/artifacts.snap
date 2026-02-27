@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-
 //#region iterables.js
 let dirty;
 const zeroToFive = { [Symbol.iterator]() {
@@ -24,18 +23,16 @@ const zeroToFive = { [Symbol.iterator]() {
 		}
 	};
 } };
-
 //#endregion
 //#region loops.js
 const iterate = (iterable) => {
 	for (const value of iterable);
 };
-
 //#endregion
 //#region main.js
 assert.equal(dirty, void 0);
 iterate(zeroToFive);
 assert.equal(dirty, 5);
-
 //#endregion
+
 ```

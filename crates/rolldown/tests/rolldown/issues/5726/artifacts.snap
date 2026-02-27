@@ -8,22 +8,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region counter.js
 const a = 100;
-
 //#endregion
 export { a };
+
 ```
 
 ## main.js
 
 ```js
-import { a } from "./counter.js";
-
+import "./counter.js";
 //#region lib.js
 console.log("test");
-
 //#endregion
 //#region main.js
 console.log(`a: `, 100);
-
 //#endregion
+
 ```

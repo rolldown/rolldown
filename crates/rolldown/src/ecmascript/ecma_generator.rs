@@ -8,7 +8,7 @@ use crate::{
 use anyhow::Result;
 use rolldown_common::{
   AddonRenderContext, EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId, ModuleIdx,
-  OutputFormat, RenderedModule,
+  OutputFormat, RenderedModule, StrictMode,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::HookAddonArgs;
@@ -19,6 +19,7 @@ use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 
 use super::format::{cjs::render_cjs, esm::render_esm, iife::render_iife, umd::render_umd};
+use super::format::utils::is_use_strict_directive;
 
 pub type RenderedModuleSources = Vec<RenderedModuleSource>;
 
@@ -97,7 +98,7 @@ impl Generator for EcmaGenerator {
       },
     );
 
-    let directives: Vec<_> = ctx
+    let mut directives: Vec<&str> = ctx
       .chunk
       .user_defined_entry_module(&ctx.link_output.module_table)
       .or_else(|| {
@@ -115,6 +116,20 @@ impl Generator for EcmaGenerator {
           .collect::<_>()
       })
       .unwrap_or_default();
+
+    // Apply output.strict option
+    match ctx.options.strict {
+      StrictMode::Always => {
+        let has_use_strict = directives.iter().any(|d| is_use_strict_directive(d));
+        if !has_use_strict {
+          directives.insert(0, "\"use strict\"");
+        }
+      }
+      StrictMode::Never => {
+        directives.retain(|d| !is_use_strict_directive(d));
+      }
+      StrictMode::Auto => {}
+    }
 
     let banner = {
       let injection = match ctx.options.banner.as_ref() {

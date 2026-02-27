@@ -2372,6 +2372,7 @@ export interface BindingOutputOptions {
   sourcemapIgnoreList?: boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)
   sourcemapDebugIds?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
+  strict?: boolean | 'auto'
   minify?: boolean | 'dce-only' | MinifyOptions
   manualCodeSplitting?: BindingManualCodeSplittingOptions
   legalComments?: 'none' | 'inline'

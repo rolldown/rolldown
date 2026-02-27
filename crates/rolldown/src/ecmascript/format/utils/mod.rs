@@ -142,3 +142,10 @@ pub fn render_chunk_directives<'a, T: Iterator<Item = &'a &'a str>>(directives: 
   }
   ret
 }
+
+/// Returns `true` if the given directive string is a `"use strict"` directive.
+/// Handles both single-quoted (`'use strict'`) and double-quoted (`"use strict"`) forms,
+/// with or without a trailing semicolon.
+pub fn is_use_strict_directive(s: &str) -> bool {
+  s.trim_start_matches(['\'', '"']).trim_end_matches(['\'', '"', ';']) == "use strict"
+}

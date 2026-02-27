@@ -657,13 +657,15 @@ impl<'a> ModuleLoader<'a> {
     let modules_iter = std::mem::take(&mut self.intermediate_normal_modules.modules)
       .into_iter_enumerated()
       .into_iter()
-      .map(|(idx, module)| {
-        let mut module = module.expect("Module tasks did't complete as expected");
-        if let Some(normal_module) = module.as_normal() {
-          if normal_module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
+      .inspect(|(_, module)| {
+        if let Some(m) = module.as_ref().and_then(|m| m.as_normal()) {
+          if m.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
             tla_module_count += 1;
           }
         }
+      })
+      .map(|(idx, module)| {
+        let mut module = module.expect("Module tasks did't complete as expected");
         if let Some(module) = module.as_normal_mut() {
           // Note: (Compat to rollup)
           // The `dynamic_importers/importers` should be added after `module_parsed` hook.

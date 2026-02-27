@@ -115,7 +115,11 @@ impl ScanStageCache {
       let old_has_tla = module_has_tla(&cache.module_table[idx]);
       let new_has_tla = module_has_tla(&new_module);
       if old_has_tla && !new_has_tla {
-        cache.tla_module_count = cache.tla_module_count.saturating_sub(1);
+        debug_assert!(
+          cache.tla_module_count > 0,
+          "tla_module_count underflow: decrement called when count is already 0"
+        );
+        cache.tla_module_count -= 1;
       } else if !old_has_tla && new_has_tla {
         cache.tla_module_count += 1;
       }

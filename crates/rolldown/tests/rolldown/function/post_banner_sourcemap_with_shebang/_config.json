@@ -1,0 +1,7 @@
+{
+  "visualizeSourcemap": true,
+  "config": {
+    "postBanner": "/* line 1 */\n/* line 2 */",
+    "sourcemap": "File"
+  }
+}

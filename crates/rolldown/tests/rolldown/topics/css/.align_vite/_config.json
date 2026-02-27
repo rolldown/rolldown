@@ -6,5 +6,8 @@
         "import": "./main.ts"
       }
     ]
+  },
+  "plugin": {
+    "css": { "codeSplit": true }
   }
 }

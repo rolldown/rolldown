@@ -11,11 +11,11 @@ use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::{
-  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult, FlatOptions,
-  HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImportedExports, ImporterRecord,
-  Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
-  PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief,
-  RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, SymbolRefDb,
+  EcmaModuleAstUsage, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule,
+  ExternalModuleTaskResult, FlatOptions, HybridIndexVec, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, ImportedExports, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg,
+  ModuleType, NormalModuleTaskResult, PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId,
+  RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, SymbolRefDb,
   SymbolRefDbForModule,
 };
 use rolldown_ecmascript::EcmaAst;
@@ -105,6 +105,7 @@ pub struct ModuleLoader<'a> {
   cache: &'a mut ScanStageCache,
   pub flat_options: FlatOptions,
   pub magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+  tla_module_count: usize,
 }
 
 pub struct ModuleLoaderOutput {
@@ -126,6 +127,7 @@ pub struct ModuleLoaderOutput {
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  pub tla_module_count: usize,
 }
 
 impl Drop for ModuleLoader<'_> {
@@ -185,6 +187,7 @@ impl<'a> ModuleLoader<'a> {
       new_added_modules_from_partial_scan: FxIndexSet::default(),
       flat_options,
       magic_string_tx,
+      tla_module_count: 0,
     })
   }
 
@@ -382,6 +385,9 @@ impl<'a> ModuleLoader<'a> {
           }
 
           let normal_module = module.as_normal().unwrap();
+          if normal_module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
+            self.tla_module_count += 1;
+          }
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
 
           let mut tracked_records = FxHashMap::default();
@@ -747,6 +753,7 @@ impl<'a> ModuleLoader<'a> {
       ),
       flat_options: self.flat_options,
       user_defined_entry_modules: user_defined_entry_ids,
+      tla_module_count: self.tla_module_count,
     })
   }
 

@@ -101,6 +101,7 @@ pub struct LinkStage<'a> {
   pub flat_options: FlatOptions,
   pub side_effects_free_function_symbol_ref: FxHashSet<SymbolRef>,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  pub tla_module_count: usize,
 }
 
 impl<'a> LinkStage<'a> {
@@ -188,6 +189,7 @@ impl<'a> LinkStage<'a> {
       flat_options: scan_stage_output.flat_options,
       side_effects_free_function_symbol_ref: FxHashSet::default(),
       user_defined_entry_modules: scan_stage_output.user_defined_entry_modules,
+      tla_module_count: scan_stage_output.tla_module_count,
     }
   }
 

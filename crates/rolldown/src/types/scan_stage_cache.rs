@@ -2,7 +2,8 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  BarrelState, GetLocalDbMut, ImporterRecord, Module, ModuleId, ModuleIdx, StableModuleId,
+  BarrelState, EcmaModuleAstUsage, GetLocalDbMut, ImporterRecord, Module, ModuleId, ModuleIdx,
+  StableModuleId,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -62,6 +63,12 @@ impl ScanStageCache {
   }
 
   pub fn merge(&mut self, mut scan_stage_output: ScanStageOutput) -> BuildResult<()> {
+    fn module_has_tla(module: &Module) -> bool {
+      module.as_normal().is_some_and(|normal_module| {
+        normal_module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait)
+      })
+    }
+
     let Some(ref mut cache) = self.snapshot else {
       self.snapshot = Some(
         scan_stage_output.try_into().map_err(|e: &'static str| vec![anyhow::anyhow!(e).into()])?,
@@ -94,6 +101,9 @@ impl ScanStageCache {
       if new_idx.index() >= cache.module_table.modules.len() {
         let new_module_idx = ModuleIdx::from_usize(cache.module_table.modules.len());
 
+        if module_has_tla(&new_module) {
+          cache.tla_module_count += 1;
+        }
         cache.symbol_ref_db.store_local_db(
           new_module_idx,
           std::mem::take(scan_stage_output.symbol_ref_db.local_db_mut(new_idx)),
@@ -101,6 +111,17 @@ impl ScanStageCache {
         cache.module_table.modules.push(new_module);
         cache.index_ecma_ast.push(scan_stage_output.index_ecma_ast.get_mut(new_idx).take());
         continue;
+      }
+      let old_has_tla = module_has_tla(&cache.module_table[idx]);
+      let new_has_tla = module_has_tla(&new_module);
+      if old_has_tla && !new_has_tla {
+        debug_assert!(
+          cache.tla_module_count > 0,
+          "tla_module_count underflow: decrement called when count is already 0"
+        );
+        cache.tla_module_count -= 1;
+      } else if !old_has_tla && new_has_tla {
+        cache.tla_module_count += 1;
       }
       cache.module_table[idx] = new_module;
       cache.index_ecma_ast[idx] = scan_stage_output.index_ecma_ast.get_mut(new_idx).take();
@@ -209,6 +230,7 @@ impl ScanStageCache {
       entry_point_to_reference_ids: cache.entry_point_to_reference_ids.clone(),
       flat_options: cache.flat_options,
       user_defined_entry_modules: cache.user_defined_entry_modules.clone(),
+      tla_module_count: cache.tla_module_count,
     }
   }
 }

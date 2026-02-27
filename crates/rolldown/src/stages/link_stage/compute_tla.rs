@@ -14,7 +14,10 @@ enum TlaVisitState {
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn compute_tla(&mut self) {
-    // TODO: skip this phase if there is no module use TLA
+    if self.tla_module_count == 0 {
+      return;
+    }
+
     fn is_tla(
       module_idx: ModuleIdx,
       module_table: &ModuleTable,

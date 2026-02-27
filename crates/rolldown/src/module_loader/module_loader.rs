@@ -11,11 +11,11 @@ use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::{
-  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult, FlatOptions,
-  HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImportedExports, ImporterRecord,
-  Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
-  PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief,
-  RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, SymbolRefDb,
+  EcmaModuleAstUsage, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule,
+  ExternalModuleTaskResult, FlatOptions, HybridIndexVec, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, ImportedExports, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg,
+  ModuleType, NormalModuleTaskResult, PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId,
+  RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, SymbolRefDb,
   SymbolRefDbForModule,
 };
 use rolldown_ecmascript::EcmaAst;
@@ -126,6 +126,7 @@ pub struct ModuleLoaderOutput {
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  pub tla_module_count: usize,
 }
 
 impl Drop for ModuleLoader<'_> {
@@ -651,12 +652,18 @@ impl<'a> ModuleLoader<'a> {
 
     let mut idx_of_module_info_need_update = vec![];
     let is_dense_index_vec = self.intermediate_normal_modules.modules.is_index_vec();
+    let mut tla_module_count = 0usize;
 
     let modules_iter = std::mem::take(&mut self.intermediate_normal_modules.modules)
       .into_iter_enumerated()
       .into_iter()
       .map(|(idx, module)| {
         let mut module = module.expect("Module tasks did't complete as expected");
+        if let Some(normal_module) = module.as_normal() {
+          if normal_module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
+            tla_module_count += 1;
+          }
+        }
         if let Some(module) = module.as_normal_mut() {
           // Note: (Compat to rollup)
           // The `dynamic_importers/importers` should be added after `module_parsed` hook.
@@ -747,6 +754,7 @@ impl<'a> ModuleLoader<'a> {
       ),
       flat_options: self.flat_options,
       user_defined_entry_modules: user_defined_entry_ids,
+      tla_module_count,
     })
   }
 

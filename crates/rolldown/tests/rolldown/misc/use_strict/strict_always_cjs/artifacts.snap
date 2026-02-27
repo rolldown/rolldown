@@ -1,0 +1,14 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+"use strict";
+//#region main.js
+console.log("This chunk should have \"use strict\" at the top because of strict: always.");
+//#endregion
+
+```

@@ -712,6 +712,16 @@ export interface OutputOptions {
    * @default false
    */
   strictExecutionOrder?: boolean;
+  /**
+   * Whether to always output `"use strict"` directive in non-ES module outputs.
+   *
+   * - `true` - Always emit `"use strict"` at the top of the output (not applicable for ESM format since ESM is always strict).
+   * - `false` - Never emit `"use strict"` in the output.
+   * - `'auto'` - Respect the `"use strict"` directives from the source code.
+   *
+   * @default 'auto'
+   */
+  strict?: boolean | 'auto';
 }
 
 export type CodeSplittingGroup = {

@@ -70,7 +70,9 @@ impl<'ast> VisitMut<'ast> for WebWorkerPostVisitor<'ast> {
           *it = self.create_self_location_href_expr();
         }
       }
-      Expression::MetaProperty(_) => {
+      Expression::MetaProperty(meta)
+        if meta.meta.name == "import" && meta.property.name == "meta" =>
+      {
         self.should_inject_import_meta_object = true;
         *it = self.ast_snippet.id_ref_expr("_vite_importMeta", SPAN);
       }

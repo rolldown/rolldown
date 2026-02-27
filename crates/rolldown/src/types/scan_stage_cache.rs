@@ -63,6 +63,12 @@ impl ScanStageCache {
   }
 
   pub fn merge(&mut self, mut scan_stage_output: ScanStageOutput) -> BuildResult<()> {
+    fn module_has_tla(module: &Module) -> bool {
+      module.as_normal().is_some_and(|normal_module| {
+        normal_module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait)
+      })
+    }
+
     let Some(ref mut cache) = self.snapshot else {
       self.snapshot = Some(
         scan_stage_output.try_into().map_err(|e: &'static str| vec![anyhow::anyhow!(e).into()])?,
@@ -80,11 +86,6 @@ impl ScanStageCache {
       }
     };
     // merge module_table, index_ast_scope, index_ecma_ast
-    let module_has_tla = |module: &Module| {
-      module.as_normal().is_some_and(|normal_module| {
-        normal_module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait)
-      })
-    };
     for (new_idx, new_module) in modules {
       let idx = self.module_id_to_idx[new_module.id()].idx();
 

@@ -70,9 +70,14 @@ const myPlugin = {
 ### Composable Filters
 
 - `and(...exprs)` / `or(...exprs)` / `not(expr)` — Logical composition of filter expressions.
-- `id(pattern, params?)` — Filter by id (string or RegExp).
+- `id(pattern, params?)` — Filter by id. A `string` pattern is matched by exact equality (not glob); a `RegExp` is tested against the id.
+- `importerId(pattern, params?)` — Filter by importer id. A `string` pattern is matched by exact equality; a `RegExp` is tested against the importer id. Only usable with the `resolveId` hook.
 - `moduleType(type)` — Filter by module type (e.g. 'js', 'tsx', or 'json').
 - `code(pattern)` — Filter by code content.
 - `query(key, pattern)` — Filter by query parameter.
 - `include(expr)` / `exclude(expr)` — Top-level include/exclude wrappers.
 - `queries(obj)` — Compose multiple query filters.
+
+### Utilities
+
+- `filterVitePlugins(plugins)` — Filters out Vite plugins with `apply: 'serve'`.

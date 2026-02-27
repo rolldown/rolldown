@@ -30,6 +30,8 @@ import type { TreeshakingOptions } from '../types/module-side-effects';
 import type { WatcherOptions } from '../options/input-options';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { RolldownBuild } from '../api/rolldown/rolldown-build';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { BundleError } from '../utils/error';
 
 type ModuleSideEffects = boolean | 'no-treeshake' | null;
 export { withFilter } from './with-filter';
@@ -375,7 +377,7 @@ export interface FunctionPluginHooks {
    */
   [DEFINED_HOOK_NAMES.buildEnd]: (
     this: PluginContext,
-    /** The error occurred during the build if applicable. */
+    /** The error occurred during the build if applicable. Normally {@linkcode BundleError} */
     err?: Error,
   ) => void;
 
@@ -454,7 +456,11 @@ export interface FunctionPluginHooks {
    *
    * @group Output Generation Hooks
    */
-  [DEFINED_HOOK_NAMES.renderError]: (this: PluginContext, error: Error) => void;
+  [DEFINED_HOOK_NAMES.renderError]: (
+    this: PluginContext,
+    /** The error that occurred during the build. Normally {@linkcode BundleError} */
+    error: Error,
+  ) => void;
 
   /**
    * Called at the end of {@linkcode RolldownBuild.generate | bundle.generate()} or

@@ -113,12 +113,14 @@ import {
   type ConfigExport,
   type RolldownOptionsFunction,
 } from './utils/define-config';
+import type { BundleError } from './utils/error';
 
 export { RUNTIME_MODULE_ID, VERSION } from './constants';
 export { build, defineConfig, rolldown, watch };
 export { BindingMagicString } from './binding.cjs';
 export type {
   AddonFunction,
+  BundleError,
   CodeSplittingGroup,
   CodeSplittingOptions,
   AsyncPluginHooks,

@@ -10,7 +10,7 @@ import { validateOption } from '../../utils/validator';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { rolldown } from './index';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
-import type { RolldownError } from '../../log/logging';
+import type { BundleError } from '../../utils/error';
 
 // @ts-expect-error TS2540: the polyfill of `asyncDispose`.
 Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose');
@@ -50,7 +50,7 @@ export class RolldownBuild {
    *
    * @param outputOptions The output options.
    * @returns The generated bundle.
-   * @throws {@linkcode RolldownError} When an error occurs during the build.
+   * @throws {@linkcode BundleError} When an error occurs during the build.
    */
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     return this.#build(false, outputOptions);
@@ -63,7 +63,7 @@ export class RolldownBuild {
    *
    * @param outputOptions The output options.
    * @returns The generated bundle.
-   * @throws {@linkcode RolldownError} When an error occurs during the build.
+   * @throws {@linkcode BundleError} When an error occurs during the build.
    */
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     return this.#build(true, outputOptions);

@@ -41,7 +41,19 @@ export function normalizeBindingError(e: BindingError): Error {
       });
 }
 
-export function aggregateBindingErrorsIntoJsError(rawErrors: BindingError[]): Error {
+/**
+ * The error type that is thrown by Rolldown for the whole build.
+ */
+export type BundleError = Error & {
+  /**
+   * The individual errors that happened during the build.
+   *
+   * This property is a getter to avoid unnecessary expansion of error details when the error is logged.
+   */
+  errors?: RolldownError[];
+};
+
+export function aggregateBindingErrorsIntoJsError(rawErrors: BindingError[]): BundleError {
   const errors = rawErrors.map(normalizeBindingError);
 
   // based on https://github.com/evanw/esbuild/blob/9eca46464ed5615cb36a3beb3f7a7b9a8ffbe7cf/lib/shared/common.ts#L1673

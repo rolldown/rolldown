@@ -44,6 +44,8 @@ Prebuilt binaries are distributed for the following platforms (grouped by [Node.
   - Apple arm64 (`aarch64-apple-darwin`)
 - Tier 2
   - Windows arm64 (`aarch64-pc-windows-msvc`)
+  - Linux s390x glibc (`s390x-unknown-linux-gnu`)
+  - Linux ppc64le glibc (`powerpc64le-unknown-linux-gnu`)
 - Experimental
   - Linux x64 musl (`x86_64-unknown-linux-musl`)
   - Linux armv7 (`armv7-unknown-linux-gnueabihf`)

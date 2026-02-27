@@ -99,8 +99,6 @@ pub fn normalize_binding_transform_options(options: TransformOptions) -> Bundler
 
   BundlerTransformOptions {
     jsx,
-    #[cfg(debug_assertions)]
-    jsx_preset: None,
     target,
     decorator,
     typescript,

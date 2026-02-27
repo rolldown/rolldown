@@ -318,11 +318,6 @@ pub fn prepare_build_context(
       }
     }
 
-    #[cfg(debug_assertions)]
-    if let Some(preset) = raw_transform_options.jsx_preset.clone() {
-      jsx_preset = preset;
-    }
-
     // Create TransformOptions based on tsconfig mode:
     // - Auto: Create Raw mode (will resolve tsconfig per file)
     // - None/Manual: Create Normal mode (resolve tsconfig once now)

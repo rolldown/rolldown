@@ -360,7 +360,7 @@ const config = defineConfig({
     ],
 
     footer: {
-      copyright: `© 2025 VoidZero Inc. and Rolldown contributors.`,
+      copyright: `© 2026 VoidZero Inc. and Rolldown contributors.`,
       nav: [
         {
           title: 'Rolldown',

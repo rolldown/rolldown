@@ -4931,6 +4931,10 @@ expression: output
 - middle-!~{003}~.js => middle-CMhJ5DMW.js
 - server-!~{002}~.js => server-DfC8g3sb.js
 
+# tests/rolldown/issues/7235
+
+- main-!~{000}~.js => main-Bo1PArHf.js
+
 # tests/rolldown/issues/7286
 
 - main-!~{000}~.js => main-2AMGYXtd.js

@@ -84,6 +84,11 @@ See [`HookFilter`](/reference/Interface.HookFilter) as well.
 
 For more complex filtering logic, Rolldown provides composable filter expressions via the [`@rolldown/pluginutils`](https://github.com/rolldown/rolldown/tree/main/packages/pluginutils) package. These allow you to build filters using logical operators like `and`, `or`, and `not`.
 
+> [!WARNING]
+> Composable filters are not yet supported in legacy Vite or unplugin. They can be used in Rolldown/Rolldown-Vite/Vite Beta plugins only.
+
+### Example
+
 ```js
 import { and, id, include, moduleType } from '@rolldown/pluginutils';
 
@@ -100,6 +105,17 @@ export default function myPlugin() {
   };
 }
 ```
+
+### Available Filter Functions
+
+- `and(...exprs)` / `or(...exprs)` / `not(expr)` — Logical composition of filter expressions.
+- `id(pattern, params?)` — Filter by id. A `string` pattern is matched by exact equality (not glob); a `RegExp` is tested against the id.
+- `importerId(pattern, params?)` — Filter by importer id. A `string` pattern is matched by exact equality; a `RegExp` is tested against the importer id. Only usable with the `resolveId` hook.
+- `moduleType(type)` — Filter by module type (e.g. 'js', 'tsx', or 'json').
+- `code(pattern)` — Filter by code content.
+- `query(key, pattern)` — Filter by query parameter.
+- `include(expr)` / `exclude(expr)` — Top-level include/exclude wrappers.
+- `queries(obj)` — Compose multiple query filters.
 
 See the [`@rolldown/pluginutils` README](https://github.com/rolldown/rolldown/tree/main/packages/pluginutils#readme) for the full API reference.
 
@@ -148,7 +164,3 @@ This approach ensures your plugin will:
 ### `moduleType` Filter
 
 The [Module Type concept](/in-depth/module-types) does not exist in Rollup / Vite 7 and below. For that reason, the `moduleType` filter is not supported by those tools and will be ignored.
-
-### Composable Filters
-
-Composable filters are currently only supported in Rolldown. They are not yet supported in Vite, Rolldown-Vite, or unplugin.

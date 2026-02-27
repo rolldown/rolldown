@@ -105,6 +105,7 @@ pub struct ModuleLoader<'a> {
   cache: &'a mut ScanStageCache,
   pub flat_options: FlatOptions,
   pub magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+  tla_module_count: usize,
 }
 
 pub struct ModuleLoaderOutput {
@@ -186,6 +187,7 @@ impl<'a> ModuleLoader<'a> {
       new_added_modules_from_partial_scan: FxIndexSet::default(),
       flat_options,
       magic_string_tx,
+      tla_module_count: 0,
     })
   }
 
@@ -383,6 +385,9 @@ impl<'a> ModuleLoader<'a> {
           }
 
           let normal_module = module.as_normal().unwrap();
+          if normal_module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
+            self.tla_module_count += 1;
+          }
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
 
           let mut tracked_records = FxHashMap::default();
@@ -652,18 +657,10 @@ impl<'a> ModuleLoader<'a> {
 
     let mut idx_of_module_info_need_update = vec![];
     let is_dense_index_vec = self.intermediate_normal_modules.modules.is_index_vec();
-    let mut tla_module_count = 0usize;
 
     let modules_iter = std::mem::take(&mut self.intermediate_normal_modules.modules)
       .into_iter_enumerated()
       .into_iter()
-      .inspect(|(_, module)| {
-        if let Some(m) = module.as_ref().and_then(|m| m.as_normal()) {
-          if m.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
-            tla_module_count += 1;
-          }
-        }
-      })
       .map(|(idx, module)| {
         let mut module = module.expect("Module tasks did't complete as expected");
         if let Some(module) = module.as_normal_mut() {
@@ -756,7 +753,7 @@ impl<'a> ModuleLoader<'a> {
       ),
       flat_options: self.flat_options,
       user_defined_entry_modules: user_defined_entry_ids,
-      tla_module_count,
+      tla_module_count: self.tla_module_count,
     })
   }
 

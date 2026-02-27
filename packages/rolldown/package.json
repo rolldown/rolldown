@@ -159,7 +159,9 @@
       "aarch64-unknown-linux-ohos",
       "aarch64-pc-windows-msvc",
       "aarch64-linux-android",
-      "wasm32-wasip1-threads"
+      "wasm32-wasip1-threads",
+      "s390x-unknown-linux-gnu",
+      "powerpc64le-unknown-linux-gnu"
     ],
     "wasm": {
       "initialMemory": 16384,

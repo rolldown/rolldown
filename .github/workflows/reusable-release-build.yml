@@ -57,8 +57,18 @@ jobs:
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
+            build: pnpm ci:build-release-binding -x --target aarch64-unknown-linux-musl
+
+          - os: ubuntu-latest
+            target: s390x-unknown-linux-gnu
             build: |
-              pnpm ci:build-release-binding -x --target aarch64-unknown-linux-musl
+              export CFLAGS="-fuse-ld=lld"
+              pnpm ci:build-release-binding --target s390x-unknown-linux-gnu --use-napi-cross
+
+          - os: ubuntu-latest
+            target: powerpc64le-unknown-linux-gnu
+            build: pnpm ci:build-release-binding --target powerpc64le-unknown-linux-gnu --use-napi-cross
+
           - os: ubuntu-latest
             target: wasm32-wasip1-threads
             build: |
@@ -81,7 +91,7 @@ jobs:
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         if: ${{ contains(matrix.target, 'musl') }}
         with:
-          version: 0.14.1
+          version: 0.15.2
 
       - name: Setup OpenHarmony SDK
         if: ${{ contains(matrix.target, 'ohos') }}
@@ -129,7 +139,7 @@ jobs:
           RUSTUP_IO_THREADS: 1
         with:
           operating_system: freebsd
-          version: '14.2'
+          version: '15.0'
           memory: 8G
           cpu_count: 3
           environment_variables: 'DEBUG RUSTUP_IO_THREADS'

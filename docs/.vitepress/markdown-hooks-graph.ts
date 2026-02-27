@@ -1,10 +1,4 @@
-import { Graphviz } from '@hpcc-js/wasm-graphviz';
-import type MarkdownIt from 'markdown-it';
-import crypto from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
-
-const RENDERER_VERSION = 1;
+import type { Processor } from 'vitepress-plugin-graphviz';
 
 type StyleDef = {
   light: Record<string, string>;
@@ -345,14 +339,43 @@ function buildNodeAttributes(
   return attrs;
 }
 
-function toDot(parsed: ParsedDsl, mode: 'light' | 'dark' = 'light'): string {
-  const nodeIdBySlug = new Map<string, string>();
-  const nodeAttrsById = new Map<string, Record<string, string>>();
+function mergeThemeValues(light: string, dark: string): string {
+  if (light === dark) return light;
+
+  const lightQuoted = /^".*"$/.test(light);
+  const darkQuoted = /^".*"$/.test(dark);
+
+  if (lightQuoted && darkQuoted) {
+    const lightInner = light.slice(1, -1);
+    const darkInner = dark.slice(1, -1);
+    return `"\${${lightInner}|${darkInner}}"`;
+  }
+
+  return `\${${light}|${dark}}`;
+}
+
+function toInterpolatedDot(parsed: ParsedDsl): string {
+  const nodeAttrsLightById = new Map<string, Record<string, string>>();
+  const nodeAttrsDarkById = new Map<string, Record<string, string>>();
+  const mergedNodeAttrsById = new Map<string, Record<string, string>>();
 
   for (const node of parsed.nodes) {
     const id = slugify(node.name);
-    nodeIdBySlug.set(id, node.name);
-    nodeAttrsById.set(id, buildNodeAttributes(node, parsed.styles, mode));
+    nodeAttrsLightById.set(id, buildNodeAttributes(node, parsed.styles, 'light'));
+    nodeAttrsDarkById.set(id, buildNodeAttributes(node, parsed.styles, 'dark'));
+  }
+
+  for (const [id] of nodeAttrsLightById) {
+    const light = nodeAttrsLightById.get(id)!;
+    const dark = nodeAttrsDarkById.get(id)!;
+    const merged: Record<string, string> = {};
+    const allKeys = new Set([...Object.keys(light), ...Object.keys(dark)]);
+    for (const key of allKeys) {
+      const lightVal = light[key] ?? '';
+      const darkVal = dark[key] ?? '';
+      merged[key] = mergeThemeValues(lightVal, darkVal);
+    }
+    mergedNodeAttrsById.set(id, merged);
   }
 
   const groupByNode = new Map<string, string>();
@@ -365,10 +388,10 @@ function toDot(parsed: ParsedDsl, mode: 'light' | 'dark' = 'light'): string {
   const edges = parsed.edges.map((edge) => {
     const fromId = slugify(edge.from);
     const toId = slugify(edge.to);
-    if (!nodeAttrsById.has(fromId)) {
+    if (!mergedNodeAttrsById.has(fromId)) {
       throw new Error(`Edge references unknown from-node: ${edge.from}`);
     }
-    if (!nodeAttrsById.has(toId)) {
+    if (!mergedNodeAttrsById.has(toId)) {
       throw new Error(`Edge references unknown to-node: ${edge.to}`);
     }
     return { ...edge, from: fromId, to: toId };
@@ -381,20 +404,22 @@ function toDot(parsed: ParsedDsl, mode: 'light' | 'dark' = 'light'): string {
   });
   const mainEdges = edges.filter((edge) => !clusterEdges.includes(edge));
 
+  const lightTextColor = getThemeColor('light').text;
+  const darkTextColor = getThemeColor('dark').text;
+  const textColor = mergeThemeValues(`"${lightTextColor}"`, `"${darkTextColor}"`);
+
   const lines: string[] = [];
   lines.push('digraph {');
   lines.push('    bgcolor="transparent";');
   lines.push('    rankdir=TB;');
-
-  const textColor = getThemeColor(mode).text;
   lines.push(
-    `    node [shape=box, style=filled, fontname="Arial", margin="0.2,0.1", color="${textColor}", fontcolor="${textColor}"];`,
+    `    node [shape=box, style=filled, fontname="Arial", margin="0.2,0.1", color=${textColor}, fontcolor=${textColor}];`,
   );
-  lines.push(`    edge [fontname="Arial", color="${textColor}"];`);
+  lines.push(`    edge [fontname="Arial", color=${textColor}];`);
   lines.push('');
   lines.push('    // Node definitions with styling');
 
-  for (const [id, attrs] of nodeAttrsById.entries()) {
+  for (const [id, attrs] of mergedNodeAttrsById.entries()) {
     const attrText = formatAttributes(attrs);
     lines.push(`    ${id} [${attrText}];`);
   }
@@ -407,7 +432,7 @@ function toDot(parsed: ParsedDsl, mode: 'light' | 'dark' = 'light'): string {
     const attrs: Record<string, string> = {};
     if (edge.label) {
       attrs.label = ensureQuoted(edge.label);
-      attrs.fontcolor = `"${textColor}"`;
+      attrs.fontcolor = textColor;
     }
     if (edge.dotted) {
       attrs.style = 'dashed';
@@ -451,133 +476,64 @@ function toDot(parsed: ParsedDsl, mode: 'light' | 'dark' = 'light'): string {
   return lines.join('\n');
 }
 
-let graphvizInstance: Awaited<ReturnType<typeof Graphviz.load>> | null = null;
+function applyAspectRatio(svg: string, parsed: ParsedDsl): string {
+  const svgMatch = svg.match(/<svg\s+([^>]*)>/);
+  if (svgMatch) {
+    const attrs = svgMatch[1];
+    const widthMatch = attrs.match(/width="([^"]*?)(?:pt)?"/);
+    const heightMatch = attrs.match(/height="([^"]*?)(?:pt)?"/);
+    const viewBoxMatch = attrs.match(/viewBox="([^"]*?)"/);
 
-function dslToDot(dsl: string): string {
-  const parsed = parseDsl(dsl);
-  return toDot(parsed);
+    if ((parsed.marginX || parsed.marginY) && viewBoxMatch) {
+      const viewBox = viewBoxMatch[1];
+      const parts = viewBox.split(/\s+/);
+      if (parts.length === 4) {
+        const marginXNum = +parsed.marginX || 0;
+        const marginYNum = +parsed.marginY || 0;
+        if (!Number.isNaN(marginXNum) || !Number.isNaN(marginYNum)) {
+          const x = +parts[0];
+          const y = +parts[1];
+          const w = +parts[2] + marginXNum;
+          const h = +parts[3] + marginYNum;
+          svg = svg.replace(/viewBox="[^"]*"/, `viewBox="${x} ${y} ${w} ${h}"`);
+        }
+      }
+    }
+    if (widthMatch && heightMatch) {
+      let width = +widthMatch[1];
+      let height = +heightMatch[1];
+      const marginXNum = +parsed.marginX || 0;
+      const marginYNum = +parsed.marginY || 0;
+      width += marginXNum;
+      height += marginYNum;
+      if (!Number.isNaN(width) && !Number.isNaN(height) && height > 0) {
+        const aspectRatio = width / height;
+        let styleStr = `aspect-ratio: ${aspectRatio};`;
+        if (parsed.maxWidth) {
+          styleStr += ` max-width: ${parsed.maxWidth};`;
+        }
+        svg = svg.replace(/(<svg\s+)/, `$1style="${styleStr}" `);
+      }
+    }
+  }
+  return svg.replace(/\s(?:height|width)="[^"]*"/g, '');
 }
 
-export async function hooksGraphPlugin(md: MarkdownIt): Promise<void> {
-  // Load Graphviz instance once during plugin initialization
-  graphvizInstance = await Graphviz.load();
+export function createHooksGraphProcessor(): Processor {
+  let parsed: ParsedDsl;
 
-  const defaultFenceRenderer = md.renderer.rules.fence!;
-
-  md.renderer.rules.fence = (tokens, idx, options, env, self) => {
-    const token = tokens[idx];
-    const info = token.info.trim();
-
-    // hooks-graph:txt → convert to DOT and output as code block
-    if (info === 'hooks-graph:txt') {
-      const dsl = token.content;
-      const dot = dslToDot(dsl);
-      token.content = dot;
-      token.info = 'txt:line-numbers';
-      return defaultFenceRenderer([token], 0, options, env, self);
-    }
-
-    // hooks-graph → convert to SVG and output as image
-    if (info === 'hooks-graph') {
-      const dsl = token.content;
-      const parsed = parseDsl(dsl);
-      const hash = crypto
-        .createHash('sha256')
-        .update(`${RENDERER_VERSION}:${graphvizInstance!.version()}:${JSON.stringify(parsed)}`)
-        .digest('hex')
-        .slice(0, 16);
-      const srcDir = env.filePath ? path.dirname(env.filePath) : process.cwd();
-      const svgPathLight = path.join(
-        srcDir,
-        `.vitepress/cache/markdown-hooks-graph/${hash}-light.svg`,
-      );
-      const svgPathDark = path.join(
-        srcDir,
-        `.vitepress/cache/markdown-hooks-graph/${hash}-dark.svg`,
-      );
-
-      // Generate SVG files if they don't exist
-      if (!fs.existsSync(svgPathLight) || !fs.existsSync(svgPathDark)) {
-        const svgDir = path.dirname(svgPathLight);
-        if (!fs.existsSync(svgDir)) {
-          fs.mkdirSync(svgDir, { recursive: true });
-        }
-
-        try {
-          const dotLight = toDot(parsed, 'light');
-          const dotDark = toDot(parsed, 'dark');
-          const svgLight = graphvizInstance!.dot(dotLight, 'svg_inline');
-          const svgDark = graphvizInstance!.dot(dotDark, 'svg_inline');
-
-          fs.writeFileSync(svgPathLight, svgLight, 'utf8');
-          fs.writeFileSync(svgPathDark, svgDark, 'utf8');
-        } catch (error) {
-          console.error('Error generating hooks-graph:', error);
-          return '<div class="error">Error generating hooks-graph</div>';
-        }
+  return {
+    preprocess(content) {
+      parsed = parseDsl(content);
+      return toInterpolatedDot(parsed);
+    },
+    postprocess(svg, mode) {
+      svg = applyAspectRatio(svg, parsed);
+      const legend = buildLegendTable(parsed, mode);
+      if (legend) {
+        svg = appendLegend(svg, legend, parsed.legendPosition);
       }
-
-      let svgLight = fs.readFileSync(svgPathLight, 'utf8');
-      let svgDark = fs.readFileSync(svgPathDark, 'utf8');
-
-      const applyAspectRatio = (svg: string): string => {
-        const svgMatch = svg.match(/<svg\s+([^>]*)>/);
-        if (svgMatch) {
-          const attrs = svgMatch[1];
-          const widthMatch = attrs.match(/width="([^"]*?)(?:pt)?"/);
-          const heightMatch = attrs.match(/height="([^"]*?)(?:pt)?"/);
-          const viewBoxMatch = attrs.match(/viewBox="([^"]*?)"/);
-
-          if ((parsed.marginX || parsed.marginY) && viewBoxMatch) {
-            const viewBox = viewBoxMatch[1];
-            const parts = viewBox.split(/\s+/);
-            if (parts.length === 4) {
-              const marginXNum = +parsed.marginX || 0;
-              const marginYNum = +parsed.marginY || 0;
-              if (!Number.isNaN(marginXNum) || !Number.isNaN(marginYNum)) {
-                const x = +parts[0];
-                const y = +parts[1];
-                const w = +parts[2] + marginXNum;
-                const h = +parts[3] + marginYNum;
-                svg = svg.replace(/viewBox="[^"]*"/, `viewBox="${x} ${y} ${w} ${h}"`);
-              }
-            }
-          }
-          if (widthMatch && heightMatch) {
-            let width = +widthMatch[1];
-            let height = +heightMatch[1];
-            const marginXNum = +parsed.marginX || 0;
-            const marginYNum = +parsed.marginY || 0;
-            width += marginXNum;
-            height += marginYNum;
-            if (!Number.isNaN(width) && !Number.isNaN(height) && height > 0) {
-              const aspectRatio = width / height;
-              let styleStr = `aspect-ratio: ${aspectRatio};`;
-              if (parsed.maxWidth) {
-                styleStr += ` max-width: ${parsed.maxWidth};`;
-              }
-              svg = svg.replace(/(<svg\s+)/, `$1style="${styleStr}" `);
-            }
-          }
-        }
-        return svg.replace(/\s(?:height|width)="[^"]*"/g, '');
-      };
-
-      svgLight = applyAspectRatio(svgLight);
-      svgDark = applyAspectRatio(svgDark);
-
-      const legendLight = buildLegendTable(parsed, 'light');
-      const legendDark = buildLegendTable(parsed, 'dark');
-      if (legendLight) {
-        svgLight = appendLegend(svgLight, legendLight, parsed.legendPosition);
-      }
-      if (legendDark) {
-        svgDark = appendLegend(svgDark, legendDark, parsed.legendPosition);
-      }
-
-      return `<div class="hooks-graph-container light-only">${svgLight}</div><div class="hooks-graph-container dark-only">${svgDark}</div>`;
-    }
-
-    return defaultFenceRenderer(tokens, idx, options, env, self);
+      return svg;
+    },
   };
 }

@@ -5,7 +5,8 @@ import { type DefaultTheme, defineConfig } from 'vitepress';
 import { groupIconMdPlugin, groupIconVitePlugin } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
 import { addOgImage } from 'vitepress-plugin-og';
-import { hooksGraphPlugin } from './markdown-hooks-graph.ts';
+import { graphvizMarkdownPlugin } from 'vitepress-plugin-graphviz';
+import { createHooksGraphProcessor } from './markdown-hooks-graph.ts';
 
 const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
   {
@@ -418,7 +419,9 @@ const config = defineConfig({
   markdown: {
     async config(md) {
       md.use(groupIconMdPlugin);
-      await hooksGraphPlugin(md);
+      await graphvizMarkdownPlugin(md, {
+        processors: { 'hooks-graph': createHooksGraphProcessor() },
+      });
     },
   },
   async transformPageData(pageData, ctx) {

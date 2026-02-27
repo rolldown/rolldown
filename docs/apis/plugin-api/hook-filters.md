@@ -85,7 +85,7 @@ See [`HookFilter`](/reference/Interface.HookFilter) as well.
 For more complex filtering logic, Rolldown provides composable filter expressions via the [`@rolldown/pluginutils`](https://github.com/rolldown/rolldown/tree/main/packages/pluginutils) package. These allow you to build filters using logical operators like `and`, `or`, and `not`.
 
 > [!WARNING]
-> Composable filters are not yet supported in legacy Vite or unplugin. They can be used in Rolldown/Vite Beta plugins only.
+> Composable filters are not yet supported in legacy Vite or unplugin. They can be used in Vite Beta, Rolldown plugins only.
 
 ### Example
 

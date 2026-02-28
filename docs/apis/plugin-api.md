@@ -101,7 +101,7 @@ Build hooks are run during the build phase. They are mainly concerned with locat
 
 The first hook of the build phase is [`options`](/reference/Interface.Plugin#options), the last one is always [`buildEnd`](/reference/Interface.Plugin#buildend). If there is a build error, [`closeBundle`](/reference/Interface.Plugin#closebundle) will be called after that.
 
-```hooks-graph
+```dot+hooks-graph
 # styles
 sequential: fillcolor="#ffe8cc", dark$fillcolor="#9d4f1a"
 parallel: fillcolor="#ffcccc", dark$fillcolor="#8a2a2a"
@@ -161,7 +161,7 @@ The first hook of the output generation phase is [`renderStart`](/reference/Inte
 
 Additionally, [`closeBundle`](/reference/Interface.Plugin#closebundle) can be called as the very last hook, but it is the responsibility of the User to manually call [`bundle.close()`](/reference/Interface.RolldownBuild#close) to trigger this. The CLI will always make sure this is the case.
 
-```hooks-graph
+```dot+hooks-graph
 # config
 margin=150,0
 

@@ -17,7 +17,7 @@ use rolldown_common::{
 use rolldown_devtools::{action, trace_action};
 use rolldown_error::CausedPlugin;
 use rolldown_sourcemap::SourceMap;
-use rolldown_utils::unique_arc::UniqueArc;
+use rolldown_utils::{IndexBitSet, unique_arc::UniqueArc};
 use string_wizard::{MagicString, SourceMapOptions};
 use tracing::{Instrument, debug_span};
 
@@ -41,14 +41,15 @@ impl PluginDriver {
     specifier: &str,
     importer: Option<&str>,
     skipped_resolve_calls: Option<&Vec<Arc<HookResolveIdSkipped>>>,
-  ) -> Vec<PluginIdx> {
-    let mut skipped_plugins = vec![];
+    plugin_count: usize,
+  ) -> IndexBitSet<PluginIdx> {
+    let mut skipped_plugins = IndexBitSet::new(plugin_count);
     if let Some(skipped_resolve_calls) = skipped_resolve_calls {
       for skip_resolve_call in skipped_resolve_calls {
         if skip_resolve_call.specifier == specifier
           && skip_resolve_call.importer.as_deref() == importer
         {
-          skipped_plugins.push(skip_resolve_call.plugin_idx);
+          skipped_plugins.set_bit(skip_resolve_call.plugin_idx);
         }
       }
     }
@@ -60,13 +61,16 @@ impl PluginDriver {
     args: &HookResolveIdArgs<'_>,
     skipped_resolve_calls: Option<&Vec<Arc<HookResolveIdSkipped>>>,
   ) -> HookResolveIdReturn {
-    let skipped_plugins =
-      Self::get_resolve_call_skipped_plugins(args.specifier, args.importer, skipped_resolve_calls);
+    let skipped_plugins = Self::get_resolve_call_skipped_plugins(
+      args.specifier,
+      args.importer,
+      skipped_resolve_calls,
+      self.plugins.len(),
+    );
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_resolve_id_meta)
     {
-      // TODO: Maybe we could optimize this a little
-      if skipped_plugins.contains(&plugin_idx) {
+      if skipped_plugins.has_bit(plugin_idx) {
         continue;
       }
       let ret = async {
@@ -137,12 +141,16 @@ impl PluginDriver {
     args: &HookResolveIdArgs<'_>,
     skipped_resolve_calls: Option<&Vec<Arc<HookResolveIdSkipped>>>,
   ) -> HookResolveIdReturn {
-    let skipped_plugins =
-      Self::get_resolve_call_skipped_plugins(args.specifier, args.importer, skipped_resolve_calls);
+    let skipped_plugins = Self::get_resolve_call_skipped_plugins(
+      args.specifier,
+      args.importer,
+      skipped_resolve_calls,
+      self.plugins.len(),
+    );
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_resolve_dynamic_import_meta)
     {
-      if skipped_plugins.contains(&plugin_idx) {
+      if skipped_plugins.has_bit(plugin_idx) {
         continue;
       }
       let start = self.start_timing();

@@ -221,7 +221,28 @@ To understand why filters are so effective, you need to understand how Rolldown 
 Rolldown uses parallel processing (like the [producer-consumer problem](https://en.wikipedia.org/wiki/Producer%E2%80%93consumer_problem)) to build the module graph efficiently. Here's a simple dependency graph to illustrate:
 
 **Dependency Graph**
-![dependency graph](https://github.com/user-attachments/assets/e49c29f1-1d2f-4d21-a277-311bcc33eda7)
+
+```dot [Dependency Graph]
+digraph {
+    bgcolor="transparent";
+    rankdir=TB;
+    node [shape=box, style="filled,rounded", fontname="Arial", fontsize=12, margin="0.2,0.1", color="${#3c3c43|#dfdfd6}", fontcolor="${#3c3c43|#dfdfd6}"];
+    edge [fontname="Arial", fontsize=10, color="${#3c3c43|#dfdfd6}", fontcolor="${#3c3c43|#dfdfd6}"];
+
+    a [label="a.js", fillcolor="${#fff0e0|#4a2a0a}"];
+    b [label="b.js", fillcolor="${#dbeafe|#1e3a5f}"];
+    c [label="c.js", fillcolor="${#dbeafe|#1e3a5f}"];
+    d [label="d.js", fillcolor="${#dbeafe|#1e3a5f}"];
+    e [label="e.js", fillcolor="${#dbeafe|#1e3a5f}"];
+    f [label="f.js", fillcolor="${#dbeafe|#1e3a5f}"];
+
+    a -> b;
+    a -> c;
+    b -> d;
+    b -> e;
+    c -> f;
+}
+```
 
 ### Without JavaScript Plugins
 

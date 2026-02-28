@@ -1,6 +1,11 @@
 import picomatch from 'picomatch';
 import { describe, expect, test } from 'vitest';
-import { exactRegex, makeIdFiltersToMatchWithQuery, prefixRegex } from './simple-filters.js';
+import {
+  matchExt,
+  exactRegex,
+  makeIdFiltersToMatchWithQuery,
+  prefixRegex,
+} from './simple-filters.js';
 
 describe('exactRegex', () => {
   test('supports without flag parameter', () => {
@@ -30,6 +35,76 @@ describe('exactRegex', () => {
     expect(regex.test('foo(bar\\)')).toBe(false);
     expect(regex.test('foo(bar)a')).toBe(false);
     expect(regex.test('afoo(bar)')).toBe(false);
+  });
+});
+
+describe('matchExt', () => {
+  const hardExpect = expect;
+  test('matches: js', () => {
+    const expect = hardExpect.soft;
+    const regex = matchExt('js');
+
+    expect(regex.test(`foo.js`)).toBe(true);
+    expect(regex.test(`app/foo.js`)).toBe(true);
+    expect(regex.test(`app/foo.js.js`)).toBe(true);
+    expect(regex.test(`app/foo.ts.js`)).toBe(true);
+    expect(regex.test(`app/foo.js?t=123`)).toBe(true);
+    expect(regex.test(`app/foo.js?f=foo.js`)).toBe(true);
+    expect(regex.test(`app/foo.js.js?f=foo.js`)).toBe(true);
+    expect(regex.test(`app/js/foo.js`)).toBe(true);
+    expect(regex.test(`app/js/foo.js#t=ts`)).toBe(true);
+  });
+
+  test('non-matches: js', () => {
+    const expect = hardExpect.soft;
+    const regex = matchExt('js');
+
+    expect(regex.test(`app/foo.js.ts`)).toBe(false);
+    expect(regex.test(`app/foo.js.ts?pretend.js`)).toBe(false);
+    expect(regex.test(`app/foo.js.md`)).toBe(false);
+    expect(regex.test(`app/foo.js.md?foo.js`)).toBe(false);
+    expect(regex.test(`app/foo.js.md?from=foo.js`)).toBe(false);
+    expect(regex.test(`app/foo/js`)).toBe(false);
+    expect(regex.test(`app/foo.js.js.ts`)).toBe(false);
+    expect(regex.test(`app/foo.js.js.ts?x=js.js`)).toBe(false);
+    expect(regex.test(`app/foo.js.js.ts?x=foo.js.js`)).toBe(false);
+    expect(regex.test(`app/foo.ts#section.js`)).toBe(false);
+  });
+
+  test('does not match query/hash-only extensions', () => {
+    const regex = matchExt('js');
+
+    expect(regex.test('app/foo?x=.js')).toBe(false);
+    expect(regex.test('app/foo#x=.js')).toBe(false);
+  });
+
+  test('is case-sensitive by default', () => {
+    const regex = matchExt('js');
+
+    expect(regex.test('app/foo.JS')).toBe(false);
+    expect(regex.test('app/foo.Js')).toBe(false);
+  });
+
+  test('supports escaped extension characters', () => {
+    const cxx = matchExt('c++');
+    const dts = matchExt('d.ts');
+
+    expect(cxx.test('app/foo.c++')).toBe(true);
+    expect(cxx.test('app/foo.c++?x=1')).toBe(true);
+    expect(cxx.test('app/foo.c++11')).toBe(false);
+
+    expect(dts.test('app/foo.d.ts')).toBe(true);
+    expect(dts.test('app/foo.d.ts?x=1')).toBe(true);
+    expect(dts.test('app/foo.ts')).toBe(false);
+    expect(dts.test('app/foo.d.ts.js')).toBe(false);
+  });
+
+  test('matches dotfiles when extension matches', () => {
+    const regex = matchExt('env');
+
+    expect(regex.test('.env')).toBe(true);
+    expect(regex.test('config/.env')).toBe(true);
+    expect(regex.test('config/.env.local')).toBe(false);
   });
 });
 

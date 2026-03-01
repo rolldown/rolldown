@@ -59,13 +59,8 @@ impl Bundler {
 
   // Rollup always creates a new build in watch mode, which could be called multiple times.
   // Here only reset the closed flag to make it possible to call again.
-  pub(crate) fn reset_closed_for_watch_mode(&mut self) {
+  pub fn reset_closed_for_watch_mode(&mut self) {
     self.closed = false;
-  }
-
-  #[cfg(feature = "experimental")]
-  pub fn reset_closed_for_watch_mode_experimental(&mut self) {
-    self.reset_closed_for_watch_mode();
   }
 
   pub(super) async fn inner_close(&mut self) -> Result<()> {

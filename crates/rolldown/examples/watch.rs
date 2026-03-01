@@ -20,6 +20,6 @@ async fn main() {
     },
     vec![],
   );
-  let watcher = Watcher::new(config, None).unwrap();
+  let watcher = Watcher::new(config).unwrap();
   watcher.start().await;
 }

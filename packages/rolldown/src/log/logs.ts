@@ -6,7 +6,7 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   PLUGIN_ERROR = 'PLUGIN_ERROR',
   INPUT_HOOK_IN_OUTPUT_PLUGIN = 'INPUT_HOOK_IN_OUTPUT_PLUGIN',
   CYCLE_LOADING = 'CYCLE_LOADING',
-  MULTIPLY_NOTIFY_OPTION = 'MULTIPLY_NOTIFY_OPTION',
+  MULTIPLE_WATCHER_OPTION = 'MULTIPLE_WATCHER_OPTION',
   PARSE_ERROR = 'PARSE_ERROR',
   NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER';
 
@@ -40,10 +40,10 @@ export function logCycleLoading(pluginName: string, moduleId: string): RolldownL
   };
 }
 
-export function logMultiplyNotifyOption(): RolldownLog {
+export function logMultipleWatcherOption(): RolldownLog {
   return {
-    code: MULTIPLY_NOTIFY_OPTION,
-    message: `Found multiply notify option at watch options, using first one to start notify watcher.`,
+    code: MULTIPLE_WATCHER_OPTION,
+    message: `Found multiple watcher options at watch options, using first one to start watcher.`,
   };
 }
 

@@ -1,6 +1,7 @@
-import { BindingWatcher, shutdownAsyncRuntime } from '../../binding.cjs';
+import { type BindingWatcherEvent, BindingWatcher, shutdownAsyncRuntime } from '../../binding.cjs';
 import { LOG_LEVEL_WARN } from '../../log/logging';
-import { logMultiplyNotifyOption } from '../../log/logs';
+import { logMultipleWatcherOption } from '../../log/logs';
+import { aggregateBindingErrorsIntoJsError } from '../../utils/error';
 import type { WatchOptions } from '../../options/watch-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
 import {
@@ -42,9 +43,56 @@ class Watcher {
     shutdownAsyncRuntime();
   }
 
+  private createEventCallback(): (event: BindingWatcherEvent) => Promise<void> {
+    const emitter = this.emitter;
+    return async (event: BindingWatcherEvent) => {
+      switch (event.eventKind()) {
+        case 'event': {
+          const code = event.bundleEventKind();
+          if (code === 'BUNDLE_END') {
+            const { duration, output, result } = event.bundleEndData();
+            await emitter.emit('event', {
+              code: 'BUNDLE_END',
+              duration,
+              output: [output],
+              result,
+            });
+          } else if (code === 'ERROR') {
+            const data = event.bundleErrorData();
+            await emitter.emit('event', {
+              code: 'ERROR',
+              error: aggregateBindingErrorsIntoJsError(data.error),
+              result: data.result,
+            });
+          } else {
+            await emitter.emit('event', { code: code as 'START' | 'BUNDLE_START' | 'END' });
+          }
+          break;
+        }
+        case 'change': {
+          const { path, kind } = event.watchChangeData();
+          await emitter.emit('change', path, {
+            event: kind as 'create' | 'update' | 'delete',
+          });
+          break;
+        }
+        case 'restart':
+          await emitter.emit('restart');
+          break;
+        case 'close':
+          await emitter.emit('close');
+          break;
+      }
+    };
+  }
+
   start(): void {
     // run first build after listener is attached
-    process.nextTick(() => this.inner.start(this.emitter.onEvent.bind(this.emitter)));
+    process.nextTick(async () => {
+      await this.inner.start(this.createEventCallback());
+      // Pending Promise keeps Node.js event loop alive — no setInterval needed
+      this.inner.waitForClose();
+    });
   }
 }
 
@@ -63,11 +111,8 @@ export async function createWatcher(
       )
       .flat(),
   );
-  const notifyOptions = getValidNotifyOption(bundlerOptions);
-  const bindingWatcher = new BindingWatcher(
-    bundlerOptions.map((option) => option.bundlerOptions),
-    notifyOptions,
-  );
+  warnMultiplePollingOptions(bundlerOptions);
+  const bindingWatcher = new BindingWatcher(bundlerOptions.map((option) => option.bundlerOptions));
   const watcher = new Watcher(
     emitter,
     bindingWatcher,
@@ -76,19 +121,18 @@ export async function createWatcher(
   watcher.start();
 }
 
-function getValidNotifyOption(bundlerOptions: BundlerOptionWithStopWorker[]) {
-  let result;
+function warnMultiplePollingOptions(bundlerOptions: BundlerOptionWithStopWorker[]) {
+  let found = false;
   for (const option of bundlerOptions) {
-    if (option.inputOptions.watch) {
-      const notifyOption = option.inputOptions.watch.notify;
-      if (notifyOption) {
-        if (result) {
-          option.onLog(LOG_LEVEL_WARN, logMultiplyNotifyOption());
-          return result;
-        } else {
-          result = notifyOption;
-        }
+    const watch = option.inputOptions.watch;
+    const watcher =
+      watch && typeof watch === 'object' ? (watch.watcher ?? watch.notify) : undefined;
+    if (watcher && (watcher.usePolling != null || watcher.pollInterval != null)) {
+      if (found) {
+        option.onLog(LOG_LEVEL_WARN, logMultipleWatcherOption());
+        return;
       }
+      found = true;
     }
   }
 }

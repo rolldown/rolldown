@@ -90,7 +90,7 @@ pub mod bundler_options {
       },
       tsconfig::TsConfig,
       tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig,
-      watch_option::{NotifyOption, OnInvalidate, WatchOption},
+      watch_option::{OnInvalidate, WatchOption},
     },
   };
 

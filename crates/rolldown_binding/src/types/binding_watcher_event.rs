@@ -2,78 +2,101 @@ use std::sync::Arc;
 
 use napi::tokio::sync::Mutex;
 use napi_derive::napi;
+use rolldown::Bundler;
+use rolldown_watcher::WatchEvent;
 
-use super::{binding_outputs::to_binding_error, error::BindingError};
+use super::binding_outputs::to_binding_error;
+use super::error::BindingError;
 use crate::binding_watcher_bundler::BindingWatcherBundler;
-use rolldown::{BundleEvent, Bundler, WatcherEvent};
+
+enum WatcherEventInner {
+  /// Bundle event (on_event): START, BUNDLE_START, BUNDLE_END, END, ERROR
+  BundleEvent(WatchEvent),
+  /// File change event (on_change)
+  Change { path: String, kind: String },
+  /// Restart event (on_restart)
+  Restart,
+  /// Close event (on_close)
+  Close,
+}
 
 #[napi]
 pub struct BindingWatcherEvent {
-  inner: WatcherEvent,
+  inner: WatcherEventInner,
+}
+
+impl BindingWatcherEvent {
+  pub fn from_watch_event(event: WatchEvent) -> Self {
+    Self { inner: WatcherEventInner::BundleEvent(event) }
+  }
+
+  pub fn from_change(path: String, kind: String) -> Self {
+    Self { inner: WatcherEventInner::Change { path, kind } }
+  }
+
+  pub fn from_restart() -> Self {
+    Self { inner: WatcherEventInner::Restart }
+  }
+
+  pub fn from_close() -> Self {
+    Self { inner: WatcherEventInner::Close }
+  }
 }
 
 #[napi]
 impl BindingWatcherEvent {
-  pub fn new(inner: WatcherEvent) -> Self {
-    Self { inner }
-  }
-
   #[napi]
   pub fn event_kind(&self) -> &str {
-    self.inner.as_str()
-  }
-
-  #[napi]
-  pub fn watch_change_data(&self) -> BindingWatcherChangeData {
     match &self.inner {
-      WatcherEvent::Change(data) => {
-        BindingWatcherChangeData { path: data.path.to_string(), kind: data.kind.to_string() }
-      }
-      _ => {
-        unreachable!("Expected WatcherEvent::Change")
-      }
-    }
-  }
-
-  #[napi]
-  pub fn bundle_end_data(&self) -> BindingBundleEndEventData {
-    match &self.inner {
-      WatcherEvent::Event(BundleEvent::BundleEnd(data)) => BindingBundleEndEventData {
-        output: data.output.clone(),
-        duration: data.duration,
-        result: Arc::clone(&data.result),
-      },
-      _ => {
-        unreachable!("Expected WatcherEvent::Event(BundleEventKind::BundleEnd)")
-      }
+      WatcherEventInner::BundleEvent(_) => "event",
+      WatcherEventInner::Change { .. } => "change",
+      WatcherEventInner::Restart => "restart",
+      WatcherEventInner::Close => "close",
     }
   }
 
   #[napi]
   pub fn bundle_event_kind(&self) -> &str {
     match &self.inner {
-      WatcherEvent::Event(kind) => kind.as_str(),
-      _ => {
-        unreachable!("Expected WatcherEvent::Event")
-      }
+      WatcherEventInner::BundleEvent(event) => event.as_str(),
+      _ => unreachable!("Expected BundleEvent"),
+    }
+  }
+
+  #[napi]
+  pub fn bundle_end_data(&self) -> BindingBundleEndEventData {
+    match &self.inner {
+      WatcherEventInner::BundleEvent(WatchEvent::BundleEnd(data)) => BindingBundleEndEventData {
+        output: data.output.clone(),
+        duration: data.duration,
+        result: Arc::clone(&data.bundler),
+      },
+      _ => unreachable!("Expected BundleEvent::BundleEnd"),
     }
   }
 
   #[napi]
   pub fn bundle_error_data(&self) -> BindingBundleErrorEventData {
     match &self.inner {
-      WatcherEvent::Event(BundleEvent::Error(data)) => BindingBundleErrorEventData {
+      WatcherEventInner::BundleEvent(WatchEvent::Error(data)) => BindingBundleErrorEventData {
         error: data
-          .error
           .diagnostics
           .iter()
-          .map(|diagnostic| to_binding_error(diagnostic, data.error.cwd.clone()))
+          .map(|diagnostic| to_binding_error(diagnostic, data.cwd.clone()))
           .collect(),
-        result: Arc::clone(&data.result),
+        result: Arc::clone(&data.bundler),
       },
-      _ => {
-        unreachable!("Expected WatcherEvent::Event(BundleEventKind::Error)")
+      _ => unreachable!("Expected BundleEvent::Error"),
+    }
+  }
+
+  #[napi]
+  pub fn watch_change_data(&self) -> BindingWatcherChangeData {
+    match &self.inner {
+      WatcherEventInner::Change { path, kind } => {
+        BindingWatcherChangeData { path: path.clone(), kind: kind.clone() }
       }
+      _ => unreachable!("Expected Change event"),
     }
   }
 }

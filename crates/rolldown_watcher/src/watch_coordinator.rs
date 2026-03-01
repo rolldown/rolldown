@@ -108,7 +108,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         }
         Ok(BuildOutcome::Skipped) => {}
         Err(errs) => {
-          let error_messages: Vec<String> = errs.iter().map(|e| format!("{e:?}")).collect();
+          let error_messages: Vec<String> =
+            errs.iter().map(|e| e.to_diagnostic().to_string()).collect();
           tracing::error!("Fatal build error: {error_messages:?}");
         }
       }
@@ -162,7 +163,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         }
         Ok(BuildOutcome::Skipped) => {}
         Err(errs) => {
-          let error_messages: Vec<String> = errs.iter().map(|e| format!("{e:?}")).collect();
+          let error_messages: Vec<String> =
+            errs.iter().map(|e| e.to_diagnostic().to_string()).collect();
           tracing::error!("Fatal build error: {error_messages:?}");
         }
       }

@@ -9,7 +9,7 @@ use notify::{
   event::{ModifyKind, RenameMode},
 };
 
-use rolldown_common::{NotifyOption, WatcherChangeKind};
+use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;
 use std::{
@@ -56,25 +56,12 @@ pub struct WatcherImpl {
 }
 
 impl WatcherImpl {
-  #[expect(clippy::needless_pass_by_value)]
-  pub fn new(
-    bundlers: Vec<Arc<Mutex<Bundler>>>,
-    notify_option: Option<NotifyOption>,
-  ) -> Result<Self> {
+  pub fn new(bundlers: Vec<Arc<Mutex<Bundler>>>) -> Result<Self> {
     let (tx, rx) = channel();
     let (exec_tx, exec_rx) = channel();
     let tx = Arc::new(tx);
     let cloned_tx = Arc::clone(&tx);
-    let watch_option = {
-      let mut config = Config::default();
-      if let Some(notify) = &notify_option {
-        if let Some(poll_interval) = notify.poll_interval {
-          config = config.with_poll_interval(poll_interval);
-        }
-        config = config.with_compare_contents(notify.compare_contents);
-      }
-      config
-    };
+    let watch_option = Config::default();
     let notify_watcher = Arc::new(Mutex::new(RecommendedWatcher::new(
       move |res| {
         if let Err(e) = tx.send(WatcherChannelMsg::NotifyEvent(res)) {

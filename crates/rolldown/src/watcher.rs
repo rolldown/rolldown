@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use rolldown_common::NotifyOption;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use tokio::sync::Mutex;
 
@@ -13,14 +12,11 @@ use crate::{
 pub struct Watcher(Arc<WatcherImpl>);
 
 impl Watcher {
-  pub fn new(config: BundlerConfig, notify_option: Option<NotifyOption>) -> BuildResult<Self> {
-    Self::with_configs(vec![config], notify_option)
+  pub fn new(config: BundlerConfig) -> BuildResult<Self> {
+    Self::with_configs(vec![config])
   }
 
-  pub fn with_configs(
-    configs: Vec<BundlerConfig>,
-    notify_option: Option<NotifyOption>,
-  ) -> BuildResult<Self> {
+  pub fn with_configs(configs: Vec<BundlerConfig>) -> BuildResult<Self> {
     let mut bundlers = Vec::with_capacity(configs.len());
 
     for config in configs {
@@ -46,7 +42,7 @@ impl Watcher {
       bundlers.push(Arc::new(Mutex::new(bundler)));
     }
 
-    let watcher = Arc::new(WatcherImpl::new(bundlers, notify_option)?);
+    let watcher = Arc::new(WatcherImpl::new(bundlers)?);
     Ok(Self(watcher))
   }
 

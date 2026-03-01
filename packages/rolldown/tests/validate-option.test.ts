@@ -22,11 +22,7 @@ test('validate input option', async () => {
     },
   });
   expect(consoleSpy).toHaveBeenCalledWith(
-    `\x1b[33mWarning: Invalid input options (4 issues found)
-- For the "input". Invalid type: Expected (string | Array | Object) but received 1. 
-- For the "resolve.foo". Invalid key: Expected never but received "foo". 
-- For the "watch.chokidar". The "watch.chokidar" option is deprecated, please use "watch.notify" instead of it. 
-- For the "foo". Invalid key: Expected never but received "foo". \x1b[0m`,
+    `\x1b[33mWarning: Invalid input options (4 issues found)\n- For the "input". Invalid type: Expected (string | Array | Object) but received 1. \n- For the "resolve.foo". Invalid key: Expected never but received "foo". \n- For the "watch.chokidar". The "watch.chokidar" option is deprecated, please use "watch.watcher" instead of it. \n- For the "foo". Invalid key: Expected never but received "foo". \x1b[0m`,
   );
 });
 
@@ -42,8 +38,7 @@ test('validate output option', async () => {
     hoistTransitiveImports: false,
   });
   expect(consoleSpy).toHaveBeenCalledWith(
-    `\x1b[33mWarning: Invalid output options (1 issue found)
-- For the "foo". Invalid key: Expected never but received "foo". \x1b[0m`,
+    `\x1b[33mWarning: Invalid output options (1 issue found)\n- For the "foo". Invalid key: Expected never but received "foo". \x1b[0m`,
   );
 });
 
@@ -58,7 +53,6 @@ test('give a warning for hoistTransitiveImports: true', async () => {
     hoistTransitiveImports: true,
   });
   expect(consoleSpy).toHaveBeenCalledWith(
-    `\x1b[33mWarning: Invalid output options (1 issue found)
-- For the "hoistTransitiveImports". Invalid type: Expected false but received true. \x1b[0m`,
+    `\x1b[33mWarning: Invalid output options (1 issue found)\n- For the "hoistTransitiveImports". Invalid type: Expected false but received true. \x1b[0m`,
   );
 });

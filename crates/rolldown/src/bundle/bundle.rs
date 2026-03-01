@@ -88,7 +88,7 @@ impl Bundle {
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
-  pub(crate) async fn scan_modules(
+  pub async fn scan_modules(
     &mut self,
     scan_mode: ScanMode<ArcStr>,
   ) -> BuildResult<NormalizedScanStageOutput> {
@@ -201,7 +201,7 @@ impl Bundle {
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
-  pub(crate) async fn bundle_generate(
+  pub async fn bundle_generate(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {

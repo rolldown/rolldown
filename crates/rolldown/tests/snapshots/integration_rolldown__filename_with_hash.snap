@@ -4980,10 +4980,6 @@ expression: output
 
 - main-!~{000}~.js => main-BNttmJRu.js
 
-# tests/rolldown/issues/8216
-
-- main-!~{000}~.js => main-DeoMB-nX.js
-
 # tests/rolldown/issues/8299
 
 - main-!~{000}~.js => main-Dh8N_I7f.js

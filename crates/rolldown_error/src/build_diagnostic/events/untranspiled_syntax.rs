@@ -12,7 +12,7 @@ pub struct UntranspiledSyntax {
 
 impl BuildEvent for UntranspiledSyntax {
   fn kind(&self) -> crate::types::event_kind::EventKind {
-    crate::types::event_kind::EventKind::UntranspiledSyntaxError
+    crate::types::event_kind::EventKind::UnhandleableError
   }
 
   fn message(&self, opts: &DiagnosticOptions) -> String {

@@ -12,6 +12,10 @@ var firstLevelVar = "var";
 var firstLevelConst = "const";
 var FirstLevelClass = class {};
 console.log(firstLevelLet, firstLevelVar, firstLevelConst, new FirstLevelClass());
+var exportedConst = "exported_const";
+var exportedLet = "exported_let";
+var ExportedClass = class {};
+function exportedFunction() {}
 console.log("let");
 function second_level() {
 	let secondLevelLet = "let";
@@ -22,5 +26,6 @@ function second_level() {
 }
 second_level();
 //#endregion
+export { ExportedClass, exportedConst, exportedFunction, exportedLet };
 
 ```

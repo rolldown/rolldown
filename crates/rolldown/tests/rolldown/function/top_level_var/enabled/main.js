@@ -4,6 +4,11 @@ const firstLevelConst = 'const';
 class FirstLevelClass {}
 console.log(firstLevelLet, firstLevelVar, firstLevelConst, new FirstLevelClass());
 
+export const exportedConst = 'exported_const';
+export let exportedLet = 'exported_let';
+export class ExportedClass {}
+export function exportedFunction() {}
+
 if (true) {
   let shouldNotBeSubstitutedLet = 'let';
   console.log(shouldNotBeSubstitutedLet);

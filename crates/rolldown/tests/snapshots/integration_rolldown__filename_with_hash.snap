@@ -4498,7 +4498,7 @@ expression: output
 
 # tests/rolldown/function/top_level_var/enabled
 
-- main-!~{000}~.js => main-fX6SLPHl.js
+- main-!~{000}~.js => main--DMU1jVn.js
 
 # tests/rolldown/hash/content_include_placeholder
 

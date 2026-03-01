@@ -1,0 +1,10 @@
+{
+  "config": {
+    "topLevelVar": false
+  },
+  "configVariants": [
+    {
+      "topLevelVar": true
+    }
+  ]
+}

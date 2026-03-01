@@ -7,6 +7,37 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region main.js
+let firstLevelLet = "let";
+var firstLevelVar = "var";
+const firstLevelConst = "const";
+var FirstLevelClass = class {};
+console.log(firstLevelLet, firstLevelVar, firstLevelConst, new FirstLevelClass());
+const exportedConst = "exported_const";
+let exportedLet = "exported_let";
+var ExportedClass = class {};
+function exportedFunction() {}
+console.log("let");
+function second_level() {
+	let secondLevelLet = "let";
+	var secondLevelVar = "var";
+	const secondLevelConst = "const";
+	class SecondLevelClass {}
+	console.log(secondLevelLet, secondLevelVar, secondLevelConst, new SecondLevelClass());
+}
+second_level();
+//#endregion
+export { ExportedClass, exportedConst, exportedFunction, exportedLet };
+
+```
+
+# Variant: [top_level_var: true]
+
+## Assets
+
+### main.js
+
+```js
+//#region main.js
 var firstLevelLet = "let";
 var firstLevelVar = "var";
 var firstLevelConst = "const";

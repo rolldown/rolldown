@@ -4492,13 +4492,9 @@ expression: output
 
 - main-!~{000}~.js => main-Cgax_oKx.js
 
-# tests/rolldown/function/top_level_var/disabled
+# tests/rolldown/function/top_level_var
 
-- main-!~{000}~.js => main-BvLeVDeF.js
-
-# tests/rolldown/function/top_level_var/enabled
-
-- main-!~{000}~.js => main--DMU1jVn.js
+- main-!~{000}~.js => main-V9INEQRT.js
 
 # tests/rolldown/hash/content_include_placeholder
 

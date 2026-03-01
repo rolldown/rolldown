@@ -33,7 +33,18 @@ export async function editFile(
 export function getPage() {
   const page = (global as any).__page;
   if (!page) {
-    throw new Error('Playwright page not initialized. Check vitest-setup-playwright.ts');
+    throw new Error('Playwright page not initialized. Check vitest-global-setup-browser.ts');
+  }
+  return page;
+}
+
+/**
+ * Get the Playwright page for lazy compilation tests from global context
+ */
+export function getLazyPage() {
+  const page = (global as any).__lazyPage;
+  if (!page) {
+    throw new Error('Lazy page not initialized. Check vitest-global-setup-browser.ts');
   }
   return page;
 }

@@ -1793,8 +1793,10 @@ export type BindingBuiltinPluginName =  'builtin:bundle-analyzer'|
 'builtin:vite-web-worker-post';
 
 export interface BindingBundleAnalyzerPluginConfig {
-  /** Output filename for the analysis data (default: "analyze-data.json") */
+  /** Output filename for the bundle analysis data (default: "analyze-data.json") */
   fileName?: string
+  /** Output format: "json" (default) or "md" for LLM-friendly markdown */
+  format?: 'json' | 'md'
 }
 
 export interface BindingBundlerOptions {

@@ -1,5 +1,1 @@
-export const logger = {
-  info() {},
-  warn() {},
-  error() {},
-};
+export const logger = { info() {}, warn() {} };

@@ -8,14 +8,19 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
 use sugar_path::SugarPath;
 
+mod render_markdown;
+use render_markdown::render_markdown;
+
 /// Plugin configuration
 #[derive(Debug, Default)]
 pub struct BundleAnalyzerPlugin {
-  /// Output filename for the visualization data
+  /// Output filename for the bundle analysis data
   pub file_name: Option<String>,
+  /// Output format: "json" (default) or "md" for LLM-friendly markdown
+  pub format: Option<String>,
 }
 
-/// Root data structure for chunk visualization
+/// Root data structure for bundle analysis
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct AnalyzeData {
@@ -103,14 +108,18 @@ impl Plugin for BundleAnalyzerPlugin {
     args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> HookNoopReturn {
     let analyze_data = self.build_analyze_data(ctx, args.bundle);
-    let json = serde_json::to_string_pretty(&analyze_data)?;
+    let is_markdown = self.format.as_deref() == Some("md");
+
+    let (content, default_filename) = if is_markdown {
+      (render_markdown(&analyze_data), arcstr::literal!("analyze-data.md"))
+    } else {
+      (serde_json::to_string_pretty(&analyze_data)?, arcstr::literal!("analyze-data.json"))
+    };
 
     ctx
       .emit_file_async(EmittedAsset {
-        file_name: Some(
-          self.file_name.as_ref().map_or(arcstr::literal!("analyze-data.json"), ArcStr::from),
-        ),
-        source: json.into(),
+        file_name: Some(self.file_name.as_ref().map_or(default_filename, ArcStr::from)),
+        source: content.into(),
         ..Default::default()
       })
       .await?;

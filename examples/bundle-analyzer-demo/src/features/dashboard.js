@@ -1,6 +1,6 @@
 import { logger } from '../utils/logger.js';
-import { formatDate } from '../utils/helpers.js';
+import { validate } from '../utils/validator.js';
 
-export function render() {
-  logger.info(formatDate());
+export function render(data) {
+  if (validate(data)) logger.info();
 }

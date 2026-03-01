@@ -1,0 +1,26 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "sorter",
+        "import": "sorter.js"
+      },
+      {
+        "name": "main",
+        "import": "main.js"
+      }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "resolve-chunk",
+          "test": "resolve\\.js"
+        },
+        {
+          "name": "sorter-chunk",
+          "test": "sorter\\.js"
+        }
+      ]
+    }
+  }
+}

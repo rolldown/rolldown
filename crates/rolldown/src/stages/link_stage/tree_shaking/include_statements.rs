@@ -18,13 +18,14 @@ use rolldown_utils::rayon::{
   IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
 };
 
+use rolldown_utils::IndexBitSet;
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
 
-pub type StmtInclusionVec = IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>;
-pub type ModuleInclusionVec = IndexVec<ModuleIdx, bool>;
+pub type StmtInclusionVec = IndexVec<ModuleIdx, IndexBitSet<StmtInfoIdx>>;
+pub type ModuleInclusionVec = IndexBitSet<ModuleIdx>;
 pub type ModuleNamespaceReasonVec = IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>;
 
 bitflags::bitflags! {
@@ -133,12 +134,12 @@ fn include_cjs_bailout_exports(
 fn collect_depended_runtime_helpers(
   modules: &IndexModules,
   metas: &LinkingMetadataVec,
-  is_module_included_vec: &IndexVec<ModuleIdx, bool>,
+  is_module_included_vec: &ModuleInclusionVec,
 ) -> RuntimeHelper {
   let iter = modules.par_iter().zip_eq(metas.par_iter()).filter_map(|(module, meta)| {
     module
       .as_normal()
-      .filter(|m| is_module_included_vec[m.idx])
+      .filter(|m| is_module_included_vec.has_bit(m.idx))
       .map(|_| meta.depended_runtime_helper)
   });
 
@@ -158,14 +159,12 @@ impl LinkStage<'_> {
       .modules
       .iter()
       .map(|m| {
-        m.as_normal().map_or(IndexVec::default(), |m| {
-          m.stmt_infos.iter().map(|_| false).collect::<IndexVec<StmtInfoIdx, _>>()
-        })
+        m.as_normal().map_or(IndexBitSet::default(), |m| IndexBitSet::new(m.stmt_infos.len()))
       })
       .collect::<IndexVec<ModuleIdx, _>>();
     let mut used_symbol_refs = FxHashSet::default();
     let mut is_module_included_vec: ModuleInclusionVec =
-      oxc_index::index_vec![false; self.module_table.modules.len()];
+      IndexBitSet::new(self.module_table.modules.len());
     let mut module_namespace_included_reason: ModuleNamespaceReasonVec =
       oxc_index::index_vec![ModuleNamespaceIncludedReason::empty(); self.module_table.len()];
     let context = &mut IncludeContext::new(
@@ -292,12 +291,13 @@ impl LinkStage<'_> {
           }
           let any_included = stmt_info_idxs
             .iter()
-            .any(|stmt_info_idx| is_stmt_info_included_vec[module.idx][*stmt_info_idx]);
+            .any(|stmt_info_idx| is_stmt_info_included_vec[module.idx].has_bit(*stmt_info_idx));
           #[expect(clippy::cast_possible_truncation)]
           // Note: `RuntimeHelper` is a bitmask with at most 32 bits, so the index is guaranteed to fit in u32.
           normalized_runtime_helper.set(
             RuntimeHelper::from_bits(1 << index as u32).unwrap(),
-            any_included || (module.id != RUNTIME_MODULE_ID && !is_module_included_vec[idx]),
+            any_included
+              || (module.id != RUNTIME_MODULE_ID && !is_module_included_vec.has_bit(idx)),
           );
           // We also need to process the runtime helper of the eliminate module so that we
           // could propagate them to its importers later
@@ -332,9 +332,9 @@ impl LinkStage<'_> {
       self.metas[module_idx].stmt_info_included = stmt_included_vec;
     });
     // Store the final module inclusion results back to metas.
-    is_module_included_vec.into_iter_enumerated().for_each(|(module_idx, is_included)| {
-      self.metas[module_idx].is_included = is_included;
-    });
+    for (module_idx, meta) in self.metas.iter_mut_enumerated() {
+      meta.is_included = is_module_included_vec.has_bit(module_idx);
+    }
 
     tracing::trace!(
       "included statements {:#?}",
@@ -501,7 +501,7 @@ impl LinkStage<'_> {
   fn is_dynamic_entry_alive(
     &self,
     entry_point: &EntryPoint,
-    is_stmt_included_vec: &IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
+    is_stmt_included_vec: &StmtInclusionVec,
     unreachable_import_expression_addrs: &FxHashSet<Address>,
   ) -> Option<Vec<(ModuleIdx, ImportRecordIdx)>> {
     let mut ret = vec![];
@@ -532,7 +532,7 @@ impl LinkStage<'_> {
               !importee_side_effects
                 && import_record.meta.contains(ImportRecordMeta::TopLevelPureDynamicImport)
             };
-            let is_stmt_included = is_stmt_included_vec[*module_idx][*stmt_idx];
+            let is_stmt_included = is_stmt_included_vec[*module_idx].has_bit(*stmt_idx);
             let lived = is_stmt_included
               && (!is_dynamic_imported_module_exports_unused || !all_dead_pure_dynamic_import);
 
@@ -573,11 +573,11 @@ pub fn include_runtime_symbol(
 
 /// if no export is used, and the module has no side effects, the module should not be included
 pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
-  if ctx.is_module_included_vec[module.idx] {
+  if ctx.is_module_included_vec.has_bit(module.idx) {
     return;
   }
 
-  ctx.is_module_included_vec[module.idx] = true;
+  ctx.is_module_included_vec.set_bit(module.idx);
   ctx.module_inclusion_changed = true;
 
   if module.idx == ctx.runtime_idx && !module.side_effects.has_side_effects() {
@@ -782,16 +782,14 @@ pub fn include_statement(
   module: &NormalModule,
   stmt_info_idx: StmtInfoIdx,
 ) {
-  let is_included = &mut ctx.is_included_vec[module.idx][stmt_info_idx];
-
-  if *is_included {
+  if ctx.is_included_vec[module.idx].has_bit(stmt_info_idx) {
     return;
   }
 
   let stmt_info = module.stmt_infos.get(stmt_info_idx);
 
   // include the statement itself
-  *is_included = true;
+  ctx.is_included_vec[module.idx].set_bit(stmt_info_idx);
 
   // FIXME: bailout for require() import for now
   // it is fine for now, since webpack did not support it either

@@ -225,7 +225,7 @@ impl GenerateStage<'_> {
               }
             });
           module.stmt_infos.iter_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
-            if !self.link_output.metas[module.idx].stmt_info_included[stmt_info_idx] {
+            if !self.link_output.metas[module.idx].stmt_info_included.has_bit(stmt_info_idx) {
               return;
             }
             stmt_info.declared_symbols.iter().for_each(|declared| {

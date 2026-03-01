@@ -8,7 +8,7 @@ use rolldown_common::{
   FacadeChunkEliminationReason, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTable,
   PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, StmtInfos, WrapKind,
 };
-use rolldown_utils::{BitSet, indexmap::FxIndexMap};
+use rolldown_utils::{BitSet, IndexBitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -840,7 +840,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     index_splitting_info: &IndexSplittingInfo,
     input_base: &ArcStr,
-    module_is_assigned: &mut IndexVec<ModuleIdx, bool>,
+    module_is_assigned: &mut IndexBitSet<ModuleIdx>,
     temp_chunk_opt_graph: &ChunkOptimizationGraph,
   ) {
     // Find empty dynamic entry chunks that should be merged with their target common chunks
@@ -1037,7 +1037,7 @@ impl GenerateStage<'_> {
         runtime_chunk_idx,
         self.link_output.metas[runtime_module_idx].depended_runtime_helper,
       );
-      module_is_assigned[runtime_module_idx] = true;
+      module_is_assigned.set_bit(runtime_module_idx);
     }
 
     // Restore the included info back to metas

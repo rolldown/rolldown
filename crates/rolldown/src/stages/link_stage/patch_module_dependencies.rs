@@ -30,7 +30,7 @@ impl LinkStage<'_> {
         module
           .stmt_infos
           .iter_enumerated()
-          .filter(|(idx, _)| meta.stmt_info_included[*idx])
+          .filter(|(idx, _)| meta.stmt_info_included.has_bit(*idx))
           .for_each(|(_, stmt_info)| {
             // We need this step to include the runtime module, if there are symbols of it.
             // TODO: Maybe we should push runtime module to `LinkingMetadata::dependencies` while pushing the runtime symbols.

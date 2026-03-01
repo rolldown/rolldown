@@ -112,7 +112,7 @@ pub fn deconflict_chunk_symbols(
       module
         .stmt_infos
         .iter_enumerated()
-        .filter(|(idx, _)| meta.stmt_info_included[*idx])
+        .filter(|(idx, _)| meta.stmt_info_included.has_bit(*idx))
         .for_each(|(_, stmt_info)| {
           for declared_symbol in stmt_info
             .declared_symbols

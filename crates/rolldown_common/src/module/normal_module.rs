@@ -14,6 +14,7 @@ use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_sourcemap::collapse_sourcemaps;
+use rolldown_utils::IndexBitSet;
 use rustc_hash::FxHashSet;
 use string_wizard::SourceMapOptions;
 
@@ -54,7 +55,7 @@ impl NormalModule {
   pub fn to_debug_normal_module_for_tree_shaking(
     &self,
     is_included: bool,
-    stmt_info_included: &IndexVec<StmtInfoIdx, bool>,
+    stmt_info_included: &IndexBitSet<StmtInfoIdx>,
   ) -> DebugNormalModuleForTreeShaking {
     DebugNormalModuleForTreeShaking {
       id: self.repr_name.clone(),
@@ -63,7 +64,9 @@ impl NormalModule {
         .ecma_view
         .stmt_infos
         .iter_enumerated()
-        .map(|(idx, stmt)| stmt.to_debug_stmt_info_for_tree_shaking(stmt_info_included[idx]))
+        .map(|(idx, stmt)| {
+          stmt.to_debug_stmt_info_for_tree_shaking(stmt_info_included.has_bit(idx))
+        })
         .collect(),
     }
   }

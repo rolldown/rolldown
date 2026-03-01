@@ -1258,7 +1258,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .enumerate()
       .zip(self.ctx.module.stmt_infos.iter_enumerated().skip(1))
       .for_each(|((_top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
-        if !self.ctx.linking_info.stmt_info_included[stmt_info_idx] {
+        if !self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx) {
           return;
         }
 

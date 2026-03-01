@@ -141,7 +141,7 @@ impl WatchTask {
   }
 
   /// Mark this task as needing rebuild if the changed file is in our watch list.
-  pub(crate) fn invalidate(&mut self, path: &str) {
+  pub(crate) fn mark_needs_rebuild(&mut self, path: &str) {
     if self.is_watched_file(path) {
       self.needs_rebuild = true;
     }

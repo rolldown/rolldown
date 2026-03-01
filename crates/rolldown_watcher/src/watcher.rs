@@ -1,15 +1,14 @@
 use crate::handler::WatcherEventHandler;
-use crate::msg::WatcherMsg;
+use crate::task_fs_event_handler::TaskFsEventHandler;
 use crate::watch_coordinator::WatchCoordinator;
 use crate::watch_task::{WatchTask, WatchTaskIdx};
+use crate::watcher_msg::WatcherMsg;
 use anyhow::Result;
 use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
 use rolldown_common::NotifyOption;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{
-  FsEventHandler, FsEventResult, FsWatcher, FsWatcherConfig, RecommendedFsWatcher,
-};
+use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, RecommendedFsWatcher};
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
 
@@ -40,18 +39,6 @@ impl WatcherConfig {
       config.compare_contents_for_polling = notify.compare_contents;
     }
     config
-  }
-}
-
-/// Bridge that forwards fs events from a per-task watcher to the shared mpsc channel.
-struct TaskFsEventHandler {
-  task_index: WatchTaskIdx,
-  tx: mpsc::UnboundedSender<WatcherMsg>,
-}
-
-impl FsEventHandler for TaskFsEventHandler {
-  fn handle_event(&mut self, event: FsEventResult) {
-    let _ = self.tx.send(WatcherMsg::FsEvent { task_index: self.task_index, event });
   }
 }
 

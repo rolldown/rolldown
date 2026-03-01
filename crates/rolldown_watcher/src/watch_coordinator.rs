@@ -1,12 +1,11 @@
 use crate::event::WatchEvent;
+use crate::file_change_event::FileChangeEvent;
 use crate::handler::WatcherEventHandler;
-use crate::msg::WatcherMsg;
-use crate::state::{ChangeEntry, WatcherState};
 use crate::watch_task::{BuildOutcome, WatchTask, WatchTaskIdx};
 use crate::watcher::WatcherConfig;
+use crate::watcher_msg::WatcherMsg;
+use crate::watcher_state::WatcherState;
 use oxc_index::IndexVec;
-use rolldown_common::WatcherChangeKind;
-use rolldown_fs_watcher::FsEventResult;
 use std::mem;
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
@@ -46,8 +45,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         WatcherState::Idle => {
           let msg = self.rx.recv().await;
           match msg {
-            Some(WatcherMsg::FsEvent { task_index, event }) => {
-              self.process_fs_event(task_index, event).await;
+            Some(WatcherMsg::FileChanges { task_index, changes }) => {
+              self.process_file_changes(task_index, changes).await;
             }
             Some(WatcherMsg::Close(reply)) => {
               self.handle_close(reply).await;
@@ -70,8 +69,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
             }
             msg = self.rx.recv() => {
               match msg {
-                Some(WatcherMsg::FsEvent { task_index, event }) => {
-                  self.process_fs_event(task_index, event).await;
+                Some(WatcherMsg::FileChanges { task_index, changes }) => {
+                  self.process_file_changes(task_index, changes).await;
                 }
                 Some(WatcherMsg::Close(reply)) => {
                   self.handle_close(reply).await;
@@ -124,7 +123,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   /// 5. For each task needing rebuild: BundleStart → build → BundleEnd/Error
   /// 6. handler.on_event(End)
   /// 7. drain_buffered_events
-  async fn run_build_sequence(&mut self, changes: Vec<ChangeEntry>) {
+  async fn run_build_sequence(&mut self, changes: Vec<FileChangeEvent>) {
     // Step 1 & 2: Notify handler and plugin hooks for each change
     for change in &changes {
       self.handler.on_change(change.path.as_str(), change.kind).await;
@@ -174,52 +173,19 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     self.drain_buffered_events().await;
   }
 
-  /// Process a file system event: map notify events to ChangeEntry,
-  /// call on_invalidate, and update state.
-  async fn process_fs_event(&mut self, task_index: WatchTaskIdx, event: FsEventResult) {
-    match event {
-      Ok(fs_events) => {
-        for fs_event in fs_events {
-          tracing::debug!(name = "notify event", event = ?fs_event.detail);
-
-          for path in &fs_event.detail.paths {
-            let id = path.to_string_lossy();
-            let kind = match fs_event.detail.kind {
-              notify::EventKind::Create(_) => Some(WatcherChangeKind::Create),
-              notify::EventKind::Modify(
-                notify::event::ModifyKind::Data(_) | notify::event::ModifyKind::Any,
-              ) => {
-                tracing::debug!(name = "notify updated content", path = ?id.as_ref());
-                Some(WatcherChangeKind::Update)
-              }
-              notify::EventKind::Modify(notify::event::ModifyKind::Name(
-                notify::event::RenameMode::To,
-              )) => {
-                tracing::debug!(name = "notify renamed file", path = ?id.as_ref());
-                Some(WatcherChangeKind::Update)
-              }
-              notify::EventKind::Remove(_) => Some(WatcherChangeKind::Delete),
-              _ => None,
-            };
-
-            if let Some(kind) = kind {
-              // Call on_invalidate for the affected task
-              if let Some(task) = self.tasks.get_mut(task_index) {
-                task.invalidate(&id);
-                task.call_on_invalidate(&id).await;
-              }
-
-              let entry = ChangeEntry::new(id.into(), kind);
-              self.state = mem::take(&mut self.state).on_file_change(entry, self.debounce_duration);
-            }
-          }
-        }
+  /// Process file changes: call on_invalidate, mark tasks for rebuild, and update state.
+  async fn process_file_changes(
+    &mut self,
+    task_index: WatchTaskIdx,
+    changes: Vec<FileChangeEvent>,
+  ) {
+    for change in changes {
+      if let Some(task) = self.tasks.get_mut(task_index) {
+        task.mark_needs_rebuild(&change.path);
+        task.call_on_invalidate(&change.path).await;
       }
-      Err(errors) => {
-        for e in errors {
-          tracing::error!("notify error: {e:?}");
-        }
-      }
+
+      self.state = mem::take(&mut self.state).on_file_change(change, self.debounce_duration);
     }
   }
 
@@ -228,8 +194,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   async fn drain_buffered_events(&mut self) {
     loop {
       match self.rx.try_recv() {
-        Ok(WatcherMsg::FsEvent { task_index, event }) => {
-          self.process_fs_event(task_index, event).await;
+        Ok(WatcherMsg::FileChanges { task_index, changes }) => {
+          self.process_file_changes(task_index, changes).await;
         }
         Ok(WatcherMsg::Close(reply)) => {
           self.handle_close(reply).await;

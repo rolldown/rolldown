@@ -1,19 +1,5 @@
-use arcstr::ArcStr;
-use rolldown_common::WatcherChangeKind;
+use crate::file_change_event::FileChangeEvent;
 use std::time::{Duration, Instant};
-
-/// A change entry representing a file change event
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct ChangeEntry {
-  pub path: ArcStr,
-  pub kind: WatcherChangeKind,
-}
-
-impl ChangeEntry {
-  pub fn new(path: ArcStr, kind: WatcherChangeKind) -> Self {
-    Self { path, kind }
-  }
-}
 
 /// The state machine for the watcher
 ///
@@ -30,7 +16,7 @@ pub enum WatcherState {
   #[default]
   Idle,
   /// Collecting changes before triggering a build
-  Debouncing { changes: Vec<ChangeEntry>, deadline: Instant },
+  Debouncing { changes: Vec<FileChangeEvent>, deadline: Instant },
   /// Watcher is closing
   Closing,
   /// Watcher has closed
@@ -42,7 +28,7 @@ impl WatcherState {
   ///
   /// Returns the new state after processing the file change
   #[must_use]
-  pub fn on_file_change(self, entry: ChangeEntry, debounce_duration: Duration) -> Self {
+  pub fn on_file_change(self, entry: FileChangeEvent, debounce_duration: Duration) -> Self {
     match self {
       WatcherState::Idle => {
         let deadline = Instant::now() + debounce_duration;
@@ -68,7 +54,7 @@ impl WatcherState {
   ///
   /// Returns (new_state, changes_to_build) if transitioning to Idle,
   /// otherwise returns (self, None)
-  pub fn on_debounce_timeout(self) -> (Self, Option<Vec<ChangeEntry>>) {
+  pub fn on_debounce_timeout(self) -> (Self, Option<Vec<FileChangeEvent>>) {
     match self {
       WatcherState::Debouncing { changes, .. } => (WatcherState::Idle, Some(changes)),
       other => (other, None),
@@ -124,6 +110,7 @@ impl WatcherState {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use rolldown_common::WatcherChangeKind;
 
   fn default_duration() -> Duration {
     Duration::from_millis(100)
@@ -132,7 +119,7 @@ mod tests {
   #[test]
   fn test_idle_to_debouncing_on_file_change() {
     let state = WatcherState::Idle;
-    let entry = ChangeEntry::new("test.js".into(), WatcherChangeKind::Update);
+    let entry = FileChangeEvent::new("test.js".into(), WatcherChangeKind::Update);
     let new_state = state.on_file_change(entry, default_duration());
 
     assert!(new_state.is_debouncing());
@@ -141,8 +128,8 @@ mod tests {
   #[test]
   fn test_debouncing_accumulates_changes() {
     let state = WatcherState::Idle;
-    let entry1 = ChangeEntry::new("test1.js".into(), WatcherChangeKind::Update);
-    let entry2 = ChangeEntry::new("test2.js".into(), WatcherChangeKind::Create);
+    let entry1 = FileChangeEvent::new("test1.js".into(), WatcherChangeKind::Update);
+    let entry2 = FileChangeEvent::new("test2.js".into(), WatcherChangeKind::Create);
 
     let state = state.on_file_change(entry1, default_duration());
     let state = state.on_file_change(entry2, default_duration());
@@ -157,7 +144,7 @@ mod tests {
   #[test]
   fn test_debounce_timeout_to_idle() {
     let state = WatcherState::Debouncing {
-      changes: vec![ChangeEntry::new("test.js".into(), WatcherChangeKind::Update)],
+      changes: vec![FileChangeEvent::new("test.js".into(), WatcherChangeKind::Update)],
       deadline: Instant::now(),
     };
 
@@ -171,8 +158,8 @@ mod tests {
   #[test]
   fn test_debouncing_deduplicates_same_path() {
     let state = WatcherState::Idle;
-    let entry1 = ChangeEntry::new("test.js".into(), WatcherChangeKind::Create);
-    let entry2 = ChangeEntry::new("test.js".into(), WatcherChangeKind::Update);
+    let entry1 = FileChangeEvent::new("test.js".into(), WatcherChangeKind::Create);
+    let entry2 = FileChangeEvent::new("test.js".into(), WatcherChangeKind::Update);
 
     let state = state.on_file_change(entry1, default_duration());
     let state = state.on_file_change(entry2, default_duration());
@@ -206,7 +193,7 @@ mod tests {
   #[test]
   fn test_closing_ignores_file_changes() {
     let state = WatcherState::Closing;
-    let entry = ChangeEntry::new("test.js".into(), WatcherChangeKind::Update);
+    let entry = FileChangeEvent::new("test.js".into(), WatcherChangeKind::Update);
     let new_state = state.on_file_change(entry, default_duration());
 
     assert!(matches!(new_state, WatcherState::Closing));

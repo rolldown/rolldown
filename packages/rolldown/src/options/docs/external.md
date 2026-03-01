@@ -1,9 +1,16 @@
-The matched IDs should be either:
-
-1. the name of an external dependency, exactly the way it is written in the import statement. I.e. to mark `import "dependency.js"` as external, use `"dependency.js"` while to mark `import "dependency"` as external, use `"dependency"`.
-1. a resolved ID (like an absolute path to a file).
-
 When creating an `iife` or `umd` bundle, you will need to provide global variable names to replace your external imports via the [`output.globals`](/reference/OutputOptions.globals) option.
+
+#### How Matching Works
+
+The `external` option is checked **twice** during module resolution, against two different kinds of IDs:
+
+1. **First check — raw import specifier** (e.g. `'lodash'`, `'./utils'`) is tested before any resolution happens, with `isResolved: false`. To mark `import "dependency"` as external, use `"dependency"` exactly as written in the import statement. If it matches, the module is immediately marked as external — **plugins and the internal resolver are skipped entirely**.
+
+2. **Second check — resolved ID** (e.g. `'/project/node_modules/vue/dist/vue.runtime.esm-bundler.js'`) is tested after plugins and the internal resolver have run, with `isResolved: true`. If it matches, the module is marked as external.
+
+The second check only runs if the first did not match. In both cases, [`makeAbsoluteExternalsRelative`](/reference/InputOptions.makeAbsoluteExternalsRelative) applies uniformly to determine whether absolute IDs are re-relativized in the output.
+
+See the [External Modules guide](/in-depth/external-modules) for a detailed explanation of the full resolution flow and how the output path is determined.
 
 #### Examples
 
@@ -19,7 +26,7 @@ export default {
 
 ```js
 export default {
-  external: /node_modules/,
+  external: /^react\//,
 };
 ```
 
@@ -53,7 +60,7 @@ Unless the logic relies on values other than `id`, it is recommended to use non-
 
 ##### Avoid `/node_modules/` for npm packages
 
-Rolldown matches module IDs twice: once with the unresolved ID (e.g., `'vue'`) and once with the resolved path (e.g., `'/path/to/project/node_modules/vue/dist/vue.runtime.esm-bundler.js'`). The pattern `/node_modules/` only matches the resolved path, so the output will contain the full absolute path instead of the package name. This will cause the output to be non-portable.
+Because the pattern `/node_modules/` can only match on the **second check** (the resolved absolute path), the full resolved path like `/path/to/node_modules/vue/dist/vue.runtime.esm-bundler.js` ends up in the output verbatim. This makes the output non-portable.
 
 Instead, match packages by name or use a pattern for bare module IDs:
 

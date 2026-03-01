@@ -85,6 +85,7 @@ OPTIONS
   --preserve-modules-root <preserve-modules-root>Put preserved modules under this path at root level.
   --sanitize-file-name        Sanitize file name.
   --shim-missing-exports      Create shim variables for missing exports.
+  --silent                    Don't print CLI logs.
   --sourcemap-base-url <sourcemap-base-url>Base URL used to prefix sourcemap paths.
   --sourcemap-debug-ids       Inject sourcemap debug IDs.
   --strict-execution-order    Lets modules be executed in the order they are declared.

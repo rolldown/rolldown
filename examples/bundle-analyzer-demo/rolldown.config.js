@@ -18,5 +18,9 @@ export default defineConfig({
       }
     },
   },
-  plugins: [bundleAnalyzerPlugin()],
+  plugins: [
+    bundleAnalyzerPlugin({
+      format: 'md',
+    }),
+  ],
 });

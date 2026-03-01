@@ -348,6 +348,13 @@ fn render_optimization_suggestions(out: &mut String, data: &AnalyzeData) {
     }
     out.push('\n');
   }
+
+  out.push_str("### Tip: Enable `entriesAware` for smarter code splitting\n\n");
+  out.push_str(
+    "Consider enabling `entriesAware: true` in your `codeSplitting.groups` configuration \
+     to let rolldown automatically split chunks based on entry point reachability. \
+     See https://rolldown.rs/reference/TypeAlias.CodeSplittingGroup#entriesaware\n\n",
+  );
 }
 
 fn render_full_module_graph(

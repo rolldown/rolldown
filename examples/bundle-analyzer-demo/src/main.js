@@ -3,7 +3,6 @@ import { logger } from './utils/logger.js';
 import { formatDate } from './utils/date-format.js';
 import { validate } from './utils/validator.js';
 import { getLocale } from './utils/locale.js';
-import './styles.css';
 
 const loadAdmin = () => import('./features/admin.js');
 const loadDashboard = () => import('./features/dashboard.js');

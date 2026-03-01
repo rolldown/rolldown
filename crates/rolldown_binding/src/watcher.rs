@@ -134,9 +134,10 @@ impl BindingWatcher {
     };
 
     // Store the closed_notify handle for wait_for_close()
-    let mut notify = self.closed_notify.lock().map_err(|e| {
-      napi::Error::new(napi::Status::GenericFailure, format!("Lock poisoned: {e}"))
-    })?;
+    let mut notify = self
+      .closed_notify
+      .lock()
+      .map_err(|e| napi::Error::new(napi::Status::GenericFailure, format!("Lock poisoned: {e}")))?;
     *notify = Some(watcher.closed_notify());
 
     *state = BindingWatcherState::Running(watcher);

@@ -927,6 +927,10 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Lets modules be executed in the order they are declared.'),
   ),
+  strict: v.pipe(
+    v.optional(v.union([v.boolean(), v.literal('auto')])),
+    v.description('Whether to always output `"use strict"` directive in non-ES module outputs.'),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof OutputOptionsSchema, OutputOptions>>();
 

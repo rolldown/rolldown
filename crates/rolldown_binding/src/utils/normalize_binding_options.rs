@@ -19,7 +19,7 @@ use rolldown::{
   ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
   IsExternal, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType,
   OptimizationOption, OutputExports, OutputFormat, Platform, RawCompressOptions, RawMangleOptions,
-  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, TsConfig,
+  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, StrictMode, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -567,6 +567,10 @@ pub fn normalize_binding_options(
     minify_internal_exports: output_options.minify_internal_exports,
     clean_dir: output_options.clean_dir,
     strict_execution_order: output_options.strict_execution_order,
+    strict: output_options.strict.map(|strict| match strict {
+      Either::A(bool_val) => StrictMode::from(bool_val),
+      Either::B(str_val) => StrictMode::from(str_val),
+    }),
     context: input_options.context,
     tsconfig: input_options.tsconfig.map(|v| match v {
       Either::A(v) => TsConfig::Auto(v),

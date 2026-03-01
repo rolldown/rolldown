@@ -15,7 +15,7 @@ use crate::{
 };
 use json_escape_simd::escape;
 
-use super::utils::render_chunk_directives;
+use super::utils::{is_use_strict_directive, render_chunk_directives};
 
 #[expect(clippy::needless_pass_by_value)]
 pub fn render_esm<'code>(
@@ -37,11 +37,9 @@ pub fn render_esm<'code>(
 
   // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/linker/linker.go#L5686-L5698
   if !directives.is_empty() {
-    let rendered_chunk_directives = render_chunk_directives(directives.iter().filter(|d| {
-      let normalized_directive =
-        d.trim_start_matches(['\'', '"']).trim_end_matches(['\'', '"', ';']);
-      normalized_directive != "use strict"
-    }));
+    let rendered_chunk_directives = render_chunk_directives(
+      directives.iter().filter(|d| !is_use_strict_directive(d)),
+    );
     if !rendered_chunk_directives.is_empty() {
       source_joiner.append_source(rendered_chunk_directives);
     }

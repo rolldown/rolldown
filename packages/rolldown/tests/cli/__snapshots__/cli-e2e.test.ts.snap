@@ -87,6 +87,7 @@ OPTIONS
   --shim-missing-exports      Create shim variables for missing exports.
   --sourcemap-base-url <sourcemap-base-url>Base URL used to prefix sourcemap paths.
   --sourcemap-debug-ids       Inject sourcemap debug IDs.
+  --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
   --strict-execution-order    Lets modules be executed in the order they are declared.
   --top-level-var             Rewrite top-level declarations to use \`var\`.
   --transform.assumptions.ignore-function-length .

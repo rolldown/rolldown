@@ -5267,6 +5267,18 @@ expression: output
 
 - main-!~{000}~.js => main-BWCd9HwM.js
 
+# tests/rolldown/misc/use_strict/strict_always_cjs
+
+- main-!~{000}~.js => main-BolwU6g-.js
+
+# tests/rolldown/misc/use_strict/strict_always_esm
+
+- main-!~{000}~.js => main-Bml1UYv9.js
+
+# tests/rolldown/misc/use_strict/strict_never_cjs
+
+- main-!~{000}~.js => main-XzH_SxM9.js
+
 # tests/rolldown/misc/wrapped_esm
 
 - main-!~{000}~.js => main-D_8QZ-ed.js

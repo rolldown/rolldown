@@ -4,5 +4,8 @@
       ".css": "css",
       ".png": "asset"
     }
+  },
+  "plugin": {
+    "css": { "codeSplit": true }
   }
 }

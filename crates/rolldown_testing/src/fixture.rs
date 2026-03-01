@@ -7,6 +7,8 @@ use crate::{
   integration_test::{IntegrationTest, NamedBundlerOptions},
   test_config::read_test_config,
 };
+use std::sync::Arc;
+
 use rolldown::{BundlerOptions, plugin::__inner::SharedPluginable};
 use rolldown_common::PreserveEntrySignatures;
 use rolldown_testing_config::{ConfigVariant, TestConfig, TestMeta};
@@ -43,9 +45,21 @@ impl Fixture {
     tokio::runtime::Runtime::new().unwrap().block_on(self.run_inner(plugins));
   }
 
-  async fn run_inner(self, plugins: Vec<SharedPluginable>) {
+  async fn run_inner(self, mut plugins: Vec<SharedPluginable>) {
     let TestConfig { config: mut options, meta, mut config_variants } =
       read_test_config(&self.config_path);
+
+    // Construct plugins from test meta — CSS plugin goes FIRST (before user plugins)
+    if let Some(css_config) = &meta.plugin.css {
+      plugins.insert(
+        0,
+        Arc::new(rolldown_plugin_css::CssPlugin::new(rolldown_plugin_css::CssPluginOptions {
+          code_split: css_config.code_split.unwrap_or_default(),
+          minify: css_config.minify.unwrap_or_default(),
+          sourcemap: css_config.sourcemap.unwrap_or_default(),
+        })),
+      );
+    }
 
     if options.cwd.is_none() {
       options.cwd = Some(self.fixture_path.clone());

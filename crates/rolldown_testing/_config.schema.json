@@ -81,6 +81,10 @@
     "dev": {
       "description": "Controls test behavior in the dev scenario",
       "$ref": "#/$defs/DevTestMeta"
+    },
+    "plugin": {
+      "description": "Plugin configurations to enable for this test fixture",
+      "$ref": "#/$defs/PluginTestMeta"
     }
   },
   "additionalProperties": false,
@@ -1961,6 +1965,49 @@
           ],
           "format": "uint64",
           "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "PluginTestMeta": {
+      "type": "object",
+      "properties": {
+        "css": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CssPluginTestConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "CssPluginTestConfig": {
+      "type": "object",
+      "properties": {
+        "codeSplit": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "minify": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "sourcemap": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
         }
       },
       "additionalProperties": false

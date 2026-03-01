@@ -3,6 +3,7 @@ use std::sync::Arc;
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_bundle_analyzer::BundleAnalyzerPlugin;
+use rolldown_plugin_css::{CssPlugin, CssPluginOptions};
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
@@ -22,7 +23,7 @@ use rolldown_plugin_vite_wasm_fallback::ViteWasmFallbackPlugin;
 use rolldown_plugin_vite_web_worker_post::ViteWebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
-  BindingBundleAnalyzerPluginConfig, BindingEsmExternalRequirePluginConfig,
+  BindingBundleAnalyzerPluginConfig, BindingCssPluginConfig, BindingEsmExternalRequirePluginConfig,
   BindingViteModulePreloadPolyfillPluginConfig, BindingViteReactRefreshWrapperPluginConfig,
 };
 
@@ -59,6 +60,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
 
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
+      BindingBuiltinPluginName::Css => {
+        let plugin: CssPlugin = if let Some(options) = plugin.options {
+          BindingCssPluginConfig::from_unknown(options)?.into()
+        } else {
+          CssPlugin::new(CssPluginOptions::default())
+        };
+        Arc::new(plugin)
+      }
       BindingBuiltinPluginName::BundleAnalyzer => {
         let plugin = if let Some(options) = plugin.options {
           BindingBundleAnalyzerPluginConfig::from_unknown(options)?.into()

@@ -3,72 +3,81 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## common-imported-by-js-Bn6VocNp.css
+## common-imported-by-js.css
 
 ```css
 body {
-  background-color: 'common-imported-by-css';
+  background-color: "common-imported-by-js";
 }
-
-body {
-  background-color: 'common-imported-by-js';
-}
-
 
 ```
 
-## common-imported-by-js.js
-
-```js
-
-```
-
-## entry-a-ByqQIZ30.css
+## entry-a.css
 
 ```css
-
 body {
-  background-color: 'entry-a';
+  background-color: "common-imported-by-css";
 }
 
 body {
-  background-color: 'a-only';
+  background-color: "entry-a";
 }
 
+body {
+  background-color: "a-only";
+}
 
 ```
 
 ## entry-a.js
 
 ```js
-import "./common-imported-by-js.js";
+/* empty css                      */
 
+//#region entry-a.css
+var entry_a_default = void 0;
+
+//#endregion
+//#region a-only.css
+var a_only_default = void 0;
+
+//#endregion
 //#region entry-a.ts
 console.log("entry-a");
 
 //#endregion
 ```
 
-## entry-b-BZLahjlx.css
+## entry-b.css
 
 ```css
-
 body {
-  background-color: 'entry-b';
+  background-color: "common-imported-by-css";
 }
 
 body {
-  background-color: 'b-only';
+  background-color: "entry-b";
 }
 
+body {
+  background-color: "b-only";
+}
 
 ```
 
 ## entry-b.js
 
 ```js
-import "./common-imported-by-js.js";
+/* empty css                      */
 
+//#region entry-b.css
+var entry_b_default = void 0;
+
+//#endregion
+//#region b-only.css
+var b_only_default = void 0;
+
+//#endregion
 //#region entry-b.ts
 console.log("entry-b");
 

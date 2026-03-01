@@ -1774,6 +1774,7 @@ export interface BindingBuiltinPlugin {
 }
 
 export type BindingBuiltinPluginName =  'builtin:bundle-analyzer'|
+'builtin:css'|
 'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
 'builtin:replace'|
@@ -1872,6 +1873,12 @@ export interface BindingCompilerOptions {
   module?: string
   allowJs?: boolean
   rootDirs?: Array<string>
+}
+
+export interface BindingCssPluginConfig {
+  codeSplit?: boolean
+  minify?: boolean
+  sourcemap?: boolean
 }
 
 export interface BindingDeferSyncScanData {

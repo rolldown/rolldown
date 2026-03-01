@@ -6,6 +6,8 @@ use crate::watcher::WatcherConfig;
 use crate::watcher_msg::WatcherMsg;
 use crate::watcher_state::WatcherState;
 use oxc_index::IndexVec;
+use rolldown_common::WatcherChangeKind;
+use rolldown_utils::indexmap::FxIndexMap;
 use std::mem;
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
@@ -123,15 +125,15 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   /// 5. For each task needing rebuild: BundleStart → build → BundleEnd/Error
   /// 6. handler.on_event(End)
   /// 7. drain_buffered_events
-  async fn run_build_sequence(&mut self, changes: Vec<FileChangeEvent>) {
+  async fn run_build_sequence(&mut self, changes: FxIndexMap<String, WatcherChangeKind>) {
     // Step 1 & 2: Notify handler and plugin hooks for each change
-    for change in &changes {
-      self.handler.on_change(change.path.as_str(), change.kind).await;
+    for (path, kind) in &changes {
+      self.handler.on_change(path.as_str(), *kind).await;
     }
 
     for task in &self.tasks {
-      for change in &changes {
-        task.call_watch_change(change.path.as_str(), change.kind).await;
+      for (path, kind) in &changes {
+        task.call_watch_change(path.as_str(), *kind).await;
       }
     }
 
@@ -173,20 +175,21 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     self.drain_buffered_events().await;
   }
 
-  /// Process file changes: call on_invalidate, mark tasks for rebuild, and update state.
+  /// Process file changes: call on_invalidate per file, mark task for rebuild,
+  /// then batch all changes into a single state transition.
   async fn process_file_changes(
     &mut self,
     task_index: WatchTaskIdx,
     changes: Vec<FileChangeEvent>,
   ) {
-    for change in changes {
-      if let Some(task) = self.tasks.get_mut(task_index) {
+    if let Some(task) = self.tasks.get_mut(task_index) {
+      for change in &changes {
         task.mark_needs_rebuild(&change.path);
         task.call_on_invalidate(&change.path).await;
       }
-
-      self.state = mem::take(&mut self.state).on_file_change(change, self.debounce_duration);
     }
+
+    self.state = mem::take(&mut self.state).on_file_changes(changes, self.debounce_duration);
   }
 
   /// Drain buffered fs events that arrived during a build.

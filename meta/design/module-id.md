@@ -8,7 +8,9 @@ Module IDs are the primary keys for the entire bundler — module graph, caches,
 
 Rollup uses a **single normalization point** design. The `resolveId` hook (and its default implementation via `path.resolve()`) is the one place where paths are normalized. The resolved path becomes the module ID used everywhere — module graph, caches, `graph.watchFiles`, plugin hooks, etc.
 
-On top of that, Rollup has an explicit **backslash-to-slash normalization**:
+**Module IDs use native OS separators.** On Windows, module IDs contain `\` separators (e.g. `D:\project\src\main.js`). The `path.resolve()` output is stored as-is — no separator normalization is applied to module IDs. ([Verified on Windows CI](https://github.com/hyf0-agent/rollup-win-test/actions/runs/22542074808))
+
+Rollup does have a `normalize` function that converts `\` to `/`:
 
 ```javascript
 // rollup/src/utils/path.ts
@@ -18,7 +20,13 @@ export function normalize(path) {
 }
 ```
 
-This is applied to module IDs, plugin filters, source maps, and chunk file names. The result: **module IDs always use forward slashes**, even on Windows. The same file gets a different absolute prefix on Windows vs Linux (`C:/Users/...` vs `/home/...`), but separators are always `/`.
+However, this is **only used in downstream/output contexts**, not in the core module ID pipeline:
+
+- `pluginFilter.ts` — normalizes IDs before matching include/exclude patterns
+- `Chunk.ts` — generating preserveModules chunk file names
+- `renderChunks.ts` — source map source paths
+- `relativeId.ts` — computing relative import paths
+- `MetaProperty.ts` — import.meta relative paths
 
 Plugin APIs like `addWatchFile()` do **no normalization** — they trust the caller to provide a path consistent with the module ID convention.
 
@@ -35,19 +43,18 @@ pub struct ModuleId { inner: ArcStr }
 
 The resolver (`oxc_resolver`) returns a `PathBuf`. Rolldown converts it to a string via `full_path().to_str()` and stores it as-is — no separator normalization. On Windows, module IDs contain native `\` separators.
 
-### Divergence from Rollup
+### Comparison with Rollup
 
 |                      | Rollup                           | Rolldown                         |
 | -------------------- | -------------------------------- | -------------------------------- |
-| Module ID on Windows | `C:/Users/project/src/file.js`   | `C:\Users\project\src\file.js`   |
+| Module ID on Windows | `C:\Users\project\src\file.js`   | `C:\Users\project\src\file.js`   |
 | Module ID on Linux   | `/home/user/project/src/file.js` | `/home/user/project/src/file.js` |
-| Normalization        | `\` → `/` at `resolveId` level   | None                             |
-| Platform-dependent?  | Prefix only (`C:/` vs `/home/`)  | Prefix **and** separators        |
+| Normalization        | None (native OS separators)      | None (native OS separators)      |
+| Platform-dependent?  | Prefix **and** separators        | Prefix **and** separators        |
 
-This means:
+Rollup and Rolldown are **aligned** here — both store `path.resolve()` / resolver output as-is, with native OS separators. The `normalize` function in Rollup only applies in downstream/output contexts (see above), not to module IDs.
 
-- **Rollup plugins running in Rolldown on Windows see `\` in module IDs** instead of the `/` they expect. This can break plugin logic that does string matching or manipulation on module IDs.
-- **The same Rolldown project produces different module IDs on Windows vs Linux**, differing not just in the absolute prefix but also in separators.
+Note: some plugins may internally assume `/` separators when doing string matching on module IDs. This is a plugin-level concern, not a Rollup-vs-Rolldown divergence.
 
 ### StableModuleId
 
@@ -109,7 +116,7 @@ Hash is consistent with equality — safe to use in `HashSet`/`HashMap`.
 
 ## Unresolved Questions
 
-- **Should module IDs be normalized at creation time?** Rollup normalizes backslashes to forward slashes globally. Rolldown could do the same in `ModuleId::new()`. This would make all downstream comparisons safe for the separator problem, but it changes the observable module ID on Windows (plugins would see `/` instead of `\`). Rollup plugins expect `/`, so this may actually be the correct behavior.
+- **Should module IDs be normalized at creation time?** Rollup does **not** normalize module ID separators — on Windows, plugins see `\` in module IDs. Rolldown currently matches this behavior. Should Rolldown diverge and normalize to `/` in `ModuleId::new()` for simpler cross-platform logic? This would change the observable module ID on Windows but could simplify plugin filter matching and internal comparisons.
 
 - **Should the watch file set use `PathBuf` instead of `ArcStr`?** `PathBuf` handles trailing slashes, double slashes, `.` segments, and Windows separators. The downside is losing cheap `ArcStr` cloning and `&str` lookups. See [watch-mode.md](./watch-mode.md) for the watch-specific discussion.
 

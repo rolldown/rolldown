@@ -149,13 +149,13 @@ Any ──(Close)──→ Closing → Closed
 ```rust
 enum WatcherState {
     Idle,
-    Debouncing { changes: Vec<FileChangeEvent>, deadline: Instant },
+    Debouncing { changes: FxIndexMap<String, WatcherChangeKind>, deadline: Instant },
     Closing,
     Closed,
 }
 ```
 
-**Debounce coalescing:** When multiple events arrive for the same path during the debounce window, the latest `kind` wins (last-write-wins). The deadline resets on each new event.
+**Debounce coalescing:** When multiple events arrive for the same path during the debounce window, the change kinds are consolidated rather than using simple last-write-wins. See "Kind Consolidation" below for details. The deadline resets on each new event.
 
 ## Debouncing
 
@@ -187,8 +187,21 @@ Changes accumulate in an `invalidatedIds` Map during the delay window — both p
 The `WatcherState::Debouncing` state does the same thing with `tokio::select!` and a deadline reset:
 
 - File change → `Idle` becomes `Debouncing { changes, deadline }`
-- More changes → deadline resets, changes accumulate (last-write-wins per path)
-- Deadline fires → all changes passed to `run_build_sequence()`
+- More changes → deadline resets, changes accumulate with kind consolidation per path
+- Deadline fires → if changes are non-empty, passed to `run_build_sequence()`; if empty (all cancelled out by kind consolidation), silently return to Idle
+
+#### Kind Consolidation
+
+Like Rollup's `eventsRewrites` table, rolldown consolidates change kinds when multiple events arrive for the same path during a debounce window (`merge_change_kind` in `watcher_state.rs`):
+
+| Existing | New    | Result    | Rationale                                                          |
+| -------- | ------ | --------- | ------------------------------------------------------------------ |
+| Create   | Update | Create    | File is still new — modification doesn't change that               |
+| Create   | Delete | _removed_ | File never existed from the observer's perspective                 |
+| Delete   | Create | Update    | File was recreated — net effect is a modification                  |
+| _other_  | _any_  | new kind  | Latest kind wins (e.g. Update+Update→Update, Update+Delete→Delete) |
+
+This matters because plugins receive the `WatcherChangeKind` in `watchChange` hooks and may behave differently based on whether a file was created vs. modified.
 
 The fs-watcher layer (`notify-debouncer-full`) is available as an option for users who need OS-level event deduplication (noisy editors, network drives), exposed through `watch.notify` options. Using both layers adds latency and makes timing harder to reason about, so it's not the default.
 
@@ -387,21 +400,20 @@ Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#648
 
 ### Missing Features (todo)
 
-- [ ] Bulk change handling — `git checkout` can produce thousands of file changes. Current issues:
-  - O(n²) dedup: `on_file_change()` does `Vec::find()` per change. Should use `IndexMap<String, WatcherChangeKind>` (matches Rollup's `invalidatedIds: Map`).
+- [x] Bulk change handling — `FxIndexMap` storage for O(1) dedup, batch `on_file_changes()` API with single state transition per batch. Remaining items:
   - Per-change bundler lock: `call_on_invalidate()` acquires the bundler mutex for each change individually.
-  - Per-change state transition: each change moves/reconstructs the `WatcherState` enum and reads the clock.
-  - `process_file_changes()` should accept the batch, do a single state transition, and batch `on_invalidate`.
+  - See Future section for bulk-change threshold optimization (skipping per-file hooks for large batches).
 - [ ] Resolver cache invalidation between rebuilds ([#6482](https://github.com/rolldown/rolldown/issues/6482))
 - [ ] `skipWrite` support — check `options.watch.skip_write`, call `generate()` instead of `write()`
 - [ ] File unwatching — `update_watch_files()` only adds, never removes. Watch set grows monotonically
-- [ ] Smart change coalescing — Rollup's `eventsRewrites` table (create+delete=removed, delete+create=update)
+- [x] Smart change coalescing — `merge_change_kind` in `watcher_state.rs` (create+delete=removed, delete+create=update). Empty change sets after consolidation return `None` from `on_debounce_timeout`, skipping spurious rebuild cycles
 
 ### Future
 
 - [ ] Non-blocking builds — spawn builds instead of inline `await` (see Unresolved Questions)
 - [ ] Incremental builds — `WatchTask::build()` currently does full rebuild via `bundler.write()`
 - [ ] Parallel task builds within a single coordinator
+- [ ] Bulk-change threshold optimization — For bulk changes (e.g. `git checkout` producing 1000+ file events), we could skip per-file `on_change`/`watchChange` hooks and just do a full rebuild. Rollup doesn't do this — it always calls per-file hooks regardless of volume. This is a potential future optimization if per-file hook overhead becomes a performance issue.
 
 ## Unresolved Questions
 

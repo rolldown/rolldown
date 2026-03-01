@@ -43,6 +43,7 @@ Rust Core (crates/rolldown)
 - `packages/rolldown`: The main Node.js package exposing the TypeScript API.
 - `packages/rolldown-tests`: Test suite for the `rolldown` package using Vitest.
 - `packages/rollup-tests`: Compatibility test suite for Rollup plugins.
+- `crates/rolldown_watcher`: Watch mode coordinator. See `meta/design/watch-mode.md` for architecture, state machine, debounce/consolidation rules, and event lifecycle.
 - `docs/`: Documentation site built with VitePress.
 - `meta/design/`: Design documents. See the "Spec-Driven Development" section above.
 

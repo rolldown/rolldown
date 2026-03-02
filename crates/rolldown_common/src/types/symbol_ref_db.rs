@@ -289,8 +289,8 @@ impl SymbolRefDb {
     }
     self.get_mut(base_root).link = Some(target_root);
     if self.has_module_preserve_jsx {
-      let jsx_mask = SymbolRefFlags::MustStartWithCapitalLetterForJSX
-        | SymbolRefFlags::UsedAsJSXMemberExprRoot;
+      let jsx_mask =
+        SymbolRefFlags::MustStartWithCapitalLetterForJSX | SymbolRefFlags::UsedAsJSXMemberExprRoot;
       if let Some(jsx_flags) =
         base_root.flags(self).map(|f| *f & jsx_mask).filter(|f| !f.is_empty())
       {

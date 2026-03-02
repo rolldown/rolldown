@@ -5263,6 +5263,10 @@ expression: output
 
 - main-!~{000}~.js => main-BolwU6g-.js
 
+# tests/rolldown/misc/use_strict/strict_always_cjs_dedup
+
+- main-!~{000}~.js => main-DyPRCGwC.js
+
 # tests/rolldown/misc/use_strict/strict_always_esm
 
 - main-!~{000}~.js => main-Bml1UYv9.js

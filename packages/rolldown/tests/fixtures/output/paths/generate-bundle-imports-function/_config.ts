@@ -3,7 +3,6 @@ import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 export default defineTest({
-  retry: 3, // FIXME: this test is flaky (https://github.com/rolldown/rolldown/issues/6737)
   config: {
     external: ['react', 'vue'],
     output: {

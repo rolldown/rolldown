@@ -60,7 +60,7 @@ pub fn render_esm<'code>(
       for importee_idx in ctx.chunk.entry_level_external_module_idx.iter().copied() {
         let importee = &ctx.link_output.module_table[importee_idx];
         if let Some(m) = importee.as_external() {
-          let ext_name = m.get_import_path(ctx.chunk, ctx.options.paths.as_ref());
+          let ext_name = m.get_import_path(ctx.chunk, ctx.resolved_paths);
           source_joiner.append_source(concat_string!("export * from \"", ext_name, "\"\n"));
         }
       }
@@ -362,7 +362,7 @@ where
           s.push_str("import * as ");
           s.push_str(alias);
           s.push_str(" from ");
-          s.push_str(&escape(&importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref())));
+          s.push_str(&escape(&importee.get_import_path(ctx.chunk, ctx.resolved_paths)));
           s.push_str(";\n");
           None
         }
@@ -395,7 +395,7 @@ where
       &ctx.link_output.module_table,
       specifiers,
       &default_alias,
-      &importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
+      &importee.get_import_path(ctx.chunk, ctx.resolved_paths),
       with_clause,
     ));
   }

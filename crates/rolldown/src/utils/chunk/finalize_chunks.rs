@@ -5,8 +5,8 @@ use futures::future::try_join_all;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Asset, HashCharacters, InsChunkIdx, InstantiationKind, NormalizedBundlerOptions, SourceMapType,
-  StrOrBytes,
+  Asset, HashCharacters, InsChunkIdx, InstantiationKind, NormalizedBundlerOptions,
+  PathsOutputOption, SourceMapType, StrOrBytes,
 };
 use rolldown_error::BuildResult;
 #[cfg(not(target_family = "wasm"))]
@@ -40,6 +40,7 @@ pub async fn finalize_assets(
   index_chunk_to_instances: &IndexChunkToInstances,
   hash_characters: HashCharacters,
   options: &NormalizedBundlerOptions,
+  resolved_paths: Option<&PathsOutputOption>,
 ) -> BuildResult<AssetVec> {
   let ins_chunk_idx_by_placeholder = index_instantiated_chunks
     .iter_enumerated()
@@ -168,7 +169,7 @@ pub async fn finalize_assets(
           link_output.module_table[*idx]
             .as_external()
             .expect("direct_imports_from_external_modules should only contain external modules")
-            .get_file_name(options.paths.as_ref())
+            .get_file_name(resolved_paths)
         }))
         .collect();
 

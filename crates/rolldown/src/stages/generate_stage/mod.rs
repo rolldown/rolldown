@@ -5,8 +5,8 @@ use futures::future::try_join_all;
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
-  ChunkIdx, ChunkKind, ImportMetaRolldownAssetReplacer, Module, OutputExports, PreliminaryFilename,
-  RollupPreRenderedAsset,
+  ChunkIdx, ChunkKind, ImportMetaRolldownAssetReplacer, Module, OutputExports,
+  PathsOutputOption, PreliminaryFilename, RollupPreRenderedAsset,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -68,6 +68,10 @@ pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
   options: &'a SharedOptions,
   plugin_driver: &'a SharedPluginDriver,
+  /// Pre-resolved paths for external modules. When the user provides a JS function for the
+  /// `paths` option, it is resolved asynchronously here before entering sync rendering code,
+  /// avoiding the need for `invoke_sync` which can cause deadlocks.
+  resolved_paths: Option<PathsOutputOption>,
 }
 
 impl<'a> GenerateStage<'a> {
@@ -76,7 +80,7 @@ impl<'a> GenerateStage<'a> {
     options: &'a SharedOptions,
     plugin_driver: &'a SharedPluginDriver,
   ) -> Self {
-    Self { link_output, options, plugin_driver }
+    Self { link_output, options, plugin_driver, resolved_paths: None }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -121,6 +125,18 @@ impl<'a> GenerateStage<'a> {
         );
       });
     });
+
+    // Pre-resolve paths for external modules to avoid sync JS callbacks during rendering.
+    // This eliminates the need for `invoke_sync` which can cause deadlocks (see #7280).
+    if let Some(paths) = &self.options.paths {
+      let ids = self
+        .link_output
+        .module_table
+        .modules
+        .iter()
+        .filter_map(|m| m.as_external().map(|e| e.id.as_str()));
+      self.resolved_paths = Some(paths.resolve_all(ids).await);
+    }
 
     self.finalize_modules(&mut chunk_graph);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
@@ -396,6 +412,7 @@ impl<'a> GenerateStage<'a> {
           module_id_to_codegen_ret: Vec::new(),
           render_export_items_index_vec: &IndexVec::default(),
           chunk_idx,
+          resolved_paths: self.resolved_paths.as_ref(),
         },
         entry_module,
         &export_names,

@@ -65,6 +65,7 @@ impl GenerateStage<'_> {
       &index_chunk_to_instances,
       self.options.hash_characters,
       self.options,
+      self.resolved_paths.as_ref(),
     )
     .await?;
 
@@ -178,6 +179,7 @@ impl GenerateStage<'_> {
           Some((chunk_idx, chunk, module_id_to_codegen_ret))
         })
         .flat_map(|(chunk_idx, chunk, module_id_to_codegen_ret)| {
+          let resolved_paths = self.resolved_paths.as_ref();
           let ecma_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
             let mut ecma_ctx = GenerateContext {
               chunk_idx,
@@ -188,6 +190,7 @@ impl GenerateStage<'_> {
               plugin_driver: self.plugin_driver,
               module_id_to_codegen_ret,
               render_export_items_index_vec,
+              resolved_paths,
             };
             let ecma_chunks_future = EcmaGenerator::instantiate_chunk(&mut ecma_ctx);
             let ecma_chunks = ecma_chunks_future.await?;
@@ -203,6 +206,7 @@ impl GenerateStage<'_> {
               plugin_driver: self.plugin_driver,
               module_id_to_codegen_ret: vec![],
               render_export_items_index_vec: &index_vec![],
+              resolved_paths,
             };
             let asset_chunks_future = AssetGenerator::instantiate_chunk(&mut asset_ctx);
             let asset_chunks = asset_chunks_future.await?;

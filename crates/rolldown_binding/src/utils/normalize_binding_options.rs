@@ -142,7 +142,7 @@ fn normalize_paths_option(
     Either::B(func) => rolldown_common::PathsOutputOption::Fn(Arc::new(move |id| {
       let func = Arc::clone(&func);
       let id = id.to_string();
-      func.invoke_sync((id,).into()).map_err(anyhow::Error::from)
+      Box::pin(async move { func.invoke_async((id,).into()).await.map_err(anyhow::Error::from) })
     })),
   })
 }

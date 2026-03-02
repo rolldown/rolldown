@@ -129,7 +129,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
 
       let require_path_str = concat_string!(
         "require(\"",
-        &importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
+        &importee.get_import_path(ctx.chunk, ctx.resolved_paths),
         "\")"
       );
 

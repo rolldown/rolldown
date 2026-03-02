@@ -370,48 +370,13 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
     // Handle keep_names for named class/function expressions in any expression context
     // (return statements, function args, array elements, etc.)
-    if self.ctx.options.keep_names && self.ctx.runtime.id() != self.ctx.idx {
-      match expr {
-        ast::Expression::ClassExpression(class_expression) => {
-          if let Some(id) = class_expression.id.as_ref() {
-            if let Some(element) = self.keep_name_helper_for_class(
-              id.symbol_id.get().map(KeepNameId::SymbolId),
-              &class_expression.body,
-            ) {
-              class_expression.body.body.insert(0, element);
-            }
-          }
-        }
-        ast::Expression::FunctionExpression(fn_expression) => {
-          if let Some(id) = fn_expression.id.as_mut() {
-            if let Some(symbol_id) = id.symbol_id.get() {
-              let keep_name_id = KeepNameId::SymbolId(symbol_id);
-              if let Some((_insert_position, original_name, _)) =
-                self.process_fn(Some(keep_name_id), Some(keep_name_id))
-              {
-                // Manually rename the binding identifier before clearing symbol_id
-                let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
-                let canonical_name = self.canonical_name_for(symbol_ref);
-                if id.name != canonical_name {
-                  id.name = self.snippet.atom(canonical_name).into();
-                }
-                // Clear symbol_id to prevent double processing:
-                // - visit_expression won't re-wrap when walker visits inner fn
-                // - visit_binding_identifier won't re-rename
-                id.symbol_id.get_mut().take();
-
-                let fn_expr = expr.take_in(self.alloc);
-                let name_ref = self.canonical_ref_for_runtime("__name");
-                let (finalized_callee, _) =
-                  self.finalized_expr_for_symbol_ref(name_ref, false, false);
-                *expr =
-                  self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_callee, true);
-              }
-            }
-          }
-        }
-        _ => {}
+    // The processed set prevents double processing when the same expression was already
+    // handled by visit_declaration or visit_assignment_expression.
+    match expr {
+      ast::Expression::ClassExpression(_) | ast::Expression::FunctionExpression(_) => {
+        self.apply_keep_name_for_expr(None, expr);
       }
+      _ => {}
     }
 
     match expr {
@@ -666,7 +631,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
   fn visit_assignment_expression(&mut self, it: &mut ast::AssignmentExpression<'ast>) {
     if let AssignmentTarget::AssignmentTargetIdentifier(id) = &mut it.left {
-      self.process_keep_name_for_expression(
+      self.apply_keep_name_for_expr(
         id.reference_id.get().map(KeepNameId::ReferenceId),
         &mut it.right,
       );
@@ -698,39 +663,42 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           else {
             continue;
           };
-          self.process_keep_name_for_expression(id.symbol_id.get().map(KeepNameId::SymbolId), init);
+          self.apply_keep_name_for_expr(id.symbol_id.get().map(KeepNameId::SymbolId), init);
         }
       }
       ast::Declaration::FunctionDeclaration(decl) => {
         let keep_name_id =
           decl.id.as_ref().and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId));
         if let Some((insert_position, original_name, new_name)) =
-          self.process_fn(keep_name_id, keep_name_id)
+          self.process_fn_decl_keep_name(keep_name_id)
         {
           self.keep_name_statement_to_insert.push((insert_position, original_name, new_name));
         }
       }
       ast::Declaration::ClassDeclaration(decl) => {
-        // need to insert `keep_names` helper, because `get_transformed_class_decl`
-        // will remove id in `class.id`
-        if let Some(element) = self.keep_name_helper_for_class(
-          decl.id.as_ref().and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId)),
-          &decl.body,
-        ) {
-          decl.body.body.insert(0, element);
-        }
         if let Some(new_decl) = self.get_transformed_class_decl(decl) {
           *it = new_decl;
-          // Clear symbol_id on class expression's id to prevent visit_expression
-          // from inserting a duplicate __name static block during walk
+          // Apply keepNames on the resulting var decl's class expression init.
+          // The processed set prevents visit_expression from double-processing.
           if let ast::Declaration::VariableDeclaration(var_decl) = it {
             if let Some(declarator) = var_decl.declarations.first_mut() {
-              if let Some(ast::Expression::ClassExpression(class_expr)) = &mut declarator.init {
-                if let Some(id) = &mut class_expr.id {
-                  id.symbol_id.get_mut().take();
-                }
+              if let (BindingPattern::BindingIdentifier(id), Some(init)) =
+                (&declarator.id, declarator.init.as_mut())
+              {
+                self.apply_keep_name_for_expr(
+                  id.symbol_id.get().map(KeepNameId::SymbolId),
+                  init,
+                );
               }
             }
+          }
+        } else {
+          // Class not transformed (e.g., not at root scope) — insert static block directly
+          if let Some(element) = self.keep_name_helper_for_class(
+            decl.id.as_ref().and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId)),
+            &decl.body,
+          ) {
+            decl.body.body.insert(0, element);
           }
         }
       }

@@ -78,6 +78,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         state: TraverseState::empty(),
         cur_stmt_index: 0,
         keep_name_statement_to_insert: vec![],
+        keep_name_processed_exprs: FxHashSet::default(),
         needs_hosted_top_level_binding: false,
         module_namespace_included,
         transferred_import_record,

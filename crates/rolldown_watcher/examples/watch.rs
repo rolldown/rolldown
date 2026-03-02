@@ -5,7 +5,7 @@ use rolldown_common::WatcherChangeKind;
 use rolldown_watcher::{WatchEvent, Watcher, WatcherConfig, WatcherEventHandler};
 use sugar_path::SugarPath;
 
-// cargo run -p rolldown --example watch_new
+// cargo run -p rolldown_watcher --example watch
 
 struct PrintHandler;
 

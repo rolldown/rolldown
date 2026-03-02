@@ -430,48 +430,20 @@ ROLLDOWN_WATCH=true  // Rolldown-specific
 
 Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#6482](https://github.com/rolldown/rolldown/issues/6482) and related issues.
 
-### Rust Core (done)
+### NAPI + TypeScript Bridge
 
-- [x] Actor architecture with single-owner coordinator
-- [x] Explicit state machine (`WatcherState`)
-- [x] Debouncing with deadline reset on new changes
-- [x] Per-task fs watchers with isolated watch sets
-- [x] Build sequence matching Rollup's 7-step semantics
-- [x] Close flow properly calls `bundler.close()` (fixes old bug)
-- [x] No `block_on()` — async actor on tokio runtime (fixes [#6393](https://github.com/rolldown/rolldown/issues/6393))
-- [x] `WatcherEventHandler` trait with blocking (awaited) semantics
-- [x] `BUNDLE_END`/`ERROR` events carry `Arc<Bundler>` handle ([#6618](https://github.com/rolldown/rolldown/issues/6618))
-- [x] Error recovery — build errors emit `ERROR` event, watcher continues
-- [x] Buffered event draining after builds (`drain_buffered_events`)
-- [x] `FileChangeEvent` mapping from `notify` (in `TaskFsEventHandler`)
-- [x] Defensive fallback to `Update` for unknown notify event kinds
-
-### NAPI + TypeScript Bridge (done)
-
-- [x] `NapiWatcherEventHandler` implementing `WatcherEventHandler` trait — bridges events to JS via `ThreadsafeFunction`
-- [x] `BindingWatcher` wrapping `rolldown_watcher::Watcher` instead of `rolldown::Watcher`
-- [x] Map `WatchEvent` variants to `BindingWatcherEvent` for JS consumption
-- [x] Update `packages/rolldown/src/api/watch/watcher.ts` to work with new binding API
-- [x] `wait_for_close()` pattern replaces `setInterval` keepalive hack
-- [x] Async `emit()` with sequential dispatch (`for...of` + `await`) so handler side effects are ordered
 - [ ] Surface setup errors (e.g. `options` hook) as `ERROR` events, not unhandled rejections ([#6482](https://github.com/rolldown/rolldown/issues/6482))
 
-### Cleanup (todo, after NAPI works)
+### Cleanup
 
-- [ ] Delete old watcher (`crates/rolldown/src/watch/`)
 - [ ] Remove `reset_closed_for_watch_mode()` hack
 - [ ] Rename `WatcherChangeKind` → `FileChangeEventKind` (type stays in `rolldown_common`)
 - [ ] CLI `--watch` mode working with new watcher ([#7759](https://github.com/rolldown/rolldown/issues/7759))
 
-### Missing Features (todo)
+### Missing Features
 
-- [x] Bulk change handling — `FxIndexMap` storage for O(1) dedup, batch `on_file_changes()` API with single state transition per batch. Remaining items:
-  - Per-change bundler lock: `call_on_invalidate()` acquires the bundler mutex for each change individually.
-  - See Future section for bulk-change threshold optimization (skipping per-file hooks for large batches).
 - [ ] Resolver cache invalidation between rebuilds ([#6482](https://github.com/rolldown/rolldown/issues/6482))
-- [x] `skipWrite` support — `with_cached_bundle_experimental` callback calls `bundle_generate()` instead of `bundle_write()` when `skip_write` is true
 - [ ] File unwatching — `update_watch_files()` only adds, never removes. Watch set grows monotonically
-- [x] Smart change coalescing — `merge_change_kind` in `watcher_state.rs` (create+delete=removed, delete+create=update). Empty change sets after consolidation return `None` from `on_debounce_timeout`, skipping spurious rebuild cycles
 
 ### Future
 

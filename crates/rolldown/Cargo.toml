@@ -42,7 +42,6 @@ oxc_index = { workspace = true }
 oxc_traverse = { workspace = true }
 petgraph = { workspace = true }
 rayon = { workspace = true }
-rolldown-notify = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_dev_common = { workspace = true }
 rolldown_devtools = { workspace = true }
@@ -81,7 +80,6 @@ regex = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_dev = { path = "../rolldown_dev" }
 rolldown_testing = { path = "../rolldown_testing" }
-rolldown_watcher = { path = "../rolldown_watcher" }
 rolldown_workspace = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

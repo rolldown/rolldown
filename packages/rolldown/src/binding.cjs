@@ -634,7 +634,6 @@ module.exports.BindingPropertyReadSideEffects = nativeBinding.BindingPropertyRea
 module.exports.BindingPropertyWriteSideEffects = nativeBinding.BindingPropertyWriteSideEffects
 module.exports.BindingRebuildStrategy = nativeBinding.BindingRebuildStrategy
 module.exports.collapseSourcemaps = nativeBinding.collapseSourcemaps
-module.exports.createTokioRuntime = nativeBinding.createTokioRuntime
 module.exports.enhancedTransform = nativeBinding.enhancedTransform
 module.exports.enhancedTransformSync = nativeBinding.enhancedTransformSync
 module.exports.FilterTokenKind = nativeBinding.FilterTokenKind

@@ -2779,8 +2779,6 @@ export interface BindingWatchOption {
 
 export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
 
-export declare function createTokioRuntime(blockingThreads?: number | undefined | null): void
-
 /**
  * Transpile a JavaScript or TypeScript into a target ECMAScript version, asynchronously.
  *

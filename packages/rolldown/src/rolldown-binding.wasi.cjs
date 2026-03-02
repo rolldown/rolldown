@@ -166,7 +166,6 @@ module.exports.BindingPropertyReadSideEffects = __napiModule.exports.BindingProp
 module.exports.BindingPropertyWriteSideEffects = __napiModule.exports.BindingPropertyWriteSideEffects
 module.exports.BindingRebuildStrategy = __napiModule.exports.BindingRebuildStrategy
 module.exports.collapseSourcemaps = __napiModule.exports.collapseSourcemaps
-module.exports.createTokioRuntime = __napiModule.exports.createTokioRuntime
 module.exports.enhancedTransform = __napiModule.exports.enhancedTransform
 module.exports.enhancedTransformSync = __napiModule.exports.enhancedTransformSync
 module.exports.FilterTokenKind = __napiModule.exports.FilterTokenKind

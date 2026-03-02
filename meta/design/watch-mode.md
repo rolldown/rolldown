@@ -20,7 +20,7 @@ function watch(input: WatchOptions | WatchOptions[]): RolldownWatcher;
 
 - Accepts a single config or an array of configs.
 - Each config may have multiple `output` entries. Internally, **each output creates a separate bundler** (a `WatchTask`).
-- Returns a `RolldownWatcher` immediately. The first build is deferred to `process.nextTick` so the caller can attach event listeners first.
+- Returns a `RolldownWatcher` immediately. The first build is deferred to `process.nextTick` so the caller can attach event listeners first. This matches Rollup's pattern: the constructor calls `process.nextTick(() => this.run())` where `run()` is private.
 
 ```typescript
 interface RolldownWatcher {
@@ -58,12 +58,12 @@ All event listeners are **awaited** before proceeding — blocking semantics mat
 ### Rust API
 
 ```rust
-let watcher = Watcher::new(config, handler, &watcher_config)?;
-let watcher = Watcher::with_multiple_bundler_configs(configs, handler, &watcher_config)?;
-watcher.close().await?;
+let watcher = Watcher::new(configs, handler, &watcher_config)?;
+watcher.run();       // spawns the coordinator (non-blocking)
+watcher.close().await?;  // sends Close, awaits completion
 ```
 
-`Watcher::new` spawns the coordinator actor and triggers the first build immediately. The caller provides a `WatcherEventHandler` implementation to receive events.
+Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` spawns it on the tokio runtime. `close()` sends a fire-and-forget `Close` message and awaits the shared completion future. `wait_for_close()` gives consumers a reliable way to await the watcher's completion without closing it.
 
 ### Known Divergences from Rollup
 
@@ -98,7 +98,7 @@ Data flow:
 
 **Ownership rules:**
 
-- `Watcher` only holds `tx` and `task_handle` — lightweight, no bundler access.
+- `Watcher` only holds `tx` and `coordinator_state` — lightweight, no bundler access.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
 - Each `WatchTask` owns its `DynFsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
 - Bundler is `Arc<TokioMutex<>>` because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
@@ -254,14 +254,15 @@ File change detected by per-task FsWatcher
 ### Close
 
 ```
-watcher.close() sends WatcherMsg::Close(oneshot_tx)
+watcher.close() sends WatcherMsg::Close (fire-and-forget)
+  → awaits shared coordinator future (wait_for_close)
   → handle_close():
       1. State → Closing
       2. task.call_hook_close_watcher() for each task (plugin hook, awaited)
       3. task.close() for each task (bundler cleanup)
       4. handler.on_close() (awaited)
       5. State → Closed
-      6. oneshot reply → close() promise resolves
+      6. coordinator future completes → all wait_for_close() callers resolve
 ```
 
 ### Error Recovery
@@ -364,18 +365,19 @@ impl WatcherEventHandler for NapiWatcherEventHandler {
 
 ### Event Loop Keepalive
 
-`ThreadsafeFunction` uses `Weak = true` (unref'd), so it doesn't prevent Node.js from exiting. `Watcher::wait_for_close()` returns a Future that resolves when the coordinator finishes (via `Arc<Notify>`). The NAPI binding exposes this as `waitForClose()` — the pending JS Promise keeps the event loop alive. This replaces the old `setInterval(() => {}, 1e9)` hack.
+`ThreadsafeFunction` uses `Weak = true` (unref'd), so it doesn't prevent Node.js from exiting. `Watcher::wait_for_close()` returns a `Shared<Future>` that resolves when the coordinator finishes — idempotent, so multiple callers (or late callers after completion) all resolve immediately. The NAPI binding exposes this as `waitForClose()` — the pending JS Promise keeps the event loop alive. This replaces the old `setInterval(() => {}, 1e9)` hack.
 
 ```
-start() → inner.start(callback)     // starts watcher, non-blocking
-       → inner.waitForClose()       // pending Promise keeps Node alive
-close() → inner.close()             // sends Close msg, awaits coordinator shutdown
-                                    // waitForClose() resolves, event loop free to exit
+constructor(options, listener)  // creates Watcher with handler, ready to run
+run()   → inner.run()           // spawns coordinator (non-blocking)
+        → inner.waitForClose()  // pending Promise keeps Node alive
+close() → inner.close()         // sends Close msg, awaits shared future
+                                // waitForClose() resolves, event loop free to exit
 ```
 
-### State Machine (Binding)
+### Binding as Thin Wrapper
 
-`BindingWatcher` uses a `Mutex<BindingWatcherState>` state machine: `Pending → Running → Closed`. On watcher creation failure, `start()` restores the `Pending` state so the caller can retry. The `closed_notify` `Arc<Notify>` is stored separately so `wait_for_close()` can await it without holding the state mutex across await points.
+`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking, no logic beyond type conversion. All lifecycle management lives in the Rust core. The constructor takes both `options` and `listener`, creates the `NapiWatcherEventHandler`, and passes it to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher.
 
 ### Event Emitter
 
@@ -383,7 +385,7 @@ close() → inner.close()             // sends Close msg, awaits coordinator shu
 
 ### Event Mapping
 
-Lives in `watcher.ts` (`createEventCallback()`), not in the emitter. Maps `BindingWatcherEvent` → Rollup-compatible event objects. Error events carry structured `Vec<BuildDiagnostic>` data from Rust; the binding preserves these diagnostics, and the JS layer converts them via `aggregateBindingErrorsIntoJsError()` before exposing them on Rollup-style event objects.
+Lives in `watcher.ts` (`createEventCallback()` — a standalone function), not in the emitter. The callback is created before the `BindingWatcher` constructor and passed to it alongside options. Maps `BindingWatcherEvent` → Rollup-compatible event objects. Error events carry structured `Vec<BuildDiagnostic>` data from Rust; the binding preserves these diagnostics, and the JS layer converts them via `aggregateBindingErrorsIntoJsError()` before exposing them on Rollup-style event objects.
 
 ### End-to-End Flow
 

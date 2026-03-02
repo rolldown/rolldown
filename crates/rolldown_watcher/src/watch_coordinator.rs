@@ -10,7 +10,7 @@ use rolldown_common::WatcherChangeKind;
 use rolldown_utils::indexmap::FxIndexMap;
 use std::mem;
 use std::time::Duration;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 
 /// The coordinator actor that owns all state and runs the event loop.
 pub struct WatchCoordinator<H: WatcherEventHandler> {
@@ -50,8 +50,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
             Some(WatcherMsg::FileChanges { task_index, changes }) => {
               self.process_file_changes(task_index, changes).await;
             }
-            Some(WatcherMsg::Close(reply)) => {
-              self.handle_close(reply).await;
+            Some(WatcherMsg::Close) => {
+              self.handle_close().await;
               break;
             }
             None => break,
@@ -74,8 +74,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
                 Some(WatcherMsg::FileChanges { task_index, changes }) => {
                   self.process_file_changes(task_index, changes).await;
                 }
-                Some(WatcherMsg::Close(reply)) => {
-                  self.handle_close(reply).await;
+                Some(WatcherMsg::Close) => {
+                  self.handle_close().await;
                   break;
                 }
                 None => break,
@@ -202,8 +202,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
         Ok(WatcherMsg::FileChanges { task_index, changes }) => {
           self.process_file_changes(task_index, changes).await;
         }
-        Ok(WatcherMsg::Close(reply)) => {
-          self.handle_close(reply).await;
+        Ok(WatcherMsg::Close) => {
+          self.handle_close().await;
           return;
         }
         Err(_) => break,
@@ -211,8 +211,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     }
   }
 
-  /// Handle close: call close_watcher hooks, close bundlers, emit close, reply
-  async fn handle_close(&mut self, reply: oneshot::Sender<()>) {
+  /// Handle close: call close_watcher hooks, close bundlers, emit close
+  async fn handle_close(&mut self) {
     let (new_state, should_close) = mem::take(&mut self.state).on_close();
     self.state = new_state;
 
@@ -233,6 +233,5 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     }
 
     self.state = mem::take(&mut self.state).to_closed();
-    let _ = reply.send(());
   }
 }

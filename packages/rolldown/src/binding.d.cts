@@ -1689,11 +1689,11 @@ export declare class BindingTransformPluginContext {
 }
 
 export declare class BindingWatcher {
-  constructor(options: Array<BindingBundlerOptions>)
-  start(listener: (data: BindingWatcherEvent) => void): Promise<void>
+  constructor(options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void)
+  run(): Promise<void>
   /**
-   * Returns a Promise that resolves when the watcher closes.
-   * The pending Promise keeps Node.js event loop alive (replaces setInterval hack).
+   * Gives consumers a reliable way to await the watcher's completion.
+   * The Node.js layer relies on the pending Promise to keep the process from exiting.
    */
   waitForClose(): Promise<void>
   close(): Promise<void>

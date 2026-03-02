@@ -3662,6 +3662,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
+ "futures",
  "oxc_index",
  "rolldown",
  "rolldown-notify",

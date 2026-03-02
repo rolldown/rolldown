@@ -46,30 +46,27 @@ impl WatcherEventHandler for NapiWatcherEventHandler {
   }
 }
 
-enum BindingWatcherState {
-  Pending { configs: Vec<rolldown::BundlerConfig>, watcher_config: WatcherConfig },
-  Running(rolldown_watcher::Watcher),
-  Closed,
-}
-
 #[napi]
 pub struct BindingWatcher {
-  state: std::sync::Mutex<BindingWatcherState>,
-  /// Stored separately so `wait_for_close` can await without holding the state mutex.
-  closed_notify: std::sync::Mutex<Option<Arc<napi::tokio::sync::Notify>>>,
+  inner: rolldown_watcher::Watcher,
 }
 
 #[napi]
 impl BindingWatcher {
-  #[napi(constructor)]
-  pub fn new(options: Vec<BindingBundlerOptions>) -> napi::Result<Self> {
+  #[napi(
+    constructor,
+    ts_args_type = "options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void"
+  )]
+  pub fn new(
+    options: Vec<BindingBundlerOptions>,
+    listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>>,
+  ) -> napi::Result<Self> {
     let configs = options
       .into_iter()
       .map(create_bundler_config_from_binding_options)
       .collect::<Result<Vec<_>, _>>()?;
 
     // Forward the largest build_delay from configs to the watcher's debounce.
-    // This matches the old watcher's behavior of using the largest delay.
     let build_delay =
       configs.iter().filter_map(|c| c.options.watch.as_ref().and_then(|w| w.build_delay)).max();
 
@@ -87,107 +84,40 @@ impl BindingWatcher {
       poll_interval,
     };
 
-    Ok(Self {
-      state: std::sync::Mutex::new(BindingWatcherState::Pending { configs, watcher_config }),
-      closed_notify: std::sync::Mutex::new(None),
-    })
+    let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };
+    let inner =
+      rolldown_watcher::Watcher::new(configs, handler, &watcher_config).map_err(|errs| {
+        napi::Error::new(
+          napi::Status::GenericFailure,
+          errs.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
+        )
+      })?;
+    Ok(Self { inner })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  #[napi(ts_args_type = "listener: (data: BindingWatcherEvent) => void")]
-  pub async fn start(
-    &self,
-    listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>>,
-  ) -> napi::Result<()> {
-    let mut state = self
-      .state
-      .lock()
-      .map_err(|e| napi::Error::new(napi::Status::GenericFailure, format!("Lock poisoned: {e}")))?;
-
-    let (configs, watcher_config) =
-      match std::mem::replace(&mut *state, BindingWatcherState::Closed) {
-        BindingWatcherState::Pending { configs, watcher_config } => (configs, watcher_config),
-        other => {
-          *state = other;
-          return Err(napi::Error::new(
-            napi::Status::GenericFailure,
-            "Watcher is not in Pending state (already started or closed)",
-          ));
-        }
-      };
-
-    let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };
-    let watcher = match rolldown_watcher::Watcher::with_multiple_bundler_configs(
-      configs,
-      handler,
-      &watcher_config,
-    ) {
-      Ok(w) => w,
-      Err(errs) => {
-        // Restore Pending state so the watcher can be retried.
-        *state = BindingWatcherState::Pending { configs: Vec::new(), watcher_config };
-        return Err(napi::Error::new(
-          napi::Status::GenericFailure,
-          errs.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
-        ));
-      }
-    };
-
-    // Store the closed_notify handle for wait_for_close()
-    let mut notify = self
-      .closed_notify
-      .lock()
-      .map_err(|e| napi::Error::new(napi::Status::GenericFailure, format!("Lock poisoned: {e}")))?;
-    *notify = Some(watcher.closed_notify());
-
-    *state = BindingWatcherState::Running(watcher);
+  #[napi]
+  pub async fn run(&self) -> napi::Result<()> {
+    self.inner.run();
     Ok(())
   }
 
-  /// Returns a Promise that resolves when the watcher closes.
-  /// The pending Promise keeps Node.js event loop alive (replaces setInterval hack).
+  /// Gives consumers a reliable way to await the watcher's completion.
+  /// The Node.js layer relies on the pending Promise to keep the process from exiting.
   #[tracing::instrument(level = "debug", skip_all)]
   #[napi]
   pub async fn wait_for_close(&self) -> napi::Result<()> {
-    let notify = {
-      let guard = self.closed_notify.lock().map_err(|e| {
-        napi::Error::new(napi::Status::GenericFailure, format!("Lock poisoned: {e}"))
-      })?;
-      guard.clone()
-    };
-
-    match notify {
-      Some(n) => {
-        n.notified().await;
-        Ok(())
-      }
-      None => Err(napi::Error::new(napi::Status::GenericFailure, "Watcher is not running")),
-    }
+    self.inner.wait_for_close().await;
+    Ok(())
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
   #[napi]
   pub async fn close(&self) -> napi::Result<()> {
-    let watcher = {
-      let mut state = self.state.lock().map_err(|e| {
-        napi::Error::new(napi::Status::GenericFailure, format!("Lock poisoned: {e}"))
-      })?;
-      match std::mem::replace(&mut *state, BindingWatcherState::Closed) {
-        BindingWatcherState::Running(watcher) => Some(watcher),
-        other => {
-          *state = other;
-          None
-        }
-      }
-    };
-
-    if let Some(watcher) = watcher {
-      watcher
-        .close()
-        .await
-        .map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))?;
-    }
-
-    Ok(())
+    self
+      .inner
+      .close()
+      .await
+      .map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))
   }
 }

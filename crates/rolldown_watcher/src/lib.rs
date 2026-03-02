@@ -11,5 +11,4 @@ mod watcher_state;
 pub use event::{BundleEndEventData, BundleStartEventData, WatchErrorEventData, WatchEvent};
 pub use file_change_event::FileChangeEvent;
 pub use handler::WatcherEventHandler;
-pub use watch_task::WatchTaskIdx;
 pub use watcher::{Watcher, WatcherConfig};

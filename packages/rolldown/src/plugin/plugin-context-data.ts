@@ -27,6 +27,7 @@ export class PluginContextData {
     private onLog: LogHandler,
     private outputOptions: OutputOptions,
     private normalizedOutputPlugins: RolldownPlugin[],
+    private inputPlugins: RolldownPlugin[] = [],
   ) {}
 
   updateModuleOption(id: string, option: ModuleOptions): ModuleOptions {
@@ -116,7 +117,7 @@ export class PluginContextData {
   }
 
   getInputOptions(opts: BindingNormalizedOptions): NormalizedInputOptions {
-    this.normalizedInputOptions ??= new NormalizedInputOptionsImpl(opts, this.onLog);
+    this.normalizedInputOptions ??= new NormalizedInputOptionsImpl(opts, this.onLog, this.inputPlugins);
     return this.normalizedInputOptions;
   }
 

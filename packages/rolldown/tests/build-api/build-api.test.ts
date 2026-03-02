@@ -143,3 +143,24 @@ test('output properties are enumerable and can be spread', async () => {
   expect(Object.keys(result.output[0])).toContain('code');
   expect(Object.keys(result.output[0])).toContain('exports');
 });
+
+test('plugins are accessible in buildStart hook', async () => {
+  let pluginsInBuildStart: unknown;
+  const pluginA = {
+    name: 'plugin-a',
+    buildStart({ plugins }: { plugins: unknown }) {
+      pluginsInBuildStart = plugins;
+    },
+  };
+  const pluginB = { name: 'plugin-b' };
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [pluginA, pluginB],
+  });
+  await bundle.generate({ format: 'esm' });
+  expect(Array.isArray(pluginsInBuildStart)).toBe(true);
+  const names = (pluginsInBuildStart as Array<{ name: string }>).map((p) => p.name);
+  expect(names).toContain('plugin-a');
+  expect(names).toContain('plugin-b');
+});

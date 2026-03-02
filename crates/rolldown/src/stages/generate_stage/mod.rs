@@ -94,6 +94,9 @@ impl<'a> GenerateStage<'a> {
 
     self.finalized_module_namespace_ref_usage();
 
+    // Flatten union-find chains so subsequent immutable lookups are O(1).
+    self.link_output.symbol_db.flatten_all_chains();
+
     self.compute_cross_chunk_links(&mut chunk_graph);
 
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);

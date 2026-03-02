@@ -1,94 +1,33 @@
-use std::ptr::addr_of;
-
-use rolldown_common::{ExportsKind, ImportKind, ImportRecordMeta, Module, OutputFormat, WrapKind};
-
-use crate::utils::external_import_interop::import_record_needs_interop;
+use rolldown_common::{ExportsKind, Module, OutputFormat};
 
 use super::LinkStage;
+use super::oxc_conversions::{from_oxc_exports_kind, from_oxc_wrap_kind};
 
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn determine_module_exports_kind(&mut self) {
-    self.module_table.modules.iter().filter_map(Module::as_normal).for_each(|importer| {
-      // TODO(hyf0): should check if importer is a js module
-      importer
-        .import_records
-        .iter()
-        .filter_map(|rec| rec.resolved_module.map(|module_idx| (rec, module_idx)))
-        .for_each(|(rec, module_idx)| {
-          let Module::Normal(importee) = &self.module_table[module_idx] else {
-            return;
-          };
-          match rec.kind {
-            ImportKind::Import => {
-              if matches!(importee.exports_kind, ExportsKind::None)
-                && !importee.meta.has_lazy_export()
-              {
-                // `import` a module that has `ExportsKind::None`, which will be turned into `ExportsKind::Esm`
-                // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
-                unsafe {
-                  let importee_mut = addr_of!(*importee).cast_mut();
-                  (&mut (*importee_mut)).exports_kind = ExportsKind::Esm;
-                }
-              }
-            }
-            ImportKind::Require => match importee.exports_kind {
-              ExportsKind::Esm => {
-                self.metas[importee.idx].sync_wrap_kind(WrapKind::Esm);
-              }
-              ExportsKind::CommonJs => {
-                self.metas[importee.idx].sync_wrap_kind(WrapKind::Cjs);
-              }
-              ExportsKind::None => {
-                self.metas[importee.idx].sync_wrap_kind(WrapKind::Cjs);
-                // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
-                // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
-                unsafe {
-                  let importee_mut = addr_of!(*importee).cast_mut();
-                  (&mut (*importee_mut)).exports_kind = ExportsKind::CommonJs;
-                }
-              }
-            },
-            ImportKind::DynamicImport => {
-              if self.options.code_splitting.is_disabled() {
-                // For iife, then import() is just a require() that
-                // returns a promise, so the imported file must also be wrapped
-                match importee.exports_kind {
-                  ExportsKind::Esm => {
-                    self.metas[importee.idx].sync_wrap_kind(WrapKind::Esm);
-                  }
-                  ExportsKind::CommonJs => {
-                    self.metas[importee.idx].sync_wrap_kind(WrapKind::Cjs);
-                  }
-                  ExportsKind::None => {
-                    self.metas[importee.idx].sync_wrap_kind(WrapKind::Cjs);
-                    // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
-                    // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
-                    unsafe {
-                      let importee_mut = addr_of!(*importee).cast_mut();
-                      (&mut (*importee_mut)).exports_kind = ExportsKind::CommonJs;
-                    }
-                  }
-                }
-              }
-            }
-            ImportKind::AtImport => {
-              unreachable!("A Js module would never import a CSS module via `@import`");
-            }
-            ImportKind::UrlImport => {
-              unreachable!("A Js module would never import a CSS module via `url()`");
-            }
-            ImportKind::NewUrl | ImportKind::HotAccept => {}
-          }
-        });
+    let config = oxc_module_graph::ExportsKindConfig {
+      dynamic_imports_as_require: self.options.code_splitting.is_disabled(),
+      wrap_cjs_entries: matches!(self.options.format, OutputFormat::Esm),
+    };
 
-      let is_entry = self.entries.contains_key(&importer.idx);
-      if matches!(importer.exports_kind, ExportsKind::CommonJs)
-        && (!is_entry || matches!(self.options.format, OutputFormat::Esm))
-      {
-        self.metas[importer.idx].sync_wrap_kind(WrapKind::Cjs);
+    let result =
+      oxc_module_graph::determine_module_exports_kind(&self.link_kernel.graph, &config);
+
+    // Sync to Rolldown data BEFORE apply() consumes the result.
+    for (oxc_idx, exports_kind) in &result.exports_kind_updates {
+      let rd_idx = rolldown_common::ModuleIdx::from_usize(oxc_idx.index());
+      if let Module::Normal(m) = &mut self.module_table[rd_idx] {
+        m.exports_kind = from_oxc_exports_kind(*exports_kind);
       }
-    });
+    }
+    for (oxc_idx, wrap_kind) in &result.wrap_kind_updates {
+      let rd_idx = rolldown_common::ModuleIdx::from_usize(oxc_idx.index());
+      self.metas[rd_idx].sync_wrap_kind(from_oxc_wrap_kind(*wrap_kind));
+    }
+
+    // Apply to graph (writes exports_kind + wrap_kind on graph modules).
+    result.apply(&mut self.link_kernel.graph);
   }
 
   /// Builds the `safely_merge_cjs_ns_map` which groups ESM imports of the same CommonJS module.
@@ -97,6 +36,10 @@ impl LinkStage<'_> {
   /// a single namespace binding, reducing code size.
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn determine_safely_merge_cjs_ns(&mut self) {
+    use rolldown_common::{ImportKind, ImportRecordMeta};
+
+    use crate::utils::external_import_interop::import_record_needs_interop;
+
     self.safely_merge_cjs_ns_map.clear();
 
     for importer in self.module_table.modules.iter().filter_map(Module::as_normal) {

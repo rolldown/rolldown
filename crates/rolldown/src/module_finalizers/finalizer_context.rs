@@ -44,6 +44,16 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub resolved_paths: Option<&'me PathsOutputOption>,
 }
 
+impl ScopeHoistingFinalizerContext<'_> {
+  /// Resolve a symbol to its canonical form.
+  ///
+  /// After chain flattening in the generate stage, Rolldown's SymbolRefDb
+  /// is a superset of all links (graph + facade) with O(1) lookups.
+  pub fn graph_canonical_ref(&self, sym: SymbolRef) -> SymbolRef {
+    self.symbol_db.canonical_ref_for(sym)
+  }
+}
+
 impl<'me> ScopeHoistingFinalizerContext<'me> {
   #[tracing::instrument(level = "trace", skip_all)]
   pub fn finalize_normal_module(

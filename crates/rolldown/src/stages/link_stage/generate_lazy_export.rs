@@ -46,7 +46,10 @@ impl LinkStage<'_> {
       }
     });
 
-    for (module_idx, exports_kind, is_json_module) in module_idx_to_exports_kind {
+    // Collect affected module indices so we can sync to graph after processing.
+    let lazy_modules: Vec<_> = module_idx_to_exports_kind.into_iter().collect();
+
+    for &(module_idx, exports_kind, is_json_module) in &lazy_modules {
       let Some(ecma_ast) = &mut self.ast_table[module_idx] else { unreachable!() };
       if matches!(exports_kind, ExportsKind::CommonJs) {
         ecma_ast.program.with_mut(|fields| {
@@ -92,6 +95,24 @@ impl LinkStage<'_> {
       let module = &mut self.module_table[module_idx];
       let module = module.as_normal_mut().unwrap();
       module.exports_kind = ExportsKind::Esm;
+    }
+
+    // Sync exports_kind to the graph for only the modules that generate_lazy_export modified.
+    // named_exports are NOT synced to the graph because bind_imports_and_exports reads
+    // them directly from module_table via the push-callback API.
+    {
+      use oxc_module_graph as oxc_mg;
+      for &(module_idx, _, _) in &lazy_modules {
+        let oxc_idx = oxc_mg::types::ModuleIdx::from_usize(module_idx.index());
+        let Some(m) = self.module_table[module_idx].as_normal() else { continue };
+        if let Some(gm) = self.link_kernel.graph.normal_module_mut(oxc_idx) {
+          gm.exports_kind = match m.exports_kind {
+            ExportsKind::Esm => oxc_mg::types::ExportsKind::Esm,
+            ExportsKind::CommonJs => oxc_mg::types::ExportsKind::CommonJs,
+            ExportsKind::None => oxc_mg::types::ExportsKind::None,
+          };
+        }
+      }
     }
   }
 }

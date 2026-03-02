@@ -278,7 +278,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       );
     }
 
-    let mut canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+    let mut canonical_ref = self.ctx.graph_canonical_ref(symbol_ref);
     let mut canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
     let namespace_alias = canonical_symbol.namespace_alias.as_ref();
     if let Some(ns_alias) = namespace_alias {
@@ -432,7 +432,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     namespace_alias: &NamespaceAlias,
   ) -> Option<(ast::Expression<'ast>, FinalizedExprProcessHint)> {
     let inline_options = self.ctx.options.optimization.inline_const?;
-    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(original_ref);
+    let canonical_ref = self.ctx.graph_canonical_ref(original_ref);
     let named_import = self.ctx.module.named_imports.get(&canonical_ref)?;
 
     if !matches!(&named_import.imported, Specifier::Literal(lit) if lit != "default") {
@@ -447,7 +447,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let resolved_export =
       self.ctx.linking_infos[importee.idx].resolved_exports.get(&namespace_alias.property_name)?;
     let export_symbol = resolved_export.symbol_ref;
-    let canonical_export_ref = self.ctx.symbol_db.canonical_ref_for(export_symbol);
+    let canonical_export_ref = self.ctx.graph_canonical_ref(export_symbol);
 
     let constant_meta = self.ctx.constant_value_map.get(&canonical_export_ref)?;
 
@@ -513,7 +513,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let is_inlinable_constant = self
           .ctx
           .constant_value_map
-          .get(&self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref))
+          .get(&self.ctx.graph_canonical_ref(resolved_export.symbol_ref))
           .is_some_and(|meta| !meta.commonjs_export);
         if !self.ctx.used_symbol_refs.contains(&resolved_export.symbol_ref)
           && !is_inlinable_constant
@@ -902,7 +902,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let reference_id = id_ref.reference_id.get()?;
     let symbol_id = self.scope.symbol_id_for(reference_id)?;
     let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
-    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+    let canonical_ref = self.ctx.graph_canonical_ref(symbol_ref);
     let symbol = self.ctx.symbol_db.get(canonical_ref);
 
     // Check if this symbol has a namespace_alias with property_name "default"

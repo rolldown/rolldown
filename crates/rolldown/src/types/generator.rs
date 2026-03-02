@@ -46,7 +46,7 @@ impl GenerateContext<'_> {
       return self.canonical_name_for(canonical_names, symbol_ref).to_string();
     }
 
-    let canonical_ref = symbol_db.canonical_ref_for(symbol_ref);
+    let canonical_ref = self.link_output.graph_canonical_ref(symbol_ref);
     let canonical_symbol = symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
     if let Some(ns_alias) = namespace_alias {

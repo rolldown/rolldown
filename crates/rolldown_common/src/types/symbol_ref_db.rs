@@ -350,6 +350,32 @@ impl SymbolRefDb {
     canonical
   }
 
+  /// Flatten all union-find chains using path halving.
+  ///
+  /// The immutable `canonical_ref_for` cannot do path compression, so chains
+  /// built during linking may be multi-hop. This method walks every symbol
+  /// once via `find_mut` (which applies path halving), so that all subsequent
+  /// immutable lookups resolve in a single read. This also enables the fast
+  /// path in `graph_canonical_ref`: when `link.is_none()`, the symbol is
+  /// already canonical and we can return immediately without touching the
+  /// graph's symbol DB at all.
+  ///
+  /// Call this after all `link()` calls are complete and before the generate
+  /// stage's hot loops that call `canonical_ref_for` thousands of times.
+  pub fn flatten_all_chains(&mut self) {
+    let module_sizes: Vec<(ModuleIdx, usize)> = self
+      .inner
+      .iter_enumerated()
+      .filter_map(|(idx, m)| m.as_ref().map(|db| (idx, db.classic_data.len())))
+      .collect();
+    for (module_idx, num_symbols) in module_sizes {
+      for symbol_idx in 0..num_symbols {
+        let sym = SymbolRef { owner: module_idx, symbol: SymbolId::new(symbol_idx) };
+        self.find_mut(sym);
+      }
+    }
+  }
+
   pub fn is_declared_in_root_scope(&self, refer: SymbolRef) -> bool {
     let local_db = self.inner[refer.owner].unpack_ref();
     local_db.ast_scopes.symbol_scope_id(refer.symbol) == local_db.root_scope_id

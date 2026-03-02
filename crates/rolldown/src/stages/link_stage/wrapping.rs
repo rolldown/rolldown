@@ -1,194 +1,78 @@
 use rolldown_common::{
-  EcmaViewMeta, ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule,
-  NormalizedBundlerOptions, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRefDb,
+  NormalModule, NormalizedBundlerOptions, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRefDb,
   TaggedSymbolRef, WrapKind,
 };
-use rolldown_utils::IndexBitSet;
-use rustc_hash::FxHashSet;
 
-use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
+use crate::types::linking_metadata::LinkingMetadata;
 
 use super::LinkStage;
-
-struct Context<'a> {
-  pub visited_modules: &'a mut IndexBitSet<ModuleIdx>,
-  pub linking_infos: &'a mut LinkingMetadataVec,
-  pub modules: &'a IndexModules,
-  pub runtime_idx: ModuleIdx,
-  pub on_demand_wrapping: bool,
-}
-
-fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
-  // Only consider `NormalModule`
-  if ctx.visited_modules.has_bit(target) {
-    return;
-  }
-  ctx.visited_modules.set_bit(target);
-
-  let Module::Normal(module) = &ctx.modules[target] else {
-    return;
-  };
-
-  if target == ctx.runtime_idx {
-    // Runtime module should not be wrapped.
-    // FIXME(hyf0): Currently, only hmr situation will fall into this branch, we should find a better way to handle this.
-    return;
-  }
-
-  // Check if the module really needs to be wrapped
-  if ctx.on_demand_wrapping
-    && matches!(module.exports_kind, ExportsKind::Esm | ExportsKind::None)
-    && !module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
-    && module.import_records.is_empty()
-  {
-    return;
-  }
-  if matches!(ctx.linking_infos[target].wrap_kind(), WrapKind::None) {
-    let new_wrap_kind = match module.exports_kind {
-      ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
-      ExportsKind::CommonJs => WrapKind::Cjs,
-    };
-    ctx.linking_infos[target].sync_wrap_kind(new_wrap_kind);
-  }
-
-  module.import_records.iter().for_each(|rec| {
-    let Some(module_idx) = rec.state.resolved_module else { return };
-    if matches!(rec.kind, ImportKind::Require) {
-      ctx.linking_infos[module_idx].required_by_other_module = true;
-    }
-    wrap_module_recursively(ctx, module_idx);
-  });
-}
-
-fn has_dynamic_exports_due_to_export_star(
-  target: ModuleIdx,
-  modules: &IndexModules,
-  linking_infos: &mut LinkingMetadataVec,
-  visited_modules: &mut IndexBitSet<ModuleIdx>,
-) -> bool {
-  if visited_modules.has_bit(target) {
-    return linking_infos[target].has_dynamic_exports;
-  }
-  visited_modules.set_bit(target);
-
-  let has_dynamic_exports = match &modules[target] {
-    Module::Normal(module) => {
-      if matches!(module.exports_kind, ExportsKind::CommonJs) {
-        true
-      } else {
-        module.star_export_module_ids().any(|importee_id| {
-          target != importee_id
-            && has_dynamic_exports_due_to_export_star(
-              importee_id,
-              modules,
-              linking_infos,
-              visited_modules,
-            )
-        })
-      }
-    }
-    Module::External(_) => true,
-  };
-
-  if has_dynamic_exports {
-    linking_infos[target].has_dynamic_exports = true;
-  }
-  linking_infos[target].has_dynamic_exports
-}
+use super::oxc_conversions::from_oxc_wrap_kind;
 
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn wrap_modules(&mut self) {
-    let mut visited_modules_for_wrapping = IndexBitSet::new(self.module_table.modules.len());
-    let mut visited_modules_for_dynamic_exports = IndexBitSet::new(self.module_table.modules.len());
-
-    let mut cjs_exports_kind_modules = FxHashSet::default();
-
-    let is_strict_execution_order_enabled = self.options.is_strict_execution_order_enabled();
-    let on_demand_wrapping = self.options.experimental.is_on_demand_wrapping_enabled();
-
-    for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
-      let module_id = module.idx;
-
-      if is_strict_execution_order_enabled && module.exports_kind == ExportsKind::CommonJs {
-        cjs_exports_kind_modules.insert(module_id);
-      }
-
-      if module.has_star_export() {
-        has_dynamic_exports_due_to_export_star(
-          module_id,
-          &self.module_table.modules,
-          &mut self.metas,
-          &mut visited_modules_for_dynamic_exports,
-        );
-      }
-
-      let need_to_wrap = !self.metas[module_id].wrap_kind().is_none();
-
-      if need_to_wrap {
-        wrap_module_recursively(
-          &mut Context {
-            visited_modules: &mut visited_modules_for_wrapping,
-            linking_infos: &mut self.metas,
-            modules: &self.module_table.modules,
-            runtime_idx: self.runtime.id(),
-            on_demand_wrapping: self.options.experimental.is_on_demand_wrapping_enabled(),
-          },
-          module_id,
-        );
-      } else {
-        // Make sure depended cjs modules got wrapped.
-        module.import_records.iter().for_each(|rec| {
-          let Some(module_idx) = rec.resolved_module else { return };
-          let Module::Normal(importee) = &self.module_table[module_idx] else {
-            return;
-          };
-          if matches!(rec.kind, ImportKind::Require) {
-            self.metas[importee.idx].required_by_other_module = true;
-          }
-          // Commonjs as a dependency must be wrapped. The wrapper is like a commonjs runtime to help initialize the commonjs module correctly.
-          if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-            wrap_module_recursively(
-              &mut Context {
-                visited_modules: &mut visited_modules_for_wrapping,
-                linking_infos: &mut self.metas,
-                modules: &self.module_table.modules,
-                runtime_idx: self.runtime.id(),
-                on_demand_wrapping: self.options.experimental.is_on_demand_wrapping_enabled(),
-              },
-              importee.idx,
-            );
-          }
-        });
-      }
-    }
-    if is_strict_execution_order_enabled {
-      // Override wrap_kind if `strictExecutionOrder` is enabled.
-      for (idx, linking_info) in
-        self.metas.iter_mut_enumerated().filter(|(module_id, _)| *module_id != self.runtime.id())
-      {
-        let Some(module) = self.module_table[idx].as_normal() else {
-          continue;
-        };
-        if cjs_exports_kind_modules.contains(&idx) {
-          // If the module is CommonJs, we need to wrap it.
-          linking_info.update_wrap_kind(WrapKind::Cjs);
-        } else {
-          // If the module is a pure esm, only exports function or expression without side
-          // effects and is not execution order sensitive , we don't need to wrap it.
-          let avoid_wrapping = on_demand_wrapping
-            && !module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
-            && module.import_records.is_empty()
-            && !linking_info.required_by_other_module;
-          linking_info.update_wrap_kind(if avoid_wrapping {
-            WrapKind::None
-          } else {
-            WrapKind::Esm
-          });
-        }
+    // 1. Compute has_dynamic_exports using oxc_module_graph (already ported).
+    let dynamic_export_modules =
+      oxc_module_graph::compute_has_dynamic_exports(&self.link_kernel.graph);
+    for oxc_idx in &dynamic_export_modules {
+      let rd_idx = rolldown_common::ModuleIdx::from_usize(oxc_idx.index());
+      self.metas[rd_idx].has_dynamic_exports = true;
+      // Also write to graph so downstream algorithms see it.
+      if let Some(gm) = self.link_kernel.graph.normal_module_mut(*oxc_idx) {
+        gm.has_dynamic_exports = true;
       }
     }
 
+    // 2. Call oxc_module_graph wrap_modules with skip_symbol_creation.
+    let config = oxc_module_graph::WrapModulesConfig {
+      on_demand_wrapping: self.options.experimental.is_on_demand_wrapping_enabled(),
+      strict_execution_order: self.options.is_strict_execution_order_enabled(),
+      skip_symbol_creation: true,
+    };
+    let result = oxc_module_graph::wrap_modules(&mut self.link_kernel.graph, &config);
+
+    // 3. Sync wrap_kind updates to Rolldown metas BEFORE apply() consumes the result.
+    //
+    // When strict_execution_order is enabled, we need to distinguish between
+    // the "original" wrap_kind (set during propagation) and the "final" wrap_kind
+    // (possibly overridden by strict execution order logic). Rolldown's
+    // sync_wrap_kind sets BOTH wrap_kind AND original_wrap_kind, while
+    // update_wrap_kind only sets wrap_kind.
+    //
+    // The oxc_module_graph algorithm handles strict execution order internally:
+    // - original_wrap_kinds: the wrap_kind set during propagation (before strict override)
+    // - wrap_kind_updates: the finalized wrap_kind (after strict override)
+    if self.options.is_strict_execution_order_enabled() {
+      // First, set original_wrap_kind via sync_wrap_kind for all modules that
+      // have an original_wrap_kind recorded.
+      for (oxc_idx, orig_wk) in &result.original_wrap_kinds {
+        let rd_idx = rolldown_common::ModuleIdx::from_usize(oxc_idx.index());
+        self.metas[rd_idx].sync_wrap_kind(from_oxc_wrap_kind(*orig_wk));
+      }
+      // Then, override wrap_kind (but not original_wrap_kind) with the final value.
+      for (oxc_idx, final_wk) in &result.wrap_kind_updates {
+        let rd_idx = rolldown_common::ModuleIdx::from_usize(oxc_idx.index());
+        self.metas[rd_idx].update_wrap_kind(from_oxc_wrap_kind(*final_wk));
+      }
+    } else {
+      // Without strict execution order, original_wrap_kind == wrap_kind,
+      // so sync_wrap_kind (which sets both) is correct.
+      for (oxc_idx, wrap_kind) in &result.wrap_kind_updates {
+        let rd_idx = rolldown_common::ModuleIdx::from_usize(oxc_idx.index());
+        self.metas[rd_idx].sync_wrap_kind(from_oxc_wrap_kind(*wrap_kind));
+      }
+    }
+
+    // 4. Sync required_by_other_module to metas.
+    for oxc_idx in &result.required_by_other_module {
+      let rd_idx = rolldown_common::ModuleIdx::from_usize(oxc_idx.index());
+      self.metas[rd_idx].required_by_other_module = true;
+    }
+
+    // 5. Apply to graph (writes wrap_kind, original_wrap_kind, wrapper_refs, required_by_other_module).
+    result.apply(&mut self.link_kernel.graph);
+
+    // 6. Create Rolldown-specific wrapper symbols + StmtInfo (unchanged).
     self.module_table.modules.iter_mut().filter_map(|m| m.as_normal_mut()).for_each(
       |ecma_module| {
         let linking_info = &mut self.metas[ecma_module.idx];

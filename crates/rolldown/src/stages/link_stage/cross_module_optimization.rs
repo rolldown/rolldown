@@ -172,7 +172,7 @@ impl LinkStage<'_> {
         let normal_module = module.as_normal()?;
         // Check if any of the module's named imports resolve to a newly discovered constant
         let references_new_constant = normal_module.named_imports.keys().any(|local_symbol_ref| {
-          let canonical_ref = self.symbols.canonical_ref_for(*local_symbol_ref);
+          let canonical_ref = self.graph_canonical_ref(*local_symbol_ref);
           new_constant_refs.contains(&canonical_ref)
         });
         references_new_constant.then_some(normal_module.idx)
@@ -203,14 +203,15 @@ impl LinkStage<'_> {
         let constant_map = FxHashMap::default();
         ast.program.with_dependent(|owner, dep| {
           let module_symbol_table = self.symbols.local_db(module_idx);
+          let symbols_ref = &self.symbols;
           let eval_ctx = ConstEvalCtx {
             ast: AstBuilder::new(&owner.allocator),
             scope: module_symbol_table.scoping(),
             overrode_get_constant_value_from_reference_id: Some(&|reference_id| {
               let reference = module_symbol_table.scoping().get_reference(reference_id);
               let symbol_id = reference.symbol_id()?;
-              let symbol_ref: SymbolRef = (module_idx, symbol_id).into();
-              let canonical_ref = self.symbols.canonical_ref_for(symbol_ref);
+              let symbol_ref = SymbolRef { owner: module_idx, symbol: symbol_id };
+              let canonical_ref = symbols_ref.canonical_ref_for(symbol_ref);
               constant_symbol_map
                 .get(&canonical_ref)
                 .map(|meta| oxc_ecmascript::constant_evaluation::ConstantValue::from(&meta.value))
@@ -415,10 +416,9 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
           let ref_id = item.reference_id.get()?;
           let symbol_id = self.immutable_ctx.eval_ctx.scope.get_reference(ref_id).symbol_id()?;
 
-          let symbol_ref = self
-            .immutable_ctx
-            .symbols
-            .canonical_ref_for((self.immutable_ctx.module_idx, symbol_id).into());
+          let symbol_ref = self.immutable_ctx.symbols.canonical_ref_for(
+            SymbolRef { owner: self.immutable_ctx.module_idx, symbol: symbol_id },
+          );
           Some(self.immutable_ctx.global_side_effect_free_function_symbols.contains(&symbol_ref))
         })
         .unwrap_or(false);

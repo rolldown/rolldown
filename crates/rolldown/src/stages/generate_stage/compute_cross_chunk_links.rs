@@ -234,7 +234,7 @@ impl GenerateStage<'_> {
             stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
               match reference_ref {
                 rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
-                  let mut canonical_ref = symbols.canonical_ref_for(*referenced);
+                  let mut canonical_ref = self.link_output.graph_canonical_ref(*referenced);
                   if let Some(namespace_alias) = &symbols.get(canonical_ref).namespace_alias {
                     canonical_ref = namespace_alias.namespace_ref;
                   }
@@ -245,7 +245,7 @@ impl GenerateStage<'_> {
                     &self.link_output.metas[module.idx].resolved_member_expr_refs,
                   ) {
                     Some(sym_ref) => {
-                      let mut canonical_ref = self.link_output.symbol_db.canonical_ref_for(sym_ref);
+                      let mut canonical_ref = self.link_output.graph_canonical_ref(sym_ref);
                       let symbol = symbols.get(canonical_ref);
                       if let Some(ref ns_alias) = symbol.namespace_alias {
                         canonical_ref = ns_alias.namespace_ref;
@@ -275,7 +275,7 @@ impl GenerateStage<'_> {
               // out a exported symbol that came from a cjs module.
               .filter(|resolved_export| !resolved_export.came_from_cjs)
             {
-              let mut canonical_ref = symbols.canonical_ref_for(export_ref.symbol_ref);
+              let mut canonical_ref = self.link_output.graph_canonical_ref(export_ref.symbol_ref);
               let symbol = symbols.get(canonical_ref);
               if let Some(ns_alias) = &symbol.namespace_alias {
                 canonical_ref = ns_alias.namespace_ref;
@@ -600,7 +600,7 @@ impl GenerateStage<'_> {
           // If this's an entry point, we need to make sure the entry modules' exports are not minified.
           let entry_module = &self.link_output.metas[entry_module_idx];
           entry_module.canonical_exports(false).for_each(|(name, export)| {
-            let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
+            let export_ref = self.link_output.graph_canonical_ref(export.symbol_ref);
             if !exported_chunk_symbols.contains_key(&export.symbol_ref)
               || !self.link_output.used_symbol_refs.contains(&export.symbol_ref)
             {
@@ -618,7 +618,7 @@ impl GenerateStage<'_> {
           for &module_idx in modules {
             let module_meta = &self.link_output.metas[module_idx];
             module_meta.canonical_exports(false).for_each(|(name, export)| {
-              let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
+              let export_ref = self.link_output.graph_canonical_ref(export.symbol_ref);
               // Use canonical ref for lookup since that's the key in exported_chunk_symbols
               if !exported_chunk_symbols.contains_key(&export_ref)
                 || !self.link_output.used_symbol_refs.contains(&export_ref)
@@ -646,7 +646,7 @@ impl GenerateStage<'_> {
             (Reverse(symbol_owner.exec_order()), symbol_name)
           })
         {
-          let export_ref = self.link_output.symbol_db.canonical_ref_for(*chunk_export);
+          let export_ref = self.link_output.graph_canonical_ref(*chunk_export);
           if processed_entry_exports.contains(&export_ref) {
             continue;
           }

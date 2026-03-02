@@ -7,9 +7,9 @@ use oxc_index::IndexVec;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
-  EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
-  ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  EntryPoint, FlatOptions, HybridIndexVec, LinkKernel, Module, ModuleIdx, ModuleTable,
+  PreserveEntrySignatures, ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement,
+  SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -52,6 +52,7 @@ pub struct NormalizedScanStageOutput {
   pub flat_options: FlatOptions,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   pub tla_module_count: usize,
+  pub link_kernel: LinkKernel,
 }
 
 impl NormalizedScanStageOutput {
@@ -81,6 +82,11 @@ impl NormalizedScanStageOutput {
       flat_options: self.flat_options,
       user_defined_entry_modules: self.user_defined_entry_modules.clone(),
       tla_module_count: self.tla_module_count,
+      link_kernel: LinkKernel::from_module_table(
+        &self.module_table,
+        &self.entry_points,
+        self.runtime.id(),
+      ),
     }
   }
 }
@@ -99,6 +105,12 @@ impl TryFrom<ScanStageOutput> for NormalizedScanStageOutput {
       HybridIndexVec::Map(_) => return Err("index_ecma_ast must be normalized to IndexVec first"),
     };
 
+    let link_kernel = LinkKernel::from_module_table(
+      &module_table,
+      &value.entry_points,
+      value.runtime.id(),
+    );
+
     Ok(Self {
       module_table,
       index_ecma_ast,
@@ -112,6 +124,7 @@ impl TryFrom<ScanStageOutput> for NormalizedScanStageOutput {
       flat_options: value.flat_options,
       user_defined_entry_modules: value.user_defined_entry_modules,
       tla_module_count: value.tla_module_count,
+      link_kernel,
     })
   }
 }

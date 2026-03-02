@@ -294,7 +294,7 @@ impl GenerateStage<'_> {
           .flat_map(|(_, import_items)| {
             import_items
               .iter()
-              .map(|item| self.link_output.symbol_db.canonical_ref_for(item.import_ref).owner)
+              .map(|item| self.link_output.graph_canonical_ref(item.import_ref).owner)
           })
           .filter_map(|idx| {
             let module = self.link_output.module_table[idx].as_normal()?;

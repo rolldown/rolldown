@@ -169,6 +169,7 @@ pub use crate::{
   types::hybrid_index_vec::HybridIndexVec,
   types::import_attribute::ImportAttribute,
   types::import_kind::ImportKind,
+  types::link_kernel::LinkKernel,
   types::import_record::{
     DynamicImportExprInfo, ImportRecordIdx, ImportRecordMeta, ImportRecordStateInit,
     RawImportRecord, ResolvedImportRecord,
@@ -186,6 +187,7 @@ pub use crate::{
   types::module_def_format::ModuleDefFormat,
   types::module_id::ModuleId,
   types::module_idx::LegacyModuleIdx,
+  types::module_payload::ModulePayload,
   types::module_info::ModuleInfo,
   types::module_namespace_included_reason::ModuleNamespaceIncludedReason,
   types::module_render_output::ModuleRenderOutput,
@@ -210,6 +212,7 @@ pub use crate::{
   types::source_mutation::SourceMutation,
   types::sourcemap_chain_element::SourcemapChainElement,
   types::stable_module_id::StableModuleId,
+  types::symbol_extras::SymbolExtrasForModule,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos},
   types::str_or_bytes::StrOrBytes,
   types::symbol_or_member_expr_ref::{SymbolOrMemberExprRef, TaggedSymbolRef},

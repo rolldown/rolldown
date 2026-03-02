@@ -9,6 +9,123 @@ source: crates/rolldown_testing/src/integration_test.rs
 [plugin-error-test] Error: Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
 A
 
+Stack backtrace:
+   0: std::backtrace_rs::backtrace::libunwind::trace
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/../../backtrace/src/backtrace/libunwind.rs:117:9
+   1: std::backtrace_rs::backtrace::trace_unsynchronized
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/../../backtrace/src/backtrace/mod.rs:66:14
+   2: std::backtrace::Backtrace::create
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/backtrace.rs:331:13
+   3: msg<&str>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/anyhow-1.0.102/src/backtrace.rs:10:14
+   4: format_err
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/anyhow-1.0.102/src/lib.rs:687:13
+   5: {async_fn#0}
+             at ./tests/rolldown/errors/plugin_error/mod.rs:26:7
+   6: {async_block#0}<integration_rolldown::rolldown::errors::plugin_error::PluginErrorTest>
+             at /Users/qing/p/github/rolldown/crates/rolldown_plugin/src/pluginable.rs:229:42
+   7: poll<alloc::boxed::Box<(dyn core::future::future::Future<Output=core::result::Result<(), anyhow::Error>> + core::marker::Send), alloc::alloc::Global>>
+             at /Users/qing/.rustup/toolchains/1.93.1-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/future/future.rs:133:9
+   8: {async_block#0}
+             at /Users/qing/p/github/rolldown/crates/rolldown_plugin/src/plugin_driver/build_hooks.rs:31:95
+   9: {async_fn#0}
+             at /Users/qing/p/github/rolldown/crates/rolldown_plugin/src/plugin_driver/build_hooks.rs:25:3
+  10: {async_block#0}
+             at ./src/stages/scan_stage.rs:189:51
+  11: {async_fn#0}
+             at ./src/stages/scan_stage.rs:158:3
+  12: {async_block#0}
+             at ./src/bundle/bundle.rs:105:6
+  13: {async_fn#0}
+             at ./src/bundle/bundle.rs:90:3
+  14: {async_block#0}
+             at ./src/bundle/bundle.rs:50:65
+  15: {async_block#0}
+             at ./src/bundle/bundle.rs:56:6
+  16: {async_fn#0}
+             at ./src/bundle/bundle.rs:43:3
+  17: {async_block#0}
+             at ./src/bundler/impl_bundler_build.rs:18:20
+  18: {async_fn#0}
+             at ./src/bundler/impl_bundler_build.rs:9:3
+  19: {async_fn#0}
+             at /Users/qing/p/github/rolldown/crates/rolldown_testing/src/integration_test.rs:418:25
+  20: {async_fn#0}
+             at /Users/qing/p/github/rolldown/crates/rolldown_testing/src/integration_test.rs:486:87
+  21: {async_fn#0}
+             at /Users/qing/p/github/rolldown/crates/rolldown_testing/src/integration_test.rs:86:8
+  22: {async_block#0}
+             at ./tests/rolldown/errors/plugin_error/mod.rs:46:6
+  23: poll<&mut dyn core::future::future::Future<Output=()>>
+             at /Users/qing/.rustup/toolchains/1.93.1-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/future/future.rs:133:9
+  24: {closure#0}<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/park.rs:284:71
+  25: with_budget<core::task::poll::Poll<()>, tokio::runtime::park::{impl#4}::block_on::{closure_env#0}<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/task/coop/mod.rs:167:5
+  26: budget<core::task::poll::Poll<()>, tokio::runtime::park::{impl#4}::block_on::{closure_env#0}<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/task/coop/mod.rs:133:5
+  27: block_on<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/park.rs:284:31
+  28: block_on<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/context/blocking.rs:66:14
+  29: {closure#0}<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/scheduler/multi_thread/mod.rs:89:22
+  30: enter_runtime<tokio::runtime::scheduler::multi_thread::{impl#0}::block_on::{closure_env#0}<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>, ()>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/context/runtime.rs:65:16
+  31: block_on<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/scheduler/multi_thread/mod.rs:88:9
+  32: block_on_inner<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/runtime.rs:370:50
+  33: block_on<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/runtime.rs:342:18
+  34: should_emit_multi_plugin_diagnostics
+             at ./tests/rolldown/errors/plugin_error/mod.rs:46:11
+  35: {closure#0}
+             at ./tests/rolldown/errors/plugin_error/mod.rs:33:48
+  36: call_once<integration_rolldown::rolldown::errors::plugin_error::should_emit_multi_plugin_diagnostics::{closure_env#0}, ()>
+             at /Users/qing/.rustup/toolchains/1.93.1-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5
+  37: core::ops::function::FnOnce::call_once
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/core/src/ops/function.rs:250:5
+  38: test::__rust_begin_short_backtrace
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/test/src/lib.rs:663:18
+  39: test::run_test_in_process::{{closure}}
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/test/src/lib.rs:686:74
+  40: <core::panic::unwind_safe::AssertUnwindSafe<F> as core::ops::function::FnOnce<()>>::call_once
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/core/src/panic/unwind_safe.rs:274:9
+  41: std::panicking::catch_unwind::do_call
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/panicking.rs:581:40
+  42: std::panicking::catch_unwind
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/panicking.rs:544:19
+  43: std::panic::catch_unwind
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/panic.rs:359:14
+  44: test::run_test_in_process
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/test/src/lib.rs:686:27
+  45: test::run_test::{{closure}}
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/test/src/lib.rs:607:43
+  46: test::run_test::{{closure}}
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/test/src/lib.rs:637:41
+  47: std::sys::backtrace::__rust_begin_short_backtrace
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/sys/backtrace.rs:160:18
+  48: std::thread::lifecycle::spawn_unchecked::{{closure}}::{{closure}}
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/thread/lifecycle.rs:92:13
+  49: <core::panic::unwind_safe::AssertUnwindSafe<F> as core::ops::function::FnOnce<()>>::call_once
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/core/src/panic/unwind_safe.rs:274:9
+  50: std::panicking::catch_unwind::do_call
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/panicking.rs:581:40
+  51: std::panicking::catch_unwind
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/panicking.rs:544:19
+  52: std::panic::catch_unwind
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/panic.rs:359:14
+  53: std::thread::lifecycle::spawn_unchecked::{{closure}}
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/thread/lifecycle.rs:90:26
+  54: core::ops::function::FnOnce::call_once{{vtable.shim}}
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/core/src/ops/function.rs:250:5
+  55: <alloc::boxed::Box<F,A> as core::ops::function::FnOnce<Args>>::call_once
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/alloc/src/boxed.rs:2206:9
+  56: std::sys::thread::unix::Thread::new::thread_start
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/sys/thread/unix.rs:118:17
+  57: __pthread_cond_wait
+
 ```
 
 ## PLUGIN_ERROR
@@ -16,5 +133,122 @@ A
 ```text
 [plugin-error-test] Error: Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
 B
+
+Stack backtrace:
+   0: std::backtrace_rs::backtrace::libunwind::trace
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/../../backtrace/src/backtrace/libunwind.rs:117:9
+   1: std::backtrace_rs::backtrace::trace_unsynchronized
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/../../backtrace/src/backtrace/mod.rs:66:14
+   2: std::backtrace::Backtrace::create
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/backtrace.rs:331:13
+   3: msg<&str>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/anyhow-1.0.102/src/backtrace.rs:10:14
+   4: format_err
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/anyhow-1.0.102/src/lib.rs:687:13
+   5: {async_fn#0}
+             at ./tests/rolldown/errors/plugin_error/mod.rs:27:7
+   6: {async_block#0}<integration_rolldown::rolldown::errors::plugin_error::PluginErrorTest>
+             at /Users/qing/p/github/rolldown/crates/rolldown_plugin/src/pluginable.rs:229:42
+   7: poll<alloc::boxed::Box<(dyn core::future::future::Future<Output=core::result::Result<(), anyhow::Error>> + core::marker::Send), alloc::alloc::Global>>
+             at /Users/qing/.rustup/toolchains/1.93.1-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/future/future.rs:133:9
+   8: {async_block#0}
+             at /Users/qing/p/github/rolldown/crates/rolldown_plugin/src/plugin_driver/build_hooks.rs:31:95
+   9: {async_fn#0}
+             at /Users/qing/p/github/rolldown/crates/rolldown_plugin/src/plugin_driver/build_hooks.rs:25:3
+  10: {async_block#0}
+             at ./src/stages/scan_stage.rs:189:51
+  11: {async_fn#0}
+             at ./src/stages/scan_stage.rs:158:3
+  12: {async_block#0}
+             at ./src/bundle/bundle.rs:105:6
+  13: {async_fn#0}
+             at ./src/bundle/bundle.rs:90:3
+  14: {async_block#0}
+             at ./src/bundle/bundle.rs:50:65
+  15: {async_block#0}
+             at ./src/bundle/bundle.rs:56:6
+  16: {async_fn#0}
+             at ./src/bundle/bundle.rs:43:3
+  17: {async_block#0}
+             at ./src/bundler/impl_bundler_build.rs:18:20
+  18: {async_fn#0}
+             at ./src/bundler/impl_bundler_build.rs:9:3
+  19: {async_fn#0}
+             at /Users/qing/p/github/rolldown/crates/rolldown_testing/src/integration_test.rs:418:25
+  20: {async_fn#0}
+             at /Users/qing/p/github/rolldown/crates/rolldown_testing/src/integration_test.rs:486:87
+  21: {async_fn#0}
+             at /Users/qing/p/github/rolldown/crates/rolldown_testing/src/integration_test.rs:86:8
+  22: {async_block#0}
+             at ./tests/rolldown/errors/plugin_error/mod.rs:46:6
+  23: poll<&mut dyn core::future::future::Future<Output=()>>
+             at /Users/qing/.rustup/toolchains/1.93.1-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/future/future.rs:133:9
+  24: {closure#0}<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/park.rs:284:71
+  25: with_budget<core::task::poll::Poll<()>, tokio::runtime::park::{impl#4}::block_on::{closure_env#0}<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/task/coop/mod.rs:167:5
+  26: budget<core::task::poll::Poll<()>, tokio::runtime::park::{impl#4}::block_on::{closure_env#0}<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/task/coop/mod.rs:133:5
+  27: block_on<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/park.rs:284:31
+  28: block_on<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/context/blocking.rs:66:14
+  29: {closure#0}<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/scheduler/multi_thread/mod.rs:89:22
+  30: enter_runtime<tokio::runtime::scheduler::multi_thread::{impl#0}::block_on::{closure_env#0}<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>, ()>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/context/runtime.rs:65:16
+  31: block_on<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/scheduler/multi_thread/mod.rs:88:9
+  32: block_on_inner<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/runtime.rs:370:50
+  33: block_on<core::pin::Pin<&mut dyn core::future::future::Future<Output=()>>>
+             at /Users/qing/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/runtime/runtime.rs:342:18
+  34: should_emit_multi_plugin_diagnostics
+             at ./tests/rolldown/errors/plugin_error/mod.rs:46:11
+  35: {closure#0}
+             at ./tests/rolldown/errors/plugin_error/mod.rs:33:48
+  36: call_once<integration_rolldown::rolldown::errors::plugin_error::should_emit_multi_plugin_diagnostics::{closure_env#0}, ()>
+             at /Users/qing/.rustup/toolchains/1.93.1-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5
+  37: core::ops::function::FnOnce::call_once
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/core/src/ops/function.rs:250:5
+  38: test::__rust_begin_short_backtrace
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/test/src/lib.rs:663:18
+  39: test::run_test_in_process::{{closure}}
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/test/src/lib.rs:686:74
+  40: <core::panic::unwind_safe::AssertUnwindSafe<F> as core::ops::function::FnOnce<()>>::call_once
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/core/src/panic/unwind_safe.rs:274:9
+  41: std::panicking::catch_unwind::do_call
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/panicking.rs:581:40
+  42: std::panicking::catch_unwind
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/panicking.rs:544:19
+  43: std::panic::catch_unwind
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/panic.rs:359:14
+  44: test::run_test_in_process
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/test/src/lib.rs:686:27
+  45: test::run_test::{{closure}}
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/test/src/lib.rs:607:43
+  46: test::run_test::{{closure}}
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/test/src/lib.rs:637:41
+  47: std::sys::backtrace::__rust_begin_short_backtrace
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/sys/backtrace.rs:160:18
+  48: std::thread::lifecycle::spawn_unchecked::{{closure}}::{{closure}}
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/thread/lifecycle.rs:92:13
+  49: <core::panic::unwind_safe::AssertUnwindSafe<F> as core::ops::function::FnOnce<()>>::call_once
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/core/src/panic/unwind_safe.rs:274:9
+  50: std::panicking::catch_unwind::do_call
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/panicking.rs:581:40
+  51: std::panicking::catch_unwind
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/panicking.rs:544:19
+  52: std::panic::catch_unwind
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/panic.rs:359:14
+  53: std::thread::lifecycle::spawn_unchecked::{{closure}}
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/thread/lifecycle.rs:90:26
+  54: core::ops::function::FnOnce::call_once{{vtable.shim}}
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/core/src/ops/function.rs:250:5
+  55: <alloc::boxed::Box<F,A> as core::ops::function::FnOnce<Args>>::call_once
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/alloc/src/boxed.rs:2206:9
+  56: std::sys::thread::unix::Thread::new::thread_start
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/std/src/sys/thread/unix.rs:118:17
+  57: __pthread_cond_wait
 
 ```

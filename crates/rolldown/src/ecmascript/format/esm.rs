@@ -214,7 +214,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     let mut specifiers = items
       .iter()
       .filter_map(|item| {
-        let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(item.import_ref);
+        let canonical_ref = ctx.link_output.graph_canonical_ref(item.import_ref);
         // Skip if we've already processed this canonical symbol
         if !seen_canonical_refs.insert(canonical_ref) {
           return None;
@@ -341,7 +341,7 @@ where
   let mut default_alias = vec![];
   let specifiers = named_imports
     .filter_map(|(_importer, named_import)| {
-      let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(named_import.imported_as);
+      let canonical_ref = ctx.link_output.graph_canonical_ref(named_import.imported_as);
       if !ctx.link_output.used_symbol_refs.contains(&canonical_ref) {
         return None;
       }

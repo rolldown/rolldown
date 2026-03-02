@@ -114,7 +114,7 @@ pub fn deconflict_chunk_symbols(
             .filter(|item| matches!(item, TaggedSymbolRef::Normal(_)))
           {
             let symbol_ref = declared_symbol.inner();
-            let canonical_ref = link_output.symbol_db.canonical_ref_for(symbol_ref);
+            let canonical_ref = link_output.graph_canonical_ref(symbol_ref);
             // Import statement declared some symbols that come from other module, those symbol should be skipped
             if canonical_ref.owner != module.idx {
               continue;

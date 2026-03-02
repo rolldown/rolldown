@@ -232,7 +232,7 @@ napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.115.0", features = [
+oxc = { git = "https://github.com/Dunqing/oxc", branch = "oxc_module_graph", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -244,13 +244,16 @@ oxc = { version = "0.115.0", features = [
   "regular_expression",
   "cfg",
 ] }
-oxc_allocator = { version = "0.115.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.115.0" }
-oxc_napi = { version = "0.115.0" }
-oxc_minify_napi = { version = "0.115.0" }
-oxc_parser_napi = { version = "0.115.0" }
-oxc_transform_napi = { version = "0.115.0" }
-oxc_traverse = { version = "0.115.0" }
+oxc_allocator = { git = "https://github.com/Dunqing/oxc", branch = "oxc_module_graph", features = [
+  "pool",
+] }
+oxc_ecmascript = { git = "https://github.com/Dunqing/oxc", branch = "oxc_module_graph" }
+oxc_napi = { git = "https://github.com/Dunqing/oxc", branch = "oxc_module_graph" }
+oxc_minify_napi = { git = "https://github.com/Dunqing/oxc", branch = "oxc_module_graph" }
+oxc_parser_napi = { git = "https://github.com/Dunqing/oxc", branch = "oxc_module_graph" }
+oxc_transform_napi = { git = "https://github.com/Dunqing/oxc", branch = "oxc_module_graph" }
+oxc_traverse = { git = "https://github.com/Dunqing/oxc", branch = "oxc_module_graph" }
+oxc_module_graph = { git = "https://github.com/Dunqing/oxc", branch = "oxc_module_graph" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

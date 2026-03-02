@@ -3,18 +3,17 @@ use std::borrow::Cow;
 use arcstr::ArcStr;
 use indexmap::IndexSet;
 use oxc::span::CompactStr;
-// TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
-// if we want more enhancements related to exports.
+use oxc_module_graph::types::MatchImportKind as OxcMatchImportKind;
+use oxc_module_graph::{ImportHooks, ImportResolutionContext, LinkConfig};
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprObjectReferencedType,
-  MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  SymbolRefFlags,
+  IndexModules, MemberExprObjectReferencedType, MemberExprRefResolution, Module, ModuleIdx,
+  ModuleType, NamespaceAlias, NormalModule, OutputFormat, ResolvedExport, Specifier,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefFlags,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
-  index_vec_ext::{IndexVecExt, IndexVecRefExt},
+  index_vec_ext::IndexVecRefExt,
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
@@ -24,101 +23,11 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{SharedOptions, types::linking_metadata::LinkingMetadataVec};
 
 use super::LinkStage;
-
-#[derive(Clone, Debug)]
-struct ImportTracker {
-  pub importer: ModuleIdx,
-  pub importee: ModuleIdx,
-  pub imported: Specifier,
-  pub imported_as: SymbolRef,
-}
-
-#[derive(Debug)]
-pub struct MatchingContext {
-  tracker_stack: Vec<ImportTracker>,
-}
-
-impl MatchingContext {
-  fn current_tracker(&self) -> &ImportTracker {
-    self.tracker_stack.last().expect("tracker_stack is not empty")
-  }
-}
-
-#[derive(Debug, Eq)]
-pub struct MatchImportKindNormal {
-  symbol: SymbolRef,
-  reexports: Vec<SymbolRef>,
-}
+use super::oxc_conversions::{from_oxc_module_idx, from_oxc_symbol_ref, to_oxc_symbol_ref};
 
 pub enum RelationWithCommonjs {
   Commonjs,
   IndirectDependOnCommonjs,
-}
-
-impl PartialEq for MatchImportKindNormal {
-  fn eq(&self, other: &Self) -> bool {
-    self.symbol == other.symbol
-  }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum MatchImportKind {
-  /// The import is either external or not defined.
-  _Ignore,
-  // "sourceIndex" and "ref" are in use
-  Normal(MatchImportKindNormal),
-  // "namespaceRef" and "alias" are in use
-  Namespace {
-    namespace_ref: SymbolRef,
-  },
-  // Both "matchImportNormal" and "matchImportNamespace"
-  NormalAndNamespace {
-    namespace_ref: SymbolRef,
-    alias: CompactStr,
-  },
-  // The import could not be evaluated due to a cycle
-  Cycle,
-  // The import resolved to multiple symbols via "export * from"
-  Ambiguous {
-    symbol_ref: SymbolRef,
-    potentially_ambiguous_symbol_refs: Vec<SymbolRef>,
-  },
-  NoMatch,
-}
-
-#[derive(Debug)]
-pub enum ImportStatus {
-  /// The imported file has no matching export
-  NoMatch,
-
-  /// The imported file has a matching export
-  Found {
-    // owner: NormalModuleId,
-    symbol: SymbolRef,
-    potentially_ambiguous_export_star_refs: Vec<SymbolRef>,
-  },
-
-  /// The imported file is CommonJS and has unknown exports
-  CommonJS,
-
-  /// The import is missing but there is a dynamic fallback object
-  DynamicFallback {
-    namespace_ref: SymbolRef,
-  },
-
-  DynamicFallbackWithCommonjsReference {
-    namespace_ref: SymbolRef,
-    commonjs_symbol: SymbolRef,
-  },
-
-  /// The import was treated as a CommonJS import but the file is known to have no exports
-  _CommonJSWithoutExports,
-
-  /// The imported file was disabled by mapping it to false in the "browser" field of package.json
-  _Disabled,
-
-  /// The imported file is external and has unknown exports
-  External(SymbolRef),
 }
 
 impl LinkStage<'_> {
@@ -136,35 +45,43 @@ impl LinkStage<'_> {
   /// Unlike import from normal modules, the imported variable deosn't have a place that declared the variable. So we consider `import { a } from 'external'` in `foo.js` as the declaration statement of `a`.
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn bind_imports_and_exports(&mut self) {
-    // Initialize `resolved_exports` to prepare for matching imports with exports
-    self.metas.par_iter_mut_enumerated().for_each(|(module_id, meta)| {
-      let Module::Normal(module) = &self.module_table[module_id] else {
-        return;
-      };
-      let mut resolved_exports = module
-        .named_exports
+    // Build resolved exports once using shared algorithm from oxc_module_graph.
+    // This initializes local exports and propagates star re-exports (including CJS reexports)
+    // with proper shadowing and ambiguity detection.
+    // Uses the push-callback API to read exports directly from module_table,
+    // avoiding the cost of copying named_exports into graph storage.
+    let module_table = &self.module_table;
+    let oxc_resolved = oxc_module_graph::build_resolved_exports_with_fn(
+      &self.link_kernel.graph,
+      &|oxc_idx, cb| {
+        let rd_idx = from_oxc_module_idx(oxc_idx);
+        if let Some(m) = module_table[rd_idx].as_normal() {
+          for (name, export) in &m.named_exports {
+            cb(name.as_str(), to_oxc_symbol_ref(export.referenced));
+          }
+        }
+      },
+    );
+    for (oxc_idx, exports) in &oxc_resolved {
+      let module_idx = from_oxc_module_idx(*oxc_idx);
+      self.metas[module_idx].resolved_exports = exports
         .iter()
-        .map(|(name, local)| {
-          let resolved_export = ResolvedExport {
-            symbol_ref: local.referenced,
-            potentially_ambiguous_symbol_refs: None,
-            came_from_cjs: local.came_from_commonjs,
-          };
-          (name.clone(), resolved_export)
+        .map(|(name, export)| {
+          (
+            CompactStr::from(name.as_str()),
+            ResolvedExport {
+              symbol_ref: from_oxc_symbol_ref(export.symbol_ref),
+              potentially_ambiguous_symbol_refs: export.potentially_ambiguous.as_ref().map(
+                |symbols| {
+                  symbols.iter().copied().map(from_oxc_symbol_ref).collect::<Vec<_>>()
+                },
+              ),
+              came_from_cjs: export.came_from_cjs,
+            },
+          )
         })
-        .collect::<FxHashMap<_, _>>();
-
-      let mut module_stack = vec![];
-      if module.has_star_export() || module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
-        Self::add_exports_for_export_star(
-          &self.module_table.modules,
-          &mut resolved_exports,
-          module_id,
-          &mut module_stack,
-        );
-      }
-      meta.resolved_exports = resolved_exports;
-    });
+        .collect();
+    }
     let side_effects_modules = self
       .module_table
       .modules
@@ -173,28 +90,139 @@ impl LinkStage<'_> {
       .map(|(idx, _)| idx)
       .collect::<FxHashSet<ModuleIdx>>();
     let mut normal_symbol_exports_chain_map = FxHashMap::default();
-    let mut binding_ctx = BindImportsAndExportsContext {
+
+    // Pre-processing: collect ESM external import bindings for later merging.
+    let is_esm = matches!(self.options.format, OutputFormat::Esm);
+    let mut external_import_binding_merger: FxHashMap<
+      ModuleIdx,
+      FxHashMap<CompactStr, IndexSet<SymbolRef>>,
+    > = FxHashMap::default();
+    let mut external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>> =
+      FxHashMap::default();
+
+    for module in &self.module_table.modules {
+      let Module::Normal(module) = module else { continue };
+      for (imported_as_ref, named_import) in &module.named_imports {
+        let rec = &module.import_records[named_import.record_idx];
+        let Some(resolved_module_idx) = rec.resolved_module else { continue };
+        let is_external =
+          matches!(self.module_table.modules[resolved_module_idx], Module::External(_));
+        if is_esm && is_external {
+          match named_import.imported {
+            Specifier::Star => {
+              external_import_namespace_merger
+                .entry(resolved_module_idx)
+                .or_default()
+                .insert(*imported_as_ref);
+            }
+            Specifier::Literal(ref name)
+              if self.metas[module.idx]
+                .resolved_exports
+                .iter()
+                .all(|(_, resolved_export)| resolved_export.symbol_ref != *imported_as_ref) =>
+            {
+              external_import_binding_merger
+                .entry(resolved_module_idx)
+                .or_default()
+                .entry(name.clone())
+                .or_default()
+                .insert(*imported_as_ref);
+            }
+            Specifier::Literal(_) => {}
+          }
+        }
+      }
+    }
+
+    // Phase 2: Match imports to resolved exports using oxc_module_graph's
+    // concrete graph + hooks, while Rolldown still owns the final symbol
+    // links for its CJS/external special cases.
+    let mut matcher = RolldownImportHooks {
       index_modules: &self.module_table.modules,
       metas: &mut self.metas,
-      symbol_db: &mut self.symbols,
       options: self.options,
-      errors: Vec::default(),
-      warnings: Vec::default(),
-      external_import_binding_merger: FxHashMap::default(),
       side_effects_modules: &side_effects_modules,
       normal_symbol_exports_chain_map: &mut normal_symbol_exports_chain_map,
-      external_import_namespace_merger: FxHashMap::default(),
+      collected_links: Vec::new(),
+      namespace_alias_results: Vec::new(),
+      shim_requests: Vec::new(),
+      errors: Vec::new(),
+      warnings: Vec::new(),
     };
-    self.module_table.modules.iter().for_each(|module| {
-      binding_ctx.match_imports_with_exports(module.idx());
-    });
+    let mut config =
+      LinkConfig { cjs_interop: false, import_hooks: Some(&mut matcher), ..Default::default() };
+    let module_table = &self.module_table;
+    let (_binding_errors, _generated_links) =
+      oxc_module_graph::match_imports_collect_with_fn(
+        &self.link_kernel.graph,
+        &mut config,
+        Some(&oxc_resolved),
+        &|oxc_idx, cb| {
+          let rd_idx = from_oxc_module_idx(oxc_idx);
+          if let Some(m) = module_table[rd_idx].as_normal() {
+            for ni in m.named_imports.values() {
+              let imported_name = match &ni.imported {
+                Specifier::Star => "*",
+                Specifier::Literal(s) => s.as_str(),
+              };
+              let is_ns = matches!(&ni.imported, Specifier::Star);
+              cb(to_oxc_symbol_ref(ni.imported_as), imported_name, ni.record_idx.index(), is_ns);
+            }
+          }
+        },
+        &|oxc_module_idx, oxc_symbol| {
+          let rd_idx = from_oxc_module_idx(oxc_module_idx);
+          let rd_symbol = from_oxc_symbol_ref(oxc_symbol);
+          let m = module_table[rd_idx].as_normal()?;
+          let ni = m.named_imports.get(&rd_symbol)?;
+          let imported_name = match &ni.imported {
+            Specifier::Star => oxc_module_graph::CompactString::from("*"),
+            Specifier::Literal(s) => oxc_module_graph::CompactString::from(s.as_str()),
+          };
+          let is_ns = matches!(&ni.imported, Specifier::Star);
+          Some((imported_name, ni.record_idx.index(), is_ns))
+        },
+      );
 
-    self.errors.extend(binding_ctx.errors);
-    self.warnings.extend(binding_ctx.warnings);
+    // Extract results from the matcher (releases &mut self.metas borrow).
+    let collected_links = std::mem::take(&mut matcher.collected_links);
+    let namespace_alias_results = std::mem::take(&mut matcher.namespace_alias_results);
+    let shim_requests = std::mem::take(&mut matcher.shim_requests);
+    let errors = std::mem::take(&mut matcher.errors);
+    let warnings = std::mem::take(&mut matcher.warnings);
+    drop(matcher);
 
-    self.external_import_namespace_merger = binding_ctx.external_import_namespace_merger;
+    for (from, to) in collected_links {
+      self.symbols.link(from, to);
+    }
 
-    for (module_idx, map) in &binding_ctx.external_import_binding_merger {
+    // Apply namespace alias results (NormalAndNamespace).
+    for (symbol, ns_ref, alias) in &namespace_alias_results {
+      self.symbols.get_mut(*symbol).namespace_alias =
+        Some(NamespaceAlias { property_name: alias.clone(), namespace_ref: *ns_ref });
+    }
+
+    // Process shim_missing_exports: create shimmed symbols and link.
+    // Facade symbols use countdown IDs from u32::MAX and cannot be stored in
+    // the graph's dense SymbolRefDb.  The `safe_canonical` / `graph_canonical_ref`
+    // fallback handles them via Rolldown's DB.
+    for (_importer_idx, local_symbol, target_idx, imported) in &shim_requests {
+      let shimmed_symbol_ref =
+        self.metas[*target_idx].shimmed_missing_exports.entry(imported.clone()).or_insert_with(
+          || {
+            self.symbols.create_facade_root_symbol_ref(*target_idx, imported.as_str())
+          },
+        );
+      self.symbols.link(*local_symbol, *shimmed_symbol_ref);
+    }
+
+    self.errors.extend(errors);
+    self.warnings.extend(warnings);
+
+    self.external_import_namespace_merger = external_import_namespace_merger;
+
+    // Facade symbols use countdown IDs from u32::MAX — skip graph sync.
+    for (module_idx, map) in &external_import_binding_merger {
       for (key, symbol_set) in map {
         let name = if key.as_str() == "default" {
           let key = symbol_set
@@ -214,16 +242,20 @@ impl LinkStage<'_> {
       }
     }
 
+    let symbols = &self.symbols;
     self.metas.par_iter_mut().for_each(|meta| {
+      let safe_canonical = |sym: SymbolRef| -> SymbolRef {
+        symbols.canonical_ref_for(sym)
+      };
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
       'next_export: for (exported_name, resolved_export) in &meta.resolved_exports {
         if let Some(potentially_ambiguous_symbol_refs) =
           &resolved_export.potentially_ambiguous_symbol_refs
         {
-          let main_ref = self.symbols.canonical_ref_for(resolved_export.symbol_ref);
+          let main_ref = safe_canonical(resolved_export.symbol_ref);
 
           for ambiguous_ref in potentially_ambiguous_symbol_refs {
-            let ambiguous_ref = self.symbols.canonical_ref_for(*ambiguous_ref);
+            let ambiguous_ref = safe_canonical(*ambiguous_ref);
             if main_ref != ambiguous_ref {
               continue 'next_export;
             }
@@ -303,74 +335,6 @@ impl LinkStage<'_> {
     }
   }
 
-  fn add_exports_for_export_star(
-    normal_modules: &IndexModules,
-    resolve_exports: &mut FxHashMap<CompactStr, ResolvedExport>,
-    module_idx: ModuleIdx,
-    module_stack: &mut Vec<ModuleIdx>,
-  ) {
-    if module_stack.contains(&module_idx) {
-      return;
-    }
-
-    module_stack.push(module_idx);
-
-    let Module::Normal(module) = &normal_modules[module_idx] else {
-      return;
-    };
-
-    let is_cjsreexports = module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport);
-
-    let cjs_reexport_module =
-      is_cjsreexports.then(|| module.import_records.first().unwrap().into_resolved_module());
-
-    for dep_id in module.star_export_module_ids().chain(cjs_reexport_module) {
-      let Module::Normal(dep_module) = &normal_modules[dep_id] else {
-        continue;
-      };
-      // if matches!(dep_module.exports_kind, ExportsKind::CommonJs) {
-      //   continue;
-      // }
-
-      for (exported_name, named_export) in &dep_module.named_exports {
-        // ES6 export star statements ignore exports named "default"
-        if !named_export.came_from_commonjs && exported_name.as_str() == "default" {
-          continue;
-        }
-        // This export star is shadowed if any file in the stack has a matching real named export
-        if module_stack
-          .iter()
-          .filter_map(|id| normal_modules[*id].as_normal())
-          .any(|module| module.named_exports.contains_key(exported_name))
-        {
-          continue;
-        }
-        // We have filled `resolve_exports` with `named_exports`. If the export is already exists, it means that the importer
-        // has a named export with the same name. So the export from dep module is shadowed.
-        if let Some(resolved_export) = resolve_exports.get_mut(exported_name) {
-          if named_export.referenced != resolved_export.symbol_ref && !resolved_export.came_from_cjs
-          {
-            resolved_export
-              .potentially_ambiguous_symbol_refs
-              .get_or_insert(Vec::default())
-              .push(named_export.referenced);
-          }
-        } else {
-          let resolved_export = ResolvedExport {
-            symbol_ref: named_export.referenced,
-            potentially_ambiguous_symbol_refs: None,
-            came_from_cjs: named_export.came_from_commonjs,
-          };
-          resolve_exports.insert(exported_name.clone(), resolved_export);
-        }
-      }
-
-      Self::add_exports_for_export_star(normal_modules, resolve_exports, dep_id, module_stack);
-    }
-
-    module_stack.pop();
-  }
-
   /// Try to find the final pointed `SymbolRef` of the member expression.
   /// ```js
   /// // index.js
@@ -389,6 +353,10 @@ impl LinkStage<'_> {
     normal_symbol_exports_chain_map: &FxHashMap<SymbolRef, Vec<SymbolRef>>,
   ) {
     let warnings = append_only_vec::AppendOnlyVec::new();
+    let symbols_db = &self.symbols;
+    let safe_canonical = |sym: SymbolRef| -> SymbolRef {
+      symbols_db.canonical_ref_for(sym)
+    };
     let resolved_meta_data = self
       .module_table
       .modules
@@ -405,7 +373,7 @@ impl LinkStage<'_> {
 
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
                 // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
-                let mut canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
+                let mut canonical_ref = safe_canonical(member_expr_ref.object_ref);
                 let mut canonical_ref_owner: &NormalModule =
                   match &self.module_table[canonical_ref.owner] {
                     Module::Normal(module) => module,
@@ -485,7 +453,7 @@ impl LinkStage<'_> {
                       }
                     }
                   }
-                  canonical_ref = self.symbols.canonical_ref_for(export_symbol.symbol_ref);
+                  canonical_ref = safe_canonical(export_symbol.symbol_ref);
                   // If the canonical ref points to an external module, we can't resolve
                   // further properties statically. Break out of the loop and let the
                   // remaining properties be accessed at runtime.
@@ -507,7 +475,7 @@ impl LinkStage<'_> {
                   let maybe_namespace = depended_refs
                     .last()
                     .copied()
-                    .unwrap_or(self.symbols.canonical_ref_for(member_expr_ref.object_ref));
+                    .unwrap_or(safe_canonical(member_expr_ref.object_ref));
                   let maybe_namespace_symbol = self.symbols.get(maybe_namespace);
                   let continue_resolve =
                     if let Some(ref ns) = maybe_namespace_symbol.namespace_alias {
@@ -628,438 +596,226 @@ impl LinkStage<'_> {
   }
 }
 
-struct BindImportsAndExportsContext<'a> {
-  pub index_modules: &'a IndexModules,
-  pub metas: &'a mut LinkingMetadataVec,
-  pub symbol_db: &'a mut SymbolRefDb,
-  pub options: &'a SharedOptions,
-  pub errors: Vec<BuildDiagnostic>,
-  pub warnings: Vec<BuildDiagnostic>,
-  pub external_import_binding_merger:
-    FxHashMap<ModuleIdx, FxHashMap<CompactStr, IndexSet<SymbolRef>>>,
-  pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
-  pub side_effects_modules: &'a FxHashSet<ModuleIdx>,
-  pub normal_symbol_exports_chain_map: &'a mut FxHashMap<SymbolRef, Vec<SymbolRef>>,
+/// Rolldown-specific import hooks that bridge `oxc_module_graph::match_imports_collect`
+/// with Rolldown's CJS interop, external module handling, and diagnostics.
+struct RolldownImportHooks<'a> {
+  index_modules: &'a IndexModules,
+  metas: &'a mut LinkingMetadataVec,
+  options: &'a SharedOptions,
+  side_effects_modules: &'a FxHashSet<ModuleIdx>,
+  normal_symbol_exports_chain_map: &'a mut FxHashMap<SymbolRef, Vec<SymbolRef>>,
+  /// Collected links to apply to Rolldown's persistent `SymbolRefDb`.
+  collected_links: Vec<(SymbolRef, SymbolRef)>,
+  /// Collected (local_symbol, namespace_ref, alias) for NormalAndNamespace results.
+  namespace_alias_results: Vec<(SymbolRef, SymbolRef, CompactStr)>,
+  /// Collected (importer_idx, local_symbol, target_idx, import_name) for NoMatch shimming.
+  shim_requests: Vec<(ModuleIdx, SymbolRef, ModuleIdx, CompactStr)>,
+  errors: Vec<BuildDiagnostic>,
+  warnings: Vec<BuildDiagnostic>,
 }
 
-impl BindImportsAndExportsContext<'_> {
-  fn match_imports_with_exports(&mut self, module_idx: ModuleIdx) {
-    let Module::Normal(module) = &self.index_modules[module_idx] else {
-      return;
-    };
-    let is_esm = matches!(self.options.format, OutputFormat::Esm);
-    for (imported_as_ref, named_import) in &module.named_imports {
-      let match_import_span = tracing::trace_span!(
-        "MATCH_IMPORT",
-        module_id = module.stable_id.as_str(),
-        imported_specifier = named_import.imported.to_string()
-      );
-      let _enter = match_import_span.enter();
+impl ImportHooks for RolldownImportHooks<'_> {
+  fn on_resolved(&mut self, ctx: &ImportResolutionContext) {
+    let importer_idx = from_oxc_module_idx(ctx.importer);
+    let local_symbol = from_oxc_symbol_ref(ctx.local_symbol);
+    let resolved = ctx.result;
+    let reexport_chain = ctx.reexport_chain;
 
-      let rec = &module.import_records[named_import.record_idx];
-      let Some(resolved_module_idx) = rec.resolved_module else { continue };
-      let is_external = matches!(self.index_modules[resolved_module_idx], Module::External(_));
+    match resolved {
+      OxcMatchImportKind::Normal { .. }
+      | OxcMatchImportKind::Namespace { .. }
+      | OxcMatchImportKind::NormalAndNamespace { .. } => {
+        let Some(importer) = self.index_modules[importer_idx].as_normal() else {
+          return;
+        };
+        let Some(named_import) = importer.named_imports.get(&local_symbol) else {
+          return;
+        };
+        let rec = &importer.import_records[named_import.record_idx];
+        let Some(target_idx) = rec.resolved_module else {
+          return;
+        };
 
-      if is_esm && is_external {
-        match named_import.imported {
-          Specifier::Star => {
-            self
-              .external_import_namespace_merger
-              .entry(resolved_module_idx)
-              .or_default()
-              .insert(*imported_as_ref);
+        let mut final_link = match resolved {
+          OxcMatchImportKind::Normal { symbol_ref } => {
+            Some((local_symbol, from_oxc_symbol_ref(*symbol_ref)))
           }
-          Specifier::Literal(ref name)
-            if self.metas[module_idx]
-              .resolved_exports
-              .iter()
-              .all(|(_, resolved_export)| resolved_export.symbol_ref != *imported_as_ref) =>
-          {
-            self
-              .external_import_binding_merger
-              .entry(resolved_module_idx)
-              .or_default()
-              .entry(name.clone())
-              .or_default()
-              .insert(*imported_as_ref);
+          OxcMatchImportKind::Namespace { namespace_ref } => {
+            Some((local_symbol, from_oxc_symbol_ref(*namespace_ref)))
           }
-          Specifier::Literal(_) => {}
+          // Keep aliased imports self-canonical so downstream consumers still
+          // observe `namespace_alias` on the canonical symbol.
+          OxcMatchImportKind::NormalAndNamespace { .. } => Some((local_symbol, local_symbol)),
+          OxcMatchImportKind::Ambiguous { .. }
+          | OxcMatchImportKind::Cycle
+          | OxcMatchImportKind::NoMatch => None,
+        };
+        let mut namespace_alias = match resolved {
+          OxcMatchImportKind::NormalAndNamespace { namespace_ref, alias } => {
+            Some((from_oxc_symbol_ref(*namespace_ref), CompactStr::new(alias.as_str())))
+          }
+          _ => None,
+        };
+
+        let is_namespace_import = matches!(&named_import.imported, Specifier::Star);
+
+        match &self.index_modules[target_idx] {
+          Module::External(_) if self.options.format.keep_esm_import_export_syntax() => {
+            // ESM output preserves external imports as-is. Keep the local symbol canonical.
+            final_link = Some((local_symbol, local_symbol));
+            namespace_alias = None;
+          }
+          Module::Normal(target) if target.exports_kind.is_commonjs() => {
+            // Rolldown uses the importer's synthetic namespace symbol for CJS interop.
+            if let Specifier::Literal(imported) = &named_import.imported {
+              if let Some(symbol_ref) = self.metas[target_idx]
+                .resolved_exports
+                .get(imported)
+                .map(|resolved_export| resolved_export.symbol_ref)
+              {
+                self.metas[target_idx].included_commonjs_export_symbol.insert(symbol_ref);
+              }
+              namespace_alias = Some((rec.namespace_ref, imported.clone()));
+              final_link = Some((local_symbol, local_symbol));
+            } else {
+              namespace_alias = None;
+              final_link = Some((local_symbol, rec.namespace_ref));
+            }
+          }
+          Module::Normal(target) if !is_namespace_import => {
+            if let Specifier::Literal(imported) = &named_import.imported
+              && let Some((symbol_ref, came_from_cjs)) = self.metas[target_idx]
+                .resolved_exports
+                .get(imported)
+                .map(|resolved_export| (resolved_export.symbol_ref, resolved_export.came_from_cjs))
+              && came_from_cjs
+            {
+              self.metas[target_idx].included_commonjs_export_symbol.insert(symbol_ref);
+              namespace_alias = Some((target.namespace_object_ref, imported.clone()));
+              final_link = Some((local_symbol, local_symbol));
+            }
+          }
+          Module::Normal(_) | Module::External(_) => {}
+        }
+
+        if let Some((_, target_symbol)) = final_link {
+          self.collected_links.push((local_symbol, target_symbol));
+        }
+        if let Some((namespace_ref, alias)) = namespace_alias {
+          self.namespace_alias_results.push((local_symbol, namespace_ref, alias));
+        }
+
+        let converted_chain =
+          reexport_chain.iter().copied().map(from_oxc_symbol_ref).collect::<Vec<_>>();
+        for symbol_ref in &converted_chain {
+          if self.side_effects_modules.contains(&symbol_ref.owner) {
+            self.metas[importer_idx].dependencies.insert(symbol_ref.owner);
+          }
+        }
+        if !converted_chain.is_empty() {
+          self.normal_symbol_exports_chain_map.insert(local_symbol, converted_chain);
         }
       }
-      let ret = self.match_import_with_export(
-        self.index_modules,
-        &mut MatchingContext { tracker_stack: Vec::default() },
-        ImportTracker {
-          importer: module_idx,
-          importee: resolved_module_idx,
-          imported: named_import.imported.clone(),
-          imported_as: *imported_as_ref,
-        },
-      );
-      tracing::trace!("Got match result {:?}", ret);
-      match ret {
-        MatchImportKind::_Ignore | MatchImportKind::Cycle => {}
-        MatchImportKind::Ambiguous { symbol_ref, potentially_ambiguous_symbol_refs } => {
-          let importee = self.index_modules[resolved_module_idx].stable_id().to_string();
+      OxcMatchImportKind::NoMatch => {
+        // Look up import info to generate diagnostics or collect shim requests.
+        let Some(importer) = self.index_modules[importer_idx].as_normal() else { return };
+        let Some(named_import) = importer.named_imports.get(&local_symbol) else { return };
+        let rec = &importer.import_records[named_import.record_idx];
+        let Some(resolved_module_idx) = rec.resolved_module else { return };
+        let importee = &self.index_modules[resolved_module_idx];
 
-          let mut exporter = Vec::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
-          if let Some(owner) = self.index_modules[symbol_ref.owner].as_normal() {
-            if let Specifier::Literal(name) = &named_import.imported {
-              let named_export = &owner.named_exports[name];
-              exporter.push(AmbiguousExternalNamespaceModule {
-                source: owner.source.clone(),
-                module_id: owner.id.to_string(),
-                stable_id: owner.stable_id.to_string(),
-                span_of_identifier: named_export.span,
-              });
+        // Check shim_missing_exports.
+        if let Module::Normal(importee_normal) = importee {
+          if self.options.shim_missing_exports
+            || matches!(importee_normal.module_type, ModuleType::Empty)
+          {
+            if let Specifier::Literal(ref imported) = named_import.imported {
+              self.shim_requests.push((
+                importer_idx,
+                local_symbol,
+                resolved_module_idx,
+                imported.clone(),
+              ));
+              return;
             }
           }
-
-          exporter.extend(potentially_ambiguous_symbol_refs.iter().filter_map(|&symbol_ref| {
-            let normal_module = self.index_modules[symbol_ref.owner].as_normal()?;
-            if let Specifier::Literal(name) = &named_import.imported {
-              let named_export = &normal_module.named_exports[name];
-              return Some(AmbiguousExternalNamespaceModule {
-                source: normal_module.source.clone(),
-                module_id: normal_module.id.to_string(),
-                stable_id: normal_module.stable_id.to_string(),
-                span_of_identifier: named_export.span,
-              });
-            }
-
-            None
-          }));
-
-          self.errors.push(BuildDiagnostic::ambiguous_external_namespace(
-            named_import.imported.to_string(),
-            importee,
-            AmbiguousExternalNamespaceModule {
-              source: module.source.clone(),
-              module_id: module.id.to_string(),
-              stable_id: module.stable_id.to_string(),
-              span_of_identifier: named_import.span_imported,
-            },
-            exporter,
-          ));
         }
-        MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports }) => {
-          for r in &reexports {
-            if self.side_effects_modules.contains(&r.owner) {
-              self.metas[module_idx].dependencies.insert(r.owner);
-            }
-          }
-          self.normal_symbol_exports_chain_map.insert(*imported_as_ref, reexports);
 
-          self.symbol_db.link(*imported_as_ref, symbol);
-        }
-        MatchImportKind::Namespace { namespace_ref } => {
-          self.symbol_db.link(*imported_as_ref, namespace_ref);
-        }
-        MatchImportKind::NormalAndNamespace { namespace_ref, alias } => {
-          self.symbol_db.get_mut(*imported_as_ref).namespace_alias =
-            Some(NamespaceAlias { property_name: alias, namespace_ref });
-
-          // Propagate JSX flags from the imported symbol to its namespace_ref.
-          // When we have: `import React from './cjs-module'; <React.Fragment/>`
-          // `React` has UsedAsJSXMemberExprRoot, but the rendered binding is
-          // the namespace_ref (`import_react`). Since namespace_ref is a facade
-          // (generated) symbol, we promote it to MustStartWithCapitalLetterForJSX
-          // so the renamer uppercases it (e.g. `Import_react`).
-          if imported_as_ref.flags(self.symbol_db).is_some_and(|flags| {
-            flags.intersects(
-              SymbolRefFlags::MustStartWithCapitalLetterForJSX
-                | SymbolRefFlags::UsedAsJSXMemberExprRoot,
+        // Generate missing_export diagnostic.
+        let is_ts_like_importing_ts_like =
+          matches!(
+            importee.as_normal().map(|m| &m.module_type),
+            Some(ModuleType::Ts | ModuleType::Tsx)
+          ) && matches!(importer.module_type, ModuleType::Ts | ModuleType::Tsx);
+        let mut diagnostic = BuildDiagnostic::missing_export(
+          importer.id.to_string(),
+          importer.stable_id.to_string(),
+          importee.id().to_string(),
+          importee.stable_id().to_string(),
+          importer.source.clone(),
+          named_import.imported.to_string(),
+          named_import.span_imported,
+          is_ts_like_importing_ts_like.then(|| {
+            format!(
+              "If you meant to import a type rather than a value, make sure to add the `type` modifier (e.g. `import {{ type Foo }} from '{}'`).",
+              rec.module_request
             )
-          }) {
-            let ns_flags = namespace_ref.flags_mut(self.symbol_db);
-            *ns_flags |= SymbolRefFlags::MustStartWithCapitalLetterForJSX;
-          }
-        }
-        MatchImportKind::NoMatch => {
-          let importee = &self.index_modules[resolved_module_idx];
-          let is_ts_like_importing_ts_like =
-            matches!(
-              importee.as_normal().map(|m| &m.module_type),
-              Some(ModuleType::Ts | ModuleType::Tsx)
-            ) && matches!(module.module_type, ModuleType::Ts | ModuleType::Tsx);
-          let mut diagnostic = BuildDiagnostic::missing_export(
-            module.id.to_string(),
-            module.stable_id.to_string(),
-            importee.id().to_string(),
-            importee.stable_id().to_string(),
-            module.source.clone(),
-            named_import.imported.to_string(),
-            named_import.span_imported,
-            is_ts_like_importing_ts_like.then(|| format!("If you meant to import a type rather than a value, make sure to add the `type` modifier (e.g. `import {{ type Foo }} from '{}'`).", rec.module_request))
-          );
-          if is_ts_like_importing_ts_like {
-            diagnostic = diagnostic.with_severity_warning();
-            self.warnings.push(diagnostic);
-          } else {
-            self.errors.push(diagnostic);
-          }
+          }),
+        );
+        if is_ts_like_importing_ts_like {
+          diagnostic = diagnostic.with_severity_warning();
+          self.warnings.push(diagnostic);
+        } else {
+          self.errors.push(diagnostic);
         }
       }
-    }
-  }
+      OxcMatchImportKind::Ambiguous { candidates } => {
+        let Some(importer) = self.index_modules[importer_idx].as_normal() else { return };
+        let Some(named_import) = importer.named_imports.get(&local_symbol) else { return };
+        let rec = &importer.import_records[named_import.record_idx];
+        let Some(resolved_module_idx) = rec.resolved_module else { return };
+        let importee_id = self.index_modules[resolved_module_idx].stable_id().to_string();
 
-  fn advance_import_tracker(&self, ctx: &MatchingContext) -> ImportStatus {
-    let tracker = ctx.current_tracker();
-    let importer = &self.index_modules[tracker.importer]
-      .as_normal()
-      .expect("only normal module can be importer");
-    let named_import = &importer.named_imports[&tracker.imported_as];
-
-    // Is this an external file?
-    let Some(importee_id) = importer.import_records[named_import.record_idx].resolved_module else {
-      return ImportStatus::NoMatch {};
-    };
-
-    let importee = match &self.index_modules[importee_id] {
-      Module::Normal(importee) => importee.as_ref(),
-      Module::External(external) => return ImportStatus::External(external.namespace_ref),
-    };
-
-    // Is this a named import of a file without any exports?
-    debug_assert!(
-      matches!(importee.exports_kind, ExportsKind::Esm | ExportsKind::CommonJs)
-        || importee.meta.has_lazy_export()
-        || importee.module_type == ModuleType::Empty
-    );
-    // TODO: Deal with https://github.com/evanw/esbuild/blob/109449e5b80886f7bc7fc7e0cee745a0221eef8d/internal/linker/linker.go#L3062-L3072
-
-    if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-      return ImportStatus::CommonJS;
-    }
-
-    match &named_import.imported {
-      Specifier::Star => ImportStatus::Found {
-        symbol: importee.namespace_object_ref,
-        // owner: importee_id,
-        potentially_ambiguous_export_star_refs: vec![],
-      },
-      Specifier::Literal(literal_imported) => {
-        match self.metas[importee_id].resolved_exports.get(literal_imported) {
-          Some(export) => {
-            if export.came_from_cjs {
-              ImportStatus::DynamicFallbackWithCommonjsReference {
-                namespace_ref: importee.namespace_object_ref,
-                commonjs_symbol: export.symbol_ref,
-              }
-            } else {
-              ImportStatus::Found {
-                // owner: importee_id,
-                symbol: export.symbol_ref,
-                potentially_ambiguous_export_star_refs: export
-                  .potentially_ambiguous_symbol_refs
-                  .clone()
-                  .unwrap_or_default(),
+        let mut exporter = Vec::new();
+        for candidate in candidates {
+          let candidate = from_oxc_symbol_ref(*candidate);
+          if let Some(owner) = self.index_modules[candidate.owner].as_normal() {
+            if let Specifier::Literal(name) = &named_import.imported {
+              if let Some(named_export) = owner.named_exports.get(name) {
+                exporter.push(AmbiguousExternalNamespaceModule {
+                  source: owner.source.clone(),
+                  module_id: owner.id.to_string(),
+                  stable_id: owner.stable_id.to_string(),
+                  span_of_identifier: named_export.span,
+                });
               }
             }
           }
-          _ => {
-            if self.metas[importee_id].has_dynamic_exports {
-              ImportStatus::DynamicFallback { namespace_ref: importee.namespace_object_ref }
-            } else {
-              ImportStatus::NoMatch
-            }
-          }
         }
-      }
-    }
-  }
 
-  fn match_import_with_export(
-    &mut self,
-    index_modules: &IndexModules,
-    ctx: &mut MatchingContext,
-    mut tracker: ImportTracker,
-  ) -> MatchImportKind {
-    let tracking_span = tracing::trace_span!(
-      "TRACKING_MATCH_IMPORT",
-      importer = index_modules[tracker.importer].stable_id().as_str(),
-      importee = index_modules[tracker.importee].stable_id().as_str(),
-      imported_specifier = tracker.imported.to_string()
-    );
-    let _enter = tracking_span.enter();
-
-    let mut ambiguous_results = vec![];
-    let mut reexports = vec![];
-    let ret = loop {
-      for prev_tracker in ctx.tracker_stack.iter().rev() {
-        if prev_tracker.importer == tracker.importer
-          && prev_tracker.imported_as == tracker.imported_as
-        {
-          let importer_module = &index_modules[tracker.importer];
-          let importer_id = importer_module.id().to_string();
-          let imported_specifier = tracker.imported.to_string();
-          self.errors.push(BuildDiagnostic::circular_reexport(importer_id, imported_specifier));
-          return MatchImportKind::Cycle;
-        }
-      }
-      ctx.tracker_stack.push(tracker.clone());
-      let import_status = self.advance_import_tracker(ctx);
-      tracing::trace!("Got import_status {:?}", import_status);
-      let importer = &self.index_modules[tracker.importer];
-      let named_import = &importer.as_normal().unwrap().named_imports[&tracker.imported_as];
-      let importer_record = &importer.as_normal().unwrap().import_records[named_import.record_idx];
-
-      let kind = match import_status {
-        ImportStatus::CommonJS => match &tracker.imported {
-          Specifier::Star => {
-            MatchImportKind::Namespace { namespace_ref: importer_record.namespace_ref }
-          }
-          Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
-            namespace_ref: importer_record.namespace_ref,
-            alias: alias.clone(),
+        self.errors.push(BuildDiagnostic::ambiguous_external_namespace(
+          named_import.imported.to_string(),
+          importee_id,
+          AmbiguousExternalNamespaceModule {
+            source: importer.source.clone(),
+            module_id: importer.id.to_string(),
+            stable_id: importer.stable_id.to_string(),
+            span_of_identifier: named_import.span_imported,
           },
-        },
-        ImportStatus::DynamicFallback { namespace_ref } => match &tracker.imported {
-          Specifier::Star => MatchImportKind::Namespace { namespace_ref },
-          Specifier::Literal(alias) => {
-            MatchImportKind::NormalAndNamespace { namespace_ref, alias: alias.clone() }
-          }
-        },
-        ImportStatus::DynamicFallbackWithCommonjsReference { namespace_ref, commonjs_symbol } => {
-          self.metas[tracker.importee].included_commonjs_export_symbol.insert(commonjs_symbol);
-          match &tracker.imported {
-            Specifier::Star => MatchImportKind::Namespace { namespace_ref },
-            Specifier::Literal(alias) => {
-              MatchImportKind::NormalAndNamespace { namespace_ref, alias: alias.clone() }
-            }
-          }
-        }
-        ImportStatus::NoMatch => {
-          break MatchImportKind::NoMatch;
-        }
-        ImportStatus::Found { symbol, potentially_ambiguous_export_star_refs } => {
-          for ambiguous_ref in &potentially_ambiguous_export_star_refs {
-            let ambiguous_ref_owner = &index_modules[ambiguous_ref.owner];
-            match ambiguous_ref_owner.as_normal().unwrap().named_imports.get(ambiguous_ref) {
-              Some(another_named_import) => {
-                let rec = &ambiguous_ref_owner.as_normal().unwrap().import_records
-                  [another_named_import.record_idx];
-                if let Some(resolved_module_idx) = rec.resolved_module {
-                  let ambiguous_result = self.match_import_with_export(
-                    index_modules,
-                    &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
-                    ImportTracker {
-                      importer: ambiguous_ref_owner.idx(),
-                      importee: resolved_module_idx,
-                      imported: another_named_import.imported.clone(),
-                      imported_as: another_named_import.imported_as,
-                    },
-                  );
-                  ambiguous_results.push(ambiguous_result);
-                }
-              }
-              _ => {
-                ambiguous_results.push(MatchImportKind::Normal(MatchImportKindNormal {
-                  symbol: *ambiguous_ref,
-                  reexports: vec![],
-                }));
-              }
-            }
-          }
-
-          // If this is a re-export of another import, continue for another
-          // iteration of the loop to resolve that import as well
-          let owner = &index_modules[symbol.owner];
-          if let Some(another_named_import) = owner.as_normal().unwrap().named_imports.get(&symbol)
-          {
-            let rec = &owner.as_normal().unwrap().import_records[another_named_import.record_idx];
-            if let Some(resolved_module_idx) = rec.resolved_module {
-              match &self.index_modules[resolved_module_idx] {
-                Module::External(_) => {
-                  break MatchImportKind::Normal(MatchImportKindNormal {
-                    symbol: another_named_import.imported_as,
-                    reexports: vec![],
-                  });
-                }
-                Module::Normal(importee) => {
-                  tracker.importee = importee.idx;
-                  tracker.importer = owner.idx();
-                  tracker.imported = another_named_import.imported.clone();
-                  tracker.imported_as = another_named_import.imported_as;
-                  reexports.push(another_named_import.imported_as);
-                  continue;
-                }
-              }
-            }
-          }
-
-          break MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports });
-        }
-        ImportStatus::_CommonJSWithoutExports => todo!(),
-        ImportStatus::_Disabled => todo!(),
-        ImportStatus::External(symbol_ref) => {
-          if self.options.format.keep_esm_import_export_syntax() {
-            // Imports from external modules should not be converted to CommonJS
-            // if the output format preserves the original ES6 import statements
-            break MatchImportKind::Normal(MatchImportKindNormal {
-              symbol: tracker.imported_as,
-              reexports: vec![],
-            });
-          }
-
-          match &tracker.imported {
-            Specifier::Star => MatchImportKind::Namespace { namespace_ref: symbol_ref },
-            Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
-              namespace_ref: symbol_ref,
-              alias: alias.clone(),
-            },
-          }
-        }
-      };
-      break kind;
-    };
-
-    tracing::trace!("ambiguous_results {:#?}", ambiguous_results);
-    tracing::trace!("ret {:#?}", ret);
-
-    for ambiguous_result in &ambiguous_results {
-      if *ambiguous_result != ret {
-        if let MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) = ret {
-          return MatchImportKind::Ambiguous {
-            symbol_ref: symbol,
-            potentially_ambiguous_symbol_refs: ambiguous_results
-              .iter()
-              .filter_map(|kind| match *kind {
-                MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) => Some(symbol),
-                MatchImportKind::Namespace { namespace_ref }
-                | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
-                _ => None,
-              })
-              .collect(),
-          };
-        }
-
-        unreachable!("symbol should always exist");
+          exporter,
+        ));
+      }
+      OxcMatchImportKind::Cycle => {
+        let Some(importer) = self.index_modules[importer_idx].as_normal() else { return };
+        let Some(named_import) = importer.named_imports.get(&local_symbol) else { return };
+        let rec = &importer.import_records[named_import.record_idx];
+        let Some(resolved_module_idx) = rec.resolved_module else { return };
+        let importee = &self.index_modules[resolved_module_idx];
+        self.errors.push(BuildDiagnostic::circular_reexport(
+          importee.id().to_string(),
+          named_import.imported.to_string(),
+        ));
       }
     }
-
-    if let Module::Normal(importee) = &self.index_modules[tracker.importee] {
-      if (self.options.shim_missing_exports || matches!(importee.module_type, ModuleType::Empty))
-        && matches!(ret, MatchImportKind::NoMatch)
-      {
-        match &tracker.imported {
-          Specifier::Star => unreachable!("star should always exist, no need to shim"),
-          Specifier::Literal(imported) => {
-            let shimmed_symbol_ref = self.metas[tracker.importee]
-              .shimmed_missing_exports
-              .entry(imported.clone())
-              .or_insert_with(|| {
-                self.symbol_db.create_facade_root_symbol_ref(tracker.importee, imported.as_str())
-              });
-            return MatchImportKind::Normal(MatchImportKindNormal {
-              symbol: *shimmed_symbol_ref,
-              reexports: vec![],
-            });
-          }
-        }
-      }
-    }
-
-    ret
   }
 }

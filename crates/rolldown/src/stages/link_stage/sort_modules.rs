@@ -1,17 +1,8 @@
-use std::iter;
-
-use rolldown_common::{Module, ModuleIdx};
+use oxc_module_graph::LinkConfig;
+use rolldown_common::Module;
 use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
-use rolldown_utils::rustc_hash::FxHashSetExt;
-use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::LinkStage;
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-enum Status {
-  ToBeExecuted(ModuleIdx),
-  WaitForExit(ModuleIdx),
-}
 
 impl LinkStage<'_> {
   /// Some notes about the module execution order:
@@ -31,97 +22,55 @@ impl LinkStage<'_> {
   /// - We only ensure execution order is relative correct, which means imported/required modules are executed before the module that imports/require them.
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn sort_modules(&mut self) {
-    // The runtime module should always be the first module to be executed
-    let mut execution_stack = self
-      .entries
-      .keys()
-      .rev()
-      .map(|&module_idx| Status::ToBeExecuted(module_idx))
-      .chain(iter::once(Status::ToBeExecuted(self.runtime.id())))
-      .collect::<Vec<_>>();
+    let config = LinkConfig {
+      include_dynamic_imports: self.options.code_splitting.is_disabled(),
+      ..Default::default()
+    };
 
-    let mut next_exec_order = 0;
+    let result = oxc_module_graph::compute_exec_order(&self.link_kernel.graph, &config);
 
-    let mut executed_ids = FxHashSet::with_capacity(self.module_table.modules.len());
-    let mut stack_indexes_of_executing_id = FxHashMap::default();
-
-    let mut sorted_modules = Vec::with_capacity(self.module_table.modules.len());
-    let mut circular_dependencies = FxHashSet::default();
-
-    while let Some(status) = execution_stack.pop() {
-      match status {
-        Status::ToBeExecuted(id) => {
-          if executed_ids.contains(&id) {
-            if self.options.checks.contains(EventKindSwitcher::CircularDependency) {
-              // Try to check if there is a circular dependency
-              if let Some(index) = stack_indexes_of_executing_id.get(&id).copied() {
-                // Executing
-                let cycles = execution_stack[index..]
-                  .iter()
-                  .filter_map(|action| match action {
-                    // Only modules with `Status::WaitForExit` are on the execution chain
-                    Status::ToBeExecuted(_) => None,
-                    Status::WaitForExit(id) => Some(*id),
-                  })
-                  .chain(iter::once(id))
-                  .collect::<Box<[_]>>();
-                circular_dependencies.insert(cycles);
-              }
-            }
-            // It's already executed in other import chain, no need to execute again
-          } else {
-            executed_ids.insert(id);
-            execution_stack.push(Status::WaitForExit(id));
-            debug_assert!(
-              !stack_indexes_of_executing_id.contains_key(&id),
-              "A module should not be executing the same module twice"
-            );
-            stack_indexes_of_executing_id.insert(id, execution_stack.len() - 1);
-
-            execution_stack.extend(
-              self.module_table[id]
-                .import_records()
-                .iter()
-                .filter(|rec| {
-                  rec.kind.is_static()
-                    || (self.options.code_splitting.is_disabled() && rec.kind.is_dynamic())
-                })
-                .filter_map(|rec| rec.resolved_module)
-                .rev()
-                .map(Status::ToBeExecuted),
-            );
-          }
+    // Sync exec_order to Rolldown's module_table before apply() consumes the result.
+    for (next_exec_order, &oxc_idx) in (0_u32..).zip(result.sorted.iter()) {
+      let idx = rolldown_common::ModuleIdx::from_usize(oxc_idx.index());
+      match &mut self.module_table[idx] {
+        Module::Normal(module) => {
+          debug_assert!(module.exec_order == u32::MAX);
+          module.exec_order = next_exec_order;
         }
-        Status::WaitForExit(id) => {
-          match &mut self.module_table[id] {
-            Module::Normal(module) => {
-              debug_assert!(module.exec_order == u32::MAX);
-              module.exec_order = next_exec_order;
-              sorted_modules.push(id);
-            }
-            Module::External(module) => {
-              debug_assert!(module.exec_order == u32::MAX);
-              module.exec_order = next_exec_order;
-            }
-          }
-          next_exec_order += 1;
-          debug_assert!(stack_indexes_of_executing_id.contains_key(&id));
-          stack_indexes_of_executing_id.remove(&id);
+        Module::External(module) => {
+          debug_assert!(module.exec_order == u32::MAX);
+          module.exec_order = next_exec_order;
         }
       }
     }
 
-    if !circular_dependencies.is_empty() {
-      for cycle in circular_dependencies {
+    // Build sorted_modules (Normal only, matching previous behavior).
+    self.sorted_modules = result
+      .sorted
+      .iter()
+      .map(|&oxc_idx| rolldown_common::ModuleIdx::from_usize(oxc_idx.index()))
+      .filter(|idx| self.module_table[*idx].as_normal().is_some())
+      .collect();
+
+    // Emit circular dependency warnings before apply() consumes result.cycles.
+    if self.options.checks.contains(EventKindSwitcher::CircularDependency)
+      && !result.cycles.is_empty()
+    {
+      for cycle in &result.cycles {
         let paths = cycle
           .iter()
-          .filter_map(|id| self.module_table[*id].as_normal().map(|module| module.id.to_string()))
+          .filter_map(|oxc_idx| {
+            let idx = rolldown_common::ModuleIdx::from_usize(oxc_idx.index());
+            self.module_table[idx].as_normal().map(|module| module.id.to_string())
+          })
           .collect::<Vec<_>>();
         self.warnings.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());
       }
     }
 
-    self.sorted_modules = sorted_modules;
+    // Apply to graph (writes exec_order on graph modules, stores sorted/cycles internally).
+    result.apply(&mut self.link_kernel.graph);
+
     debug_assert_eq!(
       self.sorted_modules.first().copied(),
       Some(self.runtime.id()),

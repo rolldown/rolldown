@@ -111,7 +111,7 @@ pub fn render_chunk_exports(
       let rendered_items = export_items
         .into_iter()
         .map(|(exported_name, export_ref)| {
-          let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
+          let canonical_ref = link_output.graph_canonical_ref(export_ref);
           let symbol = link_output.symbol_db.get(canonical_ref);
           let canonical_name = link_output
             .symbol_db
@@ -154,7 +154,7 @@ pub fn render_chunk_exports(
             &link_output.module_table[module].as_normal().expect("should be normal module");
           if !matches!(module.exports_kind, ExportsKind::Esm) {
             export_items.retain(|(_, export_ref)| {
-              let canonical_ref = link_output.symbol_db.canonical_ref_for(*export_ref);
+              let canonical_ref = link_output.graph_canonical_ref(*export_ref);
               canonical_ref.owner != module.idx
             });
           }
@@ -162,7 +162,7 @@ pub fn render_chunk_exports(
             let rendered_items = export_items
               .into_iter()
               .map(|(exported_name, export_ref)| {
-                let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
+                let canonical_ref = link_output.graph_canonical_ref(export_ref);
                 let exported_value = ctx.finalized_string_pattern_for_symbol_ref(
                   canonical_ref,
                   ctx.chunk_idx,
@@ -176,6 +176,7 @@ pub fn render_chunk_exports(
                       &link_output.symbol_db,
                       options,
                       &link_output.module_table.modules,
+                      link_output,
                     ) {
                       render_object_define_property(&exported_name, &exported_value)
                     } else if exported_name.as_str() == "__proto__" {
@@ -261,7 +262,7 @@ pub fn render_chunk_exports(
           let rendered_items = export_items
             .into_iter()
             .map(|(exported_name, export_ref)| {
-              let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
+              let canonical_ref = link_output.graph_canonical_ref(export_ref);
               let symbol = link_output.symbol_db.get(canonical_ref);
               let canonical_name = link_output
                 .symbol_db
@@ -365,8 +366,9 @@ fn must_keep_live_binding(
   symbol_db: &SymbolRefDb,
   options: &NormalizedBundlerOptions,
   modules: &IndexModules,
+  link_output: &LinkStageOutput,
 ) -> bool {
-  let canonical_ref = symbol_db.canonical_ref_for(export_ref);
+  let canonical_ref = link_output.graph_canonical_ref(export_ref);
 
   if canonical_ref.is_declared_by_const(symbol_db) {
     return false;

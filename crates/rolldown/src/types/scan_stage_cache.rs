@@ -2,8 +2,8 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  BarrelState, EcmaModuleAstUsage, GetLocalDbMut, ImporterRecord, Module, ModuleId, ModuleIdx,
-  StableModuleId,
+  BarrelState, EcmaModuleAstUsage, GetLocalDbMut, ImporterRecord, LinkKernel, Module, ModuleId,
+  ModuleIdx, StableModuleId,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -207,6 +207,12 @@ impl ScanStageCache {
     let symbol_ref_db = std::mem::take(&mut cache.symbol_ref_db);
     cache.symbol_ref_db = symbol_ref_db_partial;
 
+    let link_kernel = LinkKernel::from_module_table(
+      &cache.module_table,
+      &cache.entry_points,
+      cache.runtime.id(),
+    );
+
     NormalizedScanStageOutput {
       module_table: cache.module_table.clone(),
       index_ecma_ast: {
@@ -231,6 +237,7 @@ impl ScanStageCache {
       flat_options: cache.flat_options,
       user_defined_entry_modules: cache.user_defined_entry_modules.clone(),
       tla_module_count: cache.tla_module_count,
+      link_kernel,
     }
   }
 }

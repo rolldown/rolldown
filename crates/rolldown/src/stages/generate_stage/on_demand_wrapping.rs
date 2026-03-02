@@ -56,7 +56,7 @@ impl GenerateStage<'_> {
     let mut boundary_module = chunk
       .exports_to_other_chunks
       .keys()
-      .map(|symbol_ref| self.link_output.symbol_db.canonical_ref_for(*symbol_ref).owner)
+      .map(|symbol_ref| self.link_output.graph_canonical_ref(*symbol_ref).owner)
       .collect::<FxHashSet<_>>();
 
     let chunk_modules_set = chunk.modules.iter().copied().collect::<FxHashSet<_>>();

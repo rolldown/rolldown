@@ -22,18 +22,21 @@ impl PathsOutputOption {
     match self {
       Self::FxHashMap(value) => value.get(id).cloned(),
       Self::Fn(_) => {
-        // The Fn variant should be pre-resolved via `resolve_all()` before sync access.
-        // If reached, the path was not pre-resolved — return None as a safe fallback.
+        // Hitting this branch means a caller attempted to use the sync API on an async
+        // function-based configuration (e.g. `options.paths` instead of `resolved_paths`).
+        // Make this misuse visible in debug builds while preserving release behavior.
+        debug_assert!(
+          false,
+          "PathsOutputOption::call was used on the `Fn` variant. \
+           Use `resolve_all()` (or `resolved_paths`) to pre-resolve async paths before sync access."
+        );
         None
       }
     }
   }
 
   /// Pre-resolve all paths for the given IDs asynchronously, returning a `FxHashMap` variant.
-  pub async fn resolve_all<'a>(
-    &self,
-    ids: impl Iterator<Item = &'a str>,
-  ) -> PathsOutputOption {
+  pub async fn resolve_all<'a>(&self, ids: impl Iterator<Item = &'a str>) -> PathsOutputOption {
     match self {
       Self::FxHashMap(map) => Self::FxHashMap(map.clone()),
       Self::Fn(f) => {

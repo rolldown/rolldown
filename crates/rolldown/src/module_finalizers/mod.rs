@@ -605,8 +605,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             else {
               return vec![];
             };
-            let importee_name =
-              &module.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
+            let importee_name = &module.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
             let call_expr = self.snippet.re_export_call_expr(
               re_export_fn_ref.clone_in(self.alloc),
               self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),

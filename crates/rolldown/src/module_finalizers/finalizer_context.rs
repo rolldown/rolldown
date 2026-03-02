@@ -1,7 +1,7 @@
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
-  ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts,
-  RuntimeModuleBrief, SharedFileEmitter, SymbolRef, SymbolRefDb,
+  ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts, RuntimeModuleBrief,
+  SharedFileEmitter, SymbolRef, SymbolRefDb,
 };
 
 pub type FinalizerMutableFields = (

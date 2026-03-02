@@ -685,10 +685,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               if let (BindingPattern::BindingIdentifier(id), Some(init)) =
                 (&declarator.id, declarator.init.as_mut())
               {
-                self.apply_keep_name_for_expr(
-                  id.symbol_id.get().map(KeepNameId::SymbolId),
-                  init,
-                );
+                self.apply_keep_name_for_expr(id.symbol_id.get().map(KeepNameId::SymbolId), init);
               }
             }
           }

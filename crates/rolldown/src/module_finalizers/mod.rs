@@ -2,7 +2,9 @@ use bitflags::bitflags;
 use oxc::ast::ast::ObjectPropertyKind;
 use oxc::semantic::{ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
-  allocator::{self, Address, Allocator, Box as ArenaBox, CloneIn, Dummy, GetAddress, IntoIn, TakeIn},
+  allocator::{
+    self, Address, Allocator, Box as ArenaBox, CloneIn, Dummy, GetAddress, IntoIn, TakeIn,
+  },
   ast::{
     AstBuilder, NONE,
     ast::{
@@ -1606,8 +1608,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           .as_ref()
           .and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId))
           .or(keep_name_id);
-        if let Some(element) =
-          self.keep_name_helper_for_class(effective_id, &class_expression.body)
+        if let Some(element) = self.keep_name_helper_for_class(effective_id, &class_expression.body)
         {
           self.keep_name_processed_exprs.insert(expr_address);
           class_expression.body.body.insert(0, element);
@@ -1620,9 +1621,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           .as_ref()
           .and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId))
           .or(keep_name_id);
-        if let Some((original_name, _)) =
-          effective_id.and_then(|id| self.get_keep_name_info(id))
-        {
+        if let Some((original_name, _)) = effective_id.and_then(|id| self.get_keep_name_info(id)) {
           self.keep_name_processed_exprs.insert(expr_address);
           let original_name = CompactStr::new(original_name);
           let fn_expr = expr.take_in(self.alloc);
@@ -1633,9 +1632,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
       ast::Expression::ArrowFunctionExpression(_) => {
         // Arrows never have their own id, always use outer keep_name_id
-        if let Some((original_name, _)) =
-          keep_name_id.and_then(|id| self.get_keep_name_info(id))
-        {
+        if let Some((original_name, _)) = keep_name_id.and_then(|id| self.get_keep_name_info(id)) {
           self.keep_name_processed_exprs.insert(expr_address);
           let original_name = CompactStr::new(original_name);
           let fn_expr = expr.take_in(self.alloc);

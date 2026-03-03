@@ -45,7 +45,7 @@ Rolldown will output the directive for any of the following cases:
 If you want to append custom directive to all files, you can use the `output.banner` option:
 
 ```ts
-import { defineConfig } from "rolldown";
+import { defineConfig } from 'rolldown';
 
 export default defineConfig({
   output: {

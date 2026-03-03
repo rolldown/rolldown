@@ -1,6 +1,3 @@
-
 module.exports = {
-  a: 100
+  a: 100,
 };
-
-

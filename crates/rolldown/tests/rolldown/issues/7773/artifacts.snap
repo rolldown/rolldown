@@ -6,26 +6,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-
-//#region lib.js
-var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = {};
-}));
-
-//#endregion
 //#region main.js
-var import_lib = /* @__PURE__ */ __toESM(require_lib());
+var import_lib = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {};
+})))());
 console.log(import_lib.default);
-
 //#endregion
-Object.defineProperty(exports, 'dayjs2', {
-  enumerable: true,
-  get: function () {
-    return import_lib.default;
-  }
+Object.defineProperty(exports, "dayjs2", {
+	enumerable: true,
+	get: function() {
+		return import_lib.default;
+	}
 });
+
 ```
 
 # Variant: [format: Umd] [name: "test"]
@@ -36,29 +31,22 @@ Object.defineProperty(exports, 'dayjs2', {
 
 ```js
 (function(global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
-  typeof define === 'function' && define.amd ? define(['exports'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.test = {})));
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.test = {}));
 })(this, function(exports) {
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-// HIDDEN [\0rolldown/runtime.js]
-
-//#region lib.js
-	var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region main.js
+	var import_lib = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 		module.exports = {};
-	}));
-
-//#endregion
-//#region main.js
-	var import_lib = /* @__PURE__ */ __toESM(require_lib());
+	})))());
 	console.log(import_lib.default);
+	//#endregion
+	Object.defineProperty(exports, "dayjs2", {
+		enumerable: true,
+		get: function() {
+			return import_lib.default;
+		}
+	});
+});
 
-//#endregion
-Object.defineProperty(exports, 'dayjs2', {
-  enumerable: true,
-  get: function () {
-    return import_lib.default;
-  }
-});
-});
 ```

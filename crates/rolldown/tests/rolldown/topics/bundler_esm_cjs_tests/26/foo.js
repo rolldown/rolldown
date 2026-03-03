@@ -1,1 +1,1 @@
-module.exports = { default: { bar: 123 } }
+module.exports = { default: { bar: 123 } };

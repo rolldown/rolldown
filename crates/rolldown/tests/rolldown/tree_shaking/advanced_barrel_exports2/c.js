@@ -1,1 +1,1 @@
-export * as c from './a.js'
+export * as c from './a.js';

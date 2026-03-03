@@ -12,7 +12,7 @@ use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, ImportKind,
   Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
 };
-use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
+use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::BuildResult;
 use rolldown_fs::OsFileSystem;
@@ -286,8 +286,7 @@ impl<'a> HmrStage<'a> {
       self.cache.merge(module_loader_output.into())?;
 
       let options = Arc::clone(&self.options);
-      let resolver = Arc::clone(&self.resolver);
-      self.cache.update_defer_sync_data(&options, &resolver).await?;
+      self.cache.update_defer_sync_data(&options).await?;
       new_added_modules
     };
 
@@ -380,8 +379,7 @@ impl<'a> HmrStage<'a> {
     self.cache.merge(module_loader_output.into()).map_err(|e| vec![anyhow::anyhow!(e).into()])?;
 
     let options = Arc::clone(&self.options);
-    let resolver = Arc::clone(&self.resolver);
-    self.cache.update_defer_sync_data(&options, &resolver).await?;
+    self.cache.update_defer_sync_data(&options).await?;
 
     // Collect all sync dependencies, stopping at already-executed modules.
     // This ensures each client gets exactly the modules they need, regardless of what other clients have loaded (session-scoped cache vs client-scoped state).
@@ -486,7 +484,11 @@ impl<'a> HmrStage<'a> {
           PrintOptions {
             sourcemap: enable_sourcemap,
             filename: affected_module.id.to_string(),
-            print_legal_comments: false,
+            comments: PrintCommentsOptions {
+              legal: false,
+              annotation: self.options.comments.annotation,
+              jsdoc: self.options.comments.jsdoc,
+            },
             initial_indent: 0,
           },
         );
@@ -615,8 +617,7 @@ impl<'a> HmrStage<'a> {
         .extend(module_loader_output.new_added_modules_from_partial_scan.clone());
       self.cache.merge(module_loader_output.into())?;
       let options = Arc::clone(&self.options);
-      let resolver = Arc::clone(&self.resolver);
-      self.cache.update_defer_sync_data(&options, &resolver).await?;
+      self.cache.update_defer_sync_data(&options).await?;
 
       // Note: New added modules might include external modules. There's no way to "update" them, so we need to remove them.
       modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
@@ -720,7 +721,11 @@ impl<'a> HmrStage<'a> {
           PrintOptions {
             sourcemap: enable_sourcemap,
             filename: affected_module.id.to_string(),
-            print_legal_comments: false, // ignore hmr chunk comments
+            comments: PrintCommentsOptions {
+              legal: false, // ignore hmr chunk comments
+              annotation: self.options.comments.annotation,
+              jsdoc: self.options.comments.jsdoc,
+            },
             initial_indent: 0,
           },
         );
@@ -907,7 +912,11 @@ impl<'a> HmrStage<'a> {
           PrintOptions {
             sourcemap: enable_sourcemap,
             filename: affected_module.id.to_string(),
-            print_legal_comments: false, // ignore hmr chunk comments
+            comments: PrintCommentsOptions {
+              legal: false, // ignore hmr chunk comments
+              annotation: self.options.comments.annotation,
+              jsdoc: self.options.comments.jsdoc,
+            },
             initial_indent: 0,
           },
         );

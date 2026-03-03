@@ -8,25 +8,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region a.js
-var a_exports = /* @__PURE__ */ __exportAll({ abc: () => abc });
-const abc = void 0;
-
+var a_exports = /* @__PURE__ */ __exportAll({ abc: () => void 0 });
 //#endregion
 export { a_exports as t };
+
 ```
 
 ## entry.js
 
 ```js
 import { t as a_exports } from "./a.js";
-
 export { a_exports as a };
+
 ```
 
 ## main.js
 
 ```js
 import { t as a_exports } from "./a.js";
-
 export { a_exports as a };
+
 ```

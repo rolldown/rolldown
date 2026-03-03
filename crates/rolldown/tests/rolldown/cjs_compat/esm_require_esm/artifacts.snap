@@ -8,16 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region esm.js
-var esm_exports = /* @__PURE__ */ __exportAll({ default: () => esm_default });
-var esm_default;
-var init_esm = __esmMin((() => {
-	esm_default = "esm";
-}));
-
+var esm_exports = /* @__PURE__ */ __exportAll({ default: () => "esm" });
 //#endregion
 //#region main.js
-const esm = (init_esm(), __toCommonJS(esm_exports));
-
+const esm = (__esmMin((() => {}))(), __toCommonJS(esm_exports));
 //#endregion
 export { esm };
+
 ```

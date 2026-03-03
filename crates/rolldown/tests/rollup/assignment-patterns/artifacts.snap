@@ -7,17 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-
-//#region other.js
-const bar = "bar";
-const baz = "baz";
-const x = "x";
-const items = "items";
-const p = "p";
-const q = "q";
-const r = "r";
-const s = "s";
-
 //#endregion
 //#region main.js
 function foo(bar = 1, { baz } = { baz: 2 }, [[[, x = 3] = []] = []] = [], ...items) {
@@ -38,6 +27,6 @@ function foo(bar = 1, { baz } = { baz: 2 }, [[[, x = 3] = []] = []] = [], ...ite
 assert.equal(foo(), 33);
 assert.equal(foo(2), 34);
 assert.equal(foo(2, { baz: 3 }, [[[99, 10]]], "a", "b", "c"), 45);
-
 //#endregion
+
 ```

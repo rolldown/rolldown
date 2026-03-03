@@ -12,10 +12,9 @@ var lib_exports = /* @__PURE__ */ __exportAll({ tryPatchHandler: () => tryPatchH
 function tryPatchHandler(taskRoot, handlerPath) {
 	__require(taskRoot);
 }
-
 //#endregion
 //#region main.js
 console.log(lib_exports);
-
 //#endregion
+
 ```

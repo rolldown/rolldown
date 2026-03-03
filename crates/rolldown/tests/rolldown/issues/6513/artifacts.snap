@@ -6,42 +6,36 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-const require_main = require('./main.js');
-
+const require_main = require("./main.js");
 //#region dynamic.js
 var ddd;
-var init_dynamic = require_main.__esmMin((() => {
-	ddd = 100;
-}));
-
 //#endregion
-init_dynamic();
+require_main.__esmMin((() => {
+	ddd = 100;
+}))();
 exports.ddd = ddd;
+
 ```
 
 ## main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
-
-//#region lib.js
-var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
+//#endregion
+//#region entry.js
+var import_lib = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	const remoteProvider = async function() {
 		return await Promise.resolve().then(() => require("./dynamic.js"));
 	};
 	exports.defaultProvider = remoteProvider;
-}));
-
-//#endregion
-//#region entry.js
-var import_lib = require_lib();
+})))();
 (async () => {
 	(0, node_assert.default)((await (0, import_lib.defaultProvider)()).ddd === 100);
 })();
-
 //#endregion
 exports.__esmMin = __esmMin;
+
 ```

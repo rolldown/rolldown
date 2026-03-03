@@ -1,6 +1,5 @@
-import { type BindingWatcherBundler, type BindingWatcherEvent } from '../../binding.cjs';
+import type { BindingWatcherBundler } from '../../binding.cjs';
 import type { MaybePromise } from '../../types/utils';
-import { aggregateBindingErrorsIntoJsError } from '../../utils/error';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { OutputOptions } from '../../options/output-options';
 
@@ -89,15 +88,7 @@ export interface RolldownWatcher {
 }
 
 export class WatcherEmitter implements RolldownWatcher {
-  listeners: Map<WatcherEvent, Array<(...parameters: any[]) => MaybePromise<void>>> = new Map();
-
-  timer: any;
-
-  constructor() {
-    // The Rust side already create a thread for watcher, but it isn't at main thread.
-    // So here we need to avoid main process exit util the user call `watcher.close()`.
-    this.timer = setInterval(() => {}, 1e9 /* Low power usage */);
-  }
+  private listeners = new Map<WatcherEvent, Array<(...parameters: any[]) => MaybePromise<void>>>();
 
   on(event: WatcherEvent, listener: (...parameters: any[]) => MaybePromise<void>): this {
     const listeners = this.listeners.get(event);
@@ -119,66 +110,21 @@ export class WatcherEmitter implements RolldownWatcher {
   }
 
   clear(event: WatcherEvent): void {
-    if (this.listeners.has(event)) {
-      this.listeners.delete(event);
-    }
+    this.listeners.delete(event);
   }
 
-  async onEvent(event: BindingWatcherEvent): Promise<void> {
-    const listeners = this.listeners.get(event.eventKind() as WatcherEvent);
-    if (listeners) {
-      switch (event.eventKind()) {
-        case 'close':
-        case 'restart':
-          for (const listener of listeners) {
-            await listener();
-          }
-          break;
-
-        case 'event':
-          for (const listener of listeners) {
-            const code = event.bundleEventKind();
-            switch (code) {
-              case 'BUNDLE_END':
-                const { duration, output, result } = event.bundleEndData();
-                await listener({
-                  code: 'BUNDLE_END',
-                  duration,
-                  output: [output], // rolldown doesn't support arraying configure output
-                  result,
-                });
-                break;
-
-              case 'ERROR':
-                const data = event.bundleErrorData();
-                await listener({
-                  code: 'ERROR',
-                  error: aggregateBindingErrorsIntoJsError(data.error),
-                  result: data.result,
-                });
-                break;
-
-              default:
-                await listener({ code });
-                break;
-            }
-          }
-          break;
-
-        case 'change':
-          for (const listener of listeners) {
-            const { path, kind } = event.watchChangeData();
-            await listener(path, { event: kind as ChangeEvent });
-          }
-          break;
-
-        default:
-          throw new Error(`Unknown event: ${event}`);
+  /** Async emit — sequential dispatch so side effects from earlier handlers
+   *  (e.g. `event.result.close()` triggering `closeBundle`) are visible to later handlers. */
+  async emit(event: WatcherEvent, ...args: any[]): Promise<void> {
+    const handlers = this.listeners.get(event);
+    if (handlers?.length) {
+      for (const h of handlers) {
+        await h(...args);
       }
     }
   }
 
   async close(): Promise<void> {
-    clearInterval(this.timer);
+    // Overridden by Watcher to also close the native watcher
   }
 }

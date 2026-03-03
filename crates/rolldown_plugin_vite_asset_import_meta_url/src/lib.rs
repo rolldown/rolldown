@@ -94,7 +94,8 @@ impl Plugin for ViteAssetImportMetaUrlPlugin {
         continue;
       }
       let file = if url.starts_with('.') {
-        let path = PathBuf::from(args.id).parent().unwrap().join(&url).normalize();
+        let joined = PathBuf::from(args.id).parent().unwrap().join(&url);
+        let path = joined.normalize();
         let file = path.to_slash_lossy().into_owned();
         (self.try_fs_resolve)(&file).await?.unwrap_or(file)
       } else {
@@ -102,8 +103,8 @@ impl Plugin for ViteAssetImportMetaUrlPlugin {
           if let Some(stripped) = url.strip_prefix('/') {
             PathBuf::from(&self.public_dir).join(stripped).to_slash_lossy().into_owned()
           } else {
-            let path = PathBuf::from(args.id).parent().unwrap().join(&url).normalize();
-            path.to_slash_lossy().into_owned()
+            let joined = PathBuf::from(args.id).parent().unwrap().join(&url);
+            joined.normalize().to_slash_lossy().into_owned()
           }
         })
       };

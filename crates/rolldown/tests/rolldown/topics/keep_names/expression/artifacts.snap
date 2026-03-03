@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region a.js
 var Foo$2 = class {
@@ -26,7 +25,6 @@ var fn$2 = /* @__PURE__ */ __name(function() {}, "fn");
 var fn2$1 = /* @__PURE__ */ __name(function() {}, "fn2");
 assert.strictEqual(fn$2.name, "fn");
 assert.strictEqual(fn2$1.name, "fn2");
-
 //#endregion
 //#region b.js
 var Foo$1 = class Foo {};
@@ -37,13 +35,12 @@ var fn$1 = function fn() {};
 var fn2 = function() {};
 assert.strictEqual(fn$1.name, "fn");
 assert.strictEqual(fn2.name, "fn2");
-
 //#endregion
 //#region main.js
 var Foo = class {};
 assert.strictEqual(Foo.name, "Foo");
 var fn = function() {};
 assert.strictEqual(fn.name, "fn");
-
 //#endregion
+
 ```

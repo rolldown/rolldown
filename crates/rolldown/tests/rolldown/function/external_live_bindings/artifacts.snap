@@ -6,16 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 let node_fs = require("node:fs");
-
 //#region main.js
 const nonExternal = "nonExternal";
-
 //#endregion
 exports.nonExternal = nonExternal;
 exports.read = node_fs.read;
 exports.readFile = node_fs.readFile;
 exports.readFileSync = node_fs.readFileSync;
 exports.readSync = node_fs.readSync;
+
 ```

@@ -1,0 +1,12 @@
+{
+  "name": "bundle-analyzer-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rolldown -c rolldown.config.js"
+  },
+  "devDependencies": {
+    "rolldown": "workspace:*"
+  }
+}

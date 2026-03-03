@@ -2,8 +2,8 @@ import { stripAnsi } from 'consola/utils';
 import { $, execa } from 'execa';
 import fs from 'node:fs';
 import path from 'node:path';
-import { testsDir, waitUtil } from 'rolldown-tests/utils';
-import { describe, expect, it, test } from 'vitest';
+import { testsDir } from 'rolldown-tests/utils';
+import { describe, expect, it, test, vi } from 'vitest';
 
 function cliFixturesDir(...joined: string[]) {
   return testsDir('cli/fixtures', ...joined);
@@ -150,6 +150,58 @@ describe('cli options for bundling', () => {
       expect.unreachable();
     } catch (error: any) {
       expect(error.message).matchSnapshot();
+    }
+  });
+
+  it('should error when -d option is used without a value', async () => {
+    const cwd = cliFixturesDir('cli-multi-entries');
+    try {
+      await $({ cwd })`rolldown 1.ts -d`;
+      expect.unreachable();
+    } catch (error: any) {
+      expect(error.stdout).toContain('Option `--dir` requires a value');
+    }
+  });
+
+  it('should error when --dir option is used without a value', async () => {
+    const cwd = cliFixturesDir('cli-multi-entries');
+    try {
+      await $({ cwd })`rolldown 1.ts --dir`;
+      expect.unreachable();
+    } catch (error: any) {
+      expect(error.stdout).toContain('Option `--dir` requires a value');
+    }
+  });
+
+  it('should work when -d option is used with a value', async () => {
+    const cwd = cliFixturesDir('cli-multi-entries');
+    const status = await $({ cwd })`rolldown 1.ts -d dist`;
+    expect(status.exitCode).toBe(0);
+  });
+
+  it('should work when -d option is used with current directory', async () => {
+    const cwd = cliFixturesDir('cli-multi-entries');
+    const status = await $({ cwd })`rolldown 1.ts -d .`;
+    expect(status.exitCode).toBe(0);
+  });
+
+  it('should error when -o option is used without a value', async () => {
+    const cwd = cliFixturesDir('cli-multi-entries');
+    try {
+      await $({ cwd })`rolldown 1.ts -o`;
+      expect.unreachable();
+    } catch (error: any) {
+      expect(error.stdout).toContain('Option `--file` requires a value');
+    }
+  });
+
+  it('should error when --file option is used without a value', async () => {
+    const cwd = cliFixturesDir('cli-multi-entries');
+    try {
+      await $({ cwd })`rolldown 1.ts --file`;
+      expect.unreachable();
+    } catch (error: any) {
+      expect(error.stdout).toContain('Option `--file` requires a value');
     }
   });
 });
@@ -328,7 +380,7 @@ describe('watch cli', () => {
       reject: false,
       cancelSignal: controller.signal,
     })`rolldown index.ts -d dist -w -s`;
-    await waitUtil(() => {
+    await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true);
     });
@@ -343,7 +395,7 @@ describe('watch cli', () => {
       reject: false,
       cancelSignal: controller.signal,
     })`rolldown -c rolldown.config.ts -d watch-dist-options -w`;
-    await waitUtil(() => {
+    await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-options/esm.js'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'watch-dist-options/cjs.js'))).toBe(true);
     });
@@ -358,7 +410,7 @@ describe('watch cli', () => {
       reject: false,
       cancelSignal: controller.signal,
     })`rolldown -c rolldown.config.ts -d watch-dist-output -w`;
-    await waitUtil(() => {
+    await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-output/esm.js'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'watch-dist-output/cjs.js'))).toBe(true);
     });

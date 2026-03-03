@@ -46,14 +46,18 @@ pub fn determine_export_mode(
       } else if export_names.len() == 1 && export_names[0].as_str() == "default" {
         Ok(OutputExports::Default)
       } else {
-        let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
-        if has_default_export {
-          let name =
-            ctx.options.name.as_deref().map(ArcStr::from).unwrap_or_else(|| ArcStr::from("chunk"));
+        if !ctx.options.format.is_esm()
+          && export_names.iter().any(|name| name.as_str() == "default")
+        {
           warnings.push(
             BuildDiagnostic::mixed_export(
               module.id.to_string(),
-              name,
+              ctx
+                .options
+                .name
+                .as_deref()
+                .map(ArcStr::from)
+                .unwrap_or_else(|| ArcStr::from("chunk")),
               module.stable_id.to_string(),
               export_names.iter().map(|name| name.as_str().into()).collect(),
             )

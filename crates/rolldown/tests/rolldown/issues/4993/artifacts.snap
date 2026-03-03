@@ -7,6 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import * as Rollup from "rollup";
-
 export { Rollup };
+
 ```

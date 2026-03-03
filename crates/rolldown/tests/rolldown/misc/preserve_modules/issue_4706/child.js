@@ -1,2 +1,2 @@
-const m = require('./cjs.js')
-console.log(m)
+const m = require('./cjs.js');
+console.log(m);

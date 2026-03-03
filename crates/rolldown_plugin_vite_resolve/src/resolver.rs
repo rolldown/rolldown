@@ -185,6 +185,7 @@ fn get_resolve_options(
     } else {
       vec!["index".to_string()]
     },
+    node_path: false,
     prefer_relative: additional_options.prefer_relative,
     roots: if base_options.as_src { vec![base_options.root.clone()] } else { vec![] },
     symlinks: !base_options.preserve_symlinks,
@@ -281,7 +282,12 @@ impl Resolver {
 
     let inner_resolver = if external { &self.inner_for_external } else { &self.inner };
     let result = if let Some(importer) = importer {
-      inner_resolver.resolve_file(self.root.join(importer), specifier)
+      // check if `is_absolute` to avoid extra `join` overhead
+      if Path::new(importer).is_absolute() {
+        inner_resolver.resolve_file(importer, specifier)
+      } else {
+        inner_resolver.resolve_file(self.root.join(importer), specifier)
+      }
     } else {
       inner_resolver.resolve(&self.root, specifier)
     };
@@ -321,7 +327,12 @@ impl Resolver {
     // this allows resolving `@pkg/pkg/foo.scss` to `@pkg/pkg/_foo.scss`, which is probably not allowed by sass's resolver
     // but that's an edge case so we ignore it here
     if let Some(importer) = importer {
-      inner_resolver.resolve_file(self.root.join(importer), path_with_prefix)
+      // check if `is_absolute` to avoid extra `join` overhead
+      if Path::new(importer).is_absolute() {
+        inner_resolver.resolve_file(importer, path_with_prefix)
+      } else {
+        inner_resolver.resolve_file(self.root.join(importer), path_with_prefix)
+      }
     } else {
       inner_resolver.resolve(&self.root, path_with_prefix)
     }

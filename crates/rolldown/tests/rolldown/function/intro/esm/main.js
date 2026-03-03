@@ -1,1 +1,1 @@
-export default 'banner'
+export default 'banner';

@@ -8,6 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region entry.jsx
 console.log(<div x={x} />, <div x={"y"} />, <div x={true} />, <div {...x} />, <div>{x}</div>, <>{x}</>, <div>before{}after</div>, <div>before{}after</div>, <div>before{}after</div>, <>before{}after</>, <>before{}after</>, <>before{}after</>);
-
 //#endregion
+
 ```

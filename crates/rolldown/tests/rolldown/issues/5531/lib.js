@@ -1,1 +1,1 @@
-require('./leaflet-toolbar.js')
+require('./leaflet-toolbar.js');

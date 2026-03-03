@@ -73,6 +73,14 @@ const members = [
     ]
   },
   {
+    name: 'Shuyuan Wang (h-a-n-a)',
+    avatar: 'https://www.github.com/h-a-n-a.png',
+    links: [
+      { icon: 'github', link: 'https://github.com/h-a-n-a' },
+      { icon: 'twitter', link: 'https://x.com/_h_ana___' }
+    ]
+  },
+  {
     name: 'Alexander Lichter',
     avatar: 'https://www.github.com/TheAlexLichter.png',
     links: [

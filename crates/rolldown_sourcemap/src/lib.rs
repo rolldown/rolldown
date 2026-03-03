@@ -11,6 +11,40 @@ pub use source_joiner::SourceJoiner;
 
 pub use crate::source::{Source, SourceMapSource};
 
+/// Strips the first `lines` destination lines from the sourcemap, decrementing all remaining
+/// destination line numbers accordingly. Used to re-anchor a sourcemap after removing a
+/// prefix (e.g. a shebang line) from the generated code.
+pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, lines: u32) -> SourceMap {
+  if lines == 0 {
+    return sourcemap;
+  }
+
+  let tokens: Box<[Token]> = sourcemap
+    .get_tokens()
+    .filter(|t| t.get_dst_line() >= lines)
+    .map(|token| {
+      Token::new(
+        token.get_dst_line() - lines,
+        token.get_dst_col(),
+        token.get_src_line(),
+        token.get_src_col(),
+        token.get_source_id(),
+        token.get_name_id(),
+      )
+    })
+    .collect();
+
+  SourceMap::new(
+    sourcemap.get_file().cloned(),
+    sourcemap.get_names().cloned().collect(),
+    sourcemap.get_source_root().map(str::to_owned),
+    sourcemap.get_sources().cloned().collect(),
+    sourcemap.get_source_contents().map(|c| c.map(Arc::clone)).collect(),
+    tokens,
+    None,
+  )
+}
+
 use rolldown_utils::rustc_hash::FxHashMapExt;
 
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>

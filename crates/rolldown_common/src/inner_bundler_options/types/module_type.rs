@@ -24,6 +24,7 @@ pub enum ModuleType {
   Empty,
   Css,
   Asset,
+  Copy,
   Custom(String),
 }
 
@@ -42,6 +43,7 @@ impl ModuleType {
       "empty" => Ok(Self::Empty),
       "css" => Ok(Self::Css),
       "asset" => Ok(Self::Asset),
+      "copy" => Ok(Self::Copy),
       _ => Err(anyhow::format_err!("Unknown module type: {s}")),
     }
   }
@@ -62,6 +64,7 @@ impl ModuleType {
       "empty" => Self::Empty,
       "css" => Self::Css,
       "asset" => Self::Asset,
+      "copy" => Self::Copy,
       _ => Self::Custom(s.as_ref().to_string()),
     }
   }
@@ -82,6 +85,7 @@ impl Display for ModuleType {
       ModuleType::Empty => write!(f, "empty"),
       ModuleType::Css => write!(f, "css"),
       ModuleType::Asset => write!(f, "asset"),
+      ModuleType::Copy => write!(f, "copy"),
       ModuleType::Custom(custom_type) => write!(f, "{custom_type}"),
     }
   }

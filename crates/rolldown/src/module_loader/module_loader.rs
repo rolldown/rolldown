@@ -11,11 +11,11 @@ use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::{
-  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult, FlatOptions,
-  HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImportedExports, ImporterRecord,
-  Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
-  PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief,
-  RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, SymbolRefDb,
+  EcmaModuleAstUsage, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule,
+  ExternalModuleTaskResult, FlatOptions, HybridIndexVec, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, ImportedExports, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg,
+  ModuleType, NormalModuleTaskResult, PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId,
+  RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, SymbolRefDb,
   SymbolRefDbForModule,
 };
 use rolldown_ecmascript::EcmaAst;
@@ -105,6 +105,7 @@ pub struct ModuleLoader<'a> {
   cache: &'a mut ScanStageCache,
   pub flat_options: FlatOptions,
   pub magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+  tla_module_count: usize,
 }
 
 pub struct ModuleLoaderOutput {
@@ -125,6 +126,8 @@ pub struct ModuleLoaderOutput {
   /// e.g. https://stackblitz.com/edit/rolldown-rolldown-starter-stackblitz-jqg7vnkw?file=rolldown.config.mjs,src%2Findex.js,package.json
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
+  pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  pub tla_module_count: usize,
 }
 
 impl Drop for ModuleLoader<'_> {
@@ -151,7 +154,7 @@ impl<'a> ModuleLoader<'a> {
     }
 
     let flat_options = FlatOptions::from_shared_options(&options);
-    let symbol_ref_db = SymbolRefDb::new(options.transform_options.is_jsx_preserve());
+    let symbol_ref_db = SymbolRefDb::new();
     let meta = TaskContextMeta {
       replace_global_define_config: if options.define.is_empty() {
         None
@@ -184,6 +187,7 @@ impl<'a> ModuleLoader<'a> {
       new_added_modules_from_partial_scan: FxIndexSet::default(),
       flat_options,
       magic_string_tx,
+      tla_module_count: 0,
     })
   }
 
@@ -357,19 +361,15 @@ impl<'a> ModuleLoader<'a> {
           let NormalModuleTaskResult {
             mut module,
             mut barrel_info,
-            ecma_related: EcmaRelated { ast, symbols, mut dynamic_import_rec_exports_usage },
+            ecma_related:
+              EcmaRelated { ast, symbols, mut dynamic_import_rec_exports_usage, preserve_jsx },
             resolved_deps,
             raw_import_records,
             warnings,
           } = *task_result;
           all_warnings.extend(warnings);
 
-          // Make this.emitFile generated module as user defined entry if needed
           let module_idx = module.idx();
-          if user_defined_entry_ids.contains(&module_idx) {
-            let normal_module = module.as_normal_mut().expect("should be normal module");
-            normal_module.is_user_defined_entry = true;
-          }
 
           // remove importers from previous scan
           if !self.is_full_scan
@@ -385,6 +385,9 @@ impl<'a> ModuleLoader<'a> {
           }
 
           let normal_module = module.as_normal().unwrap();
+          if normal_module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
+            self.tla_module_count += 1;
+          }
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
 
           let mut tracked_records = FxHashMap::default();
@@ -495,6 +498,9 @@ impl<'a> ModuleLoader<'a> {
           }
 
           self.symbol_ref_db.store_local_db(module_idx, symbols);
+          if preserve_jsx {
+            self.symbol_ref_db.set_has_module_preserve_jsx();
+          }
           self.remaining -= 1;
         }
         ModuleLoaderMsg::ExternalModuleDone(task_result) => {
@@ -577,19 +583,7 @@ impl<'a> ModuleLoader<'a> {
 
           let module_idx = match result {
             Ok(resolved_id) => {
-              let idx =
-                self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries);
-              // Make this.emitFile generated module as user defined entry if needed
-              if let Some(module) = self
-                .intermediate_normal_modules
-                .modules
-                .get_mut(idx)
-                .as_mut()
-                .and_then(|module| module.as_normal_mut())
-              {
-                module.is_user_defined_entry = true;
-              }
-              idx
+              self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries)
             }
             Err(e) => {
               errors.push(e);
@@ -705,10 +699,10 @@ impl<'a> ModuleLoader<'a> {
       let Some(module) = module.as_normal() else {
         return;
       };
-      self
-        .shared_context
-        .plugin_driver
-        .set_module_info(&module.id, Arc::new(module.to_module_info(None)));
+      self.shared_context.plugin_driver.set_module_info(
+        &module.id,
+        Arc::new(module.to_module_info(None, user_defined_entry_ids.contains(&module.idx))),
+      );
     });
 
     // Collect module indices from emitted entries to filter dynamic imports
@@ -758,6 +752,8 @@ impl<'a> ModuleLoader<'a> {
         &mut self.new_added_modules_from_partial_scan,
       ),
       flat_options: self.flat_options,
+      user_defined_entry_modules: user_defined_entry_ids,
+      tla_module_count: self.tla_module_count,
     })
   }
 

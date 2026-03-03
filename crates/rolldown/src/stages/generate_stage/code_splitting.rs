@@ -12,11 +12,11 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason,
-  PreserveEntrySignatures, SymbolRef, WrapKind,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
-  BitSet, commondir,
+  BitSet, IndexBitSet, commondir,
   index_vec_ext::IndexVecRefExt,
   indexmap::FxIndexMap,
   rayon::ParallelIterator,
@@ -116,7 +116,10 @@ impl GenerateStage<'_> {
         );
         chunk.add_creation_reason(
           ChunkCreationReason::PreserveModules {
-            is_user_defined_entry: module.is_user_defined_entry,
+            is_user_defined_entry: self
+              .link_output
+              .user_defined_entry_modules
+              .contains(&module.idx),
             module_stable_id: &module.stable_id,
           },
           self.options,
@@ -182,8 +185,12 @@ impl GenerateStage<'_> {
 
     chunk_graph
       .chunk_table
-      .iter_mut()
-      .sorted_by(|a, b| {
+      .iter_mut_enumerated()
+      .filter(|(chunk_idx, _chunk)| {
+        chunk_graph.post_chunk_optimization_operations.get(chunk_idx).copied()
+          != Some(PostChunkOptimizationOperation::Removed)
+      })
+      .sorted_by(|(_ai, a), (_bi, b)| {
         let a_should_be_first = Ordering::Less;
         let b_should_be_first = Ordering::Greater;
 
@@ -224,7 +231,7 @@ impl GenerateStage<'_> {
         }
       })
       .enumerate()
-      .for_each(|(i, chunk)| {
+      .for_each(|(i, (_chunk_idx, chunk))| {
         chunk.exec_order = i.try_into().expect("Too many chunks, u32 overflowed.");
       });
     // The esbuild using `Chunk#bits` to sorted chunks, but the order of `Chunk#bits` is not stable, eg `BitSet(0) 00000001_00000000` > `BitSet(8) 00000000_00000001`. It couldn't ensure the order of dynamic chunks and common chunks.
@@ -443,7 +450,7 @@ impl GenerateStage<'_> {
             .stmt_infos
             .declared_stmts_by_symbol(ns)
             .iter()
-            .all(|item| self.link_output.metas[importer.idx].stmt_info_included[*item]);
+            .all(|item| self.link_output.metas[importer.idx].stmt_info_included.has_bit(*item));
           is_stmt_included.then_some(ns)
         })
         // Determine safely merged cjs ns binding should put in where
@@ -650,7 +657,9 @@ impl GenerateStage<'_> {
         if !self.link_output.metas[item.idx].is_included {
           return None;
         }
-        if self.options.preserve_modules || item.is_user_defined_entry {
+        if self.options.preserve_modules
+          || self.link_output.user_defined_entry_modules.contains(&item.idx)
+        {
           Path::new(item.id.as_ref()).is_absolute().then_some(item.id.as_ref())
         } else {
           None
@@ -713,7 +722,8 @@ impl GenerateStage<'_> {
         module.idx,
       );
 
-      let preserve_entry_signature = if module.is_user_defined_entry {
+      let is_user_defined_entry = self.link_output.user_defined_entry_modules.contains(&module.idx);
+      let preserve_entry_signature = if is_user_defined_entry {
         match finalized_preserve_entry_signatures {
           PreserveEntrySignatures::AllowExtension
           | PreserveEntrySignatures::Strict
@@ -754,7 +764,7 @@ impl GenerateStage<'_> {
       );
       chunk.add_creation_reason(
         ChunkCreationReason::Entry {
-          is_user_defined_entry: module.is_user_defined_entry,
+          is_user_defined_entry,
           entry_module_id: &module.debug_id,
           name: entry_point.name.as_ref(),
         },
@@ -793,13 +803,13 @@ impl GenerateStage<'_> {
       );
     }
 
-    let mut module_to_assigned: IndexVec<ModuleIdx, bool> =
-      oxc_index::index_vec![false; self.link_output.module_table.modules.len()];
+    let mut module_is_assigned: IndexBitSet<ModuleIdx> =
+      IndexBitSet::new(self.link_output.module_table.modules.len());
 
     self
       .apply_manual_code_splitting(
         index_splitting_info,
-        &mut module_to_assigned,
+        &mut module_is_assigned,
         chunk_graph,
         input_base,
       )
@@ -823,11 +833,11 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      if module_to_assigned[normal_module.idx] {
+      if module_is_assigned.has_bit(normal_module.idx) {
         continue;
       }
 
-      module_to_assigned[normal_module.idx] = true;
+      module_is_assigned.set_bit(normal_module.idx);
 
       let bits = &index_splitting_info[normal_module.idx].bits;
       debug_assert!(
@@ -843,39 +853,6 @@ impl GenerateStage<'_> {
         );
         if allow_chunk_optimization {
           temp_chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
-        }
-      } else if normal_module.is_user_defined_entry
-        && self.link_output.metas[normal_module.idx].wrap_kind().is_none()
-        // Don't apply this optimization when multiple entries point to the same module
-        // (duplicate entries). In that case, we need the normal chunk optimization to
-        // ensure the second entry properly imports from the first.
-        && self
-          .link_output
-          .entries
-          .get(&normal_module.idx)
-          .is_some_and(|entries| entries.len() <= 1)
-      {
-        // User-defined entry modules that are NOT wrapped should stay in their own entry chunk,
-        // even when reachable from multiple entries. This avoids creating unnecessary
-        // common chunks that would turn the entry into a facade.
-        //
-        // Wrapped modules (CJS or ESM wrapping for circular dependencies) need to go through
-        // the normal chunk optimization to ensure proper execution semantics.
-        let entry_chunk_idx = chunk_graph.entry_module_to_entry_chunk.get(&normal_module.idx);
-        debug_assert!(
-          entry_chunk_idx.is_some(),
-          "User-defined entry module should have an entry chunk"
-        );
-        if let Some(&entry_chunk_idx) = entry_chunk_idx {
-          chunk_graph.add_module_to_chunk(
-            normal_module.idx,
-            entry_chunk_idx,
-            self.link_output.metas[normal_module.idx].depended_runtime_helper,
-          );
-
-          if allow_chunk_optimization {
-            temp_chunk_graph.add_module_to_chunk(normal_module.idx, entry_chunk_idx);
-          }
         }
       } else if allow_chunk_optimization {
         temp_chunk_graph.init_module_assignment(normal_module.idx, bits);
@@ -898,7 +875,6 @@ impl GenerateStage<'_> {
 
     if allow_chunk_optimization {
       temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
-
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,
@@ -906,11 +882,11 @@ impl GenerateStage<'_> {
         &mut temp_chunk_graph,
       );
 
-      self.optimize_facade_dynamic_entry_chunks(
+      self.optimize_facade_entry_chunks(
         chunk_graph,
         index_splitting_info,
         input_base,
-        &mut module_to_assigned,
+        &mut module_is_assigned,
         &temp_chunk_graph,
       );
     }

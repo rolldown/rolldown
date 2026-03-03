@@ -240,6 +240,57 @@ Now, the libraries are split into separate chunks, and the browser can download 
 
 ### Why there's always a `runtime.js` chunk?
 
+```dot
+digraph {
+    bgcolor="transparent";
+    rankdir=TB;
+    node [shape=box, style="filled,rounded", fontname="Arial", fontsize=12, margin="0.2,0.1", color="${#3c3c43|#dfdfd6}", fontcolor="${#3c3c43|#dfdfd6}"];
+    edge [fontname="Arial", fontsize=10, color="${#3c3c43|#dfdfd6}", fontcolor="${#3c3c43|#dfdfd6}"];
+    compound=true;
+
+    subgraph cluster_problem {
+        label="Without runtime.js";
+        labeljust="l";
+        fontname="Arial";
+        fontsize=12;
+        fontcolor="${#3c3c43|#dfdfd6}";
+        style="dashed,rounded";
+        color="${#cb2431|#f85149}";
+
+        p_main [label="main.js", fillcolor="${#fff0e0|#4a2a0a}"];
+        p_first [label="first.js", fillcolor="${#dbeafe|#1e3a5f}"];
+        p_second [label="second.js\n(__esm, __export defined here)", fillcolor="${#dbeafe|#1e3a5f}"];
+
+        p_main -> p_first [label="imports"];
+        p_main -> p_second [label="imports __esm"];
+        p_first -> p_second [label="imports"];
+        p_second -> p_first [label="imports", color="${#cb2431|#f85149}", fontcolor="${#cb2431|#f85149}", style=dashed];
+    }
+
+    subgraph cluster_solution {
+        label="With runtime.js";
+        labeljust="l";
+        fontname="Arial";
+        fontsize=12;
+        fontcolor="${#3c3c43|#dfdfd6}";
+        style="dashed,rounded";
+        color="${#22863a|#3fb950}";
+
+        s_runtime [label="runtime.js\n(__esm, __export)", fillcolor="${#dcfce7|#14532d}"];
+        s_main [label="main.js", fillcolor="${#fff0e0|#4a2a0a}"];
+        s_first [label="first.js", fillcolor="${#dbeafe|#1e3a5f}"];
+        s_second [label="second.js", fillcolor="${#dbeafe|#1e3a5f}"];
+
+        s_main -> s_runtime [label="imports"];
+        s_main -> s_first [label="imports"];
+        s_first -> s_runtime [label="imports"];
+        s_first -> s_second [label="imports"];
+        s_second -> s_runtime [label="imports"];
+        s_second -> s_first [label="imports"];
+    }
+}
+```
+
 tl;dr: If you used manual code splitting with groups, rolldown will forcefully generate a `runtime.js` chunk to ensure that the runtime code is always executed before any other chunks.
 
 The `runtime.js` chunk is a special chunk that **only** contains the runtime code necessary for loading and executing your application. It is generated forcefully by the bundler to ensure that the runtime code is always executed before any other chunks.
@@ -366,6 +417,7 @@ With `includeDependenciesRecursively: false`, depended modules of a group might 
 
 ### Why is the chunk bigger than `maxSize`?
 
-If the input has a module that is bigger than `maxSize`, the generated chunk will contain that module and thus the chunk will be bigger than `maxSize`.
+`maxSize` acts as a target rather than a strict limit. A chunk may exceed this value in the following scenarios:
 
-This can be improved by splitting a single module into multiple chunks. But this is not supported yet.
+- If a single module is larger than `maxSize`, the resulting chunk will exceed the limit. Rolldown does not currently support splitting a single module into multiple chunks.
+- Rolldown prioritizes the `minSize` configuration. If splitting a large chunk would result in new chunks that fall below the `minSize` threshold, Rolldown will keep the original chunk undivided to avoid generating excessively small files.

@@ -21,8 +21,19 @@ pub fn apply_inner_plugins(
   options: &NormalizedBundlerOptions,
   user_plugins: &mut Vec<SharedPluginable>,
 ) -> ApplyInnerPluginsReturn {
-  let mut before_user_plugins: Vec<SharedPluginable> =
-    vec![Arc::new(rolldown_plugin_oxc_runtime::OxcRuntimePlugin)];
+  let mut before_user_plugins: Vec<SharedPluginable> = vec![
+    Arc::new(rolldown_plugin_copy_module::CopyModulePlugin::new(&options.module_types)),
+    Arc::new(rolldown_plugin_data_url::DataUrlPlugin::default()),
+    Arc::new(rolldown_plugin_oxc_runtime::OxcRuntimePlugin),
+  ];
+
+  if let Some(config) = &options.experimental.chunk_import_map {
+    before_user_plugins.push(Arc::new(rolldown_plugin_chunk_import_map::ChunkImportMapPlugin {
+      base_url: config.base_url.clone(),
+      file_name: config.file_name.clone(),
+      ..Default::default()
+    }));
+  }
 
   let mut lazy_compilation_context = None;
 
@@ -35,19 +46,9 @@ pub fn apply_inner_plugins(
     }
   }
 
-  if let Some(config) = &options.experimental.chunk_import_map {
-    before_user_plugins.push(Arc::new(rolldown_plugin_chunk_import_map::ChunkImportMapPlugin {
-      base_url: config.base_url.clone(),
-      file_name: config.file_name.clone(),
-      ..Default::default()
-    }));
-  }
-
   if !before_user_plugins.is_empty() {
     user_plugins.splice(0..0, before_user_plugins);
   }
-
-  user_plugins.push(Arc::new(rolldown_plugin_data_uri::DataUriPlugin::default()));
 
   ApplyInnerPluginsReturn { lazy_compilation_context }
 }

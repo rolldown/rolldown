@@ -1,14 +1,14 @@
 {
-    "config": {
-        "input": [
-            {
-                "name": "main",
-                "import": "main.mjs"
-            },
-            {
-                "name": "entry",
-                "import": "entry.js"
-            }
-        ]
-    }
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "main.mjs"
+      },
+      {
+        "name": "entry",
+        "import": "entry.js"
+      }
+    ]
+  }
 }

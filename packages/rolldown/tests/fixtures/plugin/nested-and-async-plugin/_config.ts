@@ -1,4 +1,4 @@
-import { InputOptions } from 'rolldown';
+import type { InputOptions } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 
 const pluginA = {
@@ -21,13 +21,10 @@ const pluginB = Promise.resolve({
 
 module.exports = defineTest({
   config: {
-    plugins: [
-      [Promise.resolve(pluginA)],
-      [undefined, Promise.resolve([null])],
-      ,
-    ],
+    // oxlint-disable-next-line no-sparse-arrays
+    plugins: [[Promise.resolve(pluginA)], [undefined, Promise.resolve([null])], ,],
   },
-  afterTest: (output) => {
+  afterTest: (_output) => {
     import('./assert.mjs');
   },
 });

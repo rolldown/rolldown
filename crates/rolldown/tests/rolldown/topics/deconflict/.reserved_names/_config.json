@@ -1,7 +1,5 @@
 {
   "config": {
-    "external": [
-      "assert"
-    ]
+    "external": ["assert"]
   }
 }

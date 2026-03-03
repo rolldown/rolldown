@@ -1,2 +1,2 @@
-export * from './commonjs.js'
-export * from './commonjs2.js'
+export * from './commonjs.js';
+export * from './commonjs2.js';

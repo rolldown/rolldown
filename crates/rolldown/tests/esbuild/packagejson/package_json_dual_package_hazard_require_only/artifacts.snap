@@ -13,10 +13,9 @@ var module_default;
 var init_module = __esmMin((() => {
 	module_default = "module";
 }));
-
 //#endregion
 //#region src/entry.js
 console.log((init_module(), __toCommonJS(module_exports)));
-
 //#endregion
+
 ```

@@ -13,7 +13,7 @@ const obj = {
 };
 const result1 = /* @__PURE__ */ React.createElement(obj.Foo, null);
 const result2 = /* @__PURE__ */ React.createElement(obj.bar.Baz, null);
-
 //#endregion
 export { result1, result2 };
+
 ```

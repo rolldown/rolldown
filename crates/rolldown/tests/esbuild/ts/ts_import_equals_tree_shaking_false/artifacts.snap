@@ -22,10 +22,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { foo } from "pkg";
-
 //#region entry.ts
 var used = foo.used;
-
 //#endregion
 export { used };
+
 ```

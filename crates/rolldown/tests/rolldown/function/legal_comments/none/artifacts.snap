@@ -12,6 +12,6 @@ bar;
 foo;
 bar;
 foo(a, b);
-
 //#endregion
+
 ```

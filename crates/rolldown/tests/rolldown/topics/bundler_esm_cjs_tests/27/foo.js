@@ -1,2 +1,1 @@
-module[Math.random() < 1 && 'exports'] =
-  { default: { bar: 123 } }
+module[Math.random() < 1 && 'exports'] = { default: { bar: 123 } };

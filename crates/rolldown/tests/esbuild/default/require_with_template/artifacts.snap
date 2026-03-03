@@ -11,11 +11,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.x = 123;
 }));
-
 //#endregion
 //#region a.js
 console.log(require_b());
 console.log(require_b());
-
 //#endregion
+
 ```

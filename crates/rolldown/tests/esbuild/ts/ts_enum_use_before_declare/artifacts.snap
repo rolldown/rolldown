@@ -17,7 +17,7 @@ var Foo = /* @__PURE__ */ function(Foo) {
 function after() {
 	console.log(Foo.FOO);
 }
-
 //#endregion
 export { after, before };
+
 ```

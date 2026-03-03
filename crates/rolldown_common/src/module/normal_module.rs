@@ -1,11 +1,10 @@
 use std::{fmt::Debug, sync::Arc};
 
-use crate::css::css_view::CssView;
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
   AssetView, DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx,
-  ImportRecordMeta, LegalComments, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions,
-  RawImportRecord, ResolvedId, StableModuleId, StmtInfoIdx,
+  ImportRecordMeta, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord,
+  ResolvedId, StableModuleId, StmtInfoIdx,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -15,6 +14,7 @@ use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_sourcemap::collapse_sourcemaps;
+use rolldown_utils::IndexBitSet;
 use rustc_hash::FxHashSet;
 use string_wizard::SourceMapOptions;
 
@@ -22,7 +22,6 @@ use string_wizard::SourceMapOptions;
 pub struct NormalModule {
   pub exec_order: u32,
   pub idx: ModuleIdx,
-  pub is_user_defined_entry: bool,
   pub id: ModuleId,
   /// `stable_id` is calculated based on `id` to be stable across machine and os.
   pub stable_id: StableModuleId,
@@ -31,7 +30,6 @@ pub struct NormalModule {
   pub repr_name: String,
   pub module_type: ModuleType,
   pub ecma_view: EcmaView,
-  pub css_view: Option<CssView>,
   pub asset_view: Option<AssetView>,
   pub originative_resolved_id: ResolvedId,
 }
@@ -57,7 +55,7 @@ impl NormalModule {
   pub fn to_debug_normal_module_for_tree_shaking(
     &self,
     is_included: bool,
-    stmt_info_included: &IndexVec<StmtInfoIdx, bool>,
+    stmt_info_included: &IndexBitSet<StmtInfoIdx>,
   ) -> DebugNormalModuleForTreeShaking {
     DebugNormalModuleForTreeShaking {
       id: self.repr_name.clone(),
@@ -66,7 +64,9 @@ impl NormalModule {
         .ecma_view
         .stmt_infos
         .iter_enumerated()
-        .map(|(idx, stmt)| stmt.to_debug_stmt_info_for_tree_shaking(stmt_info_included[idx]))
+        .map(|(idx, stmt)| {
+          stmt.to_debug_stmt_info_for_tree_shaking(stmt_info_included.has_bit(idx))
+        })
         .collect(),
     }
   }
@@ -74,11 +74,12 @@ impl NormalModule {
   pub fn to_module_info(
     &self,
     raw_import_records: Option<&IndexVec<ImportRecordIdx, RawImportRecord>>,
+    is_entry: bool,
   ) -> ModuleInfo {
     ModuleInfo {
       code: Some(self.ecma_view.source.clone()),
       id: self.id.clone(),
-      is_entry: self.is_user_defined_entry,
+      is_entry,
       importers: {
         let mut value = self.ecma_view.importers.clone();
         value.sort_unstable();
@@ -112,6 +113,7 @@ impl NormalModule {
         }
         exports
       },
+      input_format: self.ecma_view.exports_kind,
     }
   }
 
@@ -198,8 +200,6 @@ impl NormalModule {
       ModuleRenderArgs::Ecma { ast } => {
         let enable_sourcemap = options.sourcemap.is_some() && !self.is_virtual();
 
-        let print_legal_comments = matches!(options.legal_comments, LegalComments::Inline);
-
         // Because oxc codegen sourcemap is last of sourcemap chain,
         // If here no extra sourcemap need remapping, we using it as final module sourcemap.
         // So here make sure using correct `source_name` and `source_content.
@@ -208,7 +208,7 @@ impl NormalModule {
           PrintOptions {
             sourcemap: enable_sourcemap,
             filename: self.id.to_string(),
-            print_legal_comments,
+            comments: options.comments.into(),
             initial_indent,
           },
         );

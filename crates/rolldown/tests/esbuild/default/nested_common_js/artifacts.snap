@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -15,7 +14,6 @@ var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		return 123;
 	};
 }));
-
 //#endregion
 //#region entry.js
 function nestedScope() {
@@ -23,6 +21,6 @@ function nestedScope() {
 	assert.equal(fn(), 123);
 }
 nestedScope();
-
 //#endregion
+
 ```

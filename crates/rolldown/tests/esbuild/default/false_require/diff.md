@@ -8,8 +8,8 @@
 ```js
 //#region entry.js
 ((require) => require("/test.txt"))();
-
 //#endregion
+
 ```
 ### diff
 ```diff

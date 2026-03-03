@@ -1,1 +1,1 @@
-export default 'object-assign-shim'
+export default 'object-assign-shim';

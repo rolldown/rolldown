@@ -1,3 +1,3 @@
-import("./shared.js").then(({ func }) => {
+import('./shared.js').then(({ func }) => {
   func();
 });

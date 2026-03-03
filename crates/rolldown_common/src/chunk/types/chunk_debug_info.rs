@@ -12,6 +12,8 @@ pub enum FacadeChunkEliminationReason {
   DynamicEntryMergedIntoUserDefinedEntry,
   /// Dynamic entry chunk merged into common chunk.
   DynamicEntryMergedIntoCommonChunk,
+  /// Common chunk merged into facade user-defined entry chunk.
+  CommonChunkMergedIntoFacadeUserDefinedEntry,
 }
 
 impl fmt::Display for FacadeChunkEliminationReason {
@@ -28,6 +30,9 @@ impl fmt::Display for FacadeChunkEliminationReason {
       }
       FacadeChunkEliminationReason::DynamicEntryMergedIntoCommonChunk => {
         write!(f, "Dynamic entry chunk merged into common chunk")
+      }
+      FacadeChunkEliminationReason::CommonChunkMergedIntoFacadeUserDefinedEntry => {
+        write!(f, "Common chunk merged into facade user-defined entry chunk")
       }
     }
   }

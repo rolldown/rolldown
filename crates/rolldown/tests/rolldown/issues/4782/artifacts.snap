@@ -7,30 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region leaflet.js
-var require_leaflet = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	(function(global, factory) {
-		typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.leaflet = {}));
-	})(exports, function(exports$1) {
-		"use strict";
-		exports$1.foo = "foo";
-		global.L = exports$1;
-	});
-}));
-
-//#endregion
-//#region leaflet-toolbar.js
-var import_leaflet = require_leaflet();
-(function(t) {
-	"use strict";
-	t.L.Toolbar = L.foo;
-})(global);
-
-//#endregion
 //#region lib.js
 console.log("hello", !!L);
-
 //#endregion
+
 ```
 
 ## main.js
@@ -38,6 +18,6 @@ console.log("hello", !!L);
 ```js
 //#region main.js
 import("./lib.js");
-
 //#endregion
+
 ```

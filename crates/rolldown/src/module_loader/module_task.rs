@@ -2,13 +2,12 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use oxc::span::Span;
-use oxc_index::IndexVec;
 use sugar_path::SugarPath as _;
 
 use rolldown_common::{
-  FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule,
-  NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, SourcemapChainElement, StrOrBytes,
-  try_extract_lazy_barrel_info,
+  ExportsKind, FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
+  NormalModule, NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, SourcemapChainElement,
+  StrOrBytes, try_extract_lazy_barrel_info,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
@@ -18,7 +17,6 @@ use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSe
 
 use crate::{
   asset::create_asset_view,
-  css::create_css_view,
   ecmascript::ecma_module_view_factory::{CreateEcmaViewReturn, create_ecma_view},
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
   utils::{load_source::load_source, transform_source::transform_source},
@@ -105,37 +103,31 @@ impl ModuleTask {
         imported_ids: FxIndexSet::default(),
         dynamically_imported_ids: FxIndexSet::default(),
         exports: vec![],
+        input_format: ExportsKind::None,
       }),
     );
 
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
     let (mut source, module_type) = self
-      .load_source_without_cache(
-        &mut sourcemap_chain,
-        &mut hook_side_effects,
-        self.magic_string_tx.clone(),
-      )
+      .load_source(&mut sourcemap_chain, &mut hook_side_effects, self.magic_string_tx.clone())
       .await?;
 
     let stable_id = id.stabilize(&self.ctx.options.cwd);
-    let mut raw_import_records = IndexVec::default();
 
-    let (asset_view, css_view) = match module_type {
+    let asset_view = match module_type {
       ModuleType::Asset => {
         let asset_view = create_asset_view(source);
         source = StrOrBytes::Str(String::new());
-        (Some(asset_view), None)
+        Some(asset_view)
       }
       ModuleType::Css => {
-        let css_source: ArcStr = source.try_into_string()?.into();
-        // FIXME: This makes creating `EcmaView` rely on creating `CssView` first, while they should be done in parallel.
-        let (css_view, css_raw_import_records) = create_css_view(&stable_id, &css_source);
-        raw_import_records = css_raw_import_records;
-        source = StrOrBytes::Str(String::new());
-        (None, Some(css_view))
+        Err(anyhow::anyhow!(
+          "Bundling CSS is no longer supported (experimental support has been removed). See https://github.com/rolldown/rolldown/issues/4271 for details."
+        ))?;
+        unreachable!()
       }
-      _ => (None, None),
+      _ => None,
     };
 
     let mut warnings = vec![];
@@ -163,9 +155,7 @@ impl ModuleTask {
       raw_import_records: ecma_raw_import_records,
     } = ret;
 
-    if css_view.is_none() {
-      raw_import_records = ecma_raw_import_records;
-    }
+    let raw_import_records = ecma_raw_import_records;
 
     let resolved_deps = resolve_dependencies(
       &self.resolved_id,
@@ -179,21 +169,19 @@ impl ModuleTask {
     )
     .await?;
 
-    if css_view.is_none() {
-      for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
-        match record.kind {
-          ImportKind::Import | ImportKind::Require | ImportKind::NewUrl => {
-            ecma_view.imported_ids.insert(info.id.clone());
-          }
-          ImportKind::DynamicImport => {
-            ecma_view.dynamically_imported_ids.insert(info.id.clone());
-          }
-          ImportKind::HotAccept => {
-            ecma_view.hmr_info.deps.insert(info.id.clone());
-          }
-          // for a none css module, we should not have `at-import` or `url-import`
-          ImportKind::AtImport | ImportKind::UrlImport => unreachable!(),
+    for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
+      match record.kind {
+        ImportKind::Import | ImportKind::Require | ImportKind::NewUrl => {
+          ecma_view.imported_ids.insert(info.id.clone());
         }
+        ImportKind::DynamicImport => {
+          ecma_view.dynamically_imported_ids.insert(info.id.clone());
+        }
+        ImportKind::HotAccept => {
+          ecma_view.hmr_info.deps.insert(info.id.clone());
+        }
+        // for a none css module, we should not have `at-import` or `url-import`
+        ImportKind::AtImport | ImportKind::UrlImport => unreachable!(),
       }
     }
 
@@ -214,15 +202,14 @@ impl ModuleTask {
       debug_id: self.resolved_id.debug_id(&self.ctx.options.cwd),
       idx: self.module_idx,
       exec_order: u32::MAX,
-      is_user_defined_entry: self.is_user_defined_entry,
       module_type: module_type.clone(),
       ecma_view,
-      css_view,
       asset_view,
       originative_resolved_id: self.resolved_id.clone(),
     };
 
-    let module_info = Arc::new(module.to_module_info(Some(&raw_import_records)));
+    let module_info =
+      Arc::new(module.to_module_info(Some(&raw_import_records), self.is_user_defined_entry));
     self.ctx.plugin_driver.set_module_info(&module.id, Arc::clone(&module_info));
     self.ctx.plugin_driver.module_parsed(Arc::clone(&module_info), &module).await?;
     self.ctx.plugin_driver.mark_context_load_modules_loaded(module.id.clone());
@@ -244,7 +231,7 @@ impl ModuleTask {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  async fn load_source_without_cache(
+  async fn load_source(
     &self,
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
     hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,

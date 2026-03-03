@@ -40,9 +40,6 @@ export default defineTest({
     idList.length = 0;
   },
   afterTest: () => {
-    expect(idList).toStrictEqual([
-      entryName,
-      path.join(__dirname, './main.js'),
-    ]);
+    expect(idList).toStrictEqual([entryName, path.join(__dirname, './main.js')]);
   },
 });

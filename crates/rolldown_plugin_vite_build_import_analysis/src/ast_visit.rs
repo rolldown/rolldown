@@ -55,7 +55,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   fn visit_expression(&mut self, expr: &mut Expression<'a>) {
     if self.insert_preload {
       let is_rewritten = match expr {
-        Expression::CallExpression(expr) => self.rewrite_call_expr(expr),
+        Expression::CallExpression(_) => self.rewrite_call_expr(expr),
         Expression::StaticMemberExpression(expr) => self.rewrite_member_expr(expr),
         _ => self.rewrite_import_expr(expr),
       };
@@ -137,7 +137,8 @@ impl VisitMut<'_> for DynamicImportVisitor<'_, '_> {
       _ => None,
     };
     if let Some(url) = value {
-      let normalized = self.chunk_filename_dir.join(url.as_str()).normalize();
+      let joined = self.chunk_filename_dir.join(url.as_str());
+      let normalized = joined.normalize();
       if self.removed_pure_css_files.inner.contains_key(normalized.to_slash_lossy().as_ref()) {
         let s = self.s.get_or_insert_with(|| string_wizard::MagicString::new(self.code));
         s.update(

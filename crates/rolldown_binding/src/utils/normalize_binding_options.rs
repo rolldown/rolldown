@@ -13,12 +13,13 @@ use crate::{
   types::{binding_rendered_chunk::BindingRenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
 };
 use napi::bindgen_prelude::{Either, Either3, FnArgs};
+use oxc::transformer::EngineTargets;
 use rolldown::{
   AddonOutputOption, AssetFilenamesOutputOption, BundlerConfig, BundlerOptions,
   ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
   IsExternal, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType,
-  OptimizationOption, OutputExports, OutputFormat, Platform, RawMinifyOptions,
-  RawMinifyOptionsDetailed, SanitizeFilename, TsConfig,
+  OptimizationOption, OutputExports, OutputFormat, Platform, RawCompressOptions, RawMangleOptions,
+  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, StrictMode, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -141,8 +142,47 @@ fn normalize_paths_option(
     Either::B(func) => rolldown_common::PathsOutputOption::Fn(Arc::new(move |id| {
       let func = Arc::clone(&func);
       let id = id.to_string();
-      func.invoke_sync((id,).into()).map_err(anyhow::Error::from)
+      Box::pin(async move { func.invoke_async((id,).into()).await.map_err(anyhow::Error::from) })
     })),
+  })
+}
+
+fn napi_compress_options_to_raw_compress_options(
+  o: &oxc_minify_napi::CompressOptions,
+) -> Result<RawCompressOptions, String> {
+  Ok(RawCompressOptions {
+    target: o
+      .target
+      .as_ref()
+      .map(|t| -> Result<EngineTargets, String> {
+        match t {
+          Either::A(s) => Ok(EngineTargets::from_target(s)?),
+          Either::B(list) => Ok(EngineTargets::from_target_list(list)?),
+        }
+      })
+      .transpose()?,
+    drop_console: o.drop_console,
+    drop_debugger: o.drop_debugger,
+    join_vars: o.join_vars,
+    sequences: o.sequences,
+    unused: o
+      .unused
+      .as_ref()
+      .map(|u| {
+        Ok(match u {
+          Either::A(true) => oxc::minifier::CompressOptionsUnused::Remove,
+          Either::A(false) => oxc::minifier::CompressOptionsUnused::Keep,
+          Either::B(s) => match s.as_str() {
+            "keep_assign" => oxc::minifier::CompressOptionsUnused::KeepAssign,
+            _ => return Err(format!("Invalid unused option: `{s}`.")),
+          },
+        })
+      })
+      .transpose()?,
+    keep_names: o.keep_names.as_ref().map(Into::into),
+    treeshake: o.treeshake.as_ref().map(TryFrom::try_from).transpose()?,
+    drop_labels: o.drop_labels.as_ref().map(|labels| labels.iter().cloned().collect()),
+    max_iterations: o.max_iterations,
   })
 }
 
@@ -272,8 +312,6 @@ pub fn normalize_binding_options(
     asset_filenames: normalize_asset_file_names_option(output_options.asset_file_names)?,
     entry_filenames: normalize_chunk_file_names_option(output_options.entry_file_names)?,
     chunk_filenames: normalize_chunk_file_names_option(output_options.chunk_file_names)?,
-    css_entry_filenames: normalize_chunk_file_names_option(output_options.css_entry_file_names)?,
-    css_chunk_filenames: normalize_chunk_file_names_option(output_options.css_chunk_file_names)?,
     sanitize_filename: normalize_sanitize_filename(output_options.sanitize_file_name)?,
     dir: output_options.dir,
     file: output_options.file,
@@ -385,21 +423,37 @@ pub fn normalize_binding_options(
           }
         }
         napi::bindgen_prelude::Either3::C(opts) => {
-          Ok(RawMinifyOptions::Object(RawMinifyOptionsDetailed {
-            options: oxc::minifier::MinifierOptions::try_from(&opts)
-              .map_err(|_| napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))?,
-            default_target: matches!(
-              opts.compress,
-              Some(
-                Either::A(true) | Either::B(oxc_minify_napi::CompressOptions { target: None, .. })
-              )
-            ),
-            remove_whitespace: match &opts.codegen {
-              None => true,
-              Some(Either::A(bool)) => *bool,
-              Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
-            },
-          }))
+          {
+            let mangle = match &opts.mangle {
+              Some(Either::A(false)) => None,
+              None | Some(Either::A(true)) => Some(RawMangleOptions::default()),
+              Some(Either::B(o)) => Some(RawMangleOptions {
+                top_level: o.toplevel,
+                keep_names: o.keep_names.as_ref().map(|k| match k {
+                    Either::A(false) => oxc::mangler::MangleOptionsKeepNames::all_false(),
+                    Either::A(true) => oxc::mangler::MangleOptionsKeepNames::all_true(),
+                    Either::B(o) => oxc::mangler::MangleOptionsKeepNames {
+                      function: o.function,
+                      class: o.class,
+                    },
+                }),
+              }),
+            };
+            let compress = match &opts.compress {
+              Some(Either::A(false)) => None,
+              None | Some(Either::A(true)) => Some(RawCompressOptions::default()),
+              Some(Either::B(o)) => Some(napi_compress_options_to_raw_compress_options(o).map_err(|err| napi::Error::new(napi::Status::InvalidArg, err))?),
+            };
+            Ok(RawMinifyOptions::Object(RawMinifyOptionsDetailed {
+              mangle,
+              compress,
+              remove_whitespace: match &opts.codegen {
+                None => true,
+                Some(Either::A(bool)) => *bool,
+                Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
+              },
+            }))
+          }
         }
       })
       .transpose()?,
@@ -460,6 +514,8 @@ pub fn normalize_binding_options(
             max_module_size: item.max_module_size,
             min_module_size: item.min_module_size,
             max_size: item.max_size,
+            entries_aware: item.entries_aware,
+            entries_aware_merge_threshold: item.entries_aware_merge_threshold,
           })
           .collect::<Vec<_>>()
       }),
@@ -479,6 +535,14 @@ pub fn normalize_binding_options(
         )),
       })
       .transpose()?,
+    comments: output_options.comments.map(|c| match c {
+      napi::Either::A(b) => rolldown::CommentsOptions { legal: b, annotation: b, jsdoc: b },
+      napi::Either::B(obj) => rolldown::CommentsOptions {
+        legal: obj.legal.unwrap_or(true),
+        annotation: obj.annotation.unwrap_or(true),
+        jsdoc: obj.jsdoc.unwrap_or(true),
+      },
+    }),
     drop_labels: input_options.drop_labels,
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
@@ -503,6 +567,16 @@ pub fn normalize_binding_options(
     minify_internal_exports: output_options.minify_internal_exports,
     clean_dir: output_options.clean_dir,
     strict_execution_order: output_options.strict_execution_order,
+    strict: output_options
+      .strict
+      .map(|strict| match strict {
+        Either::A(v) => Ok(StrictMode::from(v)),
+        Either::B(v) => {
+          StrictMode::try_from(v)
+            .map_err(napi::Error::from_reason)
+        }
+      })
+      .transpose()?,
     context: input_options.context,
     tsconfig: input_options.tsconfig.map(|v| match v {
       Either::A(v) => TsConfig::Auto(v),

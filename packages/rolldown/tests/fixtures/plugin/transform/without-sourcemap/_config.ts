@@ -1,9 +1,5 @@
 import { defineTest } from 'rolldown-tests';
-import {
-  getLocation,
-  getOutputAsset,
-  getOutputChunk,
-} from 'rolldown-tests/utils';
+import { getLocation, getOutputAsset, getOutputChunk } from 'rolldown-tests/utils';
 import { SourceMapConsumer } from 'source-map';
 import { expect } from 'vitest';
 
@@ -32,9 +28,7 @@ export default defineTest({
     const originalLoc = smc.originalPositionFor(generatedLoc);
     expect(originalLoc.line).toBe(1);
     expect(originalLoc.column).toBe(12);
-    expect(smc.sourceContentFor(originalLoc.source!)).toBe(
-      "console.log('main');\n",
-    );
+    expect(smc.sourceContentFor(originalLoc.source!)).toBe("console.log('main');\n");
 
     const generatedLoc2 = getLocation(code, code.indexOf(`"added"`));
     const originalLoc2 = smc.originalPositionFor(generatedLoc2);

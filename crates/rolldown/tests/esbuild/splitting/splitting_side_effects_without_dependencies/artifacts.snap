@@ -6,33 +6,28 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { t as a } from "./shared.js";
-
+import "./shared.js";
 //#region a.js
-console.log(a);
-
+console.log(1);
 //#endregion
+
 ```
 
 ## b.js
 
 ```js
-import { n as b } from "./shared.js";
-
+import "./shared.js";
 //#region b.js
-console.log(b);
-
+console.log(2);
 //#endregion
+
 ```
 
 ## shared.js
 
 ```js
 //#region shared.js
-let a = 1;
-let b = 2;
 console.log("side effect");
-
 //#endregion
-export { b as n, a as t };
+
 ```

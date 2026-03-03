@@ -6,29 +6,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## import.js
 
 ```js
-//#region WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ.js
-var WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ_default = 123;
-
-//#endregion
 //#region import.js
-console.log(WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ_default, "no identifier in this file should be named W, X, Y, or Z");
-
+console.log(123, "no identifier in this file should be named W, X, Y, or Z");
 //#endregion
+
 ```
 
 ## require.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD.js
-var require_AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = 123;
-}));
-
-//#endregion
 //#region require.js
-const foo = require_AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD();
+const foo = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = 123;
+})))();
 console.log(foo, "no identifier in this file should be named A, B, C, or D");
-
 //#endregion
+
 ```

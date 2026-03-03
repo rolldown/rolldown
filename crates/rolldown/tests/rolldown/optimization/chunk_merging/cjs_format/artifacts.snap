@@ -6,21 +6,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dep.js
 
 ```js
-
 //#region dep.js
 var dep_default = 42;
-
 //#endregion
 module.exports = dep_default;
+
 ```
 
 ## main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-const require_dep = require('./dep.js');
-
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_dep = require("./dep.js");
 exports.value = require_dep;
+
 ```
 
 # Variant: named: [exports: Named]
@@ -30,20 +29,22 @@ exports.value = require_dep;
 ### dep.js
 
 ```js
-Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
-
+Object.defineProperties(exports, {
+	__esModule: { value: true },
+	[Symbol.toStringTag]: { value: "Module" }
+});
 //#region dep.js
 var dep_default = 42;
-
 //#endregion
 exports.default = dep_default;
+
 ```
 
 ### main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-const require_dep = require('./dep.js');
-
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_dep = require("./dep.js");
 exports.value = require_dep.default;
+
 ```

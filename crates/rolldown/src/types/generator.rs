@@ -2,7 +2,7 @@ use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, OutputExports,
-  SymbolRef,
+  PathsOutputOption, SymbolRef,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
@@ -18,7 +18,6 @@ pub struct GenerateContext<'a> {
   pub link_output: &'a LinkStageOutput,
   pub chunk_graph: &'a ChunkGraph,
   pub plugin_driver: &'a SharedPluginDriver,
-  pub warnings: Vec<BuildDiagnostic>,
   pub module_id_to_codegen_ret: Vec<Option<ModuleRenderOutput>>,
   /// The key of the map is exported item symbol,
   /// the value of the map is optional alias. e.g.
@@ -28,6 +27,9 @@ pub struct GenerateContext<'a> {
   /// export {a as b}; // symbol_ref points to `a`, and alias is `b`
   /// ```
   pub render_export_items_index_vec: &'a IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
+  /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
+  /// Used instead of `options.paths` in sync rendering code to avoid deadlocks.
+  pub resolved_paths: Option<&'a PathsOutputOption>,
 }
 
 impl GenerateContext<'_> {
@@ -109,6 +111,7 @@ impl GenerateContext<'_> {
   }
 }
 
+#[derive(Default)]
 pub struct GenerateOutput {
   pub chunks: Vec<InstantiatedChunk>,
   pub warnings: Vec<BuildDiagnostic>,

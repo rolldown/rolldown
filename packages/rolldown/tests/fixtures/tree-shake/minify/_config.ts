@@ -1,6 +1,6 @@
 import type { OutputChunk as RolldownOutputChunk } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
-import { expect, vi } from 'vitest';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {

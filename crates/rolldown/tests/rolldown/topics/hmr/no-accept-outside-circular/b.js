@@ -1,7 +1,7 @@
-import { c } from './c'
+import { c } from './c';
 
 const b = {
   c,
-}
+};
 
-export { b }
+export { b };

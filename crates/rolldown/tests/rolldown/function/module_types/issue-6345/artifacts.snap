@@ -9,15 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-
 //#region foo.txt
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "assets/foo-C-m4uiP6.txt";
 }));
-
 //#endregion
 //#region main.cjs
 console.log(require_foo());
-
 //#endregion
+
 ```

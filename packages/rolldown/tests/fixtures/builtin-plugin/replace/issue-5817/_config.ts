@@ -35,8 +35,8 @@ export default defineTest({
       console.log(null);
       console.log(void 0);
       console.log(123);
-
-      //#endregion"
+      //#endregion
+      "
     `);
   },
 });

@@ -7,14 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 var module = (function(exports) {
-
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-//#region main.js
-	const exports$1 = "exports";
-
-//#endregion
-exports.exports = exports$1;
-return exports;
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	//#endregion
+	exports.exports = "exports";
+	return exports;
 })({});
+
 ```

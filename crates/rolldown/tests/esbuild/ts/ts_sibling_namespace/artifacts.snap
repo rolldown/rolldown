@@ -95,9 +95,9 @@ let x;
 (function(_x2) {
 	_x2.z = y;
 })(x || (x = {}));
-
 //#endregion
 export { x };
+
 ```
 
 ## enum.js
@@ -113,9 +113,9 @@ let x;
 (function(_x2) {
 	_x2.z = y;
 })(x || (x = {}));
-
 //#endregion
 export { x };
+
 ```
 
 ## function.js
@@ -130,9 +130,9 @@ let x;
 (function(_x2) {
 	_x2.z = y;
 })(x || (x = {}));
-
 //#endregion
 export { x };
+
 ```
 
 ## let.js
@@ -146,9 +146,9 @@ let x;
 (function(_x2) {
 	_x2.z = y;
 })(x || (x = {}));
-
 //#endregion
 export { x };
+
 ```
 
 ## namespace.js
@@ -163,7 +163,7 @@ let x;
 (function(_x2) {
 	_x2.z = y;
 })(x || (x = {}));
-
 //#endregion
 export { x };
+
 ```

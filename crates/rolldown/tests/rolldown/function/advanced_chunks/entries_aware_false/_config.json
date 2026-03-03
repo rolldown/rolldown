@@ -1,0 +1,31 @@
+{
+  "_comment": "Without entriesAware (default false), all matching modules merge into one chunk. Expected: 1 vendor chunk containing shared-by-abc + shared-by-ab + shared-by-a, loaded by all 3 entries even though entry-c only needs shared-by-abc.",
+  "config": {
+    "input": [
+      {
+        "name": "entry-a",
+        "import": "./entry-a.js"
+      },
+      {
+        "name": "entry-b",
+        "import": "./entry-b.js"
+      },
+      {
+        "name": "entry-c",
+        "import": "./entry-c.js"
+      }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "vendor",
+          "test": "shared-by"
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "hiddenRuntimeModule": true
+}

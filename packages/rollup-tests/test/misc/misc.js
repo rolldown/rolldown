@@ -271,7 +271,7 @@ console.log(x);
 			});
 		} catch (error) {
 			assert.notDeepStrictEqual(error.message, 'Maximum call stack size exceeded');
-			assert.strictEqual(error.name, 'RollupError');
+			assert.strictEqual(error.name, 'RolldownError');
 		}
 	});
 

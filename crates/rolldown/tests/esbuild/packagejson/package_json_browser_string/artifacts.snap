@@ -7,19 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
-//#region node_modules/demo-pkg/browser.js
-var require_browser = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+//#region src/entry.js
+var import_browser = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function() {
 		return 123;
 	};
-}));
-
-//#endregion
-//#region src/entry.js
-var import_browser = /* @__PURE__ */ __toESM(require_browser());
+})))());
 assert.equal((0, import_browser.default)(), 123);
-
 //#endregion
+
 ```

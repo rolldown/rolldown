@@ -17,6 +17,6 @@ tests = {
 	6: (x = (y = (z) => x + y + z, z) => x + y + z, y, z, x + y + z),
 	7: (y, z, x = (z, y = (z) => x + y + z) => x + y + z, x + y + z)
 };
-
 //#endregion
+
 ```

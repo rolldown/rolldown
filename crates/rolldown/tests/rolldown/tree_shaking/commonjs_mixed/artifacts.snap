@@ -7,24 +7,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
-// HIDDEN [\0rolldown/runtime.js]
-//#region lib/fromTokenFile.js
-var require_fromTokenFile = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = { a: 100 };
-}));
-
+Object.create;
+Object.defineProperty;
+Object.getOwnPropertyDescriptor;
+Object.getOwnPropertyNames;
+Object.getPrototypeOf;
+Object.prototype.hasOwnProperty;
 //#endregion
 //#region lib/fromWebToken.js
 const fromWebToken = (init) => async () => {
 	return 1;
 };
-
 //#endregion
 //#region main.js
 (async () => {
 	assert.strictEqual(await fromWebToken()(), 1);
 })();
-
 //#endregion
+
 ```

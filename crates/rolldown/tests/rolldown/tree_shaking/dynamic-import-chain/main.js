@@ -1,1 +1,1 @@
-export default () => import("./dep1.js")
+export default () => import('./dep1.js');

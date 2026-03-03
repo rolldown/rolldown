@@ -10,8 +10,8 @@ export default defineTest({
       "//#region main.js
       $;
       angular.element;
-
-      //#endregion"
+      //#endregion
+      "
     `);
   },
 });

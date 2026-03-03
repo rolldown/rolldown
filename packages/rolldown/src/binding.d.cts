@@ -101,7 +101,7 @@ export interface MangleOptions {
   /**
    * Pass `true` to mangle names declared in the top level scope.
    *
-   * @default false
+   * @default true for modules and commonjs, otherwise false
    */
   toplevel?: boolean
   /**
@@ -509,6 +509,20 @@ export declare class ResolverFactory {
    * This method automatically discovers tsconfig.json by traversing parent directories.
    */
   resolveFileAsync(file: string, request: string): Promise<ResolveResult>
+  /**
+   * Synchronously resolve `specifier` for TypeScript declaration files.
+   *
+   * `file` is the absolute path to the containing file.
+   * Uses TypeScript's `moduleResolution: "bundler"` algorithm.
+   */
+  resolveDtsSync(file: string, request: string): ResolveResult
+  /**
+   * Asynchronously resolve `specifier` for TypeScript declaration files.
+   *
+   * `file` is the absolute path to the containing file.
+   * Uses TypeScript's `moduleResolution: "bundler"` algorithm.
+   */
+  resolveDtsAsync(file: string, request: string): Promise<ResolveResult>
 }
 
 /** Node.js builtin module when `Options::builtin_modules` is enabled. */
@@ -691,6 +705,15 @@ export interface NapiResolveOptions {
    * Default `true`
    */
   symlinks?: boolean
+  /**
+   * Whether to read the `NODE_PATH` environment variable and append its entries to `modules`.
+   *
+   * `NODE_PATH` is a deprecated Node.js feature that is not part of ESM resolution.
+   * Set this to `false` to disable the behavior.
+   *
+   * Default `true`
+   */
+  nodePath?: boolean
   /**
    * Whether to parse [module.builtinModules](https://nodejs.org/api/module.html#modulebuiltinmodules) or not.
    * For example, "zlib" will throw [crate::ResolveError::Builtin] when set to true.
@@ -1455,7 +1478,10 @@ export declare class BindingLoadPluginContext {
 
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
+  get original(): string
   get filename(): string | null
+  get offset(): number
+  set offset(offset: number)
   replace(from: string, to: string): this
   replaceAll(from: string, to: string): this
   prepend(content: string): this
@@ -1531,6 +1557,7 @@ export declare class BindingModuleInfo {
   dynamicallyImportedIds: Array<string>
   exports: Array<string>
   isEntry: boolean
+  inputFormat: 'es' | 'cjs' | 'unknown'
   get code(): string | null
 }
 
@@ -1540,8 +1567,6 @@ export declare class BindingNormalizedOptions {
   get platform(): 'node' | 'browser' | 'neutral'
   get shimMissingExports(): boolean
   get name(): string | null
-  get cssEntryFilenames(): string | undefined
-  get cssChunkFilenames(): string | undefined
   get entryFilenames(): string | undefined
   get chunkFilenames(): string | undefined
   get assetFilenames(): string | undefined
@@ -1568,6 +1593,7 @@ export declare class BindingNormalizedOptions {
   get polyfillRequire(): boolean
   get minify(): false | 'dce-only' | MinifyOptions
   get legalComments(): 'none' | 'inline'
+  get comments(): BindingCommentsOptions
   get preserveModules(): boolean
   get preserveModulesRoot(): string | undefined
   get virtualDirname(): string
@@ -1666,9 +1692,14 @@ export declare class BindingTransformPluginContext {
 }
 
 export declare class BindingWatcher {
-  constructor(options: Array<BindingBundlerOptions>, notifyOption?: BindingNotifyOption | undefined | null)
+  constructor(options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void)
+  run(): Promise<void>
+  /**
+   * Gives consumers a reliable way to await the watcher's completion.
+   * The Node.js layer relies on the pending Promise to keep the process from exiting.
+   */
+  waitForClose(): Promise<void>
   close(): Promise<void>
-  start(listener: (data: BindingWatcherEvent) => void): Promise<void>
 }
 
 /**
@@ -1686,10 +1717,10 @@ export declare class BindingWatcherChangeData {
 
 export declare class BindingWatcherEvent {
   eventKind(): string
-  watchChangeData(): BindingWatcherChangeData
-  bundleEndData(): BindingBundleEndEventData
   bundleEventKind(): string
+  bundleEndData(): BindingBundleEndEventData
   bundleErrorData(): BindingBundleErrorEventData
+  watchChangeData(): BindingWatcherChangeData
 }
 
 export declare class ParallelJsPluginRegistry {
@@ -1713,6 +1744,9 @@ export declare class TraceSubscriberGuard {
  * The cache stores resolved tsconfig configurations keyed by their file paths.
  * When transforming multiple files in the same project, tsconfig lookups are
  * deduplicated, improving performance.
+ *
+ * @category Utilities
+ * @experimental
  */
 export declare class TsconfigCache {
   /** Create a new transform cache with auto tsconfig discovery enabled. */
@@ -1747,7 +1781,8 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
+export type BindingBuiltinPluginName =  'builtin:bundle-analyzer'|
+'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
 'builtin:replace'|
 'builtin:vite-alias'|
@@ -1764,6 +1799,13 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-transform'|
 'builtin:vite-wasm-fallback'|
 'builtin:vite-web-worker-post';
+
+export interface BindingBundleAnalyzerPluginConfig {
+  /** Output filename for the bundle analysis data (default: "analyze-data.json") */
+  fileName?: string
+  /** Output format: "json" (default) or "md" for LLM-friendly markdown */
+  format?: 'json' | 'md'
+}
 
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
@@ -1796,6 +1838,7 @@ export interface BindingChecksOptions {
   pluginTimings?: boolean
   duplicateShebang?: boolean
   unsupportedTsconfigOption?: boolean
+  ineffectiveDynamicImport?: boolean
   manualCodeSplittingSkipped?: boolean
 }
 
@@ -1812,6 +1855,32 @@ export declare enum BindingChunkModuleOrderBy {
 export interface BindingClientHmrUpdate {
   clientId: string
   update: BindingHmrUpdate
+}
+
+export interface BindingCommentsOptions {
+  legal?: boolean
+  annotation?: boolean
+  jsdoc?: boolean
+}
+
+export interface BindingCompilerOptions {
+  baseUrl?: string
+  paths?: Record<string, Array<string>>
+  experimentalDecorators?: boolean
+  emitDecoratorMetadata?: boolean
+  useDefineForClassFields?: boolean
+  rewriteRelativeImportExtensions?: boolean
+  jsx?: string
+  jsxFactory?: string
+  jsxFragmentFactory?: string
+  jsxImportSource?: string
+  verbatimModuleSyntax?: boolean
+  preserveValueImports?: boolean
+  importsNotUsedAsValues?: string
+  target?: string
+  module?: string
+  allowJs?: boolean
+  rootDirs?: Array<string>
 }
 
 export interface BindingDeferSyncScanData {
@@ -2228,6 +2297,7 @@ export interface BindingLogLocation {
 
 export interface BindingMagicStringOptions {
   filename?: string
+  offset?: number
 }
 
 export type BindingMakeAbsoluteExternalsRelative =
@@ -2253,6 +2323,8 @@ export interface BindingMatchGroup {
   minModuleSize?: number
   maxModuleSize?: number
   maxSize?: number
+  entriesAware?: boolean
+  entriesAwareMergeThreshold?: number
 }
 
 export interface BindingModulePreloadOptions {
@@ -2271,11 +2343,6 @@ export interface BindingModuleSideEffectsRule {
   external?: boolean | undefined
 }
 
-export interface BindingNotifyOption {
-  pollInterval?: number
-  compareContents?: boolean
-}
-
 export interface BindingOptimization {
   inlineConst?: boolean | BindingInlineConstConfig
   pifeForModuleWrappers?: boolean
@@ -2286,8 +2353,6 @@ export interface BindingOutputOptions {
   assetFileNames?: string | ((chunk: BindingPreRenderedAsset) => string)
   entryFileNames?: string | ((chunk: PreRenderedChunk) => string)
   chunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
-  cssEntryFileNames?: string | ((chunk: PreRenderedChunk) => string)
-  cssChunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sanitizeFileName?: boolean | ((name: string) => string)
   banner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   postBanner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
@@ -2314,9 +2379,11 @@ export interface BindingOutputOptions {
   sourcemapIgnoreList?: boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)
   sourcemapDebugIds?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
+  strict?: boolean | 'auto'
   minify?: boolean | 'dce-only' | MinifyOptions
   manualCodeSplitting?: BindingManualCodeSplittingOptions
   legalComments?: 'none' | 'inline'
+  comments?: boolean | BindingCommentsOptions
   polyfillRequire?: boolean
   preserveModules?: boolean
   virtualDirname?: string
@@ -2523,7 +2590,18 @@ export interface BindingTreeshake {
   propertyWriteSideEffects?: BindingPropertyWriteSideEffects
 }
 
-/** TypeScript compiler options for inline tsconfig configuration. */
+export interface BindingTsconfig {
+  files?: Array<string>
+  include?: Array<string>
+  exclude?: Array<string>
+  compilerOptions: BindingCompilerOptions
+}
+
+/**
+ * TypeScript compiler options for inline tsconfig configuration.
+ *
+ * @category Utilities
+ */
 export interface BindingTsconfigCompilerOptions {
   /** Specifies the JSX factory function to use. */
   jsx?: 'react' | 'react-jsx' | 'react-jsxdev' | 'preserve' | 'react-native'
@@ -2549,10 +2627,19 @@ export interface BindingTsconfigCompilerOptions {
   importsNotUsedAsValues?: 'remove' | 'preserve' | 'error'
 }
 
-/** Raw tsconfig options for inline configuration. */
+/**
+ * Raw tsconfig options for inline configuration.
+ *
+ * @category Utilities
+ */
 export interface BindingTsconfigRawOptions {
   /** TypeScript compiler options. */
   compilerOptions?: BindingTsconfigCompilerOptions
+}
+
+export interface BindingTsconfigResult {
+  tsconfig: BindingTsconfig
+  tsconfigFilePaths: Array<string>
 }
 
 export interface BindingViteAliasPluginAlias {
@@ -2633,9 +2720,9 @@ export interface BindingViteReporterPluginConfig {
   isLib: boolean
   assetsDir: string
   chunkLimit: number
-  shouldLogInfo: boolean
   warnLargeChunks: boolean
   reportCompressedSize: boolean
+  logInfo?: (msg: string) => void
 }
 
 export interface BindingViteResolvePluginConfig {
@@ -2691,12 +2778,13 @@ export interface BindingWatchOption {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   buildDelay?: number
+  usePolling?: boolean
+  pollInterval?: number
+  compareContentsForPolling?: boolean
   onInvalidate?: ((id: string) => void) | undefined
 }
 
 export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
-
-export declare function createTokioRuntime(blockingThreads?: number | undefined | null): void
 
 /**
  * Transpile a JavaScript or TypeScript into a target ECMAScript version, asynchronously.
@@ -2820,6 +2908,9 @@ export interface PreRenderedChunk {
 }
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+
+/** @hidden This is only expected to be used by Vite */
+export declare function resolveTsconfig(filename: string, cache?: TsconfigCache | undefined | null): BindingTsconfigResult | null
 
 /**
  * Shutdown the tokio runtime manually.

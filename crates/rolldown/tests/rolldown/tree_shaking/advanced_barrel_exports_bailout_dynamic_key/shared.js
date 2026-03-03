@@ -1,3 +1,3 @@
-import {c} from './c.js'
+import { c } from './c.js';
 
-export { c as a }
+export { c as a };

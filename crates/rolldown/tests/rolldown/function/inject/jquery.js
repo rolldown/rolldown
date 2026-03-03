@@ -1,1 +1,1 @@
-export default 'jquery'
+export default 'jquery';

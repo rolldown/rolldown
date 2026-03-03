@@ -12,9 +12,9 @@ let Foo = /* @__PURE__ */ function(Foo) {
 	return Foo;
 }({});
 console.log(/* @__PURE__ */ React.createElement(Foo.Div, null));
-
 //#endregion
 export { Foo };
+
 ```
 
 ## fragment.js
@@ -26,9 +26,9 @@ let React = /* @__PURE__ */ function(React) {
 	return React;
 }({});
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null, "test"));
-
 //#endregion
 export { React };
+
 ```
 
 ## nested-element.js
@@ -51,8 +51,8 @@ let x;
 		console.log(/* @__PURE__ */ React.createElement(x.y.Foo.Div, null));
 	})(y || (y = _x2.y || (_x2.y = {})));
 })(x || (x = {}));
-
 //#endregion
+
 ```
 
 ## nested-fragment.js
@@ -75,6 +75,6 @@ let x;
 		console.log(/* @__PURE__ */ React.createElement(React.Fragment, null, "test"));
 	})(y || (y = _x2.y || (_x2.y = {})));
 })(x || (x = {}));
-
 //#endregion
+
 ```

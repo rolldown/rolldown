@@ -6,27 +6,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty;
+var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+var __commonJSMin = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
+//#endregion
 //#region c.js
 var require_c = /* @__PURE__ */ __commonJSMin((async () => {
 	await 0;
 }));
-
-//#endregion
-//#region b.js
-var b_exports = /* @__PURE__ */ __exportAll({});
-var import_c;
 var init_b = __esmMin((async () => {
-	import_c = require_c();
+	require_c();
 }));
-
-//#endregion
-//#region a.js
-var a_exports = /* @__PURE__ */ __exportAll({});
 var init_a = __esmMin((async () => {
 	await init_b();
 }));
-
 //#endregion
 //#region entry.js
 var require_entry = /* @__PURE__ */ __commonJSMin((async () => {
@@ -36,7 +29,6 @@ var require_entry = /* @__PURE__ */ __commonJSMin((async () => {
 	require_entry();
 	await 0;
 }));
-
 //#endregion
 export default require_entry();
 

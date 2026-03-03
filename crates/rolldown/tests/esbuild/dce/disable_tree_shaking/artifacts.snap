@@ -6,26 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region remove-me.js
-var remove_me_default = "unused";
-
 //#endregion
 //#region keep-me/index.js
 console.log("side effects");
-
+pure();
+some.fn();
 //#endregion
-//#region entry.jsx
-function RemoveMe1() {}
-let removeMe2 = 0;
-var RemoveMe3 = class {};
-function KeepMe1() {}
-let keepMe2 = /* @__PURE__ */ React.createElement(KeepMe1, null);
-function keepMe3() {
-	console.log("side effects");
-}
-let keepMe4 = /* @__PURE__ */ keepMe3();
-let keepMe5 = pure();
-let keepMe6 = some.fn();
 
-//#endregion
 ```

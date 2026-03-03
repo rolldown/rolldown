@@ -111,7 +111,6 @@ function withShared({
       'experimental-index': './src/experimental-index',
       ...(!isBrowserBuild
         ? {
-            'cli-setup': './src/cli/setup-index',
             cli: './src/cli/index',
             config: './src/config',
             'parallel-plugin': './src/parallel-plugin',
@@ -148,10 +147,6 @@ function withShared({
     },
     transform: {
       target: 'node22',
-      decorator: {
-        // Legacy decorators are required for the @lazyProp decorator
-        legacy: true,
-      },
       define: {
         'import.meta.browserBuild': String(isBrowserBuild),
       },

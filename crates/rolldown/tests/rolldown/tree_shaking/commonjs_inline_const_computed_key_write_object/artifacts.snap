@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+Object.create;
+Object.defineProperty;
+Object.getOwnPropertyDescriptor;
+Object.getOwnPropertyNames;
+Object.getPrototypeOf;
+Object.prototype.hasOwnProperty;
+var __commonJSMin = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
+(/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.a = "cjs-a";
+})))();
+const obj = {};
+obj["cjs-a"] = 1;
+obj["cjs-a"] = 2;
+assert.equal("cjs-a", "cjs-a");
+assert.equal("cjs-a", "cjs-a");
+assert.equal(obj["cjs-a"], 2);
+//#endregion
+
+```

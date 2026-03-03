@@ -119,6 +119,7 @@ const ModuleTypesSchema = v.record(
     v.literal('asset'),
     v.literal('base64'),
     v.literal('binary'),
+    v.literal('copy'),
     v.literal('css'),
     v.literal('dataurl'),
     v.literal('empty'),
@@ -258,21 +259,31 @@ const TransformOptionsSchema = v.object({
 });
 isTypeTrue<IsSchemaSubType<typeof TransformOptionsSchema, TransformOptions>>();
 
+const WatcherFileWatcherOptionsSchema = v.strictObject({
+  usePolling: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Use polling-based file watching instead of native OS events'),
+  ),
+  pollInterval: v.pipe(
+    v.optional(v.number()),
+    v.description('Poll interval in milliseconds (only used when usePolling is true)'),
+  ),
+  compareContentsForPolling: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Compare file contents for poll-based watchers (only used when usePolling is true)',
+    ),
+  ),
+});
+
 const WatcherOptionsSchema = v.strictObject({
   chokidar: v.optional(
-    v.never(`The "watch.chokidar" option is deprecated, please use "watch.notify" instead of it`),
+    v.never(`The "watch.chokidar" option is deprecated, please use "watch.watcher" instead of it`),
   ),
   exclude: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
   include: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
-  notify: v.pipe(
-    v.optional(
-      v.strictObject({
-        compareContents: v.optional(v.boolean()),
-        pollInterval: v.optional(v.number()),
-      }),
-    ),
-    v.description('Notify options'),
-  ),
+  watcher: v.optional(WatcherFileWatcherOptionsSchema),
+  notify: v.optional(WatcherFileWatcherOptionsSchema),
   skipWrite: v.pipe(v.optional(v.boolean()), v.description('Skip the bundle.write() step')),
   buildDelay: v.pipe(v.optional(v.number()), v.description('Throttle watch rebuilds')),
   clearScreen: v.pipe(
@@ -377,6 +388,12 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description(
       'Whether to emit warnings when a tsconfig option or combination of options is not supported',
+    ),
+  ),
+  ineffectiveDynamicImport: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting',
     ),
   ),
   manualCodeSplittingSkipped: v.pipe(
@@ -770,6 +787,8 @@ const AdvancedChunksSchema = v.strictObject({
         maxSize: v.optional(v.number()),
         minModuleSize: v.optional(v.number()),
         maxModuleSize: v.optional(v.number()),
+        entriesAware: v.optional(v.boolean()),
+        entriesAwareMergeThreshold: v.optional(v.number()),
       }),
     ),
   ),
@@ -851,8 +870,6 @@ const OutputOptionsSchema = v.strictObject({
   assetFileNames: v.optional(AssetFileNamesSchema),
   entryFileNames: v.optional(ChunkFileNamesSchema),
   chunkFileNames: v.optional(ChunkFileNamesSchema),
-  cssEntryFileNames: v.optional(ChunkFileNamesSchema),
-  cssChunkFileNames: v.optional(ChunkFileNamesSchema),
   sanitizeFileName: v.optional(SanitizeFileNameSchema),
   minify: v.pipe(
     v.optional(v.union([v.boolean(), v.literal('dce-only'), MinifyOptionsSchema])),
@@ -882,6 +899,19 @@ const OutputOptionsSchema = v.strictObject({
   advancedChunks: v.optional(AdvancedChunksSchema),
   legalComments: v.pipe(
     v.optional(v.union([v.literal('none'), v.literal('inline')])),
+    v.description('Control legal comments in the output'),
+  ),
+  comments: v.pipe(
+    v.optional(
+      v.union([
+        v.boolean(),
+        v.strictObject({
+          legal: v.optional(v.boolean()),
+          annotation: v.optional(v.boolean()),
+          jsdoc: v.optional(v.boolean()),
+        }),
+      ]),
+    ),
     v.description('Control comments in the output'),
   ),
   plugins: v.optional(v.custom<RolldownOutputPluginOption>(() => true)),
@@ -913,6 +943,10 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Lets modules be executed in the order they are declared.'),
   ),
+  strict: v.pipe(
+    v.optional(v.union([v.boolean(), v.literal('auto')])),
+    v.description('Whether to always output `"use strict"` directive in non-ES module outputs.'),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof OutputOptionsSchema, OutputOptions>>();
 
@@ -933,14 +967,6 @@ const OutputCliOverrideSchema = v.strictObject({
   chunkFileNames: v.pipe(
     v.optional(v.string()),
     v.description('Name pattern for emitted secondary chunks'),
-  ),
-  cssEntryFileNames: v.pipe(
-    v.optional(v.string()),
-    v.description('Name pattern for emitted css entry chunks'),
-  ),
-  cssChunkFileNames: v.pipe(
-    v.optional(v.string()),
-    v.description('Name pattern for emitted css secondary chunks'),
   ),
   sanitizeFileName: v.pipe(v.optional(v.boolean()), v.description('Sanitize file name')),
   banner: v.pipe(v.optional(v.string()), v.description(getAddonDescription('top', 'outside'))),

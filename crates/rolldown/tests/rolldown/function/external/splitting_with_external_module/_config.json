@@ -11,8 +11,6 @@
         "import": "entry.js"
       }
     ],
-    "external": [
-      "node:assert"
-    ]
+    "external": ["node:assert"]
   }
 }

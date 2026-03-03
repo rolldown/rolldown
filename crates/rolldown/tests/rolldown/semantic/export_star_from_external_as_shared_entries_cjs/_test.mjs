@@ -1,8 +1,8 @@
 const require = (await import('node:module')).createRequire(import.meta.url);
-const { readFile: readFile2 } = require('./dist/entry.js')
-const { readFile: readFile3 } = require('./dist/entry2.js')
-const { readFile } = require('node:fs')
-const assert = require('node:assert')
+const { readFile: readFile2 } = require('./dist/entry.js');
+const { readFile: readFile3 } = require('./dist/entry2.js');
+const { readFile } = require('node:fs');
+const assert = require('node:assert');
 
-assert.strictEqual(readFile, readFile2)
-assert.strictEqual(readFile, readFile3)
+assert.strictEqual(readFile, readFile2);
+assert.strictEqual(readFile, readFile3);

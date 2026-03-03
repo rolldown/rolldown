@@ -41,11 +41,10 @@ export default defineTest({
           expect(isWrite).toBe(true);
           // Mutate chunk
           chunk.code = 'console.error()';
-          (chunk as RolldownOutputChunkWithCustomProperty).customProperty =
-            'customProperty';
-          expect(
-            (chunk as RolldownOutputChunkWithCustomProperty).customProperty,
-          ).toBe('customProperty');
+          (chunk as RolldownOutputChunkWithCustomProperty).customProperty = 'customProperty';
+          expect((chunk as RolldownOutputChunkWithCustomProperty).customProperty).toBe(
+            'customProperty',
+          );
           expect('customProperty' in chunk).toBe(true);
           // Delete chunk
           delete bundle['index.js'];

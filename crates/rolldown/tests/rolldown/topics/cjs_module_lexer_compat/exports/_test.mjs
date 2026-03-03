@@ -9,4 +9,4 @@ parsed.exports.sort();
 assert.deepStrictEqual(parsed, {
   exports: ['a', 'b', '😈', 'default'].sort(),
   reexports: [],
-})
+});

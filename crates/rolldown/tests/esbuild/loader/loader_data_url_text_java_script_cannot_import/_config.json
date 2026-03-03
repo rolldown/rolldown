@@ -5,8 +5,7 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ],
-    "external": ["./other.js"]
+    ]
   },
-  "expectExecuted": false
+  "expectError": true
 }

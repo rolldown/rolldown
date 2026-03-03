@@ -127,6 +127,8 @@ bitflags::bitflags! {
         /// If current position all parent scopes are block scope or top level scope.
         /// A cache state of [AstScanner::is_valid_tla_scope]
         const TopLevel = 1 << 1;
+        /// Set when traversing a member expression that is an assignment target (write context).
+        const MemberExprIsWrite = 1 << 2;
     }
 }
 
@@ -444,7 +446,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn get_root_binding(&self, name: &str) -> Option<SymbolId> {
-    self.result.symbol_ref_db.scoping().get_root_binding(name)
+    self.result.symbol_ref_db.scoping().get_root_binding(name.into())
   }
 
   /// `is_dummy` means if it the import record is created during ast transformation.
@@ -724,13 +726,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       decl.specifiers.iter().for_each(|spec| {
         if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
           self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
-        } else {
-          self.result.errors.push(BuildDiagnostic::export_undefined_variable(
-            self.immutable_ctx.id.to_string(),
-            self.immutable_ctx.source.clone(),
-            spec.local.span(),
-            ArcStr::from(spec.local.name().as_str()),
-          ));
         }
       });
       if let Some(decl) = decl.declaration.as_ref() {
@@ -958,9 +953,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     span: Span,
     obj_ref_type: MemberExprObjectReferencedType,
     reference_id: Option<ReferenceId>,
+    is_write: bool,
   ) {
     self.current_stmt_info.referenced_symbols.push(
-      MemberExprRef::new(object_ref, prop_and_span_list, span, obj_ref_type, reference_id).into(),
+      MemberExprRef::new(
+        object_ref,
+        prop_and_span_list,
+        span,
+        obj_ref_type,
+        reference_id,
+        is_write,
+      )
+      .into(),
     );
   }
 

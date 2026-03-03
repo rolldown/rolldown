@@ -9,8 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region input.js
 first ? second : third;
 console.log(first, second, third);
-
 //#endregion
+
 //# sourceMappingURL=input.js.map
 ```
 

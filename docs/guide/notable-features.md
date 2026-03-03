@@ -13,7 +13,6 @@ Similar to [esbuild's `platform` option](https://esbuild.github.io/api/#platform
 **Notable differences from esbuild:**
 
 - The default output format is always `esm` regardless of platform.
-- No `</script>` escape behavior when platform is `browser`.
 
 :::tip
 Rolldown does not polyfill Node built-ins when targeting the browser. You can opt-in to it with [rolldown-plugin-node-polyfills](https://github.com/rolldown/rolldown-plugin-node-polyfills).

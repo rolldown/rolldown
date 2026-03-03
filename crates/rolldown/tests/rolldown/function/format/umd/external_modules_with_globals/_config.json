@@ -1,9 +1,7 @@
 {
   "config": {
     "format": "umd",
-    "external": [
-      "node:path"
-    ],
+    "external": ["node:path"],
     "globals": {
       "node:path": "path"
     },

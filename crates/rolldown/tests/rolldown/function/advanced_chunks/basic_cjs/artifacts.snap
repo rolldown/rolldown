@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as require_a } from "./common.js";
-
 export default require_a();
 
 ```
@@ -16,7 +15,6 @@ export default require_a();
 
 ```js
 import { t as require_b } from "./common.js";
-
 export default require_b();
 
 ```
@@ -25,20 +23,18 @@ export default require_b();
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
-
 //#region a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "a";
 }));
-
 //#endregion
 //#region b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.b = "b";
 }));
-
 //#endregion
 export { require_a as n, require_b as t };
+
 ```
 
 ## rolldown-runtime.js
@@ -46,6 +42,7 @@ export { require_a as n, require_b as t };
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 export { __commonJSMin as t };
+
 ```
 
 # Variant: no-profiler-names: [profiler_names: false]
@@ -56,7 +53,6 @@ export { __commonJSMin as t };
 
 ```js
 import { n as require_a } from "./common.js";
-
 export default require_a();
 
 ```
@@ -65,7 +61,6 @@ export default require_a();
 
 ```js
 import { t as require_b } from "./common.js";
-
 export default require_b();
 
 ```
@@ -74,20 +69,18 @@ export default require_b();
 
 ```js
 import { t as __commonJSMin } from "./rolldown-runtime.js";
-
 //#region a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "a";
 }));
-
 //#endregion
 //#region b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.b = "b";
 }));
-
 //#endregion
 export { require_a as n, require_b as t };
+
 ```
 
 ### rolldown-runtime.js
@@ -95,4 +88,5 @@ export { require_a as n, require_b as t };
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 export { __commonJSMin as t };
+
 ```

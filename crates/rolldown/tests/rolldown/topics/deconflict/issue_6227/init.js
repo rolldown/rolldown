@@ -1,1 +1,1 @@
-globalThis.array = []
+globalThis.array = [];

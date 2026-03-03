@@ -9,21 +9,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region entry.js
 import("./foo.js").then((m) => /* @__PURE__ */ __toESM(m.default)).then(({ default: { bar } }) => console.log(bar));
-
 //#endregion
 export { __commonJSMin as t };
+
 ```
 
 ## foo.js
 
 ```js
 import { t as __commonJSMin } from "./entry.js";
-
 //#region foo.js
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.bar = 123;
 }));
-
 //#endregion
 export default require_foo();
 

@@ -44,9 +44,7 @@ export default defineTest({
           expect(meta.magicString.toString()).toBe('replaced;appended;');
 
           meta.magicString.prepend('prepended;');
-          expect(meta.magicString.toString()).toBe(
-            'prepended;replaced;appended;',
-          );
+          expect(meta.magicString.toString()).toBe('prepended;replaced;appended;');
 
           // Test 4: Verify hasChanged() works across accesses
           expect(meta.magicString.hasChanged()).toBe(true);
@@ -58,7 +56,7 @@ export default defineTest({
       },
     ],
   },
-  afterTest: function(output) {
+  afterTest: function (output) {
     expect(output.output[0].code).toContain('prepended;\nreplaced;\nappended;');
     expect(output.output[0].map).toBeDefined();
   },

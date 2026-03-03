@@ -6,23 +6,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-
-//#region foo.js
-var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.foo = 123;
-}));
-
-//#endregion
 //#region entry.js
-var import_foo = /* @__PURE__ */ __toESM(require_foo());
-
+var import_foo = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.foo = 123;
+})))());
 //#endregion
-Object.defineProperty(exports, 'ns', {
-  enumerable: true,
-  get: function () {
-    return import_foo;
-  }
+Object.defineProperty(exports, "ns", {
+	enumerable: true,
+	get: function() {
+		return import_foo;
+	}
 });
+
 ```

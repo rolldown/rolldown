@@ -5,7 +5,11 @@ async function main() {
 
   nodeAssert.deepEqual(Object.keys(exports).sort(), ['parse']);
   nodeAssert.strictEqual(exports.parse, 'parse', 'Expected export exists and is correct');
-  nodeAssert.strictEqual(exports.default, undefined, 'Target has __esModule, so no auto-generated default export');
+  nodeAssert.strictEqual(
+    exports.default,
+    undefined,
+    'Target has __esModule, so no auto-generated default export',
+  );
 }
 
-main()
+main();

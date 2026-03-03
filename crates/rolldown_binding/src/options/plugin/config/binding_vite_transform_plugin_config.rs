@@ -30,7 +30,7 @@ pub struct BindingViteTransformPluginConfig {
 impl From<BindingViteTransformPluginConfig> for ViteTransformPlugin {
   fn from(value: BindingViteTransformPluginConfig) -> Self {
     Self {
-      root: PathBuf::from(value.root).normalize(),
+      root: PathBuf::from(value.root).normalize().into_owned(),
       include: value.include.map(bindingify_string_or_regex_array).unwrap_or_default(),
       exclude: value.exclude.map(bindingify_string_or_regex_array).unwrap_or_default(),
       jsx_refresh_include: value

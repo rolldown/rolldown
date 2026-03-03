@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
@@ -7,7 +7,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        load: function(id) {
+        load: function (id) {
           let code = fs.readFileSync(id).toString();
           return {
             code,

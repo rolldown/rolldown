@@ -384,47 +384,39 @@ impl GlobImportVisit<'_> {
     let mut negated_globs = vec![];
     let mut positive_globs = vec![];
 
+    let mut values = vec![];
     match arg {
-      Argument::StringLiteral(str) => {
-        if let Some(glob) = str.value.strip_prefix('!') {
-          negated_globs.push(self.to_absolute_glob(glob, dir, root, options.base.as_deref())?);
-        } else {
-          positive_globs.push(self.to_absolute_glob(
-            &str.value,
-            dir,
-            root,
-            options.base.as_deref(),
-          )?);
-          if !str.value.starts_with('.') {
-            is_relative = false;
-          }
+      Argument::StringLiteral(str) => values.push(str.value.as_str()),
+      Argument::TemplateLiteral(lit) => {
+        if let Some(str) = lit.single_quasi() {
+          values.push(str.as_str());
         }
       }
       Argument::ArrayExpression(array_expr) => {
         for expr in &array_expr.elements {
-          if let ArrayExpressionElement::StringLiteral(str) = expr {
-            if let Some(glob) = str.value.strip_prefix('!') {
-              negated_globs.push(self.to_absolute_glob(
-                glob,
-                dir,
-                root,
-                options.base.as_deref(),
-              )?);
-            } else {
-              positive_globs.push(self.to_absolute_glob(
-                &str.value,
-                dir,
-                root,
-                options.base.as_deref(),
-              )?);
-              if !str.value.starts_with('.') {
-                is_relative = false;
+          match expr {
+            ArrayExpressionElement::StringLiteral(str) => values.push(&str.value),
+            ArrayExpressionElement::TemplateLiteral(lit) => {
+              if let Some(str) = lit.single_quasi() {
+                values.push(str.as_str());
               }
             }
+            _ => {}
           }
         }
       }
       _ => {}
+    }
+
+    for value in values {
+      if let Some(glob) = value.strip_prefix('!') {
+        negated_globs.push(self.to_absolute_glob(glob, dir, root, options.base.as_deref())?);
+      } else {
+        positive_globs.push(self.to_absolute_glob(value, dir, root, options.base.as_deref())?);
+        if !value.starts_with('.') {
+          is_relative = false;
+        }
+      }
     }
 
     if negated_globs.is_empty() && positive_globs.is_empty() {

@@ -1,9 +1,6 @@
 {
   "config": {
-    "external": [
-      "quill",
-      "mod"
-    ],
+    "external": ["quill", "mod"],
     "format": "umd",
     "name": "EditorLib"
   }

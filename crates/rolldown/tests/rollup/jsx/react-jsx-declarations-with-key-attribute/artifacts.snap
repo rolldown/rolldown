@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { jsx } from "react/jsx-runtime";
-
 //#region main.js
 Foo;
 const b = /* @__PURE__ */ jsx(Foo, {}, 123);
@@ -24,6 +23,6 @@ const h = /* @__PURE__ */ jsx(Foo, {
 	b: "2"
 }, 123);
 console.log(b, d, f, h);
-
 //#endregion
+
 ```

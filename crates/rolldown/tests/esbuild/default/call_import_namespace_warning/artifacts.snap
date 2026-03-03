@@ -201,7 +201,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 import * as a from "a";
 import { b } from "b";
 import c from "c";
-
 //#region js.js
 a();
 b();
@@ -210,8 +209,8 @@ new a();
 new b();
 new c();
 test(a);
-
 //#endregion
+
 ```
 
 ## jsx-a.js
@@ -224,14 +223,14 @@ import "a";
 ## jsx-b.js
 
 ```js
-import { b } from "b";
+import "b";
 
 ```
 
 ## jsx-c.js
 
 ```js
-import c from "c";
+import "c";
 
 ```
 
@@ -240,7 +239,7 @@ import c from "c";
 ```js
 import "a";
 import "b";
-import c from "c";
+import "c";
 
 ```
 
@@ -250,7 +249,6 @@ import c from "c";
 import * as a from "a";
 import { b } from "b";
 import c from "c";
-
 //#region ts.ts
 a();
 b();
@@ -258,6 +256,6 @@ c();
 new a();
 new b();
 new c();
-
 //#endregion
+
 ```

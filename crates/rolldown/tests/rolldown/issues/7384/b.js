@@ -1,5 +1,5 @@
-import assert from 'node:assert'
+import assert from 'node:assert';
 import * as Babel from './mod';
 const { t } = Babel;
 
-assert.strictEqual( t.t, 1);
+assert.strictEqual(t.t, 1);

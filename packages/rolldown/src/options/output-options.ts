@@ -102,6 +102,21 @@ export type CodeSplittingTestFunction = (id: string) => boolean | undefined | vo
 
 export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
 
+export interface CommentsOptions {
+  /**
+   * Comments that contain `@license`, `@preserve` or start with `//!` or `/*!`
+   */
+  legal?: boolean;
+  /**
+   * Comments that contain `@__PURE__`, `@__NO_SIDE_EFFECTS__` or `@vite-ignore`
+   */
+  annotation?: boolean;
+  /**
+   * JSDoc comments
+   */
+  jsdoc?: boolean;
+}
+
 /** @inline */
 export interface ChunkingContext {
   getModuleInfo(moduleId: string): ModuleInfo | null;
@@ -150,7 +165,7 @@ export interface OutputOptions {
    * - `'iife'` stands for [Immediately Invoked Function Expression](https://developer.mozilla.org/en-US/docs/Glossary/IIFE).
    * - `'umd'` stands for [Universal Module Definition](https://github.com/umdjs/umd).
    *
-   * @default 'esm'
+   * @default 'es'
    *
    * {@include ./docs/output-format.md}
    */
@@ -348,18 +363,6 @@ export interface OutputOptions {
    */
   chunkFileNames?: string | ChunkFileNamesFunction;
   /**
-   * @default '[name].css'
-   * @experimental
-   * @hidden not ready for public usage yet
-   */
-  cssEntryFileNames?: string | ChunkFileNamesFunction;
-  /**
-   * @default '[name]-[hash].css'
-   * @experimental
-   * @hidden not ready for public usage yet
-   */
-  cssChunkFileNames?: string | ChunkFileNamesFunction;
-  /**
    * Whether to enable chunk name sanitization (removal of non-URL-safe characters like `\0`, `?` and `*`).
    *
    * Set `false` to disable the sanitization. You can also provide a custom sanitization function.
@@ -553,6 +556,8 @@ export interface OutputOptions {
    *
    * For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/in-depth/manual-code-splitting).
    *
+   * {@include ./docs/output-code-splitting.md}
+   *
    * @example
    * **Basic vendor chunk**
    * ```js
@@ -570,7 +575,7 @@ export interface OutputOptions {
    *   },
    * });
    * ```
-   * {@include ./docs/output-code-splitting.md}
+   * {@include ./docs/output-code-splitting-example.md}
    *
    * @default true
    */
@@ -594,12 +599,31 @@ export interface OutputOptions {
     groups?: CodeSplittingGroup[];
   };
   /**
-   * Control comments in the output.
+   * Controls how legal comments are preserved in the output.
    *
-   * - `none`: no comments
-   * - `inline`: preserve comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
+   * - `none`: no legal comments
+   * - `inline`: preserve legal comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
+   *
+   * @deprecated Use `comments.legal` instead. When both `legalComments` and `comments.legal` are set, `comments.legal` takes priority.
    */
   legalComments?: 'none' | 'inline';
+  /**
+   * Control which comments are preserved in the output.
+   *
+   * - `true`: Preserve legal, annotation, and JSDoc comments (default)
+   * - `false`: Strip all comments
+   * - Object: Granular control over comment categories
+   *
+   * Note: Regular line and block comments without these markers
+   * are always removed regardless of this option.
+   *
+   * When both `legalComments` and `comments.legal` are set, `comments.legal` takes priority.
+   *
+   * {@include ./docs/output-comments.md}
+   *
+   * @default true
+   */
+  comments?: boolean | CommentsOptions;
   /**
    * The list of plugins to use only for this output.
    *
@@ -688,6 +712,18 @@ export interface OutputOptions {
    * @default false
    */
   strictExecutionOrder?: boolean;
+  /**
+   * Whether to always output `"use strict"` directive in non-ES module outputs.
+   *
+   * - `true` - Always emit `"use strict"` at the top of the output (not applicable for ESM format since ESM is always strict).
+   * - `false` - Never emit `"use strict"` in the output.
+   * - `'auto'` - Respect the `"use strict"` directives from the source code.
+   *
+   * See [In-depth directive guide](https://rolldown.rs/in-depth/directives) for more details.
+   *
+   * @default 'auto'
+   */
+  strict?: boolean | 'auto';
 }
 
 export type CodeSplittingGroup = {
@@ -823,6 +859,36 @@ export type CodeSplittingGroup = {
    * @default 0
    */
   minModuleSize?: number;
+  /**
+   * When `false` (default), all matching modules are merged into a single chunk.
+   * Every entry that uses any of these modules must load the entire chunk — even
+   * modules it doesn't need.
+   *
+   * When `true`, matching modules are grouped by which entries actually import them.
+   * Modules shared by the same set of entries go into the same chunk, while modules
+   * shared by a different set go into a separate chunk. This way, each entry only
+   * loads the code it actually uses.
+   *
+   * Example: entries A, B, C all match a `"vendor"` group.
+   * - `moduleX` is used by A, B, C
+   * - `moduleY` is used by A, B only
+   *
+   * With `entriesAware: false` → one `vendor.js` chunk with both modules; C loads `moduleY` unnecessarily.
+   * With `entriesAware: true`  → `vendor.js` (moduleX, loaded by all) + `vendor2.js` (moduleY, loaded by A and B only).
+   *
+   * @default false
+   */
+  entriesAware?: boolean;
+  /**
+   * Size threshold in bytes for merging small `entriesAware` subgroups into the
+   * closest neighboring subgroup.
+   *
+   * This option only works when {@linkcode CodeSplittingGroup.entriesAware | entriesAware}
+   * is `true`. Set to `0` to disable subgroup merging.
+   *
+   * @default 0
+   */
+  entriesAwareMergeThreshold?: number;
 };
 
 /**

@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.jsx" },
+      { "name": "component", "import": "./component.jsx" }
+    ],
+    "format": "cjs",
+    "transform": {
+      "jsx": "preserve"
+    }
+  },
+  "expectExecuted": false
+}

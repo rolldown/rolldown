@@ -6,29 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region <data:application/json,"%31%32%33">
-var json___31_32_33__default = "123";
-
-//#endregion
-//#region <data:application/json;base64,eyJ3b3JrcyI6dHJ1ZX0=>
-var json_base64_eyJ3b3JrcyI6dHJ1ZX0__default = { works: true };
-
-//#endregion
-//#region <data:application/json;charset=UTF-8,%31%32%33>
-var json_charset_UTF_8__31_32_33_default = 123;
-
-//#endregion
-//#region <data:application/json;charset=UTF-8;base64,eyJ3b3JrcyI6dHJ1ZX0=>
-var json_charset_UTF_8_base64_eyJ3b3JrcyI6dHJ1ZX0__default = { works: true };
-
 //#endregion
 //#region entry.js
 console.log([
-	json___31_32_33__default,
-	json_base64_eyJ3b3JrcyI6dHJ1ZX0__default,
-	json_charset_UTF_8__31_32_33_default,
-	json_charset_UTF_8_base64_eyJ3b3JrcyI6dHJ1ZX0__default
+	"123",
+	{ works: true },
+	123,
+	{ works: true }
 ]);
-
 //#endregion
+
 ```

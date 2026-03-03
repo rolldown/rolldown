@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { NormalizedInputOptions, NormalizedOutputOptions } from 'rolldown';
+import type { NormalizedInputOptions, NormalizedOutputOptions } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
@@ -8,7 +8,6 @@ const entry = path.join(__dirname, './main.js');
 const allInputOptions: NormalizedInputOptions[] = [];
 const allOutputOptions: NormalizedOutputOptions[] = [];
 
-const cssChunkFileNames = () => '[name]-[hash].css';
 const chunkFileNames = () => '[name]-[hash].js';
 const footer = () => '/* footer */';
 const outputPlugin = {
@@ -24,8 +23,6 @@ export default defineTest({
     context: 'window',
     output: {
       name: 'test',
-      cssEntryFileNames: '[name].css',
-      cssChunkFileNames,
       entryFileNames: '[name].js',
       chunkFileNames,
       assetFileNames: 'assets/[name]-[hash][extname]',
@@ -82,8 +79,6 @@ export default defineTest({
 
     allOutputOptions.forEach((option) => {
       expect(option.name).toBe('test');
-      expect(option.cssEntryFileNames).toBe('[name].css');
-      expect(option.cssChunkFileNames).toStrictEqual(cssChunkFileNames);
       expect(option.entryFileNames).toBe('[name].js');
       expect(option.chunkFileNames).toStrictEqual(chunkFileNames);
       expect(option.assetFileNames).toBe('assets/[name]-[hash][extname]');
@@ -107,9 +102,7 @@ export default defineTest({
       expect(option.sourcemapIgnoreList).toStrictEqual(sourcemapIgnoreList);
       expect(option.legalComments).toBe('inline');
       expect(option.preserveModules).toBe(false);
-      expect(option.preserveModulesRoot).toStrictEqual(
-        path.join(__dirname, 'src'),
-      );
+      expect(option.preserveModulesRoot).toStrictEqual(path.join(__dirname, 'src'));
       expect(option.virtualDirname).toBe('virtual');
       expect(option.minifyInternalExports).toBe(true);
     });

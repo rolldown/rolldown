@@ -11,9 +11,9 @@ let foo;
 try {
 	foo = await Promise.resolve("foo");
 } catch (_e) {}
-
 //#endregion
 export { foo };
+
 ```
 
 # Variant: [strict_execution_order: true]
@@ -27,19 +27,14 @@ export { foo };
 //#region lib.js
 var foo;
 var init_lib = __esmMin((async () => {
-	;
 	try {
 		foo = await Promise.resolve("foo");
 	} catch (_e) {}
 }));
-
 //#endregion
-//#region main.js
-var init_main = __esmMin((async () => {
+await __esmMin((async () => {
 	await init_lib();
-}));
-
-//#endregion
-await init_main();
+}))();
 export { foo };
+
 ```

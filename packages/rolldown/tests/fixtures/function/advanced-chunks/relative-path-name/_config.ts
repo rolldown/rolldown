@@ -1,8 +1,5 @@
-import path from 'path';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
-
-const cwd = process.cwd();
 
 export default defineTest({
   config: {
@@ -12,8 +9,6 @@ export default defineTest({
         groups: [
           {
             name: (file) => {
-              let r = path.relative(cwd, file);
-              r = r.replace(/\\/g, '/');
               if (file.includes('src')) {
                 return 'base/src.js';
               }

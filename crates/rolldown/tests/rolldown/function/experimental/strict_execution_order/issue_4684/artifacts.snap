@@ -7,22 +7,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as read, r as __esmMin, t as init_read } from "./main.js";
-
-//#region dynamic.js
-var init_dynamic = __esmMin((() => {
+//#endregion
+__esmMin((() => {
 	init_read();
 	read();
-}));
+}))();
 
-//#endregion
-init_dynamic();
 ```
 
 ## main.js
 
 ```js
 import nodeAssert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region setup.js
 var setup;
@@ -32,7 +28,6 @@ var init_setup = __esmMin((() => {
 	};
 	setup();
 }));
-
 //#endregion
 //#region read.js
 var foo, read;
@@ -42,19 +37,15 @@ var init_read = __esmMin((() => {
 		console.log("read", foo);
 	};
 }));
-
 //#endregion
-//#region main.js
-var init_main = __esmMin((() => {
+__esmMin((() => {
 	init_setup();
 	init_read();
 	setup();
 	read();
 	import("./dynamic.js");
 	nodeAssert.strictEqual(globalThis.foo, "foo");
-}));
-
-//#endregion
-init_main();
+}))();
 export { read as n, __esmMin as r, init_read as t };
+
 ```

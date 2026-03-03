@@ -7,10 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 "use strict";
-
-
 //#region main.js
 exports.foo = "foo";
-
 //#endregion
+
 ```

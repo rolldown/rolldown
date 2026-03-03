@@ -1,1 +1,1 @@
-export const mod = () => import('./mod.js')
+export const mod = () => import('./mod.js');

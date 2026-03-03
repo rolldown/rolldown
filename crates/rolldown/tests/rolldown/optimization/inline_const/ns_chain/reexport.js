@@ -1,1 +1,1 @@
-export * as another from './foo.js'
+export * as another from './foo.js';

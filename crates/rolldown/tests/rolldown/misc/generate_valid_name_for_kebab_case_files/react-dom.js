@@ -1,1 +1,1 @@
-module.exports = 'react-dom'
+module.exports = 'react-dom';

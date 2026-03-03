@@ -1,9 +1,6 @@
 import path from 'node:path';
 import { defineTest } from 'rolldown-tests';
-import {
-  viteDynamicImportVarsPlugin,
-  viteImportGlobPlugin,
-} from 'rolldown/experimental';
+import { viteDynamicImportVarsPlugin, viteImportGlobPlugin } from 'rolldown/experimental';
 
 export default defineTest({
   config: {

@@ -5,7 +5,8 @@ import { type DefaultTheme, defineConfig } from 'vitepress';
 import { groupIconMdPlugin, groupIconVitePlugin } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
 import { addOgImage } from 'vitepress-plugin-og';
-import { hooksGraphPlugin } from './markdown-hooks-graph.ts';
+import { graphvizMarkdownPlugin } from 'vitepress-plugin-graphviz';
+import { createHooksGraphProcessor } from './markdown-hooks-graph.ts';
 
 const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
   {
@@ -81,6 +82,7 @@ const sidebarForInDepth: DefaultTheme.SidebarItem[] = [
         text: 'Why Plugin Hook Filter',
         link: '/in-depth/why-plugin-hook-filter.md',
       },
+      { text: 'External Modules', link: '/in-depth/external-modules.md' },
       { text: 'Directives', link: '/in-depth/directives.md' },
     ],
   },
@@ -94,6 +96,10 @@ const importantAPIs: (string | undefined)[] = [
   '/Interface.PluginContext.md',
   '/Variable.VERSION.md',
   '/Function.defineConfig.md',
+  '/Function.minify.md',
+  '/Function.parse.md',
+  '/Function.transform.md',
+  '/Class.Visitor.md',
 ];
 
 function getTypedocSidebar() {
@@ -356,7 +362,7 @@ const config = defineConfig({
     ],
 
     footer: {
-      copyright: `© 2025 VoidZero Inc. and Rolldown contributors.`,
+      copyright: `© 2025-present VoidZero Inc. and Rolldown contributors.`,
       nav: [
         {
           title: 'Rolldown',
@@ -414,7 +420,9 @@ const config = defineConfig({
   markdown: {
     async config(md) {
       md.use(groupIconMdPlugin);
-      await hooksGraphPlugin(md);
+      await graphvizMarkdownPlugin(md, {
+        processors: { 'hooks-graph': createHooksGraphProcessor() },
+      });
     },
   },
   async transformPageData(pageData, ctx) {

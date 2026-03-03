@@ -7,4 +7,4 @@ assert.deepStrictEqual(entry.foo, entry2.foo);
 assert.deepStrictEqual(entry.default, 'main');
 assert.deepStrictEqual(entry.default, entry2.default);
 
-console.log(import.meta.filename, module.exports)
+console.log(import.meta.filename, module.exports);

@@ -1,0 +1,6 @@
+{
+  "config": {
+    "file": "dist/out.css"
+  },
+  "expectExecuted": false
+}

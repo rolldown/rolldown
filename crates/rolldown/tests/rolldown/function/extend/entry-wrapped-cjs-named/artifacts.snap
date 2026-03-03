@@ -11,7 +11,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_main = /* @__PURE__ */ __commonJSMin((() => {
 	require_main();
 }));
-
 //#endregion
 export default require_main();
 
@@ -25,19 +24,18 @@ export default require_main();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-
 //#region main.js
 var require_main = /* @__PURE__ */ __commonJSMin((() => {
 	require_main();
 }));
-
 //#endregion
-Object.defineProperty(exports, 'default', {
-  enumerable: true,
-  get: function () {
-    return require_main();
-  }
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return require_main();
+	}
 });
+
 ```
 
 # Variant: [exports: Named] [extend: true] [format: Iife] [name: "module"]
@@ -48,22 +46,20 @@ Object.defineProperty(exports, 'default', {
 
 ```js
 (function(exports) {
-
-// HIDDEN [\0rolldown/runtime.js]
-
-//#region main.js
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region main.js
 	var require_main = /* @__PURE__ */ __commonJSMin((() => {
 		require_main();
 	}));
-
-//#endregion
-Object.defineProperty(exports, 'default', {
-  enumerable: true,
-  get: function () {
-    return require_main();
-  }
-});
+	//#endregion
+	Object.defineProperty(exports, "default", {
+		enumerable: true,
+		get: function() {
+			return require_main();
+		}
+	});
 })(this.module = this.module || {});
+
 ```
 
 # Variant: [exports: Named] [extend: true] [format: Umd] [name: "module"]
@@ -74,23 +70,20 @@ Object.defineProperty(exports, 'default', {
 
 ```js
 (function(global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
-  typeof define === 'function' && define.amd ? define(['exports'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.module = global.module || {})));
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.module = global.module || {}));
 })(this, function(exports) {
-// HIDDEN [\0rolldown/runtime.js]
-
-//#region main.js
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region main.js
 	var require_main = /* @__PURE__ */ __commonJSMin((() => {
 		require_main();
 	}));
+	//#endregion
+	Object.defineProperty(exports, "default", {
+		enumerable: true,
+		get: function() {
+			return require_main();
+		}
+	});
+});
 
-//#endregion
-Object.defineProperty(exports, 'default', {
-  enumerable: true,
-  get: function () {
-    return require_main();
-  }
-});
-});
 ```

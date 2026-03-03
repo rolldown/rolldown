@@ -5,7 +5,7 @@ module.exports = rolldown.defineConfig({
   input: './index.js',
   plugins: [
     plugin.replacePlugin({
-      '__rolldown': '1',
+      __rolldown: '1',
     }),
   ],
 });

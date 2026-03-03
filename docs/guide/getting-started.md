@@ -44,6 +44,8 @@ Prebuilt binaries are distributed for the following platforms (grouped by [Node.
   - Apple arm64 (`aarch64-apple-darwin`)
 - Tier 2
   - Windows arm64 (`aarch64-pc-windows-msvc`)
+  - Linux s390x glibc (`s390x-unknown-linux-gnu`)
+  - Linux ppc64le glibc (`powerpc64le-unknown-linux-gnu`)
 - Experimental
   - Linux x64 musl (`x86_64-unknown-linux-musl`)
   - Linux armv7 (`armv7-unknown-linux-gnueabihf`)
@@ -80,7 +82,7 @@ If you are using a platform that a prebuilt binary is not distributed, you have 
 
 ### Release Channels
 
-- [latest](https://www.npmjs.com/package/rolldown?activeTab=versions): currently `1.0.0-rc.*`.
+- [latest](https://npmx.dev/package/rolldown#versions): currently `1.0.0-rc.*`.
 - [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown): continuously released from the `main` branch. Install with `npm i https://pkg.pr.new/rolldown@sha` where `sha` is a successful build listed on [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown).
 
 ## Using the CLI

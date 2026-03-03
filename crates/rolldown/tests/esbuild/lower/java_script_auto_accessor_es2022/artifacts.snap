@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region js-define.js
 three(), six();
-
 //#endregion
+
 ```
 
 ## ts-assign_ts-assign.js
@@ -17,20 +17,20 @@ three(), six();
 ```js
 //#region ts-assign/ts-assign.ts
 three(), six();
-var StaticNormal = class {
+(class {
 	static accessor a = b;
 	static {
 		this.c = d;
 	}
-};
-var StaticPrivate = class {
+});
+(class {
 	static accessor #a = b;
 	static {
 		this.c = d;
 	}
-};
-
+});
 //#endregion
+
 ```
 
 ## ts-define_ts-define.js
@@ -38,14 +38,14 @@ var StaticPrivate = class {
 ```js
 //#region ts-define/ts-define.ts
 three(), six();
-var StaticNormal = class {
+(class {
 	static accessor a = b;
 	static c = d;
-};
-var StaticPrivate = class {
+});
+(class {
 	static accessor #a = b;
 	static c = d;
-};
-
+});
 //#endregion
+
 ```

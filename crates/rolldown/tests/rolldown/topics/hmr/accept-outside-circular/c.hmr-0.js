@@ -1,3 +1,3 @@
-import './b'
+import './b';
 
-export const c = 'cc'
+export const c = 'cc';

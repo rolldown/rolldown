@@ -1,1 +1,1 @@
-export default a => a
+export default (a) => a;

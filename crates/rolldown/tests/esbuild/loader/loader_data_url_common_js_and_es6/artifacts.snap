@@ -9,17 +9,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region y.txt
 var y_default = "data:text/plain;charset=utf-8,y";
-
-//#endregion
-//#region x.txt
-var require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "data:text/plain;charset=utf-8,x";
-}));
-
 //#endregion
 //#region entry.js
-const x_url = require_x();
+const x_url = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "data:text/plain;charset=utf-8,x";
+})))();
 console.log(x_url, y_default);
-
 //#endregion
+
 ```

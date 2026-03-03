@@ -6,7 +6,7 @@ export default defineTest({
       preserveModules: true,
     },
   },
-  afterTest: async (output) => {
+  afterTest: async (_output) => {
     await import('./_test.mjs');
   },
 });

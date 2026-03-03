@@ -1,1 +1,1 @@
-module[Math.random() < 1 && 'exports'] = '123'
+module[Math.random() < 1 && 'exports'] = '123';

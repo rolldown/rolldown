@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { RenderedChunk } from 'rolldown';
+import type { RenderedChunk } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { getOutputChunk } from 'rolldown-tests/utils';
 import { expect } from 'vitest';
@@ -10,6 +10,9 @@ export default defineTest({
   sequential: true,
   config: {
     input: ['main.js', 'entry.js'],
+    optimization: {
+      inlineConst: false,
+    },
     output: {
       entryFileNames: '[name]-[hash].js',
       chunkFileNames: '[name]-[hash].js',
@@ -30,7 +33,7 @@ export default defineTest({
         case path.join(__dirname, 'main.js'):
           expect(chunk.fileName).toMatch('main-!~{000}~.js');
           expect(chunk.imports).toMatchObject(['shared-!~{002}~.js']);
-          expect(chunk.dynamicImports).toMatchObject(['dynamic-!~{004}~.js']);
+          expect(chunk.dynamicImports).toMatchObject(['dynamic-!~{003}~.js']);
           break;
 
         case path.join(__dirname, 'entry.js'):
@@ -40,7 +43,7 @@ export default defineTest({
           break;
 
         case path.join(__dirname, 'dynamic.js'):
-          expect(chunk.fileName).toMatch('dynamic-!~{004}~.js');
+          expect(chunk.fileName).toMatch('dynamic-!~{003}~.js');
           break;
 
         default:
@@ -54,29 +57,29 @@ export default defineTest({
       switch (chunk.facadeModuleId) {
         case path.join(__dirname, 'main.js'):
           expect(chunk.preliminaryFileName).toMatchInlineSnapshot(`"main-!~{000}~.js"`);
-          expect(chunk.fileName).toMatchInlineSnapshot(`"main-BKJjLIpN.js"`);
+          expect(chunk.fileName).toMatchInlineSnapshot(`"main-C4YSqf-A.js"`);
           expect(chunk.imports).toMatchInlineSnapshot(
             `
             [
-              "shared-4ttuH-iD.js",
+              "shared-BXdMO0hH.js",
             ]
           `,
           );
           expect(chunk.dynamicImports).toMatchInlineSnapshot(
             `
             [
-              "dynamic-CtS_O3mS.js",
+              "dynamic-GiNS7Csv.js",
             ]
           `,
           );
           break;
 
         case path.join(__dirname, 'entry.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"entry--UVBFch3.js"`);
+          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-DQ1Ye-nr.js"`);
           expect(chunk.imports).toMatchInlineSnapshot(
             `
             [
-              "shared-4ttuH-iD.js",
+              "shared-BXdMO0hH.js",
             ]
           `,
           );
@@ -84,7 +87,7 @@ export default defineTest({
           break;
 
         case path.join(__dirname, 'dynamic.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"dynamic-CtS_O3mS.js"`);
+          expect(chunk.fileName).toMatchInlineSnapshot(`"dynamic-GiNS7Csv.js"`);
           break;
 
         default:

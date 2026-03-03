@@ -85,6 +85,12 @@ export function viteWebWorkerPostPlugin(): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-web-worker-post');
 }
 
+/**
+ * A plugin that converts CommonJS require() calls for external dependencies into ESM import statements.
+ *
+ * @see https://rolldown.rs/builtin-plugins/esm-external-require
+ * @category Builtin Plugins
+ */
 export function esmExternalRequirePlugin(
   config?: BindingEsmExternalRequirePluginConfig,
 ): BuiltinPlugin {

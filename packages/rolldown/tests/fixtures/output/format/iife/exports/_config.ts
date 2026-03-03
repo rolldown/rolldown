@@ -1,6 +1,6 @@
 import type { LogLevel, RollupLog } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
-import { expect, vi } from 'vitest';
+import { expect } from 'vitest';
 
 const logs: Array<{ level: LogLevel; log: RollupLog }> = [];
 
@@ -28,16 +28,15 @@ export default defineTest({
 
     expect(output.output[0].code).toMatchInlineSnapshot(`
       "(function(exports, node_path) {
-
-      Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
-
-      //#region main.js
-      	var main_default = node_path.join;
-
-      //#endregion
-      exports.default = main_default;
-      return exports;
-      })({}, node_path);"
+      	Object.defineProperties(exports, {
+      		__esModule: { value: true },
+      		[Symbol.toStringTag]: { value: "Module" }
+      	});
+      	//#endregion
+      	exports.default = node_path.join;
+      	return exports;
+      })({}, node_path);
+      "
     `);
   },
 });

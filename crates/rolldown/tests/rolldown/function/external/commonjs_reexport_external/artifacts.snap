@@ -12,14 +12,11 @@ var foo_exports = /* @__PURE__ */ __exportAll({});
 import * as import_external from "external";
 __reExport(foo_exports, import_external);
 var init_foo = __esmMin((() => {}));
-
 //#endregion
 //#region main.js
 var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const value = (init_foo(), __toCommonJS(foo_exports));
-	module.exports = value;
+	module.exports = (init_foo(), __toCommonJS(foo_exports));
 }));
-
 //#endregion
 export default require_main();
 

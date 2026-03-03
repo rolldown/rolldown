@@ -3,8 +3,8 @@ use oxc::{
   ast::{
     NONE,
     ast::{
-      Argument, BindingPattern, CallExpression, Declaration, Expression, FormalParameterKind,
-      Statement, StaticMemberExpression, VariableDeclarationKind,
+      Argument, BindingPattern, Declaration, Expression, FormalParameterKind, Statement,
+      StaticMemberExpression, VariableDeclarationKind,
     },
   },
   ast_visit::walk_mut::walk_arguments,
@@ -79,26 +79,54 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 
   /// transform `import('foo').then(({foo})=>{})`
   /// to `__vitePreload(async () => { let foo; return {foo} = await import('foo'); },...).then(({foo})=>{})`
-  pub fn rewrite_call_expr(&mut self, expr: &mut CallExpression<'a>) -> bool {
-    let Expression::StaticMemberExpression(ref mut callee) = expr.callee else {
+  ///
+  /// transform `import('foo').then((m) => m.prop)`
+  /// to `__vitePreload(() => import('foo').then((m) => m.prop), ...)`
+  pub fn rewrite_call_expr(&mut self, expr: &mut Expression<'a>) -> bool {
+    // import(...).then(...)
+    let Expression::CallExpression(call_expr) = expr else {
       return false;
     };
-    if callee.property.name != "then"
-      || expr.arguments.is_empty()
-      || !matches!(callee.object, Expression::ImportExpression(_))
-    {
+    let Expression::StaticMemberExpression(ref callee) = call_expr.callee else {
+      return false;
+    };
+    if callee.property.name != "then" || !matches!(callee.object, Expression::ImportExpression(_)) {
       return false;
     }
-    let arg = match &expr.arguments[0] {
-      Argument::ArrowFunctionExpression(expr) if !expr.params.is_empty() => &expr.params.items[0],
-      Argument::FunctionExpression(expr) if !expr.params.is_empty() => &expr.params.items[0],
-      _ => return false,
-    };
-    callee.object = self.construct_vite_preload_call(
-      arg.pattern.clone_in(self.snippet.alloc()),
-      self.snippet.builder.expression_await(SPAN, callee.object.take_in(self.snippet.alloc())),
-    );
-    walk_arguments(self, &mut expr.arguments);
+
+    // Check if the .then() callback has a destructuring (ObjectPattern) parameter
+    let destructuring_pat = call_expr.arguments.first().and_then(|arg| {
+      let params = match arg {
+        Argument::ArrowFunctionExpression(func) => &func.params,
+        Argument::FunctionExpression(func) => &func.params,
+        _ => return None,
+      };
+      let first_param = params.items.first()?;
+      if matches!(&first_param.pattern, BindingPattern::ObjectPattern(_)) {
+        Some(first_param.pattern.clone_in(self.snippet.alloc()))
+      } else {
+        None
+      }
+    });
+    if let Some(binding_pat) = destructuring_pat {
+      // For destructuring: replace only the import() in the callee with __vitePreload(...)
+      // keeping the .then() call on the outside
+      let Expression::StaticMemberExpression(callee) = &mut call_expr.callee else {
+        unreachable!();
+      };
+      callee.object = self.construct_vite_preload_call(
+        binding_pat,
+        self.snippet.builder.expression_await(SPAN, callee.object.take_in(self.snippet.alloc())),
+      );
+      walk_arguments(self, &mut call_expr.arguments);
+      return true;
+    }
+
+    // For non-destructuring: wrap the entire import().then() expression
+    walk_arguments(self, &mut call_expr.arguments);
+    let import_then_expr = expr.take_in(self.snippet.alloc());
+    *expr =
+      self.vite_preload_call(Argument::from(self.snippet.only_return_arrow_expr(import_then_expr)));
     true
   }
 

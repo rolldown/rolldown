@@ -1,1 +1,1 @@
-console.log("share-splitted");
+console.log('share-splitted');

@@ -7,19 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import * as assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
-//#region foo.js
-var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+//#region entry.js
+const fn = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function() {
 		return 123;
 	};
-}));
-
-//#endregion
-//#region entry.js
-const fn = require_foo();
+})))();
 assert.equal(fn(), 123);
-
 //#endregion
+
 ```

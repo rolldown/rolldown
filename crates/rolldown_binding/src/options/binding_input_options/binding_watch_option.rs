@@ -14,6 +14,9 @@ pub struct BindingWatchOption {
   pub include: Option<Vec<BindingStringOrRegex>>,
   pub exclude: Option<Vec<BindingStringOrRegex>>,
   pub build_delay: Option<u32>,
+  pub use_polling: Option<bool>,
+  pub poll_interval: Option<u32>,
+  pub compare_contents_for_polling: Option<bool>,
   #[napi(ts_type = "((id: string) => void) | undefined")]
   #[debug(skip)]
   pub on_invalidate: Option<JsCallback<FnArgs<(String,)>>>,
@@ -26,6 +29,9 @@ impl From<BindingWatchOption> for rolldown_common::WatchOption {
       include: value.include.map(bindingify_string_or_regex_array),
       exclude: value.exclude.map(bindingify_string_or_regex_array),
       build_delay: value.build_delay,
+      use_polling: value.use_polling.unwrap_or_default(),
+      poll_interval: value.poll_interval.map(u64::from),
+      compare_contents_for_polling: value.compare_contents_for_polling.unwrap_or_default(),
       on_invalidate: value.on_invalidate.map(|js_callback| {
         OnInvalidate::new(Arc::new(move |path| {
           let f = Arc::clone(&js_callback);

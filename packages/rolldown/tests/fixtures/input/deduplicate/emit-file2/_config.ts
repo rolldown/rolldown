@@ -1,5 +1,4 @@
 import { defineTest } from 'rolldown-tests';
-import { getOutputChunkNames } from 'rolldown-tests/utils';
 import { expect, vi } from 'vitest';
 
 let names: string[] = [];

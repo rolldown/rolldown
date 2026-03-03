@@ -1,1 +1,1 @@
-export const value = 'esm'
+export const value = 'esm';

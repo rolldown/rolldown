@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 //#region shared.js
 let count = 0;
 function reset() {
@@ -17,7 +16,6 @@ function inc() {
 	count += 1;
 }
 var shared_default = count;
-
 //#endregion
 //#region async-entry.js
 reset();
@@ -26,8 +24,8 @@ assert.strictEqual(shared_default, shared_default);
 inc();
 assert.strictEqual(shared_default, 0);
 assert.strictEqual(shared_default, shared_default);
-
 //#endregion
+
 ```
 
 ## main.js
@@ -35,6 +33,6 @@ assert.strictEqual(shared_default, shared_default);
 ```js
 //#region main.js
 import("./async-entry.js");
-
 //#endregion
+
 ```

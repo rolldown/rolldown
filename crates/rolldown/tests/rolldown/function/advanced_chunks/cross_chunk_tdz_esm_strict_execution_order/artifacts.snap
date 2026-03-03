@@ -24,13 +24,11 @@ To fix:
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as TIMEOUT, r as init_shared, t as MAX_RETRIES } from "./vendor.js";
 import { strictEqual } from "node:assert";
-
 //#region state.js
 var state;
 var init_state = __esmMin((() => {
 	state = {};
 }));
-
 //#endregion
 //#region helpers.js
 function getConfig(key, defaultValue) {
@@ -41,10 +39,8 @@ function getConfig(key, defaultValue) {
 var init_helpers = __esmMin((() => {
 	init_state();
 }));
-
 //#endregion
-//#region main.js
-var init_main = __esmMin((() => {
+__esmMin((() => {
 	init_state();
 	init_helpers();
 	init_shared();
@@ -52,11 +48,9 @@ var init_main = __esmMin((() => {
 	strictEqual(TIMEOUT, 3e5);
 	strictEqual(MAX_RETRIES, 3);
 	strictEqual(getConfig("TIMEOUT", 999), 5e3);
-}));
-
-//#endregion
-init_main();
+}))();
 export { init_helpers as n, getConfig as t };
+
 ```
 
 ## rolldown-runtime.js
@@ -64,6 +58,7 @@ export { init_helpers as n, getConfig as t };
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 export { __esmMin as t };
+
 ```
 
 ## vendor.js
@@ -71,7 +66,6 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_helpers, t as getConfig } from "./main.js";
-
 //#region shared.js
 var TIMEOUT, MAX_RETRIES;
 var init_shared = __esmMin((() => {
@@ -79,7 +73,7 @@ var init_shared = __esmMin((() => {
 	TIMEOUT = getConfig("TIMEOUT", 3e5);
 	MAX_RETRIES = getConfig("MAX_RETRIES", 3);
 }));
-
 //#endregion
 export { TIMEOUT as n, init_shared as r, MAX_RETRIES as t };
+
 ```

@@ -19,12 +19,11 @@ function identity2(x) {
 function identity3(x) {
 	return x;
 }
-
 //#endregion
 //#region entry-outer.js
 check(/* @__PURE__ */ empty1(), /* @__PURE__ */ empty2(args), /* @__PURE__ */ empty3(...args), identity1(), identity2(args), identity3(...args));
-
 //#endregion
+
 ```
 
 ## entry.js
@@ -44,6 +43,6 @@ function identity3(x) {
 	return x;
 }
 check(empty1(), empty2(args), empty3(...args), identity1(), identity2(args), identity3(...args));
-
 //#endregion
+
 ```

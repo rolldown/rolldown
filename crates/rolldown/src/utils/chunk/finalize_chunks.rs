@@ -5,8 +5,8 @@ use futures::future::try_join_all;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Asset, HashCharacters, InsChunkIdx, InstantiationKind, NormalizedBundlerOptions, SourceMapType,
-  StrOrBytes,
+  Asset, HashCharacters, InsChunkIdx, InstantiationKind, NormalizedBundlerOptions,
+  PathsOutputOption, SourceMapType, StrOrBytes,
 };
 use rolldown_error::BuildResult;
 #[cfg(not(target_family = "wasm"))]
@@ -20,7 +20,7 @@ use rolldown_utils::{
   rayon::{
     IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
   },
-  xxhash::{xxhash_base64_url, xxhash_with_base},
+  xxhash::{encode_hash_with_base, xxhash_base64_url},
 };
 use rustc_hash::FxHashMap;
 use xxhash_rust::xxh3::Xxh3;
@@ -40,6 +40,7 @@ pub async fn finalize_assets(
   index_chunk_to_instances: &IndexChunkToInstances,
   hash_characters: HashCharacters,
   options: &NormalizedBundlerOptions,
+  resolved_paths: Option<&PathsOutputOption>,
 ) -> BuildResult<AssetVec> {
   let ins_chunk_idx_by_placeholder = index_instantiated_chunks
     .iter_enumerated()
@@ -105,7 +106,7 @@ pub async fn finalize_assets(
       });
 
       let digested = hasher.digest128();
-      (xxhash_with_base(&digested.to_le_bytes(), hash_base), digested)
+      (encode_hash_with_base(&digested.to_le_bytes(), hash_base), digested)
     })
     .collect::<Vec<_>>()
     .into();
@@ -137,12 +138,6 @@ pub async fn finalize_assets(
         let (_, debug_id) = index_final_hashes[asset_idx];
         ecma_meta.debug_id = debug_id;
       }
-      if let InstantiationKind::Css(css_meta) = &mut instantiated_chunk.kind {
-        css_meta.filename = filename.clone();
-        let (_, debug_id) = index_final_hashes[asset_idx];
-        css_meta.debug_id = debug_id;
-      }
-
       if let StrOrBytes::Str(content) = &mut instantiated_chunk.content {
         if let Cow::Owned(replaced) = replace_placeholder_with_hash(
           content,
@@ -174,7 +169,7 @@ pub async fn finalize_assets(
           link_output.module_table[*idx]
             .as_external()
             .expect("direct_imports_from_external_modules should only contain external modules")
-            .get_file_name(options.paths.as_ref())
+            .get_file_name(resolved_paths)
         }))
         .collect();
 
@@ -227,33 +222,6 @@ pub async fn finalize_assets(
           Some(concat_string!(asset.filename, ".map"))
         };
         ecma_meta.sourcemap_filename = sourcemap_filename;
-        asset.content = code.into();
-      }
-      InstantiationKind::Css(css_meta) => {
-        let asset_code = mem::take(&mut asset.content);
-        let mut code = asset_code.try_into_string()?;
-        if let Some(map) = asset.map.as_mut() {
-          if let Some(sourcemap_asset) = process_code_and_sourcemap(
-            options,
-            &mut code,
-            map,
-            &css_meta.file_dir,
-            asset.filename.as_str(),
-            css_meta.debug_id,
-            /*is_css*/ true,
-          )
-          .await?
-          {
-            derived_asset = Ok(Some(Asset {
-              originate_from: None,
-              content: sourcemap_asset.source,
-              filename: sourcemap_asset.filename,
-              map: None,
-              meta: InstantiationKind::None,
-            }));
-          }
-        }
-
         asset.content = code.into();
       }
       InstantiationKind::None | InstantiationKind::Sourcemap(_) => {}

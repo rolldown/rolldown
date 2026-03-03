@@ -1,1 +1,1 @@
-export const count = 1
+export const count = 1;

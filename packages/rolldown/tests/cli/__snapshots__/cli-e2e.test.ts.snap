@@ -34,6 +34,7 @@ OPTIONS
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
   --checks.filename-conflict  Whether to emit warnings when files generated have the same name with different contents.
   --checks.import-is-undefined Whether to emit warnings when an imported variable is not exported.
+  --checks.ineffective-dynamic-import Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   --checks.manual-code-splitting-skipped Whether to emit warnings when a module is skipped from a manual code splitting group.
   --checks.missing-global-name Whether to emit warnings when the \`output.globals\` option is missing when needed.
   --checks.missing-name-option-for-iife-export Whether to emit warnings when the \`output.name\` option is missing when needed.
@@ -47,9 +48,8 @@ OPTIONS
   --chunk-file-names <name>   Name pattern for emitted secondary chunks.
   --clean-dir                 Clean output directory before emitting output.
   --code-splitting <code-splitting>Code splitting options (true, false, or object).
+  --comments <comments>       Control comments in the output.
   --context <context>         The entity top-level \`this\` represents.
-  --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.
-  --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.
   --cwd <cwd>                 Current working directory.
   --devtools.session-id <devtools.session-id>Used to name the build.
   --dynamic-import-in-cjs     Dynamic import in CJS output.
@@ -67,7 +67,7 @@ OPTIONS
   --input <input>             Entry file.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
   --keep-names                Keep function and class names after bundling.
-  --legal-comments <legal-comments>Control comments in the output.
+  --legal-comments <legal-comments>Control legal comments in the output.
   --log-level <log-level>     Log level (silent, info, debug, warn).
   --make-absolute-externals-relative Prevent normalization of external imports.
   --minify-internal-exports   Minify internal exports.
@@ -88,6 +88,7 @@ OPTIONS
   --shim-missing-exports      Create shim variables for missing exports.
   --sourcemap-base-url <sourcemap-base-url>Base URL used to prefix sourcemap paths.
   --sourcemap-debug-ids       Inject sourcemap debug IDs.
+  --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
   --strict-execution-order    Lets modules be executed in the order they are declared.
   --top-level-var             Rewrite top-level declarations to use \`var\`.
   --transform.assumptions.ignore-function-length .
@@ -165,15 +166,15 @@ exports[`cli options for bundling > should handle \`--input\` and positional arg
 
 //#region 1.ts
 console.log("1");
-
 //#endregion
+
 
 |→ 2.js:
 
 //#region 2.js
 console.log("2");
-
-//#endregion"
+//#endregion
+"
 `;
 
 exports[`cli options for bundling > should handle multiple define arguments with comma-separated syntax 1`] = `
@@ -184,32 +185,28 @@ exports[`cli options for bundling > should handle multiple define arguments with
 
 exports[`cli options for bundling > should handle negative boolean options 1`] = `
 "(function(exports, node_fs) {
-
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-//#region index.ts
-	const nonExternal = "nonExternal";
-
-//#endregion
-exports.nonExternal = nonExternal;
-exports.read = node_fs.read;
-exports.readFile = node_fs.readFile;
-exports.readFileSync = node_fs.readFileSync;
-exports.readSync = node_fs.readSync;
-return exports;
-})({}, node_fs);"
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	//#endregion
+	exports.nonExternal = "nonExternal";
+	exports.read = node_fs.read;
+	exports.readFile = node_fs.readFile;
+	exports.readFileSync = node_fs.readFileSync;
+	exports.readSync = node_fs.readSync;
+	return exports;
+})({}, node_fs);
+"
 `;
 
 exports[`cli options for bundling > should handle nested options 1`] = `
 "//#region index.js
 var cli_option_nested_default = defined;
-
 //#endregion
-export { cli_option_nested_default as default };"
+export { cli_option_nested_default as default };
+"
 `;
 
 exports[`cli options for bundling > should handle pass \`-s\` options 1`] = `
-"<DIR>/index.js.map  asset │ size: 0.20 kB
+"<DIR>/index.js.map  asset │ size: 0.21 kB
 <DIR>/index.js      chunk │ size: 0.19 kB
 
 "
@@ -234,13 +231,13 @@ exports[`cli options for bundling > should handle single boolean short options 1
 `;
 
 exports[`cli options for bundling > should handle single object options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.27 kB
+"<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle single string options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.13 kB
+"<DIR>/index.js  chunk │ size: 0.12 kB
 
 "
 `;

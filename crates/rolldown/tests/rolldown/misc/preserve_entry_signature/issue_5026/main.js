@@ -1,8 +1,7 @@
-import { createRouter } from './router.mjs'
+import { createRouter } from './router.mjs';
 
-const router = createRouter(() => import('./page.mjs'))
+const router = createRouter(() => import('./page.mjs'));
 
-await router.isReady
+await router.isReady;
 
 globalThis.result.push('ready');
-

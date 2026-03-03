@@ -11,7 +11,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_entry = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = null;
 }));
-
 //#endregion
 export default require_entry();
 

@@ -27,8 +27,8 @@ use(isNotPure);
 		notPure();
 	} };
 })();
-
 //#endregion
+
 ```
 
 ## remove-these.js
@@ -39,6 +39,6 @@ use(isNotPure);
 var someVar;
 ((x) => {})(someVar);
 stuff();
-
 //#endregion
+
 ```

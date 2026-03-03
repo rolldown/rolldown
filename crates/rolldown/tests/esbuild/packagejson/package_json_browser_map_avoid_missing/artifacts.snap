@@ -13,7 +13,6 @@ var require_component_indexof = /* @__PURE__ */ __commonJSMin(((exports, module)
 		return 234;
 	};
 }));
-
 //#endregion
 //#region node_modules/component-classes/index.js
 try {
@@ -21,6 +20,6 @@ try {
 } catch (err) {
 	require_component_indexof();
 }
-
 //#endregion
+
 ```

@@ -1,10 +1,8 @@
 import assert from "node:assert";
-
 //#region main.js
 console.log("production");
 assert.strictEqual("production", "production");
 (function(process) {
 	assert.strictEqual(process.env.NODE_ENV, void 0);
 })({ env: {} });
-
 //#endregion

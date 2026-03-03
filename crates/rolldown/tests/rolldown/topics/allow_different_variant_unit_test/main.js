@@ -1,4 +1,1 @@
-function test() {
-
-}
-
+function test() {}

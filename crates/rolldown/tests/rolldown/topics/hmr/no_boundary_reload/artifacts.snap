@@ -7,14 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-// HIDDEN [rolldown:hmr]
-//#region main.js
-var main_exports = /* @__PURE__ */ __exportAll({});
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-console.log(1);
 
-//#endregion
 ```
 
 # HMR Step 0
@@ -32,12 +25,5 @@ console.log(1);
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-// HIDDEN [rolldown:hmr]
-//#region main.js
-var main_exports = /* @__PURE__ */ __exportAll({});
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-console.log(2);
 
-//#endregion
 ```

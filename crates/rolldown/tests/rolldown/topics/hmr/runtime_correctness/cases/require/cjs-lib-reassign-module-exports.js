@@ -1,6 +1,6 @@
 module.exports = function () {
-  return 'exports'
-}
-module.exports.foo = 'foo'
+  return 'exports';
+};
+module.exports.foo = 'foo';
 
-import 'trigger-dep'
+import 'trigger-dep';

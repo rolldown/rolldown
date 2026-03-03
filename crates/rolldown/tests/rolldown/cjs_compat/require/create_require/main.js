@@ -1,7 +1,7 @@
-import { createRequire } from 'node:module'
+import { createRequire } from 'node:module';
 
-const require = createRequire(import.meta.url)
+const require = createRequire(import.meta.url);
 
-const assert = require('node:assert')
+const assert = require('node:assert');
 
-assert.equal(1, 1)
+assert.equal(1, 1);

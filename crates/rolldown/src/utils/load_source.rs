@@ -100,6 +100,11 @@ pub async fn load_source<Fs: FileSystem + 'static>(
               guessed,
             ))
           }
+          ModuleType::Copy => Err(anyhow::format_err!(
+            "Encountered a module with type `copy`, but no plugin handled it. \
+               If you configured this file's extension as `copy` in `moduleTypes`, \
+               ensure the builtin copy-module plugin is enabled."
+          ))?,
           ModuleType::Js
           | ModuleType::Jsx
           | ModuleType::Ts
@@ -167,6 +172,7 @@ async fn read_file_by_module_type<Fs: FileSystem + 'static>(
     | ModuleType::Json
     | ModuleType::Css
     | ModuleType::Empty
+    | ModuleType::Copy
     | ModuleType::Custom(_)
     | ModuleType::Text => Ok(StrOrBytes::Str({
       if cfg!(target_family = "wasm") {

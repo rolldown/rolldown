@@ -1,6 +1,5 @@
-import { Globals, value } from "./lib";
+import { Globals, value } from './lib';
 
 export { Globals, value };
 
-
-import 'trigger-dep'
+import 'trigger-dep';

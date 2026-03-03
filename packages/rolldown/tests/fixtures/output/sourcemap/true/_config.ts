@@ -9,6 +9,9 @@ export default defineTest({
     output: {
       sourcemap: true,
     },
+    optimization: {
+      inlineConst: false,
+    },
   },
   afterTest: function (output) {
     expect(getOutputFileNames(output)).toStrictEqual(['main.js', 'main.js.map']);
@@ -20,7 +23,7 @@ export default defineTest({
     if (output.output[1].type === 'asset') {
       const map = JSON.parse(output.output[1].source.toString());
       expect(map.file).toMatch('main.js');
-      expect(map.mappings).toMatchInlineSnapshot(`";AAAA,MAAa,MAAM;;;;ACEnB,QAAQ,IAAI,IAAI"`);
+      expect(map.mappings).toMatchInlineSnapshot(`";;ACEA,QAAQ,IDFW,ECEH"`);
     }
   },
 });

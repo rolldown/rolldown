@@ -1,4 +1,4 @@
-import assert from 'node:assert'
-import { a } from './a'
+import assert from 'node:assert';
+import { a } from './a';
 
-assert.strictEqual(a.b.c, 'c')
+assert.strictEqual(a.b.c, 'c');

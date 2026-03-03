@@ -13,6 +13,6 @@ try {
 	__require("./locale/" + name);
 	getSetGlobalLocale(oldLocale);
 } catch (e) {}
-
 //#endregion
+
 ```

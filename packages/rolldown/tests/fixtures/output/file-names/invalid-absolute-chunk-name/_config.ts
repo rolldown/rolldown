@@ -16,8 +16,6 @@ export default defineTest({
     expect(error.message).toContain(
       'Invalid substitution "/absolute/path" for placeholder "[name]"',
     );
-    expect(error.message).toContain(
-      'can be neither absolute nor relative path',
-    );
+    expect(error.message).toContain('can be neither absolute nor relative path');
   },
 });

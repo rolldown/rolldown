@@ -8,24 +8,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import * as m$1 from "d";
 import * as m from "c";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = m$1.default;
 }));
-
 //#endregion
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = m.default;
 }));
-
 //#endregion
 //#region main.js
 const a = require_a();
 const b = require_b();
 console.log(a, b);
-
 //#endregion
+
 ```

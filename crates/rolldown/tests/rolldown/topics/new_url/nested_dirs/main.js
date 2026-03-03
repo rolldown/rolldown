@@ -1,2 +1,2 @@
 export const url = new URL('./foo.txt', import.meta.url);
-export const dep = import('./dep')
+export const dep = import('./dep');

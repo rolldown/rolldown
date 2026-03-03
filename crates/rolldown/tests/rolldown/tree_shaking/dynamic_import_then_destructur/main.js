@@ -1,1 +1,1 @@
-import("./lib.js").then(({foo: x, thing: a}) => []);
+import('./lib.js').then(({ foo: x, thing: a }) => []);

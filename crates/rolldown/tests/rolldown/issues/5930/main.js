@@ -1,5 +1,5 @@
-import mod from "./rule";
-import assert from "node:assert";
+import mod from './rule';
+import assert from 'node:assert';
 
 const plugin = {
   mod,

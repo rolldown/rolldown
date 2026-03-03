@@ -43,6 +43,8 @@ runTestSuiteWithSamples(
 							bundle ||
 							(await rollup({
 								input: directory + '/main.js',
+								// Disable inlineConst for rollup tests, see https://github.com/rolldown/rolldown/issues/8100
+								optimization: { inlineConst: false },
 								onLog: (level, log) => {
 									logs.push({ level, ...log });
 									if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {

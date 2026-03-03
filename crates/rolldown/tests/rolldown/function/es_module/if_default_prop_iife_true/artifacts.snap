@@ -7,16 +7,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 var module = (function(exports) {
-
-Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
-
-//#region main.js
+	Object.defineProperties(exports, {
+		__esModule: { value: true },
+		[Symbol.toStringTag]: { value: "Module" }
+	});
+	//#region main.js
 	var main_default = "if_default_prop_true";
 	const value = true;
-
-//#endregion
-exports.default = main_default;
-exports.value = value;
-return exports;
+	//#endregion
+	exports.default = main_default;
+	exports.value = value;
+	return exports;
 })({});
+
 ```

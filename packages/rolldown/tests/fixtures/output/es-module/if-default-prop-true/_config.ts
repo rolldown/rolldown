@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 import type { OutputChunk as RolldownOutputChunk } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
-import { expect, vi } from 'vitest';
+import { expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -20,10 +20,10 @@ export default defineTest({
     const require = createRequire(import.meta.url);
     expect(
       output.output
-        .filter((output): output is RolldownOutputChunk => output.type === 'chunk' && output.isEntry)
-        .every((chunk) =>
-          require(`./dist/${chunk.fileName}`).bundle.nested.__esModule
-        ),
+        .filter(
+          (output): output is RolldownOutputChunk => output.type === 'chunk' && output.isEntry,
+        )
+        .every((chunk) => require(`./dist/${chunk.fileName}`).bundle.nested.__esModule),
     ).toBe(true);
   },
 });

@@ -1,1 +1,1 @@
-import './indirect-side-effect'
+import './indirect-side-effect';

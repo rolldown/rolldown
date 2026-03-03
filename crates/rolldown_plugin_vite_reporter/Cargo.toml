@@ -17,7 +17,9 @@ doctest = false
 workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
 cow-utils = { workspace = true }
+derive_more = { workspace = true }
 flate2 = { workspace = true }
 itoa = { workspace = true }
 num-format = { workspace = true }
@@ -25,6 +27,5 @@ owo-colors = { workspace = true, features = ["supports-colors"] }
 rayon = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
-rolldown_plugin_utils = { workspace = true }
 sugar_path = { workspace = true }
 terminal_size = { workspace = true }

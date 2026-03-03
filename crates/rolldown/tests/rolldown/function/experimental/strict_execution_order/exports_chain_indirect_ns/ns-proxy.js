@@ -1,3 +1,3 @@
-import * as star from './proxy'
+import * as star from './proxy';
 
-export { star }
+export { star };

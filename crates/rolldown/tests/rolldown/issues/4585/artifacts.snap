@@ -6,20 +6,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 let node_process = require("node:process");
-
 //#region lib.js
 var VFile = class {
 	constructor() {
 		console.log(node_process.default);
 	}
 };
-
 //#endregion
 //#region main.js
 const file = new VFile();
-
 //#endregion
 exports.file = file;
+
 ```

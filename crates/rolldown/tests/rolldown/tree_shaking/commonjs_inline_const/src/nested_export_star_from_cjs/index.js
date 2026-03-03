@@ -1,1 +1,1 @@
-export * as another from './reexport.js'
+export * as another from './reexport.js';

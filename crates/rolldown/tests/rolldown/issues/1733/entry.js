@@ -1,3 +1,3 @@
-import "./static.css";
-import("./dynamic.css");
-require("./some.css");
+import './static.css';
+import('./dynamic.css');
+require('./some.css');

@@ -1,1 +1,1 @@
-console.log('should be kept')
+console.log('should be kept');

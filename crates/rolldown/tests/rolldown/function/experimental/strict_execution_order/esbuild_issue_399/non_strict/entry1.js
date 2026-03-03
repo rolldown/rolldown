@@ -1,2 +1,2 @@
-import "./init-dep-1.js";
-import "./run-dep.js";  
+import './init-dep-1.js';
+import './run-dep.js';

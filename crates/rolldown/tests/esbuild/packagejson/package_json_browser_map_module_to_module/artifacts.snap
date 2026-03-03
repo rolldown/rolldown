@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region node_modules/node-pkg-browser/index.js
 var require_node_pkg_browser = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -15,20 +14,15 @@ var require_node_pkg_browser = /* @__PURE__ */ __commonJSMin(((exports, module) 
 		return 123;
 	};
 }));
-
 //#endregion
-//#region node_modules/demo-pkg/index.js
-var require_demo_pkg = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+//#region src/entry.js
+var import_demo_pkg = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const fn = require_node_pkg_browser();
 	module.exports = function() {
 		return fn();
 	};
-}));
-
-//#endregion
-//#region src/entry.js
-var import_demo_pkg = /* @__PURE__ */ __toESM(require_demo_pkg());
+})))());
 assert.equal((0, import_demo_pkg.default)(), 123);
-
 //#endregion
+
 ```

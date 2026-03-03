@@ -1,1 +1,1 @@
-console.log(require('./foo.txt'))
+console.log(require('./foo.txt'));

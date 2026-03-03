@@ -9,7 +9,7 @@ export default defineTest({
       b: './main.js',
     },
   },
-  afterTest: function(output) {
+  afterTest: function (output) {
     let chunkNames = getOutputChunkNames(output).sort();
     // two entry chunks + shared chunk
     expect(chunkNames.length).toStrictEqual(2);

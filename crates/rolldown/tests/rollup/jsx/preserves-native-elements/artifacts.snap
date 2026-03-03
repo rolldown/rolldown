@@ -8,15 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region other1.js
 console.log("wrong div 1", "wrong span 1");
-
 //#endregion
 //#region jsx.js
 console.log(<div />);
 console.log(<div><span /></div>);
-
 //#endregion
 //#region other2.js
 console.log("wrong div 2", "wrong span 2");
-
 //#endregion
+
 ```

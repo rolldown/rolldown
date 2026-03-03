@@ -1,4 +1,9 @@
-const Hello = () => <div>Hello</div>
+const Hello = () => <div>Hello</div>;
 export default function World() {
-  return <div><Hello />World</div>
+  return (
+    <div>
+      <Hello />
+      World
+    </div>
+  );
 }

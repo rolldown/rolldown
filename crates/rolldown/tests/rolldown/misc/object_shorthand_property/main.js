@@ -1,6 +1,6 @@
-import foo from './foo'
-import assert from 'assert'
+import foo from './foo';
+import assert from 'assert';
 
-const value = { foo }
+const value = { foo };
 
-assert.strictEqual(value.foo, 'foo')
+assert.strictEqual(value.foo, 'foo');

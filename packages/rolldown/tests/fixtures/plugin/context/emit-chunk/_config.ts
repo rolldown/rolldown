@@ -44,7 +44,7 @@ export default defineTest({
       },
     ],
   },
-  afterTest: (output) => {
+  afterTest: (_output) => {
     expect(emittedChunkPreliminaryFilenames).toMatchInlineSnapshot(`
       [
         "main-with-name-!~{001}~.js",

@@ -28,10 +28,7 @@ export default defineTest({
   },
   afterTest(output) {
     if (process.platform !== 'win32') {
-      expect(getOutputChunkNames(output)).toStrictEqual([
-        'main.js',
-        'custom-virtual/_module.js',
-      ]);
+      expect(getOutputChunkNames(output)).toStrictEqual(['main.js', 'custom-virtual/_module.js']);
     }
   },
 });

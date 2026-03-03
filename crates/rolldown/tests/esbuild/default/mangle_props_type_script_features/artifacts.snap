@@ -60,8 +60,8 @@ console.log({
 	foo: TopLevelNumber.foo_,
 	bar: TopLevelString.bar_
 });
-
 //#endregion
+
 ```
 
 ## namespace-exports.js
@@ -118,8 +118,8 @@ console.log({
 		ENUM: MANGLE_ENUM_
 	});
 })(ns || (ns = {}));
-
 //#endregion
+
 ```
 
 ## parameter-properties.js
@@ -134,6 +134,6 @@ var Foo = class {
 };
 let foo = new Foo();
 console.log(foo.KEEP_FIELD, foo.MANGLE_FIELD_);
-
 //#endregion
+
 ```

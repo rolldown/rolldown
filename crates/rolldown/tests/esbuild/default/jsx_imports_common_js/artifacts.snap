@@ -7,15 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region custom-react.js
-var require_custom_react = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = {};
-}));
-
-//#endregion
 //#region entry.jsx
-var import_custom_react = require_custom_react();
+var import_custom_react = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {};
+})))();
 console.log(/* @__PURE__ */ (0, import_custom_react.elem)("div", null), /* @__PURE__ */ (0, import_custom_react.elem)(import_custom_react.frag, null, "fragment"));
-
 //#endregion
+
 ```

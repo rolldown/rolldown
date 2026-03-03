@@ -1,5 +1,6 @@
 {
   "config": {
+    "minify": false,
     "format": "iife",
     "name": "namespace.module",
     "banner": "import assert from \"node:assert\"\nclass A {\n  constructor() {",

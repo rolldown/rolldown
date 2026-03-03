@@ -25,7 +25,7 @@ export default defineTest({
       },
     ],
   },
-  afterTest: (output) => {
+  afterTest: (_output) => {
     expect(resolveDynamicImport).toHaveBeenCalledTimes(1);
   },
 });

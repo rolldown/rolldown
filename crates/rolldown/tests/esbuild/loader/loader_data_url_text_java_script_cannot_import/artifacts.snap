@@ -1,12 +1,21 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
-# Assets
+# Errors
 
-## entry.js
+## UNRESOLVED_IMPORT
 
-```js
-import "./other.js";
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './other.js' in \0rolldown/data-url:jAtxc31b5PqcjFC5TMaMtg
+   ╭─[ \0rolldown/data-url:jAtxc31b5PqcjFC5TMaMtg:1:8 ]
+   │
+ 1 │ import './other.js'
+   │        ──────┬─────  
+   │              ╰─────── Module not found.
+   │ 
+   │ Help: '\0rolldown/data-url:jAtxc31b5PqcjFC5TMaMtg' is imported by the following path:
+   │         - \0rolldown/data-url:jAtxc31b5PqcjFC5TMaMtg
+   │         - entry.js
+───╯
 
 ```

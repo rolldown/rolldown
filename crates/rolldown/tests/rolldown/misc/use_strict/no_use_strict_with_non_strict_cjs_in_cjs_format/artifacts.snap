@@ -9,17 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
-
-//#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	console.log("This chunk should not have \"use strict\" at the top.");
-	module.exports = {};
-}));
-
 //#endregion
 //#region main.js
-var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
+var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	console.log("This chunk should not have \"use strict\" at the top.");
+	module.exports = {};
+})))());
 node_assert.default.deepEqual(import_cjs.default, { default: {} });
-
 //#endregion
+
 ```

@@ -1,8 +1,6 @@
 {
   "expectExecuted": false,
   "config": {
-    "external": [
-      "external"
-    ]
+    "external": ["external"]
   }
 }

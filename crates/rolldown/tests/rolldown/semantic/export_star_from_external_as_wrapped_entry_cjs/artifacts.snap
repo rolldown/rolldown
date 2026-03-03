@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({ main: () => main });
 __reExport(main_exports, require("node:fs"));
@@ -17,16 +16,17 @@ var init_main = __esmMin((() => {
 	main = "main";
 	console.log((init_main(), __toCommonJS(main_exports)));
 }));
-
 //#endregion
 init_main();
 exports.main = main;
 var node_fs = require("node:fs");
-Object.keys(node_fs).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return node_fs[k]; }
-  });
+Object.keys(node_fs).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return node_fs[k];
+		}
+	});
 });
 
 ```

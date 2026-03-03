@@ -8,10 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import fs from "node:fs/promises";
 import "node:what-is-this";
-
 //#region entry.js
 fs.readFile();
-
 //#endregion
-export {  };
+export {};
+
 ```

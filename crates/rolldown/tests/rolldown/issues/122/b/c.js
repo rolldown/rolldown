@@ -1,2 +1,2 @@
-import "./1.js"
-console.log('c')
+import './1.js';
+console.log('c');

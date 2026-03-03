@@ -7,15 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region test.json
-var require_test = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = { "a": 1 };
-}));
-
-//#endregion
 //#region main.js
-const a = require_test();
+const a = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { "a": 1 };
+})))();
 console.log(`a: `, a);
-
 //#endregion
+
 ```

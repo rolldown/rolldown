@@ -1,5 +1,4 @@
-
-import assert from 'node:assert'
+import assert from 'node:assert';
 
 export const url = new URL('./node_modules/foo/index.txt', import.meta.url);
 

@@ -1,29 +1,44 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: foo.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
 # Assets
 
 ## main.js
 
 ```js
 import { strictEqual } from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
-const foo = "foo";
-
+var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
 //#endregion
 //#region main.js
-strictEqual(foo, "foo");
+strictEqual("foo", "foo");
 Promise.resolve().then(() => foo_exports).then((mod) => {
 	strictEqual(mod.foo, "foo");
 });
-
 //#endregion
+
 ```
 
 # Variant: [format: Cjs]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: foo.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
 
 ## Assets
 
@@ -32,17 +47,14 @@ Promise.resolve().then(() => foo_exports).then((mod) => {
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
-
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
-const foo = "foo";
-
+var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
 //#endregion
 //#region main.js
-(0, node_assert.strictEqual)(foo, "foo");
+(0, node_assert.strictEqual)("foo", "foo");
 Promise.resolve().then(() => foo_exports).then((mod) => {
 	(0, node_assert.strictEqual)(mod.foo, "foo");
 });
-
 //#endregion
+
 ```

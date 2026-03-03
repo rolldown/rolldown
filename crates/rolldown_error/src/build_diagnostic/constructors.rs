@@ -21,8 +21,8 @@ use super::events::cannot_call_namespace::CannotCallNamespace;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
 use super::events::duplicate_shebang::DuplicateShebang;
-use super::events::export_undefined_variable::ExportUndefinedVariable;
 use super::events::filename_conflict::FilenameConflict;
+use super::events::filename_outside_output_directory::FilenameOutsideOutputDirectory;
 use super::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use super::events::import_is_undefined::ImportIsUndefined;
 use super::events::invalid_define_config::InvalidDefineConfig;
@@ -185,6 +185,10 @@ impl BuildDiagnostic {
     Self::new_inner(FilenameConflict { filename })
   }
 
+  pub fn filename_outside_output_directory(filename: String) -> Self {
+    Self::new_inner(FilenameOutsideOutputDirectory { filename })
+  }
+
   // Esbuild
   pub fn commonjs_variable_in_esm(
     filename: String,
@@ -314,15 +318,6 @@ impl BuildDiagnostic {
     })
   }
 
-  pub fn export_undefined_variable(
-    filename: String,
-    source: ArcStr,
-    span: Span,
-    name: ArcStr,
-  ) -> Self {
-    Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
-  }
-
   pub fn assign_to_import(
     filename: ArcStr,
     source: ArcStr,
@@ -425,6 +420,20 @@ impl BuildDiagnostic {
     Self::new_inner(super::events::runtime_module_symbol_not_found::RuntimeModuleSymbolNotFound {
       symbol_names,
       modified_by_plugins,
+    })
+  }
+
+  pub fn ineffective_dynamic_import(
+    module_id: String,
+    mut static_importers: Vec<String>,
+    mut dynamic_importers: Vec<String>,
+  ) -> Self {
+    static_importers.sort();
+    dynamic_importers.sort();
+    Self::new_inner(super::events::ineffective_dynamic_import::IneffectiveDynamicImport {
+      module_id,
+      static_importers,
+      dynamic_importers,
     })
   }
 }

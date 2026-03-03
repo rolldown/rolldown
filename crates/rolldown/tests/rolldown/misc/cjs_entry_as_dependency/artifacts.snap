@@ -7,13 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __commonJSMin, r as __toESM, t as require_main2 } from "./main2.js";
-
 //#region main.js
 var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var import_main2 = /* @__PURE__ */ __toESM(require_main2());
-	module.exports = import_main2.default;
+	module.exports = (/* @__PURE__ */ __toESM(require_main2())).default;
 }));
-
 //#endregion
 export default require_main();
 
@@ -27,9 +24,8 @@ export default require_main();
 var require_main2 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {};
 }));
-
 //#endregion
 export default require_main2();
-
 export { __commonJSMin as n, __toESM as r, require_main2 as t };
+
 ```

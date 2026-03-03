@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region js-define.js
 three(), six();
-
 //#endregion
+
 ```
 
 ## ts-assign_ts-assign.js
@@ -25,8 +25,8 @@ var StaticPrivate = class {
 	static accessor #a = b;
 };
 StaticPrivate.c = d;
-
 //#endregion
+
 ```
 
 ## ts-define_ts-define.js
@@ -46,6 +46,6 @@ var StaticPrivate = class {
 	static accessor #a = b;
 };
 _defineProperty(StaticPrivate, "c", d);
-
 //#endregion
+
 ```

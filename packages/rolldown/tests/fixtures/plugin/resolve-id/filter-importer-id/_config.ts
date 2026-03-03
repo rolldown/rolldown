@@ -3,7 +3,7 @@ import { defineTest } from 'rolldown-tests';
 import { expect, vi } from 'vitest';
 
 const resolveIdFn = vi.fn();
-let calledArgs = [];
+
 export default defineTest({
   sequential: true,
   config: {

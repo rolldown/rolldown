@@ -1,4 +1,4 @@
-import assert from 'node:assert'
-import './b'
+import assert from 'node:assert';
+import './b';
 
-export const c = 'c'
+export const c = 'c';

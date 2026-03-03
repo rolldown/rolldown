@@ -7,17 +7,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 let zod = require("zod");
-
 //#region main.js
 console.log(zod.z);
-
 //#endregion
-
-Object.keys(zod).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return zod[k]; }
-  });
+Object.keys(zod).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return zod[k];
+		}
+	});
 });
 
 ```

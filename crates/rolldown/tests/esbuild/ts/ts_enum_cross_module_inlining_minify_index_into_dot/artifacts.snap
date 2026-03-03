@@ -12,7 +12,6 @@ let Bar = /* @__PURE__ */ function(Bar) {
 	Bar["bar2"] = "x y z";
 	return Bar;
 }({});
-
 //#endregion
 //#region entry.ts
 var Foo = /* @__PURE__ */ function(Foo) {
@@ -36,6 +35,6 @@ notInlined = [
 	obj?.prop[Foo.foo2],
 	obj?.prop[Bar.bar2]
 ];
-
 //#endregion
+
 ```

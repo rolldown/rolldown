@@ -22,14 +22,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 let somewhere = require("somewhere");
-
-//#region constants.js
-const constant = 123;
-
-//#endregion
 //#region empty.js
 var undef = void 0;
-
 //#endregion
 //#region entry.js
 _ = class Outer {
@@ -42,7 +36,7 @@ _ = class Outer {
 			@unbound @unbound() unbound;
 		},
 		class {
-			@constant @constant() constant;
+			@(123) @(123()) constant;
 		},
 		class {
 			@undef @undef() undef;
@@ -61,6 +55,6 @@ _ = class Outer {
 		}
 	];
 };
-
 //#endregion
+
 ```

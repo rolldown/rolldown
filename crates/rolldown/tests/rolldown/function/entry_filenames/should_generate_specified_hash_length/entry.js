@@ -1,1 +1,1 @@
-export { value } from './shared.js'
+export { value } from './shared.js';

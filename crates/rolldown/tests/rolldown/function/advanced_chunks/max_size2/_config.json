@@ -1,6 +1,7 @@
 {
   // Unsplitable max size shouldn't make the group invalid/ignored
   "config": {
+    "minify": false,
     "manualCodeSplitting": {
       "groups": [
         {

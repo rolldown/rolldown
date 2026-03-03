@@ -1,6 +1,6 @@
 import { strictEqual } from 'node:assert';
 export const a = globalThis.a;
-import './dynamic.js'
-import './sideeffects.js'
+import './dynamic.js';
+import './sideeffects.js';
 
-strictEqual(a, 2)
+strictEqual(a, 2);

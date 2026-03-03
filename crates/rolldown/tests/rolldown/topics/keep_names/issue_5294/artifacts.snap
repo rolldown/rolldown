@@ -7,14 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { strictEqual } from "node:assert";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region main.js
 function foo$1() {
 	console.log("foo");
 }
 __name(foo$1, "foo");
-
 //#endregion
 //#region decorator.js
 function foo() {
@@ -22,7 +20,7 @@ function foo() {
 	foo$1();
 }
 strictEqual(foo.name, "foo");
-
 //#endregion
 export { foo as default };
+
 ```

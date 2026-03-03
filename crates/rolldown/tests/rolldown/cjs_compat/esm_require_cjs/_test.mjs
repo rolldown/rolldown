@@ -1,4 +1,4 @@
-import assert from 'assert'
-import { cjs } from './dist/main.js'
+import assert from 'assert';
+import { cjs } from './dist/main.js';
 
-assert.equal(cjs, 'cjs')
+assert.equal(cjs, 'cjs');

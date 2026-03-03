@@ -1,5 +1,4 @@
-import { B } from './dist/main.js'
-import assert from 'node:assert'
+import { B } from './dist/main.js';
+import assert from 'node:assert';
 
-assert.strictEqual(B, 100)
-
+assert.strictEqual(B, 100);

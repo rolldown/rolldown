@@ -8,11 +8,10 @@ use oxc::{
   semantic::{ScopeFlags, SymbolId},
   span::{GetSpan, Span},
 };
-use rolldown_common::StmtInfoIdx;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  MemberExprObjectReferencedType, OutputFormat, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta,
-  SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
+  MemberExprObjectReferencedType, OutputFormat, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoIdx,
+  StmtInfoMeta, SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
@@ -51,22 +50,40 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_simple_assignment_target(&mut self, it: &ast::SimpleAssignmentTarget<'ast>) {
-    if !self.immutable_ctx.flat_options.property_write_side_effects()
-      && self.traverse_state.contains(TraverseState::TopLevel)
-    {
-      match it {
-        ast::SimpleAssignmentTarget::ComputedMemberExpression(_)
-        | ast::SimpleAssignmentTarget::StaticMemberExpression(_) => {
-          let pre = self.traverse_state;
+    match it {
+      ast::SimpleAssignmentTarget::ComputedMemberExpression(_)
+      | ast::SimpleAssignmentTarget::StaticMemberExpression(_) => {
+        let pre = self.traverse_state;
+        self.traverse_state.insert(TraverseState::MemberExprIsWrite);
+        if !self.immutable_ctx.flat_options.property_write_side_effects()
+          && pre.contains(TraverseState::TopLevel)
+        {
           self.traverse_state.insert(TraverseState::RootSymbolReferenceStmtInfoId);
-          walk::walk_simple_assignment_target(self, it);
-          self.traverse_state = pre;
-          return;
         }
-        _ => {}
+        walk::walk_simple_assignment_target(self, it);
+        self.traverse_state = pre;
+        return;
       }
+      _ => {}
     }
     walk::walk_simple_assignment_target(self, it);
+  }
+
+  fn visit_computed_member_expression(&mut self, it: &ast::ComputedMemberExpression<'ast>) {
+    if self.traverse_state.contains(TraverseState::MemberExprIsWrite) {
+      let kind = AstKind::ComputedMemberExpression(self.alloc(it));
+      self.enter_node(kind);
+      // In assignment targets, only the member object is written.
+      // The computed key expression is evaluated as a read.
+      let pre = self.traverse_state;
+      self.visit_expression(&it.object);
+      self.traverse_state.remove(TraverseState::MemberExprIsWrite);
+      self.visit_expression(&it.expression);
+      self.traverse_state = pre;
+      self.leave_node(kind);
+      return;
+    }
+    walk::walk_computed_member_expression(self, it);
   }
 
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
@@ -629,14 +646,37 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           {
             if !span.is_unspanned() {
               is_inserted_before = true;
+
+              if matches!(ty, MemberExprObjectReferencedType::Namespace)
+                && self.traverse_state.contains(TraverseState::MemberExprIsWrite)
+                && props[0].0 == "default"
+              {
+                // Write through namespace default (e.g. `ns.default.a = value`). Since
+                // `ns.default` is the raw CJS exports object, any property write on it may
+                // affect all `ns.xxx` reads. Mark the symbol so all CJS exports of the target
+                // module are bailed out from constant inlining.
+                let symbol_ref_flags = root_symbol_id.flags_mut(&mut self.result.symbol_ref_db);
+                *symbol_ref_flags |= SymbolRefFlags::HasComputedMemberWrite;
+              }
               self.add_member_expr_reference(
                 root_symbol_id,
                 props,
                 span,
                 ty,
                 ident_ref.reference_id.get(),
+                self.traverse_state.contains(TraverseState::MemberExprIsWrite),
               );
             }
+          } else if self.traverse_state.contains(TraverseState::MemberExprIsWrite)
+            && matches!(
+              ty,
+              MemberExprObjectReferencedType::Default | MemberExprObjectReferencedType::Namespace
+            )
+          {
+            // Computed member write (e.g. `cjs[name] = value`) where the key is dynamic.
+            // Mark the import symbol so all CJS exports of the target module won't be inlined.
+            let symbol_ref_flags = root_symbol_id.flags_mut(&mut self.result.symbol_ref_db);
+            *symbol_ref_flags |= SymbolRefFlags::HasComputedMemberWrite;
           }
         }
         if !is_inserted_before {

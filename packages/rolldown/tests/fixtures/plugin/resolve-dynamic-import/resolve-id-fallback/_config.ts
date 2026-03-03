@@ -13,7 +13,7 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        resolveId: function (id, importer, options) {
+        resolveId: function (id, importer, _options) {
           resolveId();
           if (id === 'foo') {
             expect(importer).toStrictEqual(entry);

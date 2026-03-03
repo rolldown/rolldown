@@ -1,4 +1,4 @@
-import assert from 'node:assert'
+import assert from 'node:assert';
 import mod from './lib';
 
 let indirect = mod;

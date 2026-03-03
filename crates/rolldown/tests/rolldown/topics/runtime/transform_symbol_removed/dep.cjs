@@ -1,1 +1,1 @@
-exports.value = 'cjs-value'
+exports.value = 'cjs-value';

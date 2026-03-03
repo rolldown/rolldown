@@ -1,3 +1,4 @@
+mod binding_comments_options;
 mod binding_generated_code_options;
 pub mod binding_manual_code_splitting_options;
 mod binding_pre_rendered_asset;
@@ -8,6 +9,7 @@ use napi::Either;
 use napi::bindgen_prelude::{Either3, FnArgs};
 use rustc_hash::FxHashMap;
 
+pub use binding_comments_options::BindingCommentsOptions;
 pub use binding_generated_code_options::BindingGeneratedCodeOptions;
 use binding_manual_code_splitting_options::BindingManualCodeSplittingOptions;
 use binding_pre_rendered_chunk::PreRenderedChunk;
@@ -50,12 +52,6 @@ pub struct BindingOutputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
   pub chunk_file_names: Option<ChunkFileNamesOutputOption>,
-  #[debug(skip)]
-  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
-  pub css_entry_file_names: Option<ChunkFileNamesOutputOption>,
-  #[debug(skip)]
-  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
-  pub css_chunk_file_names: Option<ChunkFileNamesOutputOption>,
   #[debug(skip)]
   #[napi(ts_type = "boolean | ((name: string) => string)")]
   pub sanitize_file_name: Option<SanitizeFileName>,
@@ -138,7 +134,8 @@ pub struct BindingOutputOptions<'env> {
   pub sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
   // sourcemapExcludeSources: boolean;
   // sourcemapFile: string | undefined;
-  // strict: boolean;
+  #[napi(ts_type = "boolean | 'auto'")]
+  pub strict: Option<Either<bool, String>>,
   // systemNullSetters: boolean;
   // validate: boolean;
 
@@ -149,6 +146,7 @@ pub struct BindingOutputOptions<'env> {
   pub manual_code_splitting: Option<BindingManualCodeSplittingOptions>,
   #[napi(ts_type = "'none' | 'inline'")]
   pub legal_comments: Option<String>,
+  pub comments: Option<Either<bool, BindingCommentsOptions>>,
   pub polyfill_require: Option<bool>,
   pub preserve_modules: Option<bool>,
   pub virtual_dirname: Option<String>,

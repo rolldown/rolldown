@@ -146,18 +146,6 @@
             "null"
           ]
         },
-        "cssEntryFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "cssChunkFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
         "assetFilenames": {
           "type": [
             "string",
@@ -458,6 +446,16 @@
             }
           ]
         },
+        "comments": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommentsOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "polyfillRequire": {
           "type": [
             "boolean",
@@ -570,6 +568,16 @@
           "type": [
             "boolean",
             "null"
+          ]
+        },
+        "strict": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrictMode"
+            },
+            {
+              "type": "null"
+            }
           ]
         }
       },
@@ -689,7 +697,8 @@
             "binary",
             "empty",
             "css",
-            "asset"
+            "asset",
+            "copy"
           ]
         },
         {
@@ -1274,6 +1283,20 @@
             "null"
           ],
           "format": "double"
+        },
+        "entriesAware": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "entriesAwareMergeThreshold": {
+          "description": "Only effective when `entriesAware` is set to `true`.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
         }
       },
       "additionalProperties": false,
@@ -1398,6 +1421,12 @@
             "null"
           ]
         },
+        "ineffectiveDynamicImport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "manualCodeSplittingSkipped": {
           "type": [
             "boolean",
@@ -1421,6 +1450,20 @@
           "format": "uint32",
           "minimum": 0
         },
+        "usePolling": {
+          "type": "boolean"
+        },
+        "pollInterval": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "compareContentsForPolling": {
+          "type": "boolean"
+        },
         "include": {
           "type": [
             "array",
@@ -1442,7 +1485,9 @@
       },
       "additionalProperties": false,
       "required": [
-        "skipWrite"
+        "skipWrite",
+        "usePolling",
+        "compareContentsForPolling"
       ]
     },
     "LegalComments": {
@@ -1458,6 +1503,41 @@
           "const": "inline"
         }
       ]
+    },
+    "CommentsOptions": {
+      "description": "Resolved comments options with explicit boolean flags.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/RawCommentsObject"
+        }
+      ]
+    },
+    "RawCommentsObject": {
+      "type": "object",
+      "properties": {
+        "legal": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "annotation": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "jsdoc": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "MakeAbsoluteExternalsRelative": {
       "oneOf": [
@@ -1584,6 +1664,26 @@
         }
       ]
     },
+    "StrictMode": {
+      "description": "Controls whether `\"use strict\"` is emitted in the output.\n\nSee [`rollupjs.org/configuration-options/#output-strict`](https://rollupjs.org/configuration-options/#output-strict).",
+      "oneOf": [
+        {
+          "description": "Respect the `\"use strict\"` directives from the source code.\nThis is the default behavior.",
+          "type": "string",
+          "const": "auto"
+        },
+        {
+          "description": "Always emit `\"use strict\"` at the top of the output (not applicable for ESM format).",
+          "type": "string",
+          "const": "always"
+        },
+        {
+          "description": "Never emit `\"use strict\"` in the output.",
+          "type": "string",
+          "const": "never"
+        }
+      ]
+    },
     "ConfigVariant": {
       "type": "object",
       "properties": {
@@ -1624,6 +1724,16 @@
           "type": [
             "boolean",
             "null"
+          ]
+        },
+        "strict": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrictMode"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "entryFilenames": {

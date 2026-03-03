@@ -26,7 +26,7 @@ use rolldown_ecmascript_utils::{
 
 mod finalizer_context;
 mod impl_visit_mut;
-pub use finalizer_context::{FinalizerMutableState, ScopeHoistingFinalizerContext};
+pub use finalizer_context::ScopeHoistingFinalizerContext;
 use oxc::span::{CompactStr, Ident};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -605,8 +605,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             else {
               return vec![];
             };
-            let importee_name =
-              &module.get_import_path(self.ctx.chunk, self.ctx.options.paths.as_ref());
+            let importee_name = &module.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
             let call_expr = self.snippet.re_export_call_expr(
               re_export_fn_ref.clone_in(self.alloc),
               self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
@@ -939,11 +938,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         Some(ast::SimpleAssignmentTarget::StaticMemberExpression(final_access))
       }
       CjsMemberProperty::Computed(expr) => {
-        let expr_clone = expr.clone_in(self.alloc);
+        // Finalize the computed key expression (e.g. inline constants) so that an
+        // inlined value is emitted instead of a reference to a tree-shaken binding.
+        let finalized_expr = match expr {
+          ast::Expression::Identifier(ident_ref) => self
+            .try_rewrite_identifier_reference_expr(ident_ref, false)
+            .unwrap_or_else(|| expr.clone_in(self.alloc)),
+          _ => expr.clone_in(self.alloc),
+        };
         let final_access = self.snippet.builder.alloc_computed_member_expression(
           SPAN,
           default_access,
-          expr_clone,
+          finalized_expr,
           false,
         );
         Some(ast::SimpleAssignmentTarget::ComputedMemberExpression(final_access))
@@ -951,7 +957,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn get_conflicted_info(&self, id: KeepNameId) -> Option<(&'me str, &'me str)> {
+  /// Returns `(original_name, canonical_name)` for keep_names processing.
+  /// Returns `Some` only if the name has been deconflicted (renamed).
+  fn get_keep_name_info(&self, id: KeepNameId) -> Option<(&'me str, &'me str)> {
     let symbol_ref: SymbolRef = match id {
       KeepNameId::SymbolId(symbol_id) => (self.ctx.idx, symbol_id).into(),
       KeepNameId::ReferenceId(reference_id) => {
@@ -959,7 +967,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         (self.ctx.idx, symbol_id).into()
       }
       KeepNameId::CompactStr(_) => {
-        // CompactStr variant doesn't need conflict resolution - it's already a direct name
         return None;
       }
     };
@@ -1144,7 +1151,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               call_expr.arguments.get_mut(0).expect("require should have an argument");
             // Rewrite `require('xxx')` to `require('fs')`, if there is an alias that maps 'xxx' to 'fs'
             *request_path = ast::Argument::StringLiteral(self.snippet.alloc_string_literal(
-              &importee.get_import_path(self.ctx.chunk, self.ctx.options.paths.as_ref()),
+              &importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths),
               request_path.span(),
             ));
             None
@@ -1251,7 +1258,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .enumerate()
       .zip(self.ctx.module.stmt_infos.iter_enumerated().skip(1))
       .for_each(|((_top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
-        if !self.ctx.linking_info.stmt_info_included[stmt_info_idx] {
+        if !self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx) {
           return;
         }
 
@@ -1534,34 +1541,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               return;
             }
           }
-        } else if self.ctx.options.top_level_var {
-          if let Statement::VariableDeclaration(var_decl) = &mut top_stmt {
-            var_decl.kind = ast::VariableDeclarationKind::Var;
-            for decl in &mut var_decl.declarations {
-              decl.kind = VariableDeclarationKind::Var;
-            }
-          }
-          if let Statement::ClassDeclaration(class_decl) = &mut top_stmt {
-            if let Some(mut decl) = self.get_transformed_class_decl(class_decl) {
-              top_stmt = Statement::from(decl.take_in(self.alloc));
-            }
-          }
         }
-        // Convert const/let to var in ESM chunks with circular chunk dependencies.
+
+        // Convert const/let to var and class declarations to var assignments when:
+        // 1. top_level_var option is set (explicit user request), OR
+        // 2. This is an ESM non-wrapped module in a chunk with circular chunk dependencies
+        //    (safety net to prevent TDZ ReferenceErrors from circular chunk imports).
         //
-        // This runs AFTER export stripping (above), so it catches declarations that were
-        // originally `export const` and are now plain `const`.
-        //
-        // Without this, circular chunk imports can cause TDZ ReferenceErrors because
-        // const/let bindings cannot be accessed before initialization.
-        //
-        // Wrapped modules (strictExecutionOrder/on-demand wrapping) are already immune to TDZ
-        // because execution is deferred via lazy initializers, so we skip them to avoid
-        // unnecessary semantics changes.
-        if self.ctx.options.format.is_esm()
-          && self.ctx.linking_info.wrap_kind().is_none()
-          && self.ctx.chunk_graph.chunks_with_circular_deps.contains(&self.ctx.chunk_idx)
-        {
+        // For case 2: This runs AFTER export stripping (above), so it catches declarations
+        // that were originally `export const` and are now plain `const`. Wrapped modules
+        // (strictExecutionOrder/on-demand wrapping) are immune to TDZ via lazy initializers.
+        let needs_top_level_var = self.ctx.options.top_level_var
+          || (self.ctx.options.format.is_esm()
+            && self.ctx.linking_info.wrap_kind().is_none()
+            && self.ctx.chunk_graph.chunks_with_circular_deps.contains(&self.ctx.chunk_idx));
+        if needs_top_level_var {
           if let Statement::VariableDeclaration(var_decl) = &mut top_stmt {
             var_decl.kind = ast::VariableDeclarationKind::Var;
             for decl in &mut var_decl.declarations {
@@ -1590,8 +1584,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !self.ctx.options.keep_names {
       return None;
     }
-    let (original_name, _) = self.get_conflicted_info(name_binding_id?)?;
-    let (_, canonical_name) = self.get_conflicted_info(symbol_binding_id?)?;
+    let (original_name, _) = self.get_keep_name_info(name_binding_id?)?;
+    let (_, canonical_name) = self.get_keep_name_info(symbol_binding_id?)?;
     let original_name: CompactStr = CompactStr::new(original_name);
     let new_name = CompactStr::new(canonical_name);
     let insert_position = self.cur_stmt_index + 1;
@@ -1610,26 +1604,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     match expr {
       ast::Expression::ClassExpression(class_expression) => {
-        if let Some(element) = self.keep_name_helper_for_class(
-          class_expression
-            .id
-            .as_ref()
-            .and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId))
-            .or(keep_name_id),
-          &class_expression.body,
-        ) {
+        // Named class expressions are handled in visit_expression
+        if class_expression.id.is_some() {
+          return;
+        }
+        if let Some(element) = self.keep_name_helper_for_class(keep_name_id, &class_expression.body)
+        {
           class_expression.body.body.insert(0, element);
         }
       }
       ast::Expression::FunctionExpression(fn_expression) => {
-        if let Some((_insert_position, original_name, _)) = self.process_fn(
-          keep_name_id,
-          fn_expression
-            .id
-            .as_ref()
-            .and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId))
-            .or(keep_name_id),
-        ) {
+        // Named function expressions are handled in visit_expression
+        if fn_expression.id.is_some() {
+          return;
+        }
+        if let Some((_insert_position, original_name, _)) =
+          self.process_fn(keep_name_id, keep_name_id)
+        {
           let fn_expr = expr.take_in(self.alloc);
           let name_ref = self.canonical_ref_for_runtime("__name");
           let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
@@ -1669,7 +1660,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         name.clone()
       }
       KeepNameId::SymbolId(_) | KeepNameId::ReferenceId(_) => {
-        let (original_name, _) = self.get_conflicted_info(keep_name_id)?;
+        let (original_name, _) = self.get_keep_name_info(keep_name_id)?;
         let original_name: CompactStr = CompactStr::new(original_name);
         original_name
       }
@@ -2006,7 +1997,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         needs_to_esm_helper = importee.exports_kind.is_commonjs();
       }
       Module::External(importee) => {
-        let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.options.paths.as_ref());
+        let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
         if str != import_path {
           expr.source = Expression::StringLiteral(
             self.snippet.alloc_string_literal(&import_path, expr.source.span()),

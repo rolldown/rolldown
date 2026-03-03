@@ -23,10 +23,8 @@ To fix:
 ```js
 import { t as TIMEOUT } from "./vendor.js";
 import { strictEqual } from "node:assert";
-
 //#region state.js
 var state = {};
-
 //#endregion
 //#region helpers.js
 function getConfig(key, defaultValue) {
@@ -34,29 +32,24 @@ function getConfig(key, defaultValue) {
 	if (value !== void 0) return value;
 	return defaultValue;
 }
-
 //#endregion
 //#region main.js
 state.config = { TIMEOUT: 5e3 };
 strictEqual(TIMEOUT, 3e5);
 strictEqual(getConfig("TIMEOUT", 999), 5e3);
-
 //#endregion
 export { getConfig as t };
+
 ```
 
 ## vendor.js
 
 ```js
 import { t as getConfig } from "./main.js";
-
-//#region vendor_dep.js
-var TIMEOUT_FROM_VENDOR = getConfig("TIMEOUT", 3e5);
-
 //#endregion
 //#region shared.js
-var TIMEOUT = TIMEOUT_FROM_VENDOR;
-
+var TIMEOUT = getConfig("TIMEOUT", 3e5);
 //#endregion
 export { TIMEOUT as t };
+
 ```

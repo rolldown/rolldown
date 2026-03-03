@@ -33,6 +33,8 @@ fn napi_sourcemap_to_sourcemap(
 }
 
 /// TypeScript compiler options for inline tsconfig configuration.
+///
+/// @category Utilities
 #[napi(object)]
 #[derive(Default, Clone)]
 pub struct BindingTsconfigCompilerOptions {
@@ -63,6 +65,8 @@ pub struct BindingTsconfigCompilerOptions {
 }
 
 /// Raw tsconfig options for inline configuration.
+///
+/// @category Utilities
 #[napi(object)]
 #[derive(Default, Clone)]
 pub struct BindingTsconfigRawOptions {

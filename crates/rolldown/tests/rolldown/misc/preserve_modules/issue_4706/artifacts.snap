@@ -8,34 +8,32 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 export { __commonJSMin };
+
 ```
 
 ## child.js
 
 ```js
 import { require_cjs } from "./cjs.js";
-
 //#region child.js
 const m = require_cjs();
 console.log(m);
-
 //#endregion
+
 ```
 
 ## cjs.js
 
 ```js
 import { __commonJSMin } from "./_virtual/_rolldown/runtime.js";
-
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e4;
 }));
-
 //#endregion
 export default require_cjs();
-
 export { require_cjs };
+
 ```
 
 ## dynamic.js
@@ -43,8 +41,8 @@ export { require_cjs };
 ```js
 //#region dynamic.js
 console.log("dynamic");
-
 //#endregion
+
 ```
 
 ## main.js
@@ -60,6 +58,6 @@ import "./reexport.js";
 ```js
 //#region reexport.js
 import("./dynamic.js");
-
 //#endregion
+
 ```

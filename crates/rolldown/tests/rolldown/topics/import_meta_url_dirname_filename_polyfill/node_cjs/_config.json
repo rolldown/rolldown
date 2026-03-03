@@ -1,6 +1,6 @@
 {
   "config": {
-    "platform":"node",
+    "platform": "node",
     "format": "cjs"
   },
   "visualizeSourcemap": true

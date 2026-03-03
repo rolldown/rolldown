@@ -102,7 +102,7 @@ runTestSuiteWithSamples(
 						// ? [...config.options.plugins, verifyAstPlugin]
 						// : config.options.plugins;
 
-			    // The `options-async-hook` assert config equal
+			  // The `options-async-hook` assert config equal
 				if (directory.includes('class-name-conflict')) {
 					config.options = config.options || {}
 					config.options.output = config.options.output || {}
@@ -118,6 +118,14 @@ runTestSuiteWithSamples(
 					config.options ??= {};
 					config.options.checks ??= {};
 					config.options.checks.circularDependency ??= true;
+					// Disable inlineConst for rollup tests, see https://github.com/rolldown/rolldown/issues/8100
+					config.options.optimization ??= {};
+					config.options.optimization.inlineConst ??= false;
+				}
+        if (directory.includes('nested-inlined-dynamic-import-2')) {
+          config.options ??= {};
+          config.options.checks ??= {};
+          config.options.checks.ineffectiveDynamicImport ??= false;
 				}
 
 				return rollup

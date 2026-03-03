@@ -1,1 +1,1 @@
-console.log('none')
+console.log('none');

@@ -5,7 +5,6 @@ export { freeExternalMemory, scan } from './api/experimental';
 export {
   type BindingClientHmrUpdate,
   BindingRebuildStrategy,
-  createTokioRuntime,
   isolatedDeclaration,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,
@@ -14,6 +13,7 @@ export {
   type NapiResolveOptions as ResolveOptions,
   type ResolveResult,
   ResolverFactory,
+  resolveTsconfig,
 } from './binding.cjs';
 
 export { defineParallelPlugin } from './plugin/parallel-plugin';
@@ -46,6 +46,7 @@ export {
 } from './builtin-plugin/constructors';
 
 export { viteAliasPlugin } from './builtin-plugin/alias-plugin';
+export { bundleAnalyzerPlugin } from './builtin-plugin/bundle-analyzer-plugin';
 export { viteTransformPlugin } from './builtin-plugin/transform-plugin';
 export { viteManifestPlugin } from './builtin-plugin/vite-manifest-plugin';
 

@@ -21,8 +21,6 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     assetFileNames,
     entryFileNames,
     chunkFileNames,
-    cssEntryFileNames,
-    cssChunkFileNames,
     banner,
     footer,
     postBanner,
@@ -38,12 +36,17 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     preserveModules,
     virtualDirname,
     legalComments,
+    comments,
     preserveModulesRoot,
     manualChunks,
     topLevelVar,
     cleanDir,
     strictExecutionOrder,
   } = outputOptions;
+
+  if (legalComments != null) {
+    logger.warn('`legalComments` option is deprecated, please use `comments.legal` instead.');
+  }
 
   // Handle codeSplitting and inlineDynamicImports
   const { inlineDynamicImports, advancedChunks } = bindingifyCodeSplitting(
@@ -80,8 +83,6 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     assetFileNames: bindingifyAssetFilenames(assetFileNames),
     entryFileNames,
     chunkFileNames,
-    cssEntryFileNames,
-    cssChunkFileNames,
     // TODO(sapphi-red): support parallel plugins
     plugins: [],
     minify: outputOptions.minify,
@@ -94,11 +95,13 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     preserveModules,
     virtualDirname,
     legalComments,
+    comments: bindingifyComments(comments),
     preserveModulesRoot,
     topLevelVar,
     minifyInternalExports: outputOptions.minifyInternalExports,
     cleanDir,
     strictExecutionOrder,
+    strict: outputOptions.strict,
   };
 }
 
@@ -171,6 +174,16 @@ function bindingifyAssetFilenames(
     };
   }
   return assetFileNames;
+}
+
+function bindingifyComments(comments: OutputOptions['comments']): BindingOutputOptions['comments'] {
+  if (comments == null) {
+    return undefined;
+  }
+  if (typeof comments === 'boolean') {
+    return comments;
+  }
+  return comments;
 }
 
 function bindingifyCodeSplitting(

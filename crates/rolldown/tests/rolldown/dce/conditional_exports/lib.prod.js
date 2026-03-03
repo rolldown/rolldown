@@ -1,1 +1,1 @@
-export default 'prod'
+export default 'prod';

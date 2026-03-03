@@ -6,13 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-'use strict';
-
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
+"use strict";
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 //#region entry.js
 let a = 1;
-
 //#endregion
 exports.a = a;
+
 ```

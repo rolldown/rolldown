@@ -7,14 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function(factory) {
-  
-  typeof define === 'function' && define.amd ? define([], factory) :
-  factory();
+	typeof define === "function" && define.amd ? define([], factory) : factory();
 })(function() {
-
-//#region main.js
+	//#region main.js
 	console.log("none");
-
-//#endregion
+	//#endregion
 });
+
 ```

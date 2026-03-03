@@ -1,2 +1,2 @@
-const dep = require('./dep.cjs')
-export const value = dep.value
+const dep = require('./dep.cjs');
+export const value = dep.value;

@@ -1,1 +1,1 @@
-module.exports = { value: 'cjs-namespace' }
+module.exports = { value: 'cjs-namespace' };

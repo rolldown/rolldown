@@ -13,27 +13,23 @@ var import_foo = __toESM(require_foo());
 ```
 ### rolldown
 ```js
-//#region (ignored) 
-var default$1 = void 0;
-
 //#endregion
 //#region entry.js
-default$1();
-
+(void 0)();
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,5 +1,2 @@
+@@ -1,5 +1,1 @@
 -var require_foo = __commonJS({
 -    "(disabled):node_modules/foo/index.js"() {}
 -});
 -var import_foo = __toESM(require_foo());
 -(0, import_foo.default)();
-+var default$1 = void 0;
-+default$1();
++(void 0)();
 
 ```

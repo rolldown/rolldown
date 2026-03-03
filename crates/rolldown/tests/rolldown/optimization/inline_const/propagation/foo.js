@@ -1,3 +1,3 @@
-const foo = false 
+const foo = false;
 
-export default foo 
+export default foo;

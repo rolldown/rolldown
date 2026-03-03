@@ -12,7 +12,6 @@ let Foo = /* @__PURE__ */ function(Foo) {
 	Foo[Foo["*/%"] = 2] = "*/%";
 	return Foo;
 }({});
-
 //#endregion
 //#region foo.ts
 var Bar = /* @__PURE__ */ function(Bar) {
@@ -24,6 +23,6 @@ console.log({
 	"should have comments": [Foo["%/*"], Bar["%/*"]],
 	"should not have comments": [Foo["*/%"], Bar["*/%"]]
 });
-
 //#endregion
+
 ```

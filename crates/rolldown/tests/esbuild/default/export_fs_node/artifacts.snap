@@ -36,6 +36,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import * as fs from "fs";
 import { readFileSync } from "fs";
-
 export { fs, readFileSync };
+
 ```

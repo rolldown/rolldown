@@ -1,3 +1,3 @@
 export const render = async () => {
-  return 'render'
-}
+  return 'render';
+};

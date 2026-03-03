@@ -17,7 +17,7 @@ export default defineTest({
       },
     ],
   },
-  afterTest: function(output) {
+  afterTest: function (output) {
     let chunkNames = getOutputChunkNames(output).sort();
     expect(chunkNames.length).toStrictEqual(1);
   },

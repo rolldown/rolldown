@@ -6,19 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region module_a.js
-const unused$2 = "from-module-a";
 function test(unused$1) {
 	return unused$1 + "-test";
 }
-
-//#endregion
-//#region module_b.js
-const unused = "from-module-b";
-
 //#endregion
 //#region main.js
-console.log(test("x"), unused);
-
+console.log(test("x"), "from-module-b");
 //#endregion
+
 ```

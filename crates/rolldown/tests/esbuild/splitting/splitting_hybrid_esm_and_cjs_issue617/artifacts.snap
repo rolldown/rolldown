@@ -7,9 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as foo, r as init_a } from "./a2.js";
-
 init_a();
 export { foo };
+
 ```
 
 ## a2.js
@@ -19,22 +19,19 @@ export { foo };
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 var foo;
-var init_a = __esmMin((() => {
-	;
-}));
-
+var init_a = __esmMin((() => {}));
 //#endregion
 export { __toCommonJS as i, foo as n, init_a as r, a_exports as t };
+
 ```
 
 ## b.js
 
 ```js
 import { i as __toCommonJS, r as init_a, t as a_exports } from "./a2.js";
-
 //#region b.js
 let bar = (init_a(), __toCommonJS(a_exports));
-
 //#endregion
 export { bar };
+
 ```

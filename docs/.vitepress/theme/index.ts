@@ -1,5 +1,6 @@
 import RolldownTheme from '@voidzero-dev/vitepress-theme/src/rolldown';
 import 'virtual:group-icons.css';
+import 'vitepress-plugin-graphviz/style.css';
 import type { Theme } from 'vitepress';
 import DefinedIn from './components/DefinedIn.vue';
 import './styles.css';

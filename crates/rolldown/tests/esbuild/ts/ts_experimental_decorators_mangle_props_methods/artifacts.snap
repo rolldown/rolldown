@@ -22,6 +22,6 @@ __decorate([dec(3)], Foo.prototype, "prop3", null);
 __decorate([dec(4)], Foo.prototype, "prop4_", null);
 __decorate([dec(5)], Foo.prototype, "prop5", null);
 __decorate([dec(6)], Foo.prototype, "prop6_", null);
-
 //#endregion
+
 ```

@@ -1,2 +1,2 @@
-import "./child";
-import './reexport.js'
+import './child';
+import './reexport.js';

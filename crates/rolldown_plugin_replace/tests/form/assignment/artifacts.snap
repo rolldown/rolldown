@@ -10,8 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 process.env.DEBUG = "test";
 if (replaced === "production") console.log("");
 if (world == "world") console.log(world);
-
 //#endregion
+
 //# sourceMappingURL=input.js.map
 ```
 

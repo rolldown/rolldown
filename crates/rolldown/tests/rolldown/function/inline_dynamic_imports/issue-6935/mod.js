@@ -3,6 +3,6 @@ export function testFunc() {
 }
 
 export async function makeAgent() {
-  const { Agent } = await import("./lib");
+  const { Agent } = await import('./lib');
   return new Agent();
 }

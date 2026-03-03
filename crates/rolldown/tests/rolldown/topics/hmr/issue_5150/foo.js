@@ -1,2 +1,2 @@
-import { prefix } from "./common.js";
-export const foo = prefix + "foo";
+import { prefix } from './common.js';
+export const foo = prefix + 'foo';

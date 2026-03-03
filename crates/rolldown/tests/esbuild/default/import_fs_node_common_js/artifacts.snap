@@ -9,9 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 let fs = require("fs");
 fs = __toESM(fs);
-
 //#region entry.js
 console.log(fs, fs.readFileSync, fs.default);
-
 //#endregion
+
 ```

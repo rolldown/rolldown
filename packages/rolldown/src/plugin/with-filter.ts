@@ -58,6 +58,29 @@ function withFilterImpl<A, T extends RolldownPluginOption<A>>(
   return plugin as T;
 }
 
+/**
+ * A helper function to add plugin hook filters to a plugin or an array of plugins.
+ *
+ * @example
+ * ```ts
+ * import yaml from '@rollup/plugin-yaml';
+ * import { defineConfig } from 'rolldown';
+ * import { withFilter } from 'rolldown/filter';
+ *
+ * export default defineConfig({
+ *   plugins: [
+ *     // Run the transform hook of the `yaml` plugin
+ *     // only for modules which end in `.yaml`
+ *     withFilter(
+ *       yaml({}),
+ *       { transform: { id: /\.yaml$/ } },
+ *     ),
+ *   ],
+ * });
+ * ```
+ *
+ * @category Config
+ */
 export function withFilter<A, T extends RolldownPluginOption<A>>(
   pluginOption: T,
   filterObject: OverrideFilterObject | OverrideFilterObject[],

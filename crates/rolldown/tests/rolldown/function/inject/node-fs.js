@@ -1,1 +1,1 @@
-export default 'node-fs'
+export default 'node-fs';

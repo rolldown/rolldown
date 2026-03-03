@@ -11,7 +11,7 @@ use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::{HASH_PLACEHOLDER_LEFT_FINDER, find_hash_placeholders},
   rustc_hash::FxHashMapExt as _,
-  xxhash::xxhash_with_base,
+  xxhash::encode_hash_with_base,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use xxhash_rust::xxh3::Xxh3;
@@ -67,7 +67,7 @@ impl Plugin for ChunkImportMapPlugin {
             hasher
           }
         };
-        let hash = xxhash_with_base(&hasher.digest128().to_le_bytes(), base);
+        let hash = encode_hash_with_base(&hasher.digest128().to_le_bytes(), base);
         let mut chunk_id = chunk.filename.to_string();
         for (start, end, placeholder) in hash_placeholders {
           let hash = hash[..end - start].to_string();
@@ -97,7 +97,7 @@ impl Plugin for ChunkImportMapPlugin {
   }
 
   fn render_chunk_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
-    Some(rolldown_plugin::PluginHookMeta { order: Some(rolldown_plugin::PluginOrder::Post) })
+    Some(rolldown_plugin::PluginHookMeta { order: Some(rolldown_plugin::PluginOrder::PinPost) })
   }
 
   async fn generate_bundle(
@@ -126,10 +126,8 @@ impl Plugin for ChunkImportMapPlugin {
         file_name: Some(
           self.file_name.as_ref().map_or(arcstr::literal!("importmap.json"), ArcStr::from),
         ),
-        source: (serde_json::to_string_pretty(
-          &serde_json::json!({ "imports": chunk_import_map }),
-        )?)
-        .into(),
+        source: (serde_json::to_string(&serde_json::json!({ "imports": chunk_import_map }))?)
+          .into(),
         ..Default::default()
       })
       .await?;

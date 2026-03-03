@@ -23,7 +23,6 @@ var D = /* @__PURE__ */ function(D) {
 	D[D["D"] = 4] = "D";
 	return D;
 }(D || {});
-
 //#endregion
 //#region entry.ts
 console.log([
@@ -32,6 +31,6 @@ console.log([
 	C.C,
 	D.D
 ]);
-
 //#endregion
+
 ```

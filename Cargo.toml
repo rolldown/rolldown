@@ -108,7 +108,9 @@ rolldown_fs = { version = "0.1.0", path = "crates/rolldown_fs" }
 rolldown_fs_watcher = { version = "0.1.0", path = "crates/rolldown_fs_watcher" }
 rolldown_plugin = { version = "0.1.0", path = "crates/rolldown_plugin" }
 rolldown_plugin_chunk_import_map = { version = "0.1.0", path = "crates/rolldown_plugin_chunk_import_map" }
-rolldown_plugin_data_uri = { version = "0.1.0", path = "crates/rolldown_plugin_data_uri" }
+rolldown_plugin_copy_module = { version = "0.1.0", path = "crates/rolldown_plugin_copy_module" }
+rolldown_plugin_bundle_analyzer = { version = "0.1.0", path = "crates/rolldown_plugin_bundle_analyzer" }
+rolldown_plugin_data_url = { version = "0.1.0", path = "crates/rolldown_plugin_data_url" }
 rolldown_plugin_esm_external_require = { version = "0.1.0", path = "crates/rolldown_plugin_esm_external_require" }
 rolldown_plugin_hmr = { version = "0.1.0", path = "crates/rolldown_plugin_hmr" }
 rolldown_plugin_isolated_declaration = { version = "0.1.0", path = "crates/rolldown_plugin_isolated_declaration" }
@@ -137,6 +139,7 @@ rolldown_testing = { version = "0.1.0", path = "crates/rolldown_testing" }
 rolldown_testing_config = { version = "0.1.0", path = "crates/rolldown_testing_config" }
 rolldown_tracing = { version = "0.1.0", path = "crates/rolldown_tracing" }
 rolldown_utils = { version = "0.1.0", path = "crates/rolldown_utils" }
+rolldown_watcher = { version = "0.1.0", path = "crates/rolldown_watcher" }
 rolldown_workspace = { version = "0.1.0", path = "crates/rolldown_workspace" }
 string_wizard = { version = "0.0.27", path = "crates/string_wizard", features = ["serde"] }
 
@@ -155,12 +158,11 @@ blake3 = "1.8.2"
 commondir = "1.0.0"
 cow-utils = "0.1.3"
 criterion2 = { version = "3.0.0", default-features = false }
-css-module-lexer = "0.0.15"
 dashmap = "6.1.0"
 derive_more = { version = "2.0.1", features = ["debug"] }
 dunce = "1.0.5" # Normalize Windows paths to the most compatible format, avoiding UNC where possible
 fast-glob = "1.0.0"
-flate2 = { version = "=1.1.8", features = ["zlib-rs"] }
+flate2 = { version = "=1.1.9", features = ["zlib-rs"] }
 form_urlencoded = "1.2.1"
 futures = "0.3.31"
 glob = "0.3.2"
@@ -173,7 +175,7 @@ itertools = "0.14.0"
 itoa = "1.0.15"
 json-escape-simd = "3"
 json-strip-comments = "3"
-jsonschema = { version = "0.40.0", default-features = false }
+jsonschema = { version = "0.42.0", default-features = false }
 memchr = "2.7.4"
 mimalloc-safe = "0.1.52"
 mime = "0.3.17"
@@ -203,7 +205,7 @@ serde_yaml = "0.9.34"
 simdutf8 = "0.1.5"
 smallvec = "1.15.0"
 string_cache = "0.9.0"
-sugar_path = { version = "1.2.1", features = ["cached_current_dir"] }
+sugar_path = { version = "2.0.1", features = ["cached_current_dir"] }
 terminal_size = "0.4.2"
 testing_macros = "1.0.0"
 tokio = { version = "1.45.0", default-features = false }
@@ -225,12 +227,12 @@ quote = "1"
 syn = { version = "2", default-features = false }
 
 # napi
-napi = { version = "3.0.0", features = ["async", "anyhow", "tracing"] }
+napi = { version = "3.0.0", features = ["async", "anyhow", "tracing", "object_indexmap"] }
 napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.112.0", features = [
+oxc = { version = "0.115.0", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -242,13 +244,13 @@ oxc = { version = "0.112.0", features = [
   "regular_expression",
   "cfg",
 ] }
-oxc_allocator = { version = "0.112.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.112.0" }
-oxc_napi = { version = "0.112.0" }
-oxc_minify_napi = { version = "0.112.0" }
-oxc_parser_napi = { version = "0.112.0" }
-oxc_transform_napi = { version = "0.112.0" }
-oxc_traverse = { version = "0.112.0" }
+oxc_allocator = { version = "0.115.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.115.0" }
+oxc_napi = { version = "0.115.0" }
+oxc_minify_napi = { version = "0.115.0" }
+oxc_parser_napi = { version = "0.115.0" }
+oxc_transform_napi = { version = "0.115.0" }
+oxc_traverse = { version = "0.115.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
@@ -257,10 +259,10 @@ oxc_index = { version = "4", features = [
   "rayon",
   "serde",
 ] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver = { version = "11.15.0", features = [
+oxc_resolver = { version = "11.17.1", features = [
   "yarn_pnp",
 ] } # https://github.com/oxc-project/oxc-resolver
-oxc_resolver_napi = { version = "11.15.0", default-features = false, features = ["yarn_pnp"] }
+oxc_resolver_napi = { version = "11.17.1", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "6" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]

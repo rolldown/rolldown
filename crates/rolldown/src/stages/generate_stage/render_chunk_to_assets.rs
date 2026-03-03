@@ -5,8 +5,8 @@ use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Asset, ChunkIdx, ConcatenateWrappedModuleKind, EmittedChunkInfo, InstantiationKind,
-  ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk,
-  PostChunkOptimizationOperation, SharedFileEmitter, SymbolRef,
+  ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter,
+  SymbolRef,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult};
@@ -19,7 +19,6 @@ use crate::{
   BundleOutput,
   asset::asset_generator::AssetGenerator,
   chunk_graph::ChunkGraph,
-  css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
   type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
   types::generator::{GenerateContext, GenerateOutput, Generator},
@@ -66,6 +65,7 @@ impl GenerateStage<'_> {
       &index_chunk_to_instances,
       self.options.hash_characters,
       self.options,
+      self.resolved_paths.as_ref(),
     )
     .await?;
 
@@ -96,15 +96,6 @@ impl GenerateStage<'_> {
             map,
             sourcemap_filename: ecma_meta.sourcemap_filename,
             preliminary_filename: ecma_meta.preliminary_filename.to_string(),
-          })));
-        }
-        InstantiationKind::Css(_css_meta) => {
-          let code = code.try_into_string()?;
-          output.push(Output::Asset(Arc::new(OutputAsset {
-            filename: filename.clone(),
-            source: code.into(),
-            original_file_names: vec![],
-            names: vec![],
           })));
         }
         InstantiationKind::Sourcemap(sourcemap_meta) => {
@@ -181,18 +172,14 @@ impl GenerateStage<'_> {
         .filter_map(|(idx, module_id_to_codegen_ret)| {
           let chunk_idx =
             ChunkIdx::from_raw(u32::try_from(idx).expect("chunk index should fit in u32"));
-          if chunk_graph
-            .post_chunk_optimization_operations
-            .get(&chunk_idx)
-            .map(|flag| flag.contains(PostChunkOptimizationOperation::Removed))
-            .unwrap_or(false)
-          {
+          if chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx) {
             return None;
           }
           let chunk = chunk_graph.chunk_table.get(chunk_idx)?;
           Some((chunk_idx, chunk, module_id_to_codegen_ret))
         })
         .flat_map(|(chunk_idx, chunk, module_id_to_codegen_ret)| {
+          let resolved_paths = self.resolved_paths.as_ref();
           let ecma_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
             let mut ecma_ctx = GenerateContext {
               chunk_idx,
@@ -201,29 +188,13 @@ impl GenerateStage<'_> {
               link_output: self.link_output,
               chunk_graph,
               plugin_driver: self.plugin_driver,
-              warnings: vec![],
               module_id_to_codegen_ret,
               render_export_items_index_vec,
+              resolved_paths,
             };
             let ecma_chunks_future = EcmaGenerator::instantiate_chunk(&mut ecma_ctx);
             let ecma_chunks = ecma_chunks_future.await?;
             Ok(ecma_chunks)
-          });
-          let css_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
-            let mut css_ctx = GenerateContext {
-              chunk_idx,
-              chunk,
-              options: self.options,
-              link_output: self.link_output,
-              chunk_graph,
-              plugin_driver: self.plugin_driver,
-              warnings: vec![],
-              module_id_to_codegen_ret: vec![],
-              render_export_items_index_vec: &index_vec![],
-            };
-            let css_chunks_future = CssGenerator::instantiate_chunk(&mut css_ctx);
-            let css_chunks = css_chunks_future.await?;
-            Ok(css_chunks)
           });
           let asset_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
             let mut asset_ctx = GenerateContext {
@@ -233,15 +204,15 @@ impl GenerateStage<'_> {
               link_output: self.link_output,
               chunk_graph,
               plugin_driver: self.plugin_driver,
-              warnings: vec![],
               module_id_to_codegen_ret: vec![],
               render_export_items_index_vec: &index_vec![],
+              resolved_paths,
             };
             let asset_chunks_future = AssetGenerator::instantiate_chunk(&mut asset_ctx);
             let asset_chunks = asset_chunks_future.await?;
             Ok(asset_chunks)
           });
-          [ecma_chunks_future, css_chunks_future, asset_chunks_future]
+          [ecma_chunks_future, asset_chunks_future]
         }),
     )
     .await?

@@ -13,17 +13,15 @@ var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
 		return 123;
 	};
 }));
-
 //#endregion
 //#region j.json
 var require_j = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { "test": true };
 }));
-
 //#endregion
 //#region entry.js
 const { foo } = require_a();
 console.log(foo(), require_j());
-
 //#endregion
+
 ```

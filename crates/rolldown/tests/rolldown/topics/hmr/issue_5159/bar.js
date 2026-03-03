@@ -1,5 +1,5 @@
 import { trim } from './utils/string.js'; // import directly
 
-export default function() {
+export default function () {
   return trim('Route Bar');
 }

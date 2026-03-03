@@ -1,2 +1,2 @@
-export let __esModule = false
-export default { bar: 123 }
+export let __esModule = false;
+export default { bar: 123 };

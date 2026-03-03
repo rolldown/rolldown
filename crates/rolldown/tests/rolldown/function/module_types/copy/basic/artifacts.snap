@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/hello-CUbDYdKJ.txt
+
+## main.js
+
+```js
+import data from "./assets/hello-CUbDYdKJ.txt";
+//#endregion
+//#region main.js
+const data2 = (/* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
+	if (typeof require !== "undefined") return require.apply(this, arguments);
+	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function. See https://rolldown.rs/in-depth/bundling-cjs#require-external-modules for more details.");
+}))("./assets/hello-CUbDYdKJ.txt");
+console.log(data, data2);
+//#endregion
+
+//# sourceMappingURL=main.js.map
+```
+
+# Output Stats
+
+- main.js, is_entry true, is_dynamic_entry false, exports []
+
+# Sourcemap Visualizer
+
+```
+- ../main.js
+(1:6) "data2 = require(" --> (3:6) "data2 = (/* @__PURE__ */ ((x) => typeof require !== \"undefined\" ? require : typeof Proxy !== \"undefined\" ? new Proxy(x, { get: (a, b) => (typeof require !== \"undefined\" ? require : a)[b] }) : x)(function(x) {\n"
+(1:22) "'./hello.txt')" --> (6:4) "\"./assets/hello-CUbDYdKJ.txt\")"
+(1:36) ";\n" --> (6:34) ";\n"
+(2:0) "console." --> (7:0) "console."
+(2:8) "log(" --> (7:8) "log("
+(2:12) "data, " --> (7:12) "data, "
+(2:18) "data2)" --> (7:18) "data2)"
+(2:24) ";\n" --> (7:24) ";\n"
+```

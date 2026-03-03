@@ -13,29 +13,27 @@ Object.defineProperty(classLike.prototype, "sideEffect", { get() {
 	console.log("this side effect may not need to be preserved? See https://github.com/javascript-compiler-hints/compiler-notations-spec/issues/8");
 	return 0;
 } });
-
 //#endregion
 export { classLike as t };
+
 ```
 
 ## entry.js
 
 ```js
 import "./classLike.js";
-
 //#region main.js
 console.log("Hello");
-
 //#endregion
+
 ```
 
 ## entry2.js
 
 ```js
 import { t as classLike } from "./classLike.js";
-
 //#region entry2.js
 new classLike();
-
 //#endregion
+
 ```

@@ -1,10 +1,10 @@
-import assert from 'assert'
-import bar from './bar'
+import assert from 'assert';
+import bar from './bar';
 
 const a = 2; // make foo `a` conflict
 
-const { foo } = bar
+const { foo } = bar;
 
-assert.strictEqual(typeof foo, 'function')
+assert.strictEqual(typeof foo, 'function');
 
-require('./foo')
+require('./foo');

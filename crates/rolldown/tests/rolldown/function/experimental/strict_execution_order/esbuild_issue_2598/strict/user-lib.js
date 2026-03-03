@@ -1,5 +1,5 @@
 Object.somePolyfilledFunction();
 
 export async function foo() {
-	return import('./lazy-chunk');
+  return import('./lazy-chunk');
 }

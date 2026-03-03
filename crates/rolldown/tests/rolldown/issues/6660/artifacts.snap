@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./index.js";
-
 //#region d.js
 var d_exports = /* @__PURE__ */ __exportAll({ loadEventStreamCapability: () => loadEventStreamCapability });
 async function loadEventStreamCapability() {
@@ -17,7 +16,6 @@ async function loadEventStreamCapability() {
 var init_d = __esmMin((() => {
 	loadEventStreamCapability();
 }));
-
 //#endregion
 //#region c.js
 var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -25,7 +23,6 @@ var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
 		return init_d(), __toCommonJS(d_exports);
 	};
 }));
-
 //#endregion
 export default require_c();
 
@@ -35,32 +32,25 @@ export default require_c();
 
 ```js
 import { n as __esmMin } from "./index.js";
-
-//#region e.js
-var init_e = __esmMin((() => {
-	console.log("event");
-}));
-
 //#endregion
-init_e();
+__esmMin((() => {
+	console.log("event");
+}))();
+
 ```
 
 ## index.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region b.js
-var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
+//#region a.js
+(/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.defaultProvider = async function test() {
 		const { fromIni } = await import("./c.js").then((m) => /* @__PURE__ */ __toESM(m.default));
 		console.log(fromIni);
 	};
-}));
-
-//#endregion
-//#region a.js
-require_b();
-
+})))();
 //#endregion
 export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+
 ```

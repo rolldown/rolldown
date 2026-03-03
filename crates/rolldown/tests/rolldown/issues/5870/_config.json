@@ -1,6 +1,5 @@
 {
-  "config": {
-  },
+  "config": {},
   "configVariants": [
     {
       "strictExecutionOrder": true,

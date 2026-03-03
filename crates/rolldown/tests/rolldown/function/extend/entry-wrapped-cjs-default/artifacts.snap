@@ -11,7 +11,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_main = /* @__PURE__ */ __commonJSMin((() => {
 	require_main();
 }));
-
 //#endregion
 export default require_main();
 
@@ -25,12 +24,10 @@ export default require_main();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-
 //#region main.js
 var require_main = /* @__PURE__ */ __commonJSMin((() => {
 	require_main();
 }));
-
 //#endregion
 module.exports = require_main();
 
@@ -44,18 +41,15 @@ module.exports = require_main();
 
 ```js
 this.module = (function() {
-
-// HIDDEN [\0rolldown/runtime.js]
-
-//#region main.js
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region main.js
 	var require_main = /* @__PURE__ */ __commonJSMin((() => {
 		require_main();
 	}));
-
-//#endregion
-return require_main();
-
+	//#endregion
+	return require_main();
 })();
+
 ```
 
 # Variant: [extend: true] [format: Umd] [name: "module"]
@@ -66,19 +60,15 @@ return require_main();
 
 ```js
 (function(global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports =  factory() :
-  typeof define === 'function' && define.amd ? define([], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.module = factory()));
+	typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory() : typeof define === "function" && define.amd ? define([], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, global.module = factory());
 })(this, function() {
-// HIDDEN [\0rolldown/runtime.js]
-
-//#region main.js
+	// HIDDEN [\0rolldown/runtime.js]
+	//#region main.js
 	var require_main = /* @__PURE__ */ __commonJSMin((() => {
 		require_main();
 	}));
-
-//#endregion
-return require_main();
-
+	//#endregion
+	return require_main();
 });
+
 ```

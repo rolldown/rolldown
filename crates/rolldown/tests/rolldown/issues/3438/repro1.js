@@ -1,1 +1,1 @@
-export const clear = "repro1_clear"
+export const clear = 'repro1_clear';

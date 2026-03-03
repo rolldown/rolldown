@@ -9,8 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 import("./foo.js");
 import("./foo2.js");
-
 //#endregion
+
 ```
 
 ## foo.js
@@ -18,8 +18,8 @@ import("./foo2.js");
 ```js
 //#region a/foo.js
 console.log("a/foo");
-
 //#endregion
+
 ```
 
 ## foo2.js
@@ -27,6 +27,6 @@ console.log("a/foo");
 ```js
 //#region b/foo.js
 console.log("b/foo");
-
 //#endregion
+
 ```

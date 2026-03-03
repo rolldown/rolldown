@@ -1,1 +1,1 @@
-console.log("dynamic-foo");
+console.log('dynamic-foo');

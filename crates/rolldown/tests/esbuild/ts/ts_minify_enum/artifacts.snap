@@ -19,7 +19,7 @@ let Foo = /* @__PURE__ */ function(Foo) {
 	Foo[Foo["Z"] = Foo] = "Z";
 	return Foo;
 }({});
-
 //#endregion
 export { Foo };
+
 ```

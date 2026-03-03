@@ -10,9 +10,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 var foo = "foo";
 var bar = "bar";
 var baz = "baz";
-
 //#endregion
 export { bar, baz, foo };
+
 ```
 
 ## main.js
@@ -25,6 +25,6 @@ await import("./lib.js");
 lib.bar;
 (await import("./lib.js"))["baz"];
 await import("./lib.js");
-
 //#endregion
+
 ```

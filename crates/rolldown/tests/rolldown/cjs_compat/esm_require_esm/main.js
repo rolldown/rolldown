@@ -1,3 +1,3 @@
-const esm = require('./esm')
+const esm = require('./esm');
 
-export { esm }
+export { esm };

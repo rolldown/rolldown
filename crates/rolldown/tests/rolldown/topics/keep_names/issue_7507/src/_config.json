@@ -6,7 +6,7 @@
         "name": "index"
       }
     ],
+    "platform": "node",
     "keepNames": true
-  },
-  "expectExecuted": false
+  }
 }

@@ -1,2 +1,2 @@
-import {a} from './barrel.js'
-console.log(`a: `, a)
+import { a } from './barrel.js';
+console.log(`a: `, a);

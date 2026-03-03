@@ -24,10 +24,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import a from "foo\"";
 import b from "foo\\bar";
-
 //#region main.js
 console.log(a);
 console.log(b);
-
 //#endregion
+
 ```

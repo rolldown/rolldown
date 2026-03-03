@@ -1,1 +1,1 @@
-export default 'shaked'
+export default 'shaked';

@@ -47,52 +47,49 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_chunk = require("./chunk.js");
 let external = require("external");
 external = require_chunk.__toESM(external);
-
 //#region a.js
 console.log(external[foo](), new external[foo]());
-
 //#endregion
+
 ```
 
 ## b.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_chunk = require("./chunk.js");
 let external = require("external");
 external = require_chunk.__toESM(external);
-
 //#region b.js
 console.log(external.foo(), new external.foo());
-
 //#endregion
+
 ```
 
 ## c.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_chunk = require("./chunk.js");
 let external = require("external");
 external = require_chunk.__toESM(external);
-
 //#region c.js
 console.log((0, external.default)(), (0, external.foo)());
 console.log(new external.default(), new external.foo());
-
 //#endregion
+
 ```
 
 ## chunk.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-
-Object.defineProperty(exports, '__toESM', {
-  enumerable: true,
-  get: function () {
-    return __toESM;
-  }
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
 });
+
 ```

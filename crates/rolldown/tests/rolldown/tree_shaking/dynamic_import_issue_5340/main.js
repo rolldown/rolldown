@@ -1,2 +1,1 @@
-export const foo = async () => await import("./dagre.mjs");
-
+export const foo = async () => await import('./dagre.mjs');

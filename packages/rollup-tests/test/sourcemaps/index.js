@@ -29,6 +29,8 @@ runTestSuiteWithSamples(
 						const plugins = wrapPluginWithRuntimeFilter(config.options?.plugins);
 						const inputOptions = {
 							input: directory + '/main.js',
+							// Disable inlineConst for rollup tests, see https://github.com/rolldown/rolldown/issues/8100
+							optimization: { inlineConst: false },
               onLog: (level, log) => {
                 if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
                   warnings.push(log);

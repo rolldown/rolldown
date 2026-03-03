@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { RenderedChunk } from 'rolldown';
+import type { RenderedChunk } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { expect, vi } from 'vitest';
 
@@ -53,6 +53,7 @@ export default defineTest({
       },
     ],
     output: {
+      minify: false,
       sourcemap: true,
     },
   },

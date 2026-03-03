@@ -22,7 +22,7 @@ export { foo } from "./foo";
 ```js
 //#region foo.tsx
 const foo = "foo";
-
 //#endregion
 export { foo };
+
 ```

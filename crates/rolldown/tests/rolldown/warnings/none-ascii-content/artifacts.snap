@@ -22,9 +22,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import test from "test";
-
 //#region main.js
 console.log(`test: `, test);
-
 //#endregion
+
 ```

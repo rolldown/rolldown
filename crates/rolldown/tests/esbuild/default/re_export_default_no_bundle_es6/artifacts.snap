@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,6 +8,6 @@ snapshot_kind: text
 ```js
 import foo from "./foo";
 import bar from "./bar";
-
 export { bar, foo };
+
 ```

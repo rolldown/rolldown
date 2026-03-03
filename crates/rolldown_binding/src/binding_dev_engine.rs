@@ -177,23 +177,13 @@ impl BindingDevEngine {
   }
 
   #[napi]
-  #[allow(
-    clippy::unused_async,
-    clippy::allow_attributes,
-    reason = "Avoid blocking nodejs thread and potential deadlock. See https://github.com/rolldown/rolldown/issues/7311"
-  )]
   pub async fn register_modules(&self, client_id: String, modules: Vec<String>) {
-    self.inner.clients.entry(client_id).or_default().executed_modules.extend(modules);
+    self.inner.clients.lock().await.entry(client_id).or_default().executed_modules.extend(modules);
   }
 
   #[napi]
-  #[allow(
-    clippy::unused_async,
-    clippy::allow_attributes,
-    reason = "Avoid blocking nodejs thread and potential deadlock. See https://github.com/rolldown/rolldown/issues/7311"
-  )]
   pub async fn remove_client(&self, client_id: String) {
-    self.inner.clients.remove(&client_id);
+    self.inner.clients.lock().await.remove(&client_id);
   }
 
   #[napi]

@@ -1,4 +1,4 @@
 import assert from 'node:assert';
-import value from './text.data'
+import value from './text.data';
 
-assert(typeof value === 'string')
+assert(typeof value === 'string');

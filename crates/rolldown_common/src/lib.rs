@@ -1,6 +1,5 @@
 mod asset;
 mod chunk;
-mod css;
 mod ecmascript;
 mod file_emitter;
 mod generated;
@@ -33,6 +32,7 @@ pub mod bundler_options {
       chunk_import_map::ChunkImportMap,
       chunk_modules_order::ChunkModulesOrderBy,
       code_splitting_mode::CodeSplittingMode,
+      comments::CommentsOptions,
       defer_sync_scan_data_option::DeferSyncScanDataOption,
       dev_mode_options::DevModeOptions,
       devtools_options::DevtoolsOptions,
@@ -51,7 +51,10 @@ pub mod bundler_options {
       manual_code_splitting_options::{
         ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, MatchGroupTest,
       },
-      minify_options::{MinifyOptions, RawMinifyOptions, RawMinifyOptionsDetailed},
+      minify_options::{
+        MinifyOptions, RawCompressOptions, RawMangleOptions, RawMinifyOptions,
+        RawMinifyOptionsDetailed,
+      },
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},
       on_log::{Log, LogLocation, LogWithoutPlugin, OnLog},
@@ -71,6 +74,7 @@ pub mod bundler_options {
       source_map_type::SourceMapType,
       sourcemap_ignore_list::SourceMapIgnoreList,
       sourcemap_path_transform::SourceMapPathTransform,
+      strict_mode::StrictMode,
       target::ESTarget,
       transform_option::{
         CompilerAssumptions, DecoratorOptions, Either, IsolatedDeclarationsOptions, JsxOptions,
@@ -87,7 +91,7 @@ pub mod bundler_options {
       },
       tsconfig::TsConfig,
       tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig,
-      watch_option::{NotifyOption, OnInvalidate, WatchOption},
+      watch_option::{OnInvalidate, WatchOption},
     },
   };
 
@@ -110,10 +114,6 @@ pub use crate::{
       module_group::ModuleGroup,
       preliminary_filename::PreliminaryFilename,
     },
-  },
-  css::{
-    css_asset_meta::CssAssetMeta,
-    css_view::{CssAssetNameReplacer, CssRenderer, CssView},
   },
   ecmascript::{
     comment_annotation::get_leading_comment,

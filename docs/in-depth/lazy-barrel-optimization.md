@@ -205,17 +205,6 @@ export { b } from './b';
 import { a } from './barrel'; // a.js is loaded even if `a` is never used
 ```
 
-To automatically remove unused import specifiers and avoid loading their modules, set `treeshake.invalidImportSideEffects` to `false`:
-
-```js
-// rolldown.config.js
-export default {
-  treeshake: {
-    invalidImportSideEffects: false,
-  },
-};
-```
-
 ### Own exports (non-pure re-export barrels)
 
 When a barrel module has its own exports (not just re-exports), all its import records must be loaded when any own export is used:

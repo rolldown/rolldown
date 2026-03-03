@@ -23,8 +23,6 @@ export default defineTest({
     ],
   },
   async afterTest() {
-    expect(
-      transformed.splice(0).filter((id) => id.includes('node_modules')).length,
-    ).toBe(0);
+    expect(transformed.splice(0).filter((id) => id.includes('node_modules')).length).toBe(0);
   },
 });

@@ -167,7 +167,6 @@ let i_WRAP = require("i_WRAP");
 i_WRAP = __toESM(i_WRAP);
 let j_WRAP = require("j_WRAP");
 j_WRAP = __toESM(j_WRAP);
-
 //#region entry.js
 (0, b_nowrap.b)();
 x = d_WRAP.x;
@@ -178,15 +177,15 @@ x = h_WRAP;
 i_WRAP.x();
 j_WRAP.x``;
 x = import("k_WRAP");
-
 //#endregion
-
 var c_nowrap = require("c_nowrap");
-Object.keys(c_nowrap).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return c_nowrap[k]; }
-  });
+Object.keys(c_nowrap).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return c_nowrap[k];
+		}
+	});
 });
 
 ```

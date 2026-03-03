@@ -19,7 +19,6 @@ const someObject = {
 	e: 5,
 	nested: { deep: "value" }
 };
-
 //#endregion
 //#region main.js
 function test() {
@@ -27,6 +26,8 @@ function test() {
 }
 API_ENDPOINTS[unknown];
 test().a.b.c;
+test().a.b.c;
+test()?.a?.b.c;
 test()?.a?.b.c;
 const { d } = console.log("side effect") || someObject;
 const { e } = (() => {
@@ -34,7 +35,7 @@ const { e } = (() => {
 	return someObject;
 })();
 var main_default = {};
-
 //#endregion
 export { main_default as default };
+
 ```

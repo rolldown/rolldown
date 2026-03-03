@@ -7,22 +7,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as foo } from "./shared.js";
-
 //#region a.js
 console.log(foo);
-
 //#endregion
+
 ```
 
 ## b.js
 
 ```js
 import { t as foo } from "./shared.js";
-
 //#region b.js
 console.log(foo);
-
 //#endregion
+
 ```
 
 ## c.js
@@ -36,7 +34,7 @@ console.log(foo);
 ```js
 //#region shared.js
 function foo(bar) {}
-
 //#endregion
 export { foo as t };
+
 ```

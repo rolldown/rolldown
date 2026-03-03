@@ -1,1 +1,1 @@
-exports.a = 'basic-ref-with-named-default-a'
+exports.a = 'basic-ref-with-named-default-a';

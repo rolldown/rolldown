@@ -1,3 +1,3 @@
-import("./dynamic-foo");
+import('./dynamic-foo');
 
-console.log("after preload dynamic");
+console.log('after preload dynamic');

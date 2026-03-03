@@ -1,2 +1,2 @@
-import {a} from './lib.js'
-console.log(a)
+import { a } from './lib.js';
+console.log(a);

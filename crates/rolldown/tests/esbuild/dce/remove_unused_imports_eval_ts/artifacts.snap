@@ -25,6 +25,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region entry.ts
 eval("foo(a, b, c)");
-
 //#endregion
+
 ```

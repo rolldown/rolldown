@@ -9,13 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 import * as what from "node:http";
 import dh from "node:http";
 import { URL } from "node:net";
-
 //#region file.js
 console.log("file", what, URL, dh);
-
 //#endregion
 //#region file2.js
 console.log("file", what, URL, dh);
-
 //#endregion
+
 ```

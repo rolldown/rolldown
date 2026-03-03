@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
-
 //#region entry.js
 console.log(require.resolve);
 console.log(require.resolve());
@@ -28,6 +26,6 @@ console.log(0);
 console.log(false);
 console.log(true);
 console.log(true);
-
 //#endregion
+
 ```

@@ -1,7 +1,7 @@
-import assert from 'node:assert'
-import foo from './cjs'
+import assert from 'node:assert';
+import foo from './cjs';
 assert.deepEqual(foo, {
-  default: {}
-})
+  default: {},
+});
 
-export {}
+export {};

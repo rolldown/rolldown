@@ -23,6 +23,7 @@ impl LinkStage<'_> {
   pub(super) fn reference_needed_symbols(&mut self) {
     // Since each module only access its own symbol ref db, we use zip rather than a Mutex to
     // access the symbol db in parallel.
+    let has_module_preserve_jsx = self.symbols.has_module_preserve_jsx();
     let old_symbol_db = std::mem::take(&mut self.symbols);
     let mut symbols_inner = old_symbol_db.into_inner();
     let keep_names = self.options.keep_names;
@@ -293,7 +294,10 @@ impl LinkStage<'_> {
       }
     }
 
-    self.symbols =
-      SymbolRefDb::new(self.options.transform_options.is_jsx_preserve()).with_inner(symbols_inner);
+    let mut symbols = SymbolRefDb::new().with_inner(symbols_inner);
+    if has_module_preserve_jsx {
+      symbols.set_has_module_preserve_jsx();
+    }
+    self.symbols = symbols;
   }
 }

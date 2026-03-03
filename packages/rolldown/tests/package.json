@@ -3,6 +3,17 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts"
+    },
+    "./utils": {
+      "import": "./src/utils.ts"
+    },
+    "./types": {
+      "types": "./src/types.ts"
+    }
+  },
   "scripts": {
     "test:main": "RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run --exclude '**/watch.test.ts' --reporter verbose --hideSkippedTests",
     "test:watcher": "RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run watch.test.ts --reporter verbose --hideSkippedTests",
@@ -21,16 +32,5 @@
     "@types/node": "catalog:",
     "source-map-js": "^1.2.1",
     "tsx": "catalog:"
-  },
-  "exports": {
-    ".": {
-      "import": "./src/index.ts"
-    },
-    "./utils": {
-      "import": "./src/utils.ts"
-    },
-    "./types": {
-      "types": "./src/types.ts"
-    }
   }
 }

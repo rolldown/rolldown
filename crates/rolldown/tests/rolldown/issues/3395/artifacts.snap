@@ -7,15 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { createRequire } from "node:module";
-
 // HIDDEN [\0rolldown/runtime.js]
 //#region main.js
 __require("fs");
-__require;
 function test() {
 	__require("fs");
 }
-
 //#endregion
 export { test };
+
 ```

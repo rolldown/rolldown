@@ -17,6 +17,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region main.js
 console.log("hello from main");
-
 //#endregion
+
 ```

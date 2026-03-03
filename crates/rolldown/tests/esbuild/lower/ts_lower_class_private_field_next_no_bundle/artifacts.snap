@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.ts
-var Foo = class {
+(class {
 	constructor() {
 		this.foo = 123;
 	}
@@ -18,7 +17,7 @@ var Foo = class {
 	static {
 		this.s_foo = 123;
 	}
-};
-
+});
 //#endregion
+
 ```

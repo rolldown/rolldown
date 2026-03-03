@@ -8,7 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region data.json
 var data_default = { some: "data" };
-
 //#endregion
 //#region entry.js
 x = [
@@ -16,6 +15,6 @@ x = [
 	data_default,
 	data_default
 ];
-
 //#endregion
+
 ```

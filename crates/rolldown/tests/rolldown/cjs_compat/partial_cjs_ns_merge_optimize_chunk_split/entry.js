@@ -1,3 +1,3 @@
-import test from './a'
+import test from './a';
 
 export const entry = test();

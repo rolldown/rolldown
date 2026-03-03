@@ -1,1 +1,1 @@
-export const value = 'esm-only'
+export const value = 'esm-only';

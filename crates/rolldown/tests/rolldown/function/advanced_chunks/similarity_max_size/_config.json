@@ -1,0 +1,18 @@
+{
+  "config": {
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          // Real-world style vendor splitting:
+          // react/* should stay together and date-fns/* should stay together.
+          "test": "node_modules[\\\\/].*\\.js",
+          "name": "vendor-similarity",
+          "maxSize": 80
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  }
+}

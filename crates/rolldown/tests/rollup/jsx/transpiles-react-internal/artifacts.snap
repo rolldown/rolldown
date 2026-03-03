@@ -8,21 +8,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region other1.js
 console.log("wrong Foo 1", "wrong React 1");
-
 //#endregion
 //#region react.js
 var react_default = { createElement() {
 	console.log("createElement");
 } };
-
 //#endregion
 //#region jsx.js
 const Foo = () => {};
 console.log(/* @__PURE__ */ react_default.createElement(Foo, null));
-
 //#endregion
 //#region other2.js
 console.log("wrong Foo 2", "wrong React 2");
-
 //#endregion
+
 ```

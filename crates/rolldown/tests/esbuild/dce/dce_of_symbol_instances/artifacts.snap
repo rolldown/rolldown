@@ -10,8 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 Symbol.iterator, keep;
 keep, Symbol.iterator;
 Symbol.wtf;
-
 //#endregion
+
 ```
 
 ## object.js
@@ -21,6 +21,6 @@ Symbol.wtf;
 Symbol.iterator, keep;
 keep, Symbol.iterator;
 Symbol.wtf;
-
 //#endregion
+
 ```

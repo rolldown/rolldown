@@ -1,3 +1,3 @@
-const cjs = require('./cjs')
+const cjs = require('./cjs');
 
-export { cjs }
+export { cjs };

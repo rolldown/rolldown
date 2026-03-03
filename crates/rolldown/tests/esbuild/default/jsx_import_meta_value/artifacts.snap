@@ -11,8 +11,8 @@ console.log([/* @__PURE__ */ import.meta("x", null), /* @__PURE__ */ {}("x", nul
 f = function() {
 	console.log([/* @__PURE__ */ import.meta("y", null), /* @__PURE__ */ {}("y", null)]);
 };
-
 //#endregion
+
 ```
 
 ## fragment.js
@@ -22,6 +22,6 @@ f = function() {
 console.log([/* @__PURE__ */ import.meta(import.meta, null, "x"), /* @__PURE__ */ {}({}, null, "x")]), f = function() {
 	console.log([/* @__PURE__ */ import.meta(import.meta, null, "y"), /* @__PURE__ */ {}({}, null, "y")]);
 };
-
 //#endregion
+
 ```

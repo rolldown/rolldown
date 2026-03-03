@@ -186,7 +186,7 @@ impl Plugin for ViteCSSPostPlugin {
     let mut css_chunk: Option<String> = None;
     for module_id in &args.chunk.module_ids {
       let id = module_id.as_str();
-      if let Some(css) = styles.inner.get(id) {
+      if let Some(css) = styles.inner.get(id).map(|s| s.to_owned()) {
         // `?transform-only` is used for ?url and shouldn't be included in normal CSS chunks
         if find_special_query(id, b"transform-only").is_some() {
           continue;

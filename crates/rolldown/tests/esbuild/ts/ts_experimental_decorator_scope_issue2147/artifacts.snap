@@ -16,7 +16,7 @@ var Foo = class {
 };
 __decorate([__decorateParam(0, dec(foo))], Foo.prototype, "method1", null);
 __decorate([__decorateParam(0, dec(() => foo))], Foo.prototype, "method2", null);
-var Bar = class {
+(class {
 	static {
 		this.x = class {
 			static {
@@ -38,7 +38,7 @@ var Bar = class {
 			}
 		};
 	}
-};
-
+});
 //#endregion
+
 ```

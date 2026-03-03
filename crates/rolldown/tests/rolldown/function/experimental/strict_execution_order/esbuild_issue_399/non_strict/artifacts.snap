@@ -7,22 +7,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "./run-dep.js";
-
 //#region init-dep-1.js
 global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
-
 //#endregion
+
 ```
 
 ## entry2.js
 
 ```js
 import "./run-dep.js";
-
 //#region init-dep-2.js
 global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
-
 //#endregion
+
 ```
 
 ## run-dep.js
@@ -30,6 +28,6 @@ global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
 ```js
 //#region run-dep.js
 global.foo.log();
-
 //#endregion
+
 ```

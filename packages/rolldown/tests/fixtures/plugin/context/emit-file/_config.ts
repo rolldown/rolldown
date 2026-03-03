@@ -26,6 +26,7 @@ export default defineTest({
             source: 'emitted',
             originalFileName: ORIGINAL_FILE_NAME,
           });
+          // oxlint-disable-next-line typescript/unbound-method
           testEmitFileThis(this.emitFile);
         },
         generateBundle() {

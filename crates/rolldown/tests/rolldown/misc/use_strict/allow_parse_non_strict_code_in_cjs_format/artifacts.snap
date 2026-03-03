@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 [PARSE_ERROR] Error: Cannot assign to 'arguments' in strict mode
    ╭─[ cjs.js:2:31 ]
    │
- 2 │ module.exports = function foo(arguments) {}
+ 2 │ module.exports = function foo(arguments) {};
    │                               ────┬────  
    │                                   ╰────── 
 ───╯

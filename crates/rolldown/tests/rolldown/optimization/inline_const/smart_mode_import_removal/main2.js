@@ -1,5 +1,5 @@
-import { foo } from './lib.js'
+import { foo } from './lib.js';
 
 if (foo) {
-  console.log('foo')
+  console.log('foo');
 }

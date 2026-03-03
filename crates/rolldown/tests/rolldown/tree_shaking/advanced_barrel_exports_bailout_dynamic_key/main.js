@@ -1,6 +1,6 @@
 import assert from 'node:assert';
-import * as ns from './shared'
+import * as ns from './shared';
 
-let q = 'a'
+let q = 'a';
 // should include all symbols in `a`
-assert.equal(ns.a[q], 100)
+assert.equal(ns.a[q], 100);

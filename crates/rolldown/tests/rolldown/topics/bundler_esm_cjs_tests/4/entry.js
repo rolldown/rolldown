@@ -1,2 +1,2 @@
-import * as foo from './foo.js'
-input.works = foo.default === '123'
+import * as foo from './foo.js';
+input.works = foo.default === '123';

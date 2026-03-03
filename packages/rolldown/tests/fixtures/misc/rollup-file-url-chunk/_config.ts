@@ -28,10 +28,7 @@ export default defineTest({
   },
   afterTest: async () => {
     const main = await import('./dist/main.js' as string);
-    const depUrl = new URL(
-      main.default,
-      new URL('./dist/main.js', import.meta.url),
-    ).href;
+    const depUrl = new URL(main.default, new URL('./dist/main.js', import.meta.url)).href;
     const dep = await import(depUrl);
     expect(dep.default).toBe('dep.js');
   },

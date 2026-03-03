@@ -9,6 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region entry.js
 console.log(__require("hello, world"));
-
 //#endregion
+
 ```

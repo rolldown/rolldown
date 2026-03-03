@@ -6,13 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 //#region main.js
 const a = 1;
-
 //#endregion
 exports.a = a;
+
 ```
 
 # Variant: [format: Esm]
@@ -24,9 +23,9 @@ exports.a = a;
 ```js
 //#region main.js
 const a = 1;
-
 //#endregion
 export { a };
+
 ```
 
 # Variant: [format: Iife]
@@ -46,14 +45,10 @@ export { a };
 
 ```js
 (function(exports) {
-
-Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-
-//#region main.js
-	const a = 1;
-
-//#endregion
-exports.a = a;
-return exports;
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	//#endregion
+	exports.a = 1;
+	return exports;
 })({});
+
 ```

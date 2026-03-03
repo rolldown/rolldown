@@ -1,5 +1,5 @@
-import assert from 'node:assert'
+import assert from 'node:assert';
 // index.js
-import './foo.js'
+import './foo.js';
 
-assert.strictEqual(globalThis.value, 'foo', 'globalThis.value should be "foo"')
+assert.strictEqual(globalThis.value, 'foo', 'globalThis.value should be "foo"');

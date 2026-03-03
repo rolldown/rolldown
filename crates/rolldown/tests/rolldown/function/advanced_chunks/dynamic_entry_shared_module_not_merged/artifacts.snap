@@ -10,8 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 import("./shared.js").then((n) => n.t).then(({ func }) => {
 	func();
 });
-
 //#endregion
+
 ```
 
 ## other.js
@@ -29,7 +29,7 @@ var shared_exports = /* @__PURE__ */ __exportAll({ func: () => func });
 function func() {
 	return "This is a shared function";
 }
-
 //#endregion
 export { shared_exports as t };
+
 ```

@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
-
 //#region shared.js
 let count = 0;
 function reset() {
@@ -19,7 +18,6 @@ function inc() {
 	count += 1;
 }
 var shared_default = count;
-
 //#endregion
 //#region async-entry.js
 reset();
@@ -28,16 +26,15 @@ node_assert.default.strictEqual(shared_default, shared_default);
 inc();
 node_assert.default.strictEqual(shared_default, 0);
 node_assert.default.strictEqual(shared_default, shared_default);
-
 //#endregion
+
 ```
 
 ## main.js
 
 ```js
-
 //#region main.js
 Promise.resolve().then(() => require("./async-entry.js"));
-
 //#endregion
+
 ```

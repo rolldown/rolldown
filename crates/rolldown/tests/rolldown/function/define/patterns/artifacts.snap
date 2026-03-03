@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-
 //#region main.js
 const id = "ok";
 const objProp = "ok";
@@ -17,6 +16,6 @@ assert.strictEqual(objProp, "ok");
 	assert.strictEqual(Id, void 0);
 	assert.strictEqual(Obj.prop, void 0);
 })(void 0, {});
-
 //#endregion
+
 ```

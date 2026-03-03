@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region main.js
 const Foo = () => {};
 const result = <Foo>{}</Foo>;
-
 //#endregion
 export { result };
+
 ```

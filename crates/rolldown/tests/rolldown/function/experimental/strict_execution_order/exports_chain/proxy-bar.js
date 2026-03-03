@@ -1,3 +1,3 @@
-import { value as bar } from './lib-bar'
+import { value as bar } from './lib-bar';
 
-export { bar }
+export { bar };

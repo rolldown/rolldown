@@ -42,17 +42,17 @@ pub enum EventKind {
   ///
   /// {@include ../docs/checks-filename-conflict.md}
   FilenameConflict = 15,
+  FilenameOutsideOutputDirectoryError = 16,
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // --- These kinds are derived from esbuild
-  AssignToImportError = 16,
+  AssignToImportError = 17,
   /// Whether to emit warnings when a CommonJS variable is used in an ES module.
   ///
   /// CommonJS variables like `module` and `exports` are treated as global variables in ES modules and may not work as expected.
   ///
   /// {@include ../docs/checks-commonjs-variable-in-esm.md}
-  CommonJsVariableInEsm = 17,
-  ExportUndefinedVariableError = 18,
+  CommonJsVariableInEsm = 18,
   /// Whether to emit warnings when an imported variable is not exported.
   ///
   /// If the code is importing a variable that is not exported by the imported module, the value will always be `undefined`. This might be a mistake in the code.
@@ -109,13 +109,14 @@ pub enum EventKind {
   /// Whether to emit warnings when a tsconfig option or combination of options is not supported.
   UnsupportedTsconfigOption = 41,
   RuntimeModuleSymbolNotFoundError = 42,
-  UntranspiledSyntaxError = 43,
+  /// Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
+  IneffectiveDynamicImport = 44,
   /// Whether to emit warnings when a module is skipped from a manual code splitting group
   /// because splitting it would create a circular chunk dependency.
   ///
   /// This is separate from `CircularDependency` (module-level cycles) — this warning indicates
   /// that the build output shape was changed to prevent a runtime TDZ error.
-  ManualCodeSplittingSkipped = 44,
+  ManualCodeSplittingSkipped = 45,
 }
 
 impl Display for EventKind {
@@ -137,11 +138,13 @@ impl Display for EventKind {
       EventKind::UnresolvedEntry => write!(f, "UNRESOLVED_ENTRY"),
       EventKind::UnresolvedImport => write!(f, "UNRESOLVED_IMPORT"),
       EventKind::FilenameConflict => write!(f, "FILE_NAME_CONFLICT"),
+      EventKind::FilenameOutsideOutputDirectoryError => {
+        write!(f, "FILE_NAME_OUTSIDE_OUTPUT_DIRECTORY")
+      }
 
       // --- Derived from esbuild
       EventKind::AssignToImportError => write!(f, "ASSIGN_TO_IMPORT"),
       EventKind::CommonJsVariableInEsm => write!(f, "COMMONJS_VARIABLE_IN_ESM"),
-      EventKind::ExportUndefinedVariableError => write!(f, "EXPORT_UNDEFINED_VARIABLE"),
       EventKind::ImportIsUndefined => write!(f, "IMPORT_IS_UNDEFINED"),
       EventKind::UnsupportedFeatureError => write!(f, "UNSUPPORTED_FEATURE"),
       EventKind::EmptyImportMeta => write!(f, "EMPTY_IMPORT_META"),
@@ -171,7 +174,7 @@ impl Display for EventKind {
       EventKind::RuntimeModuleSymbolNotFoundError => {
         write!(f, "RUNTIME_MODULE_SYMBOL_NOT_FOUND")
       }
-      EventKind::UntranspiledSyntaxError => write!(f, "UNTRANSPILED_SYNTAX"),
+      EventKind::IneffectiveDynamicImport => write!(f, "INEFFECTIVE_DYNAMIC_IMPORT"),
       EventKind::ManualCodeSplittingSkipped => write!(f, "MANUAL_CODE_SPLITTING_SKIPPED"),
     }
   }

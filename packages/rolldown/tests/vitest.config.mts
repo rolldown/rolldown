@@ -5,7 +5,6 @@ export default defineConfig({
   test: {
     testTimeout: 20000,
     disableConsoleIntercept: true,
-    mockReset: true,
     pool: 'forks',
   },
   resolve: {

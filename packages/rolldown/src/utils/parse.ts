@@ -1,13 +1,24 @@
 import {
   parse as originalParse,
-  type ParseResult,
-  type ParserOptions,
+  type ParseResult as BindingParseResult,
+  type ParserOptions as BindingParserOptions,
   parseSync as originalParseSync,
 } from '../binding.cjs';
 // @ts-ignore
 import * as oxcParserWrap from 'oxc-parser/src-js/wrap.js';
 
-export type { ParseResult, ParserOptions };
+/**
+ * Result of parsing a code
+ *
+ * @category Utilities
+ */
+export interface ParseResult extends BindingParseResult {}
+/**
+ * Options for parsing a code
+ *
+ * @category Utilities
+ */
+export interface ParserOptions extends BindingParserOptions {}
 
 /**
  * Parse JS/TS source asynchronously on a separate thread.
@@ -19,8 +30,10 @@ export type { ParseResult, ParserOptions };
  *
  * i.e. the majority of the workload cannot be parallelized by using this method.
  *
- * Generally `parseSync` is preferable to use as it does not have the overhead of spawning a thread.
+ * Generally {@linkcode parseSync} is preferable to use as it does not have the overhead of spawning a thread.
  * If you need to parallelize parsing multiple files, it is recommended to use worker threads.
+ *
+ * @category Utilities
  */
 export async function parse(
   filename: string,
@@ -33,12 +46,14 @@ export async function parse(
 /**
  * Parse JS/TS source synchronously on current thread.
  *
- * This is generally preferable over `parse` (async) as it does not have the overhead
+ * This is generally preferable over {@linkcode parse} (async) as it does not have the overhead
  * of spawning a thread, and the majority of the workload cannot be parallelized anyway
- * (see `parse` documentation for details).
+ * (see {@linkcode parse} documentation for details).
  *
  * If you need to parallelize parsing multiple files, it is recommended to use worker threads
- * with `parseSync` rather than using `parse`.
+ * with {@linkcode parseSync} rather than using {@linkcode parse}.
+ *
+ * @category Utilities
  */
 export function parseSync(
   filename: string,

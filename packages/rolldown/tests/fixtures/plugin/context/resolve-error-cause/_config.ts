@@ -26,9 +26,7 @@ export default defineTest({
   },
   catchError(err: any) {
     expect(err).toBeInstanceOf(Error);
-    expect(err.message).toContain(
-      'Errored while resolving "./sub.js" in `this.resolve`.',
-    );
+    expect(err.message).toContain('Errored while resolving "./sub.js" in `this.resolve`.');
     expect(err.message).toContain('Caused by:');
     expect(err.message).toContain('Error: my error');
   },

@@ -1,5 +1,5 @@
-import { b } from './b'
+import { b } from './b';
 
 export const a = {
   b,
-}
+};

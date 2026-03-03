@@ -26,6 +26,7 @@ import type {
   InputOptions,
   ModuleTypes,
   OptimizationOptions,
+  WatcherFileWatcherOptions,
   WatcherOptions,
 } from './options/input-options';
 import type { TransformOptions } from './options/transform-options';
@@ -43,6 +44,7 @@ import type {
   CodeSplittingNameFunction,
   AdvancedChunksGroup,
   AdvancedChunksOptions,
+  CommentsOptions,
   GeneratedCodeOptions,
   GeneratedCodePreset,
   GlobalsFunction,
@@ -112,12 +114,14 @@ import {
   type ConfigExport,
   type RolldownOptionsFunction,
 } from './utils/define-config';
+import type { BundleError } from './utils/error';
 
 export { RUNTIME_MODULE_ID, VERSION } from './constants';
 export { build, defineConfig, rolldown, watch };
 export { BindingMagicString } from './binding.cjs';
 export type {
   AddonFunction,
+  BundleError,
   CodeSplittingGroup,
   CodeSplittingOptions,
   AsyncPluginHooks,
@@ -129,6 +133,7 @@ export type {
   ChunkFileNamesFunction,
   ChunkingContext,
   CodeSplittingNameFunction,
+  CommentsOptions,
   ConfigExport,
   CustomPluginOptions,
   DefineParallelPluginResult,
@@ -213,6 +218,7 @@ export type {
   TransformResult,
   TreeshakingOptions,
   WarningHandlerWithDefault,
+  WatcherFileWatcherOptions,
   WatcherOptions,
   WatchOptions,
 };

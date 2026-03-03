@@ -14,7 +14,6 @@ var require_entry = /* @__PURE__ */ __commonJSMin(((exports) => {
 		if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) exports.colors = [];
 	} catch (error) {}
 }));
-
 //#endregion
 export default require_entry();
 

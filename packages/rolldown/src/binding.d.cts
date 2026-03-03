@@ -1479,6 +1479,8 @@ export declare class BindingLoadPluginContext {
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
   get filename(): string | null
+  get offset(): number
+  set offset(offset: number)
   replace(from: string, to: string): this
   replaceAll(from: string, to: string): this
   prepend(content: string): this
@@ -2293,6 +2295,7 @@ export interface BindingLogLocation {
 
 export interface BindingMagicStringOptions {
   filename?: string
+  offset?: number
 }
 
 export type BindingMakeAbsoluteExternalsRelative =

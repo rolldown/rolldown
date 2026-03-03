@@ -570,10 +570,10 @@ pub fn normalize_binding_options(
     strict: output_options
       .strict
       .map(|strict| match strict {
-        Either::A(bool_val) => Ok(StrictMode::from(bool_val)),
-        Either::B(str_val) => {
-          StrictMode::try_from(str_val.as_str())
-            .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))
+        Either::A(v) => Ok(StrictMode::from(v)),
+        Either::B(v) => {
+          StrictMode::try_from(v)
+            .map_err(napi::Error::from_reason)
         }
       })
       .transpose()?,

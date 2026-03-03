@@ -29,14 +29,12 @@ impl From<bool> for StrictMode {
   }
 }
 
-impl TryFrom<&str> for StrictMode {
+impl TryFrom<String> for StrictMode {
   type Error = String;
 
-  fn try_from(value: &str) -> Result<Self, Self::Error> {
-    match value {
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    match value.as_str() {
       "auto" => Ok(Self::Auto),
-      "always" => Ok(Self::Always),
-      "never" => Ok(Self::Never),
       _ => Err(format!("Unknown strict mode: {value:?}")),
     }
   }

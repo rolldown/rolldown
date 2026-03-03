@@ -1703,8 +1703,8 @@ export declare class BindingWatcher {
 }
 
 /**
- * Minimal wrapper around the core `Bundler` for watcher events.
- * This is returned from watcher event data to allow access to the bundler instance.
+ * Minimal wrapper around a `BundleHandle` for watcher events.
+ * This is returned from watcher event data to allow calling `result.close()`.
  */
 export declare class BindingWatcherBundler {
   close(): Promise<void>

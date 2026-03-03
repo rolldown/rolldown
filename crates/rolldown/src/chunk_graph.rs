@@ -84,10 +84,11 @@ impl ChunkGraph {
   /// are part of a circular dependency. Modules in these chunks need `const`/`let` converted
   /// to `var` to prevent TDZ errors during ESM circular evaluation.
   ///
-  /// Note: This currently detects direct mutual imports (A↔B) only. Longer cycles (A→B→C→A)
-  /// would require SCC detection (e.g. Tarjan's algorithm) but are uncommon in practice since
-  /// chunk-level circular deps are typically caused by `manualCodeSplitting` splitting a module
-  /// away from its dependents.
+  /// Note: This currently detects direct mutual imports (A↔B) only. Longer/transitive cycles
+  /// (A→B→C→A) or cycles that emerge after later optimizations are not detected here and instead
+  /// rely on the general const/let→var safety net layer. Direct detection is mainly an
+  /// optimization, since chunk-level circular deps are typically caused by `manualCodeSplitting`
+  /// splitting a module away from its dependents.
   pub fn detect_circular_chunk_deps(&mut self) {
     for (chunk_idx, chunk) in self.chunk_table.iter_enumerated() {
       for &imported_chunk_idx in chunk.imports_from_other_chunks.keys() {

@@ -1,10 +1,9 @@
 use crate::watch_task::WatchTaskIdx;
-use rolldown::Bundler;
+use rolldown::BundleHandle;
 use rolldown_error::BuildDiagnostic;
 use std::fmt::{Debug, Display};
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 /// Watch-related events
 #[derive(Debug, Clone)]
@@ -51,7 +50,7 @@ pub struct BundleEndEventData {
   pub task_index: WatchTaskIdx,
   pub output: String,
   pub duration: u32,
-  pub bundler: Arc<Mutex<Bundler>>,
+  pub bundle_handle: BundleHandle,
 }
 
 impl Debug for BundleEndEventData {
@@ -72,7 +71,7 @@ pub struct WatchErrorEventData {
   /// Wrapped in `Arc` because `BuildDiagnostic` is not `Clone`.
   pub diagnostics: Arc<[BuildDiagnostic]>,
   pub cwd: PathBuf,
-  pub bundler: Arc<Mutex<Bundler>>,
+  pub bundle_handle: BundleHandle,
 }
 
 impl Debug for WatchErrorEventData {

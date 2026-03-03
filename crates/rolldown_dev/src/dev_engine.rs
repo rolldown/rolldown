@@ -362,7 +362,7 @@ impl DevEngine {
       .map_err_to_unhandleable()
       .context("DevEngine: failed to send Close message to coordinator - coordinator may have already terminated")?;
 
-    // Close the bundler
+    // Close the bundler (calls `closeBundle` plugin hook)
     let mut bundler = self.bundler.lock().await;
     bundler.close().await?;
 

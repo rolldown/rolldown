@@ -148,7 +148,7 @@ impl ManualSplitter<'_> {
     let mut prevented_manual_splits: FxHashMap<ModuleIdx, PreventedManualSplit> =
       FxHashMap::default();
 
-    if !matches!(self.chunking_options.include_dependencies_recursively, Some(false)) {
+    if self.chunking_options.include_dependencies_recursively != Some(false) {
       return prevented_manual_splits;
     }
 
@@ -173,30 +173,20 @@ impl ManualSplitter<'_> {
           continue;
         }
 
-        // Check if this module has dependencies outside the group
-        let outside_deps = self.link_output.metas[module_idx]
-          .dependencies
-          .iter()
-          .copied()
-          .filter(|dep| !group.modules.contains(dep))
-          .collect::<Vec<_>>();
-        if outside_deps.is_empty() {
-          continue;
-        }
-
         // Check if splitting this module would create a circular chunk dependency:
         // module_idx is in this group, has deps outside the group, and something
         // outside the group depends on module_idx AND shares a chunk (same bits)
         // with one of module_idx's outside deps.
+        let deps = &self.link_output.metas[module_idx].dependencies;
         let rdeps = &reverse_deps[module_idx];
-        let would_create_cycle = !rdeps.is_empty()
-          && rdeps.iter().any(|&rdep| {
-            !group.modules.contains(&rdep)
-              && self.link_output.metas[rdep].is_included
-              && outside_deps.iter().any(|&dep| {
-                self.index_splitting_info[dep].bits == self.index_splitting_info[rdep].bits
-              })
-          });
+        let would_create_cycle = rdeps.iter().any(|&rdep| {
+          !group.modules.contains(&rdep)
+            && self.link_output.metas[rdep].is_included
+            && deps.iter().any(|&dep| {
+              !group.modules.contains(&dep)
+                && self.index_splitting_info[dep].bits == self.index_splitting_info[rdep].bits
+            })
+        });
 
         if would_create_cycle {
           let new_prevented = PreventedManualSplit {
@@ -567,12 +557,9 @@ impl GenerateStage<'_> {
         if module_to_assigned.has_bit(module_idx) {
           continue;
         }
-        let module_id = self.link_output.module_table[module_idx]
-          .as_normal()
-          .map(|m| m.debug_id.clone())
-          .unwrap_or_else(|| self.link_output.module_table[module_idx].id().to_string());
+        let module_id = self.link_output.module_table[module_idx].id().to_string();
         self.link_output.warnings.push(
-          BuildDiagnostic::manual_code_splitting_skipped_due_to_circular_chunk_dependency(
+          BuildDiagnostic::manual_code_splitting_circular_chunk_dep(
             module_id,
             prevented.group_name.to_string(),
           )

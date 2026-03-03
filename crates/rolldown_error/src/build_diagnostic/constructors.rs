@@ -118,10 +118,7 @@ impl BuildDiagnostic {
     Self::new_inner(CircularDependency { paths })
   }
 
-  pub fn manual_code_splitting_skipped_due_to_circular_chunk_dependency(
-    module_id: String,
-    group_name: String,
-  ) -> Self {
+  pub fn manual_code_splitting_circular_chunk_dep(module_id: String, group_name: String) -> Self {
     Self::new_inner(ManualCodeSplittingCircularChunkDependency { module_id, group_name })
   }
 

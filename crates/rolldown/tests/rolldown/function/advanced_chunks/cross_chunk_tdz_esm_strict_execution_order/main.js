@@ -11,4 +11,3 @@ strictEqual(MAX_RETRIES, 3);
 
 // But dynamic calls to getConfig see the updated config
 strictEqual(getConfig('TIMEOUT', 999), 5000);
-

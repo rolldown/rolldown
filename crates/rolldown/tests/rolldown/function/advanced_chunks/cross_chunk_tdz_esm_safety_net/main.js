@@ -12,4 +12,3 @@ strictEqual(TIMEOUT, 300000);
 
 // After state is initialized by the entry, dynamic reads see the config.
 strictEqual(getConfig('TIMEOUT', 999), 5000);
-

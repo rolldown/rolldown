@@ -3,11 +3,8 @@
   "config": {
     "strictExecutionOrder": true,
     "manualCodeSplitting": {
-      "groups": [
-        { "name": "vendor", "test": "shared\\.js" }
-      ],
+      "groups": [{ "name": "vendor", "test": "shared\\.js" }],
       "includeDependenciesRecursively": false
     }
   }
 }
-

@@ -7,4 +7,3 @@ export function getConfig(key, defaultValue) {
   if (value !== undefined) return value;
   return defaultValue;
 }
-

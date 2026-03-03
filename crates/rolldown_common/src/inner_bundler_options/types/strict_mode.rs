@@ -31,6 +31,11 @@ impl From<bool> for StrictMode {
 
 impl From<String> for StrictMode {
   fn from(value: String) -> Self {
-    if value == "auto" { Self::Auto } else { unreachable!("unknown strict mode: {value}") }
+    match value.as_str() {
+      "auto" => Self::Auto,
+      "always" => Self::Always,
+      "never" => Self::Never,
+      _ => unreachable!("unknown strict mode: {value}"),
+    }
   }
 }

@@ -302,6 +302,7 @@ function bindingifyWatch(watch: InputOptions['watch']): BindingInputOptions['wat
       skipWrite: watch.skipWrite,
       usePolling: watcher.usePolling,
       pollInterval: watcher.pollInterval,
+      compareContentsForPolling: watcher.compareContentsForPolling,
       include: normalizedStringOrRegex(watch.include),
       exclude: normalizedStringOrRegex(watch.exclude),
       onInvalidate: (...args) => watch.onInvalidate?.(...args),

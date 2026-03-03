@@ -2774,6 +2774,7 @@ export interface BindingWatchOption {
   buildDelay?: number
   usePolling?: boolean
   pollInterval?: number
+  compareContentsForPolling?: boolean
   onInvalidate?: ((id: string) => void) | undefined
 }
 

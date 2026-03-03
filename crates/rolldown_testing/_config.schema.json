@@ -1445,6 +1445,9 @@
           "format": "uint64",
           "minimum": 0
         },
+        "compareContentsForPolling": {
+          "type": "boolean"
+        },
         "include": {
           "type": [
             "array",
@@ -1467,7 +1470,8 @@
       "additionalProperties": false,
       "required": [
         "skipWrite",
-        "usePolling"
+        "usePolling",
+        "compareContentsForPolling"
       ]
     },
     "LegalComments": {

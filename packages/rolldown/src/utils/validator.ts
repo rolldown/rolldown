@@ -268,6 +268,12 @@ const WatcherFileWatcherOptionsSchema = v.strictObject({
     v.optional(v.number()),
     v.description('Poll interval in milliseconds (only used when usePolling is true)'),
   ),
+  compareContentsForPolling: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Compare file contents for poll-based watchers (only used when usePolling is true)',
+    ),
+  ),
 });
 
 const WatcherOptionsSchema = v.strictObject({

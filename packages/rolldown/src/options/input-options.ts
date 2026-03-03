@@ -72,6 +72,15 @@ export interface WatcherFileWatcherOptions {
    * @default 100
    */
   pollInterval?: number;
+  /**
+   * Whether to compare file contents for poll-based watchers.
+   * When enabled, poll watchers will check file contents to determine if they actually changed.
+   *
+   * This option is only used when {@linkcode usePolling} is `true`.
+   *
+   * @default false
+   */
+  compareContentsForPolling?: boolean;
 }
 
 export interface WatcherOptions {

@@ -262,8 +262,8 @@ impl BindingMagicString<'_> {
   }
 
   #[napi(getter)]
-  pub fn filename(&self) -> Option<String> {
-    self.inner.filename().map(String::from)
+  pub fn filename(&self) -> Option<&str> {
+    self.inner.filename()
   }
 
   #[napi(getter)]

@@ -719,6 +719,8 @@ export interface OutputOptions {
    * - `false` - Never emit `"use strict"` in the output.
    * - `'auto'` - Respect the `"use strict"` directives from the source code.
    *
+   * See [In-depth directive guide](https://rolldown.rs/in-depth/directives) for more details.
+   *
    * @default 'auto'
    */
   strict?: boolean | 'auto';

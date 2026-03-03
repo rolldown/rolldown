@@ -29,13 +29,15 @@ impl From<bool> for StrictMode {
   }
 }
 
-impl From<String> for StrictMode {
-  fn from(value: String) -> Self {
-    match value.as_str() {
-      "auto" => Self::Auto,
-      "always" => Self::Always,
-      "never" => Self::Never,
-      _ => unreachable!("unknown strict mode: {value}"),
+impl TryFrom<&str> for StrictMode {
+  type Error = String;
+
+  fn try_from(value: &str) -> Result<Self, Self::Error> {
+    match value {
+      "auto" => Ok(Self::Auto),
+      "always" => Ok(Self::Always),
+      "never" => Ok(Self::Never),
+      _ => Err(format!("Unknown strict mode: {value:?}")),
     }
   }
 }

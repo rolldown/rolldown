@@ -17,7 +17,7 @@ You can control the `"use strict"` directive emission with the [`output.strict`]
 - `'auto'` (default) - Respect the `"use strict"` directive from the source code.
 
 ```ts
-import { defineConfig } from "rolldown";
+import { defineConfig } from 'rolldown';
 
 export default defineConfig({
   output: {

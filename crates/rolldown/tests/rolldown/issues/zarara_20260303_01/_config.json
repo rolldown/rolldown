@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [{ "name": "entry-0", "import": "./node0.cjs" }],
+    "treeshake": {
+      "moduleSideEffects": false
+    },
+    "preserveEntrySignatures": "false",
+    "minifyInternalExports": true
+  }
+}

@@ -257,6 +257,11 @@ impl BindingMagicString<'_> {
   }
 
   #[napi(getter)]
+  pub fn original(&self) -> &str {
+    self.inner.source()
+  }
+
+  #[napi(getter)]
   pub fn filename(&self) -> Option<String> {
     self.inner.filename().map(String::from)
   }

@@ -1478,6 +1478,7 @@ export declare class BindingLoadPluginContext {
 
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
+  get original(): string
   get filename(): string | null
   get offset(): number
   set offset(offset: number)

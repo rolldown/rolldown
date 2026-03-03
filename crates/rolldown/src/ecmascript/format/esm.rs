@@ -37,9 +37,8 @@ pub fn render_esm<'code>(
 
   // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/linker/linker.go#L5686-L5698
   if !directives.is_empty() {
-    let rendered_chunk_directives = render_chunk_directives(
-      directives.iter().filter(|d| !is_use_strict_directive(d)),
-    );
+    let rendered_chunk_directives =
+      render_chunk_directives(directives.iter().filter(|d| !is_use_strict_directive(d)));
     if !rendered_chunk_directives.is_empty() {
       source_joiner.append_source(rendered_chunk_directives);
     }

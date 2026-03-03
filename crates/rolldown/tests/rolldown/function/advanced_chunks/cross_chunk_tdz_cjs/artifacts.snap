@@ -1,0 +1,82 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] Warning: `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as require_shared } from "./vendor.js";
+import { strictEqual } from "node:assert";
+//#region state.js
+var require_state = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { state: {} };
+}));
+//#endregion
+//#region helpers.js
+var require_helpers = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const { state } = require_state();
+	function getConfig(key, defaultValue) {
+		if (state.config && typeof state.config === "object") {
+			const value = state.config[key];
+			if (value !== void 0) return value;
+		}
+		return defaultValue;
+	}
+	module.exports = { getConfig };
+}));
+//#endregion
+//#region main.js
+var { state } = require_state();
+var { getConfig } = require_helpers();
+var { TIMEOUT, MAX_RETRIES } = require_shared();
+state.config = { TIMEOUT: 5e3 };
+strictEqual(TIMEOUT, 3e5);
+strictEqual(MAX_RETRIES, 3);
+strictEqual(getConfig("TIMEOUT", 999), 5e3);
+//#endregion
+export { require_helpers as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __commonJSMin as t };
+
+```
+
+## vendor.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+import { t as require_helpers } from "./main.js";
+//#region shared.js
+var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const { getConfig } = require_helpers();
+	module.exports = {
+		TIMEOUT: getConfig("TIMEOUT", 3e5),
+		MAX_RETRIES: getConfig("MAX_RETRIES", 3)
+	};
+}));
+//#endregion
+export { require_shared as t };
+
+```

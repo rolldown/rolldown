@@ -33,7 +33,8 @@ use crate::inner_bundler_options::types::optimization::NormalizedOptimizationCon
 use crate::{
   DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
   HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, LogLevel,
-  MakeAbsoluteExternalsRelative, ModuleType, OnLog, RollupPreRenderedAsset, TransformOptions,
+  MakeAbsoluteExternalsRelative, ModuleType, OnLog, RollupPreRenderedAsset, StrictMode,
+  TransformOptions,
 };
 
 #[expect(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
@@ -113,6 +114,7 @@ pub struct NormalizedBundlerOptions {
   pub clean_dir: bool,
   pub context: String,
   pub strict_execution_order: bool,
+  pub strict: StrictMode,
 }
 
 // This is only used for testing
@@ -188,6 +190,7 @@ impl Default for NormalizedBundlerOptions {
       clean_dir: false,
       context: Default::default(),
       strict_execution_order: false,
+      strict: StrictMode::default(),
     }
   }
 }

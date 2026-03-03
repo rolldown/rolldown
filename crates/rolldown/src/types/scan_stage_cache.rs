@@ -207,11 +207,8 @@ impl ScanStageCache {
     let symbol_ref_db = std::mem::take(&mut cache.symbol_ref_db);
     cache.symbol_ref_db = symbol_ref_db_partial;
 
-    let link_kernel = LinkKernel::from_module_table(
-      &cache.module_table,
-      &cache.entry_points,
-      cache.runtime.id(),
-    );
+    let link_kernel =
+      LinkKernel::from_module_table(&cache.module_table, &cache.entry_points, cache.runtime.id());
 
     NormalizedScanStageOutput {
       module_table: cache.module_table.clone(),

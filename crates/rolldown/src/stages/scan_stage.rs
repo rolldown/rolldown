@@ -105,11 +105,8 @@ impl TryFrom<ScanStageOutput> for NormalizedScanStageOutput {
       HybridIndexVec::Map(_) => return Err("index_ecma_ast must be normalized to IndexVec first"),
     };
 
-    let link_kernel = LinkKernel::from_module_table(
-      &module_table,
-      &value.entry_points,
-      value.runtime.id(),
-    );
+    let link_kernel =
+      LinkKernel::from_module_table(&module_table, &value.entry_points, value.runtime.id());
 
     Ok(Self {
       module_table,

@@ -46,10 +46,7 @@ impl LinkKernel {
     entries: &[EntryPoint],
     runtime_id: ModuleIdx,
   ) -> Self {
-    let mut lk = Self {
-      graph: ModuleGraph::without_symbols(),
-      ..Self::default()
-    };
+    let mut lk = Self { graph: ModuleGraph::without_symbols(), ..Self::default() };
     populate_graph(&mut lk.graph, module_table, entries, runtime_id);
     lk
   }
@@ -121,8 +118,7 @@ fn populate_graph(
 
     match module {
       Module::Normal(m) => {
-        let mut import_records =
-          Vec::with_capacity(m.import_records.len());
+        let mut import_records = Vec::with_capacity(m.import_records.len());
         for rec in m.import_records.iter() {
           import_records.push(oxc_mg::types::ResolvedImportRecord {
             resolved_module: rec.resolved_module.map(to_oxc_module_idx),
@@ -133,12 +129,17 @@ fn populate_graph(
           });
         }
 
-        let star_count = m.import_records.iter()
+        let star_count = m
+          .import_records
+          .iter()
           .filter(|rec| rec.meta.contains(ImportRecordMeta::IsExportStar))
           .count();
-        let mut star_export_entries =
-          Vec::with_capacity(star_count + usize::from(m.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport)));
-        for rec in m.import_records.iter().filter(|rec| rec.meta.contains(ImportRecordMeta::IsExportStar)) {
+        let mut star_export_entries = Vec::with_capacity(
+          star_count + usize::from(m.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport)),
+        );
+        for rec in
+          m.import_records.iter().filter(|rec| rec.meta.contains(ImportRecordMeta::IsExportStar))
+        {
           star_export_entries.push(oxc_mg::types::StarExportEntry {
             module_request: CompactString::default(),
             resolved_module: rec.resolved_module.map(to_oxc_module_idx),
@@ -168,8 +169,7 @@ fn populate_graph(
         );
         oxc_module.has_module_syntax = m.def_format.is_esm();
         oxc_module.exports_kind = to_oxc_exports_kind(m.exports_kind);
-        oxc_module.has_top_level_await =
-          m.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait);
+        oxc_module.has_top_level_await = m.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait);
         oxc_module.side_effects = to_oxc_side_effects(&m.side_effects);
         oxc_module.has_lazy_export = m.meta.has_lazy_export();
         oxc_module.execution_order_sensitive =

@@ -11,8 +11,7 @@ impl LinkStage<'_> {
       wrap_cjs_entries: matches!(self.options.format, OutputFormat::Esm),
     };
 
-    let result =
-      oxc_module_graph::determine_module_exports_kind(&self.link_kernel.graph, &config);
+    let result = oxc_module_graph::determine_module_exports_kind(&self.link_kernel.graph, &config);
 
     // Sync to Rolldown data BEFORE apply() consumes the result.
     for (oxc_idx, exports_kind) in &result.exports_kind_updates {

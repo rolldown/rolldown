@@ -51,17 +51,15 @@ impl LinkStage<'_> {
     // Uses the push-callback API to read exports directly from module_table,
     // avoiding the cost of copying named_exports into graph storage.
     let module_table = &self.module_table;
-    let oxc_resolved = oxc_module_graph::build_resolved_exports_with_fn(
-      &self.link_kernel.graph,
-      &|oxc_idx, cb| {
+    let oxc_resolved =
+      oxc_module_graph::build_resolved_exports_with_fn(&self.link_kernel.graph, &|oxc_idx, cb| {
         let rd_idx = from_oxc_module_idx(oxc_idx);
         if let Some(m) = module_table[rd_idx].as_normal() {
           for (name, export) in &m.named_exports {
             cb(name.as_str(), to_oxc_symbol_ref(export.referenced));
           }
         }
-      },
-    );
+      });
     for (oxc_idx, exports) in &oxc_resolved {
       let module_idx = from_oxc_module_idx(*oxc_idx);
       self.metas[module_idx].resolved_exports = exports
@@ -72,9 +70,7 @@ impl LinkStage<'_> {
             ResolvedExport {
               symbol_ref: from_oxc_symbol_ref(export.symbol_ref),
               potentially_ambiguous_symbol_refs: export.potentially_ambiguous.as_ref().map(
-                |symbols| {
-                  symbols.iter().copied().map(from_oxc_symbol_ref).collect::<Vec<_>>()
-                },
+                |symbols| symbols.iter().copied().map(from_oxc_symbol_ref).collect::<Vec<_>>(),
               ),
               came_from_cjs: export.came_from_cjs,
             },
@@ -152,37 +148,36 @@ impl LinkStage<'_> {
     let mut config =
       LinkConfig { cjs_interop: false, import_hooks: Some(&mut matcher), ..Default::default() };
     let module_table = &self.module_table;
-    let (_binding_errors, _generated_links) =
-      oxc_module_graph::match_imports_collect_with_fn(
-        &self.link_kernel.graph,
-        &mut config,
-        Some(&oxc_resolved),
-        &|oxc_idx, cb| {
-          let rd_idx = from_oxc_module_idx(oxc_idx);
-          if let Some(m) = module_table[rd_idx].as_normal() {
-            for ni in m.named_imports.values() {
-              let imported_name = match &ni.imported {
-                Specifier::Star => "*",
-                Specifier::Literal(s) => s.as_str(),
-              };
-              let is_ns = matches!(&ni.imported, Specifier::Star);
-              cb(to_oxc_symbol_ref(ni.imported_as), imported_name, ni.record_idx.index(), is_ns);
-            }
+    let (_binding_errors, _generated_links) = oxc_module_graph::match_imports_collect_with_fn(
+      &self.link_kernel.graph,
+      &mut config,
+      Some(&oxc_resolved),
+      &|oxc_idx, cb| {
+        let rd_idx = from_oxc_module_idx(oxc_idx);
+        if let Some(m) = module_table[rd_idx].as_normal() {
+          for ni in m.named_imports.values() {
+            let imported_name = match &ni.imported {
+              Specifier::Star => "*",
+              Specifier::Literal(s) => s.as_str(),
+            };
+            let is_ns = matches!(&ni.imported, Specifier::Star);
+            cb(to_oxc_symbol_ref(ni.imported_as), imported_name, ni.record_idx.index(), is_ns);
           }
-        },
-        &|oxc_module_idx, oxc_symbol| {
-          let rd_idx = from_oxc_module_idx(oxc_module_idx);
-          let rd_symbol = from_oxc_symbol_ref(oxc_symbol);
-          let m = module_table[rd_idx].as_normal()?;
-          let ni = m.named_imports.get(&rd_symbol)?;
-          let imported_name = match &ni.imported {
-            Specifier::Star => oxc_module_graph::CompactString::from("*"),
-            Specifier::Literal(s) => oxc_module_graph::CompactString::from(s.as_str()),
-          };
-          let is_ns = matches!(&ni.imported, Specifier::Star);
-          Some((imported_name, ni.record_idx.index(), is_ns))
-        },
-      );
+        }
+      },
+      &|oxc_module_idx, oxc_symbol| {
+        let rd_idx = from_oxc_module_idx(oxc_module_idx);
+        let rd_symbol = from_oxc_symbol_ref(oxc_symbol);
+        let m = module_table[rd_idx].as_normal()?;
+        let ni = m.named_imports.get(&rd_symbol)?;
+        let imported_name = match &ni.imported {
+          Specifier::Star => oxc_module_graph::CompactString::from("*"),
+          Specifier::Literal(s) => oxc_module_graph::CompactString::from(s.as_str()),
+        };
+        let is_ns = matches!(&ni.imported, Specifier::Star);
+        Some((imported_name, ni.record_idx.index(), is_ns))
+      },
+    );
 
     // Extract results from the matcher (releases &mut self.metas borrow).
     let collected_links = std::mem::take(&mut matcher.collected_links);
@@ -209,9 +204,7 @@ impl LinkStage<'_> {
     for (_importer_idx, local_symbol, target_idx, imported) in &shim_requests {
       let shimmed_symbol_ref =
         self.metas[*target_idx].shimmed_missing_exports.entry(imported.clone()).or_insert_with(
-          || {
-            self.symbols.create_facade_root_symbol_ref(*target_idx, imported.as_str())
-          },
+          || self.symbols.create_facade_root_symbol_ref(*target_idx, imported.as_str()),
         );
       self.symbols.link(*local_symbol, *shimmed_symbol_ref);
     }
@@ -244,9 +237,7 @@ impl LinkStage<'_> {
 
     let symbols = &self.symbols;
     self.metas.par_iter_mut().for_each(|meta| {
-      let safe_canonical = |sym: SymbolRef| -> SymbolRef {
-        symbols.canonical_ref_for(sym)
-      };
+      let safe_canonical = |sym: SymbolRef| -> SymbolRef { symbols.canonical_ref_for(sym) };
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
       'next_export: for (exported_name, resolved_export) in &meta.resolved_exports {
         if let Some(potentially_ambiguous_symbol_refs) =
@@ -354,9 +345,7 @@ impl LinkStage<'_> {
   ) {
     let warnings = append_only_vec::AppendOnlyVec::new();
     let symbols_db = &self.symbols;
-    let safe_canonical = |sym: SymbolRef| -> SymbolRef {
-      symbols_db.canonical_ref_for(sym)
-    };
+    let safe_canonical = |sym: SymbolRef| -> SymbolRef { symbols_db.canonical_ref_for(sym) };
     let resolved_meta_data = self
       .module_table
       .modules

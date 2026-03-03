@@ -416,9 +416,10 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
           let ref_id = item.reference_id.get()?;
           let symbol_id = self.immutable_ctx.eval_ctx.scope.get_reference(ref_id).symbol_id()?;
 
-          let symbol_ref = self.immutable_ctx.symbols.canonical_ref_for(
-            SymbolRef { owner: self.immutable_ctx.module_idx, symbol: symbol_id },
-          );
+          let symbol_ref = self.immutable_ctx.symbols.canonical_ref_for(SymbolRef {
+            owner: self.immutable_ctx.module_idx,
+            symbol: symbol_id,
+          });
           Some(self.immutable_ctx.global_side_effect_free_function_symbols.contains(&symbol_ref))
         })
         .unwrap_or(false);

@@ -93,7 +93,6 @@ impl LinkStageOutput {
   }
 }
 
-
 #[derive(Debug)]
 pub struct LinkStage<'a> {
   pub module_table: ModuleTable,

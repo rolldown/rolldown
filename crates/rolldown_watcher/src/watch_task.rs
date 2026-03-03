@@ -72,12 +72,10 @@ impl WatchTask {
     let options_ref = &*self.options;
 
     // Scope the bundler lock to minimize lock duration
-    let (result, new_watch_files) = {
+    let (result, new_watch_files, bundle_handle) = {
       let mut bundler = self.bundler.lock().await;
 
-      // Reset bundler state for watch mode — allows rebuilds after `result.close()`
-      // (which sets closed=true) and clears stale plugin driver state.
-      bundler.reset_closed_for_watch_mode();
+      // Clear stale plugin driver state from previous build.
       if let Some(last_bundle_handle) = &bundler.last_bundle_handle {
         last_bundle_handle.plugin_driver().clear();
       }
@@ -110,10 +108,15 @@ impl WatchTask {
         })
         .await;
 
-      // Collect watch files while we have the lock (may include render-phase files)
-      let new_watch_files: Vec<ArcStr> = bundler.watch_files().iter().map(|f| f.clone()).collect();
+      // Extract the bundle handle for event data (watch files + close support)
+      let bundle_handle =
+        bundler.last_bundle_handle.clone().expect("bundle handle should exist after build");
 
-      (result, new_watch_files)
+      // Collect watch files while we have the lock (may include render-phase files)
+      let new_watch_files: Vec<ArcStr> =
+        bundle_handle.watch_files().iter().map(|f| f.clone()).collect();
+
+      (result, new_watch_files, bundle_handle)
     };
 
     // Also register any files discovered during render/write phase
@@ -129,13 +132,13 @@ impl WatchTask {
         task_index,
         output: self.options.cwd.join(&self.options.out_dir).to_string_lossy().into_owned(),
         duration,
-        bundler: Arc::clone(&self.bundler),
+        bundle_handle,
       })),
       Err(errs) => Ok(BuildOutcome::Error(WatchErrorEventData {
         task_index,
         diagnostics: Arc::from(errs.into_vec()),
         cwd: self.options.cwd.clone(),
-        bundler: Arc::clone(&self.bundler),
+        bundle_handle,
       })),
     }
   }
@@ -227,12 +230,11 @@ impl WatchTask {
     }
   }
 
-  /// Close the bundler
+  /// Close the bundler (calls `closeBundle` plugin hook for the last built bundle, if any).
   #[tracing::instrument(level = "debug", skip_all)]
   pub(crate) async fn close(&self) -> anyhow::Result<()> {
     let mut bundler = self.bundler.lock().await;
-    bundler.close().await?;
-    Ok(())
+    bundler.close().await.map_err(Into::into)
   }
 
   fn is_watched_file(&self, path: &str) -> bool {

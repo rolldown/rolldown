@@ -1,8 +1,5 @@
-use std::sync::Arc;
-
-use napi::tokio::sync::Mutex;
 use napi_derive::napi;
-use rolldown::Bundler;
+use rolldown::BundleHandle;
 use rolldown_watcher::WatchEvent;
 
 use super::binding_outputs::to_binding_error;
@@ -69,7 +66,7 @@ impl BindingWatcherEvent {
       WatcherEventInner::BundleEvent(WatchEvent::BundleEnd(data)) => BindingBundleEndEventData {
         output: data.output.clone(),
         duration: data.duration,
-        result: Arc::clone(&data.bundler),
+        result: data.bundle_handle.clone(),
       },
       _ => unreachable!("Expected BundleEvent::BundleEnd"),
     }
@@ -84,7 +81,7 @@ impl BindingWatcherEvent {
           .iter()
           .map(|diagnostic| to_binding_error(diagnostic, data.cwd.clone()))
           .collect(),
-        result: Arc::clone(&data.bundler),
+        result: data.bundle_handle.clone(),
       },
       _ => unreachable!("Expected BundleEvent::Error"),
     }
@@ -111,28 +108,28 @@ pub struct BindingWatcherChangeData {
 pub struct BindingBundleEndEventData {
   pub output: String,
   pub duration: u32,
-  result: Arc<Mutex<Bundler>>,
+  result: BundleHandle,
 }
 
 #[napi]
 impl BindingBundleEndEventData {
   #[napi(getter)]
   pub fn result(&self) -> BindingWatcherBundler {
-    BindingWatcherBundler::new(Arc::clone(&self.result))
+    BindingWatcherBundler::new(self.result.clone())
   }
 }
 
 #[napi]
 pub struct BindingBundleErrorEventData {
   error: Vec<BindingError>,
-  result: Arc<Mutex<Bundler>>,
+  result: BundleHandle,
 }
 
 #[napi]
 impl BindingBundleErrorEventData {
   #[napi(getter)]
   pub fn result(&self) -> BindingWatcherBundler {
-    BindingWatcherBundler::new(Arc::clone(&self.result))
+    BindingWatcherBundler::new(self.result.clone())
   }
 
   #[napi(getter)]

@@ -9,10 +9,6 @@ impl Bundler {
     &self.bundle_factory.options
   }
 
-  pub fn closed(&self) -> bool {
-    self.closed
-  }
-
   pub fn watch_files(&self) -> &Arc<FxDashSet<ArcStr>> {
     static EMPTY_SET: LazyLock<Arc<FxDashSet<ArcStr>>> =
       LazyLock::new(|| Arc::new(FxDashSet::default()));

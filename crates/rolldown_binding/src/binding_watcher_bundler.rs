@@ -13,10 +13,21 @@ pub struct BindingWatcherBundler {
 
 #[napi]
 impl BindingWatcherBundler {
+  /// Fully close the bundler and clean up all resources including the cache.
+  /// This should be called when a build fails or when the watcher is being shut down.
   #[napi]
   pub async fn close(&self) -> napi::Result<()> {
     let mut bundler = self.inner.lock().await;
     bundler.close().await.map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    Ok(())
+  }
+
+  /// Close the bundle and call the `closeBundle` hook, but preserve the cache for incremental builds.
+  /// This should be used in watch mode after each successful build completes.
+  #[napi]
+  pub async fn close_bundle(&self) -> napi::Result<()> {
+    let mut bundler = self.inner.lock().await;
+    bundler.close_bundle().await.map_err(|e| napi::Error::from_reason(e.to_string()))?;
     Ok(())
   }
 }

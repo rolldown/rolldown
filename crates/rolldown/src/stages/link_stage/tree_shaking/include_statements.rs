@@ -860,6 +860,17 @@ pub fn include_statement(
       {
         return;
       }
+      // Skip CJS bailout for dynamic imports that will be determined dead:
+      // top-level pure (unused exports) importing a side-effect-free module.
+      // The dynamic entry mechanism handles CJS bailout for live entries via
+      // `process_and_retain_dynamic_entry`. Without this check, a dead dynamic
+      // import's CJS bailout would mark the module as included while the entry
+      // is later removed, causing an empty-bits assertion in code splitting.
+      if import_record.meta.contains(ImportRecordMeta::TopLevelPureDynamicImport)
+        && !m.side_effects.has_side_effects()
+      {
+        return;
+      }
       if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
         // When the importer has multiple CJS re-export targets (conditional re-exports),
         // bail out to prevent tree-shaking from dropping any branch's exports.

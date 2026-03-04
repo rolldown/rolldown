@@ -26,8 +26,6 @@ bitflags::bitflags! {
   #[derive(Debug, Default, Clone, Copy)]
   pub struct SymbolRefFlags: u8 {
     const IsNotReassigned = 1;
-    /// If this symbol is declared by `const`. Eg. `const a = 1;`
-    const IsConst = 1 << 1;
     const MustStartWithCapitalLetterForJSX = 1 << 2;
     /// If the SymbolRef points to a side-effects-free function
     const SideEffectsFreeFunction = 1 << 3;

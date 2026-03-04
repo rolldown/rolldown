@@ -147,7 +147,6 @@ impl Bundle {
     BundleHandle {
       options: Arc::clone(&self.options),
       plugin_driver: Arc::clone(&self.plugin_driver),
-      closed: Arc::default(),
     }
   }
 

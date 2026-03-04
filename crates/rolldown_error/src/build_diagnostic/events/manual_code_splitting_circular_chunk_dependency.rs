@@ -14,18 +14,15 @@ impl BuildEvent for ManualCodeSplittingCircularChunkDependency {
 
   fn message(&self, opts: &DiagnosticOptions) -> String {
     let module_id = opts.stabilize_path(&self.module_id);
-    [
-      format!(
-        "Skipped manual code splitting for \"{module_id}\" into group \"{}\" because it would create a circular chunk dependency and may cause TDZ errors at runtime.",
-        self.group_name
-      ),
-      String::new(),
-      "To keep the split, consider:".to_string(),
-      String::new(),
-      "- Enabling `strictExecutionOrder: true` (wraps modules with lazy init)".to_string(),
-      "- Setting `manualCodeSplitting.includeDependenciesRecursively: true`".to_string(),
-    ]
-    .join("\n")
+    format!(
+      "Skipped manual code splitting for \"{module_id}\" into group \"{}\" because it would create a circular chunk dependency and may cause TDZ errors at runtime.\n\
+       \n\
+       To keep the split, consider:\n\
+       \n\
+       - Enabling `strictExecutionOrder: true` (wraps modules with lazy init)\n\
+       - Setting `manualCodeSplitting.includeDependenciesRecursively: true`",
+      self.group_name
+    )
   }
 
   fn id(&self) -> Option<String> {

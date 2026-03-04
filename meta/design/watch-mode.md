@@ -436,7 +436,7 @@ Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#648
 
 ### Cleanup
 
-- [ ] Remove `reset_closed_for_watch_mode()` hack — see [rust-bundler.md](./rust-bundler.md) for the `Bundle.close()` design that replaces it
+- [ ] Remove `reset_closed_for_watch_mode()` hack
 - [ ] Rename `WatcherChangeKind` → `FileChangeEventKind` (type stays in `rolldown_common`)
 - [ ] CLI `--watch` mode working with new watcher ([#7759](https://github.com/rolldown/rolldown/issues/7759))
 
@@ -464,8 +464,6 @@ Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#648
 
 ## Related
 
-- [rust-bundler](./rust-bundler.md) — Core Bundler struct and `Bundle.close()` design
-- [rust-classic-bundler](./rust-classic-bundler.md) — Rollup API compatibility wrapper
 - [module-id](./module-id.md) — Module ID, path identity, and normalization
 - [#6482](https://github.com/rolldown/rolldown/issues/6482) — Watch mode issue collection (tracks all known bugs)
 - `crates/rolldown_watcher/` — Implementation

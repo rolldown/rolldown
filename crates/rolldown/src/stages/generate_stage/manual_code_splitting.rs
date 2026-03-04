@@ -9,7 +9,7 @@ use arcstr::ArcStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupTest,
-  Module, ModuleIdx, ModuleTable,
+  Module, ModuleIdx, ModuleTable, WrapKind,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
 use rolldown_plugin::SharedPluginDriver;
@@ -35,17 +35,10 @@ struct PreventedManualSplit {
 }
 
 impl PreventedManualSplit {
-  // Mirrors the manual group ordering: higher priority first, then lower match_group_index,
-  // then dictionary order by name. If a module is prevented from multiple groups, we only
-  // report the "best" group to avoid warning spam.
-  fn is_better_than(&self, other: &Self) -> bool {
-    if self.priority != other.priority {
-      return self.priority > other.priority;
-    }
-    if self.match_group_index != other.match_group_index {
-      return self.match_group_index < other.match_group_index;
-    }
-    self.group_name < other.group_name
+  /// Ordering key that mirrors the manual group sort: higher priority first,
+  /// then lower match_group_index, then dictionary order by name.
+  fn ordering_key(&self) -> (Reverse<u32>, usize, &ArcStr) {
+    (Reverse(self.priority), self.match_group_index, &self.group_name)
   }
 }
 
@@ -168,8 +161,8 @@ impl ManualSplitter<'_> {
     for group in module_groups.values_mut() {
       let mut to_remove = Vec::new();
       for &module_idx in &group.modules {
-        // Wrapped modules use lazy init -- immune to TDZ
-        if !self.link_output.metas[module_idx].wrap_kind().is_none() {
+        // Wrapped modules (CJS/ESM) use lazy init -- immune to TDZ
+        if self.link_output.metas[module_idx].wrap_kind() != WrapKind::None {
           continue;
         }
 
@@ -194,8 +187,9 @@ impl ManualSplitter<'_> {
             match_group_index: group.match_group_index,
             group_name: group.name.clone(),
           };
+          // Keep only the best (lowest ordering key) prevented split per module.
           match prevented_manual_splits.get(&module_idx) {
-            Some(existing) if existing.is_better_than(&new_prevented) => {}
+            Some(existing) if existing.ordering_key() <= new_prevented.ordering_key() => {}
             _ => {
               prevented_manual_splits.insert(module_idx, new_prevented);
             }

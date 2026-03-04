@@ -32,11 +32,6 @@ pub struct ChunkGraph {
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
   pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
-  /// Chunks that participate in circular chunk import relationships.
-  /// When chunk A imports from chunk B and chunk B also imports from chunk A,
-  /// both are marked here. Modules in these chunks have their `const`/`let`
-  /// declarations converted to `var` to avoid TDZ errors during circular evaluation.
-  pub chunks_with_circular_deps: FxHashSet<ChunkIdx>,
 }
 
 impl ChunkGraph {
@@ -51,7 +46,6 @@ impl ChunkGraph {
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
-      chunks_with_circular_deps: FxHashSet::default(),
     }
   }
 
@@ -75,32 +69,6 @@ impl ChunkGraph {
     self.chunk_table.chunks[chunk_idx].modules.push(module_idx);
     self.module_to_chunk[module_idx] = Some(chunk_idx);
     self.chunk_table.chunks[chunk_idx].depended_runtime_helper.insert(depended_runtime_helper);
-  }
-
-  /// Detects circular chunk import relationships and stores the affected chunk indices.
-  /// Should be called after `compute_cross_chunk_links` has populated `imports_from_other_chunks`.
-  ///
-  /// When chunk A imports from chunk B and chunk B also imports from chunk A, both chunks
-  /// are part of a circular dependency. Modules in these chunks need `const`/`let` converted
-  /// to `var` to prevent TDZ errors during ESM circular evaluation.
-  ///
-  /// Note: This currently detects direct mutual imports (A↔B) only. Longer/transitive cycles
-  /// (A→B→C→A) or cycles that emerge after later optimizations are not detected here and instead
-  /// rely on the general const/let→var safety net layer. Direct detection is mainly an
-  /// optimization, since chunk-level circular deps are typically caused by `manualCodeSplitting`
-  /// splitting a module away from its dependents.
-  pub fn detect_circular_chunk_deps(&mut self) {
-    for (chunk_idx, chunk) in self.chunk_table.iter_enumerated() {
-      for &imported_chunk_idx in chunk.imports_from_other_chunks.keys() {
-        if imported_chunk_idx == chunk_idx {
-          continue;
-        }
-        if self.chunk_table[imported_chunk_idx].imports_from_other_chunks.contains_key(&chunk_idx) {
-          self.chunks_with_circular_deps.insert(chunk_idx);
-          self.chunks_with_circular_deps.insert(imported_chunk_idx);
-        }
-      }
-    }
   }
 
   pub fn sort_chunk_modules(&mut self, link_output: &LinkStageOutput, options: &SharedOptions) {

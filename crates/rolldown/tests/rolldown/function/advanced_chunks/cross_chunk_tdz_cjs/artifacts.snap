@@ -43,9 +43,9 @@ var require_helpers = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 }));
 //#endregion
 //#region main.js
-var { state } = require_state();
-var { getConfig } = require_helpers();
-var { TIMEOUT, MAX_RETRIES } = require_shared();
+const { state } = require_state();
+const { getConfig } = require_helpers();
+const { TIMEOUT, MAX_RETRIES } = require_shared();
 state.config = { TIMEOUT: 5e3 };
 strictEqual(TIMEOUT, 3e5);
 strictEqual(MAX_RETRIES, 3);

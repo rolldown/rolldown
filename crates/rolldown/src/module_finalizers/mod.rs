@@ -1543,19 +1543,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           }
         }
 
-        // Convert const/let to var and class declarations to var assignments when:
-        // 1. top_level_var option is set (explicit user request), OR
-        // 2. This is an ESM non-wrapped module in a chunk with circular chunk dependencies
-        //    (safety net to prevent TDZ ReferenceErrors from circular chunk imports).
-        //
-        // For case 2: This runs AFTER export stripping (above), so it catches declarations
-        // that were originally `export const` and are now plain `const`. Wrapped modules
-        // (strictExecutionOrder/on-demand wrapping) are immune to TDZ via lazy initializers.
-        let needs_top_level_var = self.ctx.options.top_level_var
-          || (self.ctx.options.format.is_esm()
-            && self.ctx.linking_info.wrap_kind().is_none()
-            && self.ctx.chunk_graph.chunks_with_circular_deps.contains(&self.ctx.chunk_idx));
-        if needs_top_level_var {
+        if self.ctx.options.top_level_var {
           if let Statement::VariableDeclaration(var_decl) = &mut top_stmt {
             var_decl.kind = ast::VariableDeclarationKind::Var;
             for decl in &mut var_decl.declarations {

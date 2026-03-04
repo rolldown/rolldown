@@ -20,8 +20,8 @@
     "editor.defaultFormatter": "oxc.oxc-vscode"
   },
   "[markdown]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode",
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "oxc.oxc-vscode"
   },
   "files.associations": {
     "*.snap": "markdown",

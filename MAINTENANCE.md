@@ -17,6 +17,8 @@ Current Canary/preview distribution is handled by `publish-to-pkg.pr.new.yml` (n
    - add the `trigger: preview` label to a PR.
 3. Wait for the `Pkg Preview` job to finish and check the published preview at:
    - https://pkg.pr.new/~/rolldown/rolldown
+4. For npm canary tag status (view only), check:
+   - https://npmx.dev/package/rolldown/v/canary
 
 ## pkg.pr.new
 

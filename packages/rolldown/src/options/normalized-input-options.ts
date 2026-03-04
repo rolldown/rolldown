@@ -57,7 +57,6 @@ export class NormalizedInputOptionsImpl extends PlainObjectLike implements Norma
     return this.inner.context;
   }
 
-  @lazyProp
   get plugins(): RolldownPlugin[] {
     return this.inputPlugins;
   }

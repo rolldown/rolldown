@@ -42,9 +42,10 @@ export async function createBundlerOptions(
     watchMode,
   );
 
+  const hookOutputPlugins = await normalizePluginOption(outputOptions.plugins);
   const normalizedInputPlugins = normalizePlugins(inputPlugins, ANONYMOUS_PLUGIN_PREFIX);
   const normalizedOutputPlugins = normalizePlugins(
-    await normalizePluginOption(outputOptions.plugins),
+    hookOutputPlugins,
     ANONYMOUS_OUTPUT_PLUGIN_PREFIX,
   );
 

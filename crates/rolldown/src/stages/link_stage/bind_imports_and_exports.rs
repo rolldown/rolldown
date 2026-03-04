@@ -382,7 +382,6 @@ impl LinkStage<'_> {
   /// export const c = 1;
   /// ```
   /// The final pointed `SymbolRef` of `foo_ns.bar_ns.c` is the `c` in `bar.js`.
-  #[expect(clippy::too_many_lines)]
   fn resolve_member_expr_refs(
     &mut self,
     side_effects_modules: &FxHashSet<ModuleIdx>,

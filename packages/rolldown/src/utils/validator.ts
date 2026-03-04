@@ -268,6 +268,12 @@ const WatcherFileWatcherOptionsSchema = v.strictObject({
     v.optional(v.number()),
     v.description('Poll interval in milliseconds (only used when usePolling is true)'),
   ),
+  compareContentsForPolling: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Compare file contents for poll-based watchers (only used when usePolling is true)',
+    ),
+  ),
 });
 
 const WatcherOptionsSchema = v.strictObject({
@@ -930,6 +936,10 @@ const OutputOptionsSchema = v.strictObject({
   strictExecutionOrder: v.pipe(
     v.optional(v.boolean()),
     v.description('Lets modules be executed in the order they are declared.'),
+  ),
+  strict: v.pipe(
+    v.optional(v.union([v.boolean(), v.literal('auto')])),
+    v.description('Whether to always output `"use strict"` directive in non-ES module outputs.'),
   ),
 });
 isTypeTrue<IsSchemaSubType<typeof OutputOptionsSchema, OutputOptions>>();

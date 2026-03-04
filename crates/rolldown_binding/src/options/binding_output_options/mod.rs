@@ -134,7 +134,8 @@ pub struct BindingOutputOptions<'env> {
   pub sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
   // sourcemapExcludeSources: boolean;
   // sourcemapFile: string | undefined;
-  // strict: boolean;
+  #[napi(ts_type = "boolean | 'auto'")]
+  pub strict: Option<Either<bool, String>>,
   // systemNullSetters: boolean;
   // validate: boolean;
 

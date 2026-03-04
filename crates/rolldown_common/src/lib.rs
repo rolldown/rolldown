@@ -74,6 +74,7 @@ pub mod bundler_options {
       source_map_type::SourceMapType,
       sourcemap_ignore_list::SourceMapIgnoreList,
       sourcemap_path_transform::SourceMapPathTransform,
+      strict_mode::StrictMode,
       target::ESTarget,
       transform_option::{
         CompilerAssumptions, DecoratorOptions, Either, IsolatedDeclarationsOptions, JsxOptions,

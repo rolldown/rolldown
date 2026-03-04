@@ -569,6 +569,16 @@
             "boolean",
             "null"
           ]
+        },
+        "strict": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrictMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1445,6 +1455,9 @@
           "format": "uint64",
           "minimum": 0
         },
+        "compareContentsForPolling": {
+          "type": "boolean"
+        },
         "include": {
           "type": [
             "array",
@@ -1467,7 +1480,8 @@
       "additionalProperties": false,
       "required": [
         "skipWrite",
-        "usePolling"
+        "usePolling",
+        "compareContentsForPolling"
       ]
     },
     "LegalComments": {
@@ -1644,6 +1658,26 @@
         }
       ]
     },
+    "StrictMode": {
+      "description": "Controls whether `\"use strict\"` is emitted in the output.\n\nSee [`rollupjs.org/configuration-options/#output-strict`](https://rollupjs.org/configuration-options/#output-strict).",
+      "oneOf": [
+        {
+          "description": "Respect the `\"use strict\"` directives from the source code.\nThis is the default behavior.",
+          "type": "string",
+          "const": "auto"
+        },
+        {
+          "description": "Always emit `\"use strict\"` at the top of the output (not applicable for ESM format).",
+          "type": "string",
+          "const": "always"
+        },
+        {
+          "description": "Never emit `\"use strict\"` in the output.",
+          "type": "string",
+          "const": "never"
+        }
+      ]
+    },
     "ConfigVariant": {
       "type": "object",
       "properties": {
@@ -1684,6 +1718,16 @@
           "type": [
             "boolean",
             "null"
+          ]
+        },
+        "strict": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrictMode"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "entryFilenames": {

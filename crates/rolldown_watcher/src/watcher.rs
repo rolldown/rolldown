@@ -29,6 +29,8 @@ pub struct WatcherConfig {
   pub use_polling: bool,
   /// Poll interval in milliseconds (only used when `use_polling` is true)
   pub poll_interval: Option<u64>,
+  /// Whether to compare file contents for poll-based watchers (only used when `use_polling` is true)
+  pub compare_contents_for_polling: bool,
 }
 
 impl WatcherConfig {
@@ -41,6 +43,7 @@ impl WatcherConfig {
     if let Some(poll_interval) = self.poll_interval {
       config.poll_interval = poll_interval;
     }
+    config.compare_contents_for_polling = self.compare_contents_for_polling;
     config
   }
 }

@@ -70,18 +70,29 @@ impl BindingWatcher {
     let build_delay =
       configs.iter().filter_map(|c| c.options.watch.as_ref().and_then(|w| w.build_delay)).max();
 
-    // Extract use_polling / poll_interval from the first config that specifies them.
+    // Extract use_polling / poll_interval / compare_contents_for_polling from the first config that specifies them.
     let use_polling = configs
       .iter()
       .find_map(|c| c.options.watch.as_ref().filter(|w| w.use_polling).map(|w| w.use_polling))
       .unwrap_or(false);
     let poll_interval =
       configs.iter().find_map(|c| c.options.watch.as_ref().and_then(|w| w.poll_interval));
+    let compare_contents_for_polling = configs
+      .iter()
+      .find_map(|c| {
+        c.options
+          .watch
+          .as_ref()
+          .filter(|w| w.compare_contents_for_polling)
+          .map(|w| w.compare_contents_for_polling)
+      })
+      .unwrap_or(false);
 
     let watcher_config = WatcherConfig {
       debounce: build_delay.map(|ms| Duration::from_millis(u64::from(ms))),
       use_polling,
       poll_interval,
+      compare_contents_for_polling,
     };
 
     let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };

@@ -2,7 +2,7 @@ type MaybePromise<T> = T | Promise<T>
 type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
-type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T
+export type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T
 
 export interface CodegenOptions {
   /**
@@ -1478,7 +1478,10 @@ export declare class BindingLoadPluginContext {
 
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
+  get original(): string
   get filename(): string | null
+  get offset(): number
+  set offset(offset: number)
   replace(from: string, to: string): this
   replaceAll(from: string, to: string): this
   prepend(content: string): this
@@ -1700,8 +1703,8 @@ export declare class BindingWatcher {
 }
 
 /**
- * Minimal wrapper around the core `Bundler` for watcher events.
- * This is returned from watcher event data to allow access to the bundler instance.
+ * Minimal wrapper around a `BundleHandle` for watcher events.
+ * This is returned from watcher event data to allow calling `result.close()`.
  */
 export declare class BindingWatcherBundler {
   close(): Promise<void>
@@ -2293,6 +2296,7 @@ export interface BindingLogLocation {
 
 export interface BindingMagicStringOptions {
   filename?: string
+  offset?: number
 }
 
 export type BindingMakeAbsoluteExternalsRelative =
@@ -2374,6 +2378,7 @@ export interface BindingOutputOptions {
   sourcemapIgnoreList?: boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)
   sourcemapDebugIds?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
+  strict?: boolean | 'auto'
   minify?: boolean | 'dce-only' | MinifyOptions
   manualCodeSplitting?: BindingManualCodeSplittingOptions
   legalComments?: 'none' | 'inline'
@@ -2774,6 +2779,7 @@ export interface BindingWatchOption {
   buildDelay?: number
   usePolling?: boolean
   pollInterval?: number
+  compareContentsForPolling?: boolean
   onInvalidate?: ((id: string) => void) | undefined
 }
 

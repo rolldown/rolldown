@@ -19,6 +19,7 @@ pub struct WatchOption {
   pub build_delay: Option<u32>,
   pub use_polling: bool,
   pub poll_interval: Option<u64>,
+  pub compare_contents_for_polling: bool,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_string_or_regex"),

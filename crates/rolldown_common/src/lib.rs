@@ -189,7 +189,6 @@ pub use crate::{
   types::module_idx::LegacyModuleIdx,
   types::module_info::ModuleInfo,
   types::module_namespace_included_reason::ModuleNamespaceIncludedReason,
-  types::module_payload::ModulePayload,
   types::module_render_output::ModuleRenderOutput,
   types::module_table::{IndexModules, ModuleTable},
   types::named_export::LocalExport,

@@ -9,7 +9,6 @@ use crate::{
   SymbolRef, side_effects::DeterminedSideEffects,
 };
 
-use super::module_payload::ModulePayload;
 use super::symbol_extras::SymbolExtrasForModule;
 
 /// Kernel that bridges scan-stage output to link-stage input.
@@ -21,8 +20,6 @@ pub struct LinkKernel {
   /// Generic link-time graph — the canonical source of truth for
   /// module topology, import/export records, and symbol linking.
   pub graph: ModuleGraph,
-  /// Rolldown-only per-module payload (source text, AST, codegen state, etc.).
-  pub module_payloads: IndexVec<ModuleIdx, Option<ModulePayload>>,
   /// Rolldown-only per-module symbol metadata (scopes, flags, namespace aliases, etc.).
   pub symbol_extras: IndexVec<ModuleIdx, Option<SymbolExtrasForModule>>,
 }

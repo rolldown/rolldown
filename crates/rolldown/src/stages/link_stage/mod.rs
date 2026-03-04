@@ -77,7 +77,6 @@ pub struct LinkStageOutput {
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
-  pub link_kernel: LinkKernel,
 }
 
 impl LinkStageOutput {
@@ -280,7 +279,6 @@ impl<'a> LinkStage<'a> {
       global_constant_symbol_map: self.global_constant_symbol_map,
       normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
       user_defined_entry_modules: self.user_defined_entry_modules,
-      link_kernel: self.link_kernel,
     }
   }
 

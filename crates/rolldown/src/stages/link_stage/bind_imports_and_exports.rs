@@ -602,10 +602,7 @@ impl LinkStage<'_> {
       for (import_symbol, cjs_module_idx) in
         meta.named_import_to_cjs_module.iter().chain(meta.import_record_ns_to_cjs_module.iter())
       {
-        if import_symbol
-          .flags(&self.symbols)
-          .is_some_and(|f| f.contains(SymbolRefFlags::HasComputedMemberWrite))
-        {
+        if import_symbol.flags(&self.symbols).contains(SymbolRefFlags::HasComputedMemberWrite) {
           written_cjs_export_symbols.extend(
             self.metas[*cjs_module_idx]
               .resolved_exports

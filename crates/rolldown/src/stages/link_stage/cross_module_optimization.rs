@@ -72,10 +72,10 @@ impl LinkStage<'_> {
           .contains(EcmaViewMeta::TopExportedSideEffectsFreeFunction)
           .then(move || {
             let symbol_for_module = symbol_for_module.as_ref()?;
-            Some(symbol_for_module.flags.iter().filter_map(move |(symbol_id, flag)| {
+            Some(symbol_for_module.flags.iter_enumerated().filter_map(move |(symbol_id, flag)| {
               flag
                 .contains(SymbolRefFlags::SideEffectsFreeFunction)
-                .then_some(SymbolRef::from((idx, *symbol_id)))
+                .then_some(SymbolRef::from((idx, symbol_id)))
             }))
           })
           .flatten()
@@ -443,13 +443,10 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
       var_decl.declarations.iter().for_each(|declarator| {
         if let BindingPattern::BindingIdentifier(ref binding) = declarator.id {
           let symbol_ref: SymbolRef = (self.immutable_ctx.module_idx, binding.symbol_id()).into();
-          let is_not_assigned = self
-            .immutable_ctx
-            .symbols
-            .local_db(self.immutable_ctx.module_idx)
-            .flags
-            .get(&symbol_ref.symbol)
-            .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned));
+          let is_not_assigned =
+            self.immutable_ctx.symbols.local_db(self.immutable_ctx.module_idx).flags
+              [symbol_ref.symbol]
+              .contains(SymbolRefFlags::IsNotReassigned);
 
           if is_not_assigned
             && let Some(value) = declarator

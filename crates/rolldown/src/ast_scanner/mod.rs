@@ -391,12 +391,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
     self.result.constant_export_map.retain(|symbol_id, constant_meta| {
       (constant_meta.commonjs_export && !bailout_inlined_cjs_exports_symbol_ids.contains(symbol_id))
-        || self
-          .result
-          .symbol_ref_db
-          .flags
-          .get(symbol_id)
-          .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned))
+        || self.result.symbol_ref_db.flags[*symbol_id].contains(SymbolRefFlags::IsNotReassigned)
     });
 
     if cfg!(debug_assertions) {
@@ -756,12 +751,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                     .result
                     .ecma_view_meta
                     .insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-                  self
-                    .result
-                    .symbol_ref_db
-                    .flags
-                    .entry(symbol_id)
-                    .or_default()
+                  self.result.symbol_ref_db.flags[symbol_id]
                     .insert(SymbolRefFlags::SideEffectsFreeFunction);
                 }
               }
@@ -773,12 +763,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
             if fn_decl.is_side_effect_free() || fn_decl.pure {
               self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-              self
-                .result
-                .symbol_ref_db
-                .flags
-                .entry(symbol_id)
-                .or_default()
+              self.result.symbol_ref_db.flags[symbol_id]
                 .insert(SymbolRefFlags::SideEffectsFreeFunction);
             }
           }
@@ -834,12 +819,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
         if fn_decl.is_side_effect_free() || fn_decl.pure {
           self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-          self
-            .result
-            .symbol_ref_db
-            .flags
-            .entry(self.result.default_export_ref.symbol)
-            .or_default()
+          self.result.symbol_ref_db.flags[self.result.default_export_ref.symbol]
             .insert(SymbolRefFlags::SideEffectsFreeFunction);
         }
         fn_decl.id.as_ref().map(|id| {

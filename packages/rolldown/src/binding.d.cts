@@ -2,7 +2,7 @@ type MaybePromise<T> = T | Promise<T>
 type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
-type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T
+export type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T
 
 export interface CodegenOptions {
   /**

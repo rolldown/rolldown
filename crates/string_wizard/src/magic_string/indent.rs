@@ -80,7 +80,7 @@ impl MagicString<'_> {
     }
 
     fn indent_frag(frag: &mut CowStr, indent_replacer: &mut IndentReplacer) {
-      let mut indented = String::new();
+      let mut indented = String::with_capacity(frag.len() + indent_replacer.indentor.len());
       for char in frag.chars() {
         if char == '\n' {
           indent_replacer.should_indent_next_char = true;

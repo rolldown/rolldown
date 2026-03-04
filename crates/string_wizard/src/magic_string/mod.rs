@@ -109,7 +109,7 @@ impl<'text> MagicString<'text> {
   pub fn last_char(&self) -> Option<char> {
     // Check outro first (last in output order)
     if let Some(last_outro) = self.outro.back()
-      && let Some(c) = last_outro.chars().last()
+      && let Some(c) = last_outro.chars().next_back()
     {
       return Some(c);
     }
@@ -121,7 +121,7 @@ impl<'text> MagicString<'text> {
 
       // Check chunk outro
       if let Some(last_outro) = chunk.outro.back()
-        && let Some(c) = last_outro.chars().last()
+        && let Some(c) = last_outro.chars().next_back()
       {
         return Some(c);
       }
@@ -132,13 +132,13 @@ impl<'text> MagicString<'text> {
         .as_ref()
         .map(|s| s.as_ref())
         .unwrap_or_else(|| chunk.span.text(&self.source));
-      if let Some(c) = content.chars().last() {
+      if let Some(c) = content.chars().next_back() {
         return Some(c);
       }
 
       // Check chunk intro
       if let Some(last_intro) = chunk.intro.back()
-        && let Some(c) = last_intro.chars().last()
+        && let Some(c) = last_intro.chars().next_back()
       {
         return Some(c);
       }
@@ -148,7 +148,7 @@ impl<'text> MagicString<'text> {
 
     // Check intro last (first in output order, but we're going backwards)
     if let Some(last_intro) = self.intro.back()
-      && let Some(c) = last_intro.chars().last()
+      && let Some(c) = last_intro.chars().next_back()
     {
       return Some(c);
     }

@@ -5,13 +5,12 @@ use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
 use crate::utils::chunk::normalize_preserve_entry_signature;
 use itertools::{Itertools, multizip};
-use oxc::semantic::SymbolId;
 use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolIdExt, SymbolRef, WrapKind,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolRef, WrapKind,
 };
 use rolldown_utils::concat_string;
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
@@ -420,16 +419,18 @@ impl GenerateStage<'_> {
                     if let Some(wrapper_ref) = meta.wrapper_ref {
                       index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
                     }
-                    index_chunk_exported_symbols[chunk_id]
-                      .entry(SymbolId::module_namespace_symbol_ref(*dynamic_entry_module))
-                      .or_default();
+                    let ns_ref = self.link_output.module_table[*dynamic_entry_module]
+                      .namespace_object_ref()
+                      .expect("dynamic entry should be normal module");
+                    index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
                   }
                   WrapKind::None => {
                     // For non-wrapped modules, export only namespace
                     // Generated code: `import('./chunk.js').then((n) => n.namespace)`
-                    index_chunk_exported_symbols[chunk_id]
-                      .entry(SymbolId::module_namespace_symbol_ref(*dynamic_entry_module))
-                      .or_default();
+                    let ns_ref = self.link_output.module_table[*dynamic_entry_module]
+                      .namespace_object_ref()
+                      .expect("dynamic entry should be normal module");
+                    index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
                   }
                 }
               }

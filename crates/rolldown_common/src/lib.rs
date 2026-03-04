@@ -125,7 +125,6 @@ pub use crate::{
     },
     json_to_program::{json_value_to_ecma_ast, json_value_to_expression},
     module_idx::ModuleIdx,
-    symbol_id_ext::SymbolIdExt,
   },
   file_emitter::{
     EmittedAsset, EmittedChunk, EmittedChunkInfo, EmittedPrebuiltChunk, FileEmitter,

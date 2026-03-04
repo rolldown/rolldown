@@ -9,7 +9,7 @@ use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
   RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, SideEffectDetail,
-  StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolIdExt, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
@@ -688,9 +688,7 @@ pub fn include_symbol(
     {
       ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
     }
-    if ctx.modules[canonical_ref.owner].as_normal().map(|m| m.namespace_object_ref)
-      == Some(canonical_ref)
-    {
+    if ctx.modules[canonical_ref.owner].namespace_object_ref() == Some(canonical_ref) {
       ctx.bailout_cjs_tree_shaking_modules.insert(canonical_ref.owner);
     }
   }
@@ -723,7 +721,9 @@ pub fn include_symbol(
     }
   }
 
-  let is_simulated_facade_chunk = if canonical_ref.symbol.is_module_namespace() {
+  let is_module_namespace =
+    ctx.modules[canonical_ref.owner].namespace_object_ref() == Some(canonical_ref);
+  let is_simulated_facade_chunk = if is_module_namespace {
     if include_reason.intersects(SymbolIncludeReason::Normal | SymbolIncludeReason::EntryExport) {
       ctx.module_namespace_included_reason[canonical_ref.owner]
         .insert(ModuleNamespaceIncludedReason::Unknown);

@@ -153,14 +153,16 @@ test('plugins are accessible in buildStart hook', async () => {
     },
   };
   const pluginB = { name: 'plugin-b' };
+  const pluginC = { name: 'plugin-c' };
   const bundle = await rolldown({
     input: './main.js',
     cwd: import.meta.dirname,
     plugins: [pluginA, pluginB],
   });
-  await bundle.generate({ format: 'esm' });
+  await bundle.generate({ format: 'esm', plugins: [pluginC] });
   expect(Array.isArray(pluginsInBuildStart)).toBe(true);
   const names = (pluginsInBuildStart as Array<{ name: string }>).map((p) => p.name);
   expect(names).toContain('plugin-a');
   expect(names).toContain('plugin-b');
+  expect(names).not.toContain('plugin-c');
 });

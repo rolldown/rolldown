@@ -22,6 +22,7 @@ export interface NormalizedInputOptions {
 
 export class NormalizedInputOptionsImpl extends PlainObjectLike implements NormalizedInputOptions {
   inner: BindingNormalizedOptions;
+
   constructor(
     inner: BindingNormalizedOptions,
     public onLog: LogHandler,

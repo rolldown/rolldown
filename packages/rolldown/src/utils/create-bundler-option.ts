@@ -42,14 +42,15 @@ export async function createBundlerOptions(
     watchMode,
   );
 
-  const normalizedOutputPlugins = await normalizePluginOption(outputOptions.plugins);
+  const normalizedInputPlugins = normalizePlugins(inputPlugins, ANONYMOUS_PLUGIN_PREFIX);
+  const normalizedOutputPlugins = normalizePlugins(
+    await normalizePluginOption(outputOptions.plugins),
+    ANONYMOUS_OUTPUT_PLUGIN_PREFIX,
+  );
 
   let plugins = [
-    ...normalizePlugins(inputPlugins, ANONYMOUS_PLUGIN_PREFIX),
-    ...checkOutputPluginOption(
-      normalizePlugins(normalizedOutputPlugins, ANONYMOUS_OUTPUT_PLUGIN_PREFIX),
-      onLog,
-    ),
+    ...normalizedInputPlugins,
+    ...checkOutputPluginOption(normalizedOutputPlugins, onLog),
   ];
 
   const parallelPluginInitResult = import.meta.browserBuild
@@ -69,6 +70,7 @@ export async function createBundlerOptions(
       plugins,
       inputOptions,
       outputOptions,
+      normalizedInputPlugins,
       normalizedOutputPlugins,
       onLog,
       logLevel,

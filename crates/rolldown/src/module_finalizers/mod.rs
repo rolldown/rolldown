@@ -16,8 +16,7 @@ use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx,
   ImportRecordMeta, InlineConstMode, MemberExprRefResolution, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
-  OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolIdExt, SymbolRef,
-  WrapKind,
+  OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -1793,7 +1792,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // For wrapped modules (CJS/ESM), look up the wrapper_ref; for others, look up the namespace symbol
       let primary_export_symbol = match wrap_kind {
         WrapKind::Cjs | WrapKind::Esm => importee_meta.wrapper_ref,
-        WrapKind::None => Some(SymbolId::module_namespace_symbol_ref(importee_idx)),
+        WrapKind::None => self.ctx.modules[importee_idx].namespace_object_ref(),
       };
 
       let primary_export_name = primary_export_symbol.and_then(|sym| {
@@ -1802,10 +1801,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
       // For ESM wrapped modules, we also need the namespace symbol
       let namespace_export_name = if matches!(wrap_kind, WrapKind::Esm) {
-        importee_chunk
-          .exports_to_other_chunks
-          .get(&SymbolId::module_namespace_symbol_ref(importee_idx))
-          .and_then(|names| names.first())
+        self.ctx.modules[importee_idx].namespace_object_ref().and_then(|ns_ref| {
+          importee_chunk.exports_to_other_chunks.get(&ns_ref).and_then(|names| names.first())
+        })
       } else {
         None
       };

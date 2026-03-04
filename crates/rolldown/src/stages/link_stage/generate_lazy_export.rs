@@ -211,7 +211,6 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
     return false;
   }
   let original_symbol_ref_db = std::mem::take(link_staged.symbols.local_db_mut(module_idx));
-  let (_, facade_scope) = original_symbol_ref_db.ast_scopes.into_inner();
   // recreate semantic data
   #[expect(clippy::cast_possible_truncation)]
   let scoping = ecma_ast.make_symbol_table_and_scope_tree_with_semantic_builder(
@@ -226,8 +225,17 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   // update semantic data of module
   let root_scope_id = scoping.root_scope_id();
   let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, module_idx, root_scope_id);
-  symbol_ref_db.set_facade_scope(facade_scope);
-
+  // Re-create facade symbols in the new scoping. The JSON module was re-parsed above,
+  // producing a new Scoping with fresh symbol IDs, so old facade IDs are invalid.
+  // We allocate new IDs by name and update the module's references.
+  let mut recreate_facade = |old_ref: SymbolRef| -> SymbolRef {
+    symbol_ref_db.create_facade_root_symbol_ref(original_symbol_ref_db.symbol_name(old_ref.symbol))
+  };
+  module.namespace_object_ref = recreate_facade(module.namespace_object_ref);
+  module.default_export_ref = recreate_facade(module.default_export_ref);
+  if let Some(hot_ref) = module.hmr_hot_ref {
+    module.hmr_hot_ref = Some(recreate_facade(hot_ref));
+  }
   let namespace_object_ref = module.namespace_object_ref;
   let default_export_ref = module.default_export_ref;
 

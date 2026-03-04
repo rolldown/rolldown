@@ -291,8 +291,7 @@ impl Bundle {
         continue;
       };
       let cache_db = snapshot.symbol_ref_db.local_db_mut(idx);
-      let (scoping, _) = db_for_module.ast_scopes.into_inner();
-      cache_db.ast_scopes.set_scoping(scoping);
+      cache_db.merge_from_build(db_for_module);
     }
   }
 

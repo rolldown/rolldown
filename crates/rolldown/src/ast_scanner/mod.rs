@@ -1081,7 +1081,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
-    let is_mutated = !self.result.symbol_ref_db.ast_scopes.is_facade_symbol(symbol_id)
+    let is_mutated = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
       && self.result.symbol_ref_db.scoping().symbol_is_mutated(symbol_id);
     if is_mutated {
       return;

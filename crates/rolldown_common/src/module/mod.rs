@@ -5,7 +5,7 @@ use oxc_index::IndexVec;
 
 use crate::{
   ExternalModule, ImportRecordIdx, ModuleId, ModuleIdx, NormalModule, ResolvedImportRecord,
-  StableModuleId,
+  StableModuleId, SymbolRef,
 };
 
 #[derive(Debug, Clone)]
@@ -106,6 +106,11 @@ impl Module {
       Module::Normal(v) => v.ecma_view.import_records = records,
       Module::External(v) => v.import_records = records,
     }
+  }
+
+  /// Returns the namespace object ref if this is a normal module.
+  pub fn namespace_object_ref(&self) -> Option<SymbolRef> {
+    self.as_normal().map(|m| m.namespace_object_ref)
   }
 
   /// Returns `true` if the module is [`Ecma`].

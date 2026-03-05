@@ -11,7 +11,7 @@ const members = [
     name: 'Evan You',
     links: [
       { icon: 'github', link: 'https://github.com/yyx990803' },
-      { icon: 'twitter', link: 'https://twitter.com/youyuxi' }
+      { icon: 'x', link: 'https://x.com/youyuxi' }
     ]
   },
   {
@@ -19,7 +19,7 @@ const members = [
     name: 'Yinan Long (Brooooooklyn)',
     links: [
       { icon: 'github', link: 'https://github.com/Brooooooklyn' },
-      { icon: 'twitter', link: 'https://twitter.com/Brooooook_lyn' }
+      { icon: 'x', link: 'https://x.com/Brooooook_lyn' }
     ]
   },
   {
@@ -27,7 +27,7 @@ const members = [
     name: 'Yunfei He (hyf0)',
     links: [
       { icon: 'github', link: 'https://github.com/hyf0' },
-      { icon: 'twitter', link: 'https://twitter.com/_hyf0' }
+      { icon: 'x', link: 'https://x.com/_hyf0' }
     ]
   },
   {
@@ -42,7 +42,7 @@ const members = [
     name: 'Boshen',
     links: [
       { icon: 'github', link: 'https://github.com/boshen' },
-      { icon: 'twitter', link: 'https://twitter.com/boshen_c' },
+      { icon: 'x', link: 'https://x.com/boshen_c' },
       { icon: 'bluesky', link: 'https://bsky.app/profile/boshen.github.io' }
     ]
   },
@@ -51,7 +51,7 @@ const members = [
     avatar: 'https://www.github.com/shulaoda.png',
     links: [
       { icon: 'github', link: 'https://github.com/shulaoda' },
-      { icon: 'twitter', link: 'https://x.com/dalaoshv' }
+      { icon: 'x', link: 'https://x.com/dalaoshv' }
     ]
   },
   {
@@ -59,7 +59,7 @@ const members = [
     avatar: 'https://www.github.com/sxzz.png',
     links: [
       { icon: 'github', link: 'https://github.com/sxzz' },
-      { icon: 'twitter', link: 'https://x.com/sanxiaozhizi' },
+      { icon: 'x', link: 'https://x.com/sanxiaozhizi' },
       { icon: 'bluesky', link: 'https://bsky.app/profile/sxzz.dev' }
     ]
   },
@@ -68,7 +68,7 @@ const members = [
     avatar: 'https://www.github.com/sapphi-red.png',
     links: [
       { icon: 'github', link: 'https://github.com/sapphi-red' },
-      { icon: 'twitter', link: 'https://x.com/sapphi_red' },
+      { icon: 'x', link: 'https://x.com/sapphi_red' },
       { icon: 'bluesky', link: 'https://bsky.app/profile/sapphi.red' }
     ]
   },
@@ -77,7 +77,7 @@ const members = [
     avatar: 'https://www.github.com/h-a-n-a.png',
     links: [
       { icon: 'github', link: 'https://github.com/h-a-n-a' },
-      { icon: 'twitter', link: 'https://x.com/_h_ana___' }
+      { icon: 'x', link: 'https://x.com/_h_ana___' }
     ]
   },
   {
@@ -85,7 +85,7 @@ const members = [
     avatar: 'https://www.github.com/TheAlexLichter.png',
     links: [
       { icon: 'github', link: 'https://github.com/TheAlexLichter' },
-      { icon: 'twitter', link: 'https://x.com/TheAlexLichter' },
+      { icon: 'x', link: 'https://x.com/TheAlexLichter' },
       { icon: 'bluesky', link: 'https://bsky.app/profile/thealexlichter.com' }
     ]
   }

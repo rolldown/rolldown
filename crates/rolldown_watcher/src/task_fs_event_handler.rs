@@ -14,13 +14,17 @@ pub struct TaskFsEventHandler {
 
 impl TaskFsEventHandler {
   /// Map a notify `EventKind` to a `WatcherChangeKind`.
-  /// Falls back to `Update` for unrecognized events — a spurious rebuild
-  /// is better than a missed one.
-  fn map_event_kind(kind: &notify::EventKind) -> WatcherChangeKind {
+  ///
+  /// Returns `None` for event kinds that should not trigger a rebuild.
+  /// In particular, `Access` events (file open/read/close) are ignored because
+  /// the build process itself reads watched source files, which would otherwise
+  /// cause an infinite rebuild loop on Linux where inotify emits `IN_OPEN` events.
+  fn map_event_kind(kind: &notify::EventKind) -> Option<WatcherChangeKind> {
     match kind {
-      notify::EventKind::Create(_) => WatcherChangeKind::Create,
-      notify::EventKind::Remove(_) => WatcherChangeKind::Delete,
-      _ => WatcherChangeKind::Update,
+      notify::EventKind::Create(_) => Some(WatcherChangeKind::Create),
+      notify::EventKind::Remove(_) => Some(WatcherChangeKind::Delete),
+      notify::EventKind::Modify(_) => Some(WatcherChangeKind::Update),
+      _ => None,
     }
   }
 }
@@ -31,14 +35,17 @@ impl FsEventHandler for TaskFsEventHandler {
       Ok(fs_events) => {
         let changes: Vec<FileChangeEvent> = fs_events
           .into_iter()
-          .flat_map(|fs_event| {
-            let kind = Self::map_event_kind(&fs_event.detail.kind);
-            fs_event
-              .detail
-              .paths
-              .into_iter()
-              .map(move |path| FileChangeEvent::new(path.to_string_lossy().into_owned(), kind))
+          .filter_map(|fs_event| {
+            let kind = Self::map_event_kind(&fs_event.detail.kind)?;
+            Some(
+              fs_event
+                .detail
+                .paths
+                .into_iter()
+                .map(move |path| FileChangeEvent::new(path.to_string_lossy().into_owned(), kind)),
+            )
           })
+          .flatten()
           .collect();
 
         if !changes.is_empty() {

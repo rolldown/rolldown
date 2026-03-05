@@ -1,4 +1,83 @@
 
+## [1.0.0-rc.7] - 2026-03-05
+
+### 💥 BREAKING CHANGES
+
+- enable minify: 'dce-only' by default (#8465) by @IWANABETHATGUY
+- settings `inlineConst: { mode: 'smart', pass: 1}`  by default (#8444) by @IWANABETHATGUY
+
+### 🚀 Features
+
+- binding: add original getter to BindingMagicString (#8533) by @IWANABETHATGUY
+- native-magic-string: add `offset` property support (#8531) by @IWANABETHATGUY
+- add `output.strict` option to control `"use strict"` directive emission (#8489) by @Copilot
+- watch: expose `watcher.compareContentsForPolling` (#8526) by @hyf0
+- watch: use new watcher to support watch mode (#8475) by @hyf0
+- rust/watch: handle bulk-change (#8466) by @hyf0
+- add LLM-friendly markdown output format to bundle analyzer plugin (#8242) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- expose `plugins` on `NormalizedInputOptions` for `buildStart` hook (#8521) by @Copilot
+- only uppercase facade symbols in JSX preserve mode (#8519) by @IWANABETHATGUY
+- binding: export BindingResult in generated dts header (#8537) by @minsoo-web
+- pre-resolve paths option to avoid `invoke_sync` deadlock (#8518) by @IWANABETHATGUY
+- remove debug-only jsx_preset and UntranspiledSyntaxError (#8511) by @IWANABETHATGUY
+- apply `topLevelVar` to exported `const`/`let` declarations (#8507) by @IWANABETHATGUY
+- rolldown_plugin_vite_web_worker_post: avoid replacing `new.target` (#8488) by @sapphi-red
+- update copyright year to 2026 (#8486) by @maciekzygmunt
+
+### 🚜 Refactor
+
+- rust: use Oxc's SymbolFlags::ConstVariable instead of custom IsConst flag (#8543) by @Dunqing
+- rust: remove FacadeScoping, use Scoping::create_symbol for facade symbols (#8540) by @Dunqing
+- rust/watch: remove hacky `reset_closed_for_watch_mode` (#8530) by @hyf0
+- binding: return &str instead of String in filename() getter (#8534) by @IWANABETHATGUY
+- rust: remove old watch mode implementation (#8525) by @hyf0
+- rust/watch: simply watch logic in the binding layer (#8516) by @hyf0
+- rust/watch: tweak struct/function names (#8464) by @hyf0
+
+### 📚 Documentation
+
+- explain how external modules work in rolldown (#8457) by @sapphi-red
+- add some diagrams using graphviz (#8499) by @sapphi-red
+- use `vitepress-plugin-graphviz` (#8498) by @sapphi-red
+- list s390x/ppc64le prebuilt binaries (#8495) by @crusty-voidzero
+- fix error type for `RolldownBuild.generate` and others (#8490) by @sapphi-red
+
+### ⚡ Performance
+
+- string_wizard: reduce allocations and add ASCII fast paths (#8541) by @IWANABETHATGUY
+- use IndexBitSet to replace IndexVec<XXXIdx, bool> for module/stmt inclusion tracking (#8503) by @IWANABETHATGUY
+- plugin: use IndexBitSet to optimize skipped plugins checking (#8497) by @ShroXd
+- rust/tla: skip compute_tla if there is no module use TLA (#8487) by @ShroXd
+
+### 🧪 Testing
+
+- node/watch: make watch tests run in concurrent and retry-able (#8512) by @hyf0
+- add test case for static flag tree-shaking (#8476) by @IWANABETHATGUY
+- migrate post-banner sourcemap-with-shebang to Rust (#8477) by @Copilot
+
+### ⚙️ Miscellaneous Tasks
+
+- vscode: `formatOnSave` for markdown files using oxc formatter (#8536) by @minsoo-web
+- deps: update test262 submodule for tests (#8528) by @sapphi-red
+- remove `retry` workaround from output paths test fixtures (#8520) by @Copilot
+- docs: add Shuyuan Wang (h-a-n-a) and remove from acknowledgements (#8509) by @Copilot
+- consolidate top_level_var test cases using configVariants (#8508) by @IWANABETHATGUY
+- add s390x and ppc64le linux gnu targets (#8493) by @Brooooooklyn
+
+### ◀️ Revert
+
+- fix(rolldown): increase tokio blocking threads size for watch mode (#8517) by @hyf0
+
+### ❤️ New Contributors
+
+* @minsoo-web made their first contribution in [#8536](https://github.com/rolldown/rolldown/pull/8536)
+* @crusty-voidzero made their first contribution in [#8495](https://github.com/rolldown/rolldown/pull/8495)
+* @maciekzygmunt made their first contribution in [#8486](https://github.com/rolldown/rolldown/pull/8486)
+
+
 ## [1.0.0-rc.6] - 2026-02-26
 
 ### 💥 BREAKING CHANGES

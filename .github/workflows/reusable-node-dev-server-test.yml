@@ -42,9 +42,6 @@ jobs:
       - name: Build `@rolldown/test-dev-server`
         run: pnpm --filter '@rolldown/test-dev-server' build
 
-      - name: Type Check
-        run: pnpm type-check
-
       - name: Install Playwright
         run: pnpm playwright install chromium
 

@@ -5,8 +5,14 @@ import killPort from 'kill-port';
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';
 import { afterAll, describe, test } from 'vitest';
-import { CONFIG } from './src/config';
-import { isDirectoryExists, removeDirSync, sensibleTimeoutInMs } from './src/utils';
+import { isDirectoryExists, removeDirSync } from './src/utils';
+import {
+  getBuildSeq,
+  getModuleRegistrationSeq,
+  waitForBuildStable,
+  waitForModuleRegistration,
+  waitForNextBuild,
+} from './test-utils';
 
 function main() {
   const fixturesPath = nodePath.resolve(__dirname, 'fixtures');
@@ -82,9 +88,12 @@ function main() {
 
         await waitForPathExists(nodeScriptPath);
 
-        let runningArtifactProcess = await runArtifactProcess(nodeScriptPath, tmpProjectPath);
+        let runningArtifactProcess = await runArtifactProcess(nodeScriptPath, tmpProjectPath, port);
 
         const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
+
+        // Wait for the initial build to stabilize
+        await waitForBuildStable(port);
 
         for (const [index, [step, hmrEdits]] of hmrEditFiles.entries()) {
           console.log(
@@ -94,17 +103,6 @@ function main() {
               2,
             )}`,
           );
-
-          // Refer to `packages/test-dev-server/src/utils/get-dev-watch-options-for-ci.ts`
-          // We used a poll-based and debounced watcher in CI, so we need to wait for certain amount of time to
-          // - Make sure different steps are not debounced together
-          // - Make sure changes are detected individually for different steps
-          // - Make sure changes in the same step are detected together
-          if (index !== 0) {
-            await sensibleTimeoutInMs(
-              CONFIG.watch.debounceDuration + CONFIG.watch.debounceTickRate + 100,
-            );
-          }
 
           const hmrEditsWithContent = hmrEdits.map((e) => ({
             ...e,
@@ -119,6 +117,9 @@ function main() {
             currentArtifactContent = nodeFs.readFileSync(nodeScriptPath);
           }
 
+          // Snapshot buildSeq before writing so we can detect the resulting build
+          const preWriteBuildSeq = await getBuildSeq(port);
+
           for (const hmrEdit of hmrEditsWithContent) {
             console.log(`🔄 Writing content to: ${hmrEdit.targetPath}`);
             nodeFs.writeFileSync(hmrEdit.targetPath, hmrEdit.content);
@@ -127,16 +128,20 @@ function main() {
           console.log(`⏳ Waiting for HMR to be triggered for step ${step}`);
 
           if (needRestart || needReload) {
-            // Waiting Reload hmr update to be triggered. If we close the process too fast, dev engine will think there're no clients.
-            // No hmr update will be triggered.
-            await sensibleTimeoutInMs(2000);
             if (needReload) {
+              // For reload steps, send the 'r' signal to request a rebuild, which
+              // calls ensureLatestBuildOutput only when the output is stale.
+              // We don't rely on the watcher since the edited file may be new
+              // and not yet in the build graph.
               console.log(`🏃‍➡️ Sent rebuild message to the dev server`);
               devServeProcess.stdin.write('r');
+            } else {
+              // For restart steps (no reload), wait for the watcher-triggered build.
+              await waitForNextBuild(port, preWriteBuildSeq);
             }
             await runningArtifactProcess.close();
             await waitForFileToBeModified(nodeScriptPath, currentArtifactContent);
-            runningArtifactProcess = await runArtifactProcess(nodeScriptPath, tmpProjectPath);
+            runningArtifactProcess = await runArtifactProcess(nodeScriptPath, tmpProjectPath, port);
           }
           await waitForPathExists(nodePath.join(tmpProjectPath, `ok-${index}`), 10 * 1000);
           console.log(`✅ HMR triggered for step ${step}`);
@@ -161,7 +166,7 @@ function main() {
 
 let id = 0;
 
-async function runArtifactProcess(artifactPath: string, tmpProjectPath: string) {
+async function runArtifactProcess(artifactPath: string, tmpProjectPath: string, port: number) {
   const thisId = id;
   id++;
 
@@ -173,6 +178,9 @@ async function runArtifactProcess(artifactPath: string, tmpProjectPath: string) 
   `.trim(),
   );
 
+  // Snapshot registered clients before starting the process
+  const currentRegistered = await getModuleRegistrationSeq(port);
+
   console.log(`🔄 Starting Node.js process: ${artifactPath}`);
   const artifactProcess = execa(
     'node',
@@ -183,7 +191,8 @@ async function runArtifactProcess(artifactPath: string, tmpProjectPath: string) 
   // Wait for the Node.js process to start
   await waitForPathExists(initOkFilePath);
 
-  await sensibleTimeoutInMs(2000); // Make sure module are registered
+  // Wait for modules to be registered with the dev server
+  await waitForModuleRegistration(port, currentRegistered);
 
   return {
     process: artifactProcess,

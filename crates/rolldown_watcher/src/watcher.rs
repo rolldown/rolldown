@@ -10,7 +10,6 @@ use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
-#[cfg(not(target_family = "wasm"))]
 use rolldown_fs_watcher::{PollFsWatcher, RecommendedFsWatcher};
 use std::future::Future;
 use std::pin::Pin;
@@ -125,16 +124,11 @@ impl Watcher {
     for (index, config) in configs.into_iter().enumerate() {
       let task_index = WatchTaskIdx::from_usize(index);
       let fs_handler = TaskFsEventHandler { task_index, tx: tx.clone() };
-      #[cfg(not(target_family = "wasm"))]
       let fs_watcher: Box<dyn FsWatcher + Send + 'static> = if watcher_config.use_polling {
         Box::new(PollFsWatcher::with_config(fs_handler, fs_watcher_config.clone())?)
       } else {
         Box::new(RecommendedFsWatcher::with_config(fs_handler, fs_watcher_config.clone())?)
       };
-      #[cfg(target_family = "wasm")]
-      let fs_watcher: Box<dyn FsWatcher + Send + 'static> = Box::new(
-        rolldown_fs_watcher::NoopFsWatcher::with_config(fs_handler, fs_watcher_config.clone())?,
-      );
       let task = WatchTask::new(config, fs_watcher)?;
       tasks.push(task);
     }

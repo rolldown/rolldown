@@ -3,14 +3,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/common-CnHCZ2rs.png
+## assets/common-RzbKAZGz.png
 
 ## common.js
 
 ```js
-//#endregion
+// HIDDEN [\0rolldown/runtime.js]
 //#region shared/common.js
-console.log("assets/common-CnHCZ2rs.png");
+var import_common = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "./assets/common-RzbKAZGz.png";
+})))());
+console.log(import_common.default);
 //#endregion
 
 ```

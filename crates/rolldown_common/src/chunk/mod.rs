@@ -76,8 +76,6 @@ pub struct Chunk {
   pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
-  pub asset_preliminary_filenames: FxIndexMap<ModuleIdx, PreliminaryFilename>,
-  pub asset_absolute_preliminary_filenames: FxIndexMap<ModuleIdx, String>,
   pub canonical_names: FxHashMap<SymbolRef, CompactStr>,
   // Sorted by Module#stable_id of modules in the chunk
   pub cross_chunk_imports: Vec<ChunkIdx>,

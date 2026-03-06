@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/foo-C-m4uiP6.txt
+## assets/foo-Cctl21F7.txt
 
 ## main.js
 
@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region foo.txt
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "assets/foo-C-m4uiP6.txt";
+	module.exports = "./assets/foo-Cctl21F7.txt";
 }));
 //#endregion
 //#region main.cjs

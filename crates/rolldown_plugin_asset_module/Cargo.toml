@@ -1,0 +1,21 @@
+[package]
+name = "rolldown_plugin_asset_module"
+version = "0.1.0"
+edition.workspace = true
+license = "MIT"
+publish = true
+description = "Rolldown builtin plugin for handling asset modules"
+
+[lib]
+doctest = false
+
+[dependencies]
+anyhow = { workspace = true }
+memchr = { workspace = true }
+rolldown_common = { workspace = true }
+rolldown_plugin = { workspace = true }
+rolldown_utils = { workspace = true }
+rustc-hash = { workspace = true }
+string_wizard = { workspace = true }
+sugar_path = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }

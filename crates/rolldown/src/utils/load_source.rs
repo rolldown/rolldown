@@ -21,33 +21,35 @@ pub async fn load_source<Fs: FileSystem + 'static>(
   is_read_from_disk: &mut bool,
   module_idx: ModuleIdx,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
-  let (maybe_source, mut maybe_module_type) =
-    match plugin_driver.load(&HookLoadArgs { id: &resolved_id.id, module_idx }).await? {
-      Some(load_hook_output) => {
-        sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
-        if let Some(v) = load_hook_output.side_effects {
-          *side_effects = Some(v);
-        }
-
-        (Some(load_hook_output.code.to_string()), load_hook_output.module_type)
+  let (maybe_source, mut maybe_module_type) = match plugin_driver
+    .load(&HookLoadArgs { id: &resolved_id.id, module_idx, asserted_module_type })
+    .await?
+  {
+    Some(load_hook_output) => {
+      sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
+      if let Some(v) = load_hook_output.side_effects {
+        *side_effects = Some(v);
       }
-      _ => {
-        if resolved_id.ignored {
-          (Some(String::new()), Some(ModuleType::Empty))
-        } else {
-          (None, None)
-        }
-      }
-    };
 
-  // If we're given a specific module type to use
-  if let Some(asserted) = asserted_module_type {
-    let is_type_conflicted =
-      maybe_module_type.as_ref().is_some_and(|user_specified_type| user_specified_type != asserted);
-    if is_type_conflicted {
-      // TODO: emit a warning about the type conflict
+      (Some(load_hook_output.code.to_string()), load_hook_output.module_type)
     }
-    maybe_module_type = Some(asserted.clone());
+    _ => {
+      if resolved_id.ignored {
+        (Some(String::new()), Some(ModuleType::Empty))
+      } else {
+        (None, None)
+      }
+    }
+  };
+
+  // If we're given a specific module type to use and the load hook did not provide a
+  // module_type, apply the asserted type. When a plugin's load hook returns a module_type
+  // (e.g. the asset module plugin returns Js after handling the asset), we trust the plugin's
+  // decision, even if it also returned source.
+  if let Some(asserted) = asserted_module_type {
+    if maybe_module_type.is_none() {
+      maybe_module_type = Some(asserted.clone());
+    }
   }
   if maybe_source.is_some() {
     *is_read_from_disk = false;
@@ -80,30 +82,33 @@ pub async fn load_source<Fs: FileSystem + 'static>(
           ))
         }
         (source, Some(guessed)) => match &guessed {
-          ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl | ModuleType::Asset => {
-            Ok((
-              StrOrBytes::Bytes({
-                match source {
-                  Some(s) => s.into_bytes(),
-                  None => {
-                    if cfg!(target_family = "wasm") {
-                      fs.read(resolved_id.id.as_path())?
-                    } else {
-                      let id = resolved_id.id.clone();
-                      tokio::runtime::Handle::current()
-                        .spawn_blocking(move || fs.read(id.as_path()))
-                        .await??
-                    }
+          ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok((
+            StrOrBytes::Bytes({
+              match source {
+                Some(s) => s.into_bytes(),
+                None => {
+                  if cfg!(target_family = "wasm") {
+                    fs.read(resolved_id.id.as_path())?
+                  } else {
+                    let id = resolved_id.id.clone();
+                    tokio::runtime::Handle::current()
+                      .spawn_blocking(move || fs.read(id.as_path()))
+                      .await??
                   }
                 }
-              }),
-              guessed,
-            ))
-          }
+              }
+            }),
+            guessed,
+          )),
           ModuleType::Copy => Err(anyhow::format_err!(
             "Encountered a module with type `copy`, but no plugin handled it. \
                If you configured this file's extension as `copy` in `moduleTypes`, \
                ensure the builtin copy-module plugin is enabled."
+          ))?,
+          ModuleType::Asset => Err(anyhow::format_err!(
+            "Encountered a module with type `asset`, but no plugin handled it. \
+               If you configured this file's extension as `asset` in `moduleTypes`, \
+               ensure the builtin asset-module plugin is enabled."
           ))?,
           ModuleType::Js
           | ModuleType::Jsx
@@ -181,14 +186,16 @@ async fn read_file_by_module_type<Fs: FileSystem + 'static>(
         tokio::runtime::Handle::current().spawn_blocking(move || fs.read_to_string(&path)).await??
       }
     })),
-    ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl | ModuleType::Asset => {
-      Ok(StrOrBytes::Bytes({
-        if cfg!(target_family = "wasm") {
-          fs.read(&path)?
-        } else {
-          tokio::runtime::Handle::current().spawn_blocking(move || fs.read(&path)).await??
-        }
-      }))
-    }
+    ModuleType::Asset => Err(anyhow::format_err!(
+      "Encountered a module with type `asset` in read_file_by_module_type. \
+         Asset modules should be handled by the builtin asset-module plugin."
+    ))?,
+    ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok(StrOrBytes::Bytes({
+      if cfg!(target_family = "wasm") {
+        fs.read(&path)?
+      } else {
+        tokio::runtime::Handle::current().spawn_blocking(move || fs.read(&path)).await??
+      }
+    })),
   }
 }

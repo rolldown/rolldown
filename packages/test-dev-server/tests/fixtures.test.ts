@@ -9,6 +9,7 @@ import { isDirectoryExists, removeDirSync } from './src/utils';
 import {
   getBuildSeq,
   getRegisteredClients,
+  waitForDevIdle,
   waitForModuleRegistration,
   waitForNextBuild,
 } from './test-utils';
@@ -89,7 +90,7 @@ function main() {
 
         const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
 
-        let currentBuildSeq = await getBuildSeq(port);
+        let currentBuildSeq = 0;
 
         for (const [index, [step, hmrEdits]] of hmrEditFiles.entries()) {
           console.log(
@@ -99,6 +100,11 @@ function main() {
               2,
             )}`,
           );
+
+          // Ensure the pipeline is idle before writing the next step's files.
+          // This prevents writes from being debounced together with the previous step.
+          await waitForDevIdle(port);
+          currentBuildSeq = await getBuildSeq(port);
 
           const hmrEditsWithContent = hmrEdits.map((e) => ({
             ...e,

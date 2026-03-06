@@ -24,6 +24,7 @@ pub struct BindingChecksOptions {
   pub duplicate_shebang: Option<bool>,
   pub unsupported_tsconfig_option: Option<bool>,
   pub ineffective_dynamic_import: Option<bool>,
+  pub manual_code_splitting_skipped: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -48,6 +49,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       duplicate_shebang: value.duplicate_shebang,
       unsupported_tsconfig_option: value.unsupported_tsconfig_option,
       ineffective_dynamic_import: value.ineffective_dynamic_import,
+      manual_code_splitting_skipped: value.manual_code_splitting_skipped,
     }
   }
 }

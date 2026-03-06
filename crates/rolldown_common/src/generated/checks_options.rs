@@ -32,6 +32,7 @@ pub struct ChecksOptions {
   pub duplicate_shebang: Option<bool>,
   pub unsupported_tsconfig_option: Option<bool>,
   pub ineffective_dynamic_import: Option<bool>,
+  pub manual_code_splitting_skipped: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -107,6 +108,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::IneffectiveDynamicImport,
       value.ineffective_dynamic_import.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::ManualCodeSplittingSkipped,
+      value.manual_code_splitting_skipped.unwrap_or(true),
     );
     flag
   }

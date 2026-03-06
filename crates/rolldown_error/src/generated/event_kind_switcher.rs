@@ -48,5 +48,6 @@ bitflags! {
     const UnsupportedTsconfigOption = 1 << 41;
     const RuntimeModuleSymbolNotFoundError = 1 << 42;
     const IneffectiveDynamicImport = 1 << 44;
+    const ManualCodeSplittingSkipped = 1 << 45;
   }
 }

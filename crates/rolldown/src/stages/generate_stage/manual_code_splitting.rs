@@ -6,11 +6,12 @@ use std::{
 };
 
 use arcstr::ArcStr;
+use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupTest,
-  Module, ModuleIdx, ModuleTable,
+  Module, ModuleIdx, ModuleTable, WrapKind,
 };
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{BitSet, IndexBitSet, xxhash::xxhash_with_base};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -25,6 +26,21 @@ use super::{
   chunk_ext::{ChunkCreationReason, ChunkDebugExt},
   code_splitting::IndexSplittingInfo,
 };
+
+#[derive(Debug, Clone)]
+struct PreventedManualSplit {
+  priority: u32,
+  match_group_index: usize,
+  group_name: ArcStr,
+}
+
+impl PreventedManualSplit {
+  /// Ordering key that mirrors the manual group sort: higher priority first,
+  /// then lower match_group_index, then dictionary order by name.
+  fn ordering_key(&self) -> (Reverse<u32>, usize, &ArcStr) {
+    (Reverse(self.priority), self.match_group_index, &self.group_name)
+  }
+}
 
 // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
 #[derive(Debug)]
@@ -78,12 +94,15 @@ struct ManualSplitter<'a> {
 }
 
 impl ManualSplitter<'_> {
-  async fn split(&mut self) -> BuildResult<()> {
+  async fn split(&mut self) -> BuildResult<FxHashMap<ModuleIdx, PreventedManualSplit>> {
     let (mut module_groups, entries_aware_groups_by_origin) = self.build_module_groups().await?;
 
     if module_groups.values().all(|group| group.modules.is_empty()) {
-      return Ok(());
+      return Ok(FxHashMap::default());
     }
+
+    // Prevent circular chunk dependencies before any further processing.
+    let prevented_manual_splits = self.prevent_circular_chunk_deps(&mut module_groups);
 
     self.extract_runtime_chunk(&mut module_groups);
 
@@ -98,11 +117,93 @@ impl ManualSplitter<'_> {
 
     let module_groups = self.into_priority_sorted_groups(module_groups);
     if module_groups.is_empty() {
-      return Ok(());
+      return Ok(prevented_manual_splits);
     }
 
     self.convert_groups_to_chunks(module_groups);
-    Ok(())
+    Ok(prevented_manual_splits)
+  }
+
+  /// Prevent circular chunk dependencies for non-wrapped modules.
+  ///
+  /// When `includeDependenciesRecursively: false`, a module can be split into a
+  /// separate chunk while its dependencies stay in the entry chunk. If the split
+  /// module is also depended on by something in the entry chunk, this creates a
+  /// bidirectional (circular) import between chunks, causing TDZ errors for
+  /// const/let bindings at runtime.
+  ///
+  /// Wrapped modules (WrapKind::Esm/Cjs) use lazy initialization (__esmMin/__cjsMin)
+  /// and are immune to TDZ, so we skip them.
+  fn prevent_circular_chunk_deps(
+    &self,
+    module_groups: &mut FxHashMap<u32, ModuleGroup>,
+  ) -> FxHashMap<ModuleIdx, PreventedManualSplit> {
+    let mut prevented_manual_splits: FxHashMap<ModuleIdx, PreventedManualSplit> =
+      FxHashMap::default();
+
+    if self.chunking_options.include_dependencies_recursively != Some(false) {
+      return prevented_manual_splits;
+    }
+
+    // Build reverse dependency map: for each module, which modules depend on it?
+    let mut reverse_deps: IndexVec<ModuleIdx, Vec<ModuleIdx>> =
+      index_vec![Vec::new(); self.link_output.module_table.modules.len()];
+    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
+    {
+      if !self.link_output.metas[normal_module.idx].is_included {
+        continue;
+      }
+      for dep in &self.link_output.metas[normal_module.idx].dependencies {
+        reverse_deps[*dep].push(normal_module.idx);
+      }
+    }
+
+    for group in module_groups.values_mut() {
+      let mut to_remove = Vec::new();
+      for &module_idx in &group.modules {
+        // Wrapped modules (CJS/ESM) use lazy init -- immune to TDZ
+        if self.link_output.metas[module_idx].wrap_kind() != WrapKind::None {
+          continue;
+        }
+
+        // Check if splitting this module would create a circular chunk dependency:
+        // module_idx is in this group, has deps outside the group, and something
+        // outside the group depends on module_idx AND shares a chunk (same bits)
+        // with one of module_idx's outside deps.
+        let deps = &self.link_output.metas[module_idx].dependencies;
+        let rdeps = &reverse_deps[module_idx];
+        let would_create_cycle = rdeps.iter().any(|&rdep| {
+          !group.modules.contains(&rdep)
+            && self.link_output.metas[rdep].is_included
+            && deps.iter().any(|&dep| {
+              !group.modules.contains(&dep)
+                && self.index_splitting_info[dep].bits == self.index_splitting_info[rdep].bits
+            })
+        });
+
+        if would_create_cycle {
+          let new_prevented = PreventedManualSplit {
+            priority: group.priority,
+            match_group_index: group.match_group_index,
+            group_name: group.name.clone(),
+          };
+          // Keep only the best (lowest ordering key) prevented split per module.
+          match prevented_manual_splits.get(&module_idx) {
+            Some(existing) if existing.ordering_key() <= new_prevented.ordering_key() => {}
+            _ => {
+              prevented_manual_splits.insert(module_idx, new_prevented);
+            }
+          }
+          to_remove.push(module_idx);
+        }
+      }
+
+      for module_idx in to_remove {
+        group.remove_module(module_idx, &self.link_output.module_table);
+      }
+    }
+
+    prevented_manual_splits
   }
 
   async fn build_module_groups(
@@ -408,7 +509,7 @@ impl ManualSplitter<'_> {
 
 impl GenerateStage<'_> {
   pub async fn apply_manual_code_splitting(
-    &self,
+    &mut self,
     index_splitting_info: &IndexSplittingInfo,
     module_to_assigned: &mut IndexBitSet<ModuleIdx>,
     chunk_graph: &mut ChunkGraph,
@@ -439,7 +540,28 @@ impl GenerateStage<'_> {
       chunk_graph,
       module_to_assigned,
     };
-    splitter.split().await
+    let prevented_manual_splits = splitter.split().await?;
+    // `splitter` borrows `self.link_output` immutably, so drop it before pushing warnings.
+    drop(splitter);
+
+    // Emit warnings for modules that were prevented from joining their preferred manual group.
+    // Only warn if the module wasn't assigned to a different manual group and checks are enabled.
+    if self.options.checks.contains(EventKindSwitcher::ManualCodeSplittingSkipped) {
+      for (module_idx, prevented) in prevented_manual_splits {
+        if module_to_assigned.has_bit(module_idx) {
+          continue;
+        }
+        let module_id = self.link_output.module_table[module_idx].id().to_string();
+        self.link_output.warnings.push(
+          BuildDiagnostic::manual_code_splitting_circular_chunk_dep(
+            module_id,
+            prevented.group_name.to_string(),
+          )
+          .with_severity_warning(),
+        );
+      }
+    }
+    Ok(())
   }
 }
 

@@ -111,6 +111,12 @@ pub enum EventKind {
   RuntimeModuleSymbolNotFoundError = 42,
   /// Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   IneffectiveDynamicImport = 44,
+  /// Whether to emit warnings when a module is skipped from a manual code splitting group
+  /// because splitting it would create a circular chunk dependency.
+  ///
+  /// This is separate from `CircularDependency` (module-level cycles) — this warning indicates
+  /// that the build output shape was changed to prevent a runtime TDZ error.
+  ManualCodeSplittingSkipped = 45,
 }
 
 impl Display for EventKind {
@@ -169,6 +175,7 @@ impl Display for EventKind {
         write!(f, "RUNTIME_MODULE_SYMBOL_NOT_FOUND")
       }
       EventKind::IneffectiveDynamicImport => write!(f, "INEFFECTIVE_DYNAMIC_IMPORT"),
+      EventKind::ManualCodeSplittingSkipped => write!(f, "MANUAL_CODE_SPLITTING_SKIPPED"),
     }
   }
 }

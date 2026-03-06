@@ -1,0 +1,9 @@
+{
+  "_comment": "Tests that CJS modules with circular chunk dependencies work correctly. CJS modules are always wrapped (WrapKind::Cjs) with lazy initialization, so splitting them into separate chunks is safe even when it creates circular chunk imports. The vendor chunk should be created successfully. See https://github.com/rolldown/rolldown/issues/7449",
+  "config": {
+    "manualCodeSplitting": {
+      "groups": [{ "name": "vendor", "test": "shared\\.js" }],
+      "includeDependenciesRecursively": false
+    }
+  }
+}

@@ -2735,7 +2735,6 @@ dependencies = [
  "dashmap",
  "dunce",
  "futures",
- "glob",
  "indexmap",
  "insta",
  "itertools",

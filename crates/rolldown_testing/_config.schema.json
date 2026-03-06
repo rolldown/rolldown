@@ -1426,6 +1426,12 @@
             "boolean",
             "null"
           ]
+        },
+        "manualCodeSplittingSkipped": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

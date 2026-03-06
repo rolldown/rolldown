@@ -23,18 +23,42 @@ fn fixture_with_config(config_path: PathBuf) {
 async fn filename_with_hash() {
   let mut snapshot_outputs = vec![];
 
-  let mut config_paths =
-    glob::glob("./tests/**/_config.json").unwrap().map(Result::unwrap).collect::<Vec<_>>();
+  // Use WalkDir instead of globbing `./tests/**/_config.json`.
+  //
+  // Many fixtures use `writeToDisk: true` and will delete/recreate `dist/` while tests run in
+  // parallel. `glob` can error if it tries to traverse a directory that disappears mid-walk.
+  let mut config_paths = walkdir::WalkDir::new("./tests")
+    .follow_links(false)
+    .into_iter()
+    .filter_entry(|e| {
+      let name = e.file_name().to_string_lossy();
+      if name.starts_with('.') {
+        return false;
+      }
+      // These directories are commonly mutated by tests.
+      if e.file_type().is_dir() && matches!(name.as_ref(), "dist" | "hmr-temp") {
+        return false;
+      }
+      true
+    })
+    .filter_map(Result::ok)
+    .filter(|e| !e.file_type().is_dir() && e.file_name() == "_config.json")
+    .map(walkdir::DirEntry::into_path)
+    .collect::<Vec<_>>();
   let cwd = std::env::current_dir().unwrap();
   config_paths.sort_by_cached_key(|p| p.relative(&cwd));
 
   for path in config_paths {
-    if path.components().map(Component::as_os_str).any(|c| c.to_string_lossy().starts_with('.')) {
-      continue;
-    }
     let mut snapshot_output = String::new();
     let config_path = path.canonicalize().unwrap();
     let config_path = dunce::simplified(&config_path);
+    if config_path
+      .components()
+      .map(Component::as_os_str)
+      .any(|c| c.to_string_lossy().starts_with('.'))
+    {
+      continue;
+    }
     let fixture_path = config_path.parent().unwrap();
 
     let TestConfig { config: mut options, meta, config_variants: _not_supported } =

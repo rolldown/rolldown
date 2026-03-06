@@ -7,7 +7,7 @@ import nodePath from 'node:path';
 import { afterAll, describe, test } from 'vitest';
 import { isDirectoryExists, removeDirSync } from './src/utils';
 import {
-  getRegisteredClients,
+  getModuleRegistrationSeq,
   waitForBuildStable,
   waitForModuleRegistration,
   waitForNextBuild,
@@ -182,7 +182,7 @@ async function runArtifactProcess(artifactPath: string, tmpProjectPath: string, 
   );
 
   // Snapshot registered clients before starting the process
-  const currentRegistered = await getRegisteredClients(port);
+  const currentRegistered = await getModuleRegistrationSeq(port);
 
   console.log(`🔄 Starting Node.js process: ${artifactPath}`);
   const artifactProcess = execa(

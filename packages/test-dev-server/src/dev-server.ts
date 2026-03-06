@@ -47,7 +47,7 @@ class DevServer {
   #devEngine?: DevEngine;
   #port = 3000;
   #buildSeq = 0;
-  #registeredClientCount = 0;
+  #moduleRegistrationSeq = 0;
 
   constructor() {}
 
@@ -173,7 +173,7 @@ class DevServer {
           case 'hmr:module-registered': {
             console.log('Registering modules:', clientMessage.modules);
             this.#devEngine?.registerModules(clientSession.id, clientMessage.modules);
-            this.#registeredClientCount++;
+            this.#moduleRegistrationSeq++;
             break;
           }
           default: {
@@ -231,7 +231,7 @@ class DevServer {
             lastFullBuildFailed: bundleState.lastFullBuildFailed,
             buildSeq: this.#buildSeq,
             connectedClients: this.#clients.size,
-            registeredClients: this.#registeredClientCount,
+            moduleRegistrationSeq: this.#moduleRegistrationSeq,
           }),
         );
         return;

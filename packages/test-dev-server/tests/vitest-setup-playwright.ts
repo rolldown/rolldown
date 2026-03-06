@@ -7,7 +7,7 @@ import { chromium } from 'playwright';
 import type { Browser, Page } from 'playwright';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 import { CONFIG } from './src/config';
-import { waitForBuildStable } from './test-utils';
+import { waitForBuildStable, waitForNextBuild } from './test-utils';
 
 let devServerProcess: ResultPromise<{}> | null = null;
 let browser: Browser | null = null;
@@ -142,11 +142,12 @@ beforeAll(async () => {
 beforeEach(async (ctx) => {
   const retryCount = ctx.task.result?.retryCount ?? 0;
   if (retryCount > 0) {
+    // Snapshot buildSeq before resetting files so we can detect the resulting rebuild
+    const beforeReset = await waitForBuildStable(3000);
     await resetTestFiles();
-    // Wait for the dev server to finish rebuilding after file reset
-    await waitForBuildStable(3000);
+    // Wait for the watcher-triggered rebuild to complete after file reset
+    await waitForNextBuild(3000, beforeReset.buildSeq);
     // Reload the page to ensure it reflects the reset file state
-    // This is necessary because after a failed test, the page may show stale content
     if (page) {
       await page.reload({ waitUntil: 'networkidle' });
     }

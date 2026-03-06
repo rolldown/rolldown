@@ -67,19 +67,6 @@ export async function waitForNextBuild(
   throw new Error(`No new build within ${timeoutMs}ms (stuck at buildSeq=${currentBuildSeq})`);
 }
 
-/** Poll until pipeline is idle (not stale). */
-export async function waitForDevIdle(port: number, timeoutMs = 30_000): Promise<DevStatus> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    try {
-      const status = await fetchDevStatus(port);
-      if (!status.hasStaleOutput) return status;
-    } catch {}
-    await new Promise((r) => setTimeout(r, 50));
-  }
-  throw new Error(`Dev server not idle within ${timeoutMs}ms`);
-}
-
 /** Wait for buildSeq to stabilize (no changes for `stableMs`). This ensures the debounce window has closed. */
 export async function waitForBuildStable(
   port: number,
@@ -121,12 +108,6 @@ export async function waitForModuleRegistration(
   throw new Error(
     `Module registration not reached (stuck at ${currentCount}) within ${timeoutMs}ms`,
   );
-}
-
-/** Get current build sequence number. */
-export async function getBuildSeq(port: number): Promise<number> {
-  const status = await fetchDevStatus(port);
-  return status.buildSeq;
 }
 
 /** Get current registered client count. */

@@ -188,7 +188,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
 
     if let Some(task) = self.tasks.get_mut(task_index) {
       for change in changes {
-        if task.mark_needs_rebuild(&change.path) {
+        if task.mark_needs_rebuild(&change.path, change.kind) {
           task.call_on_invalidate(&change.path).await;
           effective_changes.push(change);
         }

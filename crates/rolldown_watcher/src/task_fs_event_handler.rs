@@ -23,7 +23,10 @@ impl TaskFsEventHandler {
   /// Aligned with `BundleCoordinator::handle_watch_event` in `rolldown_dev`.
   fn map_event_kind(kind: &notify::EventKind) -> Option<WatcherChangeKind> {
     match kind {
-      notify::EventKind::Create(_) => Some(WatcherChangeKind::Create),
+      notify::EventKind::Create(_)
+      | notify::EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::To)) => {
+        Some(WatcherChangeKind::Create)
+      }
       notify::EventKind::Modify(notify::event::ModifyKind::Name(
         notify::event::RenameMode::From,
       ))

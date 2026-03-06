@@ -127,13 +127,16 @@ function main() {
           console.log(`⏳ Waiting for HMR to be triggered for step ${step}`);
 
           if (needRestart || needReload) {
-            // Wait for the build to complete before closing the process,
-            // otherwise the dev engine will think there are no clients.
-            const status = await waitForNextBuild(port, currentBuildSeq);
-            currentBuildSeq = status.buildSeq;
             if (needReload) {
+              // For reload steps, the 'r' signal forces ensureLatestBuildOutput.
+              // We don't rely on the watcher since the edited file may be new
+              // and not yet in the build graph.
               console.log(`🏃‍➡️ Sent rebuild message to the dev server`);
               devServeProcess.stdin.write('r');
+            } else {
+              // For restart steps (no reload), wait for the watcher-triggered build.
+              const status = await waitForNextBuild(port, currentBuildSeq);
+              currentBuildSeq = status.buildSeq;
             }
             await runningArtifactProcess.close();
             await waitForFileToBeModified(nodeScriptPath, currentArtifactContent);

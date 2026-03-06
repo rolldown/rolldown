@@ -19,10 +19,15 @@ impl TaskFsEventHandler {
   /// In particular, `Access` events (file open/read/close) are ignored because
   /// the build process itself reads watched source files, which would otherwise
   /// cause an infinite rebuild loop on Linux where inotify emits `IN_OPEN` events.
+  ///
+  /// Aligned with `BundleCoordinator::handle_watch_event` in `rolldown_dev`.
   fn map_event_kind(kind: &notify::EventKind) -> Option<WatcherChangeKind> {
     match kind {
       notify::EventKind::Create(_) => Some(WatcherChangeKind::Create),
-      notify::EventKind::Remove(_) => Some(WatcherChangeKind::Delete),
+      notify::EventKind::Modify(notify::event::ModifyKind::Name(
+        notify::event::RenameMode::From,
+      ))
+      | notify::EventKind::Remove(_) => Some(WatcherChangeKind::Delete),
       notify::EventKind::Modify(_) => Some(WatcherChangeKind::Update),
       _ => None,
     }

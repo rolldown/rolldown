@@ -46,6 +46,8 @@ class DevServer {
   #devOptions?: NormalizedDevOptions;
   #devEngine?: DevEngine;
   #port = 3000;
+  #buildSeq = 0;
+  #registeredClientCount = 0;
 
   constructor() {}
 
@@ -96,6 +98,7 @@ class DevServer {
         if (errOrOutputs instanceof Error) {
           console.error('Build error:', errOrOutputs);
         }
+        this.#buildSeq++;
       },
       watch: getDevWatchOptionsForCi(),
     });
@@ -169,6 +172,7 @@ class DevServer {
           case 'hmr:module-registered': {
             console.log('Registering modules:', clientMessage.modules);
             this.#devEngine?.registerModules(clientSession.id, clientMessage.modules);
+            this.#registeredClientCount++;
             break;
           }
           default: {
@@ -213,6 +217,23 @@ class DevServer {
           console.error('Error handling lazy compile request:', err);
           return;
         }
+      }
+      next();
+    });
+    this.connectServer.use(async (req, res, next) => {
+      if (req.url === '/_dev/status') {
+        const bundleState = await devEngine.getBundleState();
+        res.setHeader('Content-Type', 'application/json');
+        res.end(
+          JSON.stringify({
+            hasStaleOutput: bundleState.hasStaleOutput,
+            lastFullBuildFailed: bundleState.lastFullBuildFailed,
+            buildSeq: this.#buildSeq,
+            connectedClients: this.#clients.size,
+            registeredClients: this.#registeredClientCount,
+          }),
+        );
+        return;
       }
       next();
     });

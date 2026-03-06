@@ -5,8 +5,8 @@ import killPort from 'kill-port';
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';
 import { afterAll, describe, test } from 'vitest';
-import { CONFIG } from './src/config';
-import { isDirectoryExists, removeDirSync, sensibleTimeoutInMs } from './src/utils';
+import { isDirectoryExists, removeDirSync } from './src/utils';
+import { getBuildSeq, waitForModuleRegistration, waitForNextBuild } from './test-utils';
 
 function main() {
   const fixturesPath = nodePath.resolve(__dirname, 'fixtures');
@@ -80,9 +80,11 @@ function main() {
 
         await waitForPathExists(nodeScriptPath);
 
-        let runningArtifactProcess = await runArtifactProcess(nodeScriptPath, tmpProjectPath);
+        let runningArtifactProcess = await runArtifactProcess(nodeScriptPath, tmpProjectPath, port);
 
         const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
+
+        let currentBuildSeq = await getBuildSeq(port);
 
         for (const [index, [step, hmrEdits]] of hmrEditFiles.entries()) {
           console.log(
@@ -92,17 +94,6 @@ function main() {
               2,
             )}`,
           );
-
-          // Refer to `packages/test-dev-server/src/utils/get-dev-watch-options-for-ci.ts`
-          // We used a poll-based and debounced watcher in CI, so we need to wait for certain amount of time to
-          // - Make sure different steps are not debounced together
-          // - Make sure changes are detected individually for different steps
-          // - Make sure changes in the same step are detected together
-          if (index !== 0) {
-            await sensibleTimeoutInMs(
-              CONFIG.watch.debounceDuration + CONFIG.watch.debounceTickRate + 100,
-            );
-          }
 
           const hmrEditsWithContent = hmrEdits.map((e) => ({
             ...e,
@@ -125,16 +116,21 @@ function main() {
           console.log(`⏳ Waiting for HMR to be triggered for step ${step}`);
 
           if (needRestart || needReload) {
-            // Waiting Reload hmr update to be triggered. If we close the process too fast, dev engine will think there're no clients.
-            // No hmr update will be triggered.
-            await sensibleTimeoutInMs(2000);
+            // Wait for the build to complete before closing the process,
+            // otherwise the dev engine will think there are no clients.
+            const status = await waitForNextBuild(port, currentBuildSeq);
+            currentBuildSeq = status.buildSeq;
             if (needReload) {
               console.log(`🏃‍➡️ Sent rebuild message to the dev server`);
               devServeProcess.stdin.write('r');
             }
             await runningArtifactProcess.close();
             await waitForFileToBeModified(nodeScriptPath, currentArtifactContent);
-            runningArtifactProcess = await runArtifactProcess(nodeScriptPath, tmpProjectPath);
+            runningArtifactProcess = await runArtifactProcess(nodeScriptPath, tmpProjectPath, port);
+          } else {
+            // Wait for HMR build to complete
+            const status = await waitForNextBuild(port, currentBuildSeq);
+            currentBuildSeq = status.buildSeq;
           }
           await waitForPathExists(nodePath.join(tmpProjectPath, `ok-${index}`), 10 * 1000);
           console.log(`✅ HMR triggered for step ${step}`);
@@ -159,7 +155,7 @@ function main() {
 
 let id = 0;
 
-async function runArtifactProcess(artifactPath: string, tmpProjectPath: string) {
+async function runArtifactProcess(artifactPath: string, tmpProjectPath: string, port: number) {
   const thisId = id;
   id++;
 
@@ -181,7 +177,8 @@ async function runArtifactProcess(artifactPath: string, tmpProjectPath: string) 
   // Wait for the Node.js process to start
   await waitForPathExists(initOkFilePath);
 
-  await sensibleTimeoutInMs(2000); // Make sure module are registered
+  // Wait for modules to be registered with the dev server
+  await waitForModuleRegistration(port, thisId + 1);
 
   return {
     process: artifactProcess,

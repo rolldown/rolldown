@@ -77,6 +77,30 @@ export async function waitForDevIdle(port: number, timeoutMs = 30_000): Promise<
   throw new Error(`Dev server not idle within ${timeoutMs}ms`);
 }
 
+/** Wait for buildSeq to stabilize (no changes for `stableMs`). This ensures the debounce window has closed. */
+export async function waitForBuildStable(
+  port: number,
+  stableMs = 800,
+  timeoutMs = 30_000,
+): Promise<DevStatus> {
+  const start = Date.now();
+  let lastSeq = -1;
+  let lastChangeTime = start;
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const status = await fetchDevStatus(port);
+      if (status.buildSeq !== lastSeq) {
+        lastSeq = status.buildSeq;
+        lastChangeTime = Date.now();
+      } else if (Date.now() - lastChangeTime >= stableMs) {
+        return status;
+      }
+    } catch {}
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  throw new Error(`Build not stable within ${timeoutMs}ms`);
+}
+
 /** Poll until registeredClients exceeds the given count (i.e., a new module registration happened). */
 export async function waitForModuleRegistration(
   port: number,

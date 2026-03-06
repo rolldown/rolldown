@@ -7,8 +7,8 @@ import nodePath from 'node:path';
 import { afterAll, describe, test } from 'vitest';
 import { isDirectoryExists, removeDirSync } from './src/utils';
 import {
-  getBuildSeq,
   getRegisteredClients,
+  waitForBuildStable,
   waitForModuleRegistration,
   waitForNextBuild,
 } from './test-utils';
@@ -100,10 +100,11 @@ function main() {
             )}`,
           );
 
-          // Re-snapshot buildSeq right before writing files.
-          // This ensures we're comparing against the latest value, avoiding
-          // races where the counter advanced between steps.
-          currentBuildSeq = await getBuildSeq(port);
+          // Wait for buildSeq to stabilize before writing the next step's files.
+          // This ensures the debounce window from any previous build has closed,
+          // so the watcher will detect our new writes as a separate change.
+          const stable = await waitForBuildStable(port);
+          currentBuildSeq = stable.buildSeq;
 
           const hmrEditsWithContent = hmrEdits.map((e) => ({
             ...e,

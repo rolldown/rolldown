@@ -1,6 +1,6 @@
 import { setTimeout } from 'node:timers/promises';
 import { describe, expect, test } from 'vitest';
-import { editFile, getPage } from './test-utils';
+import { editFile, getPage, waitForBuildStable } from './test-utils';
 
 describe('hmr-full-bundle-mode', () => {
   test.sequential('should render initial content', async () => {
@@ -23,12 +23,16 @@ describe('hmr-full-bundle-mode', () => {
 
     await expect.poll(() => page.textContent('.hmr')).toBe('hello1');
 
+    // Wait for the build to stabilize before the next edit so the watcher's
+    // debounce window has closed and will detect the new change.
+    await waitForBuildStable(3000);
     await editFile('hmr.js', (code) =>
       code.replace("const foo = 'hello1'", "const foo = 'hello2'"),
     );
 
     await expect.poll(() => page.textContent('.hmr')).toBe('hello2');
 
+    await waitForBuildStable(3000);
     await editFile('hmr.js', (code) => code.replace("const foo = 'hello2'", "const foo = 'hello'"));
     await expect.poll(() => page.textContent('.hmr')).toBe('hello');
   });

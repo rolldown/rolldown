@@ -1045,6 +1045,7 @@ const CliOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Watch files in bundle and rebuild on changes'),
   ),
+  silent: v.pipe(v.optional(v.boolean()), v.description("Don't print CLI logs")),
   ...InputCliOptionsSchema.entries,
   ...OutputCliOptionsSchema.entries,
 });

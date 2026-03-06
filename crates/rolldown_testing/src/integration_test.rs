@@ -363,7 +363,9 @@ impl IntegrationTest {
 
       build_snapshot.initial_output = Some(initial_build_output);
       artifacts_snapshot.builds.push(build_snapshot);
-      drop(dev_engine);
+      // Explicitly close the dev engine to shut down the background coordinator task.
+      // Without this, the coordinator task would persist across tests under the shared runtime.
+      let _ = dev_engine.close().await;
     }
 
     artifacts_snapshot

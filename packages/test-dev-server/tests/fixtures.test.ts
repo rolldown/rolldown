@@ -6,7 +6,12 @@ import nodeFs from 'node:fs';
 import nodePath from 'node:path';
 import { afterAll, describe, test } from 'vitest';
 import { isDirectoryExists, removeDirSync } from './src/utils';
-import { getBuildSeq, waitForModuleRegistration, waitForNextBuild } from './test-utils';
+import {
+  getBuildSeq,
+  getRegisteredClients,
+  waitForModuleRegistration,
+  waitForNextBuild,
+} from './test-utils';
 
 function main() {
   const fixturesPath = nodePath.resolve(__dirname, 'fixtures');
@@ -167,6 +172,9 @@ async function runArtifactProcess(artifactPath: string, tmpProjectPath: string, 
   `.trim(),
   );
 
+  // Snapshot registered clients before starting the process
+  const currentRegistered = await getRegisteredClients(port);
+
   console.log(`🔄 Starting Node.js process: ${artifactPath}`);
   const artifactProcess = execa(
     'node',
@@ -178,7 +186,7 @@ async function runArtifactProcess(artifactPath: string, tmpProjectPath: string, 
   await waitForPathExists(initOkFilePath);
 
   // Wait for modules to be registered with the dev server
-  await waitForModuleRegistration(port, thisId + 1);
+  await waitForModuleRegistration(port, currentRegistered);
 
   return {
     process: artifactProcess,

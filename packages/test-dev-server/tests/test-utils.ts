@@ -77,25 +77,33 @@ export async function waitForDevIdle(port: number, timeoutMs = 30_000): Promise<
   throw new Error(`Dev server not idle within ${timeoutMs}ms`);
 }
 
-/** Poll until at least one client has registered modules. */
+/** Poll until registeredClients exceeds the given count (i.e., a new module registration happened). */
 export async function waitForModuleRegistration(
   port: number,
-  minCount: number,
+  currentCount: number,
   timeoutMs = 30_000,
 ): Promise<DevStatus> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
       const status = await fetchDevStatus(port);
-      if (status.registeredClients >= minCount) return status;
+      if (status.registeredClients > currentCount) return status;
     } catch {}
     await new Promise((r) => setTimeout(r, 50));
   }
-  throw new Error(`Module registration not reached (need ${minCount}) within ${timeoutMs}ms`);
+  throw new Error(
+    `Module registration not reached (stuck at ${currentCount}) within ${timeoutMs}ms`,
+  );
 }
 
 /** Get current build sequence number. */
 export async function getBuildSeq(port: number): Promise<number> {
   const status = await fetchDevStatus(port);
   return status.buildSeq;
+}
+
+/** Get current registered client count. */
+export async function getRegisteredClients(port: number): Promise<number> {
+  const status = await fetchDevStatus(port);
+  return status.registeredClients;
 }

@@ -7,7 +7,7 @@ import { chromium } from 'playwright';
 import type { Browser, Page } from 'playwright';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 import { CONFIG } from './src/config';
-import { waitForDevIdle } from './test-utils';
+import { waitForBuildStable } from './test-utils';
 
 let devServerProcess: ResultPromise<{}> | null = null;
 let browser: Browser | null = null;
@@ -144,7 +144,7 @@ beforeEach(async (ctx) => {
   if (retryCount > 0) {
     await resetTestFiles();
     // Wait for the dev server to finish rebuilding after file reset
-    await waitForDevIdle(3000);
+    await waitForBuildStable(3000);
     // Reload the page to ensure it reflects the reset file state
     // This is necessary because after a failed test, the page may show stale content
     if (page) {

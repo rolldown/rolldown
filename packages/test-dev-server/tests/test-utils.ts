@@ -12,6 +12,9 @@ export async function editFile(
   filename: string,
   replacer: (content: string) => string,
 ): Promise<void> {
+  // Wait for the build pipeline to stabilize before writing,
+  // so the watcher's debounce window from any previous edit has closed.
+  await waitForBuildStable(3000);
   const filePath = resolve(testDir, filename);
   const content = nodeFs.readFileSync(filePath, 'utf-8');
   const newContent = replacer(content);

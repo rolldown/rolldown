@@ -93,6 +93,7 @@ class DevServer {
         } else {
           this.handleHmrUpdates(errOrUpdates.updates);
         }
+        this.#buildSeq++;
       },
       onOutput: (errOrOutputs) => {
         if (errOrOutputs instanceof Error) {

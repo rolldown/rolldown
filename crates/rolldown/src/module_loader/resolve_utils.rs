@@ -107,7 +107,10 @@ pub async fn resolve_dependencies(
             // files, etc. on the next build.
             if ecmascript::is_path_like_specifier(specifier) {
               if let Some(importer_dir) = Path::new(self_resolved_id.id.as_str()).parent() {
-                plugin_driver.missing_import_dirs.insert(importer_dir.to_string_lossy().into());
+                let target_path = importer_dir.join(specifier.as_str());
+                if let Some(target_dir) = target_path.parent() {
+                  plugin_driver.missing_import_dirs.insert(target_dir.to_string_lossy().into());
+                }
               }
             }
 

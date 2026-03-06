@@ -310,13 +310,42 @@ The watcher uses `Bundler::with_cached_bundle_experimental()` to get `&mut Bundl
 
 This matches the legacy watcher's approach (`with_cached_bundle`), where `watch_files()` was called between scan and write phases.
 
+### Missing File Detection
+
+When an import resolves to a non-existent file (e.g. `import './components/button.js'`), the build errors. Watch mode should detect when the missing file is later created and trigger a rebuild.
+
+**Challenge:** `notify` can't watch non-existent paths (unlike chokidar, which internally watches the parent directory).
+
+**Approach — directory-based tracking:**
+
+1. **Track target directories** (`resolve_utils.rs`): On `ResolveError::NotFound` for relative specifiers, resolve the specifier relative to the importer's directory, then insert the **target's parent directory** into `plugin_driver.missing_import_dirs`. For `import './components/button.js'` from `/src/main.js`, this inserts `/src/components/` — the directory where the file would be created.
+
+2. **Watch directories** (`watch_task.rs`): After each build, directories from `missing_import_dirs` are registered with the fs watcher using `NonRecursive` mode.
+
+3. **Rebuild on create** (`watch_task.rs`): `mark_needs_rebuild()` accepts the change kind. If `kind == Create` and the event's parent directory is in `missing_import_dirs`, a rebuild is triggered. The resolver then re-attempts resolution — no path guessing needed.
+
+4. **Lifecycle**: `missing_import_dirs` is cleared between rebuilds (via `plugin_driver.clear()`) and repopulated during resolution. Dirs are automatically removed once the import error is resolved (file created or import line removed).
+
+**Tradeoffs:**
+
+- While a missing import error persists, _any_ file creation in the target directory triggers a rebuild (spurious rebuilds). Acceptable because the build is already in an error state, debouncing limits frequency, and failed resolution is cheap.
+- Goes beyond Rollup's behavior — Rollup only watches successfully loaded modules and relies on the importer being re-saved to discover new files.
+
 ### Notify Event Mapping
 
 ```
-notify::EventKind::Create(_)  → WatcherChangeKind::Create
-notify::EventKind::Remove(_)  → WatcherChangeKind::Delete
-Everything else                → WatcherChangeKind::Update (defensive: spurious rebuild > missed rebuild)
+notify::EventKind::Create(_)                              → WatcherChangeKind::Create
+notify::EventKind::Modify(Name(RenameMode::To))           → WatcherChangeKind::Create
+notify::EventKind::Modify(Name(RenameMode::Both))         → WatcherChangeKind::Create
+notify::EventKind::Modify(Name(RenameMode::From))         → WatcherChangeKind::Delete
+notify::EventKind::Remove(_)                              → WatcherChangeKind::Delete
+notify::EventKind::Modify(_)  (other)                     → WatcherChangeKind::Update
+notify::EventKind::Access(_)                              → None (ignored — prevents infinite rebuild loops on Linux)
 ```
+
+**Rename handling:** Linux inotify can emit `Modify(Name(Both))` when both source and destination are known in a single rename event. This is mapped to `Create` because the destination (the newly visible file) is the more important signal — especially for missing file detection. `RenameMode::To` is the single-event equivalent. `RenameMode::From` maps to `Delete` (file disappeared from watched location).
+
+**Access filtering:** The build process reads watched source files, which on Linux triggers `IN_OPEN`/`IN_CLOSE_NOWRITE` events. Without filtering, these cause infinite rebuild loops.
 
 ### Path Identity
 
@@ -442,7 +471,7 @@ Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#648
 
 ### Missing Features
 
-- [ ] Resolver cache invalidation between rebuilds ([#6482](https://github.com/rolldown/rolldown/issues/6482))
+- [x] Resolver cache invalidation between rebuilds ([#6482](https://github.com/rolldown/rolldown/issues/6482)) — `clear_resolver_cache()` called at start of each rebuild
 - [ ] File unwatching — `update_watch_files()` only adds, never removes. Watch set grows monotonically
 
 ### Future

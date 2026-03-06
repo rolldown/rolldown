@@ -24,9 +24,9 @@ impl TaskFsEventHandler {
   fn map_event_kind(kind: &notify::EventKind) -> Option<WatcherChangeKind> {
     match kind {
       notify::EventKind::Create(_)
-      | notify::EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::To)) => {
-        Some(WatcherChangeKind::Create)
-      }
+      | notify::EventKind::Modify(notify::event::ModifyKind::Name(
+        notify::event::RenameMode::To | notify::event::RenameMode::Both,
+      )) => Some(WatcherChangeKind::Create),
       notify::EventKind::Modify(notify::event::ModifyKind::Name(
         notify::event::RenameMode::From,
       ))

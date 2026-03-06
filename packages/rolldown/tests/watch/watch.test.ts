@@ -1129,7 +1129,7 @@ test.concurrent(
         errors.push(event.error.message);
       }
     });
-    await editFile(path.join(cwd, 'main.js'), `import './foo.js'`);
+    await editFile(path.join(cwd, 'main.js'), `import { foo } from './foo.js'\nconsole.log(foo)`);
     await expect.poll(() => errors.length).toBeGreaterThan(0);
 
     // Create the missing file — should trigger a successful rebuild
@@ -1148,7 +1148,7 @@ test.concurrent(
     const retryCount = task.result?.retryCount ?? 0;
     const { dir: cwd } = createTestWithMultiFiles('import-non-existing-then-rename', retryCount, {
       'main.js': `console.log('main')`,
-      'bar.js': `export const bar = 'renamed'`,
+      'bar.js': `export const foo = 'renamed'`,
     });
     onTestFinished(() => {
       if (!process.env.CI) {
@@ -1170,7 +1170,7 @@ test.concurrent(
         errors.push(event.error.message);
       }
     });
-    await editFile(path.join(cwd, 'main.js'), `import './foo.js'`);
+    await editFile(path.join(cwd, 'main.js'), `import { foo } from './foo.js'\nconsole.log(foo)`);
     await expect.poll(() => errors.length).toBeGreaterThan(0);
 
     // Rename bar.js to foo.js — should trigger a successful rebuild

@@ -80,6 +80,10 @@ impl WatchTask {
         last_bundle_handle.plugin_driver().clear();
       }
 
+      // Clear resolver cache so previously-failed lookups (e.g. missing files
+      // that have since been created) are re-evaluated.
+      bundler.clear_resolver_cache();
+
       // Use with_cached_bundle_experimental to register FS watches between scan and write phases.
       // This ensures changes made during render hooks (e.g. renderStart modifying a file)
       // are detected by the FS watcher.
@@ -170,18 +174,31 @@ impl WatchTask {
         continue;
       }
       let path = Path::new(file_str);
-      if path.exists()
-        && pattern_filter::filter(
-          options.watch.exclude.as_deref(),
-          options.watch.include.as_deref(),
-          file_str,
-          options.cwd.to_string_lossy().as_ref(),
-        )
-        .inner()
+      if pattern_filter::filter(
+        options.watch.exclude.as_deref(),
+        options.watch.include.as_deref(),
+        file_str,
+        options.cwd.to_string_lossy().as_ref(),
+      )
+      .inner()
       {
-        tracing::debug!(name = "notify watch", path = ?path);
-        watcher_paths.add(path, RecursiveMode::NonRecursive).map_err_to_unhandleable()?;
-        watched_files.insert(file.clone());
+        // For non-existing files (e.g. missing imports), watch the parent
+        // directory so we can detect when the file is created.
+        let watch_path = if path.exists() {
+          path
+        } else {
+          path.parent().unwrap_or(path)
+        };
+
+        match watcher_paths.add(watch_path, RecursiveMode::NonRecursive) {
+          Ok(()) => {
+            tracing::debug!(name = "notify watch", path = ?watch_path);
+            watched_files.insert(file.clone());
+          }
+          Err(e) => {
+            tracing::debug!(name = "notify watch skipped", path = ?watch_path, error = ?e);
+          }
+        }
       }
     }
     watcher_paths.commit().map_err_to_unhandleable()?;
@@ -190,10 +207,13 @@ impl WatchTask {
   }
 
   /// Mark this task as needing rebuild if the changed file is in our watch list.
-  pub(crate) fn mark_needs_rebuild(&mut self, path: &str) {
+  /// Returns `true` if the file is relevant to this task.
+  pub(crate) fn mark_needs_rebuild(&mut self, path: &str) -> bool {
     if self.is_watched_file(path) {
       self.needs_rebuild = true;
+      return true;
     }
+    false
   }
 
   /// Call on_invalidate callback if the path is in watch list

@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
@@ -14,6 +15,7 @@ use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPl
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::ecmascript::{self};
 use rustc_hash::FxHashMap;
+use sugar_path::SugarPath;
 
 use crate::{SharedOptions, SharedResolver};
 
@@ -100,6 +102,16 @@ pub async fn resolve_dependencies(
         let specifier = &dep.module_request;
         match e {
           ResolveError::NotFound(..) => {
+            // Register the expected file path for watching so the watcher can
+            // detect when the missing file is created and trigger a rebuild.
+            if ecmascript::is_path_like_specifier(specifier) {
+              if let Some(importer_dir) = Path::new(self_resolved_id.id.as_str()).parent() {
+                let specifier_str = specifier.as_str();
+                let expected_path = specifier_str.absolutize_with(importer_dir);
+                plugin_driver.watch_files.insert(expected_path.to_string_lossy().into());
+              }
+            }
+
             // NOTE: IN_TRY_CATCH_BLOCK meta if it is a `require` import
             // record
             if !dep.meta.contains(ImportRecordMeta::InTryCatchBlock) {

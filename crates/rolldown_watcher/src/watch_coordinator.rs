@@ -184,14 +184,23 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     task_index: WatchTaskIdx,
     changes: Vec<FileChangeEvent>,
   ) {
+    let mut effective_changes: Vec<FileChangeEvent> = Vec::new();
+
     if let Some(task) = self.tasks.get_mut(task_index) {
-      for change in &changes {
-        task.mark_needs_rebuild(&change.path);
-        task.call_on_invalidate(&change.path).await;
+      for change in changes {
+        if task.mark_needs_rebuild(&change.path) {
+          task.call_on_invalidate(&change.path).await;
+          effective_changes.push(change);
+        }
       }
     }
 
-    self.state = mem::take(&mut self.state).on_file_changes(changes, self.debounce_duration);
+    if effective_changes.is_empty() {
+      return;
+    }
+
+    self.state =
+      mem::take(&mut self.state).on_file_changes(effective_changes, self.debounce_duration);
   }
 
   /// Drain buffered fs events that arrived during a build.

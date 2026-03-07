@@ -38,7 +38,7 @@ test(`emit data for devtool`, async () => {
 
   const moduleGraphReady = logs.find((event) => event.action === 'ModuleGraphReady');
   expect(moduleGraphReady).toBeDefined();
-  const entryModule = moduleGraphReady.modules.find((module) => module.id.endsWith('/index.ts'));
+  const entryModule = moduleGraphReady.modules.find((module) => /[\\/]index\.ts$/.test(module.id));
   expect(entryModule).toBeDefined();
   expect(entryModule.imports).toContainEqual(
     expect.objectContaining({

@@ -21,13 +21,14 @@ pub struct WatchTask {
   options: Arc<NormalizedBundlerOptions>,
   fs_watcher: std::sync::Mutex<DynFsWatcher>,
   watched_files: FxDashSet<ArcStr>,
-  /// Directories where a relative import failed to resolve.
-  /// A `Create` event in any of these directories triggers a rebuild.
-  missing_import_dirs: FxDashSet<ArcStr>,
+  /// Directories registered with the fs watcher for missing import detection.
+  /// Only used to avoid re-registering the same directory with notify.
+  registered_missing_dirs: FxDashSet<ArcStr>,
+  /// Active missing import directories from the latest build.
+  /// Refreshed each build from `plugin_driver.missing_import_dirs`.
+  /// Only directories in this set trigger rebuilds on `Create` events.
+  active_missing_dirs: FxDashSet<ArcStr>,
   pub(crate) needs_rebuild: bool,
-  /// Whether the current pending changes include Create or Delete events,
-  /// used to decide if the resolver cache needs clearing.
-  pub(crate) has_create_or_delete: bool,
 }
 
 impl WatchTask {
@@ -57,9 +58,9 @@ impl WatchTask {
       options,
       fs_watcher: std::sync::Mutex::new(fs_watcher),
       watched_files: FxDashSet::default(),
-      missing_import_dirs: FxDashSet::default(),
+      registered_missing_dirs: FxDashSet::default(),
+      active_missing_dirs: FxDashSet::default(),
       needs_rebuild: true,
-      has_create_or_delete: false,
     })
   }
 
@@ -73,13 +74,17 @@ impl WatchTask {
     let start_time = Instant::now();
 
     let skip_write = self.options.watch.skip_write;
-    let has_create_or_delete = self.has_create_or_delete;
     // Use field-level borrows so the closure can capture fs_watcher/watched_files/options
     // without conflicting with the &mut self borrow on bundler.
     let fs_watcher_ref = &self.fs_watcher;
     let watched_files_ref = &self.watched_files;
-    let missing_import_dirs_ref = &self.missing_import_dirs;
+    let registered_missing_dirs_ref = &self.registered_missing_dirs;
+    let active_missing_dirs_ref = &self.active_missing_dirs;
     let options_ref = &*self.options;
+
+    // Clear active missing dirs before rebuilding — will be repopulated from
+    // plugin_driver.missing_import_dirs during scan.
+    self.active_missing_dirs.clear();
 
     // Scope the bundler lock to minimize lock duration
     let (result, new_watch_files, bundle_handle) = {
@@ -90,11 +95,9 @@ impl WatchTask {
         last_bundle_handle.plugin_driver().clear();
       }
 
-      // Clear resolver cache only when files were created or deleted, since
-      // modifications don't invalidate resolution results.
-      if has_create_or_delete {
-        bundler.clear_resolver_cache();
-      }
+      // Always clear resolver cache before each rebuild in watch mode to avoid
+      // stale resolution results from modified package.json/tsconfig/export maps.
+      bundler.clear_resolver_cache();
 
       // Use with_cached_bundle_experimental to register FS watches between scan and write phases.
       // This ensures changes made during render hooks (e.g. renderStart modifying a file)
@@ -112,7 +115,8 @@ impl WatchTask {
           Self::update_watch_files_from(
             fs_watcher_ref,
             watched_files_ref,
-            missing_import_dirs_ref,
+            registered_missing_dirs_ref,
+            active_missing_dirs_ref,
             options_ref,
             &watch_files,
             &new_missing_dirs,
@@ -147,7 +151,6 @@ impl WatchTask {
     let duration = start_time.elapsed().as_millis() as u32;
 
     self.needs_rebuild = false;
-    self.has_create_or_delete = false;
 
     match result {
       Ok(_output) => Ok(BuildOutcome::Success(BundleEndEventData {
@@ -175,7 +178,8 @@ impl WatchTask {
     Self::update_watch_files_from(
       &self.fs_watcher,
       &self.watched_files,
-      &self.missing_import_dirs,
+      &self.registered_missing_dirs,
+      &self.active_missing_dirs,
       &self.options,
       files,
       missing_dirs,
@@ -187,7 +191,8 @@ impl WatchTask {
   fn update_watch_files_from(
     fs_watcher: &std::sync::Mutex<DynFsWatcher>,
     watched_files: &FxDashSet<ArcStr>,
-    missing_import_dirs: &FxDashSet<ArcStr>,
+    registered_missing_dirs: &FxDashSet<ArcStr>,
+    active_missing_dirs: &FxDashSet<ArcStr>,
     options: &NormalizedBundlerOptions,
     files: &[ArcStr],
     new_missing_dirs: &[ArcStr],
@@ -227,17 +232,30 @@ impl WatchTask {
     // Watch directories where imports failed to resolve, so we can detect
     // when the missing file is created.
     for dir in new_missing_dirs {
-      if missing_import_dirs.contains(dir.as_str()) {
+      active_missing_dirs.insert(dir.clone());
+
+      if registered_missing_dirs.contains(dir.as_str()) {
         continue;
       }
+
+      // Find the nearest existing ancestor directory to watch. The target
+      // directory itself may not exist yet (e.g. `import './new-folder/file.js'`).
+      // Only mark as "registered" when we watch the exact target dir — if we
+      // fell back to an ancestor, we need to retry on the next build so that
+      // once the directory exists, we add a direct watch on it.
       let dir_path = Path::new(dir.as_str());
-      match watcher_paths.add(dir_path, RecursiveMode::NonRecursive) {
-        Ok(()) => {
-          tracing::debug!(name = "notify watch missing dir", path = ?dir_path);
-          missing_import_dirs.insert(dir.clone());
-        }
-        Err(e) => {
-          tracing::debug!(name = "notify watch missing dir skipped", path = ?dir_path, error = ?e);
+      let watch_path = std::iter::successors(Some(dir_path), |p| p.parent()).find(|p| p.exists());
+      if let Some(watch_path) = watch_path {
+        match watcher_paths.add(watch_path, RecursiveMode::NonRecursive) {
+          Ok(()) => {
+            tracing::debug!(name = "notify watch missing dir", target = ?dir_path, watching = ?watch_path);
+            if watch_path == dir_path {
+              registered_missing_dirs.insert(dir.clone());
+            }
+          }
+          Err(e) => {
+            tracing::debug!(name = "notify watch missing dir skipped", path = ?watch_path, error = ?e);
+          }
         }
       }
     }
@@ -253,18 +271,24 @@ impl WatchTask {
   pub(crate) fn mark_needs_rebuild(&mut self, path: &str, kind: WatcherChangeKind) -> bool {
     if self.is_watched_file(path) {
       self.needs_rebuild = true;
-      if matches!(kind, WatcherChangeKind::Create | WatcherChangeKind::Delete) {
-        self.has_create_or_delete = true;
-      }
       return true;
     }
     // For Create events, check if the file was created in a directory where
-    // a relative import previously failed to resolve.
+    // a relative import failed to resolve in the latest build, or if the
+    // created path itself is a missing directory (ancestor fallback case:
+    // when the target dir didn't exist, we watched an ancestor and need to
+    // detect the directory creation).
     if kind == WatcherChangeKind::Create {
-      if let Some(parent) = Path::new(path).parent() {
-        if self.missing_import_dirs.contains(parent.to_string_lossy().as_ref()) {
+      let event_path = Path::new(path);
+      // Check if the created path itself is a tracked missing directory
+      if self.active_missing_dirs.contains(event_path.to_string_lossy().as_ref()) {
+        self.needs_rebuild = true;
+        return true;
+      }
+      // Check if the file was created inside a tracked missing directory
+      if let Some(parent) = event_path.parent() {
+        if self.active_missing_dirs.contains(parent.to_string_lossy().as_ref()) {
           self.needs_rebuild = true;
-          self.has_create_or_delete = true;
           return true;
         }
       }

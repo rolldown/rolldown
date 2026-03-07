@@ -24,9 +24,9 @@ impl TaskFsEventHandler {
   fn map_event_kind(kind: &notify::EventKind) -> Option<WatcherChangeKind> {
     match kind {
       notify::EventKind::Create(_)
-      | notify::EventKind::Modify(notify::event::ModifyKind::Name(
-        notify::event::RenameMode::To | notify::event::RenameMode::Both,
-      )) => Some(WatcherChangeKind::Create),
+      | notify::EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::To)) => {
+        Some(WatcherChangeKind::Create)
+      }
       notify::EventKind::Modify(notify::event::ModifyKind::Name(
         notify::event::RenameMode::From,
       ))
@@ -34,6 +34,15 @@ impl TaskFsEventHandler {
       notify::EventKind::Modify(_) => Some(WatcherChangeKind::Update),
       _ => None,
     }
+  }
+
+  /// Check if this event is a `RenameMode::Both` event, which carries two paths
+  /// (source and destination) that need different change kinds.
+  fn is_rename_both(kind: &notify::EventKind) -> bool {
+    matches!(
+      kind,
+      notify::EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::Both))
+    )
   }
 }
 
@@ -44,13 +53,34 @@ impl FsEventHandler for TaskFsEventHandler {
         let changes: Vec<FileChangeEvent> = fs_events
           .into_iter()
           .filter_map(|fs_event| {
+            // RenameMode::Both carries [from_path, to_path] — emit Delete for the
+            // source and Create for the destination so both signals are preserved.
+            if Self::is_rename_both(&fs_event.detail.kind) {
+              let mut paths = fs_event.detail.paths.into_iter();
+              let mut result = Vec::new();
+              if let Some(from) = paths.next() {
+                result.push(FileChangeEvent::new(
+                  from.to_string_lossy().into_owned(),
+                  WatcherChangeKind::Delete,
+                ));
+              }
+              if let Some(to) = paths.next() {
+                result.push(FileChangeEvent::new(
+                  to.to_string_lossy().into_owned(),
+                  WatcherChangeKind::Create,
+                ));
+              }
+              return Some(result);
+            }
+
             let kind = Self::map_event_kind(&fs_event.detail.kind)?;
             Some(
               fs_event
                 .detail
                 .paths
                 .into_iter()
-                .map(move |path| FileChangeEvent::new(path.to_string_lossy().into_owned(), kind)),
+                .map(|path| FileChangeEvent::new(path.to_string_lossy().into_owned(), kind))
+                .collect(),
             )
           })
           .flatten()

@@ -101,14 +101,24 @@ pub async fn resolve_dependencies(
         let specifier = &dep.module_request;
         match e {
           ResolveError::NotFound(..) => {
-            // Track the importer's directory so the watcher can detect when a
+            // Track the target's parent directory so the watcher can detect when a
             // file is created there and trigger a rebuild. We don't guess the
             // exact path — the resolver handles extension resolution, index
             // files, etc. on the next build.
             if ecmascript::is_path_like_specifier(specifier) {
-              if let Some(importer_dir) = Path::new(self_resolved_id.id.as_str()).parent() {
-                let target_path = importer_dir.join(specifier.as_str());
-                if let Some(target_dir) = target_path.parent() {
+              let target_dir = if ecmascript::is_relative_specifier(specifier) {
+                // Relative specifier — resolve against importer's directory
+                Path::new(self_resolved_id.id.as_str())
+                  .parent()
+                  .map(|importer_dir| importer_dir.join(specifier.as_str()))
+                  .and_then(|target_path| target_path.parent().map(Path::to_path_buf))
+              } else {
+                // Absolute specifier — use its parent directly
+                Path::new(specifier.as_str()).parent().map(Path::to_path_buf)
+              };
+              if let Some(target_dir) = target_dir {
+                // Skip root directories to avoid watching overly broad paths
+                if target_dir.parent().is_some() {
                   plugin_driver.missing_import_dirs.insert(target_dir.to_string_lossy().into());
                 }
               }

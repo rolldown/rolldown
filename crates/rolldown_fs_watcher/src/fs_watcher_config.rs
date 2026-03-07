@@ -27,6 +27,18 @@ pub struct FsWatcherConfig {
   ///
   /// ⚠️Only take effect for debounced watchers.
   pub debounce_tick_rate: Option<u64>,
+
+  /// Whether to use polling-based file watching instead of native OS events.
+  /// Default: false (use native OS events).
+  ///
+  /// ⚠️Only used by `create_fs_watcher` for watcher selection, not by concrete watcher implementations.
+  pub use_polling: bool,
+
+  /// Whether to use debounced event delivery.
+  /// Default: false.
+  ///
+  /// ⚠️Only used by `create_fs_watcher` for watcher selection, not by concrete watcher implementations.
+  pub use_debounce: bool,
 }
 
 impl Default for FsWatcherConfig {
@@ -37,6 +49,8 @@ impl Default for FsWatcherConfig {
       poll_interval: 100,
       compare_contents_for_polling: false,
       debounce_tick_rate: None,
+      use_polling: false,
+      use_debounce: false,
     }
   }
 }

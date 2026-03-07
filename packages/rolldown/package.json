@@ -128,6 +128,7 @@
     "@oxc-node/cli": "catalog:",
     "@rollup/plugin-json": "catalog:",
     "buble": "catalog:",
+    "cac": "catalog:",
     "consola": "catalog:",
     "execa": "catalog:",
     "glob": "catalog:",

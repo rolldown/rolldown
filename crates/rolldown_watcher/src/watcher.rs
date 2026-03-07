@@ -9,9 +9,9 @@ use futures::future::Shared;
 use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
-#[cfg(not(target_family = "wasm"))]
-use rolldown_fs_watcher::{PollFsWatcher, RecommendedFsWatcher};
+#[cfg(target_family = "wasm")]
+use rolldown_fs_watcher::FsWatcher;
+use rolldown_fs_watcher::FsWatcherConfig;
 use std::future::Future;
 use std::pin::Pin;
 use tokio::sync::mpsc;
@@ -44,6 +44,9 @@ impl WatcherConfig {
       config.poll_interval = poll_interval;
     }
     config.compare_contents_for_polling = self.compare_contents_for_polling;
+    config.use_polling = self.use_polling;
+    // rolldown_watcher doesn't support debounce currently
+    config.use_debounce = false;
     config
   }
 }
@@ -126,11 +129,8 @@ impl Watcher {
       let task_index = WatchTaskIdx::from_usize(index);
       let fs_handler = TaskFsEventHandler { task_index, tx: tx.clone() };
       #[cfg(not(target_family = "wasm"))]
-      let fs_watcher: Box<dyn FsWatcher + Send + 'static> = if watcher_config.use_polling {
-        Box::new(PollFsWatcher::with_config(fs_handler, fs_watcher_config.clone())?)
-      } else {
-        Box::new(RecommendedFsWatcher::with_config(fs_handler, fs_watcher_config.clone())?)
-      };
+      let fs_watcher =
+        rolldown_fs_watcher::create_fs_watcher(fs_handler, fs_watcher_config.clone())?;
       #[cfg(target_family = "wasm")]
       let fs_watcher: Box<dyn FsWatcher + Send + 'static> = Box::new(
         rolldown_fs_watcher::NoopFsWatcher::with_config(fs_handler, fs_watcher_config.clone())?,

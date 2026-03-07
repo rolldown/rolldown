@@ -37,8 +37,10 @@ function main() {
         testIndex++;
 
         let tmpProjectPath = nodePath.join(tmpFixturesPath, fixtureName);
+        let retryIndex = 0;
         while (await isDirectoryExists(tmpProjectPath)) {
-          tmpProjectPath = nodePath.join(tmpFixturesPath, fixtureName + '-retry');
+          retryIndex++;
+          tmpProjectPath = nodePath.join(tmpFixturesPath, `${fixtureName}-retry-${retryIndex}`);
         }
 
         console.log(

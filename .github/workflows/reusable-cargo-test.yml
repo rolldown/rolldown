@@ -33,11 +33,6 @@ jobs:
             CARGO_HOME,{{ DEV_DRIVE }}/.cargo
             RUSTUP_HOME,{{ DEV_DRIVE }}/.rustup
 
-      - name: Disable Windows Defender real-time monitoring
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: Add-MpPreference -ExclusionPath ${{ github.workspace }}, $env:CARGO_HOME, $env:RUSTUP_HOME
-
       - name: Setup Rust
         uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:

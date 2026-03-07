@@ -39,6 +39,7 @@ impl PluginDriverFactory {
     transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   ) -> Arc<crate::plugin_driver::PluginDriver> {
     let watch_files = Arc::new(FxDashSet::default());
+    let missing_import_dirs = Arc::new(FxDashSet::default());
     let meta = Arc::new(PluginContextMeta::default());
     let tx = Arc::new(tokio::sync::Mutex::new(None));
     let mut plugin_usage_vec = IndexVec::new();
@@ -100,6 +101,7 @@ impl PluginDriverFactory {
         contexts: index_contexts,
         file_emitter: Arc::clone(file_emitter),
         watch_files,
+        missing_import_dirs,
         module_infos,
         transform_dependencies,
         context_load_completion_manager: ContextLoadCompletionManager::default(),

@@ -11,19 +11,13 @@ mod paths_mut;
 mod recommended_fs_watcher;
 mod utils;
 
-#[cfg(not(target_family = "wasm"))]
 mod poll_fs_watcher;
-#[cfg(not(target_family = "wasm"))]
 pub use poll_fs_watcher::PollFsWatcher;
 
-#[cfg(not(target_family = "wasm"))]
 mod debounced_poll_fs_watcher;
-#[cfg(not(target_family = "wasm"))]
 pub use debounced_poll_fs_watcher::DebouncedPollFsWatcher;
 
-#[cfg(not(target_family = "wasm"))]
 mod debounced_recommended_fs_watcher;
-#[cfg(not(target_family = "wasm"))]
 pub use debounced_recommended_fs_watcher::DebouncedRecommendedFsWatcher;
 
 pub use crate::{

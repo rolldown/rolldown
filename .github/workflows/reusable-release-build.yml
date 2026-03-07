@@ -82,6 +82,7 @@ jobs:
       - name: Setup Rust
         uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
+          # No caching to avoid cache poisoning in release artifacts
           restore-cache: false
 
       - name: Rustup Adds Target
@@ -252,6 +253,7 @@ jobs:
       - name: Setup Rust
         uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
+          # No caching to avoid cache poisoning in release artifacts
           restore-cache: false
 
       - name: Add WASI target
@@ -298,8 +300,8 @@ jobs:
       - name: Setup Rust
         uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
-          # `@rolldown/debug` only rely on debug build to produce code in `src/generated`.
-          cache-key: debug-build
+          # No caching to avoid cache poisoning in release artifacts
+          restore-cache: false
 
       - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 

@@ -3,18 +3,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## main.css
+## main.js
+
+```js
+//#region main.css
+var main_default = void 0;
+
+//#endregion
+export { main_default as default };
+```
+
+## style.css
 
 ```css
 body {
   background-color: #f0f0f0;
 }
-
-
-```
-
-## main.js
-
-```js
 
 ```

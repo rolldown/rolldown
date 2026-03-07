@@ -5,6 +5,8 @@ use napi_derive::napi;
 pub enum BindingBuiltinPluginName {
   #[napi(value = "builtin:bundle-analyzer")]
   BundleAnalyzer,
+  #[napi(value = "builtin:css")]
+  Css,
   #[napi(value = "builtin:esm-external-require")]
   EsmExternalRequire,
   #[napi(value = "builtin:isolated-declaration")]

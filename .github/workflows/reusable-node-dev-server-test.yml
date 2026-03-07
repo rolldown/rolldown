@@ -14,12 +14,14 @@ on:
 
 jobs:
   run:
-    name: Node Dev Server Test
+    name: Node Dev Server Test (Node ${{ matrix.node-version }})
     if: ${{ inputs.changed }}
     runs-on: ${{ inputs.os }}
     timeout-minutes: 15
     strategy:
       fail-fast: false
+      matrix:
+        node-version: [20, 22, 24]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -45,29 +47,11 @@ jobs:
       - name: Install Playwright
         run: pnpm playwright install chromium
 
-      - name: Setup Node20 For Testing
+      - name: Setup Node${{ matrix.node-version }} For Testing
         uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           package-manager-cache: false
 
-      - name: Dev Server Test For Node20
-        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
-
-      - name: Setup Node22 For Testing
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
-        with:
-          node-version: 22
-          package-manager-cache: false
-
-      - name: Dev Server Test For Node22
-        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
-
-      - name: Setup Node24 For Testing
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
-        with:
-          node-version: 24
-          package-manager-cache: false
-
-      - name: Dev Server Test For Node24
+      - name: Dev Server Test
         run: pnpm run --filter '@rolldown/test-dev-server-tests' test

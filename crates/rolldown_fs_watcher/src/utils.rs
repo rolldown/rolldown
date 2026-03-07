@@ -1,10 +1,8 @@
 use crate::{FsEventHandler, fs_event::FsEvent};
 use notify::{RecursiveMode, TargetMode, WatchMode};
+use notify_debouncer_full::{DebounceEventHandler, DebounceEventResult};
 use rolldown_error::{BuildResult, ResultExt};
 use std::{path::Path, time::Instant};
-
-#[cfg(not(target_family = "wasm"))]
-pub use non_wasm::*;
 
 pub struct NotifyEventHandlerAdapter<T: FsEventHandler>(pub T);
 
@@ -49,24 +47,17 @@ where
   }
 }
 
-#[cfg(not(target_family = "wasm"))]
-mod non_wasm {
+/// This makes a Rolldown `EventHandler` to be a compatible `DebounceEventHandler`.
+/// So we could pass a Rolldown `EventHandler` to notify-debouncer-full `Debouncer`.
+pub struct DebounceEventHandlerAdapter<T: FsEventHandler>(pub T);
 
-  use crate::{FsEventHandler, fs_event::FsEvent};
-  use notify_debouncer_full::{DebounceEventHandler, DebounceEventResult};
-
-  /// This makes a Rolldown `EventHandler` to be a compatible `DebounceEventHandler`.
-  /// So we could pass a Rolldown `EventHandler` to notify-debouncer-full `Debouncer`.
-  pub struct DebounceEventHandlerAdapter<T: FsEventHandler>(pub T);
-
-  impl<T> DebounceEventHandler for DebounceEventHandlerAdapter<T>
-  where
-    T: FsEventHandler,
-  {
-    fn handle_event(&mut self, event: DebounceEventResult) {
-      self.0.handle_event(event.map(|events| {
-        events.into_iter().map(|event| FsEvent { detail: event.event, time: event.time }).collect()
-      }));
-    }
+impl<T> DebounceEventHandler for DebounceEventHandlerAdapter<T>
+where
+  T: FsEventHandler,
+{
+  fn handle_event(&mut self, event: DebounceEventResult) {
+    self.0.handle_event(event.map(|events| {
+      events.into_iter().map(|event| FsEvent { detail: event.event, time: event.time }).collect()
+    }));
   }
 }

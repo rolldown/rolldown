@@ -10,10 +10,8 @@ description = "Filesystem watching implementation for Rolldown"
 
 [dependencies]
 rolldown-notify = { workspace = true }
-rolldown_error = { workspace = true }
-
-[target.'cfg(not(target_family = "wasm"))'.dependencies]
 rolldown-notify-debouncer-full = { workspace = true }
+rolldown_error = { workspace = true }
 
 [lints]
 workspace = true

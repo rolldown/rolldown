@@ -79,12 +79,11 @@ impl ModuleTask {
   pub async fn run(mut self) {
     if let Err(errs) = self.run_inner().await {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
-      self
+      let _ = self
         .ctx
         .tx
         .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
-        .await
-        .expect("ModuleLoader: failed to send build errors - main thread terminated while processing module errors");
+        .await;
     }
   }
 
@@ -212,9 +211,7 @@ impl ModuleTask {
       barrel_info,
     }));
 
-    self.ctx.tx.send(result).await.expect(
-      "ModuleLoader channel closed while sending module completion - main thread terminated unexpectedly"
-    );
+    let _ = self.ctx.tx.send(result).await;
 
     Ok(())
   }

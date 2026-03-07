@@ -26,19 +26,22 @@ export function normalizeBindingResult<T>(container: BindingResult<T>): T | Erro
 }
 
 export function normalizeBindingError(e: BindingError): Error {
-  return e.type === 'JsError'
-    ? e.field0
-    : Object.assign(new Error(), {
-        code: e.field0.kind,
-        // kept for backward compat for old Rolldown versions
-        kind: e.field0.kind,
-        message: e.field0.message,
-        id: e.field0.id,
-        exporter: e.field0.exporter,
-        loc: e.field0.loc,
-        pos: e.field0.pos,
-        stack: undefined,
-      });
+  if (e.type === 'JsError') {
+    // e.field0 could be null/undefined if the plugin threw a non-Error value or
+    // if the NAPI error could not be properly serialized
+    return e.field0 ?? new Error('Unknown plugin error')
+  }
+  return Object.assign(new Error(), {
+    code: e.field0.kind,
+    // kept for backward compat for old Rolldown versions
+    kind: e.field0.kind,
+    message: e.field0.message,
+    id: e.field0.id,
+    exporter: e.field0.exporter,
+    loc: e.field0.loc,
+    pos: e.field0.pos,
+    stack: undefined,
+  })
 }
 
 /**

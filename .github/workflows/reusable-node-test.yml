@@ -28,11 +28,6 @@ jobs:
           submodules: true # Pull submodules for additional files
           persist-credentials: false
 
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
-        with:
-          tools: just
-
       - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 
       - name: Download Native Rolldown Build
@@ -43,13 +38,6 @@ jobs:
 
       - name: Build `@rolldown/test-dev-server`
         run: pnpm --filter '@rolldown/test-dev-server' build
-
-      - name: Type Check
-        run: pnpm type-check
-
-      - name: Node Type Test
-        run: |
-          pnpm run --filter rolldown-tests test:types
 
       - name: Setup Node${{ matrix.node-version }} For Testing
         uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0

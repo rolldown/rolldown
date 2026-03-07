@@ -66,33 +66,16 @@ impl BindingWatcher {
       .map(create_bundler_config_from_binding_options)
       .collect::<Result<Vec<_>, _>>()?;
 
-    // Forward the largest build_delay from configs to the watcher's debounce.
-    let build_delay =
-      configs.iter().filter_map(|c| c.options.watch.as_ref().and_then(|w| w.build_delay)).max();
-
-    // Extract use_polling / poll_interval / compare_contents_for_polling from the first config that specifies them.
-    let use_polling = configs
-      .iter()
-      .find_map(|c| c.options.watch.as_ref().filter(|w| w.use_polling).map(|w| w.use_polling))
-      .unwrap_or(false);
-    let poll_interval =
-      configs.iter().find_map(|c| c.options.watch.as_ref().and_then(|w| w.poll_interval));
-    let compare_contents_for_polling = configs
-      .iter()
-      .find_map(|c| {
-        c.options
-          .watch
-          .as_ref()
-          .filter(|w| w.compare_contents_for_polling)
-          .map(|w| w.compare_contents_for_polling)
-      })
-      .unwrap_or(false);
-
+    // Extract watcher config from the first config's watch options.
+    let watch = configs.first().and_then(|c| c.options.watch.as_ref());
     let watcher_config = WatcherConfig {
-      debounce: build_delay.map(|ms| Duration::from_millis(u64::from(ms))),
-      use_polling,
-      poll_interval,
-      compare_contents_for_polling,
+      debounce: watch.and_then(|w| w.build_delay).map(|ms| Duration::from_millis(u64::from(ms))),
+      use_polling: watch.is_some_and(|w| w.use_polling),
+      poll_interval: watch.and_then(|w| w.poll_interval),
+      compare_contents_for_polling: watch.is_some_and(|w| w.compare_contents_for_polling),
+      use_debounce: watch.is_some_and(|w| w.use_debounce),
+      debounce_delay: watch.and_then(|w| w.debounce_delay),
+      debounce_tick_rate: watch.and_then(|w| w.debounce_tick_rate),
     };
 
     let handler = NapiWatcherEventHandler { listener: Arc::new(listener) };

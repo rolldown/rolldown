@@ -31,6 +31,12 @@ pub struct WatcherConfig {
   pub poll_interval: Option<u64>,
   /// Whether to compare file contents for poll-based watchers (only used when `use_polling` is true)
   pub compare_contents_for_polling: bool,
+  /// Whether to use debounced event delivery at the filesystem level
+  pub use_debounce: bool,
+  /// Debounce delay in milliseconds for fs-level debounced watchers (only used when `use_debounce` is true)
+  pub debounce_delay: Option<u64>,
+  /// Tick rate in milliseconds for the debouncer's internal polling (only used when `use_debounce` is true)
+  pub debounce_tick_rate: Option<u64>,
 }
 
 impl WatcherConfig {
@@ -45,8 +51,11 @@ impl WatcherConfig {
     }
     config.compare_contents_for_polling = self.compare_contents_for_polling;
     config.use_polling = self.use_polling;
-    // rolldown_watcher doesn't support debounce currently
-    config.use_debounce = false;
+    config.use_debounce = self.use_debounce;
+    if let Some(debounce_delay) = self.debounce_delay {
+      config.debounce_delay = debounce_delay;
+    }
+    config.debounce_tick_rate = self.debounce_tick_rate;
     config
   }
 }

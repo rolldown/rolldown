@@ -14,12 +14,16 @@ use serde::{Deserialize, Deserializer};
   derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
+#[expect(clippy::struct_excessive_bools)]
 pub struct WatchOption {
   pub skip_write: bool,
   pub build_delay: Option<u32>,
   pub use_polling: bool,
   pub poll_interval: Option<u64>,
   pub compare_contents_for_polling: bool,
+  pub use_debounce: bool,
+  pub debounce_delay: Option<u64>,
+  pub debounce_tick_rate: Option<u64>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_string_or_regex"),

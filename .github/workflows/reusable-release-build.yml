@@ -82,8 +82,7 @@ jobs:
       - name: Setup Rust
         uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
-          cache-key: release-${{ matrix.target }}
-          save-cache: ${{ github.ref_name == 'main' }}
+          restore-cache: false
 
       - name: Rustup Adds Target
         run: rustup target add ${{ matrix.target }}
@@ -253,8 +252,7 @@ jobs:
       - name: Setup Rust
         uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
-          cache-key: release-wasm32-wasip1-threads
-          save-cache: ${{ github.ref_name == 'main' }}
+          restore-cache: false
 
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads

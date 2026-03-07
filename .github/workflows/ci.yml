@@ -125,6 +125,37 @@ jobs:
       os: ubuntu-latest
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
+  type-check:
+    name: Type Check
+    needs: [changes, build-rolldown-ubuntu]
+    if: |
+      always() &&
+      (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true
+          persist-credentials: false
+
+      - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
+
+      - name: Download Native Rolldown Build
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: rolldown-native-ubuntu-latest
+          path: ./packages
+
+      - name: Build `@rolldown/test-dev-server`
+        run: pnpm --filter '@rolldown/test-dev-server' build
+
+      - name: Type Check
+        run: pnpm type-check
+
+      - name: Node Type Test
+        run: pnpm run --filter rolldown-tests test:types
+
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml

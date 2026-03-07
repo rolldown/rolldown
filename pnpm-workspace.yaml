@@ -42,6 +42,7 @@ catalog:
   acorn-import-assertions: ^1.9.0
   astring: ^1.9.0
   buble: ^0.20.0
+  cac: ^6.7.14
   chalk: ^5.3.0
   change-case: ^5.4.4
   connect: ^3.7.0

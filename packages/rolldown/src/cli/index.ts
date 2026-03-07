@@ -30,6 +30,16 @@ async function main() {
     }
   }
 
+  if (cliOptions.help) {
+    showHelp();
+    return;
+  }
+
+  if (cliOptions.version) {
+    logger.log(`rolldown v${version}`);
+    return;
+  }
+
   if (cliOptions.config || cliOptions.config === '') {
     await bundleWithConfig(cliOptions.config, cliOptions, rawArgs);
     return;
@@ -38,11 +48,6 @@ async function main() {
   if ('input' in cliOptions.input) {
     // If input is specified, we will bundle with the input options
     await bundleWithCliOptions(cliOptions);
-    return;
-  }
-
-  if (cliOptions.version) {
-    logger.log(`rolldown v${version}`);
     return;
   }
 

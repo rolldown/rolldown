@@ -101,28 +101,7 @@ pub async fn resolve_dependencies(
         let specifier = &dep.module_request;
         match e {
           ResolveError::NotFound(..) => {
-            // Track the target's parent directory so the watcher can detect when a
-            // file is created there and trigger a rebuild. We don't guess the
-            // exact path — the resolver handles extension resolution, index
-            // files, etc. on the next build.
-            if ecmascript::is_path_like_specifier(specifier) {
-              let target_dir = if ecmascript::is_relative_specifier(specifier) {
-                // Relative specifier — resolve against importer's directory
-                Path::new(self_resolved_id.id.as_str())
-                  .parent()
-                  .map(|importer_dir| importer_dir.join(specifier.as_str()))
-                  .and_then(|target_path| target_path.parent().map(Path::to_path_buf))
-              } else {
-                // Absolute specifier — use its parent directly
-                Path::new(specifier.as_str()).parent().map(Path::to_path_buf)
-              };
-              if let Some(target_dir) = target_dir {
-                // Skip root directories to avoid watching overly broad paths
-                if target_dir.parent().is_some() {
-                  plugin_driver.missing_import_dirs.insert(target_dir.to_string_lossy().into());
-                }
-              }
-            }
+            track_missing_imports(plugin_driver, self_resolved_id.id.as_str(), specifier);
 
             // NOTE: IN_TRY_CATCH_BLOCK meta if it is a `require` import
             // record
@@ -204,4 +183,24 @@ pub async fn resolve_dependencies(
   }
 
   if build_errors.is_empty() { Ok(ret) } else { Err(build_errors.into()) }
+}
+
+/// Record the target directory of a missing relative import so the watcher
+/// can detect when a file is created there and trigger a rebuild.
+/// Only tracks relative specifiers (`./` / `../`) — absolute paths are not
+/// tracked because the ancestor fallback could watch overly broad system
+/// directories (e.g. `/opt`, `/usr`).
+fn track_missing_imports(plugin_driver: &PluginDriver, importer: &str, specifier: &str) {
+  if !ecmascript::is_relative_specifier(specifier) {
+    return;
+  }
+  let target_dir = Path::new(importer)
+    .parent()
+    .map(|d| d.join(specifier))
+    .and_then(|t| t.parent().map(Path::to_path_buf));
+  if let Some(dir) = target_dir {
+    if dir.parent().is_some() {
+      plugin_driver.missing_import_dirs.insert(dir.to_string_lossy().into());
+    }
+  }
 }

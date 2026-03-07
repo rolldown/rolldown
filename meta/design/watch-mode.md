@@ -318,7 +318,7 @@ When an import resolves to a non-existent file (e.g. `import './components/butto
 
 **Approach — directory-based tracking:**
 
-1. **Track target directories** (`resolve_utils.rs`): On `ResolveError::NotFound` for path-like specifiers (both relative and absolute), resolve the specifier to its target directory. For relative specifiers (`./`, `../`), join with the importer's directory then take the parent. For absolute specifiers, take the parent directly. Root directories are skipped to avoid watching overly broad paths. For `import './components/button.js'` from `/src/main.js`, this inserts `/src/components/`.
+1. **Track target directories** (`resolve_utils.rs`): On `ResolveError::NotFound` for relative specifiers (`./`, `../`), join with the importer's directory then take the parent. Absolute specifiers are not tracked — the ancestor fallback could reach overly broad system directories (e.g. `/opt`, `/usr`). Root directories are also skipped. For `import './components/button.js'` from `/src/main.js`, this inserts `/src/components/`.
 
 2. **Watch directories** (`watch_task.rs`): After each build, directories from `plugin_driver.missing_import_dirs` are registered with the fs watcher using `NonRecursive` mode. If the target directory doesn't exist yet, the nearest existing ancestor is watched instead. The directory is only marked as "registered" when the actual target dir is watched — ancestor fallbacks are retried on the next build so that once the directory exists, a direct watch is added.
 

@@ -244,7 +244,9 @@ impl WatchTask {
       // fell back to an ancestor, we need to retry on the next build so that
       // once the directory exists, we add a direct watch on it.
       let dir_path = Path::new(dir.as_str());
-      let watch_path = std::iter::successors(Some(dir_path), |p| p.parent()).find(|p| p.exists());
+      let watch_path = std::iter::successors(Some(dir_path), |p| p.parent())
+        .filter(|p| p.parent().is_some()) // skip root dirs
+        .find(|p| p.exists());
       if let Some(watch_path) = watch_path {
         match watcher_paths.add(watch_path, RecursiveMode::NonRecursive) {
           Ok(()) => {

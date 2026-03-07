@@ -74,47 +74,16 @@ impl DevEngine {
       debounce_delay: ctx.options.debounce_duration,
       compare_contents_for_polling: ctx.options.compare_contents_for_polling,
       debounce_tick_rate: ctx.options.debounce_tick_rate,
+      use_polling: ctx.options.use_polling,
+      use_debounce: ctx.options.use_debounce,
     };
 
     let event_handler = BundleCoordinator::create_watcher_event_handler(coordinator_tx.clone());
 
-    let watcher = {
-      if ctx.options.disable_watcher {
-        NoopFsWatcher::with_config(event_handler, watcher_config)?.into_dyn_fs_watcher()
-      } else {
-        #[cfg(not(target_family = "wasm"))]
-        {
-          use rolldown_fs_watcher::{
-            DebouncedPollFsWatcher, DebouncedRecommendedFsWatcher, PollFsWatcher,
-            RecommendedFsWatcher,
-          };
-
-          match (ctx.options.use_polling, ctx.options.use_debounce) {
-            // Polling + no debounce = PollFsWatcher
-            (true, false) => {
-              PollFsWatcher::with_config(event_handler, watcher_config)?.into_dyn_fs_watcher()
-            }
-            // Polling + debounce = DebouncedPollFsWatcher
-            (true, true) => DebouncedPollFsWatcher::with_config(event_handler, watcher_config)?
-              .into_dyn_fs_watcher(),
-            // No polling + no debounce = RecommendedFsWatcher
-            (false, false) => RecommendedFsWatcher::with_config(event_handler, watcher_config)?
-              .into_dyn_fs_watcher(),
-            // No polling + debounce = DebouncedRecommendedFsWatcher
-            (false, true) => {
-              DebouncedRecommendedFsWatcher::with_config(event_handler, watcher_config)?
-                .into_dyn_fs_watcher()
-            }
-          }
-        }
-        #[cfg(target_family = "wasm")]
-        {
-          use rolldown_fs_watcher::RecommendedFsWatcher;
-          // For WASM, always use NotifyWatcher (which is PollWatcher in WASM)
-          // Use the FsWatcher trait implementation
-          RecommendedFsWatcher::with_config(event_handler, watcher_config)?.into_dyn_fs_watcher()
-        }
-      }
+    let watcher = if ctx.options.disable_watcher {
+      NoopFsWatcher::with_config(event_handler, watcher_config)?.into_dyn_fs_watcher()
+    } else {
+      rolldown_fs_watcher::create_fs_watcher(event_handler, watcher_config)?
     };
 
     let coordinator =

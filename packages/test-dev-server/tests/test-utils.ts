@@ -12,6 +12,10 @@ export async function editFile(
   filename: string,
   replacer: (content: string) => string,
 ): Promise<void> {
+  // Wait for the build pipeline to stabilize before writing,
+  // so the watcher's debounce window from any previous edit has closed.
+  // Port 3000 is the default dev server port used by browser tests
+  await waitForBuildStable(3000);
   const filePath = resolve(testDir, filename);
   const content = nodeFs.readFileSync(filePath, 'utf-8');
   const newContent = replacer(content);
@@ -20,10 +24,6 @@ export async function editFile(
     return;
   }
   nodeFs.writeFileSync(filePath, newContent, 'utf-8');
-
-  // Small delay to ensure file system events are picked up
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
   console.log(`[editFile] Updated ${filename}`);
 }
 
@@ -36,4 +36,94 @@ export function getPage() {
     throw new Error('Playwright page not initialized. Check vitest-setup-playwright.ts');
   }
   return page;
+}
+
+interface DevStatus {
+  hasStaleOutput: boolean;
+  lastFullBuildFailed: boolean;
+  buildSeq: number;
+  connectedClients: number;
+  moduleRegistrationSeq: number;
+}
+
+async function fetchDevStatus(port: number): Promise<DevStatus> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5_000);
+  try {
+    const res = await fetch(`http://localhost:${port}/_dev/status`, {
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      throw new Error(`/_dev/status responded with ${res.status}`);
+    }
+    return await res.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/** Poll until buildSeq increments past the given value (i.e., a new build completed). */
+export async function waitForNextBuild(
+  port: number,
+  currentBuildSeq: number,
+  timeoutMs = 30_000,
+): Promise<DevStatus> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const status = await fetchDevStatus(port);
+      if (status.buildSeq > currentBuildSeq) return status;
+    } catch {}
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  throw new Error(`No new build within ${timeoutMs}ms (stuck at buildSeq=${currentBuildSeq})`);
+}
+
+/** Wait for buildSeq to stabilize (no changes for `stableMs`). This ensures the debounce window has closed. */
+export async function waitForBuildStable(
+  port: number,
+  stableMs = 800,
+  timeoutMs = 30_000,
+): Promise<DevStatus> {
+  const start = Date.now();
+  let lastSeq = -1;
+  let lastChangeTime = start;
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const status = await fetchDevStatus(port);
+      if (status.buildSeq !== lastSeq) {
+        lastSeq = status.buildSeq;
+        lastChangeTime = Date.now();
+      } else if (Date.now() - lastChangeTime >= stableMs) {
+        return status;
+      }
+    } catch {}
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  throw new Error(`Build not stable within ${timeoutMs}ms`);
+}
+
+/** Poll until moduleRegistrationSeq exceeds the given value (i.e., a new module registration happened). */
+export async function waitForModuleRegistration(
+  port: number,
+  currentSeq: number,
+  timeoutMs = 30_000,
+): Promise<DevStatus> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const status = await fetchDevStatus(port);
+      if (status.moduleRegistrationSeq > currentSeq) return status;
+    } catch {}
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  throw new Error(
+    `Module registration not reached (stuck at seq=${currentSeq}) within ${timeoutMs}ms`,
+  );
+}
+
+/** Get current module registration sequence number. */
+export async function getModuleRegistrationSeq(port: number): Promise<number> {
+  const status = await fetchDevStatus(port);
+  return status.moduleRegistrationSeq;
 }

@@ -14,22 +14,19 @@ on:
 
 jobs:
   run:
-    name: Node Dev Server Test
+    name: Node Dev Server Test (Node ${{ matrix.node-version }})
     if: ${{ inputs.changed }}
     runs-on: ${{ inputs.os }}
     timeout-minutes: 15
     strategy:
       fail-fast: false
+      matrix:
+        node-version: ${{ inputs.os == 'ubuntu-latest' && fromJson('[20, 22, 24]') || fromJson('[24]') }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           submodules: true # Pull submodules for additional files
           persist-credentials: false
-
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
-        with:
-          tools: just
 
       - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 
@@ -45,29 +42,11 @@ jobs:
       - name: Install Playwright
         run: pnpm playwright install chromium
 
-      - name: Setup Node20 For Testing
+      - name: Setup Node${{ matrix.node-version }} For Testing
         uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           package-manager-cache: false
 
-      - name: Dev Server Test For Node20
-        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
-
-      - name: Setup Node22 For Testing
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
-        with:
-          node-version: 22
-          package-manager-cache: false
-
-      - name: Dev Server Test For Node22
-        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
-
-      - name: Setup Node24 For Testing
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
-        with:
-          node-version: 24
-          package-manager-cache: false
-
-      - name: Dev Server Test For Node24
+      - name: Dev Server Test
         run: pnpm run --filter '@rolldown/test-dev-server-tests' test

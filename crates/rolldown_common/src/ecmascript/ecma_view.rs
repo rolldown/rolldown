@@ -129,19 +129,6 @@ bitflags! {
 }
 
 #[derive(Debug, Default)]
-pub struct ImportMetaRolldownAssetReplacer {
-  pub asset_filename: ArcStr,
-}
-
-impl SourceMutation for ImportMetaRolldownAssetReplacer {
-  fn apply(&self, magic_string: &mut string_wizard::MagicString<'_>) {
-    magic_string
-      .replace_all("__ROLLDOWN_ASSET_FILENAME__", format!("\"{}\"", self.asset_filename))
-      .expect("replace_all should not fail for asset filename replacement");
-  }
-}
-
-#[derive(Debug, Default)]
 pub struct PrependRenderedImport {
   pub intro: String,
 }

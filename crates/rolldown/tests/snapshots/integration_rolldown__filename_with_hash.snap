@@ -2185,53 +2185,52 @@ expression: output
 
 # tests/esbuild/loader/loader_file
 
-- entry-!~{000}~.js => entry-BagpNM6t.js
-- assets/test-C9EyqxrM.svg
+- entry-!~{000}~.js => entry-LnyUaR7v.js
+- assets/test-CmpSc5Ku.svg
 
 # tests/esbuild/loader/loader_file_common_js_and_es6
 
-- entry-!~{000}~.js => entry-B1j4zraP.js
-- assets/x-D1oTQX23.txt
-- assets/y-B1Y75Q9P.txt
+- entry-!~{000}~.js => entry-C4V3uAId.js
+- assets/x-RzbKAZGz.txt
+- assets/y-DlqcDX5l.txt
 
 # tests/esbuild/loader/loader_file_ext_path_asset_names_js
 
-- entries/entry-!~{000}~.js => entries/entry-cV_H7zDz.js
-- png/image-C1OY-uUF.png
-- txt/file-D-o7EDGZ.txt
+- entries/entry-!~{000}~.js => entries/entry-DAhtXmbj.js
+- png/image-RzbKAZGz.png
+- txt/file-DlqcDX5l.txt
 
 # tests/esbuild/loader/loader_file_multiple_no_collision
 
-- entry-!~{000}~.js => entry-uJhxZyms.js
-- assets/test-1P-S1VxP.txt
-- assets/test-BknXfcJ_.txt
+- entry-!~{000}~.js => entry-BEkSHYp4.js
+- assets/test-C4X7hChn.txt
 
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_js
 
-- entries_entry-!~{000}~.js => entries_entry-CWEePLZ9.js
-- entries_other_entry-!~{001}~.js => entries_other_entry-DKlX9gsa.js
-- common-!~{002}~.js => common-BDJ72uEg.js
-- assets/common-CJBUHw4V.png
+- entries_entry-!~{000}~.js => entries_entry-D5kLKdD8.js
+- entries_other_entry-!~{001}~.js => entries_other_entry-jxrYKDdj.js
+- common-!~{002}~.js => common-DGsWJMQI.js
+- assets/common-RzbKAZGz.png
 
 # tests/esbuild/loader/loader_file_public_path_asset_names_js
 
-- entries/entry-!~{000}~.js => entries/entry-BVANTiLj.js
-- assets/image-7R51b9Yh.png
+- entries/entry-!~{000}~.js => entries/entry-Cm2K7a9f.js
+- assets/image-RzbKAZGz.png
 
 # tests/esbuild/loader/loader_file_public_path_js
 
-- entries/entry-!~{000}~.js => entries/entry-BVANTiLj.js
-- assets/image-7R51b9Yh.png
+- entries/entry-!~{000}~.js => entries/entry-Cm2K7a9f.js
+- assets/image-RzbKAZGz.png
 
 # tests/esbuild/loader/loader_file_relative_path_asset_names_js
 
-- entries/entry-!~{000}~.js => entries/entry-BVANTiLj.js
-- assets/image-7R51b9Yh.png
+- entries/entry-!~{000}~.js => entries/entry-Cm2K7a9f.js
+- assets/image-RzbKAZGz.png
 
 # tests/esbuild/loader/loader_file_relative_path_js
 
-- entries/entry-!~{000}~.js => entries/entry-V-LaOZV7.js
-- image-DzFdYDYb.png
+- entries/entry-!~{000}~.js => entries/entry-CKf6xUwY.js
+- image-RzbKAZGz.png
 
 # tests/esbuild/loader/loader_json_common_js_and_es6
 
@@ -4309,9 +4308,14 @@ expression: output
 
 # tests/rolldown/function/module_types/asset
 
-- main-!~{000}~.js => main-BXfBYAYd.js
-- assets/foo-D91Zmg_q.txt
-- main-BXfBYAYd.js.map
+- main-!~{000}~.js => main-CfPuWcuZ.js
+- main-CfPuWcuZ.js.map
+- assets/foo-Cctl21F7.txt
+
+# tests/rolldown/function/module_types/asset_require
+
+- main-!~{000}~.js => main-DbTTl82F.js
+- assets/file-Cc5MjxNb.txt
 
 # tests/rolldown/function/module_types/base64/binary
 
@@ -4372,8 +4376,8 @@ expression: output
 
 # tests/rolldown/function/module_types/issue-6345
 
-- main-!~{000}~.js => main-B7c237q-.js
-- assets/foo-D91Zmg_q.txt
+- main-!~{000}~.js => main-Dfm74izs.js
+- assets/foo-Cctl21F7.txt
 
 # tests/rolldown/function/module_types/json/array
 
@@ -6073,8 +6077,8 @@ expression: output
 
 # tests/rolldown/topics/new_url/binary_asset
 
-- main-!~{000}~.js => main-rUM3m4Fj.js
-- assets/foo-D14wgUZU.bin
+- main-!~{000}~.js => main-DJiaZn7t.js
+- assets/foo-u1ylrPOy.bin
 
 # tests/rolldown/topics/new_url/dataurl
 
@@ -6082,10 +6086,9 @@ expression: output
 
 # tests/rolldown/topics/new_url/nested_dirs
 
-- main-!~{000}~.js => main-R_6D9g24.js
-- chunks/dep-!~{003}~.js => chunks/dep-DNWQBnVw.js
-- chunks/foo-!~{001}~.js => chunks/foo-CjA2Nq6F.js
-- assets/foo-DX_UVeUe.txt
+- main-!~{000}~.js => main-Ba7AGDNv.js
+- chunks/dep-!~{001}~.js => chunks/dep-B-4nC8RN.js
+- assets/foo-CKfX4HZF.txt
 
 # tests/rolldown/topics/new_url/opt-out
 
@@ -6097,8 +6100,8 @@ expression: output
 
 # tests/rolldown/topics/new_url/should_prefer_relative
 
-- main-!~{000}~.js => main-7kx4Xjj2.js
-- assets/index-D25jITRo.txt
+- main-!~{000}~.js => main-DRyAf0kR.js
+- assets/index-Cctl21F7.txt
 
 # tests/rolldown/topics/new_url/template_literal_with_expression
 

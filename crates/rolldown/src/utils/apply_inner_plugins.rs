@@ -23,6 +23,7 @@ pub fn apply_inner_plugins(
 ) -> ApplyInnerPluginsReturn {
   let mut before_user_plugins: Vec<SharedPluginable> = vec![
     Arc::new(rolldown_plugin_copy_module::CopyModulePlugin::new(&options.module_types)),
+    Arc::new(rolldown_plugin_asset_module::AssetModulePlugin::new(&options.module_types)),
     Arc::new(rolldown_plugin_data_url::DataUrlPlugin::default()),
     Arc::new(rolldown_plugin_oxc_runtime::OxcRuntimePlugin),
   ];

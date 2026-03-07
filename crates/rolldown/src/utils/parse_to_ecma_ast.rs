@@ -128,11 +128,7 @@ fn pre_process_source(
 ) -> BuildResult<(bool, Cow<'static, str>, OxcParseType)> {
   let has_lazy_export = matches!(
     module_type,
-    ModuleType::Json
-      | ModuleType::Text
-      | ModuleType::Base64
-      | ModuleType::Dataurl
-      | ModuleType::Asset
+    ModuleType::Json | ModuleType::Text | ModuleType::Base64 | ModuleType::Dataurl
   );
 
   let source = match module_type {
@@ -148,7 +144,13 @@ fn pre_process_source(
       let text = text.strip_prefix('\u{FEFF}').unwrap_or(&text);
       Cow::Owned(escape(text))
     }
-    ModuleType::Asset => Cow::Borrowed("__ROLLDOWN_ASSET_FILENAME__"),
+    ModuleType::Asset => {
+      return Err(anyhow::format_err!(
+        "Encountered a module with type `asset` during AST parsing. \
+         Modules with type `asset` must be handled by the builtin AssetModulePlugin before this stage; \
+         please check your plugin and loader configuration."
+      ))?;
+    }
     ModuleType::Base64 => {
       let encoded = rolldown_utils::base64::to_standard_base64(source.as_bytes());
       Cow::Owned(escape(&encoded))

@@ -21,7 +21,3 @@ export function setNestedProperty<T extends object, K>(obj: T, path: string, val
 export function camelCaseToKebabCase(str: string): string {
   return str.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
 }
-
-export function kebabCaseToCamelCase(str: string): string {
-  return str.replace(/-./g, (match) => match[1].toUpperCase());
-}

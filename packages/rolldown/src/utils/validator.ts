@@ -834,12 +834,7 @@ const OutputOptionsSchema = v.strictObject({
   ),
   sourcemap: v.pipe(
     v.optional(v.union([v.boolean(), v.literal('inline'), v.literal('hidden')])),
-    v.description(
-      `Generate sourcemap (\`-s inline\` for inline, or ${styleText(
-        'bold',
-        'pass the `-s` on the last argument if you want to generate `.map` file',
-      )})`,
-    ),
+    v.description(`Generate sourcemap (\`-s inline\` for inline, or \`-s\` for \`.map\` file)`),
   ),
   sourcemapBaseUrl: v.pipe(
     v.optional(v.string()),

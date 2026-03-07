@@ -3,14 +3,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/foo-DoQK7vb1.bin
+## assets/foo-u1ylrPOy.bin
 
 ## main.js
 
 ```js
-//#endregion
 //#region main.js
-const url = new URL("assets/foo-DoQK7vb1.bin", import.meta.url);
+const url = new URL("assets/foo-u1ylrPOy.bin", import.meta.url);
 //#endregion
 export { url };
 

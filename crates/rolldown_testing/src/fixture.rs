@@ -16,6 +16,12 @@ pub struct Fixture {
   fixture_path: PathBuf,
 }
 
+static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
+
+fn shared_runtime() -> &'static tokio::runtime::Runtime {
+  RUNTIME.get_or_init(|| tokio::runtime::Runtime::new().unwrap())
+}
+
 // Using std once lock to store env variable
 static NEEDS_EXTENDED_TESTS: OnceLock<bool> = OnceLock::new();
 /// A function to get the API key.
@@ -36,11 +42,11 @@ impl Fixture {
   }
 
   pub fn run_integration_test(self) {
-    tokio::runtime::Runtime::new().unwrap().block_on(self.run_inner(vec![]));
+    shared_runtime().block_on(self.run_inner(vec![]));
   }
 
   pub fn run_integration_test_with_plugins(self, plugins: Vec<SharedPluginable>) {
-    tokio::runtime::Runtime::new().unwrap().block_on(self.run_inner(plugins));
+    shared_runtime().block_on(self.run_inner(plugins));
   }
 
   async fn run_inner(self, plugins: Vec<SharedPluginable>) {

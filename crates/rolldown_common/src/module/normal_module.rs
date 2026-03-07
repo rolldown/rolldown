@@ -2,9 +2,9 @@ use std::{fmt::Debug, sync::Arc};
 
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
-  AssetView, DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx,
-  ImportRecordMeta, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord,
-  ResolvedId, StableModuleId, StmtInfoIdx,
+  DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta,
+  ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord, ResolvedId,
+  StableModuleId, StmtInfoIdx,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -30,7 +30,6 @@ pub struct NormalModule {
   pub repr_name: String,
   pub module_type: ModuleType,
   pub ecma_view: EcmaView,
-  pub asset_view: Option<AssetView>,
   pub originative_resolved_id: ResolvedId,
 }
 

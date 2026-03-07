@@ -85,6 +85,10 @@ pub struct FileEmitter {
   emitted_files: FxDashSet<ArcStr>,
   emitted_chunks: FxDashMap<ArcStr, ArcStr>,
   emitted_filenames: FxDashSet<ArcStr>,
+  /// Maps module IDs to their emitted file reference IDs.
+  /// Used by the asset module plugin to associate modules with emitted files
+  /// so that the `new URL()` finalizer can look up asset filenames.
+  module_to_file_ref: FxDashMap<ArcStr, ArcStr>,
 }
 
 impl FileEmitter {
@@ -101,6 +105,7 @@ impl FileEmitter {
       options,
       emitted_files: DashSet::default(),
       emitted_filenames: FxDashSet::default(),
+      module_to_file_ref: DashMap::default(),
     }
   }
 
@@ -352,6 +357,17 @@ impl FileEmitter {
     *tx_guard = tx;
   }
 
+  /// Associate a module ID with an emitted file reference ID.
+  /// This allows the `new URL()` finalizer to look up asset filenames by module ID.
+  pub fn associate_module_with_file_ref(&self, module_id: &str, reference_id: &str) {
+    self.module_to_file_ref.insert(ArcStr::from(module_id), ArcStr::from(reference_id));
+  }
+
+  /// Get the emitted file reference ID for a given module ID.
+  pub fn file_ref_for_module(&self, module_id: &str) -> Option<ArcStr> {
+    self.module_to_file_ref.get(module_id).map(|v| v.value().clone())
+  }
+
   pub fn clear(&self) {
     self.chunks.clear();
     self.files.clear();
@@ -361,6 +377,7 @@ impl FileEmitter {
     self.base_reference_id.store(0, Ordering::Relaxed);
     self.emitted_files.clear();
     self.emitted_chunks.clear();
+    self.module_to_file_ref.clear();
   }
 }
 

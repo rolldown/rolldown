@@ -365,6 +365,19 @@ impl<'a> GenerateStage<'a> {
     if trace_action_enabled!() {
       let mut chunk_infos = Vec::new();
       for (idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+        let mut imports = chunk
+          .imports_from_other_chunks
+          .iter()
+          .map(|(importee_idx, _imports)| action::ChunkImport {
+            chunk_id: importee_idx.raw(),
+            kind: "import-statement",
+          })
+          .collect::<Vec<_>>();
+
+        imports.extend(chunk.cross_chunk_dynamic_imports.iter().map(|importee_idx| {
+          action::ChunkImport { chunk_id: importee_idx.raw(), kind: "dynamic-import" }
+        }));
+
         chunk_infos.push(action::Chunk {
           is_user_defined_entry: chunk.is_user_defined_entry(),
           is_async_entry: chunk.is_async_entry(),
@@ -380,15 +393,7 @@ impl<'a> GenerateStage<'a> {
           advanced_chunk_group_id: chunk.chunk_reason_type.group_index(),
           chunk_id: idx.raw(),
           name: chunk.name.as_ref().map(ArcStr::to_string),
-          // TODO(hyf0): add dynamic importees
-          imports: chunk
-            .imports_from_other_chunks
-            .iter()
-            .map(|(importee_idx, _imports)| action::ChunkImport {
-              chunk_id: importee_idx.raw(),
-              kind: "import-statement",
-            })
-            .collect(),
+          imports,
         });
       }
       trace_action!(action::ChunkGraphReady { action: "ChunkGraphReady", chunks: chunk_infos });

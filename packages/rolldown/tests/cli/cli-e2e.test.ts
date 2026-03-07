@@ -11,11 +11,11 @@ function cliFixturesDir(...joined: string[]) {
 
 // remove `Finished in x ms` since it is not deterministic
 // remove Ansi colors for snapshot testing
+// replace version number for snapshot testing
 function cleanStdout(stdout: string) {
-  return stripAnsi(stdout).replace(
-    /rolldown v(?<version>\S+) Finished in \d+(\.\d+)? (s|ms|us|ns)/g,
-    '',
-  );
+  return stripAnsi(stdout)
+    .replace(/rolldown v(?<version>\S+) Finished in \d+(\.\d+)? (s|ms|us|ns)/g, '')
+    .replace(/* Match `rolldown v*)` */ /rolldown\sv.*\)/, 'rolldown VERSION)');
 }
 
 describe('should not hang after running', () => {
@@ -30,12 +30,7 @@ describe('basic arguments', () => {
     const ret = await execa`rolldown`;
 
     expect(ret.exitCode).toBe(0);
-    expect(
-      cleanStdout(
-        // Prevent snapshot from breaking when version changes
-        ret.stdout.replace(/* Match `rolldown v*)` */ /rolldown\sv.*\)/, 'rolldown VERSION)'),
-      ),
-    ).toMatchSnapshot();
+    expect(cleanStdout(ret.stdout)).toMatchSnapshot();
   });
 
   test('should not show warning with supported Node.js version', async () => {
@@ -45,6 +40,42 @@ describe('basic arguments', () => {
     expect(ret.exitCode).toBe(0);
     expect(ret.stdout).toContain('rolldown v');
     expect(ret.stdout).not.toContain('Please upgrade your Node.js version');
+  });
+
+  test('should print version with --version', async () => {
+    const ret = await execa`rolldown --version`;
+
+    expect(ret.exitCode).toBe(0);
+    expect(ret.stdout).toMatch(/rolldown v\d+/);
+  });
+
+  test('should print version with -v', async () => {
+    const ret = await execa`rolldown -v`;
+
+    expect(ret.exitCode).toBe(0);
+    expect(ret.stdout).toMatch(/rolldown v\d+/);
+  });
+
+  test('should print help with --help', async () => {
+    const ret = await execa`rolldown --help`;
+
+    expect(ret.exitCode).toBe(0);
+    expect(cleanStdout(ret.stdout)).toMatchSnapshot();
+  });
+
+  test('should print help with -h', async () => {
+    const ret = await execa`rolldown -h`;
+
+    expect(ret.exitCode).toBe(0);
+    expect(cleanStdout(ret.stdout)).toMatchSnapshot();
+  });
+
+  test('should show help when --help is used with other arguments (#8523)', async () => {
+    const cwd = cliFixturesDir('cli-option-string');
+    const ret = await execa({ cwd })`rolldown index.ts -o dist/lib.js --help`;
+
+    expect(ret.exitCode).toBe(0);
+    expect(cleanStdout(ret.stdout)).toMatchSnapshot();
   });
 });
 
@@ -97,6 +128,24 @@ describe('cli options for bundling', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
+  it('should handle comma-separated object options', async () => {
+    const cwd = cliFixturesDir('cli-option-object');
+    const status = await $({
+      cwd,
+    })`rolldown index.ts --module-types .123=text,notjson=json,.b64=base64 -d dist`;
+    expect(status.exitCode).toBe(0);
+    expect(cleanStdout(status.stdout)).toMatchSnapshot();
+  });
+
+  it('should handle comma-separated object options mixed with single object', async () => {
+    const cwd = cliFixturesDir('cli-option-object');
+    const status = await $({
+      cwd,
+    })`rolldown index.ts --module-types .123=text,notjson=json --module-types .b64=base64 -d dist`;
+    expect(status.exitCode).toBe(0);
+    expect(cleanStdout(status.stdout)).toMatchSnapshot();
+  });
+
   it('should handle negative boolean options', async () => {
     const cwd = cliFixturesDir('cli-option-no-external-live-bindings');
     const status = await $({
@@ -106,11 +155,11 @@ describe('cli options for bundling', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
-  it('should handle pass `-s` options', async () => {
+  it('should handle pass `-s` options in any position', async () => {
     const cwd = cliFixturesDir('cli-option-sourcemap');
-    const status = await $({ cwd })`rolldown index.ts -d dist -s`;
+    const status = await $({ cwd })`rolldown index.ts -s -d dist`;
     expect(status.exitCode).toBe(0);
-    expect(cleanStdout(status.stdout)).toMatchSnapshot();
+    expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true);
   });
 
   it('should handle nested options', async () => {
@@ -203,6 +252,22 @@ describe('cli options for bundling', () => {
     } catch (error: any) {
       expect(error.stdout).toContain('Option `--file` requires a value');
     }
+  });
+
+  it('should warn on unrecognized options but still bundle', async () => {
+    const cwd = cliFixturesDir('cli-option-string');
+    const status = await $({ cwd })`rolldown index.ts --someRandomFlag -d dist`;
+    expect(status.exitCode).toBe(0);
+    expect(status.stdout).toContain('unrecognized');
+  });
+
+  it('should handle camelCase options (e.g. --moduleTypes) (#8410)', async () => {
+    const cwd = cliFixturesDir('cli-option-object');
+    const status = await $({
+      cwd,
+    })`rolldown index.ts --moduleTypes .123=text,notjson=json,.b64=base64 -d dist`;
+    expect(status.exitCode).toBe(0);
+    expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 });
 
@@ -361,6 +426,31 @@ describe('config', () => {
     } catch (error: any) {
       expect(error.stdout).toContain('expected object or array, got 123');
     }
+  });
+
+  it('should allow CLI options to override config values', async () => {
+    const cwd = cliFixturesDir('cli-override-config');
+    const status = await $({ cwd })`rolldown -c rolldown.config.js --format cjs`;
+    expect(status.exitCode).toBe(0);
+    const file = path.resolve(cwd, 'dist/index.js');
+    const content = fs.readFileSync(file, 'utf-8');
+    // Config has format: 'esm', CLI overrides with --format cjs
+    expect(content).toContain('exports.foo');
+    expect(content).not.toContain('export {');
+  });
+
+  it('should handle `-c -w` without `-w` being consumed as config filename (#3248)', async () => {
+    const cwd = cliFixturesDir('cli-config-with-watch');
+    const controller = new AbortController();
+    execa({
+      cwd,
+      reject: false,
+      cancelSignal: controller.signal,
+    })`rolldown -c -w`;
+    await vi.waitFor(() => {
+      expect(fs.existsSync(path.join(cwd, 'dist/index.js'))).toBe(true);
+    });
+    controller.abort();
   });
 });
 

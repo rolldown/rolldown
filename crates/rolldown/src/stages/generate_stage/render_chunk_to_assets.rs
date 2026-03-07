@@ -17,7 +17,6 @@ use rolldown_utils::{
 
 use crate::{
   BundleOutput,
-  asset::asset_generator::AssetGenerator,
   chunk_graph::ChunkGraph,
   ecmascript::ecma_generator::EcmaGenerator,
   type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
@@ -196,23 +195,7 @@ impl GenerateStage<'_> {
             let ecma_chunks = ecma_chunks_future.await?;
             Ok(ecma_chunks)
           });
-          let asset_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
-            let mut asset_ctx = GenerateContext {
-              chunk_idx,
-              chunk,
-              options: self.options,
-              link_output: self.link_output,
-              chunk_graph,
-              plugin_driver: self.plugin_driver,
-              module_id_to_codegen_ret: vec![],
-              render_export_items_index_vec: &index_vec![],
-              resolved_paths,
-            };
-            let asset_chunks_future = AssetGenerator::instantiate_chunk(&mut asset_ctx);
-            let asset_chunks = asset_chunks_future.await?;
-            Ok(asset_chunks)
-          });
-          [ecma_chunks_future, asset_chunks_future]
+          [ecma_chunks_future]
         }),
     )
     .await?

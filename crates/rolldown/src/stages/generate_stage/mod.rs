@@ -1,24 +1,19 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
 use arcstr::ArcStr;
 use futures::future::try_join_all;
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
-use rolldown_common::{
-  ChunkIdx, ChunkKind, ImportMetaRolldownAssetReplacer, Module, OutputExports, PathsOutputOption,
-  PreliminaryFilename, RollupPreRenderedAsset,
-};
+use rolldown_common::{ChunkIdx, ChunkKind, OutputExports, PathsOutputOption};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_std_utils::OptionExt as _;
 use rolldown_std_utils::{
   PathBufExt as _, PathExt as _, representative_file_name_for_preserve_modules,
 };
 use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::HashPlaceholderGenerator,
-  make_unique_name::make_unique_name,
   rayon::{IntoParallelRefMutIterator as _, ParallelIterator as _},
 };
 use rustc_hash::FxHashMap;
@@ -112,7 +107,6 @@ impl<'a> GenerateStage<'a> {
 
     let index_chunk_id_to_name =
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
-    self.patch_asset_modules(&chunk_graph);
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
@@ -309,53 +303,6 @@ impl<'a> GenerateStage<'a> {
       // if user provided one.
       chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
 
-      for module in chunk.modules.iter().copied().filter_map(|idx| modules[idx].as_normal()) {
-        if let Some(asset_view) = module.asset_view.as_ref() {
-          let name = self
-            .options
-            .sanitize_filename
-            .call(module.id.as_path().file_stem().and_then(|s| s.to_str()).unpack())
-            .await?;
-          let asset_filename_template = self
-            .options
-            .asset_filename_template(&RollupPreRenderedAsset {
-              names: vec![name.clone()],
-              original_file_names: vec![],
-              source: asset_view.source.clone(),
-            })
-            .await?;
-
-          let has_hash_pattern = asset_filename_template.has_hash_pattern();
-          let extension = module.id.as_path().extension().and_then(|s| s.to_str());
-
-          let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
-          let hash_replacer = has_hash_pattern.then(|| {
-            let pattern_name = asset_filename_template.pattern_name();
-            |len: Option<usize>| {
-              let hash = hash_placeholder_generator.generate(len, pattern_name)?;
-              if let Some(hash_placeholder) = hash_placeholder.as_mut() {
-                hash_placeholder.push(hash.clone());
-              }
-              Ok(hash)
-            }
-          });
-
-          let mut filename =
-            asset_filename_template.render(Some(&name), None, extension, hash_replacer)?.into();
-          filename = make_unique_name(&filename, &used_name_counts);
-          let preliminary = PreliminaryFilename::new(filename, hash_placeholder);
-
-          chunk.asset_absolute_preliminary_filenames.insert(
-            module.idx,
-            preliminary
-              .absolutize_with(self.options.cwd.join(&self.options.out_dir))
-              .into_owned()
-              .expect_into_string(),
-          );
-          chunk.asset_preliminary_filenames.insert(module.idx, preliminary);
-        }
-      }
-
       chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
 
       chunk.absolute_preliminary_filename = Some(
@@ -367,22 +314,6 @@ impl<'a> GenerateStage<'a> {
       chunk.preliminary_filename = Some(preliminary_filename);
     }
     Ok(index_chunk_id_to_representative_name)
-  }
-
-  pub fn patch_asset_modules(&mut self, chunk_graph: &ChunkGraph) {
-    chunk_graph.chunk_table.iter().for_each(|chunk| {
-      // replace asset name in ecma view
-      chunk.asset_preliminary_filenames.iter().for_each(|(module_idx, preliminary)| {
-        let Module::Normal(module) = &mut self.link_output.module_table[*module_idx] else {
-          return;
-        };
-        let asset_filename: ArcStr = preliminary.as_str().into();
-        module
-          .ecma_view
-          .mutations
-          .push(Arc::new(ImportMetaRolldownAssetReplacer { asset_filename }));
-      });
-    });
   }
 
   fn compute_chunk_output_exports(

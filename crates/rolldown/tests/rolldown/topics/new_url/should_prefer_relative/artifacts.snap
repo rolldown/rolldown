@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/index-B0GLEKT9.txt
+## assets/index-Cctl21F7.txt
 
 ```txt
 hello, world
@@ -13,11 +13,10 @@ hello, world
 
 ```js
 import assert from "node:assert";
-//#endregion
 //#region main.js
-const url = new URL("assets/index-B0GLEKT9.txt", import.meta.url);
-const url2 = new URL("assets/index-B0GLEKT9.txt", import.meta.url);
-const url3 = new URL("assets/index-B0GLEKT9.txt", import.meta.url);
+const url = new URL("assets/index-Cctl21F7.txt", import.meta.url);
+const url2 = new URL("assets/index-Cctl21F7.txt", import.meta.url);
+const url3 = new URL("assets/index-Cctl21F7.txt", import.meta.url);
 assert.strictEqual(url.href, url3.href);
 assert.strictEqual(url2.href, url3.href);
 //#endregion

@@ -362,9 +362,14 @@ impl DevEngine {
       .map_err_to_unhandleable()
       .context("DevEngine: failed to send Close message to coordinator - coordinator may have already terminated")?;
 
-    // Close the bundler (calls `closeBundle` plugin hook)
-    let mut bundler = self.bundler.lock().await;
-    bundler.close().await?;
+    // Close the bundler (calls `closeBundle` plugin hook).
+    // The bundler lock MUST be released before waiting for the coordinator below.
+    // Otherwise we'd deadlock: the coordinator's Close handler waits for any running
+    // bundling task to finish, and that task may need to acquire the bundler lock.
+    {
+      let mut bundler = self.bundler.lock().await;
+      bundler.close().await?;
+    }
 
     // Wait for coordinator to close (coordinator handles watcher cleanup)
     let coordinator_state = self.coordinator_state.lock().await;

@@ -8,6 +8,7 @@ use oxc::ast::ast::{
   VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression};
+use oxc::semantic::SymbolId;
 use oxc::span::Ident;
 use oxc_allocator::{Address, UnstableAddress};
 use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, SideEffectDetail};
@@ -42,6 +43,10 @@ pub struct SideEffectDetector<'a> {
   flat_options: FlatOptions,
   /// This field is only used for `LinkStage#cross_module_optimization`.
   side_effect_free_function_symbol_ref: Option<&'a FxHashSet<Address>>,
+  /// Symbols known to be initialized with plain object literals (no
+  /// getters/setters). When an object spread references one of these symbols,
+  /// we can treat the property reads as side-effect-free.
+  spread_safe_symbol_ids: Option<&'a FxHashSet<SymbolId>>,
 }
 
 impl<'a> SideEffectDetector<'a> {
@@ -51,7 +56,20 @@ impl<'a> SideEffectDetector<'a> {
     options: &'a SharedNormalizedBundlerOptions,
     side_effect_free_function_symbol_ref: Option<&'a FxHashSet<Address>>,
   ) -> Self {
-    Self { scope, options, flat_options, side_effect_free_function_symbol_ref }
+    Self { scope, options, flat_options, side_effect_free_function_symbol_ref, spread_safe_symbol_ids: None }
+  }
+
+  pub fn with_spread_safe_symbols(mut self, symbols: &'a FxHashSet<SymbolId>) -> Self {
+    self.spread_safe_symbol_ids = Some(symbols);
+    self
+  }
+
+  /// Check if the given identifier reference resolves to a symbol known to be
+  /// initialized with a plain object literal.
+  fn is_spread_safe_symbol(&self, ident: &IdentifierReference) -> bool {
+    let Some(set) = self.spread_safe_symbol_ids else { return false };
+    let ref_id = ident.reference_id.get().unwrap();
+    self.scope.symbol_id_for(ref_id).is_some_and(|sym| set.contains(&sym))
   }
 
   #[inline]
@@ -448,7 +466,29 @@ impl<'a> SideEffectDetector<'a> {
             // refer https://github.com/rollup/rollup/blob/f7633942/src/ast/nodes/SpreadElement.ts#L32
             ast::ObjectPropertyKind::SpreadProperty(res) => {
               if self.flat_options.property_read_side_effects() {
-                return true.into();
+                // Object spread reads all enumerable own properties from the
+                // argument, which can trigger getters or Proxy traps on
+                // arbitrary expressions. We treat a spread as safe only when we
+                // can verify the argument is a plain object:
+                //
+                // - If the argument is an identifier whose symbol was
+                //   initialized with a plain object literal (tracked via
+                //   `spread_safe_symbol_ids`), the property reads are safe.
+                // - If the argument is an inline object literal whose
+                //   properties are all simple `init` properties (no
+                //   getters/setters), the property reads are safe.
+                //
+                // This matches rollup's `propertyReadSideEffects: true`
+                // behavior, which uses value tracking to verify the argument
+                // is a plain object before treating the spread as side-effect
+                // free.
+                let is_safe = matches!(
+                  &res.argument,
+                  Expression::Identifier(ident) if self.is_spread_safe_symbol(ident)
+                ) || is_plain_object_literal(&res.argument);
+                if !is_safe {
+                  return true.into();
+                }
               }
               self.detect_side_effect_of_expr(&res.argument)
             }
@@ -966,17 +1006,49 @@ impl<'a> SideEffectDetector<'a> {
   }
 }
 
+/// Returns `true` if the expression is an object literal whose properties are
+/// all simple `init` properties (no getters, setters, or methods with
+/// non-`init` kind). Such objects are safe to spread without triggering
+/// getters or Proxy traps.
+pub fn is_plain_object_literal(expr: &Expression) -> bool {
+  matches!(expr, Expression::ObjectExpression(obj)
+    if !obj.properties.iter().any(|p| matches!(p,
+      ast::ObjectPropertyKind::ObjectProperty(prop)
+        if prop.kind != ast::PropertyKind::Init
+    ))
+  )
+}
+
 #[cfg(test)]
 mod test {
   use std::sync::Arc;
 
   use itertools::Itertools;
+  use oxc::ast::ast::{BindingPattern, Statement};
+  use oxc::semantic::SymbolId;
   use oxc::{parser::Parser, span::SourceType};
   use rolldown_common::{AstScopes, NormalizedBundlerOptions, SideEffectDetail};
   use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
+  use rustc_hash::FxHashSet;
 
-  use super::SideEffectDetector;
+  use super::{SideEffectDetector, is_plain_object_literal};
   use rolldown_common::FlatOptions;
+
+  /// Collect symbol IDs of variables initialized with plain object literals
+  /// from a variable declaration statement.
+  fn collect_spread_safe_symbols(stmt: &Statement, set: &mut FxHashSet<SymbolId>) {
+    if let Statement::VariableDeclaration(decl) = stmt {
+      for var_decl in &decl.declarations {
+        if let BindingPattern::BindingIdentifier(binding) = &var_decl.id {
+          if let Some(init) = &var_decl.init {
+            if is_plain_object_literal(init) {
+              set.insert(binding.symbol_id());
+            }
+          }
+        }
+      }
+    }
+  }
 
   fn get_statements_side_effect(code: &str) -> bool {
     let source_type = SourceType::tsx();
@@ -987,10 +1059,14 @@ mod test {
 
     let options = Arc::new(NormalizedBundlerOptions::default());
     let flags = FlatOptions::from_shared_options(&options);
+    let mut spread_safe = FxHashSet::default();
     ast.program().body.iter().any(|stmt| {
-      SideEffectDetector::new(&ast_scopes, flags, &options, None)
+      let has_side_effect = SideEffectDetector::new(&ast_scopes, flags, &options, None)
+        .with_spread_safe_symbols(&spread_safe)
         .detect_side_effect_of_stmt(stmt)
-        .has_side_effect()
+        .has_side_effect();
+      collect_spread_safe_symbols(stmt, &mut spread_safe);
+      has_side_effect
     })
   }
 
@@ -1003,12 +1079,17 @@ mod test {
 
     let options = Arc::new(NormalizedBundlerOptions::default());
     let flags = FlatOptions::from_shared_options(&options);
+    let mut spread_safe = FxHashSet::default();
     ast
       .program()
       .body
       .iter()
       .map(|stmt| {
-        SideEffectDetector::new(&ast_scopes, flags, &options, None).detect_side_effect_of_stmt(stmt)
+        let detail = SideEffectDetector::new(&ast_scopes, flags, &options, None)
+          .with_spread_safe_symbols(&spread_safe)
+          .detect_side_effect_of_stmt(stmt);
+        collect_spread_safe_symbols(stmt, &mut spread_safe);
+        detail
       })
       .collect_vec()
   }
@@ -1049,6 +1130,33 @@ mod test {
         '-2':'BAIL'
       };",
     ));
+  }
+
+  #[test]
+  fn test_object_spread_side_effects() {
+    // Spreading a symbol initialized with a plain object literal is safe
+    assert!(!get_statements_side_effect("const obj = { a: 1 }; ({ ...obj })"));
+    assert!(!get_statements_side_effect("let obj = { a: 1 }; ({ ...obj })"));
+    // Spreading an inline object expression without getters is side-effect-free
+    assert!(!get_statements_side_effect("({ ...{ a: 1, b: 2 } })"));
+    // Object literal with spread of local var and extra properties
+    assert!(!get_statements_side_effect("const proto = { x: 1 }; ({ ...proto, tag: 'Utc' })"));
+    // Spreading an inline object with a getter HAS side effects
+    assert!(get_statements_side_effect("({ ...{ get prop() { sideEffect() } } })"));
+    // Spreading an inline object with a setter HAS side effects
+    assert!(get_statements_side_effect("({ ...{ set prop(v) { sideEffect() } } })"));
+    // Spreading a global/unresolved identifier has side effects
+    assert!(get_statements_side_effect("({ ...globalVar })"));
+    // Spreading a local Proxy has side effects (not a plain object literal init)
+    assert!(get_statements_side_effect(
+      "const p = new Proxy({}, { ownKeys() { return []; } }); ({ ...p })"
+    ));
+    // Spreading a local variable initialized by a function call has side effects
+    assert!(get_statements_side_effect("const obj = getObj(); ({ ...obj })"));
+    // Spreading a member expression has side effects (could trigger getters)
+    assert!(get_statements_side_effect("const obj = {}; ({ ...obj.inner })"));
+    // Spreading a call expression has side effects (result could be Proxy)
+    assert!(get_statements_side_effect("({ ...getObj() })"));
   }
 
   #[test]

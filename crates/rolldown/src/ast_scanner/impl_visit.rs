@@ -26,7 +26,7 @@ use crate::ast_scanner::{TraverseState, cjs_export_analyzer::CommonJsAstType};
 
 use super::{
   AstScanner, UntranspiledSyntax, cjs_export_analyzer::CjsGlobalAssignmentType,
-  side_effect_detector::SideEffectDetector,
+  side_effect_detector::{SideEffectDetector, is_plain_object_literal},
 };
 
 impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
@@ -116,7 +116,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         self.immutable_ctx.flat_options,
         self.immutable_ctx.options,
         None,
-      );
+      )
+      .with_spread_safe_symbols(&self.spread_safe_symbol_ids);
       self.current_stmt_info.side_effect = detector.detect_side_effect_of_stmt(stmt);
 
       #[cfg(debug_assertions)]
@@ -390,6 +391,16 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_variable_declaration(&mut self, decl: &ast::VariableDeclaration<'ast>) {
+    // Track symbols initialized with plain object literals for spread safety
+    for var_decl in &decl.declarations {
+      if let BindingPattern::BindingIdentifier(binding) = &var_decl.id {
+        if let Some(init) = &var_decl.init {
+          if is_plain_object_literal(init) {
+            self.spread_safe_symbol_ids.insert(binding.symbol_id());
+          }
+        }
+      }
+    }
     match decl.declarations.as_slice() {
       [decl] => {
         if let (BindingPattern::BindingIdentifier(binding), Some(init)) = (&decl.id, &decl.init) {

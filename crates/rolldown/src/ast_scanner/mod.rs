@@ -166,6 +166,9 @@ pub struct AstScanner<'me, 'ast> {
   traverse_state: TraverseState,
   current_comment_idx: usize,
   untranspiled_syntax: UntranspiledSyntax,
+  /// Symbols initialized with plain object literals (no getters/setters).
+  /// Used to determine if spreading a local variable is side-effect-free.
+  spread_safe_symbol_ids: FxHashSet<SymbolId>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -256,6 +259,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       traverse_state: TraverseState::empty(),
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
+      spread_safe_symbol_ids: FxHashSet::default(),
     }
   }
 

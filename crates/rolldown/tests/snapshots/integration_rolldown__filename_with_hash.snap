@@ -6327,6 +6327,14 @@ expression: output
 - entry2-!~{001}~.js => entry2-C-aRH99N.js
 - classLike-!~{002}~.js => classLike-BfQGe2ZS.js
 
+# tests/rolldown/tree_shaking/object_spread_local_binding
+
+- main-!~{000}~.js => main-7ika18pw.js
+
+# tests/rolldown/tree_shaking/object_spread_with_getter
+
+- main-!~{000}~.js => main-BtbBORBR.js
+
 # tests/rolldown/tree_shaking/property_read_side_effects
 
 - main-!~{000}~.js => main-1kB9c516.js

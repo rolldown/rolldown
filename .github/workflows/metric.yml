@@ -27,6 +27,7 @@ jobs:
       - uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
           cache-key: release-build
+          save-cache: false
       - run: cargo clean # build from scratch using local system cache to avoid download from crates.io
       - id: run
         run: |

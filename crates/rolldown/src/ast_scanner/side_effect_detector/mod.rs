@@ -74,7 +74,7 @@ impl<'a> SideEffectDetector<'a> {
   /// initialized with a plain object literal.
   fn is_spread_safe_symbol(&self, ident: &IdentifierReference) -> bool {
     let Some(set) = self.spread_safe_symbol_ids else { return false };
-    let ref_id = ident.reference_id.get().unwrap();
+    let Some(ref_id) = ident.reference_id.get() else { return false };
     self.scope.symbol_id_for(ref_id).is_some_and(|sym| set.contains(&sym))
   }
 
@@ -1016,7 +1016,7 @@ impl<'a> SideEffectDetector<'a> {
 /// all simple `init` properties (no getters, setters, or methods with
 /// non-`init` kind). Such objects are safe to spread without triggering
 /// getters or Proxy traps.
-pub fn is_plain_object_literal(expr: &Expression) -> bool {
+pub(crate) fn is_plain_object_literal(expr: &Expression) -> bool {
   matches!(expr, Expression::ObjectExpression(obj)
     if !obj.properties.iter().any(|p| matches!(p,
       ast::ObjectPropertyKind::ObjectProperty(prop)
@@ -1040,10 +1040,13 @@ mod test {
   use super::{SideEffectDetector, is_plain_object_literal};
   use rolldown_common::FlatOptions;
 
-  /// Collect symbol IDs of variables initialized with plain object literals
+  /// Collect symbol IDs of const variables initialized with plain object literals
   /// from a variable declaration statement.
   fn collect_spread_safe_symbols(stmt: &Statement, set: &mut FxHashSet<SymbolId>) {
     if let Statement::VariableDeclaration(decl) = stmt {
+      if !matches!(decl.kind, oxc::ast::ast::VariableDeclarationKind::Const) {
+        return;
+      }
       for var_decl in &decl.declarations {
         if let BindingPattern::BindingIdentifier(binding) = &var_decl.id {
           if let Some(init) = &var_decl.init {
@@ -1140,9 +1143,10 @@ mod test {
 
   #[test]
   fn test_object_spread_side_effects() {
-    // Spreading a symbol initialized with a plain object literal is safe
+    // Spreading a const symbol initialized with a plain object literal is safe
     assert!(!get_statements_side_effect("const obj = { a: 1 }; ({ ...obj })"));
-    assert!(!get_statements_side_effect("let obj = { a: 1 }; ({ ...obj })"));
+    // let/var can be reassigned, so spreading them is not safe
+    assert!(get_statements_side_effect("let obj = { a: 1 }; ({ ...obj })"));
     // Spreading an inline object expression without getters is side-effect-free
     assert!(!get_statements_side_effect("({ ...{ a: 1, b: 2 } })"));
     // Object literal with spread of local var and extra properties
@@ -1163,6 +1167,10 @@ mod test {
     assert!(get_statements_side_effect("const obj = {}; ({ ...obj.inner })"));
     // Spreading a call expression has side effects (result could be Proxy)
     assert!(get_statements_side_effect("({ ...getObj() })"));
+    // let reassigned from plain object to something else is not safe
+    assert!(get_statements_side_effect(
+      "let obj = { a: 1 }; obj = makeProxy(); ({ ...obj })"
+    ));
   }
 
   #[test]

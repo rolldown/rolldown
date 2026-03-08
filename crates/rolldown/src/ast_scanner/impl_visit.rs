@@ -392,12 +392,16 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_variable_declaration(&mut self, decl: &ast::VariableDeclaration<'ast>) {
-    // Track symbols initialized with plain object literals for spread safety
-    for var_decl in &decl.declarations {
-      if let BindingPattern::BindingIdentifier(binding) = &var_decl.id {
-        if let Some(init) = &var_decl.init {
-          if is_plain_object_literal(init) {
-            self.spread_safe_symbol_ids.insert(binding.symbol_id());
+    // Track symbols initialized with plain object literals for spread safety.
+    // Only consider `const` declarations, since `let`/`var` can be reassigned
+    // to a Proxy or other non-plain object after initialization.
+    if matches!(decl.kind, ast::VariableDeclarationKind::Const) {
+      for var_decl in &decl.declarations {
+        if let BindingPattern::BindingIdentifier(binding) = &var_decl.id {
+          if let Some(init) = &var_decl.init {
+            if is_plain_object_literal(init) {
+              self.spread_safe_symbol_ids.insert(binding.symbol_id());
+            }
           }
         }
       }

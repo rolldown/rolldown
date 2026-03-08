@@ -10,7 +10,7 @@ const Proto = {
   },
 };
 
-// These should be tree-shaken: result unused and spread of local var is safe
+// These bindings should be tree-shaken: ProtoUtc/ProtoZoned are unused and spread of a const plain object is safe
 const ProtoUtc = { ...Proto, _tag: 'Utc' };
 const ProtoZoned = { ...Proto, _tag: 'Zoned' };
 

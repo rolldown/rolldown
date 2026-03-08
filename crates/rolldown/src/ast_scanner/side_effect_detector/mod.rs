@@ -1030,7 +1030,7 @@ mod test {
   use std::sync::Arc;
 
   use itertools::Itertools;
-  use oxc::ast::ast::{BindingPattern, Statement};
+  use oxc::ast::ast::{self, BindingPattern, Expression, Statement};
   use oxc::semantic::SymbolId;
   use oxc::{parser::Parser, span::SourceType};
   use rolldown_common::{AstScopes, NormalizedBundlerOptions, SideEffectDetail};
@@ -1041,21 +1041,81 @@ mod test {
   use rolldown_common::FlatOptions;
 
   /// Collect symbol IDs of const variables initialized with plain object literals
-  /// from a variable declaration statement.
-  fn collect_spread_safe_symbols(stmt: &Statement, set: &mut FxHashSet<SymbolId>) {
+  /// from a variable declaration statement. Also invalidate symbols that appear
+  /// as arguments to function calls (since the function could mutate the object).
+  fn update_spread_safe_symbols(
+    stmt: &Statement,
+    set: &mut FxHashSet<SymbolId>,
+    scopes: &AstScopes,
+  ) {
+    // Add const plain object literal symbols
     if let Statement::VariableDeclaration(decl) = stmt {
-      if !matches!(decl.kind, oxc::ast::ast::VariableDeclarationKind::Const) {
-        return;
-      }
-      for var_decl in &decl.declarations {
-        if let BindingPattern::BindingIdentifier(binding) = &var_decl.id {
-          if let Some(init) = &var_decl.init {
-            if is_plain_object_literal(init) {
-              set.insert(binding.symbol_id());
+      if matches!(decl.kind, oxc::ast::ast::VariableDeclarationKind::Const) {
+        for var_decl in &decl.declarations {
+          if let BindingPattern::BindingIdentifier(binding) = &var_decl.id {
+            if let Some(init) = &var_decl.init {
+              if is_plain_object_literal(init) {
+                set.insert(binding.symbol_id());
+              }
             }
           }
         }
       }
+    }
+    // Invalidate symbols passed as call arguments
+    invalidate_call_args_in_stmt(stmt, set, scopes);
+  }
+
+  /// Walk the statement looking for call expressions, and remove any spread-safe
+  /// symbols that appear as arguments.
+  fn invalidate_call_args_in_stmt(
+    stmt: &Statement,
+    set: &mut FxHashSet<SymbolId>,
+    scopes: &AstScopes,
+  ) {
+    if set.is_empty() {
+      return;
+    }
+    // Simple recursive walk to find call expressions in the statement
+    match stmt {
+      Statement::ExpressionStatement(expr) => {
+        invalidate_call_args_in_expr(&expr.expression, set, scopes);
+      }
+      Statement::VariableDeclaration(decl) => {
+        for d in &decl.declarations {
+          if let Some(init) = &d.init {
+            invalidate_call_args_in_expr(init, set, scopes);
+          }
+        }
+      }
+      _ => {}
+    }
+  }
+
+  fn invalidate_call_args_in_expr(
+    expr: &Expression,
+    set: &mut FxHashSet<SymbolId>,
+    scopes: &AstScopes,
+  ) {
+    match expr {
+      Expression::CallExpression(call) => {
+        for arg in &call.arguments {
+          if let ast::Argument::Identifier(ident) = arg {
+            if let Some(ref_id) = ident.reference_id.get() {
+              if let Some(sym) = scopes.symbol_id_for(ref_id) {
+                set.remove(&sym);
+              }
+            }
+          }
+        }
+        invalidate_call_args_in_expr(&call.callee, set, scopes);
+      }
+      Expression::SequenceExpression(seq) => {
+        for e in &seq.expressions {
+          invalidate_call_args_in_expr(e, set, scopes);
+        }
+      }
+      _ => {}
     }
   }
 
@@ -1074,7 +1134,7 @@ mod test {
         .with_spread_safe_symbols(&spread_safe)
         .detect_side_effect_of_stmt(stmt)
         .has_side_effect();
-      collect_spread_safe_symbols(stmt, &mut spread_safe);
+      update_spread_safe_symbols(stmt, &mut spread_safe, &ast_scopes);
       has_side_effect
     })
   }
@@ -1097,7 +1157,7 @@ mod test {
         let detail = SideEffectDetector::new(&ast_scopes, flags, &options, None)
           .with_spread_safe_symbols(&spread_safe)
           .detect_side_effect_of_stmt(stmt);
-        collect_spread_safe_symbols(stmt, &mut spread_safe);
+        update_spread_safe_symbols(stmt, &mut spread_safe, &ast_scopes);
         detail
       })
       .collect_vec()
@@ -1169,6 +1229,12 @@ mod test {
     assert!(get_statements_side_effect("({ ...getObj() })"));
     // let reassigned from plain object to something else is not safe
     assert!(get_statements_side_effect("let obj = { a: 1 }; obj = makeProxy(); ({ ...obj })"));
+    // Object.defineProperty can add getters, invalidating spread safety
+    assert!(get_statements_side_effect(
+      "const o = { a: 1 }; Object.defineProperty(o, 'x', { get() { return 1; } }); ({ ...o })"
+    ));
+    // Any function call with the symbol as argument invalidates it
+    assert!(get_statements_side_effect("const o = { a: 1 }; mutate(o); ({ ...o })"));
   }
 
   #[test]

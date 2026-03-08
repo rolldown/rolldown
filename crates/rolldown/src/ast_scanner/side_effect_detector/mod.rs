@@ -56,7 +56,13 @@ impl<'a> SideEffectDetector<'a> {
     options: &'a SharedNormalizedBundlerOptions,
     side_effect_free_function_symbol_ref: Option<&'a FxHashSet<Address>>,
   ) -> Self {
-    Self { scope, options, flat_options, side_effect_free_function_symbol_ref, spread_safe_symbol_ids: None }
+    Self {
+      scope,
+      options,
+      flat_options,
+      side_effect_free_function_symbol_ref,
+      spread_safe_symbol_ids: None,
+    }
   }
 
   pub fn with_spread_safe_symbols(mut self, symbols: &'a FxHashSet<SymbolId>) -> Self {

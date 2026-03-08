@@ -25,7 +25,8 @@ use rolldown_std_utils::OptionExt;
 use crate::ast_scanner::{TraverseState, cjs_export_analyzer::CommonJsAstType};
 
 use super::{
-  AstScanner, UntranspiledSyntax, cjs_export_analyzer::CjsGlobalAssignmentType,
+  AstScanner, UntranspiledSyntax,
+  cjs_export_analyzer::CjsGlobalAssignmentType,
   side_effect_detector::{SideEffectDetector, is_plain_object_literal},
 };
 

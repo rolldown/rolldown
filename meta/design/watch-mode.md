@@ -310,30 +310,9 @@ The watcher uses `Bundler::with_cached_bundle_experimental()` to get `&mut Bundl
 
 This matches the legacy watcher's approach (`with_cached_bundle`), where `watch_files()` was called between scan and write phases.
 
-### Missing File Detection
+### Missing File Recovery
 
-When an import resolves to a non-existent file (e.g. `import './components/button.js'`), the build errors. Watch mode should detect when the missing file is later created and trigger a rebuild.
-
-**Challenge:** `notify` can't watch non-existent paths (unlike chokidar, which internally watches the parent directory).
-
-**Approach — directory-based tracking:**
-
-1. **Track target directories** (`resolve_utils.rs`): On `ResolveError::NotFound` for relative specifiers (`./`, `../`), join with the importer's directory then take the parent. Absolute specifiers are not tracked — the ancestor fallback could reach overly broad system directories (e.g. `/opt`, `/usr`). Root directories are also skipped. For `import './components/button.js'` from `/src/main.js`, this inserts `/src/components/`.
-
-2. **Watch directories** (`watch_task.rs`): After each build, directories from `plugin_driver.missing_import_dirs` are registered with the fs watcher using `NonRecursive` mode. If the target directory doesn't exist yet, the nearest existing ancestor is watched instead. The directory is only marked as "registered" when the actual target dir is watched — ancestor fallbacks are retried on the next build so that once the directory exists, a direct watch is added.
-
-3. **Rebuild on create** (`watch_task.rs`): `mark_needs_rebuild()` accepts the change kind. For `Create` events, it checks two conditions: (a) if the created path _itself_ is in `active_missing_dirs` (handles the case where a missing directory is created — ancestor watch detects this), or (b) if the created file's _parent_ is in `active_missing_dirs` (handles the case where a file is created in a watched missing directory). The resolver then re-attempts resolution — no path guessing needed.
-
-4. **Lifecycle**: Two sets track missing dirs at different scopes:
-   - `plugin_driver.missing_import_dirs` — cleared between rebuilds (via `plugin_driver.clear()`), repopulated during resolution. Reflects only the _current_ build's missing imports.
-   - `WatchTask.active_missing_dirs` — cleared at the start of each build and repopulated from the plugin driver's set. Only directories in this set trigger rebuilds on `Create` events, so once a missing import is resolved, its directory no longer triggers spurious rebuilds.
-   - `WatchTask.registered_missing_dirs` — tracks directories where a direct (non-ancestor) watch has been added with notify. Only populated when the actual target dir is watched, not when falling back to an ancestor.
-
-**Tradeoffs:**
-
-- While a missing import error persists, _any_ file creation in the target directory triggers a rebuild (spurious rebuilds). Acceptable because the build is already in an error state, debouncing limits frequency, and failed resolution is cheap.
-- Ancestor fallbacks may re-register the ancestor watch on each rebuild until the target directory exists. This is cheap and ensures correct behavior.
-- Goes beyond Rollup's behavior — Rollup only watches successfully loaded modules and relies on the importer being re-saved to discover new files.
+When an import resolves to a non-existent file, the build errors. Watch mode relies on the resolver cache being cleared before each rebuild (`bundler.clear_resolver_cache()`). The expected recovery workflow is: create the missing file, then manually edit a watched file (e.g. noop edit to the importer) to trigger a rebuild. The resolver re-evaluates the import with a fresh cache and succeeds. This matches Rollup's behavior — Rollup only watches successfully loaded modules.
 
 ### Notify Event Mapping
 

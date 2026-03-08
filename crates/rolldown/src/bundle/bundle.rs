@@ -143,10 +143,6 @@ impl Bundle {
     &self.plugin_driver.watch_files
   }
 
-  pub fn get_missing_import_dirs(&self) -> &Arc<FxDashSet<ArcStr>> {
-    &self.plugin_driver.missing_import_dirs
-  }
-
   pub fn context(&self) -> BundleHandle {
     BundleHandle {
       options: Arc::clone(&self.options),

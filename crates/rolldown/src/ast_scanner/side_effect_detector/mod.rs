@@ -1249,6 +1249,16 @@ mod test {
     assert!(get_statements_side_effect(
       "const o = { a: 1 }; o.__defineGetter__('x', function() { sideEffect(); }); ({ ...o })",
     ));
+    // Parenthesized expressions must not defeat the analysis
+    assert!(get_statements_side_effect("const o = { a: 1 }; mutate((o)); ({ ...o })"));
+    assert!(get_statements_side_effect(
+      "const o = { a: 1 }; (o).__defineGetter__('x', function() {}); ({ ...o })",
+    ));
+    // Sequence expressions (e.g. indirect call pattern) must not defeat the analysis
+    assert!(get_statements_side_effect(
+      "const o = { a: 1 }; (void 0, o).__defineGetter__('x', function() {}); ({ ...o })",
+    ));
+    assert!(get_statements_side_effect("const o = { a: 1 }; mutate((void 0, o)); ({ ...o })"));
   }
 
   #[test]

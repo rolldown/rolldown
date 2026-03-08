@@ -1016,7 +1016,7 @@ impl<'a> SideEffectDetector<'a> {
 /// all simple `init` properties (no getters, setters, or methods with
 /// non-`init` kind). Such objects are safe to spread without triggering
 /// getters or Proxy traps.
-pub(crate) fn is_plain_object_literal(expr: &Expression) -> bool {
+pub fn is_plain_object_literal(expr: &Expression) -> bool {
   matches!(expr, Expression::ObjectExpression(obj)
     if !obj.properties.iter().any(|p| matches!(p,
       ast::ObjectPropertyKind::ObjectProperty(prop)

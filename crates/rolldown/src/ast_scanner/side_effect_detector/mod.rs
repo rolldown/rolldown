@@ -1168,9 +1168,7 @@ mod test {
     // Spreading a call expression has side effects (result could be Proxy)
     assert!(get_statements_side_effect("({ ...getObj() })"));
     // let reassigned from plain object to something else is not safe
-    assert!(get_statements_side_effect(
-      "let obj = { a: 1 }; obj = makeProxy(); ({ ...obj })"
-    ));
+    assert!(get_statements_side_effect("let obj = { a: 1 }; obj = makeProxy(); ({ ...obj })"));
   }
 
   #[test]

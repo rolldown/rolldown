@@ -552,24 +552,19 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     // or __defineGetter__) making later spreads potentially side-effectful.
     if !self.spread_safe_symbol_ids.is_empty() {
       for arg in &it.arguments {
-        if let ast::Argument::Identifier(ident) = arg {
-          if let Some(ref_id) = ident.reference_id.get() {
-            if let Some(sym) = self.result.symbol_ref_db.ast_scopes.symbol_id_for(ref_id) {
-              self.spread_safe_symbol_ids.remove(&sym);
-            }
+        match arg {
+          ast::Argument::SpreadElement(spread) => {
+            self.invalidate_spread_safe_from_expr(&spread.argument);
+          }
+          _ => {
+            self.invalidate_spread_safe_from_expr(arg.to_expression());
           }
         }
       }
       // Also invalidate when the object is the receiver of a method call
-      // (e.g. o.__defineGetter__(...), o.method())
+      // (e.g. o.__defineGetter__(...), (o).method(), (void 0, o).method())
       if let Some(member) = it.callee.as_member_expression() {
-        if let Expression::Identifier(ident) = member.object() {
-          if let Some(ref_id) = ident.reference_id.get() {
-            if let Some(sym) = self.result.symbol_ref_db.ast_scopes.symbol_id_for(ref_id) {
-              self.spread_safe_symbol_ids.remove(&sym);
-            }
-          }
-        }
+        self.invalidate_spread_safe_from_expr(member.object());
       }
     }
     walk::walk_call_expression(self, it);
@@ -603,6 +598,34 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
+  /// Unwrap parenthesized/sequence expressions and invalidate any spread-safe
+  /// symbol found at the base. This handles patterns like `(o)`, `(void 0, o)`,
+  /// `(1, 2, 3, o)` etc.
+  fn invalidate_spread_safe_from_expr(&mut self, mut expr: &Expression<'ast>) {
+    loop {
+      match expr {
+        Expression::ParenthesizedExpression(paren) => {
+          expr = &paren.expression;
+        }
+        Expression::SequenceExpression(seq) => {
+          if let Some(last) = seq.expressions.last() {
+            expr = last;
+          } else {
+            return;
+          }
+        }
+        _ => break,
+      }
+    }
+    if let Expression::Identifier(ident) = expr {
+      if let Some(ref_id) = ident.reference_id.get() {
+        if let Some(sym) = self.result.symbol_ref_db.ast_scopes.symbol_id_for(ref_id) {
+          self.spread_safe_symbol_ids.remove(&sym);
+        }
+      }
+    }
+  }
+
   /// visit `Class` of declaration
   #[expect(clippy::unused_self)]
   pub fn get_class_id(&self, class: &ast::Class<'ast>) -> Option<SymbolId> {

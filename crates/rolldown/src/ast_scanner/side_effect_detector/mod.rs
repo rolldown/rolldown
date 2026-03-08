@@ -1013,14 +1013,13 @@ impl<'a> SideEffectDetector<'a> {
 }
 
 /// Returns `true` if the expression is an object literal whose properties are
-/// all simple `init` properties (no getters, setters, or methods with
-/// non-`init` kind). Such objects are safe to spread without triggering
-/// getters or Proxy traps.
+/// all simple `init` properties (no getters, setters, or spreads).
+/// Such objects are safe to spread without triggering getters or Proxy traps.
 pub fn is_plain_object_literal(expr: &Expression) -> bool {
   matches!(expr, Expression::ObjectExpression(obj)
-    if !obj.properties.iter().any(|p| matches!(p,
+    if obj.properties.iter().all(|p| matches!(p,
       ast::ObjectPropertyKind::ObjectProperty(prop)
-        if prop.kind != ast::PropertyKind::Init
+        if prop.kind == ast::PropertyKind::Init
     ))
   )
 }
@@ -1092,6 +1091,37 @@ mod test {
     }
   }
 
+  /// Unwrap parenthesized/sequence expressions and remove any found
+  /// spread-safe symbol from the set.
+  fn unwrap_and_invalidate(
+    mut expr: &Expression,
+    set: &mut FxHashSet<SymbolId>,
+    scopes: &AstScopes,
+  ) {
+    loop {
+      match expr {
+        Expression::ParenthesizedExpression(paren) => {
+          expr = &paren.expression;
+        }
+        Expression::SequenceExpression(seq) => {
+          if let Some(last) = seq.expressions.last() {
+            expr = last;
+          } else {
+            return;
+          }
+        }
+        _ => break,
+      }
+    }
+    if let Expression::Identifier(ident) = expr {
+      if let Some(ref_id) = ident.reference_id.get() {
+        if let Some(sym) = scopes.symbol_id_for(ref_id) {
+          set.remove(&sym);
+        }
+      }
+    }
+  }
+
   fn invalidate_call_args_in_expr(
     expr: &Expression,
     set: &mut FxHashSet<SymbolId>,
@@ -1100,23 +1130,18 @@ mod test {
     match expr {
       Expression::CallExpression(call) => {
         for arg in &call.arguments {
-          if let ast::Argument::Identifier(ident) = arg {
-            if let Some(ref_id) = ident.reference_id.get() {
-              if let Some(sym) = scopes.symbol_id_for(ref_id) {
-                set.remove(&sym);
-              }
+          match arg {
+            ast::Argument::SpreadElement(spread) => {
+              unwrap_and_invalidate(&spread.argument, set, scopes);
+            }
+            _ => {
+              unwrap_and_invalidate(arg.to_expression(), set, scopes);
             }
           }
         }
         // Also invalidate when the object is the receiver of a method call
         if let Some(member) = call.callee.as_member_expression() {
-          if let Expression::Identifier(ident) = member.object() {
-            if let Some(ref_id) = ident.reference_id.get() {
-              if let Some(sym) = scopes.symbol_id_for(ref_id) {
-                set.remove(&sym);
-              }
-            }
-          }
+          unwrap_and_invalidate(member.object(), set, scopes);
         }
         invalidate_call_args_in_expr(&call.callee, set, scopes);
       }
@@ -1239,26 +1264,62 @@ mod test {
     assert!(get_statements_side_effect("({ ...getObj() })"));
     // let reassigned from plain object to something else is not safe
     assert!(get_statements_side_effect("let obj = { a: 1 }; obj = makeProxy(); ({ ...obj })"));
-    // Object.defineProperty can add getters, invalidating spread safety
-    assert!(get_statements_side_effect(
-      "const o = { a: 1 }; Object.defineProperty(o, 'x', { get() { return 1; } }); ({ ...o })"
-    ));
+    // Object.defineProperty can add getters, invalidating spread safety.
+    // Verify the spread statement itself (last) is side-effectful.
+    assert!(
+      get_statements_side_effect_details(
+        "const o = { a: 1 }; Object.defineProperty(o, 'x', { get() { return 1; } }); ({ ...o })"
+      )
+      .last()
+      .unwrap()
+      .has_side_effect()
+    );
     // Any function call with the symbol as argument invalidates it
-    assert!(get_statements_side_effect("const o = { a: 1 }; mutate(o); ({ ...o })"));
-    // A method call on the object as receiver can mutate it (e.g. by adding a getter)
-    assert!(get_statements_side_effect(
-      "const o = { a: 1 }; o.__defineGetter__('x', function() { sideEffect(); }); ({ ...o })",
-    ));
+    assert!(
+      get_statements_side_effect_details("const o = { a: 1 }; mutate(o); ({ ...o })")
+        .last()
+        .unwrap()
+        .has_side_effect()
+    );
+    // A method call on the object as receiver can mutate it
+    assert!(
+      get_statements_side_effect_details(
+        "const o = { a: 1 }; o.__defineGetter__('x', function() { sideEffect(); }); ({ ...o })",
+      )
+      .last()
+      .unwrap()
+      .has_side_effect()
+    );
     // Parenthesized expressions must not defeat the analysis
-    assert!(get_statements_side_effect("const o = { a: 1 }; mutate((o)); ({ ...o })"));
-    assert!(get_statements_side_effect(
-      "const o = { a: 1 }; (o).__defineGetter__('x', function() {}); ({ ...o })",
-    ));
+    assert!(
+      get_statements_side_effect_details("const o = { a: 1 }; mutate((o)); ({ ...o })")
+        .last()
+        .unwrap()
+        .has_side_effect()
+    );
+    assert!(
+      get_statements_side_effect_details(
+        "const o = { a: 1 }; (o).__defineGetter__('x', function() {}); ({ ...o })",
+      )
+      .last()
+      .unwrap()
+      .has_side_effect()
+    );
     // Sequence expressions (e.g. indirect call pattern) must not defeat the analysis
-    assert!(get_statements_side_effect(
-      "const o = { a: 1 }; (void 0, o).__defineGetter__('x', function() {}); ({ ...o })",
-    ));
-    assert!(get_statements_side_effect("const o = { a: 1 }; mutate((void 0, o)); ({ ...o })"));
+    assert!(
+      get_statements_side_effect_details(
+        "const o = { a: 1 }; (void 0, o).__defineGetter__('x', function() {}); ({ ...o })",
+      )
+      .last()
+      .unwrap()
+      .has_side_effect()
+    );
+    assert!(
+      get_statements_side_effect_details("const o = { a: 1 }; mutate((void 0, o)); ({ ...o })")
+        .last()
+        .unwrap()
+        .has_side_effect()
+    );
   }
 
   #[test]

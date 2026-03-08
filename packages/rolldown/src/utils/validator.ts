@@ -274,6 +274,18 @@ const WatcherFileWatcherOptionsSchema = v.strictObject({
       'Compare file contents for poll-based watchers (only used when usePolling is true)',
     ),
   ),
+  useDebounce: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Use debounced event delivery at the filesystem level'),
+  ),
+  debounceDelay: v.pipe(
+    v.optional(v.number()),
+    v.description('Debounce delay in milliseconds (only used when useDebounce is true)'),
+  ),
+  debounceTickRate: v.pipe(
+    v.optional(v.number()),
+    v.description('Tick rate in milliseconds for debouncer (only used when useDebounce is true)'),
+  ),
 });
 
 const WatcherOptionsSchema = v.strictObject({

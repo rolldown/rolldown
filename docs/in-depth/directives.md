@@ -21,6 +21,7 @@ import { defineConfig } from 'rolldown';
 
 export default defineConfig({
   output: {
+    format: 'cjs',
     strict: true,
   },
 });

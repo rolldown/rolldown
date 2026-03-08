@@ -84,6 +84,7 @@ jobs:
         with:
           # No caching to avoid cache poisoning in release artifacts
           restore-cache: false
+          save-cache: false
 
       - name: Rustup Adds Target
         run: rustup target add ${{ matrix.target }}
@@ -255,6 +256,7 @@ jobs:
         with:
           # No caching to avoid cache poisoning in release artifacts
           restore-cache: false
+          save-cache: false
 
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
@@ -302,6 +304,7 @@ jobs:
         with:
           # No caching to avoid cache poisoning in release artifacts
           restore-cache: false
+          save-cache: false
 
       - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 

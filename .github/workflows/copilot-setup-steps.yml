@@ -30,7 +30,7 @@ jobs:
 
       - uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
-          cache-key: debug-build
+          cache-key: lint
           save-cache: false
           tools: just,cargo-insta,typos-cli,cargo-shear
           components: clippy rust-docs rustfmt

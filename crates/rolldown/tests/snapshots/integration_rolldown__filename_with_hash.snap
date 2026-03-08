@@ -6103,6 +6103,12 @@ expression: output
 - main-!~{000}~.js => main-DRyAf0kR.js
 - assets/index-Cctl21F7.txt
 
+# tests/rolldown/topics/new_url/template_literal_no_substitution
+
+- main-!~{000}~.js => main-bPwX-9qq.js
+- assets/asset1-62jLpcKt.txt
+- assets/asset2-3AI71wi7.txt
+
 # tests/rolldown/topics/new_url/template_literal_with_expression
 
 - main-!~{000}~.js => main-BB2tmmFW.js

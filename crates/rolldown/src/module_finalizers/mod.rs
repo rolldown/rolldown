@@ -808,10 +808,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
 
-    let first_arg_string_literal = expr.arguments.first_mut().and_then(|arg| match arg {
-      ast::Argument::StringLiteral(string_literal) => Some(string_literal),
-      _ => None,
-    })?;
+    let first_arg_expr = expr.arguments.first_mut().and_then(|a| a.as_expression_mut())?;
+    // bail if not a static string literal
+    match &first_arg_expr {
+      ast::Expression::StringLiteral(_) => {}
+      ast::Expression::TemplateLiteral(tpl) if tpl.is_no_substitution_template() => {}
+      _ => return None,
+    }
 
     let importee =
       rec.resolved_module.and_then(|module_idx| self.ctx.modules[module_idx].as_normal())?;
@@ -822,7 +825,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let abs_path = self.ctx.options.cwd.join(&self.ctx.options.out_dir).join(filename.as_str());
     let import_path = self.ctx.chunk.relative_path_for(abs_path.as_path());
 
-    first_arg_string_literal.value = self.snippet.atom(&import_path);
+    *first_arg_expr = self.snippet.string_literal_expr(&import_path, first_arg_expr.span());
     None
   }
 

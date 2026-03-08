@@ -819,10 +819,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let importee =
       rec.resolved_module.and_then(|module_idx| self.ctx.modules[module_idx].as_normal())?;
 
-    let chunk_idx = &self.ctx.chunk_graph.module_to_chunk[importee.idx]?;
-    let chunk = &self.ctx.chunk_graph.chunk_table[*chunk_idx];
-    let asset_filename = &chunk.asset_absolute_preliminary_filenames[&importee.idx];
-    let import_path = self.ctx.chunk.relative_path_for(asset_filename.as_path());
+    // Look up the emitted asset filename via the FileEmitter bridge
+    let ref_id = self.ctx.file_emitter.file_ref_for_module(&importee.id)?;
+    let filename = self.ctx.file_emitter.get_file_name(&ref_id).ok()?;
+    let abs_path = self.ctx.options.cwd.join(&self.ctx.options.out_dir).join(filename.as_str());
+    let import_path = self.ctx.chunk.relative_path_for(abs_path.as_path());
 
     *first_arg_expr = self.snippet.string_literal_expr(&import_path, first_arg_expr.span());
     None

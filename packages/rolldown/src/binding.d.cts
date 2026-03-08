@@ -2780,6 +2780,9 @@ export interface BindingWatchOption {
   usePolling?: boolean
   pollInterval?: number
   compareContentsForPolling?: boolean
+  useDebounce?: boolean
+  debounceDelay?: number
+  debounceTickRate?: number
   onInvalidate?: ((id: string) => void) | undefined
 }
 

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::file_change_event::FileChangeEvent;
 use crate::watch_task::WatchTaskIdx;
 use crate::watcher_msg::WatcherMsg;
@@ -21,9 +23,14 @@ impl TaskFsEventHandler {
   /// cause an infinite rebuild loop on Linux where inotify emits `IN_OPEN` events.
   ///
   /// Aligned with `BundleCoordinator::handle_watch_event` in `rolldown_dev`.
-  fn map_event_kind(kind: &notify::EventKind) -> Option<WatcherChangeKind> {
+  fn map_raw_event_kind_to_watcher_event_kind(
+    kind: &notify::EventKind,
+  ) -> Option<WatcherChangeKind> {
     match kind {
-      notify::EventKind::Create(_) => Some(WatcherChangeKind::Create),
+      notify::EventKind::Create(_)
+      | notify::EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::To)) => {
+        Some(WatcherChangeKind::Create)
+      }
       notify::EventKind::Modify(notify::event::ModifyKind::Name(
         notify::event::RenameMode::From,
       ))
@@ -31,6 +38,24 @@ impl TaskFsEventHandler {
       notify::EventKind::Modify(_) => Some(WatcherChangeKind::Update),
       _ => None,
     }
+  }
+
+  /// `RenameMode::Both` carries `[from_path, to_path]` — emit `Delete` for the
+  /// source and `Create` for the destination so both signals are preserved.
+  fn map_rename_to_delete_create_changes(
+    paths: impl IntoIterator<Item = PathBuf>,
+  ) -> Vec<FileChangeEvent> {
+    let mut paths = paths.into_iter();
+    let mut result = Vec::new();
+    if let Some(from) = paths.next() {
+      result
+        .push(FileChangeEvent::new(from.to_string_lossy().into_owned(), WatcherChangeKind::Delete));
+    }
+    if let Some(to) = paths.next() {
+      result
+        .push(FileChangeEvent::new(to.to_string_lossy().into_owned(), WatcherChangeKind::Create));
+    }
+    result
   }
 }
 
@@ -41,13 +66,23 @@ impl FsEventHandler for TaskFsEventHandler {
         let changes: Vec<FileChangeEvent> = fs_events
           .into_iter()
           .filter_map(|fs_event| {
-            let kind = Self::map_event_kind(&fs_event.detail.kind)?;
+            if matches!(
+              fs_event.detail.kind,
+              notify::EventKind::Modify(notify::event::ModifyKind::Name(
+                notify::event::RenameMode::Both
+              ))
+            ) {
+              return Some(Self::map_rename_to_delete_create_changes(fs_event.detail.paths));
+            }
+
+            let kind = Self::map_raw_event_kind_to_watcher_event_kind(&fs_event.detail.kind)?;
             Some(
               fs_event
                 .detail
                 .paths
                 .into_iter()
-                .map(move |path| FileChangeEvent::new(path.to_string_lossy().into_owned(), kind)),
+                .map(|path| FileChangeEvent::new(path.to_string_lossy().into_owned(), kind))
+                .collect(),
             )
           })
           .flatten()

@@ -9,10 +9,9 @@ export interface CliOptions extends InputCliOptions, OutputCliOptions {
   environment?: string | string[];
 }
 
-export interface OptionConfig {
+interface OptionConfig {
   abbreviation?: string;
   description?: string;
-  default?: string | boolean;
   hint?: string;
   reverse?: boolean;
   /**
@@ -58,7 +57,6 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   },
   sourcemap: {
     abbreviation: 's',
-    default: true,
   },
   minify: {
     abbreviation: 'm',
@@ -76,15 +74,12 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
     hint: 'name',
   },
   externalLiveBindings: {
-    default: true,
     reverse: true,
   },
   treeshake: {
-    default: true,
     reverse: true,
   },
   preserveEntrySignatures: {
-    default: 'strict',
     reverse: true,
   },
   moduleTypes: {

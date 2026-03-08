@@ -81,6 +81,24 @@ export interface WatcherFileWatcherOptions {
    * @default false
    */
   compareContentsForPolling?: boolean;
+  /**
+   * Whether to use debounced event delivery at the filesystem level.
+   * This coalesces rapid filesystem events before they reach the build coordinator.
+   * @default false
+   */
+  useDebounce?: boolean;
+  /**
+   * Debounce delay in milliseconds for fs-level debounced watchers.
+   * Only used when {@linkcode useDebounce} is `true`.
+   * @default 10
+   */
+  debounceDelay?: number;
+  /**
+   * Tick rate in milliseconds for the debouncer's internal polling.
+   * Only used when {@linkcode useDebounce} is `true`.
+   * When undefined, auto-selects 1/4 of debounceDelay.
+   */
+  debounceTickRate?: number;
 }
 
 export interface WatcherOptions {

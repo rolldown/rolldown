@@ -110,6 +110,10 @@ impl PluginContext {
     call_native_only!(self, "get_file_name", ctx => ctx.get_file_name(reference_id))
   }
 
+  pub fn associate_module_with_file_ref(&self, module_id: &str, reference_id: &str) {
+    call_native_only!(self, "associate_module_with_file_ref", ctx => ctx.associate_module_with_file_ref(module_id, reference_id));
+  }
+
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
     call_native_only!(self, "get_module_info", ctx => ctx.get_module_info(module_id))
   }

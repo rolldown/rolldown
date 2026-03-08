@@ -112,8 +112,8 @@
     "build-native:memory-profile": "pnpm run build-binding:profile --features default_global_allocator && pnpm run build-js-glue",
     "build-wasi:debug": "TARGET='rolldown-wasi' pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
     "build-wasi:release": "TARGET='rolldown-wasi' pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
-    "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
-    "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
+    "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi|node)$/'",
+    "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding:wasi:release|node)$/'",
     "# Scrips for docs #": "_",
     "prepublishOnly": "napi pre-publish -t npm --no-gh-release",
     "publint": "publint ."
@@ -128,6 +128,7 @@
     "@oxc-node/cli": "catalog:",
     "@rollup/plugin-json": "catalog:",
     "buble": "catalog:",
+    "cac": "catalog:",
     "consola": "catalog:",
     "execa": "catalog:",
     "glob": "catalog:",

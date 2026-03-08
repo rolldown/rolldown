@@ -11,19 +11,13 @@ mod paths_mut;
 mod recommended_fs_watcher;
 mod utils;
 
-#[cfg(not(target_family = "wasm"))]
 mod poll_fs_watcher;
-#[cfg(not(target_family = "wasm"))]
 pub use poll_fs_watcher::PollFsWatcher;
 
-#[cfg(not(target_family = "wasm"))]
 mod debounced_poll_fs_watcher;
-#[cfg(not(target_family = "wasm"))]
 pub use debounced_poll_fs_watcher::DebouncedPollFsWatcher;
 
-#[cfg(not(target_family = "wasm"))]
 mod debounced_recommended_fs_watcher;
-#[cfg(not(target_family = "wasm"))]
 pub use debounced_recommended_fs_watcher::DebouncedRecommendedFsWatcher;
 
 pub use crate::{
@@ -39,3 +33,25 @@ pub use paths_mut::PathsMut;
 pub use recommended_fs_watcher::RecommendedFsWatcher;
 
 pub type DynFsWatcher = Box<dyn FsWatcher + Send + 'static>;
+
+/// Create a filesystem watcher based on the `use_polling` and `use_debounce` fields in the config.
+///
+/// This is the canonical factory for non-noop watchers. Consumers that need a `NoopFsWatcher`
+/// (e.g. when watching is disabled) should construct it directly.
+pub fn create_fs_watcher<F: FsEventHandler>(
+  event_handler: F,
+  config: FsWatcherConfig,
+) -> rolldown_error::BuildResult<DynFsWatcher> {
+  match (config.use_polling, config.use_debounce) {
+    (true, false) => Ok(PollFsWatcher::with_config(event_handler, config)?.into_dyn_fs_watcher()),
+    (true, true) => {
+      Ok(DebouncedPollFsWatcher::with_config(event_handler, config)?.into_dyn_fs_watcher())
+    }
+    (false, false) => {
+      Ok(RecommendedFsWatcher::with_config(event_handler, config)?.into_dyn_fs_watcher())
+    }
+    (false, true) => {
+      Ok(DebouncedRecommendedFsWatcher::with_config(event_handler, config)?.into_dyn_fs_watcher())
+    }
+  }
+}

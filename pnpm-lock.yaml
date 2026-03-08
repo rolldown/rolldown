@@ -90,6 +90,9 @@ catalogs:
     buble:
       specifier: ^0.20.0
       version: 0.20.0
+    cac:
+      specifier: ^6.7.14
+      version: 6.7.14
     chalk:
       specifier: ^5.3.0
       version: 5.6.2
@@ -573,6 +576,9 @@ importers:
       buble:
         specifier: 'catalog:'
         version: 0.20.0
+      cac:
+        specifier: 'catalog:'
+        version: 6.7.14
       consola:
         specifier: 'catalog:'
         version: 3.4.2
@@ -4316,6 +4322,10 @@ packages:
 
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
+
+  cac@6.7.14:
+    resolution: {integrity: sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==}
+    engines: {node: '>=8'}
 
   camelcase-keys@6.2.2:
     resolution: {integrity: sha512-YrwaA0vEKazPBkn0ipTiMpSajYDSe+KjQfrjhcBMxJt/znbvlHd8Pw/Vamaz5EB4Wfhs3SUR3Z9mwRu/P3s3Yg==}
@@ -9746,6 +9756,8 @@ snapshots:
       regexpu-core: 4.5.4
 
   buffer-from@1.1.2: {}
+
+  cac@6.7.14: {}
 
   camelcase-keys@6.2.2:
     dependencies:

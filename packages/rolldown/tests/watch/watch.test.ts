@@ -1101,6 +1101,88 @@ test.concurrent(
   },
 );
 
+test.concurrent(
+  'watch import non-existing file then create it',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('import-non-existing-then-create', retryCount, {
+      'main.js': `console.log('main')`,
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+    const watcher = watch({
+      cwd,
+      input: 'main.js',
+      output: { dir: path.join(cwd, 'dist') },
+    });
+    onTestFinished(async () => await watcher.close());
+    await waitBuildFinished(watcher);
+
+    // Edit main.js to import a non-existing file — should cause an error
+    const errors: string[] = [];
+    watcher.on('event', (event) => {
+      if (event.code === 'ERROR') {
+        errors.push(event.error.message);
+      }
+    });
+    await editFile(path.join(cwd, 'main.js'), `import { foo } from './foo.js'\nconsole.log(foo)`);
+    await expect.poll(() => errors.length).toBeGreaterThan(0);
+
+    // Create the missing file — should trigger a successful rebuild
+    await editFile(path.join(cwd, 'foo.js'), `export const foo = 'added'`);
+    await waitBuildFinished(watcher);
+
+    const output = path.join(cwd, 'dist', 'main.js');
+    expect(fs.readFileSync(output, 'utf-8')).toContain('added');
+  },
+);
+
+test.concurrent(
+  'watch import non-existing file then rename to it',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('import-non-existing-then-rename', retryCount, {
+      'main.js': `console.log('main')`,
+      'bar.js': `export const foo = 'renamed'`,
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+    const watcher = watch({
+      cwd,
+      input: 'main.js',
+      output: { dir: path.join(cwd, 'dist') },
+    });
+    onTestFinished(async () => await watcher.close());
+    await waitBuildFinished(watcher);
+
+    // Edit main.js to import a non-existing file — should cause an error
+    const errors: string[] = [];
+    watcher.on('event', (event) => {
+      if (event.code === 'ERROR') {
+        errors.push(event.error.message);
+      }
+    });
+    await editFile(path.join(cwd, 'main.js'), `import { foo } from './foo.js'\nconsole.log(foo)`);
+    await expect.poll(() => errors.length).toBeGreaterThan(0);
+
+    // Rename bar.js to foo.js — should trigger a successful rebuild
+    await sleep(1000);
+    fs.renameSync(path.join(cwd, 'bar.js'), path.join(cwd, 'foo.js'));
+    await waitBuildFinished(watcher);
+
+    const output = path.join(cwd, 'dist', 'main.js');
+    expect(fs.readFileSync(output, 'utf-8')).toContain('renamed');
+  },
+);
+
 function createTestInputAndOutput(testLabel: string, retryCount: number, content?: string) {
   const uniqueId = crypto.randomUUID().slice(0, 8);
   const dirname = `${testLabel}-${uniqueId}-retry${retryCount}`;

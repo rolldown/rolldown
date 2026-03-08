@@ -23,11 +23,21 @@ jobs:
           submodules: true # Pull submodules for additional files
           persist-credentials: false
 
+      - uses: samypr100/setup-dev-drive@30f0f98ae5636b2b6501e181dfb3631b9974818d # v4.0.0
+        if: runner.os == 'Windows'
+        with:
+          drive-size: 8GB
+          drive-format: ReFS
+          env-mapping: |
+            CARGO_HOME,{{ DEV_DRIVE }}/.cargo
+            RUSTUP_HOME,{{ DEV_DRIVE }}/.rustup
+
       - name: Setup Rust
         uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
           tools: just
-          cache-key: debug-build
+          cache-key: cargo-test
+          save-cache: ${{ github.ref_name == 'main' }}
 
       - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 

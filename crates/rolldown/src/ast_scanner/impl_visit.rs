@@ -547,11 +547,23 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_call_expression(&mut self, it: &ast::CallExpression<'ast>) {
     self.try_extract_hmr_info_from_hot_accept_call(it);
     // If a spread-safe symbol is passed as an argument to any function call,
-    // remove it from the set — the function could mutate the object (e.g. via
-    // Object.defineProperty) making later spreads potentially side-effectful.
+    // or is the receiver of a method call, remove it from the set — the
+    // function/method could mutate the object (e.g. via Object.defineProperty
+    // or __defineGetter__) making later spreads potentially side-effectful.
     if !self.spread_safe_symbol_ids.is_empty() {
       for arg in &it.arguments {
         if let ast::Argument::Identifier(ident) = arg {
+          if let Some(ref_id) = ident.reference_id.get() {
+            if let Some(sym) = self.result.symbol_ref_db.ast_scopes.symbol_id_for(ref_id) {
+              self.spread_safe_symbol_ids.remove(&sym);
+            }
+          }
+        }
+      }
+      // Also invalidate when the object is the receiver of a method call
+      // (e.g. o.__defineGetter__(...), o.method())
+      if let Some(member) = it.callee.as_member_expression() {
+        if let Expression::Identifier(ident) = member.object() {
           if let Some(ref_id) = ident.reference_id.get() {
             if let Some(sym) = self.result.symbol_ref_db.ast_scopes.symbol_id_for(ref_id) {
               self.spread_safe_symbol_ids.remove(&sym);

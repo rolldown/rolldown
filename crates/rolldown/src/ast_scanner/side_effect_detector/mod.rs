@@ -1108,6 +1108,16 @@ mod test {
             }
           }
         }
+        // Also invalidate when the object is the receiver of a method call
+        if let Some(member) = call.callee.as_member_expression() {
+          if let Expression::Identifier(ident) = member.object() {
+            if let Some(ref_id) = ident.reference_id.get() {
+              if let Some(sym) = scopes.symbol_id_for(ref_id) {
+                set.remove(&sym);
+              }
+            }
+          }
+        }
         invalidate_call_args_in_expr(&call.callee, set, scopes);
       }
       Expression::SequenceExpression(seq) => {
@@ -1235,6 +1245,10 @@ mod test {
     ));
     // Any function call with the symbol as argument invalidates it
     assert!(get_statements_side_effect("const o = { a: 1 }; mutate(o); ({ ...o })"));
+    // A method call on the object as receiver can mutate it (e.g. by adding a getter)
+    assert!(get_statements_side_effect(
+      "const o = { a: 1 }; o.__defineGetter__('x', function() { sideEffect(); }); ({ ...o })",
+    ));
   }
 
   #[test]

@@ -10,23 +10,27 @@ The `"use strict"` directive is a directive that tells the JavaScript engine to 
 
 Since ES modules are always in strict mode, Rolldown does not output any `"use strict"` directive for `output.format: 'es'`. As a side note, this means code that is not in strict mode are forced to be in strict mode for ES module format output.
 
-When `output.format` is not `'es'`, Rolldown will output the `"use strict"` directive for any of the following cases:
+You can control the `"use strict"` directive emission with the [`output.strict`](/reference/OutputOptions.strict) option:
 
-- The directive is not in the top-level scope and not inside strict mode scope ([REPL](https://repl.rolldown.rs/#eNptjk0KAyEMha8SsrGF4gGE3mQ24mhxsMmgsR0YvHu1pT+LbpJ8L+G97BjQ7Bhp9pteypgJzZdP6Dr6beUsRQdmOEOo5CQygT0cYZ8IQNXioUiOTtTg7KVmAtXvO7eJuo9HI7n6dsLMKc18J+2YQrxo+cT+2fw+ALMPtibpoXnEcJW1inkjQOB8tV1QbinqJbbRngVbz751s2TFF8H2AIc5VRY=))
-- The directive is in the top-level scope and the module is a entry module ([REPL](https://repl.rolldown.rs/#eNptUEtuhDAMvYqVDVCN6Kobuuw12FBwpqmCQx2nTYVy9zGD5qPRbJK8Z7+PshprutU4mjC333F7k+lu+GBGhVWKCFHYjVK99+TmJbDA1/+C/JE+ESyHGar2Nf6kgVF121ZPY6AYPLY+HOvrcv3WNDpVZzSdcMJyMFfdJf9GPC3QE+ZzhQntkLyATTSKCwS7sM4NrD0BMEpiggwvkFVXNFfjOHg/hT9qtaB1x7vcJ5O9wEPe2vNmH5IsSboLBLCB50GJatQ/2MmyXefDFM3+VTM/CEYx5QSMo4I7))
-- The directive is in the top-level scope and `output.preserveModules` is enabled ([REPL](https://repl.rolldown.rs/#eNptkE1uhDAMha9iZQNUiK66ocuuewM2FJwpVYip40ypUO5eZxAz1Wg2Sfzz/L14M9a0m5n8iGvzFfLbm/YW12bQsIgBIQhPgxSvnZ/mhVjg83dBfosfCJZphqJ5Dt+xZ1Rd7ur8QD6Qw8bRqbw2ly9VpVWdjKYVjphqc9Ud/FvioQFcLwZGtH10Ajb6QSbysMvKtYKt8wCMEtnDCk+wqiopVWFMzo304xu1Z6fTP+qDyo6/420d5/EUZYnSHiGAJZ57TRSDbqA+sgtjQD7jO43RYWghf3ovpnxdDpPU2VlRrhcMYtIfQpqMFA==))
-
-If you want to append `"use strict"` to all files, you can use the `output.intro` option:
+- `true` - Always emit `"use strict"` at the top of the output (not applicable for ESM format since ESM is always strict).
+- `false` - Never emit `"use strict"` in the output.
+- `'auto'` (default) - Respect the `"use strict"` directive from the source code.
 
 ```ts
 import { defineConfig } from 'rolldown';
 
 export default defineConfig({
   output: {
-    intro: "'use strict';",
+    strict: true,
   },
 });
 ```
+
+When `output.format` is not `'es'` and `output.strict` is `'auto'`, Rolldown will output the `"use strict"` directive for any of the following cases:
+
+- The directive is not in the top-level scope and not inside strict mode scope ([REPL](https://repl.rolldown.rs/#eNptjk0KAyEMha8SsrGF4gGE3mQ24mhxsMmgsR0YvHu1pT+LbpJ8L+G97BjQ7Bhp9pteypgJzZdP6Dr6beUsRQdmOEOo5CQygT0cYZ8IQNXioUiOTtTg7KVmAtXvO7eJuo9HI7n6dsLMKc18J+2YQrxo+cT+2fw+ALMPtibpoXnEcJW1inkjQOB8tV1QbinqJbbRngVbz751s2TFF8H2AIc5VRY=))
+- The directive is in the top-level scope and the module is an entry module ([REPL](https://repl.rolldown.rs/#eNptUEtuhDAMvYqVDVCN6Kobuuw12FBwpqmCQx2nTYVy9zGD5qPRbJK8Z7+PshprutU4mjC333F7k+lu+GBGhVWKCFHYjVK99+TmJbDA1/+C/JE+ESyHGar2Nf6kgVF121ZPY6AYPLY+HOvrcv3WNDpVZzSdcMJyMFfdJf9GPC3QE+ZzhQntkLyATTSKCwS7sM4NrD0BMEpiggwvkFVXNFfjOHg/hT9qtaB1x7vcJ5O9wEPe2vNmH5IsSboLBLCB50GJatQ/2MmyXefDFM3+VTM/CEYx5QSMo4I7))
+- The directive is in the top-level scope and `output.preserveModules` is enabled ([REPL](https://repl.rolldown.rs/#eNptkE1uhDAMha9iZQNUiK66ocuuewM2FJwpVYip40ypUO5eZxAz1Wg2Sfzz/L14M9a0m5n8iGvzFfLbm/YW12bQsIgBIQhPgxSvnZ/mhVjg83dBfosfCJZphqJ5Dt+xZ1Rd7ur8QD6Qw8bRqbw2ly9VpVWdjKYVjphqc9Ud/FvioQFcLwZGtH10Ajb6QSbysMvKtYKt8wCMEtnDCk+wqiopVWFMzo304xu1Z6fTP+qDyo6/420d5/EUZYnSHiGAJZ57TRSDbqA+sgtjQD7jO43RYWghf3ovpnxdDpPU2VlRrhcMYtIfQpqMFA==))
 
 ## Other directives
 

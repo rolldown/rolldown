@@ -28,7 +28,6 @@ jobs:
     outputs:
       rust-changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}
       node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}
-      pluginutils-changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}
     steps:
       - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
 
@@ -57,21 +56,14 @@ jobs:
               - 'package.json'
               - 'justfile'
               - 'rollup'
-            pluginutils-changes:
-              - 'packages/pluginutils/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
       - name: Show outputs
         run: |
           echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}"
           echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}"
-          echo "PluginUtils changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}"
 
   rust-validation:
     name: Rust Validation
     needs: changes
-    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
@@ -84,7 +76,19 @@ jobs:
           save-cache: ${{ github.ref_name == 'main' }}
           components: clippy rustfmt
 
-      - run: just lint-rust
+      - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
+
+      - name: Lint Rust
+        if: ${{ needs.changes.outputs.rust-changes == 'true' }}
+        run: just lint-rust
+
+      - name: Lint Filename
+        run: cargo ls-lint
+
+      - name: Check generated code
+        run: |
+          cargo run --bin generator
+          git diff --exit-code
 
   cargo-test:
     needs: changes
@@ -131,34 +135,6 @@ jobs:
     with:
       os: ubuntu-latest
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
-
-  type-check:
-    name: Type Check
-    needs: [changes, build-rolldown-ubuntu]
-    if: |
-      always() &&
-      (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
-
-      - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
-
-      - name: Download Native Rolldown Build
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: rolldown-native-ubuntu-latest
-          path: ./packages
-
-      - name: Build `@rolldown/test-dev-server`
-        run: pnpm --filter '@rolldown/test-dev-server' build
-
-      - name: Type Check
-        run: pnpm type-check
-
-      - name: Node Type Test
-        run: pnpm run --filter rolldown-tests test:types
 
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]
@@ -213,19 +189,6 @@ jobs:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
       os: ubuntu-latest
 
-  pluginutils-test:
-    name: Pluginutils Test
-    needs: changes
-    if: ${{ needs.changes.outputs.pluginutils-changes == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
-
-      - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
-
-      - name: Test `@rolldown/pluginutils`
-        run: pnpm --filter '@rolldown/pluginutils' test
-
   node-validation:
     name: Node Validation
     needs: changes
@@ -261,6 +224,9 @@ jobs:
       - name: Build @rolldown/pluginutils
         run: just build-pluginutils
 
+      - name: Test Pluginutils
+        run: pnpm --filter '@rolldown/pluginutils' test
+
       - name: Lint Code
         run: pnpm lint-code
 
@@ -273,21 +239,15 @@ jobs:
       - name: Validate workspace package
         run: node scripts/misc/published-package-check.mjs
 
-  repo-validation:
-    name: Repo Validation
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
+      - name: Build @rolldown/test-dev-server
+        run: pnpm --filter '@rolldown/test-dev-server' build
 
-      - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
+      - name: Type Check
+        run: pnpm type-check
 
-      - name: Lint Filename
-        run: cargo ls-lint
+      - name: Node Type Test
+        run: pnpm run --filter rolldown-tests test:types
 
-      - name: update generated code
-        run: |
-          cargo run --bin generator
-          git diff --exit-code
 
   typos:
     name: Spell Check

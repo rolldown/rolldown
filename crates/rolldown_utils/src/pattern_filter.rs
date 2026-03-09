@@ -104,7 +104,7 @@ pub fn filter(
 /// Both arguments must use forward slashes. Exposed so callers outside this
 /// crate (e.g. `rolldown_watcher`) don't need a direct `fast-glob` dep.
 pub fn glob_match_path(pattern: &str, path: &str) -> bool {
-  todo!()
+  glob_match(pattern.as_bytes(), path.as_bytes())
 }
 
 /// https://github.com/rollup/plugins/blob/e1a5ef99f1578eb38a8c87563cb9651db228f3bd/packages/pluginutils/src/createFilter.ts#L10

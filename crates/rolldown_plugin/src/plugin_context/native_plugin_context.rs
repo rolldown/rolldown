@@ -40,6 +40,7 @@ pub struct NativePluginContextImpl {
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<FxDashSet<ArcStr>>,
+  pub(crate) watch_globs: Arc<FxDashSet<ArcStr>>,
   pub(crate) module_infos: SharedModuleInfoDashMap,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_devtools::Session,
@@ -191,6 +192,12 @@ impl NativePluginContextImpl {
 
   pub fn add_watch_file(&self, file: &str) {
     self.watch_files.insert(file.into());
+  }
+
+  pub fn add_watch_glob(&self, glob: &str) {
+    let cwd = self.options.cwd.to_string_lossy();
+    let normalized = rolldown_utils::pattern_filter::get_matcher_string(glob, &cwd);
+    self.watch_globs.insert(normalized.into());
   }
 
   fn log(&self, level: LogLevel, log: LogWithoutPlugin) {

@@ -14,6 +14,11 @@ impl LoadPluginContext {
     Self { inner, module_idx }
   }
 
+  /// Add a glob pattern to watch in watch mode.
+  pub fn add_watch_glob(&self, glob: &str) {
+    self.inner.add_watch_glob(glob);
+  }
+
   /// Add a file as a dependency.
   ///
   /// * file - The file to add as a watch dependency. This should be a normalized absolute path.

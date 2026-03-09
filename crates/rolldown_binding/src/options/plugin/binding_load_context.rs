@@ -24,4 +24,9 @@ impl BindingLoadPluginContext {
   pub fn add_watch_file(&self, file: String) {
     self.inner.add_watch_file(&file);
   }
+
+  #[napi]
+  pub fn add_watch_glob(&self, glob: String) {
+    self.inner.add_watch_glob(&glob);
+  }
 }

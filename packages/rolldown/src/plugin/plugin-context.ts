@@ -234,6 +234,18 @@ export interface PluginContext extends MinimalPluginContext {
     id: string,
   ): void;
   /**
+   * Adds a glob pattern to be monitored in watch mode. Any file whose path matches the pattern
+   * will trigger a rebuild when changed.
+   */
+  addWatchGlob(
+    /**
+     * A glob pattern such as `"src/**\/*.ts"` or `"data/*.json"`.
+     *
+     * Relative patterns are resolved against the current working directory.
+     */
+    pattern: string,
+  ): void;
+  /**
    * Loads and parses the module corresponding to the given id, attaching additional
    * meta information to the module if provided. This will trigger the same
    * {@linkcode Plugin.load | load}, {@linkcode Plugin.transform | transform} and
@@ -427,6 +439,10 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
 
   public addWatchFile(id: string): void {
     this.context.addWatchFile(id);
+  }
+
+  public addWatchGlob(pattern: string): void {
+    this.context.addWatchGlob(pattern);
   }
 
   public parse(input: string, options?: ParserOptions | null): Program {

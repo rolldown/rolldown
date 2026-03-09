@@ -25,4 +25,8 @@ export class LoadPluginContextImpl extends PluginContextImpl {
     // Use the inner context's addWatchFile which tracks dependencies for HMR
     this.inner.addWatchFile(id);
   }
+
+  public addWatchGlob(pattern: string): void {
+    this.inner.addWatchGlob(pattern);
+  }
 }

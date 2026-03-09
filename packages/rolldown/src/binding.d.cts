@@ -1474,6 +1474,7 @@ export declare class BindingDevEngine {
 export declare class BindingLoadPluginContext {
   inner(): BindingPluginContext
   addWatchFile(file: string): void
+  addWatchGlob(glob: string): void
 }
 
 export declare class BindingMagicString {
@@ -1640,6 +1641,7 @@ export declare class BindingPluginContext {
   getModuleInfo(moduleId: string): BindingModuleInfo | null
   getModuleIds(): Array<string>
   addWatchFile(file: string): void
+  addWatchGlob(glob: string): void
 }
 
 export declare class BindingRenderedChunk {
@@ -1688,6 +1690,7 @@ export declare class BindingTransformPluginContext {
   getCombinedSourcemap(): string
   inner(): BindingPluginContext
   addWatchFile(file: string): void
+  addWatchGlob(glob: string): void
   sendMagicString(magicString: BindingMagicString): string | null
 }
 

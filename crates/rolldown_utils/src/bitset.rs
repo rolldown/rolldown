@@ -11,7 +11,11 @@ impl BitSet {
   }
 
   pub fn has_bit(&self, bit: u32) -> bool {
-    (self.entries[bit as usize / 8] & (1 << (bit & 7))) != 0
+    let idx = bit as usize / 8;
+    if idx >= self.entries.len() {
+      return false;
+    }
+    (self.entries[idx] & (1 << (bit & 7))) != 0
   }
 
   pub fn set_bit(&mut self, bit: u32) {

@@ -354,9 +354,15 @@ impl GenerateStage<'_> {
         }
         let chunk_idxs: Vec<_> = bits
           .index_of_one()
-          .map(ChunkIdx::from_raw)
-          // Some of the bits maybe not created yet, so filter it out.
-          // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
+          // Use bit_to_chunk_idx to correctly map bit positions to chunk indices.
+          // Bit positions may not match chunk indices when external module entries
+          // are skipped during chunk creation.
+          .filter_map(|bit| {
+            chunk_graph
+              .bit_to_chunk_idx
+              .get(bit as usize)
+              .and_then(|idx| *idx)
+          })
           .filter(|idx| entry_chunk_idx.contains(idx))
           .collect();
 

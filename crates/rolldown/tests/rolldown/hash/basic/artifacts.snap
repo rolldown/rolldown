@@ -3,11 +3,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## main-D99pEcLI.js
+## main-CL6hEqWv.js
 
 ```js
 //#region main.js
-console.log("_shared-!~{003}~.js");
+const foo = "bar";
 //#endregion
+export { foo };
 
 ```

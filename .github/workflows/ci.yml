@@ -90,12 +90,7 @@ jobs:
     needs: changes
     strategy:
       matrix:
-        target:
-          - ubuntu-latest
-          - macos-latest
-          - ${{ github.ref_name == 'main' && 'windows-latest' || '' }}
-        exclude:
-          - target: ''
+        target: ${{ github.ref_name == 'main' && fromJSON('["ubuntu-latest","macos-latest","windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
     uses: ./.github/workflows/reusable-cargo-test.yml
     with:
       os: ${{ matrix.target }}
@@ -116,6 +111,7 @@ jobs:
     needs: [changes, build-rolldown-macos]
     uses: ./.github/workflows/reusable-node-test.yml
     if: |
+      github.ref_name == 'main' &&
       always() &&
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
@@ -175,6 +171,7 @@ jobs:
     needs: [changes, build-rolldown-macos]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
     if: |
+      github.ref_name == 'main' &&
       always() &&
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
@@ -201,6 +198,7 @@ jobs:
 
   build-rolldown-macos:
     needs: changes
+    if: github.ref_name == 'main'
     uses: ./.github/workflows/reusable-native-build.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}

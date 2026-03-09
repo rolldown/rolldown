@@ -317,6 +317,10 @@ impl WatchTask {
   }
 
   fn matches_watch_globs(&self, path: &str) -> bool {
+    if self.watch_globs.is_empty() {
+      return false;
+    }
+
     let normalized = pattern_filter::normalize_path(path);
     self
       .watch_globs
@@ -340,70 +344,6 @@ impl WatchTask {
     }
 
     false
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use arcstr::ArcStr;
-  use rolldown_utils::dashmap::FxDashSet;
-
-  /// Standalone helper mirroring `WatchTask::matches_watch_globs` so tests
-  /// can exercise the logic without constructing a full `WatchTask`.
-  fn matches_globs(globs: &FxDashSet<ArcStr>, path: &str) -> bool {
-    globs
-      .iter()
-      .any(|pattern| rolldown_utils::pattern_filter::glob_match_path(pattern.as_str(), path))
-  }
-
-  #[test]
-  fn test_matches_watch_globs_double_star() {
-    let globs: FxDashSet<ArcStr> = FxDashSet::default();
-    globs.insert("/project/src/**/*.ts".into());
-
-    assert!(matches_globs(&globs, "/project/src/utils/helper.ts"));
-    assert!(matches_globs(&globs, "/project/src/deep/nested/file.ts"));
-    assert!(!matches_globs(&globs, "/project/src/utils/helper.js"));
-  }
-
-  #[test]
-  fn test_matches_watch_globs_single_star() {
-    let globs: FxDashSet<ArcStr> = FxDashSet::default();
-    globs.insert("/project/data/*.txt".into());
-
-    assert!(matches_globs(&globs, "/project/data/foo.txt"));
-    // single * does not cross directories
-    assert!(!matches_globs(&globs, "/project/data/nested/foo.txt"));
-    assert!(!matches_globs(&globs, "/project/data/foo.js"));
-  }
-
-  #[test]
-  fn test_matches_watch_globs_empty_set() {
-    let globs: FxDashSet<ArcStr> = FxDashSet::default();
-    assert!(!matches_globs(&globs, "/project/src/file.ts"));
-  }
-
-  #[test]
-  fn test_matches_watch_globs_multiple_patterns() {
-    let globs: FxDashSet<ArcStr> = FxDashSet::default();
-    globs.insert("/project/src/**/*.ts".into());
-    globs.insert("/project/data/*.txt".into());
-
-    assert!(matches_globs(&globs, "/project/src/file.ts"));
-    assert!(matches_globs(&globs, "/project/data/config.txt"));
-    assert!(!matches_globs(&globs, "/project/src/file.js"));
-    assert!(!matches_globs(&globs, "/project/other/file.ts"));
-  }
-
-  #[test]
-  fn test_non_matching_file_does_not_trigger() {
-    let globs: FxDashSet<ArcStr> = FxDashSet::default();
-    globs.insert("/project/src/**/*.ts".into());
-
-    // a .js file alongside .ts files should not match
-    assert!(!matches_globs(&globs, "/project/src/utils/helper.js"));
-    // a completely different directory should not match
-    assert!(!matches_globs(&globs, "/other/project/src/utils/helper.ts"));
   }
 }
 

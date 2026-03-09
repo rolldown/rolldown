@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "jsx": "react",
+    "jsxFactory": "appFactory",
+    "paths": {
+      "1/*": ["./src/lib/module1/*"],
+      "2/*": ["./src/lib/module2/*"]
+    }
+  },
+  "include": ["src/app", "src/lib"]
+}

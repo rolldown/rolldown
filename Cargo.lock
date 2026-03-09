@@ -3558,6 +3558,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "dashmap",
+ "fast-glob",
  "itertools",
  "oxc_resolver",
  "rolldown_common",

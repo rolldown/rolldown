@@ -20,6 +20,7 @@ workspace = true
 anyhow = { workspace = true }
 arcstr = { workspace = true }
 dashmap = { workspace = true }
+fast-glob = { workspace = true }
 itertools = { workspace = true }
 oxc_resolver = { workspace = true }
 rolldown_common = { workspace = true }

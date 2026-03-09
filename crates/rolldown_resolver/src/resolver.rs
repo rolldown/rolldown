@@ -7,8 +7,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_resolver::{
-  ModuleType, PackageJson as OxcPackageJson, Resolution, ResolveError, ResolverGeneric,
-  TsConfig as OxcTsConfig,
+  ModuleType, PackageJson as OxcPackageJson, Resolution, ResolveContext, ResolveError,
+  ResolverGeneric, TsConfig as OxcTsConfig,
 };
 use rolldown_common::{
   ImportKind, ModuleDefFormat, ModuleId, PackageJson, Platform, ResolveOptions, ResolvedId,
@@ -165,6 +165,14 @@ impl<Fs: FileSystem> Resolver<Fs> {
       resolution =
         self.try_rollup_compatibility_resolve(selected_resolver, importer, specifier, resolution);
     }
+    if resolution.is_err() {
+      resolution = self.try_resolve_with_implicit_solution_tsconfig(
+        selected_resolver,
+        importer,
+        specifier,
+        resolution,
+      );
+    }
 
     resolution.map(|info| {
       let package_json = info.package_json().map(|p| self.cached_package_json(p));
@@ -219,6 +227,160 @@ impl<Fs: FileSystem> Resolver<Fs> {
     let fallback = resolver.resolve(importer_dir, &specifier_path.to_string_lossy());
     if fallback.is_ok() { fallback } else { original_resolution }
   }
+
+  fn try_resolve_with_implicit_solution_tsconfig(
+    &self,
+    resolver: &ResolverGeneric<Fs>,
+    importer: Option<&Path>,
+    specifier: &str,
+    original_resolution: Result<Resolution, ResolveError>,
+  ) -> Result<Resolution, ResolveError> {
+    let Some(importer) = importer else {
+      return original_resolution;
+    };
+    if specifier.starts_with('.') || specifier.starts_with('/') {
+      return original_resolution;
+    }
+
+    let importer_path =
+      if importer.is_absolute() { importer.to_path_buf() } else { self.cwd.join(importer) };
+    let Some(importer_dir) = importer_path.parent() else {
+      return original_resolution;
+    };
+
+    let Ok(Some(tsconfig)) = resolver.find_tsconfig(&importer_path) else {
+      return original_resolution;
+    };
+    let Some(tsconfig) = select_referenced_tsconfig_for_path(&tsconfig, &importer_path) else {
+      return original_resolution;
+    };
+
+    let mut resolve_context = ResolveContext::default();
+    let fallback = resolver.resolve_with_context(
+      importer_dir,
+      specifier,
+      Some(tsconfig.as_ref()),
+      &mut resolve_context,
+    );
+    if fallback.is_ok() { fallback } else { original_resolution }
+  }
+}
+
+fn select_referenced_tsconfig_for_path(
+  tsconfig: &Arc<OxcTsConfig>,
+  file_path: &Path,
+) -> Option<Arc<OxcTsConfig>> {
+  if !is_implicit_solution_tsconfig(tsconfig) {
+    return None;
+  }
+
+  tsconfig
+    .references_resolved
+    .iter()
+    .find(|referenced| is_file_included_in_tsconfig(referenced, file_path))
+    .cloned()
+}
+
+fn is_implicit_solution_tsconfig(tsconfig: &OxcTsConfig) -> bool {
+  if tsconfig.references_resolved.is_empty()
+    || tsconfig.files.is_some()
+    || tsconfig.include.is_some()
+  {
+    return false;
+  }
+
+  let compiler_options = &tsconfig.compiler_options;
+  compiler_options.base_url.is_none()
+    && compiler_options.paths.is_none()
+    && compiler_options.experimental_decorators.is_none()
+    && compiler_options.emit_decorator_metadata.is_none()
+    && compiler_options.use_define_for_class_fields.is_none()
+    && compiler_options.rewrite_relative_import_extensions.is_none()
+    && compiler_options.jsx.is_none()
+    && compiler_options.jsx_factory.is_none()
+    && compiler_options.jsx_fragment_factory.is_none()
+    && compiler_options.jsx_import_source.is_none()
+    && compiler_options.verbatim_module_syntax.is_none()
+    && compiler_options.preserve_value_imports.is_none()
+    && compiler_options.imports_not_used_as_values.is_none()
+    && compiler_options.target.is_none()
+    && compiler_options.module.is_none()
+    && compiler_options.allow_js.is_none()
+    && compiler_options.root_dirs.is_none()
+}
+
+fn is_file_included_in_tsconfig(tsconfig: &OxcTsConfig, file_path: &Path) -> bool {
+  if tsconfig
+    .files
+    .as_ref()
+    .is_some_and(|files| files.iter().any(|file| file.as_path() == file_path))
+  {
+    return true;
+  }
+
+  let is_included = match &tsconfig.include {
+    Some(include_patterns) => is_glob_matches(tsconfig, file_path, include_patterns),
+    None => tsconfig.files.is_none() && is_glob_match(tsconfig, file_path, "**/*"),
+  };
+  if !is_included {
+    return false;
+  }
+
+  tsconfig
+    .exclude
+    .as_ref()
+    .is_none_or(|exclude_patterns| !is_glob_matches(tsconfig, file_path, exclude_patterns))
+}
+
+fn is_glob_matches(tsconfig: &OxcTsConfig, file_path: &Path, patterns: &[PathBuf]) -> bool {
+  patterns.iter().any(|pattern| {
+    let pattern = pattern.to_string_lossy().replace('\\', "/");
+    is_glob_match_impl(tsconfig, file_path, &pattern)
+  })
+}
+
+fn is_glob_match(tsconfig: &OxcTsConfig, file_path: &Path, pattern: &str) -> bool {
+  is_glob_match_impl(tsconfig, file_path, pattern)
+}
+
+fn is_glob_match_impl(tsconfig: &OxcTsConfig, file_path: &Path, pattern: &str) -> bool {
+  let file_path_str = file_path.to_string_lossy().replace('\\', "/");
+  if pattern == file_path_str || pattern == "**/*" {
+    return true;
+  }
+
+  let mut normalized_pattern = pattern.to_string();
+  let after_last_slash =
+    normalized_pattern.rsplit('/').next().unwrap_or(normalized_pattern.as_str());
+  let needs_implicit_glob = !after_last_slash.contains('.')
+    && !after_last_slash.contains('*')
+    && !after_last_slash.contains('?');
+  if needs_implicit_glob {
+    if normalized_pattern.ends_with('/') {
+      normalized_pattern.push_str("**/*");
+    } else {
+      normalized_pattern.push_str("/**/*");
+    }
+  }
+
+  if normalized_pattern.ends_with('*')
+    && !is_file_extension_allowed_in_tsconfig(tsconfig, file_path)
+  {
+    return false;
+  }
+
+  fast_glob::glob_match(&normalized_pattern, &file_path_str)
+}
+
+fn is_file_extension_allowed_in_tsconfig(tsconfig: &OxcTsConfig, file_path: &Path) -> bool {
+  const TS_EXTENSIONS: [&str; 4] = ["ts", "tsx", "mts", "cts"];
+  const JS_EXTENSIONS: [&str; 4] = ["js", "jsx", "mjs", "cjs"];
+
+  let allow_js = tsconfig.compiler_options.allow_js.is_some_and(|enabled| enabled);
+  file_path
+    .extension()
+    .and_then(|ext| ext.to_str())
+    .is_some_and(|ext| TS_EXTENSIONS.contains(&ext) || (allow_js && JS_EXTENSIONS.contains(&ext)))
 }
 
 /// Infer module format from file extension and package.json type field

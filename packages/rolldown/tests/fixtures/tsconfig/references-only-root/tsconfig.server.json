@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "paths": {
+      "1/*": ["./src/lib/module1/*"],
+      "2/*": ["./src/lib/module2/*"]
+    }
+  },
+  "include": ["src/server", "src/lib"]
+}

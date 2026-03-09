@@ -227,4 +227,13 @@ mod tests {
     let empty: BitSet = std::iter::empty().collect();
     assert!(empty.is_empty());
   }
+
+  #[test]
+  fn has_bit_out_of_bounds() {
+    let bs = BitSet::new(0);
+    assert!(!bs.has_bit(0));
+
+    let bs = BitSet::new(1);
+    assert!(!bs.has_bit(100));
+  }
 }

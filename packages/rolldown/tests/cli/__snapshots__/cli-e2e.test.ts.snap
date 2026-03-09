@@ -11,7 +11,7 @@ OPTIONS
   --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
   --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
-  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key=value\`).
+  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key:value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
   --name -n, <name>           Name for UMD / IIFE format outputs.
@@ -97,7 +97,7 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorator.emit-decorator-metadata .
   --transform.decorator.legacy .
-  --transform.define <transform.define>Define global variables (syntax: key=value,key2=value2).
+  --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
   --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
@@ -151,7 +151,7 @@ OPTIONS
   --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
   --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
-  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key=value\`).
+  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key:value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
   --name -n, <name>           Name for UMD / IIFE format outputs.
@@ -237,7 +237,7 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorator.emit-decorator-metadata .
   --transform.decorator.legacy .
-  --transform.define <transform.define>Define global variables (syntax: key=value,key2=value2).
+  --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
   --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
@@ -291,7 +291,7 @@ OPTIONS
   --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
   --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
-  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key=value\`).
+  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key:value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
   --name -n, <name>           Name for UMD / IIFE format outputs.
@@ -377,7 +377,7 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorator.emit-decorator-metadata .
   --transform.decorator.legacy .
-  --transform.define <transform.define>Define global variables (syntax: key=value,key2=value2).
+  --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
   --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
@@ -431,7 +431,7 @@ OPTIONS
   --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
   --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
-  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key=value\`).
+  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key:value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
   --name -n, <name>           Name for UMD / IIFE format outputs.
@@ -517,7 +517,7 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorator.emit-decorator-metadata .
   --transform.decorator.legacy .
-  --transform.define <transform.define>Define global variables (syntax: key=value,key2=value2).
+  --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
   --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
@@ -571,7 +571,7 @@ OPTIONS
   --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
   --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
-  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key=value\`).
+  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key:value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
   --name -n, <name>           Name for UMD / IIFE format outputs.
@@ -657,7 +657,7 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorator.emit-decorator-metadata .
   --transform.decorator.legacy .
-  --transform.define <transform.define>Define global variables (syntax: key=value,key2=value2).
+  --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
   --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
@@ -761,6 +761,13 @@ exports[`cli options for bundling > should handle comma-separated object options
 
 exports[`cli options for bundling > should handle comma-separated object options mixed with single object 1`] = `
 "<DIR>/index.js  chunk │ size: 0.09 kB
+
+"
+`;
+
+exports[`cli options for bundling > should handle deprecated key=value syntax with warning 1`] = `
+"Using \`key=value\` syntax for \`--module-types\` is deprecated. Use \`key:value\` instead.
+<DIR>/index.js  chunk │ size: 0.09 kB
 
 "
 `;

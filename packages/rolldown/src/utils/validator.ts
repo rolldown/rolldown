@@ -245,7 +245,7 @@ const TransformOptionsSchema = v.object({
   ),
   define: v.pipe(
     v.optional(v.record(v.string(), v.string())),
-    v.description('Define global variables (syntax: key=value,key2=value2)'),
+    v.description('Define global variables (syntax: key:value,key2:value2)'),
   ),
   inject: v.pipe(
     v.optional(v.record(v.string(), v.union([v.string(), v.tuple([v.string(), v.string()])]))),
@@ -879,7 +879,7 @@ const OutputOptionsSchema = v.strictObject({
   name: v.pipe(v.optional(v.string()), v.description('Name for UMD / IIFE format outputs')),
   globals: v.pipe(
     v.optional(v.union([v.record(v.string(), v.string()), GlobalsFunctionSchema])),
-    v.description('Global variable of UMD / IIFE dependencies (syntax: `key=value`)'),
+    v.description('Global variable of UMD / IIFE dependencies (syntax: `key:value`)'),
   ),
   paths: v.pipe(
     v.optional(v.union([v.record(v.string(), v.string()), PathsFunctionSchema])),
@@ -995,7 +995,7 @@ const OutputCliOverrideSchema = v.strictObject({
   ),
   globals: v.pipe(
     v.optional(v.record(v.string(), v.string())),
-    v.description('Global variable of UMD / IIFE dependencies (syntax: `key=value`)'),
+    v.description('Global variable of UMD / IIFE dependencies (syntax: `key:value`)'),
   ),
   codeSplitting: v.pipe(
     v.optional(

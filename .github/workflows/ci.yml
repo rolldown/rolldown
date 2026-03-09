@@ -86,14 +86,6 @@ jobs:
 
       - run: just lint-rust
 
-      - name: Lint Filename
-        run: cargo ls-lint
-
-      - name: update generated code
-        run: |
-          cargo run --bin generator
-          git diff --exit-code
-
   cargo-test:
     needs: changes
     strategy:
@@ -280,6 +272,22 @@ jobs:
 
       - name: Validate workspace package
         run: node scripts/misc/published-package-check.mjs
+
+  repo-validation:
+    name: Repo Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
+
+      - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
+
+      - name: Lint Filename
+        run: cargo ls-lint
+
+      - name: update generated code
+        run: |
+          cargo run --bin generator
+          git diff --exit-code
 
   typos:
     name: Spell Check

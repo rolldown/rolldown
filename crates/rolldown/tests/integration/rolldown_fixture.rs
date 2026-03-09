@@ -1,10 +1,7 @@
-#![allow(clippy::ignore_without_reason)]
 use std::path::PathBuf;
 
 use rolldown_testing::fixture::Fixture;
 use testing_macros::fixture;
-
-mod rolldown;
 
 #[expect(clippy::needless_pass_by_value)]
 #[fixture("./tests/rolldown/**/_config.json")]

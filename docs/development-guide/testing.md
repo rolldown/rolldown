@@ -137,7 +137,7 @@ The git submodule should have been initialized after running `just setup` when s
 You can run the test262 integration tests with the following command:
 
 ```shell
-TEST262_FILTER="attribute" cargo test --test integration_test262 -- --no-capture
+TEST262_FILTER="attribute" cargo test --test integration -- --no-capture
 ```
 
 - `TEST262_FILTER` allows you to filter tests by name (e.g., `"attribute"`). If you omit this environment variable, all test cases will be run. Note that the result snapshot will not be updated if the environment variable is set.

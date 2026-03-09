@@ -1,4 +1,66 @@
 
+## [1.0.0-rc.8] - 2026-03-09
+
+### 🚀 Features
+
+- watch: enable full functional fs watcher in wasm (#8575) by @hyf0
+- watch: expose debounce related options (#8572) by @hyf0
+
+### 🐛 Bug Fixes
+
+- detect new URL(…, import.meta.url) with no-sub template literal (#8565) by @char
+- devtools: trace dynamic imports in devtools (#8581) by @cal-gooo
+- watch: rebuild when a previously missing file is created (#8562) by @hyf0-agent
+- watch: filter out Access events to prevent infinite rebuild loop on Linux (#8557) by @hyf0-agent
+
+### 🚜 Refactor
+
+- watch: remove auto watch for fail imports (#8585) by @hyf0
+- fs_watcher: unify the way of constructing watcher (#8571) by @hyf0
+- cli: migrate CLI to CAC (#8551) by @h-a-n-a
+- switch asset module support from hard-code to builtin plugin (#8546) by @hyf0
+
+### 📚 Documentation
+
+- fix subject-verb agreement in why-bundlers.md (#8591) by @brandonzylstra
+- maintenance: align release and canary workflow guide (#8538) by @minsoo-web
+- add `format` option to directives example config (#8590) by @shulaoda
+- fix: change twitter to x logo in team (#8552) by @mdong1909
+- correct composable filter support explanation (#8550) by @sapphi-red
+
+### ⚡ Performance
+
+- testing: share tokio runtime across fixture tests (#8567) by @Boshen
+
+### 🧪 Testing
+
+- hmr: fix infinite loop in dev server test retry logic (#8576) by @hyf0-agent
+- cli: add more cli-e2e test cases (#8548) by @h-a-n-a
+
+### ⚙️ Miscellaneous Tasks
+
+- docs: update in-depth/directives for `output.strict` option (#8535) by @minsoo-web
+- add PNPM_HOME Dev Drive mapping to Windows CI workflows (#8589) by @Boshen
+- deps: update github-actions (#8588) by @renovate[bot]
+- move Windows cargo target dir to Dev Drive (#8586) by @Boshen
+- optimize cache keys to fix race conditions and reduce usage (#8578) by @Boshen
+- remove WASI build & test pipeline (#8580) by @Boshen
+- remove unnecessary submodule checkouts (#8577) by @Boshen
+- use Dev Drive for Windows CI jobs (#8574) by @Boshen
+- skip redundant native binding build for browser and remove standalone job (#8573) by @Boshen
+- parallelize Node tests on ubuntu, single Node 24 on macOS/windows (#8570) by @Boshen
+- docs: bump @voidzero-dev/vitepress-theme to 4.8.0 (#8558) by @crusty-voidzero
+- dedupe type-check from dev server workflow (#8554) by @Boshen
+
+### ❤️ New Contributors
+
+* @brandonzylstra made their first contribution in [#8591](https://github.com/rolldown/rolldown/pull/8591)
+* @char made their first contribution in [#8565](https://github.com/rolldown/rolldown/pull/8565)
+* @cal-gooo made their first contribution in [#8581](https://github.com/rolldown/rolldown/pull/8581)
+* @hyf0-agent made their first contribution in [#8562](https://github.com/rolldown/rolldown/pull/8562)
+* @h-a-n-a made their first contribution in [#8551](https://github.com/rolldown/rolldown/pull/8551)
+
+
 ## [1.0.0-rc.7] - 2026-03-05
 
 ### 💥 BREAKING CHANGES

@@ -113,7 +113,8 @@ impl LinkStage<'_> {
           rec.resolved_module.and_then(|importee_idx| self.module_table[importee_idx].as_normal())
           && matches!(importee.exports_kind, ExportsKind::CommonJs)
         {
-          let info = self.safely_merge_cjs_ns_map[importee.idx].get_or_insert_with(Default::default);
+          let info =
+            self.safely_merge_cjs_ns_map[importee.idx].get_or_insert_with(Default::default);
           info.namespace_refs.push(rec.namespace_ref);
           info.needs_interop |= import_record_needs_interop(importer, rec_idx);
         }

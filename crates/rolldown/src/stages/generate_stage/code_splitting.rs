@@ -128,8 +128,7 @@ impl GenerateStage<'_> {
         if let Some(entries) = self.link_output.entries.get(&module.idx) {
           for entry in entries {
             if let Some(reference_ids) = self.link_output.entry_point_to_reference_ids.get(entry) {
-              chunk_graph
-                .chunk_idx_to_reference_ids[chunk_idx]
+              chunk_graph.chunk_idx_to_reference_ids[chunk_idx]
                 .extend(reference_ids.iter().cloned());
             }
           }
@@ -433,7 +432,12 @@ impl GenerateStage<'_> {
   pub fn merge_cjs_namespace(&mut self, chunk_graph: &mut ChunkGraph) {
     let mut chunk_list: IndexVec<ChunkIdx, FxHashMap<(ModuleIdx, usize), Vec<SymbolRef>>> =
       index_vec![FxHashMap::default(); chunk_graph.chunk_table.len()];
-    for (k, info) in self.link_output.safely_merge_cjs_ns_map.iter_enumerated().filter_map(|(k, v)| v.as_ref().map(|info| (k, info))) {
+    for (k, info) in self
+      .link_output
+      .safely_merge_cjs_ns_map
+      .iter_enumerated()
+      .filter_map(|(k, v)| v.as_ref().map(|info| (k, info)))
+    {
       for symbol_ref in info
         .namespace_refs
         .iter()

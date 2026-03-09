@@ -1717,11 +1717,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<Expression<'ast>> {
     let importee_idx = importee.idx;
     // to make sure the semantic is correct after chunk merging optimization.
-    let needs_namespace_extraction = self
-      .ctx
-      .chunk_graph
-      .common_chunk_exported_facade_chunk_namespace[importee_chunk_idx]
-      .contains(&importee_idx);
+    let needs_namespace_extraction =
+      self.ctx.chunk_graph.common_chunk_exported_facade_chunk_namespace[importee_chunk_idx]
+        .contains(&importee_idx);
 
     if !needs_namespace_extraction {
       return None;

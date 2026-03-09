@@ -1,5 +1,4 @@
 use oxc::allocator::{GetAddress, UnstableAddress};
-use oxc_index::IndexVec;
 use oxc::{
   ast::{
     AstKind,
@@ -12,6 +11,7 @@ use oxc::{
   semantic::{ScopeFlags, SymbolId},
   span::{GetSpan, Span},
 };
+use oxc_index::IndexVec;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
   MemberExprObjectReferencedType, OutputFormat, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoIdx,
@@ -152,7 +152,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     self.result.hashbang_range = program.hashbang.as_ref().map(GetSpan::span);
     self.result.directive_range = program.directives.iter().map(GetSpan::span).collect();
     {
-      let old_map = std::mem::take(&mut self.dynamic_import_usage_info.dynamic_import_exports_usage);
+      let old_map =
+        std::mem::take(&mut self.dynamic_import_usage_info.dynamic_import_exports_usage);
       let mut new_vec = IndexVec::with_capacity(self.result.import_records.len());
       new_vec.resize(self.result.import_records.len(), None);
       for (k, v) in old_map {

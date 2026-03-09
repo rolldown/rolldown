@@ -99,6 +99,5 @@ pub fn normalize_preserve_entry_signature(
   options: &SharedNormalizedBundlerOptions,
   module_idx: ModuleIdx,
 ) -> PreserveEntrySignatures {
-  overrode_preserve_entry_signature_map[module_idx]
-    .unwrap_or(options.preserve_entry_signatures)
+  overrode_preserve_entry_signature_map[module_idx].unwrap_or(options.preserve_entry_signatures)
 }

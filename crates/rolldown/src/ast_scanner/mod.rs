@@ -107,7 +107,8 @@ pub struct ScanResult {
   pub hashbang_range: Option<Span>,
   /// we don't know the ImportRecord related ModuleIdx yet, so use ImportRecordIdx as key
   /// temporarily
-  pub dynamic_import_rec_exports_usage: IndexVec<ImportRecordIdx, Option<DynamicImportExportsUsage>>,
+  pub dynamic_import_rec_exports_usage:
+    IndexVec<ImportRecordIdx, Option<DynamicImportExportsUsage>>,
   /// `new URL('...', import.meta.url)`
   pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
   pub this_expr_replace_map: FxHashMap<Span, ThisExprReplaceKind>,
@@ -393,11 +394,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       if let Some(constant_meta) = slot {
         let keep = (constant_meta.commonjs_export
           && !bailout_inlined_cjs_exports_symbol_ids.contains(&symbol_id))
-          || self
-            .result
-            .symbol_ref_db
-            .flags[symbol_id]
-            .contains(SymbolRefFlags::IsNotReassigned);
+          || self.result.symbol_ref_db.flags[symbol_id].contains(SymbolRefFlags::IsNotReassigned);
         if !keep {
           *slot = None;
         }
@@ -756,10 +753,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                     .result
                     .ecma_view_meta
                     .insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-                  self
-                    .result
-                    .symbol_ref_db
-                    .flags[symbol_id]
+                  self.result.symbol_ref_db.flags[symbol_id]
                     .insert(SymbolRefFlags::SideEffectsFreeFunction);
                 }
               }
@@ -771,10 +765,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
             if fn_decl.is_side_effect_free() || fn_decl.pure {
               self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-              self
-                .result
-                .symbol_ref_db
-                .flags[symbol_id]
+              self.result.symbol_ref_db.flags[symbol_id]
                 .insert(SymbolRefFlags::SideEffectsFreeFunction);
             }
           }
@@ -830,10 +821,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
         if fn_decl.is_side_effect_free() || fn_decl.pure {
           self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-          self
-            .result
-            .symbol_ref_db
-            .flags[self.result.default_export_ref.symbol]
+          self.result.symbol_ref_db.flags[self.result.default_export_ref.symbol]
             .insert(SymbolRefFlags::SideEffectsFreeFunction);
         }
         fn_decl.id.as_ref().map(|id| {

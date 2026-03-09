@@ -1084,8 +1084,7 @@ impl GenerateStage<'_> {
         let modules = std::mem::take(
           &mut chunk_graph.common_chunk_preserve_export_names_modules[merge.from_chunk_idx],
         );
-        chunk_graph.common_chunk_preserve_export_names_modules[merge.to_chunk_idx]
-          .extend(modules);
+        chunk_graph.common_chunk_preserve_export_names_modules[merge.to_chunk_idx].extend(modules);
       }
 
       // Retarget runtime_dependent_chunks so runtime is placed in the correct chunk

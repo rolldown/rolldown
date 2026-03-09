@@ -31,7 +31,8 @@ pub struct ChunkGraph {
   /// 2. Keep them in place and mark them as dead
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
-  pub post_chunk_optimization_operations: IndexVec<ChunkIdx, Option<PostChunkOptimizationOperation>>,
+  pub post_chunk_optimization_operations:
+    IndexVec<ChunkIdx, Option<PostChunkOptimizationOperation>>,
 }
 
 impl ChunkGraph {

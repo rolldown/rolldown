@@ -312,12 +312,12 @@ pub fn set_emitted_chunk_preliminary_filenames(
     .chunks
     .iter_enumerated()
     .filter_map(|(idx, chunk)| {
-      {
-        let reference_ids = &chunk_graph.chunk_idx_to_reference_ids[idx];
-        if reference_ids.is_empty() {
-          return None;
-        }
-        Some(reference_ids.iter().map(|reference_id| EmittedChunkInfo {
+      let reference_ids = &chunk_graph.chunk_idx_to_reference_ids[idx];
+      if reference_ids.is_empty() {
+        return None;
+      }
+      Some(reference_ids.iter().map(|reference_id| {
+        EmittedChunkInfo {
           reference_id: reference_id.clone(),
           filename: chunk
             .preliminary_filename
@@ -325,8 +325,8 @@ pub fn set_emitted_chunk_preliminary_filenames(
             .expect("Emitted chunk should have filename")
             .deref()
             .clone(),
-        }))
-      }
+        }
+      }))
     })
     .flatten();
   file_emitter.set_emitted_chunk_info(emitted_chunk_info);
@@ -341,16 +341,14 @@ fn set_emitted_chunk_filenames(
     .iter()
     .filter_map(|asset| {
       asset.originate_from.and_then(|originate_from| {
-        {
-          let reference_ids = &chunk_graph.chunk_idx_to_reference_ids[originate_from];
-          if reference_ids.is_empty() {
-            return None;
-          }
-          Some(reference_ids.iter().map(|reference_id| EmittedChunkInfo {
-            reference_id: reference_id.clone(),
-            filename: asset.filename.clone(),
-          }))
+        let reference_ids = &chunk_graph.chunk_idx_to_reference_ids[originate_from];
+        if reference_ids.is_empty() {
+          return None;
         }
+        Some(reference_ids.iter().map(|reference_id| EmittedChunkInfo {
+          reference_id: reference_id.clone(),
+          filename: asset.filename.clone(),
+        }))
       })
     })
     .flatten();

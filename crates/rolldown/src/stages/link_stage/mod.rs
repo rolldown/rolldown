@@ -114,15 +114,13 @@ impl<'a> LinkStage<'a> {
         .par_iter_mut()
         .filter_map(|m| {
           let m = m.as_normal_mut()?;
-          Some(
-            std::mem::take(&mut m.constant_export_map)
-              .into_iter_enumerated()
-              .filter_map(move |(symbol_id, v)| {
-                let v = v?;
-                let symbol_ref = SymbolRef { owner: m.idx, symbol: symbol_id };
-                Some((symbol_ref, v))
-              }),
-          )
+          Some(std::mem::take(&mut m.constant_export_map).into_iter_enumerated().filter_map(
+            move |(symbol_id, v)| {
+              let v = v?;
+              let symbol_ref = SymbolRef { owner: m.idx, symbol: symbol_id };
+              Some((symbol_ref, v))
+            },
+          ))
         })
         .flatten_iter()
         .collect::<FxHashMap<SymbolRef, ConstExportMeta>>()

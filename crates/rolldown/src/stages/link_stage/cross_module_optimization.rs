@@ -1,4 +1,3 @@
-use oxc_index::IndexVec;
 use oxc::{
   allocator::{Address, GetAddress, UnstableAddress},
   ast::{
@@ -11,6 +10,7 @@ use oxc::{
   ast_visit::{Visit, walk},
   semantic::ScopeFlags,
 };
+use oxc_index::IndexVec;
 use rolldown_common::{
   AstScopes, ConstExportMeta, EcmaViewMeta, FlatOptions, GetLocalDb, ModuleIdx,
   SharedNormalizedBundlerOptions, SideEffectDetail, StmtInfoIdx, SymbolRef, SymbolRefDb,
@@ -444,12 +444,10 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
       var_decl.declarations.iter().for_each(|declarator| {
         if let BindingPattern::BindingIdentifier(ref binding) = declarator.id {
           let symbol_ref: SymbolRef = (self.immutable_ctx.module_idx, binding.symbol_id()).into();
-          let is_not_assigned = self
-            .immutable_ctx
-            .symbols
-            .local_db(self.immutable_ctx.module_idx)
-            .flags[symbol_ref.symbol]
-            .contains(SymbolRefFlags::IsNotReassigned);
+          let is_not_assigned =
+            self.immutable_ctx.symbols.local_db(self.immutable_ctx.module_idx).flags
+              [symbol_ref.symbol]
+              .contains(SymbolRefFlags::IsNotReassigned);
 
           if is_not_assigned
             && let Some(value) = declarator

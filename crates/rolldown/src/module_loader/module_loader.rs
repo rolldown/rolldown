@@ -454,7 +454,9 @@ impl<'a> ModuleLoader<'a> {
             });
 
             // Defer usage merging - with only one consumer, keep fetch actions simple
-            if let Some(usage) = dynamic_import_rec_exports_usage.get_mut(rec_idx).and_then(Option::take) {
+            if let Some(usage) =
+              dynamic_import_rec_exports_usage.get_mut(rec_idx).and_then(Option::take)
+            {
               dynamic_import_exports_usage_pairs.push((idx, usage));
             }
             if matches!(raw_rec.kind, ImportKind::DynamicImport)

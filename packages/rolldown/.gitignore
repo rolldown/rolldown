@@ -3,6 +3,8 @@
 *.wasm
 tests/watch/temp
 lib
+!tests/fixtures/tsconfig/references-only-root/src/lib/
+!tests/fixtures/tsconfig/references-only-root/src/lib/**
 
 
 npm

@@ -9,6 +9,7 @@ use oxc::transformer::{ESFeature, EngineTargets, TransformOptions as OxcTransfor
 use oxc_resolver::{ResolveOptions, Resolver, TsconfigDiscovery, TsconfigOptions};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::dashmap::FxDashMap;
+use rustc_hash::FxHashSet;
 
 use super::tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig;
 use crate::{BundlerTransformOptions, TsConfig};
@@ -145,7 +146,9 @@ impl TransformOptions {
           None => None,
         };
         let tsconfig = match (file_path, tsconfig) {
-          (Some(path), Some(tsconfig)) => Some(select_tsconfig_for_file(tsconfig, path)),
+          (Some(path), Some(tsconfig)) => {
+            Some(select_tsconfig_for_file(&raw.resolver, tsconfig, path))
+          }
           (_, tsconfig) => tsconfig,
         };
         raw.get_or_create_for_tsconfig(tsconfig.as_deref(), warnings)
@@ -155,6 +158,7 @@ impl TransformOptions {
 }
 
 fn select_tsconfig_for_file(
+  resolver: &Resolver,
   tsconfig: Arc<oxc_resolver::TsConfig>,
   file_path: &Path,
 ) -> Arc<oxc_resolver::TsConfig> {
@@ -162,16 +166,48 @@ fn select_tsconfig_for_file(
     return tsconfig;
   }
 
-  tsconfig
-    .references_resolved
+  collect_referenced_tsconfig_candidates(resolver, &tsconfig)
     .iter()
     .find(|referenced| is_file_included_in_tsconfig(referenced, file_path))
     .cloned()
     .unwrap_or(tsconfig)
 }
 
+fn collect_referenced_tsconfig_candidates(
+  resolver: &Resolver,
+  tsconfig: &Arc<oxc_resolver::TsConfig>,
+) -> Vec<Arc<oxc_resolver::TsConfig>> {
+  let mut candidates = Vec::new();
+  let mut seen_paths: FxHashSet<PathBuf> = FxHashSet::default();
+  let mut push_unique = |candidate: Arc<oxc_resolver::TsConfig>| {
+    if seen_paths.insert(candidate.path.clone()) {
+      candidates.push(candidate);
+    }
+  };
+
+  for referenced in &tsconfig.references_resolved {
+    push_unique(Arc::clone(referenced));
+  }
+
+  if tsconfig.references_resolved.len() < tsconfig.references.len() {
+    let tsconfig_dir = tsconfig.path.parent().unwrap_or_else(|| Path::new(""));
+    for reference in &tsconfig.references {
+      let reference_path = if reference.path.is_absolute() {
+        reference.path.clone()
+      } else {
+        tsconfig_dir.join(&reference.path)
+      };
+      if let Ok(referenced) = resolver.resolve_tsconfig(&reference_path) {
+        push_unique(referenced);
+      }
+    }
+  }
+
+  candidates
+}
+
 fn is_implicit_solution_tsconfig(tsconfig: &oxc_resolver::TsConfig) -> bool {
-  if tsconfig.references_resolved.is_empty()
+  if (tsconfig.references_resolved.is_empty() && tsconfig.references.is_empty())
     || tsconfig.files.is_some()
     || tsconfig.include.is_some()
   {
@@ -300,6 +336,77 @@ impl Default for TransformOptions {
       target: EngineTargets::default(),
       jsx_preset: JsxPreset::default(),
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::{
+    fs,
+    time::{SystemTime, UNIX_EPOCH},
+  };
+
+  use super::*;
+
+  fn create_temp_dir() -> PathBuf {
+    let unique = format!(
+      "rolldown-transform-options-{}-{}",
+      std::process::id(),
+      SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system time should be after unix epoch")
+        .as_nanos()
+    );
+    let dir = std::env::temp_dir().join(unique);
+    fs::create_dir_all(&dir).expect("should create temp dir");
+    dir
+  }
+
+  #[test]
+  fn resolves_extensionless_raw_project_references_for_transform_options() {
+    let fixture_root = create_temp_dir();
+    fs::create_dir_all(fixture_root.join("src/app")).expect("should create source dir");
+    fs::write(
+      fixture_root.join("tsconfig.json"),
+      r#"{
+  "references": [
+    { "path": "./tsconfig.app" }
+  ]
+}"#,
+    )
+    .expect("should write root tsconfig");
+    fs::write(
+      fixture_root.join("tsconfig.app.json"),
+      r#"{
+  "compilerOptions": {
+    "jsxFactory": "appFactory"
+  },
+  "include": ["src/app"]
+}"#,
+    )
+    .expect("should write referenced tsconfig");
+    let importer_path = fixture_root.join("src/app/index.tsx");
+    fs::write(&importer_path, "export {};\n").expect("should write importer");
+
+    let resolver = Resolver::new(ResolveOptions {
+      tsconfig: Some(TsconfigDiscovery::Auto),
+      ..Default::default()
+    });
+    let root_tsconfig = resolver
+      .resolve_tsconfig(&fixture_root.join("tsconfig.json"))
+      .expect("should resolve root tsconfig");
+    let mut raw_root_tsconfig = (*root_tsconfig).clone();
+    raw_root_tsconfig.references_resolved.clear();
+    let raw_root_tsconfig = Arc::new(raw_root_tsconfig);
+
+    assert!(is_implicit_solution_tsconfig(raw_root_tsconfig.as_ref()));
+
+    let selected =
+      select_tsconfig_for_file(&resolver, Arc::clone(&raw_root_tsconfig), &importer_path);
+
+    assert_eq!(selected.path, fixture_root.join("tsconfig.app.json"));
+
+    fs::remove_dir_all(fixture_root).expect("should clean temp dir");
   }
 }
 

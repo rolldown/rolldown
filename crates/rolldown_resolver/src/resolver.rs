@@ -312,62 +312,46 @@ impl<Fs: FileSystem> Resolver<Fs> {
     importer_path: &Path,
   ) -> Vec<Arc<OxcTsConfig>> {
     let mut candidates = Vec::new();
-    let mut seen_paths: HashSet<PathBuf> = HashSet::new();
+    let mut seen_paths: HashSet<PathBuf> = HashSet::default();
     let mut push_unique = |candidate: Arc<OxcTsConfig>| {
       if seen_paths.insert(candidate.path.clone()) {
         candidates.push(candidate);
       }
     };
 
-    let preferred = select_referenced_tsconfig_for_path(tsconfig, importer_path);
-    if let Some(preferred) = preferred {
-      push_unique(preferred);
-    }
-
     for referenced in &tsconfig.references_resolved {
       push_unique(Arc::clone(referenced));
     }
 
     // In some environments, references may be present but not materialized in `references_resolved`.
-    // Resolve raw references eagerly so tsconfig-path fallback stays reliable.
-    if tsconfig.references_resolved.is_empty() && !tsconfig.references.is_empty() {
+    // Mirror `oxc_resolver` tsconfig lookup for file, directory, and extensionless references.
+    if tsconfig.references_resolved.len() < tsconfig.references.len() {
       let tsconfig_dir = tsconfig.path.parent().unwrap_or_else(|| Path::new(""));
       for reference in &tsconfig.references {
-        let mut reference_path = if reference.path.is_absolute() {
+        let reference_path = if reference.path.is_absolute() {
           reference.path.clone()
         } else {
           tsconfig_dir.join(&reference.path)
         };
-        if reference_path.extension().is_none() {
-          reference_path = reference_path.join("tsconfig.json");
-        }
         if let Ok(referenced) = resolver.resolve_tsconfig(&reference_path) {
           push_unique(referenced);
         }
       }
     }
 
+    if let Some(preferred_idx) =
+      candidates.iter().position(|candidate| is_file_included_in_tsconfig(candidate, importer_path))
+    {
+      let preferred = candidates.remove(preferred_idx);
+      candidates.insert(0, preferred);
+    }
+
     candidates
   }
 }
 
-fn select_referenced_tsconfig_for_path(
-  tsconfig: &Arc<OxcTsConfig>,
-  file_path: &Path,
-) -> Option<Arc<OxcTsConfig>> {
-  if !is_implicit_solution_tsconfig(tsconfig) {
-    return None;
-  }
-
-  tsconfig
-    .references_resolved
-    .iter()
-    .find(|referenced| is_file_included_in_tsconfig(referenced, file_path))
-    .cloned()
-}
-
 fn is_implicit_solution_tsconfig(tsconfig: &OxcTsConfig) -> bool {
-  if tsconfig.references_resolved.is_empty()
+  if (tsconfig.references_resolved.is_empty() && tsconfig.references.is_empty())
     || tsconfig.files.is_some()
     || tsconfig.include.is_some()
   {
@@ -500,4 +484,84 @@ fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
     }
   }
   ModuleDefFormat::Unknown
+}
+
+#[cfg(test)]
+mod tests {
+  use std::{
+    fs,
+    time::{SystemTime, UNIX_EPOCH},
+  };
+
+  use super::*;
+
+  fn create_temp_dir() -> PathBuf {
+    let unique = format!(
+      "rolldown-resolver-{}-{}",
+      std::process::id(),
+      SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system time should be after unix epoch")
+        .as_nanos()
+    );
+    let dir = std::env::temp_dir().join(unique);
+    fs::create_dir_all(&dir).expect("should create temp dir");
+    dir
+  }
+
+  #[test]
+  fn resolves_extensionless_raw_project_references_for_fallback_candidates() {
+    let fixture_root = create_temp_dir();
+    fs::create_dir_all(fixture_root.join("src/app")).expect("should create source dir");
+    fs::write(
+      fixture_root.join("tsconfig.json"),
+      r#"{
+  "references": [
+    { "path": "./tsconfig.app" }
+  ]
+}"#,
+    )
+    .expect("should write root tsconfig");
+    fs::write(
+      fixture_root.join("tsconfig.app.json"),
+      r#"{
+  "compilerOptions": {
+    "paths": {
+      "@app/*": ["./src/app/*"]
+    }
+  },
+  "include": ["src/app"]
+}"#,
+    )
+    .expect("should write referenced tsconfig");
+    let importer_path = fixture_root.join("src/app/index.ts");
+    fs::write(&importer_path, "export {};\n").expect("should write importer");
+
+    let resolver = Resolver::new(
+      <OsFileSystem as oxc_resolver::FileSystem>::new(false),
+      fixture_root.clone(),
+      Platform::Neutral,
+      &TsConfig::Auto(true),
+      ResolveOptions::default(),
+    );
+    let root_tsconfig = resolver
+      .resolve_tsconfig(&fixture_root.join("tsconfig.json"))
+      .expect("should resolve root tsconfig");
+    let mut raw_root_tsconfig = (*root_tsconfig).clone();
+    raw_root_tsconfig.references_resolved.clear();
+    let raw_root_tsconfig = Arc::new(raw_root_tsconfig);
+
+    assert!(is_implicit_solution_tsconfig(raw_root_tsconfig.as_ref()));
+
+    let candidates = resolver.collect_referenced_tsconfig_candidates_for_fallback(
+      &resolver.import_resolver,
+      &raw_root_tsconfig,
+      &importer_path,
+    );
+
+    assert_eq!(candidates.len(), 1);
+    assert_eq!(candidates[0].path, fixture_root.join("tsconfig.app.json"));
+
+    fs::remove_dir_all(fixture_root).expect("should clean temp dir");
+  }
 }

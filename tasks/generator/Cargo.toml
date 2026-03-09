@@ -28,5 +28,10 @@ syn = { workspace = true, features = [
   "printing",
   "proc-macro",
 ] }
+
+[[bin]]
+name = "generator"
+test = false
+
 [lints]
 workspace = true

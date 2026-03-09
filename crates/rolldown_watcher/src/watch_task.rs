@@ -132,13 +132,17 @@ impl WatchTask {
     // Also register any files discovered during render/write phase
     self.update_watch_files(&new_watch_files)?;
 
-    // Refresh globs from this build. Unlike watched_files, globs need no notify
-    // registration — they are matched against incoming paths on the fly.
-    // Plugins re-register globs each build, so we replace rather than accumulate.
+    // Refresh globs from this build. Plugins re-register globs each build,
+    // so we replace the pattern set rather than accumulate.
     self.watch_globs.clear();
-    for glob in new_watch_globs {
-      self.watch_globs.insert(glob);
+    for glob in &new_watch_globs {
+      self.watch_globs.insert(glob.clone());
     }
+    // Walk the filesystem to find files matching each glob pattern and
+    // register them individually with notify. This is more reliable than
+    // watching directories: only matching files trigger rebuilds, so
+    // non-matching files in the same directory are ignored.
+    self.register_glob_files(&new_watch_globs)?;
 
     #[expect(clippy::cast_possible_truncation)]
     let duration = start_time.elapsed().as_millis() as u32;
@@ -267,6 +271,77 @@ impl WatchTask {
     bundler.close().await.map_err(Into::into)
   }
 
+  /// Given a normalized absolute glob pattern, return the static base directory
+  /// (everything before the first `*`, `?`, or `[`) and whether it is recursive.
+  ///
+  /// Example: `/project/src/**/*.ts` → (`/project/src/`, true)
+  /// Example: `/project/data/*.txt`  → (`/project/data/`, false)
+  fn glob_base_dir(pattern: &str) -> (&str, bool) {
+    let is_recursive = pattern.contains("**");
+    let glob_start =
+      pattern.find(|c| c == '*' || c == '?' || c == '[').unwrap_or(pattern.len());
+    let base_end = pattern[..glob_start].rfind('/').map_or(0, |i| i + 1);
+    (&pattern[..base_end], is_recursive)
+  }
+
+  /// Walk the filesystem to find files matching each glob pattern and register
+  /// them individually with notify (same mechanism as `addWatchFile`).
+  ///
+  /// Called after every build. `update_watch_files` deduplicates, so
+  /// already-watched files are skipped cheaply.
+  fn register_glob_files(&self, globs: &[ArcStr]) -> BuildResult<()> {
+    let mut matched: Vec<ArcStr> = Vec::new();
+
+    for glob_pattern in globs {
+      let pattern_str = glob_pattern.as_str();
+      let (base, is_recursive) = Self::glob_base_dir(pattern_str);
+      if base.is_empty() {
+        continue;
+      }
+      let base_path = Path::new(base);
+      if !base_path.is_dir() {
+        continue;
+      }
+
+      if is_recursive {
+        Self::walk_matching_recursive(base_path, pattern_str, &mut matched);
+      } else {
+        if let Ok(entries) = std::fs::read_dir(base_path) {
+          for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+              continue;
+            }
+            let path_str = path.to_string_lossy();
+            let normalized = pattern_filter::normalize_path(&path_str);
+            if pattern_filter::glob_match_path(pattern_str, &normalized) {
+              matched.push(ArcStr::from(normalized.as_ref()));
+            }
+          }
+        }
+      }
+    }
+
+    self.update_watch_files(&matched)
+  }
+
+  /// Recursively walk `dir` and collect files whose normalized path matches `pattern`.
+  fn walk_matching_recursive(dir: &Path, pattern: &str, out: &mut Vec<ArcStr>) {
+    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    for entry in entries.flatten() {
+      let path = entry.path();
+      if path.is_dir() {
+        Self::walk_matching_recursive(&path, pattern, out);
+      } else if path.is_file() {
+        let path_str = path.to_string_lossy();
+        let normalized = pattern_filter::normalize_path(&path_str);
+        if pattern_filter::glob_match_path(pattern, &normalized) {
+          out.push(ArcStr::from(normalized.as_ref()));
+        }
+      }
+    }
+  }
+
   /// Returns `true` if any stored glob pattern matches `path`.
   ///
   /// Patterns are already normalized to absolute forward-slash form by
@@ -274,7 +349,8 @@ impl WatchTask {
   /// comparison works correctly on Windows.
   fn matches_watch_globs(&self, path: &str) -> bool {
     let normalized = pattern_filter::normalize_path(path);
-    self.watch_globs
+    self
+      .watch_globs
       .iter()
       .any(|pattern| pattern_filter::glob_match_path(pattern.as_str(), &normalized))
   }

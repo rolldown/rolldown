@@ -129,9 +129,7 @@ impl GenerateStage<'_> {
           for entry in entries {
             if let Some(reference_ids) = self.link_output.entry_point_to_reference_ids.get(entry) {
               chunk_graph
-                .chunk_idx_to_reference_ids
-                .entry(chunk_idx)
-                .or_default()
+                .chunk_idx_to_reference_ids[chunk_idx]
                 .extend(reference_ids.iter().cloned());
             }
           }
@@ -187,7 +185,7 @@ impl GenerateStage<'_> {
       .chunk_table
       .iter_mut_enumerated()
       .filter(|(chunk_idx, _chunk)| {
-        chunk_graph.post_chunk_optimization_operations.get(chunk_idx).copied()
+        chunk_graph.post_chunk_optimization_operations[*chunk_idx]
           != Some(PostChunkOptimizationOperation::Removed)
       })
       .sorted_by(|(_ai, a), (_bi, b)| {
@@ -435,7 +433,7 @@ impl GenerateStage<'_> {
   pub fn merge_cjs_namespace(&mut self, chunk_graph: &mut ChunkGraph) {
     let mut chunk_list: IndexVec<ChunkIdx, FxHashMap<(ModuleIdx, usize), Vec<SymbolRef>>> =
       index_vec![FxHashMap::default(); chunk_graph.chunk_table.len()];
-    for (k, info) in &self.link_output.safely_merge_cjs_ns_map {
+    for (k, info) in self.link_output.safely_merge_cjs_ns_map.iter_enumerated().filter_map(|(k, v)| v.as_ref().map(|info| (k, info))) {
       for symbol_ref in info
         .namespace_refs
         .iter()
@@ -469,7 +467,7 @@ impl GenerateStage<'_> {
         let Some(group_idx) = group_idx else {
           continue;
         };
-        chunk_list[chunk_idx].entry((*k, group_idx)).or_default().push(*symbol_ref);
+        chunk_list[chunk_idx].entry((k, group_idx)).or_default().push(*symbol_ref);
       }
     }
 
@@ -772,7 +770,7 @@ impl GenerateStage<'_> {
       );
       let chunk_idx = chunk_graph.add_chunk(chunk);
       if let Some(reference_ids) = self.link_output.entry_point_to_reference_ids.get(entry_point) {
-        chunk_graph.chunk_idx_to_reference_ids.insert(chunk_idx, reference_ids.clone());
+        chunk_graph.chunk_idx_to_reference_ids[chunk_idx].clone_from(reference_ids);
       }
 
       bits_to_chunk.insert(bits, chunk_idx);

@@ -143,7 +143,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
       WrapKind::Cjs => {
         // Check if this CJS module's namespace can be merged with other imports
-        let merge_info = self.ctx.safely_merge_cjs_ns_map.get(&resolved_module_idx);
+        let merge_info = self.ctx.safely_merge_cjs_ns_map[resolved_module_idx].as_ref();
 
         // Consider user reference a module use relative path e.g.
         // ```js
@@ -1720,9 +1720,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let needs_namespace_extraction = self
       .ctx
       .chunk_graph
-      .common_chunk_exported_facade_chunk_namespace
-      .get(&importee_chunk_idx)
-      .is_some_and(|set| set.contains(&importee_idx));
+      .common_chunk_exported_facade_chunk_namespace[importee_chunk_idx]
+      .contains(&importee_idx);
 
     if !needs_namespace_extraction {
       return None;

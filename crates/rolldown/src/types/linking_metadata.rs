@@ -134,14 +134,14 @@ impl LinkingMetadata {
     &'b self,
     module_idx: ModuleIdx,
     entry_point_kind: EntryPointKind,
-    dynamic_import_exports_usage_map: &'a FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+    dynamic_import_exports_usage_map: &'a IndexVec<ModuleIdx, Option<DynamicImportExportsUsage>>,
     needs_commonjs_export: bool,
   ) -> impl Iterator<Item = (&'b CompactStr, &'b ResolvedExport)> + 'b {
     let partial_used_exports = match entry_point_kind {
       rolldown_common::EntryPointKind::UserDefined
       | rolldown_common::EntryPointKind::EmittedUserDefined => None,
       rolldown_common::EntryPointKind::DynamicImport => {
-        dynamic_import_exports_usage_map.get(&module_idx).and_then(|usage| match usage {
+        dynamic_import_exports_usage_map[module_idx].as_ref().and_then(|usage| match usage {
           DynamicImportExportsUsage::Complete => None,
           DynamicImportExportsUsage::Partial(set) => Some(set),
           DynamicImportExportsUsage::Single(_) => unreachable!(),

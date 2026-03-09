@@ -1,5 +1,6 @@
 use self::render_chunk_exports::get_chunk_export_names;
 use arcstr::ArcStr;
+use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkMeta, ModuleId, ModuleIdx, PreserveEntrySignatures, RenderedModule,
   RollupPreRenderedChunk, RollupRenderedChunk, SharedNormalizedBundlerOptions,
@@ -94,12 +95,10 @@ pub fn generate_rendered_chunk(
 }
 
 pub fn normalize_preserve_entry_signature(
-  overrode_preserve_entry_signature_map: &FxHashMap<ModuleIdx, PreserveEntrySignatures>,
+  overrode_preserve_entry_signature_map: &IndexVec<ModuleIdx, Option<PreserveEntrySignatures>>,
   options: &SharedNormalizedBundlerOptions,
   module_idx: ModuleIdx,
 ) -> PreserveEntrySignatures {
-  overrode_preserve_entry_signature_map
-    .get(&module_idx)
-    .copied()
+  overrode_preserve_entry_signature_map[module_idx]
     .unwrap_or(options.preserve_entry_signatures)
 }

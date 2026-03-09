@@ -10,6 +10,7 @@ pub type FinalizerMutableFields = (
 );
 
 use oxc::ast_visit::VisitMut as _;
+use oxc_index::IndexVec;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -38,7 +39,7 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub file_emitter: &'me SharedFileEmitter,
   pub constant_value_map: &'me FxHashMap<SymbolRef, ConstExportMeta>,
   pub side_effect_free_function_symbols: &'me FxHashSet<SymbolRef>,
-  pub safely_merge_cjs_ns_map: &'me FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
+  pub safely_merge_cjs_ns_map: &'me IndexVec<ModuleIdx, Option<SafelyMergeCjsNsInfo>>,
   pub used_symbol_refs: &'me FxHashSet<SymbolRef>,
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   pub resolved_paths: Option<&'me PathsOutputOption>,

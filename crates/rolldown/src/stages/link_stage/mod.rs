@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
-use oxc_index::IndexVec;
+use oxc_index::{IndexVec, index_vec};
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
@@ -66,12 +66,12 @@ pub struct LinkStageOutput {
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
-  pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
-  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
+  pub dynamic_import_exports_usage_map: IndexVec<ModuleIdx, Option<DynamicImportExportsUsage>>,
+  pub safely_merge_cjs_ns_map: IndexVec<ModuleIdx, Option<SafelyMergeCjsNsInfo>>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   /// https://rollupjs.org/plugin-development/#this-emitfile
   /// Used to store `preserveSignature` specified with `this.emitFile` in plugins.
-  pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
+  pub overrode_preserve_entry_signature_map: IndexVec<ModuleIdx, Option<PreserveEntrySignatures>>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -91,11 +91,11 @@ pub struct LinkStage<'a> {
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
-  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
-  pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+  pub safely_merge_cjs_ns_map: IndexVec<ModuleIdx, Option<SafelyMergeCjsNsInfo>>,
+  pub dynamic_import_exports_usage_map: IndexVec<ModuleIdx, Option<DynamicImportExportsUsage>>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
-  pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
+  pub overrode_preserve_entry_signature_map: IndexVec<ModuleIdx, Option<PreserveEntrySignatures>>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub flat_options: FlatOptions,
@@ -114,10 +114,15 @@ impl<'a> LinkStage<'a> {
         .par_iter_mut()
         .filter_map(|m| {
           let m = m.as_normal_mut()?;
-          Some(std::mem::take(&mut m.constant_export_map).into_iter().map(|(symbol_id, v)| {
-            let symbol_ref = SymbolRef { owner: m.idx, symbol: symbol_id };
-            (symbol_ref, v)
-          }))
+          Some(
+            std::mem::take(&mut m.constant_export_map)
+              .into_iter_enumerated()
+              .filter_map(move |(symbol_id, v)| {
+                let v = v?;
+                let symbol_ref = SymbolRef { owner: m.idx, symbol: symbol_id };
+                Some((symbol_ref, v))
+              }),
+          )
         })
         .flatten_iter()
         .collect::<FxHashMap<SymbolRef, ConstExportMeta>>()
@@ -136,6 +141,8 @@ impl<'a> LinkStage<'a> {
     });
 
     scan_stage_output.entry_points.extend(rest);
+
+    let module_count = scan_stage_output.module_table.modules.len();
 
     Self {
       sorted_modules: Vec::new(),
@@ -177,14 +184,25 @@ impl<'a> LinkStage<'a> {
       warnings: scan_stage_output.warnings,
       errors: vec![],
       ast_table: scan_stage_output.index_ecma_ast,
-      dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
+      dynamic_import_exports_usage_map: {
+        let mut vec = index_vec![None; module_count];
+        for (idx, usage) in scan_stage_output.dynamic_import_exports_usage_map {
+          vec[idx] = Some(usage);
+        }
+        vec
+      },
       options,
       used_symbol_refs: FxHashSet::default(),
-      safely_merge_cjs_ns_map: FxHashMap::default(),
+      safely_merge_cjs_ns_map: index_vec![None; module_count],
       normal_symbol_exports_chain_map: FxHashMap::default(),
       external_import_namespace_merger: FxHashMap::default(),
-      overrode_preserve_entry_signature_map: scan_stage_output
-        .overrode_preserve_entry_signature_map,
+      overrode_preserve_entry_signature_map: {
+        let mut vec = index_vec![None; module_count];
+        for (idx, sig) in scan_stage_output.overrode_preserve_entry_signature_map {
+          vec[idx] = Some(sig);
+        }
+        vec
+      },
       entry_point_to_reference_ids: scan_stage_output.entry_point_to_reference_ids,
       flat_options: scan_stage_output.flat_options,
       side_effects_free_function_symbol_ref: FxHashSet::default(),

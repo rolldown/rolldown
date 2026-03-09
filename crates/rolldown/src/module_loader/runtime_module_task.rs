@@ -193,9 +193,9 @@ impl RuntimeModuleTask {
         hmr_hot_ref: None,
         directive_range: vec![],
         dummy_record_set,
-        constant_export_map: FxHashMap::default(),
+        constant_export_map: IndexVec::new(),
         depended_runtime_helper: Box::default(),
-        import_attribute_map: FxHashMap::default(),
+        import_attribute_map: IndexVec::new(),
         json_module_none_self_reference_included_symbol: None,
       },
       // TODO(hyf0/hmr): We might need to find a better way to handle this.

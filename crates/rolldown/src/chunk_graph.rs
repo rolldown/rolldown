@@ -19,11 +19,11 @@ pub struct ChunkGraph {
   /// If the namespace is not merged, `Key` == `Value`.
   /// If the namespace is merged, `Key` is the original namespace symbol, and `Value` is the linked namespace symbol.
   pub finalized_cjs_ns_map_idx_vec: IndexVec<ChunkIdx, FxHashMap<SymbolRef, SymbolRef>>,
-  pub chunk_idx_to_reference_ids: FxHashMap<ChunkIdx, Vec<ArcStr>>,
-  pub common_chunk_exported_facade_chunk_namespace: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
+  pub chunk_idx_to_reference_ids: IndexVec<ChunkIdx, Vec<ArcStr>>,
+  pub common_chunk_exported_facade_chunk_namespace: IndexVec<ChunkIdx, FxHashSet<ModuleIdx>>,
   /// Modules from emitted chunks with AllowExtension that were merged into common chunks.
   /// Their export names should be preserved (not minified).
-  pub common_chunk_preserve_export_names_modules: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
+  pub common_chunk_preserve_export_names_modules: IndexVec<ChunkIdx, FxHashSet<ModuleIdx>>,
   /// Tracks chunks that have been removed during post-optimization of code splitting.
   ///
   /// Since chunks are stored in an `IndexVec`, we have two options when removing chunks:
@@ -31,7 +31,7 @@ pub struct ChunkGraph {
   /// 2. Keep them in place and mark them as dead
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
-  pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
+  pub post_chunk_optimization_operations: IndexVec<ChunkIdx, Option<PostChunkOptimizationOperation>>,
 }
 
 impl ChunkGraph {
@@ -42,10 +42,10 @@ impl ChunkGraph {
       sorted_chunk_idx_vec: Vec::new(),
       entry_module_to_entry_chunk: FxHashMap::default(),
       finalized_cjs_ns_map_idx_vec: index_vec![],
-      chunk_idx_to_reference_ids: FxHashMap::default(),
-      common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
-      common_chunk_preserve_export_names_modules: FxHashMap::default(),
-      post_chunk_optimization_operations: FxHashMap::default(),
+      chunk_idx_to_reference_ids: index_vec![],
+      common_chunk_exported_facade_chunk_namespace: index_vec![],
+      common_chunk_preserve_export_names_modules: index_vec![],
+      post_chunk_optimization_operations: index_vec![],
     }
   }
 
@@ -57,6 +57,10 @@ impl ChunkGraph {
   pub fn add_chunk(&mut self, chunk: Chunk) -> ChunkIdx {
     let idx = self.chunk_table.push(chunk);
     self.finalized_cjs_ns_map_idx_vec.push(FxHashMap::default());
+    self.chunk_idx_to_reference_ids.push(Vec::new());
+    self.common_chunk_exported_facade_chunk_namespace.push(FxHashSet::default());
+    self.common_chunk_preserve_export_names_modules.push(FxHashSet::default());
+    self.post_chunk_optimization_operations.push(None);
     idx
   }
 

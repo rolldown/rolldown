@@ -509,7 +509,7 @@ impl LinkStage<'_> {
       EntryPointKind::UserDefined | EntryPointKind::EmittedUserDefined => true,
       EntryPointKind::DynamicImport => {
         let is_dynamic_imported_module_exports_unused =
-          self.dynamic_import_exports_usage_map.get(&entry_point.idx).is_some_and(
+          self.dynamic_import_exports_usage_map[entry_point.idx].as_ref().is_some_and(
             |item| matches!(item, DynamicImportExportsUsage::Partial(set) if set.is_empty()),
           );
 

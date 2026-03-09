@@ -168,7 +168,7 @@ impl LinkStage<'_> {
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           // Only reference __toESM if this import needs interop (namespace or default import)
                           let needs_toesm =
-                            if let Some(info) = self.safely_merge_cjs_ns_map.get(&importee.idx) {
+                            if let Some(info) = self.safely_merge_cjs_ns_map[importee.idx].as_ref() {
                               info.needs_interop
                             } else {
                               import_record_needs_interop(importer, *rec_id)

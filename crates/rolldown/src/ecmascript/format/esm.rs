@@ -258,7 +258,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     // TODO: Warning same import record has different import attributes. https://tinyurl.com/2ddnbbc8
     named_imports.iter().for_each(|(idx, named_import)| {
       let module = ctx.link_output.module_table[*idx].as_normal().unwrap();
-      if module.import_attribute_map.contains_key(&named_import.record_idx) {
+      if module.import_attribute_map.get(named_import.record_idx).and_then(|v| v.as_ref()).is_some() {
         if import_attribute.is_none() {
           import_attribute = Some((module.idx, named_import.record_idx));
         }
@@ -286,7 +286,7 @@ fn create_import_declaration(
   let mut ret = String::new();
   let with_clause_string = with_clause.and_then(|(module_idx, record_idx)| {
     let module = module_table[module_idx].as_normal()?;
-    let import_attribute = module.import_attribute_map.get(&record_idx)?;
+    let import_attribute = module.import_attribute_map.get(record_idx)?.as_ref()?;
     Some(import_attribute.to_string())
   });
   let first_default_alias = match &default_alias {

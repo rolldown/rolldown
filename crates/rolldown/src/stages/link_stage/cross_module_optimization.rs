@@ -1,3 +1,4 @@
+use oxc_index::IndexVec;
 use oxc::{
   allocator::{Address, GetAddress, UnstableAddress},
   ast::{
@@ -72,10 +73,10 @@ impl LinkStage<'_> {
           .contains(EcmaViewMeta::TopExportedSideEffectsFreeFunction)
           .then(move || {
             let symbol_for_module = symbol_for_module.as_ref()?;
-            Some(symbol_for_module.flags.iter().filter_map(move |(symbol_id, flag)| {
+            Some(symbol_for_module.flags.iter_enumerated().filter_map(move |(symbol_id, flag)| {
               flag
                 .contains(SymbolRefFlags::SideEffectsFreeFunction)
-                .then_some(SymbolRef::from((idx, *symbol_id)))
+                .then_some(SymbolRef::from((idx, symbol_id)))
             }))
           })
           .flatten()
@@ -199,8 +200,8 @@ impl LinkStage<'_> {
         let module_idx = module.idx;
         let ast =
           self.ast_table[module_idx].as_ref().expect("ast should be set in a normal module");
-        // A dummy map to fits the api of `ConstEvalCtx`
-        let constant_map = FxHashMap::default();
+        // A dummy IndexVec to fit the api of `ConstEvalCtx`
+        let constant_map = IndexVec::new();
         ast.program.with_dependent(|owner, dep| {
           let module_symbol_table = self.symbols.local_db(module_idx);
           let eval_ctx = ConstEvalCtx {
@@ -447,9 +448,8 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
             .immutable_ctx
             .symbols
             .local_db(self.immutable_ctx.module_idx)
-            .flags
-            .get(&symbol_ref.symbol)
-            .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned));
+            .flags[symbol_ref.symbol]
+            .contains(SymbolRefFlags::IsNotReassigned);
 
           if is_not_assigned
             && let Some(value) = declarator

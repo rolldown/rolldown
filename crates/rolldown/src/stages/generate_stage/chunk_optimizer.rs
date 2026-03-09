@@ -934,21 +934,16 @@ impl GenerateStage<'_> {
         continue;
       };
 
-      chunk_graph.post_chunk_optimization_operations.insert(
-        *from_chunk_idx,
-        if chunk_meta.contains(ChunkMeta::EmittedChunk) {
+      chunk_graph.post_chunk_optimization_operations[*from_chunk_idx] =
+        Some(if chunk_meta.contains(ChunkMeta::EmittedChunk) {
           PostChunkOptimizationOperation::RemovedWithPreservedExports
         } else {
           PostChunkOptimizationOperation::Removed
-        },
-      );
+        });
 
       // Track emitted chunks so their export names are preserved (not minified)
       if chunk_meta.contains(ChunkMeta::EmittedChunk) {
-        chunk_graph
-          .common_chunk_preserve_export_names_modules
-          .entry(*to_chunk_idx)
-          .or_default()
+        chunk_graph.common_chunk_preserve_export_names_modules[*to_chunk_idx]
           .insert(*entry_module_idx);
       }
 
@@ -956,10 +951,7 @@ impl GenerateStage<'_> {
       if !chunk_meta.contains(ChunkMeta::DynamicImported) {
         continue;
       }
-      chunk_graph
-        .common_chunk_exported_facade_chunk_namespace
-        .entry(*to_chunk_idx)
-        .or_default()
+      chunk_graph.common_chunk_exported_facade_chunk_namespace[*to_chunk_idx]
         .insert(*entry_module_idx);
 
       // Add debug info about eliminated facade chunk to target chunk
@@ -1068,9 +1060,8 @@ impl GenerateStage<'_> {
       to_chunk.modules.extend(from_chunk_modules);
       to_chunk.debug_info.extend(from_chunk_debug_info);
       to_chunk.depended_runtime_helper.insert(from_chunk_runtime_helper);
-      chunk_graph
-        .post_chunk_optimization_operations
-        .insert(merge.from_chunk_idx, PostChunkOptimizationOperation::Removed);
+      chunk_graph.post_chunk_optimization_operations[merge.from_chunk_idx] =
+        Some(PostChunkOptimizationOperation::Removed);
 
       // Retarget entry mappings that point at the removed chunk
       for entry_chunk_idx in chunk_graph.entry_module_to_entry_chunk.values_mut() {
@@ -1080,24 +1071,20 @@ impl GenerateStage<'_> {
       }
 
       // Retarget facade chunk namespace exports
-      if let Some(modules) =
-        chunk_graph.common_chunk_exported_facade_chunk_namespace.remove(&merge.from_chunk_idx)
       {
-        chunk_graph
-          .common_chunk_exported_facade_chunk_namespace
-          .entry(merge.to_chunk_idx)
-          .or_default()
+        let modules = std::mem::take(
+          &mut chunk_graph.common_chunk_exported_facade_chunk_namespace[merge.from_chunk_idx],
+        );
+        chunk_graph.common_chunk_exported_facade_chunk_namespace[merge.to_chunk_idx]
           .extend(modules);
       }
 
       // Retarget preserved export names
-      if let Some(modules) =
-        chunk_graph.common_chunk_preserve_export_names_modules.remove(&merge.from_chunk_idx)
       {
-        chunk_graph
-          .common_chunk_preserve_export_names_modules
-          .entry(merge.to_chunk_idx)
-          .or_default()
+        let modules = std::mem::take(
+          &mut chunk_graph.common_chunk_preserve_export_names_modules[merge.from_chunk_idx],
+        );
+        chunk_graph.common_chunk_preserve_export_names_modules[merge.to_chunk_idx]
           .extend(modules);
       }
 

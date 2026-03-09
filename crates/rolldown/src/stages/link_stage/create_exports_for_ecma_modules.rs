@@ -1,9 +1,9 @@
+use oxc_index::IndexVec;
 use rolldown_common::{
   EntryPoint, ExportsKind, ImportRecordMeta, ModuleIdx, OutputFormat, PreserveEntrySignatures,
   SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, TaggedSymbolRef, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
-use rustc_hash::FxHashMap;
 
 use crate::{
   types::linking_metadata::LinkingMetadata, utils::chunk::normalize_preserve_entry_signature,
@@ -14,9 +14,9 @@ use super::LinkStage;
 fn init_entry_point_stmt_info(
   meta: &mut LinkingMetadata,
   entry: &EntryPoint,
-  dynamic_import_exports_usage_map: &FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+  dynamic_import_exports_usage_map: &IndexVec<ModuleIdx, Option<DynamicImportExportsUsage>>,
   options: &SharedNormalizedBundlerOptions,
-  overrode_preserve_entry_signature_map: &FxHashMap<ModuleIdx, PreserveEntrySignatures>,
+  overrode_preserve_entry_signature_map: &IndexVec<ModuleIdx, Option<PreserveEntrySignatures>>,
   is_dynamic_imported: bool,
 ) {
   let mut referenced_symbols = vec![];

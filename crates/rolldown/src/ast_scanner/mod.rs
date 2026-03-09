@@ -107,15 +107,15 @@ pub struct ScanResult {
   pub hashbang_range: Option<Span>,
   /// we don't know the ImportRecord related ModuleIdx yet, so use ImportRecordIdx as key
   /// temporarily
-  pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
+  pub dynamic_import_rec_exports_usage: IndexVec<ImportRecordIdx, Option<DynamicImportExportsUsage>>,
   /// `new URL('...', import.meta.url)`
   pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
   pub this_expr_replace_map: FxHashMap<Span, ThisExprReplaceKind>,
   pub hmr_info: HmrInfo,
   pub hmr_hot_ref: Option<SymbolRef>,
   pub directive_range: Vec<Span>,
-  pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
-  pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
+  pub constant_export_map: IndexVec<SymbolId, Option<ConstExportMeta>>,
+  pub import_attribute_map: IndexVec<ImportRecordIdx, Option<ImportAttribute>>,
 }
 
 bitflags::bitflags! {
@@ -212,7 +212,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: FxHashSet::default(),
       hashbang_range: None,
-      dynamic_import_rec_exports_usage: FxHashMap::default(),
+      dynamic_import_rec_exports_usage: IndexVec::new(),
       new_url_references: FxHashMap::default(),
       this_expr_replace_map: FxHashMap::default(),
       hmr_info: HmrInfo::default(),
@@ -220,9 +220,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       directive_range: vec![],
       dummy_record_set: FxHashSet::default(),
       commonjs_exports: FxHashMap::default(),
-      constant_export_map: FxHashMap::default(),
+      constant_export_map: IndexVec::new(),
       ecma_view_meta: EcmaViewMeta::default(),
-      import_attribute_map: FxHashMap::default(),
+      import_attribute_map: IndexVec::new(),
     };
 
     Self {
@@ -389,15 +389,20 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
     }
 
-    self.result.constant_export_map.retain(|symbol_id, constant_meta| {
-      (constant_meta.commonjs_export && !bailout_inlined_cjs_exports_symbol_ids.contains(symbol_id))
-        || self
-          .result
-          .symbol_ref_db
-          .flags
-          .get(symbol_id)
-          .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned))
-    });
+    for (symbol_id, slot) in self.result.constant_export_map.iter_mut_enumerated() {
+      if let Some(constant_meta) = slot {
+        let keep = (constant_meta.commonjs_export
+          && !bailout_inlined_cjs_exports_symbol_ids.contains(&symbol_id))
+          || self
+            .result
+            .symbol_ref_db
+            .flags[symbol_id]
+            .contains(SymbolRefFlags::IsNotReassigned);
+        if !keep {
+          *slot = None;
+        }
+      }
+    }
 
     if cfg!(debug_assertions) {
       use rustc_hash::FxHashSet;
@@ -672,7 +677,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
     self.result.imports.insert(decl.span, id);
     if let Some(ref with_clause) = decl.with_clause {
-      self.result.import_attribute_map.insert(id, ImportAttribute::from_with_clause(with_clause));
+      self.result.import_attribute_map.resize(id.index() + 1, None);
+      self.result.import_attribute_map[id] = Some(ImportAttribute::from_with_clause(with_clause));
     }
   }
 
@@ -711,10 +717,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         );
       });
       if let Some(ref with_clause) = decl.with_clause {
-        self
-          .result
-          .import_attribute_map
-          .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
+        self.result.import_attribute_map.resize(record_idx.index() + 1, None);
+        self.result.import_attribute_map[record_idx] =
+          Some(ImportAttribute::from_with_clause(with_clause));
       }
       self.result.imports.insert(decl.span, record_idx);
     } else {
@@ -754,9 +759,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                   self
                     .result
                     .symbol_ref_db
-                    .flags
-                    .entry(symbol_id)
-                    .or_default()
+                    .flags[symbol_id]
                     .insert(SymbolRefFlags::SideEffectsFreeFunction);
                 }
               }
@@ -771,9 +774,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               self
                 .result
                 .symbol_ref_db
-                .flags
-                .entry(symbol_id)
-                .or_default()
+                .flags[symbol_id]
                 .insert(SymbolRefFlags::SideEffectsFreeFunction);
             }
           }
@@ -832,9 +833,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           self
             .result
             .symbol_ref_db
-            .flags
-            .entry(self.result.default_export_ref.symbol)
-            .or_default()
+            .flags[self.result.default_export_ref.symbol]
             .insert(SymbolRefFlags::SideEffectsFreeFunction);
         }
         fn_decl.id.as_ref().map(|id| {
@@ -881,10 +880,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     );
 
     if let Some(ref with_clause) = decl.with_clause {
-      self
-        .result
-        .import_attribute_map
-        .insert(rec_id, ImportAttribute::from_with_clause(with_clause));
+      self.result.import_attribute_map.resize(rec_id.index() + 1, None);
+      self.result.import_attribute_map[rec_id] =
+        Some(ImportAttribute::from_with_clause(with_clause));
     }
     self.result.imports.insert(decl.span, rec_id);
 
@@ -1081,7 +1079,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if is_mutated {
       return;
     }
-    self.result.constant_export_map.insert(symbol_id, value);
+    self.result.constant_export_map.resize(symbol_id.index() + 1, None);
+    self.result.constant_export_map[symbol_id] = Some(value);
   }
 
   fn is_import_expr_ignored_by_comment(&mut self, expr: &ImportExpression<'ast>) -> bool {

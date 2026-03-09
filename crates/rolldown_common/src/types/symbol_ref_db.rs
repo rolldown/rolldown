@@ -62,8 +62,7 @@ pub struct SymbolRefDbForModule {
   owner_idx: ModuleIdx,
   root_scope_id: ScopeId,
   pub ast_scopes: AstScopes,
-  // Only some symbols would be cared about, so we use a hashmap to store the flags.
-  pub flags: FxHashMap<SymbolId, SymbolRefFlags>,
+  pub flags: IndexVec<SymbolId, SymbolRefFlags>,
   pub classic_data: IndexVec<SymbolId, SymbolRefDataClassic>,
   #[cfg(debug_assertions)]
   create_reason: FxHashMap<SymbolRef, String>,
@@ -75,7 +74,7 @@ impl Default for SymbolRefDbForModule {
       owner_idx: ModuleIdx::new(0),
       root_scope_id: ScopeId::new(0),
       ast_scopes: AstScopes::new(Scoping::default()),
-      flags: FxHashMap::default(),
+      flags: IndexVec::default(),
       classic_data: IndexVec::default(),
       #[cfg(debug_assertions)]
       create_reason: FxHashMap::default(),
@@ -92,8 +91,8 @@ impl SymbolRefDbForModule {
         SymbolRefDataClassic::default();
         scoping.symbols_len()
       ]),
+      flags: IndexVec::from_vec(vec![SymbolRefFlags::default(); scoping.symbols_len()]),
       ast_scopes: AstScopes::new(scoping),
-      flags: FxHashMap::default(),
       #[cfg(debug_assertions)]
       create_reason: FxHashMap::default(),
     }
@@ -104,7 +103,7 @@ impl SymbolRefDbForModule {
   pub fn create_facade_root_symbol_ref(&mut self, name: &str) -> SymbolRef {
     let symbol_id = self.ast_scopes.create_facade_root_symbol_ref(name);
     self.classic_data.push(SymbolRefDataClassic::default());
-    self.flags.entry(symbol_id).or_default().insert(SymbolRefFlags::IsFacade);
+    self.flags.push(SymbolRefFlags::IsFacade);
 
     let ret = SymbolRef::from((self.owner_idx, symbol_id));
     #[cfg(debug_assertions)]
@@ -124,7 +123,7 @@ impl SymbolRefDbForModule {
   /// Check if a symbol is a facade symbol (synthetic, not present in the original AST).
   #[inline]
   pub fn is_facade_symbol(&self, symbol_id: SymbolId) -> bool {
-    self.flags.get(&symbol_id).is_some_and(|f| f.contains(SymbolRefFlags::IsFacade))
+    self.flags[symbol_id].contains(SymbolRefFlags::IsFacade)
   }
 
   /// Merge immutable fields (Scoping) from a build's DB into this cache DB.
@@ -138,10 +137,17 @@ impl SymbolRefDbForModule {
       self.classic_data.push(SymbolRefDataClassic::default());
     }
 
+    // Extend flags for any symbols added during linking (e.g., facade symbols)
+    let current_flags_len = self.flags.len();
+    if build_db.flags.len() > current_flags_len {
+      for i in current_flags_len..build_db.flags.len() {
+        self.flags.push(build_db.flags[SymbolId::from_usize(i)]);
+      }
+    }
     // Preserve IsFacade flags for facade symbols added during linking
-    for (symbol_id, flags) in &build_db.flags {
+    for (i, flags) in build_db.flags.iter_enumerated() {
       if flags.contains(SymbolRefFlags::IsFacade) {
-        self.flags.entry(*symbol_id).or_default().insert(SymbolRefFlags::IsFacade);
+        self.flags[i].insert(SymbolRefFlags::IsFacade);
       }
     }
 
@@ -289,9 +295,8 @@ impl SymbolRefDb {
     if self.has_module_preserve_jsx {
       let jsx_mask =
         SymbolRefFlags::MustStartWithCapitalLetterForJSX | SymbolRefFlags::UsedAsJSXMemberExprRoot;
-      if let Some(jsx_flags) =
-        base_root.flags(self).map(|f| *f & jsx_mask).filter(|f| !f.is_empty())
-      {
+      let jsx_flags = *base_root.flags(self) & jsx_mask;
+      if !jsx_flags.is_empty() {
         *target_root.flags_mut(self) |= jsx_flags;
       }
     }

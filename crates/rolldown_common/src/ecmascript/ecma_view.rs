@@ -103,8 +103,8 @@ pub struct EcmaView {
 
   pub hmr_hot_ref: Option<SymbolRef>,
   pub hmr_info: HmrInfo,
-  pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
-  pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
+  pub constant_export_map: IndexVec<SymbolId, Option<ConstExportMeta>>,
+  pub import_attribute_map: IndexVec<ImportRecordIdx, Option<ImportAttribute>>,
   /// Use `Box` since it is rarely used also it could reduce the size of `EcmaView`, .
   pub json_module_none_self_reference_included_symbol: Option<Box<FxHashSet<SymbolRef>>>,
 }

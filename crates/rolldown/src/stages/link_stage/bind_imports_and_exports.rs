@@ -604,7 +604,7 @@ impl LinkStage<'_> {
       {
         if import_symbol
           .flags(&self.symbols)
-          .is_some_and(|f| f.contains(SymbolRefFlags::HasComputedMemberWrite))
+          .contains(SymbolRefFlags::HasComputedMemberWrite)
         {
           written_cjs_export_symbols.extend(
             self.metas[*cjs_module_idx]
@@ -765,12 +765,10 @@ impl BindImportsAndExportsContext<'_> {
           // the namespace_ref (`import_react`). Since namespace_ref is a facade
           // (generated) symbol, we promote it to MustStartWithCapitalLetterForJSX
           // so the renamer uppercases it (e.g. `Import_react`).
-          if imported_as_ref.flags(self.symbol_db).is_some_and(|flags| {
-            flags.intersects(
-              SymbolRefFlags::MustStartWithCapitalLetterForJSX
-                | SymbolRefFlags::UsedAsJSXMemberExprRoot,
-            )
-          }) {
+          if imported_as_ref.flags(self.symbol_db).intersects(
+            SymbolRefFlags::MustStartWithCapitalLetterForJSX
+              | SymbolRefFlags::UsedAsJSXMemberExprRoot,
+          ) {
             let ns_flags = namespace_ref.flags_mut(self.symbol_db);
             *ns_flags |= SymbolRefFlags::MustStartWithCapitalLetterForJSX;
           }

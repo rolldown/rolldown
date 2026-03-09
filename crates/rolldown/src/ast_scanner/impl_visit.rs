@@ -1,4 +1,5 @@
 use oxc::allocator::{GetAddress, UnstableAddress};
+use oxc_index::IndexVec;
 use oxc::{
   ast::{
     AstKind,
@@ -150,19 +151,28 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
     self.result.hashbang_range = program.hashbang.as_ref().map(GetSpan::span);
     self.result.directive_range = program.directives.iter().map(GetSpan::span).collect();
-    self.result.dynamic_import_rec_exports_usage =
-      std::mem::take(&mut self.dynamic_import_usage_info.dynamic_import_exports_usage);
+    {
+      let old_map = std::mem::take(&mut self.dynamic_import_usage_info.dynamic_import_exports_usage);
+      let mut new_vec = IndexVec::with_capacity(self.result.import_records.len());
+      new_vec.resize(self.result.import_records.len(), None);
+      for (k, v) in old_map {
+        new_vec[k] = Some(v);
+      }
+      self.result.dynamic_import_rec_exports_usage = new_vec;
+    }
     if self.result.ecma_view_meta.contains(EcmaViewMeta::Eval) {
       // if there exists `eval` in current module, assume all dynamic import are completely used;
-      for usage in self.result.dynamic_import_rec_exports_usage.values_mut() {
+      for usage in self.result.dynamic_import_rec_exports_usage.iter_mut().flatten() {
         *usage = DynamicImportExportsUsage::Complete;
       }
     }
 
     // Check if dynamic import record is a pure dynamic import
-    for (rec_idx, usage) in &self.result.dynamic_import_rec_exports_usage {
-      if matches!(usage, DynamicImportExportsUsage::Partial(set) if set.is_empty()) {
-        self.result.import_records[*rec_idx].meta.insert(ImportRecordMeta::PureDynamicImport);
+    for (rec_idx, usage) in self.result.dynamic_import_rec_exports_usage.iter_enumerated() {
+      if let Some(usage) = usage {
+        if matches!(usage, DynamicImportExportsUsage::Partial(set) if set.is_empty()) {
+          self.result.import_records[rec_idx].meta.insert(ImportRecordMeta::PureDynamicImport);
+        }
       }
     }
 

@@ -171,7 +171,7 @@ impl GenerateStage<'_> {
         .filter_map(|(idx, module_id_to_codegen_ret)| {
           let chunk_idx =
             ChunkIdx::from_raw(u32::try_from(idx).expect("chunk index should fit in u32"));
-          if chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx) {
+          if chunk_graph.post_chunk_optimization_operations[chunk_idx].is_some() {
             return None;
           }
           let chunk = chunk_graph.chunk_table.get(chunk_idx)?;
@@ -312,8 +312,12 @@ pub fn set_emitted_chunk_preliminary_filenames(
     .chunks
     .iter_enumerated()
     .filter_map(|(idx, chunk)| {
-      chunk_graph.chunk_idx_to_reference_ids.get(&idx).map(|reference_ids| {
-        reference_ids.iter().map(|reference_id| EmittedChunkInfo {
+      {
+        let reference_ids = &chunk_graph.chunk_idx_to_reference_ids[idx];
+        if reference_ids.is_empty() {
+          return None;
+        }
+        Some(reference_ids.iter().map(|reference_id| EmittedChunkInfo {
           reference_id: reference_id.clone(),
           filename: chunk
             .preliminary_filename
@@ -321,8 +325,8 @@ pub fn set_emitted_chunk_preliminary_filenames(
             .expect("Emitted chunk should have filename")
             .deref()
             .clone(),
-        })
-      })
+        }))
+      }
     })
     .flatten();
   file_emitter.set_emitted_chunk_info(emitted_chunk_info);
@@ -337,12 +341,16 @@ fn set_emitted_chunk_filenames(
     .iter()
     .filter_map(|asset| {
       asset.originate_from.and_then(|originate_from| {
-        chunk_graph.chunk_idx_to_reference_ids.get(&originate_from).map(|reference_ids| {
-          reference_ids.iter().map(|reference_id| EmittedChunkInfo {
+        {
+          let reference_ids = &chunk_graph.chunk_idx_to_reference_ids[originate_from];
+          if reference_ids.is_empty() {
+            return None;
+          }
+          Some(reference_ids.iter().map(|reference_id| EmittedChunkInfo {
             reference_id: reference_id.clone(),
             filename: asset.filename.clone(),
-          })
-        })
+          }))
+        }
       })
     })
     .flatten();

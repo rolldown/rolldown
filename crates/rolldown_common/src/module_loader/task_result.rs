@@ -7,8 +7,6 @@ use arcstr::ArcStr;
 use oxc_index::IndexVec;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
-use rustc_hash::FxHashMap;
-
 pub struct NormalModuleTaskResult {
   pub module: Module,
   pub ecma_related: EcmaRelated,
@@ -30,7 +28,7 @@ pub struct ExternalModuleTaskResult {
 pub struct EcmaRelated {
   pub ast: EcmaAst,
   pub symbols: SymbolRefDbForModule,
-  pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
+  pub dynamic_import_rec_exports_usage: IndexVec<ImportRecordIdx, Option<DynamicImportExportsUsage>>,
   /// Whether JSX syntax is preserved for this module, determined per-module
   /// during transformation based on the resolved tsconfig.
   pub preserve_jsx: bool,

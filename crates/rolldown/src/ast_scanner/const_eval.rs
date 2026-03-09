@@ -8,13 +8,13 @@ use oxc_ecmascript::{
   constant_evaluation::{ConstantEvaluation, ConstantEvaluationCtx},
   side_effects::MayHaveSideEffectsContext,
 };
+use oxc_index::IndexVec;
 use rolldown_common::{ConstExportMeta, ConstantValue};
-use rustc_hash::FxHashMap;
 
 pub struct ConstEvalCtx<'me, 'ast: 'me> {
   pub ast: oxc::ast::AstBuilder<'ast>,
   pub scope: &'me Scoping,
-  pub constant_map: &'me FxHashMap<SymbolId, ConstExportMeta>,
+  pub constant_map: &'me IndexVec<SymbolId, Option<ConstExportMeta>>,
   pub overrode_get_constant_value_from_reference_id: Option<
     &'me dyn Fn(ReferenceId) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'ast>>,
   >,
@@ -42,7 +42,7 @@ impl<'ast> GlobalContext<'ast> for ConstEvalCtx<'_, 'ast> {
     }
     let reference = self.scope.get_reference(reference_id);
     let symbol_id = reference.symbol_id()?;
-    let v = self.constant_map.get(&symbol_id)?;
+    let v = self.constant_map.get(symbol_id)?.as_ref()?;
     Some(oxc_ecmascript::constant_evaluation::ConstantValue::from(&v.value))
   }
 }

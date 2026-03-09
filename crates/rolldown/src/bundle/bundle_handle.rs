@@ -60,6 +60,14 @@ impl BundleHandle {
     &self.plugin_driver.watch_files
   }
 
+  /// Get the watch globs collected during this bundle.
+  ///
+  /// These patterns (already normalized to absolute form) are matched against
+  /// every path that `notify` emits. Any match triggers a rebuild.
+  pub fn watch_globs(&self) -> &Arc<rolldown_utils::dashmap::FxDashSet<arcstr::ArcStr>> {
+    &self.plugin_driver.watch_globs
+  }
+
   /// Get the plugin driver used in this bundle.
   ///
   /// Primarily used to call cleanup hooks like `close_bundle()` after the build completes.

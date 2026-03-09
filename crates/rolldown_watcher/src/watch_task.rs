@@ -21,6 +21,9 @@ pub struct WatchTask {
   options: Arc<NormalizedBundlerOptions>,
   fs_watcher: std::sync::Mutex<DynFsWatcher>,
   watched_files: FxDashSet<ArcStr>,
+  /// Glob patterns registered via `addWatchGlob` in the latest build.
+  /// Refreshed after every build; checked against each notify event path.
+  watch_globs: FxDashSet<ArcStr>,
   pub(crate) needs_rebuild: bool,
 }
 
@@ -51,6 +54,7 @@ impl WatchTask {
       options,
       fs_watcher: std::sync::Mutex::new(fs_watcher),
       watched_files: FxDashSet::default(),
+      watch_globs: FxDashSet::default(),
       needs_rebuild: true,
     })
   }
@@ -72,7 +76,7 @@ impl WatchTask {
     let options_ref = &*self.options;
 
     // Scope the bundler lock to minimize lock duration
-    let (result, new_watch_files, bundle_handle) = {
+    let (result, new_watch_files, new_watch_globs, bundle_handle) = {
       let mut bundler = self.bundler.lock().await;
 
       // Clear stale plugin driver state from previous build.
@@ -116,15 +120,25 @@ impl WatchTask {
       let bundle_handle =
         bundler.last_bundle_handle.clone().expect("bundle handle should exist after build");
 
-      // Collect watch files while we have the lock (may include render-phase files)
+      // Collect watch files and globs while we have the lock (may include render-phase additions)
       let new_watch_files: Vec<ArcStr> =
         bundle_handle.watch_files().iter().map(|f| f.clone()).collect();
+      let new_watch_globs: Vec<ArcStr> =
+        bundle_handle.watch_globs().iter().map(|g| g.clone()).collect();
 
-      (result, new_watch_files, bundle_handle)
+      (result, new_watch_files, new_watch_globs, bundle_handle)
     };
 
     // Also register any files discovered during render/write phase
     self.update_watch_files(&new_watch_files)?;
+
+    // Refresh globs from this build. Unlike watched_files, globs need no notify
+    // registration — they are matched against incoming paths on the fly.
+    // Plugins re-register globs each build, so we replace rather than accumulate.
+    self.watch_globs.clear();
+    for glob in new_watch_globs {
+      self.watch_globs.insert(glob);
+    }
 
     #[expect(clippy::cast_possible_truncation)]
     let duration = start_time.elapsed().as_millis() as u32;
@@ -255,10 +269,14 @@ impl WatchTask {
 
   /// Returns `true` if any stored glob pattern matches `path`.
   ///
-  /// Patterns must already be normalized to absolute form (done by `add_watch_glob`
-  /// at registration time). `path` is the absolute path emitted by `notify`.
+  /// Patterns are already normalized to absolute forward-slash form by
+  /// `add_watch_glob`. The incoming `path` is also normalized here so the
+  /// comparison works correctly on Windows.
   fn matches_watch_globs(&self, path: &str) -> bool {
-    todo!()
+    let normalized = pattern_filter::normalize_path(path);
+    self.watch_globs
+      .iter()
+      .any(|pattern| pattern_filter::glob_match_path(pattern.as_str(), &normalized))
   }
 
   fn is_watched_file(&self, path: &str) -> bool {
@@ -266,9 +284,13 @@ impl WatchTask {
       return true;
     }
 
-    // Windows path normalization
+    // Windows path normalization for exact-file matches
     #[cfg(windows)]
     if self.watched_files.contains(path.replace('\\', "/").as_str()) {
+      return true;
+    }
+
+    if self.matches_watch_globs(path) {
       return true;
     }
 
@@ -281,8 +303,8 @@ mod tests {
   use arcstr::ArcStr;
   use rolldown_utils::dashmap::FxDashSet;
 
-  /// Thin wrapper so tests can call `matches_watch_globs` without a full `WatchTask`.
-  /// Will be replaced by the real field + impl once the feature is built.
+  /// Standalone helper mirroring `WatchTask::matches_watch_globs` so tests
+  /// can exercise the logic without constructing a full `WatchTask`.
   fn matches_globs(globs: &FxDashSet<ArcStr>, path: &str) -> bool {
     globs
       .iter()

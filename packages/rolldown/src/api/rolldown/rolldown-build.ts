@@ -110,6 +110,14 @@ export class RolldownBuild {
     return Promise.resolve(this.#bundler.getWatchFiles());
   }
 
+  /**
+   * @experimental
+   * @hidden not ready for public usage yet
+   */
+  get watchGlobs(): Promise<string[]> {
+    return Promise.resolve(this.#bundler.getWatchGlobs());
+  }
+
   async #build(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
     await this.#stopWorkers?.();

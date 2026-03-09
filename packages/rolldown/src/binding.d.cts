@@ -1418,6 +1418,7 @@ export declare class BindingBundler {
   close(): Promise<undefined>
   get closed(): boolean
   getWatchFiles(): Array<string>
+  getWatchGlobs(): Array<string>
 }
 
 export declare class BindingCallableBuiltinPlugin {

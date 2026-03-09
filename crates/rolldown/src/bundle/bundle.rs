@@ -143,6 +143,10 @@ impl Bundle {
     &self.plugin_driver.watch_files
   }
 
+  pub fn get_watch_globs(&self) -> &Arc<FxDashSet<ArcStr>> {
+    &self.plugin_driver.watch_globs
+  }
+
   pub fn context(&self) -> BundleHandle {
     BundleHandle {
       options: Arc::clone(&self.options),

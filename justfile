@@ -60,7 +60,7 @@ test-update-node:
 
 # Run Rust tests.
 test-rust: pnpm-install
-  cargo test --workspace --exclude rolldown_binding
+  cargo test --workspace --exclude rolldown_binding --lib --tests
 
 # Run Node.js tests for Rolldown.
 test-node-rolldown *args="": build-rolldown

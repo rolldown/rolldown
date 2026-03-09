@@ -1,4 +1,5 @@
 import type {
+  BindingCssPluginConfig,
   BindingEsmExternalRequirePluginConfig,
   BindingIsolatedDeclarationPluginConfig,
   BindingViteBuildImportAnalysisPluginConfig,
@@ -117,4 +118,8 @@ export function viteReactRefreshWrapperPlugin(
   }
   const builtinPlugin = new BuiltinPlugin('builtin:vite-react-refresh-wrapper', config);
   return makeBuiltinPluginCallable(builtinPlugin);
+}
+
+export function cssPlugin(config?: BindingCssPluginConfig): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:css', config);
 }

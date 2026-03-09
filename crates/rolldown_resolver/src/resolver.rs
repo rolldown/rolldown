@@ -298,6 +298,17 @@ impl<Fs: FileSystem> Resolver<Fs> {
       return Some(tsconfig);
     }
 
+    if let Some(importer_dir) = importer_path.parent() {
+      for dir in importer_dir.ancestors() {
+        let tsconfig_path = dir.join("tsconfig.json");
+        if let Ok(tsconfig) = resolver.resolve_tsconfig(&tsconfig_path)
+          && is_implicit_solution_tsconfig(&tsconfig)
+        {
+          return Some(tsconfig);
+        }
+      }
+    }
+
     None
   }
 }

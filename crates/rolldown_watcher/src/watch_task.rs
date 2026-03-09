@@ -120,7 +120,7 @@ impl WatchTask {
       let bundle_handle =
         bundler.last_bundle_handle.clone().expect("bundle handle should exist after build");
 
-      // Collect watch files and globs while we have the lock (may include render-phase additions)
+      // Collect watch files and globs while we have the lock (may include render-phase)
       let new_watch_files: Vec<ArcStr> =
         bundle_handle.watch_files().iter().map(|f| f.clone()).collect();
       let new_watch_globs: Vec<ArcStr> =
@@ -133,6 +133,7 @@ impl WatchTask {
     self.update_watch_files(&new_watch_files)?;
 
     self.watch_globs.clear();
+    self.watch_glob_dirs.clear();
     for glob in &new_watch_globs {
       self.watch_globs.insert(glob.clone());
     }
@@ -266,9 +267,6 @@ impl WatchTask {
   }
 
   /// Given a normalized absolute glob pattern, return the static base directory
-  ///
-  /// Example: `/project/src/**/*.ts` → (`/project/src/`, true)
-  /// Example: `/project/data/*.txt`  → (`/project/data/`, false)
   fn glob_base_dir(pattern: &str) -> (&str, bool) {
     let is_recursive = pattern.contains("**");
     let glob_start = pattern.find(|c| c == '*' || c == '?' || c == '[').unwrap_or(pattern.len());
@@ -292,14 +290,16 @@ impl WatchTask {
       if base.is_empty() {
         continue;
       }
-      // Deduplicate: each unique base dir is registered with the OS only once.
+      
       if self.watch_glob_dirs.contains(base) {
         continue;
       }
+      
       let base_path = Path::new(base);
       if !base_path.is_dir() {
         continue;
       }
+      
       let mode = if is_recursive { RecursiveMode::Recursive } else { RecursiveMode::NonRecursive };
       match watcher_paths.add(base_path, mode) {
         Ok(()) => {
@@ -333,7 +333,7 @@ impl WatchTask {
       return true;
     }
 
-    // Windows path normalization for exact-file matches
+    // Windows path normalization
     #[cfg(windows)]
     if self.watched_files.contains(path.replace('\\', "/").as_str()) {
       return true;

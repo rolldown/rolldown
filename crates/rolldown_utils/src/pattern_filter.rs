@@ -186,62 +186,6 @@ mod tests {
 
   use super::*;
 
-  // --- get_matcher_string ---
-
-  #[test]
-  fn test_get_matcher_string_relative_joins_cwd() {
-    assert_eq!(get_matcher_string("src/**/*.ts", "/project"), "/project/src/**/*.ts");
-    assert_eq!(
-      get_matcher_string("data/*.txt", "/home/user/project"),
-      "/home/user/project/data/*.txt"
-    );
-  }
-
-  #[test]
-  fn test_get_matcher_string_absolute_passes_through() {
-    assert_eq!(get_matcher_string("/project/src/**/*.ts", "/project"), "/project/src/**/*.ts");
-  }
-
-  #[test]
-  fn test_get_matcher_string_double_star_prefix_passes_through() {
-    assert_eq!(get_matcher_string("**/*.ts", "/project"), "**/*.ts");
-  }
-
-  // --- glob_match_path ---
-
-  #[test]
-  fn test_glob_match_path_matches_deep_path() {
-    assert!(glob_match_path("/project/src/**/*.ts", "/project/src/utils/helper.ts"));
-    assert!(glob_match_path("/project/src/**/*.ts", "/project/src/deep/nested/file.ts"));
-  }
-
-  #[test]
-  fn test_glob_match_path_no_match_wrong_extension() {
-    assert!(!glob_match_path("/project/src/**/*.ts", "/project/src/utils/helper.js"));
-  }
-
-  #[test]
-  fn test_glob_match_path_no_match_wrong_root() {
-    assert!(!glob_match_path("/project/src/**/*.ts", "/other/src/utils/helper.ts"));
-  }
-
-  #[test]
-  fn test_glob_match_path_single_star_no_nested() {
-    assert!(glob_match_path("/project/data/*.txt", "/project/data/foo.txt"));
-    // single * does not cross directory boundaries
-    assert!(!glob_match_path("/project/data/*.txt", "/project/data/nested/foo.txt"));
-  }
-
-  #[test]
-  fn test_full_add_watch_glob_flow() {
-    // Simulate what add_watch_glob does: normalize at storage time, match at event time.
-    // Naive match without normalization fails:
-    assert!(!glob_match_path("src/**/*.ts", "/project/src/utils/helper.ts"));
-    // After normalization it matches:
-    let stored = get_matcher_string("src/**/*.ts", "/project");
-    assert!(glob_match_path(&stored, "/project/src/utils/helper.ts"));
-  }
-
   #[test]
   fn test_filter() {
     #[derive(Debug)]

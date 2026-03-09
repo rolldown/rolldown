@@ -1195,7 +1195,6 @@ test.concurrent(
     const { dir } = createTestWithMultiFiles('addWatchGlob-modify', retryCount, {
       'main.js': `console.log(1)`,
     });
-    // Create a src/ subdirectory with a file that matches the glob
     const srcDir = path.join(dir, 'src');
     fs.mkdirSync(srcDir, { recursive: true });
     const watchedFile = path.join(srcDir, 'data.txt');
@@ -1242,7 +1241,6 @@ test.concurrent(
     const { dir } = createTestWithMultiFiles('addWatchGlob-create', retryCount, {
       'main.js': `console.log(1)`,
     });
-    // src/ starts empty — no files exist yet that match the glob
     const srcDir = path.join(dir, 'src');
     fs.mkdirSync(srcDir, { recursive: true });
 
@@ -1266,16 +1264,12 @@ test.concurrent(
 
     await waitBuildFinished(watcher);
 
-    // Count rebuilds triggered after the initial build
     let rebuildCount = 0;
     watcher.on('event', (event) => {
       if (event.code === 'BUNDLE_START') rebuildCount++;
     });
 
-    // Create a brand-new file that matches the glob — this is the key scenario
-    // that addWatchGlob handles and addWatchFile cannot (file didn't exist at build time)
     await editFile(path.join(srcDir, 'new.txt'), 'hello');
-
     await expect.poll(() => rebuildCount, { timeout: TEST_TIMEOUT }).toBeGreaterThan(0);
   },
 );
@@ -1290,9 +1284,7 @@ test.concurrent(
     });
     const srcDir = path.join(dir, 'src');
     fs.mkdirSync(srcDir, { recursive: true });
-    // This file matches the glob and IS watched
     fs.writeFileSync(path.join(srcDir, 'watched.txt'), 'watched');
-    // This file does NOT match the glob (wrong extension) and should be ignored
     const ignoredFile = path.join(srcDir, 'ignored.js');
     fs.writeFileSync(ignoredFile, 'ignored');
 
@@ -1321,7 +1313,6 @@ test.concurrent(
       if (event.code === 'BUNDLE_START') rebuildCount++;
     });
 
-    // Modify the ignored .js file — must not trigger a rebuild
     await editFile(ignoredFile, 'still ignored');
     // Wait long enough that any spurious rebuild would have already fired
     await sleep(3000);
@@ -1367,7 +1358,6 @@ test.concurrent(
       if (event.code === 'BUNDLE_START') rebuildCount++;
     });
 
-    // Delete the watched file — should trigger a rebuild
     await deleteFile(watchedFile);
     await expect.poll(() => rebuildCount, { timeout: TEST_TIMEOUT }).toBeGreaterThan(0);
   },

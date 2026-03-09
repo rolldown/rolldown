@@ -279,6 +279,13 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
 
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@4f86b5d871ae7d24bc420e578be68964ab09e5cc # v1.0.15
+        with:
+          cache-key: repo-validation
+          save-cache: ${{ github.ref_name == 'main' }}
+          components: rustfmt
+
       - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 
       - name: Lint Filename

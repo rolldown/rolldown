@@ -251,18 +251,34 @@ impl<Fs: FileSystem> Resolver<Fs> {
     let Ok(Some(tsconfig)) = resolver.find_tsconfig(&importer_path) else {
       return original_resolution;
     };
-    let Some(tsconfig) = select_referenced_tsconfig_for_path(&tsconfig, &importer_path) else {
+    if !is_implicit_solution_tsconfig(&tsconfig) {
       return original_resolution;
-    };
+    }
 
-    let mut resolve_context = ResolveContext::default();
-    let fallback = resolver.resolve_with_context(
-      importer_dir,
-      specifier,
-      Some(tsconfig.as_ref()),
-      &mut resolve_context,
+    let preferred = select_referenced_tsconfig_for_path(&tsconfig, &importer_path);
+    let candidates = preferred.iter().cloned().chain(
+      tsconfig
+        .references_resolved
+        .iter()
+        .filter(|candidate| {
+          preferred.as_ref().is_none_or(|preferred| candidate.path != preferred.path)
+        })
+        .cloned(),
     );
-    if fallback.is_ok() { fallback } else { original_resolution }
+
+    for candidate in candidates {
+      let mut resolve_context = ResolveContext::default();
+      if let Ok(resolved) = resolver.resolve_with_context(
+        importer_dir,
+        specifier,
+        Some(candidate.as_ref()),
+        &mut resolve_context,
+      ) {
+        return Ok(resolved);
+      }
+    }
+
+    original_resolution
   }
 }
 

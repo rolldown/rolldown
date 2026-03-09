@@ -134,7 +134,9 @@ impl PluginContext {
     call_native_only!(self, "add_watch_file", ctx => ctx.add_watch_file(file));
   }
 
-  /// Add a glob pattern to watch. The pattern is normalized to absolute at storage time.
+  /// Add a glob pattern to watch.
+  ///
+  /// * glob - The glob pattern to add. This pattern is normalized to absolute at storage time.
   pub fn add_watch_glob(&self, glob: &str) {
     call_native_only!(self, "add_watch_glob", ctx => ctx.add_watch_glob(glob));
   }

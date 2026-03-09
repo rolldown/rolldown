@@ -315,8 +315,6 @@ impl GenerateStage<'_> {
     let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
 
-    let entry_chunk_idx =
-      chunk_graph.chunk_table.iter_enumerated().map(|(idx, _)| idx).collect::<FxHashSet<_>>();
     // Calculate on demand to avoid add a new field on each NormalModule.
     let dynamic_entry_to_dynamic_importers: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>> = {
       // Get dynamic entry modules from chunk_table, then find matched entry points
@@ -358,7 +356,6 @@ impl GenerateStage<'_> {
           // Bit positions may not match chunk indices when external module entries
           // are skipped during chunk creation.
           .filter_map(|bit| chunk_graph.bit_to_chunk_idx.get(bit as usize).and_then(|idx| *idx))
-          .filter(|idx| entry_chunk_idx.contains(idx))
           .collect();
 
         let merge_target = Self::try_insert_into_existing_chunk(

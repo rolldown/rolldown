@@ -6,23 +6,25 @@ Code splitting determines which modules go into which output chunks. It uses a B
 
 ## Pipeline
 
+The entry point is `generate_chunks()` in `code_splitting.rs`, called from `GenerateStage::generate()`.
+
 ```
-LinkStageOutput.entries
+generate_chunks()
     │
-    ▼
-init_entry_point()          Assign bit positions, create entry chunks
+    ├─ init_entry_point()             Assign bit positions, create entry chunks
     │
-    ▼
-determine_reachable_modules_for_entry()   BFS per entry, set bits on reachable modules
-    │
-    ▼
-split_chunks()              Group modules by identical BitSet → chunks
-    │
-    ▼
-ChunkOptimizer              Merge common chunks into entry chunks, remove empty facades
-    │
-    ▼
-ChunkGraph                  Final module-to-chunk assignment
+    └─ split_chunks()
+         │
+         ├─ determine_reachable_modules_for_entry()   BFS per entry, set bits on reachable modules
+         │
+         ├─ apply_manual_code_splitting()             User-defined chunk groups (manualChunks)
+         │
+         ├─ Module assignment         Group modules by identical BitSet → chunks
+         │
+         └─ ChunkOptimizer           Merge common chunks into entry chunks, remove empty facades
+              │
+              ▼
+         ChunkGraph                   Final module-to-chunk assignment
 ```
 
 **Key files:**
@@ -63,10 +65,10 @@ entry-a.js:   bits = 0001  (only reachable from entry 0)
 
 ## Chunk Creation
 
-`split_chunks()` groups modules by identical `bits` patterns:
+After reachability propagation, `split_chunks()` assigns modules to chunks by their `bits` pattern:
 
 1. Entry chunks already exist from `init_entry_point()` with their single-bit patterns
-2. For each non-entry module, look up `bits_to_chunk[module.bits]`
+2. For each non-entry module (iterated in `sorted_modules` order), look up `bits_to_chunk[module.bits]`
 3. If a chunk exists for that pattern, add the module to it
 4. Otherwise, create a new `Common` chunk
 

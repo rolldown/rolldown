@@ -8,7 +8,7 @@ use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_resolver::{
   ModuleType, PackageJson as OxcPackageJson, Resolution, ResolveContext, ResolveError,
-  ResolverGeneric, TsConfig as OxcTsConfig,
+  ResolverGeneric, TsConfig as OxcTsConfig, TsconfigDiscovery as OxcTsconfigDiscovery,
 };
 use rolldown_common::{
   ImportKind, ModuleDefFormat, ModuleId, PackageJson, Platform, ResolveOptions, ResolvedId,
@@ -248,12 +248,11 @@ impl<Fs: FileSystem> Resolver<Fs> {
       return original_resolution;
     };
 
-    let Ok(Some(tsconfig)) = resolver.find_tsconfig(&importer_path) else {
+    let Some(tsconfig) =
+      self.find_implicit_solution_tsconfig_for_fallback(resolver, &importer_path)
+    else {
       return original_resolution;
     };
-    if !is_implicit_solution_tsconfig(&tsconfig) {
-      return original_resolution;
-    }
 
     let preferred = select_referenced_tsconfig_for_path(&tsconfig, &importer_path);
     let candidates = preferred.iter().cloned().chain(
@@ -279,6 +278,27 @@ impl<Fs: FileSystem> Resolver<Fs> {
     }
 
     original_resolution
+  }
+
+  fn find_implicit_solution_tsconfig_for_fallback(
+    &self,
+    resolver: &ResolverGeneric<Fs>,
+    importer_path: &Path,
+  ) -> Option<Arc<OxcTsConfig>> {
+    if let Some(OxcTsconfigDiscovery::Manual(options)) = resolver.options().tsconfig.as_ref()
+      && let Ok(tsconfig) = resolver.resolve_tsconfig(&options.config_file)
+      && is_implicit_solution_tsconfig(&tsconfig)
+    {
+      return Some(tsconfig);
+    }
+
+    if let Ok(Some(tsconfig)) = resolver.find_tsconfig(importer_path)
+      && is_implicit_solution_tsconfig(&tsconfig)
+    {
+      return Some(tsconfig);
+    }
+
+    None
   }
 }
 

@@ -290,16 +290,16 @@ impl WatchTask {
       if base.is_empty() {
         continue;
       }
-      
+
       if self.watch_glob_dirs.contains(base) {
         continue;
       }
-      
+
       let base_path = Path::new(base);
       if !base_path.is_dir() {
         continue;
       }
-      
+
       let mode = if is_recursive { RecursiveMode::Recursive } else { RecursiveMode::NonRecursive };
       match watcher_paths.add(base_path, mode) {
         Ok(()) => {

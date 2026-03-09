@@ -1,4 +1,5 @@
 use std::{
+  collections::HashSet,
   path::{Path, PathBuf},
   sync::Arc,
 };
@@ -254,16 +255,8 @@ impl<Fs: FileSystem> Resolver<Fs> {
       return original_resolution;
     };
 
-    let preferred = select_referenced_tsconfig_for_path(&tsconfig, &importer_path);
-    let candidates = preferred.iter().cloned().chain(
-      tsconfig
-        .references_resolved
-        .iter()
-        .filter(|candidate| {
-          preferred.as_ref().is_none_or(|preferred| candidate.path != preferred.path)
-        })
-        .cloned(),
-    );
+    let candidates =
+      self.collect_referenced_tsconfig_candidates_for_fallback(resolver, &tsconfig, &importer_path);
 
     for candidate in candidates {
       let mut resolve_context = ResolveContext::default();
@@ -310,6 +303,51 @@ impl<Fs: FileSystem> Resolver<Fs> {
     }
 
     None
+  }
+
+  fn collect_referenced_tsconfig_candidates_for_fallback(
+    &self,
+    resolver: &ResolverGeneric<Fs>,
+    tsconfig: &Arc<OxcTsConfig>,
+    importer_path: &Path,
+  ) -> Vec<Arc<OxcTsConfig>> {
+    let mut candidates = Vec::new();
+    let mut seen_paths: HashSet<PathBuf> = HashSet::new();
+    let mut push_unique = |candidate: Arc<OxcTsConfig>| {
+      if seen_paths.insert(candidate.path.clone()) {
+        candidates.push(candidate);
+      }
+    };
+
+    let preferred = select_referenced_tsconfig_for_path(tsconfig, importer_path);
+    if let Some(preferred) = preferred {
+      push_unique(preferred);
+    }
+
+    for referenced in &tsconfig.references_resolved {
+      push_unique(Arc::clone(referenced));
+    }
+
+    // In some environments, references may be present but not materialized in `references_resolved`.
+    // Resolve raw references eagerly so tsconfig-path fallback stays reliable.
+    if tsconfig.references_resolved.is_empty() && !tsconfig.references.is_empty() {
+      let tsconfig_dir = tsconfig.path.parent().unwrap_or_else(|| Path::new(""));
+      for reference in &tsconfig.references {
+        let mut reference_path = if reference.path.is_absolute() {
+          reference.path.clone()
+        } else {
+          tsconfig_dir.join(&reference.path)
+        };
+        if reference_path.extension().is_none() {
+          reference_path = reference_path.join("tsconfig.json");
+        }
+        if let Ok(referenced) = resolver.resolve_tsconfig(&reference_path) {
+          push_unique(referenced);
+        }
+      }
+    }
+
+    candidates
   }
 }
 

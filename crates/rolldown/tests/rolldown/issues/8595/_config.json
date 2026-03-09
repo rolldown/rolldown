@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      { "name": "index1", "import": "index1.js" },
+      { "name": "index2", "import": "index2.js" }
+    ],
+    "external": [
+      "@prettier/plugin-oxc",
+      "@prettier/plugin-hermes",
+      "prettier-plugin-astro",
+      "prettier-plugin-marko"
+    ]
+  }
+}

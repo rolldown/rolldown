@@ -334,7 +334,7 @@ fn is_file_included_in_tsconfig(tsconfig: &OxcTsConfig, file_path: &Path) -> boo
 
 fn is_glob_matches(tsconfig: &OxcTsConfig, file_path: &Path, patterns: &[PathBuf]) -> bool {
   patterns.iter().any(|pattern| {
-    let pattern = pattern.to_string_lossy().replace('\\', "/");
+    let pattern = normalize_tsconfig_pattern(tsconfig, pattern);
     is_glob_match_impl(tsconfig, file_path, &pattern)
   })
 }
@@ -370,6 +370,17 @@ fn is_glob_match_impl(tsconfig: &OxcTsConfig, file_path: &Path, pattern: &str) -
   }
 
   fast_glob::glob_match(&normalized_pattern, &file_path_str)
+}
+
+fn normalize_tsconfig_pattern(tsconfig: &OxcTsConfig, pattern: &Path) -> String {
+  let pattern = if pattern.is_absolute() {
+    pattern.to_path_buf()
+  } else if let Some(tsconfig_dir) = tsconfig.path.parent() {
+    tsconfig_dir.join(pattern)
+  } else {
+    pattern.to_path_buf()
+  };
+  pattern.to_string_lossy().replace('\\', "/")
 }
 
 fn is_file_extension_allowed_in_tsconfig(tsconfig: &OxcTsConfig, file_path: &Path) -> bool {

@@ -228,7 +228,7 @@ fn is_glob_matches(
   patterns: &[std::path::PathBuf],
 ) -> bool {
   patterns.iter().any(|pattern| {
-    let pattern = pattern.to_string_lossy().replace('\\', "/");
+    let pattern = normalize_tsconfig_pattern(tsconfig, pattern);
     is_glob_match_impl(tsconfig, file_path, &pattern)
   })
 }
@@ -266,6 +266,17 @@ fn is_glob_match_impl(tsconfig: &oxc_resolver::TsConfig, file_path: &Path, patte
   }
 
   fast_glob::glob_match(&normalized_pattern, &file_path_str)
+}
+
+fn normalize_tsconfig_pattern(tsconfig: &oxc_resolver::TsConfig, pattern: &Path) -> String {
+  let pattern = if pattern.is_absolute() {
+    pattern.to_path_buf()
+  } else if let Some(tsconfig_dir) = tsconfig.path.parent() {
+    tsconfig_dir.join(pattern)
+  } else {
+    pattern.to_path_buf()
+  };
+  pattern.to_string_lossy().replace('\\', "/")
 }
 
 fn is_file_extension_allowed_in_tsconfig(

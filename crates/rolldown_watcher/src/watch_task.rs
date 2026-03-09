@@ -269,7 +269,7 @@ impl WatchTask {
   /// Given a normalized absolute glob pattern, return the static base directory
   fn glob_base_dir(pattern: &str) -> (&str, bool) {
     let is_recursive = pattern.contains("**");
-    let glob_start = pattern.find(|c| c == '*' || c == '?' || c == '[').unwrap_or(pattern.len());
+    let glob_start = pattern.find(['*', '?', '[']).unwrap_or(pattern.len());
     let base_end = pattern[..glob_start].rfind('/').map_or(0, |i| i + 1);
     (&pattern[..base_end], is_recursive)
   }

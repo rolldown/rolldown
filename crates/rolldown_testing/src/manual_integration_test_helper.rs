@@ -14,6 +14,9 @@ pub struct IntegrationTestBuilder {
 
 impl IntegrationTestBuilder {
   pub fn new(test_folder_path: PathBuf) -> Self {
+    // Canonicalize to resolve any `..` segments (e.g. from #[path] attributes)
+    let test_folder_path =
+      dunce::canonicalize(&test_folder_path).unwrap_or(test_folder_path);
     Self { test_folder_path }
   }
 

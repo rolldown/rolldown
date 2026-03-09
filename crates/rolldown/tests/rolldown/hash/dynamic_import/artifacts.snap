@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy-Bbonjr_2.js
+
+```js
+//#region lazy.js
+const value = "lazy_loaded";
+//#endregion
+export { value };
+
+```
+
+## main-IElob51c.js
+
+```js
+//#region main.js
+import("./lazy-Bbonjr_2.js").then((m) => console.log(m));
+//#endregion
+
+```

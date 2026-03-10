@@ -585,18 +585,11 @@ impl<'a> SideEffectDetector<'a> {
             }
           }
 
-          // For "==" and "!=", pretend the operator was actually "===" or "!==". If
-          // we know that we can convert it to "==" or "!=", then we can consider the
-          // operator itself to have no side effects. This matters because our mangle
-          // logic will convert "typeof x === 'object'" into "typeof x == 'object'"
-          // and since "typeof x === 'object'" is considered to be side-effect free,
-          // we must also consider "typeof x == 'object'" to be side-effect free.
+          // `==` and `!=` themselves don't throw — the comparison calls ToPrimitive
+          // which could throw for objects, but that concern is delegated to the
+          // operands' own side-effect detection (matching Oxc's approach).
           ast::BinaryOperator::Equality | ast::BinaryOperator::Inequality => {
-            SideEffectDetail::from(!can_change_strict_to_loose(
-              self.scope,
-              &binary_expr.left,
-              &binary_expr.right,
-            )) | self.detect_side_effect_of_expr(&binary_expr.left)
+            self.detect_side_effect_of_expr(&binary_expr.left)
               | self.detect_side_effect_of_expr(&binary_expr.right)
           }
 
@@ -1730,6 +1723,26 @@ let remove15 = class {
     // this, import.meta
     assert_matches_oxc("this");
     assert_matches_oxc("import.meta");
+  }
+
+  #[test]
+  fn test_oxc_parity_binary_expression() {
+    // Strict equality — both systems agree
+    assert_matches_oxc("1 === 1");
+    assert_matches_oxc("'a' === 'b'");
+
+    // Loose equality — now matches Oxc (just recurse on operands)
+    assert_matches_oxc("1 == 1");
+    assert_matches_oxc("'a' == 'b'");
+    assert_matches_oxc("null == undefined");
+    assert_matches_oxc("1 != 2");
+
+    // Comparison operators — now matches Oxc (just recurse on operands)
+    assert_matches_oxc("1 < 2");
+    assert_matches_oxc("1 > 2");
+    assert_matches_oxc("1 <= 2");
+    assert_matches_oxc("1 >= 2");
+    assert_matches_oxc("'a' < 'b'");
   }
 
   #[test]

@@ -1,5 +1,5 @@
 ---
-source: crates/rolldown/tests/integration_test262.rs
+source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
 Summary: 542 passed, 50 failed, 592 total

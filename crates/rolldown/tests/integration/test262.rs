@@ -559,7 +559,7 @@ async fn test262_module_code() {
   let test_files: Vec<_> = discover_test_files(&module_code_dir)
     .into_iter()
     .filter(|test_file| {
-      // Example: TEST262_FILTER="export-default" cargo test --test integration_test262 -- --no-capture
+      // Example: TEST262_FILTER="export-default" cargo test --test integration -- --no-capture
       filter.as_ref().is_none_or(|filter| test_file.to_string_lossy().contains(filter))
     })
     .collect();

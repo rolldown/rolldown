@@ -1,4 +1,4 @@
-import type { InputOptions } from '..';
+import type { InputOptions, RolldownPlugin } from '..';
 import type { BindingNormalizedOptions } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import type { LogHandler } from '../log/log-handler';
@@ -16,13 +16,17 @@ export interface NormalizedInputOptions {
   shimMissingExports: boolean;
   /** @see {@linkcode InputOptions.context | context} */
   context: string;
+  /** @see {@linkcode InputOptions.plugins | plugins} */
+  plugins: RolldownPlugin[];
 }
 
 export class NormalizedInputOptionsImpl extends PlainObjectLike implements NormalizedInputOptions {
   inner: BindingNormalizedOptions;
+
   constructor(
     inner: BindingNormalizedOptions,
     public onLog: LogHandler,
+    private inputPlugins: RolldownPlugin[],
   ) {
     super();
     this.inner = inner;
@@ -51,5 +55,9 @@ export class NormalizedInputOptionsImpl extends PlainObjectLike implements Norma
   @lazyProp
   get context(): string {
     return this.inner.context;
+  }
+
+  get plugins(): RolldownPlugin[] {
+    return this.inputPlugins;
   }
 }

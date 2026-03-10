@@ -16,7 +16,8 @@ Design docs live in `meta/design/`. They capture high-level vision and design in
 When a design doc exists for a topic, treat it as the source of truth — read it before coding, update it before changing the design. When there isn't one, just code.
 
 - **Format:** See `meta/design/template.md` for the suggested format. Keep it freeform — one concept per file, link between docs, no rigid structure required.
-- **Traceability:** When implementing or fixing something described in a design doc, link the relevant GitHub issue/PR in commit messages or comments so progress is traceable.
+- **Reference in code:** When code implements something described in a design doc, add a comment referencing the doc (e.g. `// See meta/design/watch-mode.md`) so readers can find the rationale.
+- **Keep docs in sync:** When changing code that affects a design doc, update the doc in the same change. Design docs that drift from reality are worse than no docs.
 
 # Architecture
 
@@ -43,6 +44,7 @@ Rust Core (crates/rolldown)
 - `packages/rolldown`: The main Node.js package exposing the TypeScript API.
 - `packages/rolldown-tests`: Test suite for the `rolldown` package using Vitest.
 - `packages/rollup-tests`: Compatibility test suite for Rollup plugins.
+- `crates/rolldown_watcher`: Watch mode coordinator. See `meta/design/watch-mode.md` for architecture, state machine, debounce/consolidation rules, and event lifecycle.
 - `docs/`: Documentation site built with VitePress.
 - `meta/design/`: Design documents. See the "Spec-Driven Development" section above.
 

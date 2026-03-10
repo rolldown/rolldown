@@ -1,5 +1,4 @@
 use crate::{BundleFactory, BundlerOptions, types::scan_stage_cache::ScanStageCache};
-use anyhow::Result;
 use rolldown_error::BuildResult;
 use rolldown_plugin::__inner::SharedPluginable;
 use std::ops::Deref;
@@ -38,17 +37,11 @@ impl Bundler {
 
     Ok(Self {
       bundle_factory,
-      closed: false,
       session: rolldown_devtools::Session::dummy(),
       cache: ScanStageCache::default(),
+      closed: false,
     })
   }
-
-  // Implementation is split across multiple files:
-  // - Normal build operations and lifecycle: `impl_bundler_build.rs`
-  // - Getter/accessor methods: `impl_bundler_getter.rs`
-  // - Incremental build methods: `impl_bundler_incremental_build.rs`
-  // - HMR methods: `impl_bundler_hmr.rs`
 
   pub(super) fn create_error_if_closed(&self) -> BuildResult<()> {
     if self.closed {
@@ -57,34 +50,11 @@ impl Bundler {
     Ok(())
   }
 
-  // Rollup always creates a new build in watch mode, which could be called multiple times.
-  // Here only reset the closed flag to make it possible to call again.
-  pub(crate) fn reset_closed_for_watch_mode(&mut self) {
-    self.closed = false;
-  }
-
-  #[cfg(feature = "experimental")]
-  pub fn reset_closed_for_watch_mode_experimental(&mut self) {
-    self.reset_closed_for_watch_mode();
-  }
-
-  pub(super) async fn inner_close(&mut self) -> Result<()> {
-    if self.closed {
-      return Ok(());
-    }
-
-    self.closed = true;
-    // NOTE: `close_bundle` is not called if no bundle happened: https://github.com/rolldown/rolldown/issues/6910
-    if let Some(last_bundle_handle) = &self.last_bundle_handle {
-      last_bundle_handle.plugin_driver.close_bundle(None).await?;
-      last_bundle_handle.plugin_driver.clear();
-    }
-
-    // Clean up resources
-    self.cache = ScanStageCache::default();
-    self.bundle_factory.resolver.clear_cache();
-    Ok(())
-  }
+  // Implementation is split across multiple files:
+  // - Normal build operations and lifecycle: `impl_bundler_build.rs`
+  // - Getter/accessor methods: `impl_bundler_getter.rs`
+  // - Incremental build methods: `impl_bundler_incremental_build.rs`
+  // - HMR methods: `impl_bundler_hmr.rs`
 }
 
 fn _test_bundler() {

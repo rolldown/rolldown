@@ -32,12 +32,18 @@ export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
+  normalizedInputPlugins: RolldownPlugin[],
   normalizedOutputPlugins: RolldownPlugin[],
   onLog: LogHandler,
   logLevel: LogLevelOption,
   watchMode: boolean,
 ): BindingInputOptions {
-  const pluginContextData = new PluginContextData(onLog, outputOptions, normalizedOutputPlugins);
+  const pluginContextData = new PluginContextData(
+    onLog,
+    outputOptions,
+    normalizedInputPlugins,
+    normalizedOutputPlugins,
+  );
 
   const plugins = rawPlugins.map((plugin) => {
     if ('_parallel' in plugin) {
@@ -292,9 +298,20 @@ function bindingifyInput(input: InputOptions['input']): BindingInputOptions['inp
 
 function bindingifyWatch(watch: InputOptions['watch']): BindingInputOptions['watch'] {
   if (watch) {
+    if (watch.notify) {
+      console.warn('The "watch.notify" option is deprecated. Please use "watch.watcher" instead.');
+    }
+    // Merge deprecated `notify` into `watcher`, with `watcher` taking precedence
+    const watcher = { ...watch.notify, ...watch.watcher };
     return {
       buildDelay: watch.buildDelay,
       skipWrite: watch.skipWrite,
+      usePolling: watcher.usePolling,
+      pollInterval: watcher.pollInterval,
+      compareContentsForPolling: watcher.compareContentsForPolling,
+      useDebounce: watcher.useDebounce,
+      debounceDelay: watcher.debounceDelay,
+      debounceTickRate: watcher.debounceTickRate,
       include: normalizedStringOrRegex(watch.include),
       exclude: normalizedStringOrRegex(watch.exclude),
       onInvalidate: (...args) => watch.onInvalidate?.(...args),

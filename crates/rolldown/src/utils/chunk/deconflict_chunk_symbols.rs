@@ -84,12 +84,6 @@ pub fn deconflict_chunk_symbols(
           renamer.add_symbol_in_root_scope(symbol_ref, true);
         }
       });
-      for symbol_id in db.ast_scopes.facade_symbol_classic_data().keys() {
-        let symbol_ref = (*module, *symbol_id).into();
-        if link_output.used_symbol_refs.contains(&symbol_ref) {
-          renamer.add_symbol_in_root_scope(symbol_ref, true);
-        }
-      }
     });
   }
 
@@ -112,7 +106,7 @@ pub fn deconflict_chunk_symbols(
       module
         .stmt_infos
         .iter_enumerated()
-        .filter(|(idx, _)| meta.stmt_info_included[*idx])
+        .filter(|(idx, _)| meta.stmt_info_included.has_bit(*idx))
         .for_each(|(_, stmt_info)| {
           for declared_symbol in stmt_info
             .declared_symbols

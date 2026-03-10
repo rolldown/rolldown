@@ -88,7 +88,7 @@ impl Bundle {
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
-  pub(crate) async fn scan_modules(
+  pub async fn scan_modules(
     &mut self,
     scan_mode: ScanMode<ArcStr>,
   ) -> BuildResult<NormalizedScanStageOutput> {
@@ -147,6 +147,7 @@ impl Bundle {
     BundleHandle {
       options: Arc::clone(&self.options),
       plugin_driver: Arc::clone(&self.plugin_driver),
+      closed: Arc::default(),
     }
   }
 
@@ -201,7 +202,7 @@ impl Bundle {
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
-  pub(crate) async fn bundle_generate(
+  pub async fn bundle_generate(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
@@ -291,8 +292,7 @@ impl Bundle {
         continue;
       };
       let cache_db = snapshot.symbol_ref_db.local_db_mut(idx);
-      let (scoping, _) = db_for_module.ast_scopes.into_inner();
-      cache_db.ast_scopes.set_scoping(scoping);
+      cache_db.merge_from_build(db_for_module);
     }
   }
 

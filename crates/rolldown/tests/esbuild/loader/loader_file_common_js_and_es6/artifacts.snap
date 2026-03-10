@@ -3,13 +3,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/x-BA9VvU_1.txt
+## assets/x-RzbKAZGz.txt
 
 ```txt
 x
 ```
 
-## assets/y-DBJZ7rtI.txt
+## assets/y-DlqcDX5l.txt
 
 ```txt
 y
@@ -20,13 +20,19 @@ y
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region y.txt
-var y_default = "assets/y-DBJZ7rtI.txt";
+var require_y = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "./assets/y-DlqcDX5l.txt";
+}));
+//#endregion
+//#region x.txt
+var require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "./assets/x-RzbKAZGz.txt";
+}));
 //#endregion
 //#region entry.js
-const x_url = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = "assets/x-BA9VvU_1.txt";
-})))();
-console.log(x_url, y_default);
+var import_y = /* @__PURE__ */ __toESM(require_y());
+const x_url = require_x();
+console.log(x_url, import_y.default);
 //#endregion
 
 ```

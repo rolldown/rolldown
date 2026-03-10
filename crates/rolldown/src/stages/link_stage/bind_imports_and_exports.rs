@@ -758,6 +758,22 @@ impl BindImportsAndExportsContext<'_> {
         MatchImportKind::NormalAndNamespace { namespace_ref, alias } => {
           self.symbol_db.get_mut(*imported_as_ref).namespace_alias =
             Some(NamespaceAlias { property_name: alias, namespace_ref });
+
+          // Propagate JSX flags from the imported symbol to its namespace_ref.
+          // When we have: `import React from './cjs-module'; <React.Fragment/>`
+          // `React` has UsedAsJSXMemberExprRoot, but the rendered binding is
+          // the namespace_ref (`import_react`). Since namespace_ref is a facade
+          // (generated) symbol, we promote it to MustStartWithCapitalLetterForJSX
+          // so the renamer uppercases it (e.g. `Import_react`).
+          if imported_as_ref.flags(self.symbol_db).is_some_and(|flags| {
+            flags.intersects(
+              SymbolRefFlags::MustStartWithCapitalLetterForJSX
+                | SymbolRefFlags::UsedAsJSXMemberExprRoot,
+            )
+          }) {
+            let ns_flags = namespace_ref.flags_mut(self.symbol_db);
+            *ns_flags |= SymbolRefFlags::MustStartWithCapitalLetterForJSX;
+          }
         }
         MatchImportKind::NoMatch => {
           let importee = &self.index_modules[resolved_module_idx];

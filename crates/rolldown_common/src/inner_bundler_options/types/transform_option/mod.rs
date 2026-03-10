@@ -15,17 +15,10 @@ pub use {
   typescript_options::{IsolatedDeclarationsOptions, TypeScriptOptions},
 };
 
-#[cfg(debug_assertions)]
-use super::transform_options::JsxPreset;
-
 #[derive(Debug, Default, Clone)]
 pub struct TransformOptions {
   /// Configure how TSX and JSX are transformed.
   pub jsx: Option<Either<String, JsxOptions>>,
-
-  /// Override the jsx preset derived from `jsx` option. Only used for testing.
-  #[cfg(debug_assertions)]
-  pub jsx_preset: Option<JsxPreset>,
 
   /// Sets the target environment for the generated JavaScript.
   ///
@@ -61,8 +54,6 @@ impl From<crate::utils::enhanced_transform::EnhancedTransformOptions> for Transf
   fn from(options: crate::utils::enhanced_transform::EnhancedTransformOptions) -> Self {
     Self {
       jsx: options.jsx,
-      #[cfg(debug_assertions)]
-      jsx_preset: None,
       target: options.target,
       assumptions: options.assumptions,
       decorator: options.decorator,

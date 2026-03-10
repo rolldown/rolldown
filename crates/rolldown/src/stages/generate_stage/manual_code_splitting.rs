@@ -6,14 +6,13 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupTest,
   Module, ModuleIdx, ModuleTable,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_utils::{BitSet, xxhash::xxhash_with_base};
+use rolldown_utils::{BitSet, IndexBitSet, xxhash::xxhash_with_base};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -75,7 +74,7 @@ struct ManualSplitter<'a> {
   plugin_driver: &'a SharedPluginDriver,
   input_base: &'a ArcStr,
   chunk_graph: &'a mut ChunkGraph,
-  module_to_assigned: &'a mut IndexVec<ModuleIdx, bool>,
+  module_to_assigned: &'a mut IndexBitSet<ModuleIdx>,
 }
 
 impl ManualSplitter<'_> {
@@ -122,7 +121,7 @@ impl ManualSplitter<'_> {
         continue;
       }
 
-      if self.module_to_assigned[normal_module.idx] {
+      if self.module_to_assigned.has_bit(normal_module.idx) {
         continue;
       }
 
@@ -253,7 +252,7 @@ impl ManualSplitter<'_> {
         chunk_idx,
         self.link_output.metas[runtime_module_idx].depended_runtime_helper,
       );
-      self.module_to_assigned[runtime_module_idx] = true;
+      self.module_to_assigned.set_bit(runtime_module_idx);
     }
   }
 
@@ -402,7 +401,7 @@ impl ManualSplitter<'_> {
         chunk_idx,
         self.link_output.metas[module_idx].depended_runtime_helper,
       );
-      self.module_to_assigned[module_idx] = true;
+      self.module_to_assigned.set_bit(module_idx);
     });
   }
 }
@@ -411,7 +410,7 @@ impl GenerateStage<'_> {
   pub async fn apply_manual_code_splitting(
     &self,
     index_splitting_info: &IndexSplittingInfo,
-    module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
+    module_to_assigned: &mut IndexBitSet<ModuleIdx>,
     chunk_graph: &mut ChunkGraph,
     input_base: &ArcStr,
   ) -> BuildResult<()> {

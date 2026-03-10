@@ -40,7 +40,7 @@ const myPlugin = {
 ### Composable Filters
 
 > [!WARNING]
-> Composable filters are not yet supported in legacy Vite or unplugin. They can be used in Rolldown/Rolldown-Vite/Vite Beta plugins only.
+> Composable filters are not yet supported in Vite or unplugin. They can be used in Rolldown plugins only.
 
 ```ts
 import { and, id, include, moduleType, query } from '@rolldown/pluginutils';

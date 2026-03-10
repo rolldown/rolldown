@@ -59,6 +59,12 @@ impl<I: Idx> IndexBitSet<I> {
   }
 }
 
+impl<I: Idx> Default for IndexBitSet<I> {
+  fn default() -> Self {
+    Self::new(0)
+  }
+}
+
 impl<I: Idx> Extend<I> for IndexBitSet<I> {
   fn extend<T: IntoIterator<Item = I>>(&mut self, iter: T) {
     self.inner.extend(iter.into_iter().map(Self::bit));

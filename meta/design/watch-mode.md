@@ -20,7 +20,7 @@ function watch(input: WatchOptions | WatchOptions[]): RolldownWatcher;
 
 - Accepts a single config or an array of configs.
 - Each config may have multiple `output` entries. Internally, **each output creates a separate bundler** (a `WatchTask`).
-- Returns a `RolldownWatcher` immediately. The first build is deferred to `process.nextTick` so the caller can attach event listeners first.
+- Returns a `RolldownWatcher` immediately. The first build is deferred to `process.nextTick` so the caller can attach event listeners first. This matches Rollup's pattern: the constructor calls `process.nextTick(() => this.run())` where `run()` is private.
 
 ```typescript
 interface RolldownWatcher {
@@ -58,12 +58,12 @@ All event listeners are **awaited** before proceeding — blocking semantics mat
 ### Rust API
 
 ```rust
-let watcher = Watcher::new(config, handler, &watcher_config)?;
-let watcher = Watcher::with_multiple_bundler_configs(configs, handler, &watcher_config)?;
-watcher.close().await?;
+let watcher = Watcher::new(configs, handler, &watcher_config)?;
+watcher.run();       // spawns the coordinator (non-blocking)
+watcher.close().await?;  // sends Close, awaits completion
 ```
 
-`Watcher::new` spawns the coordinator actor and triggers the first build immediately. The caller provides a `WatcherEventHandler` implementation to receive events.
+Follows the same `new → run → close` pattern as `DevEngine`. `new()` creates the coordinator future but doesn't spawn it. `run()` spawns it on the tokio runtime. `close()` sends a fire-and-forget `Close` message and awaits the shared completion future. `wait_for_close()` gives consumers a reliable way to await the watcher's completion without closing it.
 
 ### Known Divergences from Rollup
 
@@ -92,13 +92,13 @@ Watcher (public API)
                                     └── WatchTask N ...
 
 Data flow:
-  DynFsWatcher ──(TaskFsEventHandler)──→ WatcherMsg::FsEvent ──→ WatchCoordinator
+  DynFsWatcher ──(TaskFsEventHandler: maps notify events → FileChangeEvent)──→ WatcherMsg::FileChanges ──→ WatchCoordinator
   WatchCoordinator ──(handler.on_event().await)──→ Consumer (NAPI/Rust)
 ```
 
 **Ownership rules:**
 
-- `Watcher` only holds `tx` and `task_handle` — lightweight, no bundler access.
+- `Watcher` only holds `tx` and `coordinator_state` — lightweight, no bundler access.
 - `WatchCoordinator` owns ALL mutable state. No external mutation.
 - Each `WatchTask` owns its `DynFsWatcher`. Per-task watchers mean isolated watch sets and simpler ownership.
 - Bundler is `Arc<TokioMutex<>>` because event data structs carry a clone for consumer access (e.g. `BUNDLE_END.result`).
@@ -123,14 +123,16 @@ Rust Core (crates/rolldown_watcher/)
 
 ```
 rolldown_watcher/
-├── lib.rs                // Public exports
-├── watcher.rs            // Watcher (public API) + TaskFsEventHandler + WatcherConfig
-├── watch_coordinator.rs  // WatchCoordinator (actor + event loop)
-├── watch_task.rs         // WatchTask (bundler + fs watcher) + WatchTaskIdx + BuildOutcome
-├── handler.rs            // WatcherEventHandler async trait
-├── event.rs              // WatchEvent, BundleStartEventData, BundleEndEventData, WatchErrorEventData
-├── state.rs              // WatcherState enum + transitions + ChangeEntry
-└── msg.rs                // WatcherMsg enum (FsEvent, Close)
+├── lib.rs                     // Public exports
+├── watcher.rs                 // Watcher (public API) + WatcherConfig
+├── watch_coordinator.rs       // WatchCoordinator (actor + event loop)
+├── watch_task.rs              // WatchTask (bundler + fs watcher) + WatchTaskIdx + BuildOutcome
+├── task_fs_event_handler.rs   // TaskFsEventHandler (notify → FileChangeEvent mapping)
+├── handler.rs                 // WatcherEventHandler async trait
+├── event.rs                   // WatchEvent, BundleStartEventData, BundleEndEventData, WatchErrorEventData
+├── file_change_event.rs       // FileChangeEvent (path + kind)
+├── watcher_state.rs           // WatcherState enum + transitions
+└── watcher_msg.rs             // WatcherMsg enum (FileChanges, Close)
 ```
 
 ## State Machine
@@ -147,13 +149,65 @@ Any ──(Close)──→ Closing → Closed
 ```rust
 enum WatcherState {
     Idle,
-    Debouncing { changes: Vec<ChangeEntry>, deadline: Instant },
+    Debouncing { changes: FxIndexMap<String, WatcherChangeKind>, deadline: Instant },
     Closing,
     Closed,
 }
 ```
 
-**Debounce coalescing:** When multiple events arrive for the same path during the debounce window, the latest `kind` wins (last-write-wins). The deadline resets on each new event.
+**Debounce coalescing:** When multiple events arrive for the same path during the debounce window, the change kinds are consolidated rather than using simple last-write-wins. See "Kind Consolidation" below for details. The deadline resets on each new event.
+
+## Debouncing
+
+### Two Layers, One Default
+
+There are two possible debounce layers:
+
+1. **Coordinator-level** (`WatcherState::Debouncing`) — batches file changes across files before triggering a rebuild. Controlled by `buildDelay`. This is the primary mechanism.
+2. **Fs-watcher-level** (`notify-debouncer-full`) — deduplicates rapid OS-level events for the same file (e.g. editors that write multiple times per save). Available in `rolldown_fs_watcher` but not used by the watcher.
+
+Only coordinator-level debounce is active by default. This matches Rollup, which implements its own `setTimeout`/`clearTimeout` debounce on top of chokidar (chokidar has no debounce option — only `awaitWriteFinish` for write completion detection).
+
+### Rollup's Approach
+
+Rollup's `buildDelay` option (default: **0ms**) controls a simple timer-reset pattern:
+
+```javascript
+// Each file change resets the timer
+if (this.buildTimeout) clearTimeout(this.buildTimeout);
+this.buildTimeout = setTimeout(() => {
+  // emit all accumulated changes, trigger single rebuild
+}, this.buildDelay);
+```
+
+Changes accumulate in an `invalidatedIds` Map during the delay window — both per-file deduplication and cross-file batching happen in one mechanism. Rollup also applies an `eventsRewrites` table for smarter coalescing (create+delete=null, delete+create=update, etc.).
+
+### Rolldown's Approach
+
+The `WatcherState::Debouncing` state does the same thing with `tokio::select!` and a deadline reset:
+
+- File change → `Idle` becomes `Debouncing { changes, deadline }`
+- More changes → deadline resets, changes accumulate with kind consolidation per path
+- Deadline fires → if changes are non-empty, passed to `run_build_sequence()`; if empty (all cancelled out by kind consolidation), silently return to Idle
+
+#### Kind Consolidation
+
+Like Rollup's `eventsRewrites` table, rolldown consolidates change kinds when multiple events arrive for the same path during a debounce window (`merge_change_kind` in `watcher_state.rs`):
+
+| Existing | New    | Result    | Rationale                                                          |
+| -------- | ------ | --------- | ------------------------------------------------------------------ |
+| Create   | Update | Create    | File is still new — modification doesn't change that               |
+| Create   | Delete | _removed_ | File never existed from the observer's perspective                 |
+| Delete   | Create | Update    | File was recreated — net effect is a modification                  |
+| _other_  | _any_  | new kind  | Latest kind wins (e.g. Update+Update→Update, Update+Delete→Delete) |
+
+This matters because plugins receive the `WatcherChangeKind` in `watchChange` hooks and may behave differently based on whether a file was created vs. modified.
+
+The fs-watcher layer (`notify-debouncer-full`) is available as an option for users who need OS-level event deduplication (noisy editors, network drives), exposed through `watch.watcher` options (`usePolling` / `pollInterval`). Using both layers adds latency and makes timing harder to reason about, so it's not the default.
+
+### Default Delay
+
+Rollup defaults `buildDelay` to 0ms. The new `rolldown_watcher` defaults to 0ms (`DEFAULT_DEBOUNCE_MS`), matching Rollup.
 
 ## Event Lifecycle
 
@@ -172,7 +226,7 @@ Watcher spawns coordinator
 
 ```
 File change detected by per-task FsWatcher
-  → TaskFsEventHandler sends WatcherMsg::FsEvent
+  → TaskFsEventHandler sends WatcherMsg::FileChanges
   → process_fs_event():
       - Maps notify EventKind → WatcherChangeKind (Create/Update/Delete)
       - task.invalidate(path) → sets needs_rebuild = true
@@ -186,7 +240,12 @@ File change detected by per-task FsWatcher
       4. handler.on_event(START)
       5. For each task with needs_rebuild:
          a. handler.on_event(BUNDLE_START)
-         b. task.build() → bundler.write() + update_watch_files()
+         b. task.build():
+            - bundler.with_cached_bundle_experimental(FullBuild, |bundle| { ... })
+              1. bundle.scan_modules() → discover module graph
+              2. bundle.get_watch_files() → register FS watches (before render, before checking scan result for error recovery)
+              3. bundle.bundle_write() or bundle.bundle_generate() (if skip_write)
+            - update_watch_files() again with any render-phase files
          c. handler.on_event(BUNDLE_END or ERROR)
       6. handler.on_event(END)
       7. drain_buffered_events() → process events that arrived during build
@@ -195,14 +254,15 @@ File change detected by per-task FsWatcher
 ### Close
 
 ```
-watcher.close() sends WatcherMsg::Close(oneshot_tx)
+watcher.close() sends WatcherMsg::Close (fire-and-forget)
+  → awaits shared coordinator future (wait_for_close)
   → handle_close():
       1. State → Closing
       2. task.call_hook_close_watcher() for each task (plugin hook, awaited)
       3. task.close() for each task (bundler cleanup)
       4. handler.on_close() (awaited)
       5. State → Closed
-      6. oneshot reply → close() promise resolves
+      6. coordinator future completes → all wait_for_close() callers resolve
 ```
 
 ### Error Recovery
@@ -235,15 +295,48 @@ Configured via `WatcherOptions`, fires **immediately** on file change (before de
 - Files are watched **non-recursively** (individual file watches).
 - Batch operations: `fs_watcher.paths_mut()` returns a guard for batching adds, committed via `.commit()`.
 
+### Split-Phase Build for Watch Mode
+
+`Bundler::write()` runs scan → render → write atomically. But the watcher needs to register FS watches for discovered files BETWEEN scan and write — otherwise changes made during render hooks (e.g. `renderStart` modifying a file) are missed because the FS watcher isn't watching yet.
+
+The watcher uses `Bundler::with_cached_bundle_experimental()` to get `&mut Bundle` access, allowing manual orchestration of the build phases:
+
+1. **Scan** — `bundle.scan_modules()` discovers module graph and populates watch files
+2. **Watch registration** — `bundle.get_watch_files()` → register FS watches BEFORE render hooks fire.
+   This happens before checking the scan result — so files are watched even on scan error.
+   This is critical for error recovery: if a user introduces a syntax error, the watcher must
+   still be watching the broken file so that saving a fix triggers a rebuild.
+3. **Write/Generate** — `bundle_write()` or `bundle_generate()` (if `skip_write`)
+
+This matches the legacy watcher's approach (`with_cached_bundle`), where `watch_files()` was called between scan and write phases.
+
+### Missing File Recovery
+
+When an import resolves to a non-existent file, the build errors. Watch mode relies on the resolver cache being cleared before each rebuild (`bundler.clear_resolver_cache()`). The expected recovery workflow is: create the missing file, then manually edit a watched file (e.g. noop edit to the importer) to trigger a rebuild. The resolver re-evaluates the import with a fresh cache and succeeds. This matches Rollup's behavior — Rollup only watches successfully loaded modules.
+
 ### Notify Event Mapping
 
 ```
-notify::EventKind::Create(_)                    → WatcherChangeKind::Create
-notify::EventKind::Modify(Data | Any)           → WatcherChangeKind::Update
-notify::EventKind::Modify(Name(RenameMode::To)) → WatcherChangeKind::Update
-notify::EventKind::Remove(_)                    → WatcherChangeKind::Delete
-Other                                           → ignored
+notify::EventKind::Create(_)                              → WatcherChangeKind::Create
+notify::EventKind::Modify(Name(RenameMode::To))           → WatcherChangeKind::Create
+notify::EventKind::Modify(Name(RenameMode::Both))         → per-path (see below)
+notify::EventKind::Modify(Name(RenameMode::From))         → WatcherChangeKind::Delete
+notify::EventKind::Remove(_)                              → WatcherChangeKind::Delete
+notify::EventKind::Modify(_)  (other)                     → WatcherChangeKind::Update
+notify::EventKind::Access(_)                              → None (ignored — prevents infinite rebuild loops on Linux)
 ```
+
+**Rename handling:** Linux inotify can emit `Modify(Name(Both))` when both source and destination are known in a single rename event. This event carries two paths `[from, to]`. The event handler splits it into two `FileChangeEvent`s: `Delete` for the source path and `Create` for the destination path. This preserves both signals — the delete ensures stale cache entries are invalidated, and the create triggers missing-dir rebuilds. `RenameMode::To` and `RenameMode::From` are the single-path equivalents.
+
+**Access filtering:** The build process reads watched source files, which on Linux triggers `IN_OPEN`/`IN_CLOSE_NOWRITE` events. Without filtering, these cause infinite rebuild loops.
+
+### Path Identity
+
+The watch set stores paths as raw `ArcStr` strings. The `notify` crate reports events with OS-native paths. If these don't match exactly, `is_watched_file()` fails silently. The current `#[cfg(windows)]` backslash fallback is a symptom.
+
+**Recommendation:** Use `PathBuf` for the watched file set instead of `ArcStr`. This handles trailing slashes, double separators, `.` segments, and Windows `\` vs `/` — all common mismatch sources between resolver output and notify events.
+
+See [module-id.md](./module-id.md) for the full analysis of path identity across the bundler, `PathBuf` comparison behavior, and Rollup's approach.
 
 ## WatcherEventHandler Trait
 
@@ -262,33 +355,75 @@ All methods are awaited — the coordinator blocks on handler calls, ensuring Ro
 
 ## NAPI Bridge
 
-The NAPI handler funnels all events through a single `ThreadsafeFunction` callback. `call_async` awaits the JS Promise, ensuring the Rust coordinator blocks until JS handlers finish.
+### Event Handler
+
+`NapiWatcherEventHandler` implements `WatcherEventHandler`, bridging all 4 trait methods to a single JS callback via `ThreadsafeFunction`. Each method wraps its data in a `BindingWatcherEvent` variant and calls `listener.await_call()`, which awaits the JS Promise — ensuring the Rust coordinator blocks until JS handlers finish.
 
 ```rust
 struct NapiWatcherEventHandler {
-    on_event: ThreadsafeFunction<BindingWatcherEvent, Promise<()>>,
+    listener: Arc<MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>>>,
 }
 
 impl WatcherEventHandler for NapiWatcherEventHandler {
     async fn on_event(&self, event: WatchEvent) {
-        self.on_event.call_async(event.into()).await;
+        let binding_event = BindingWatcherEvent::from_watch_event(event);
+        self.listener.await_call(FnArgs { data: (binding_event,) }).await;
     }
-    // same pattern for on_change, on_restart, on_close
+    // same pattern for on_change (from_change), on_restart, on_close
 }
 ```
 
-The TypeScript `WatcherEmitter.onEvent()` dispatches based on event kind to the appropriate listener set.
+`BindingWatcherEvent` wraps an internal enum (`BundleEvent | Change | Restart | Close`) with NAPI-exposed accessor methods (`eventKind()`, `bundleEventKind()`, `bundleEndData()`, etc.) for JS consumption.
+
+### Event Loop Keepalive
+
+`ThreadsafeFunction` uses `Weak = true` (unref'd), so it doesn't prevent Node.js from exiting. `Watcher::wait_for_close()` returns a `Shared<Future>` that resolves when the coordinator finishes — idempotent, so multiple callers (or late callers after completion) all resolve immediately. The NAPI binding exposes this as `waitForClose()` — the pending JS Promise keeps the event loop alive. This replaces the old `setInterval(() => {}, 1e9)` hack.
+
+```
+constructor(options, listener)  // creates Watcher with handler, ready to run
+run()   → inner.run()           // spawns coordinator (non-blocking)
+        → inner.waitForClose()  // pending Promise keeps Node alive
+close() → inner.close()         // sends Close msg, awaits shared future
+                                // waitForClose() resolves, event loop free to exit
+```
+
+### Binding as Thin Wrapper
+
+`BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking, no logic beyond type conversion. All lifecycle management lives in the Rust core. The constructor takes both `options` and `listener`, creates the `NapiWatcherEventHandler`, and passes it to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher.
+
+### Event Emitter
+
+`WatcherEmitter` uses a simple `Map<string, Function[]>` for listener storage (on/off). Async `emit()` dispatches handlers sequentially (`for...of` + `await`) so side effects from earlier handlers (e.g. `result.close()` triggering `closeBundle`) are visible to later handlers. No external dependency needed.
+
+### Event Mapping
+
+Lives in `watcher.ts` (`createEventCallback()` — a standalone function), not in the emitter. The callback is created before the `BindingWatcher` constructor and passed to it alongside options. Maps `BindingWatcherEvent` → Rollup-compatible event objects. Error events carry structured `Vec<BuildDiagnostic>` data from Rust; the binding preserves these diagnostics, and the JS layer converts them via `aggregateBindingErrorsIntoJsError()` before exposing them on Rollup-style event objects.
+
+### End-to-End Flow
+
+```
+WatchCoordinator.run_build_sequence()
+  → handler.on_event(WatchEvent::BundleEnd(data)).await
+  → NapiWatcherEventHandler.on_event()
+    → BindingWatcherEvent::from_watch_event(event)
+    → listener.await_call(binding_event).await → ThreadsafeFunction calls JS
+  → JS: createEventCallback() receives BindingWatcherEvent
+    → Maps to RolldownWatcherEvent { code: 'BUNDLE_END', ... }
+    → emitter.emit('event', mapped_event) → sequential for...of await
+  → Rust: await_call resolves → coordinator continues
+```
 
 ## Configuration
 
 ```typescript
 interface WatcherOptions {
   skipWrite?: boolean; // Skip bundle.write(). Default: false
-  buildDelay?: number; // Debounce ms. Default: 0 (Rust default: 100ms)
-  notify?: {
-    pollInterval?: number; // Polling backend interval ms. Default: 30000
-    compareContents?: boolean; // Content comparison for polling. Default: false
+  buildDelay?: number; // Debounce ms. Default: 0
+  watcher?: {
+    usePolling?: boolean; // Use polling backend. Default: false
+    pollInterval?: number; // Polling interval ms. Default: 100
   };
+  notify?: { ... }; // Deprecated — use `watcher` instead
   include?: StringOrRegExp | StringOrRegExp[];
   exclude?: StringOrRegExp | StringOrRegExp[];
   onInvalidate?: (id: string) => void;
@@ -303,40 +438,47 @@ ROLLUP_WATCH=true    // Rollup compatibility
 ROLLDOWN_WATCH=true  // Rolldown-specific
 ```
 
-## Known Gaps
+## Migration Status
 
-The new `rolldown_watcher` is expected to resolve all issues tracked in [#6482](https://github.com/rolldown/rolldown/issues/6482). Each gap below links to the relevant issue(s).
+Tracks progress from old watcher → new `rolldown_watcher`. Items link to [#6482](https://github.com/rolldown/rolldown/issues/6482) and related issues.
 
-### Must Fix (from #6482)
+### NAPI + TypeScript Bridge
 
-1. **Close mechanism is broken** — The old watcher never calls `Bundler::close()`, so `bundler.is_closed` is always false. The new watcher's close flow (the Close section above) properly calls `task.close()` for each bundler. ([#6482](https://github.com/rolldown/rolldown/issues/6482))
+- [ ] Surface setup errors (e.g. `options` hook) as `ERROR` events, not unhandled rejections ([#6482](https://github.com/rolldown/rolldown/issues/6482))
 
-2. **Watch hangs with small thread pools** — The old implementation uses `block_on()` which can deadlock with limited blocking threads. The new async actor model avoids this entirely — the coordinator runs on the tokio runtime without blocking threads. ([#6393](https://github.com/rolldown/rolldown/issues/6393), [#6482](https://github.com/rolldown/rolldown/issues/6482))
+### Cleanup
 
-3. **Unhandled errors in `options` hook cause promise rejections** — The old `watch()` is sync but `createWatcher()` is async, so errors in the options hook become unhandled rejections. The new design must ensure errors during setup are surfaced as `event('ERROR')` rather than unhandled rejections. ([#6482](https://github.com/rolldown/rolldown/issues/6482))
+- [ ] Remove `reset_closed_for_watch_mode()` hack — see [rust-bundler.md](./rust-bundler.md) for the `Bundle.close()` design that replaces it
+- [ ] Rename `WatcherChangeKind` → `FileChangeEventKind` (type stays in `rolldown_common`)
+- [ ] CLI `--watch` mode working with new watcher ([#7759](https://github.com/rolldown/rolldown/issues/7759))
 
-4. **`BUNDLE_END`/`ERROR` events need `RolldownBuild` handle** — Rollup's watch events include a `result` (build handle) that consumers can use. Rolldown's bundler model differs (each `write/generate` is a new build), so the new watcher exposes `Arc<TokioMutex<Bundler>>` in event data as the access mechanism. ([#6618](https://github.com/rolldown/rolldown/issues/6618), [#6482](https://github.com/rolldown/rolldown/issues/6482))
+### Missing Features
 
-5. **Resolver cache not cleared between rebuilds** — The resolver cache must be invalidated for changed files on rebuild. The new watcher should ensure proper cache invalidation as part of the rebuild sequence. ([#6482](https://github.com/rolldown/rolldown/issues/6482))
-
-6. **`--watch` CLI mode not working** — Reported for tsdown/rolldown CLI. The new watcher must work correctly when invoked via CLI. ([#7759](https://github.com/rolldown/rolldown/issues/7759))
-
-7. **NAPI handler not yet wired** — `WatcherEventHandler` trait needs to be implemented in the NAPI binding layer to complete the migration. ([#6482](https://github.com/rolldown/rolldown/issues/6482))
-
-### Should Fix
-
-8. **No file unwatching** — `update_watch_files()` only adds, never removes files no longer in the module graph. Watch set grows monotonically.
-
-9. **No `skipWrite` support** — Always calls `bundler.write()`. Should check `options.watch.skip_write` and call `bundler.generate()` instead.
-
-10. **Simplified change coalescing** — Uses last-write-wins. Rollup's `eventsRewrites` table (e.g. create+delete=removed, delete+create=update) is not implemented.
+- [x] Resolver cache invalidation between rebuilds ([#6482](https://github.com/rolldown/rolldown/issues/6482)) — `clear_resolver_cache()` called at start of each rebuild
+- [ ] File unwatching — `update_watch_files()` only adds, never removes. Watch set grows monotonically
 
 ### Future
 
-11. **No incremental build** — `WatchTask::build()` calls `bundler.write()` (full rebuild). Incremental builds are a future optimization.
+- [ ] Non-blocking builds — spawn builds instead of inline `await` (see Unresolved Questions)
+- [ ] Incremental builds — `WatchTask::build()` currently does full rebuild via `bundler.write()`
+- [ ] Parallel task builds within a single coordinator
+- [ ] Bulk-change threshold optimization — For bulk changes (e.g. `git checkout` producing 1000+ file events), we could skip per-file `on_change`/`watchChange` hooks and just do a full rebuild. Rollup doesn't do this — it always calls per-file hooks regardless of volume. This is a potential future optimization if per-file hook overhead becomes a performance issue.
+
+## Unresolved Questions
+
+- **Build should not block the coordinator loop** — Currently the coordinator `await`s builds inline, blocking the entire event loop. The dev engine (`BundleCoordinator`) solves this by `tokio::spawn`ing builds — the coordinator loop stays responsive to messages while builds run. On `Close`, the dev engine still waits for the running build to finish gracefully, but the point is it _receives_ the message immediately rather than being blocked. The watcher should follow the same pattern — spawn builds, receive completion messages back, and keep the loop free to process events during builds.
+
+- **Parallel task builds** — `watch([configA, configB])` builds tasks sequentially (matching Rollup), while calling `watch(configA); watch(configB)` separately runs them in parallel (separate coordinators). This means sequential execution isn't a meaningful guarantee — users can trivially opt into parallelism by splitting calls. Should we just parallelize tasks within a single coordinator too?
+
+- **Shared vs per-task FsWatcher** — Currently each `WatchTask` owns its own `DynFsWatcher`. If two tasks watch the same file, it's watched twice at the OS level. A single shared `DynFsWatcher` at the coordinator level would deduplicate watches and use fewer OS resources. Adding files is straightforward. Unwatching (not yet implemented) would require cross-task coordination — a file can only be unwatched when no task needs it (reference counting or a union check across task watch sets). Since unwatching isn't implemented yet, a shared watcher would be strictly simpler today.
+
+- **Watch files not persisted across builds** — `bundler.watch_files()` returns the watch set from the latest build, but this set is not persisted between builds. With full rebuilds this is fine (each build produces a complete set). But with incremental builds, only a subset of modules are re-processed, so the incremental build's `watch_files()` would be incomplete — it wouldn't include files from modules that weren't re-visited. The watch set needs to be accumulated/persisted across builds, not replaced each time.
 
 ## Related
 
+- [rust-bundler](./rust-bundler.md) — Core Bundler struct and `Bundle.close()` design
+- [rust-classic-bundler](./rust-classic-bundler.md) — Rollup API compatibility wrapper
+- [module-id](./module-id.md) — Module ID, path identity, and normalization
 - [#6482](https://github.com/rolldown/rolldown/issues/6482) — Watch mode issue collection (tracks all known bugs)
 - `crates/rolldown_watcher/` — Implementation
 - `crates/rolldown_fs_watcher/` — File system watching abstraction over `notify`

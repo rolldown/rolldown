@@ -12,14 +12,14 @@ pub struct UntranspiledSyntax {
 
 impl BuildEvent for UntranspiledSyntax {
   fn kind(&self) -> crate::types::event_kind::EventKind {
-    crate::types::event_kind::EventKind::UntranspiledSyntaxError
+    crate::types::event_kind::EventKind::UnhandleableError
   }
 
   fn message(&self, opts: &DiagnosticOptions) -> String {
     let filename = opts.stabilize_path(&self.filename);
     format!(
-      "{} syntax should be transpiled before bundling. Found untranspiled {} in {filename:?}",
-      self.syntax_kind, self.syntax_kind
+      "Something went wrong inside rolldown while processing {filename:?}: found untranspiled {} syntax. Please report this problem at https://github.com/rolldown/rolldown/issues",
+      self.syntax_kind
     )
   }
 

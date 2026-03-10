@@ -29,6 +29,32 @@ test(`emit data for devtool`, async () => {
   for (const variable of variables) {
     expect(logsContent.includes(variable)).toBe(false);
   }
+
+  const logs = logsContent
+    .toString()
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line));
+
+  const moduleGraphReady = logs.find((event) => event.action === 'ModuleGraphReady');
+  expect(moduleGraphReady).toBeDefined();
+  const entryModule = moduleGraphReady.modules.find((module) => /[\\/]index\.ts$/.test(module.id));
+  expect(entryModule).toBeDefined();
+  expect(entryModule.imports).toContainEqual(
+    expect.objectContaining({
+      kind: 'dynamic-import',
+      module_request: './async',
+    }),
+  );
+
+  const chunkGraphReady = logs.find((event) => event.action === 'ChunkGraphReady');
+  expect(chunkGraphReady).toBeDefined();
+  expect(
+    chunkGraphReady.chunks.some((chunk) =>
+      chunk.imports.some((item) => item.kind === 'dynamic-import'),
+    ),
+  ).toBe(true);
+
   const metaContent = readFileSync(join(dotRolldownFileName, dotRolldownDir[0], 'meta.json'));
   for (const variable of variables) {
     expect(metaContent.includes(variable)).toBe(false);

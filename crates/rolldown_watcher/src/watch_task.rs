@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig};
-use rolldown_common::{NormalizedBundlerOptions, WatcherChangeKind};
+use rolldown_common::{BundleMode, NormalizedBundlerOptions, ScanMode, WatcherChangeKind};
 use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_fs_watcher::{DynFsWatcher, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
@@ -64,21 +64,66 @@ impl WatchTask {
 
     let start_time = Instant::now();
 
+    let skip_write = self.options.watch.skip_write;
+    // Use field-level borrows so the closure can capture fs_watcher/watched_files/options
+    // without conflicting with the &mut self borrow on bundler.
+    let fs_watcher_ref = &self.fs_watcher;
+    let watched_files_ref = &self.watched_files;
+    let options_ref = &*self.options;
+
     // Scope the bundler lock to minimize lock duration
-    let (result, new_watch_files) = {
+    let (result, new_watch_files, bundle_handle) = {
       let mut bundler = self.bundler.lock().await;
 
-      // TODO: `write()` does a full rebuild each time. We should integrate
-      // incremental builds here in the future.
-      let result = bundler.write().await;
+      // Clear stale plugin driver state from previous build.
+      if let Some(last_bundle_handle) = &bundler.last_bundle_handle {
+        last_bundle_handle.plugin_driver().clear();
+      }
 
-      // Collect watch files while we have the lock
-      let new_watch_files: Vec<ArcStr> = bundler.watch_files().iter().map(|f| f.clone()).collect();
+      // Always clear resolver cache before each rebuild in watch mode to avoid
+      // stale resolution results from modified package.json/tsconfig/export maps.
+      bundler.clear_resolver_cache();
 
-      (result, new_watch_files)
+      // Use with_cached_bundle_experimental to register FS watches between scan and write phases.
+      // This ensures changes made during render hooks (e.g. renderStart modifying a file)
+      // are detected by the FS watcher.
+      let result = bundler
+        .with_cached_bundle_experimental(BundleMode::FullBuild, async |bundle| {
+          let scan_result = bundle.scan_modules(ScanMode::Full).await;
+
+          // Register watch files discovered during scan BEFORE checking scan errors
+          // (so files are watched even on error — enables recovery when user fixes the issue)
+          let watch_files: Vec<ArcStr> =
+            bundle.get_watch_files().iter().map(|f| f.clone()).collect();
+          Self::update_watch_files_from(
+            fs_watcher_ref,
+            watched_files_ref,
+            options_ref,
+            &watch_files,
+          )?;
+
+          let scan_output = scan_result?;
+
+          if skip_write {
+            bundle.bundle_generate(scan_output).await
+          } else {
+            bundle.bundle_write(scan_output).await
+          }
+        })
+        .await;
+
+      // Extract the bundle handle for event data (watch files + close support)
+      let bundle_handle =
+        bundler.last_bundle_handle.clone().expect("bundle handle should exist after build");
+
+      // Collect watch files while we have the lock (may include render-phase files)
+      let new_watch_files: Vec<ArcStr> =
+        bundle_handle.watch_files().iter().map(|f| f.clone()).collect();
+
+      (result, new_watch_files, bundle_handle)
     };
 
-    // Update watch files without holding the bundler lock
+    // Also register any files discovered during render/write phase
     self.update_watch_files(&new_watch_files)?;
 
     #[expect(clippy::cast_possible_truncation)]
@@ -91,17 +136,14 @@ impl WatchTask {
         task_index,
         output: self.options.cwd.join(&self.options.out_dir).to_string_lossy().into_owned(),
         duration,
-        bundler: Arc::clone(&self.bundler),
+        bundle_handle,
       })),
-      Err(errs) => {
-        let error_messages: Vec<String> = errs.iter().map(|e| format!("{e:?}")).collect();
-        Ok(BuildOutcome::Error(WatchErrorEventData {
-          task_index,
-          errors: error_messages,
-          cwd: self.options.cwd.clone(),
-          bundler: Arc::clone(&self.bundler),
-        }))
-      }
+      Err(errs) => Ok(BuildOutcome::Error(WatchErrorEventData {
+        task_index,
+        diagnostics: Arc::from(errs.into_vec()),
+        cwd: self.options.cwd.clone(),
+        bundle_handle,
+      })),
     }
   }
 
@@ -112,39 +154,62 @@ impl WatchTask {
 
   /// Update watched files by adding new ones to the fs watcher.
   fn update_watch_files(&self, files: &[ArcStr]) -> BuildResult<()> {
-    let mut fs_watcher = self.fs_watcher.lock().expect("fs_watcher lock poisoned");
+    Self::update_watch_files_from(&self.fs_watcher, &self.watched_files, &self.options, files)
+  }
+
+  /// Static helper: update FS watcher with newly discovered files.
+  /// Separated from `&self` to allow calling from closures during build.
+  fn update_watch_files_from(
+    fs_watcher: &std::sync::Mutex<DynFsWatcher>,
+    watched_files: &FxDashSet<ArcStr>,
+    options: &NormalizedBundlerOptions,
+    files: &[ArcStr],
+  ) -> BuildResult<()> {
+    let mut fs_watcher = fs_watcher.lock().expect("fs_watcher lock poisoned");
     let mut watcher_paths = fs_watcher.paths_mut();
 
     for file in files {
       let file_str = file.as_str();
-      if self.watched_files.contains(file_str) {
+      if watched_files.contains(file_str) {
         continue;
       }
       let path = Path::new(file_str);
-      if path.exists()
-        && pattern_filter::filter(
-          self.options.watch.exclude.as_deref(),
-          self.options.watch.include.as_deref(),
-          file_str,
-          self.options.cwd.to_string_lossy().as_ref(),
-        )
-        .inner()
+      if !path.exists() {
+        continue;
+      }
+      if pattern_filter::filter(
+        options.watch.exclude.as_deref(),
+        options.watch.include.as_deref(),
+        file_str,
+        options.cwd.to_string_lossy().as_ref(),
+      )
+      .inner()
       {
-        tracing::debug!(name = "notify watch", path = ?path);
-        watcher_paths.add(path, RecursiveMode::NonRecursive).map_err_to_unhandleable()?;
-        self.watched_files.insert(file.clone());
+        match watcher_paths.add(path, RecursiveMode::NonRecursive) {
+          Ok(()) => {
+            tracing::debug!(name = "notify watch", path = ?path);
+            watched_files.insert(file.clone());
+          }
+          Err(e) => {
+            tracing::debug!(name = "notify watch skipped", path = ?path, error = ?e);
+          }
+        }
       }
     }
+
     watcher_paths.commit().map_err_to_unhandleable()?;
 
     Ok(())
   }
 
   /// Mark this task as needing rebuild if the changed file is in our watch list.
-  pub(crate) fn invalidate(&mut self, path: &str) {
+  /// Returns `true` if the file is relevant to this task.
+  pub(crate) fn mark_needs_rebuild(&mut self, path: &str) -> bool {
     if self.is_watched_file(path) {
       self.needs_rebuild = true;
+      return true;
     }
+    false
   }
 
   /// Call on_invalidate callback if the path is in watch list
@@ -181,12 +246,11 @@ impl WatchTask {
     }
   }
 
-  /// Close the bundler
+  /// Close the bundler (calls `closeBundle` plugin hook for the last built bundle, if any).
   #[tracing::instrument(level = "debug", skip_all)]
   pub(crate) async fn close(&self) -> anyhow::Result<()> {
     let mut bundler = self.bundler.lock().await;
-    bundler.close().await?;
-    Ok(())
+    bundler.close().await.map_err(Into::into)
   }
 
   fn is_watched_file(&self, path: &str) -> bool {

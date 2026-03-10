@@ -525,16 +525,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
     let symbol_ref: SymbolRef = (self.immutable_ctx.idx, local).into();
 
-    let is_const = self.result.symbol_ref_db.scoping().symbol_flags(local).is_const_variable();
-
     // If there is any write reference to the local variable, it is reassigned.
     let is_reassigned =
       self.result.symbol_ref_db.get_resolved_references(local).any(Reference::is_write);
 
     let ref_flags = symbol_ref.flags_mut(&mut self.result.symbol_ref_db);
-    if is_const {
-      ref_flags.insert(SymbolRefFlags::IsConst);
-    }
     if !is_reassigned {
       ref_flags.insert(SymbolRefFlags::IsNotReassigned);
     }
@@ -1084,7 +1079,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
-    let is_mutated = !self.result.symbol_ref_db.ast_scopes.is_facade_symbol(symbol_id)
+    let is_mutated = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
       && self.result.symbol_ref_db.scoping().symbol_is_mutated(symbol_id);
     if is_mutated {
       return;

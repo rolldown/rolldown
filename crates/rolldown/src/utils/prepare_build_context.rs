@@ -318,11 +318,6 @@ pub fn prepare_build_context(
       }
     }
 
-    #[cfg(debug_assertions)]
-    if let Some(preset) = raw_transform_options.jsx_preset.clone() {
-      jsx_preset = preset;
-    }
-
     // Create TransformOptions based on tsconfig mode:
     // - Auto: Create Raw mode (will resolve tsconfig per file)
     // - None/Manual: Create Normal mode (resolve tsconfig once now)
@@ -463,6 +458,7 @@ pub fn prepare_build_context(
     clean_dir: raw_options.clean_dir.unwrap_or(false),
     context: raw_options.context.unwrap_or_default(),
     strict_execution_order: raw_options.strict_execution_order.unwrap_or(false),
+    strict: raw_options.strict.unwrap_or_default(),
   };
 
   normalized.minify = raw_minify.normalize(&normalized);

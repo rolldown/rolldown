@@ -19,7 +19,7 @@ use rolldown::{
   ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
   IsExternal, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType,
   OptimizationOption, OutputExports, OutputFormat, Platform, RawCompressOptions, RawMangleOptions,
-  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, TsConfig,
+  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, StrictMode, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -142,7 +142,7 @@ fn normalize_paths_option(
     Either::B(func) => rolldown_common::PathsOutputOption::Fn(Arc::new(move |id| {
       let func = Arc::clone(&func);
       let id = id.to_string();
-      func.invoke_sync((id,).into()).map_err(anyhow::Error::from)
+      Box::pin(async move { func.invoke_async((id,).into()).await.map_err(anyhow::Error::from) })
     })),
   })
 }
@@ -567,6 +567,16 @@ pub fn normalize_binding_options(
     minify_internal_exports: output_options.minify_internal_exports,
     clean_dir: output_options.clean_dir,
     strict_execution_order: output_options.strict_execution_order,
+    strict: output_options
+      .strict
+      .map(|strict| match strict {
+        Either::A(v) => Ok(StrictMode::from(v)),
+        Either::B(v) => {
+          StrictMode::try_from(v)
+            .map_err(napi::Error::from_reason)
+        }
+      })
+      .transpose()?,
     context: input_options.context,
     tsconfig: input_options.tsconfig.map(|v| match v {
       Either::A(v) => TsConfig::Auto(v),

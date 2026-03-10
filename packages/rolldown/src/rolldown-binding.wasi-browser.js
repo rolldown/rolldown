@@ -121,7 +121,6 @@ export const BindingPropertyReadSideEffects = __napiModule.exports.BindingProper
 export const BindingPropertyWriteSideEffects = __napiModule.exports.BindingPropertyWriteSideEffects
 export const BindingRebuildStrategy = __napiModule.exports.BindingRebuildStrategy
 export const collapseSourcemaps = __napiModule.exports.collapseSourcemaps
-export const createTokioRuntime = __napiModule.exports.createTokioRuntime
 export const enhancedTransform = __napiModule.exports.enhancedTransform
 export const enhancedTransformSync = __napiModule.exports.enhancedTransformSync
 export const FilterTokenKind = __napiModule.exports.FilterTokenKind

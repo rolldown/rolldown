@@ -6,7 +6,7 @@ import type {
   BindingPluginContext,
   BindingPluginOptions,
 } from '../binding.cjs';
-import { BindingMagicString } from '../binding.cjs';
+import { BindingMagicString } from '../binding-magic-string';
 import { parseAst } from '../parse-ast-index';
 import { bindingifySourcemap, type ExistingRawSourceMap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError } from '../utils/error';

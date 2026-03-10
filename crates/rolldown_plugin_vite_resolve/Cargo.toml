@@ -8,6 +8,7 @@ description = "Rolldown plugin for Vite module resolution"
 
 [lib]
 doctest = false
+test = false
 
 [dependencies]
 anyhow = { workspace = true }

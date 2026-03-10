@@ -48,32 +48,6 @@ pub mod worker_manager;
 pub use oxc_parser_napi;
 pub use oxc_resolver_napi;
 
-#[napi_derive::napi]
-pub fn create_tokio_runtime(blocking_threads: Option<u32>) {
-  use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
-  let max_blocking_threads = blocking_threads
-    .map(|v| v as usize)
-    .or_else(|| {
-      std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS").ok().and_then(|v| v.parse::<usize>().ok())
-    })
-    // default value in tokio implementation is **512**
-    // it's too high for us
-    // we don't have that many `blocking` tasks to run at this moment
-    .unwrap_or(4);
-  let mut builder = tokio::runtime::Builder::new_multi_thread();
-
-  let rt = builder
-    .max_blocking_threads(max_blocking_threads)
-    // unlike the web server scenario
-    // rolldown puts a lot of blocking tasks in the worker threads rather than blocking_threads
-    // so we need to increase the worker threads rather than the blocking_threads
-    .worker_threads(num_cpus::get_physical() * 3 / 2)
-    .enable_all()
-    .build()
-    .expect("Failed to create tokio runtime");
-  create_custom_tokio_runtime(rt);
-}
-
 #[cfg(all(target_family = "wasm", tokio_unstable))]
 pub static ACTIVE_TASK_COUNT: LazyLock<AtomicU32> = LazyLock::new(|| AtomicU32::new(1));
 
@@ -108,6 +82,30 @@ pub fn start_async_runtime() {
 
 #[napi_derive::module_init]
 fn init() {
+  #[cfg(not(target_family = "wasm"))]
+  {
+    use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
+    let max_blocking_threads = std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
+      .ok()
+      .and_then(|v| v.parse::<usize>().ok())
+      // default value in tokio implementation is **512**
+      // it's too high for us
+      // we don't have that many `blocking` tasks to run at this moment
+      .unwrap_or(4);
+    let mut builder = tokio::runtime::Builder::new_multi_thread();
+
+    let rt = builder
+      .max_blocking_threads(max_blocking_threads)
+      // unlike the web server scenario
+      // rolldown puts a lot of blocking tasks in the worker threads rather than blocking_threads
+      // so we need to increase the worker threads rather than the blocking_threads
+      .worker_threads(num_cpus::get_physical() * 3 / 2)
+      .enable_all()
+      .build()
+      .expect("Failed to create tokio runtime");
+    create_custom_tokio_runtime(rt);
+  }
+
   let default_hook = std::panic::take_hook();
   std::panic::set_hook(Box::new(move |info| {
     eprintln!("Rolldown panicked. This is a bug in Rolldown, not your code.");

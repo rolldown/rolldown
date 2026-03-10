@@ -1,4 +1,3 @@
-mod asset;
 mod chunk;
 mod ecmascript;
 mod file_emitter;
@@ -74,6 +73,7 @@ pub mod bundler_options {
       source_map_type::SourceMapType,
       sourcemap_ignore_list::SourceMapIgnoreList,
       sourcemap_path_transform::SourceMapPathTransform,
+      strict_mode::StrictMode,
       target::ESTarget,
       transform_option::{
         CompilerAssumptions, DecoratorOptions, Either, IsolatedDeclarationsOptions, JsxOptions,
@@ -90,7 +90,7 @@ pub mod bundler_options {
       },
       tsconfig::TsConfig,
       tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig,
-      watch_option::{NotifyOption, OnInvalidate, WatchOption},
+      watch_option::{OnInvalidate, WatchOption},
     },
   };
 
@@ -101,7 +101,6 @@ pub mod bundler_options {
 
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
-  asset::asset_view::AssetView,
   chunk::{
     Chunk, ChunkMeta, PostChunkOptimizationOperation,
     chunk_table::ChunkTable,
@@ -119,12 +118,11 @@ pub use crate::{
     dynamic_import_usage,
     ecma_asset_meta::EcmaAssetMeta,
     ecma_view::{
-      EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ImportMetaRolldownAssetReplacer,
-      PrependRenderedImport, ThisExprReplaceKind, generate_replace_this_expr_map,
+      EcmaModuleAstUsage, EcmaView, EcmaViewMeta, PrependRenderedImport, ThisExprReplaceKind,
+      generate_replace_this_expr_map,
     },
     json_to_program::{json_value_to_ecma_ast, json_value_to_expression},
     module_idx::ModuleIdx,
-    symbol_id_ext::SymbolIdExt,
   },
   file_emitter::{
     EmittedAsset, EmittedChunk, EmittedChunkInfo, EmittedPrebuiltChunk, FileEmitter,

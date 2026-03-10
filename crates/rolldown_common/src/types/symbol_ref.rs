@@ -37,11 +37,8 @@ impl SymbolRef {
     db.local_db_mut(self.owner).flags.entry(self.symbol).or_default()
   }
 
-  // `None` means we don't know if it's declared by `const`.
-  pub fn is_declared_by_const(&self, db: &SymbolRefDb) -> Option<bool> {
-    let flags = self.flags(db)?;
-    // Not having this flag means we don't know if it's declared by `const` instead of it's not declared by `const`.
-    flags.contains(SymbolRefFlags::IsConst).then_some(true)
+  pub fn is_declared_by_const(&self, db: &SymbolRefDb) -> bool {
+    db.local_db(self.owner).ast_scopes.scoping().symbol_flags(self.symbol).is_const_variable()
   }
 
   /// `None` means we don't know if it gets reassigned.

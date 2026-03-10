@@ -245,7 +245,7 @@ const TransformOptionsSchema = v.object({
   ),
   define: v.pipe(
     v.optional(v.record(v.string(), v.string())),
-    v.description('Define global variables (syntax: key=value,key2=value2)'),
+    v.description('Define global variables (syntax: key:value,key2:value2)'),
   ),
   inject: v.pipe(
     v.optional(v.record(v.string(), v.union([v.string(), v.tuple([v.string(), v.string()])]))),
@@ -259,21 +259,43 @@ const TransformOptionsSchema = v.object({
 });
 isTypeTrue<IsSchemaSubType<typeof TransformOptionsSchema, TransformOptions>>();
 
+const WatcherFileWatcherOptionsSchema = v.strictObject({
+  usePolling: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Use polling-based file watching instead of native OS events'),
+  ),
+  pollInterval: v.pipe(
+    v.optional(v.number()),
+    v.description('Poll interval in milliseconds (only used when usePolling is true)'),
+  ),
+  compareContentsForPolling: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Compare file contents for poll-based watchers (only used when usePolling is true)',
+    ),
+  ),
+  useDebounce: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Use debounced event delivery at the filesystem level'),
+  ),
+  debounceDelay: v.pipe(
+    v.optional(v.number()),
+    v.description('Debounce delay in milliseconds (only used when useDebounce is true)'),
+  ),
+  debounceTickRate: v.pipe(
+    v.optional(v.number()),
+    v.description('Tick rate in milliseconds for debouncer (only used when useDebounce is true)'),
+  ),
+});
+
 const WatcherOptionsSchema = v.strictObject({
   chokidar: v.optional(
-    v.never(`The "watch.chokidar" option is deprecated, please use "watch.notify" instead of it`),
+    v.never(`The "watch.chokidar" option is deprecated, please use "watch.watcher" instead of it`),
   ),
   exclude: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
   include: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
-  notify: v.pipe(
-    v.optional(
-      v.strictObject({
-        compareContents: v.optional(v.boolean()),
-        pollInterval: v.optional(v.number()),
-      }),
-    ),
-    v.description('Notify options'),
-  ),
+  watcher: v.optional(WatcherFileWatcherOptionsSchema),
+  notify: v.optional(WatcherFileWatcherOptionsSchema),
   skipWrite: v.pipe(v.optional(v.boolean()), v.description('Skip the bundle.write() step')),
   buildDelay: v.pipe(v.optional(v.number()), v.description('Throttle watch rebuilds')),
   clearScreen: v.pipe(
@@ -824,12 +846,7 @@ const OutputOptionsSchema = v.strictObject({
   ),
   sourcemap: v.pipe(
     v.optional(v.union([v.boolean(), v.literal('inline'), v.literal('hidden')])),
-    v.description(
-      `Generate sourcemap (\`-s inline\` for inline, or ${styleText(
-        'bold',
-        'pass the `-s` on the last argument if you want to generate `.map` file',
-      )})`,
-    ),
+    v.description(`Generate sourcemap (\`-s inline\` for inline, or \`-s\` for \`.map\` file)`),
   ),
   sourcemapBaseUrl: v.pipe(
     v.optional(v.string()),
@@ -862,7 +879,7 @@ const OutputOptionsSchema = v.strictObject({
   name: v.pipe(v.optional(v.string()), v.description('Name for UMD / IIFE format outputs')),
   globals: v.pipe(
     v.optional(v.union([v.record(v.string(), v.string()), GlobalsFunctionSchema])),
-    v.description('Global variable of UMD / IIFE dependencies (syntax: `key=value`)'),
+    v.description('Global variable of UMD / IIFE dependencies (syntax: `key:value`)'),
   ),
   paths: v.pipe(
     v.optional(v.union([v.record(v.string(), v.string()), PathsFunctionSchema])),
@@ -927,6 +944,10 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Lets modules be executed in the order they are declared.'),
   ),
+  strict: v.pipe(
+    v.optional(v.union([v.boolean(), v.literal('auto')])),
+    v.description('Whether to always output `"use strict"` directive in non-ES module outputs.'),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof OutputOptionsSchema, OutputOptions>>();
 
@@ -974,7 +995,7 @@ const OutputCliOverrideSchema = v.strictObject({
   ),
   globals: v.pipe(
     v.optional(v.record(v.string(), v.string())),
-    v.description('Global variable of UMD / IIFE dependencies (syntax: `key=value`)'),
+    v.description('Global variable of UMD / IIFE dependencies (syntax: `key:value`)'),
   ),
   codeSplitting: v.pipe(
     v.optional(

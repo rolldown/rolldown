@@ -9,8 +9,10 @@ impl Bundler {
     &self.bundle_factory.options
   }
 
-  pub fn closed(&self) -> bool {
-    self.closed
+  /// Clear the resolver cache so that previously-failed lookups (e.g. missing
+  /// files that have since been created) are re-evaluated on the next build.
+  pub fn clear_resolver_cache(&self) {
+    self.bundle_factory.resolver.clear_cache();
   }
 
   pub fn watch_files(&self) -> &Arc<FxDashSet<ArcStr>> {

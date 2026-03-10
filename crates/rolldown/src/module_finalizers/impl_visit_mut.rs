@@ -111,7 +111,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       .ctx
       .linking_info
       .wrapper_stmt_info
-      .is_some_and(|idx| self.ctx.linking_info.stmt_info_included[idx])
+      .is_some_and(|idx| self.ctx.linking_info.stmt_info_included.has_bit(idx))
       .then_some(self.ctx.linking_info.wrap_kind());
 
     self.needs_hosted_top_level_binding = matches!(included_wrap_kind, Some(WrapKind::Esm));
@@ -135,7 +135,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         .stmt_infos
         .declared_stmts_by_symbol(symbol_ref)
         .iter()
-        .any(|id| self.ctx.linking_info.stmt_info_included[*id]);
+        .any(|id| self.ctx.linking_info.stmt_info_included.has_bit(*id));
       if is_included {
         let canonical_name = self.canonical_name_for(*symbol_ref);
         program.body.push(self.snippet.var_decl_stmt(canonical_name, self.snippet.void_zero()));
@@ -368,6 +368,52 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
+    // Handle keep_names for named class/function expressions in any expression context
+    // (return statements, function args, array elements, etc.)
+    if self.ctx.options.keep_names && self.ctx.runtime.id() != self.ctx.idx {
+      match expr {
+        ast::Expression::ClassExpression(class_expression) => {
+          if let Some(id) = class_expression.id.as_ref() {
+            if let Some(element) = self.keep_name_helper_for_class(
+              id.symbol_id.get().map(KeepNameId::SymbolId),
+              &class_expression.body,
+            ) {
+              class_expression.body.body.insert(0, element);
+            }
+          }
+        }
+        ast::Expression::FunctionExpression(fn_expression) => {
+          if let Some(id) = fn_expression.id.as_mut() {
+            if let Some(symbol_id) = id.symbol_id.get() {
+              let keep_name_id = KeepNameId::SymbolId(symbol_id);
+              if let Some((_insert_position, original_name, _)) =
+                self.process_fn(Some(keep_name_id), Some(keep_name_id))
+              {
+                // Manually rename the binding identifier before clearing symbol_id
+                let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+                let canonical_name = self.canonical_name_for(symbol_ref);
+                if id.name != canonical_name {
+                  id.name = self.snippet.atom(canonical_name).into();
+                }
+                // Clear symbol_id to prevent double processing:
+                // - visit_expression won't re-wrap when walker visits inner fn
+                // - visit_binding_identifier won't re-rename
+                id.symbol_id.get_mut().take();
+
+                let fn_expr = expr.take_in(self.alloc);
+                let name_ref = self.canonical_ref_for_runtime("__name");
+                let (finalized_callee, _) =
+                  self.finalized_expr_for_symbol_ref(name_ref, false, false);
+                *expr =
+                  self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_callee, true);
+              }
+            }
+          }
+        }
+        _ => {}
+      }
+    }
+
     match expr {
       ast::Expression::CallExpression(call_expr) => {
         self.rewrite_hot_accept_call_deps(call_expr);
@@ -673,10 +719,20 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         ) {
           decl.body.body.insert(0, element);
         }
-        if let Some(decl) = self.get_transformed_class_decl(decl) {
-          *it = decl;
+        if let Some(new_decl) = self.get_transformed_class_decl(decl) {
+          *it = new_decl;
+          // Clear symbol_id on class expression's id to prevent visit_expression
+          // from inserting a duplicate __name static block during walk
+          if let ast::Declaration::VariableDeclaration(var_decl) = it {
+            if let Some(declarator) = var_decl.declarations.first_mut() {
+              if let Some(ast::Expression::ClassExpression(class_expr)) = &mut declarator.init {
+                if let Some(id) = &mut class_expr.id {
+                  id.symbol_id.get_mut().take();
+                }
+              }
+            }
+          }
         }
-        // deconflict class name
       }
       ast::Declaration::TSTypeAliasDeclaration(_)
       | ast::Declaration::TSInterfaceDeclaration(_)

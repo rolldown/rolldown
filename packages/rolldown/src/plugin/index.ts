@@ -1,10 +1,7 @@
 import type { Program } from '@oxc-project/types';
 import type { InputOptions, OutputOptions } from '..';
-import type {
-  BindingHookResolveIdExtraArgs,
-  BindingMagicString,
-  BindingTransformHookExtraArgs,
-} from '../binding.cjs';
+import type { BindingHookResolveIdExtraArgs, BindingTransformHookExtraArgs } from '../binding.cjs';
+import type { BindingMagicString } from '../binding-magic-string';
 import type { BuiltinPlugin } from '../builtin-plugin/utils';
 import type { DefinedHookNames } from '../constants/plugin';
 import type { DEFINED_HOOK_NAMES } from '../constants/plugin';

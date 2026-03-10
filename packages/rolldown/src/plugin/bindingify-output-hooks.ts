@@ -1,5 +1,5 @@
 import type { BindingHookFilter, BindingPluginOptions } from '../binding.cjs';
-import { BindingMagicString } from '../binding.cjs';
+import { BindingMagicString } from '../binding-magic-string';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError, unwrapBindingResult } from '../utils/error';
 import { normalizeHook } from '../utils/normalize-hook';

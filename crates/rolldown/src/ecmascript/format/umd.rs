@@ -150,7 +150,7 @@ fn render_amd_dependencies(
   externals.iter().for_each(|external| {
     dependencies.push(concat_string!(
       "'",
-      external.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
+      external.get_import_path(ctx.chunk, ctx.resolved_paths),
       "'"
     ));
   });
@@ -170,7 +170,7 @@ fn render_cjs_dependencies(
   externals.iter().for_each(|external| {
     dependencies.push(concat_string!(
       "require('",
-      external.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
+      external.get_import_path(ctx.chunk, ctx.resolved_paths),
       "')"
     ));
   });

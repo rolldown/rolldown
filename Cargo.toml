@@ -108,6 +108,7 @@ rolldown_fs = { version = "0.1.0", path = "crates/rolldown_fs" }
 rolldown_fs_watcher = { version = "0.1.0", path = "crates/rolldown_fs_watcher" }
 rolldown_plugin = { version = "0.1.0", path = "crates/rolldown_plugin" }
 rolldown_plugin_chunk_import_map = { version = "0.1.0", path = "crates/rolldown_plugin_chunk_import_map" }
+rolldown_plugin_asset_module = { version = "0.1.0", path = "crates/rolldown_plugin_asset_module" }
 rolldown_plugin_copy_module = { version = "0.1.0", path = "crates/rolldown_plugin_copy_module" }
 rolldown_plugin_bundle_analyzer = { version = "0.1.0", path = "crates/rolldown_plugin_bundle_analyzer" }
 rolldown_plugin_data_url = { version = "0.1.0", path = "crates/rolldown_plugin_data_url" }
@@ -139,6 +140,7 @@ rolldown_testing = { version = "0.1.0", path = "crates/rolldown_testing" }
 rolldown_testing_config = { version = "0.1.0", path = "crates/rolldown_testing_config" }
 rolldown_tracing = { version = "0.1.0", path = "crates/rolldown_tracing" }
 rolldown_utils = { version = "0.1.0", path = "crates/rolldown_utils" }
+rolldown_watcher = { version = "0.1.0", path = "crates/rolldown_watcher" }
 rolldown_workspace = { version = "0.1.0", path = "crates/rolldown_workspace" }
 string_wizard = { version = "0.0.27", path = "crates/string_wizard", features = ["serde"] }
 
@@ -192,8 +194,8 @@ pnp = "0.12.7"
 rayon = "1.10.0"
 regex = "1.11.1"
 regress = "0.10.3"
-rolldown-notify = "10.1.0"
-rolldown-notify-debouncer-full = "0.7.4"
+rolldown-notify = "10.2.0"
+rolldown-notify-debouncer-full = "0.7.5"
 ropey = "1.6.1"
 rustc-hash = { version = "2.1.1" }
 schemars = "1.0.0"

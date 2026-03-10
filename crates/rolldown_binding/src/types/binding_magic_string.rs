@@ -55,6 +55,12 @@ impl CharToByteMapper {
     count
   }
 
+  /// Returns the total accumulated length (in the same units as `char_to_byte` entries).
+  /// This is the correct sentinel for out-of-bounds index clamping in `slice`.
+  fn total_len(&self) -> u32 {
+    self.char_to_byte.last().copied().unwrap_or(0)
+  }
+
   /// Normalizes a potentially negative index to a positive index.
   /// Negative indices count from the end of the string (matching original magic-string behavior).
   fn normalize_index(&self, index: i64) -> i64 {
@@ -71,6 +77,7 @@ impl CharToByteMapper {
 #[derive(Default)]
 pub struct BindingMagicStringOptions {
   pub filename: Option<String>,
+  pub offset: Option<i64>,
 }
 
 #[napi(object)]
@@ -231,6 +238,7 @@ impl BindingDecodedMap {
 pub struct BindingMagicString<'a> {
   pub(crate) inner: MagicString<'a>,
   char_to_byte_mapper: CharToByteMapper,
+  pub(crate) offset: i64,
 }
 
 #[napi]
@@ -239,13 +247,55 @@ impl BindingMagicString<'_> {
   pub fn new(source: String, options: Option<BindingMagicStringOptions>) -> Self {
     let char_to_byte_mapper = CharToByteMapper::new(&source);
     let opts = options.unwrap_or_default();
+    let offset = opts.offset.unwrap_or(0);
     let magic_string_options = MagicStringOptions { filename: opts.filename };
-    Self { inner: MagicString::with_options(source, magic_string_options), char_to_byte_mapper }
+    Self {
+      inner: MagicString::with_options(source, magic_string_options),
+      char_to_byte_mapper,
+      offset,
+    }
   }
 
   #[napi(getter)]
-  pub fn filename(&self) -> Option<String> {
-    self.inner.filename().map(String::from)
+  pub fn original(&self) -> &str {
+    self.inner.source()
+  }
+
+  #[napi(getter)]
+  pub fn filename(&self) -> Option<&str> {
+    self.inner.filename()
+  }
+
+  #[napi(getter)]
+  pub fn get_offset(&self) -> i64 {
+    self.offset
+  }
+
+  #[napi(setter)]
+  pub fn set_offset(&mut self, offset: i64) {
+    self.offset = offset;
+  }
+
+  /// Applies `self.offset` to a u32 character index.
+  /// Returns an error if the resulting index would be negative (underflow).
+  #[inline]
+  fn apply_offset_u32(&self, index: u32) -> napi::Result<u32> {
+    let result = i64::from(index) + self.offset;
+    if result < 0 || result > i64::from(u32::MAX) {
+      return Err(napi::Error::from_reason(format!(
+        "index {index} is out of bounds with offset {}",
+        self.offset
+      )));
+    }
+    #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    Ok(result as u32)
+  }
+
+  /// Applies `self.offset` to an i64 character index.
+  /// Uses saturating addition to avoid undefined behaviour on extreme offset values.
+  #[inline]
+  fn apply_offset_i64(&self, index: i64) -> i64 {
+    index.saturating_add(self.offset)
   }
 
   #[napi]
@@ -283,31 +333,63 @@ impl BindingMagicString<'_> {
   }
 
   #[napi]
-  pub fn prepend_left<'s>(&'s mut self, this: This<'s>, index: u32, content: String) -> This<'s> {
-    let byte_index = self.char_to_byte_mapper.char_to_byte(index).expect("Invalid character index");
+  pub fn prepend_left<'s>(
+    &'s mut self,
+    this: This<'s>,
+    index: u32,
+    content: String,
+  ) -> napi::Result<This<'s>> {
+    let byte_index = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(index)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid character index"))?;
     self.inner.prepend_left(byte_index, content);
-    this
+    Ok(this)
   }
 
   #[napi]
-  pub fn prepend_right<'s>(&'s mut self, this: This<'s>, index: u32, content: String) -> This<'s> {
-    let byte_index = self.char_to_byte_mapper.char_to_byte(index).expect("Invalid character index");
+  pub fn prepend_right<'s>(
+    &'s mut self,
+    this: This<'s>,
+    index: u32,
+    content: String,
+  ) -> napi::Result<This<'s>> {
+    let byte_index = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(index)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid character index"))?;
     self.inner.prepend_right(byte_index, content);
-    this
+    Ok(this)
   }
 
   #[napi]
-  pub fn append_left<'s>(&'s mut self, this: This<'s>, index: u32, content: String) -> This<'s> {
-    let byte_index = self.char_to_byte_mapper.char_to_byte(index).expect("Invalid character index");
+  pub fn append_left<'s>(
+    &'s mut self,
+    this: This<'s>,
+    index: u32,
+    content: String,
+  ) -> napi::Result<This<'s>> {
+    let byte_index = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(index)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid character index"))?;
     self.inner.append_left(byte_index, content);
-    this
+    Ok(this)
   }
 
   #[napi]
-  pub fn append_right<'s>(&'s mut self, this: This<'s>, index: u32, content: String) -> This<'s> {
-    let byte_index = self.char_to_byte_mapper.char_to_byte(index).expect("Invalid character index");
+  pub fn append_right<'s>(
+    &'s mut self,
+    this: This<'s>,
+    index: u32,
+    content: String,
+  ) -> napi::Result<This<'s>> {
+    let byte_index = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(index)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid character index"))?;
     self.inner.append_right(byte_index, content);
-    this
+    Ok(this)
   }
 
   #[napi]
@@ -318,9 +400,14 @@ impl BindingMagicString<'_> {
     end: u32,
     content: String,
   ) -> napi::Result<This<'s>> {
-    let start_byte =
-      self.char_to_byte_mapper.char_to_byte(start).expect("Invalid start character index");
-    let end_byte = self.char_to_byte_mapper.char_to_byte(end).expect("Invalid end character index");
+    let start_byte = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(start)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid start character index"))?;
+    let end_byte = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(end)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
     self
       .inner
       .update_with(
@@ -334,7 +421,6 @@ impl BindingMagicString<'_> {
   }
 
   #[napi]
-  // TODO: should use `&str` instead. (claude code) Attempt failed due to generates new String from MagicString internal representation
   pub fn to_string(&self) -> String {
     self.inner.to_string()
   }
@@ -360,9 +446,14 @@ impl BindingMagicString<'_> {
 
   #[napi]
   pub fn remove<'s>(&'s mut self, this: This<'s>, start: u32, end: u32) -> napi::Result<This<'s>> {
-    let start_byte =
-      self.char_to_byte_mapper.char_to_byte(start).expect("Invalid start character index");
-    let end_byte = self.char_to_byte_mapper.char_to_byte(end).expect("Invalid end character index");
+    let start_byte = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(start)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid start character index"))?;
+    let end_byte = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(end)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
     self.inner.remove(start_byte, end_byte).map_err(napi::Error::from_reason)?;
     Ok(this)
   }
@@ -375,9 +466,14 @@ impl BindingMagicString<'_> {
     end: u32,
     content: String,
   ) -> napi::Result<This<'s>> {
-    let start_byte =
-      self.char_to_byte_mapper.char_to_byte(start).expect("Invalid start character index");
-    let end_byte = self.char_to_byte_mapper.char_to_byte(end).expect("Invalid end character index");
+    let start_byte = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(start)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid start character index"))?;
+    let end_byte = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(end)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
     self.inner.update(start_byte, end_byte, content).map_err(napi::Error::from_reason)?;
     Ok(this)
   }
@@ -390,10 +486,18 @@ impl BindingMagicString<'_> {
     end: u32,
     to: u32,
   ) -> napi::Result<This<'s>> {
-    let start_byte =
-      self.char_to_byte_mapper.char_to_byte(start).expect("Invalid start character index");
-    let end_byte = self.char_to_byte_mapper.char_to_byte(end).expect("Invalid end character index");
-    let to_byte = self.char_to_byte_mapper.char_to_byte(to).expect("Invalid to character index");
+    let start_byte = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(start)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid start character index"))?;
+    let end_byte = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(end)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
+    let to_byte = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(to)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid to character index"))?;
     self.inner.relocate(start_byte, end_byte, to_byte).map_err(napi::Error::from_reason)?;
     Ok(this)
   }
@@ -465,7 +569,11 @@ impl BindingMagicString<'_> {
   #[napi(js_name = "clone")]
   #[must_use]
   pub fn clone_instance(&self) -> Self {
-    Self { inner: self.inner.clone(), char_to_byte_mapper: self.char_to_byte_mapper.clone() }
+    Self {
+      inner: self.inner.clone(),
+      char_to_byte_mapper: self.char_to_byte_mapper.clone(),
+      offset: self.offset,
+    }
   }
 
   /// Returns the last character of the generated string, or an empty string if empty.
@@ -483,12 +591,18 @@ impl BindingMagicString<'_> {
   /// Returns a clone with content outside the specified range removed.
   #[napi]
   pub fn snip(&self, start: u32, end: u32) -> napi::Result<Self> {
-    let start_byte =
-      self.char_to_byte_mapper.char_to_byte(start).expect("Invalid start character index");
-    let end_byte = self.char_to_byte_mapper.char_to_byte(end).expect("Invalid end character index");
+    let start_byte = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(start)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid start character index"))?;
+    let end_byte = self
+      .char_to_byte_mapper
+      .char_to_byte(self.apply_offset_u32(end)?)
+      .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
     Ok(Self {
       inner: self.inner.snip(start_byte, end_byte).map_err(napi::Error::from_reason)?,
       char_to_byte_mapper: self.char_to_byte_mapper.clone(),
+      offset: self.offset,
     })
   }
 
@@ -497,9 +611,9 @@ impl BindingMagicString<'_> {
   /// Supports negative indices (counting from the end).
   #[napi]
   pub fn reset<'s>(&'s mut self, this: This<'s>, start: i64, end: i64) -> napi::Result<This<'s>> {
-    // Handle negative indices (matching original magic-string behavior)
-    let start = self.char_to_byte_mapper.normalize_index(start);
-    let end = self.char_to_byte_mapper.normalize_index(end);
+    // Apply offset, then handle negative indices (matching original magic-string behavior)
+    let start = self.char_to_byte_mapper.normalize_index(self.apply_offset_i64(start));
+    let end = self.char_to_byte_mapper.normalize_index(self.apply_offset_i64(end));
 
     // Convert character indices to byte indices
     // indices are non-negative after normalize_index and files are < 4GB
@@ -523,23 +637,30 @@ impl BindingMagicString<'_> {
   /// Supports negative indices (counting from the end).
   #[napi]
   pub fn slice(&self, start: Option<i64>, end: Option<i64>) -> napi::Result<String> {
-    let start = start.unwrap_or(0);
+    // Apply offset to both start and end (including defaults), then normalize negatives
+    let start = self.apply_offset_i64(start.unwrap_or(0));
 
-    // Default end to char_count (original string length in characters)
-    let end = end.unwrap_or(self.char_to_byte_mapper.char_count());
+    // When end is omitted, default to the internal string end (char_count) directly,
+    // without shifting by offset. Applying offset to the default would shift the end
+    // left for negative offsets, collapsing the range to empty.
+    let end = match end {
+      Some(e) => self.apply_offset_i64(e),
+      None => self.char_to_byte_mapper.char_count(),
+    };
 
     // Handle negative indices (matching original magic-string behavior)
     let start = self.char_to_byte_mapper.normalize_index(start);
     let end = self.char_to_byte_mapper.normalize_index(end);
 
-    // Convert character indices to byte indices
-    // indices are non-negative after normalize_index and files are < 4GB
-    #[expect(clippy::cast_possible_truncation)]
-    let source_len = self.inner.source().len() as u32;
+    // Convert character indices to byte indices.
+    // indices are non-negative after normalize_index and files are < 4GB.
+    // Use total_len() (in the mapper's own units) as the out-of-bounds sentinel instead of
+    // source().len() (UTF-8 bytes), which would be wrong for non-ASCII strings.
+    let total_len = self.char_to_byte_mapper.total_len();
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-    let start_byte = self.char_to_byte_mapper.char_to_byte(start as u32).unwrap_or(source_len);
+    let start_byte = self.char_to_byte_mapper.char_to_byte(start as u32).unwrap_or(total_len);
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-    let end_byte = self.char_to_byte_mapper.char_to_byte(end as u32).unwrap_or(source_len);
+    let end_byte = self.char_to_byte_mapper.char_to_byte(end as u32).unwrap_or(total_len);
 
     self.inner.slice(start_byte, Some(end_byte)).map_err(napi::Error::from_reason)
   }

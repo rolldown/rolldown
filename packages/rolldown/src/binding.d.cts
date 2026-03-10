@@ -2,7 +2,7 @@ type MaybePromise<T> = T | Promise<T>
 type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
-type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T
+export type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T
 
 export interface CodegenOptions {
   /**
@@ -1478,7 +1478,10 @@ export declare class BindingLoadPluginContext {
 
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
+  get original(): string
   get filename(): string | null
+  get offset(): number
+  set offset(offset: number)
   replace(from: string, to: string): this
   replaceAll(from: string, to: string): this
   prepend(content: string): this
@@ -1689,14 +1692,19 @@ export declare class BindingTransformPluginContext {
 }
 
 export declare class BindingWatcher {
-  constructor(options: Array<BindingBundlerOptions>, notifyOption?: BindingNotifyOption | undefined | null)
+  constructor(options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void)
+  run(): Promise<void>
+  /**
+   * Gives consumers a reliable way to await the watcher's completion.
+   * The Node.js layer relies on the pending Promise to keep the process from exiting.
+   */
+  waitForClose(): Promise<void>
   close(): Promise<void>
-  start(listener: (data: BindingWatcherEvent) => void): Promise<void>
 }
 
 /**
- * Minimal wrapper around the core `Bundler` for watcher events.
- * This is returned from watcher event data to allow access to the bundler instance.
+ * Minimal wrapper around a `BundleHandle` for watcher events.
+ * This is returned from watcher event data to allow calling `result.close()`.
  */
 export declare class BindingWatcherBundler {
   close(): Promise<void>
@@ -1709,10 +1717,10 @@ export declare class BindingWatcherChangeData {
 
 export declare class BindingWatcherEvent {
   eventKind(): string
-  watchChangeData(): BindingWatcherChangeData
-  bundleEndData(): BindingBundleEndEventData
   bundleEventKind(): string
+  bundleEndData(): BindingBundleEndEventData
   bundleErrorData(): BindingBundleErrorEventData
+  watchChangeData(): BindingWatcherChangeData
 }
 
 export declare class ParallelJsPluginRegistry {
@@ -1793,8 +1801,10 @@ export type BindingBuiltinPluginName =  'builtin:bundle-analyzer'|
 'builtin:vite-web-worker-post';
 
 export interface BindingBundleAnalyzerPluginConfig {
-  /** Output filename for the analysis data (default: "analyze-data.json") */
+  /** Output filename for the bundle analysis data (default: "analyze-data.json") */
   fileName?: string
+  /** Output format: "json" (default) or "md" for LLM-friendly markdown */
+  format?: 'json' | 'md'
 }
 
 export interface BindingBundlerOptions {
@@ -2286,6 +2296,7 @@ export interface BindingLogLocation {
 
 export interface BindingMagicStringOptions {
   filename?: string
+  offset?: number
 }
 
 export type BindingMakeAbsoluteExternalsRelative =
@@ -2331,11 +2342,6 @@ export interface BindingModuleSideEffectsRule {
   external?: boolean | undefined
 }
 
-export interface BindingNotifyOption {
-  pollInterval?: number
-  compareContents?: boolean
-}
-
 export interface BindingOptimization {
   inlineConst?: boolean | BindingInlineConstConfig
   pifeForModuleWrappers?: boolean
@@ -2372,6 +2378,7 @@ export interface BindingOutputOptions {
   sourcemapIgnoreList?: boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)
   sourcemapDebugIds?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
+  strict?: boolean | 'auto'
   minify?: boolean | 'dce-only' | MinifyOptions
   manualCodeSplitting?: BindingManualCodeSplittingOptions
   legalComments?: 'none' | 'inline'
@@ -2770,12 +2777,16 @@ export interface BindingWatchOption {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   buildDelay?: number
+  usePolling?: boolean
+  pollInterval?: number
+  compareContentsForPolling?: boolean
+  useDebounce?: boolean
+  debounceDelay?: number
+  debounceTickRate?: number
   onInvalidate?: ((id: string) => void) | undefined
 }
 
 export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
-
-export declare function createTokioRuntime(blockingThreads?: number | undefined | null): void
 
 /**
  * Transpile a JavaScript or TypeScript into a target ECMAScript version, asynchronously.

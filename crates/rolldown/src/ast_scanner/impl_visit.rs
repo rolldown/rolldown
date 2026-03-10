@@ -2,7 +2,10 @@ use oxc::allocator::{GetAddress, UnstableAddress};
 use oxc::{
   ast::{
     AstKind,
-    ast::{self, BindingPattern, Declaration, Expression, IdentifierReference},
+    ast::{
+      self, BindingPattern, Declaration, Expression, IdentifierReference, JSXClosingElement,
+      JSXElementName, JSXMemberExpressionObject, JSXOpeningElement,
+    },
   },
   ast_visit::{Visit, walk},
   semantic::{ScopeFlags, SymbolId},
@@ -531,6 +534,16 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     walk::walk_call_expression(self, it);
   }
 
+  fn visit_jsx_opening_element(&mut self, it: &JSXOpeningElement<'ast>) {
+    self.visit_jsx_opening_element_for_jsx_preserve(it);
+    walk::walk_jsx_opening_element(self, it);
+  }
+
+  fn visit_jsx_closing_element(&mut self, it: &JSXClosingElement<'ast>) {
+    self.visit_jsx_closing_element_for_jsx_preserve(it);
+    walk::walk_jsx_closing_element(self, it);
+  }
+
   fn visit_export_default_declaration(&mut self, it: &ast::ExportDefaultDeclaration<'ast>) {
     // Mark export default declarations with anonymous function/class expressions
     // so that __name helper will be included in the runtime
@@ -701,6 +714,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           _ => {}
         }
 
+        // For JSX preserve mode, mark symbols used as JSX element names.
+        // This flag ensures that after bundling, JSX element names whose canonical
+        // name starts with lowercase get uppercased to remain valid component references.
         if self.immutable_ctx.flat_options.jsx_preserve()
           && self.visit_path.last().is_some_and(|ast_kind| {
             matches!(ast_kind, AstKind::JSXOpeningElement(_) | AstKind::JSXClosingElement(_))
@@ -790,5 +806,55 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let id = self.add_import_record(value.as_ref(), ImportKind::Require, span, init_meta, None);
     self.result.imports.insert(expr.span, id);
     true
+  }
+
+  /// For JSX preserve mode, mark the root identifier of JSXElementName::MemberExpression.
+  /// Uses `UsedAsJSXMemberExprRoot` (not `MustStartWithCapitalLetterForJSX`) because
+  /// member expressions like `<obj.Foo>` are valid JSX regardless of root casing.
+  /// Only facade (generated) symbols need uppercasing (e.g. `import_react` → `Import_react`).
+  fn mark_jsx_member_expression_root(&mut self, element_name: &JSXElementName<'ast>) {
+    if !self.immutable_ctx.flat_options.jsx_preserve() {
+      return;
+    }
+
+    // Only handle MemberExpression case. IdentifierReference case is handled
+    // in visit_identifier_reference where the parent is JSXOpeningElement/JSXClosingElement.
+    let JSXElementName::MemberExpression(member_expr) = element_name else {
+      return;
+    };
+
+    // Get the root identifier of the member expression chain (e.g., `ns` in `<ns.Foo.Bar>`)
+    let mut current = &member_expr.object;
+    loop {
+      match current {
+        JSXMemberExpressionObject::IdentifierReference(ident_ref) => {
+          if let Some(symbol_id) = self.resolve_symbol_from_reference(ident_ref) {
+            if self.is_root_symbol(symbol_id) {
+              let symbol_ref: rolldown_common::SymbolRef =
+                (self.immutable_ctx.idx, symbol_id).into();
+              let symbol_ref_flags = symbol_ref.flags_mut(&mut self.result.symbol_ref_db);
+              *symbol_ref_flags |= SymbolRefFlags::UsedAsJSXMemberExprRoot;
+            }
+          }
+          break;
+        }
+        JSXMemberExpressionObject::MemberExpression(nested_member) => {
+          current = &nested_member.object;
+        }
+        JSXMemberExpressionObject::ThisExpression(_) => {
+          break;
+        }
+      }
+    }
+  }
+}
+
+impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
+  fn visit_jsx_opening_element_for_jsx_preserve(&mut self, elem: &JSXOpeningElement<'ast>) {
+    self.mark_jsx_member_expression_root(&elem.name);
+  }
+
+  fn visit_jsx_closing_element_for_jsx_preserve(&mut self, elem: &JSXClosingElement<'ast>) {
+    self.mark_jsx_member_expression_root(&elem.name);
   }
 }

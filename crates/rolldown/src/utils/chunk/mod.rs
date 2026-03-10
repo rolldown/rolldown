@@ -46,7 +46,7 @@ pub fn generate_rendered_chunk(
   chunk: &GenerateContext<'_>,
   render_modules: FxHashMap<ModuleId, RenderedModule>,
 ) -> RollupRenderedChunk {
-  let GenerateContext { chunk_graph, chunk, link_output, options, .. } = chunk;
+  let GenerateContext { chunk_graph, chunk, link_output, resolved_paths, .. } = chunk;
   let pre_rendered_chunk =
     chunk.pre_rendered_chunk.as_ref().expect("Should have pre-rendered chunk");
   RollupRenderedChunk {
@@ -76,7 +76,7 @@ pub fn generate_rendered_chunk(
         link_output.module_table[*idx]
           .as_external()
           .expect("direct_imports_from_external_modules should only contain external modules")
-          .get_file_name(options.paths.as_ref())
+          .get_file_name(*resolved_paths)
       }))
       .collect(),
     dynamic_imports: chunk

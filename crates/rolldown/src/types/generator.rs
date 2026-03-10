@@ -2,7 +2,7 @@ use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, OutputExports,
-  SymbolRef,
+  PathsOutputOption, SymbolRef,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
@@ -27,6 +27,9 @@ pub struct GenerateContext<'a> {
   /// export {a as b}; // symbol_ref points to `a`, and alias is `b`
   /// ```
   pub render_export_items_index_vec: &'a IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
+  /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
+  /// Used instead of `options.paths` in sync rendering code to avoid deadlocks.
+  pub resolved_paths: Option<&'a PathsOutputOption>,
 }
 
 impl GenerateContext<'_> {

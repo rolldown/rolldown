@@ -16,7 +16,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
-  BitSet, commondir,
+  BitSet, IndexBitSet, commondir,
   index_vec_ext::IndexVecRefExt,
   indexmap::FxIndexMap,
   rayon::ParallelIterator,
@@ -450,7 +450,7 @@ impl GenerateStage<'_> {
             .stmt_infos
             .declared_stmts_by_symbol(ns)
             .iter()
-            .all(|item| self.link_output.metas[importer.idx].stmt_info_included[*item]);
+            .all(|item| self.link_output.metas[importer.idx].stmt_info_included.has_bit(*item));
           is_stmt_included.then_some(ns)
         })
         // Determine safely merged cjs ns binding should put in where
@@ -803,8 +803,8 @@ impl GenerateStage<'_> {
       );
     }
 
-    let mut module_is_assigned: IndexVec<ModuleIdx, bool> =
-      oxc_index::index_vec![false; self.link_output.module_table.modules.len()];
+    let mut module_is_assigned: IndexBitSet<ModuleIdx> =
+      IndexBitSet::new(self.link_output.module_table.modules.len());
 
     self
       .apply_manual_code_splitting(
@@ -833,11 +833,11 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      if module_is_assigned[normal_module.idx] {
+      if module_is_assigned.has_bit(normal_module.idx) {
         continue;
       }
 
-      module_is_assigned[normal_module.idx] = true;
+      module_is_assigned.set_bit(normal_module.idx);
 
       let bits = &index_splitting_info[normal_module.idx].bits;
       debug_assert!(

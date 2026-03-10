@@ -1,8 +1,5 @@
-import type {
-  BindingMagicString,
-  BindingPluginContext,
-  BindingTransformPluginContext,
-} from '../binding.cjs';
+import type { BindingPluginContext, BindingTransformPluginContext } from '../binding.cjs';
+import type { BindingMagicString } from '../binding-magic-string';
 import {
   type LoggingFunctionWithPosition,
   type LogHandler,

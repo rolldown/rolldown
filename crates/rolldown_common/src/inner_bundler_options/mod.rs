@@ -36,7 +36,7 @@ use self::types::{
   hash_characters::HashCharacters, input_item::InputItem, is_external::IsExternal,
   output_exports::OutputExports, output_format::OutputFormat, output_option::AddonOutputOption,
   platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
-  sourcemap_path_transform::SourceMapPathTransform, tsconfig::TsConfig,
+  sourcemap_path_transform::SourceMapPathTransform, strict_mode::StrictMode, tsconfig::TsConfig,
 };
 
 use crate::{
@@ -234,6 +234,7 @@ pub struct BundlerOptions {
   pub context: Option<String>,
   pub tsconfig: Option<TsConfig>,
   pub strict_execution_order: Option<bool>,
+  pub strict: Option<StrictMode>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
@@ -522,20 +523,6 @@ where
                 ));
               }
             };
-          }
-          #[cfg(debug_assertions)]
-          "jsxPreset" => {
-            let preset_str = v
-              .as_str()
-              .ok_or_else(|| serde::de::Error::custom("transform.jsxPreset should be a string"))?;
-            transform_options.jsx_preset = Some(match preset_str {
-              "enable" => crate::JsxPreset::Enable,
-              "disable" => crate::JsxPreset::Disable,
-              "preserve" => crate::JsxPreset::Preserve,
-              _ => {
-                return Err(serde::de::Error::custom(format!("unknown jsxPreset: {preset_str}",)));
-              }
-            });
           }
           _ => return Err(serde::de::Error::custom(format!("unknown transform option: {k}",))),
         }

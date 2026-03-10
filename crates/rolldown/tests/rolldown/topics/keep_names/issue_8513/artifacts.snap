@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region url.js
+var URL = class {};
+//#endregion
+//#region main.js
+function createURL() {
+	return class URL$1 extends URL {
+		static {
+			__name(this, "URL");
+		}
+	};
+}
+function createFn() {
+	return function fn() {
+		return 1;
+	};
+}
+function wrapper1() {
+	function helper() {
+		return 42;
+	}
+	return helper;
+}
+function wrapper2() {
+	class MyClass {}
+	return MyClass;
+}
+function wrapper3() {
+	var myFn = function() {};
+	var myArrow = () => {};
+	var myClass = class {};
+	return {
+		myFn,
+		myArrow,
+		myClass
+	};
+}
+//#endregion
+export { createFn, createURL, wrapper1, wrapper2, wrapper3 };
+
+```

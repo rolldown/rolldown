@@ -8,6 +8,7 @@ description = "Rolldown builtin plugin implementing esbuild copy loader semantic
 
 [lib]
 doctest = false
+test = false
 
 [dependencies]
 anyhow = { workspace = true }

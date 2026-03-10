@@ -1,192 +1,243 @@
-import { parseArgs } from 'node:util';
+import cac from 'cac';
 import { getCliSchemaInfo } from '../../utils/validator';
 import { logger } from '../logger';
-import { alias, type OptionConfig } from './alias';
+import { alias, type CliOptions } from './alias';
 import { normalizeCliOptions, type NormalizedCliOptions } from './normalize';
-import { camelCaseToKebabCase, kebabCaseToCamelCase } from './utils';
+import { camelCaseToKebabCase } from './utils';
 
 const schemaInfo = getCliSchemaInfo();
 
+// Build the options export for help message
 export const options: {
   [k: string]: {
     type: 'boolean' | 'string';
-    multiple: boolean;
     short?: string;
-    default?: boolean | string | string[];
     hint?: string;
     description: string;
-    environment?: string | string[];
   };
 } = Object.fromEntries(
   Object.entries(schemaInfo)
     .filter(([_key, info]) => info.type !== 'never')
     .map(([key, info]) => {
-      const config = Object.getOwnPropertyDescriptor(alias, key)?.value as OptionConfig | undefined;
+      const config = alias[key as keyof typeof alias];
 
-      const type = info.type;
-
-      const result = {
-        type: type === 'boolean' ? 'boolean' : 'string',
-        // We only support comma separated mode right now.
-        // multiple: type === 'object' || type === 'array',
-        description: info?.description ?? config?.description ?? '',
-        hint: config?.hint,
-      } as {
-        type: 'boolean' | 'string';
-        multiple: boolean;
-        short?: string;
-        default?: boolean | string | string[];
-        hint?: string;
-        description: string;
-        environment?: string | string[];
-      };
-      if (config && config?.abbreviation) {
-        result.short = config?.abbreviation;
-      }
-      if (config && config.reverse) {
-        if (result.description.startsWith('enable')) {
-          result.description = result.description.replace('enable', 'disable');
-        } else if (!result.description.startsWith('Avoid')) {
-          result.description = `disable ${result.description}`;
+      let description = info?.description ?? config?.description ?? '';
+      if (config?.reverse) {
+        if (description.startsWith('enable')) {
+          description = description.replace('enable', 'disable');
+        } else if (!description.startsWith('Avoid')) {
+          description = `disable ${description}`;
         }
       }
-      key = camelCaseToKebabCase(key);
-      // add 'no-' prefix for need reverse options
-      return [config?.reverse ? `no-${key}` : key, result];
+
+      const result: {
+        type: 'boolean' | 'string';
+        short?: string;
+        hint?: string;
+        description: string;
+      } = {
+        type: info.type === 'boolean' ? 'boolean' : 'string',
+        description,
+      };
+      if (config?.abbreviation) {
+        result.short = config.abbreviation;
+      }
+      if (config?.hint) {
+        result.hint = config.hint;
+      }
+
+      const kebabKey = camelCaseToKebabCase(key);
+      const optionKey = config?.reverse ? `no-${kebabKey}` : kebabKey;
+      return [optionKey, result];
     }),
 );
+
+const knownKeys = new Set(Object.keys(schemaInfo));
+for (const key of Object.keys(schemaInfo)) {
+  const dotIdx = key.indexOf('.');
+  if (dotIdx > 0) {
+    knownKeys.add(key.substring(0, dotIdx));
+  }
+}
+
+const shortAliases = new Set<string>();
+for (const config of Object.values(alias)) {
+  if (config?.abbreviation) {
+    shortAliases.add(config.abbreviation);
+  }
+}
 
 export function parseCliArguments(): NormalizedCliOptions & {
   rawArgs: Record<string, any>;
 } {
-  const { values, tokens, positionals } = parseArgs({
-    options,
-    tokens: true,
-    allowPositionals: true,
-    // We can't use `strict` mode because we should handle the default config file name.
-    strict: false,
-  });
+  const cli = cac('rolldown');
 
-  let invalid_options = tokens
-    .filter((token) => token.kind === 'option')
-    .map((option) => {
-      let negative = false;
-      if (option.name.startsWith('no-')) {
-        // stripe `no-` prefix
-        const name = kebabCaseToCamelCase(option.name.substring(3));
-        if (name in schemaInfo) {
-          // Remove the `no-` in values
-          delete values[option.name];
-          option.name = name;
-          negative = true;
-        }
-      }
-      delete values[option.name]; // Strip the kebab-case options.
-      option.name = kebabCaseToCamelCase(option.name);
-      let originalInfo = schemaInfo[option.name];
-      if (!originalInfo) {
-        // Return the summary of invalid option.
-        return { name: option.name, value: option.value };
-      }
-      let type = originalInfo.type;
-      if (type === 'string' && typeof option.value !== 'string') {
-        let opt = option as { name: string };
-        // Check if this option requires a value
-        let config = Object.getOwnPropertyDescriptor(alias, opt.name)?.value as OptionConfig;
-        if (config?.requireValue) {
-          logger.error(
-            `Option \`--${camelCaseToKebabCase(opt.name)}\` requires a value but none was provided.`,
-          );
-          process.exit(1);
-        }
-        // We should use the default value.
-        Object.defineProperty(values, opt.name, {
-          value: config?.default ?? '',
-          enumerable: true,
-          configurable: true,
-          writable: true,
-        });
-      } else if (type === 'object' && typeof option.value === 'string') {
-        // `key1=value1,key2=value2`
-        const pairs = option.value.split(',').map((x) => x.split('='));
-        if (!values[option.name]) {
-          Object.defineProperty(values, option.name, {
-            value: {},
-            enumerable: true,
-            configurable: true,
-            writable: true,
-          });
-        }
-        for (const [key, value] of pairs) {
-          if (key && value) {
-            Object.defineProperty(values[option.name], key, {
-              value,
-              enumerable: true,
-              configurable: true,
-              writable: true,
-            });
-          }
-        }
-      } else if (type === 'array' && typeof option.value === 'string') {
-        if (!values[option.name]) {
-          Object.defineProperty(values, option.name, {
-            value: [],
-            enumerable: true,
-            configurable: true,
-            writable: true,
-          });
-        }
-        (values[option.name] as string[]).push(option.value);
-      } else if (type === 'boolean') {
-        Object.defineProperty(values, option.name, {
-          value: !negative,
-          enumerable: true,
-          configurable: true,
-          writable: true,
-        });
-      } else if (type === 'union') {
-        // We should use the default value.
-        let defaultValue = Object.getOwnPropertyDescriptor(alias, option.name)
-          ?.value as OptionConfig;
-        Object.defineProperty(values, option.name, {
-          value: option.value ?? defaultValue?.default ?? '',
-          enumerable: true,
-          configurable: true,
-          writable: true,
-        });
+  // Register all options with cac
+  for (const [key, info] of Object.entries(schemaInfo)) {
+    if (info.type === 'never') continue;
+    const config = alias[key as keyof typeof alias];
+
+    let rawName = '';
+    if (config?.abbreviation) rawName += `-${config.abbreviation}, `;
+
+    if (config?.reverse) {
+      rawName += `--no-${key}`;
+    } else {
+      rawName += `--${key}`;
+    }
+
+    if (info.type !== 'boolean' && !config?.reverse) {
+      if (config?.requireValue) {
+        rawName += ` <${config?.hint ?? key}>`;
       } else {
-        Object.defineProperty(values, option.name, {
-          value: option.value ?? '',
-          enumerable: true,
-          configurable: true,
-          writable: true,
-        });
+        rawName += ` [${config?.hint ?? key}]`;
       }
-    })
-    .filter((item) => {
-      return item !== undefined;
-    });
+    }
 
-  invalid_options.sort((a, b) => {
-    return a.name.localeCompare(b.name);
+    cli.option(rawName, info.description ?? config?.description ?? '');
+  }
+
+  let parsedInput: string[] = [];
+  let parsedOptions: Record<string, any> = {};
+
+  const cmd = cli.command('[...input]', '');
+  cmd.allowUnknownOptions();
+
+  // Disable applying default values.
+  //
+  // For options with prefix `--no-*`, cac sets `true` by default.
+  // For example, `--no-preserve-entry-signatures` will set `preserveEntrySignatures` to `true` by default. However, we want it to be `undefined` by default.
+  //
+  // Here we disable cac's default behavior and let the bundler's internal default value handling logic handle it.
+  cmd.ignoreOptionDefaultValue();
+
+  cmd.action((input: string[], opts: Record<string, any>) => {
+    parsedInput = input;
+    parsedOptions = opts;
   });
 
-  if (invalid_options.length !== 0) {
-    let single = invalid_options.length === 1;
+  try {
+    cli.parse(process.argv, { run: true });
+  } catch (err: any) {
+    if (err?.name === 'CACError') {
+      const match = err.message.match(/option `(.+?)` value is missing/);
+      if (match) {
+        const optName = match[1].replace(/ [<[].*/, '').replace(/^-\w, /, '');
+        logger.error(`Option \`${optName}\` requires a value but none was provided.`);
+      } else {
+        logger.error(err.message);
+      }
+      process.exit(1);
+    }
+    throw err;
+  }
+
+  // Post-processing
+
+  // CAC collects arguments behind `--` in a separate `--` key.
+  // This is unknown to the bundler.
+  delete parsedOptions['--'];
+
+  // Remove short-alias keys (cac/mri duplicates them alongside the full name)
+  for (const short of shortAliases) {
+    delete parsedOptions[short];
+  }
+
+  // Prototype pollution guard
+  for (const key of Object.keys(parsedOptions)) {
+    if (
+      key === '__proto__' ||
+      key === 'constructor' ||
+      key === 'prototype' ||
+      key.startsWith('__proto__.') ||
+      key.startsWith('constructor.') ||
+      key.startsWith('prototype.')
+    ) {
+      delete parsedOptions[key];
+    }
+  }
+
+  // Unknown option detection + warning
+  const unknownKeys = Object.keys(parsedOptions).filter((k) => !knownKeys.has(k));
+
+  if (unknownKeys.length > 0) {
+    unknownKeys.sort();
+    const single = unknownKeys.length === 1;
     logger.warn(
-      `Option \`${invalid_options.map((item) => item.name).join(',')}\` ${
-        single ? 'is' : 'are'
-      } unrecognized. We will ignore ${single ? 'this' : 'those'} option${single ? '' : 's'}.`,
+      `Option \`${unknownKeys.join(',')}\` ${single ? 'is' : 'are'} unrecognized. ` +
+        `We will ignore ${single ? 'this' : 'those'} option${single ? '' : 's'}.`,
     );
   }
 
-  let rawArgs = {
-    ...values,
-    ...invalid_options.reduce((acc, cur) => {
-      acc[cur.name] = cur.value;
-      return acc;
-    }, Object.create(null)),
-  };
-  const normalizedOptions = normalizeCliOptions(values, positionals as string[]);
+  // rawArgs assembly — snapshot before removing unknown keys
+  const rawArgs: Record<string, any> = { ...parsedOptions };
+
+  // Remove unknown keys from parsedOptions before type coercion
+  for (const key of unknownKeys) {
+    delete parsedOptions[key];
+  }
+
+  // Type coercion — duplicate filtering + array wrapping
+  for (const [key, value] of Object.entries(parsedOptions)) {
+    const type = schemaInfo[key]?.type;
+    if (Array.isArray(value)) {
+      if (type !== 'array' && type !== 'object') {
+        parsedOptions[key] = value[value.length - 1];
+      }
+    } else if (type === 'array' && typeof value === 'string') {
+      parsedOptions[key] = [value];
+    }
+  }
+
+  // Object option parsing — parse "key:val,key:val" strings (Rollup-compatible)
+  // Also supports deprecated "key=val,key=val" syntax with a warning
+  for (const [schemaKey, info] of Object.entries(schemaInfo)) {
+    if (info.type !== 'object') continue;
+
+    const parts = schemaKey.split('.');
+    let parent: any = parsedOptions;
+    for (let i = 0; i < parts.length - 1; i++) {
+      parent = parent?.[parts[i]];
+    }
+    const leafKey = parts[parts.length - 1];
+    const value = parent?.[leafKey];
+    if (value === undefined) continue;
+
+    const values = Array.isArray(value) ? value : [value];
+    if (typeof values[0] !== 'string') continue;
+
+    let usedDeprecatedSyntax = false;
+    const result: Record<string, string> = {};
+    for (const v of values) {
+      for (const pair of String(v).split(',')) {
+        // Prefer `:` only if it appears before `=` (or `=` doesn't exist)
+        // This ensures `key=value:with:colon` (deprecated) is parsed correctly
+        const colonIdx = pair.indexOf(':');
+        const eqIdx = pair.indexOf('=');
+        let k: string;
+        let val: string;
+        if (colonIdx > 0 && (eqIdx === -1 || colonIdx < eqIdx)) {
+          k = pair.slice(0, colonIdx);
+          val = pair.slice(colonIdx + 1);
+        } else if (eqIdx > 0) {
+          k = pair.slice(0, eqIdx);
+          val = pair.slice(eqIdx + 1);
+          usedDeprecatedSyntax = true;
+        } else {
+          continue;
+        }
+        result[k] = val;
+      }
+    }
+    if (usedDeprecatedSyntax) {
+      const optionName = camelCaseToKebabCase(schemaKey);
+      logger.warn(
+        `Using \`key=value\` syntax for \`--${optionName}\` is deprecated. Use \`key:value\` instead.`,
+      );
+    }
+    parent[leafKey] = result;
+  }
+
+  const normalizedOptions = normalizeCliOptions(parsedOptions as CliOptions, parsedInput);
   return { ...normalizedOptions, rawArgs };
 }

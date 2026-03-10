@@ -3,6 +3,7 @@ import { build, type BuildOptions } from './api/build';
 import { rolldown } from './api/rolldown';
 import type { RolldownBuild } from './api/rolldown/rolldown-build';
 import { watch } from './api/watch';
+import { BindingMagicString } from './binding-magic-string';
 import type {
   RolldownWatcher,
   RolldownWatcherEvent,
@@ -26,6 +27,7 @@ import type {
   InputOptions,
   ModuleTypes,
   OptimizationOptions,
+  WatcherFileWatcherOptions,
   WatcherOptions,
 } from './options/input-options';
 import type { TransformOptions } from './options/transform-options';
@@ -117,7 +119,7 @@ import type { BundleError } from './utils/error';
 
 export { RUNTIME_MODULE_ID, VERSION } from './constants';
 export { build, defineConfig, rolldown, watch };
-export { BindingMagicString } from './binding.cjs';
+export { BindingMagicString };
 export type {
   AddonFunction,
   BundleError,
@@ -217,6 +219,7 @@ export type {
   TransformResult,
   TreeshakingOptions,
   WarningHandlerWithDefault,
+  WatcherFileWatcherOptions,
   WatcherOptions,
   WatchOptions,
 };

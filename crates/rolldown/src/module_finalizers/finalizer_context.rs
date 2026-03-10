@@ -1,7 +1,7 @@
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
-  ModuleType, NormalModule, RenderedConcatenatedModuleParts, RuntimeModuleBrief, SharedFileEmitter,
-  SymbolRef, SymbolRefDb,
+  ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts, RuntimeModuleBrief,
+  SharedFileEmitter, SymbolRef, SymbolRefDb,
 };
 
 pub type FinalizerMutableFields = (
@@ -40,6 +40,8 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub side_effect_free_function_symbols: &'me FxHashSet<SymbolRef>,
   pub safely_merge_cjs_ns_map: &'me FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub used_symbol_refs: &'me FxHashSet<SymbolRef>,
+  /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
+  pub resolved_paths: Option<&'me PathsOutputOption>,
 }
 
 impl<'me> ScopeHoistingFinalizerContext<'me> {

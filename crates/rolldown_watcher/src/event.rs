@@ -1,9 +1,9 @@
 use crate::watch_task::WatchTaskIdx;
-use rolldown::Bundler;
+use rolldown::BundleHandle;
+use rolldown_error::BuildDiagnostic;
 use std::fmt::{Debug, Display};
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 /// Watch-related events
 #[derive(Debug, Clone)]
@@ -50,7 +50,7 @@ pub struct BundleEndEventData {
   pub task_index: WatchTaskIdx,
   pub output: String,
   pub duration: u32,
-  pub bundler: Arc<Mutex<Bundler>>,
+  pub bundle_handle: BundleHandle,
 }
 
 impl Debug for BundleEndEventData {
@@ -67,16 +67,18 @@ impl Debug for BundleEndEventData {
 #[derive(Clone)]
 pub struct WatchErrorEventData {
   pub task_index: WatchTaskIdx,
-  pub errors: Vec<String>,
+  /// Raw diagnostics preserved for rich error conversion at the binding layer.
+  /// Wrapped in `Arc` because `BuildDiagnostic` is not `Clone`.
+  pub diagnostics: Arc<[BuildDiagnostic]>,
   pub cwd: PathBuf,
-  pub bundler: Arc<Mutex<Bundler>>,
+  pub bundle_handle: BundleHandle,
 }
 
 impl Debug for WatchErrorEventData {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("WatchErrorEventData")
       .field("task_index", &self.task_index)
-      .field("errors", &self.errors)
+      .field("diagnostics", &self.diagnostics)
       .field("cwd", &self.cwd)
       .finish_non_exhaustive()
   }

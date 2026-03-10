@@ -11,7 +11,8 @@
  * 3. Skips tests that use unsupported features
  *
  * BindingMagicString API (supported methods):
- *   - constructor(source: string)
+ *   - constructor(source: string, options?: { filename?, offset? })
+ *   - offset: number (getter/setter — shifts all position-based operations)
  *   - replace(from: string, to: string): this
  *   - replaceAll(from: string, to: string): this
  *   - prepend(content: string): this
@@ -41,12 +42,12 @@
  *   - generateDecodedMap(options?): BindingDecodedMap (returns object with decoded mappings array)
  *
  * NOT supported (will be skipped):
- *   - constructor options (filename, ignoreList, indentExclusionRanges)
+ *   - constructor options (ignoreList, indentExclusionRanges) — filename and offset ARE supported
  *   - reset tests (most require splitting inside edited chunks)
  *   - addSourcemapLocation (not in string_wizard)
  *   - storeName option in overwrite (not in string_wizard)
  *   - x_google_ignoreList / ignoreList (not in string_wizard)
- *   - original property
+ *   - original property (getter — not yet implemented)
  *   - replace/replaceAll with regex or function replacer
  */
 
@@ -146,7 +147,6 @@ const SKIP_TESTS = [
   'should ignore non-changed replacements', // uses function replacer
   'global regex result the same as .replace', // regex not supported
   'rejects with non-global regexp', // regex not supported
-  'with offset', // uses offset option not supported
   // length/isEmpty tests that rely on modified length
   'should support length', // length returns original length
   'should support isEmpty', // isEmpty behavior differs

@@ -1,4 +1,145 @@
 
+## [1.0.0-rc.8] - 2026-03-09
+
+### 🚀 Features
+
+- watch: enable full functional fs watcher in wasm (#8575) by @hyf0
+- watch: expose debounce related options (#8572) by @hyf0
+
+### 🐛 Bug Fixes
+
+- detect new URL(…, import.meta.url) with no-sub template literal (#8565) by @char
+- devtools: trace dynamic imports in devtools (#8581) by @cal-gooo
+- watch: rebuild when a previously missing file is created (#8562) by @hyf0-agent
+- watch: filter out Access events to prevent infinite rebuild loop on Linux (#8557) by @hyf0-agent
+
+### 🚜 Refactor
+
+- watch: remove auto watch for fail imports (#8585) by @hyf0
+- fs_watcher: unify the way of constructing watcher (#8571) by @hyf0
+- cli: migrate CLI to CAC (#8551) by @h-a-n-a
+- switch asset module support from hard-code to builtin plugin (#8546) by @hyf0
+
+### 📚 Documentation
+
+- fix subject-verb agreement in why-bundlers.md (#8591) by @brandonzylstra
+- maintenance: align release and canary workflow guide (#8538) by @minsoo-web
+- add `format` option to directives example config (#8590) by @shulaoda
+- fix: change twitter to x logo in team (#8552) by @mdong1909
+- correct composable filter support explanation (#8550) by @sapphi-red
+
+### ⚡ Performance
+
+- testing: share tokio runtime across fixture tests (#8567) by @Boshen
+
+### 🧪 Testing
+
+- hmr: fix infinite loop in dev server test retry logic (#8576) by @hyf0-agent
+- cli: add more cli-e2e test cases (#8548) by @h-a-n-a
+
+### ⚙️ Miscellaneous Tasks
+
+- docs: update in-depth/directives for `output.strict` option (#8535) by @minsoo-web
+- add PNPM_HOME Dev Drive mapping to Windows CI workflows (#8589) by @Boshen
+- deps: update github-actions (#8588) by @renovate[bot]
+- move Windows cargo target dir to Dev Drive (#8586) by @Boshen
+- optimize cache keys to fix race conditions and reduce usage (#8578) by @Boshen
+- remove WASI build & test pipeline (#8580) by @Boshen
+- remove unnecessary submodule checkouts (#8577) by @Boshen
+- use Dev Drive for Windows CI jobs (#8574) by @Boshen
+- skip redundant native binding build for browser and remove standalone job (#8573) by @Boshen
+- parallelize Node tests on ubuntu, single Node 24 on macOS/windows (#8570) by @Boshen
+- docs: bump @voidzero-dev/vitepress-theme to 4.8.0 (#8558) by @crusty-voidzero
+- dedupe type-check from dev server workflow (#8554) by @Boshen
+
+### ❤️ New Contributors
+
+* @brandonzylstra made their first contribution in [#8591](https://github.com/rolldown/rolldown/pull/8591)
+* @char made their first contribution in [#8565](https://github.com/rolldown/rolldown/pull/8565)
+* @cal-gooo made their first contribution in [#8581](https://github.com/rolldown/rolldown/pull/8581)
+* @hyf0-agent made their first contribution in [#8562](https://github.com/rolldown/rolldown/pull/8562)
+* @h-a-n-a made their first contribution in [#8551](https://github.com/rolldown/rolldown/pull/8551)
+
+
+## [1.0.0-rc.7] - 2026-03-05
+
+### 💥 BREAKING CHANGES
+
+- enable minify: 'dce-only' by default (#8465) by @IWANABETHATGUY
+- settings `inlineConst: { mode: 'smart', pass: 1}`  by default (#8444) by @IWANABETHATGUY
+
+### 🚀 Features
+
+- binding: add original getter to BindingMagicString (#8533) by @IWANABETHATGUY
+- native-magic-string: add `offset` property support (#8531) by @IWANABETHATGUY
+- add `output.strict` option to control `"use strict"` directive emission (#8489) by @Copilot
+- watch: expose `watcher.compareContentsForPolling` (#8526) by @hyf0
+- watch: use new watcher to support watch mode (#8475) by @hyf0
+- rust/watch: handle bulk-change (#8466) by @hyf0
+- add LLM-friendly markdown output format to bundle analyzer plugin (#8242) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- expose `plugins` on `NormalizedInputOptions` for `buildStart` hook (#8521) by @Copilot
+- only uppercase facade symbols in JSX preserve mode (#8519) by @IWANABETHATGUY
+- binding: export BindingResult in generated dts header (#8537) by @minsoo-web
+- pre-resolve paths option to avoid `invoke_sync` deadlock (#8518) by @IWANABETHATGUY
+- remove debug-only jsx_preset and UntranspiledSyntaxError (#8511) by @IWANABETHATGUY
+- apply `topLevelVar` to exported `const`/`let` declarations (#8507) by @IWANABETHATGUY
+- rolldown_plugin_vite_web_worker_post: avoid replacing `new.target` (#8488) by @sapphi-red
+- update copyright year to 2026 (#8486) by @maciekzygmunt
+
+### 🚜 Refactor
+
+- rust: use Oxc's SymbolFlags::ConstVariable instead of custom IsConst flag (#8543) by @Dunqing
+- rust: remove FacadeScoping, use Scoping::create_symbol for facade symbols (#8540) by @Dunqing
+- rust/watch: remove hacky `reset_closed_for_watch_mode` (#8530) by @hyf0
+- binding: return &str instead of String in filename() getter (#8534) by @IWANABETHATGUY
+- rust: remove old watch mode implementation (#8525) by @hyf0
+- rust/watch: simply watch logic in the binding layer (#8516) by @hyf0
+- rust/watch: tweak struct/function names (#8464) by @hyf0
+
+### 📚 Documentation
+
+- explain how external modules work in rolldown (#8457) by @sapphi-red
+- add some diagrams using graphviz (#8499) by @sapphi-red
+- use `vitepress-plugin-graphviz` (#8498) by @sapphi-red
+- list s390x/ppc64le prebuilt binaries (#8495) by @crusty-voidzero
+- fix error type for `RolldownBuild.generate` and others (#8490) by @sapphi-red
+
+### ⚡ Performance
+
+- string_wizard: reduce allocations and add ASCII fast paths (#8541) by @IWANABETHATGUY
+- use IndexBitSet to replace IndexVec<XXXIdx, bool> for module/stmt inclusion tracking (#8503) by @IWANABETHATGUY
+- plugin: use IndexBitSet to optimize skipped plugins checking (#8497) by @ShroXd
+- rust/tla: skip compute_tla if there is no module use TLA (#8487) by @ShroXd
+
+### 🧪 Testing
+
+- node/watch: make watch tests run in concurrent and retry-able (#8512) by @hyf0
+- add test case for static flag tree-shaking (#8476) by @IWANABETHATGUY
+- migrate post-banner sourcemap-with-shebang to Rust (#8477) by @Copilot
+
+### ⚙️ Miscellaneous Tasks
+
+- vscode: `formatOnSave` for markdown files using oxc formatter (#8536) by @minsoo-web
+- deps: update test262 submodule for tests (#8528) by @sapphi-red
+- remove `retry` workaround from output paths test fixtures (#8520) by @Copilot
+- docs: add Shuyuan Wang (h-a-n-a) and remove from acknowledgements (#8509) by @Copilot
+- consolidate top_level_var test cases using configVariants (#8508) by @IWANABETHATGUY
+- add s390x and ppc64le linux gnu targets (#8493) by @Brooooooklyn
+
+### ◀️ Revert
+
+- fix(rolldown): increase tokio blocking threads size for watch mode (#8517) by @hyf0
+
+### ❤️ New Contributors
+
+* @minsoo-web made their first contribution in [#8536](https://github.com/rolldown/rolldown/pull/8536)
+* @crusty-voidzero made their first contribution in [#8495](https://github.com/rolldown/rolldown/pull/8495)
+* @maciekzygmunt made their first contribution in [#8486](https://github.com/rolldown/rolldown/pull/8486)
+
+
 ## [1.0.0-rc.6] - 2026-02-26
 
 ### 💥 BREAKING CHANGES

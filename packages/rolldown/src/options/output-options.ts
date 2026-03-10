@@ -376,11 +376,11 @@ export interface OutputOptions {
    * Rolldown uses Oxc Minifier under the hood. See Oxc's [minification documentation](https://oxc.rs/docs/guide/usage/minifier#features) for more details.
    *
    * - `true`: Enable full minification including code compression and dead code elimination
-   * - `false`: Disable minification (default)
-   * - `'dce-only'`: Only perform dead code elimination without code compression
+   * - `false`: Disable minification
+   * - `'dce-only'`: Only perform dead code elimination without code compression (default)
    * - `MinifyOptions`: Fine-grained control over minification settings
    *
-   * @default false
+   * @default 'dce-only'
    */
   minify?: boolean | 'dce-only' | MinifyOptions;
   /**
@@ -712,6 +712,18 @@ export interface OutputOptions {
    * @default false
    */
   strictExecutionOrder?: boolean;
+  /**
+   * Whether to always output `"use strict"` directive in non-ES module outputs.
+   *
+   * - `true` - Always emit `"use strict"` at the top of the output (not applicable for ESM format since ESM is always strict).
+   * - `false` - Never emit `"use strict"` in the output.
+   * - `'auto'` - Respect the `"use strict"` directives from the source code.
+   *
+   * See [In-depth directive guide](https://rolldown.rs/in-depth/directives) for more details.
+   *
+   * @default 'auto'
+   */
+  strict?: boolean | 'auto';
 }
 
 export type CodeSplittingGroup = {

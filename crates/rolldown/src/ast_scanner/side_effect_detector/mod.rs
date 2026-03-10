@@ -425,36 +425,46 @@ impl<'a> SideEffectDetector<'a> {
         detail
       }
       // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2533-L2539
-      Expression::UnaryExpression(unary_expr) => match unary_expr.operator {
-        ast::UnaryOperator::Typeof if matches!(unary_expr.argument, Expression::Identifier(_)) => {
-          false.into()
-        }
-        ast::UnaryOperator::Typeof => self.detect_side_effect_of_expr(&unary_expr.argument),
-        // delete always has a side effect (it modifies the object)
-        ast::UnaryOperator::Delete => true.into(),
-        // void and ! only have side effects if their argument does
-        ast::UnaryOperator::Void | ast::UnaryOperator::LogicalNot => {
-          self.detect_side_effect_of_expr(&unary_expr.argument)
-        }
-        // ToNumber throws on Symbol and BigInt
-        ast::UnaryOperator::UnaryPlus => {
-          let prim = known_primitive_type(self.scope, &unary_expr.argument);
-          if matches!(prim, PrimitiveType::Unknown | PrimitiveType::BigInt) {
-            true.into()
-          } else {
+      Expression::UnaryExpression(unary_expr) => {
+        let detail = match unary_expr.operator {
+          ast::UnaryOperator::Typeof
+            if matches!(unary_expr.argument, Expression::Identifier(_)) =>
+          {
+            false.into()
+          }
+          ast::UnaryOperator::Typeof => self.detect_side_effect_of_expr(&unary_expr.argument),
+          // delete always has a side effect (it modifies the object)
+          ast::UnaryOperator::Delete => true.into(),
+          // void and ! only have side effects if their argument does
+          ast::UnaryOperator::Void | ast::UnaryOperator::LogicalNot => {
             self.detect_side_effect_of_expr(&unary_expr.argument)
           }
-        }
-        // ToNumeric throws on Symbol (but not BigInt)
-        ast::UnaryOperator::UnaryNegation | ast::UnaryOperator::BitwiseNot => {
-          let prim = known_primitive_type(self.scope, &unary_expr.argument);
-          if prim == PrimitiveType::Unknown {
-            true.into()
-          } else {
-            self.detect_side_effect_of_expr(&unary_expr.argument)
+          // ToNumber throws on Symbol and BigInt
+          ast::UnaryOperator::UnaryPlus => {
+            let prim = known_primitive_type(self.scope, &unary_expr.argument);
+            if matches!(prim, PrimitiveType::Unknown | PrimitiveType::BigInt) {
+              true.into()
+            } else {
+              self.detect_side_effect_of_expr(&unary_expr.argument)
+            }
           }
-        }
-      },
+          // ToNumeric throws on Symbol (but not BigInt)
+          ast::UnaryOperator::UnaryNegation | ast::UnaryOperator::BitwiseNot => {
+            let prim = known_primitive_type(self.scope, &unary_expr.argument);
+            if prim == PrimitiveType::Unknown {
+              true.into()
+            } else {
+              self.detect_side_effect_of_expr(&unary_expr.argument)
+            }
+          }
+        };
+        debug_assert_eq!(
+          detail.has_side_effect(),
+          expr.may_have_side_effects(&self.ctx),
+          "Oxc parity: UnaryExpression"
+        );
+        detail
+      }
       oxc::ast::match_member_expression!(Expression) => self
         .detect_side_effect_of_member_expr(expr.to_member_expression(), PropertyAccessFlag::Read),
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),

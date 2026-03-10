@@ -8,7 +8,7 @@ use oxc::ast::ast::{
   VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression};
-use oxc::span::Ident;
+use oxc::span::{GetSpan, Ident};
 use oxc_allocator::Address;
 use oxc_ecmascript::side_effects::MayHaveSideEffects;
 use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, SideEffectDetail};
@@ -419,8 +419,26 @@ impl<'a> SideEffectDetector<'a> {
         detail
       }
       Expression::UnaryExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
-      oxc::ast::match_member_expression!(Expression) => self
-        .detect_side_effect_of_member_expr(expr.to_member_expression(), PropertyAccessFlag::Read),
+      oxc::ast::match_member_expression!(Expression) => {
+        let detail = self
+          .detect_side_effect_of_member_expr(expr.to_member_expression(), PropertyAccessFlag::Read);
+        // Known divergences where Rolldown has bundler-specific knowledge that Oxc lacks:
+        // 1. `import.meta.url` — Rolldown treats as side-effect-free (bundler resolves it)
+        // 2. 3-level global chains like `Object.prototype.hasOwnProperty` — Oxc's
+        //    `property_access_may_have_side_effects` recurses into the intermediate
+        //    2-level expression first (e.g. `Object.prototype`), which fails the
+        //    known-globals check before the 3-level check can fire.
+        // Skip the assert for these cases; once Oxc adds `prototype` to Object's
+        // known properties or restructures the check order, these will converge.
+        if !is_known_member_expr_divergence(expr) {
+          debug_assert_eq!(
+            detail.has_side_effect(),
+            expr.may_have_side_effects(&self.ctx),
+            "Oxc parity: MemberExpression {:?}", expr.span()
+          );
+        }
+        detail
+      }
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
       Expression::Identifier(ident) => self.detect_side_effect_of_identifier(ident),
@@ -681,6 +699,11 @@ impl<'a> SideEffectDetector<'a> {
     let has_side_effect = is_global
       && self.ctx.options.treeshake.unknown_global_side_effects()
       && !is_global_ident_ref(&ident_ref.name);
+    debug_assert_eq!(
+      has_side_effect,
+      ident_ref.may_have_side_effects(&self.ctx),
+      "Oxc parity: IdentifierReference '{}'", ident_ref.name
+    );
     let mut detail = SideEffectDetail::from(has_side_effect);
     // METADATA: GlobalVarAccess
     detail.set(SideEffectDetail::GlobalVarAccess, is_global);
@@ -943,6 +966,25 @@ fn extract_first_part_of_member_expr_like<'a>(expr: &'a Expression) -> Option<&'
       _ => break None,
     }
   }
+}
+
+/// Check if a member expression is a known divergence between Rolldown and Oxc's
+/// `MayHaveSideEffects` trait. Used to skip debug_assert_eq for cases where
+/// Rolldown has bundler-specific knowledge that Oxc doesn't yet implement.
+fn is_known_member_expr_divergence(expr: &Expression) -> bool {
+  // Case 1: `import.meta.url` — Rolldown knows this is side-effect-free
+  if let Expression::StaticMemberExpression(member) = expr {
+    if matches!(member.object, Expression::MetaProperty(_)) {
+      return true;
+    }
+    // Case 2: 3-level global chains like `Object.prototype.propertyIsEnumerable`
+    // Oxc's intermediate 2-level check (e.g. `Object.prototype`) fails before
+    // the 3-level check can run.
+    if let Expression::StaticMemberExpression(_) = &member.object {
+      return true;
+    }
+  }
+  false
 }
 
 #[cfg(test)]

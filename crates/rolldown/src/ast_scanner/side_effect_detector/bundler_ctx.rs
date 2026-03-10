@@ -68,4 +68,8 @@ impl MayHaveSideEffectsContext<'_> for BundlerSideEffectCtx<'_> {
   fn unknown_global_side_effects(&self) -> bool {
     self.options.treeshake.unknown_global_side_effects()
   }
+
+  fn property_write_side_effects(&self) -> bool {
+    self.flat_options.property_write_side_effects()
+  }
 }

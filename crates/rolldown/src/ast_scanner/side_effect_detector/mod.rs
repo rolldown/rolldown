@@ -445,9 +445,28 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::V8IntrinsicExpression(_) => true.into(),
       Expression::BinaryExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
       Expression::PrivateInExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
-      Expression::AssignmentExpression(expr) => {
-        self.detect_side_effect_of_assignment_target(&expr.left)
-          | self.detect_side_effect_of_expr(&expr.right)
+      Expression::AssignmentExpression(assign_expr) => {
+        let detail = self.detect_side_effect_of_assignment_target(&assign_expr.left)
+          | self.detect_side_effect_of_expr(&assign_expr.right);
+        // Skip assert for:
+        // - CJS export pattern (PureCjs): Rolldown says "no side effect", Oxc says "true"
+        // - Empty destructuring targets: Rolldown considers side-effect-free, Oxc returns true
+        //   for all non-member-expression targets
+        let is_empty_destructuring = matches!(
+          &assign_expr.left,
+          AssignmentTarget::ArrayAssignmentTarget(a) if a.elements.is_empty() && a.rest.is_none()
+        ) || matches!(
+          &assign_expr.left,
+          AssignmentTarget::ObjectAssignmentTarget(o) if o.properties.is_empty() && o.rest.is_none()
+        );
+        if !detail.contains(SideEffectDetail::PureCjs) && !is_empty_destructuring {
+          debug_assert_eq!(
+            detail.has_side_effect(),
+            expr.may_have_side_effects(&self.ctx),
+            "Oxc parity: AssignmentExpression"
+          );
+        }
+        detail
       }
 
       Expression::ChainExpression(expr) => match &expr.expression {
@@ -463,9 +482,9 @@ impl<'a> SideEffectDetector<'a> {
       Expression::TaggedTemplateExpression(expr) => {
         (!self.is_expr_manual_pure_functions(&expr.tag)).into()
       }
-      Expression::UpdateExpression(expr) => {
+      Expression::UpdateExpression(update_expr) => {
         // Handle update expressions like obj.prop++ or obj[prop]++
-        match &expr.argument {
+        let detail = match &update_expr.argument {
           ast::SimpleAssignmentTarget::StaticMemberExpression(static_member_expr) => {
             if self.ctx.flat_options.property_write_side_effects() {
               true.into()
@@ -482,7 +501,13 @@ impl<'a> SideEffectDetector<'a> {
           ast::SimpleAssignmentTarget::ComputedMemberExpression(computed_expr) => self
             .detect_side_effect_of_computed_member_expr(computed_expr, PropertyAccessFlag::all()),
           _ => true.into(),
-        }
+        };
+        debug_assert_eq!(
+          detail.has_side_effect(),
+          expr.may_have_side_effects(&self.ctx),
+          "Oxc parity: UpdateExpression"
+        );
+        detail
       }
       Expression::ArrayExpression(expr) => self.detect_side_effect_of_array_expr(expr),
       Expression::NewExpression(expr) => {

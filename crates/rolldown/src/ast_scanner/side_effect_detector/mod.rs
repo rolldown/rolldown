@@ -569,20 +569,14 @@ impl<'a> SideEffectDetector<'a> {
             self.detect_side_effect_of_expr(&binary_expr.left)
               | self.detect_side_effect_of_expr(&binary_expr.right)
           }
-          // Special-case "<" and ">" with string, number, or bigint arguments
+          // Comparison operators just recurse on operands (matching Oxc).
+          // ToPrimitive concerns are delegated to the operands' own detection.
           ast::BinaryOperator::GreaterThan
           | ast::BinaryOperator::LessThan
           | ast::BinaryOperator::GreaterEqualThan
           | ast::BinaryOperator::LessEqualThan => {
-            let lt = known_primitive_type(self.scope, &binary_expr.left);
-            match lt {
-              PrimitiveType::Number | PrimitiveType::String | PrimitiveType::BigInt => {
-                SideEffectDetail::from(known_primitive_type(self.scope, &binary_expr.right) != lt)
-                  | self.detect_side_effect_of_expr(&binary_expr.left)
-                  | self.detect_side_effect_of_expr(&binary_expr.right)
-              }
-              _ => true.into(),
-            }
+            self.detect_side_effect_of_expr(&binary_expr.left)
+              | self.detect_side_effect_of_expr(&binary_expr.right)
           }
 
           // `==` and `!=` themselves don't throw — the comparison calls ToPrimitive

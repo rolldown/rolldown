@@ -8,7 +8,7 @@ use oxc::ast::ast::{
   VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression};
-use oxc::span::Ident;
+use oxc::span::{GetSpan, Ident};
 use oxc_allocator::Address;
 use oxc_ecmascript::side_effects::MayHaveSideEffects;
 use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, SideEffectDetail};
@@ -419,8 +419,20 @@ impl<'a> SideEffectDetector<'a> {
         detail
       }
       Expression::UnaryExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
-      oxc::ast::match_member_expression!(Expression) => self
-        .detect_side_effect_of_member_expr(expr.to_member_expression(), PropertyAccessFlag::Read),
+      oxc::ast::match_member_expression!(Expression) => {
+        let detail = self
+          .detect_side_effect_of_member_expr(expr.to_member_expression(), PropertyAccessFlag::Read);
+        // Known divergence: `import.meta.*` — Rolldown treats `import.meta.url` as
+        // side-effect-free (bundler resolves it), Oxc doesn't know about MetaProperty.
+        if !is_import_meta_member_expr(expr) {
+          debug_assert_eq!(
+            detail.has_side_effect(),
+            expr.may_have_side_effects(&self.ctx),
+            "Oxc parity: MemberExpression {:?}", expr.span()
+          );
+        }
+        detail
+      }
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
       Expression::Identifier(ident) => self.detect_side_effect_of_identifier(ident),
@@ -944,6 +956,18 @@ fn extract_first_part_of_member_expr_like<'a>(expr: &'a Expression) -> Option<&'
     }
   }
 }
+
+/// `import.meta.*` is bundler-specific: Rolldown treats `import.meta.url` as
+/// side-effect-free, but Oxc's generic analysis doesn't know about MetaProperty.
+fn is_import_meta_member_expr(expr: &Expression) -> bool {
+  if let Expression::StaticMemberExpression(member) = expr {
+    if matches!(member.object, Expression::MetaProperty(_)) {
+      return true;
+    }
+  }
+  false
+}
+
 
 #[cfg(test)]
 mod test {

@@ -1,10 +1,12 @@
 use std::path::Path;
 
+use oxc::ast::CommentPosition;
 use oxc::ast::ast::Program;
 use oxc::ast_visit::VisitMut;
 use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, SemanticBuilder, Stats};
+use oxc::span::GetSpan;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
   InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
@@ -14,6 +16,7 @@ use rolldown_common::NormalizedBundlerOptions;
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
+use rustc_hash::FxHashSet;
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -158,6 +161,8 @@ impl PreProcessEcmaAst {
     // Step 5: Run DCE.
     // Avoid DCE for lazy export.
     if bundle_options.treeshake.is_some() && !has_lazy_export {
+      let original_top_level_stmt_spans =
+        ast.program().body.iter().map(GetSpan::span).collect::<Vec<_>>();
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         let scoping = self.recreate_scoping(&mut scoping, program);
         let mut treeshake = TreeShakeOptions::from(&bundle_options.treeshake);
@@ -169,6 +174,7 @@ impl PreProcessEcmaAst {
           ..CompressOptions::dce()
         };
         Compressor::new(allocator).dead_code_elimination_with_scoping(program, scoping, options);
+        preserve_removed_top_level_stmt_comments(program, &original_top_level_stmt_spans);
       });
     }
 
@@ -193,5 +199,54 @@ impl PreProcessEcmaAst {
       .semantic;
     self.stats = ret.stats();
     ret.into_scoping()
+  }
+}
+
+fn preserve_removed_top_level_stmt_comments(
+  program: &mut Program<'_>,
+  original_stmt_spans: &[oxc::span::Span],
+) {
+  if program.comments.is_empty() || original_stmt_spans.is_empty() {
+    return;
+  }
+
+  let remaining_stmt_starts =
+    program.body.iter().map(|stmt| stmt.span().start).collect::<FxHashSet<_>>();
+  let mut next_anchor = program.span.end;
+  let mut comment_anchors = vec![program.span.end; original_stmt_spans.len()];
+
+  for (idx, span) in original_stmt_spans.iter().enumerate().rev() {
+    comment_anchors[idx] = next_anchor;
+    if remaining_stmt_starts.contains(&span.start) {
+      next_anchor = span.start;
+    }
+  }
+
+  for (idx, span) in original_stmt_spans.iter().enumerate() {
+    if remaining_stmt_starts.contains(&span.start) {
+      continue;
+    }
+
+    let comment_region_end =
+      original_stmt_spans.get(idx + 1).map_or(program.span.end, |next_span| next_span.start);
+
+    for comment in &mut program.comments {
+      if comment.attached_to == span.start {
+        if comment.position == CommentPosition::Trailing {
+          comment.position = CommentPosition::Leading;
+        }
+        comment.attached_to = comment_anchors[idx];
+        continue;
+      }
+
+      if comment.position == CommentPosition::Trailing
+        && comment.attached_to == 0
+        && comment.span.start >= span.start
+        && comment.span.start < comment_region_end
+      {
+        comment.position = CommentPosition::Leading;
+        comment.attached_to = comment_anchors[idx];
+      }
+    }
   }
 }

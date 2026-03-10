@@ -1,4 +1,5 @@
 use bitflags::bitflags;
+use oxc::ast::CommentPosition;
 use oxc::ast::ast::ObjectPropertyKind;
 use oxc::semantic::{ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
@@ -1254,6 +1255,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let mut last_import_stmt_idx = None;
 
     let old_body = program.body.take_in(self.alloc);
+    let next_included_stmt_starts = {
+      let mut next_anchor = program.span.end;
+      let mut anchors = vec![program.span.end; old_body.len()];
+      for ((top_stmt_idx, stmt), (stmt_info_idx, _stmt_info)) in
+        old_body.iter().enumerate().zip(self.ctx.module.stmt_infos.iter_enumerated().skip(1)).rev()
+      {
+        anchors[top_stmt_idx] = next_anchor;
+        if self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx) {
+          next_anchor = stmt.span().start;
+        }
+      }
+      anchors
+    };
+    let next_source_stmt_starts = old_body
+      .iter()
+      .enumerate()
+      .map(|(idx, _)| old_body.get(idx + 1).map_or(program.span.end, |stmt| stmt.span().start))
+      .collect::<Vec<_>>();
+
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
     old_body
@@ -1261,7 +1281,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .enumerate()
       .zip(self.ctx.module.stmt_infos.iter_enumerated().skip(1))
       .for_each(|((_top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
+        let removed_stmt_comment_anchor = next_included_stmt_starts[_top_stmt_idx];
+        let removed_stmt_comment_region_end = next_source_stmt_starts[_top_stmt_idx];
         if !self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx) {
+          self.preserve_removed_top_level_stmt_comments(
+            program,
+            top_stmt.span(),
+            removed_stmt_comment_anchor,
+            removed_stmt_comment_region_end,
+          );
           return;
         }
 
@@ -1271,14 +1299,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let span = import_decl.span;
           let rec_idx = self.ctx.module.imports[&import_decl.span];
           if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
-            for comment in &mut program.comments {
-              if comment.attached_to == span.start {
-                comment.attached_to = 0;
-              }
-              if comment.attached_to > span.start {
-                break;
-              }
-            }
+            self.preserve_removed_top_level_stmt_comments(
+              program,
+              span,
+              removed_stmt_comment_anchor,
+              removed_stmt_comment_region_end,
+            );
             return;
           }
         } else if let Some(export_all_decl) = top_stmt.as_export_all_declaration() {
@@ -1403,6 +1429,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   | rolldown_common::OutputFormat::Umd
                   | rolldown_common::OutputFormat::Cjs => {
                     // Just remove the statement
+                    self.preserve_removed_top_level_stmt_comments(
+                      program,
+                      export_all_decl.span,
+                      removed_stmt_comment_anchor,
+                      removed_stmt_comment_region_end,
+                    );
                     return;
                   }
                 }
@@ -1523,8 +1555,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           // comments
           *top_stmt.span_mut() = default_decl_span;
         } else if let Some(named_decl) = top_stmt.as_export_named_declaration_mut() {
+          let named_decl_span = named_decl.span;
           if named_decl.source.is_none() {
-            let named_decl_span = named_decl.span;
             if let Some(decl) = &mut named_decl.declaration {
               // `export var foo = 1` => `var foo = 1`
               // `export function foo() {}` => `function foo() {}`
@@ -1535,12 +1567,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             } else {
               // `export { foo }`
               // Remove this statement by ignoring it
+              self.preserve_removed_top_level_stmt_comments(
+                program,
+                named_decl_span,
+                removed_stmt_comment_anchor,
+                removed_stmt_comment_region_end,
+              );
               return;
             }
           } else {
             // `export { foo } from 'path'`
             let rec_idx = self.ctx.module.imports[&named_decl.span];
             if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
+              self.preserve_removed_top_level_stmt_comments(
+                program,
+                named_decl_span,
+                removed_stmt_comment_anchor,
+                removed_stmt_comment_region_end,
+              );
               return;
             }
           }
@@ -1565,6 +1609,33 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
       });
     last_import_stmt_idx.unwrap_or(0)
+  }
+
+  fn preserve_removed_top_level_stmt_comments(
+    &self,
+    program: &mut ast::Program<'ast>,
+    removed_stmt_span: oxc::span::Span,
+    target_anchor: u32,
+    comment_region_end: u32,
+  ) {
+    for comment in &mut program.comments {
+      if comment.attached_to == removed_stmt_span.start {
+        if comment.position == CommentPosition::Trailing {
+          comment.position = CommentPosition::Leading;
+        }
+        comment.attached_to = target_anchor;
+        continue;
+      }
+
+      if comment.position == CommentPosition::Trailing
+        && comment.attached_to == 0
+        && comment.span.start >= removed_stmt_span.start
+        && comment.span.start < comment_region_end
+      {
+        comment.position = CommentPosition::Leading;
+        comment.attached_to = target_anchor;
+      }
+    }
   }
 
   fn process_fn(

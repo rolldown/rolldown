@@ -425,7 +425,6 @@ impl GenerateStage<'_> {
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
   ) -> ChunkAssignment {
-    // let is_advanced_chunk =
     let is_advanced_chunk = self
       .options
       .manual_code_splitting

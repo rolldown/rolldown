@@ -10,6 +10,7 @@ use oxc::ast::ast::{
 use oxc::ast::{match_expression, match_member_expression};
 use oxc::span::Ident;
 use oxc_allocator::Address;
+use oxc_ecmascript::side_effects::MayHaveSideEffects;
 use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, SideEffectDetail};
 use rolldown_utils::global_reference::{
   is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
@@ -17,8 +18,8 @@ use rolldown_utils::global_reference::{
 };
 use rustc_hash::FxHashSet;
 use utils::{
-  can_change_strict_to_loose, is_side_effect_free_unbound_identifier_ref,
-  maybe_side_effect_free_global_constructor, maybe_side_effect_free_global_function_call,
+  is_side_effect_free_unbound_identifier_ref, maybe_side_effect_free_global_constructor,
+  maybe_side_effect_free_global_function_call,
 };
 
 use self::utils::{PrimitiveType, known_primitive_type};
@@ -394,7 +395,13 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::MetaProperty(_)
       | Expression::ThisExpression(_)
       | Expression::Super(_)
-      | Expression::StringLiteral(_) => false.into(),
+      | Expression::StringLiteral(_) => {
+        debug_assert!(
+          !expr.may_have_side_effects(&self.ctx),
+          "Oxc disagrees: leaf expression should be side-effect-free"
+        );
+        false.into()
+      }
       Expression::ObjectExpression(obj_expr) => {
         let mut detail = SideEffectDetail::empty();
         for obj_prop in &obj_expr.properties {
@@ -565,24 +572,16 @@ impl<'a> SideEffectDetector<'a> {
       // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2541-L2574
       Expression::BinaryExpression(binary_expr) => {
         match binary_expr.operator {
-          ast::BinaryOperator::StrictEquality | ast::BinaryOperator::StrictInequality => {
-            self.detect_side_effect_of_expr(&binary_expr.left)
-              | self.detect_side_effect_of_expr(&binary_expr.right)
-          }
-          // Comparison operators just recurse on operands (matching Oxc).
+          // Equality and comparison operators just recurse on operands (matching Oxc).
           // ToPrimitive concerns are delegated to the operands' own detection.
-          ast::BinaryOperator::GreaterThan
+          ast::BinaryOperator::StrictEquality
+          | ast::BinaryOperator::StrictInequality
+          | ast::BinaryOperator::Equality
+          | ast::BinaryOperator::Inequality
+          | ast::BinaryOperator::GreaterThan
           | ast::BinaryOperator::LessThan
           | ast::BinaryOperator::GreaterEqualThan
           | ast::BinaryOperator::LessEqualThan => {
-            self.detect_side_effect_of_expr(&binary_expr.left)
-              | self.detect_side_effect_of_expr(&binary_expr.right)
-          }
-
-          // `==` and `!=` themselves don't throw — the comparison calls ToPrimitive
-          // which could throw for objects, but that concern is delegated to the
-          // operands' own side-effect detection (matching Oxc's approach).
-          ast::BinaryOperator::Equality | ast::BinaryOperator::Inequality => {
             self.detect_side_effect_of_expr(&binary_expr.left)
               | self.detect_side_effect_of_expr(&binary_expr.right)
           }

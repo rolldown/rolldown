@@ -603,7 +603,14 @@ impl<'a> SideEffectDetector<'a> {
     use oxc::ast::ast::Declaration;
     match decl {
       Declaration::VariableDeclaration(var_decl) => self.detect_side_effect_of_var_decl(var_decl),
-      Declaration::FunctionDeclaration(_) => false.into(),
+      Declaration::FunctionDeclaration(_) => {
+        debug_assert_eq!(
+          false,
+          decl.may_have_side_effects(&self.ctx),
+          "Oxc parity: FunctionDeclaration"
+        );
+        false.into()
+      }
       Declaration::ClassDeclaration(cls_decl) => self.detect_side_effect_of_class(cls_decl),
       Declaration::TSTypeAliasDeclaration(_)
       | Declaration::TSInterfaceDeclaration(_)
@@ -714,29 +721,61 @@ impl<'a> SideEffectDetector<'a> {
       Statement::ExpressionStatement(expr) => self.detect_side_effect_of_expr(&expr.expression),
       Statement::BlockStatement(block) => self.detect_side_effect_of_block(block),
       Statement::DoWhileStatement(do_while) => {
-        self.detect_side_effect_of_stmt(&do_while.body)
-          | self.detect_side_effect_of_expr(&do_while.test)
+        let detail = self.detect_side_effect_of_stmt(&do_while.body)
+          | self.detect_side_effect_of_expr(&do_while.test);
+        debug_assert_eq!(
+          detail.has_side_effect(),
+          stmt.may_have_side_effects(&self.ctx),
+          "Oxc parity: DoWhileStatement"
+        );
+        detail
       }
       Statement::WhileStatement(while_stmt) => {
-        self.detect_side_effect_of_expr(&while_stmt.test)
-          | self.detect_side_effect_of_stmt(&while_stmt.body)
+        let detail = self.detect_side_effect_of_expr(&while_stmt.test)
+          | self.detect_side_effect_of_stmt(&while_stmt.body);
+        debug_assert_eq!(
+          detail.has_side_effect(),
+          stmt.may_have_side_effects(&self.ctx),
+          "Oxc parity: WhileStatement"
+        );
+        detail
       }
       Statement::IfStatement(if_stmt) => {
-        self.detect_side_effect_of_expr(&if_stmt.test)
+        let detail = self.detect_side_effect_of_expr(&if_stmt.test)
           | self.detect_side_effect_of_stmt(&if_stmt.consequent)
           | if_stmt
             .alternate
             .as_ref()
-            .map(|stmt| self.detect_side_effect_of_stmt(stmt))
-            .unwrap_or(false.into())
+            .map(|s| self.detect_side_effect_of_stmt(s))
+            .unwrap_or(false.into());
+        debug_assert_eq!(
+          detail.has_side_effect(),
+          stmt.may_have_side_effects(&self.ctx),
+          "Oxc parity: IfStatement"
+        );
+        detail
       }
-      Statement::ReturnStatement(ret_stmt) => ret_stmt
-        .argument
-        .as_ref()
-        .map(|expr| self.detect_side_effect_of_expr(expr))
-        .unwrap_or(false.into()),
+      Statement::ReturnStatement(ret_stmt) => {
+        let detail = ret_stmt
+          .argument
+          .as_ref()
+          .map(|expr| self.detect_side_effect_of_expr(expr))
+          .unwrap_or(false.into());
+        debug_assert_eq!(
+          detail.has_side_effect(),
+          stmt.may_have_side_effects(&self.ctx),
+          "Oxc parity: ReturnStatement"
+        );
+        detail
+      }
       Statement::LabeledStatement(labeled_stmt) => {
-        self.detect_side_effect_of_stmt(&labeled_stmt.body)
+        let detail = self.detect_side_effect_of_stmt(&labeled_stmt.body);
+        debug_assert_eq!(
+          detail.has_side_effect(),
+          stmt.may_have_side_effects(&self.ctx),
+          "Oxc parity: LabeledStatement"
+        );
+        detail
       }
       Statement::TryStatement(try_stmt) => {
         let mut detail = self.detect_side_effect_of_block(&try_stmt.block);
@@ -779,14 +818,28 @@ impl<'a> SideEffectDetector<'a> {
 
       Statement::EmptyStatement(_)
       | Statement::ContinueStatement(_)
-      | Statement::BreakStatement(_) => false.into(),
+      | Statement::BreakStatement(_) => {
+        debug_assert_eq!(
+          false,
+          stmt.may_have_side_effects(&self.ctx),
+          "Oxc parity: EmptyStatement/ContinueStatement/BreakStatement"
+        );
+        false.into()
+      }
 
       Statement::DebuggerStatement(_)
       | Statement::ForInStatement(_)
       | Statement::ForOfStatement(_)
       | Statement::ForStatement(_)
       | Statement::ThrowStatement(_)
-      | Statement::WithStatement(_) => true.into(),
+      | Statement::WithStatement(_) => {
+        debug_assert_eq!(
+          true,
+          stmt.may_have_side_effects(&self.ctx),
+          "Oxc parity: DebuggerStatement/ForInStatement/ForOfStatement/ForStatement/ThrowStatement/WithStatement"
+        );
+        true.into()
+      }
     }
   }
 
@@ -798,6 +851,11 @@ impl<'a> SideEffectDetector<'a> {
         break;
       }
     }
+    debug_assert_eq!(
+      detail.has_side_effect(),
+      block.may_have_side_effects(&self.ctx),
+      "Oxc parity: BlockStatement"
+    );
     detail
   }
 }

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import assert from 'node:assert';
 import { SourceMapConsumer } from 'source-map-js';
-import { BindingMagicString as MagicString } from 'rolldown';
+import { RolldownMagicString as MagicString } from 'rolldown';
 import { describe, it } from 'vitest';
 
 describe('MagicString', () => {

@@ -119,7 +119,7 @@ import type { BundleError } from './utils/error';
 
 export { RUNTIME_MODULE_ID, VERSION } from './constants';
 export { build, defineConfig, rolldown, watch };
-export { BindingMagicString };
+export { BindingMagicString as RolldownMagicString };
 export type {
   AddonFunction,
   BundleError,

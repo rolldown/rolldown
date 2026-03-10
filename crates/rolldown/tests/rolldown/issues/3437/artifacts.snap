@@ -6,19 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import "./rolldown-runtime.js";
 //#region main.js
 import("./square.js").then(console.log);
-//#endregion
-export {};
-
-```
-
-## rolldown-runtime.js
-
-```js
-import "node:module";
-import.meta.url;
 //#endregion
 export {};
 
@@ -27,7 +16,6 @@ export {};
 ## square.js
 
 ```js
-import "./rolldown-runtime.js";
 //#region square.json
 var hello = "world";
 var square_default = { hello };

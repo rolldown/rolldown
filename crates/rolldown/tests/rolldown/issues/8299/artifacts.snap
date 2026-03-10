@@ -6,9 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import "node:module";
-import.meta.url;
-//#endregion
 //#region main.js
 console.log("Hello!");
 //#endregion

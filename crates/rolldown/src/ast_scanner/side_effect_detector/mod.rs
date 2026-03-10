@@ -250,14 +250,17 @@ impl<'a> SideEffectDetector<'a> {
     let is_cross_module_pure = !self.ctx.flat_options.ignore_annotations()
       && self.ctx.is_call_expr_marked_pure(expr);
 
-    // Delegate side-effect bool to Oxc (handles manual_pure_functions,
-    // pure annotations, global function/method purity lists)
-    let has_side_effect =
-      if is_cross_module_pure { false } else { expr.may_have_side_effects(&self.ctx) };
-
-    // Compute metadata
     let is_pure_annotated = !self.ctx.flat_options.ignore_annotations()
       && (expr.pure || is_cross_module_pure);
+
+    // For pure-annotated calls, the call itself is side-effect-free.
+    // We must check args via Rolldown's detector (not Oxc's) because Rolldown
+    // has bundler-specific overrides (e.g. import.meta.* is side-effect-free).
+    // Oxc's pure-call handling would still check args via its own may_have_side_effects,
+    // which doesn't know about these overrides.
+    let has_side_effect =
+      if is_pure_annotated { false } else { expr.may_have_side_effects(&self.ctx) };
+
     let is_global_call = !has_side_effect
       && matches!(&expr.callee, Expression::Identifier(id) if self.is_unresolved_reference(id));
 

@@ -6,11 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import "node:module";
 export * from "fs";
 export * from "./external";
-import.meta.url;
-//#endregion
 //#region internal.js
 let foo = 123;
 //#endregion

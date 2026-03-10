@@ -380,6 +380,7 @@ pub fn maybe_side_effect_free_global_constructor(
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InvocationKind {
   /// CallExpression: `foo()`
+  #[expect(dead_code)]
   Call,
   /// NewExpression: `new Foo()`
   New,
@@ -491,22 +492,3 @@ pub fn check_global_free_constructor_args<'a>(
   }
 }
 
-pub fn maybe_side_effect_free_global_function_call(
-  scope: &AstScopes,
-  expr: &ast::CallExpression<'_>,
-) -> bool {
-  let Some(ident) = expr.callee.as_identifier() else {
-    return false;
-  };
-
-  if scope.is_unresolved(ident.reference_id()) {
-    check_global_free_constructor_args(
-      ident.name.as_str(),
-      &expr.arguments,
-      InvocationKind::Call,
-      scope,
-    )
-  } else {
-    false
-  }
-}

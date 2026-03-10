@@ -3,23 +3,20 @@ use crate::ast_scanner::side_effect_detector::utils::{
 };
 use bitflags::bitflags;
 use oxc::ast::ast::{
-  self, Argument, ArrayExpressionElement, AssignmentTarget, BindingPattern, CallExpression,
+  self, Argument, AssignmentTarget, BindingPattern, CallExpression,
   ChainElement, Expression, IdentifierReference, PropertyKey, UnaryOperator,
   VariableDeclarationKind,
 };
-use oxc::ast::{match_expression, match_member_expression};
+use oxc::ast::match_member_expression;
 use oxc::span::{GetSpan, Ident};
 use oxc_allocator::Address;
 use oxc_ecmascript::side_effects::MayHaveSideEffects;
 use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, SideEffectDetail};
 use rolldown_utils::global_reference::{
-  is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
-  is_side_effect_free_member_expr_of_len_two,
+  is_side_effect_free_member_expr_of_len_three, is_side_effect_free_member_expr_of_len_two,
 };
 use rustc_hash::FxHashSet;
-use utils::{
-  maybe_side_effect_free_global_constructor, maybe_side_effect_free_global_function_call,
-};
+use utils::maybe_side_effect_free_global_constructor;
 
 bitflags! {
   #[derive(Debug, Clone, Copy)]
@@ -256,12 +253,9 @@ impl<'a> SideEffectDetector<'a> {
           break;
         }
         ast::Expression::MetaProperty(_) => {
-          // Only `import.meta.url` is a spec-defined side-effect-free property read.
-          // Other accesses like `import.meta.hot.accept()` may have side effects.
-          if chains.len() == 1 && chains[0] == "url" {
-            return;
-          }
-          break;
+          // `import.meta` is a spec-defined ordinary object with null prototype.
+          // All property reads on it are side-effect-free.
+          return;
         }
         _ => {
           *side_effects_detail |= self.detect_side_effect_of_expr(cur);
@@ -326,20 +320,28 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_call_expr(&self, expr: &CallExpression) -> SideEffectDetail {
-    if self.is_expr_manual_pure_functions(&expr.callee) {
-      return false.into();
-    }
+    // Cross-module optimization: bundler-specific, not known to Oxc
+    let is_cross_module_pure = !self.ctx.flat_options.ignore_annotations()
+      && self.ctx.is_call_expr_marked_pure(expr);
 
-    // 1. Is-pure check: annotation or cross-module optimization
-    let is_pure = !self.ctx.flat_options.ignore_annotations()
-      && (expr.pure || self.ctx.is_call_expr_marked_pure(expr));
+    // Delegate side-effect bool to Oxc (handles manual_pure_functions,
+    // pure annotations, global function/method purity lists)
+    let has_side_effect =
+      if is_cross_module_pure { false } else { expr.may_have_side_effects(&self.ctx) };
 
-    if is_pure {
-      // 2. Core side-effect: pure calls are side-effect-free, but still check args
-      // Even it is pure, we also wants to know if the callee has access global var
-      // But we need to ignore the `Unknown` flag, since it is already marked as `pure`.
-      // METADATA: PureAnnotation
-      let mut detail = SideEffectDetail::PureAnnotation;
+    // Compute metadata
+    let is_pure_annotated = !self.ctx.flat_options.ignore_annotations()
+      && (expr.pure || is_cross_module_pure);
+    let is_global_call = !has_side_effect
+      && matches!(&expr.callee, Expression::Identifier(id) if self.is_unresolved_reference(id));
+
+    let mut detail = SideEffectDetail::from(has_side_effect);
+    detail.set(SideEffectDetail::PureAnnotation, is_pure_annotated);
+    detail.set(SideEffectDetail::GlobalVarAccess, is_global_call);
+
+    if !has_side_effect {
+      // For pure/known-safe calls, still propagate metadata from callee and args.
+      // Strip the Unknown flag from callee since the call itself is known-pure.
       detail |= self.detect_side_effect_of_expr(&expr.callee) - SideEffectDetail::Unknown;
       for arg in &expr.arguments {
         detail |= match arg {
@@ -350,18 +352,8 @@ impl<'a> SideEffectDetector<'a> {
           break;
         }
       }
-      detail
-    } else {
-      // 3. Check global function lists (e.g. Symbol(), String())
-      let is_side_effect_free_global_function =
-        maybe_side_effect_free_global_function_call(self.ctx.scope, expr);
-      if is_side_effect_free_global_function {
-        // METADATA: GlobalVarAccess — the function itself is global
-        SideEffectDetail::GlobalVarAccess
-      } else {
-        true.into()
-      }
     }
+    detail
   }
 
   fn is_expr_manual_pure_functions(&self, expr: &'a Expression) -> bool {
@@ -416,24 +408,36 @@ impl<'a> SideEffectDetector<'a> {
             break;
           }
         }
+        // Known divergences with Oxc:
+        // 1. Oxc ignores ToPrimitive side effects for computed property keys
+        //    (Rolldown considers non-primitive computed keys as side-effectful)
+        // 2. Oxc doesn't respect property_read_side_effects for spread properties
         detail
       }
       Expression::UnaryExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
       oxc::ast::match_member_expression!(Expression) => {
         let detail = self
           .detect_side_effect_of_member_expr(expr.to_member_expression(), PropertyAccessFlag::Read);
-        // Known divergence: `import.meta.*` — Rolldown treats `import.meta.url` as
-        // side-effect-free (bundler resolves it), Oxc doesn't know about MetaProperty.
-        if !is_import_meta_member_expr(expr) {
-          debug_assert_eq!(
-            detail.has_side_effect(),
-            expr.may_have_side_effects(&self.ctx),
-            "Oxc parity: MemberExpression {:?}", expr.span()
+        debug_assert_eq!(
+          detail.has_side_effect(),
+          expr.may_have_side_effects(&self.ctx),
+          "Oxc parity: MemberExpression {:?}", expr.span()
+        );
+        detail
+      }
+      Expression::ClassExpression(cls) => {
+        let detail = self.detect_side_effect_of_class(cls);
+        // One-directional assert: Rolldown is more conservative (checks param decorators,
+        // accessor property values). If Rolldown says no SE, Oxc should agree.
+        if !detail.has_side_effect() {
+          debug_assert!(
+            !cls.may_have_side_effects(&self.ctx),
+            "Oxc parity: ClassExpression - Rolldown says no side effects but Oxc disagrees {:?}",
+            expr.span()
           );
         }
         detail
       }
-      Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
       Expression::Identifier(ident) => self.detect_side_effect_of_identifier(ident),
       Expression::TemplateLiteral(_) => expr.may_have_side_effects(&self.ctx).into(),
@@ -481,18 +485,23 @@ impl<'a> SideEffectDetector<'a> {
         detail
       }
 
-      Expression::ChainExpression(expr) => match &expr.expression {
-        ChainElement::CallExpression(call_expr) => self.detect_side_effect_of_call_expr(call_expr),
-        ChainElement::TSNonNullExpression(expr) => {
-          self.detect_side_effect_of_expr(&expr.expression)
-        }
-        match_member_expression!(ChainElement) => self.detect_side_effect_of_member_expr(
-          expr.expression.to_member_expression(),
-          PropertyAccessFlag::Read,
-        ),
-      },
+      Expression::ChainExpression(chain_expr) => {
+        let detail = match &chain_expr.expression {
+          ChainElement::CallExpression(call_expr) => {
+            self.detect_side_effect_of_call_expr(call_expr)
+          }
+          ChainElement::TSNonNullExpression(ts_expr) => {
+            self.detect_side_effect_of_expr(&ts_expr.expression)
+          }
+          match_member_expression!(ChainElement) => self.detect_side_effect_of_member_expr(
+            chain_expr.expression.to_member_expression(),
+            PropertyAccessFlag::Read,
+          ),
+        };
+        detail
+      }
       Expression::TaggedTemplateExpression(expr) => {
-        (!self.is_expr_manual_pure_functions(&expr.tag)).into()
+        expr.may_have_side_effects(&self.ctx).into()
       }
       Expression::UpdateExpression(update_expr) => {
         // Handle update expressions like obj.prop++ or obj[prop]++
@@ -521,54 +530,43 @@ impl<'a> SideEffectDetector<'a> {
         );
         detail
       }
-      Expression::ArrayExpression(expr) => self.detect_side_effect_of_array_expr(expr),
+      Expression::ArrayExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
       Expression::NewExpression(expr) => {
-        let is_side_effect_free_global_constructor =
-          maybe_side_effect_free_global_constructor(self.ctx.scope, expr);
-        // Core side-effect: not pure if neither annotated nor known-safe global constructor
-        let is_pure = expr.pure || is_side_effect_free_global_constructor;
+        let oxc_has_side_effect = expr.may_have_side_effects(&self.ctx);
+        // Override: TypedArray constructors not yet in Oxc
+        let is_typed_array_override =
+          oxc_has_side_effect && maybe_side_effect_free_global_constructor(self.ctx.scope, expr);
+        let has_side_effect = oxc_has_side_effect && !is_typed_array_override;
 
-        let mut detail = SideEffectDetail::from(!is_pure);
         // METADATA: GlobalVarAccess — constructor is a known global
-        detail.set(SideEffectDetail::GlobalVarAccess, is_side_effect_free_global_constructor);
+        let is_global_constructor = is_typed_array_override
+          || (!oxc_has_side_effect
+            && matches!(&expr.callee, Expression::Identifier(id) if self.is_unresolved_reference(id)));
         // METADATA: PureAnnotation — marked with /*@__PURE__*/
-        detail.set(SideEffectDetail::PureAnnotation, expr.pure);
+        let is_pure_annotated =
+          !self.ctx.flat_options.ignore_annotations() && expr.pure;
 
-        for arg in &expr.arguments {
-          detail |= match arg {
-            Argument::SpreadElement(_) => true.into(),
-            _ => self.detect_side_effect_of_expr(arg.to_expression()),
-          };
-          if detail.has_side_effect() {
-            break;
+        let mut detail = SideEffectDetail::from(has_side_effect);
+        detail.set(SideEffectDetail::GlobalVarAccess, is_global_constructor);
+        detail.set(SideEffectDetail::PureAnnotation, is_pure_annotated);
+
+        if !has_side_effect {
+          // Oxc already checked args for side effects, but we still need to
+          // propagate metadata flags (GlobalVarAccess, etc.) from args.
+          for arg in &expr.arguments {
+            detail |= match arg {
+              Argument::SpreadElement(_) => true.into(),
+              _ => self.detect_side_effect_of_expr(arg.to_expression()),
+            };
+            if detail.has_side_effect() {
+              break;
+            }
           }
         }
         detail
       }
       Expression::CallExpression(expr) => self.detect_side_effect_of_call_expr(expr),
     }
-  }
-
-  fn detect_side_effect_of_array_expr(&self, expr: &ast::ArrayExpression<'_>) -> SideEffectDetail {
-    let mut detail = SideEffectDetail::empty();
-    for elem in &expr.elements {
-      let cur = match elem {
-        ArrayExpressionElement::SpreadElement(ele) => {
-          // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2466-L2477
-          // Spread of an inline array such as "[...[x]]" is side-effect free
-          match &ele.argument {
-            Expression::ArrayExpression(arr) => self.detect_side_effect_of_array_expr(arr),
-            _ => return true.into(),
-          }
-        }
-        ArrayExpressionElement::Elision(_) => false.into(),
-        match_expression!(ArrayExpressionElement) => {
-          self.detect_side_effect_of_expr(elem.to_expression())
-        }
-      };
-      detail |= cur;
-    }
-    detail
   }
 
   fn detect_side_effect_of_var_decl(
@@ -583,14 +581,6 @@ impl<'a> SideEffectDetector<'a> {
       _ => {
         let mut detail = SideEffectDetail::empty();
         for declarator in &var_decl.declarations {
-          // Whether to destructure import.meta
-          if let BindingPattern::ObjectPattern(ref obj_pat) = declarator.id {
-            if !obj_pat.properties.is_empty() {
-              if let Some(Expression::MetaProperty(_)) = declarator.init {
-                return true.into();
-              }
-            }
-          }
           detail |= match &declarator.id {
             // Destructuring the initializer has no side effects if the
             // initializer is an array, since we assume the iterator is then
@@ -689,10 +679,8 @@ impl<'a> SideEffectDetector<'a> {
 
   fn detect_side_effect_of_identifier(&self, ident_ref: &IdentifierReference) -> SideEffectDetail {
     let is_global = self.is_unresolved_reference(ident_ref);
-    // Core side-effect: global access to unknown identifier
-    let has_side_effect = is_global
-      && self.ctx.options.treeshake.unknown_global_side_effects()
-      && !is_global_ident_ref(&ident_ref.name);
+    // Delegate side-effect bool to Oxc (checks known globals, unknown_global_side_effects)
+    let has_side_effect = ident_ref.may_have_side_effects(&self.ctx);
     let mut detail = SideEffectDetail::from(has_side_effect);
     // METADATA: GlobalVarAccess
     detail.set(SideEffectDetail::GlobalVarAccess, is_global);
@@ -955,17 +943,6 @@ fn extract_first_part_of_member_expr_like<'a>(expr: &'a Expression) -> Option<&'
       _ => break None,
     }
   }
-}
-
-/// `import.meta.*` is bundler-specific: Rolldown treats `import.meta.url` as
-/// side-effect-free, but Oxc's generic analysis doesn't know about MetaProperty.
-fn is_import_meta_member_expr(expr: &Expression) -> bool {
-  if let Expression::StaticMemberExpression(member) = expr {
-    if matches!(member.object, Expression::MetaProperty(_)) {
-      return true;
-    }
-  }
-  false
 }
 
 
@@ -1369,9 +1346,10 @@ mod test {
     assert!(!get_statements_side_effect("String(undefined)"));
     assert!(!get_statements_side_effect("String(true)"));
 
-    // String() with objects/unknown values has side effects
-    assert!(get_statements_side_effect("String({})"));
-    assert!(get_statements_side_effect("String([1, 2, 3])"));
+    // String() with object literals: Oxc correctly determines {} has a known
+    // toString(), so ToPrimitive is side-effect free. Unknown variables still unsafe.
+    assert!(!get_statements_side_effect("String({})"));
+    assert!(!get_statements_side_effect("String([1, 2, 3])"));
     assert!(get_statements_side_effect("let obj; String(obj)"));
 
     // Number() - side-effect-free with primitive arguments only
@@ -1382,11 +1360,12 @@ mod test {
     assert!(!get_statements_side_effect("Number(undefined)"));
     assert!(!get_statements_side_effect("Number(true)"));
 
-    // Number() with objects/unknown values has side effects
-    assert!(get_statements_side_effect("Number({})"));
+    // Number() with object literals: Oxc checks ToPrimitive/ToNumeric.
+    // {} has known valueOf/toString, so ToNumeric({}) = NaN (no throw).
+    assert!(!get_statements_side_effect("Number({})"));
     assert!(get_statements_side_effect("let val; Number(val)"));
 
-    // Boolean() - side-effect-free with primitive arguments only
+    // Boolean() - always side-effect free (no type conversion needed)
     assert!(!get_statements_side_effect("Boolean()"));
     assert!(!get_statements_side_effect("Boolean(true)"));
     assert!(!get_statements_side_effect("Boolean('text')"));
@@ -1394,9 +1373,9 @@ mod test {
     assert!(!get_statements_side_effect("Boolean(null)"));
     assert!(!get_statements_side_effect("Boolean(undefined)"));
 
-    // Boolean() with objects/unknown values has side effects
-    assert!(get_statements_side_effect("Boolean({})"));
-    assert!(get_statements_side_effect("let val; Boolean(val)"));
+    // Boolean() with any value is side-effect free (just checks truthiness)
+    assert!(!get_statements_side_effect("Boolean({})"));
+    assert!(!get_statements_side_effect("let val; Boolean(val)"));
 
     // BigInt() - side-effect-free only with proven-safe arguments
     // BigInt() with no arguments throws TypeError
@@ -1412,9 +1391,9 @@ mod test {
     // BigInt literals are safe
     assert!(!get_statements_side_effect("BigInt(123n)"));
 
-    // BigInt() with strings has side effects (can't validate statically)
-    // BigInt("123") works but BigInt("abc") or BigInt("1.5") throws
-    assert!(get_statements_side_effect("BigInt('456')"));
+    // BigInt() with strings: Oxc can statically validate integer strings.
+    // BigInt("123") works, BigInt("abc") or BigInt("1.5") throws.
+    assert!(!get_statements_side_effect("BigInt('456')"));
     assert!(get_statements_side_effect("BigInt('abc')"));
 
     // BigInt() with non-integer numbers throws RangeError

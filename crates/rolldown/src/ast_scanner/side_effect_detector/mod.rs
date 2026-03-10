@@ -392,6 +392,7 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::ArrowFunctionExpression(_)
       | Expression::MetaProperty(_)
       | Expression::ThisExpression(_)
+      | Expression::Super(_)
       | Expression::StringLiteral(_) => false.into(),
       Expression::ObjectExpression(obj_expr) => {
         let mut detail = SideEffectDetail::empty();
@@ -556,7 +557,6 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::JSXElement(_)
       | Expression::JSXFragment(_)
       // Inherently side-effectful expressions.
-      | Expression::Super(_)
       | Expression::AwaitExpression(_)
       | Expression::ImportExpression(_)
       | Expression::YieldExpression(_)

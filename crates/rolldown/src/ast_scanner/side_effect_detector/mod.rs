@@ -1634,6 +1634,79 @@ let remove15 = class {
     super::extract_first_part_of_member_expr_like(&expr).unwrap().to_string()
   }
 
+  /// Assert that Rolldown's `detect_side_effect_of_stmt` boolean result matches
+  /// Oxc's `stmt.may_have_side_effects()` for each statement in `code`.
+  ///
+  /// This function compares the boolean side-effect determination from both systems
+  /// and panics if they disagree, printing the code and differing values.
+  ///
+  /// Note: Oxc treats module declarations (import/export) as side-effectful while
+  /// Rolldown treats them as side-effect-free (bundler handles them). So this helper
+  /// only compares non-module-declaration statements.
+  fn assert_matches_oxc(code: &str) {
+    use oxc_ecmascript::side_effects::MayHaveSideEffects;
+
+    let source_type = SourceType::tsx();
+    let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
+    let semantic = EcmaAst::make_semantic(ast.program(), false);
+    let scoping = semantic.into_scoping();
+    let ast_scopes = AstScopes::new(scoping);
+
+    let options = Arc::new(NormalizedBundlerOptions::default());
+    let flags = FlatOptions::from_shared_options(&options);
+    let ctx = super::BundlerSideEffectCtx::new(&ast_scopes, &options, flags, None);
+
+    for stmt in &ast.program().body {
+      // Skip module declarations — Rolldown intentionally differs from Oxc here
+      if matches!(stmt, oxc::ast::ast::Statement::ImportDeclaration(_))
+        || matches!(stmt, oxc::ast::ast::Statement::ExportAllDeclaration(_))
+        || matches!(stmt, oxc::ast::ast::Statement::ExportDefaultDeclaration(_))
+        || matches!(stmt, oxc::ast::ast::Statement::ExportNamedDeclaration(_))
+      {
+        continue;
+      }
+
+      let rolldown_result =
+        SideEffectDetector::new(&ast_scopes, flags, &options, None)
+          .detect_side_effect_of_stmt(stmt)
+          .has_side_effect();
+      let oxc_result = stmt.may_have_side_effects(&ctx);
+      assert_eq!(
+        rolldown_result, oxc_result,
+        "Rolldown vs Oxc mismatch for code: {code:?}\n  Rolldown: {rolldown_result}\n  Oxc: {oxc_result}"
+      );
+    }
+  }
+
+  #[test]
+  fn test_oxc_parity_literals_and_functions() {
+    // Literals — both systems agree these are side-effect-free
+    assert_matches_oxc("true");
+    assert_matches_oxc("false");
+    assert_matches_oxc("null");
+    assert_matches_oxc("42");
+    assert_matches_oxc("3.14");
+    assert_matches_oxc("'hello'");
+    assert_matches_oxc("123n");
+    assert_matches_oxc("/abc/g");
+
+    // Functions — side-effect-free
+    assert_matches_oxc("(function() {})");
+    assert_matches_oxc("(() => {})");
+
+    // Parenthesized
+    assert_matches_oxc("(true)");
+    assert_matches_oxc("(null)");
+
+    // Sequence
+    assert_matches_oxc("true, false");
+    assert_matches_oxc("null, true");
+
+    // this, import.meta
+    assert_matches_oxc("this");
+    assert_matches_oxc("import.meta");
+  }
+
   #[test]
   fn test_bundler_side_effect_ctx_default_options() {
     use oxc_ecmascript::GlobalContext;

@@ -3690,6 +3690,13 @@ expression: output
 - other-!~{001}~.js => other-B3P9919W.js
 - shared-!~{002}~.js => shared-CfDL9uKx.js
 
+# tests/rolldown/function/advanced_chunks/empty_chunk
+
+- index-!~{000}~.js => index-CX46COH2.js
+- index1-!~{001}~.js => index1-C_IOA5JT.js
+- bundle-a-!~{002}~.js => bundle-a-DeBPwQYr.js
+- bundle-b-!~{003}~.js => bundle-b-DeNWVfeV.js
+
 # tests/rolldown/function/advanced_chunks/entries_aware_false
 
 - entry-a-!~{000}~.js => entry-a-BTWqrAK9.js
@@ -3802,6 +3809,13 @@ expression: output
 - main-!~{000}~.js => main-hv1UM7CU.js
 - vendor-similarity-!~{002}~.js => vendor-similarity-BVmnDSHh.js
 - vendor-similarity-!~{001}~.js => vendor-similarity-Dq8reExr.js
+
+# tests/rolldown/function/advanced_chunks/split_empty_chunk
+
+- index-!~{000}~.js => index-CX46COH2.js
+- index1-!~{001}~.js => index1-C_IOA5JT.js
+- bundle-a-!~{002}~.js => bundle-a-DeBPwQYr.js
+- bundle-b-!~{003}~.js => bundle-b-DeNWVfeV.js
 
 # tests/rolldown/function/advanced_chunks/split_node_modules
 

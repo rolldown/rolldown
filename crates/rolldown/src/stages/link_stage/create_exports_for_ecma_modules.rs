@@ -75,6 +75,7 @@ impl LinkStage<'_> {
             referenced_symbols: vec![],
             side_effect: false.into(),
             import_records: Vec::new(),
+            stmt_str: None,
             #[cfg(debug_assertions)]
             debug_label: None,
             meta: StmtInfoMeta::default(),
@@ -124,6 +125,7 @@ impl LinkStage<'_> {
             referenced_symbols,
             side_effect: false.into(),
             import_records: Vec::new(),
+            stmt_str: None,
             #[cfg(debug_assertions)]
             debug_label: None,
             meta: StmtInfoMeta::default(),

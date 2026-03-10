@@ -1,10 +1,11 @@
+use std::collections::HashSet;
 use std::{fmt::Debug, sync::Arc};
 
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
   AssetView, DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx,
   ImportRecordMeta, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord,
-  ResolvedId, StableModuleId, StmtInfoIdx,
+  ResolvedId, StableModuleId, StmtInfo, StmtInfoIdx, SymbolRef,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -240,6 +241,155 @@ impl NormalModule {
 
   pub fn can_accept_hmr_dependency_for(&self, module_id: &ModuleId) -> bool {
     self.hmr_info.deps.contains(module_id)
+  }
+
+  pub fn is_pure_reexport_module(&self) -> bool {
+    //  First check if all stmt_info are re-export, if yes return true
+    if self
+      .stmt_infos
+      .iter_enumerated_without_namespace_stmt()
+      .all(|(_, stmt_info)| self.is_reexport_statement(stmt_info))
+    {
+      return true;
+    }
+
+    // Check if all stmt_info are plain import ,return false
+    if self
+      .stmt_infos
+      .iter_enumerated_without_namespace_stmt()
+      .all(|(_, stmt_info)| self.is_plain_import_statement(stmt_info))
+    {
+      return false;
+    }
+
+    let is_any_reexport = self
+      .stmt_infos
+      .iter_enumerated_without_namespace_stmt()
+      .any(|(_, stmt_info)| self.is_reexport_statement(stmt_info));
+
+    let is_any_plain_import = self
+      .stmt_infos
+      .iter_enumerated_without_namespace_stmt()
+      .any(|(_, stmt_info)| self.is_plain_import_statement(stmt_info));
+
+    let is_export_only = self
+      .stmt_infos
+      .iter_enumerated_without_namespace_stmt()
+      .any(|(_, stmt_info)| self.is_export_only_statement(stmt_info));
+
+    //Check if there are any statements that are neither re-exports nor plain imports with matched exports
+    if !(is_any_reexport || is_any_plain_import || is_export_only) {
+      return false;
+    }
+    // Extract symbols from is_export_only and is_plain_import_statement, compare them
+    let export_only_symbols: HashSet<SymbolRef> = self
+      .stmt_infos
+      .iter_enumerated_without_namespace_stmt()
+      .filter(|(_, stmt_info)| self.is_export_only_statement(stmt_info))
+      .flat_map(|(_, stmt_info)| &stmt_info.referenced_symbols)
+      .map(|symbol| *symbol.symbol_ref())
+      .collect();
+
+    let plain_import_symbols: HashSet<SymbolRef> = self
+      .stmt_infos
+      .iter_enumerated_without_namespace_stmt()
+      .filter(|(_, stmt_info)| self.is_plain_import_statement(stmt_info))
+      .flat_map(|(_, stmt_info)| &stmt_info.declared_symbols)
+      .map(|tagged_symbol| tagged_symbol.inner())
+      .collect();
+
+    // If all export-only symbols match plain import symbols, return true
+    // Otherwise, return false
+    export_only_symbols.iter().all(|symbol_ref| plain_import_symbols.contains(symbol_ref))
+  }
+
+  // Helper function to determine if a statement is a re-export statement
+  fn is_reexport_statement(&self, stmt_info: &StmtInfo) -> bool {
+    let export_str = stmt_info.stmt_str.as_ref();
+
+    if export_str.is_none() {
+      return false;
+    }
+
+    let export_str = export_str.unwrap().trim();
+
+    if export_str.contains("import") {
+      return false;
+    }
+    stmt_info.import_records.iter().any(|&record_idx| {
+      self
+        .named_imports
+        .values()
+        .any(|named_import| named_import.record_idx == record_idx && named_import.is_reexport)
+    })
+  }
+
+  ///  Helper function to determine if a statement is a plain import statement
+  /// (imports only, no re-export)
+  fn is_plain_import_statement(&self, stmt_info: &StmtInfo) -> bool {
+    let import_str = stmt_info.stmt_str.as_ref();
+
+    if import_str.is_none() {
+      return false;
+    }
+
+    let import_str = import_str.unwrap().trim();
+
+    if !(import_str.starts_with("import") && import_str.contains("from")) {
+      return false;
+    }
+    !stmt_info.import_records.is_empty()
+      && !stmt_info.import_records.iter().any(|&record_idx| {
+        self
+          .named_imports
+          .values()
+          .any(|named_import| named_import.record_idx == record_idx && named_import.is_reexport)
+      })
+  }
+
+  /// Helper function to determine if a statement is an export-only statement
+  /// (export { A } but not export { A } from ...)
+  fn is_export_only_statement(&self, stmt_info: &StmtInfo) -> bool {
+    let export_str = stmt_info.stmt_str.as_ref();
+
+    if export_str.is_none() {
+      return false;
+    }
+
+    let export_str = export_str.unwrap().trim();
+
+    if export_str.contains("from")
+      || export_str.contains("default")
+      || export_str.contains("import")
+    {
+      return false;
+    }
+
+    // Check if this statement references symbols that are also in named_imports
+    stmt_info.referenced_symbols.iter().any(|symbol_or_member_ref| {
+      match symbol_or_member_ref {
+        crate::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
+          // Check if this symbol is imported in this module
+          let is_containes = self.named_imports.contains_key(symbol_ref);
+
+          if is_containes {
+            let named_import = self.named_imports.get(symbol_ref).unwrap();
+            let litera_specifier = named_import.imported.get_literal();
+
+            if named_import.is_reexport || litera_specifier.is_none() {
+              return false;
+            }
+            let literal_str = litera_specifier.unwrap();
+            let local_export = self.named_exports.get(literal_str);
+            return local_export.is_some()
+              && !local_export.unwrap().came_from_commonjs
+              && &local_export.unwrap().referenced == symbol_ref;
+          }
+          false
+        }
+        crate::SymbolOrMemberExprRef::MemberExpr(_) => false,
+      }
+    })
   }
 }
 

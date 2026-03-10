@@ -108,6 +108,13 @@ impl Module {
     }
   }
 
+  pub fn is_pure_reexport(&self) -> bool {
+    match self {
+      Module::Normal(v) => v.is_pure_reexport_module(),
+      Module::External(_) => false,
+    }
+  }
+
   /// Returns `true` if the module is [`Ecma`].
   ///
   /// [`Ecma`]: Module::Ecma

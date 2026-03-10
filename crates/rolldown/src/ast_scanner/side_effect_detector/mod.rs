@@ -18,11 +18,8 @@ use rolldown_utils::global_reference::{
 };
 use rustc_hash::FxHashSet;
 use utils::{
-  is_side_effect_free_unbound_identifier_ref, maybe_side_effect_free_global_constructor,
-  maybe_side_effect_free_global_function_call,
+  maybe_side_effect_free_global_constructor, maybe_side_effect_free_global_function_call,
 };
-
-use self::utils::{PrimitiveType, known_primitive_type};
 
 bitflags! {
   #[derive(Debug, Clone, Copy)]
@@ -421,147 +418,17 @@ impl<'a> SideEffectDetector<'a> {
         }
         detail
       }
-      // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2533-L2539
-      Expression::UnaryExpression(unary_expr) => {
-        let detail = match unary_expr.operator {
-          ast::UnaryOperator::Typeof
-            if matches!(unary_expr.argument, Expression::Identifier(_)) =>
-          {
-            false.into()
-          }
-          ast::UnaryOperator::Typeof => self.detect_side_effect_of_expr(&unary_expr.argument),
-          // delete always has a side effect (it modifies the object)
-          ast::UnaryOperator::Delete => true.into(),
-          // void and ! only have side effects if their argument does
-          ast::UnaryOperator::Void | ast::UnaryOperator::LogicalNot => {
-            self.detect_side_effect_of_expr(&unary_expr.argument)
-          }
-          // ToNumber throws on Symbol and BigInt
-          ast::UnaryOperator::UnaryPlus => {
-            let prim = known_primitive_type(self.ctx.scope, &unary_expr.argument);
-            if matches!(prim, PrimitiveType::Unknown | PrimitiveType::BigInt) {
-              true.into()
-            } else {
-              self.detect_side_effect_of_expr(&unary_expr.argument)
-            }
-          }
-          // ToNumeric throws on Symbol (but not BigInt)
-          ast::UnaryOperator::UnaryNegation | ast::UnaryOperator::BitwiseNot => {
-            let prim = known_primitive_type(self.ctx.scope, &unary_expr.argument);
-            if prim == PrimitiveType::Unknown {
-              true.into()
-            } else {
-              self.detect_side_effect_of_expr(&unary_expr.argument)
-            }
-          }
-        };
-        debug_assert_eq!(
-          detail.has_side_effect(),
-          expr.may_have_side_effects(&self.ctx),
-          "Oxc parity: UnaryExpression"
-        );
-        detail
-      }
+      Expression::UnaryExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
       oxc::ast::match_member_expression!(Expression) => self
         .detect_side_effect_of_member_expr(expr.to_member_expression(), PropertyAccessFlag::Read),
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
       Expression::Identifier(ident) => self.detect_side_effect_of_identifier(ident),
-      // https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2576-L2588
-      Expression::TemplateLiteral(literal) => {
-        let mut detail = SideEffectDetail::empty();
-        for expr in &literal.expressions {
-          // Primitive type detection is more strict and faster than side_effects detection of
-          // `Expr`, put it first to fail fast.
-          detail |= (known_primitive_type(self.ctx.scope, expr) == PrimitiveType::Unknown).into();
-          detail |= self.detect_side_effect_of_expr(expr);
-          if detail.has_side_effect() {
-            break;
-          }
-        }
-        detail
-      }
-      Expression::LogicalExpression(logic_expr) => match logic_expr.operator {
-        ast::LogicalOperator::Or => {
-          let lhs = self.detect_side_effect_of_expr(&logic_expr.left);
-          let mut rhs = self.detect_side_effect_of_expr(&logic_expr.right);
-          rhs.set(
-            SideEffectDetail::Unknown,
-            !is_side_effect_free_unbound_identifier_ref(
-              self.ctx.scope,
-              &logic_expr.right,
-              &logic_expr.left,
-              false,
-            )
-            .unwrap_or_default()
-              && rhs.contains(SideEffectDetail::Unknown),
-          );
-          lhs | rhs
-        }
-        ast::LogicalOperator::And => {
-          let lhs = self.detect_side_effect_of_expr(&logic_expr.left);
-          let mut rhs = self.detect_side_effect_of_expr(&logic_expr.right);
-          rhs.set(
-            SideEffectDetail::Unknown,
-            !is_side_effect_free_unbound_identifier_ref(
-              self.ctx.scope,
-              &logic_expr.right,
-              &logic_expr.left,
-              true,
-            )
-            .unwrap_or_default()
-              && rhs.contains(SideEffectDetail::Unknown),
-          );
-          lhs | rhs
-        }
-        ast::LogicalOperator::Coalesce => {
-          self.detect_side_effect_of_expr(&logic_expr.left)
-            | self.detect_side_effect_of_expr(&logic_expr.right)
-        }
-      },
-      Expression::ParenthesizedExpression(paren_expr) => {
-        self.detect_side_effect_of_expr(&paren_expr.expression)
-      }
-      Expression::SequenceExpression(seq_expr) => {
-        let mut detail = SideEffectDetail::empty();
-
-        for expr in &seq_expr.expressions {
-          detail |= self.detect_side_effect_of_expr(expr);
-          if detail.has_side_effect() {
-            break;
-          }
-        }
-        detail
-      }
-      // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2460-L2463
-      Expression::ConditionalExpression(cond_expr) => {
-        let detail = self.detect_side_effect_of_expr(&cond_expr.test);
-        let mut consequent_detail = self.detect_side_effect_of_expr(&cond_expr.consequent);
-        consequent_detail.set(
-          SideEffectDetail::Unknown,
-          !is_side_effect_free_unbound_identifier_ref(
-            self.ctx.scope,
-            &cond_expr.consequent,
-            &cond_expr.test,
-            true,
-          )
-          .unwrap_or_default()
-            && consequent_detail.contains(SideEffectDetail::Unknown),
-        );
-        let mut alternate_detail = self.detect_side_effect_of_expr(&cond_expr.alternate);
-        alternate_detail.set(
-          SideEffectDetail::Unknown,
-          !is_side_effect_free_unbound_identifier_ref(
-            self.ctx.scope,
-            &cond_expr.alternate,
-            &cond_expr.test,
-            false,
-          )
-          .unwrap_or_default()
-            && alternate_detail.contains(SideEffectDetail::Unknown),
-        );
-        detail | consequent_detail | alternate_detail
-      }
+      Expression::TemplateLiteral(_) => expr.may_have_side_effects(&self.ctx).into(),
+      Expression::LogicalExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
+      Expression::ParenthesizedExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
+      Expression::SequenceExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
+      Expression::ConditionalExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
       // Untranspiled TS/JSX syntax should be caught during scan stage.
       // Conservatively treat as side-effectful since they should not appear here.
       Expression::TSAsExpression(_)
@@ -576,29 +443,8 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::ImportExpression(_)
       | Expression::YieldExpression(_)
       | Expression::V8IntrinsicExpression(_) => true.into(),
-      // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2541-L2574
-      Expression::BinaryExpression(binary_expr) => {
-        match binary_expr.operator {
-          // Equality and comparison operators just recurse on operands (matching Oxc).
-          // ToPrimitive concerns are delegated to the operands' own detection.
-          ast::BinaryOperator::StrictEquality
-          | ast::BinaryOperator::StrictInequality
-          | ast::BinaryOperator::Equality
-          | ast::BinaryOperator::Inequality
-          | ast::BinaryOperator::GreaterThan
-          | ast::BinaryOperator::LessThan
-          | ast::BinaryOperator::GreaterEqualThan
-          | ast::BinaryOperator::LessEqualThan => {
-            self.detect_side_effect_of_expr(&binary_expr.left)
-              | self.detect_side_effect_of_expr(&binary_expr.right)
-          }
-
-          _ => true.into(),
-        }
-      }
-      Expression::PrivateInExpression(private_in_expr) => {
-        self.detect_side_effect_of_expr(&private_in_expr.right)
-      }
+      Expression::BinaryExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
+      Expression::PrivateInExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
       Expression::AssignmentExpression(expr) => {
         self.detect_side_effect_of_assignment_target(&expr.left)
           | self.detect_side_effect_of_expr(&expr.right)
@@ -1260,15 +1106,20 @@ mod test {
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("1 + foo"));
     assert!(get_statements_side_effect("2 + bar"));
-    // + will invoke valueOf, which may have side effect
-    assert!(get_statements_side_effect("1 + 1"));
+    // Oxc correctly recognizes primitive literal operands as side-effect-free
+    assert!(!get_statements_side_effect("1 + 1"));
+    // Oxc doesn't do constant propagation through variables, so `a + b` is
+    // conservatively treated as potentially side-effectful (ToPrimitive)
     assert!(get_statements_side_effect("const a = 1; const b = 2; a + b"));
   }
 
   #[test]
   fn test_private_in_expression() {
-    assert!(!get_statements_side_effect("#privateField in this"));
-    assert!(!get_statements_side_effect("const obj = {}; #privateField in obj"));
+    // Oxc checks that the RHS is known to be an object; `this` and local
+    // variables with unknown value type are conservatively treated as
+    // potentially non-object, so `#x in this` / `#x in obj` may throw.
+    assert!(get_statements_side_effect("#privateField in this"));
+    assert!(get_statements_side_effect("const obj = {}; #privateField in obj"));
     // accessing global variable may have side effect
     assert!(get_statements_side_effect("#privateField in bar"));
     assert!(get_statements_side_effect("#privateField in foo"));
@@ -1293,7 +1144,10 @@ mod test {
 
   #[test]
   fn test_assignment_expression() {
-    assert!(!get_statements_side_effect("let a; [] = a; ({} = a)"));
+    // Oxc treats all assignment expressions as side-effectful (via `_ => true` fallback).
+    // The parenthesized `({} = a)` delegates to Oxc which returns true.
+    assert!(!get_statements_side_effect("let a; [] = a"));
+    assert!(get_statements_side_effect("({} = a)"));
     assert!(get_statements_side_effect("let a; a = 1"));
     assert!(get_statements_side_effect("let a, b; a = b; a = b = 1"));
     // accessing global variable may have side effect

@@ -41,9 +41,6 @@ pub use bundler_ctx::BundlerSideEffectCtx;
 
 /// Detect if a statement "may" have side effect.
 pub struct SideEffectDetector<'a> {
-  pub scope: &'a AstScopes,
-  options: &'a SharedNormalizedBundlerOptions,
-  flat_options: FlatOptions,
   /// Bridge to Oxc's `MayHaveSideEffectsContext` trait.
   /// Also holds the cross-module pure call expr addresses.
   ctx: BundlerSideEffectCtx<'a>,
@@ -57,12 +54,12 @@ impl<'a> SideEffectDetector<'a> {
     side_effect_free_call_expr_addr: Option<&'a FxHashSet<Address>>,
   ) -> Self {
     let ctx = BundlerSideEffectCtx::new(scope, options, flat_options, side_effect_free_call_expr_addr);
-    Self { scope, options, flat_options, ctx }
+    Self { ctx }
   }
 
   #[inline]
   fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
-    self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
+    self.ctx.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
   }
 
   fn detect_side_effect_of_property_key(
@@ -79,12 +76,12 @@ impl<'a> SideEffectDetector<'a> {
             if let Some((ref_id, chain)) =
               extract_member_expr_chain(key_expr.to_member_expression(), 2)
             {
-              !(chain == ["Symbol", "iterator"] && self.scope.is_unresolved(ref_id))
+              !(chain == ["Symbol", "iterator"] && self.ctx.scope.is_unresolved(ref_id))
             } else {
               true
             }
           }
-          _ => !is_primitive_literal(self.scope, key_expr),
+          _ => !is_primitive_literal(self.ctx.scope, key_expr),
         }
       })
       .into(),
@@ -157,10 +154,10 @@ impl<'a> SideEffectDetector<'a> {
   ) -> SideEffectDetail {
     let mut property_access_side_effects = false;
     if property_access_kind.contains(PropertyAccessFlag::Read) {
-      property_access_side_effects |= self.flat_options.property_read_side_effects();
+      property_access_side_effects |= self.ctx.flat_options.property_read_side_effects();
     }
     if property_access_kind.contains(PropertyAccessFlag::Write) {
-      property_access_side_effects |= self.flat_options.property_write_side_effects();
+      property_access_side_effects |= self.ctx.flat_options.property_write_side_effects();
     }
 
     let mut side_effects_detail = SideEffectDetail::empty();
@@ -190,10 +187,10 @@ impl<'a> SideEffectDetector<'a> {
   ) -> SideEffectDetail {
     let mut property_access_side_effects = false;
     if property_access_kind.contains(PropertyAccessFlag::Read) {
-      property_access_side_effects |= self.flat_options.property_read_side_effects();
+      property_access_side_effects |= self.ctx.flat_options.property_read_side_effects();
     }
     if property_access_kind.contains(PropertyAccessFlag::Write) {
-      property_access_side_effects |= self.flat_options.property_write_side_effects();
+      property_access_side_effects |= self.ctx.flat_options.property_write_side_effects();
     }
 
     let mut side_effects_detail = SideEffectDetail::empty();
@@ -300,7 +297,7 @@ impl<'a> SideEffectDetector<'a> {
 
   fn detect_side_effect_of_assignment_target(&self, expr: &AssignmentTarget) -> SideEffectDetail {
     // Bundler-specific: check CJS export pattern first
-    if let Some(pure_cjs) = check_pure_cjs_export(self.scope, expr) {
+    if let Some(pure_cjs) = check_pure_cjs_export(self.ctx.scope, expr) {
       return pure_cjs;
     }
 
@@ -308,7 +305,7 @@ impl<'a> SideEffectDetector<'a> {
       AssignmentTarget::ComputedMemberExpression(_)
       | AssignmentTarget::StaticMemberExpression(_) => {
         let member_expr = expr.to_member_expression();
-        if self.flat_options.property_write_side_effects() {
+        if self.ctx.flat_options.property_write_side_effects() {
           true.into()
         } else {
           self.detect_side_effect_of_member_expr(member_expr, PropertyAccessFlag::Write)
@@ -337,7 +334,7 @@ impl<'a> SideEffectDetector<'a> {
     }
 
     // 1. Is-pure check: annotation or cross-module optimization
-    let is_pure = !self.flat_options.ignore_annotations()
+    let is_pure = !self.ctx.flat_options.ignore_annotations()
       && (expr.pure || self.ctx.is_call_expr_marked_pure(expr));
 
     if is_pure {
@@ -360,7 +357,7 @@ impl<'a> SideEffectDetector<'a> {
     } else {
       // 3. Check global function lists (e.g. Symbol(), String())
       let is_side_effect_free_global_function =
-        maybe_side_effect_free_global_function_call(self.scope, expr);
+        maybe_side_effect_free_global_function_call(self.ctx.scope, expr);
       if is_side_effect_free_global_function {
         // METADATA: GlobalVarAccess — the function itself is global
         SideEffectDetail::GlobalVarAccess
@@ -371,11 +368,11 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn is_expr_manual_pure_functions(&self, expr: &'a Expression) -> bool {
-    if self.flat_options.is_manual_pure_functions_empty() {
+    if self.ctx.flat_options.is_manual_pure_functions_empty() {
       return false;
     }
     // `is_manual_pure_functions_empty` is false, so `manual_pure_functions` is `Some`.
-    let manual_pure_functions = self.options.treeshake.manual_pure_functions().unwrap();
+    let manual_pure_functions = self.ctx.options.treeshake.manual_pure_functions().unwrap();
     let Some(first_part) = extract_first_part_of_member_expr_like(expr) else {
       return false;
     };
@@ -412,7 +409,7 @@ impl<'a> SideEffectDetector<'a> {
             }
             // refer https://github.com/rollup/rollup/blob/f7633942/src/ast/nodes/SpreadElement.ts#L32
             ast::ObjectPropertyKind::SpreadProperty(res) => {
-              if self.flat_options.property_read_side_effects() {
+              if self.ctx.flat_options.property_read_side_effects() {
                 return true.into();
               }
               self.detect_side_effect_of_expr(&res.argument)
@@ -441,7 +438,7 @@ impl<'a> SideEffectDetector<'a> {
           }
           // ToNumber throws on Symbol and BigInt
           ast::UnaryOperator::UnaryPlus => {
-            let prim = known_primitive_type(self.scope, &unary_expr.argument);
+            let prim = known_primitive_type(self.ctx.scope, &unary_expr.argument);
             if matches!(prim, PrimitiveType::Unknown | PrimitiveType::BigInt) {
               true.into()
             } else {
@@ -450,7 +447,7 @@ impl<'a> SideEffectDetector<'a> {
           }
           // ToNumeric throws on Symbol (but not BigInt)
           ast::UnaryOperator::UnaryNegation | ast::UnaryOperator::BitwiseNot => {
-            let prim = known_primitive_type(self.scope, &unary_expr.argument);
+            let prim = known_primitive_type(self.ctx.scope, &unary_expr.argument);
             if prim == PrimitiveType::Unknown {
               true.into()
             } else {
@@ -476,7 +473,7 @@ impl<'a> SideEffectDetector<'a> {
         for expr in &literal.expressions {
           // Primitive type detection is more strict and faster than side_effects detection of
           // `Expr`, put it first to fail fast.
-          detail |= (known_primitive_type(self.scope, expr) == PrimitiveType::Unknown).into();
+          detail |= (known_primitive_type(self.ctx.scope, expr) == PrimitiveType::Unknown).into();
           detail |= self.detect_side_effect_of_expr(expr);
           if detail.has_side_effect() {
             break;
@@ -491,7 +488,7 @@ impl<'a> SideEffectDetector<'a> {
           rhs.set(
             SideEffectDetail::Unknown,
             !is_side_effect_free_unbound_identifier_ref(
-              self.scope,
+              self.ctx.scope,
               &logic_expr.right,
               &logic_expr.left,
               false,
@@ -507,7 +504,7 @@ impl<'a> SideEffectDetector<'a> {
           rhs.set(
             SideEffectDetail::Unknown,
             !is_side_effect_free_unbound_identifier_ref(
-              self.scope,
+              self.ctx.scope,
               &logic_expr.right,
               &logic_expr.left,
               true,
@@ -543,7 +540,7 @@ impl<'a> SideEffectDetector<'a> {
         consequent_detail.set(
           SideEffectDetail::Unknown,
           !is_side_effect_free_unbound_identifier_ref(
-            self.scope,
+            self.ctx.scope,
             &cond_expr.consequent,
             &cond_expr.test,
             true,
@@ -555,7 +552,7 @@ impl<'a> SideEffectDetector<'a> {
         alternate_detail.set(
           SideEffectDetail::Unknown,
           !is_side_effect_free_unbound_identifier_ref(
-            self.scope,
+            self.ctx.scope,
             &cond_expr.alternate,
             &cond_expr.test,
             false,
@@ -624,7 +621,7 @@ impl<'a> SideEffectDetector<'a> {
         // Handle update expressions like obj.prop++ or obj[prop]++
         match &expr.argument {
           ast::SimpleAssignmentTarget::StaticMemberExpression(static_member_expr) => {
-            if self.flat_options.property_write_side_effects() {
+            if self.ctx.flat_options.property_write_side_effects() {
               true.into()
             } else {
               // If property_write_side_effects is false, we consider property updates
@@ -644,7 +641,7 @@ impl<'a> SideEffectDetector<'a> {
       Expression::ArrayExpression(expr) => self.detect_side_effect_of_array_expr(expr),
       Expression::NewExpression(expr) => {
         let is_side_effect_free_global_constructor =
-          maybe_side_effect_free_global_constructor(self.scope, expr);
+          maybe_side_effect_free_global_constructor(self.ctx.scope, expr);
         // Core side-effect: not pure if neither annotated nor known-safe global constructor
         let is_pure = expr.pure || is_side_effect_free_global_constructor;
 
@@ -717,7 +714,7 @@ impl<'a> SideEffectDetector<'a> {
             // the built-in side-effect free array iterator.
             BindingPattern::ObjectPattern(_) => {
               // Object destructuring only has side effects when property_read_side_effects is Always
-              if self.flat_options.property_read_side_effects() {
+              if self.ctx.flat_options.property_read_side_effects() {
                 true.into()
               } else {
                 declarator
@@ -804,7 +801,7 @@ impl<'a> SideEffectDetector<'a> {
     let is_global = self.is_unresolved_reference(ident_ref);
     // Core side-effect: global access to unknown identifier
     let has_side_effect = is_global
-      && self.options.treeshake.unknown_global_side_effects()
+      && self.ctx.options.treeshake.unknown_global_side_effects()
       && !is_global_ident_ref(&ident_ref.name);
     let mut detail = SideEffectDetail::from(has_side_effect);
     // METADATA: GlobalVarAccess

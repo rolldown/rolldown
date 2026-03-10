@@ -6,8 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+import "node:module";
 import fs from "node:fs/promises";
 import "node:what-is-this";
+import.meta.url;
+//#endregion
 //#region entry.js
 fs.readFile();
 //#endregion

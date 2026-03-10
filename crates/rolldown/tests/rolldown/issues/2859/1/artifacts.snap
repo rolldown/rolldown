@@ -19,7 +19,10 @@ export { bar, lib_default as default, foo };
 ## main.js
 
 ```js
+import "node:module";
 import assert from "assert";
+import.meta.url;
+//#endregion
 //#region main.js
 import("./lib.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
 	foo: "foo",

@@ -21,7 +21,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+import "node:module";
 import { setupWorker } from "msw/browser";
+import.meta.url;
+//#endregion
 //#region lib/msw-config.ts
 setupWorker();
 //#endregion

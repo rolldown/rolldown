@@ -143,7 +143,8 @@ impl<'a> SideEffectDetector<'a> {
             .as_ref()
             .is_some_and(|init| self.detect_side_effect_of_expr(init).has_side_effect()))
         }
-        ClassElement::TSIndexSignature(_) => true,
+        // TS index signatures are type-only constructs with no runtime effect
+        ClassElement::TSIndexSignature(_) => false,
       })
       .into()
   }

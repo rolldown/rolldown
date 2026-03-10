@@ -12,6 +12,7 @@ description = "Dev mode orchestration for Rolldown bundler"
 
 [lib]
 doctest = false
+test = false
 
 [lints]
 workspace = true

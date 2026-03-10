@@ -12,7 +12,7 @@ description = "DevTools utilities for Rolldown"
 workspace = true
 
 [lib]
-doctest = false
+test = false
 
 [dependencies]
 blake3 = { workspace = true }

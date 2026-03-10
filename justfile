@@ -11,7 +11,7 @@ setup:
   just check-setup-prerequisites
   # Rust related setup
   cargo install cargo-binstall
-  cargo binstall cargo-insta cargo-deny cargo-shear typos-cli -y
+  cargo binstall cargo-insta cargo-deny cargo-shear@1.10.0 typos-cli -y
   # Node.js related setup
   corepack enable
   pnpm install

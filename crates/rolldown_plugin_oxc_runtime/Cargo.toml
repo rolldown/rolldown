@@ -10,6 +10,7 @@ description = "Rolldown plugin for OXC runtime helpers"
 
 [lib]
 doctest = false
+test = false
 
 [dependencies]
 arcstr = { workspace = true }

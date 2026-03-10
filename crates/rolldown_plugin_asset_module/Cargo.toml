@@ -8,6 +8,7 @@ description = "Rolldown builtin plugin for handling asset modules"
 
 [lib]
 doctest = false
+test = false
 
 [dependencies]
 anyhow = { workspace = true }

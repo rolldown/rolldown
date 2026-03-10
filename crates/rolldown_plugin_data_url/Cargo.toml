@@ -8,6 +8,7 @@ description = "Rolldown plugin for data URI handling"
 
 [lib]
 doctest = false
+test = false
 
 [dependencies]
 arcstr = { workspace = true }

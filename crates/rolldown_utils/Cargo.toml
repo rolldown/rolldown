@@ -12,7 +12,6 @@ license.workspace = true
 repository.workspace = true
 
 [lib]
-doctest = false
 
 [[bench]]
 harness = false

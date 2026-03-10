@@ -1,4 +1,3 @@
-mod asset;
 mod chunk;
 mod ecmascript;
 mod file_emitter;

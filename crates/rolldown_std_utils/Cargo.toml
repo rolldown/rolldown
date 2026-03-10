@@ -9,7 +9,6 @@ repository.workspace = true
 description = "Standard library utilities for Rolldown"
 
 [lib]
-doctest = false
 
 [lints]
 workspace = true

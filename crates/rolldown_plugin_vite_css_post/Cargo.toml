@@ -10,6 +10,7 @@ description = "Rolldown plugin for Vite CSS post-processing"
 
 [lib]
 doctest = false
+test = false
 
 [lints]
 workspace = true

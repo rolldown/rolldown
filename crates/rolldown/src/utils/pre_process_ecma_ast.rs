@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use oxc::ast::CommentPosition;
-use oxc::ast::ast::Program;
+use oxc::ast::ast::{Expression, Program, Statement};
 use oxc::ast_visit::VisitMut;
 use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
@@ -161,8 +161,15 @@ impl PreProcessEcmaAst {
     // Step 5: Run DCE.
     // Avoid DCE for lazy export.
     if bundle_options.treeshake.is_some() && !has_lazy_export {
-      let original_top_level_stmt_spans =
-        ast.program().body.iter().map(GetSpan::span).collect::<Vec<_>>();
+      let original_top_level_stmts = ast
+        .program()
+        .body
+        .iter()
+        .map(|stmt| OriginalTopLevelStmt {
+          span: stmt.span(),
+          preserve_comments: should_preserve_removed_top_level_stmt_comments(stmt),
+        })
+        .collect::<Vec<_>>();
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         let scoping = self.recreate_scoping(&mut scoping, program);
         let mut treeshake = TreeShakeOptions::from(&bundle_options.treeshake);
@@ -174,7 +181,7 @@ impl PreProcessEcmaAst {
           ..CompressOptions::dce()
         };
         Compressor::new(allocator).dead_code_elimination_with_scoping(program, scoping, options);
-        preserve_removed_top_level_stmt_comments(program, &original_top_level_stmt_spans);
+        preserve_removed_top_level_stmt_comments(program, &original_top_level_stmts);
       });
     }
 
@@ -202,36 +209,50 @@ impl PreProcessEcmaAst {
   }
 }
 
+#[derive(Clone, Copy)]
+struct OriginalTopLevelStmt {
+  span: oxc::span::Span,
+  preserve_comments: bool,
+}
+
+fn should_preserve_removed_top_level_stmt_comments(stmt: &Statement<'_>) -> bool {
+  !matches!(
+    stmt,
+    Statement::ExpressionStatement(expr_stmt)
+      if matches!(expr_stmt.expression.without_parentheses(), Expression::StringLiteral(_))
+  )
+}
+
 fn preserve_removed_top_level_stmt_comments(
   program: &mut Program<'_>,
-  original_stmt_spans: &[oxc::span::Span],
+  original_stmts: &[OriginalTopLevelStmt],
 ) {
-  if program.comments.is_empty() || original_stmt_spans.is_empty() {
+  if program.comments.is_empty() || original_stmts.is_empty() {
     return;
   }
 
   let remaining_stmt_starts =
     program.body.iter().map(|stmt| stmt.span().start).collect::<FxHashSet<_>>();
   let mut next_anchor = program.span.end;
-  let mut comment_anchors = vec![program.span.end; original_stmt_spans.len()];
+  let mut comment_anchors = vec![program.span.end; original_stmts.len()];
 
-  for (idx, span) in original_stmt_spans.iter().enumerate().rev() {
+  for (idx, stmt) in original_stmts.iter().enumerate().rev() {
     comment_anchors[idx] = next_anchor;
-    if remaining_stmt_starts.contains(&span.start) {
-      next_anchor = span.start;
+    if remaining_stmt_starts.contains(&stmt.span.start) {
+      next_anchor = stmt.span.start;
     }
   }
 
-  for (idx, span) in original_stmt_spans.iter().enumerate() {
-    if remaining_stmt_starts.contains(&span.start) {
+  for (idx, stmt) in original_stmts.iter().enumerate() {
+    if remaining_stmt_starts.contains(&stmt.span.start) || !stmt.preserve_comments {
       continue;
     }
 
     let comment_region_end =
-      original_stmt_spans.get(idx + 1).map_or(program.span.end, |next_span| next_span.start);
+      original_stmts.get(idx + 1).map_or(program.span.end, |next_stmt| next_stmt.span.start);
 
     for comment in &mut program.comments {
-      if comment.attached_to == span.start {
+      if comment.attached_to == stmt.span.start {
         if comment.position == CommentPosition::Trailing {
           comment.position = CommentPosition::Leading;
         }
@@ -241,7 +262,7 @@ fn preserve_removed_top_level_stmt_comments(
 
       if comment.position == CommentPosition::Trailing
         && comment.attached_to == 0
-        && comment.span.start >= span.start
+        && comment.span.start >= stmt.span.start
         && comment.span.start < comment_region_end
       {
         comment.position = CommentPosition::Leading;

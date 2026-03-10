@@ -1280,16 +1280,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .into_iter()
       .enumerate()
       .zip(self.ctx.module.stmt_infos.iter_enumerated().skip(1))
-      .for_each(|((_top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
-        let removed_stmt_comment_anchor = next_included_stmt_starts[_top_stmt_idx];
-        let removed_stmt_comment_region_end = next_source_stmt_starts[_top_stmt_idx];
+      .for_each(|((top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
+        let removed_stmt_comment_anchor = next_included_stmt_starts[top_stmt_idx];
+        let removed_stmt_comment_region_end = next_source_stmt_starts[top_stmt_idx];
         if !self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx) {
-          self.preserve_removed_top_level_stmt_comments(
-            program,
-            top_stmt.span(),
-            removed_stmt_comment_anchor,
-            removed_stmt_comment_region_end,
-          );
+          if Self::should_preserve_removed_top_level_stmt_comments(&top_stmt) {
+            self.preserve_removed_top_level_stmt_comments(
+              program,
+              top_stmt.span(),
+              removed_stmt_comment_anchor,
+              removed_stmt_comment_region_end,
+            );
+          }
           return;
         }
 
@@ -1636,6 +1638,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         comment.attached_to = target_anchor;
       }
     }
+  }
+
+  fn should_preserve_removed_top_level_stmt_comments(stmt: &Statement<'ast>) -> bool {
+    !matches!(
+      stmt,
+      Statement::ExpressionStatement(expr_stmt)
+        if matches!(expr_stmt.expression.without_parentheses(), Expression::StringLiteral(_))
+    )
   }
 
   fn process_fn(

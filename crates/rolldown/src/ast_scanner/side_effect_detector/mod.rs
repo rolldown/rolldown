@@ -420,7 +420,31 @@ impl<'a> SideEffectDetector<'a> {
         ast::UnaryOperator::Typeof if matches!(unary_expr.argument, Expression::Identifier(_)) => {
           false.into()
         }
-        _ => self.detect_side_effect_of_expr(&unary_expr.argument),
+        ast::UnaryOperator::Typeof => self.detect_side_effect_of_expr(&unary_expr.argument),
+        // delete always has a side effect (it modifies the object)
+        ast::UnaryOperator::Delete => true.into(),
+        // void and ! only have side effects if their argument does
+        ast::UnaryOperator::Void | ast::UnaryOperator::LogicalNot => {
+          self.detect_side_effect_of_expr(&unary_expr.argument)
+        }
+        // ToNumber throws on Symbol and BigInt
+        ast::UnaryOperator::UnaryPlus => {
+          let prim = known_primitive_type(self.scope, &unary_expr.argument);
+          if matches!(prim, PrimitiveType::Unknown | PrimitiveType::BigInt) {
+            true.into()
+          } else {
+            self.detect_side_effect_of_expr(&unary_expr.argument)
+          }
+        }
+        // ToNumeric throws on Symbol (but not BigInt)
+        ast::UnaryOperator::UnaryNegation | ast::UnaryOperator::BitwiseNot => {
+          let prim = known_primitive_type(self.scope, &unary_expr.argument);
+          if prim == PrimitiveType::Unknown {
+            true.into()
+          } else {
+            self.detect_side_effect_of_expr(&unary_expr.argument)
+          }
+        }
       },
       oxc::ast::match_member_expression!(Expression) => self
         .detect_side_effect_of_member_expr(expr.to_member_expression(), PropertyAccessFlag::Read),
@@ -1705,6 +1729,35 @@ let remove15 = class {
     // this, import.meta
     assert_matches_oxc("this");
     assert_matches_oxc("import.meta");
+  }
+
+  #[test]
+  fn test_oxc_parity_unary_expression() {
+    // typeof on identifier is always side-effect-free
+    assert_matches_oxc("typeof undefined");
+    assert_matches_oxc("typeof x");
+
+    // delete is always side-effectful
+    assert_matches_oxc("var x = {}; delete x.a");
+
+    // void and ! only recurse
+    assert_matches_oxc("void 0");
+    assert_matches_oxc("void true");
+    assert_matches_oxc("!true");
+    assert_matches_oxc("!false");
+
+    // +x: ToNumber throws on Symbol and BigInt
+    assert_matches_oxc("+1");
+    assert_matches_oxc("+true");
+    assert_matches_oxc("+'hello'");
+
+    // -x and ~x: ToNumeric throws on Symbol (but BigInt is ok)
+    assert_matches_oxc("-1");
+    assert_matches_oxc("-true");
+    assert_matches_oxc("~1");
+    assert_matches_oxc("~true");
+    assert_matches_oxc("-123n");
+    assert_matches_oxc("~123n");
   }
 
   #[test]

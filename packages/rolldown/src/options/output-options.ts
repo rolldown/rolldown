@@ -376,11 +376,11 @@ export interface OutputOptions {
    * Rolldown uses Oxc Minifier under the hood. See Oxc's [minification documentation](https://oxc.rs/docs/guide/usage/minifier#features) for more details.
    *
    * - `true`: Enable full minification including code compression and dead code elimination
-   * - `false`: Disable minification (default)
-   * - `'dce-only'`: Only perform dead code elimination without code compression
+   * - `false`: Disable minification
+   * - `'dce-only'`: Only perform dead code elimination without code compression (default)
    * - `MinifyOptions`: Fine-grained control over minification settings
    *
-   * @default false
+   * @default 'dce-only'
    */
   minify?: boolean | 'dce-only' | MinifyOptions;
   /**

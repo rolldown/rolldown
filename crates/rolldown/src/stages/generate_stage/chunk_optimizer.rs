@@ -350,7 +350,7 @@ impl GenerateStage<'_> {
         if !temp_chunk.needs_creation {
           return None;
         }
-        let chunk_idxs: Vec<_> = bits.index_of_one().map(|bit| ChunkIdx::from_raw(bit)).collect();
+        let chunk_idxs: Vec<_> = bits.index_of_one().map(ChunkIdx::from_raw).collect();
 
         let merge_target = Self::try_insert_into_existing_chunk(
           &chunk_idxs,

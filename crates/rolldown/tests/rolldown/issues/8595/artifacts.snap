@@ -1,0 +1,140 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## acorn.js
+
+```js
+//#region plugins/acorn.mjs
+var acorn_default = {};
+//#endregion
+export { acorn_default as default };
+
+```
+
+## babel.js
+
+```js
+import { t as __exportAll } from "./chunk.js";
+//#region plugins/babel.mjs
+var babel_exports = /* @__PURE__ */ __exportAll({
+	default: () => Ks,
+	parsers: () => ra
+});
+var Ks = {};
+var ra = {};
+Ks.parsers = ra;
+//#endregion
+export { babel_exports as t };
+
+```
+
+## chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```
+
+## flow.js
+
+```js
+//#region plugins/flow.mjs
+var flow_default = {};
+//#endregion
+export { flow_default as default };
+
+```
+
+## glimmer.js
+
+```js
+//#region plugins/glimmer.mjs
+var glimmer_default = {};
+//#endregion
+export { glimmer_default as default };
+
+```
+
+## html.js
+
+```js
+//#region plugins/html.mjs
+var html_default = {};
+//#endregion
+export { html_default as default };
+
+```
+
+## index1.js
+
+```js
+//#region index1.js
+function a() {
+	import("./tt.js");
+}
+//#endregion
+export { a };
+
+```
+
+## index2.js
+
+```js
+import { a } from "./index1.js";
+export { a };
+
+```
+
+## meriyah.js
+
+```js
+//#region plugins/meriyah.mjs
+var meriyah_default = {};
+//#endregion
+export { meriyah_default as default };
+
+```
+
+## postcss.js
+
+```js
+import { t as __exportAll } from "./chunk.js";
+//#region plugins/postcss.mjs
+var postcss_exports = /* @__PURE__ */ __exportAll({ default: () => _l });
+var _l = {};
+_l.parsers = {};
+//#endregion
+export { postcss_exports as t };
+
+```
+
+## tt.js
+
+```js
+import { t as babel_exports } from "./babel.js";
+import { t as postcss_exports } from "./postcss.js";
+//#region tt.mjs
+import("./babel.js");
+import("./flow.js");
+import("./glimmer.js");
+import("./html.js");
+import("./postcss.js");
+const a = [
+	import("./html.js"),
+	import("./glimmer.js"),
+	import("./meriyah.js"),
+	import("./acorn.js"),
+	import("./flow.js")
+];
+import("@prettier/plugin-oxc");
+import("@prettier/plugin-hermes");
+import("prettier-plugin-astro");
+import("prettier-plugin-marko");
+const options = [postcss_exports, babel_exports];
+//#endregion
+export { a, options };
+
+```

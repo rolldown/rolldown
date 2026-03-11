@@ -11,7 +11,11 @@ impl BitSet {
   }
 
   pub fn has_bit(&self, bit: u32) -> bool {
-    (self.entries[bit as usize / 8] & (1 << (bit & 7))) != 0
+    let idx = bit as usize / 8;
+    if idx >= self.entries.len() {
+      return false;
+    }
+    (self.entries[idx] & (1 << (bit & 7))) != 0
   }
 
   pub fn set_bit(&mut self, bit: u32) {
@@ -222,5 +226,14 @@ mod tests {
 
     let empty: BitSet = std::iter::empty().collect();
     assert!(empty.is_empty());
+  }
+
+  #[test]
+  fn has_bit_out_of_bounds() {
+    let bs = BitSet::new(0);
+    assert!(!bs.has_bit(0));
+
+    let bs = BitSet::new(1);
+    assert!(!bs.has_bit(100));
   }
 }

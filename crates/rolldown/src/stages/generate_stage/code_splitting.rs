@@ -698,6 +698,9 @@ impl GenerateStage<'_> {
     entries_len: u32,
     input_base: &ArcStr,
   ) {
+    // Pre-allocate bit_to_chunk_idx mapping for all entry positions
+    chunk_graph.bit_to_chunk_idx = vec![None; entries_len as usize];
+
     // Create chunk for each static and dynamic entry
     for (entry_index, (&module_idx, entry_point)) in self
       .link_output
@@ -771,6 +774,10 @@ impl GenerateStage<'_> {
         self.options,
       );
       let chunk_idx = chunk_graph.add_chunk(chunk);
+      // Record the mapping from bit position to chunk index.
+      // External entries are skipped (no chunk created), so bit positions may not match chunk indices.
+      chunk_graph.bit_to_chunk_idx[entry_index] = Some(chunk_idx);
+
       if let Some(reference_ids) = self.link_output.entry_point_to_reference_ids.get(entry_point) {
         chunk_graph.chunk_idx_to_reference_ids.insert(chunk_idx, reference_ids.clone());
       }

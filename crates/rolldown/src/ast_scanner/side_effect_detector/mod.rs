@@ -406,31 +406,22 @@ impl<'a> SideEffectDetector<'a> {
         expr.may_have_side_effects(&self.ctx).into()
       }
       Expression::UpdateExpression(update_expr) => {
-        // Handle update expressions like obj.prop++ or obj[prop]++
-        let detail = match &update_expr.argument {
-          ast::SimpleAssignmentTarget::StaticMemberExpression(static_member_expr) => {
-            if self.ctx.flat_options.property_write_side_effects() {
-              true.into()
-            } else {
-              // If property_write_side_effects is false, we consider property updates
-              // as side-effect-free
-
-              self.detect_side_effect_of_static_member_expr(
-                static_member_expr,
-                PropertyAccessFlag::all(),
-              )
-            }
-          }
+        let has_side_effect = expr.may_have_side_effects(&self.ctx);
+        if has_side_effect {
+          return true.into();
+        }
+        // Side-effect-free (property_write_side_effects is false).
+        // Collect metadata (GlobalVarAccess) from the member expression chain.
+        match &update_expr.argument {
+          ast::SimpleAssignmentTarget::StaticMemberExpression(static_member_expr) => self
+            .detect_side_effect_of_static_member_expr(
+              static_member_expr,
+              PropertyAccessFlag::all(),
+            ),
           ast::SimpleAssignmentTarget::ComputedMemberExpression(computed_expr) => self
             .detect_side_effect_of_computed_member_expr(computed_expr, PropertyAccessFlag::all()),
-          _ => true.into(),
-        };
-        debug_assert_eq!(
-          detail.has_side_effect(),
-          expr.may_have_side_effects(&self.ctx),
-          "Oxc parity: UpdateExpression"
-        );
-        detail
+          _ => unreachable!("Oxc returned no side effects, so argument must be a member expression"),
+        }
       }
       Expression::ArrayExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
       Expression::NewExpression(expr) => {

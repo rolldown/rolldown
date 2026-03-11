@@ -1,4 +1,58 @@
 
+## [1.0.0-rc.9] - 2026-03-11
+
+### 💥 BREAKING CHANGES
+
+- rename exported BindingMagicString to RolldownMagicString (#8626) by @IWANABETHATGUY
+
+### 🚀 Features
+
+- rolldown: add isRolldownMagicString property for reliable native detection (#8614) by @IWANABETHATGUY
+- cli: align object type with rollup (#8598) by @h-a-n-a
+
+### 🐛 Bug Fixes
+
+- update minify default docs from `false` to `'dce-only'` (#8620) by @shulaoda
+
+### 💼 Other
+
+- fix early exit in script build-node (#8617) by @h-a-n-a
+
+### 🚜 Refactor
+
+- binding: remove outdated TODO comment in MagicString to_string() (#8613) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- add viteplus alpha announcement banner (#8615) by @mdong1909
+- update VitePress theme to 4.8.2 for narrow-screen layout regression (#8612) by @Copilot
+
+### ⚡ Performance
+
+- merge 4 integration test binaries into 1 (#8610) by @Boshen
+
+### 🧪 Testing
+
+- replace heavy filename_with_hash test with targeted hash fixtures (#8597) by @Boshen
+
+### ⚙️ Miscellaneous Tasks
+
+- ci: remove redundant `--no-run` build step from cargo-test (#8623) by @Boshen
+- rust: use `cargo-shear` to toggle Cargo.toml [lib] test = bool (#8622) by @Boshen
+- deps: update test262 submodule for tests (#8611) by @sapphi-red
+- skip macOS CI jobs on pull requests (#8608) by @Copilot
+- add rust cache to repo validation job (#8607) by @Boshen
+- skip running empty bin test targets (#8605) by @Boshen
+- skip building examples in cargo-test to reduce build time (#8603) by @Boshen
+- switch plain workflow checkouts to taiki-e action (#8601) by @Boshen
+- skip Windows CI jobs on PRs (#8600) by @Boshen
+- remove unused asset module (#8594) by @shulaoda
+
+### ◀️ Revert
+
+- "docs: add viteplus alpha announcement banner (#8615)" (#8616) by @shulaoda
+
+
 ## [1.0.0-rc.8] - 2026-03-09
 
 ### 🚀 Features

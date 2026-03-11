@@ -30,8 +30,7 @@ impl<'a> BundlerSideEffectCtx<'a> {
 
   /// Check if a call expression has been marked pure by cross-module optimization.
   pub fn is_call_expr_marked_pure(&self, expr: &CallExpression) -> bool {
-    self.side_effect_free_call_expr_addr
-      .is_some_and(|set| set.contains(&expr.unstable_address()))
+    self.side_effect_free_call_expr_addr.is_some_and(|set| set.contains(&expr.unstable_address()))
   }
 }
 

@@ -5,7 +5,7 @@ use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
   DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta,
   ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord, ResolvedId,
-  StableModuleId, StmtInfo, StmtInfoIdx, SymbolRef,
+  StableModuleId, StmtInfo, StmtInfoIdx, SymbolRef, TaggedSymbolRef,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -297,7 +297,7 @@ impl NormalModule {
       .iter_enumerated_without_namespace_stmt()
       .filter(|(_, stmt_info)| self.is_plain_import_statement(stmt_info))
       .flat_map(|(_, stmt_info)| &stmt_info.declared_symbols)
-      .map(|tagged_symbol| tagged_symbol.inner())
+      .map(TaggedSymbolRef::inner)
       .collect();
 
     // If all export-only symbols match plain import symbols, return true
@@ -372,9 +372,9 @@ impl NormalModule {
       match symbol_or_member_ref {
         crate::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
           // Check if this symbol is imported in this module
-          let is_containes = self.named_imports.contains_key(symbol_ref);
+          let is_contains = self.named_imports.contains_key(symbol_ref);
 
-          if is_containes {
+          if is_contains {
             let named_import = self.named_imports.get(symbol_ref).unwrap();
             let litera_specifier = named_import.imported.get_literal();
 

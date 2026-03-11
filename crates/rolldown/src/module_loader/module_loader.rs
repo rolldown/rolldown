@@ -427,6 +427,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
               }
             }
 
+            let is_external = resolved_id.external.is_external();
             let idx = self.try_spawn_new_task(
               resolved_id,
               Some(ModuleTaskOwner::new(normal_module, raw_rec.span)),
@@ -458,6 +459,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
               dynamic_import_exports_usage_pairs.push((idx, usage));
             }
             if matches!(raw_rec.kind, ImportKind::DynamicImport)
+              && !is_external
               && !user_defined_entry_ids.contains(&idx)
             {
               match dynamic_import_entry_ids.entry(idx) {

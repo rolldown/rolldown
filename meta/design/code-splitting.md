@@ -31,7 +31,7 @@ The trade-off is that this approach can produce many small chunks when there are
 | Separate chunk vs. inline? | Always separate; `experimentalMinChunkSize` for merging | Always separate; no merging                             | Separate by default; optimizer merges into entry chunks                          |
 | Circular chunk deps        | Warns; allows cyclic reexports                          | Enforces acyclic static chunk graph                     | Enforces acyclic via `would_create_circular_dependency` check before every merge |
 | Dynamic imports            | New entry points; computes "already loaded" atoms       | New entry points; rewrites to chunk unique keys         | New entry points; facade elimination for empty dynamic entries                   |
-| External modules           | Excluded from chunk graph                               | Excluded from bundling                                  | Get bit positions but no chunks (see Invariant below)                            |
+| External modules           | Excluded from chunk graph                               | Excluded from bundling                                  | Filtered from entry list at source (never get bit positions)                     |
 | Granularity                | Module level                                            | File level (was statement-level, backed off due to TLA) | Module level                                                                     |
 
 ## Pipeline
@@ -71,19 +71,14 @@ generate_chunks()
 ```
 entry_index 0  →  entry-a.js      →  bit 0  →  ChunkIdx(0)
 entry_index 1  →  entry-b.js      →  bit 1  →  ChunkIdx(1)
-entry_index 2  →  @optional/ext   →  bit 2  →  (external, no chunk)
-entry_index 3  →  plugin.js       →  bit 3  →  ChunkIdx(2)
+entry_index 2  →  plugin.js       →  bit 2  →  ChunkIdx(2)
 ```
 
 Dynamic imports are treated as entry points — they get bit positions and entry chunks just like static entries. This matches Rollup and esbuild behavior: a dynamic `import()` creates a new loading boundary, so the imported module needs its own chunk (or must be merged into an existing one).
 
-External modules get bit positions (because they appear in the entries list from the link stage) but no chunks are created for them (the `Module::Normal` check skips them). This means **bit positions do not equal chunk indices**. The mapping is stored in `chunk_graph.bit_to_chunk_idx: Vec<Option<ChunkIdx>>` — `None` for external entries, `Some(idx)` for real chunks.
+External modules are filtered out at the source — they never appear in `link_output.entries`. This is done in `module_loader.rs` where dynamic imports are collected as entry points: external modules are excluded from `dynamic_import_entry_ids`. This matches esbuild's approach where external modules never enter the entry list, and ensures that **bit positions directly equal chunk indices** — `ChunkIdx::from_raw(bit_position)` is always valid.
 
-### Invariant
-
-Any code converting a bit position to a `ChunkIdx` **must** use `bit_to_chunk_idx`, not `ChunkIdx::from_raw(bit_position)`. Violating this produces wrong chunk assignments when external entries exist. See #8595 for the bug this caused.
-
-esbuild avoids this problem because external modules never enter its entry list. Rollup uses `Set` objects rather than index-based lookup, so the mismatch can't occur. Rolldown's design — where external entries occupy bit positions without chunks — is unique and requires this explicit mapping.
+See #8595 for the bug that motivated this filtering.
 
 ## Reachability Propagation
 
@@ -118,7 +113,7 @@ The chunk optimizer reduces chunk count by merging common chunks back into entry
 
 ### Common Module Merging (`try_insert_common_module_to_exist_chunk`)
 
-For each common chunk, translates its `bits` to chunk indices via `bit_to_chunk_idx`, then tries to merge it into one of those entry chunks. Merging is skipped if it would:
+For each common chunk, translates its `bits` to chunk indices (bit positions directly map to `ChunkIdx`), then tries to merge it into one of those entry chunks. Merging is skipped if it would:
 
 - **Create a circular dependency between chunks** — checked via BFS in `would_create_circular_dependency()`. This is stricter than Rollup (which warns but allows cycles) and matches esbuild's enforcement of acyclic static chunk graphs.
 - **Change an entry's export signature** — when `preserveEntrySignatures: 'strict'`, adding modules to an entry chunk would expose symbols that the original entry didn't export.
@@ -138,7 +133,6 @@ Dynamic/emitted entries can become empty facades when all their modules are pull
 pub struct ChunkGraph {
     pub chunk_table: ChunkTable,                    // IndexVec<ChunkIdx, Chunk>
     pub module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>>,
-    pub bit_to_chunk_idx: Vec<Option<ChunkIdx>>,    // bit position → chunk index
     pub entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx>,
     pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
     // ...
@@ -147,7 +141,6 @@ pub struct ChunkGraph {
 
 - `chunk_table` — All chunks, indexed by `ChunkIdx`. May contain removed chunks (marked in `post_chunk_optimization_operations`) since re-indexing would be expensive.
 - `module_to_chunk` — Which chunk each module belongs to. O(1) lookup.
-- `bit_to_chunk_idx` — Translates entry bit positions to chunk indices. `None` for external entries that have bit positions but no chunks.
 
 ## Related
 

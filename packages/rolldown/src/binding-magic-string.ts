@@ -20,4 +20,11 @@ type BindingMagicStringConstructor = Omit<typeof NativeBindingMagicString, 'prot
   prototype: BindingMagicString;
 };
 
+/**
+ * A native MagicString implementation powered by Rust.
+ *
+ * Publicly exported as {@linkcode RolldownMagicString}.
+ *
+ * @experimental
+ */
 export const BindingMagicString = NativeBindingMagicString as BindingMagicStringConstructor;

@@ -460,11 +460,10 @@ impl GenerateStage<'_> {
           .all(|&module_id| self.link_output.module_table[module_id].is_pure_reexport());
         if is_pure_reexport && is_advanced_chunk {
           return ChunkAssignment::Empty;
-        } else {
-          let new_chunk_id =
-            self.create_common_chunk(modules, bits, chunk_graph, bits_to_chunk, input_base);
-          ChunkAssignment::Created(new_chunk_id)
         }
+        let new_chunk_id =
+          self.create_common_chunk(modules, bits, chunk_graph, bits_to_chunk, input_base);
+        ChunkAssignment::Created(new_chunk_id)
       }
     }
   }

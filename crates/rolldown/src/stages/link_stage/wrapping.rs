@@ -228,7 +228,6 @@ pub fn create_wrapper(
         import_records: Vec::new(),
         #[cfg(debug_assertions)]
         debug_label: None,
-        stmt_str: None,
         meta: StmtInfoMeta::default(),
 
         force_tree_shaking: true,
@@ -260,7 +259,6 @@ pub fn create_wrapper(
         import_records: Vec::new(),
         #[cfg(debug_assertions)]
         debug_label: None,
-        stmt_str: None,
         meta: StmtInfoMeta::default(),
         force_tree_shaking: true,
       };

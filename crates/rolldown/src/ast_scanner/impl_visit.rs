@@ -123,7 +123,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       {
         self.current_stmt_info.debug_label = Some(stmt.to_source_string());
       }
-      self.current_stmt_info.stmt_str = Some(stmt.to_source_string());
 
       self.visit_statement(stmt);
       if self.current_stmt_info.side_effect.intersects(

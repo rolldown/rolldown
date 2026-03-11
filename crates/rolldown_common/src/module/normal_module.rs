@@ -5,7 +5,7 @@ use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
   DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta,
   ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord, ResolvedId,
-  StableModuleId, StmtInfo, StmtInfoIdx, SymbolRef,
+  StableModuleId, StmtInfo, StmtInfoIdx, SymbolRef, TaggedSymbolRef,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -264,25 +264,19 @@ impl NormalModule {
       return false;
     }
 
-    let is_any_reexport = self
+     // Check if there are any statements that are neither re-exports nor plain imports nor export-only
+    if self
       .stmt_infos
       .iter_enumerated_without_namespace_stmt()
-      .any(|(_, stmt_info)| self.is_reexport_statement(stmt_info));
-
-    let is_any_plain_import = self
-      .stmt_infos
-      .iter_enumerated_without_namespace_stmt()
-      .any(|(_, stmt_info)| self.is_plain_import_statement(stmt_info));
-
-    let is_export_only = self
-      .stmt_infos
-      .iter_enumerated_without_namespace_stmt()
-      .any(|(_, stmt_info)| self.is_export_only_statement(stmt_info));
-
-    //Check if there are any statements that are neither re-exports nor plain imports with matched exports
-    if !(is_any_reexport || is_any_plain_import || is_export_only) {
+      .any(|(_, stmt_info)| {
+        !self.is_reexport_statement(stmt_info) 
+          && !self.is_plain_import_statement(stmt_info) 
+          && !self.is_export_only_statement(stmt_info)
+      }) {
       return false;
     }
+
+    
     // Extract symbols from is_export_only and is_plain_import_statement, compare them
     let export_only_symbols: HashSet<SymbolRef> = self
       .stmt_infos
@@ -297,7 +291,7 @@ impl NormalModule {
       .iter_enumerated_without_namespace_stmt()
       .filter(|(_, stmt_info)| self.is_plain_import_statement(stmt_info))
       .flat_map(|(_, stmt_info)| &stmt_info.declared_symbols)
-      .map(|tagged_symbol| tagged_symbol.inner())
+      .map(TaggedSymbolRef::inner)
       .collect();
 
     // If all export-only symbols match plain import symbols, return true
@@ -307,17 +301,7 @@ impl NormalModule {
 
   // Helper function to determine if a statement is a re-export statement
   fn is_reexport_statement(&self, stmt_info: &StmtInfo) -> bool {
-    let export_str = stmt_info.stmt_str.as_ref();
-
-    if export_str.is_none() {
-      return false;
-    }
-
-    let export_str = export_str.unwrap().trim();
-
-    if export_str.contains("import") {
-      return false;
-    }
+   
     stmt_info.import_records.iter().any(|&record_idx| {
       self
         .named_imports
@@ -329,13 +313,7 @@ impl NormalModule {
   ///  Helper function to determine if a statement is a plain import statement
   /// (imports only, no re-export)
   fn is_plain_import_statement(&self, stmt_info: &StmtInfo) -> bool {
-    let import_str = stmt_info.stmt_str.as_ref();
-
-    if import_str.is_none() {
-      return false;
-    }
-
-    let import_str = import_str.unwrap().trim();
+   
 
     if !(import_str.starts_with("import") && import_str.contains("from")) {
       return false;
@@ -352,29 +330,16 @@ impl NormalModule {
   /// Helper function to determine if a statement is an export-only statement
   /// (export { A } but not export { A } from ...)
   fn is_export_only_statement(&self, stmt_info: &StmtInfo) -> bool {
-    let export_str = stmt_info.stmt_str.as_ref();
 
-    if export_str.is_none() {
-      return false;
-    }
-
-    let export_str = export_str.unwrap().trim();
-
-    if export_str.contains("from")
-      || export_str.contains("default")
-      || export_str.contains("import")
-    {
-      return false;
-    }
 
     // Check if this statement references symbols that are also in named_imports
     stmt_info.referenced_symbols.iter().any(|symbol_or_member_ref| {
       match symbol_or_member_ref {
         crate::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
           // Check if this symbol is imported in this module
-          let is_containes = self.named_imports.contains_key(symbol_ref);
+          let is_contains = self.named_imports.contains_key(symbol_ref);
 
-          if is_containes {
+          if is_contains {
             let named_import = self.named_imports.get(symbol_ref).unwrap();
             let litera_specifier = named_import.imported.get_literal();
 

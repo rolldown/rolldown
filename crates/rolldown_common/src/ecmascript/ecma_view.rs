@@ -126,6 +126,8 @@ bitflags! {
         const UnknownExportsRead = 1 << 7;
         /// Top-level return statement (only valid in CommonJS)
         const TopLevelReturn = 1 << 8;
+        const ModuleExportsPropWriteRef = 1 << 9;
+        const ModuleExportsNonPropWriteRef = 1 << 10;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
 }

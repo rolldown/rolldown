@@ -448,19 +448,36 @@ impl<'a> SideEffectDetector<'a> {
   }
 }
 
-/// Bundler-specific: detect `exports.staticProp = ...` CJS export pattern.
+/// Bundler-specific: detect CJS export patterns as side-effect-free.
+/// - `exports.a = ...`  / `exports['a'] = ...`
+/// - `module.exports.a = ...` / `module.exports['a'] = ...`
 /// Returns `Some(PureCjs)` if the target matches, `None` otherwise.
 fn check_pure_cjs_export(scope: &AstScopes, target: &AssignmentTarget) -> Option<SideEffectDetail> {
   match target {
     AssignmentTarget::ComputedMemberExpression(_) | AssignmentTarget::StaticMemberExpression(_) => {
       let member_expr = target.to_member_expression();
-      if let Expression::Identifier(ident) = member_expr.object() {
-        if ident.reference_id.get().is_some_and(|ref_id| scope.is_unresolved(ref_id))
-          && ident.name == "exports"
-          && member_expr.static_property_name().is_some()
+      match member_expr.object() {
+        Expression::Identifier(ident)
+          if ident.reference_id.get().is_some_and(|ref_id| scope.is_unresolved(ref_id)) =>
         {
-          return Some(SideEffectDetail::PureCjs);
+          // exports.a / exports['a']
+          if ident.name == "exports" && member_expr.static_property_name().is_some() {
+            return Some(SideEffectDetail::PureCjs);
+          }
         }
+        // module.exports.a / module.exports['a']
+        Expression::ComputedMemberExpression(_) | Expression::StaticMemberExpression(_) => {
+          let nested = member_expr.object().to_member_expression();
+          if member_expr.static_property_name().is_some()
+            && matches!(nested.static_property_name(), Some("exports"))
+            && matches!(nested.object(), Expression::Identifier(ident)
+              if ident.reference_id.get().is_some_and(|ref_id| scope.is_unresolved(ref_id))
+                && ident.name == "module")
+          {
+            return Some(SideEffectDetail::PureCjs);
+          }
+        }
+        _ => {}
       }
       None
     }
@@ -1131,6 +1148,17 @@ mod test {
     assert_eq!(
       get_statements_side_effect_details("exports[test()] = true"),
       vec![SideEffectDetail::Unknown]
+    );
+
+    // module.exports.xxx = expr
+    assert_eq!(
+      get_statements_side_effect_details("module.exports.foo = 'bar'"),
+      vec![SideEffectDetail::PureCjs]
+    );
+
+    assert_eq!(
+      get_statements_side_effect_details("module.exports.foo = global()"),
+      vec![SideEffectDetail::Unknown | SideEffectDetail::PureCjs]
     );
 
     assert_eq!(

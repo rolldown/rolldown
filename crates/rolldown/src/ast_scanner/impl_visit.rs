@@ -169,8 +169,12 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     // check if the module is a reexport cjs module e.g.
     // module.exports = require('a');
     // normalize ast usage flag
-    if self.result.ast_usage.contains(EcmaModuleAstUsage::ModuleRef)
-      || !self.result.ast_usage.contains(EcmaModuleAstUsage::ExportsRef)
+    //
+    // Access apart from module.exports.xxx or exports.xxx
+    // will be considered as non-static property access
+    if self.result.ast_usage.contains(EcmaModuleAstUsage::ModuleExportsNonPropWriteRef)
+      || (!self.result.ast_usage.contains(EcmaModuleAstUsage::ModuleExportsPropWriteRef)
+        && !self.result.ast_usage.contains(EcmaModuleAstUsage::ExportsRef))
     {
       self.result.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
     }
@@ -306,13 +310,30 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           }
         }
         // `module.exports.test` is also considered as commonjs keyword
-        Expression::StaticMemberExpression(member_expr) => {
-          if let Expression::Identifier(ref id) = member_expr.object {
+        Expression::StaticMemberExpression(inner_member_expr) => {
+          if let Expression::Identifier(ref id) = inner_member_expr.object {
             if id.name == "module"
               && self.is_global_identifier_reference(id)
-              && member_expr.property.name == "exports"
+              && inner_member_expr.property.name == "exports"
             {
               self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
+
+              // `module.exports.test = ...` — create facade symbol like `exports.test = ...`
+              if let Some((span, export_name)) = member_expr.static_property_info() {
+                let exported_symbol =
+                  self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
+
+                self.declare_link_only_symbol_ref(exported_symbol.symbol);
+
+                if let Some(value) = self.extract_constant_value_from_expr(Some(&node.right)) {
+                  self
+                    .add_constant_symbol(exported_symbol.symbol, ConstExportMeta::new(value, true));
+                }
+
+                self.result.commonjs_exports.entry(export_name.into()).or_default().push(
+                  LocalExport { referenced: exported_symbol, span, came_from_commonjs: true },
+                );
+              }
             }
           }
         }
@@ -578,6 +599,16 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               ident_ref,
               CjsGlobalAssignmentType::ModuleExportsAssignment,
             );
+            match v {
+              Some(CommonJsAstType::ExportsPropWrite(ref prop)) if prop != "*" => {
+                self.cjs_named_exports_usage.entry(prop.clone()).or_default().write += 1;
+                self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleExportsPropWriteRef);
+              }
+              Some(CommonJsAstType::EsModuleFlag) => {
+                self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleExportsPropWriteRef);
+              }
+              _ => self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleExportsNonPropWriteRef),
+            }
             self.update_ast_usage_for_commonjs_export(v.as_ref());
           }
           "exports" => {

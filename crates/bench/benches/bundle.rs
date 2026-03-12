@@ -41,17 +41,15 @@ fn criterion_benchmark(c: &mut Criterion) {
           let resolver = resolver.clone();
           let options = item.options.clone();
           async move {
-            let mut factory =
-              rolldown::BundleFactory::new(BundleFactoryOptions {
-                bundler_options: options,
-                plugins: vec![],
-                session: None,
-                disable_tracing_setup: true,
-              })
-              .expect("Failed to create bundle factory");
-            let bundle = factory
-              .create_bundle_with_fs(mem_fs, resolver)
-              .expect("Failed to create bundle");
+            let mut factory = rolldown::BundleFactory::new(BundleFactoryOptions {
+              bundler_options: options,
+              plugins: vec![],
+              session: None,
+              disable_tracing_setup: true,
+            })
+            .expect("Failed to create bundle factory");
+            let bundle =
+              factory.create_bundle_with_fs(mem_fs, resolver).expect("Failed to create bundle");
             let result = bundle.generate().await;
             if let Err(e) = result {
               panic!("Failed to bundle: {e}");

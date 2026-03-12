@@ -63,10 +63,7 @@ impl<'a> SideEffectDetector<'a> {
   /// - `exports.a = ...`  / `exports['a'] = ...`
   /// - `module.exports = ...`
   /// - `module.exports.a = ...` / `module.exports['a'] = ...`
-  fn is_pure_cjs_assignment_target(
-    &self,
-    member_expr: &ast::MemberExpression<'_>,
-  ) -> bool {
+  fn is_pure_cjs_assignment_target(&self, member_expr: &ast::MemberExpression<'_>) -> bool {
     match member_expr.object() {
       Expression::Identifier(ident) if self.is_unresolved_reference(ident) => {
         // exports.a / exports['a']

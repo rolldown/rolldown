@@ -131,7 +131,7 @@ impl BundleFactory {
       self.transform_dependencies_for_incremental_build = Arc::default();
     }
 
-    self.build_bundle(self.fs.clone(), Arc::clone(&self.resolver), cache)
+    Ok(self.build_bundle(self.fs.clone(), Arc::clone(&self.resolver), cache))
   }
 
   /// Create a bundle with a custom filesystem and resolver.
@@ -140,7 +140,7 @@ impl BundleFactory {
     &mut self,
     fs: Fs,
     resolver: SharedResolver<Fs>,
-  ) -> BuildResult<Bundle<Fs>> {
+  ) -> Bundle<Fs> {
     self.module_infos_for_incremental_build = Arc::default();
     self.transform_dependencies_for_incremental_build = Arc::default();
     self.build_bundle(fs, resolver, ScanStageCache::default())
@@ -151,7 +151,7 @@ impl BundleFactory {
     fs: Fs,
     resolver: SharedResolver<Fs>,
     cache: ScanStageCache,
-  ) -> BuildResult<Bundle<Fs>> {
+  ) -> Bundle<Fs> {
     let bundle_span = self.generate_unique_bundle_span();
     let module_infos = Arc::clone(&self.module_infos_for_incremental_build);
     let transform_dependencies = Arc::clone(&self.transform_dependencies_for_incremental_build);
@@ -175,7 +175,7 @@ impl BundleFactory {
       cache,
     };
     self.last_bundle_handle = Some(bundle.context());
-    Ok(bundle)
+    bundle
   }
 
   fn check_prefer_builtin_feature(

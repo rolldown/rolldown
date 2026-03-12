@@ -16,7 +16,7 @@ use std::sync::Arc;
 use rolldown_fs::OsFileSystem;
 use rolldown_resolver::Resolver;
 
-pub(crate) type SharedResolver = Arc<Resolver<OsFileSystem>>;
+pub(crate) type SharedResolver<Fs = OsFileSystem> = Arc<Resolver<Fs>>;
 pub(crate) type SharedOptions = SharedNormalizedBundlerOptions;
 
 pub use crate::{

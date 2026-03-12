@@ -28,10 +28,10 @@ use sugar_path::SugarPath;
   clippy::struct_field_names,
   reason = "`bundle_span` emphasizes this's a span for this bundle, not a session level span"
 )]
-pub struct Bundle {
-  pub(crate) fs: OsFileSystem,
+pub struct Bundle<Fs: FileSystem + Clone + 'static = OsFileSystem> {
+  pub(crate) fs: Fs,
   pub(crate) options: SharedOptions,
-  pub(crate) resolver: SharedResolver,
+  pub(crate) resolver: SharedResolver<Fs>,
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) warnings: Vec<BuildDiagnostic>,
@@ -39,7 +39,7 @@ pub struct Bundle {
   pub(crate) bundle_span: Arc<tracing::Span>,
 }
 
-impl Bundle {
+impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {

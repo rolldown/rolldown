@@ -13,7 +13,7 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_fs::OsFileSystem;
+use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -30,11 +30,11 @@ type SourcemapChannel = (
   Option<thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>>,
 );
 
-pub struct ScanStage {
+pub struct ScanStage<Fs: FileSystem + Clone + 'static = OsFileSystem> {
   options: SharedOptions,
   plugin_driver: SharedPluginDriver,
-  fs: OsFileSystem,
-  resolver: SharedResolver,
+  fs: Fs,
+  resolver: SharedResolver<Fs>,
 }
 
 #[derive(Debug)]
@@ -132,12 +132,12 @@ pub struct ScanStageOutput {
   pub tla_module_count: usize,
 }
 
-impl ScanStage {
+impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
   pub fn new(
     options: SharedOptions,
     plugin_driver: SharedPluginDriver,
-    fs: OsFileSystem,
-    resolver: SharedResolver,
+    fs: Fs,
+    resolver: SharedResolver<Fs>,
   ) -> Self {
     Self { options, plugin_driver, fs, resolver }
   }

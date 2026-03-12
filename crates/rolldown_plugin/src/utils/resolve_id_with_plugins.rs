@@ -4,6 +4,7 @@ use crate::{
 };
 use nodejs_built_in_modules::is_nodejs_builtin_module;
 use rolldown_common::{ImportKind, ModuleDefFormat, ModuleId, PackageJson, ResolvedId};
+use rolldown_fs::FileSystem;
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dataurl::is_data_url;
 use std::{path::Path, sync::Arc};
@@ -47,8 +48,8 @@ pub fn infer_module_def_format(
 }
 
 #[expect(clippy::too_many_arguments)]
-pub async fn resolve_id_with_plugins(
-  resolver: &Resolver,
+pub async fn resolve_id_with_plugins<Fs: FileSystem>(
+  resolver: &Resolver<Fs>,
   plugin_driver: &PluginDriver,
   specifier: &str,
   importer: Option<&str>,
@@ -130,8 +131,8 @@ pub async fn resolve_id_with_plugins(
   Ok(resolve_id(resolver, specifier, importer, import_kind, is_user_defined_entry))
 }
 
-fn resolve_id(
-  resolver: &Resolver,
+fn resolve_id<Fs: FileSystem>(
+  resolver: &Resolver<Fs>,
   specifier: &str,
   importer: Option<&str>,
   import_kind: ImportKind,

@@ -1,6 +1,9 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use rolldown::BundlerOptions;
+use rolldown_fs::MemoryFileSystem;
+use rolldown_resolver::Resolver;
 use rolldown_workspace::root_dir;
 
 pub fn join_by_workspace_root(path: &str) -> PathBuf {
@@ -59,4 +62,50 @@ pub fn derive_benchmark_items(
   }
 
   ret
+}
+
+/// Walk a directory recursively and load all files into a `MemoryFileSystem`.
+/// This is used in benchmarks to eliminate disk I/O from the timed section.
+pub fn preload_into_memory_fs(dir: &Path) -> MemoryFileSystem {
+  let mut fs = MemoryFileSystem::default();
+  walk_and_load(dir, &mut fs);
+  fs
+}
+
+fn walk_and_load(dir: &Path, fs: &mut MemoryFileSystem) {
+  let entries = match std::fs::read_dir(dir) {
+    Ok(entries) => entries,
+    Err(_) => return,
+  };
+  for entry in entries.flatten() {
+    let path = entry.path();
+    if path.is_dir() {
+      walk_and_load(&path, fs);
+    } else if path.is_file() {
+      if let Ok(content) = std::fs::read_to_string(&path) {
+        fs.add_file(&path, &content);
+      }
+    }
+  }
+}
+
+/// Create a `MemoryFileSystem` and `Resolver` pair for benchmarking.
+pub fn create_mem_fs_and_resolver(
+  options: &BundlerOptions,
+) -> (MemoryFileSystem, Arc<Resolver<MemoryFileSystem>>) {
+  let cwd = options
+    .cwd
+    .clone()
+    .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
+  let mem_fs = preload_into_memory_fs(&cwd);
+  let platform = options.platform.unwrap_or(rolldown::Platform::Browser);
+  let raw_resolve = options.resolve.clone().unwrap_or_default();
+  let resolver = Arc::new(Resolver::new(
+    mem_fs.clone(),
+    cwd,
+    platform,
+    &Default::default(),
+    raw_resolve,
+  ));
+  (mem_fs, resolver)
 }

@@ -1,6 +1,7 @@
-use bench::{DeriveOptions, derive_benchmark_items};
+use bench::{DeriveOptions, create_mem_fs_and_resolver, derive_benchmark_items};
 use criterion::{Criterion, criterion_group, criterion_main};
 
+use rolldown::BundleFactoryOptions;
 use rolldown_common::BundlerOptions;
 use rolldown_testing::bundler_options_presets::{multi_duplicated_symbol, rome_ts, threejs};
 
@@ -23,6 +24,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     .into_iter()
     .flat_map(|(name, options)| derive_benchmark_items(&derive_options, name, options))
     .for_each(|item| {
+      // Preload files into MemoryFileSystem once (outside the timed loop)
+      let (mem_fs, resolver) = create_mem_fs_and_resolver(&item.options);
+
       group.bench_function(format!("bundle@{}", item.name), move |b| {
         b.to_async(
           tokio::runtime::Builder::new_multi_thread()
@@ -32,12 +36,26 @@ fn criterion_benchmark(c: &mut Criterion) {
             .build()
             .unwrap(),
         )
-        .iter(|| async {
-          let mut bundler =
-            rolldown::Bundler::new(item.options.clone()).expect("Failed to create bundler");
-          let result = bundler.generate().await;
-          if let Err(e) = result {
-            panic!("Failed to bundle: {e}");
+        .iter(|| {
+          let mem_fs = mem_fs.clone();
+          let resolver = resolver.clone();
+          let options = item.options.clone();
+          async move {
+            let mut factory =
+              rolldown::BundleFactory::new(BundleFactoryOptions {
+                bundler_options: options,
+                plugins: vec![],
+                session: None,
+                disable_tracing_setup: true,
+              })
+              .expect("Failed to create bundle factory");
+            let bundle = factory
+              .create_bundle_with_fs(mem_fs, resolver)
+              .expect("Failed to create bundle");
+            let result = bundle.generate().await;
+            if let Err(e) = result {
+              panic!("Failed to bundle: {e}");
+            }
           }
         });
       });

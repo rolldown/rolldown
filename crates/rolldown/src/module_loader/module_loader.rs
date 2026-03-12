@@ -22,7 +22,7 @@ use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableResolveError, consolidate_diagnostics,
 };
-use rolldown_fs::OsFileSystem;
+use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
@@ -94,8 +94,8 @@ impl VisitState {
   }
 }
 
-pub struct ModuleLoader<'a> {
-  pub shared_context: Arc<TaskContext>,
+pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static = OsFileSystem> {
+  pub shared_context: Arc<TaskContext<Fs>>,
   rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
@@ -130,17 +130,17 @@ pub struct ModuleLoaderOutput {
   pub tla_module_count: usize,
 }
 
-impl Drop for ModuleLoader<'_> {
+impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
   fn drop(&mut self) {
     self.cache.importers = std::mem::take(&mut self.intermediate_normal_modules.importers);
   }
 }
 
-impl<'a> ModuleLoader<'a> {
+impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
   pub fn new(
-    fs: OsFileSystem,
+    fs: Fs,
     options: SharedOptions,
-    resolver: SharedResolver,
+    resolver: SharedResolver<Fs>,
     plugin_driver: SharedPluginDriver,
     cache: &'a mut ScanStageCache,
     is_full_scan: bool,

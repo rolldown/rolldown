@@ -7,7 +7,7 @@ use rolldown_common::{
   SharedModuleInfoDashMap,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
-use rolldown_fs::OsFileSystem;
+use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{__inner::SharedPluginable, PluginDriverFactory};
 use rolldown_plugin_lazy_compilation::LazyCompilationContext;
 use rolldown_utils::dashmap::FxDashSet;
@@ -110,7 +110,7 @@ impl BundleFactory {
     &mut self,
     bundle_mode: BundleMode,
     cache: Option<ScanStageCache>,
-  ) -> BuildResult<Bundle> {
+  ) -> BuildResult<Bundle<OsFileSystem>> {
     let bundle_span = self.generate_unique_bundle_span();
 
     let cache = if bundle_mode.is_incremental() {
@@ -152,6 +152,42 @@ impl BundleFactory {
       warnings: std::mem::take(&mut self.warnings),
       bundle_span,
       cache,
+    };
+    self.last_bundle_handle = Some(bundle.context());
+    Ok(bundle)
+  }
+
+  /// Create a bundle with a custom filesystem and resolver.
+  /// This is useful for benchmarks that want to use an in-memory filesystem.
+  pub fn create_bundle_with_fs<Fs: FileSystem + Clone + 'static>(
+    &mut self,
+    fs: Fs,
+    resolver: SharedResolver<Fs>,
+  ) -> BuildResult<Bundle<Fs>> {
+    let bundle_span = self.generate_unique_bundle_span();
+
+    self.module_infos_for_incremental_build = Arc::default();
+    self.transform_dependencies_for_incremental_build = Arc::default();
+    let module_infos = Arc::clone(&self.module_infos_for_incremental_build);
+    let transform_dependencies = Arc::clone(&self.transform_dependencies_for_incremental_build);
+
+    let plugin_driver = self.plugin_driver_factory.create_plugin_driver(
+      &self.file_emitter,
+      &self.options,
+      &self.session,
+      &bundle_span,
+      module_infos,
+      transform_dependencies,
+    );
+    let bundle = Bundle {
+      fs,
+      options: Arc::clone(&self.options),
+      resolver,
+      file_emitter: Arc::clone(&self.file_emitter),
+      plugin_driver,
+      warnings: std::mem::take(&mut self.warnings),
+      bundle_span,
+      cache: ScanStageCache::default(),
     };
     self.last_bundle_handle = Some(bundle.context());
     Ok(bundle)

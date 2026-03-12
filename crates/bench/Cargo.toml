@@ -21,7 +21,7 @@ rolldown = { workspace = true, features = ["experimental"] }
 rolldown_fs = { workspace = true, features = ["memory"] }
 rolldown_resolver = { workspace = true }
 rolldown_workspace = { workspace = true }
-tokio = { workspace = true, features = ["rt"] }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
 
 [[bench]]
 harness = false

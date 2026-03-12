@@ -59,6 +59,34 @@ impl<'a> SideEffectDetector<'a> {
     self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
   }
 
+  /// Check if a member expression assignment target is a CJS export pattern:
+  /// - `exports.a = ...`  / `exports['a'] = ...`
+  /// - `module.exports = ...`
+  /// - `module.exports.a = ...` / `module.exports['a'] = ...`
+  fn is_pure_cjs_assignment_target(
+    &self,
+    member_expr: &ast::MemberExpression<'_>,
+  ) -> bool {
+    match member_expr.object() {
+      Expression::Identifier(ident) if self.is_unresolved_reference(ident) => {
+        // exports.a / exports['a']
+        (ident.name == "exports" && member_expr.static_property_name().is_some())
+        // module.exports
+        || (ident.name == "module"
+          && matches!(member_expr.static_property_name(), Some("exports")))
+      }
+      // module.exports.a / module.exports['a']
+      Expression::ComputedMemberExpression(_) | Expression::StaticMemberExpression(_) => {
+        let nested = member_expr.object().to_member_expression();
+        member_expr.static_property_name().is_some()
+          && matches!(nested.static_property_name(), Some("exports"))
+          && matches!(nested.object(), Expression::Identifier(ident)
+            if self.is_unresolved_reference(ident) && ident.name == "module")
+      }
+      _ => false,
+    }
+  }
+
   fn detect_side_effect_of_property_key(
     &self,
     key: &PropertyKey,
@@ -296,28 +324,13 @@ impl<'a> SideEffectDetector<'a> {
       AssignmentTarget::ComputedMemberExpression(_)
       | AssignmentTarget::StaticMemberExpression(_) => {
         let member_expr = expr.to_member_expression();
-        match member_expr.object() {
-          Expression::Identifier(ident) => {
-            // - exports.a = ...;
-            // - exports['a'] = ...;
-            if self.is_unresolved_reference(ident)
-              && ident.name == "exports"
-              && member_expr.static_property_name().is_some()
-            {
-              SideEffectDetail::PureCjs
-            } else if self.flat_options.property_write_side_effects() {
-              true.into()
-            } else {
-              self.detect_side_effect_of_member_expr(member_expr, PropertyAccessFlag::Write)
-            }
-          }
-          _ => {
-            if self.flat_options.property_write_side_effects() {
-              true.into()
-            } else {
-              self.detect_side_effect_of_member_expr(member_expr, PropertyAccessFlag::Write)
-            }
-          }
+        if self.is_pure_cjs_assignment_target(member_expr) {
+          return SideEffectDetail::PureCjs;
+        }
+        if self.flat_options.property_write_side_effects() {
+          true.into()
+        } else {
+          self.detect_side_effect_of_member_expr(member_expr, PropertyAccessFlag::Write)
         }
       }
 
@@ -1544,6 +1557,23 @@ mod test {
     assert_eq!(
       get_statements_side_effect_details("exports[test()] = true"),
       vec![SideEffectDetail::Unknown]
+    );
+
+    // module.exports = expr
+    assert_eq!(
+      get_statements_side_effect_details("module.exports = 123"),
+      vec![SideEffectDetail::PureCjs]
+    );
+
+    assert_eq!(
+      get_statements_side_effect_details("module.exports = global()"),
+      vec![SideEffectDetail::Unknown | SideEffectDetail::PureCjs]
+    );
+
+    // module.exports.xxx = expr
+    assert_eq!(
+      get_statements_side_effect_details("module.exports.foo = 'bar'"),
+      vec![SideEffectDetail::PureCjs]
     );
 
     assert_eq!(

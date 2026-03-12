@@ -13,8 +13,7 @@ fn items() -> Vec<(&'static str, BundlerOptions)> {
         "tmp/bench/rolldown-benchcases/packages/multi-duplicated-symbols",
         "index.jsx",
       );
-      opts.module_types =
-        Some(FxHashMap::from_iter([("css".to_string(), ModuleType::Empty)]));
+      opts.module_types = Some(FxHashMap::from_iter([("css".to_string(), ModuleType::Empty)]));
       opts
     }),
     #[cfg(not(feature = "codspeed"))]

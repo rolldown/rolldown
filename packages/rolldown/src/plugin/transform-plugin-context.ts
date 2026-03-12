@@ -103,6 +103,10 @@ export class TransformPluginContextImpl extends PluginContextImpl {
     this.inner.addWatchFile(id);
   }
 
+  public addWatchGlob(pattern: string): void {
+    this.inner.addWatchGlob(pattern);
+  }
+
   public sendMagicString(s: BindingMagicString): void {
     this.inner.sendMagicString(s);
   }

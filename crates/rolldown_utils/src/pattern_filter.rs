@@ -99,8 +99,13 @@ pub fn filter(
   }
 }
 
+/// Match a single normalized glob `pattern` against an absolute `path`.
+pub fn glob_match_path(pattern: &str, path: &str) -> bool {
+  glob_match(pattern.as_bytes(), path.as_bytes())
+}
+
 /// https://github.com/rollup/plugins/blob/e1a5ef99f1578eb38a8c87563cb9651db228f3bd/packages/pluginutils/src/createFilter.ts#L10
-fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
+pub fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
   if glob.starts_with("**") || Path::new(glob).is_absolute() {
     normalize_path(glob)
   } else {

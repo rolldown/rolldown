@@ -196,6 +196,15 @@ impl BindingBundler {
       .map(|handle| handle.watch_files().iter().map(|s| s.to_string()).collect())
       .unwrap_or_default()
   }
+
+  #[napi]
+  pub fn get_watch_globs(&self) -> Vec<String> {
+    self
+      .last_bundle_handle
+      .as_ref()
+      .map(|handle| handle.watch_globs().iter().map(|s| s.to_string()).collect())
+      .unwrap_or_default()
+  }
 }
 
 impl BindingBundler {

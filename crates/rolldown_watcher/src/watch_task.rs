@@ -21,6 +21,8 @@ pub struct WatchTask {
   options: Arc<NormalizedBundlerOptions>,
   fs_watcher: std::sync::Mutex<DynFsWatcher>,
   watched_files: FxDashSet<ArcStr>,
+  watch_globs: FxDashSet<ArcStr>,
+  watch_glob_dirs: FxDashSet<ArcStr>,
   pub(crate) needs_rebuild: bool,
 }
 
@@ -51,6 +53,8 @@ impl WatchTask {
       options,
       fs_watcher: std::sync::Mutex::new(fs_watcher),
       watched_files: FxDashSet::default(),
+      watch_globs: FxDashSet::default(),
+      watch_glob_dirs: FxDashSet::default(),
       needs_rebuild: true,
     })
   }
@@ -72,7 +76,7 @@ impl WatchTask {
     let options_ref = &*self.options;
 
     // Scope the bundler lock to minimize lock duration
-    let (result, new_watch_files, bundle_handle) = {
+    let (result, new_watch_files, new_watch_globs, bundle_handle) = {
       let mut bundler = self.bundler.lock().await;
 
       // Clear stale plugin driver state from previous build.
@@ -116,15 +120,24 @@ impl WatchTask {
       let bundle_handle =
         bundler.last_bundle_handle.clone().expect("bundle handle should exist after build");
 
-      // Collect watch files while we have the lock (may include render-phase files)
+      // Collect watch files and globs while we have the lock (may include render-phase)
       let new_watch_files: Vec<ArcStr> =
         bundle_handle.watch_files().iter().map(|f| f.clone()).collect();
+      let new_watch_globs: Vec<ArcStr> =
+        bundle_handle.watch_globs().iter().map(|g| g.clone()).collect();
 
-      (result, new_watch_files, bundle_handle)
+      (result, new_watch_files, new_watch_globs, bundle_handle)
     };
 
     // Also register any files discovered during render/write phase
     self.update_watch_files(&new_watch_files)?;
+
+    self.watch_globs.clear();
+    self.watch_glob_dirs.clear();
+    for glob in &new_watch_globs {
+      self.watch_globs.insert(glob.clone());
+    }
+    self.register_glob_dirs(&new_watch_globs)?;
 
     #[expect(clippy::cast_possible_truncation)]
     let duration = start_time.elapsed().as_millis() as u32;
@@ -253,6 +266,68 @@ impl WatchTask {
     bundler.close().await.map_err(Into::into)
   }
 
+  /// Given a normalized absolute glob pattern, return the static base directory
+  fn glob_base_dir(pattern: &str) -> (&str, bool) {
+    let is_recursive = pattern.contains("**");
+    let glob_start = pattern.find(['*', '?', '[']).unwrap_or(pattern.len());
+    let base_end = pattern[..glob_start].rfind('/').map_or(0, |i| i + 1);
+    (&pattern[..base_end], is_recursive)
+  }
+
+  /// Register the base directory of each glob with the fs watcher using the
+  /// appropriate `RecursiveMode` (`Recursive` for `**`, `NonRecursive` otherwise).
+  fn register_glob_dirs(&self, globs: &[ArcStr]) -> BuildResult<()> {
+    if globs.is_empty() {
+      return Ok(());
+    }
+
+    let mut fs_watcher = self.fs_watcher.lock().expect("fs_watcher lock poisoned");
+    let mut watcher_paths = fs_watcher.paths_mut();
+
+    for glob_pattern in globs {
+      let pattern_str = glob_pattern.as_str();
+      let (base, is_recursive) = Self::glob_base_dir(pattern_str);
+      if base.is_empty() {
+        continue;
+      }
+
+      if self.watch_glob_dirs.contains(base) {
+        continue;
+      }
+
+      let base_path = Path::new(base);
+      if !base_path.is_dir() {
+        continue;
+      }
+
+      let mode = if is_recursive { RecursiveMode::Recursive } else { RecursiveMode::NonRecursive };
+      match watcher_paths.add(base_path, mode) {
+        Ok(()) => {
+          tracing::debug!(name = "notify watch glob dir", path = ?base_path, recursive = is_recursive);
+          self.watch_glob_dirs.insert(ArcStr::from(base));
+        }
+        Err(e) => {
+          tracing::debug!(name = "notify watch glob dir skipped", path = ?base_path, error = ?e);
+        }
+      }
+    }
+
+    watcher_paths.commit().map_err_to_unhandleable()?;
+    Ok(())
+  }
+
+  fn matches_watch_globs(&self, path: &str) -> bool {
+    if self.watch_globs.is_empty() {
+      return false;
+    }
+
+    let normalized = pattern_filter::normalize_path(path);
+    self
+      .watch_globs
+      .iter()
+      .any(|pattern| pattern_filter::glob_match_path(pattern.as_str(), &normalized))
+  }
+
   fn is_watched_file(&self, path: &str) -> bool {
     if self.watched_files.contains(path) {
       return true;
@@ -261,6 +336,10 @@ impl WatchTask {
     // Windows path normalization
     #[cfg(windows)]
     if self.watched_files.contains(path.replace('\\', "/").as_str()) {
+      return true;
+    }
+
+    if self.matches_watch_globs(path) {
       return true;
     }
 

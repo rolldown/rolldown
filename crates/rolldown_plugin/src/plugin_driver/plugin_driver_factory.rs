@@ -39,6 +39,7 @@ impl PluginDriverFactory {
     transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   ) -> Arc<crate::plugin_driver::PluginDriver> {
     let watch_files = Arc::new(FxDashSet::default());
+    let watch_globs = Arc::new(FxDashSet::default());
     let meta = Arc::new(PluginContextMeta::default());
     let tx = Arc::new(tokio::sync::Mutex::new(None));
     let mut plugin_usage_vec = IndexVec::new();
@@ -87,6 +88,7 @@ impl PluginDriverFactory {
           module_infos: Arc::clone(&module_infos),
           options: Arc::clone(options),
           watch_files: Arc::clone(&watch_files),
+          watch_globs: Arc::clone(&watch_globs),
           tx: Arc::clone(&tx),
           session: session.clone(),
           bundle_span: Arc::clone(&bundle_span_arc),
@@ -100,6 +102,7 @@ impl PluginDriverFactory {
         contexts: index_contexts,
         file_emitter: Arc::clone(file_emitter),
         watch_files,
+        watch_globs,
         module_infos,
         transform_dependencies,
         context_load_completion_manager: ContextLoadCompletionManager::default(),

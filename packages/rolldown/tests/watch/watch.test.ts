@@ -1187,6 +1187,182 @@ test.concurrent(
   },
 );
 
+test.concurrent(
+  'PluginContext addWatchGlob - modify existing file triggers rebuild',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('addWatchGlob-modify', retryCount, {
+      'main.js': `console.log(1)`,
+    });
+    const srcDir = path.join(dir, 'src');
+    fs.mkdirSync(srcDir, { recursive: true });
+    const watchedFile = path.join(srcDir, 'data.txt');
+    fs.writeFileSync(watchedFile, 'version=1');
+
+    const watcher = watch({
+      cwd: dir,
+      input: 'main.js',
+      output: { file: path.join(dir, 'dist', 'main.js') },
+      plugins: [
+        {
+          name: 'test-addWatchGlob-modify',
+          buildStart() {
+            this.addWatchGlob(path.join(srcDir, '*.txt'));
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    await waitBuildFinished(watcher);
+
+    const changeFn = vi.fn();
+    watcher.on('change', (id, event) => {
+      if (event.event === 'update') {
+        changeFn();
+        expect(id).toBe(watchedFile);
+      }
+    });
+
+    await editFile(watchedFile, 'version=2');
+    await expect.poll(() => changeFn).toBeCalled();
+  },
+);
+
+test.concurrent(
+  'PluginContext addWatchGlob - create new file matching glob triggers rebuild',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('addWatchGlob-create', retryCount, {
+      'main.js': `console.log(1)`,
+    });
+    const srcDir = path.join(dir, 'src');
+    fs.mkdirSync(srcDir, { recursive: true });
+
+    const watcher = watch({
+      cwd: dir,
+      input: 'main.js',
+      output: { file: path.join(dir, 'dist', 'main.js') },
+      plugins: [
+        {
+          name: 'test-addWatchGlob-create',
+          buildStart() {
+            this.addWatchGlob(path.join(srcDir, '*.txt'));
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    await waitBuildFinished(watcher);
+
+    let rebuildCount = 0;
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_START') rebuildCount++;
+    });
+
+    await editFile(path.join(srcDir, 'new.txt'), 'hello');
+    await expect.poll(() => rebuildCount, { timeout: TEST_TIMEOUT }).toBeGreaterThan(0);
+  },
+);
+
+test.concurrent(
+  'PluginContext addWatchGlob - modifying non-matching file should not trigger rebuild',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('addWatchGlob-no-rebuild', retryCount, {
+      'main.js': `console.log(1)`,
+    });
+    const srcDir = path.join(dir, 'src');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.writeFileSync(path.join(srcDir, 'watched.txt'), 'watched');
+    const ignoredFile = path.join(srcDir, 'ignored.js');
+    fs.writeFileSync(ignoredFile, 'ignored');
+
+    const watcher = watch({
+      cwd: dir,
+      input: 'main.js',
+      output: { file: path.join(dir, 'dist', 'main.js') },
+      plugins: [
+        {
+          name: 'test-addWatchGlob-no-rebuild',
+          buildStart() {
+            this.addWatchGlob(path.join(srcDir, '*.txt'));
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    await waitBuildFinished(watcher);
+
+    let rebuildCount = 0;
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_START') rebuildCount++;
+    });
+
+    await editFile(ignoredFile, 'still ignored');
+    // Wait long enough that any spurious rebuild would have already fired
+    await sleep(3000);
+    expect(rebuildCount).toBe(0);
+  },
+);
+
+test.concurrent(
+  'PluginContext addWatchGlob - deleting a matching file triggers rebuild',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('addWatchGlob-delete', retryCount, {
+      'main.js': `console.log(1)`,
+    });
+    const srcDir = path.join(dir, 'src');
+    fs.mkdirSync(srcDir, { recursive: true });
+    const watchedFile = path.join(srcDir, 'data.txt');
+    fs.writeFileSync(watchedFile, 'version=1');
+
+    const watcher = watch({
+      cwd: dir,
+      input: 'main.js',
+      output: { file: path.join(dir, 'dist', 'main.js') },
+      plugins: [
+        {
+          name: 'test-addWatchGlob-delete',
+          buildStart() {
+            this.addWatchGlob(path.join(srcDir, '*.txt'));
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    await waitBuildFinished(watcher);
+
+    let rebuildCount = 0;
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_START') rebuildCount++;
+    });
+
+    await deleteFile(watchedFile);
+    await expect.poll(() => rebuildCount, { timeout: TEST_TIMEOUT }).toBeGreaterThan(0);
+  },
+);
+
 function createTestInputAndOutput(testLabel: string, retryCount: number, content?: string) {
   const uniqueId = crypto.randomUUID().slice(0, 8);
   const dirname = `${testLabel}-${uniqueId}-retry${retryCount}`;

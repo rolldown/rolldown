@@ -59,6 +59,7 @@ impl PluginContext {
         file_emitter: Arc::clone(&ctx.file_emitter),
         options: Arc::clone(&ctx.options),
         watch_files: Arc::clone(&ctx.watch_files),
+        watch_globs: Arc::clone(&ctx.watch_globs),
         module_infos: Arc::clone(&ctx.module_infos),
         tx: Arc::clone(&ctx.tx),
         session: ctx.session.clone(),
@@ -131,6 +132,13 @@ impl PluginContext {
   /// * file - The file to add as a watch dependency. This should be a normalized absolute path.
   pub fn add_watch_file(&self, file: &str) {
     call_native_only!(self, "add_watch_file", ctx => ctx.add_watch_file(file));
+  }
+
+  /// Add a glob pattern to watch.
+  ///
+  /// * glob - The glob pattern to add. This pattern is normalized to absolute at storage time.
+  pub fn add_watch_glob(&self, glob: &str) {
+    call_native_only!(self, "add_watch_glob", ctx => ctx.add_watch_glob(glob));
   }
 
   pub fn meta(&self) -> &PluginContextMeta {

@@ -34,6 +34,7 @@ pub struct PluginDriver {
   hook_orders: PluginHookOrders,
   pub file_emitter: SharedFileEmitter,
   pub watch_files: Arc<FxDashSet<ArcStr>>,
+  pub watch_globs: Arc<FxDashSet<ArcStr>>,
   pub module_infos: SharedModuleInfoDashMap,
   /// Module dependencies tracked during load/transform hooks for HMR invalidation
   pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
@@ -46,6 +47,7 @@ pub struct PluginDriver {
 impl PluginDriver {
   pub fn clear(&self) {
     self.watch_files.clear();
+    self.watch_globs.clear();
     self.module_infos.clear();
     // Note: transform_dependencies is NOT cleared here - it's preserved across incremental builds
     // by BundleFactory which manages its lifecycle (reset on full builds only)

@@ -33,6 +33,11 @@ impl BindingTransformPluginContext {
   }
 
   #[napi]
+  pub fn add_watch_glob(&self, glob: String) {
+    self.inner.add_watch_glob(&glob);
+  }
+
+  #[napi]
   pub fn send_magic_string(
     &self,
     magic_string: &mut BindingMagicString<'static>,

@@ -125,9 +125,22 @@ pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
     .clone()
     .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
   let mem_fs = preload_into_memory_fs(&cwd);
-  let platform = options.platform.unwrap_or(Platform::Browser);
+  // Mirror the normalization in prepare_build_context: derive platform from format,
+  // and add default condition_names for Browser/Node.
+  let format = options.format.unwrap_or(rolldown::OutputFormat::Esm);
+  let platform = options.platform.unwrap_or(match format {
+    rolldown::OutputFormat::Cjs => Platform::Node,
+    rolldown::OutputFormat::Esm
+    | rolldown::OutputFormat::Iife
+    | rolldown::OutputFormat::Umd => Platform::Browser,
+  });
   let tsconfig = options.tsconfig.clone().map(|tc| tc.with_base(&cwd)).unwrap_or_default();
-  let raw_resolve = options.resolve.clone().unwrap_or_default();
+  let mut raw_resolve = options.resolve.clone().unwrap_or_default();
+  if raw_resolve.condition_names.is_none()
+    && matches!(platform, Platform::Browser | Platform::Node)
+  {
+    raw_resolve.condition_names = Some(vec!["module".to_string()]);
+  }
   let factory = BundleFactory::new(BundleFactoryOptions {
     bundler_options: options.clone(),
     plugins: vec![],

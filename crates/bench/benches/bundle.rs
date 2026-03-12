@@ -36,7 +36,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         )
         .iter(|| {
           let mem_fs = ctx.mem_fs.clone();
-          let resolver = ctx.resolver.clone();
+          let resolver = ctx.create_resolver();
           let bundle = ctx.factory.create_bundle_with_fs(mem_fs, resolver);
           async move {
             let result = bundle.generate().await;

@@ -36,7 +36,7 @@ pub struct BundleFactory {
   pub plugin_driver_factory: PluginDriverFactory,
   pub fs: OsFileSystem,
   pub options: SharedOptions,
-  pub resolver: SharedResolver,
+  pub resolver: SharedResolver<OsFileSystem>,
   pub file_emitter: SharedFileEmitter,
   /// Warnings collected during bundle factory creation.
   /// These warnings are transferred to the first created `Bundle` via `create_bundle()` or `create_incremental_bundle()`.

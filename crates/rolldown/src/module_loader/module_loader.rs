@@ -22,7 +22,7 @@ use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableResolveError, consolidate_diagnostics,
 };
-use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
@@ -94,7 +94,7 @@ impl VisitState {
   }
 }
 
-pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static = OsFileSystem> {
+pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   pub shared_context: Arc<TaskContext<Fs>>,
   rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
   remaining: u32,

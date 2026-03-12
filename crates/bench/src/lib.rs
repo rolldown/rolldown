@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use rolldown::{BundleFactory, BundleFactoryOptions, BundlerOptions};
+use rolldown::{BundleFactory, BundleFactoryOptions, BundlerOptions, Platform, ResolveOptions, TsConfig};
 use rolldown_fs::MemoryFileSystem;
 use rolldown_resolver::Resolver;
 use rolldown_workspace::root_dir;
@@ -90,12 +90,28 @@ fn walk_and_load(dir: &Path, fs: &mut MemoryFileSystem) {
   }
 }
 
-/// Precomputed benchmark context: factory, MemoryFileSystem, and resolver.
+/// Precomputed benchmark context: factory, MemoryFileSystem, and resolver config.
 /// Created once per benchmark item (outside the timed loop).
 pub struct BenchContext {
   pub factory: BundleFactory,
   pub mem_fs: MemoryFileSystem,
-  pub resolver: Arc<Resolver<MemoryFileSystem>>,
+  pub cwd: PathBuf,
+  pub platform: Platform,
+  pub tsconfig: TsConfig,
+  pub raw_resolve: ResolveOptions,
+}
+
+impl BenchContext {
+  /// Create a fresh resolver for each benchmark iteration to avoid cache warming bias.
+  pub fn create_resolver(&self) -> Arc<Resolver<MemoryFileSystem>> {
+    Arc::new(Resolver::new(
+      self.mem_fs.clone(),
+      self.cwd.clone(),
+      self.platform,
+      &self.tsconfig,
+      self.raw_resolve.clone(),
+    ))
+  }
 }
 
 /// Create a `BenchContext` for a given set of bundler options.
@@ -107,10 +123,9 @@ pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
     .clone()
     .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
   let mem_fs = preload_into_memory_fs(&cwd);
-  let platform = options.platform.unwrap_or(rolldown::Platform::Browser);
+  let platform = options.platform.unwrap_or(Platform::Browser);
+  let tsconfig = options.tsconfig.clone().map(|tc| tc.with_base(&cwd)).unwrap_or_default();
   let raw_resolve = options.resolve.clone().unwrap_or_default();
-  let resolver =
-    Arc::new(Resolver::new(mem_fs.clone(), cwd, platform, &Default::default(), raw_resolve));
   let factory = BundleFactory::new(BundleFactoryOptions {
     bundler_options: options.clone(),
     plugins: vec![],
@@ -118,5 +133,5 @@ pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
     disable_tracing_setup: true,
   })
   .expect("Failed to create bundle factory");
-  BenchContext { factory, mem_fs, resolver }
+  BenchContext { factory, mem_fs, cwd, platform, tsconfig, raw_resolve }
 }

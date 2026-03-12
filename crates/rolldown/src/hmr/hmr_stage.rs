@@ -15,7 +15,7 @@ use rolldown_common::{
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::BuildResult;
-use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_sourcemap::{Source, SourceJoiner, SourceMapSource};
 #[cfg(not(target_family = "wasm"))]
@@ -34,7 +34,7 @@ use crate::{
   utils::process_code_and_sourcemap::process_code_and_sourcemap,
 };
 
-pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static = OsFileSystem> {
+pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
   pub options: SharedOptions,
   pub fs: Fs,
   pub resolver: SharedResolver<Fs>,
@@ -53,7 +53,7 @@ impl<Fs: FileSystem + Clone + 'static> HmrStageInput<'_, Fs> {
   }
 }
 
-pub struct HmrStage<'a, Fs: FileSystem + Clone + 'static = OsFileSystem> {
+pub struct HmrStage<'a, Fs: FileSystem + Clone + 'static> {
   pub(crate) input: HmrStageInput<'a, Fs>,
 }
 

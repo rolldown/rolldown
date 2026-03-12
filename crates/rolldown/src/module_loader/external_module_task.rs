@@ -9,14 +9,14 @@ use rolldown_error::BuildResult;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 use sugar_path::SugarPath;
 
-use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_fs::FileSystem;
 
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 
 use super::task_context::TaskContext;
 
 #[expect(clippy::rc_buffer)]
-pub struct ExternalModuleTask<Fs: FileSystem = OsFileSystem> {
+pub struct ExternalModuleTask<Fs: FileSystem> {
   ctx: Arc<TaskContext<Fs>>,
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,

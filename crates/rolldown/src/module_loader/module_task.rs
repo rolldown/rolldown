@@ -15,7 +15,7 @@ use rolldown_error::{
 use rolldown_std_utils::PathExt as _;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
-use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_fs::FileSystem;
 
 use crate::{
   ecmascript::ecma_module_view_factory::{CreateEcmaViewReturn, create_ecma_view},
@@ -41,7 +41,7 @@ impl ModuleTaskOwner {
   }
 }
 
-pub struct ModuleTask<Fs: FileSystem + Clone + 'static = OsFileSystem> {
+pub struct ModuleTask<Fs: FileSystem + Clone + 'static> {
   ctx: Arc<TaskContext<Fs>>,
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,

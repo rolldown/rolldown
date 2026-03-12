@@ -25,6 +25,8 @@ use crate::{
   utils::tweak_ast_for_scanning::PreProcessor,
 };
 
+use rolldown_fs::FileSystem;
+
 use super::resolve_utils::resolve_dependencies;
 use super::task_context::TaskContext;
 
@@ -41,16 +43,16 @@ fn get_runtime_js_with_node_platform() -> String {
   concat_string!(RUNTIME_HEAD_NODE_JS, RUNTIME_BASE_JS, RUNTIME_TAIL_NODE_JS)
 }
 
-pub struct RuntimeModuleTask {
+pub struct RuntimeModuleTask<Fs: FileSystem + Clone + 'static> {
   module_idx: ModuleIdx,
-  ctx: Arc<TaskContext>,
+  ctx: Arc<TaskContext<Fs>>,
   flat_options: FlatOptions,
 }
 
-impl RuntimeModuleTask {
+impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
   pub fn new(
     module_idx: ModuleIdx,
-    shared_context: Arc<TaskContext>,
+    shared_context: Arc<TaskContext<Fs>>,
     flat_options: FlatOptions,
   ) -> Self {
     Self { module_idx, ctx: shared_context, flat_options }

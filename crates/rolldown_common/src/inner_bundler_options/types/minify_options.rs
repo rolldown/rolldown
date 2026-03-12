@@ -90,12 +90,12 @@ pub struct RawMinifyOptionsDetailed {
 }
 
 impl RawMinifyOptions {
-  /// Returns `true` if the minify options is [`Enabled`].
-  ///
-  /// [`Enabled`]: RawMinifyOptions::Object
+  /// Returns `true` only for full minification modes (`Bool(true)` or `Object`).
+  /// `DeadCodeEliminationOnly` is not considered production since it only performs DCE.
   #[must_use]
-  pub fn is_enabled(&self) -> bool {
-    !matches!(self, Self::Bool(false))
+  #[inline]
+  pub fn is_production(&self) -> bool {
+    matches!(self, Self::Bool(true) | Self::Object(_))
   }
 }
 

@@ -15,6 +15,8 @@ use rolldown_error::{
 use rolldown_std_utils::PathExt as _;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
+use rolldown_fs::FileSystem;
+
 use crate::{
   ecmascript::ecma_module_view_factory::{CreateEcmaViewReturn, create_ecma_view},
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
@@ -39,8 +41,8 @@ impl ModuleTaskOwner {
   }
 }
 
-pub struct ModuleTask {
-  ctx: Arc<TaskContext>,
+pub struct ModuleTask<Fs: FileSystem + Clone + 'static> {
+  ctx: Arc<TaskContext<Fs>>,
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,
   owner: Option<ModuleTaskOwner>,
@@ -51,10 +53,10 @@ pub struct ModuleTask {
   magic_string_tx: Option<std::sync::Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
 }
 
-impl ModuleTask {
+impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
   #[expect(clippy::too_many_arguments)]
   pub fn new(
-    ctx: Arc<TaskContext>,
+    ctx: Arc<TaskContext<Fs>>,
     idx: ModuleIdx,
     resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,

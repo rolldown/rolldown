@@ -33,6 +33,10 @@ impl MemoryFileSystem {
   }
 
   pub fn add_file(&mut self, path: &Path, content: &str) {
+    self.add_file_bytes(path, content.as_bytes());
+  }
+
+  pub fn add_file_bytes(&mut self, path: &Path, content: &[u8]) {
     let fs = &mut self.fs;
     // Create all parent directories
     for path in path.ancestors().collect::<Vec<_>>().iter().rev() {
@@ -43,7 +47,7 @@ impl MemoryFileSystem {
     }
     // Create file
     let mut file = fs.create_file(path.to_string_lossy().as_ref()).unwrap();
-    file.write_all(content.as_bytes()).unwrap();
+    file.write_all(content).unwrap();
   }
 }
 

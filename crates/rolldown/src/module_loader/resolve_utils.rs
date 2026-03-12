@@ -10,6 +10,7 @@ use rolldown_common::{
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableArcstr, DiagnosticOptions, EventKind,
 };
+use rolldown_fs::FileSystem;
 use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::ecmascript::{self};
@@ -18,9 +19,9 @@ use rustc_hash::FxHashMap;
 use crate::{SharedOptions, SharedResolver};
 
 #[tracing::instrument(skip_all, fields(CONTEXT_hook_resolve_id_trigger = "automatic"))]
-pub async fn resolve_id(
+pub async fn resolve_id<Fs: FileSystem>(
   bundle_options: &NormalizedBundlerOptions,
-  resolver: &Resolver,
+  resolver: &Resolver<Fs>,
   plugin_driver: &PluginDriver,
   importer: &str,
   specifier: &str,
@@ -51,10 +52,10 @@ pub async fn resolve_id(
 }
 
 #[expect(clippy::too_many_arguments)]
-pub async fn resolve_dependencies(
+pub async fn resolve_dependencies<Fs: FileSystem>(
   self_resolved_id: &ResolvedId,
   options: &SharedOptions,
-  resolver: &SharedResolver,
+  resolver: &SharedResolver<Fs>,
   plugin_driver: &SharedPluginDriver,
   dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
   source: ArcStr,

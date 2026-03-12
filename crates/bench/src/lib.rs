@@ -83,10 +83,10 @@ fn walk_and_load(dir: &Path, fs: &mut MemoryFileSystem) {
     let path = entry.path();
     if path.is_dir() {
       walk_and_load(&path, fs);
-    } else if path.is_file() {
-      if let Ok(content) = std::fs::read(&path) {
-        fs.add_file_bytes(&path, &content);
-      }
+    } else if path.is_file()
+      && let Ok(content) = std::fs::read(&path)
+    {
+      fs.add_file_bytes(&path, &content);
     }
   }
 }

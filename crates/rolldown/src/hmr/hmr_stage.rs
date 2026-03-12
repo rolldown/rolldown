@@ -15,7 +15,7 @@ use rolldown_common::{
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::BuildResult;
-use rolldown_fs::OsFileSystem;
+use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_sourcemap::{Source, SourceJoiner, SourceMapSource};
 #[cfg(not(target_family = "wasm"))]
@@ -34,16 +34,16 @@ use crate::{
   utils::process_code_and_sourcemap::process_code_and_sourcemap,
 };
 
-pub struct HmrStageInput<'a> {
+pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
   pub options: SharedOptions,
-  pub fs: OsFileSystem,
-  pub resolver: SharedResolver,
+  pub fs: Fs,
+  pub resolver: SharedResolver<Fs>,
   pub plugin_driver: SharedPluginDriver,
   pub cache: &'a mut ScanStageCache,
   pub next_hmr_patch_id: Arc<AtomicU32>,
 }
 
-impl HmrStageInput<'_> {
+impl<Fs: FileSystem + Clone + 'static> HmrStageInput<'_, Fs> {
   pub fn module_table(&self) -> &ModuleTable {
     &self.cache.get_snapshot().module_table
   }
@@ -53,26 +53,26 @@ impl HmrStageInput<'_> {
   }
 }
 
-pub struct HmrStage<'a> {
-  pub(crate) input: HmrStageInput<'a>,
+pub struct HmrStage<'a, Fs: FileSystem + Clone + 'static> {
+  pub(crate) input: HmrStageInput<'a, Fs>,
 }
 
-impl<'a> Deref for HmrStage<'a> {
-  type Target = HmrStageInput<'a>;
+impl<'a, Fs: FileSystem + Clone + 'static> Deref for HmrStage<'a, Fs> {
+  type Target = HmrStageInput<'a, Fs>;
 
   fn deref(&self) -> &Self::Target {
     &self.input
   }
 }
 
-impl DerefMut for HmrStage<'_> {
+impl<Fs: FileSystem + Clone + 'static> DerefMut for HmrStage<'_, Fs> {
   fn deref_mut(&mut self) -> &mut Self::Target {
     &mut self.input
   }
 }
 
-impl<'a> HmrStage<'a> {
-  pub fn new(input: HmrStageInput<'a>) -> Self {
+impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
+  pub fn new(input: HmrStageInput<'a, Fs>) -> Self {
     Self { input }
   }
 
@@ -1234,7 +1234,7 @@ struct ModuleRenderInput {
   pub ecma_ast: EcmaAst,
 }
 
-impl HmrStage<'_> {
+impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
   fn collect_sync_dependencies_for_client(
     &self,
     proxy_entry_idx: ModuleIdx,

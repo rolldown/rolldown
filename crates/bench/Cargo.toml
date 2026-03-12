@@ -16,6 +16,8 @@ test = false
 
 [dependencies]
 rolldown = { workspace = true, features = ["experimental"] }
+rolldown_fs = { workspace = true, features = ["memory"] }
+rolldown_resolver = { workspace = true }
 rolldown_workspace = { workspace = true }
 
 [[bench]]

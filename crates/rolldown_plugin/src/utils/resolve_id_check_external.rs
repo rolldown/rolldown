@@ -8,6 +8,7 @@ use rolldown_common::{
   ImportKind, MakeAbsoluteExternalsRelative, ModuleId, NormalizedBundlerOptions, ResolvedExternal,
   ResolvedId,
 };
+use rolldown_fs::FileSystem;
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dataurl::is_data_url;
 use std::{path::Path, sync::Arc};
@@ -16,8 +17,8 @@ use sugar_path::SugarPath;
 use crate::__inner::resolve_id_with_plugins;
 
 #[expect(clippy::too_many_arguments)]
-pub async fn resolve_id_check_external(
-  resolver: &Resolver,
+pub async fn resolve_id_check_external<Fs: FileSystem>(
+  resolver: &Resolver<Fs>,
   plugin_driver: &PluginDriver,
   specifier: &str,
   importer: Option<&str>,

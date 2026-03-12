@@ -20,7 +20,7 @@ use crate::{SharedResolver, utils::determine_minify_internal_exports_default};
 
 pub struct PrepareBuildContext {
   pub fs: OsFileSystem,
-  pub resolver: SharedResolver,
+  pub resolver: SharedResolver<OsFileSystem>,
   pub options: Arc<NormalizedBundlerOptions>,
   pub warnings: Vec<BuildDiagnostic>,
 }

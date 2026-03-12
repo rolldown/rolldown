@@ -1,4 +1,4 @@
-use bench::{DeriveOptions, derive_benchmark_items};
+use bench::{DeriveOptions, create_bench_context, derive_benchmark_items};
 use criterion::{Criterion, criterion_group, criterion_main};
 
 use rolldown_common::BundlerOptions;
@@ -20,6 +20,8 @@ fn criterion_benchmark(c: &mut Criterion) {
     .into_iter()
     .flat_map(|(name, options)| derive_benchmark_items(&derive_options, name, options))
     .for_each(|item| {
+      let mut ctx = create_bench_context(&item.options);
+
       group.bench_function(format!("scan@{}", item.name), move |b| {
         b.to_async(
           tokio::runtime::Builder::new_multi_thread()
@@ -29,10 +31,13 @@ fn criterion_benchmark(c: &mut Criterion) {
             .build()
             .unwrap(),
         )
-        .iter(|| async {
-          let mut rolldown_bundler =
-            rolldown::Bundler::new(item.options.clone()).expect("Failed to create bundler");
-          rolldown_bundler.scan().await.expect("should not failed in scan");
+        .iter(|| {
+          let mem_fs = ctx.mem_fs.clone();
+          let resolver = ctx.create_resolver();
+          let bundle = ctx.factory.create_bundle_with_fs(mem_fs, resolver);
+          async move {
+            bundle.scan().await.expect("should not fail in scan");
+          }
         });
       });
     });

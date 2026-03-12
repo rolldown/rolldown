@@ -96,10 +96,10 @@ pub fn preload_into_memory_fs(dir: &Path) -> MemoryFileSystem {
     .flatten()
   {
     let path = entry.path();
-    if path.is_file() {
-      if let Ok(content) = std::fs::read(path) {
-        fs.add_file_bytes(path, &content);
-      }
+    if path.is_file()
+      && let Ok(content) = std::fs::read(path)
+    {
+      fs.add_file_bytes(path, &content);
     }
   }
   fs

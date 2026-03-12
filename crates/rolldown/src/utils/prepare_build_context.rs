@@ -163,7 +163,7 @@ pub fn prepare_build_context(
 
   let mut raw_define = raw_options.define.unwrap_or_default();
   if matches!(platform, Platform::Browser) && !raw_define.contains_key("process.env.NODE_ENV") {
-    if raw_minify.is_enabled() {
+    if raw_minify.is_production() {
       raw_define.insert("process.env.NODE_ENV".to_string(), "'production'".to_string());
     } else {
       raw_define.insert("process.env.NODE_ENV".to_string(), "'development'".to_string());

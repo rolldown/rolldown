@@ -9,7 +9,6 @@ use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, Si
 use rustc_hash::FxHashSet;
 
 mod bundler_ctx;
-mod utils;
 
 pub use bundler_ctx::BundlerSideEffectCtx;
 
@@ -163,33 +162,13 @@ impl<'a> SideEffectDetector<'a> {
     manual_pure_functions.contains(first_part)
   }
 
-  #[expect(clippy::too_many_lines)]
   fn detect_side_effect_of_expr(&self, expr: &Expression) -> SideEffectDetail {
     match expr {
-      Expression::BooleanLiteral(_)
-      | Expression::NullLiteral(_)
-      | Expression::NumericLiteral(_)
-      | Expression::BigIntLiteral(_)
-      | Expression::RegExpLiteral(_)
-      | Expression::FunctionExpression(_)
-      | Expression::ArrowFunctionExpression(_)
-      | Expression::MetaProperty(_)
-      | Expression::ThisExpression(_)
-      | Expression::Super(_)
-      | Expression::StringLiteral(_) => {
-        debug_assert!(
-          !expr.may_have_side_effects(&self.ctx),
-          "Oxc disagrees: leaf expression should be side-effect-free"
-        );
-        false.into()
-      }
-      Expression::ObjectExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
-      Expression::UnaryExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
+      // --- Bundler-specific overrides (metadata or custom logic) ---
       oxc::ast::match_member_expression!(Expression) => {
         let member_expr = expr.to_member_expression();
         let (is_global, is_import_meta) = self.member_expr_chain_root_info(member_expr);
-        // `import.meta` is a spec-defined ordinary object with null prototype.
-        // Property reads on it are always side-effect-free.
+        // Bundler override: import.meta property reads are always side-effect-free.
         if is_import_meta {
           return false.into();
         }
@@ -198,30 +177,7 @@ impl<'a> SideEffectDetector<'a> {
         detail.set(SideEffectDetail::GlobalVarAccess, is_global);
         detail
       }
-      Expression::ClassExpression(cls) => cls.may_have_side_effects(&self.ctx).into(),
-      // Accessing global variables considered as side effect.
       Expression::Identifier(ident) => self.detect_side_effect_of_identifier(ident),
-      Expression::TemplateLiteral(_) => expr.may_have_side_effects(&self.ctx).into(),
-      Expression::LogicalExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
-      Expression::ParenthesizedExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
-      Expression::SequenceExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
-      Expression::ConditionalExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
-      // Untranspiled TS/JSX syntax should be caught during scan stage.
-      // Conservatively treat as side-effectful since they should not appear here.
-      Expression::TSAsExpression(_)
-      | Expression::TSSatisfiesExpression(_)
-      | Expression::TSTypeAssertion(_)
-      | Expression::TSNonNullExpression(_)
-      | Expression::TSInstantiationExpression(_)
-      | Expression::JSXElement(_)
-      | Expression::JSXFragment(_)
-      // Inherently side-effectful expressions.
-      | Expression::AwaitExpression(_)
-      | Expression::ImportExpression(_)
-      | Expression::YieldExpression(_)
-      | Expression::V8IntrinsicExpression(_) => true.into(),
-      Expression::BinaryExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
-      Expression::PrivateInExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
       Expression::AssignmentExpression(assign_expr) => {
         let detail = self.detect_side_effect_of_assignment_target(&assign_expr.left)
           | self.detect_side_effect_of_expr(&assign_expr.right);
@@ -268,9 +224,6 @@ impl<'a> SideEffectDetector<'a> {
         };
         detail
       }
-      Expression::TaggedTemplateExpression(expr) => {
-        expr.may_have_side_effects(&self.ctx).into()
-      }
       Expression::UpdateExpression(update_expr) => {
         let has_side_effect = expr.may_have_side_effects(&self.ctx);
         if has_side_effect {
@@ -289,7 +242,6 @@ impl<'a> SideEffectDetector<'a> {
           _ => unreachable!("Oxc returned no side effects, so argument must be a member expression"),
         }
       }
-      Expression::ArrayExpression(_) => expr.may_have_side_effects(&self.ctx).into(),
       Expression::NewExpression(expr) => {
         let has_side_effect = expr.may_have_side_effects(&self.ctx);
 
@@ -320,6 +272,11 @@ impl<'a> SideEffectDetector<'a> {
         detail
       }
       Expression::CallExpression(expr) => self.detect_side_effect_of_call_expr(expr),
+      // Everything else: delegate entirely to Oxc.
+      // This covers literals, object/array/class expressions, unary/binary/logical/
+      // conditional/sequence/template/tagged-template/parenthesized expressions,
+      // TS/JSX syntax, await/import/yield, and any future expression types.
+      _ => expr.may_have_side_effects(&self.ctx).into(),
     }
   }
 

@@ -7,7 +7,6 @@ pub mod dataurl;
 pub mod debug;
 pub mod ecmascript;
 pub mod futures;
-pub mod global_reference;
 pub mod index_bitset;
 pub mod indexmap;
 pub mod light_guess;

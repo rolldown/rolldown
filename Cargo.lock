@@ -3670,7 +3670,6 @@ dependencies = [
  "nom",
  "oxc",
  "oxc_index",
- "phf",
  "rayon",
  "regex",
  "regress",

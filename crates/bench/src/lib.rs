@@ -109,13 +109,8 @@ pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
   let mem_fs = preload_into_memory_fs(&cwd);
   let platform = options.platform.unwrap_or(rolldown::Platform::Browser);
   let raw_resolve = options.resolve.clone().unwrap_or_default();
-  let resolver = Arc::new(Resolver::new(
-    mem_fs.clone(),
-    cwd,
-    platform,
-    &Default::default(),
-    raw_resolve,
-  ));
+  let resolver =
+    Arc::new(Resolver::new(mem_fs.clone(), cwd, platform, &Default::default(), raw_resolve));
   let factory = BundleFactory::new(BundleFactoryOptions {
     bundler_options: options.clone(),
     plugins: vec![],

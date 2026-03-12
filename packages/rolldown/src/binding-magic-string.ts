@@ -25,5 +25,4 @@ type RolldownMagicStringConstructor = Omit<typeof NativeBindingMagicString, 'pro
  *
  * @experimental
  */
-export const RolldownMagicString =
-  NativeBindingMagicString as RolldownMagicStringConstructor;
+export const RolldownMagicString = NativeBindingMagicString as RolldownMagicStringConstructor;

@@ -151,11 +151,10 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn is_expr_manual_pure_functions(&self, expr: &'a Expression) -> bool {
-    if self.ctx.flat_options.is_manual_pure_functions_empty() {
+    let Some(manual_pure_functions) = self.ctx.options.treeshake.manual_pure_functions() else {
+      debug_assert!(self.ctx.flat_options.is_manual_pure_functions_empty());
       return false;
-    }
-    // `is_manual_pure_functions_empty` is false, so `manual_pure_functions` is `Some`.
-    let manual_pure_functions = self.ctx.options.treeshake.manual_pure_functions().unwrap();
+    };
     let Some(first_part) = extract_first_part_of_member_expr_like(expr) else {
       return false;
     };

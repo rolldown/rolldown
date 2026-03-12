@@ -87,7 +87,14 @@ pub fn derive_benchmark_items(
 /// This is used in benchmarks to eliminate disk I/O from the timed section.
 pub fn preload_into_memory_fs(dir: &Path) -> MemoryFileSystem {
   let mut fs = MemoryFileSystem::default();
-  for entry in ignore::WalkBuilder::new(dir).ignore(false).git_ignore(false).git_global(false).git_exclude(false).build().flatten() {
+  for entry in ignore::WalkBuilder::new(dir)
+    .ignore(false)
+    .git_ignore(false)
+    .git_global(false)
+    .git_exclude(false)
+    .build()
+    .flatten()
+  {
     let path = entry.path();
     if path.is_file() {
       if let Ok(content) = std::fs::read(path) {

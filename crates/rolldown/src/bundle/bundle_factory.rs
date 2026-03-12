@@ -111,8 +111,6 @@ impl BundleFactory {
     bundle_mode: BundleMode,
     cache: Option<ScanStageCache>,
   ) -> BuildResult<Bundle<OsFileSystem>> {
-    let bundle_span = self.generate_unique_bundle_span();
-
     let cache = if bundle_mode.is_incremental() {
       if let Some(cache) = cache {
         cache
@@ -132,42 +130,29 @@ impl BundleFactory {
       // Also reset transform dependencies for full builds
       self.transform_dependencies_for_incremental_build = Arc::default();
     }
-    let module_infos = Arc::clone(&self.module_infos_for_incremental_build);
-    let transform_dependencies = Arc::clone(&self.transform_dependencies_for_incremental_build);
 
-    let plugin_driver = self.plugin_driver_factory.create_plugin_driver(
-      &self.file_emitter,
-      &self.options,
-      &self.session,
-      &bundle_span,
-      module_infos,
-      transform_dependencies,
-    );
-    let bundle = Bundle {
-      fs: self.fs.clone(),
-      options: Arc::clone(&self.options),
-      resolver: Arc::clone(&self.resolver),
-      file_emitter: Arc::clone(&self.file_emitter),
-      plugin_driver,
-      warnings: std::mem::take(&mut self.warnings),
-      bundle_span,
-      cache,
-    };
-    self.last_bundle_handle = Some(bundle.context());
-    Ok(bundle)
+    self.build_bundle(self.fs.clone(), Arc::clone(&self.resolver), cache)
   }
 
   /// Create a bundle with a custom filesystem and resolver.
-  /// This is useful for benchmarks that want to use an in-memory filesystem.
+  /// This always performs a full build (no incremental cache).
   pub fn create_bundle_with_fs<Fs: FileSystem + Clone + 'static>(
     &mut self,
     fs: Fs,
     resolver: SharedResolver<Fs>,
   ) -> BuildResult<Bundle<Fs>> {
-    let bundle_span = self.generate_unique_bundle_span();
-
     self.module_infos_for_incremental_build = Arc::default();
     self.transform_dependencies_for_incremental_build = Arc::default();
+    self.build_bundle(fs, resolver, ScanStageCache::default())
+  }
+
+  fn build_bundle<Fs: FileSystem + Clone + 'static>(
+    &mut self,
+    fs: Fs,
+    resolver: SharedResolver<Fs>,
+    cache: ScanStageCache,
+  ) -> BuildResult<Bundle<Fs>> {
+    let bundle_span = self.generate_unique_bundle_span();
     let module_infos = Arc::clone(&self.module_infos_for_incremental_build);
     let transform_dependencies = Arc::clone(&self.transform_dependencies_for_incremental_build);
 
@@ -187,7 +172,7 @@ impl BundleFactory {
       plugin_driver,
       warnings: std::mem::take(&mut self.warnings),
       bundle_span,
-      cache: ScanStageCache::default(),
+      cache,
     };
     self.last_bundle_handle = Some(bundle.context());
     Ok(bundle)

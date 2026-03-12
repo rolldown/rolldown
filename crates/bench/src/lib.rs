@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use rolldown::BundlerOptions;
+use rolldown::{BundleFactory, BundleFactoryOptions, BundlerOptions};
 use rolldown_fs::MemoryFileSystem;
 use rolldown_resolver::Resolver;
 use rolldown_workspace::root_dir;
@@ -82,6 +82,7 @@ fn walk_and_load(dir: &Path, fs: &mut MemoryFileSystem) {
     if path.is_dir() {
       walk_and_load(&path, fs);
     } else if path.is_file() {
+      // MemoryFileSystem only supports UTF-8 content; binary files are skipped.
       if let Ok(content) = std::fs::read_to_string(&path) {
         fs.add_file(&path, &content);
       }
@@ -89,10 +90,18 @@ fn walk_and_load(dir: &Path, fs: &mut MemoryFileSystem) {
   }
 }
 
-/// Create a `MemoryFileSystem` and `Resolver` pair for benchmarking.
-pub fn create_mem_fs_and_resolver(
-  options: &BundlerOptions,
-) -> (MemoryFileSystem, Arc<Resolver<MemoryFileSystem>>) {
+/// Precomputed benchmark context: factory, MemoryFileSystem, and resolver.
+/// Created once per benchmark item (outside the timed loop).
+pub struct BenchContext {
+  pub factory: BundleFactory,
+  pub mem_fs: MemoryFileSystem,
+  pub resolver: Arc<Resolver<MemoryFileSystem>>,
+}
+
+/// Create a `BenchContext` for a given set of bundler options.
+/// This performs all one-time setup (option normalization, FS preloading, resolver creation)
+/// so the timed loop only measures bundling work.
+pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
   let cwd = options
     .cwd
     .clone()
@@ -100,7 +109,19 @@ pub fn create_mem_fs_and_resolver(
   let mem_fs = preload_into_memory_fs(&cwd);
   let platform = options.platform.unwrap_or(rolldown::Platform::Browser);
   let raw_resolve = options.resolve.clone().unwrap_or_default();
-  let resolver =
-    Arc::new(Resolver::new(mem_fs.clone(), cwd, platform, &Default::default(), raw_resolve));
-  (mem_fs, resolver)
+  let resolver = Arc::new(Resolver::new(
+    mem_fs.clone(),
+    cwd,
+    platform,
+    &Default::default(),
+    raw_resolve,
+  ));
+  let factory = BundleFactory::new(BundleFactoryOptions {
+    bundler_options: options.clone(),
+    plugins: vec![],
+    session: None,
+    disable_tracing_setup: true,
+  })
+  .expect("Failed to create bundle factory");
+  BenchContext { factory, mem_fs, resolver }
 }

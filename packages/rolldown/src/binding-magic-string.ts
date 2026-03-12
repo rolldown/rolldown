@@ -11,20 +11,18 @@ Object.defineProperty(NativeBindingMagicString.prototype, 'isRolldownMagicString
   configurable: false,
 });
 
-export interface BindingMagicString extends NativeBindingMagicString {
+export interface RolldownMagicString extends NativeBindingMagicString {
   readonly isRolldownMagicString: true;
 }
 
-type BindingMagicStringConstructor = Omit<typeof NativeBindingMagicString, 'prototype'> & {
-  new (...args: ConstructorParameters<typeof NativeBindingMagicString>): BindingMagicString;
-  prototype: BindingMagicString;
+type RolldownMagicStringConstructor = Omit<typeof NativeBindingMagicString, 'prototype'> & {
+  new (...args: ConstructorParameters<typeof NativeBindingMagicString>): RolldownMagicString;
+  prototype: RolldownMagicString;
 };
 
 /**
  * A native MagicString implementation powered by Rust.
  *
- * Publicly exported as {@linkcode RolldownMagicString}.
- *
  * @experimental
  */
-export const BindingMagicString = NativeBindingMagicString as BindingMagicStringConstructor;
+export const RolldownMagicString = NativeBindingMagicString as RolldownMagicStringConstructor;

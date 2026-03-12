@@ -84,9 +84,8 @@ fn walk_and_load(dir: &Path, fs: &mut MemoryFileSystem) {
     if path.is_dir() {
       walk_and_load(&path, fs);
     } else if path.is_file() {
-      // MemoryFileSystem only supports UTF-8 content; binary files are skipped.
-      if let Ok(content) = std::fs::read_to_string(&path) {
-        fs.add_file(&path, &content);
+      if let Ok(content) = std::fs::read(&path) {
+        fs.add_file_bytes(&path, &content);
       }
     }
   }

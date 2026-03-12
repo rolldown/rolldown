@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use rolldown::{BundleFactory, BundleFactoryOptions, BundlerOptions, Platform, ResolveOptions, TsConfig};
+use rolldown::{
+  BundleFactory, BundleFactoryOptions, BundlerOptions, Platform, ResolveOptions, TsConfig,
+};
 use rolldown_fs::MemoryFileSystem;
 use rolldown_resolver::Resolver;
 use rolldown_workspace::root_dir;

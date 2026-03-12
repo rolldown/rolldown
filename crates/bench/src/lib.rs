@@ -1,15 +1,32 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use criterion::Criterion;
 use rolldown::{
-  BundleFactory, BundleFactoryOptions, BundlerOptions, Platform, ResolveOptions, TsConfig,
+  BundleFactory, BundleFactoryOptions, BundlerOptions, InputItem, Platform, ResolveOptions,
+  TsConfig,
 };
 use rolldown_fs::MemoryFileSystem;
 use rolldown_resolver::Resolver;
 use rolldown_workspace::root_dir;
 
-pub fn join_by_workspace_root(path: &str) -> PathBuf {
-  root_dir().join(path)
+pub fn bench_preset(name: &str, bench_dir: &str, entry: &str) -> BundlerOptions {
+  let dir = root_dir().join(bench_dir);
+  BundlerOptions {
+    input: Some(vec![InputItem {
+      name: Some(name.to_string()),
+      import: dir.join(entry).to_str().unwrap().to_string(),
+    }]),
+    cwd: Some(dir),
+    ..Default::default()
+  }
+}
+
+pub fn rome_ts_preset() -> BundlerOptions {
+  let mut opts = bench_preset("rome-ts", "tmp/bench/rome", "src/entry.ts");
+  opts.shim_missing_exports = Some(true);
+  opts.tsconfig = Some(TsConfig::Manual(root_dir().join("tmp/bench/rome/src/tsconfig.json")));
+  opts
 }
 
 pub struct BenchItem {
@@ -70,25 +87,15 @@ pub fn derive_benchmark_items(
 /// This is used in benchmarks to eliminate disk I/O from the timed section.
 pub fn preload_into_memory_fs(dir: &Path) -> MemoryFileSystem {
   let mut fs = MemoryFileSystem::default();
-  walk_and_load(dir, &mut fs);
-  fs
-}
-
-fn walk_and_load(dir: &Path, fs: &mut MemoryFileSystem) {
-  let entries = match std::fs::read_dir(dir) {
-    Ok(entries) => entries,
-    Err(_) => return,
-  };
-  for entry in entries.flatten() {
+  for entry in ignore::WalkBuilder::new(dir).build().flatten() {
     let path = entry.path();
-    if path.is_dir() {
-      walk_and_load(&path, fs);
-    } else if path.is_file()
-      && let Ok(content) = std::fs::read(&path)
-    {
-      fs.add_file_bytes(&path, &content);
+    if path.is_file() {
+      if let Ok(content) = std::fs::read(path) {
+        fs.add_file_bytes(path, &content);
+      }
     }
   }
+  fs
 }
 
 /// Precomputed benchmark context: factory, MemoryFileSystem, and resolver config.
@@ -147,4 +154,47 @@ pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
   })
   .expect("Failed to create bundle factory");
   BenchContext { factory, mem_fs, cwd, platform, tsconfig, raw_resolve }
+}
+
+#[derive(Clone, Copy)]
+pub enum BenchMode {
+  Scan,
+  Bundle,
+}
+
+pub fn run_bench_group(
+  c: &mut Criterion,
+  group_name: &str,
+  mode: BenchMode,
+  derive_options: &DeriveOptions,
+  items: Vec<(&str, BundlerOptions)>,
+) {
+  let mut group = c.benchmark_group(group_name);
+  let runtime = tokio::runtime::Builder::new_multi_thread()
+    .worker_threads(8)
+    .enable_all()
+    .max_blocking_threads(4)
+    .build()
+    .expect("Failed to build tokio runtime");
+
+  for (name, options) in items {
+    for item in derive_benchmark_items(derive_options, name, options) {
+      let mut ctx = create_bench_context(&item.options);
+      group.bench_function(format!("{group_name}@{}", item.name), |b| {
+        b.to_async(&runtime).iter(|| {
+          let bundle = ctx.factory.create_bundle_with_fs(ctx.mem_fs.clone(), ctx.create_resolver());
+          async {
+            match mode {
+              BenchMode::Scan => {
+                bundle.scan().await.expect("Failed to scan");
+              }
+              BenchMode::Bundle => {
+                bundle.generate().await.expect("Failed to bundle");
+              }
+            }
+          }
+        });
+      });
+    }
+  }
 }

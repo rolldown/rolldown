@@ -1,46 +1,19 @@
-use bench::{DeriveOptions, create_bench_context, derive_benchmark_items};
+use bench::{BenchMode, DeriveOptions, bench_preset, rome_ts_preset, run_bench_group};
 use criterion::{Criterion, criterion_group, criterion_main};
-
-use rolldown_common::BundlerOptions;
-use rolldown_testing::bundler_options_presets::{rome_ts, threejs};
+use rolldown::BundlerOptions;
 
 fn items() -> Vec<(&'static str, BundlerOptions)> {
   vec![
-    ("threejs", threejs()),
-    ("rome_ts", rome_ts()),
+    ("threejs", bench_preset("threejs", "tmp/bench/three", "entry.js")),
+    ("rome_ts", rome_ts_preset()),
     #[cfg(not(feature = "codspeed"))]
-    ("threejs10x", rolldown_testing::bundler_options_presets::threejs10x()),
+    ("threejs10x", bench_preset("threejs", "tmp/bench/three10x", "entry.js")),
   ]
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  let mut group = c.benchmark_group("scan");
   let derive_options = DeriveOptions { sourcemap: false, minify: false };
-  items()
-    .into_iter()
-    .flat_map(|(name, options)| derive_benchmark_items(&derive_options, name, options))
-    .for_each(|item| {
-      let mut ctx = create_bench_context(&item.options);
-
-      group.bench_function(format!("scan@{}", item.name), move |b| {
-        b.to_async(
-          tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(8)
-            .enable_all()
-            .max_blocking_threads(4)
-            .build()
-            .unwrap(),
-        )
-        .iter(|| {
-          let mem_fs = ctx.mem_fs.clone();
-          let resolver = ctx.create_resolver();
-          let bundle = ctx.factory.create_bundle_with_fs(mem_fs, resolver);
-          async move {
-            bundle.scan().await.expect("should not fail in scan");
-          }
-        });
-      });
-    });
+  run_bench_group(c, "scan", BenchMode::Scan, &derive_options, items());
 }
 
 criterion_group!(benches, criterion_benchmark);

@@ -149,12 +149,12 @@ name = "bench"
 version = "0.1.0"
 dependencies = [
  "criterion2",
+ "ignore",
  "rolldown",
- "rolldown_common",
  "rolldown_fs",
  "rolldown_resolver",
- "rolldown_testing",
  "rolldown_workspace",
+ "rustc-hash",
  "tokio",
 ]
 

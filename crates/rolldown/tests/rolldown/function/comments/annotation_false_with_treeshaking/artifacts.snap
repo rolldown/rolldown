@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region icons.js
+const AIcon = window.bar(function() {
+	return 1;
+});
+//#endregion
+//#region main.js
+console.log(AIcon);
+//#endregion
+
+```
+
+# Variant: [comments: true]
+
+## Assets
+
+### main.js
+
+```js
+//#region icons.js
+const AIcon = /* @__PURE__ */ window.bar(function() {
+	return 1;
+});
+//#endregion
+//#region main.js
+console.log(AIcon);
+//#endregion
+
+```

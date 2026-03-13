@@ -1,7 +1,7 @@
 use rolldown_common::{
-  AddonOutputOption, BundlerOptions, CodeSplittingMode, ExperimentalOptions, InlineConstOption,
-  OptimizationOption, OutputExports, OutputFormat, PreserveEntrySignatures, StrictMode,
-  TreeshakeOptions, deserialize_inline_const,
+  AddonOutputOption, BundlerOptions, CodeSplittingMode, CommentsOptions, ExperimentalOptions,
+  InlineConstOption, OptimizationOption, OutputExports, OutputFormat, PreserveEntrySignatures,
+  StrictMode, TreeshakeOptions, deserialize_inline_const,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -35,6 +35,7 @@ pub struct ConfigVariant {
   pub footer: Option<String>,
   pub intro: Option<String>,
   pub outro: Option<String>,
+  pub comments: Option<CommentsOptions>,
   pub chunk_optimization: Option<bool>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
@@ -127,6 +128,9 @@ impl ConfigVariant {
     if let Some(outro) = &self.outro {
       config.outro = Some(AddonOutputOption::String(Some(outro.clone())));
     }
+    if let Some(comments) = &self.comments {
+      config.comments = Some(*comments);
+    }
     if let Some(chunk_optimization) = &self.chunk_optimization {
       config.experimental = Some(ExperimentalOptions {
         chunk_optimization: Some(*chunk_optimization),
@@ -191,6 +195,9 @@ impl ConfigVariant {
     }
     if let Some(minify) = &self.minify {
       fields.push(format!("minify: {minify:?}"));
+    }
+    if let Some(comments) = &self.comments {
+      fields.push(format!("comments: {comments}"));
     }
     if let Some(chunk_optimization) = &self.chunk_optimization {
       fields.push(format!("chunk_optimization: {chunk_optimization:?}"));

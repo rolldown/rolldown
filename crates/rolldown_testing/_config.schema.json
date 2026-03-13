@@ -1864,6 +1864,16 @@
             "null"
           ]
         },
+        "comments": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommentsOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "chunkOptimization": {
           "type": [
             "boolean",

@@ -132,7 +132,6 @@ jobs:
     name: Type Check
     needs: [changes, build-rolldown-ubuntu]
     if: |
-      needs.changes.outputs.node-changes == 'true' &&
       always() &&
       (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
     runs-on: ubuntu-latest

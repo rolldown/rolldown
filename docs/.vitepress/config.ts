@@ -283,6 +283,12 @@ const config = defineConfig({
       },
     },
 
+    banner: {
+      id: 'viteplus-alpha',
+      text: 'Announcing Vite+ Alpha: Open source. Unified. Next-gen.',
+      url: 'https://voidzero.dev/posts/announcing-vite-plus-alpha?utm_source=rolldown&utm_content=top_banner',
+    },
+
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       {

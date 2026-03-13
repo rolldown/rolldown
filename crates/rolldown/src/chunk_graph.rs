@@ -32,10 +32,6 @@ pub struct ChunkGraph {
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
   pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
-  /// Maps entry bit positions to their corresponding ChunkIdx.
-  /// Needed because external module entries are skipped during chunk creation,
-  /// causing bit positions (from enumerate) to not match chunk indices.
-  pub bit_to_chunk_idx: Vec<Option<ChunkIdx>>,
 }
 
 impl ChunkGraph {
@@ -50,7 +46,6 @@ impl ChunkGraph {
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
-      bit_to_chunk_idx: Vec::new(),
     }
   }
 

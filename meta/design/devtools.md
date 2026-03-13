@@ -6,7 +6,7 @@ Rolldown devtools is a tracing-based system that emits structured build-time dat
 
 ## User-Facing API
 
-```js
+```ts
 import { rolldown } from 'rolldown';
 
 const bundle = await rolldown({
@@ -28,11 +28,11 @@ When devtools is enabled, rolldown writes JSON-lines files to:
 
 ```
 <CWD>/node_modules/.rolldown/<session_id>/
-  meta.json    # SessionMeta action (one JSON object)
+  meta.json    # SessionMeta action (one JSON object per build; appended in watch/rebuild)
   logs.json    # All other actions, one JSON object per line
 ```
 
-Each line is a self-contained JSON object with a `timestamp` and `action` discriminator field. The consumer reads the file and splits on newlines.
+Each line is a self-contained JSON object with an `action` discriminator field. Action events also carry `timestamp`, `session_id`, and `build_id` fields. `StringRef` entries contain only `action`, `id`, and `content` (no timestamp). The consumer reads the file and splits on newlines.
 
 ### Large String Deduplication
 
@@ -138,7 +138,7 @@ Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 | `AssetsReady`                | After final asset generation         | assets[]{chunk_id, content, size, filename}                                                                 |
 | `StringRef`                  | Before any action with large strings | id (blake3 hash), content                                                                                   |
 
-All actions carry injected `session_id`, `build_id`, and `timestamp` fields.
+All actions except `StringRef` carry injected `session_id`, `build_id`, and `timestamp` fields. `StringRef` entries contain only `action`, `id`, and `content`.
 
 ## TypeScript Codegen
 

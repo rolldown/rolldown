@@ -50,8 +50,6 @@ impl CrossModuleOptimizationCtx {
 #[derive(Default, Clone, Copy, Debug)]
 struct CrossModuleOptimizationConfig {
   pass: u32,
-  #[expect(unused)]
-  side_effects_free_function_optimization: bool,
   inline_const_optimization: bool,
 }
 
@@ -90,9 +88,6 @@ impl LinkStage<'_> {
     let cross_module_inline_const_pass = self.options.optimization.inline_const_pass() - 1;
     CrossModuleOptimizationConfig {
       pass: cross_module_inline_const_pass.max(other_optimization_pass),
-      side_effects_free_function_optimization: !self
-        .side_effects_free_function_symbol_ref
-        .is_empty(),
       inline_const_optimization: cross_module_inline_const_pass >= 1,
     }
   }

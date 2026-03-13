@@ -458,6 +458,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
               dynamic_import_exports_usage_pairs.push((idx, usage));
             }
+            // External modules are excluded here to preserve the bit-position-to-ChunkIdx
+            // invariant in code splitting. User-defined and emitted entries are already
+            // guaranteed non-external by `load_entry_module()` which rejects them with
+            // `entry_cannot_be_external`.
             if matches!(raw_rec.kind, ImportKind::DynamicImport)
               && !is_external
               && !user_defined_entry_ids.contains(&idx)

@@ -15,10 +15,13 @@ doctest = false
 test = false
 
 [dependencies]
+criterion2 = { workspace = true, features = ["async_tokio"] }
+ignore = { workspace = true }
 rolldown = { workspace = true, features = ["experimental"] }
 rolldown_fs = { workspace = true, features = ["memory"] }
 rolldown_resolver = { workspace = true }
 rolldown_workspace = { workspace = true }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
 
 [[bench]]
 harness = false
@@ -32,7 +35,4 @@ name = "scan"
 codspeed = ["criterion2/codspeed"]
 
 [dev-dependencies]
-criterion2 = { workspace = true, features = ["async_tokio"] }
-rolldown_common = { workspace = true }
-rolldown_testing = { workspace = true }
-tokio = { workspace = true, features = ["rt"] }
+rustc-hash = { workspace = true }

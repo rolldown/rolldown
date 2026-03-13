@@ -100,16 +100,19 @@ class DevServer {
       watch: getDevWatchOptionsForCi(),
     });
     this.#devEngine = devEngine;
-    process.stdin
-      .on('data', async (data) => {
-        if (data.toString() === 'r') {
-          const { hasStaleOutput } = await devEngine.getBundleState();
-          if (hasStaleOutput) {
-            await devEngine.ensureLatestBuildOutput();
-          }
+    process.stdin.on('data', async (data) => {
+      if (data.toString() === 'r') {
+        const { hasStaleOutput } = await devEngine.getBundleState();
+        if (hasStaleOutput) {
+          await devEngine.ensureLatestBuildOutput();
         }
-      })
-      .unref();
+      }
+    });
+    // Unref stdin to prevent it from keeping the process alive.
+    // Some Node.js versions (e.g., 24) may not have unref() on stdin.
+    if (typeof process.stdin.unref === 'function') {
+      process.stdin.unref();
+    }
     this.#prepareHttpServerAfterCreateDevEngine(devEngine);
     const initialBuildStart = Date.now();
     console.log('Starting initial build...');

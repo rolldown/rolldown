@@ -36,13 +36,13 @@ Each line is a self-contained JSON object with an `action` discriminator field. 
 
 ### Large String Deduplication
 
-Strings larger than 5 KB are deduplicated by blake3 hash. A `StringRef` record is emitted before the action that references it:
+Top-level string fields larger than 5 KB are cached by blake3 hash. A `StringRef` record is emitted before the action that references it:
 
 ```json
 { "action": "StringRef", "id": "<blake3-hash>", "content": "<full string>" }
 ```
 
-Strings larger than 10 KB in the action itself are replaced with a `$ref:<hash>` placeholder, pointing back to the `StringRef` entry. This keeps action records compact while preserving full content for consumers that need it.
+Top-level string fields larger than 10 KB are additionally replaced with a `$ref:<hash>` placeholder in the action itself, pointing back to the `StringRef` entry. This keeps action records compact while preserving full content for consumers that need it. Note: nested strings (e.g. `AssetsReady.assets[].content`) are not ref'd — only top-level fields are considered.
 
 ## Architecture
 
@@ -109,7 +109,7 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
 **`Bundle`** (per-build):
 
 1. `trace_action_session_meta()` — emits `SessionMeta` with inputs, plugins, cwd, platform, format, output dir/file
-2. `BuildStart` / `BuildEnd` — bracket the full build
+2. `BuildStart` / `BuildEnd` — emitted both around the outer `write()`/`generate()` call and inside `scan_modules()`, so consumers may see nested pairs per build
 3. `trace_action_module_graph_ready()` — emits after scan stage with all modules and their import relationships
 4. `trace_action_chunks_infos()` — emits after chunk graph construction in the generate stage
 
@@ -124,19 +124,19 @@ Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 
 ## Action Catalog
 
-| Action                       | When Emitted                         | Key Fields                                                                                                  |
-| ---------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `SessionMeta`                | Start of build (to `meta.json`)      | inputs, plugins, cwd, platform, format, dir, file                                                           |
-| `BuildStart`                 | Before scan stage                    | —                                                                                                           |
-| `HookResolveIdCallStart/End` | Per plugin per resolve call          | module_request, importer, plugin_name, plugin_id, trigger, call_id, resolved_id                             |
-| `HookLoadCallStart/End`      | Per plugin per load call             | module_id, plugin_name, plugin_id, call_id, content                                                         |
-| `HookTransformCallStart/End` | Per plugin per transform call        | module_id, content, plugin_name, plugin_id, call_id                                                         |
-| `ModuleGraphReady`           | After scan + normalize               | modules[]{id, is_external, imports[]{module_id, kind, module_request}, importers[]}                         |
-| `BuildEnd`                   | After scan stage completes           | —                                                                                                           |
-| `ChunkGraphReady`            | After chunk graph construction       | chunks[]{chunk_id, name, reason, modules[], imports[], is_user_defined_entry, is_async_entry, entry_module} |
-| `HookRenderChunkStart/End`   | Per plugin per renderChunk call      | chunk_id, plugin_name, plugin_id, call_id, code                                                             |
-| `AssetsReady`                | After final asset generation         | assets[]{chunk_id, content, size, filename}                                                                 |
-| `StringRef`                  | Before any action with large strings | id (blake3 hash), content                                                                                   |
+| Action                       | When Emitted                              | Key Fields                                                                                                  |
+| ---------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `SessionMeta`                | Start of build (to `meta.json`)           | inputs, plugins, cwd, platform, format, dir, file                                                           |
+| `BuildStart`                 | Before scan stage + around write/generate | —                                                                                                           |
+| `HookResolveIdCallStart/End` | Per plugin per resolve call               | module_request, importer, plugin_name, plugin_id, trigger, call_id, resolved_id                             |
+| `HookLoadCallStart/End`      | Per plugin per load call                  | module_id, plugin_name, plugin_id, call_id, content                                                         |
+| `HookTransformCallStart/End` | Per plugin per transform call             | module_id, content, plugin_name, plugin_id, call_id                                                         |
+| `ModuleGraphReady`           | After scan + normalize                    | modules[]{id, is_external, imports[]{module_id, kind, module_request}, importers[]}                         |
+| `BuildEnd`                   | After scan stage + after write/generate   | —                                                                                                           |
+| `ChunkGraphReady`            | After chunk graph construction            | chunks[]{chunk_id, name, reason, modules[], imports[], is_user_defined_entry, is_async_entry, entry_module} |
+| `HookRenderChunkStart/End`   | Per plugin per renderChunk call           | chunk_id, plugin_name, plugin_id, call_id, content                                                          |
+| `AssetsReady`                | After final asset generation              | assets[]{chunk_id, content, size, filename}                                                                 |
+| `StringRef`                  | Before any action with large strings      | id (blake3 hash), content                                                                                   |
 
 All actions except `StringRef` carry injected `session_id`, `build_id`, and `timestamp` fields. `StringRef` entries contain only `action`, `id`, and `content`.
 

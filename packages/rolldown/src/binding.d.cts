@@ -1798,7 +1798,8 @@ export type BindingBuiltinPluginName =  'builtin:bundle-analyzer'|
 'builtin:vite-resolve'|
 'builtin:vite-transform'|
 'builtin:vite-wasm-fallback'|
-'builtin:vite-web-worker-post';
+'builtin:vite-web-worker-post'|
+'builtin:oxc-runtime';
 
 export interface BindingBundleAnalyzerPluginConfig {
   /** Output filename for the bundle analysis data (default: "analyze-data.json") */

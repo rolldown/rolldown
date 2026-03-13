@@ -44,6 +44,7 @@ rolldown_plugin = { workspace = true }
 rolldown_plugin_bundle_analyzer = { workspace = true }
 rolldown_plugin_esm_external_require = { workspace = true }
 rolldown_plugin_isolated_declaration = { workspace = true }
+rolldown_plugin_oxc_runtime = { workspace = true }
 rolldown_plugin_replace = { workspace = true }
 rolldown_plugin_utils = { workspace = true }
 rolldown_plugin_vite_alias = { workspace = true }

@@ -2869,6 +2869,7 @@ dependencies = [
  "rolldown_plugin_bundle_analyzer",
  "rolldown_plugin_esm_external_require",
  "rolldown_plugin_isolated_declaration",
+ "rolldown_plugin_oxc_runtime",
  "rolldown_plugin_replace",
  "rolldown_plugin_utils",
  "rolldown_plugin_vite_alias",

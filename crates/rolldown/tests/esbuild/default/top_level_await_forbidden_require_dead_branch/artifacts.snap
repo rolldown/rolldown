@@ -16,7 +16,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function() {
-	Object.defineProperty;
 	var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
 	var __commonJSMin = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
 	//#endregion

@@ -7,12 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-Object.create;
-Object.defineProperty;
-Object.getOwnPropertyDescriptor;
-Object.getOwnPropertyNames;
-Object.getPrototypeOf;
-Object.prototype.hasOwnProperty;
 //#endregion
 //#region lib/fromWebToken.js
 const fromWebToken = (init) => async () => {

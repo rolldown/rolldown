@@ -151,9 +151,7 @@ impl BindingBundler {
       })?;
       let cwd = bundle.options().cwd.clone();
       match bundle.scan().await {
-        Ok(_scan_output) => {
-          Ok(napi::Either::B(()))
-        }
+        Ok(_scan_output) => Ok(napi::Either::B(())),
         Err(errs) => {
           let errors: Vec<BindingError> = errs
             .into_vec()

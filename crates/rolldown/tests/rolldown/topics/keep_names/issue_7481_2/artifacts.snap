@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-Object.defineProperty;
 //#endregion
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region main.ts

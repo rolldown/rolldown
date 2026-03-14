@@ -49,19 +49,12 @@ jobs:
       - name: Setup Benchmark Input
         run: just setup-bench
 
-      - name: Build the benchmark target(s)
-        run: cargo codspeed build -p bench --features codspeed
-
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@281164b0f014a4e7badd2c02cecad9b595b70537 # v4.11.1
         with:
-          run: cargo codspeed run -p bench
+          run: cargo codspeed build -p bench --features codspeed && cargo codspeed run -p bench
           token: ${{ secrets.CODSPEED_TOKEN }}
-          mode: 'instrumentation'
-        env:
-          # ensure that `root_dir()` from `crates/rolldown_testing/src/workspace.rs` works during the benchmark
-          # see https://github.com/adriencaccia/rolldown/pull/1 for explanation
-          CARGO_MANIFEST_DIR: ${{ github.workspace }}/target/codspeed
+          mode: simulation
 
   benchmark-rust:
     permissions:

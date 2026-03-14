@@ -9,10 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 export * from "ext-index";
 export * from "ext-file";
 export * from "ext-folder";
-Object.defineProperty;
-Object.getOwnPropertyDescriptor;
-Object.getOwnPropertyNames;
-Object.prototype.hasOwnProperty;
 //#endregion
 //#region file.js
 const file = {};

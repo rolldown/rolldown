@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#endregion
+//#region main.js
+console.log(window.bar(function() {
+	return 1;
+}));
+//#endregion
+
+```
+
+# Variant: [comments: true]
+
+## Assets
+
+### main.js
+
+```js
+//#endregion
+//#region main.js
+console.log(/* @__PURE__ */ window.bar(function() {
+	return 1;
+}));
+//#endregion
+
+```

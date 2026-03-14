@@ -12,7 +12,7 @@ use rolldown_common::{
   ExternalModule, ImportRecordIdx, IndexModules, Module, ModuleIdx, NormalModule,
 };
 use rolldown_ecmascript::CJS_REQUIRE_REF_ATOM;
-use rolldown_ecmascript_utils::{AstSnippet, BindingIdentifierExt, ExpressionExt};
+use rolldown_ecmascript_utils::{AstSnippet, ExpressionExt};
 use rolldown_utils::{
   ecmascript::is_validate_identifier_name,
   indexmap::{FxIndexMap, FxIndexSet},
@@ -96,7 +96,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
               specifiers.iter().for_each(|spec| match spec {
                 ast::ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
                   self.import_bindings.insert(
-                    import_specifier.local.expect_symbol_id(),
+                    import_specifier.local.symbol_id(),
                     format!("{binding_name}.{}", import_specifier.imported.name()),
                   );
                 }
@@ -104,17 +104,16 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                   import_default_specifier,
                 ) => {
                   self.import_bindings.insert(
-                    import_default_specifier.local.expect_symbol_id(),
+                    import_default_specifier.local.symbol_id(),
                     format!("{binding_name}.default"),
                   );
                 }
                 ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(
                   import_namespace_specifier,
                 ) => {
-                  self.import_bindings.insert(
-                    import_namespace_specifier.local.expect_symbol_id(),
-                    binding_name.clone(),
-                  );
+                  self
+                    .import_bindings
+                    .insert(import_namespace_specifier.local.symbol_id(), binding_name.clone());
                 }
               });
             });

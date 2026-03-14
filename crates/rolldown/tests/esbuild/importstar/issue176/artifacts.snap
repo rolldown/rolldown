@@ -10,11 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region folders/child/foo.js
 const foo = () => "hi there";
 //#endregion
-//#region folders/index.js
-var folders_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
-//#endregion
 //#region entry.js
-console.log(JSON.stringify(folders_exports));
+console.log(JSON.stringify(/* @__PURE__ */ __exportAll({ foo: () => foo })));
 //#endregion
 
 ```

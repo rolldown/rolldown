@@ -21,6 +21,7 @@ export { defineParallelPlugin } from './plugin/parallel-plugin';
 // Builtin plugin factory
 export {
   isolatedDeclarationPlugin,
+  oxcRuntimePlugin,
   viteBuildImportAnalysisPlugin,
   viteDynamicImportVarsPlugin,
   viteImportGlobPlugin,

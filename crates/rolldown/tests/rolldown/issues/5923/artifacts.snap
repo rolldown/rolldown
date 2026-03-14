@@ -7,10 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 export * from "external";
-Object.defineProperty;
-Object.getOwnPropertyDescriptor;
-Object.getOwnPropertyNames;
-Object.prototype.hasOwnProperty;
 let foo;
 //#endregion
 export { foo };

@@ -350,13 +350,7 @@ impl GenerateStage<'_> {
         if !temp_chunk.needs_creation {
           return None;
         }
-        let chunk_idxs: Vec<_> = bits
-          .index_of_one()
-          // Use bit_to_chunk_idx to correctly map bit positions to chunk indices.
-          // Bit positions may not match chunk indices when external module entries
-          // are skipped during chunk creation.
-          .filter_map(|bit| chunk_graph.bit_to_chunk_idx.get(bit as usize).and_then(|idx| *idx))
-          .collect();
+        let chunk_idxs: Vec<_> = bits.index_of_one().map(ChunkIdx::from_raw).collect();
 
         let merge_target = Self::try_insert_into_existing_chunk(
           &chunk_idxs,

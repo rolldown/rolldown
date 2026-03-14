@@ -16,20 +16,14 @@ var b_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
 //#region test.ts
 var Test = void 0;
 //#endregion
-//#region c.ts
-var c_exports = /* @__PURE__ */ __exportAll({
-	Test: () => Test,
-	foo: () => 123
-});
-//#endregion
-//#region d.ts
-var d_exports = /* @__PURE__ */ __exportAll({
-	Test: () => Test,
-	foo: () => 123
-});
-//#endregion
 //#region entry.ts
-console.log(a_exports, b_exports, c_exports, d_exports);
+console.log(a_exports, b_exports, /* @__PURE__ */ __exportAll({
+	Test: () => Test,
+	foo: () => 123
+}), /* @__PURE__ */ __exportAll({
+	Test: () => Test,
+	foo: () => 123
+}));
 //#endregion
 
 ```

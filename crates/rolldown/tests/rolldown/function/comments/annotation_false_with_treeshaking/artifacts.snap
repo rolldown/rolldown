@@ -6,13 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region icons.js
-const AIcon = window.bar(function() {
-	return 1;
-});
 //#endregion
 //#region main.js
-console.log(AIcon);
+console.log(window.bar(function() {
+	return 1;
+}));
 //#endregion
 
 ```
@@ -24,13 +22,11 @@ console.log(AIcon);
 ### main.js
 
 ```js
-//#region icons.js
-const AIcon = /* @__PURE__ */ window.bar(function() {
-	return 1;
-});
 //#endregion
 //#region main.js
-console.log(AIcon);
+console.log(/* @__PURE__ */ window.bar(function() {
+	return 1;
+}));
 //#endregion
 
 ```

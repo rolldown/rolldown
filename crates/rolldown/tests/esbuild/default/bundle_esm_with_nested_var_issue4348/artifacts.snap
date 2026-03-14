@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry_js.js
 
 ```js
-Object.defineProperty;
 var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res), x;
 //#endregion
 //#region entry.js

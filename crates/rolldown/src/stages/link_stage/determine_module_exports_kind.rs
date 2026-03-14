@@ -84,7 +84,11 @@ impl LinkStage<'_> {
 
       let is_entry = self.entries.contains_key(&importer.idx);
       if matches!(importer.exports_kind, ExportsKind::CommonJs)
-        && (!is_entry || matches!(self.options.format, OutputFormat::Esm))
+        && (!is_entry
+          || matches!(
+            self.options.format,
+            OutputFormat::Esm | OutputFormat::Iife | OutputFormat::Umd
+          ))
       {
         self.metas[importer.idx].sync_wrap_kind(WrapKind::Cjs);
       }

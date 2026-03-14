@@ -32,7 +32,11 @@ const StyledButton = styled.button`
     height: 0;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.3);
-    transition: width 0.6s, height 0.6s, top 0.6s, left 0.6s;
+    transition:
+      width 0.6s,
+      height 0.6s,
+      top 0.6s,
+      left 0.6s;
     transform: translate(-50%, -50%);
     z-index: 0;
   }

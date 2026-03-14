@@ -11,17 +11,17 @@ pub enum StringOrRegex {
 }
 
 impl StringOrRegex {
-  pub fn expect_string(self) -> String {
+  pub fn try_into_string(self) -> anyhow::Result<String> {
     match self {
-      StringOrRegex::String(s) => s,
-      StringOrRegex::Regex(_) => unreachable!("Expected a string, but got {:?}", self),
+      StringOrRegex::String(s) => Ok(s),
+      StringOrRegex::Regex(_) => anyhow::bail!("expected a string, but got a regex"),
     }
   }
 
-  pub fn expect_regex(self) -> HybridRegex {
+  pub fn try_into_regex(self) -> anyhow::Result<HybridRegex> {
     match self {
-      StringOrRegex::Regex(s) => s,
-      StringOrRegex::String(_) => unreachable!("Expected a regex, but got {:?}", self),
+      StringOrRegex::Regex(s) => Ok(s),
+      StringOrRegex::String(_) => anyhow::bail!("expected a regex, but got a string"),
     }
   }
 }

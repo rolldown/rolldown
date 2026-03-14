@@ -1132,8 +1132,10 @@ test.concurrent(
     await editFile(path.join(cwd, 'main.js'), `import { foo } from './foo.js'\nconsole.log(foo)`);
     await expect.poll(() => errors.length).toBeGreaterThan(0);
 
-    // Create the missing file — should trigger a successful rebuild
+    // Create the missing file, then do a noop edit to main.js to trigger rebuild
+    // (the missing file's directory is not auto-watched, so we need to touch a watched file)
     await editFile(path.join(cwd, 'foo.js'), `export const foo = 'added'`);
+    await editFile(path.join(cwd, 'main.js'), `import { foo } from './foo.js'\nconsole.log(foo)`);
     await waitBuildFinished(watcher);
 
     const output = path.join(cwd, 'dist', 'main.js');
@@ -1173,9 +1175,11 @@ test.concurrent(
     await editFile(path.join(cwd, 'main.js'), `import { foo } from './foo.js'\nconsole.log(foo)`);
     await expect.poll(() => errors.length).toBeGreaterThan(0);
 
-    // Rename bar.js to foo.js — should trigger a successful rebuild
+    // Rename bar.js to foo.js, then do a noop edit to main.js to trigger rebuild
+    // (the missing file's directory is not auto-watched, so we need to touch a watched file)
     await sleep(1000);
     fs.renameSync(path.join(cwd, 'bar.js'), path.join(cwd, 'foo.js'));
+    await editFile(path.join(cwd, 'main.js'), `import { foo } from './foo.js'\nconsole.log(foo)`);
     await waitBuildFinished(watcher);
 
     const output = path.join(cwd, 'dist', 'main.js');

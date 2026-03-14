@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a-C8INET05.js
+
+```js
+import { t as shared } from "./shared-3YY3WwRA.js";
+//#region a.js
+console.log("a", shared);
+//#endregion
+
+```
+
+## b-MtfO4kZ9.js
+
+```js
+import { t as shared } from "./shared-3YY3WwRA.js";
+//#region b.js
+console.log("b", shared);
+//#endregion
+
+```
+
+## shared-3YY3WwRA.js
+
+```js
+//#region shared.js
+const shared = "shared_value";
+//#endregion
+export { shared as t };
+
+```

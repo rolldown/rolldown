@@ -1,5 +1,5 @@
 import type { BindingHookFilter, BindingPluginOptions } from '../binding.cjs';
-import { BindingMagicString } from '../binding.cjs';
+import { RolldownMagicString } from '../binding-magic-string';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError, unwrapBindingResult } from '../utils/error';
 import { normalizeHook } from '../utils/normalize-hook';
@@ -67,14 +67,14 @@ export function bindingifyRenderChunk(
       const renderChunkMeta = args.pluginContextData.getRenderChunkMeta()!;
 
       // Add lazy-loaded magicString if nativeMagicString is enabled
-      let magicStringInstance: BindingMagicString;
+      let magicStringInstance: RolldownMagicString;
       if (args.options.experimental?.nativeMagicString) {
         Object.defineProperty(renderChunkMeta, 'magicString', {
           get() {
             if (magicStringInstance) {
               return magicStringInstance;
             }
-            magicStringInstance = new BindingMagicString(code);
+            magicStringInstance = new RolldownMagicString(code);
             return magicStringInstance;
           },
           configurable: true,
@@ -102,7 +102,7 @@ export function bindingifyRenderChunk(
       }
 
       // Handle MagicString return value directly
-      if (ret instanceof BindingMagicString) {
+      if (ret instanceof RolldownMagicString) {
         const normalizedCode = ret.toString();
         const generatedMap = ret.generateMap();
         return {
@@ -122,8 +122,8 @@ export function bindingifyRenderChunk(
       }
 
       // Handle object return with code as MagicString
-      if (ret.code instanceof BindingMagicString) {
-        const magicString = ret.code as BindingMagicString;
+      if (ret.code instanceof RolldownMagicString) {
+        const magicString = ret.code as RolldownMagicString;
         const normalizedCode = magicString.toString();
         // If map is explicitly null, don't generate sourcemap (opt-out)
         // If map is undefined, auto-generate from MagicString

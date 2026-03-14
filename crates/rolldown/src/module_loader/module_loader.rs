@@ -22,7 +22,7 @@ use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableResolveError, consolidate_diagnostics,
 };
-use rolldown_fs::OsFileSystem;
+use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
@@ -94,8 +94,8 @@ impl VisitState {
   }
 }
 
-pub struct ModuleLoader<'a> {
-  pub shared_context: Arc<TaskContext>,
+pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
+  pub shared_context: Arc<TaskContext<Fs>>,
   rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
@@ -130,17 +130,17 @@ pub struct ModuleLoaderOutput {
   pub tla_module_count: usize,
 }
 
-impl Drop for ModuleLoader<'_> {
+impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
   fn drop(&mut self) {
     self.cache.importers = std::mem::take(&mut self.intermediate_normal_modules.importers);
   }
 }
 
-impl<'a> ModuleLoader<'a> {
+impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
   pub fn new(
-    fs: OsFileSystem,
+    fs: Fs,
     options: SharedOptions,
-    resolver: SharedResolver,
+    resolver: SharedResolver<Fs>,
     plugin_driver: SharedPluginDriver,
     cache: &'a mut ScanStageCache,
     is_full_scan: bool,
@@ -427,6 +427,7 @@ impl<'a> ModuleLoader<'a> {
               }
             }
 
+            let is_external = resolved_id.external.is_external();
             let idx = self.try_spawn_new_task(
               resolved_id,
               Some(ModuleTaskOwner::new(normal_module, raw_rec.span)),
@@ -457,7 +458,12 @@ impl<'a> ModuleLoader<'a> {
             if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
               dynamic_import_exports_usage_pairs.push((idx, usage));
             }
+            // External modules are excluded here to preserve the bit-position-to-ChunkIdx
+            // invariant in code splitting. User-defined and emitted entries are already
+            // guaranteed non-external by `load_entry_module()` which rejects them with
+            // `entry_cannot_be_external`.
             if matches!(raw_rec.kind, ImportKind::DynamicImport)
+              && !is_external
               && !user_defined_entry_ids.contains(&idx)
             {
               match dynamic_import_entry_ids.entry(idx) {

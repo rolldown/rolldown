@@ -11,22 +11,29 @@ on:
       changed:
         required: true
         type: boolean
+      node-version:
+        required: true
+        type: number
 
 jobs:
   run:
-    name: Node Test (Node ${{ matrix.node-version }})
+    name: Node Test
     if: ${{ inputs.changed }}
     runs-on: ${{ inputs.os }}
     timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: ${{ inputs.os == 'ubuntu-latest' && fromJson('[20, 22, 24]') || fromJson('[24]') }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           submodules: true # Pull submodules for additional files
           persist-credentials: false
+
+      - uses: samypr100/setup-dev-drive@30f0f98ae5636b2b6501e181dfb3631b9974818d # v4.0.0
+        if: runner.os == 'Windows'
+        with:
+          drive-size: 12GB
+          drive-format: ReFS
+          env-mapping: |
+            PNPM_HOME,{{ DEV_DRIVE }}/.pnpm
 
       - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 
@@ -39,10 +46,10 @@ jobs:
       - name: Build `@rolldown/test-dev-server`
         run: pnpm --filter '@rolldown/test-dev-server' build
 
-      - name: Setup Node${{ matrix.node-version }} For Testing
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      - name: Setup Node${{ inputs.node-version }} For Testing
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ inputs.node-version }}
           package-manager-cache: false
 
       - name: Node Test
@@ -52,7 +59,7 @@ jobs:
       - name: Rollup Test
         run: pnpm run --filter rollup-tests test
         env:
-          SKIP_PASS_DIFF: ${{ matrix.node-version != 24 && '1' || '' }}
+          SKIP_PASS_DIFF: ${{ inputs.node-version != 24 && '1' || '' }}
 
       - name: Build Examples
         run: pnpm --filter '@example/**' build

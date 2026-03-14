@@ -1,0 +1,124 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## apis.js
+
+```js
+//#region apis.js
+async function format(code) {
+	let pl = await import("./plugin.js");
+	return (await import("./core.js")).run(pl.transform(code));
+}
+//#endregion
+export { format as t };
+
+```
+
+## core.js
+
+```js
+//#region core.js
+async function run(code) {
+	let pa = await import("./parser-a.js");
+	let pb = await import("./parser-b.js");
+	let pc = await import("./parser-c.js");
+	return pa.parse(code) + pb.parse(code) + pc.parse(code);
+}
+//#endregion
+export { run };
+
+```
+
+## entry-a.js
+
+```js
+import { t as format } from "./apis.js";
+//#region entry-a.js
+const a = () => format("a");
+//#endregion
+export { a };
+
+```
+
+## entry-b.js
+
+```js
+import { t as format } from "./apis.js";
+//#region entry-b.js
+const b = () => format("b");
+//#endregion
+export { b };
+
+```
+
+## parser-a.js
+
+```js
+import { t as helper } from "./shared.js";
+//#region parser-a.js
+function parse(x) {
+	return helper("a" + x);
+}
+//#endregion
+export { parse };
+
+```
+
+## parser-b.js
+
+```js
+import { t as helper } from "./shared.js";
+//#region parser-b.js
+function parse(x) {
+	return helper("b" + x);
+}
+//#endregion
+export { parse };
+
+```
+
+## parser-c.js
+
+```js
+import { t as helper } from "./shared.js";
+//#region parser-c.js
+function parse(x) {
+	return helper("c" + x);
+}
+//#endregion
+export { parse };
+
+```
+
+## plugin.js
+
+```js
+import { parse } from "./parser-a.js";
+import { parse as parse$1 } from "./parser-b.js";
+import { parse as parse$2 } from "./parser-c.js";
+//#region plugin.js
+async function opt() {
+	await import("@optional/ext");
+}
+function transform(code) {
+	opt();
+	return parse(code) + parse$1(code) + parse$2(code);
+}
+//#endregion
+export { transform };
+
+```
+
+## shared.js
+
+```js
+//#region shared.js
+function helper(x) {
+	return x.toUpperCase();
+}
+//#endregion
+export { helper as t };
+
+```

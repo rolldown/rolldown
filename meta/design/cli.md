@@ -22,7 +22,7 @@ bin/cli.mjs
           → rawArgs snapshot
           → remove unknown keys
           → type coercion (duplicate filtering + array wrapping)
-          → object option parsing (key=val,key=val)
+          → object option parsing (key:val,key:val)
       → arguments/normalize.ts
         → validateCliOptions() via valibot
         → split into input/output based on schema keys
@@ -141,7 +141,7 @@ cli.parse(process.argv, { run: true });
 5. Snapshot `rawArgs` (includes unknown keys)
 6. Remove unknown keys from `parsedOptions`
 7. Type coercion — duplicate filtering + array wrapping (single merged loop)
-8. Object option parsing (`key=val,key=val`)
+8. Object option parsing (`key:val,key:val`)
 9. `normalizeCliOptions()` — valibot validation + input/output splitting
 
 ## Implementation Notes

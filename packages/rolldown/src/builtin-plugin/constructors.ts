@@ -108,6 +108,14 @@ type ViteReactRefreshWrapperPluginConfig = Omit<
   exclude?: StringOrRegExp | StringOrRegExp[];
 };
 
+/**
+ * This plugin should not be used for Rolldown.
+ */
+export function oxcRuntimePlugin(): BuiltinPlugin {
+  const builtinPlugin = new BuiltinPlugin('builtin:oxc-runtime');
+  return makeBuiltinPluginCallable(builtinPlugin);
+}
+
 export function viteReactRefreshWrapperPlugin(
   config: ViteReactRefreshWrapperPluginConfig,
 ): BuiltinPlugin {

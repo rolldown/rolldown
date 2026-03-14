@@ -771,6 +771,7 @@ impl GenerateStage<'_> {
         self.options,
       );
       let chunk_idx = chunk_graph.add_chunk(chunk);
+
       if let Some(reference_ids) = self.link_output.entry_point_to_reference_ids.get(entry_point) {
         chunk_graph.chunk_idx_to_reference_ids.insert(chunk_idx, reference_ids.clone());
       }
@@ -900,6 +901,10 @@ impl GenerateStage<'_> {
     entry_index: u32,
     index_splitting_info: &mut IndexSplittingInfo,
   ) {
+    debug_assert!(
+      self.link_output.module_table[entry_module_idx].is_normal(),
+      "Entry module {entry_module_idx:?} should be a normal module. External dynamic imports should be filtered out in module_loader.rs."
+    );
     let mut q = VecDeque::from([entry_module_idx]);
     while let Some(module_idx) = q.pop_front() {
       if !self.link_output.module_table[module_idx].is_normal() {

@@ -315,8 +315,6 @@ impl GenerateStage<'_> {
     let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
 
-    let entry_chunk_idx =
-      chunk_graph.chunk_table.iter_enumerated().map(|(idx, _)| idx).collect::<FxHashSet<_>>();
     // Calculate on demand to avoid add a new field on each NormalModule.
     let dynamic_entry_to_dynamic_importers: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>> = {
       // Get dynamic entry modules from chunk_table, then find matched entry points
@@ -352,13 +350,7 @@ impl GenerateStage<'_> {
         if !temp_chunk.needs_creation {
           return None;
         }
-        let chunk_idxs: Vec<_> = bits
-          .index_of_one()
-          .map(ChunkIdx::from_raw)
-          // Some of the bits maybe not created yet, so filter it out.
-          // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
-          .filter(|idx| entry_chunk_idx.contains(idx))
-          .collect();
+        let chunk_idxs: Vec<_> = bits.index_of_one().map(ChunkIdx::from_raw).collect();
 
         let merge_target = Self::try_insert_into_existing_chunk(
           &chunk_idxs,

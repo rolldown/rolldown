@@ -12,6 +12,7 @@ description = "Rolldown plugin for TypeScript isolated declarations"
 
 [lib]
 doctest = false
+test = false
 
 [lints]
 workspace = true

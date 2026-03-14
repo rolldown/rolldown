@@ -1,10 +1,7 @@
 import type { Program } from '@oxc-project/types';
 import type { InputOptions, OutputOptions } from '..';
-import type {
-  BindingHookResolveIdExtraArgs,
-  BindingMagicString,
-  BindingTransformHookExtraArgs,
-} from '../binding.cjs';
+import type { BindingHookResolveIdExtraArgs, BindingTransformHookExtraArgs } from '../binding.cjs';
+import type { RolldownMagicString } from '../binding-magic-string';
 import type { BuiltinPlugin } from '../builtin-plugin/utils';
 import type { DefinedHookNames } from '../constants/plugin';
 import type { DEFINED_HOOK_NAMES } from '../constants/plugin';
@@ -169,7 +166,7 @@ export type LoadResult = NullValue | string | SourceDescription;
 export type TransformResult =
   | NullValue
   | string
-  | (Omit<SourceDescription, 'code'> & { code?: string | BindingMagicString });
+  | (Omit<SourceDescription, 'code'> & { code?: string | RolldownMagicString });
 
 export type RenderedChunkMeta = {
   /**
@@ -182,7 +179,7 @@ export type RenderedChunkMeta = {
    * Use this to perform string transformations with automatic source map support.
    * This is only available when `experimental.nativeMagicString` is enabled.
    */
-  magicString?: BindingMagicString;
+  magicString?: RolldownMagicString;
 };
 
 /** @category Plugin APIs */
@@ -350,7 +347,7 @@ export interface FunctionPluginHooks {
     id: string,
     meta: BindingTransformHookExtraArgs & {
       moduleType: ModuleType;
-      magicString?: BindingMagicString;
+      magicString?: RolldownMagicString;
       ast?: Program;
     },
   ) => TransformResult;
@@ -425,9 +422,9 @@ export interface FunctionPluginHooks {
   ) =>
     | NullValue
     | string
-    | BindingMagicString
+    | RolldownMagicString
     | {
-        code: string | BindingMagicString;
+        code: string | RolldownMagicString;
         map?: SourceMapInput;
       };
 

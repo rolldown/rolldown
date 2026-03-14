@@ -6,7 +6,7 @@ import type {
   BindingPluginContext,
   BindingPluginOptions,
 } from '../binding.cjs';
-import { BindingMagicString } from '../binding.cjs';
+import { RolldownMagicString } from '../binding-magic-string';
 import { parseAst } from '../parse-ast-index';
 import { bindingifySourcemap, type ExistingRawSourceMap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError } from '../utils/error';
@@ -208,14 +208,14 @@ export function bindingifyTransform(
 
   return {
     plugin: async (ctx, code, id, meta) => {
-      let magicStringInstance: BindingMagicString, astInstance: Program;
+      let magicStringInstance: RolldownMagicString, astInstance: Program;
       Object.defineProperties(meta, {
         magicString: {
           get() {
             if (magicStringInstance) {
               return magicStringInstance;
             }
-            magicStringInstance = new BindingMagicString(code);
+            magicStringInstance = new RolldownMagicString(code);
             return magicStringInstance;
           },
         },
@@ -275,8 +275,8 @@ export function bindingifyTransform(
       let map = ret.map;
       if (typeof ret.code === 'string') {
         normalizedCode = ret.code;
-      } else if (ret.code instanceof BindingMagicString) {
-        let magicString = ret.code as BindingMagicString;
+      } else if (ret.code instanceof RolldownMagicString) {
+        let magicString = ret.code as RolldownMagicString;
         normalizedCode = magicString.toString();
         // If the option is not enable we should just return soucemapJsonString
         let fallbackSourcemap = ctx.sendMagicString(magicString);

@@ -1,4 +1,3 @@
-use std::path::Path;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
@@ -11,6 +10,7 @@ use rolldown_common::{
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableArcstr, DiagnosticOptions, EventKind,
 };
+use rolldown_fs::FileSystem;
 use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::ecmascript::{self};
@@ -19,9 +19,9 @@ use rustc_hash::FxHashMap;
 use crate::{SharedOptions, SharedResolver};
 
 #[tracing::instrument(skip_all, fields(CONTEXT_hook_resolve_id_trigger = "automatic"))]
-pub async fn resolve_id(
+pub async fn resolve_id<Fs: FileSystem>(
   bundle_options: &NormalizedBundlerOptions,
-  resolver: &Resolver,
+  resolver: &Resolver<Fs>,
   plugin_driver: &PluginDriver,
   importer: &str,
   specifier: &str,
@@ -52,10 +52,10 @@ pub async fn resolve_id(
 }
 
 #[expect(clippy::too_many_arguments)]
-pub async fn resolve_dependencies(
+pub async fn resolve_dependencies<Fs: FileSystem>(
   self_resolved_id: &ResolvedId,
   options: &SharedOptions,
-  resolver: &SharedResolver,
+  resolver: &SharedResolver<Fs>,
   plugin_driver: &SharedPluginDriver,
   dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
   source: ArcStr,
@@ -101,8 +101,6 @@ pub async fn resolve_dependencies(
         let specifier = &dep.module_request;
         match e {
           ResolveError::NotFound(..) => {
-            track_missing_imports(plugin_driver, self_resolved_id.id.as_str(), specifier);
-
             // NOTE: IN_TRY_CATCH_BLOCK meta if it is a `require` import
             // record
             if !dep.meta.contains(ImportRecordMeta::InTryCatchBlock) {
@@ -183,24 +181,4 @@ pub async fn resolve_dependencies(
   }
 
   if build_errors.is_empty() { Ok(ret) } else { Err(build_errors.into()) }
-}
-
-/// Record the target directory of a missing relative import so the watcher
-/// can detect when a file is created there and trigger a rebuild.
-/// Only tracks relative specifiers (`./` / `../`) — absolute paths are not
-/// tracked because the ancestor fallback could watch overly broad system
-/// directories (e.g. `/opt`, `/usr`).
-fn track_missing_imports(plugin_driver: &PluginDriver, importer: &str, specifier: &str) {
-  if !ecmascript::is_relative_specifier(specifier) {
-    return;
-  }
-  let target_dir = Path::new(importer)
-    .parent()
-    .map(|d| d.join(specifier))
-    .and_then(|t| t.parent().map(Path::to_path_buf));
-  if let Some(dir) = target_dir {
-    if dir.parent().is_some() {
-      plugin_driver.missing_import_dirs.insert(dir.to_string_lossy().into());
-    }
-  }
 }

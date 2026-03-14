@@ -1,0 +1,15 @@
+{
+  "config": {
+    "comments": {
+      "annotation": false
+    }
+  },
+  "configVariants": [
+    {
+      "comments": {
+        "annotation": true
+      }
+    }
+  ],
+  "expectExecuted": false
+}

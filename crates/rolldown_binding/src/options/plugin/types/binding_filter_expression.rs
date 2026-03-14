@@ -17,38 +17,31 @@ pub enum BindingFilterTokenPayloadInner {
 }
 
 impl BindingFilterTokenPayloadInner {
-  pub fn expect_string(self) -> String {
+  pub fn try_into_string(self) -> anyhow::Result<String> {
     match self {
-      BindingFilterTokenPayloadInner::StringOrRegex(inner) => inner.expect_string(),
-      BindingFilterTokenPayloadInner::Number(_) | BindingFilterTokenPayloadInner::Boolean(_) => {
-        unreachable!()
-      }
+      BindingFilterTokenPayloadInner::StringOrRegex(inner) => inner.try_into_string(),
+      other => anyhow::bail!("expected a string payload, but got {other:?}"),
     }
   }
 
-  pub fn expect_string_or_regex(self) -> StringOrRegex {
+  pub fn try_into_string_or_regex(self) -> anyhow::Result<StringOrRegex> {
     match self {
-      BindingFilterTokenPayloadInner::StringOrRegex(inner) => inner,
-      BindingFilterTokenPayloadInner::Number(_) | BindingFilterTokenPayloadInner::Boolean(_) => {
-        unreachable!()
-      }
+      BindingFilterTokenPayloadInner::StringOrRegex(inner) => Ok(inner),
+      other => anyhow::bail!("expected a string or regex payload, but got {other:?}"),
     }
   }
 
-  pub fn expect_number(self) -> u32 {
+  pub fn try_into_number(self) -> anyhow::Result<u32> {
     match self {
-      BindingFilterTokenPayloadInner::Number(v) => v,
-      BindingFilterTokenPayloadInner::StringOrRegex(_)
-      | BindingFilterTokenPayloadInner::Boolean(_) => unreachable!(),
+      BindingFilterTokenPayloadInner::Number(v) => Ok(v),
+      other => anyhow::bail!("expected a number payload, but got {other:?}"),
     }
   }
 
-  pub fn expect_regex(self) -> HybridRegex {
+  pub fn try_into_regex(self) -> anyhow::Result<HybridRegex> {
     match self {
-      BindingFilterTokenPayloadInner::StringOrRegex(inner) => inner.expect_regex(),
-      BindingFilterTokenPayloadInner::Number(_) | BindingFilterTokenPayloadInner::Boolean(_) => {
-        unreachable!()
-      }
+      BindingFilterTokenPayloadInner::StringOrRegex(inner) => inner.try_into_regex(),
+      other => anyhow::bail!("expected a regex payload, but got {other:?}"),
     }
   }
 }
@@ -107,64 +100,42 @@ pub enum FilterTokenKind {
   QueryValue,
 }
 
-pub fn normalized_tokens(tokens: Vec<BindingFilterToken>) -> Vec<Token> {
+pub fn normalized_tokens(tokens: Vec<BindingFilterToken>) -> anyhow::Result<Vec<Token>> {
+  fn take_payload(
+    token: &mut BindingFilterToken,
+  ) -> anyhow::Result<BindingFilterTokenPayloadInner> {
+    token
+      .payload
+      .take()
+      .ok_or_else(|| anyhow::anyhow!("`{:?}` token should have a payload", token.kind))
+      .map(BindingFilterTokenPayload::into_inner)
+  }
+
   let mut ret: Vec<Token> = Vec::with_capacity(tokens.len());
   let mut iter = tokens.into_iter().peekable();
   while let Some(value) = iter.peek_mut() {
     match value.kind {
       FilterTokenKind::Id => {
-        ret.push(Token::from(
-          value
-            .payload
-            .take()
-            .expect("`Id` should have payload")
-            .into_inner()
-            .expect_string_or_regex(),
-        ));
+        ret.push(Token::from(take_payload(value)?.try_into_string_or_regex()?));
         ret.push(Token::Id);
       }
       FilterTokenKind::ImporterId => {
-        ret.push(Token::from(
-          value
-            .payload
-            .take()
-            .expect("`ImporterId` should have payload")
-            .into_inner()
-            .expect_string_or_regex(),
-        ));
+        ret.push(Token::from(take_payload(value)?.try_into_string_or_regex()?));
         ret.push(Token::ImporterId);
       }
       FilterTokenKind::Code => {
-        ret.push(Token::from(
-          value
-            .payload
-            .take()
-            .expect("`Code` should have payload")
-            .into_inner()
-            .expect_string_or_regex(),
-        ));
+        ret.push(Token::from(take_payload(value)?.try_into_string_or_regex()?));
         ret.push(Token::Code);
       }
       FilterTokenKind::ModuleType => {
-        ret.push(Token::String(
-          value
-            .payload
-            .take()
-            .expect("`ModuleType` should have payload")
-            .into_inner()
-            .expect_string(),
-        ));
+        ret.push(Token::String(take_payload(value)?.try_into_string()?));
         ret.push(Token::ModuleType);
       }
       FilterTokenKind::And => {
-        ret.push(Token::And(
-          value.payload.take().expect("And should have payload").into_inner().expect_number(),
-        ));
+        ret.push(Token::And(take_payload(value)?.try_into_number()?));
       }
       FilterTokenKind::Or => {
-        ret.push(Token::Or(
-          value.payload.take().expect("`Or` should have payload").into_inner().expect_number(),
-        ));
+        ret.push(Token::Or(take_payload(value)?.try_into_number()?));
       }
       FilterTokenKind::Not => {
         ret.push(Token::Not);
@@ -173,29 +144,27 @@ pub fn normalized_tokens(tokens: Vec<BindingFilterToken>) -> Vec<Token> {
       FilterTokenKind::Exclude => ret.push(Token::Exclude),
       FilterTokenKind::CleanUrl => ret.push(Token::CleanUrl),
       FilterTokenKind::QueryKey => {
-        let query_key = value
-          .payload
-          .take()
-          .expect("`QueryKey` should have payload")
-          .into_inner()
-          .expect_string();
+        let query_key = take_payload(value)?.try_into_string()?;
         iter.next();
-        let Some(next_token) = iter.peek_mut() else {
-          unreachable!("`QueryKey` should be followed by one Token");
-        };
+        let next_token = iter.peek_mut().ok_or_else(|| {
+          anyhow::anyhow!("`QueryKey` should be followed by a `QueryValue` token")
+        })?;
         if next_token.kind != FilterTokenKind::QueryValue {
-          unreachable!("`QueryKey` should be followed by `QueryValue`");
+          anyhow::bail!(
+            "`QueryKey` should be followed by `QueryValue`, but got `{:?}`",
+            next_token.kind
+          );
         }
-        let query_value =
-          match next_token.payload.take().expect("`QueryValue` should have payload").into_inner() {
-            BindingFilterTokenPayloadInner::StringOrRegex(string_or_regex) => match string_or_regex
-            {
-              StringOrRegex::String(str) => Token::String(str),
-              StringOrRegex::Regex(regexp) => Token::Regex(regexp),
-            },
-            BindingFilterTokenPayloadInner::Boolean(v) => Token::Boolean(v),
-            BindingFilterTokenPayloadInner::Number(_) => todo!(),
-          };
+        let query_value = match take_payload(next_token)? {
+          BindingFilterTokenPayloadInner::StringOrRegex(string_or_regex) => match string_or_regex {
+            StringOrRegex::String(str) => Token::String(str),
+            StringOrRegex::Regex(regexp) => Token::Regex(regexp),
+          },
+          BindingFilterTokenPayloadInner::Boolean(v) => Token::Boolean(v),
+          BindingFilterTokenPayloadInner::Number(_) => {
+            anyhow::bail!("number values are not supported for query filter values");
+          }
+        };
         ret.push(query_value);
         ret.push(Token::String(query_key));
         ret.push(Token::Query);
@@ -203,10 +172,10 @@ pub fn normalized_tokens(tokens: Vec<BindingFilterToken>) -> Vec<Token> {
         continue;
       }
       FilterTokenKind::QueryValue => {
-        unreachable!("`QueryValue` is not expected");
+        anyhow::bail!("`QueryValue` token should not appear without a preceding `QueryKey`");
       }
     }
     iter.next();
   }
-  ret
+  Ok(ret)
 }

@@ -108,7 +108,7 @@ export default defineConfig({
 
 ## Command Line Flags
 
-Flags can be passed as `--foo`, `--foo <value>`, or `--foo=<value>`. Boolean flags like `--minify` don't need a value, while key-value options like `--define` use comma-separated syntax: `--define key=value,key2=value2`. Many flags have short aliases (e.g., `-m` for `--minify`, `-f` for `--format`).
+Flags can be passed as `--foo`, `--foo <value>`, or `--foo=<value>`. Boolean flags like `--minify` don't need a value, while key-value options like `--transform.define` use comma-separated syntax: `--transform.define key:value,key2:value2`. Many flags have short aliases (e.g., `-m` for `--minify`, `-f` for `--format`).
 
 ::: info Integration into other tools
 

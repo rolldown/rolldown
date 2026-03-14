@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/asset1-62jLpcKt.txt
+
+## assets/asset2-3AI71wi7.txt
+
+## main.js
+
+```js
+//#region main.js
+const url = new URL("assets/asset1-62jLpcKt.txt", import.meta.url);
+const url2 = new URL("assets/asset2-3AI71wi7.txt", import.meta.url);
+//#endregion
+export { url, url2 };
+
+```

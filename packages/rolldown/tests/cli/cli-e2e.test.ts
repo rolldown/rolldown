@@ -123,7 +123,7 @@ describe('cli options for bundling', () => {
     const cwd = cliFixturesDir('cli-option-object');
     const status = await $({
       cwd,
-    })`rolldown index.ts --module-types .123=text --module-types notjson=json --module-types .b64=base64 -d dist`;
+    })`rolldown index.ts --module-types .123:text --module-types notjson:json --module-types .b64:base64 -d dist`;
     expect(status.exitCode).toBe(0);
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
@@ -132,7 +132,7 @@ describe('cli options for bundling', () => {
     const cwd = cliFixturesDir('cli-option-object');
     const status = await $({
       cwd,
-    })`rolldown index.ts --module-types .123=text,notjson=json,.b64=base64 -d dist`;
+    })`rolldown index.ts --module-types .123:text,notjson:json,.b64:base64 -d dist`;
     expect(status.exitCode).toBe(0);
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
@@ -141,9 +141,21 @@ describe('cli options for bundling', () => {
     const cwd = cliFixturesDir('cli-option-object');
     const status = await $({
       cwd,
-    })`rolldown index.ts --module-types .123=text,notjson=json --module-types .b64=base64 -d dist`;
+    })`rolldown index.ts --module-types .123:text,notjson:json --module-types .b64:base64 -d dist`;
     expect(status.exitCode).toBe(0);
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
+  });
+
+  it('should handle deprecated key=value syntax with warning', async () => {
+    const cwd = cliFixturesDir('cli-option-object');
+    const status = await $({
+      cwd,
+    })`rolldown index.ts --module-types .123=text,notjson=json,.b64=base64 -d dist`;
+    expect(status.exitCode).toBe(0);
+    expect(cleanStdout(status.stdout)).toMatchSnapshot();
+    expect(status.stdout).toContain(
+      'Using `key=value` syntax for `--module-types` is deprecated. Use `key:value` instead.',
+    );
   });
 
   it('should handle negative boolean options', async () => {
@@ -166,7 +178,7 @@ describe('cli options for bundling', () => {
     const cwd = cliFixturesDir('cli-option-nested');
     const status = await $({
       cwd,
-    })`rolldown index.js --transform.define __DEFINE__=defined`;
+    })`rolldown index.js --transform.define __DEFINE__:defined`;
     expect(status.exitCode).toBe(0);
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
@@ -175,7 +187,7 @@ describe('cli options for bundling', () => {
     const cwd = cliFixturesDir('cli-option-multiple-define');
     const status = await $({
       cwd,
-    })`rolldown index.js --transform.define __A__=A,__B__=B,__C__=C -d dist`;
+    })`rolldown index.js --transform.define __A__:A,__B__:B,__C__:C -d dist`;
     expect(status.exitCode).toBe(0);
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
     const file = path.resolve(cwd, 'dist/index.js');
@@ -265,7 +277,7 @@ describe('cli options for bundling', () => {
     const cwd = cliFixturesDir('cli-option-object');
     const status = await $({
       cwd,
-    })`rolldown index.ts --moduleTypes .123=text,notjson=json,.b64=base64 -d dist`;
+    })`rolldown index.ts --moduleTypes .123:text,notjson:json,.b64:base64 -d dist`;
     expect(status.exitCode).toBe(0);
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });

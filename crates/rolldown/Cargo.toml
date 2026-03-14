@@ -11,7 +11,6 @@ description = "Fast JavaScript bundler in Rust, designed for the future of Vite"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-doctest = false
 
 [lints]
 workspace = true
@@ -74,8 +73,6 @@ xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]
 cow-utils = { workspace = true }
-dunce = { workspace = true }
-glob = { workspace = true }
 insta = { workspace = true }
 regex = { workspace = true }
 rolldown_common = { workspace = true }

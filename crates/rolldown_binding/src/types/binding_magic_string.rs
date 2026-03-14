@@ -421,7 +421,6 @@ impl BindingMagicString<'_> {
   }
 
   #[napi]
-  // TODO: should use `&str` instead. (claude code) Attempt failed due to generates new String from MagicString internal representation
   pub fn to_string(&self) -> String {
     self.inner.to_string()
   }

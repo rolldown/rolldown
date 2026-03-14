@@ -1,8 +1,5 @@
-import type {
-  BindingMagicString,
-  BindingPluginContext,
-  BindingTransformPluginContext,
-} from '../binding.cjs';
+import type { BindingPluginContext, BindingTransformPluginContext } from '../binding.cjs';
+import type { RolldownMagicString } from '../binding-magic-string';
 import {
   type LoggingFunctionWithPosition,
   type LogHandler,
@@ -106,7 +103,7 @@ export class TransformPluginContextImpl extends PluginContextImpl {
     this.inner.addWatchFile(id);
   }
 
-  public sendMagicString(s: BindingMagicString): void {
+  public sendMagicString(s: RolldownMagicString): void {
     this.inner.sendMagicString(s);
   }
 }

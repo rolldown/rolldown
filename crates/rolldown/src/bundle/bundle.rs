@@ -28,10 +28,10 @@ use sugar_path::SugarPath;
   clippy::struct_field_names,
   reason = "`bundle_span` emphasizes this's a span for this bundle, not a session level span"
 )]
-pub struct Bundle {
-  pub(crate) fs: OsFileSystem,
+pub struct Bundle<Fs: FileSystem + Clone + 'static = OsFileSystem> {
+  pub(crate) fs: Fs,
   pub(crate) options: SharedOptions,
-  pub(crate) resolver: SharedResolver,
+  pub(crate) resolver: SharedResolver<Fs>,
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) warnings: Vec<BuildDiagnostic>,
@@ -39,7 +39,7 @@ pub struct Bundle {
   pub(crate) bundle_span: Arc<tracing::Span>,
 }
 
-impl Bundle {
+impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {
@@ -143,10 +143,6 @@ impl Bundle {
     &self.plugin_driver.watch_files
   }
 
-  pub fn get_missing_import_dirs(&self) -> &Arc<FxDashSet<ArcStr>> {
-    &self.plugin_driver.missing_import_dirs
-  }
-
   pub fn context(&self) -> BundleHandle {
     BundleHandle {
       options: Arc::clone(&self.options),
@@ -181,7 +177,26 @@ impl Bundle {
     })?;
 
     for chunk in &output.assets {
-      let dest = dist_dir.join(chunk.filename());
+      let filename = chunk.filename();
+      if filename.contains('\0') {
+        let pattern_name = match chunk {
+          rolldown_common::Output::Chunk(c) => {
+            if c.is_entry {
+              "entryFileNames"
+            } else {
+              "chunkFileNames"
+            }
+          }
+          rolldown_common::Output::Asset(_) => "assetFileNames",
+        };
+        return Err(
+          BuildDiagnostic::invalid_option(rolldown_error::InvalidOptionType::NulByteInFilename {
+            pattern_name: pattern_name.to_string(),
+          })
+          .into(),
+        );
+      }
+      let dest = dist_dir.join(filename);
       if let Some(p) = dest.parent() {
         if !self.fs.exists(p) {
           self.fs.create_dir_all(p).with_context(|| {

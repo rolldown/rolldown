@@ -189,7 +189,8 @@ export function parseCliArguments(): NormalizedCliOptions & {
     }
   }
 
-  // Object option parsing — parse "key=val,key=val" strings
+  // Object option parsing — parse "key:val,key:val" strings (Rollup-compatible)
+  // Also supports deprecated "key=val,key=val" syntax with a warning
   for (const [schemaKey, info] of Object.entries(schemaInfo)) {
     if (info.type !== 'object') continue;
 
@@ -205,14 +206,34 @@ export function parseCliArguments(): NormalizedCliOptions & {
     const values = Array.isArray(value) ? value : [value];
     if (typeof values[0] !== 'string') continue;
 
+    let usedDeprecatedSyntax = false;
     const result: Record<string, string> = {};
     for (const v of values) {
       for (const pair of String(v).split(',')) {
-        const [k, ...rest] = pair.split('=');
-        if (k && rest.length > 0) {
-          result[k] = rest.join('=');
+        // Prefer `:` only if it appears before `=` (or `=` doesn't exist)
+        // This ensures `key=value:with:colon` (deprecated) is parsed correctly
+        const colonIdx = pair.indexOf(':');
+        const eqIdx = pair.indexOf('=');
+        let k: string;
+        let val: string;
+        if (colonIdx > 0 && (eqIdx === -1 || colonIdx < eqIdx)) {
+          k = pair.slice(0, colonIdx);
+          val = pair.slice(colonIdx + 1);
+        } else if (eqIdx > 0) {
+          k = pair.slice(0, eqIdx);
+          val = pair.slice(eqIdx + 1);
+          usedDeprecatedSyntax = true;
+        } else {
+          continue;
         }
+        result[k] = val;
       }
+    }
+    if (usedDeprecatedSyntax) {
+      const optionName = camelCaseToKebabCase(schemaKey);
+      logger.warn(
+        `Using \`key=value\` syntax for \`--${optionName}\` is deprecated. Use \`key:value\` instead.`,
+      );
     }
     parent[leafKey] = result;
   }

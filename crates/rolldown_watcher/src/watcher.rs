@@ -9,8 +9,6 @@ use futures::future::Shared;
 use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
-#[cfg(target_family = "wasm")]
-use rolldown_fs_watcher::FsWatcher;
 use rolldown_fs_watcher::FsWatcherConfig;
 use std::future::Future;
 use std::pin::Pin;
@@ -31,6 +29,12 @@ pub struct WatcherConfig {
   pub poll_interval: Option<u64>,
   /// Whether to compare file contents for poll-based watchers (only used when `use_polling` is true)
   pub compare_contents_for_polling: bool,
+  /// Whether to use debounced event delivery at the filesystem level
+  pub use_debounce: bool,
+  /// Debounce delay in milliseconds for fs-level debounced watchers (only used when `use_debounce` is true)
+  pub debounce_delay: Option<u64>,
+  /// Tick rate in milliseconds for the debouncer's internal polling (only used when `use_debounce` is true)
+  pub debounce_tick_rate: Option<u64>,
 }
 
 impl WatcherConfig {
@@ -45,8 +49,11 @@ impl WatcherConfig {
     }
     config.compare_contents_for_polling = self.compare_contents_for_polling;
     config.use_polling = self.use_polling;
-    // rolldown_watcher doesn't support debounce currently
-    config.use_debounce = false;
+    config.use_debounce = self.use_debounce;
+    if let Some(debounce_delay) = self.debounce_delay {
+      config.debounce_delay = debounce_delay;
+    }
+    config.debounce_tick_rate = self.debounce_tick_rate;
     config
   }
 }
@@ -128,13 +135,8 @@ impl Watcher {
     for (index, config) in configs.into_iter().enumerate() {
       let task_index = WatchTaskIdx::from_usize(index);
       let fs_handler = TaskFsEventHandler { task_index, tx: tx.clone() };
-      #[cfg(not(target_family = "wasm"))]
       let fs_watcher =
         rolldown_fs_watcher::create_fs_watcher(fs_handler, fs_watcher_config.clone())?;
-      #[cfg(target_family = "wasm")]
-      let fs_watcher: Box<dyn FsWatcher + Send + 'static> = Box::new(
-        rolldown_fs_watcher::NoopFsWatcher::with_config(fs_handler, fs_watcher_config.clone())?,
-      );
       let task = WatchTask::new(config, fs_watcher)?;
       tasks.push(task);
     }

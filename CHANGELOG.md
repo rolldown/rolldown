@@ -1,4 +1,121 @@
 
+## [1.0.0-rc.9] - 2026-03-11
+
+### 💥 BREAKING CHANGES
+
+- rename exported BindingMagicString to RolldownMagicString (#8626) by @IWANABETHATGUY
+
+### 🚀 Features
+
+- rolldown: add isRolldownMagicString property for reliable native detection (#8614) by @IWANABETHATGUY
+- cli: align object type with rollup (#8598) by @h-a-n-a
+
+### 🐛 Bug Fixes
+
+- rust: circular inter-chunk imports when external dynamic imports exist (#8596) by @Dunqing
+- update minify default docs from `false` to `'dce-only'` (#8620) by @shulaoda
+
+### 💼 Other
+
+- fix early exit in script build-node (#8617) by @h-a-n-a
+
+### 🚜 Refactor
+
+- binding: remove outdated TODO comment in MagicString to_string() (#8613) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- add viteplus alpha announcement banner (#8615) by @mdong1909
+- update VitePress theme to 4.8.2 for narrow-screen layout regression (#8612) by @Copilot
+
+### ⚡ Performance
+
+- merge 4 integration test binaries into 1 (#8610) by @Boshen
+
+### 🧪 Testing
+
+- replace heavy filename_with_hash test with targeted hash fixtures (#8597) by @Boshen
+
+### ⚙️ Miscellaneous Tasks
+
+- ci: remove redundant `--no-run` build step from cargo-test (#8623) by @Boshen
+- rust: use `cargo-shear` to toggle Cargo.toml [lib] test = bool (#8622) by @Boshen
+- deps: update test262 submodule for tests (#8611) by @sapphi-red
+- skip macOS CI jobs on pull requests (#8608) by @Copilot
+- add rust cache to repo validation job (#8607) by @Boshen
+- skip running empty bin test targets (#8605) by @Boshen
+- skip building examples in cargo-test to reduce build time (#8603) by @Boshen
+- switch plain workflow checkouts to taiki-e action (#8601) by @Boshen
+- skip Windows CI jobs on PRs (#8600) by @Boshen
+- remove unused asset module (#8594) by @shulaoda
+
+### ◀️ Revert
+
+- "docs: add viteplus alpha announcement banner (#8615)" (#8616) by @shulaoda
+
+
+## [1.0.0-rc.8] - 2026-03-09
+
+### 🚀 Features
+
+- watch: enable full functional fs watcher in wasm (#8575) by @hyf0
+- watch: expose debounce related options (#8572) by @hyf0
+
+### 🐛 Bug Fixes
+
+- detect new URL(…, import.meta.url) with no-sub template literal (#8565) by @char
+- devtools: trace dynamic imports in devtools (#8581) by @cal-gooo
+- watch: rebuild when a previously missing file is created (#8562) by @hyf0-agent
+- watch: filter out Access events to prevent infinite rebuild loop on Linux (#8557) by @hyf0-agent
+
+### 🚜 Refactor
+
+- watch: remove auto watch for fail imports (#8585) by @hyf0
+- fs_watcher: unify the way of constructing watcher (#8571) by @hyf0
+- cli: migrate CLI to CAC (#8551) by @h-a-n-a
+- switch asset module support from hard-code to builtin plugin (#8546) by @hyf0
+
+### 📚 Documentation
+
+- fix subject-verb agreement in why-bundlers.md (#8591) by @brandonzylstra
+- maintenance: align release and canary workflow guide (#8538) by @minsoo-web
+- add `format` option to directives example config (#8590) by @shulaoda
+- fix: change twitter to x logo in team (#8552) by @mdong1909
+- correct composable filter support explanation (#8550) by @sapphi-red
+
+### ⚡ Performance
+
+- testing: share tokio runtime across fixture tests (#8567) by @Boshen
+
+### 🧪 Testing
+
+- hmr: fix infinite loop in dev server test retry logic (#8576) by @hyf0-agent
+- cli: add more cli-e2e test cases (#8548) by @h-a-n-a
+
+### ⚙️ Miscellaneous Tasks
+
+- docs: update in-depth/directives for `output.strict` option (#8535) by @minsoo-web
+- add PNPM_HOME Dev Drive mapping to Windows CI workflows (#8589) by @Boshen
+- deps: update github-actions (#8588) by @renovate[bot]
+- move Windows cargo target dir to Dev Drive (#8586) by @Boshen
+- optimize cache keys to fix race conditions and reduce usage (#8578) by @Boshen
+- remove WASI build & test pipeline (#8580) by @Boshen
+- remove unnecessary submodule checkouts (#8577) by @Boshen
+- use Dev Drive for Windows CI jobs (#8574) by @Boshen
+- skip redundant native binding build for browser and remove standalone job (#8573) by @Boshen
+- parallelize Node tests on ubuntu, single Node 24 on macOS/windows (#8570) by @Boshen
+- docs: bump @voidzero-dev/vitepress-theme to 4.8.0 (#8558) by @crusty-voidzero
+- dedupe type-check from dev server workflow (#8554) by @Boshen
+
+### ❤️ New Contributors
+
+* @brandonzylstra made their first contribution in [#8591](https://github.com/rolldown/rolldown/pull/8591)
+* @char made their first contribution in [#8565](https://github.com/rolldown/rolldown/pull/8565)
+* @cal-gooo made their first contribution in [#8581](https://github.com/rolldown/rolldown/pull/8581)
+* @hyf0-agent made their first contribution in [#8562](https://github.com/rolldown/rolldown/pull/8562)
+* @h-a-n-a made their first contribution in [#8551](https://github.com/rolldown/rolldown/pull/8551)
+
+
 ## [1.0.0-rc.7] - 2026-03-05
 
 ### 💥 BREAKING CHANGES

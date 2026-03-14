@@ -1458,6 +1458,25 @@
         "compareContentsForPolling": {
           "type": "boolean"
         },
+        "useDebounce": {
+          "type": "boolean"
+        },
+        "debounceDelay": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "debounceTickRate": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
         "include": {
           "type": [
             "array",
@@ -1481,7 +1500,8 @@
       "required": [
         "skipWrite",
         "usePolling",
-        "compareContentsForPolling"
+        "compareContentsForPolling",
+        "useDebounce"
       ]
     },
     "LegalComments": {
@@ -1842,6 +1862,16 @@
           "type": [
             "string",
             "null"
+          ]
+        },
+        "comments": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommentsOptions"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "chunkOptimization": {

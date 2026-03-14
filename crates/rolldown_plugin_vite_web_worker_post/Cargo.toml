@@ -12,6 +12,7 @@ description = "Rolldown plugin for Web Worker post-processing"
 
 [lib]
 doctest = false
+test = false
 
 [lints]
 workspace = true

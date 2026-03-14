@@ -238,7 +238,9 @@ impl<'a> SideEffectDetector<'a> {
             self.detect_side_effect_of_expr(&e.object)
               | self.detect_side_effect_of_expr(&e.expression)
           }
-          _ => unreachable!("Oxc returned no side effects, so argument must be a member expression"),
+          _ => {
+            unreachable!("Oxc returned no side effects, so argument must be a member expression")
+          }
         }
       }
       Expression::NewExpression(expr) => {
@@ -248,8 +250,7 @@ impl<'a> SideEffectDetector<'a> {
         let is_global_constructor = !has_side_effect
           && matches!(&expr.callee, Expression::Identifier(id) if self.is_unresolved_reference(id));
         // METADATA: PureAnnotation — marked with /*@__PURE__*/
-        let is_pure_annotated =
-          !self.ctx.flat_options.ignore_annotations() && expr.pure;
+        let is_pure_annotated = !self.ctx.flat_options.ignore_annotations() && expr.pure;
 
         let mut detail = SideEffectDetail::from(has_side_effect);
         detail.set(SideEffectDetail::GlobalVarAccess, is_global_constructor);
@@ -341,10 +342,7 @@ impl<'a> SideEffectDetector<'a> {
     match decl {
       Declaration::VariableDeclaration(var_decl) => self.detect_side_effect_of_var_decl(var_decl),
       Declaration::FunctionDeclaration(_) => {
-        debug_assert!(
-          !decl.may_have_side_effects(&self.ctx),
-          "Oxc parity: FunctionDeclaration"
-        );
+        debug_assert!(!decl.may_have_side_effects(&self.ctx), "Oxc parity: FunctionDeclaration");
         false.into()
       }
       Declaration::ClassDeclaration(cls_decl) => cls_decl.may_have_side_effects(&self.ctx).into(),

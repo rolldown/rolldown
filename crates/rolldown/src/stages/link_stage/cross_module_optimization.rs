@@ -3,8 +3,8 @@ use oxc::{
   ast::{
     AstBuilder, AstKind,
     ast::{
-      BindingPattern, Declaration, ExportDefaultDeclaration, ExportDefaultDeclarationKind,
-      ExportNamedDeclaration,
+      BindingIdentifier, BindingPattern, Declaration, ExportDefaultDeclaration,
+      ExportDefaultDeclarationKind, ExportNamedDeclaration,
     },
   },
   ast_visit::{Visit, walk},
@@ -485,10 +485,10 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
     let local_binding_for_default_export = match &it.declaration {
       oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
       ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
-        fn_decl.id.as_ref().map(rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id)
+        fn_decl.id.as_ref().map(BindingIdentifier::symbol_id)
       }
       ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => {
-        cls_decl.id.as_ref().map(rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id)
+        cls_decl.id.as_ref().map(BindingIdentifier::symbol_id)
       }
       ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
     };

@@ -37,7 +37,7 @@ use rolldown_common::{
   StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
   TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
-use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt, FunctionExt};
+use rolldown_ecmascript_utils::{BindingPatternExt, FunctionExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
@@ -728,7 +728,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           ast::Declaration::VariableDeclaration(var_decl) => {
             var_decl.declarations.iter().for_each(|decl| {
               decl.id.binding_identifiers().into_iter().for_each(|id| {
-                self.add_local_export(&id.name, id.expect_symbol_id(), id.span);
+                self.add_local_export(&id.name, id.symbol_id(), id.span);
               });
               if let BindingPattern::BindingIdentifier(ref binding) = decl.id {
                 let symbol_id = binding.symbol_id();
@@ -764,7 +764,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           }
           ast::Declaration::FunctionDeclaration(fn_decl) => {
             let binding_id = fn_decl.id.as_ref().unwrap();
-            let symbol_id = binding_id.expect_symbol_id();
+            let symbol_id = binding_id.symbol_id();
             self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
             if fn_decl.is_side_effect_free() || fn_decl.pure {
               self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
@@ -779,7 +779,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           }
           ast::Declaration::ClassDeclaration(cls_decl) => {
             let id = cls_decl.id.as_ref().unwrap();
-            self.add_local_export(id.name.as_str(), id.expect_symbol_id(), id.span);
+            self.add_local_export(id.name.as_str(), id.symbol_id(), id.span);
           }
           _ => {
             self.untranspiled_syntax |= UntranspiledSyntax::TypeScript;
@@ -838,14 +838,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             .insert(SymbolRefFlags::SideEffectsFreeFunction);
         }
         fn_decl.id.as_ref().map(|id| {
-          let symbol_id = rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id);
+          let symbol_id = id.symbol_id();
           self.result.default_export_ref.symbol = symbol_id;
           (symbol_id, id.span)
         })
       }
       ast::ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => {
         cls_decl.id.as_ref().map(|id| {
-          let symbol_id = rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id);
+          let symbol_id = id.symbol_id();
           self.result.default_export_ref.symbol = symbol_id;
           (symbol_id, id.span)
         })
@@ -891,15 +891,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let Some(specifiers) = &decl.specifiers else { return };
     specifiers.iter().for_each(|spec| match spec {
       ast::ImportDeclarationSpecifier::ImportSpecifier(spec) => {
-        let sym = spec.local.expect_symbol_id();
+        let sym = spec.local.symbol_id();
         let imported = spec.imported.name();
         self.add_named_import(sym, imported.as_str(), rec_id, spec.imported.span());
       }
       ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(spec) => {
-        self.add_named_import(spec.local.expect_symbol_id(), "default", rec_id, spec.span);
+        self.add_named_import(spec.local.symbol_id(), "default", rec_id, spec.span);
       }
       ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(spec) => {
-        let symbol_id = spec.local.expect_symbol_id();
+        let symbol_id = spec.local.symbol_id();
         self.add_star_import(symbol_id, rec_id, spec.local.span());
       }
     });

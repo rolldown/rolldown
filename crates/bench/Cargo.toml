@@ -25,11 +25,7 @@ tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
 
 [[bench]]
 harness = false
-name = "bundle"
-
-[[bench]]
-harness = false
-name = "scan"
+name = "bench"
 
 [features]
 codspeed = ["criterion2/codspeed"]

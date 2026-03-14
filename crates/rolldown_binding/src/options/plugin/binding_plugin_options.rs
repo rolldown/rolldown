@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use napi::bindgen_prelude::{Either, FnArgs};
 use rolldown_utils::filter_expression::{self, FilterExprKind};
 use std::fmt::Debug;
@@ -217,45 +216,43 @@ pub struct FilterExprCache {
   pub render_chunk: Option<Vec<FilterExprKind>>,
 }
 impl BindingPluginOptions {
-  pub fn pre_compile_filter_expr(&self) -> FilterExprCache {
+  pub fn pre_compile_filter_expr(&self) -> napi::Result<FilterExprCache> {
+    let plugin_name = &self.name;
+    let make_err = |err: anyhow::Error| {
+      napi::Error::new(
+        napi::Status::InvalidArg,
+        format!("Invalid filter expression in plugin '{plugin_name}': {err}"),
+      )
+    };
+    let compile = |tokenss: &[Vec<_>]| -> napi::Result<Vec<FilterExprKind>> {
+      tokenss
+        .iter()
+        .cloned()
+        .map(|tokens| {
+          let normalized = normalized_tokens(tokens).map_err(&make_err)?;
+          filter_expression::parse(normalized).map_err(&make_err)
+        })
+        .collect()
+    };
+
     let mut cache = FilterExprCache::default();
     if let Some(tokenss) = self.resolve_id_filter.as_ref().and_then(|item| item.value.as_ref()) {
-      let filter_kind = tokenss
-        .clone()
-        .into_iter()
-        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
-        .collect_vec();
-      cache.resolve_id = Some(filter_kind);
+      cache.resolve_id = Some(compile(tokenss)?);
     }
 
     if let Some(filter) = self.load_filter.as_ref().and_then(|item| item.value.as_ref()) {
-      let filter_kind = filter
-        .clone()
-        .into_iter()
-        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
-        .collect_vec();
-      cache.load = Some(filter_kind);
+      cache.load = Some(compile(filter)?);
     }
 
     if let Some(filter) = self.transform_filter.as_ref().and_then(|item| item.value.as_ref()) {
-      let filter_kind = filter
-        .clone()
-        .into_iter()
-        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
-        .collect_vec();
-      cache.transform = Some(filter_kind);
+      cache.transform = Some(compile(filter)?);
     }
 
     if let Some(filter) = self.render_chunk_filter.as_ref().and_then(|item| item.value.as_ref()) {
-      let filter_kind = filter
-        .clone()
-        .into_iter()
-        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
-        .collect_vec();
-      cache.render_chunk = Some(filter_kind);
+      cache.render_chunk = Some(compile(filter)?);
     }
 
-    cache
+    Ok(cache)
   }
 }
 

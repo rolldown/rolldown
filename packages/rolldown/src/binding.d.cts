@@ -1533,8 +1533,12 @@ export declare class BindingMagicString {
    */
   reset(start: number, end: number): this
   /**
-   * Returns the content between the specified original character positions.
+   * Returns the content between the specified UTF-16 code unit positions (JS string indices).
    * Supports negative indices (counting from the end).
+   *
+   * When an index falls in the middle of a surrogate pair, the lone surrogate is
+   * included in the result (matching the original magic-string / JS behavior).
+   * This is done by returning a UTF-16 encoded JS string via `napi_create_string_utf16`.
    */
   slice(start?: number | undefined | null, end?: number | undefined | null): string
   /**

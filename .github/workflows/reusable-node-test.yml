@@ -11,17 +11,16 @@ on:
       changed:
         required: true
         type: boolean
+      node-version:
+        required: true
+        type: number
 
 jobs:
   run:
-    name: Node Test (Node ${{ matrix.node-version }})
+    name: Node Test (Node ${{ inputs.node-version }})
     if: ${{ inputs.changed }}
     runs-on: ${{ inputs.os }}
     timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: ${{ inputs.os == 'ubuntu-latest' && fromJson('[20, 22, 24]') || fromJson('[24]') }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -47,10 +46,10 @@ jobs:
       - name: Build `@rolldown/test-dev-server`
         run: pnpm --filter '@rolldown/test-dev-server' build
 
-      - name: Setup Node${{ matrix.node-version }} For Testing
+      - name: Setup Node${{ inputs.node-version }} For Testing
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ inputs.node-version }}
           package-manager-cache: false
 
       - name: Node Test
@@ -60,7 +59,7 @@ jobs:
       - name: Rollup Test
         run: pnpm run --filter rollup-tests test
         env:
-          SKIP_PASS_DIFF: ${{ matrix.node-version != 24 && '1' || '' }}
+          SKIP_PASS_DIFF: ${{ inputs.node-version != 24 && '1' || '' }}
 
       - name: Build Examples
         run: pnpm --filter '@example/**' build

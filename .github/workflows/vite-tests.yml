@@ -48,7 +48,7 @@ jobs:
         with:
           tools: just
           cache-key: native-build
-          save-cache: ${{ github.ref_name == 'main' }}
+          save-cache: false
 
       - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 

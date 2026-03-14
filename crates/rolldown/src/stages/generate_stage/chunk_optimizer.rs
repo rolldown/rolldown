@@ -245,6 +245,7 @@ enum ChunkAssignment {
   Merged(ChunkIdx),
   /// A new common chunk was created in chunk_graph (chunk_graph index).
   Created(ChunkIdx),
+  Empty,
 }
 
 impl GenerateStage<'_> {
@@ -396,6 +397,7 @@ impl GenerateStage<'_> {
         ChunkAssignment::Created(new_chunk_id) => {
           temp_chunk_graph.register_chunk_graph_index(new_chunk_id, temp_chunk_idx);
         }
+        ChunkAssignment::Empty => {}
       }
     }
   }
@@ -415,6 +417,12 @@ impl GenerateStage<'_> {
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
   ) -> ChunkAssignment {
+    let is_advanced_chunk = self
+      .options
+      .manual_code_splitting
+      .as_ref()
+      .is_some_and(|code_splitting| code_splitting.groups.is_some());
+
     match merge_target {
       Some(chunk_idx) => {
         let chunk = &chunk_graph.chunk_table[chunk_idx];
@@ -439,6 +447,12 @@ impl GenerateStage<'_> {
         }
       }
       _ => {
+        let is_pure_reexport = modules
+          .iter()
+          .all(|&module_id| self.link_output.module_table[module_id].is_pure_reexport());
+        if is_pure_reexport && is_advanced_chunk {
+          return ChunkAssignment::Empty;
+        }
         let new_chunk_id =
           self.create_common_chunk(modules, bits, chunk_graph, bits_to_chunk, input_base);
         ChunkAssignment::Created(new_chunk_id)

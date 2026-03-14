@@ -23,7 +23,6 @@ const napiArgs = {
   jsBinding: 'binding.cjs',
   dts: 'binding.d.cts',
   constEnum: false,
-  dtsCache: !process.env.CI,
 };
 
 console.info('args:', napiArgs);

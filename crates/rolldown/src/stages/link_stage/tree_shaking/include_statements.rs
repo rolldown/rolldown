@@ -50,7 +50,6 @@ bitflags::bitflags! {
     }
 }
 
-#[expect(clippy::struct_excessive_bools)]
 pub struct IncludeContext<'a> {
   pub modules: &'a IndexModules,
   pub symbols: &'a SymbolRefDb,
@@ -67,7 +66,6 @@ pub struct IncludeContext<'a> {
   /// It is necessary since we can't mutate `module.meta` during the tree shaking process.
   /// see [rolldown_common::ecmascript::ecma_view::EcmaViewMeta]
   pub bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
-  pub may_partial_namespace: bool,
   /// Tracks whether any new module was included during the current convergence iteration.
   /// Used to detect fixpoint without O(N) scanning of `is_module_included_vec`.
   pub module_inclusion_changed: bool,
@@ -104,7 +102,6 @@ impl<'a> IncludeContext<'a> {
       options,
       normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
-      may_partial_namespace: false,
       module_inclusion_changed: false,
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
@@ -123,8 +120,57 @@ fn include_cjs_bailout_exports(
       .iter()
       .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
       .for_each(|local| {
-        include_symbol(context, local.symbol_ref, SymbolIncludeReason::Normal);
+        include_symbol_and_check_cjs_bailout(context, local.symbol_ref, SymbolIncludeReason::Normal);
       });
+  }
+}
+
+/// Include a symbol and check for CJS tree-shaking bailout.
+///
+/// Use this at most call sites. Only use bare [`include_symbol`] when you
+/// explicitly want to skip the bailout check (e.g., for partial CJS member-
+/// expression access or runtime symbols).
+fn include_symbol_and_check_cjs_bailout(
+  ctx: &mut IncludeContext,
+  symbol_ref: SymbolRef,
+  include_reason: SymbolIncludeReason,
+) {
+  include_symbol(ctx, symbol_ref, include_reason);
+  check_cjs_bailout(ctx, symbol_ref);
+}
+
+/// Check if including this symbol should trigger CJS tree-shaking bailout.
+/// This is called at `include_symbol` call sites where the symbol is NOT accessed
+/// via a resolved member expression on a CJS namespace (i.e., where the full namespace
+/// might be used opaquely). When we know only a specific property is accessed
+/// (member expression with `target_commonjs_exported_symbol`), we skip this check
+/// to allow CJS tree-shaking.
+fn check_cjs_bailout(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
+  let canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
+
+  // If the symbol is a CJS namespace import ref, bail out the target CJS module.
+  if let Some(idx) =
+    ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
+  {
+    ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
+  }
+  // If the symbol IS a CJS module's namespace object, bail out that module.
+  if ctx.modules[canonical_ref.owner].namespace_object_ref() == Some(canonical_ref) {
+    ctx.bailout_cjs_tree_shaking_modules.insert(canonical_ref.owner);
+  }
+
+  // If the symbol has a namespace_alias importing "default" from a CJS module,
+  // bail out that module (default import is the whole module.exports).
+  let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
+  if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
+    if let Some(idx) = ctx.metas[namespace_alias.namespace_ref.owner]
+      .import_record_ns_to_cjs_module
+      .get(&namespace_alias.namespace_ref)
+    {
+      if namespace_alias.property_name.as_str() == "default" {
+        ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
+      }
+    }
   }
 }
 
@@ -204,7 +250,7 @@ impl LinkStage<'_> {
                 include_statement(context, module, stmt_info_id);
               },
             );
-            include_symbol(context, *symbol_ref, SymbolIncludeReason::EntryExport);
+            include_symbol_and_check_cjs_bailout(context, *symbol_ref, SymbolIncludeReason::EntryExport);
           }
         },
       );
@@ -386,7 +432,7 @@ impl LinkStage<'_> {
             include_statement(context, module, stmt_info_id);
           },
         );
-        include_symbol(context, *symbol_ref, SymbolIncludeReason::EntryExport);
+        include_symbol_and_check_cjs_bailout(context, *symbol_ref, SymbolIncludeReason::EntryExport);
       }
     });
     include_module(context, module);
@@ -577,13 +623,6 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
     return;
   }
 
-  // Save and reset may_partial_namespace. When including a module's
-  // side-effectful statements, we should not inherit the partial namespace
-  // context from a specific member expression resolution — the module's
-  // own statements need independent bailout evaluation.
-  let prev_may_partial_namespace = ctx.may_partial_namespace;
-  ctx.may_partial_namespace = false;
-
   ctx.is_module_included_vec.set_bit(module.idx);
   ctx.module_inclusion_changed = true;
 
@@ -649,12 +688,12 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
   );
   if module.meta.has_eval() && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
     module.named_imports.keys().for_each(|symbol| {
-      include_symbol(ctx, *symbol, SymbolIncludeReason::Normal);
+      include_symbol_and_check_cjs_bailout(ctx, *symbol, SymbolIncludeReason::Normal);
     });
   }
 
   ctx.metas[module.idx].included_commonjs_export_symbol.iter().for_each(|symbol_ref| {
-    include_symbol(ctx, *symbol_ref, SymbolIncludeReason::Normal);
+    include_symbol_and_check_cjs_bailout(ctx, *symbol_ref, SymbolIncludeReason::Normal);
   });
 
   // With enabling HMR, rolldown will register included esm module's namespace object to the runtime.
@@ -665,8 +704,6 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
     include_statement(ctx, module, StmtInfos::NAMESPACE_STMT_IDX);
     ctx.module_namespace_included_reason[module.idx].insert(ModuleNamespaceIncludedReason::Unknown);
   }
-
-  ctx.may_partial_namespace = prev_may_partial_namespace;
 }
 
 pub fn include_symbol(
@@ -691,16 +728,8 @@ pub fn include_symbol(
   // Also include the symbol that points to the canonical ref.
   ctx.used_symbol_refs.insert(symbol_ref);
 
-  if !ctx.may_partial_namespace {
-    if let Some(idx) =
-      ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
-    {
-      ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
-    }
-    if ctx.modules[canonical_ref.owner].namespace_object_ref() == Some(canonical_ref) {
-      ctx.bailout_cjs_tree_shaking_modules.insert(canonical_ref.owner);
-    }
-  }
+  // CJS bailout checks are handled by `include_symbol_and_check_cjs_bailout`
+  // at most call sites. This keeps `include_symbol` focused on inclusion only.
 
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
@@ -708,25 +737,22 @@ pub fn include_symbol(
     if let Some(idx) =
       ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
     {
-      if !ctx.may_partial_namespace && namespace_alias.property_name.as_str() == "default" {
-        ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
-      } else {
-        // handle case:
-        // ```js
-        // import {a} from './cjs.js'
-        // console.log(a)
-        // ```
-        ctx.modules[*idx].as_normal().inspect(|_| {
-          let Some(export_symbol) =
-            ctx.metas[*idx].resolved_exports.get(&namespace_alias.property_name)
-          else {
-            return;
-          };
-          if namespace_alias.property_name.as_str() != "default" {
-            include_symbol(ctx, export_symbol.symbol_ref, SymbolIncludeReason::Normal);
-          }
-        });
-      }
+      // Include specific named export from CJS module.
+      // Default import bailout is handled by check_cjs_bailout at call sites.
+      // ```js
+      // import {a} from './cjs.js'
+      // console.log(a)
+      // ```
+      ctx.modules[*idx].as_normal().inspect(|_| {
+        let Some(export_symbol) =
+          ctx.metas[*idx].resolved_exports.get(&namespace_alias.property_name)
+        else {
+          return;
+        };
+        if namespace_alias.property_name.as_str() != "default" {
+          include_symbol(ctx, export_symbol.symbol_ref, SymbolIncludeReason::Normal);
+        }
+      });
     }
   }
 
@@ -874,9 +900,6 @@ pub fn include_statement(
       // Caveat: If we can get the `MemberExprRefResolution` from the `resolved_member_expr_refs`,
       // it means this member expr definitely contains module namespace ref.
       if let Some(resolved_ref) = member_expr_resolution.resolved {
-        let pre = ctx.may_partial_namespace;
-        ctx.may_partial_namespace =
-          member_expr_resolution.target_commonjs_exported_symbol.is_some();
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
           if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
             module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(
@@ -887,7 +910,13 @@ pub fn include_statement(
           }
         });
         include_symbol(ctx, resolved_ref, include_kind);
-        ctx.may_partial_namespace = pre;
+        // When the member expression resolves to a specific CJS export property
+        // (e.g., `ns.x`), we skip the bailout check — we know the access is partial
+        // and CJS tree-shaking can work. Otherwise, the full namespace may be used
+        // opaquely, so we check for bailout.
+        if member_expr_resolution.target_commonjs_exported_symbol.is_none() {
+          check_cjs_bailout(ctx, resolved_ref);
+        }
       } else {
         // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
       }
@@ -906,7 +935,7 @@ pub fn include_statement(
             );
           }
         });
-      include_symbol(ctx, *original_ref, include_kind);
+      include_symbol_and_check_cjs_bailout(ctx, *original_ref, include_kind);
     }
   });
 }

@@ -174,113 +174,82 @@ impl From<StringOrRegex> for Token {
   }
 }
 
-// TODO: better error handling
-pub fn parse(mut tokens: Vec<Token>) -> FilterExprKind {
-  fn rec(tokens: &mut Vec<Token>) -> Option<FilterExpr> {
-    let token = tokens.pop()?;
+pub fn parse(mut tokens: Vec<Token>) -> anyhow::Result<FilterExprKind> {
+  fn pop(tokens: &mut Vec<Token>) -> anyhow::Result<Token> {
+    tokens.pop().ok_or_else(|| anyhow::anyhow!("unexpected end of filter expression tokens"))
+  }
+
+  fn pop_string_or_regex(tokens: &mut Vec<Token>, context: &str) -> anyhow::Result<StringOrRegex> {
+    match pop(tokens)? {
+      Token::String(str) => Ok(StringOrRegex::String(str)),
+      Token::Regex(regexp) => Ok(StringOrRegex::Regex(regexp)),
+      other => {
+        anyhow::bail!("{context} token should be followed by a string or regex, but got {other:?}")
+      }
+    }
+  }
+
+  fn rec(tokens: &mut Vec<Token>) -> anyhow::Result<FilterExpr> {
+    let token = pop(tokens)?;
     match token {
-      Token::Id => {
-        let string_or_regex = match tokens.pop()? {
-          Token::String(str) => StringOrRegex::String(str),
-          Token::Regex(regexp) => StringOrRegex::Regex(regexp),
-          _ => {
-            unreachable!("Id token should be followed by a string or regex")
-          }
-        };
-        Some(FilterExpr::Id(string_or_regex))
-      }
-      Token::ImporterId => {
-        let string_or_regex = match tokens.pop()? {
-          Token::String(str) => StringOrRegex::String(str),
-          Token::Regex(regexp) => StringOrRegex::Regex(regexp),
-          _ => {
-            unreachable!("ImporterId token should be followed by a string or regex")
-          }
-        };
-        Some(FilterExpr::ImporterId(string_or_regex))
-      }
+      Token::Id => Ok(FilterExpr::Id(pop_string_or_regex(tokens, "Id")?)),
+      Token::ImporterId => Ok(FilterExpr::ImporterId(pop_string_or_regex(tokens, "ImporterId")?)),
+      Token::Code => Ok(FilterExpr::Code(pop_string_or_regex(tokens, "Code")?)),
       Token::Query => {
-        let Token::String(key) = tokens.pop()? else {
-          unreachable!("Key of `Query` should be string")
+        let key = match pop(tokens)? {
+          Token::String(key) => key,
+          other => anyhow::bail!("key of `Query` should be a string, but got {other:?}"),
         };
-        let value = match tokens.pop()? {
+        let value = match pop(tokens)? {
           Token::String(v) => QueryValue::String(v),
           Token::Regex(v) => QueryValue::Regex(v),
           Token::Boolean(v) => QueryValue::Boolean(v),
-          _ => {
-            unreachable!("Value of `Query` should be either `string`, `regex` or `boolean`")
-          }
+          other => anyhow::bail!(
+            "value of `Query` should be a string, regex, or boolean, but got {other:?}"
+          ),
         };
-        Some(FilterExpr::Query(key, value))
-      }
-      Token::Code => {
-        let string_or_regex = match tokens.pop()? {
-          Token::String(str) => StringOrRegex::String(str),
-          Token::Regex(regexp) => StringOrRegex::Regex(regexp),
-          _ => {
-            unreachable!("Code token should be followed by a string or regex")
-          }
-        };
-        Some(FilterExpr::Code(string_or_regex))
+        Ok(FilterExpr::Query(key, value))
       }
       Token::ModuleType => {
-        let Token::String(string) = tokens.pop()? else {
-          unreachable!("ModuleType token should be followed by a string");
+        let string = match pop(tokens)? {
+          Token::String(s) => s,
+          other => {
+            anyhow::bail!("ModuleType token should be followed by a string, but got {other:?}")
+          }
         };
-        Some(FilterExpr::ModuleType(string))
+        Ok(FilterExpr::ModuleType(string))
       }
       Token::And(arg_count) => {
         let mut args = Vec::with_capacity(arg_count as usize);
         for _ in 0..arg_count {
-          let inner = rec(tokens)?;
-          args.push(inner);
+          args.push(rec(tokens)?);
         }
-        Some(FilterExpr::And(args))
+        Ok(FilterExpr::And(args))
       }
       Token::Or(arg_count) => {
         let mut args = Vec::with_capacity(arg_count as usize);
         for _ in 0..arg_count {
-          let inner = rec(tokens)?;
-          args.push(inner);
+          args.push(rec(tokens)?);
         }
-        Some(FilterExpr::Or(args))
+        Ok(FilterExpr::Or(args))
       }
-      Token::Not => {
-        let inner = rec(tokens)?;
-        Some(FilterExpr::Not(Box::new(inner)))
-      }
-      Token::Include => {
-        unreachable!("Include token should not be in the expression");
-      }
-      Token::Exclude => {
-        unreachable!("Exclude token should not be in the expression");
-      }
-      Token::CleanUrl => {
-        let arg = rec(tokens)?;
-        Some(FilterExpr::CleanUrl(Box::new(arg)))
-      }
-      Token::String(_) => {
-        unreachable!("String token should not appear standalone");
-      }
-      Token::Regex(_) => {
-        unreachable!("Regex token should not appear standalone");
-      }
-      Token::Boolean(_) => {
-        unreachable!("Boolean token should not appear standalone");
-      }
+      Token::Not => Ok(FilterExpr::Not(Box::new(rec(tokens)?))),
+      Token::CleanUrl => Ok(FilterExpr::CleanUrl(Box::new(rec(tokens)?))),
+      Token::Include => anyhow::bail!("Include token should not appear inside an expression"),
+      Token::Exclude => anyhow::bail!("Exclude token should not appear inside an expression"),
+      Token::String(_) => anyhow::bail!("String token should not appear standalone"),
+      Token::Regex(_) => anyhow::bail!("Regex token should not appear standalone"),
+      Token::Boolean(_) => anyhow::bail!("Boolean token should not appear standalone"),
     }
   }
-  match tokens.pop() {
-    Some(Token::Include) => {
-      let inner = rec(&mut tokens).expect("Failed to parse expression");
-      FilterExprKind::Include(inner)
-    }
-    Some(Token::Exclude) => {
-      let inner = rec(&mut tokens).expect("Failed to parse expression");
-      FilterExprKind::Exclude(inner)
-    }
 
-    _ => unreachable!("Expression should start with Include or Exclude"),
+  match tokens.pop() {
+    Some(Token::Include) => Ok(FilterExprKind::Include(rec(&mut tokens)?)),
+    Some(Token::Exclude) => Ok(FilterExprKind::Exclude(rec(&mut tokens)?)),
+    Some(other) => {
+      anyhow::bail!("filter expression should start with Include or Exclude, but got {other:?}")
+    }
+    None => anyhow::bail!("filter expression is empty"),
   }
 }
 
@@ -360,7 +329,7 @@ mod test {
     ];
     tokens.reverse();
 
-    let expr = parse(tokens);
+    let expr = parse(tokens).unwrap();
     // the expr return `true`, but since it is a `Exclude`, finally it should be `false`
     assert!(!filter_exprs_interpreter(
       &[expr],

@@ -48,10 +48,10 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
         if output_mode == "chrome-json" { TraceStyle::Async } else { TraceStyle::Threaded };
       let (chrome_layer, guard) =
         ChromeLayerBuilder::new().trace_style(trace_style).include_args(true).build();
-      tracing_subscriber::registry()
+      let _ = tracing_subscriber::registry()
         .with(Targets::from_str(&env_var).unwrap())
         .with(chrome_layer.with_filter(filter_for_removing_devtools_event))
-        .init();
+        .try_init();
       Some(Box::new(guard))
     }
     "json" => {
@@ -60,22 +60,22 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
       unimplemented!()
     }
     "readable" => {
-      tracing_subscriber::registry()
+      let _ = tracing_subscriber::registry()
         .with(filter_for_removing_devtools_event)
         .with(Targets::from_str(&env_var).unwrap())
         .with(
           fmt::layer().pretty().with_span_events(FmtSpan::NONE).with_level(true).with_target(false),
         )
-        .init();
+        .try_init();
       tracing::debug!("Tracing initialized");
       None
     }
     _ => {
-      tracing_subscriber::registry()
+      let _ = tracing_subscriber::registry()
         .with(filter_for_removing_devtools_event)
         .with(Targets::from_str(&env_var).unwrap())
         .with(fmt::layer().pretty().with_span_events(FmtSpan::CLOSE | FmtSpan::ENTER))
-        .init();
+        .try_init();
       tracing::debug!("Tracing initialized");
       None
     }

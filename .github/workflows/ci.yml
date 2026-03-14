@@ -131,9 +131,7 @@ jobs:
   type-check:
     name: Type Check
     needs: [changes, build-rolldown-ubuntu]
-    if: |
-      always() &&
-      (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
+    if: needs.changes.outputs.node-changes == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

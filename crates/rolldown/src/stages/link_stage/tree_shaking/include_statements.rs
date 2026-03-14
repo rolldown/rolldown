@@ -577,6 +577,13 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
     return;
   }
 
+  // Save and reset may_partial_namespace. When including a module's
+  // side-effectful statements, we should not inherit the partial namespace
+  // context from a specific member expression resolution — the module's
+  // own statements need independent bailout evaluation.
+  let prev_may_partial_namespace = ctx.may_partial_namespace;
+  ctx.may_partial_namespace = false;
+
   ctx.is_module_included_vec.set_bit(module.idx);
   ctx.module_inclusion_changed = true;
 
@@ -658,6 +665,8 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
     include_statement(ctx, module, StmtInfos::NAMESPACE_STMT_IDX);
     ctx.module_namespace_included_reason[module.idx].insert(ModuleNamespaceIncludedReason::Unknown);
   }
+
+  ctx.may_partial_namespace = prev_may_partial_namespace;
 }
 
 pub fn include_symbol(

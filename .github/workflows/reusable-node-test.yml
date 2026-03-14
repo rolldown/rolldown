@@ -17,7 +17,7 @@ on:
 
 jobs:
   run:
-    name: Node Test (Node ${{ inputs.node-version }})
+    name: Node Test
     if: ${{ inputs.changed }}
     runs-on: ${{ inputs.os }}
     timeout-minutes: 10

@@ -120,7 +120,11 @@ fn include_cjs_bailout_exports(
       .iter()
       .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
       .for_each(|local| {
-        include_symbol_and_check_cjs_bailout(context, local.symbol_ref, SymbolIncludeReason::Normal);
+        include_symbol_and_check_cjs_bailout(
+          context,
+          local.symbol_ref,
+          SymbolIncludeReason::Normal,
+        );
       });
   }
 }
@@ -250,7 +254,11 @@ impl LinkStage<'_> {
                 include_statement(context, module, stmt_info_id);
               },
             );
-            include_symbol_and_check_cjs_bailout(context, *symbol_ref, SymbolIncludeReason::EntryExport);
+            include_symbol_and_check_cjs_bailout(
+              context,
+              *symbol_ref,
+              SymbolIncludeReason::EntryExport,
+            );
           }
         },
       );
@@ -432,7 +440,11 @@ impl LinkStage<'_> {
             include_statement(context, module, stmt_info_id);
           },
         );
-        include_symbol_and_check_cjs_bailout(context, *symbol_ref, SymbolIncludeReason::EntryExport);
+        include_symbol_and_check_cjs_bailout(
+          context,
+          *symbol_ref,
+          SymbolIncludeReason::EntryExport,
+        );
       }
     });
     include_module(context, module);

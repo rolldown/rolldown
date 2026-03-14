@@ -341,9 +341,8 @@ impl<'a> SideEffectDetector<'a> {
     match decl {
       Declaration::VariableDeclaration(var_decl) => self.detect_side_effect_of_var_decl(var_decl),
       Declaration::FunctionDeclaration(_) => {
-        debug_assert_eq!(
-          false,
-          decl.may_have_side_effects(&self.ctx),
+        debug_assert!(
+          !decl.may_have_side_effects(&self.ctx),
           "Oxc parity: FunctionDeclaration"
         );
         false.into()
@@ -554,9 +553,8 @@ impl<'a> SideEffectDetector<'a> {
       Statement::EmptyStatement(_)
       | Statement::ContinueStatement(_)
       | Statement::BreakStatement(_) => {
-        debug_assert_eq!(
-          false,
-          stmt.may_have_side_effects(&self.ctx),
+        debug_assert!(
+          !stmt.may_have_side_effects(&self.ctx),
           "Oxc parity: EmptyStatement/ContinueStatement/BreakStatement"
         );
         false.into()
@@ -568,8 +566,7 @@ impl<'a> SideEffectDetector<'a> {
       | Statement::ForStatement(_)
       | Statement::ThrowStatement(_)
       | Statement::WithStatement(_) => {
-        debug_assert_eq!(
-          true,
+        debug_assert!(
           stmt.may_have_side_effects(&self.ctx),
           "Oxc parity: DebuggerStatement/ForInStatement/ForOfStatement/ForStatement/ThrowStatement/WithStatement"
         );

@@ -26,6 +26,10 @@ pub use crate::{
   },
   bundler::Bundler,
   bundler_builder::BundlerBuilder,
+  stages::{
+    link_stage::LinkStageOutput,
+    scan_stage::NormalizedScanStageOutput,
+  },
   types::{bundle_output::BundleOutput, bundler_config::BundlerConfig},
 };
 

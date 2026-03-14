@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use criterion::Criterion;
+use criterion::{BatchSize, Criterion};
 use rolldown::{
   BundleFactory, BundleFactoryOptions, BundlerOptions, InputItem, Platform, ResolveOptions,
   TsConfig,
@@ -166,6 +166,8 @@ pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
 #[derive(Clone, Copy)]
 pub enum BenchMode {
   Scan,
+  Link,
+  Generate,
   Bundle,
 }
 
@@ -187,20 +189,56 @@ pub fn run_bench_group(
   for (name, options) in items {
     for item in derive_benchmark_items(derive_options, name, options) {
       let mut ctx = create_bench_context(&item.options);
-      group.bench_function(format!("{group_name}@{}", item.name), |b| {
-        b.to_async(&runtime).iter(|| {
-          let bundle = ctx.factory.create_bundle_with_fs(ctx.mem_fs.clone(), ctx.create_resolver());
-          async {
-            match mode {
-              BenchMode::Scan => {
-                bundle.scan().await.expect("Failed to scan");
-              }
-              BenchMode::Bundle => {
-                bundle.generate().await.expect("Failed to bundle");
-              }
+      group.bench_function(format!("{group_name}@{}", item.name), |b| match mode {
+        BenchMode::Scan => {
+          b.to_async(&runtime).iter(|| {
+            let mut bundle =
+              ctx.factory.create_bundle_with_fs(ctx.mem_fs.clone(), ctx.create_resolver());
+            async move {
+              bundle.scan().await.expect("Failed to scan");
             }
-          }
-        });
+          });
+        }
+        BenchMode::Link => {
+          b.to_async(&runtime).iter_batched(
+            || {
+              let mut bundle =
+                ctx.factory.create_bundle_with_fs(ctx.mem_fs.clone(), ctx.create_resolver());
+              let scan_output =
+                runtime.block_on(bundle.scan()).expect("Failed to scan in link setup");
+              (bundle, scan_output)
+            },
+            |(bundle, scan_output)| async move {
+              bundle.link(scan_output);
+            },
+            BatchSize::PerIteration,
+          );
+        }
+        BenchMode::Generate => {
+          b.to_async(&runtime).iter_batched(
+            || {
+              let mut bundle =
+                ctx.factory.create_bundle_with_fs(ctx.mem_fs.clone(), ctx.create_resolver());
+              let scan_output =
+                runtime.block_on(bundle.scan()).expect("Failed to scan in generate setup");
+              let link_output = bundle.link(scan_output);
+              (bundle, link_output)
+            },
+            |(mut bundle, mut link_output)| async move {
+              bundle.generate_from_link(&mut link_output).await.expect("Failed to generate");
+            },
+            BatchSize::PerIteration,
+          );
+        }
+        BenchMode::Bundle => {
+          b.to_async(&runtime).iter(|| {
+            let bundle =
+              ctx.factory.create_bundle_with_fs(ctx.mem_fs.clone(), ctx.create_resolver());
+            async move {
+              bundle.generate().await.expect("Failed to bundle");
+            }
+          });
+        }
       });
     }
   }

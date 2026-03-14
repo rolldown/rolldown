@@ -143,7 +143,7 @@ impl BindingBundler {
     }
 
     let fut = async move {
-      let bundle = maybe_bundle.map_err(|err| {
+      let mut bundle = maybe_bundle.map_err(|err| {
         napi::Error::new(
           napi::Status::GenericFailure,
           err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
@@ -151,8 +151,7 @@ impl BindingBundler {
       })?;
       let cwd = bundle.options().cwd.clone();
       match bundle.scan().await {
-        Ok(()) => {
-          // scan() returns no useful output, just return empty
+        Ok(_scan_output) => {
           Ok(napi::Either::B(()))
         }
         Err(errs) => {

@@ -5,7 +5,7 @@ use super::super::{
   module_loader::deferred_scan_data::defer_sync_scan_data,
   stages::{
     generate_stage::GenerateStage,
-    link_stage::LinkStage,
+    link_stage::{LinkStage, LinkStageOutput},
     scan_stage::{NormalizedScanStageOutput, ScanStage, ScanStageOutput},
   },
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
@@ -80,11 +80,19 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
-  /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
-  pub async fn scan(mut self) -> BuildResult<()> {
-    self.scan_modules(ScanMode::Full).await?;
+  pub async fn scan(&mut self) -> BuildResult<NormalizedScanStageOutput> {
+    self.scan_modules(ScanMode::Full).await
+  }
 
-    Ok(())
+  pub fn link(&self, scan_output: NormalizedScanStageOutput) -> LinkStageOutput {
+    LinkStage::new(scan_output, &self.options).link()
+  }
+
+  pub async fn generate_from_link(
+    &mut self,
+    link_output: &mut LinkStageOutput,
+  ) -> BuildResult<BundleOutput> {
+    GenerateStage::new(link_output, &self.options, &self.plugin_driver).generate().await
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]

@@ -45,7 +45,7 @@ impl Bundler {
   pub async fn scan(&mut self) -> BuildResult<()> {
     self.create_error_if_closed()?;
     self.ensure_last_bundle_closed().await?;
-    let bundle = self.bundle_factory.create_bundle(BundleMode::FullBuild, None)?;
+    let mut bundle = self.bundle_factory.create_bundle(BundleMode::FullBuild, None)?;
     bundle.scan().await?;
     Ok(())
   }

@@ -21,10 +21,25 @@ fn items() -> Vec<(&'static str, BundlerOptions)> {
   ]
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-  let derive_options = DeriveOptions { sourcemap: true, minify: false };
+fn bench_scan(c: &mut Criterion) {
+  let derive_options = DeriveOptions { sourcemap: false, minify: false };
+  run_bench_group(c, "scan", BenchMode::Scan, &derive_options, items());
+}
+
+fn bench_link(c: &mut Criterion) {
+  let derive_options = DeriveOptions { sourcemap: false, minify: false };
+  run_bench_group(c, "link", BenchMode::Link, &derive_options, items());
+}
+
+fn bench_generate(c: &mut Criterion) {
+  let derive_options = DeriveOptions { sourcemap: true, minify: true };
+  run_bench_group(c, "generate", BenchMode::Generate, &derive_options, items());
+}
+
+fn bench_bundle(c: &mut Criterion) {
+  let derive_options = DeriveOptions { sourcemap: true, minify: true };
   run_bench_group(c, "bundle", BenchMode::Bundle, &derive_options, items());
 }
 
-criterion_group!(benches, criterion_benchmark);
+criterion_group!(benches, bench_scan, bench_link, bench_generate, bench_bundle);
 criterion_main!(benches);

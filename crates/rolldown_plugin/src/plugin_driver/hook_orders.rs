@@ -91,9 +91,7 @@ impl PluginHookOrders {
         plugin_usage_vec[i].contains(HookUsage::RenderError).then(|| p.render_error_meta())
       }),
       order_by_generate_bundle_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i]
-          .contains(HookUsage::GenerateBundle)
-          .then(|| p.generate_bundle_meta())
+        plugin_usage_vec[i].contains(HookUsage::GenerateBundle).then(|| p.generate_bundle_meta())
       }),
       order_by_write_bundle_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
         plugin_usage_vec[i].contains(HookUsage::WriteBundle).then(|| p.write_bundle_meta())

@@ -17,8 +17,7 @@ impl PluginDriver {
       self.iter_plugin_with_context_by_order(&self.order_by_render_start_meta)
     {
       let start = self.start_timing();
-      let result =
-        plugin.render_start(ctx, &crate::HookRenderStartArgs { options: opts }).await;
+      let result = plugin.render_start(ctx, &crate::HookRenderStartArgs { options: opts }).await;
       self.record_timing(plugin_idx, start);
       result.with_context(|| CausedPlugin::new(plugin.name()))?;
     }

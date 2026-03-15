@@ -72,11 +72,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     None
   }
 
-  async fn load(
-    &self,
-    _ctx: SharedLoadPluginContext,
-    _args: &HookLoadArgs<'_>,
-  ) -> HookLoadReturn {
+  async fn load(&self, _ctx: SharedLoadPluginContext, _args: &HookLoadArgs<'_>) -> HookLoadReturn {
     Ok(None)
   }
 
@@ -135,11 +131,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     None
   }
 
-  async fn banner(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn {
+  async fn banner(&self, _ctx: &PluginContext, _args: &HookAddonArgs) -> HookInjectionOutputReturn {
     Ok(None)
   }
 
@@ -147,11 +139,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     None
   }
 
-  async fn footer(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn {
+  async fn footer(&self, _ctx: &PluginContext, _args: &HookAddonArgs) -> HookInjectionOutputReturn {
     Ok(None)
   }
 
@@ -159,11 +147,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     None
   }
 
-  async fn intro(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn {
+  async fn intro(&self, _ctx: &PluginContext, _args: &HookAddonArgs) -> HookInjectionOutputReturn {
     Ok(None)
   }
 
@@ -171,11 +155,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     None
   }
 
-  async fn outro(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn {
+  async fn outro(&self, _ctx: &PluginContext, _args: &HookAddonArgs) -> HookInjectionOutputReturn {
     Ok(None)
   }
 

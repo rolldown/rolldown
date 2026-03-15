@@ -46,11 +46,7 @@ impl Plugin for AssetModulePlugin {
     Some(PluginHookMeta { order: Some(PluginOrder::Post) })
   }
 
-  async fn load(
-    &self,
-    ctx: SharedLoadPluginContext,
-    args: &HookLoadArgs<'_>,
-  ) -> HookLoadReturn {
+  async fn load(&self, ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     self.load_impl(ctx, args).await
   }
 

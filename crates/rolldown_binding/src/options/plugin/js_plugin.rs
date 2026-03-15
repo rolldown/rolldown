@@ -8,7 +8,7 @@ use crate::types::{
 use anyhow::Context;
 use napi::bindgen_prelude::FnArgs;
 use rolldown_common::NormalModule;
-use rolldown_plugin::{HookUsage, Plugin, __inner::SharedPluginable, typedmap::TypedMapKey};
+use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin, typedmap::TypedMapKey};
 use rolldown_utils::filter_expression::filter_exprs_interpreter;
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 use tracing::{Instrument, debug_span};

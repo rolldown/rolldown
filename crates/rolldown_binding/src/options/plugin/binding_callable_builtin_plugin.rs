@@ -127,10 +127,7 @@ impl BindingCallableBuiltinPlugin {
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
       plugin
-        .transform(
-          context,
-          &HookTransformArgs { id: &id, code: &code, module_type: &module_type },
-        )
+        .transform(context, &HookTransformArgs { id: &id, code: &code, module_type: &module_type })
         .await
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))

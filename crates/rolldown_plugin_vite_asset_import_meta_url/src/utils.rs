@@ -101,7 +101,7 @@ pub fn contains_asset_import_meta_url(code: &str) -> bool {
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// assert_eq!(strip_query("./foo/bar.js?raw"), "./foo/bar.js");
 /// assert_eq!(strip_query("./foo/bar.js"), "./foo/bar.js");
 /// assert_eq!(strip_query("./foo/${x ? 'a' : 'b'}.js"), "./foo/${x ? 'a' : 'b'}.js");

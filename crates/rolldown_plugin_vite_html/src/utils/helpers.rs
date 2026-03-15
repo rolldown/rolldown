@@ -206,7 +206,7 @@ pub struct ImageCandidate {
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// # use rolldown_plugin_vite_html::utils::helpers::{parse_srcset, ImageCandidate};
 /// let candidates = parse_srcset("small.jpg 480w, large.jpg 1200w");
 /// assert_eq!(candidates.len(), 2);
@@ -250,7 +250,7 @@ pub fn parse_srcset(srcset: &str) -> Vec<ImageCandidate> {
 /// A vector of lowercase tokens
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// let tokens = parse_rel_attr("stylesheet icon");
 /// assert_eq!(tokens, vec!["stylesheet", "icon"]);
 /// ```

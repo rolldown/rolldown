@@ -2,6 +2,7 @@
 use std::sync::Arc;
 
 use napi::bindgen_prelude::{Either, This};
+use napi::{Env, JsString};
 use napi_derive::napi;
 use rolldown_sourcemap::{JSONSourceMap, SourceMap};
 use rolldown_utils::base64::to_standard_base64;
@@ -22,54 +23,94 @@ struct SerializableSourceMap<'a> {
   mappings: &'a String,
 }
 
-#[derive(Clone)]
-struct CharToByteMapper {
-  char_to_byte: Vec<u32>,
+/// Per-UTF-16-index mapping entry: byte offset + surrogate code unit.
+#[derive(Clone, Copy)]
+struct Utf16Mapping {
+  /// UTF-8 byte offset at this UTF-16 position.
+  byte_offset: u32,
+  /// Raw UTF-16 code unit value. 0 for BMP characters and the end sentinel.
+  /// High surrogates (0xD800–0xDBFF) and low surrogates (0xDC00–0xDFFF)
+  /// store their actual code unit value, used to emit lone surrogates in `slice`.
+  surrogate: u16,
 }
 
-impl CharToByteMapper {
+impl Utf16Mapping {
+  #[inline]
+  fn is_low_surrogate(self) -> bool {
+    (0xDC00..=0xDFFF).contains(&self.surrogate)
+  }
+}
+
+#[derive(Clone)]
+struct Utf16ToByteMapper {
+  /// One entry per UTF-16 code unit, plus a sentinel at the end.
+  /// Length = utf16_len + 1. Indexed directly by JS string index.
+  entries: Vec<Utf16Mapping>,
+}
+
+impl Utf16ToByteMapper {
+  /// Builds a mapping from UTF-16 code unit positions (JS string indices) to UTF-8 byte offsets.
+  ///
+  /// JavaScript strings are UTF-16 encoded, so all indices from JS are UTF-16 code unit positions.
+  /// Characters outside the BMP (e.g. emoji `🤷`) use 2 UTF-16 code units (a surrogate pair) but
+  /// are a single Rust `char`. This mapper accounts for that by pushing one entry per UTF-16 code
+  /// unit, so the array is indexed directly by JS string index.
   #[expect(clippy::cast_possible_truncation)]
   fn new(s: &str) -> Self {
-    let mut char_to_byte = Vec::with_capacity(s.chars().count() + 1);
-    char_to_byte.push(0); // char 0 is at byte 0
+    // UTF-16 length <= UTF-8 byte length for all strings, so s.len() + 1
+    // is always a valid upper-bound capacity, avoiding a second pass over chars.
+    let mut entries = Vec::with_capacity(s.len() + 1);
 
     let mut byte_offset = 0u32;
     for ch in s.chars() {
-      byte_offset += ch.len_utf16() as u32;
-      char_to_byte.push(byte_offset);
+      if ch.len_utf16() == 2 {
+        let mut buf = [0u16; 2];
+        ch.encode_utf16(&mut buf);
+        // High surrogate: byte offset *before* the character.
+        entries.push(Utf16Mapping { byte_offset, surrogate: buf[0] });
+        byte_offset += ch.len_utf8() as u32;
+        // Low surrogate: byte offset *after* the character.
+        entries.push(Utf16Mapping { byte_offset, surrogate: buf[1] });
+      } else {
+        entries.push(Utf16Mapping { byte_offset, surrogate: 0 });
+        byte_offset += ch.len_utf8() as u32;
+      }
     }
+    // End sentinel.
+    entries.push(Utf16Mapping { byte_offset, surrogate: 0 });
 
-    Self { char_to_byte }
+    Self { entries }
   }
 
   #[inline]
-  fn char_to_byte(&self, char_offset: u32) -> Option<u32> {
-    self.char_to_byte.get(char_offset as usize).copied()
+  fn get(&self, utf16_index: u32) -> Option<Utf16Mapping> {
+    self.entries.get(utf16_index as usize).copied()
   }
 
-  /// Returns the character count (number of characters in the string).
-  fn char_count(&self) -> i64 {
-    // The vector has N+1 elements for N characters (stores byte offset after each char)
+  #[inline]
+  fn utf16_to_byte(&self, utf16_offset: u32) -> Option<u32> {
+    self.get(utf16_offset).map(|e| e.byte_offset)
+  }
+
+  /// Returns the UTF-16 code unit count of the original string.
+  /// This matches JavaScript's `String.prototype.length`.
+  fn utf16_len(&self) -> i64 {
     #[expect(clippy::cast_possible_wrap)]
-    let count = (self.char_to_byte.len() - 1) as i64;
+    let count = (self.entries.len() - 1) as i64;
     count
   }
 
-  /// Returns the total accumulated length (in the same units as `char_to_byte` entries).
+  /// Returns the total UTF-8 byte length of the original string.
   /// This is the correct sentinel for out-of-bounds index clamping in `slice`.
   fn total_len(&self) -> u32 {
-    self.char_to_byte.last().copied().unwrap_or(0)
+    self.entries.last().map_or(0, |e| e.byte_offset)
   }
 
   /// Normalizes a potentially negative index to a positive index.
   /// Negative indices count from the end of the string (matching original magic-string behavior).
   fn normalize_index(&self, index: i64) -> i64 {
-    let char_count = self.char_count();
-    if char_count > 0 && index < 0 {
-      ((index % char_count) + char_count) % char_count
-    } else {
-      index
-    }
+    let len = self.utf16_len();
+    if len > 0 && index < 0 { ((index % len) + len) % len } else { index }
   }
 }
 
@@ -237,7 +278,7 @@ impl BindingDecodedMap {
 #[napi]
 pub struct BindingMagicString<'a> {
   pub(crate) inner: MagicString<'a>,
-  char_to_byte_mapper: CharToByteMapper,
+  utf16_to_byte_mapper: Utf16ToByteMapper,
   pub(crate) offset: i64,
 }
 
@@ -245,13 +286,13 @@ pub struct BindingMagicString<'a> {
 impl BindingMagicString<'_> {
   #[napi(constructor)]
   pub fn new(source: String, options: Option<BindingMagicStringOptions>) -> Self {
-    let char_to_byte_mapper = CharToByteMapper::new(&source);
+    let utf16_to_byte_mapper = Utf16ToByteMapper::new(&source);
     let opts = options.unwrap_or_default();
     let offset = opts.offset.unwrap_or(0);
     let magic_string_options = MagicStringOptions { filename: opts.filename };
     Self {
       inner: MagicString::with_options(source, magic_string_options),
-      char_to_byte_mapper,
+      utf16_to_byte_mapper,
       offset,
     }
   }
@@ -340,8 +381,8 @@ impl BindingMagicString<'_> {
     content: String,
   ) -> napi::Result<This<'s>> {
     let byte_index = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(index)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(index)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid character index"))?;
     self.inner.prepend_left(byte_index, content);
     Ok(this)
@@ -355,8 +396,8 @@ impl BindingMagicString<'_> {
     content: String,
   ) -> napi::Result<This<'s>> {
     let byte_index = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(index)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(index)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid character index"))?;
     self.inner.prepend_right(byte_index, content);
     Ok(this)
@@ -370,8 +411,8 @@ impl BindingMagicString<'_> {
     content: String,
   ) -> napi::Result<This<'s>> {
     let byte_index = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(index)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(index)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid character index"))?;
     self.inner.append_left(byte_index, content);
     Ok(this)
@@ -385,8 +426,8 @@ impl BindingMagicString<'_> {
     content: String,
   ) -> napi::Result<This<'s>> {
     let byte_index = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(index)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(index)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid character index"))?;
     self.inner.append_right(byte_index, content);
     Ok(this)
@@ -401,12 +442,12 @@ impl BindingMagicString<'_> {
     content: String,
   ) -> napi::Result<This<'s>> {
     let start_byte = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(start)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(start)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid start character index"))?;
     let end_byte = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(end)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(end)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
     self
       .inner
@@ -447,12 +488,12 @@ impl BindingMagicString<'_> {
   #[napi]
   pub fn remove<'s>(&'s mut self, this: This<'s>, start: u32, end: u32) -> napi::Result<This<'s>> {
     let start_byte = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(start)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(start)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid start character index"))?;
     let end_byte = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(end)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(end)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
     self.inner.remove(start_byte, end_byte).map_err(napi::Error::from_reason)?;
     Ok(this)
@@ -467,12 +508,12 @@ impl BindingMagicString<'_> {
     content: String,
   ) -> napi::Result<This<'s>> {
     let start_byte = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(start)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(start)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid start character index"))?;
     let end_byte = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(end)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(end)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
     self.inner.update(start_byte, end_byte, content).map_err(napi::Error::from_reason)?;
     Ok(this)
@@ -487,16 +528,16 @@ impl BindingMagicString<'_> {
     to: u32,
   ) -> napi::Result<This<'s>> {
     let start_byte = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(start)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(start)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid start character index"))?;
     let end_byte = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(end)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(end)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
     let to_byte = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(to)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(to)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid to character index"))?;
     self.inner.relocate(start_byte, end_byte, to_byte).map_err(napi::Error::from_reason)?;
     Ok(this)
@@ -571,7 +612,7 @@ impl BindingMagicString<'_> {
   pub fn clone_instance(&self) -> Self {
     Self {
       inner: self.inner.clone(),
-      char_to_byte_mapper: self.char_to_byte_mapper.clone(),
+      utf16_to_byte_mapper: self.utf16_to_byte_mapper.clone(),
       offset: self.offset,
     }
   }
@@ -592,16 +633,16 @@ impl BindingMagicString<'_> {
   #[napi]
   pub fn snip(&self, start: u32, end: u32) -> napi::Result<Self> {
     let start_byte = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(start)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(start)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid start character index"))?;
     let end_byte = self
-      .char_to_byte_mapper
-      .char_to_byte(self.apply_offset_u32(end)?)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(self.apply_offset_u32(end)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
     Ok(Self {
       inner: self.inner.snip(start_byte, end_byte).map_err(napi::Error::from_reason)?,
-      char_to_byte_mapper: self.char_to_byte_mapper.clone(),
+      utf16_to_byte_mapper: self.utf16_to_byte_mapper.clone(),
       offset: self.offset,
     })
   }
@@ -612,31 +653,40 @@ impl BindingMagicString<'_> {
   #[napi]
   pub fn reset<'s>(&'s mut self, this: This<'s>, start: i64, end: i64) -> napi::Result<This<'s>> {
     // Apply offset, then handle negative indices (matching original magic-string behavior)
-    let start = self.char_to_byte_mapper.normalize_index(self.apply_offset_i64(start));
-    let end = self.char_to_byte_mapper.normalize_index(self.apply_offset_i64(end));
+    let start = self.utf16_to_byte_mapper.normalize_index(self.apply_offset_i64(start));
+    let end = self.utf16_to_byte_mapper.normalize_index(self.apply_offset_i64(end));
 
     // Convert character indices to byte indices
     // indices are non-negative after normalize_index and files are < 4GB
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     let start_byte = self
-      .char_to_byte_mapper
-      .char_to_byte(start as u32)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(start as u32)
       .ok_or_else(|| napi::Error::from_reason("Character is out of bounds"))?;
 
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     let end_byte = self
-      .char_to_byte_mapper
-      .char_to_byte(end as u32)
+      .utf16_to_byte_mapper
+      .utf16_to_byte(end as u32)
       .ok_or_else(|| napi::Error::from_reason("Character is out of bounds"))?;
 
     self.inner.reset(start_byte, end_byte).map_err(napi::Error::from_reason)?;
     Ok(this)
   }
 
-  /// Returns the content between the specified original character positions.
+  /// Returns the content between the specified UTF-16 code unit positions (JS string indices).
   /// Supports negative indices (counting from the end).
+  ///
+  /// When an index falls in the middle of a surrogate pair, the lone surrogate is
+  /// included in the result (matching the original magic-string / JS behavior).
+  /// This is done by returning a UTF-16 encoded JS string via `napi_create_string_utf16`.
   #[napi]
-  pub fn slice(&self, start: Option<i64>, end: Option<i64>) -> napi::Result<String> {
+  pub fn slice<'env>(
+    &self,
+    env: &'env Env,
+    start: Option<i64>,
+    end: Option<i64>,
+  ) -> napi::Result<JsString<'env>> {
     // Apply offset to both start and end (including defaults), then normalize negatives
     let start = self.apply_offset_i64(start.unwrap_or(0));
 
@@ -645,24 +695,80 @@ impl BindingMagicString<'_> {
     // left for negative offsets, collapsing the range to empty.
     let end = match end {
       Some(e) => self.apply_offset_i64(e),
-      None => self.char_to_byte_mapper.char_count(),
+      None => self.utf16_to_byte_mapper.utf16_len(),
     };
 
     // Handle negative indices (matching original magic-string behavior)
-    let start = self.char_to_byte_mapper.normalize_index(start);
-    let end = self.char_to_byte_mapper.normalize_index(end);
+    let start = self.utf16_to_byte_mapper.normalize_index(start);
+    let end = self.utf16_to_byte_mapper.normalize_index(end);
 
-    // Convert character indices to byte indices.
-    // indices are non-negative after normalize_index and files are < 4GB.
-    // Use total_len() (in the mapper's own units) as the out-of-bounds sentinel instead of
-    // source().len() (UTF-8 bytes), which would be wrong for non-ASCII strings.
-    let total_len = self.char_to_byte_mapper.total_len();
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-    let start_byte = self.char_to_byte_mapper.char_to_byte(start as u32).unwrap_or(total_len);
+    let start_u32 = start as u32;
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-    let end_byte = self.char_to_byte_mapper.char_to_byte(end as u32).unwrap_or(total_len);
+    let end_u32 = end as u32;
 
-    self.inner.slice(start_byte, Some(end_byte)).map_err(napi::Error::from_reason)
+    // Fetch the mapping entries once. If start/end fall on a low surrogate (middle
+    // of a surrogate pair), we need special handling:
+    // - start at LOW: prepend the lone low surrogate, UTF-8 slice starts after the char.
+    // - end at LOW: use the previous entry's byte offset (before the char) and append
+    //   the lone high surrogate.
+    // - HIGH surrogate positions already have the correct byte offset (before the char).
+    let total_len = self.utf16_to_byte_mapper.total_len();
+    let start_entry = self.utf16_to_byte_mapper.get(start_u32);
+    let end_entry = self.utf16_to_byte_mapper.get(end_u32);
+
+    // When start == end, the result is always empty regardless of surrogate position.
+    // Only check surrogates when the range is non-empty.
+    let (start_is_low, end_prev_entry) = if start_u32 < end_u32 {
+      let start_is_low = start_entry.is_some_and(Utf16Mapping::is_low_surrogate);
+      let end_is_low = end_entry.is_some_and(Utf16Mapping::is_low_surrogate);
+      // When end is a low surrogate, look up the preceding high surrogate entry once
+      // (used for both the byte offset and the surrogate value to append).
+      let end_prev = if end_is_low {
+        debug_assert!(end_u32 > 0, "low surrogate cannot appear at index 0");
+        self.utf16_to_byte_mapper.get(end_u32 - 1)
+      } else {
+        None
+      };
+      (start_is_low, end_prev)
+    } else {
+      (false, None)
+    };
+
+    let start_byte = start_entry.map_or(total_len, |e| e.byte_offset);
+    let end_byte = if let Some(prev) = end_prev_entry {
+      // End falls on a low surrogate — use the high surrogate's byte_offset
+      // (before the character) so the UTF-8 slice excludes it.
+      prev.byte_offset
+    } else {
+      end_entry.map_or(total_len, |e| e.byte_offset)
+    };
+    // Clamp reversed ranges (e.g. slice(2, 1) on 'a🤷b') to empty.
+    let end_byte = end_byte.max(start_byte);
+
+    let utf8_result =
+      self.inner.slice(start_byte, Some(end_byte)).map_err(napi::Error::from_reason)?;
+
+    // Fast path: no lone surrogates involved — return the UTF-8 string directly,
+    // avoiding the UTF-16 transcoding and allocation.
+    if !start_is_low && end_prev_entry.is_none() {
+      return env.create_string(&utf8_result);
+    }
+
+    // Slow path: build UTF-16 buffer with lone surrogates at the boundaries.
+    let mut utf16_buf: Vec<u16> = Vec::new();
+
+    if let Some(entry) = start_entry.filter(|e| e.is_low_surrogate()) {
+      utf16_buf.push(entry.surrogate);
+    }
+
+    utf16_buf.extend(utf8_result.encode_utf16());
+
+    if let Some(high_entry) = end_prev_entry {
+      utf16_buf.push(high_entry.surrogate);
+    }
+
+    env.create_string_utf16(&utf16_buf)
   }
 
   /// Generates a source map for the transformations applied to this MagicString.

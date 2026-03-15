@@ -293,7 +293,10 @@ impl GlobImportVisit<'_> {
         is_sub_imports_pattern.then(|| {
           let mut custom = rolldown_plugin::CustomField::new();
           custom.insert(ViteImportGlob, ViteImportGlobValue(true));
-          rolldown_plugin::PluginContextResolveOptions { custom: Arc::new(custom), ..Default::default() }
+          rolldown_plugin::PluginContextResolveOptions {
+            custom: Arc::new(custom),
+            ..Default::default()
+          }
         }),
       );
 

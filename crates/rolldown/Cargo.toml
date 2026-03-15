@@ -8,10 +8,6 @@ publish = true
 repository.workspace = true
 description = "Fast JavaScript bundler in Rust, designed for the future of Vite"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-
 [lints]
 workspace = true
 
@@ -86,6 +82,9 @@ sugar_path = { workspace = true }
 testing_macros = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
 walkdir = { workspace = true }
+
+[lib]
+doctest = false
 
 [package.metadata.cargo-shear]
 # `serde` is used via feature flag.

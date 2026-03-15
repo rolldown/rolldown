@@ -42,9 +42,9 @@ impl Plugin for ChunkImportMapPlugin {
       let base = args.options.hash_characters.base();
       let mut used_names = FxHashSet::default();
       for chunk in args.chunks.values() {
-        let hash_placeholders =
-          find_hash_placeholders(&chunk.filename, &HASH_PLACEHOLDER_LEFT_FINDER);
-        if hash_placeholders.is_empty() {
+        let mut hash_placeholders =
+          find_hash_placeholders(&chunk.filename, &HASH_PLACEHOLDER_LEFT_FINDER).peekable();
+        if hash_placeholders.peek().is_none() {
           continue;
         }
         let hasher = match &chunk.facade_module_id {
@@ -78,8 +78,9 @@ impl Plugin for ChunkImportMapPlugin {
       }
     }
 
-    let mut placeholders = find_hash_placeholders(&args.code, &HASH_PLACEHOLDER_LEFT_FINDER);
-    placeholders.retain(|placeholder| self.chunk_import_map.contains_key(placeholder.2));
+    let placeholders: Vec<_> = find_hash_placeholders(&args.code, &HASH_PLACEHOLDER_LEFT_FINDER)
+      .filter(|placeholder| self.chunk_import_map.contains_key(placeholder.2))
+      .collect();
 
     if placeholders.is_empty() {
       return Ok(None);

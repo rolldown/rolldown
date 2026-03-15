@@ -177,7 +177,7 @@ pub struct BindingHookJsResolveIdOptions {
 
 impl From<BindingHookJsResolveIdOptions> for Arc<CustomField> {
   fn from(value: BindingHookJsResolveIdOptions) -> Self {
-    let map = CustomField::default();
+    let mut map = CustomField::default();
     map.insert(ResolveIdOptionsScan, value.scan.unwrap_or(false));
     if let Some(is_sub_imports_pattern) =
       value.custom.and_then(|v| v.vite_import_glob.and_then(|v| v.is_sub_imports_pattern))

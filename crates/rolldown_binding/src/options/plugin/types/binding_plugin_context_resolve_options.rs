@@ -32,7 +32,7 @@ impl TryFrom<BindingPluginContextResolveOptions> for PluginContextResolveOptions
   type Error = String;
 
   fn try_from(value: BindingPluginContextResolveOptions) -> Result<Self, Self::Error> {
-    let custom = CustomField::new();
+    let mut custom = CustomField::new();
     if let Some(js_custom_id) = value.custom {
       custom.insert(JsPluginContextResolveCustomArgId, js_custom_id);
     }

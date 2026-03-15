@@ -8,10 +8,11 @@ publish = true
 repository.workspace = true
 description = "Standard library utilities for Rolldown"
 
-[lib]
-
 [lints]
 workspace = true
 
 [dependencies]
 regex = { workspace = true }
+
+[lib]
+doctest = false

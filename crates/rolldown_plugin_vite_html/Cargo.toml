@@ -8,10 +8,6 @@ publish = true
 repository.workspace = true
 description = "Rolldown plugin for Vite HTML handling"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-
 [lints]
 workspace = true
 
@@ -32,3 +28,6 @@ rustc-hash = { workspace = true }
 string_cache = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
+
+[lib]
+doctest = false

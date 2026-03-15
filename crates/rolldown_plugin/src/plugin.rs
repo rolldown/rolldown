@@ -25,6 +25,7 @@ pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
 pub type HookAugmentChunkHashReturn = Result<Option<String>>;
 pub type HookInjectionOutputReturn = Result<Option<String>>;
 
+#[async_trait::async_trait]
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn name(&self) -> Cow<'static, str>;
 
@@ -32,24 +33,24 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   // --- Build hooks ---
 
-  fn build_start(
+  async fn build_start(
     &self,
     _ctx: &PluginContext,
     _args: &HookBuildStartArgs<'_>,
-  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
-    async { Ok(()) }
+  ) -> HookNoopReturn {
+    Ok(())
   }
 
   fn build_start_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn resolve_id(
+  async fn resolve_id(
     &self,
     _ctx: &PluginContext,
     _args: &HookResolveIdArgs<'_>,
-  ) -> impl std::future::Future<Output = HookResolveIdReturn> + Send {
-    async { Ok(None) }
+  ) -> HookResolveIdReturn {
+    Ok(None)
   }
 
   fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
@@ -59,61 +60,61 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   #[deprecated(
     note = "This hook is only for rollup compatibility, please use `resolve_id` instead."
   )]
-  fn resolve_dynamic_import(
+  async fn resolve_dynamic_import(
     &self,
     _ctx: &PluginContext,
     _args: &HookResolveIdArgs<'_>,
-  ) -> impl std::future::Future<Output = HookResolveIdReturn> + Send {
-    async { Ok(None) }
+  ) -> HookResolveIdReturn {
+    Ok(None)
   }
 
   fn resolve_dynamic_import_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn load(
+  async fn load(
     &self,
     _ctx: SharedLoadPluginContext,
     _args: &HookLoadArgs<'_>,
-  ) -> impl std::future::Future<Output = HookLoadReturn> + Send {
-    async { Ok(None) }
+  ) -> HookLoadReturn {
+    Ok(None)
   }
 
   fn load_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn transform(
+  async fn transform(
     &self,
     _ctx: SharedTransformPluginContext,
     _args: &HookTransformArgs<'_>,
-  ) -> impl std::future::Future<Output = HookTransformReturn> + Send {
-    async { Ok(None) }
+  ) -> HookTransformReturn {
+    Ok(None)
   }
 
   fn transform_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn module_parsed(
+  async fn module_parsed(
     &self,
     _ctx: &PluginContext,
     _module_info: Arc<ModuleInfo>,
     _normal_module: &NormalModule,
-  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
-    async { Ok(()) }
+  ) -> HookNoopReturn {
+    Ok(())
   }
 
   fn module_parsed_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn build_end(
+  async fn build_end(
     &self,
     _ctx: &PluginContext,
-    _args: Option<&HookBuildEndArgs>,
-  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
-    async { Ok(()) }
+    _args: Option<&HookBuildEndArgs<'_>>,
+  ) -> HookNoopReturn {
+    Ok(())
   }
 
   fn build_end_meta(&self) -> Option<PluginHookMeta> {
@@ -122,132 +123,132 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   // --- Generate hooks ---
 
-  fn render_start(
+  async fn render_start(
     &self,
     _ctx: &PluginContext,
     _args: &HookRenderStartArgs<'_>,
-  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
-    async { Ok(()) }
+  ) -> HookNoopReturn {
+    Ok(())
   }
 
   fn render_start_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn banner(
+  async fn banner(
     &self,
     _ctx: &PluginContext,
     _args: &HookAddonArgs,
-  ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
-    async { Ok(None) }
+  ) -> HookInjectionOutputReturn {
+    Ok(None)
   }
 
   fn banner_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn footer(
+  async fn footer(
     &self,
     _ctx: &PluginContext,
     _args: &HookAddonArgs,
-  ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
-    async { Ok(None) }
+  ) -> HookInjectionOutputReturn {
+    Ok(None)
   }
 
   fn footer_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn intro(
+  async fn intro(
     &self,
     _ctx: &PluginContext,
     _args: &HookAddonArgs,
-  ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
-    async { Ok(None) }
+  ) -> HookInjectionOutputReturn {
+    Ok(None)
   }
 
   fn intro_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn outro(
+  async fn outro(
     &self,
     _ctx: &PluginContext,
     _args: &HookAddonArgs,
-  ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
-    async { Ok(None) }
+  ) -> HookInjectionOutputReturn {
+    Ok(None)
   }
 
   fn outro_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn render_chunk(
+  async fn render_chunk(
     &self,
     _ctx: &PluginContext,
     _args: &HookRenderChunkArgs<'_>,
-  ) -> impl std::future::Future<Output = HookRenderChunkReturn> + Send {
-    async { Ok(None) }
+  ) -> HookRenderChunkReturn {
+    Ok(None)
   }
 
   fn render_chunk_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn augment_chunk_hash(
+  async fn augment_chunk_hash(
     &self,
     _ctx: &PluginContext,
     _chunk: Arc<RollupRenderedChunk>,
-  ) -> impl std::future::Future<Output = HookAugmentChunkHashReturn> + Send {
-    async { Ok(None) }
+  ) -> HookAugmentChunkHashReturn {
+    Ok(None)
   }
 
   fn augment_chunk_hash_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn render_error(
+  async fn render_error(
     &self,
     _ctx: &PluginContext,
-    _args: &HookRenderErrorArgs,
-  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
-    async { Ok(()) }
+    _args: &HookRenderErrorArgs<'_>,
+  ) -> HookNoopReturn {
+    Ok(())
   }
 
   fn render_error_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn generate_bundle(
+  async fn generate_bundle(
     &self,
     _ctx: &PluginContext,
     _args: &mut HookGenerateBundleArgs<'_>,
-  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
-    async { Ok(()) }
+  ) -> HookNoopReturn {
+    Ok(())
   }
 
   fn generate_bundle_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn write_bundle(
+  async fn write_bundle(
     &self,
     _ctx: &PluginContext,
-    _args: &mut HookWriteBundleArgs,
-  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
-    async { Ok(()) }
+    _args: &mut HookWriteBundleArgs<'_>,
+  ) -> HookNoopReturn {
+    Ok(())
   }
 
   fn write_bundle_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn close_bundle(
+  async fn close_bundle(
     &self,
     _ctx: &PluginContext,
-    _args: Option<&HookCloseBundleArgs>,
-  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
-    async { Ok(()) }
+    _args: Option<&HookCloseBundleArgs<'_>>,
+  ) -> HookNoopReturn {
+    Ok(())
   }
 
   fn close_bundle_meta(&self) -> Option<PluginHookMeta> {
@@ -256,24 +257,21 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   // watch hooks
 
-  fn watch_change(
+  async fn watch_change(
     &self,
     _ctx: &PluginContext,
     _path: &str,
     _event: WatcherChangeKind,
-  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
-    async { Ok(()) }
+  ) -> HookNoopReturn {
+    Ok(())
   }
 
   fn watch_change_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  fn close_watcher(
-    &self,
-    _ctx: &PluginContext,
-  ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
-    async { Ok(()) }
+  async fn close_watcher(&self, _ctx: &PluginContext) -> HookNoopReturn {
+    Ok(())
   }
 
   fn close_watcher_meta(&self) -> Option<PluginHookMeta> {
@@ -281,12 +279,12 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   }
 
   // --- experimental hooks ---
-  fn transform_ast(
+  async fn transform_ast(
     &self,
     _ctx: &PluginContext,
     args: HookTransformAstArgs<'_>,
-  ) -> impl std::future::Future<Output = HookTransformAstReturn> + Send {
-    async { Ok(args.ast) }
+  ) -> HookTransformAstReturn {
+    Ok(args.ast)
   }
 
   fn transform_ast_meta(&self) -> Option<PluginHookMeta> {

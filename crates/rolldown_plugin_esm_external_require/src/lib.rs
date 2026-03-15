@@ -14,6 +14,7 @@ pub struct EsmExternalRequirePlugin {
   pub skip_duplicate_check: bool,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for EsmExternalRequirePlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:esm-external-require")

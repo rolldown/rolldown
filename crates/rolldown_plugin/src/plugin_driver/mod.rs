@@ -19,9 +19,9 @@ use sugar_path::SugarPath;
 use tokio::sync::{Mutex, broadcast};
 
 use crate::{
-  __inner::SharedPluginable,
   PluginContext,
   plugin_driver::hook_orders::PluginHookOrders,
+  pluginable::SharedPluginable,
   type_aliases::{IndexPluginContext, IndexPluginable},
   types::hook_timing::HookTimingCollector,
 };

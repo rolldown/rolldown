@@ -10,6 +10,7 @@ use sugar_path::SugarPath;
 #[derive(Debug)]
 struct ExternalCss;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ExternalCss {
   fn name(&self) -> Cow<'static, str> {
     "external-css".into()

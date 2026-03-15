@@ -61,6 +61,7 @@ impl LazyCompilationPlugin {
   }
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for LazyCompilationPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     "lazy-compilation".into()

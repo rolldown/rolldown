@@ -32,6 +32,7 @@ pub struct ViteAssetPlugin {
   pub handled_asset_ids: FxDashSet<String>,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteAssetPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-asset")

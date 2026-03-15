@@ -54,6 +54,7 @@ pub struct ViteBuildImportAnalysisPlugin {
   pub v2: Option<ViteBuildImportAnalysisPluginV2>,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteBuildImportAnalysisPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-build-import-analysis")

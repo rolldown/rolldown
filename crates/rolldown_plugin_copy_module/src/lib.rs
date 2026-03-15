@@ -37,6 +37,7 @@ impl CopyModulePlugin {
   }
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for CopyModulePlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:copy-module")

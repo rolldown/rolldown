@@ -12,6 +12,7 @@ use std::sync::Mutex;
 #[derive(Debug)]
 struct TestPlugin(Arc<Mutex<Option<String>>>);
 
+#[rolldown_plugin::async_trait]
 impl Plugin for TestPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     "test-plugin".into()

@@ -27,6 +27,7 @@ pub struct ViteManifestPlugin {
   pub css_entries: Arc<CssEntriesFn>,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteManifestPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-manifest")

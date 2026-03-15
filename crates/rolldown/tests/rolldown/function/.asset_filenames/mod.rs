@@ -9,6 +9,7 @@ use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 #[derive(Debug)]
 struct TestPlugin;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for TestPlugin {
   fn name(&self) -> Cow<'static, str> {
     "test-plugin".into()

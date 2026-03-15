@@ -15,6 +15,7 @@ use generated::embedded_helpers::{
 #[derive(Debug)]
 pub struct OxcRuntimePlugin;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for OxcRuntimePlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:oxc-runtime")

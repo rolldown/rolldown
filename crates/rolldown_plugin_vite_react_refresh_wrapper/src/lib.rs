@@ -95,6 +95,7 @@ function $RefreshSig$() {{ return RefreshRuntime.createSignatureFunctionForTrans
   }
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteReactRefreshWrapperPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     Cow::Borrowed("builtin:vite-react-refresh-wrapper")

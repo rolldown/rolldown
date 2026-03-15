@@ -38,6 +38,7 @@ impl ViteTransformPlugin {
 }
 
 /// only handle ecma like syntax, `jsx`,`tsx`,`ts`
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteTransformPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-transform")

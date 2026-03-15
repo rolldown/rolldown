@@ -51,6 +51,7 @@ pub struct ViteCSSPlugin {
   pub asset_inline_limit: UsizeOrFunction,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteCSSPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     std::borrow::Cow::Borrowed("builtin:vite-css")

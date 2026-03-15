@@ -10,7 +10,7 @@ use rolldown::ModuleType;
 use rolldown_common::WatcherChangeKind;
 use rolldown_plugin::{
   CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput,
-  HookTransformArgs, LoadPluginContext, PluginIdx, Pluginable, SharedTransformPluginContext,
+  HookTransformArgs, LoadPluginContext, Plugin, PluginIdx, SharedTransformPluginContext,
   TransformPluginContext,
 };
 use rolldown_plugin_vite_resolve::ResolveIdOptionsScan;
@@ -30,7 +30,7 @@ use super::{
 
 #[napi]
 pub struct BindingCallableBuiltinPlugin {
-  inner: Arc<dyn Pluginable>,
+  inner: Arc<dyn Plugin>,
   context: SharedTransformPluginContext,
 }
 
@@ -38,7 +38,7 @@ pub struct BindingCallableBuiltinPlugin {
 impl BindingCallableBuiltinPlugin {
   #[napi(constructor)]
   pub fn new(plugin: BindingBuiltinPlugin) -> napi::Result<Self> {
-    let inner: Arc<dyn Pluginable> = plugin.try_into()?;
+    let inner: Arc<dyn Plugin> = plugin.try_into()?;
 
     Ok(Self {
       inner,
@@ -67,7 +67,7 @@ impl BindingCallableBuiltinPlugin {
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
       plugin
-        .call_resolve_id(
+        .resolve_id(
           &context.inner,
           &HookResolveIdArgs {
             specifier: &id,
@@ -101,7 +101,7 @@ impl BindingCallableBuiltinPlugin {
       let module_idx = rolldown_common::ModuleIdx::new(0);
       let load_ctx = Arc::new(LoadPluginContext::new(context.inner.clone(), module_idx));
       plugin
-        .call_load(load_ctx, &HookLoadArgs { id: &id, module_idx, asserted_module_type: None })
+        .load(load_ctx, &HookLoadArgs { id: &id, module_idx, asserted_module_type: None })
         .await
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))
@@ -127,7 +127,7 @@ impl BindingCallableBuiltinPlugin {
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
       plugin
-        .call_transform(
+        .transform(
           context,
           &HookTransformArgs { id: &id, code: &code, module_type: &module_type },
         )
@@ -155,7 +155,7 @@ impl BindingCallableBuiltinPlugin {
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
       plugin
-        .call_watch_change(&context.inner, &path, kind)
+        .watch_change(&context.inner, &path, kind)
         .await
         .map_err(AnyHowMaybeNapiError::into_napi_error)
     })

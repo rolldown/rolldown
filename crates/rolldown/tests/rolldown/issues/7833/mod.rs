@@ -11,6 +11,7 @@ use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 #[derive(Debug)]
 struct Test;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for Test {
   fn name(&self) -> Cow<'static, str> {
     "test".into()

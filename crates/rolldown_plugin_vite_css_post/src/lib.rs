@@ -67,6 +67,7 @@ pub struct ViteCSSPostPlugin {
   pub has_emitted: AtomicBool,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteCSSPostPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     std::borrow::Cow::Borrowed("builtin:vite-css-post")

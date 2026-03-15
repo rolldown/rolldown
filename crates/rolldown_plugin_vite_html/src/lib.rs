@@ -52,6 +52,7 @@ pub struct ViteHtmlPlugin {
   pub html_result_map: FxDashMap<(String, String), (String, bool)>,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteHtmlPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-html")

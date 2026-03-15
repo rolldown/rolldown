@@ -11,6 +11,7 @@ use crate::ast_visitor::WebWorkerPostVisitor;
 #[derive(Debug)]
 pub struct ViteWebWorkerPostPlugin;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteWebWorkerPostPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-web-worker-post")

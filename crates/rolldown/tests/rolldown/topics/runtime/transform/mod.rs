@@ -22,6 +22,7 @@ struct RuntimeTransformState {
 #[derive(Debug)]
 struct RuntimeTransformPlugin;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for RuntimeTransformPlugin {
   fn name(&self) -> Cow<'static, str> {
     "runtime-transform-plugin".into()

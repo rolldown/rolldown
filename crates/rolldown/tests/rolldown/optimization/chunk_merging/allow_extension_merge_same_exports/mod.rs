@@ -13,6 +13,7 @@ use rolldown_utils::js_regex::HybridRegex;
 #[derive(Debug)]
 struct EmitChunkPlugin;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for EmitChunkPlugin {
   fn name(&self) -> Cow<'static, str> {
     "emit-chunk-plugin".into()

@@ -11,6 +11,7 @@ pub struct ViteHtmlInlineProxyPlugin {
   pub root: PathBuf,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteHtmlInlineProxyPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-html-inline-proxy")

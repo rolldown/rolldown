@@ -5,6 +5,7 @@ use rolldown_plugin::{HookLoadArgs, HookLoadReturn, HookUsage, Plugin, SharedLoa
 #[derive(Debug)]
 pub struct ViteWasmFallbackPlugin;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteWasmFallbackPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-wasm-fallback")

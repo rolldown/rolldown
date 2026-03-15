@@ -10,6 +10,7 @@ use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 #[derive(Debug)]
 struct RuntimeBreakingPlugin;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for RuntimeBreakingPlugin {
   fn name(&self) -> Cow<'static, str> {
     "runtime-breaking-plugin".into()

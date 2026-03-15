@@ -31,6 +31,7 @@ impl AssetModulePlugin {
   }
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for AssetModulePlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:asset-module")
@@ -45,12 +46,12 @@ impl Plugin for AssetModulePlugin {
     Some(PluginHookMeta { order: Some(PluginOrder::Post) })
   }
 
-  fn load(
+  async fn load(
     &self,
     ctx: SharedLoadPluginContext,
     args: &HookLoadArgs<'_>,
-  ) -> impl std::future::Future<Output = HookLoadReturn> + Send {
-    self.load_impl(ctx, args)
+  ) -> HookLoadReturn {
+    self.load_impl(ctx, args).await
   }
 
   fn render_chunk_meta(&self) -> Option<PluginHookMeta> {

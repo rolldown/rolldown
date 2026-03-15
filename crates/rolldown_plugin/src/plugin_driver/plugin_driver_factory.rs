@@ -10,10 +10,10 @@ use rolldown_resolver::Resolver;
 use rolldown_utils::dashmap::FxDashSet;
 
 use crate::{
-  __inner::SharedPluginable,
   PluginContext,
   plugin_context::{NativePluginContextImpl, PluginContextMeta},
   plugin_driver::{ContextLoadCompletionManager, hook_orders::PluginHookOrders},
+  pluginable::SharedPluginable,
   type_aliases::{IndexPluginContext, IndexPluginable},
   types::hook_timing::HookTimingCollector,
 };
@@ -66,10 +66,10 @@ impl PluginDriverFactory {
 
       self.plugins.iter().for_each(|plugin| {
         let plugin_idx = index_plugins.push(Arc::clone(plugin));
-        plugin_usage_vec.push(plugin.call_hook_usage());
+        plugin_usage_vec.push(plugin.register_hook_usage());
 
         // Register plugin in timing collector if enabled (skip internal builtin plugins)
-        let plugin_name = plugin.call_name();
+        let plugin_name = plugin.name();
         if let Some(ref collector) = hook_timing_collector {
           if !plugin_name.starts_with("builtin:") {
             collector.register_plugin(plugin_idx, ArcStr::from(plugin_name.as_ref()));

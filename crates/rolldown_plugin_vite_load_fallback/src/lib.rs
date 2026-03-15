@@ -8,6 +8,7 @@ use rolldown_utils::dataurl::is_data_url;
 #[derive(Debug)]
 pub struct ViteLoadFallbackPlugin;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteLoadFallbackPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-load-fallback")

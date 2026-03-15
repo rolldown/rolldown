@@ -368,7 +368,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
           .iter()
           .enumerate()
           .map(|(idx, p)| action::PluginItem {
-            name: p.call_name().into_owned(),
+            name: p.name().into_owned(),
             plugin_id: idx.try_into().unwrap()
           })
           .collect(),

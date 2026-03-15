@@ -38,6 +38,7 @@ pub struct ViteReporterPlugin {
   pub log_info: Option<Arc<LogInfoFn>>,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteReporterPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-reporter")

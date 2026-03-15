@@ -24,6 +24,7 @@ pub struct DataUrlPlugin {
   resolved_data_url: FxDashMap<ArcStr, ResolvedDataUrl>,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for DataUrlPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:data-url")

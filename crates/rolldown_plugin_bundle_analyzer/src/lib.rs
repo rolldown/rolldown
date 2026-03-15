@@ -93,6 +93,7 @@ pub(crate) struct ModuleData {
   pub(crate) importers: Option<Vec<usize>>,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for BundleAnalyzerPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:bundle-analyzer")

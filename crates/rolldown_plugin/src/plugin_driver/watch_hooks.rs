@@ -10,9 +10,9 @@ impl PluginDriver {
       self.iter_plugin_with_context_by_order(&self.order_by_watch_change_meta)
     {
       let start = self.start_timing();
-      let result = plugin.call_watch_change(ctx, path, event).await;
+      let result = plugin.watch_change(ctx, path, event).await;
       self.record_timing(plugin_idx, start);
-      result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      result.with_context(|| CausedPlugin::new(plugin.name()))?;
     }
     Ok(())
   }
@@ -22,9 +22,9 @@ impl PluginDriver {
       self.iter_plugin_with_context_by_order(&self.order_by_close_watcher_meta)
     {
       let start = self.start_timing();
-      let result = plugin.call_close_watcher(ctx).await;
+      let result = plugin.close_watcher(ctx).await;
       self.record_timing(plugin_idx, start);
-      result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      result.with_context(|| CausedPlugin::new(plugin.name()))?;
     }
     Ok(())
   }

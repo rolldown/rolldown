@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
-use rolldown_plugin::__inner::Pluginable;
+use rolldown_plugin::Plugin;
 use rolldown_plugin_bundle_analyzer::BundleAnalyzerPlugin;
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
@@ -55,7 +55,7 @@ impl std::fmt::Debug for BindingBuiltinPlugin<'_> {
   }
 }
 
-impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
+impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Plugin> {
   type Error = napi::Error;
 
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {

@@ -204,7 +204,7 @@ impl BundleFactory {
       ("json", ("@rollup/plugin-json", None, None)),
     ]);
     for plugin in plugins {
-      let name = plugin.call_name();
+      let name = plugin.name();
       let Some((package_name, feature, additional_message)) = map.get(name.as_ref()) else {
         continue;
       };

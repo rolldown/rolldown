@@ -7,6 +7,7 @@ use sugar_path::SugarPath;
 #[derive(Debug)]
 struct TestPlugin;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for TestPlugin {
   fn name(&self) -> Cow<'static, str> {
     "TestPlugin".into()

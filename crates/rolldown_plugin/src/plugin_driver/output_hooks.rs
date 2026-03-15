@@ -18,9 +18,9 @@ impl PluginDriver {
     {
       let start = self.start_timing();
       let result =
-        plugin.call_render_start(ctx, &crate::HookRenderStartArgs { options: opts }).await;
+        plugin.render_start(ctx, &crate::HookRenderStartArgs { options: opts }).await;
       self.record_timing(plugin_idx, start);
-      result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      result.with_context(|| CausedPlugin::new(plugin.name()))?;
     }
     Ok(())
   }
@@ -30,9 +30,9 @@ impl PluginDriver {
       self.iter_plugin_with_context_by_order(&self.order_by_banner_meta)
     {
       let start = self.start_timing();
-      let result = plugin.call_banner(ctx, &args).await;
+      let result = plugin.banner(ctx, &args).await;
       self.record_timing(plugin_idx, start);
-      if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+      if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.name()))? {
         banner.push('\n');
         banner.push_str(r.as_str());
       }
@@ -48,9 +48,9 @@ impl PluginDriver {
       self.iter_plugin_with_context_by_order(&self.order_by_footer_meta)
     {
       let start = self.start_timing();
-      let result = plugin.call_footer(ctx, &args).await;
+      let result = plugin.footer(ctx, &args).await;
       self.record_timing(plugin_idx, start);
-      if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+      if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.name()))? {
         footer.push('\n');
         footer.push_str(r.as_str());
       }
@@ -66,9 +66,9 @@ impl PluginDriver {
       self.iter_plugin_with_context_by_order(&self.order_by_intro_meta)
     {
       let start = self.start_timing();
-      let result = plugin.call_intro(ctx, &args).await;
+      let result = plugin.intro(ctx, &args).await;
       self.record_timing(plugin_idx, start);
-      if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+      if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.name()))? {
         intro.push('\n');
         intro.push_str(r.as_str());
       }
@@ -84,9 +84,9 @@ impl PluginDriver {
       self.iter_plugin_with_context_by_order(&self.order_by_outro_meta)
     {
       let start = self.start_timing();
-      let result = plugin.call_outro(ctx, &args).await;
+      let result = plugin.outro(ctx, &args).await;
       self.record_timing(plugin_idx, start);
-      if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+      if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.name()))? {
         outro.push('\n');
         outro.push_str(r.as_str());
       }
@@ -108,22 +108,22 @@ impl PluginDriver {
       async {
         trace_action!(action::HookRenderChunkStart {
           action: "HookRenderChunkStart",
-          plugin_name: plugin.call_name().to_string(),
+          plugin_name: plugin.name().to_string(),
           plugin_id: plugin_idx.raw(),
           call_id: "${call_id}",
           content: args.code.clone(),
         });
         let start = self.start_timing();
-        let result = plugin.call_render_chunk(ctx, &args).await;
+        let result = plugin.render_chunk(ctx, &args).await;
         self.record_timing(plugin_idx, start);
-        if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+        if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.name()))? {
           args.code = r.code;
           if let Some(map) = r.map {
             sourcemap_chain.push(map);
           }
           trace_action!(action::HookRenderChunkEnd {
             action: "HookRenderChunkEnd",
-            plugin_name: plugin.call_name().to_string(),
+            plugin_name: plugin.name().to_string(),
             plugin_id: plugin_idx.raw(),
             call_id: "${call_id}",
             content: Some(args.code.clone()),
@@ -131,7 +131,7 @@ impl PluginDriver {
         } else {
           trace_action!(action::HookRenderChunkEnd {
             action: "HookRenderChunkEnd",
-            plugin_name: plugin.call_name().to_string(),
+            plugin_name: plugin.name().to_string(),
             plugin_id: plugin_idx.raw(),
             call_id: "${call_id}",
             content: None,
@@ -158,9 +158,9 @@ impl PluginDriver {
       self.iter_plugin_with_context_by_order(&self.order_by_augment_chunk_hash_meta)
     {
       let start = self.start_timing();
-      let result = plugin.call_augment_chunk_hash(ctx, Arc::clone(&chunk)).await;
+      let result = plugin.augment_chunk_hash(ctx, Arc::clone(&chunk)).await;
       self.record_timing(plugin_idx, start);
-      if let Some(plugin_hash) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+      if let Some(plugin_hash) = result.with_context(|| CausedPlugin::new(plugin.name()))? {
         hash.get_or_insert_with(String::default).push_str(&plugin_hash);
       }
     }
@@ -172,9 +172,9 @@ impl PluginDriver {
       self.iter_plugin_with_context_by_order(&self.order_by_render_error_meta)
     {
       let start = self.start_timing();
-      let result = plugin.call_render_error(ctx, args).await;
+      let result = plugin.render_error(ctx, args).await;
       self.record_timing(plugin_idx, start);
-      result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      result.with_context(|| CausedPlugin::new(plugin.name()))?;
     }
     Ok(())
   }
@@ -191,9 +191,9 @@ impl PluginDriver {
     {
       let mut args = crate::HookGenerateBundleArgs { is_write, bundle, options: opts };
       let start = self.start_timing();
-      let result = plugin.call_generate_bundle(ctx, &mut args).await;
+      let result = plugin.generate_bundle(ctx, &mut args).await;
       self.record_timing(plugin_idx, start);
-      result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      result.with_context(|| CausedPlugin::new(plugin.name()))?;
       ctx.file_emitter().add_additional_files(bundle, warnings);
     }
     Ok(())
@@ -210,9 +210,9 @@ impl PluginDriver {
     {
       let mut args = crate::HookWriteBundleArgs { bundle, options: opts };
       let start = self.start_timing();
-      let result = plugin.call_write_bundle(ctx, &mut args).await;
+      let result = plugin.write_bundle(ctx, &mut args).await;
       self.record_timing(plugin_idx, start);
-      result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      result.with_context(|| CausedPlugin::new(plugin.name()))?;
       ctx.file_emitter().add_additional_files(bundle, warnings);
     }
     Ok(())
@@ -223,9 +223,9 @@ impl PluginDriver {
       self.iter_plugin_with_context_by_order(&self.order_by_close_bundle_meta)
     {
       let start = self.start_timing();
-      let result = plugin.call_close_bundle(ctx, args).await;
+      let result = plugin.close_bundle(ctx, args).await;
       self.record_timing(plugin_idx, start);
-      result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      result.with_context(|| CausedPlugin::new(plugin.name()))?;
     }
     Ok(())
   }

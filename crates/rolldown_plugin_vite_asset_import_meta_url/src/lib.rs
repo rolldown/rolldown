@@ -32,6 +32,7 @@ pub struct ViteAssetImportMetaUrlPlugin {
   pub asset_inline_limit: UsizeOrFunction,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteAssetImportMetaUrlPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-asset-import-meta-url")

@@ -11,6 +11,7 @@ use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 #[derive(Debug)]
 struct TransformWithoutRuntimeUsagePlugin;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for TransformWithoutRuntimeUsagePlugin {
   fn name(&self) -> Cow<'static, str> {
     "transform-without-runtime-usage-plugin".into()

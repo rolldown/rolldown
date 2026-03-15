@@ -24,6 +24,7 @@ pub struct ChunkImportMapPlugin {
   pub chunk_import_map: FxDashMap<ArcStr, String>,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ChunkImportMapPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:chunk-import-map")

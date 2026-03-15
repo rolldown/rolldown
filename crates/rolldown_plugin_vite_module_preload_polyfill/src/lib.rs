@@ -15,6 +15,7 @@ pub struct ViteModulePreloadPolyfillPlugin {
   pub is_server: bool,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteModulePreloadPolyfillPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-module-preload-polyfill")

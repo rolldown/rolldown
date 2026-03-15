@@ -20,6 +20,7 @@ pub struct IsolatedDeclarationPlugin {
   pub strip_internal: bool,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for IsolatedDeclarationPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:isolated-declaration")

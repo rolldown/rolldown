@@ -16,6 +16,7 @@ pub struct ViteImportGlobPlugin {
   pub restore_query_extension: bool,
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ViteImportGlobPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-import-glob")

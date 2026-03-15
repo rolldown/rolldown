@@ -7,6 +7,7 @@ mod type_aliases;
 mod types;
 mod utils;
 
+pub use async_trait::async_trait;
 pub use rolldown_common::{Log, LogWithoutPlugin};
 pub use typedmap;
 
@@ -17,7 +18,7 @@ pub mod __inner {
   pub use super::utils::resolve_id_with_plugins::{
     infer_module_def_format, resolve_id_with_plugins,
   };
-  pub use crate::pluginable::{Pluginable, SharedPluginable};
+  pub use crate::pluginable::SharedPluginable;
 }
 
 pub use crate::{
@@ -32,7 +33,6 @@ pub use crate::{
     SharedTransformPluginContext, TransformPluginContext,
   },
   plugin_driver::{PluginDriver, PluginDriverFactory, SharedPluginDriver},
-  pluginable::Pluginable,
   types::custom_field::CustomField,
   types::hook_addon_args::HookAddonArgs,
   types::hook_build_end_args::HookBuildEndArgs,

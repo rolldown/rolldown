@@ -179,6 +179,7 @@ impl ReplacePlugin {
   }
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for ReplacePlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     Cow::Borrowed("builtin:replace")

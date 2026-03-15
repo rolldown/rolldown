@@ -7,6 +7,7 @@ use rolldown_plugin::{
 #[derive(Debug)]
 pub struct HmrPlugin;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for HmrPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     "builtin:hmr".into()

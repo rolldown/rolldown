@@ -18,6 +18,7 @@ impl TypedMapKey for MyArg {
   type Value = String;
 }
 
+#[rolldown_plugin::async_trait]
 impl Plugin for TestPluginCaller {
   fn name(&self) -> Cow<'static, str> {
     "TestPluginCaller".into()
@@ -61,6 +62,7 @@ impl Plugin for TestPluginCaller {
 #[derive(Debug)]
 struct TestPluginReceiver;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for TestPluginReceiver {
   fn name(&self) -> Cow<'static, str> {
     "TestPluginReceiver".into()

@@ -9,6 +9,7 @@ use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 #[derive(Debug)]
 struct UnresolvedImport;
 
+#[rolldown_plugin::async_trait]
 impl Plugin for UnresolvedImport {
   fn name(&self) -> Cow<'static, str> {
     "unresolved-import-basic".into()

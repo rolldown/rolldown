@@ -232,12 +232,12 @@ modules(build_id, module_id, is_external)
 module_imports(build_id, module_id, imported_module_id, kind, module_request)
 chunks(build_id, chunk_id, name, reason, is_user_defined_entry, is_async_entry, entry_module)
 chunk_imports(build_id, chunk_id, imported_chunk_id, kind)
-hook_calls(build_id, call_id, hook_type, plugin_name, plugin_id, module_id, started_at, ended_at)
-hook_call_content(call_id, content_before, content_after)  -- large text in separate table
-assets(build_id, filename, chunk_id, size)
+sources(source_id, content)  -- store large payloads/source text once
+hook_calls(build_id, call_id, hook_type, plugin_name, plugin_id, module_id, started_at, ended_at, input_source_id, output_source_id)
+assets(build_id, filename, chunk_id, size, content_source_id)
 ```
 
-Separating large content (`hook_call_content`) from metadata (`hook_calls`) means consumers querying plugin timing never touch the multi-GB source text. This is the relational equivalent of the current `StringRef` dedup pattern, but with proper query support.
+Separating large content from metadata means consumers querying plugin timing never touch the multi-GB source text. For a database-backed design specifically, source-like payloads should live in standalone fields/rows (for example, `sources.content`) and actions should reference them by ID (`input_source_id`, `output_source_id`, `content_source_id`) instead of inlining the same source everywhere. This is the relational equivalent of the current `StringRef` dedup pattern, but with proper query support.
 
 #### Migration Path
 

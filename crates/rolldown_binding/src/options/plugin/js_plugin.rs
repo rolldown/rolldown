@@ -110,7 +110,7 @@ impl Plugin for JsPlugin {
       custom: args
         .custom
         .get::<JsPluginContextResolveCustomArgId>(&JsPluginContextResolveCustomArgId)
-        .map(|v| *v),
+        .copied(),
     };
 
     cb.await_call(

@@ -112,7 +112,7 @@ impl Plugin for ParallelJsPlugin {
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     if self.first_plugin().load.is_some() {
-      self.run_single(|plugin| plugin.load(ctx.clone(), args)).await
+      self.run_single(|plugin| plugin.load(Arc::clone(&ctx), args)).await
     } else {
       Ok(None)
     }
@@ -124,7 +124,7 @@ impl Plugin for ParallelJsPlugin {
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     if self.first_plugin().transform.is_some() {
-      self.run_single(|plugin| plugin.transform(ctx.clone(), args)).await
+      self.run_single(|plugin| plugin.transform(Arc::clone(&ctx), args)).await
     } else {
       Ok(None)
     }

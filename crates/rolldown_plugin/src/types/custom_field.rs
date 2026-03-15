@@ -4,6 +4,7 @@ use std::ops::{Deref, DerefMut};
 use rustc_hash::FxBuildHasher;
 use typedmap::TypedMap;
 
+// See meta/design/plugin-context-resolve.md.
 type Inner = TypedMap<(), typedmap::SyncAnyBounds, typedmap::SyncAnyBounds, FxBuildHasher>;
 
 pub struct CustomField(Inner);

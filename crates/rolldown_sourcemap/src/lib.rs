@@ -4,7 +4,7 @@ mod source_joiner;
 use std::sync::Arc;
 
 use oxc_sourcemap::Token;
-use rustc_hash::FxHashMap;
+use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 
 pub use oxc_sourcemap::{JSONSourceMap, SourceMap, SourceMapBuilder, SourcemapVisualizer};
 pub use source_joiner::SourceJoiner;
@@ -45,8 +45,6 @@ pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, lines: u32) -> SourceMap
   )
 }
 
-use rolldown_utils::rustc_hash::FxHashMapExt;
-
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
 #[expect(clippy::cast_possible_truncation)]
 pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
@@ -65,18 +63,10 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
     .map(|sourcemap| (sourcemap, sourcemap.generate_lookup_table()))
     .collect::<Vec<_>>();
 
-  let source_view_tokens = last_map.get_source_view_tokens();
-
-  let sources_map = first_map
-    .get_sources()
-    .enumerate()
-    .map(|(i, source)| (source, i as u32))
-    .collect::<FxHashMap<_, _>>();
-
-  // Avoid hashing the source text for every token.
-  let mut sources_cache = FxHashMap::with_capacity(sources_map.len());
+  let source_view_tokens = last_map.get_source_view_tokens().collect::<Vec<_>>();
 
   let tokens = source_view_tokens
+    .into_par_iter()
     .filter_map(|token| {
       let original_token = sourcemap_and_lookup_table.iter().rev().try_fold(
         token,
@@ -94,14 +84,7 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
           token.get_dst_col(),
           original_token.get_src_line(),
           original_token.get_src_col(),
-          original_token.get_source_id().and_then(|source_id| {
-            sources_cache
-              .entry(source_id)
-              .or_insert_with(|| {
-                first_map.get_source(source_id).and_then(|source| sources_map.get(source))
-              })
-              .copied()
-          }),
+          original_token.get_source_id(),
           original_token.get_name_id(),
         )
       })

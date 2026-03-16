@@ -20,9 +20,23 @@
             href="https://github.com/rolldown/rolldown"
             target="_blank"
             rel="noopener noreferrer"
-            class="button inline-block w-fit"
+            class="button inline-flex items-center gap-2 w-fit"
           >
-            View on GitHub
+            <span>View on GitHub</span>
+            <svg class="size-3" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M3.18228 2.81797L9.54624 2.81797L9.54624 9.18193"
+                stroke="currentColor"
+                stroke-width="1.35"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M9.5459 2.81799L3.18194 9.18195"
+                stroke="currentColor"
+                stroke-width="1.35"
+                stroke-linejoin="round"
+              />
+            </svg>
           </a>
         </div>
       </div>

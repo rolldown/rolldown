@@ -63,6 +63,29 @@ pub fn normalize_path_to_native(path: &str) -> Cow<'_, str> {
   Cow::Borrowed(path)
 }
 
+pub fn get_npm_package_name(id: &str) -> Option<&str> {
+  if id.starts_with('@') {
+    let mut indices = id.match_indices('/');
+    indices.next()?;
+    let second_pos = indices.next().map_or(id.len(), |(pos, _)| pos);
+    Some(&id[0..second_pos])
+  } else {
+    id.split('/').next()
+  }
+}
+
+pub fn can_externalize_file(file_path: &str) -> bool {
+  let ext = get_extension(file_path);
+  ext.is_empty() || ext == "js" || ext == "mjs" || ext == "cjs"
+}
+
+/// path.resolve normalizes the leading slashes to a single slash
+pub fn normalize_leading_slashes(specifier: &str) -> &str {
+  let trimmed = specifier.trim_start_matches('/');
+  let leading_slashes = specifier.len() - trimmed.len();
+  if leading_slashes <= 1 { specifier } else { &specifier[leading_slashes - 1..] }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -96,27 +119,4 @@ mod tests {
     // Already native should be a no-op borrow
     assert!(matches!(normalize_path_to_native("D:\\a\\project"), Cow::Borrowed(_)));
   }
-}
-
-pub fn get_npm_package_name(id: &str) -> Option<&str> {
-  if id.starts_with('@') {
-    let mut indices = id.match_indices('/');
-    indices.next()?;
-    let second_pos = indices.next().map_or(id.len(), |(pos, _)| pos);
-    Some(&id[0..second_pos])
-  } else {
-    id.split('/').next()
-  }
-}
-
-pub fn can_externalize_file(file_path: &str) -> bool {
-  let ext = get_extension(file_path);
-  ext.is_empty() || ext == "js" || ext == "mjs" || ext == "cjs"
-}
-
-/// path.resolve normalizes the leading slashes to a single slash
-pub fn normalize_leading_slashes(specifier: &str) -> &str {
-  let trimmed = specifier.trim_start_matches('/');
-  let leading_slashes = specifier.len() - trimmed.len();
-  if leading_slashes <= 1 { specifier } else { &specifier[leading_slashes - 1..] }
 }

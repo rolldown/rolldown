@@ -603,7 +603,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               }
               None => match self.try_extract_parent_static_member_expr_chain(1) {
                 Some((_span, prop)) => {
-                  self.cjs_named_exports_usage.entry(prop[0].0.clone()).or_default().read += 1;
+                  self.cjs_named_exports_usage.entry(prop[0].name.clone()).or_default().read += 1;
                 }
                 _ => {
                   self.result.ast_usage.insert(EcmaModuleAstUsage::UnknownExportsRead);
@@ -662,7 +662,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
               if matches!(ty, MemberExprObjectReferencedType::Namespace)
                 && self.traverse_state.contains(TraverseState::MemberExprIsWrite)
-                && props[0].0 == "default"
+                && props[0].name == "default"
               {
                 // Write through namespace default (e.g. `ns.default.a = value`). Since
                 // `ns.default` is the raw CJS exports object, any property write on it may

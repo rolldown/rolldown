@@ -32,9 +32,9 @@ use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicIm
 use rolldown_common::{
   ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
   ExportsKind, FlatOptions, HmrInfo, ImportAttribute, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, LocalExport, MemberExprObjectReferencedType, MemberExprRef, ModuleDefFormat,
-  ModuleId, ModuleIdx, NamedImport, RawImportRecord, SideEffectDetail, Specifier, StmtInfo,
-  StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
+  ImportRecordMeta, LocalExport, MemberExprObjectReferencedType, MemberExprProp, MemberExprRef,
+  ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord, SideEffectDetail, Specifier,
+  StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
   TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::{BindingPatternExt, FunctionExt};
@@ -944,7 +944,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn add_member_expr_reference(
     &mut self,
     object_ref: SymbolRef,
-    prop_and_span_list: Vec<(CompactStr, Span)>,
+    prop_and_span_list: Vec<MemberExprProp>,
     span: Span,
     obj_ref_type: MemberExprObjectReferencedType,
     reference_id: Option<ReferenceId>,
@@ -1004,19 +1004,27 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn try_extract_parent_static_member_expr_chain(
     &self,
     max_len: usize,
-  ) -> Option<(Span, Vec<(CompactStr, Span)>)> {
+  ) -> Option<(Span, Vec<MemberExprProp>)> {
     let mut span = SPAN;
     let mut props = vec![];
     for ancestor_ast in self.visit_path.iter().rev().take(max_len) {
       match ancestor_ast {
         AstKind::StaticMemberExpression(expr) => {
           span = ancestor_ast.span();
-          props.push((expr.property.name.as_str().into(), expr.property.span()));
+          props.push(MemberExprProp {
+            name: expr.property.name.as_str().into(),
+            span: expr.property.span(),
+            optional: expr.optional,
+          });
         }
         AstKind::ComputedMemberExpression(expr) => {
           if let Some(name) = expr.static_property_name() {
             span = ancestor_ast.span();
-            props.push((name.into(), expr.expression.span()));
+            props.push(MemberExprProp {
+              name: name.into(),
+              span: expr.expression.span(),
+              optional: expr.optional,
+            });
           } else {
             break;
           }

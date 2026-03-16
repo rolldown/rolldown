@@ -179,7 +179,7 @@ pub use crate::{
     BarrelInfo, BarrelState, ExportSource, ImportedExports, LazyBarrelInfo,
     try_extract_lazy_barrel_info,
   },
-  types::member_expr_ref::{MemberExprObjectReferencedType, MemberExprRef},
+  types::member_expr_ref::{MemberExprObjectReferencedType, MemberExprProp, MemberExprRef},
   types::member_expr_ref_resolution::MemberExprRefResolution,
   types::module_def_format::ModuleDefFormat,
   types::module_id::ModuleId,

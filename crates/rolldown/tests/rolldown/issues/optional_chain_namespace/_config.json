@@ -1,0 +1,6 @@
+{
+  "config": {
+    "platform": "node"
+  },
+  "expectExecuted": true
+}

@@ -7,10 +7,10 @@ use oxc::{
       ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
     },
   },
-  span::{Atom, CompactStr, GetSpanMut, SPAN, Span},
+  span::{Atom, GetSpanMut, SPAN, Span},
   syntax::identifier,
 };
-use rolldown_common::{EcmaModuleAstUsage, Interop};
+use rolldown_common::{EcmaModuleAstUsage, Interop, MemberExprProp};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 type PassedStr<'a> = &'a str;
@@ -73,24 +73,24 @@ impl<'ast> AstSnippet<'ast> {
   pub fn member_expr_or_ident_ref(
     &self,
     object: ast::Expression<'ast>,
-    name_and_span_list: &[(CompactStr, Span)],
+    props: &[MemberExprProp],
     span: Span,
   ) -> ast::Expression<'ast> {
     let mut cur = object;
-    for (name, related_span) in name_and_span_list {
-      cur = if identifier::is_identifier_name(name) {
+    for prop in props {
+      cur = if identifier::is_identifier_name(&prop.name) {
         ast::Expression::from(self.builder.member_expression_static(
           SPAN,
           cur,
-          self.id_name(name, *related_span),
-          false,
+          self.id_name(&prop.name, prop.span),
+          prop.optional,
         ))
       } else {
         ast::Expression::from(self.builder.member_expression_computed(
           SPAN,
           cur,
-          self.builder.expression_string_literal(*related_span, self.builder.atom(name), None),
-          false,
+          self.builder.expression_string_literal(prop.span, self.builder.atom(&prop.name), None),
+          prop.optional,
         ))
       };
     }
@@ -102,13 +102,13 @@ impl<'ast> AstSnippet<'ast> {
   #[inline]
   pub fn member_expr_with_void_zero_object(
     &self,
-    name_and_span_list: &[(CompactStr, Span)],
+    props: &[MemberExprProp],
     span: Span,
   ) -> ast::Expression<'ast> {
-    if name_and_span_list.is_empty() {
+    if props.is_empty() {
       self.void_zero()
     } else {
-      self.member_expr_or_ident_ref(self.void_zero(), &name_and_span_list[1..], span)
+      self.member_expr_or_ident_ref(self.void_zero(), &props[1..], span)
     }
   }
 

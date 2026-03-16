@@ -418,7 +418,8 @@ impl LinkStage<'_> {
                   canonical_ref_owner.namespace_object_ref == canonical_ref || is_json_import_ns;
                 let mut cursor = 0;
                 while cursor < member_expr_ref.prop_and_span_list.len() && is_namespace_ref {
-                  let (name, _related_span) = &member_expr_ref.prop_and_span_list[cursor];
+                  let prop = &member_expr_ref.prop_and_span_list[cursor];
+                  let name = &prop.name;
                   let meta = &self.metas[canonical_ref_owner.idx];
                   let export_symbol = meta.resolved_exports.get(name).and_then(|resolved_export| {
                     (!resolved_export.came_from_cjs).then_some(resolved_export)
@@ -536,13 +537,13 @@ impl LinkStage<'_> {
                       .and_then(|idx| {
                         self.metas[*idx]
                           .resolved_exports
-                          .get(&member_expr_ref.prop_and_span_list[cursor].0)
+                          .get(&member_expr_ref.prop_and_span_list[cursor].name)
                           .and_then(|resolved_export| {
                             resolved_export.came_from_cjs.then_some(resolved_export)
                           })
                       })
                   {
-                    let is_default = member_expr_ref.prop_and_span_list[cursor].0 == "default";
+                    let is_default = member_expr_ref.prop_and_span_list[cursor].name == "default";
                     target_commonjs_exported_symbol = Some((m.symbol_ref, is_default));
                     depended_refs.push(m.symbol_ref);
                     // If this member expression is a write (e.g. `cjs.c = 'abcd'`), the

@@ -483,12 +483,35 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
       ast::Expression::ChainExpression(chain_expr) => {
+        let chain_span = chain_expr.span;
         if let Some(new_expr) = chain_expr
           .expression
           .as_member_expression_mut()
           .and_then(|expr| self.try_rewrite_member_expr(expr))
         {
-          *expr = new_expr;
+          // If the rewritten expression contains optional member accesses (?.),
+          // it must remain wrapped in a ChainExpression for valid JavaScript output.
+          if has_optional_member_access(&new_expr) {
+            match new_expr {
+              ast::Expression::StaticMemberExpression(member) => {
+                *expr = self
+                  .snippet
+                  .builder
+                  .expression_chain(chain_span, ast::ChainElement::StaticMemberExpression(member));
+              }
+              ast::Expression::ComputedMemberExpression(member) => {
+                *expr = self.snippet.builder.expression_chain(
+                  chain_span,
+                  ast::ChainElement::ComputedMemberExpression(member),
+                );
+              }
+              _ => {
+                *expr = new_expr;
+              }
+            }
+          } else {
+            *expr = new_expr;
+          }
         }
       }
       _ => {
@@ -743,5 +766,27 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     }
 
     walk_mut::walk_declaration(self, it);
+  }
+}
+
+/// Check if an expression tree contains any optional member accesses (`?.`).
+fn has_optional_member_access(expr: &Expression) -> bool {
+  let mut cur = expr;
+  loop {
+    match cur {
+      Expression::StaticMemberExpression(e) => {
+        if e.optional {
+          return true;
+        }
+        cur = &e.object;
+      }
+      Expression::ComputedMemberExpression(e) => {
+        if e.optional {
+          return true;
+        }
+        cur = &e.object;
+      }
+      _ => return false,
+    }
   }
 }

@@ -48,7 +48,7 @@ impl GenerateStage<'_> {
           let (minified_content, new_map) = EcmaCompiler::dce_or_minify(
             &allocator_guard,
             chunk.content.try_as_inner_str()?,
-            options.format.source_type().with_jsx(true),
+            options.format.source_type().with_jsx(options.transform_options.is_jsx_preserve()),
             chunk.map.is_some(),
             chunk.preliminary_filename.as_str(),
             compress,

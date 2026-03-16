@@ -30,7 +30,7 @@ use crate::{
   resolver::{self, AdditionalOptions, Resolvers},
   utils::{
     BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, is_bare_import, is_windows_drive_path,
-    normalize_leading_slashes, normalize_path,
+    normalize_leading_slashes, normalize_path, normalize_path_to_native,
   },
 };
 
@@ -142,6 +142,10 @@ pub struct ViteResolvePlugin {
 
 impl ViteResolvePlugin {
   pub fn new(options: ViteResolveOptions) -> Self {
+    // Normalize root to native separators to prevent mixed-separator paths
+    // on Windows (e.g., `D:/a/project\tsconfig.json`) that can break
+    // oxc_resolver's tsconfig path resolution and cache lookups.
+    let root = PathBuf::from(normalize_path_to_native(&options.resolve_options.root).as_ref());
     let base_options = resolver::BaseOptions {
       main_fields: &options.resolve_options.main_fields,
       conditions: &options.resolve_options.conditions,
@@ -150,7 +154,7 @@ impl ViteResolvePlugin {
       try_index: options.resolve_options.try_index,
       try_prefix: &options.resolve_options.try_prefix,
       as_src: options.resolve_options.as_src,
-      root: PathBuf::from(&options.resolve_options.root),
+      root,
       preserve_symlinks: options.resolve_options.preserve_symlinks,
       tsconfig_paths: options.resolve_options.tsconfig_paths,
       yarn_pnp: options.yarn_pnp,

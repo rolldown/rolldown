@@ -45,6 +45,24 @@ pub fn normalize_path(path: &str) -> Cow<'_, str> {
   path.cow_replace('\\', "/")
 }
 
+/// Normalize path separators to the OS-native format.
+///
+/// On Windows, converts forward slashes to backslashes so that all path
+/// operations (join, parent, etc.) produce paths with consistent separators.
+/// This prevents mixed-separator paths like `D:/a/analog\tsconfig.json` that
+/// can confuse oxc_resolver's path cache and tsconfig resolution.
+///
+/// On non-Windows platforms, this is a no-op.
+#[cfg(windows)]
+pub fn normalize_path_to_native(path: &str) -> Cow<'_, str> {
+  path.cow_replace('/', "\\")
+}
+
+#[cfg(not(windows))]
+pub fn normalize_path_to_native(path: &str) -> Cow<'_, str> {
+  Cow::Borrowed(path)
+}
+
 pub fn get_npm_package_name(id: &str) -> Option<&str> {
   if id.starts_with('@') {
     let mut indices = id.match_indices('/');

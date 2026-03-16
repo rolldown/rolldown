@@ -17,7 +17,7 @@ use crate::{
   package_json_cache::{PackageJsonCache, PackageJsonWithOptionalPeerDependencies},
   utils::{
     BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, can_externalize_file, get_extension,
-    get_npm_package_name, is_bare_import, is_deep_import, normalize_path,
+    get_npm_package_name, is_bare_import, is_deep_import, normalize_path, normalize_path_to_native,
   },
 };
 
@@ -282,11 +282,14 @@ impl Resolver {
 
     let inner_resolver = if external { &self.inner_for_external } else { &self.inner };
     let result = if let Some(importer) = importer {
+      // Normalize importer to native separators to prevent mixed-separator
+      // paths on Windows that can break oxc_resolver's tsconfig resolution.
+      let native_importer = normalize_path_to_native(importer);
       // check if `is_absolute` to avoid extra `join` overhead
-      if Path::new(importer).is_absolute() {
-        inner_resolver.resolve_file(importer, specifier)
+      if Path::new(native_importer.as_ref()).is_absolute() {
+        inner_resolver.resolve_file(native_importer.as_ref(), specifier)
       } else {
-        inner_resolver.resolve_file(self.root.join(importer), specifier)
+        inner_resolver.resolve_file(self.root.join(native_importer.as_ref()), specifier)
       }
     } else {
       inner_resolver.resolve(&self.root, specifier)
@@ -327,11 +330,12 @@ impl Resolver {
     // this allows resolving `@pkg/pkg/foo.scss` to `@pkg/pkg/_foo.scss`, which is probably not allowed by sass's resolver
     // but that's an edge case so we ignore it here
     if let Some(importer) = importer {
+      let native_importer = normalize_path_to_native(importer);
       // check if `is_absolute` to avoid extra `join` overhead
-      if Path::new(importer).is_absolute() {
-        inner_resolver.resolve_file(importer, path_with_prefix)
+      if Path::new(native_importer.as_ref()).is_absolute() {
+        inner_resolver.resolve_file(native_importer.as_ref(), path_with_prefix)
       } else {
-        inner_resolver.resolve_file(self.root.join(importer), path_with_prefix)
+        inner_resolver.resolve_file(self.root.join(native_importer.as_ref()), path_with_prefix)
       }
     } else {
       inner_resolver.resolve(&self.root, path_with_prefix)

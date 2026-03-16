@@ -299,3 +299,6 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+[patch.crates-io]
+oxc_resolver = { git = "https://github.com/oxc-project/oxc-resolver", rev = "c888ec9bd2a6ca9993619bc73847431a9bf3ab1b" }

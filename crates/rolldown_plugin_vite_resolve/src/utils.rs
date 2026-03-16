@@ -63,6 +63,41 @@ pub fn normalize_path_to_native(path: &str) -> Cow<'_, str> {
   Cow::Borrowed(path)
 }
 
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_normalize_path_converts_backslashes_to_forward_slashes() {
+    assert_eq!(normalize_path("foo/bar"), "foo/bar");
+    assert_eq!(normalize_path("foo\\bar"), "foo/bar");
+    assert_eq!(normalize_path("C:\\Users\\foo\\bar"), "C:/Users/foo/bar");
+    assert_eq!(normalize_path("/unix/path"), "/unix/path");
+  }
+
+  #[test]
+  fn test_normalize_path_borrows_when_no_change() {
+    assert!(matches!(normalize_path("foo/bar"), Cow::Borrowed(_)));
+  }
+
+  #[test]
+  #[cfg(not(windows))]
+  fn test_normalize_path_to_native_is_noop_on_non_windows() {
+    assert!(matches!(normalize_path_to_native("foo/bar"), Cow::Borrowed("foo/bar")));
+    assert!(matches!(normalize_path_to_native("D:/a/project/src"), Cow::Borrowed(_)));
+    assert!(matches!(normalize_path_to_native("foo\\bar"), Cow::Borrowed("foo\\bar")));
+  }
+
+  #[test]
+  #[cfg(windows)]
+  fn test_normalize_path_to_native_converts_to_backslashes_on_windows() {
+    assert_eq!(normalize_path_to_native("D:/a/project/src"), "D:\\a\\project\\src");
+    assert_eq!(normalize_path_to_native("D:/a/project\\src"), "D:\\a\\project\\src");
+    // Already native should be a no-op borrow
+    assert!(matches!(normalize_path_to_native("D:\\a\\project"), Cow::Borrowed(_)));
+  }
+}
+
 pub fn get_npm_package_name(id: &str) -> Option<&str> {
   if id.starts_with('@') {
     let mut indices = id.match_indices('/');

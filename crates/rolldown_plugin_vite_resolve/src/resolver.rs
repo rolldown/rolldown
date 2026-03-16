@@ -404,7 +404,7 @@ impl Resolver {
               })
             })
             .flatten();
-          if resolved_importer_dir.is_some_and(|dir| dir != self.root.to_str().unwrap())
+          if resolved_importer_dir.is_some_and(|dir| Path::new(dir) != self.root.as_path())
             && let Some(package_json) =
               self.get_nearest_package_json_optional_peer_deps(importer.unwrap())
             && package_json.optional_peer_dependencies.contains(pkg_name)

@@ -269,7 +269,8 @@ pub fn prepare_build_context(
   }
 
   let tsconfig = raw_options.tsconfig.map(|tsconfig| tsconfig.with_base(&cwd)).unwrap_or_default();
-  let fs = OsFileSystem::new(raw_resolve.yarn_pnp.is_some_and(|b| b));
+  let yarn_pnp = raw_resolve.yarn_pnp.unwrap_or(false);
+  let fs = OsFileSystem::new(yarn_pnp);
   let resolver = Arc::new(Resolver::new(fs.clone(), cwd.clone(), platform, &tsconfig, raw_resolve));
 
   let transform_options = {
@@ -339,7 +340,7 @@ pub fn prepare_build_context(
           )
         } else {
           TransformOptions::new_raw(
-            RawTransformOptions::new(raw_transform_options, v.clone()),
+            RawTransformOptions::new(raw_transform_options, v.clone(), yarn_pnp),
             target,
             jsx_preset,
           )
@@ -350,7 +351,7 @@ pub fn prepare_build_context(
           // Auto mode: Create Raw mode TransformOptions
           // Each file will find its nearest tsconfig during compilation
           TransformOptions::new_raw(
-            RawTransformOptions::new(raw_transform_options, v),
+            RawTransformOptions::new(raw_transform_options, v, yarn_pnp),
             target,
             jsx_preset,
           )

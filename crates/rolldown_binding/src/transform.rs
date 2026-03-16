@@ -44,6 +44,7 @@ fn enhanced_transform_internal(
   source_text: &str,
   options: Option<BindingEnhancedTransformOptions>,
   cache: Option<&TsconfigCache>,
+  yarn_pnp: bool,
 ) -> napi::Result<BindingEnhancedTransformResult> {
   let options = options.unwrap_or_default();
   let cwd = options
@@ -59,7 +60,7 @@ fn enhanced_transform_internal(
     ));
   }
 
-  let result = core_enhanced_transform(filename, source_text, transform_options);
+  let result = core_enhanced_transform(filename, source_text, transform_options, yarn_pnp);
   Ok(BindingEnhancedTransformResult::from_enhanced_transform_result(result, cwd))
 }
 
@@ -68,6 +69,7 @@ pub struct EnhancedTransformTask<'a> {
   source_text: String,
   options: Option<BindingEnhancedTransformOptions>,
   cache: Option<&'a TsconfigCache>,
+  yarn_pnp: bool,
 }
 
 #[napi]
@@ -76,7 +78,13 @@ impl Task for EnhancedTransformTask<'_> {
   type Output = BindingEnhancedTransformResult;
 
   fn compute(&mut self) -> napi::Result<Self::Output> {
-    enhanced_transform_internal(&self.filename, &self.source_text, self.options.take(), self.cache)
+    enhanced_transform_internal(
+      &self.filename,
+      &self.source_text,
+      self.options.take(),
+      self.cache,
+      self.yarn_pnp,
+    )
   }
 
   fn resolve(&mut self, _env: napi::Env, output: Self::Output) -> napi::Result<Self::JsValue> {
@@ -84,63 +92,35 @@ impl Task for EnhancedTransformTask<'_> {
   }
 }
 
-/// Transpile a JavaScript or TypeScript into a target ECMAScript version, asynchronously.
-///
-/// Note: This function can be slower than `transformSync` due to the overhead of spawning a thread.
-///
-/// @param filename The name of the file being transformed. If this is a
-/// relative path, consider setting the {@link TransformOptions#cwd} option.
-/// @param sourceText The source code to transform.
-/// @param options The transform options including tsconfig and inputMap. See {@link
-/// BindingEnhancedTransformOptions} for more information.
-/// @param cache Optional tsconfig cache for reusing resolved tsconfig across multiple transforms.
-/// Only used when tsconfig auto-discovery is enabled.
-///
-/// @returns a promise that resolves to an object containing the transformed code,
-/// source maps, and any errors that occurred during parsing or transformation.
-///
-/// @experimental
 #[napi]
 pub fn enhanced_transform(
   filename: String,
   source_text: String,
   options: Option<BindingEnhancedTransformOptions>,
   cache: Option<&TsconfigCache>,
+  yarn_pnp: bool,
 ) -> AsyncTask<EnhancedTransformTask<'_>> {
-  AsyncTask::new(EnhancedTransformTask { filename, source_text, options, cache })
+  AsyncTask::new(EnhancedTransformTask { filename, source_text, options, cache, yarn_pnp })
 }
 
-/// Transpile a JavaScript or TypeScript into a target ECMAScript version.
-///
-/// @param filename The name of the file being transformed. If this is a
-/// relative path, consider setting the {@link TransformOptions#cwd} option.
-/// @param sourceText The source code to transform.
-/// @param options The transform options including tsconfig and inputMap. See {@link
-/// BindingEnhancedTransformOptions} for more information.
-/// @param cache Optional tsconfig cache for reusing resolved tsconfig across multiple transforms.
-/// Only used when tsconfig auto-discovery is enabled.
-///
-/// @returns an object containing the transformed code, source maps, and any errors
-/// that occurred during parsing or transformation.
-///
-/// @experimental
 #[napi]
 pub fn enhanced_transform_sync(
   filename: String,
   source_text: String,
   options: Option<BindingEnhancedTransformOptions>,
   cache: Option<&TsconfigCache>,
+  yarn_pnp: bool,
 ) -> napi::Result<BindingEnhancedTransformResult> {
-  enhanced_transform_internal(&filename, &source_text, options, cache)
+  enhanced_transform_internal(&filename, &source_text, options, cache, yarn_pnp)
 }
 
-/// @hidden This is only expected to be used by Vite
 #[napi]
 pub fn resolve_tsconfig(
   filename: String,
   cache: Option<&TsconfigCache>,
+  yarn_pnp: bool,
 ) -> napi::Result<Option<BindingTsconfigResult>> {
-  let tsconfig_cache = if let Some(cache) = cache { cache } else { &TsconfigCache::new() };
+  let tsconfig_cache = if let Some(cache) = cache { cache } else { &TsconfigCache::new(yarn_pnp) };
 
   match tsconfig_cache.find_tsconfig(Path::new(&filename)) {
     Ok(Some(tsconfig)) => Ok(Some(tsconfig.as_ref().clone().into())),

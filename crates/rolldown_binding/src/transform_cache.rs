@@ -8,14 +8,6 @@ use napi_derive::napi;
 use oxc_resolver::{ResolveError, ResolveOptions, Resolver, TsConfig, TsconfigDiscovery};
 use rolldown_utils::dashmap::FxDashMap;
 
-/// Cache for tsconfig resolution to avoid redundant file system operations.
-///
-/// The cache stores resolved tsconfig configurations keyed by their file paths.
-/// When transforming multiple files in the same project, tsconfig lookups are
-/// deduplicated, improving performance.
-///
-/// @category Utilities
-/// @experimental
 #[napi]
 pub struct TsconfigCache {
   resolver: Arc<Resolver>,
@@ -26,10 +18,11 @@ pub struct TsconfigCache {
 impl TsconfigCache {
   /// Create a new transform cache with auto tsconfig discovery enabled.
   #[napi(constructor)]
-  pub fn new() -> Self {
+  pub fn new(yarn_pnp: bool) -> Self {
     Self {
       resolver: Arc::new(Resolver::new(ResolveOptions {
         tsconfig: Some(TsconfigDiscovery::Auto),
+        yarn_pnp,
         ..Default::default()
       })),
       cache: FxDashMap::default(),
@@ -48,12 +41,6 @@ impl TsconfigCache {
   #[napi]
   pub fn size(&self) -> u32 {
     u32::try_from(self.cache.len()).unwrap_or(u32::MAX)
-  }
-}
-
-impl Default for TsconfigCache {
-  fn default() -> Self {
-    Self::new()
   }
 }
 
@@ -91,13 +78,13 @@ mod tests {
 
   #[test]
   fn test_cache_creation() {
-    let cache = TsconfigCache::new();
+    let cache = TsconfigCache::new(false);
     assert_eq!(cache.size(), 0);
   }
 
   #[test]
   fn test_cache_clear() {
-    let cache = TsconfigCache::new();
+    let cache = TsconfigCache::new(false);
     cache.clear();
     assert_eq!(cache.size(), 0);
   }

@@ -34,7 +34,7 @@ pub struct RawTransformOptions {
 }
 
 impl RawTransformOptions {
-  pub fn new(base_options: BundlerTransformOptions, tsconfig: TsConfig) -> Self {
+  pub fn new(base_options: BundlerTransformOptions, tsconfig: TsConfig, yarn_pnp: bool) -> Self {
     Self {
       base_options: Arc::new(base_options),
       cache: FxDashMap::default(),
@@ -46,6 +46,7 @@ impl RawTransformOptions {
             references: oxc_resolver::TsconfigReferences::Auto,
           })),
         },
+        yarn_pnp,
         ..Default::default()
       })),
     }

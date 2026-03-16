@@ -207,18 +207,7 @@ impl NormalModule {
           PrintOptions {
             sourcemap: enable_sourcemap,
             filename: self.id.to_string(),
-            comments: {
-              let mut c: rolldown_ecmascript::PrintCommentsOptions = options.comments.into();
-              // Annotation comments must survive into the rendered text because
-              // `minify_chunks` re-parses it; without them the parser won't set
-              // `expr.pure` and DCE can't eliminate unused pure calls.
-              // `minify_chunks` codegen will honour the user's `comments.annotation`
-              // setting when it emits the final output.
-              // Only `annotation` needs this override — `legal` and `jsdoc` comments
-              // have no effect on DCE behaviour.
-              c.annotation = true;
-              c
-            },
+            comments: options.comments.into(),
             initial_indent,
           },
         );

@@ -3569,7 +3569,6 @@ dependencies = [
  "oxc",
  "oxc_sourcemap",
  "rolldown_utils",
- "rustc-hash",
 ]
 
 [[package]]

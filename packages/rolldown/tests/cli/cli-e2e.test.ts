@@ -18,6 +18,18 @@ function cleanStdout(stdout: string) {
     .replace(/* Match `rolldown v*)` */ /rolldown\sv.*\)/, 'rolldown VERSION)');
 }
 
+function createStreamWaiter(stream: NodeJS.ReadableStream) {
+  let output = '';
+  stream.on('data', (data) => {
+    output += data.toString();
+  });
+  return {
+    waitFor(predicate: string, options?: { timeout?: number }) {
+      return vi.waitUntil(() => output.includes(predicate), options);
+    },
+  };
+}
+
 describe('should not hang after running', () => {
   test.skip('basic', async () => {
     const cwd = cliFixturesDir('no-config');
@@ -477,46 +489,58 @@ describe('watch cli', () => {
   it('should handle output options', async () => {
     const cwd = cliFixturesDir('watch-cli-option');
     const controller = new AbortController();
-    execa({
+    const process = execa({
       cwd,
       reject: false,
       cancelSignal: controller.signal,
     })`rolldown index.ts -d dist -w -s`;
+    const stdoutWaiter = createStreamWaiter(process.stdout);
+    await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
     await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true);
     });
     controller.abort();
+    await process;
+    expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
   });
 
   it('should allow multiply options', async () => {
     const cwd = cliFixturesDir('config-multiply-options');
     const controller = new AbortController();
-    execa({
+    const process = execa({
       cwd,
       reject: false,
       cancelSignal: controller.signal,
     })`rolldown -c rolldown.config.ts -d watch-dist-options -w`;
+    const stdoutWaiter = createStreamWaiter(process.stdout);
+    await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
     await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-options/esm.js'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'watch-dist-options/cjs.js'))).toBe(true);
     });
     controller.abort();
+    await process;
+    expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
   });
 
   it('should allow multiply output', async () => {
     const cwd = cliFixturesDir('config-multiply-output');
     const controller = new AbortController();
-    execa({
+    const process = execa({
       cwd,
       reject: false,
       cancelSignal: controller.signal,
     })`rolldown -c rolldown.config.ts -d watch-dist-output -w`;
+    const stdoutWaiter = createStreamWaiter(process.stdout);
+    await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
     await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-output/esm.js'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'watch-dist-output/cjs.js'))).toBe(true);
     });
     controller.abort();
+    await process;
+    expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
   });
 
   it('should allow multiply output + call options hook once + call outputOptions hook', async () => {
@@ -536,5 +560,30 @@ describe('watch cli', () => {
     const cwd = cliFixturesDir('watch-mode');
     const status = await $({ cwd })`rolldown -w -c`;
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
+  });
+
+  it('should close with exit code 0 even when there are errors', async () => {
+    const cwd = cliFixturesDir('watch-error');
+    const controller = new AbortController();
+    const process = execa({
+      cwd,
+      reject: false,
+      cancelSignal: controller.signal,
+    })`rolldown index.ts -d dist -w`;
+    const stdoutWaiter = createStreamWaiter(process.stdout);
+    await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
+
+    fs.writeFileSync(
+      path.join(cwd, 'index.ts'),
+      `import { foo } from './non-existent';\n\nconsole.log(foo);\n`,
+    );
+    try {
+      await stdoutWaiter.waitFor('UNRESOLVED_IMPORT', { timeout: 5_000 });
+      controller.abort();
+      await process;
+      expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
+    } finally {
+      fs.writeFileSync(path.join(cwd, 'index.ts'), `var foo = '';\n\nconsole.log(foo);\n`);
+    }
   });
 });

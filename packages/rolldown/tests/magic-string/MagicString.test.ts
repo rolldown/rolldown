@@ -1317,7 +1317,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'a[]c;');
     });
 
-    it.skip('should provide a useful error when illegal removals are attempted', () => {
+    it('should provide a useful error when illegal removals are attempted', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.overwrite(5, 7, 'XX');
@@ -1419,7 +1419,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'bc');
     });
 
-    it.skip('should reset modified ranges', () => {
+    it('should reset modified ranges', () => {
       const s = new MagicString('abcdefghi');
 
       s.overwrite(3, 6, 'DEF');
@@ -1451,7 +1451,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), '(a.c);');
     });
 
-    it.skip('should provide a useful error when illegal removals are attempted', () => {
+    it('should provide a useful error when illegal removals are attempted', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.remove(4, 8);

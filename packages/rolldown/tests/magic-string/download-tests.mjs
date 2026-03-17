@@ -124,7 +124,7 @@ const SKIP_TESTS = [
   // The reset version passes, so we handle this with a special transformation below
   'should not remove content inserted', // complex interaction
   'should remove interior inserts', // causes panic
-  'should provide a useful error', // expects throw but gets panic
+  // Note: 'should provide a useful error' now works — errors are properly thrown, not panicked
   // slice-specific skips
   'should return the generated content between the specified original characters', // nested overwrites + slice
   'supports characters moved', // complex move + slice interaction
@@ -261,12 +261,7 @@ function transformTestFile(content, filename) {
     "$1\n$2it.skip('removes across moved content'",
   );
 
-  // Special case: skip "should reset modified ranges" but not "should reset modified ranges, redux"
-  // The "redux" version passes, but the first one uses overwrite+remove+reset which fails
-  transformed = transformed.replace(
-    /it\('should reset modified ranges', /g,
-    "it.skip('should reset modified ranges', ",
-  );
+  // Note: "should reset modified ranges" now passes (overwrite+remove+reset works correctly)
 
   return transformed;
 }

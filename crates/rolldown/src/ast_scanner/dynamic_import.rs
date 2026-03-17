@@ -75,7 +75,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
       // e.g. `import('mod');`
       // init_set is empty, importee would be included if it has side effects
-      AstKind::ExpressionStatement(_) if self.is_root_scope() => Some(FxHashSet::default()),
+      AstKind::ExpressionStatement(_) => Some(FxHashSet::default()),
       _ => None,
     };
 

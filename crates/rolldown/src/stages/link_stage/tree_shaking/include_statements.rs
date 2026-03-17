@@ -585,10 +585,10 @@ impl LinkStage<'_> {
                 .side_effects()
                 .has_side_effects();
 
-              // Only consider it is unused if it is a top level pure dynamic import and the
+              // Only consider it is unused if it is a pure dynamic import and the
               // importee module has no side effects.
               !importee_side_effects
-                && import_record.meta.contains(ImportRecordMeta::TopLevelPureDynamicImport)
+                && import_record.meta.contains(ImportRecordMeta::PureDynamicImport)
             };
             let is_stmt_included = is_stmt_included_vec[*module_idx].has_bit(*stmt_idx);
             let lived = is_stmt_included

@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+function bar() {
+	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+}
+async function baz() {
+	console.log(await import("./used-module-1.js"));
+}
+function qux() {
+	window.foo(import("./used-module-2.js"));
+}
+//#endregion
+export { bar, baz, qux };
+
+```
+
+## used-module-1.js
+
+```js
+
+```
+
+## used-module-2.js
+
+```js
+
+```

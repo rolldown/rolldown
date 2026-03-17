@@ -115,17 +115,9 @@ fn include_cjs_bailout_exports(
   bailout_modules: impl IntoIterator<Item = ModuleIdx>,
 ) {
   for idx in bailout_modules {
-    metas[idx]
-      .resolved_exports
-      .iter()
-      .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
-      .for_each(|local| {
-        include_symbol_and_check_cjs_bailout(
-          context,
-          local.symbol_ref,
-          SymbolIncludeReason::Normal,
-        );
-      });
+    metas[idx].resolved_exports.values().filter(|local| local.came_from_cjs).for_each(|local| {
+      include_symbol_and_check_cjs_bailout(context, local.symbol_ref, SymbolIncludeReason::Normal);
+    });
   }
 }
 

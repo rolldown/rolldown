@@ -512,7 +512,7 @@ where
                       })?;
                       default_jsx_option.pragma_frag = Some(pragma_frag.to_owned());
                     }
-                    _ => return Err(serde::de::Error::custom(format!("unknown jsx option: {k}",))),
+                    _ => return Err(serde::de::Error::custom(format!("unknown jsx option: {k}"))),
                   }
                 }
                 Some(Either::Right(default_jsx_option))
@@ -524,7 +524,7 @@ where
               }
             };
           }
-          _ => return Err(serde::de::Error::custom(format!("unknown transform option: {k}",))),
+          _ => return Err(serde::de::Error::custom(format!("unknown transform option: {k}"))),
         }
       }
       Ok(Some(transform_options))

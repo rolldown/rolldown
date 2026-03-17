@@ -277,7 +277,7 @@ impl IntegrationTest {
       // Transform nested vecs into HmrStepOutput
       let hmr_steps_output: Vec<HmrStepOutput> = hmr_updates_by_steps
         .into_iter()
-        .zip(build_results_by_steps.into_iter())
+        .zip(build_results_by_steps)
         .map(|(hmr_updates_vec, build_outputs_vec)| {
           // A step may have 0 or 1 HMR update callbacks
           // (e.g., initial builds don't generate HMR updates)
@@ -631,7 +631,7 @@ impl IntegrationTest {
         .map(|item| {
           let name = item.name.clone().expect("inputs must have `name` in `_config.json`");
           let ext = "js";
-          format!("{name}.{ext}",)
+          format!("{name}.{ext}")
         })
         .map(|name| dist_folder.join(name))
         .map(|path| {
@@ -686,7 +686,7 @@ impl IntegrationTest {
     let mut stmts = vec![];
 
     if let Some(config_name) = config_name {
-      stmts.push(format!("globalThis.__configName = `{config_name}`;",));
+      stmts.push(format!("globalThis.__configName = `{config_name}`;"));
     }
 
     if !patch_chunks.is_empty() {

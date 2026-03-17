@@ -257,16 +257,27 @@ impl<'name> Renamer<'name> {
     }
 
     // Find unique name: skip candidates that conflict with top-level symbols
+    // or with existing bindings in nested scopes of the same module.
     for count in 1u32.. {
       let name: CompactStr =
         concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
 
-      if let Entry::Vacant(entry) = self.used_canonical_names.entry(name) {
-        let candidate_name = entry.key().clone();
-        entry.insert(0);
-        self.canonical_names.insert(symbol_ref, candidate_name);
-        return;
+      if self.used_canonical_names.contains_key(&name) {
+        continue;
       }
+
+      // Also skip if the candidate name conflicts with an existing binding in
+      // a nested scope of the same module. Without this check, renaming `child`
+      // to `child$1` could collide with an existing `child$1` binding in the
+      // same scope (e.g. from Gleam's variable shadowing convention).
+      if self.has_nested_scope_binding(symbol_ref.owner, &name) {
+        self.used_canonical_names.insert(name, 0);
+        continue;
+      }
+
+      self.used_canonical_names.insert(name.clone(), 0);
+      self.canonical_names.insert(symbol_ref, name);
+      return;
     }
   }
 

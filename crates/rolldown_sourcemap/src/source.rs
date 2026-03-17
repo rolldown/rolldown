@@ -82,7 +82,7 @@ impl Source for &Box<dyn Source + Send + Sync> {
 #[expect(clippy::cast_possible_truncation)]
 #[inline]
 fn lines_count(str: &str) -> u32 {
-  memchr::memmem::find_iter(str.as_bytes(), "\n").count() as u32
+  memchr::memchr_iter(b'\n', str.as_bytes()).count() as u32
 }
 
 #[test]

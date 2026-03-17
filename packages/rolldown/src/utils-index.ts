@@ -6,8 +6,8 @@ export {
   type TransformOptions,
   type TransformResult,
   transformSync,
-  TsconfigCache,
   type TsconfigRawOptions,
   type TsconfigCompilerOptions,
 } from './utils/transform';
+export { TsconfigCache } from './utils/resolve-tsconfig';
 export { Visitor, type VisitorObject } from './utils/visitor';

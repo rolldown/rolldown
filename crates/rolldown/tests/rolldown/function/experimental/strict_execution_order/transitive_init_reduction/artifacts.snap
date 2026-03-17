@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region c.js
+var init_c = __esmMin((() => {}));
+//#endregion
+//#region b.js
+var value$1;
+var init_b = __esmMin((() => {
+	init_c();
+	value$1 = "b:c";
+}));
+//#endregion
+//#region a.js
+var value;
+var init_a = __esmMin((() => {
+	init_b();
+	value = "a:" + value$1;
+}));
+//#endregion
+__esmMin((() => {
+	init_a();
+	assert.equal(value, "a:b:c");
+	assert.equal(value$1, "b:c");
+	assert.equal("c", "c");
+}))();
+
+```

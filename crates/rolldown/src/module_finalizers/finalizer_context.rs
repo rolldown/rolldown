@@ -1,8 +1,10 @@
 use rolldown_common::{
-  AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
-  ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts, RuntimeModuleBrief,
-  SharedFileEmitter, SymbolRef, SymbolRefDb,
+  AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ConstExportMeta, ImportKind,
+  ImportRecordIdx, IndexModules, ModuleIdx, ModuleType, NormalModule, PathsOutputOption,
+  RenderedConcatenatedModuleParts, RuntimeModuleBrief, SharedFileEmitter, SymbolRef, SymbolRefDb,
+  WrapKind,
 };
+use rolldown_utils::IndexBitSet;
 
 pub type FinalizerMutableFields = (
   FxIndexMap<ImportRecordIdx, String>, // transferred_import_record
@@ -10,6 +12,7 @@ pub type FinalizerMutableFields = (
 );
 
 use oxc::ast_visit::VisitMut as _;
+use oxc_index::IndexVec;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -42,6 +45,52 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub used_symbol_refs: &'me FxHashSet<SymbolRef>,
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   pub resolved_paths: Option<&'me PathsOutputOption>,
+  pub transitive_wrapped_deps: Option<&'me IndexVec<ModuleIdx, IndexBitSet<ModuleIdx>>>,
+}
+
+fn compute_minimal_init_set(
+  module: &NormalModule,
+  linking_infos: &LinkingMetadataVec,
+  transitive_wrapped_deps: Option<&IndexVec<ModuleIdx, IndexBitSet<ModuleIdx>>>,
+) -> Option<FxHashSet<ModuleIdx>> {
+  let transitive_wrapped_deps = transitive_wrapped_deps?;
+
+  // Collect direct wrapped ESM deps (deduped)
+  let mut direct_deps = FxHashSet::default();
+  for rec in &module.ecma_view.import_records {
+    if rec.kind != ImportKind::Import {
+      continue;
+    }
+    let Some(resolved) = rec.resolved_module else {
+      continue;
+    };
+    let info = &linking_infos[resolved];
+    if info.wrap_kind() != WrapKind::Esm {
+      continue;
+    }
+    if matches!(info.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner) {
+      continue;
+    }
+    direct_deps.insert(resolved);
+  }
+
+  // Transitive reduction: drop dep di if any other dep dj (still in the minimal set)
+  // transitively reaches di. We must only consider retained deps as covering,
+  // otherwise circular deps would eliminate all members.
+  let deps_vec: Vec<ModuleIdx> = direct_deps.iter().copied().collect();
+  let mut minimal = direct_deps;
+  for &di in &deps_vec {
+    if !minimal.contains(&di) {
+      continue;
+    }
+    let is_covered = deps_vec.iter().any(|&dj| {
+      di != dj && minimal.contains(&dj) && transitive_wrapped_deps[dj].has_bit(di)
+    });
+    if is_covered {
+      minimal.remove(&di);
+    }
+  }
+  Some(minimal)
 }
 
 impl<'me> ScopeHoistingFinalizerContext<'me> {
@@ -51,6 +100,9 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
     ast: &'me mut EcmaAst,
     ast_scope: &'me AstScopes,
   ) -> FinalizerMutableFields {
+    let minimal_init_set =
+      compute_minimal_init_set(self.module, self.linking_infos, self.transitive_wrapped_deps);
+
     ast.program.with_mut(move |fields| {
       let (oxc_program, alloc) = (fields.program, fields.allocator);
 
@@ -75,6 +127,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         scope: ast_scope,
         snippet: AstSnippet::new(alloc),
         generated_init_esm_importee_ids: FxHashSet::default(),
+        minimal_init_set,
         scope_stack: vec![],
         top_level_var_bindings: FxIndexSet::default(),
         state: TraverseState::empty(),

@@ -1,0 +1,7 @@
+{
+  "config": {
+    "strictExecutionOrder": true,
+    "external": ["node:assert"]
+  },
+  "writeToDisk": true
+}

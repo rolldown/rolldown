@@ -28,7 +28,6 @@ var init_foo = __esmMin((() => {
 __esmMin((() => {
 	init_setup();
 	init_foo();
-	init_foo_inner();
 	assert.equal(foo_inner_default.foo, "foo");
 }))();
 

@@ -9,6 +9,64 @@ use rolldown_utils::base64::to_standard_base64;
 use serde::Serialize;
 use string_wizard::{MagicString, MagicStringOptions, SourceMapOptions};
 
+/// Internal representation preserving the original JS format (flat `[start, end]` vs nested
+/// `[[start, end], ...]`) so the getter returns the same shape the user passed in.
+#[derive(Clone)]
+enum IndentExclusionRanges {
+  Flat(Vec<i64>),
+  Nested(Vec<Vec<i64>>),
+}
+
+impl IndentExclusionRanges {
+  fn from_either(either: Either<Vec<Vec<i64>>, Vec<i64>>) -> Self {
+    match either {
+      Either::A(nested) => Self::Nested(nested),
+      Either::B(flat) => Self::Flat(flat),
+    }
+  }
+
+  fn to_either(&self) -> Either<Vec<Vec<i64>>, Vec<i64>> {
+    match self {
+      Self::Flat(v) => Either::B(v.clone()),
+      Self::Nested(v) => Either::A(v.clone()),
+    }
+  }
+}
+
+/// Normalizes an `Either<Vec<Vec<i64>>, Vec<i64>>` (nested or flat exclusion ranges from JS)
+/// into `Vec<(u32, u32)>` byte-offset pairs suitable for the Rust indent implementation.
+/// The `offset` is applied to each index before UTF-16→byte conversion, matching the
+/// behavior of every other position-based API in this binding.
+fn normalize_exclude_ranges(
+  ranges: &Either<Vec<Vec<i64>>, Vec<i64>>,
+  mapper: &Utf16ToByteMapper,
+  offset: i64,
+) -> Vec<(u32, u32)> {
+  let pairs: Vec<(i64, i64)> = match ranges {
+    Either::B(flat) => {
+      if flat.len() >= 2 {
+        vec![(flat[0], flat[1])]
+      } else {
+        vec![]
+      }
+    }
+    Either::A(nested) => {
+      nested.iter().filter_map(|r| if r.len() >= 2 { Some((r[0], r[1])) } else { None }).collect()
+    }
+  };
+
+  pairs
+    .into_iter()
+    .filter_map(|(s, e)| {
+      let s_with_offset = u32::try_from(s + offset).ok()?;
+      let e_with_offset = u32::try_from(e + offset).ok()?;
+      let start = mapper.utf16_to_byte(s_with_offset)?;
+      let end = mapper.utf16_to_byte(e_with_offset)?;
+      Some((start, end))
+    })
+    .collect()
+}
+
 /// Serializable source map matching the SourceMap V3 specification.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -119,6 +177,13 @@ impl Utf16ToByteMapper {
 pub struct BindingMagicStringOptions {
   pub filename: Option<String>,
   pub offset: Option<i64>,
+  pub indent_exclusion_ranges: Option<Either<Vec<Vec<i64>>, Vec<i64>>>,
+}
+
+#[napi(object)]
+#[derive(Default)]
+pub struct BindingIndentOptions {
+  pub exclude: Option<Either<Vec<Vec<i64>>, Vec<i64>>>,
 }
 
 #[napi(object)]
@@ -280,6 +345,7 @@ pub struct BindingMagicString<'a> {
   pub(crate) inner: MagicString<'a>,
   utf16_to_byte_mapper: Utf16ToByteMapper,
   pub(crate) offset: i64,
+  indent_exclusion_ranges: Option<IndentExclusionRanges>,
 }
 
 #[napi]
@@ -289,11 +355,14 @@ impl BindingMagicString<'_> {
     let utf16_to_byte_mapper = Utf16ToByteMapper::new(&source);
     let opts = options.unwrap_or_default();
     let offset = opts.offset.unwrap_or(0);
+    let indent_exclusion_ranges =
+      opts.indent_exclusion_ranges.map(IndentExclusionRanges::from_either);
     let magic_string_options = MagicStringOptions { filename: opts.filename };
     Self {
       inner: MagicString::with_options(source, magic_string_options),
       utf16_to_byte_mapper,
       offset,
+      indent_exclusion_ranges,
     }
   }
 
@@ -305,6 +374,11 @@ impl BindingMagicString<'_> {
   #[napi(getter)]
   pub fn filename(&self) -> Option<&str> {
     self.inner.filename()
+  }
+
+  #[napi(getter)]
+  pub fn indent_exclusion_ranges(&self) -> Option<Either<Vec<Vec<i64>>, Vec<i64>>> {
+    self.indent_exclusion_ranges.as_ref().map(IndentExclusionRanges::to_either)
   }
 
   #[napi(getter)]
@@ -558,14 +632,26 @@ impl BindingMagicString<'_> {
   }
 
   #[napi]
-  pub fn indent<'s>(&'s mut self, this: This<'s>, indentor: Option<String>) -> This<'s> {
-    if let Some(indentor) = indentor {
-      self
-        .inner
-        .indent_with(string_wizard::IndentOptions { indentor: Some(&indentor), exclude: &[] });
+  pub fn indent<'s>(
+    &'s mut self,
+    this: This<'s>,
+    indentor: Option<String>,
+    options: Option<BindingIndentOptions>,
+  ) -> This<'s> {
+    // Per-call exclude takes priority; fall back to constructor's indentExclusionRanges.
+    let explicit_exclude = options.and_then(|opts| opts.exclude);
+    let exclude_ranges = if let Some(ref e) = explicit_exclude {
+      normalize_exclude_ranges(e, &self.utf16_to_byte_mapper, self.offset)
+    } else if let Some(ref stored) = self.indent_exclusion_ranges {
+      normalize_exclude_ranges(&stored.to_either(), &self.utf16_to_byte_mapper, self.offset)
     } else {
-      self.inner.indent();
-    }
+      vec![]
+    };
+
+    self.inner.indent_with(string_wizard::IndentOptions {
+      indentor: indentor.as_deref(),
+      exclude: &exclude_ranges,
+    });
     this
   }
 
@@ -614,6 +700,7 @@ impl BindingMagicString<'_> {
       inner: self.inner.clone(),
       utf16_to_byte_mapper: self.utf16_to_byte_mapper.clone(),
       offset: self.offset,
+      indent_exclusion_ranges: self.indent_exclusion_ranges.clone(),
     }
   }
 
@@ -644,6 +731,7 @@ impl BindingMagicString<'_> {
       inner: self.inner.snip(start_byte, end_byte).map_err(napi::Error::from_reason)?,
       utf16_to_byte_mapper: self.utf16_to_byte_mapper.clone(),
       offset: self.offset,
+      indent_exclusion_ranges: self.indent_exclusion_ranges.clone(),
     })
   }
 

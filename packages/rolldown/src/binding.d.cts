@@ -1480,6 +1480,7 @@ export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
   get original(): string
   get filename(): string | null
+  get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
   get offset(): number
   set offset(offset: number)
   replace(from: string, to: string): this
@@ -1504,7 +1505,7 @@ export declare class BindingMagicString {
    * Returns `this` for method chaining.
    */
   move(start: number, end: number, index: number): this
-  indent(indentor?: string | undefined | null): this
+  indent(indentor?: string | undefined | null, options?: BindingIndentOptions | undefined | null): this
   /** Trims whitespace or specified characters from the start and end. */
   trim(charType?: string | undefined | null): this
   /** Trims whitespace or specified characters from the start. */
@@ -2187,6 +2188,10 @@ export interface BindingHookTransformOutput {
   moduleType?: string
 }
 
+export interface BindingIndentOptions {
+  exclude?: Array<Array<number>> | Array<number>
+}
+
 export interface BindingInjectImportNamed {
   tagNamed: true
   imported: string
@@ -2292,6 +2297,7 @@ export interface BindingLogLocation {
 export interface BindingMagicStringOptions {
   filename?: string
   offset?: number
+  indentExclusionRanges?: Array<Array<number>> | Array<number>
 }
 
 export type BindingMakeAbsoluteExternalsRelative =

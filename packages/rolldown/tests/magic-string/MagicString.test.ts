@@ -153,7 +153,7 @@ describe('MagicString', () => {
       assert.equal(c.filename, 'foo.js');
     });
 
-    it.skip('should clone indentExclusionRanges', () => {
+    it('should clone indentExclusionRanges', () => {
       const array = [3, 6];
       const source = new MagicString('abcdefghijkl', {
         filename: 'foo.js',
@@ -166,7 +166,7 @@ describe('MagicString', () => {
       assert.deepEqual(source.indentExclusionRanges, clone.indentExclusionRanges);
     });
 
-    it.skip('should clone complex indentExclusionRanges', () => {
+    it('should clone complex indentExclusionRanges', () => {
       const array = [
         [3, 6],
         [7, 9],
@@ -679,7 +679,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'abc\ndef\nghi\njkl');
     });
 
-    it.skip('should prevent excluded characters from being indented', () => {
+    it('should prevent excluded characters from being indented', () => {
       const s = new MagicString('abc\ndef\nghi\njkl');
 
       s.indent('  ', { exclude: [7, 15] });

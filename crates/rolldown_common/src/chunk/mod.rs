@@ -213,16 +213,16 @@ impl Chunk {
         Ok(hash)
       }
     });
-    let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
-    let sanitized_chunk_name;
+    // For preserve_modules chunks, rollup_pre_rendered_chunk.name is the sanitized relative
+    // chunk name computed in generate_chunk_name_and_preliminary_filenames — use it directly
+    // to avoid a second sanitize_filename call.  For all other chunks, derive the name from
+    // the (possibly absolute) chunk_filename via get_preserve_modules_chunk_name.
+    let chunk_name_cow;
     let chunk_name: &str = if options.preserve_modules {
-      // The chunk_name may contain unsanitized characters (e.g. from a module path whose file
-      // name has special chars, or from the path suffix after stripping preserveModulesRoot).
-      // Sanitize it here so the filename template receives a clean name.
-      sanitized_chunk_name = options.sanitize_filename.call(chunk_name.as_ref()).await?;
-      &sanitized_chunk_name
+      rollup_pre_rendered_chunk.name.as_str()
     } else {
-      chunk_name.as_ref()
+      chunk_name_cow = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
+      chunk_name_cow.as_ref()
     };
 
     let filename = filename_template

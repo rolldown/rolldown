@@ -11,6 +11,7 @@ use oxc::transformer_plugins::{
 };
 
 use rolldown_common::NormalizedBundlerOptions;
+use rustc_hash::{FxHashMap, FxHashSet};
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
@@ -179,7 +180,15 @@ impl PreProcessEcmaAst {
       self.recreate_scoping(&mut None, program)
     });
 
-    Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings, preserve_jsx })
+    Ok(ParseToEcmaAstResult {
+      ast,
+      scoping,
+      has_lazy_export,
+      warnings,
+      preserve_jsx,
+      enum_member_values: FxHashMap::default(),
+      const_enum_names: FxHashSet::default(),
+    })
   }
 
   fn recreate_scoping(&mut self, scoping: &mut Option<Scoping>, program: &Program<'_>) -> Scoping {

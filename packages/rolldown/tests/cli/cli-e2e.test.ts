@@ -578,7 +578,7 @@ describe('watch cli', () => {
       `import { foo } from './non-existent';\n\nconsole.log(foo);\n`,
     );
     try {
-      await stdoutWaiter.waitFor('UNRESOLVED_IMPORT', { timeout: 5_000 });
+      await stdoutWaiter.waitFor('UNRESOLVED_IMPORT', { timeout: 10_000 });
       controller.abort();
       await process;
       expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);

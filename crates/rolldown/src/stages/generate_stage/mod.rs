@@ -170,9 +170,6 @@ impl<'a> GenerateStage<'a> {
               let (representative_chunk_name, absolute_chunk_file_name, ext) =
                 representative_file_name_for_preserve_modules(module_id.as_path());
 
-              let sanitized_absolute_filename =
-                sanitize_filename.call(absolute_chunk_file_name.as_str()).await?;
-
               // Apply the same logic as get_preserve_modules_chunk_name to include directory structure
               let chunk_name = {
                 let p = PathBuf::from(absolute_chunk_file_name.as_str());
@@ -207,7 +204,7 @@ impl<'a> GenerateStage<'a> {
               PreGeneratedChunkName {
                 representative_chunk_name: sanitized_representative_chunk_name,
                 chunk_name,
-                chunk_filename: sanitized_absolute_filename,
+                chunk_filename: absolute_chunk_file_name.into(),
               }
             } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {
               // try extract meaningful input name from path
@@ -290,11 +287,6 @@ impl<'a> GenerateStage<'a> {
       let pre_rendered_chunk =
         generate_pre_rendered_chunk(chunk, &pre_generated_chunk_name.chunk_name, self.link_output);
 
-      // Set chunk name before generate_preliminary_filename so that
-      // get_preserve_modules_chunk_name can short-circuit via self.name instead of trying
-      // to match the sanitized absolute chunk_filename against the unsanitized preserve_modules_root.
-      chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
-
       let preliminary_filename = chunk
         .generate_preliminary_filename(
           self.options,
@@ -304,6 +296,10 @@ impl<'a> GenerateStage<'a> {
           &used_name_counts,
         )
         .await?;
+
+      // Defer chunk name assignment to make sure at this point only entry chunk have a name
+      // if user provided one.
+      chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
 
       chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
 

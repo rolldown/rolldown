@@ -214,9 +214,19 @@ impl Chunk {
       }
     });
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
+    let sanitized_chunk_name;
+    let chunk_name: &str = if options.preserve_modules {
+      // The chunk_name may contain unsanitized characters (e.g. from a module path whose file
+      // name has special chars, or from the path suffix after stripping preserveModulesRoot).
+      // Sanitize it here so the filename template receives a clean name.
+      sanitized_chunk_name = options.sanitize_filename.call(chunk_name.as_ref()).await?;
+      &sanitized_chunk_name
+    } else {
+      chunk_name.as_ref()
+    };
 
     let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
+      .render(Some(chunk_name), Some(options.format.as_str()), None, hash_replacer)?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);

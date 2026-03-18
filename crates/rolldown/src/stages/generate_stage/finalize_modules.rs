@@ -73,6 +73,7 @@ impl GenerateStage<'_> {
             safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
             used_symbol_refs: &self.link_output.used_symbol_refs,
             resolved_paths: self.resolved_paths.as_ref(),
+            transitive_wrapped_deps: self.link_output.transitive_wrapped_deps.as_ref(),
           };
 
           let concatenated_wrapped_module_kind = ctx.linking_info.concatenated_wrapped_module_kind;

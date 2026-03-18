@@ -83,6 +83,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
   pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
+  pub minimal_init_set: Option<FxHashSet<ModuleIdx>>,
   pub scope_stack: Vec<ScopeFlags>,
   pub state: TraverseState,
   pub top_level_var_bindings: FxIndexSet<Ident<'ast>>,
@@ -216,7 +217,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if matches!(
           importee_linking_info.concatenated_wrapped_module_kind,
           ConcatenateWrappedModuleKind::Inner
-        ) || self.generated_init_esm_importee_ids.contains(&importee.idx)
+        ) || self.minimal_init_set.as_ref().is_some_and(|set| !set.contains(&importee.idx))
+          || self.generated_init_esm_importee_ids.contains(&importee.idx)
         {
           return true;
         }

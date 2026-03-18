@@ -312,24 +312,128 @@ generate_stage/mod.rs:
 
 ### Direction 2 implementation
 
-**Where:** Link stage (precompute reachability) + codegen (`module_finalizers/mod.rs:215-259`).
+#### How it works
 
-**Step-by-step:**
+For each module `m` with direct wrapped deps `D = {d1, ..., dn}`, drop `di` if any other `dj` in `D` transitively reaches `di` through wrapped imports. `dj`'s init call will cascade to `di` via `__esmMin`, so `init_di()` in `m`'s wrapper is redundant.
 
-1. **Precompute transitive wrapped-dependency closure.** During link stage (after `wrap_modules()`), compute a `BitSet` per module representing all modules transitively reachable through wrapped imports.
+The only data needed: `reach(d)` — the set of all modules transitively reachable from `d` through wrapped import edges.
 
-   **Cyclic graph handling:** The wrapped-import graph can contain cycles (ESM supports circular imports). A naive reverse-topological pass assumes a DAG and will undercompute `reach()` for modules in SCCs. The algorithm must handle this:
-   - **Condense SCCs first.** Compute strongly-connected components (e.g., Tarjan's). All modules within an SCC have identical reachability — they can all reach each other. Collapse each SCC into a single node in the condensed DAG.
-   - **Propagate on the condensed DAG.** Process in reverse topological order of the condensed graph: `reach(scc) = ∪ {scc_j} ∪ reach(scc_j)` for each successor SCC `scc_j`.
-   - **Expand back.** Each module's `reach()` = its SCC's `reach()` + all other modules in the same SCC.
+#### Precompute: Tarjan's SCC + bitset propagation
 
-   This ensures correct coverage computation even with circular dependencies. The condensed DAG is typically much smaller than the full module graph, so the overhead is minimal.
+Wrapped-import graphs can have cycles (circular ESM imports). Tarjan's SCC handles this in a single O(V+E) pass, producing both SCC grouping and reverse topological order as byproducts.
 
-2. **Store on `LinkingMetadata`.** Add `transitive_wrapped_deps: BitSet` field.
+```
+1. Build wrapped-import adjacency list from import_records
+   (only follow edges where importee has wrap_kind == WrapKind::Esm)
 
-3. **Filter at codegen.** In `transform_or_remove_import_export_stmt()` (`mod.rs:215`), before emitting `init_xxx()`, check if the importee is in `reach(dj)` for any other direct dependency `dj`. If so, skip — it's transitively covered. Replace the simple `generated_init_esm_importee_ids` HashSet check with the transitive reduction filter.
+2. Run Tarjan's SCC → scc_id per module, condensed DAG in reverse topo order
 
-**Note:** If D1 is applied first (some modules unwrapped), D2's transitive reduction graph changes. Unwrapped intermediary modules don't produce init calls, so they break the transitive coverage chain. The `reach()` computation should only follow edges to modules that remain wrapped (check `wrap_kind() == WrapKind::Esm`). If D1 runs in generate stage and D2's reachability was precomputed in link stage, the reachability may need recomputation. Alternatively, compute D2's reachability after D1 in the generate stage.
+3. Propagate reachability on the condensed DAG (reverse topo order):
+     reach(scc) = ∅
+     for each successor SCC succ:
+       reach(scc) |= {all modules in succ} | reach(succ)
+
+4. Expand: reach(m) = reach(m's scc) ∪ {other modules in same scc}
+```
+
+**Data structure:** `IndexVec<ModuleIdx, IndexBitSet<ModuleIdx>>`. `IndexBitSet` is already used throughout rolldown (`SplittingInfo.bits`). For 10K modules: ~1.2 KB per bitset, ~12 MB total.
+
+**Why IndexBitSet over FxHashSet:**
+
+- `has_bit()`: single array index + bit mask. `FxHashSet::contains()`: hash computation + probe.
+- `union`: tight loop over cache-line-friendly words, SIMD-vectorizable. `FxHashSet::extend`: random hash insertions.
+- Fixed memory per module (V/8 bytes), predictable. FxHashSet blows up for modules near the root with large reachable sets.
+- The per-module filter step (codegen) is embarrassingly parallel via rayon. BitSet's O(1) `has_bit()` is ideal for parallel reads with zero contention.
+
+#### Filter at codegen
+
+Precompute each module's minimal init set before the AST walk:
+
+```rust
+fn minimal_init_set(
+    module: &NormalModule,
+    linking_infos: &LinkingMetadataVec,
+    reach: &IndexVec<ModuleIdx, IndexBitSet<ModuleIdx>>,
+) -> FxHashSet<ModuleIdx> {
+    let direct_deps: Vec<ModuleIdx> = module.import_records.iter()
+        .filter_map(|rec| rec.resolved_module)
+        .filter(|&dep| linking_infos[dep].wrap_kind() == WrapKind::Esm)
+        .collect::<FxHashSet<_>>()
+        .into_iter().collect();
+
+    direct_deps.iter().copied()
+        .filter(|&di| {
+            // keep di only if no other dj covers it
+            !direct_deps.iter().any(|&dj| dj != di && reach[dj].has_bit(di))
+        })
+        .collect()
+}
+```
+
+In `transform_or_remove_import_export_stmt()`:
+
+```rust
+if !self.minimal_init_set.contains(&importee.idx)
+    || self.generated_init_esm_importee_ids.contains(&importee.idx)
+{
+    return true;
+}
+self.generated_init_esm_importee_ids.insert(importee.idx);
+// ... emit init_xxx() ...
+```
+
+Precomputing the minimal set avoids order-dependence — the result is the true minimum regardless of import statement ordering in the source.
+
+#### Where it runs
+
+```
+Link stage:
+  ...
+  wrap_modules()
+  ...
+  patch_module_dependencies()
+  compute_transitive_init_deps()     ← NEW (after wrap_kind is set)
+
+  → reach: IndexVec<ModuleIdx, IndexBitSet<ModuleIdx>> flows into LinkStageOutput
+
+Codegen (parallel per chunk via rayon):
+  → each module's minimal_init_set computed from reach (read-only, no contention)
+  → filter in transform_or_remove_import_export_stmt()
+```
+
+The precomputation (Tarjan's + propagation) is sequential but O(V+E). The per-module filter is embarrassingly parallel — each chunk's codegen runs independently on rayon, reading the shared `reach` table with zero synchronization.
+
+#### Complexity
+
+| Phase                  | Cost                             | Parallelizable?            |
+| ---------------------- | -------------------------------- | -------------------------- |
+| Build adjacency list   | O(V + E)                         | Yes (per module)           |
+| Tarjan's SCC           | O(V + E)                         | No (sequential)            |
+| Bitset propagation     | O(edges_condensed × V/64)        | No (topo-order dependent)  |
+| Per-module minimal set | O(D²) per module, D < 20 typical | **Yes** (rayon, per chunk) |
+
+Total precomputation: O(V + E × V/64). For 10K modules, sub-millisecond. The parallel codegen filter is where this scales.
+
+#### Correctness across graph shapes
+
+- **Cycles:** Tarjan's SCC groups cyclic modules together. All modules in an SCC get identical `reach` sets (they all reach each other). So if `a → b → c → b` and `a` directly imports both `b` and `c`, then `c ∈ reach(b)` (same SCC), so `init_c()` is dropped from `a`'s wrapper. Inside the cycle, `__esmMin`'s once-guard prevents infinite recursion — the first call runs the code, the second returns immediately.
+- **Cross-chunk:** The reduction operates on the module-level init call graph, not the chunk graph. If `b` is in chunk X and `c` is in chunk Y, `init_b()`'s wrapper still references `init_c()` as a cross-chunk import. The chunk loading mechanism guarantees chunk Y is loaded before chunk X executes (chunk dependency). So `b → c` coverage holds regardless of chunk assignment.
+- **TLA:** When a module has TLA, its init becomes `await init_xxx()`. The `is_tla_or_contains_tla_dependency` flag propagates transitively — if `c` has TLA, `b` gets the flag too. So if `a → b → c` and we drop `init_c()` from `a`'s wrapper, `await init_b()` internally does `await init_c()`, handling `c`'s async initialization before `b`'s code runs.
+
+#### Test plan
+
+New test fixtures under `crates/rolldown/tests/rolldown/topics/strict_execution_order/`:
+
+| Test          | Graph                                        | Expected init calls                                        |
+| ------------- | -------------------------------------------- | ---------------------------------------------------------- |
+| `chain`       | `a → b → c → d`                              | `init_a` calls only `init_b`                               |
+| `diamond`     | `a → b, c; b → d; c → d`                     | `init_a` calls `init_b`, `init_c` (not `init_d`)           |
+| `star`        | `a → b, c, d, e; b → c, d, e`                | `init_a` calls only `init_b` (it covers c, d, e)           |
+| `parallel`    | `a → b, c; b and c independent`              | `init_a` calls both `init_b`, `init_c` (no reduction)      |
+| `cycle`       | `a → b → c → b`                              | `init_a` calls `init_b` (cycle members cover each other)   |
+| `cross_chunk` | `a` and `b` in different chunks, `a → b → c` | `init_a` calls `init_b` only (cross-chunk reduction works) |
+
+Each test should assert on the actual init call count in the generated output, not just correctness. Use snapshot tests on the output JS.
 
 ### Test coverage gaps
 
@@ -340,19 +444,10 @@ The existing test suite (20 tests) covers wrapping mechanics well but lacks:
 - Tests with **manual code splitting + strictExecutionOrder** (only `issue_5303` touches this)
 - No benchmarks measuring size overhead of wrapping
 
-New tests needed:
-
-- Ambiguous pair detection: two entries importing shared modules in different orders
-- Consensus order: modules with stable ordering across all entries → verify no wrapper
-- Transitive reduction: diamond/chain dependency → verify minimal init calls
-- Manual code splitting: groups pulling modules across execution order boundaries
-
 ## Unresolved Questions
 
 - What's the right default? Currently `false`. Should it be `true` for code-split builds?
 - How should `strictExecutionOrder` interact with `preserveEntrySignatures`?
-- For D2: should the transitive reduction consider non-wrapped intermediary modules? (e.g., `a → unwrapped_b → c` — does this still transitively cover `c`?) If `b` is unwrapped, its code runs inline — so `c` is NOT guaranteed to be initialized before `a` accesses it. The reduction should only follow **wrapped** edges.
-- Should D2's reachability be computed in link stage (before D1) or generate stage (after D1)? If link stage, it needs recomputation after D1 unwraps modules. If generate stage, it avoids the recomputation but adds generate-stage cost.
 
 ## Related
 

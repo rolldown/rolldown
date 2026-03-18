@@ -39,12 +39,11 @@ export { init_first as n, value as r, first_exports as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as second_exports, t as init_second } from "./second.js";
+import { n as second_exports } from "./second.js";
 import { n as init_first, t as first_exports } from "./first.js";
 //#endregion
 __esmMin((() => {
 	init_first();
-	init_second();
 	console.log(first_exports, second_exports);
 }))();
 

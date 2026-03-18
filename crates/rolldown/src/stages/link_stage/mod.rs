@@ -9,6 +9,7 @@ use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
+use rolldown_utils::IndexBitSet;
 #[cfg(target_family = "wasm")]
 use rolldown_utils::rayon::IteratorExt as _;
 use rolldown_utils::{
@@ -28,6 +29,7 @@ use super::scan_stage::NormalizedScanStageOutput;
 
 mod bind_imports_and_exports;
 mod compute_tla;
+mod compute_transitive_init_deps;
 mod create_exports_for_ecma_modules;
 mod cross_module_optimization;
 mod determine_module_exports_kind;
@@ -76,6 +78,7 @@ pub struct LinkStageOutput {
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  pub transitive_wrapped_deps: Option<IndexVec<ModuleIdx, IndexBitSet<ModuleIdx>>>,
 }
 
 #[derive(Debug)]
@@ -209,6 +212,10 @@ impl<'a> LinkStage<'a> {
     self.include_statements(&unreachable_import_expression_addrs);
     self.patch_module_dependencies();
 
+    let transitive_wrapped_deps = self.options.is_strict_execution_order_enabled().then(|| {
+      compute_transitive_init_deps::compute_transitive_init_deps(&self.module_table, &self.metas)
+    });
+
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 
     LinkStageOutput {
@@ -230,6 +237,7 @@ impl<'a> LinkStage<'a> {
       global_constant_symbol_map: self.global_constant_symbol_map,
       normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
       user_defined_entry_modules: self.user_defined_entry_modules,
+      transitive_wrapped_deps,
     }
   }
 

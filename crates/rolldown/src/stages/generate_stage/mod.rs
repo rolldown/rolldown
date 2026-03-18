@@ -179,7 +179,7 @@ impl<'a> GenerateStage<'a> {
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
                     if absolute_chunk_file_name.starts_with(preserve_modules_root.as_str()) {
-                      absolute_chunk_file_name[preserve_modules_root.len()..]
+                      sanitized_absolute_filename[preserve_modules_root.len()..]
                         .trim_start_matches(['/', '\\'])
                         .to_string()
                     } else {

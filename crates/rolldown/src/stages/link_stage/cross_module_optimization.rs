@@ -8,23 +8,19 @@ use oxc::{
     },
   },
   ast_visit::{Visit, walk},
-  semantic::ScopeFlags,
 };
 use rolldown_common::{
   AstScopes, ConstExportMeta, EcmaViewMeta, FlatOptions, GetLocalDb, ModuleIdx,
   SharedNormalizedBundlerOptions, SideEffectDetail, StmtInfoIdx, SymbolRef, SymbolRefDb,
   SymbolRefFlags,
 };
-use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
+use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{
-  ast_scanner::{
-    const_eval::{ConstEvalCtx, try_extract_const_literal},
-    side_effect_detector::SideEffectDetector,
-  },
-  module_finalizers::TraverseState,
+use crate::ast_scanner::{
+  const_eval::{ConstEvalCtx, try_extract_const_literal},
+  side_effect_detector::SideEffectDetector,
 };
 
 use super::LinkStage;
@@ -50,8 +46,6 @@ impl CrossModuleOptimizationCtx {
 #[derive(Default, Clone, Copy, Debug)]
 struct CrossModuleOptimizationConfig {
   pass: u32,
-  #[expect(unused)]
-  side_effects_free_function_optimization: bool,
   inline_const_optimization: bool,
 }
 
@@ -90,9 +84,6 @@ impl LinkStage<'_> {
     let cross_module_inline_const_pass = self.options.optimization.inline_const_pass() - 1;
     CrossModuleOptimizationConfig {
       pass: cross_module_inline_const_pass.max(other_optimization_pass),
-      side_effects_free_function_optimization: !self
-        .side_effects_free_function_symbol_ref
-        .is_empty(),
       inline_const_optimization: cross_module_inline_const_pass >= 1,
     }
   }
@@ -225,8 +216,6 @@ impl LinkStage<'_> {
           let mut ctx = CrossModuleOptimizationRunnerContext {
             local_constant_symbol_map: FxHashMap::default(),
             side_effect_detail_mutations: FxHashMap::default(),
-            scope_stack: vec![],
-            traverse_state: TraverseState::empty(),
             side_effect_free_call_expr_addr: FxHashSet::default(),
             immutable_ctx: CrossModuleOptimizationImmutableCtx {
               eval_ctx: &eval_ctx,
@@ -307,8 +296,6 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
 struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
   local_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   side_effect_detail_mutations: FxHashMap<StmtInfoIdx, SideEffectDetail>,
-  scope_stack: Vec<ScopeFlags>,
-  traverse_state: TraverseState,
   side_effect_free_call_expr_addr: FxHashSet<Address>,
   immutable_ctx: CrossModuleOptimizationImmutableCtx<'a, 'ast>,
   toplevel_stmt_idx: StmtInfoIdx,
@@ -328,20 +315,6 @@ impl<'a, 'ast: 'a> std::ops::Deref for CrossModuleOptimizationRunnerContext<'a, 
 }
 
 impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast> {
-  fn enter_scope(
-    &mut self,
-    flags: oxc::semantic::ScopeFlags,
-    _scope_id: &std::cell::Cell<Option<oxc::semantic::ScopeId>>,
-  ) {
-    self.scope_stack.push(flags);
-    self.traverse_state.set(TraverseState::TopLevel, is_top_level(&self.scope_stack));
-  }
-
-  fn leave_scope(&mut self) {
-    self.scope_stack.pop();
-    self.traverse_state.set(TraverseState::TopLevel, is_top_level(&self.scope_stack));
-  }
-
   fn enter_node(&mut self, kind: AstKind<'ast>) {
     self.visit_path.push(kind);
   }
@@ -351,16 +324,6 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
   }
 
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
-    self.enter_scope(
-      {
-        let mut flags = ScopeFlags::Top;
-        if program.source_type.is_strict() || program.has_use_strict_directive() {
-          flags |= ScopeFlags::StrictMode;
-        }
-        flags
-      },
-      &program.scope_id,
-    );
     // Custom visit
     for (idx, stmt) in program.body.iter().enumerate() {
       let pre_addr_len = self.side_effect_free_call_expr_addr.len();
@@ -378,8 +341,6 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
       }
       self.toplevel_stmt_idx += 1;
     }
-
-    self.leave_scope();
   }
 
   fn visit_import_expression(&mut self, it: &oxc::ast::ast::ImportExpression<'ast>) {
@@ -405,28 +366,24 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
 
   fn visit_call_expression(&mut self, it: &oxc::ast::ast::CallExpression<'ast>) {
     let mut pre_addr = None;
-    if self.traverse_state.contains(TraverseState::TopLevel)
-      || !self.immutable_ctx.stmt_idx_to_dynamic_import_expr_addr.is_empty()
-    {
-      let is_side_effects_free_function = it
-        .callee
-        .as_identifier()
-        .and_then(|item| {
-          let ref_id = item.reference_id.get()?;
-          let symbol_id = self.immutable_ctx.eval_ctx.scope.get_reference(ref_id).symbol_id()?;
+    let is_side_effects_free_function = it
+      .callee
+      .as_identifier()
+      .and_then(|item| {
+        let ref_id = item.reference_id.get()?;
+        let symbol_id = self.immutable_ctx.eval_ctx.scope.get_reference(ref_id).symbol_id()?;
 
-          let symbol_ref = self
-            .immutable_ctx
-            .symbols
-            .canonical_ref_for((self.immutable_ctx.module_idx, symbol_id).into());
-          Some(self.immutable_ctx.global_side_effect_free_function_symbols.contains(&symbol_ref))
-        })
-        .unwrap_or(false);
+        let symbol_ref = self
+          .immutable_ctx
+          .symbols
+          .canonical_ref_for((self.immutable_ctx.module_idx, symbol_id).into());
+        Some(self.immutable_ctx.global_side_effect_free_function_symbols.contains(&symbol_ref))
+      })
+      .unwrap_or(false);
 
-      if is_side_effects_free_function {
-        self.side_effect_free_call_expr_addr.insert(it.unstable_address());
-        pre_addr = self.latest_side_effect_free_call_expr_addr.replace(it.unstable_address());
-      }
+    if is_side_effects_free_function {
+      self.side_effect_free_call_expr_addr.insert(it.unstable_address());
+      pre_addr = self.latest_side_effect_free_call_expr_addr.replace(it.unstable_address());
     }
     walk::walk_call_expression(self, it);
     if let Some(addr) = pre_addr {

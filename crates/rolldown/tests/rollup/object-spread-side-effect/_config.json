@@ -3,6 +3,5 @@
     "external": [
       "assert"
     ]
-  },
-  "expectExecuted": false
+  }
 }

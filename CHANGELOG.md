@@ -1,4 +1,104 @@
 
+## [1.0.0-rc.10] - 2026-03-18
+
+### 🚀 Features
+
+- add indentExclusionRanges property to MagicString (#8746) by @IWANABETHATGUY
+- expose `oxcRuntimePlugin` (#8654) by @sapphi-red
+- rust: make bundler generic over FileSystem for in-memory benchmarks (#8652) by @Boshen
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_vite_dynamic_import_vars: align dynamic import fast check with Vite (#8760) by @shulaoda
+- renamer: handle existing bindings in nested scopes when finding unique names (#8741) by @drewolson
+- pass `yarn_pnp` option where needed (#8736) by @sapphi-red
+- preserve optional chaining in namespace member expr rewrite (#8712) by @Copilot
+- correct UTF-16 index handling in native MagicString (#8693) by @IWANABETHATGUY
+- mark failing doctests as ignore (#8700) by @Boshen
+- prevent may_partial_namespace from leaking through include_module (#8682) by @IWANABETHATGUY
+- ci: bump native-build cache key to invalidate stale napi-rs artifacts (#8678) by @Boshen
+- `comments.annotation: false` breaking tree-shaking (#8657) by @IWANABETHATGUY
+- validate filenames for NUL bytes from chunkFileNames/entryFileNames (#8644) by @IWANABETHATGUY
+- dce-only minify should not set NODE_ENV to production (#8651) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- rust: remove dead `CrossModuleOptimizationConfig::side_effects_free_function_optimization` (#8673) by @Dunqing
+- rust: simplify `cross_module_optimization` by removing redundant scope tracking (#8672) by @Dunqing
+- simplify string repeat in guess_indentor (#8753) by @IWANABETHATGUY
+- consolidate custom magic-string tests into one file (#8696) by @IWANABETHATGUY
+- extract CJS bailout checks from include_symbol (#8683) by @IWANABETHATGUY
+- rust: remove `BindingIdentifierExt` to use `BindingIdentifier::symbol_id()` instead (#8667) by @Dunqing
+- bench: add bench_preset helper and inline presets (#8658) by @Boshen
+- rust: filter external modules from entries instead of mapping bit positions (#8637) by @Dunqing
+
+### 📚 Documentation
+
+- clarify watch mode behavior and its limitations (#8751) by @sapphi-red
+- add external link icon to GitHub button in Hero section (#8731) by @thisisnkc
+- guide: clarify that `inject` option is only conceptually similar to esbuild's one (#8743) by @sapphi-red
+- meta/design: add `devtools.md` (#8663) by @hyf0
+- add viteplus alpha announcement banner (#8668) by @shulaoda
+
+### ⚡ Performance
+
+- rolldown: some minor perf optimization found by autoresearch (#8730) by @Brooooooklyn
+- replace Vec allocation with lazy iterator in find_hash_placeholders (#8703) by @Boshen
+- replace TypedDashMap with TypedMap in CustomField (#8708) by @Boshen
+- bench: remove scan benchmark binary to halve LTO link time (#8694) by @Boshen
+
+### 🧪 Testing
+
+- watch: increase timeout for error output (#8766) by @sapphi-red
+- vite-tests: remove JS plugin tests (#8767) by @sapphi-red
+- watch: add CLI exit code test (#8752) by @sapphi-red
+- normalize paths on Windows even if `resolve.symlinks` is false (#8483) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- correct comment in bundle-analyzer-plugin.ts (#8770) by @origami-z
+- upgrade oxc to 0.120.0 (#8764) by @Boshen
+- enable all test for `reset` category in MagicString.test.ts (#8749) by @IWANABETHATGUY
+- deps: update test262 submodule for tests (#8742) by @sapphi-red
+- deps: update oxc apps (#8734) by @renovate[bot]
+- deps: update softprops/action-gh-release action to v2.6.1 (#8724) by @renovate[bot]
+- deps: update npm packages (major) (#8722) by @renovate[bot]
+- deps: update github-actions (major) (#8721) by @renovate[bot]
+- deps: update softprops/action-gh-release action to v2.6.0 (#8720) by @renovate[bot]
+- deps: update npm packages (#8718) by @renovate[bot]
+- deps: update rust crates (#8717) by @renovate[bot]
+- deps: update github-actions (#8716) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.17.0 (#8713) by @renovate[bot]
+- deps: bump cargo-shear to v1.11.2 (#8711) by @Boshen
+- use org level `CODE_OF_CONDUCT.md` (#8706) by @sapphi-red
+- fix cache key mismatch and remove redundant cache saves (#8695) by @Boshen
+- deps: update oxc apps (#8692) by @renovate[bot]
+- deps: update oxc apps (#8649) by @renovate[bot]
+- should do matrix out side of reusable workflows 2 (#8691) by @hyf0
+- should do matrix out side of reusable workflows (#8690) by @hyf0
+- deps: update dependency rolldown-plugin-dts to v0.22.5 (#8689) by @renovate[bot]
+- upgrade oxc to 0.119.0 and oxc_resolver to 11.19.1 (#8686) by @Boshen
+- correct if condition of `type-check` job (#8677) by @hyf0
+- Gate CI type-check job on node changes (#8669) by @Copilot
+- benchmark: improve codspeed build (#8665) by @Boshen
+- deps: update oxc to v0.118.0 (#8650) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.44.0 (#8647) by @renovate[bot]
+- deps: update oxc resolver to v11.19.1 (#8646) by @renovate[bot]
+- deps: update dependency rust to v1.94.0 (#8648) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.22.4 (#8645) by @renovate[bot]
+
+### ◀️ Revert
+
+- Revert "ci: Gate CI type-check job on node changes" (#8674) by @hyf0
+- "chore(deps): update dependency rust to v1.94.0 (#8648)" (#8660) by @shulaoda
+
+### ❤️ New Contributors
+
+* @origami-z made their first contribution in [#8770](https://github.com/rolldown/rolldown/pull/8770)
+* @drewolson made their first contribution in [#8741](https://github.com/rolldown/rolldown/pull/8741)
+* @thisisnkc made their first contribution in [#8731](https://github.com/rolldown/rolldown/pull/8731)
+
+
 ## [1.0.0-rc.9] - 2026-03-11
 
 ### 💥 BREAKING CHANGES

@@ -1,3 +1,4 @@
 export function withCommentBeforeParen(name) {
-  return import(/* comment */ `./dir/${name}.js`);
+  // oxfmt-ignore
+  return import /* comment */ (`./dir/${name}.js`);
 }

@@ -206,7 +206,7 @@ impl<'a> GenerateStage<'a> {
                 sanitize_filename.call(&representative_chunk_name).await?;
               PreGeneratedChunkName {
                 representative_chunk_name: sanitized_representative_chunk_name,
-                chunk_name: chunk_name.into(),
+                chunk_name,
                 chunk_filename: sanitized_absolute_filename,
               }
             } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {

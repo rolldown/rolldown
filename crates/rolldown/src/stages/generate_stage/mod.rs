@@ -173,15 +173,15 @@ impl<'a> GenerateStage<'a> {
               let sanitized_absolute_filename =
                 sanitize_filename.call(absolute_chunk_file_name.as_str()).await?;
 
-              // Apply the same logic as get_preserve_modules_chunk_name to include directory structure
+              // Compute the relative chunk name from non-sanitized values so that path lengths
+              // always match (e.g. preserve_modules_root.len() is valid for absolute_chunk_file_name),
+              // then sanitize the final relative name in one pass.
               let chunk_name = {
-                let p = PathBuf::from(sanitized_absolute_filename.as_str());
+                let p = PathBuf::from(absolute_chunk_file_name.as_str());
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
                     if absolute_chunk_file_name.starts_with(preserve_modules_root.as_str()) {
-                      let sanitized_preserve_modules_root =
-                        sanitize_filename.call(preserve_modules_root.as_str()).await?;
-                      sanitized_absolute_filename[sanitized_preserve_modules_root.len()..]
+                      absolute_chunk_file_name[preserve_modules_root.len()..]
                         .trim_start_matches(['/', '\\'])
                         .to_string()
                     } else {
@@ -196,11 +196,12 @@ impl<'a> GenerateStage<'a> {
                 // `p` may be an absolute or relative path without extension, depending on the module path.
                 // Now we need to add the extension back when generating the relative chunk name.
                 // skip some common extension https://github.com/rollup/rollup/pull/4565/files
-                match ext.as_deref() {
+                let name_with_ext = match ext.as_deref() {
                   Some(e) if COMMON_JS_EXTENSIONS.contains(&e) => relative_path,
                   Some(e) if !e.is_empty() => format!("{relative_path}.{e}"),
                   _ => relative_path,
-                }
+                };
+                sanitize_filename.call(&name_with_ext).await?
               };
 
               let sanitized_representative_chunk_name =

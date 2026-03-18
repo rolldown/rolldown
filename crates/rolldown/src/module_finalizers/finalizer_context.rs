@@ -83,9 +83,9 @@ fn compute_minimal_init_set(
     if !minimal.contains(&di) {
       continue;
     }
-    let is_covered = deps_vec.iter().any(|&dj| {
-      di != dj && minimal.contains(&dj) && transitive_wrapped_deps[dj].has_bit(di)
-    });
+    let is_covered = deps_vec
+      .iter()
+      .any(|&dj| di != dj && minimal.contains(&dj) && transitive_wrapped_deps[dj].has_bit(di));
     if is_covered {
       minimal.remove(&di);
     }

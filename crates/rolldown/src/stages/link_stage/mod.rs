@@ -8,8 +8,8 @@ use rolldown_common::{
   PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
-use rolldown_utils::IndexBitSet;
 use rolldown_error::BuildDiagnostic;
+use rolldown_utils::IndexBitSet;
 #[cfg(target_family = "wasm")]
 use rolldown_utils::rayon::IteratorExt as _;
 use rolldown_utils::{
@@ -29,13 +29,13 @@ use super::scan_stage::NormalizedScanStageOutput;
 
 mod bind_imports_and_exports;
 mod compute_tla;
+mod compute_transitive_init_deps;
 mod create_exports_for_ecma_modules;
 mod cross_module_optimization;
 mod determine_module_exports_kind;
 mod generate_lazy_export;
 mod patch_module_dependencies;
 mod reference_needed_symbols;
-mod compute_transitive_init_deps;
 mod sort_modules;
 mod tree_shaking;
 

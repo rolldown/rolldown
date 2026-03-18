@@ -1480,6 +1480,7 @@ export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
   get original(): string
   get filename(): string | null
+  get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
   get offset(): number
   set offset(offset: number)
   replace(from: string, to: string): this
@@ -1504,7 +1505,7 @@ export declare class BindingMagicString {
    * Returns `this` for method chaining.
    */
   move(start: number, end: number, index: number): this
-  indent(indentor?: string | undefined | null): this
+  indent(indentor?: string | undefined | null, options?: BindingIndentOptions | undefined | null): this
   /** Trims whitespace or specified characters from the start and end. */
   trim(charType?: string | undefined | null): this
   /** Trims whitespace or specified characters from the start. */
@@ -1742,19 +1743,9 @@ export declare class TraceSubscriberGuard {
   close(): void
 }
 
-/**
- * Cache for tsconfig resolution to avoid redundant file system operations.
- *
- * The cache stores resolved tsconfig configurations keyed by their file paths.
- * When transforming multiple files in the same project, tsconfig lookups are
- * deduplicated, improving performance.
- *
- * @category Utilities
- * @experimental
- */
 export declare class TsconfigCache {
   /** Create a new transform cache with auto tsconfig discovery enabled. */
-  constructor()
+  constructor(yarnPnp: boolean)
   /**
    * Clear the cache.
    *
@@ -2197,6 +2188,10 @@ export interface BindingHookTransformOutput {
   moduleType?: string
 }
 
+export interface BindingIndentOptions {
+  exclude?: Array<Array<number>> | Array<number>
+}
+
 export interface BindingInjectImportNamed {
   tagNamed: true
   imported: string
@@ -2302,6 +2297,7 @@ export interface BindingLogLocation {
 export interface BindingMagicStringOptions {
   filename?: string
   offset?: number
+  indentExclusionRanges?: Array<Array<number>> | Array<number>
 }
 
 export type BindingMakeAbsoluteExternalsRelative =
@@ -2793,43 +2789,9 @@ export interface BindingWatchOption {
 
 export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
 
-/**
- * Transpile a JavaScript or TypeScript into a target ECMAScript version, asynchronously.
- *
- * Note: This function can be slower than `transformSync` due to the overhead of spawning a thread.
- *
- * @param filename The name of the file being transformed. If this is a
- * relative path, consider setting the {@link TransformOptions#cwd} option.
- * @param sourceText The source code to transform.
- * @param options The transform options including tsconfig and inputMap. See {@link
- * BindingEnhancedTransformOptions} for more information.
- * @param cache Optional tsconfig cache for reusing resolved tsconfig across multiple transforms.
- * Only used when tsconfig auto-discovery is enabled.
- *
- * @returns a promise that resolves to an object containing the transformed code,
- * source maps, and any errors that occurred during parsing or transformation.
- *
- * @experimental
- */
-export declare function enhancedTransform(filename: string, sourceText: string, options?: BindingEnhancedTransformOptions | undefined | null, cache?: TsconfigCache | undefined | null): Promise<BindingEnhancedTransformResult>
+export declare function enhancedTransform(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): Promise<BindingEnhancedTransformResult>
 
-/**
- * Transpile a JavaScript or TypeScript into a target ECMAScript version.
- *
- * @param filename The name of the file being transformed. If this is a
- * relative path, consider setting the {@link TransformOptions#cwd} option.
- * @param sourceText The source code to transform.
- * @param options The transform options including tsconfig and inputMap. See {@link
- * BindingEnhancedTransformOptions} for more information.
- * @param cache Optional tsconfig cache for reusing resolved tsconfig across multiple transforms.
- * Only used when tsconfig auto-discovery is enabled.
- *
- * @returns an object containing the transformed code, source maps, and any errors
- * that occurred during parsing or transformation.
- *
- * @experimental
- */
-export declare function enhancedTransformSync(filename: string, sourceText: string, options?: BindingEnhancedTransformOptions | undefined | null, cache?: TsconfigCache | undefined | null): BindingEnhancedTransformResult
+export declare function enhancedTransformSync(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingEnhancedTransformResult
 
 export interface ExtensionAliasItem {
   target: string
@@ -2916,8 +2878,7 @@ export interface PreRenderedChunk {
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
-/** @hidden This is only expected to be used by Vite */
-export declare function resolveTsconfig(filename: string, cache?: TsconfigCache | undefined | null): BindingTsconfigResult | null
+export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 
 /**
  * Shutdown the tokio runtime manually.

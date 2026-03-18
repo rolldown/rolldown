@@ -256,10 +256,12 @@ fn build_inject_config(
 /// * `filename` - The filename (used for source type detection and error reporting)
 /// * `source_text` - The source code to transform
 /// * `transform_options` - Transform options including tsconfig and sourcemap settings
+/// * `yarn_pnp` - Whether to enable Yarn PnP support when resolving tsconfig
 pub fn enhanced_transform(
   filename: &str,
   source_text: &str,
   transform_options: EnhancedTransformOptions,
+  yarn_pnp: bool,
 ) -> EnhancedTransformResult {
   let mut errors = Vec::new();
   let mut warnings = Vec::new();
@@ -273,6 +275,7 @@ pub fn enhanced_transform(
       let file_path = PathBuf::from(filename);
       let result = oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions {
         tsconfig: Some(oxc_resolver::TsconfigDiscovery::Auto),
+        yarn_pnp,
         ..Default::default()
       })
       .find_tsconfig(file_path);

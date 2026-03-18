@@ -11,7 +11,7 @@
  * 3. Skips tests that use unsupported features
  *
  * BindingMagicString API (supported methods):
- *   - constructor(source: string, options?: { filename?, offset? })
+ *   - constructor(source: string, options?: { filename?, offset?, indentExclusionRanges? })
  *   - offset: number (getter/setter — shifts all position-based operations)
  *   - replace(from: string, to: string): this
  *   - replaceAll(from: string, to: string): this
@@ -30,7 +30,7 @@
  *   - update(start: number, end: number, content: string): this
  *   - relocate(start: number, end: number, to: number): this
  *   - move(start: number, end: number, index: number): this (alias for relocate)
- *   - indent(indentor?: string | undefined | null): this
+ *   - indent(indentor?: string | undefined | null, options?: { exclude? }): this
  *   - slice(start?: number, end?: number): string
  *   - insert(index: number, content: string): throws Error (deprecated)
  *   - clone(): BindingMagicString
@@ -42,12 +42,10 @@
  *   - generateDecodedMap(options?): BindingDecodedMap (returns object with decoded mappings array)
  *
  * NOT supported (will be skipped):
- *   - constructor options (ignoreList, indentExclusionRanges) — filename and offset ARE supported
- *   - reset tests (most require splitting inside edited chunks)
+ *   - constructor options: ignoreList — filename, offset, and indentExclusionRanges ARE supported
  *   - addSourcemapLocation (not in string_wizard)
- *   - storeName option in overwrite (not in string_wizard)
- *   - x_google_ignoreList / ignoreList (not in string_wizard)
- *   - original property (getter — not yet implemented)
+ *   - storeName option in overwrite/update (not exposed in binding)
+ *   - x_google_ignoreList / ignoreList in generateMap output (not in string_wizard)
  *   - replace/replaceAll with regex or function replacer
  */
 
@@ -87,7 +85,7 @@ const SKIP_TESTS = [
   'should throw', // error handling differs
   // options-specific skips
   'stores ignore-list hint', // ignoreList option not supported
-  'indentExclusionRanges', // not supported
+  // Note: 'indentExclusionRanges' is now supported (constructor option + getter + clone)
   'sourcemapLocations', // not supported
   'should return cloned content', // clone-related
   'should noop', // edge cases that may differ
@@ -108,7 +106,7 @@ const SKIP_TESTS = [
 
   'should replace then remove', // causes split chunk panic
   'preserves intended order', // complex append/prepend ordering with slice
-  'excluded characters', // indent exclude option not supported
+  // Note: 'excluded characters' (indent exclude option) is now supported
   // remove-specific skips
   'should remove everything', // edge case
   'should adjust other removals', // complex removal interaction
@@ -126,14 +124,13 @@ const SKIP_TESTS = [
   // The reset version passes, so we handle this with a special transformation below
   'should not remove content inserted', // complex interaction
   'should remove interior inserts', // causes panic
-  'should provide a useful error', // expects throw but gets panic
+  // Note: 'should provide a useful error' now works — errors are properly thrown, not panicked
   // slice-specific skips
   'should return the generated content between the specified original characters', // nested overwrites + slice
   'supports characters moved', // complex move + slice interaction
   // clone-specific skips (tests that use unsupported constructor options)
   // Note: 'should clone filename info' now works since filename is supported
-  'should clone indentExclusionRanges', // uses indentExclusionRanges constructor option
-  'should clone complex indentExclusionRanges', // uses indentExclusionRanges constructor option
+  // Note: 'should clone indentExclusionRanges' now works since indentExclusionRanges is supported
   'should clone sourcemapLocations', // uses sourcemapLocations
   // hasChanged tests that use clone
   'should not report change if content is identical', // uses clone
@@ -180,12 +177,12 @@ function transformTestFile(content, filename) {
   // Replace imports
   transformed = transformed.replace(
     /import MagicString from ['"]\.\/utils\/IntegrityCheckingMagicString['"];?/g,
-    "import { BindingMagicString as MagicString } from 'rolldown';",
+    "import { RolldownMagicString as MagicString } from 'rolldown';",
   );
 
   transformed = transformed.replace(
     /import MagicString from ['"]\.\.\/src\/MagicString['"];?/g,
-    "import { BindingMagicString as MagicString } from 'rolldown';",
+    "import { RolldownMagicString as MagicString } from 'rolldown';",
   );
 
   // Handle Bundle import - Bundle is not supported, so we import MagicString and skip all Bundle tests
@@ -264,12 +261,7 @@ function transformTestFile(content, filename) {
     "$1\n$2it.skip('removes across moved content'",
   );
 
-  // Special case: skip "should reset modified ranges" but not "should reset modified ranges, redux"
-  // The "redux" version passes, but the first one uses overwrite+remove+reset which fails
-  transformed = transformed.replace(
-    /it\('should reset modified ranges', /g,
-    "it.skip('should reset modified ranges', ",
-  );
+  // Note: "should reset modified ranges" now passes (overwrite+remove+reset works correctly)
 
   return transformed;
 }

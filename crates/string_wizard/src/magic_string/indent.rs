@@ -41,11 +41,7 @@ pub fn guess_indentor(source: &str) -> Option<String> {
     .min()
     .unwrap_or(0);
 
-  let mut indent_str = String::with_capacity(min_space_count);
-  for _ in 0..min_space_count {
-    indent_str.push(' ');
-  }
-  Some(indent_str)
+  Some(" ".repeat(min_space_count))
 }
 
 #[derive(Debug, Default)]

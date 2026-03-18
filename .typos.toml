@@ -40,3 +40,4 @@ styl = "styl"
 
 [default.extend-identifiers]
 IIFEs = "IIFEs"
+PnP = "PnP"

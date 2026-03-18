@@ -3,10 +3,13 @@ import {
   enhancedTransformSync as originalTransformSync,
   type BindingEnhancedTransformOptions,
   type BindingEnhancedTransformResult,
-  TsconfigCache,
 } from '../binding.cjs';
+import type { TsconfigCache } from './resolve-tsconfig';
 import type { RolldownLog } from '../get-log-filter';
 import { normalizeBindingError } from './error';
+
+// process is undefined for browser build
+const yarnPnp = typeof process === 'object' && !!process.versions?.pnp;
 
 /**
  * Options for transforming a code.
@@ -25,7 +28,6 @@ export type TransformResult = Omit<BindingEnhancedTransformResult, 'errors' | 'w
   warnings: RolldownLog[];
 };
 
-export { TsconfigCache };
 export type {
   BindingTsconfigRawOptions as TsconfigRawOptions,
   BindingTsconfigCompilerOptions as TsconfigCompilerOptions,
@@ -55,7 +57,7 @@ export async function transform(
   options?: TransformOptions | null,
   cache?: TsconfigCache | null,
 ): Promise<TransformResult> {
-  const result = await originalTransform(filename, sourceText, options, cache);
+  const result = await originalTransform(filename, sourceText, options, cache, yarnPnp);
   return {
     ...result,
     errors: result.errors.map(normalizeBindingError),
@@ -85,7 +87,7 @@ export function transformSync(
   options?: TransformOptions | null,
   cache?: TsconfigCache | null,
 ): TransformResult {
-  const result = originalTransformSync(filename, sourceText, options, cache);
+  const result = originalTransformSync(filename, sourceText, options, cache, yarnPnp);
   return {
     ...result,
     errors: result.errors.map(normalizeBindingError),

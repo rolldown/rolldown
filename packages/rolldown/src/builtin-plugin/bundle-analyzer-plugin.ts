@@ -38,11 +38,11 @@ import { BuiltinPlugin } from './utils';
  * @example
  * **LLM-friendly markdown output**
  * ```js
- * import { chunkVisualizePlugin } from 'rolldown/experimental';
+ * import { bundleAnalyzerPlugin } from 'rolldown/experimental';
  *
  * export default {
  *   plugins: [
- *     chunkVisualizePlugin({
+ *     bundleAnalyzerPlugin({
  *       format: 'md'
  *     })
  *   ]

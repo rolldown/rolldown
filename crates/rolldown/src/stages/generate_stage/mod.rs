@@ -179,7 +179,9 @@ impl<'a> GenerateStage<'a> {
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
                     if absolute_chunk_file_name.starts_with(preserve_modules_root.as_str()) {
-                      sanitized_absolute_filename[preserve_modules_root.len()..]
+                      let sanitized_preserve_modules_root =
+                        sanitize_filename.call(preserve_modules_root.as_str()).await?;
+                      sanitized_absolute_filename[sanitized_preserve_modules_root.len()..]
                         .trim_start_matches(['/', '\\'])
                         .to_string()
                     } else {
@@ -289,6 +291,13 @@ impl<'a> GenerateStage<'a> {
       let pre_rendered_chunk =
         generate_pre_rendered_chunk(chunk, &pre_generated_chunk_name.chunk_name, self.link_output);
 
+      // Set chunk name before generate_preliminary_filename so that
+      // get_preserve_modules_chunk_name can use self.name directly, avoiding
+      // a comparison between the sanitized absolute chunk_filename and the
+      // original (unsanitized) preserve_modules_root which can differ in length
+      // when a custom sanitizeFileName function changes character count.
+      chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
+
       let preliminary_filename = chunk
         .generate_preliminary_filename(
           self.options,
@@ -298,10 +307,6 @@ impl<'a> GenerateStage<'a> {
           &used_name_counts,
         )
         .await?;
-
-      // Defer chunk name assignment to make sure at this point only entry chunk have a name
-      // if user provided one.
-      chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
 
       chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
 

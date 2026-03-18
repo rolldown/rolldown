@@ -16,6 +16,8 @@
     "crates/rolldown/tests/**",
     "prepare/**",
     "packages/rolldown/tests/fixtures/builtin-plugin/load-fallback/path-has-hashtag/**",
+    "packages/rolldown/tests/fixtures/topics/preserve-modules/sanitize-filename-with-preserve-modules-root/**",
+    "packages/rolldown/tests/fixtures/topics/preserve-modules/sanitize-filename-preserve-modules-root-custom-sanitizer/**",
     "packages/debug/src/generated/**",
     "**/*.config.{js,mjs,cjs,ts,cts,mts}",
     "**/*.test.{js,mjs,cjs,ts,cts,mts}",

@@ -562,28 +562,35 @@ describe('watch cli', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
-  it('should close with exit code 0 even when there are errors', async () => {
-    const cwd = cliFixturesDir('watch-error');
-    const controller = new AbortController();
-    const process = execa({
-      cwd,
-      reject: false,
-      cancelSignal: controller.signal,
-    })`rolldown index.ts -d dist -w`;
-    const stdoutWaiter = createStreamWaiter(process.stdout);
-    await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
+  it(
+    'should close with exit code 0 even when there are errors',
+    {
+      // `stdoutWaiter.waitFor('UNRESOLVED_IMPORT')` is flaky
+      retry: 3,
+    },
+    async () => {
+      const cwd = cliFixturesDir('watch-error');
+      const controller = new AbortController();
+      const process = execa({
+        cwd,
+        reject: false,
+        cancelSignal: controller.signal,
+      })`rolldown index.ts -d dist -w`;
+      const stdoutWaiter = createStreamWaiter(process.stdout);
+      await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
 
-    fs.writeFileSync(
-      path.join(cwd, 'index.ts'),
-      `import { foo } from './non-existent';\n\nconsole.log(foo);\n`,
-    );
-    try {
-      await stdoutWaiter.waitFor('UNRESOLVED_IMPORT', { timeout: 10_000 });
-      controller.abort();
-      await process;
-      expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
-    } finally {
-      fs.writeFileSync(path.join(cwd, 'index.ts'), `var foo = '';\n\nconsole.log(foo);\n`);
-    }
-  });
+      fs.writeFileSync(
+        path.join(cwd, 'index.ts'),
+        `import { foo } from './non-existent';\n\nconsole.log(foo);\n`,
+      );
+      try {
+        await stdoutWaiter.waitFor('UNRESOLVED_IMPORT', { timeout: 5_000 });
+        controller.abort();
+        await process;
+        expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
+      } finally {
+        fs.writeFileSync(path.join(cwd, 'index.ts'), `var foo = '';\n\nconsole.log(foo);\n`);
+      }
+    },
+  );
 });

@@ -5,5 +5,5 @@
   "ignored(unsupported features)": 313,
   "ignored(treeshaking)": 324,
   "ignored(behavior passed, snapshot different)": 157,
-  "passed": 914
+  "passed": 915
 }

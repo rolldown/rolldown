@@ -408,7 +408,7 @@ importers:
         specifier: ^0.8.1
         version: 0.8.3(oxc-transform@0.121.0)(rollup@4.59.0)(typescript@5.9.3)
 
-  examples/lazy:
+  examples/lazy-compilation:
     devDependencies:
       '@rolldown/test-dev-server':
         specifier: workspace:*

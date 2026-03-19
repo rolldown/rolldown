@@ -26,7 +26,7 @@ jobs:
       - uses: samypr100/setup-dev-drive@30f0f98ae5636b2b6501e181dfb3631b9974818d # v4.0.0
         if: runner.os == 'Windows'
         with:
-          drive-size: 12GB
+          drive-size: 20GB
           drive-format: ReFS
           env-mapping: |
             CARGO_HOME,{{ DEV_DRIVE }}/.cargo

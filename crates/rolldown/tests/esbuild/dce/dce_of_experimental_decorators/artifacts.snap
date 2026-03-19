@@ -23,7 +23,13 @@ var Method = class {
 };
 __decorate([fn], Method.prototype, "method", null);
 var Accessor = class {
-	accessor accessor;
+	#_accessor_accessor_storage;
+	get accessor() {
+		return this.#_accessor_accessor_storage;
+	}
+	set accessor(value) {
+		this.#_accessor_accessor_storage = value;
+	}
 };
 __decorate([fn], Accessor.prototype, "accessor", null);
 var Parameter = class {
@@ -36,10 +42,15 @@ var StaticMethod = class {
 	static method() {}
 };
 __decorate([fn], StaticMethod, "method", null);
-var StaticAccessor = class {
-	static accessor accessor;
-};
-__decorate([fn], StaticAccessor, "accessor", null);
+__decorate([fn], class StaticAccessor {
+	static #_accessor_accessor_storage;
+	static get accessor() {
+		return StaticAccessor.#_accessor_accessor_storage;
+	}
+	static set accessor(value) {
+		StaticAccessor.#_accessor_accessor_storage = value;
+	}
+}, "accessor", null);
 var StaticParameter = class {
 	static foo(bar) {}
 };

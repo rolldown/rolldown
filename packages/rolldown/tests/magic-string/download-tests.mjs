@@ -63,7 +63,7 @@ const BASE_URL = 'https://raw.githubusercontent.com/Rich-Harris/magic-string/mas
 // Describe blocks to skip entirely (unsupported features)
 const SKIP_DESCRIBE_BLOCKS = [
   'addSourcemapLocation', // not in string_wizard
-  'getIndentString', // not supported
+  // Note: 'getIndentString' is now supported
   'original', // not supported
   // Note: 'generateMap' is now supported (returns BindingSourceMap object)
   // Note: 'generateDecodedMap' is now supported (returns BindingDecodedMap object)

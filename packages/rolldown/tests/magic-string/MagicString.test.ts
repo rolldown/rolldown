@@ -636,7 +636,7 @@ describe('MagicString', () => {
     });
   });
 
-  describe.skip('getIndentString', () => {
+  describe('getIndentString', () => {
     it('should guess the indent string', () => {
       const s = new MagicString('abc\n  def\nghi');
       assert.equal(s.getIndentString(), '  ');

@@ -56,7 +56,7 @@ pub struct IndentOptions<'a, 'b> {
 }
 
 impl MagicString<'_> {
-  fn guessed_indentor(&self) -> &str {
+  pub fn get_indent_string(&self) -> &str {
     self
       .guessed_indentor
       .get_or_init(|| guess_indentor(&self.source).unwrap_or_else(|| "\t".to_string()))
@@ -89,7 +89,7 @@ impl MagicString<'_> {
       *frag = Cow::Owned(indented);
     }
 
-    let indentor = opts.indentor.unwrap_or_else(|| self.guessed_indentor());
+    let indentor = opts.indentor.unwrap_or_else(|| self.get_indent_string());
 
     let mut indent_replacer =
       IndentReplacer { should_indent_next_char: true, indentor: indentor.to_string() };

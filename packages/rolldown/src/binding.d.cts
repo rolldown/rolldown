@@ -1528,6 +1528,8 @@ export declare class BindingMagicString {
   lastChar(): string
   /** Returns the content after the last newline in the generated string. */
   lastLine(): string
+  /** Returns the guessed indentation string, or `\t` if none is found. */
+  getIndentString(): string
   /** Returns a clone with content outside the specified range removed. */
   snip(start: number, end: number): BindingMagicString
   /**

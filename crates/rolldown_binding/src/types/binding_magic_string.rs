@@ -741,6 +741,12 @@ impl BindingMagicString<'_> {
     self.inner.last_line()
   }
 
+  /// Returns the guessed indentation string, or `\t` if none is found.
+  #[napi]
+  pub fn get_indent_string(&self) -> &str {
+    self.inner.get_indent_string()
+  }
+
   /// Returns a clone with content outside the specified range removed.
   #[napi]
   pub fn snip(&self, start: u32, end: u32) -> napi::Result<Self> {

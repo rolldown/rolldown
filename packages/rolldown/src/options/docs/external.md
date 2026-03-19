@@ -43,7 +43,7 @@ export default {
 ```js
 export default {
   external: (id) => {
-    return !id.startsWith('.') && !id.startsWith('/');
+    return !id.startsWith('.') && !id.startsWith('/') && !id.includes('\\');
   },
 };
 ```
@@ -72,7 +72,7 @@ export default {
   // Package name patterns
   external: [/^vue/, /^react/, /^@mui/],
 
-  // All bare module IDs (not starting with `.` or `/`)
-  external: /^[^./]/,
+  // All bare module IDs (not starting with `.` or `/` or `C:\`)
+  external: /^[^./](?!:\\)/,
 };
 ```

@@ -246,7 +246,7 @@ To achieve optimal performance, Rolldown runs the internal transform which trans
 
 ### Transforming TypeScript and JSX beforehand
 
-If processing TypeScript and JSX AST is not an option, you can still transform them to JavaScript by using the `transform` function exposed from `rolldown/experimental`. Note that this has an additional overhead.
+If processing TypeScript and JSX AST is not an option, you can still transform them to JavaScript by using the `transform` function exposed from `rolldown/utils`. Note that this has an additional overhead.
 
 ## Notable Differences from Rollup
 

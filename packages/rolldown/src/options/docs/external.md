@@ -73,6 +73,6 @@ export default {
   external: [/^vue/, /^react/, /^@mui/],
 
   // All bare module IDs (not starting with `.` or `/` or `C:\`)
-  external: /^[^\./](?!:\\)/,
+  external: /^[^./](?!:\\)/,
 };
 ```

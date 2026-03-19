@@ -99,12 +99,17 @@ impl<'text> MagicString<'text> {
     self.ignore_list
   }
 
+  /// Returns the length of the content within chunks (intro + content + outro per chunk),
+  /// excluding the global intro/outro from `prepend`/`append`.
+  /// This aligns with the reference `magic-string` behavior.
   pub fn len(&self) -> usize {
-    self.fragments().map(|f| f.len()).sum()
+    self.iter_chunks().flat_map(|c| c.fragments(&self.source)).map(|f| f.len()).sum()
   }
 
+  /// Returns `true` if all chunk content (intro + content + outro) is whitespace or empty.
+  /// This aligns with the reference `magic-string` behavior where `isEmpty()` uses `.trim()`.
   pub fn is_empty(&self) -> bool {
-    self.len() == 0
+    self.iter_chunks().flat_map(|c| c.fragments(&self.source)).all(|f| f.trim().is_empty())
   }
 
   /// Indicates if the string has been changed.
@@ -334,7 +339,7 @@ impl<'text> MagicString<'text> {
 #[expect(clippy::to_string_trait_impl)] // `impl Display` causes extra allocation
 impl ToString for MagicString<'_> {
   fn to_string(&self) -> String {
-    let size_hint = self.len();
+    let size_hint = self.fragments().map(|f| f.len()).sum();
     let mut ret = String::with_capacity(size_hint);
     self.fragments().for_each(|f| ret.push_str(f));
     ret

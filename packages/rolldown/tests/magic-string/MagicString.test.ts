@@ -1740,7 +1740,7 @@ describe('MagicString', () => {
   });
 
   describe('isEmpty', () => {
-    it.skip('should support isEmpty', () => {
+    it('should support isEmpty', () => {
       const s = new MagicString(' abcde   fghijkl ');
 
       assert.equal(s.isEmpty(), false);
@@ -1759,7 +1759,7 @@ describe('MagicString', () => {
   });
 
   describe('length', () => {
-    it.skip('should support length', () => {
+    it('should support length', () => {
       const s = new MagicString(' abcde   fghijkl ');
 
       assert.equal(s.length(), 17);

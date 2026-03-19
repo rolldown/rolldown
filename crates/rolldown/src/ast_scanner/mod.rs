@@ -116,6 +116,9 @@ pub struct ScanResult {
   pub directive_range: Vec<Span>,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
   pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
+  /// Enum member constant values, keyed by the enum declaration's SymbolId → member name → value.
+  /// Used by the finalizer to inline `Direction.Up` style accesses.
+  pub enum_member_value_map: FxHashMap<SymbolId, FxHashMap<CompactStr, ConstExportMeta>>,
 }
 
 bitflags::bitflags! {
@@ -181,6 +184,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     options: &'me SharedOptions,
     allocator: &'ast oxc::allocator::Allocator,
     flat_options: FlatOptions,
+    enum_member_values: &FxHashMap<oxc::syntax::symbol::SymbolId, Vec<(CompactStr, oxc::syntax::constant_value::ConstantValue)>>,
   ) -> Self {
     let root_scope_id = scoping.root_scope_id();
     let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, idx, root_scope_id);
@@ -196,7 +200,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(legitimized_repr_name, "_hot"))
     });
 
-    let result = ScanResult {
+    let mut result = ScanResult {
       named_imports: FxIndexMap::default(),
       named_exports: FxHashMap::default(),
       stmt_infos: StmtInfos::new(),
@@ -223,7 +227,24 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       constant_export_map: FxHashMap::default(),
       ecma_view_meta: EcmaViewMeta::default(),
       import_attribute_map: FxHashMap::default(),
+      enum_member_value_map: FxHashMap::default(),
     };
+
+    // Populate enum_member_value_map from pre-computed enum values.
+    // SymbolIds are already resolved to the rebuilt Scoping by pre_process_ecma_ast.
+    for (&enum_sym_id, members) in enum_member_values {
+      let mut member_map = FxHashMap::default();
+      for (member_name, value) in members {
+        let rolldown_value = match value {
+          oxc::syntax::constant_value::ConstantValue::Number(n) => ConstantValue::Number(*n),
+          oxc::syntax::constant_value::ConstantValue::String(s) => {
+            ConstantValue::String(s.to_string())
+          }
+        };
+        member_map.insert(member_name.clone(), ConstExportMeta::new(rolldown_value, false));
+      }
+      result.enum_member_value_map.insert(enum_sym_id, member_map);
+    }
 
     Self {
       immutable_ctx: AstScannerImmutableCtx {

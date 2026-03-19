@@ -54,7 +54,7 @@ impl From<TypeScriptOptions> for oxc::transformer::TypeScriptOptions {
       remove_class_fields_without_initializer: options
         .remove_class_fields_without_initializer
         .unwrap_or(ops.remove_class_fields_without_initializer),
-      optimize_const_enums: false,
+      optimize_const_enums: true,
       rewrite_import_extensions: options.rewrite_import_extensions.and_then(|value| match value {
         Either::Left(v) => {
           if v {

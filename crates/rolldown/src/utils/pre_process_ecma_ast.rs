@@ -14,7 +14,7 @@ use oxc::transformer_plugins::{
 };
 
 use rolldown_common::NormalizedBundlerOptions;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
@@ -92,18 +92,36 @@ impl PreProcessEcmaAst {
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
 
     // Extract enum member values before the transformer converts enums.
-    let (enum_member_values, const_enum_names) = {
+    let enum_member_values = {
       let scoping_ref = scoping.as_mut().unwrap();
-      let raw_values = scoping_ref.take_enum_member_values();
+      // Clone (not take) so the transformer can still read values from Scoping
+      // during IIFE generation (e.g., `all_members_evaluable()` checks member values
+      // to decide whether to use `({})` or `(Foo || {})` as the IIFE argument).
+      let raw_values = scoping_ref.enum_member_values().clone();
 
       if raw_values.is_empty() {
-        (FxHashMap::default(), FxHashSet::default())
+        FxHashMap::default()
       } else {
         let mut enum_values: FxHashMap<CompactStr, Vec<(CompactStr, ConstantValue)>> =
           FxHashMap::default();
-        let mut const_names: FxHashSet<CompactStr> = FxHashSet::default();
 
-        // For each enum member with a value, find its parent enum declaration.
+        // Build a reverse map: body_scope_id → enum_name
+        // using the enum_body_scopes stored during semantic analysis.
+        let mut scope_to_enum: FxHashMap<oxc::semantic::ScopeId, CompactStr> =
+          FxHashMap::default();
+        for symbol_id in scoping_ref.symbol_ids() {
+          let flags = scoping_ref.symbol_flags(symbol_id);
+          if flags.is_const_enum() || flags.contains(SymbolFlags::RegularEnum) {
+            if let Some(body_scopes) = scoping_ref.get_enum_body_scopes(symbol_id) {
+              let name = CompactStr::from(scoping_ref.symbol_name(symbol_id));
+              for &body_scope in body_scopes {
+                scope_to_enum.insert(body_scope, name.clone());
+              }
+            }
+          }
+        }
+
+        // For each enum member with a value, find its parent enum via scope mapping.
         for (symbol_id, value) in &raw_values {
           if !scoping_ref.symbol_flags(*symbol_id).is_enum_member() {
             continue;
@@ -111,22 +129,14 @@ impl PreProcessEcmaAst {
           let member_name = CompactStr::from(scoping_ref.symbol_name(*symbol_id));
           let member_scope = scoping_ref.symbol_scope_id(*symbol_id);
 
-          // Member's scope = enum body scope. Parent scope has the enum declaration symbol.
-          if let Some(parent_scope) = scoping_ref.scope_parent_id(member_scope) {
-            for parent_sym in scoping_ref.iter_bindings_in(parent_scope) {
-              let pf = scoping_ref.symbol_flags(parent_sym);
-              if pf.is_const_enum() || pf.contains(SymbolFlags::RegularEnum) {
-                let enum_name = CompactStr::from(scoping_ref.symbol_name(parent_sym));
-                if pf.is_const_enum() {
-                  const_names.insert(enum_name.clone());
-                }
-                enum_values.entry(enum_name).or_default().push((member_name.clone(), value.clone()));
-                break;
-              }
-            }
+          if let Some(enum_name) = scope_to_enum.get(&member_scope) {
+            enum_values
+              .entry(enum_name.clone())
+              .or_default()
+              .push((member_name, value.clone()));
           }
         }
-        (enum_values, const_names)
+        enum_values
       }
     };
 
@@ -222,6 +232,19 @@ impl PreProcessEcmaAst {
       self.recreate_scoping(&mut None, program)
     });
 
+    // Resolve name-based enum values to SymbolIds from the rebuilt Scoping.
+    // The name-based intermediate is needed because SymbolIds change across Scoping rebuilds.
+    let enum_member_values = {
+      let root_scope = scoping.root_scope_id();
+      let mut resolved = FxHashMap::default();
+      for (enum_name, members) in enum_member_values {
+        if let Some(sym_id) = scoping.get_binding(root_scope, enum_name.as_str().into()) {
+          resolved.insert(sym_id, members);
+        }
+      }
+      resolved
+    };
+
     Ok(ParseToEcmaAstResult {
       ast,
       scoping,
@@ -229,7 +252,6 @@ impl PreProcessEcmaAst {
       warnings,
       preserve_jsx,
       enum_member_values,
-      const_enum_names,
     })
   }
 

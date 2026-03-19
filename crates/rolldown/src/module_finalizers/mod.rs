@@ -13,10 +13,11 @@ use oxc::{
   span::{GetSpan, GetSpanMut, SPAN},
 };
 use rolldown_common::{
-  AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx,
-  ImportRecordMeta, InlineConstMode, MemberExprRefResolution, Module, ModuleIdx,
+  AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, GetLocalDb,
+  ImportRecordIdx, ImportRecordMeta, InlineConstMode, MemberExprRefResolution, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
-  OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolRef, WrapKind,
+  OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolRef,
+  WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -516,7 +517,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ))
   }
 
-  /// Try to inline a const enum member access like `Direction.Up` → `0`.
+  /// Try to inline an enum member access like `Direction.Up` → `0`.
   /// Resolves the identifier to its canonical symbol, then looks up the enum member
   /// value in the owning module's `enum_member_value_map`.
   fn try_inline_enum_member(
@@ -527,12 +528,53 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let ref_id = ident.reference_id.get()?;
     let symbol_id = self.scope.scoping().get_reference(ref_id).symbol_id()?;
     let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+    self.try_inline_enum_member_by_ref(symbol_ref, property_name)
+  }
+
+  /// Try to inline a chained enum member access like `ns.c.x` → `"c"`.
+  /// `ns` is a namespace import (`import * as ns`), `c` is a named export (enum), `x` is the member.
+  fn try_inline_chained_enum_member(
+    &self,
+    outer_expr: &ast::StaticMemberExpression<'_>,
+  ) -> Option<ast::Expression<'ast>> {
+    // The object must be a StaticMemberExpression (e.g., `ns.c`)
+    let ast::Expression::StaticMemberExpression(inner_expr) = &outer_expr.object else {
+      return None;
+    };
+    // The inner object must be an identifier (e.g., `ns`)
+    let ast::Expression::Identifier(ns_ident) = &inner_expr.object else {
+      return None;
+    };
+
+    // Resolve `ns` to its symbol
+    let ref_id = ns_ident.reference_id.get()?;
+    let symbol_id = self.scope.scoping().get_reference(ref_id).symbol_id()?;
+    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
 
+    // Find which module this namespace belongs to.
+    // For `import * as ns from './enums'`, canonical_ref.owner is the importee module.
+    let importee = self.ctx.modules[canonical_ref.owner].as_normal()?;
+
+    // Find the exported symbol for the inner property name (e.g., `c`)
+    let resolved_export = self.ctx.linking_infos[importee.idx]
+      .resolved_exports
+      .get(inner_expr.property.name.as_str())?;
+    let canonical_export = self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref);
+
+    // Now try to inline the outer property (e.g., `x`) as an enum member
+    self.try_inline_enum_member_by_ref(canonical_export, outer_expr.property.name.as_str())
+  }
+
+  fn try_inline_enum_member_by_ref(
+    &self,
+    symbol_ref: SymbolRef,
+    property_name: &str,
+  ) -> Option<ast::Expression<'ast>> {
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
     let module = self.ctx.modules[canonical_ref.owner].as_normal()?;
     let member_map = module.ecma_view.enum_member_value_map.get(&canonical_ref.symbol)?;
     let meta = member_map.get(property_name)?;
-
     Some(meta.value.to_expression(AstBuilder::new(self.alloc)))
   }
 
@@ -1659,6 +1701,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     last_import_stmt_idx.unwrap_or(0)
   }
 
+
   fn process_fn(
     &self,
     symbol_binding_id: Option<KeepNameId>,
@@ -2250,3 +2293,4 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     Some(())
   }
 }
+

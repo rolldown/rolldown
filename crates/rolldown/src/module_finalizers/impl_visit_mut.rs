@@ -515,6 +515,20 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
       _ => {
+        // Try to inline const enum member accesses (e.g., `Direction.Up` → `0`)
+        if let ast::Expression::StaticMemberExpression(member_expr) = expr {
+          if let ast::Expression::Identifier(ident) = &member_expr.object {
+            if let Some(new_expr) =
+              self.try_inline_enum_member(ident, &member_expr.property.name)
+            {
+              *expr = new_expr;
+              // Skip further rewriting since we've already replaced the expression
+              self.rewrite_import_meta_hot(expr);
+              walk_mut::walk_expression(self, expr);
+              return;
+            }
+          }
+        }
         if let Some(new_expr) =
           expr.as_member_expression().and_then(|expr| self.try_rewrite_member_expr(expr))
         {

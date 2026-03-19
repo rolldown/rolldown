@@ -5,6 +5,9 @@ use oxc::ast_visit::VisitMut;
 use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, SemanticBuilder, Stats};
+use oxc::span::CompactStr;
+use oxc::syntax::constant_value::ConstantValue;
+use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
   InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
@@ -87,6 +90,45 @@ impl PreProcessEcmaAst {
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
+
+    // Extract enum member values before the transformer converts enums.
+    let (enum_member_values, const_enum_names) = {
+      let scoping_ref = scoping.as_mut().unwrap();
+      let raw_values = scoping_ref.take_enum_member_values();
+
+      if raw_values.is_empty() {
+        (FxHashMap::default(), FxHashSet::default())
+      } else {
+        let mut enum_values: FxHashMap<CompactStr, Vec<(CompactStr, ConstantValue)>> =
+          FxHashMap::default();
+        let mut const_names: FxHashSet<CompactStr> = FxHashSet::default();
+
+        // For each enum member with a value, find its parent enum declaration.
+        for (symbol_id, value) in &raw_values {
+          if !scoping_ref.symbol_flags(*symbol_id).is_enum_member() {
+            continue;
+          }
+          let member_name = CompactStr::from(scoping_ref.symbol_name(*symbol_id));
+          let member_scope = scoping_ref.symbol_scope_id(*symbol_id);
+
+          // Member's scope = enum body scope. Parent scope has the enum declaration symbol.
+          if let Some(parent_scope) = scoping_ref.scope_parent_id(member_scope) {
+            for parent_sym in scoping_ref.iter_bindings_in(parent_scope) {
+              let pf = scoping_ref.symbol_flags(parent_sym);
+              if pf.is_const_enum() || pf.contains(SymbolFlags::RegularEnum) {
+                let enum_name = CompactStr::from(scoping_ref.symbol_name(parent_sym));
+                if pf.is_const_enum() {
+                  const_names.insert(enum_name.clone());
+                }
+                enum_values.entry(enum_name).or_default().push((member_name.clone(), value.clone()));
+                break;
+              }
+            }
+          }
+        }
+        (enum_values, const_names)
+      }
+    };
 
     // Step 2: Run define plugin.
     if let Some(replace_global_define_config) = replace_global_define_config {
@@ -186,8 +228,8 @@ impl PreProcessEcmaAst {
       has_lazy_export,
       warnings,
       preserve_jsx,
-      enum_member_values: FxHashMap::default(),
-      const_enum_names: FxHashSet::default(),
+      enum_member_values,
+      const_enum_names,
     })
   }
 

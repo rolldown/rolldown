@@ -197,4 +197,13 @@ describe('unicode handling', () => {
     const s = new MagicString('a🤷b');
     assert.strictEqual(s.slice(2, 1), '');
   });
+
+  it('should preserve lone-surrogate boundaries for reversed moved slices', () => {
+    const s = new MagicString('ab🤷efghIJkl');
+    s.move(2, 4, 8);
+    s.move(8, 10, 4);
+
+    assert.strictEqual(s.toString(), 'abIJefgh🤷kl');
+    assert.strictEqual(s.slice(-3, 3), 'Jefgh\uD83E');
+  });
 });

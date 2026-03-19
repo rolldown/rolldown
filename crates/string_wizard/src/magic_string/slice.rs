@@ -73,7 +73,11 @@ impl<'text> MagicString<'text> {
         content.len()
       };
 
-      result.push_str(&content[slice_start..slice_end]);
+      // Guard against reversed range within a single chunk (matches JS .slice() behavior
+      // which returns "" for reversed ranges instead of panicking).
+      if slice_start < slice_end {
+        result.push_str(&content[slice_start..slice_end]);
+      }
 
       // Add outro if this chunk doesn't contain the end, or if chunk.end === end
       if !contains_end || chunk.end() == end {

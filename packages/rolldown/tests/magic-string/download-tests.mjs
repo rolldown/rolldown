@@ -126,8 +126,8 @@ const SKIP_TESTS = [
   'should remove interior inserts', // causes panic
   // Note: 'should provide a useful error' now works — errors are properly thrown, not panicked
   // slice-specific skips
-  'should return the generated content between the specified original characters', // nested overwrites + slice
-  'supports characters moved', // complex move + slice interaction
+  // Note: 'should return the generated content between the specified original characters' now works
+  // Note: 'supports characters moved opposing' now works (reversed slice range fix)
   // clone-specific skips (tests that use unsupported constructor options)
   // Note: 'should clone filename info' now works since filename is supported
   // Note: 'should clone indentExclusionRanges' now works since indentExclusionRanges is supported

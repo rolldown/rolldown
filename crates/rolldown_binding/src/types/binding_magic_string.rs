@@ -839,53 +839,67 @@ impl BindingMagicString<'_> {
 
     // When start == end, the result is always empty regardless of surrogate position.
     // Only check surrogates when the range is non-empty.
-    let (start_is_low, end_prev_entry) = if start_u32 < end_u32 {
+    let (start_is_low, end_is_low, end_prev_entry) = if start_u32 == end_u32 {
+      (false, false, None)
+    } else {
       let start_is_low = start_entry.is_some_and(Utf16Mapping::is_low_surrogate);
       let end_is_low = end_entry.is_some_and(Utf16Mapping::is_low_surrogate);
-      // When end is a low surrogate, look up the preceding high surrogate entry once
-      // (used for both the byte offset and the surrogate value to append).
-      let end_prev = if end_is_low {
+      // For forward ranges (start < end), when end is a low surrogate we adjust the
+      // byte offset to exclude the character entirely and later append the high surrogate.
+      // For reversed/moved ranges (start > end) this byte-offset trick does not work
+      // because the inner slice sees the end chunk before the start chunk, so we
+      // post-process instead (see below).
+      let end_prev = if end_is_low && start_u32 < end_u32 {
         debug_assert!(end_u32 > 0, "low surrogate cannot appear at index 0");
         self.utf16_to_byte_mapper.get(end_u32 - 1)
       } else {
         None
       };
-      (start_is_low, end_prev)
-    } else {
-      (false, None)
+      (start_is_low, end_is_low, end_prev)
     };
 
     let start_byte = start_entry.map_or(total_len, |e| e.byte_offset);
     let end_byte = if let Some(prev) = end_prev_entry {
-      // End falls on a low surrogate — use the high surrogate's byte_offset
+      // End falls on a low surrogate (forward range) — use the high surrogate's byte_offset
       // (before the character) so the UTF-8 slice excludes it.
       prev.byte_offset
     } else {
       end_entry.map_or(total_len, |e| e.byte_offset)
     };
-    // Clamp reversed ranges (e.g. slice(2, 1) on 'a🤷b') to empty.
-    let end_byte = end_byte.max(start_byte);
-
     let utf8_result =
       self.inner.slice(start_byte, Some(end_byte)).map_err(napi::Error::from_reason)?;
 
     // Fast path: no lone surrogates involved — return the UTF-8 string directly,
     // avoiding the UTF-16 transcoding and allocation.
-    if !start_is_low && end_prev_entry.is_none() {
+    if !start_is_low && !end_is_low {
       return env.create_string(&utf8_result);
     }
 
     // Slow path: build UTF-16 buffer with lone surrogates at the boundaries.
     let mut utf16_buf: Vec<u16> = Vec::new();
 
-    if let Some(entry) = start_entry.filter(|e| e.is_low_surrogate()) {
-      utf16_buf.push(entry.surrogate);
+    // Only prepend the start's low surrogate for forward ranges. For reversed ranges
+    // without moves the inner slice returns "" and we should return "" unchanged.
+    if start_u32 < end_u32 {
+      if let Some(entry) = start_entry.filter(|e| e.is_low_surrogate()) {
+        utf16_buf.push(entry.surrogate);
+      }
     }
 
     utf16_buf.extend(utf8_result.encode_utf16());
 
     if let Some(high_entry) = end_prev_entry {
+      // Forward range: emoji was excluded by byte-offset adjustment, append the high surrogate.
       utf16_buf.push(high_entry.surrogate);
+    } else if end_is_low && !utf8_result.is_empty() {
+      // Reversed/moved range: the inner slice included the full emoji character.
+      // Remove the trailing low surrogate to leave only the high surrogate,
+      // matching JS String.prototype.slice behavior at surrogate boundaries.
+      if let Some(&last) = utf16_buf.last() {
+        if (0xDC00..=0xDFFF).contains(&last) {
+          utf16_buf.pop();
+        }
+      }
     }
 
     env.create_string_utf16(&utf16_buf)

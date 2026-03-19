@@ -27,8 +27,10 @@ mod options {
   use super::*;
   #[test]
   fn stores_source_file_information() {
-    let s =
-      MagicString::with_options("abc", MagicStringOptions { filename: Some("foo.js".to_string()) });
+    let s = MagicString::with_options(
+      "abc",
+      MagicStringOptions { filename: Some("foo.js".to_string()), ..Default::default() },
+    );
     assert_eq!(s.filename(), Some("foo.js"))
   }
 }

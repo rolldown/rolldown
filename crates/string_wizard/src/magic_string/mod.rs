@@ -24,11 +24,13 @@ use crate::{
 #[derive(Debug, Default)]
 pub struct MagicStringOptions {
   pub filename: Option<String>,
+  pub ignore_list: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct MagicString<'s> {
   filename: Option<String>,
+  ignore_list: bool,
   intro: VecDeque<CowStr<'s>>,
   outro: VecDeque<CowStr<'s>>,
   source: Cow<'s, str>,
@@ -74,6 +76,7 @@ impl<'text> MagicString<'text> {
       chunk_by_start: Default::default(),
       chunk_by_end: Default::default(),
       filename: options.filename,
+      ignore_list: options.ignore_list,
       guessed_indentor: OnceLock::default(),
       last_searched_chunk_idx: initial_chunk_idx,
     };
@@ -90,6 +93,10 @@ impl<'text> MagicString<'text> {
 
   pub fn filename(&self) -> Option<&str> {
     self.filename.as_deref()
+  }
+
+  pub fn ignore_list(&self) -> bool {
+    self.ignore_list
   }
 
   pub fn len(&self) -> usize {

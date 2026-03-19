@@ -79,6 +79,8 @@ struct SerializableSourceMap<'a> {
   sources_content: Option<&'a Vec<Option<String>>>,
   names: &'a Vec<String>,
   mappings: &'a String,
+  #[serde(rename = "x_google_ignoreList", skip_serializing_if = "Option::is_none")]
+  x_google_ignore_list: Option<&'a Vec<u32>>,
 }
 
 /// Per-UTF-16-index mapping entry: byte offset + surrogate code unit.
@@ -178,6 +180,7 @@ pub struct BindingMagicStringOptions {
   pub filename: Option<String>,
   pub offset: Option<i64>,
   pub indent_exclusion_ranges: Option<Either<Vec<Vec<i64>>, Vec<i64>>>,
+  pub ignore_list: Option<bool>,
 }
 
 #[napi(object)]
@@ -252,6 +255,12 @@ impl BindingSourceMap {
     self.json.mappings.clone()
   }
 
+  /// The list of source indices that should be excluded from debugging.
+  #[napi(getter, js_name = "x_google_ignoreList")]
+  pub fn x_google_ignore_list(&self) -> Option<Vec<u32>> {
+    self.json.x_google_ignore_list.clone()
+  }
+
   /// Returns the source map as a JSON string.
   #[napi]
   pub fn to_string(&self) -> String {
@@ -262,6 +271,7 @@ impl BindingSourceMap {
       sources_content: self.json.sources_content.as_ref(),
       names: &self.json.names,
       mappings: &self.json.mappings,
+      x_google_ignore_list: self.json.x_google_ignore_list.as_ref(),
     };
     serde_json::to_string(&serializable).expect("should be able to serialize source map")
   }
@@ -338,6 +348,12 @@ impl BindingDecodedMap {
 
     lines
   }
+
+  /// The list of source indices that should be excluded from debugging.
+  #[napi(getter, js_name = "x_google_ignoreList")]
+  pub fn x_google_ignore_list(&self) -> Option<Vec<u32>> {
+    self.json.x_google_ignore_list.clone()
+  }
 }
 
 #[napi]
@@ -346,6 +362,7 @@ pub struct BindingMagicString<'a> {
   utf16_to_byte_mapper: Utf16ToByteMapper,
   pub(crate) offset: i64,
   indent_exclusion_ranges: Option<IndentExclusionRanges>,
+  ignore_list: bool,
 }
 
 #[napi]
@@ -357,12 +374,14 @@ impl BindingMagicString<'_> {
     let offset = opts.offset.unwrap_or(0);
     let indent_exclusion_ranges =
       opts.indent_exclusion_ranges.map(IndentExclusionRanges::from_either);
-    let magic_string_options = MagicStringOptions { filename: opts.filename };
+    let ignore_list = opts.ignore_list.unwrap_or(false);
+    let magic_string_options = MagicStringOptions { filename: opts.filename, ignore_list };
     Self {
       inner: MagicString::with_options(source, magic_string_options),
       utf16_to_byte_mapper,
       offset,
       indent_exclusion_ranges,
+      ignore_list,
     }
   }
 
@@ -379,6 +398,11 @@ impl BindingMagicString<'_> {
   #[napi(getter)]
   pub fn indent_exclusion_ranges(&self) -> Option<Either<Vec<Vec<i64>>, Vec<i64>>> {
     self.indent_exclusion_ranges.as_ref().map(IndentExclusionRanges::to_either)
+  }
+
+  #[napi(getter)]
+  pub fn ignore_list(&self) -> bool {
+    self.ignore_list
   }
 
   #[napi(getter)]
@@ -701,6 +725,7 @@ impl BindingMagicString<'_> {
       utf16_to_byte_mapper: self.utf16_to_byte_mapper.clone(),
       offset: self.offset,
       indent_exclusion_ranges: self.indent_exclusion_ranges.clone(),
+      ignore_list: self.ignore_list,
     }
   }
 
@@ -732,6 +757,7 @@ impl BindingMagicString<'_> {
       utf16_to_byte_mapper: self.utf16_to_byte_mapper.clone(),
       offset: self.offset,
       indent_exclusion_ranges: self.indent_exclusion_ranges.clone(),
+      ignore_list: self.ignore_list,
     })
   }
 
@@ -877,7 +903,7 @@ impl BindingMagicString<'_> {
 
     // If file option is provided, reconstruct the source map with the file field
     let source_map = if let Some(file) = opts.file {
-      SourceMap::new(
+      let mut m = SourceMap::new(
         Some(Arc::from(file)),
         source_map.get_names().map(Arc::clone).collect(),
         None,
@@ -885,7 +911,11 @@ impl BindingMagicString<'_> {
         source_map.get_source_contents().map(|x| x.map(Arc::clone)).collect(),
         source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
         None,
-      )
+      );
+      if self.ignore_list {
+        m.set_x_google_ignore_list(vec![0]);
+      }
+      m
     } else {
       source_map
     };
@@ -914,7 +944,7 @@ impl BindingMagicString<'_> {
 
     // If file option is provided, reconstruct the source map with the file field
     let source_map = if let Some(file) = opts.file {
-      SourceMap::new(
+      let mut m = SourceMap::new(
         Some(Arc::from(file)),
         source_map.get_names().map(Arc::clone).collect(),
         None,
@@ -922,7 +952,11 @@ impl BindingMagicString<'_> {
         source_map.get_source_contents().map(|x| x.map(Arc::clone)).collect(),
         source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
         None,
-      )
+      );
+      if self.ignore_list {
+        m.set_x_google_ignore_list(vec![0]);
+      }
+      m
     } else {
       source_map
     };

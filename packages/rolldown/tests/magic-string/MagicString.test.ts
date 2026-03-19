@@ -14,7 +14,7 @@ describe('MagicString', () => {
       assert.equal(s.filename, 'foo.js');
     });
 
-    it.skip('stores ignore-list hint', () => {
+    it('stores ignore-list hint', () => {
       const s = new MagicString('abc', { ignoreList: true });
 
       assert.equal(s.ignoreList, true);
@@ -471,7 +471,7 @@ describe('MagicString', () => {
       assert.equal(map.mappings, 'IAAA');
     });
 
-    it.skip('generates x_google_ignoreList', () => {
+    it('generates x_google_ignoreList', () => {
       const s = new MagicString('function foo(){}', {
         ignoreList: true,
       });
@@ -479,6 +479,20 @@ describe('MagicString', () => {
       const map = s.generateMap({ source: 'foo.js' });
       assert.deepEqual(map.sources, ['foo.js']);
       assert.deepEqual(map.x_google_ignoreList, [0]);
+    });
+
+    it('preserves x_google_ignoreList when file is set', () => {
+      const s = new MagicString('function foo(){}', {
+        ignoreList: true,
+      });
+
+      const map = s.generateMap({ source: 'foo.js', file: 'out.js' });
+      assert.deepEqual(map.x_google_ignoreList, [0]);
+      assert.equal(map.file, 'out.js');
+
+      const decoded = s.generateDecodedMap({ source: 'foo.js', file: 'out.js' });
+      assert.deepEqual(decoded.x_google_ignoreList, [0]);
+      assert.equal(decoded.file, 'out.js');
     });
 
     it('generates segments per word boundary with hires "boundary"', () => {

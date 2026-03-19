@@ -58,7 +58,14 @@ impl MagicString<'_> {
       });
     });
 
-    source_builder.into_source_map()
+    let mut source_map = source_builder.into_source_map();
+
+    if self.ignore_list {
+      // The source is always at index 0 for a single MagicString instance.
+      source_map.set_x_google_ignore_list(vec![0]);
+    }
+
+    source_map
   }
 }
 

@@ -42,10 +42,10 @@
  *   - generateDecodedMap(options?): BindingDecodedMap (returns object with decoded mappings array)
  *
  * NOT supported (will be skipped):
- *   - constructor options: ignoreList — filename, offset, and indentExclusionRanges ARE supported
+ *   - constructor options: filename, offset, indentExclusionRanges, and ignoreList ARE supported
  *   - addSourcemapLocation (not in string_wizard)
  *   - storeName option in overwrite/update (not exposed in binding)
- *   - x_google_ignoreList / ignoreList in generateMap output (not in string_wizard)
+ *   - x_google_ignoreList / ignoreList in generateMap output is now supported
  *   - replace/replaceAll with regex or function replacer
  */
 
@@ -71,7 +71,7 @@ const SKIP_DESCRIBE_BLOCKS = [
   // Note: 'snip' is now supported
   // Note: 'lastChar' is now supported
   // Note: 'lastLine' is now supported
-  // Note: 'options' is now partially supported (filename works, ignoreList doesn't)
+  // Note: 'options' is now supported (filename, offset, indentExclusionRanges, ignoreList)
   // Note: 'insert' is now supported (throws deprecated error as expected)
   // Note: 'slice' is now supported
   // Note: 'clone' is now supported (some individual tests skipped)
@@ -84,7 +84,7 @@ const SKIP_TESTS = [
   'should throw when given non-string content', // error handling differs
   'should throw', // error handling differs
   // options-specific skips
-  'stores ignore-list hint', // ignoreList option not supported
+  // Note: 'stores ignore-list hint' is now supported (ignoreList option)
   // Note: 'indentExclusionRanges' is now supported (constructor option + getter + clone)
   'sourcemapLocations', // not supported
   'should return cloned content', // clone-related
@@ -152,7 +152,7 @@ const SKIP_TESTS = [
   'should generate a sourcemap using specified locations', // addSourcemapLocation not implemented
   'should recover original names', // storeName option not implemented
   'generates a map with trimmed content', // trim sourcemap behavior differs
-  'generates x_google_ignoreList', // ignoreList not implemented
+  // Note: 'generates x_google_ignoreList' is now supported
   'generates segments per word boundary with hires "boundary" in the next line', // multiline boundary mappings differ
   'generates a correct source map with update using a content containing a new line', // multiline update mappings differ
   'generates a correct source map with update using content ending with a new line', // multiline update mappings differ

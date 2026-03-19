@@ -1449,6 +1449,8 @@ export declare class BindingDecodedMap {
    * Each line is an array of segments, where each segment is [generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex?].
    */
   get mappings(): Array<Array<Array<number>>>
+  /** The list of source indices that should be excluded from debugging. */
+  get x_google_ignoreList(): Array<number> | null
 }
 
 export declare class BindingDevEngine {
@@ -1481,6 +1483,7 @@ export declare class BindingMagicString {
   get original(): string
   get filename(): string | null
   get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
+  get ignoreList(): boolean
   get offset(): number
   set offset(offset: number)
   replace(from: string, to: string): this
@@ -1683,6 +1686,8 @@ export declare class BindingSourceMap {
   get names(): Array<string>
   /** The VLQ-encoded mappings string. */
   get mappings(): string
+  /** The list of source indices that should be excluded from debugging. */
+  get x_google_ignoreList(): Array<number> | null
   /** Returns the source map as a JSON string. */
   toString(): string
   /** Returns the source map as a base64-encoded data URL. */
@@ -2298,6 +2303,7 @@ export interface BindingMagicStringOptions {
   filename?: string
   offset?: number
   indentExclusionRanges?: Array<Array<number>> | Array<number>
+  ignoreList?: boolean
 }
 
 export type BindingMakeAbsoluteExternalsRelative =

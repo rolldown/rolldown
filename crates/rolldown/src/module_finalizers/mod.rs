@@ -526,6 +526,26 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ))
   }
 
+  /// Try to inline a const enum member access like `Direction.Up` → `0`.
+  /// Resolves the identifier to its canonical symbol, then looks up the enum member
+  /// value in the owning module's `enum_member_value_map`.
+  fn try_inline_enum_member(
+    &self,
+    ident: &ast::IdentifierReference<'_>,
+    property_name: &str,
+  ) -> Option<ast::Expression<'ast>> {
+    let ref_id = ident.reference_id.get()?;
+    let symbol_id = self.scope.scoping().get_reference(ref_id).symbol_id()?;
+    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+
+    let module = self.ctx.modules[canonical_ref.owner].as_normal()?;
+    let member_map = module.ecma_view.enum_member_value_map.get(&canonical_ref.symbol)?;
+    let meta = member_map.get(property_name)?;
+
+    Some(meta.value.to_expression(AstBuilder::new(self.alloc)))
+  }
+
   fn var_declaration_to_expr_seq_and_bindings(
     &self,
     decl: &mut ast::VariableDeclaration<'ast>,

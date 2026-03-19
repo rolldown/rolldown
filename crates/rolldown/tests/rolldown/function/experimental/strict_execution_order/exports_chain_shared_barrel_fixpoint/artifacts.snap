@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.js
+var init_dep = __esmMin((() => {}));
+
+//#endregion
+//#region leaf.js
+var foo;
+var init_leaf = __esmMin((() => {
+	init_dep();
+	;
+	foo = 1;
+}));
+
+//#endregion
+//#region inner.js
+var inner_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var init_inner = __esmMin((() => {
+	init_leaf();
+}));
+
+//#endregion
+//#region ns.js
+var init_ns = __esmMin((() => {
+	init_inner();
+}));
+
+//#endregion
+//#region outer.js
+var init_outer = __esmMin((() => {
+	init_ns();
+}));
+
+//#endregion
+//#region main.js
+var init_main = __esmMin((() => {
+	init_outer();
+}));
+
+//#endregion
+init_main();
+export { inner_exports as star };
+```

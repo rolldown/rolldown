@@ -44,7 +44,7 @@ describe('MagicString', () => {
   });
 
   describe('(ap|pre)pend(Left|Right)', () => {
-    it.skip('preserves intended order', () => {
+    it('preserves intended order', () => {
       const s = new MagicString('0123456789');
 
       s.appendLeft(5, 'A');
@@ -78,7 +78,7 @@ describe('MagicString', () => {
       assert.equal(s.slice(5), '])cba>}56789');
     });
 
-    it.skip('preserves intended order at beginning of string', () => {
+    it('preserves intended order at beginning of string', () => {
       const s = new MagicString('x');
 
       s.appendLeft(0, '1');
@@ -89,7 +89,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), '4213x');
     });
 
-    it.skip('preserves intended order at end of string', () => {
+    it('preserves intended order at end of string', () => {
       const s = new MagicString('x');
 
       s.appendRight(1, '1');
@@ -961,7 +961,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'abcdefyes');
     });
 
-    it.skip('should allow contiguous but non-overlapping replacements', () => {
+    it('should allow contiguous but non-overlapping replacements', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.overwrite(3, 6, 'DEF');
@@ -1102,7 +1102,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'abcdefyes');
     });
 
-    it.skip('should allow contiguous but non-overlapping replacements', () => {
+    it('should allow contiguous but non-overlapping replacements', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.update(3, 6, 'DEF');
@@ -1311,7 +1311,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'abhi');
     });
 
-    it.skip('should not remove content inserted after the end of removed range', () => {
+    it('should not remove content inserted after the end of removed range', () => {
       const s = new MagicString('ab.c;');
 
       s.prependRight(0, '(');
@@ -1801,7 +1801,7 @@ describe('MagicString', () => {
   });
 
   describe('hasChanged', () => {
-    it.skip('should works', () => {
+    it('should works', () => {
       const s = new MagicString(' abcde   fghijkl ');
 
       assert.ok(!s.hasChanged());

@@ -99,13 +99,14 @@ const SKIP_TESTS = [
   'storeName', // storeName option not supported
   'contentOnly', // contentOnly option not supported
   'should remove overlapping ranges', // overlapping replacements cause panic
-  'overlapping replacements', // overlapping replacements cause panic
+  'error if overlapping replacements', // overlapping replacements cause panic
+  // Note: 'should allow contiguous but non-overlapping replacements' now works
   'already been edited', // Cannot split a chunk that has already been edited
   'non-zero-length inserts inside', // causes split chunk panic
   'should remove modified ranges', // causes split chunk panic
 
   'should replace then remove', // causes split chunk panic
-  'preserves intended order', // complex append/prepend ordering with slice
+  // Note: 'preserves intended order' now works (append/prepend ordering with slice)
   // Note: 'excluded characters' (indent exclude option) is now supported
   // remove-specific skips
   'should remove everything', // edge case
@@ -122,7 +123,7 @@ const SKIP_TESTS = [
   // remove-specific complex cases
   // Note: "removes across moved content" appears in both remove and reset sections
   // The reset version passes, so we handle this with a special transformation below
-  'should not remove content inserted', // complex interaction
+  // Note: 'should not remove content inserted after the end of removed range' now works
   'should remove interior inserts', // causes panic
   // Note: 'should provide a useful error' now works — errors are properly thrown, not panicked
   // slice-specific skips
@@ -132,9 +133,8 @@ const SKIP_TESTS = [
   // Note: 'should clone filename info' now works since filename is supported
   // Note: 'should clone indentExclusionRanges' now works since indentExclusionRanges is supported
   'should clone sourcemapLocations', // uses sourcemapLocations
-  // hasChanged tests that use clone
-  'should not report change if content is identical', // uses clone
-  'should works', // uses clone
+  // Note: 'should works' (hasChanged) now works — clone preserves hasChanged state
+  // Note: 'should not report change if content is identical' no longer in upstream tests
   // replace/replaceAll tests that use regex or function replacer
   'works with global regex replace', // regex not supported
   'works with global regex replace $$', // regex not supported

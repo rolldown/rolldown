@@ -51,9 +51,15 @@ impl<'a> Iterator for HashPlaceholderIter<'a> {
     loop {
       let left_pos = self.finder.find(&self.s.as_bytes()[self.start..])?;
       let left_pos = self.start + left_pos;
-      // Bound the search for `}~` to the maximum possible placeholder length
+      // Bound the search for `}~` to the maximum possible placeholder length.
+      // Use byte-level slicing to avoid panics when `search_end` falls inside a
+      // multi-byte UTF-8 character (e.g. Chinese/Japanese characters in the source).
       let search_end = (left_pos + MAX_HASH_SIZE + HASH_PLACEHOLDER_OVERHEAD).min(self.s.len());
-      if let Some(right_pos) = self.s[left_pos..search_end].find(HASH_PLACEHOLDER_RIGHT) {
+      let search_bytes = &self.s.as_bytes()[left_pos..search_end];
+      if let Some(right_pos) = memchr::memmem::find(search_bytes, HASH_PLACEHOLDER_RIGHT.as_bytes())
+      {
+        // `right_pos` points to the start of `}~` within `search_bytes`; advance
+        // past those two ASCII bytes so the end index is always char-boundary-safe.
         let right_pos = left_pos + right_pos + HASH_PLACEHOLDER_RIGHT.len();
         let placeholder = &self.s[left_pos..right_pos];
         self.start = right_pos;
@@ -244,4 +250,28 @@ fn test_find_hash_placeholders() {
   assert_eq!(placeholders.len(), 2);
   assert_eq!(placeholders[0], (0, 8, "!~{000}~"));
   assert_eq!(placeholders[1], (8, 16, "!~{001}~"));
+}
+
+#[test]
+fn test_find_hash_placeholders_multibyte_chars() {
+  // Regression test: Chinese/Japanese characters (multi-byte UTF-8) in the
+  // surrounding source text must not cause a panic when `search_end` lands
+  // inside a multi-byte character.  The placeholder '!~{001}~' is still found
+  // correctly.
+  let s = "import{C as e}from\"./vue.runtime.esm-bundler-!~{001}~.js\";// 中文级别文字";
+  let placeholders: Vec<_> = find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER).collect();
+  assert_eq!(placeholders.len(), 1);
+  assert_eq!(placeholders[0].2, "!~{001}~");
+
+  // Test where the multi-byte character falls right at the search boundary
+  // (26 bytes after `!~{`).  Construct a string where a 3-byte Chinese char
+  // straddles byte offset `left_pos + MAX_HASH_SIZE + OVERHEAD`.
+  let prefix = "!~{001}~"; // placeholder itself
+  let filler = "x".repeat(20); // padding so next `!~{` is far enough
+  let chinese = "级"; // 3-byte UTF-8 char
+  let s = format!("{prefix}{filler}!~{{002}}{chinese}");
+  // No `}~` closing the second `!~{`, so only one placeholder should be found.
+  let placeholders: Vec<_> = find_hash_placeholders(&s, &HASH_PLACEHOLDER_LEFT_FINDER).collect();
+  assert_eq!(placeholders.len(), 1);
+  assert_eq!(placeholders[0].2, "!~{001}~");
 }

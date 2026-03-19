@@ -3,7 +3,7 @@ import { defineDevConfig } from '@rolldown/test-dev-server';
 export default defineDevConfig({
   platform: 'browser',
   dev: {
-    port: 3000,
+    port: 3636,
   },
   build: {
     input: {

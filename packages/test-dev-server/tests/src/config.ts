@@ -15,6 +15,12 @@ export const CONFIG = {
     tmpPlaygroundDir: nodePath.join(testsDir, 'tmp-playground'),
     hmrFullBundleModeDir: nodePath.join(testsDir, 'playground/hmr-full-bundle-mode'),
     tmpFullBundleModeDir: nodePath.join(testsDir, 'tmp-playground/hmr-full-bundle-mode'),
+    lazyCompilationDir: nodePath.join(testsDir, 'playground/lazy-compilation'),
+    tmpLazyCompilationDir: nodePath.join(testsDir, 'tmp-playground/lazy-compilation'),
+  },
+  ports: {
+    hmrFullBundleMode: 3636,
+    lazyCompilation: 3637,
   },
   watch: getDevWatchOptionsForCi(),
 };

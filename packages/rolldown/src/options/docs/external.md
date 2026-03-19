@@ -41,9 +41,11 @@ export default {
 ##### Function
 
 ```js
+import path from 'node:path';
+
 export default {
   external: (id) => {
-    return !id.startsWith('.') && !id.startsWith('/') && !id.includes('\\');
+    return !id.startsWith('.') && !path.isAbsolute(id);
   },
 };
 ```
@@ -73,6 +75,6 @@ export default {
   external: [/^vue/, /^react/, /^@mui/],
 
   // All bare module IDs (not starting with `.` or `/` or `C:\`)
-  external: /^[^./](?!:\\)/,
+  external: /^[^./](?!:[/\\])/,
 };
 ```

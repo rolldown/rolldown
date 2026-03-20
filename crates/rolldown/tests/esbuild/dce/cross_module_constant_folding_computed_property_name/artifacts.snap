@@ -18,7 +18,6 @@ console.log({
 ## enum-entry_ts.js
 
 ```js
-//#endregion
 //#region enum-entry.ts
 console.log({
 	[123]: 123,

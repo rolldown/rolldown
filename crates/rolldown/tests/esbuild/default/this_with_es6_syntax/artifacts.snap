@@ -118,7 +118,9 @@ console.log(void 0);
 //#region es6-ns-export-enum.ts
 let ns$3;
 (function(_ns) {
-	_ns.Foo = Foo;
+	_ns.Foo = /* @__PURE__ */ function(Foo) {
+		return Foo;
+	}({});
 })(ns$3 || (ns$3 = {}));
 console.log(void 0);
 //#endregion

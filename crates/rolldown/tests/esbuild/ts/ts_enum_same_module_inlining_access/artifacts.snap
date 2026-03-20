@@ -7,6 +7,30 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.ts
+var c_num = /* @__PURE__ */ function(c_num) {
+	c_num[c_num["x"] = 123] = "x";
+	return c_num;
+}(c_num || {});
+var d_num = /* @__PURE__ */ function(d_num) {
+	d_num[d_num["x"] = 123] = "x";
+	return d_num;
+}(d_num || {});
+var e_num = /* @__PURE__ */ function(e_num) {
+	e_num[e_num["x"] = 123] = "x";
+	return e_num;
+}(e_num || {});
+var c_str = /* @__PURE__ */ function(c_str) {
+	c_str["x"] = "abc";
+	return c_str;
+}(c_str || {});
+var d_str = /* @__PURE__ */ function(d_str) {
+	d_str["x"] = "abc";
+	return d_str;
+}(d_str || {});
+var e_str = /* @__PURE__ */ function(e_str) {
+	e_str["x"] = "abc";
+	return e_str;
+}(e_str || {});
 inlined = [
 	123,
 	123,

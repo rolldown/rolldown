@@ -9,7 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region nested-number.ts
 let foo;
 (function(_foo) {
-	_foo.x = x;
+	_foo.x = /* @__PURE__ */ function(x) {
+		x[x["y"] = 0] = "y";
+		x[x["yy"] = 0] = "yy";
+		return x;
+	}({});
 })(foo || (foo = {}));
 (function(_foo2) {
 	_foo2.x = /* @__PURE__ */ function(x) {
@@ -35,7 +39,10 @@ export { foo };
 //#region nested-propagation.ts
 let n;
 (function(_n) {
-	_n.a = a;
+	_n.a = /* @__PURE__ */ function(a) {
+		a[a["b"] = 100] = "b";
+		return a;
+	}({});
 })(n || (n = {}));
 (function(_n2) {
 	_n2.x = /* @__PURE__ */ function(x) {
@@ -65,7 +72,11 @@ export { n };
 //#region nested-string.ts
 let foo;
 (function(_foo) {
-	_foo.x = x;
+	_foo.x = /* @__PURE__ */ function(x) {
+		x["y"] = "a";
+		x["yy"] = "a";
+		return x;
+	}({});
 })(foo || (foo = {}));
 (function(_foo2) {
 	_foo2.x = /* @__PURE__ */ function(x) {

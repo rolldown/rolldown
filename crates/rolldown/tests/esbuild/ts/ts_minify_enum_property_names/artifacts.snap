@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#endregion
 //#region entry.ts
 var SameFileGood = /* @__PURE__ */ function(SameFileGood) {
 	SameFileGood["STR"] = "str 1";

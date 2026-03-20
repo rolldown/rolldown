@@ -13,7 +13,7 @@ use oxc::{
   span::{GetSpan, GetSpanMut, SPAN},
 };
 use rolldown_common::{
-  AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, GetLocalDb,
+  AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind,
   ImportRecordIdx, ImportRecordMeta, InlineConstMode, MemberExprRefResolution, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
   OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolRef,
@@ -519,7 +519,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<ast::Expression<'ast>> {
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
     let module = self.ctx.modules[canonical_ref.owner].as_normal()?;
-    let member_map = module.ecma_view.enum_member_value_map.get(&canonical_ref.symbol)?;
+    let symbol_name = canonical_ref.name(self.ctx.symbol_db);
+    let member_map = module.ecma_view.enum_member_value_map.get(symbol_name)?;
     let meta = member_map.get(property_name)?;
     Some(meta.value.to_expression(AstBuilder::new(self.alloc)))
   }

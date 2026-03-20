@@ -6,15 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region enums.ts
-let a_num = /* @__PURE__ */ function(a_num) {
-	a_num[a_num["x"] = 123] = "x";
-	return a_num;
-}({});
-let b_num = /* @__PURE__ */ function(b_num) {
-	b_num[b_num["x"] = 123] = "x";
-	return b_num;
-}({});
 let c_num = /* @__PURE__ */ function(c_num) {
 	c_num[c_num["x"] = 123] = "x";
 	return c_num;
@@ -26,14 +17,6 @@ let d_num = /* @__PURE__ */ function(d_num) {
 let e_num = /* @__PURE__ */ function(e_num) {
 	e_num[e_num["x"] = 123] = "x";
 	return e_num;
-}({});
-let a_str = /* @__PURE__ */ function(a_str) {
-	a_str["x"] = "abc";
-	return a_str;
-}({});
-let b_str = /* @__PURE__ */ function(b_str) {
-	b_str["x"] = "abc";
-	return b_str;
 }({});
 let c_str = /* @__PURE__ */ function(c_str) {
 	c_str["x"] = "abc";
@@ -50,10 +33,10 @@ let e_str = /* @__PURE__ */ function(e_str) {
 //#endregion
 //#region entry.ts
 inlined = [
-	a_num.x,
-	b_num["x"],
-	a_str.x,
-	b_str["x"]
+	123,
+	123,
+	"abc",
+	"abc"
 ];
 not_inlined = [
 	c_num?.x,

@@ -232,19 +232,6 @@ impl PreProcessEcmaAst {
       self.recreate_scoping(&mut None, program)
     });
 
-    // Resolve name-based enum values to SymbolIds from the rebuilt Scoping.
-    // The name-based intermediate is needed because SymbolIds change across Scoping rebuilds.
-    let enum_member_values = {
-      let root_scope = scoping.root_scope_id();
-      let mut resolved = FxHashMap::default();
-      for (enum_name, members) in enum_member_values {
-        if let Some(sym_id) = scoping.get_binding(root_scope, enum_name.as_str().into()) {
-          resolved.insert(sym_id, members);
-        }
-      }
-      resolved
-    };
-
     Ok(ParseToEcmaAstResult {
       ast,
       scoping,

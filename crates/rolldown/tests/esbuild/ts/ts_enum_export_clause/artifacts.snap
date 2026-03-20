@@ -6,15 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-var B = /* @__PURE__ */ function(B) {
-	B[B["B"] = 2] = "B";
-	return B;
-}(B || {});
-var D = /* @__PURE__ */ function(D) {
-	D[D["D"] = 4] = "D";
-	return D;
-}(D || {});
-//#endregion
 //#region entry.ts
 console.log([
 	1,

@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## foo.js
 
 ```js
-//#endregion
 //#region foo.ts
 console.log({
 	"should have comments": [1, 1],

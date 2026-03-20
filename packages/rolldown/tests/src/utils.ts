@@ -58,11 +58,7 @@ export function testsDir(...joined: string[]) {
   return projectDir('tests', ...joined);
 }
 
-assert.deepEqual(testsDir().split(path.sep).slice(-3), [
-  'packages',
-  'rolldown',
-  'tests',
-]);
+assert.deepEqual(testsDir().split(path.sep).slice(-3), ['packages', 'rolldown', 'tests']);
 
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

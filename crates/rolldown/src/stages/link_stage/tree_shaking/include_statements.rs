@@ -484,13 +484,10 @@ impl LinkStage<'_> {
   ) -> FxHashSet<ModuleIdx> {
     let mut graph: DiGraphMap<ModuleIdx, ()> = DiGraphMap::new();
 
-    // TODO: Since we don't skip visited node, If a project has a lot of dynamic entries,
-    // and they are all connected, the performance may be impacted. But this seems rare in real world,
-    // we could optimize it later if needed.
+    let mut visited = FxHashSet::default();
     for entry in dynamic_entries.iter() {
       let mut entry_module_idx = entry.idx;
       let cur = entry_module_idx;
-      let mut visited = FxHashSet::default();
       self.construct_dynamic_entry_graph(&mut graph, &mut visited, &mut entry_module_idx, cur);
     }
     let mut cycled_dynamic_entries = FxHashSet::default();

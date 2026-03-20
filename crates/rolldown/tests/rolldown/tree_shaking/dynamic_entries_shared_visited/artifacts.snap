@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region a.js
+const a = "a_" + shared;
+//#endregion
+export { a };
+
+```
+
+## b.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region b.js
+const b = "b_" + shared;
+//#endregion
+export { b };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+const loadA = () => import("./a.js");
+const loadB = () => import("./b.js");
+//#endregion
+export { loadA, loadB };
+
+```
+
+## shared.js
+
+```js
+//#region shared.js
+const shared = "shared";
+//#endregion
+export { shared as t };
+
+```

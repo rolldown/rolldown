@@ -63,7 +63,7 @@ jobs:
         run: just build-rolldown-release
 
       - name: Run benchmarks
-        run: pnpm --filter bench run bench-ci
+        run: vp run --filter bench bench-ci
 
       - name: Show/Update benchmark result
         uses: benchmark-action/github-action-benchmark@a7bc2366eda11037936ea57d811a43b3418d3073 # v1.21.0

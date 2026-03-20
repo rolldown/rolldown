@@ -81,10 +81,10 @@ jobs:
           path: packages/rolldown/artifacts
 
       - name: Create rolldown/npm dirs
-        run: pnpm --filter rolldown exec napi create-npm-dirs
+        run: vp exec --filter rolldown napi create-npm-dirs
 
       - name: Move Binding Artifacts
-        run: pnpm --filter rolldown artifacts
+        run: vp run --filter rolldown artifacts
 
       - name: List Rolldown Bindings
         run: ls -R ./packages/rolldown/npm
@@ -128,7 +128,7 @@ jobs:
       - name: Canary/Nightly Versioning
         run: |
           node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
-          pnpm --filter rolldown prepublishOnly --skip-optional-publish
+          vp run --filter rolldown prepublishOnly --skip-optional-publish
         env:
           ROLLDOWN_VERSION: ${{ steps.rolldown-version.outputs.content }}
 
@@ -138,4 +138,4 @@ jobs:
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
 
       - name: Release
-        run: pnpx pkg-pr-new publish --compact --pnpm './packages/rolldown/npm/*' './packages/rolldown' './packages/browser' './packages/debug' './packages/pluginutils'
+        run: vp exec pkg-pr-new publish --compact --pnpm './packages/rolldown/npm/*' './packages/rolldown' './packages/browser' './packages/debug' './packages/pluginutils'

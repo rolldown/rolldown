@@ -45,7 +45,7 @@ jobs:
       - run: just bump-packages ${VERSION}
 
       - name: Regenerate binding.js after version bump
-        run: pnpm --filter rolldown build-binding
+        run: vp run --filter rolldown build-binding
 
       - name: Generate changelog via git cliff
         id: changelog

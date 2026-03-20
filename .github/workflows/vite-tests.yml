@@ -63,4 +63,4 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
       - name: Run Vite Tests
-        run: pnpm run --filter vite-tests test
+        run: vp run --filter vite-tests test

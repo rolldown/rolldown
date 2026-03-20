@@ -26,6 +26,7 @@ jobs:
 
       - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
         with:
+          node-version: ${{ inputs.node-version }}
           cache: true
 
       - name: Download Native Rolldown Build
@@ -35,16 +36,10 @@ jobs:
           path: ./packages
 
       - name: Build `@rolldown/test-dev-server`
-        run: pnpm --filter '@rolldown/test-dev-server' build
+        run: vp run --filter '@rolldown/test-dev-server' build
 
       - name: Install Playwright
-        run: pnpm playwright install chromium
-
-      - name: Setup Node${{ inputs.node-version }} For Testing
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          node-version: ${{ inputs.node-version }}
-          package-manager-cache: false
+        run: vp exec playwright install chromium
 
       - name: Dev Server Test
-        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
+        run: vp run --filter '@rolldown/test-dev-server-tests' test

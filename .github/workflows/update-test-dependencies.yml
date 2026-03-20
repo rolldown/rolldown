@@ -117,8 +117,8 @@ jobs:
       - name: Update rollup snapshots
         if: steps.check-update.outputs.update_needed == 'true'
         run: |
-          pnpm install
-          pnpm run --filter rollup-tests test --update
+          vp install
+          vp run --filter rollup-tests test --update
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
@@ -338,8 +338,8 @@ jobs:
       - name: Generate esbuild tests
         if: steps.check-update.outputs.update_needed == 'true'
         run: |
-          pnpm install
-          pnpm run --filter scripts gen-esbuild-tests all
+          vp install
+          vp run --filter scripts gen-esbuild-tests all
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'

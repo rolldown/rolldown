@@ -6,6 +6,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+//#endregion
+//#region entry.ts
+var SameFileGood = /* @__PURE__ */ function(SameFileGood) {
+	SameFileGood["STR"] = "str 1";
+	SameFileGood[SameFileGood["NUM"] = 123] = "NUM";
+	return SameFileGood;
+}(SameFileGood || {});
+var SameFileBad = /* @__PURE__ */ function(SameFileBad) {
+	SameFileBad["PROTO"] = "__proto__";
+	SameFileBad["CONSTRUCTOR"] = "constructor";
+	SameFileBad["PROTOTYPE"] = "prototype";
+	return SameFileBad;
+}(SameFileBad || {});
 shouldNotBeComputed(class {
 	[100] = 100;
 	"200" = 200;

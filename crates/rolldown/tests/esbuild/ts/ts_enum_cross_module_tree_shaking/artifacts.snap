@@ -6,19 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region enums.ts
-let a_DROP = /* @__PURE__ */ function(a_DROP) {
-	a_DROP[a_DROP["x"] = 1] = "x";
-	return a_DROP;
-}({});
-let b_DROP = /* @__PURE__ */ function(b_DROP) {
-	b_DROP[b_DROP["x"] = 2] = "x";
-	return b_DROP;
-}({});
-let c_DROP = /* @__PURE__ */ function(c_DROP) {
-	c_DROP["x"] = "";
-	return c_DROP;
-}({});
 let a_keep = /* @__PURE__ */ function(a_keep) {
 	a_keep[a_keep["x"] = false] = "x";
 	return a_keep;
@@ -39,9 +26,9 @@ let e_keep = {};
 //#endregion
 //#region entry.ts
 console.log([
-	a_DROP.x,
-	b_DROP["x"],
-	c_DROP.x
+	1,
+	2,
+	""
 ]);
 console.log([
 	a_keep.x,

@@ -6,29 +6,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region lib.ts
-let Bar = /* @__PURE__ */ function(Bar) {
-	Bar["bar1"] = "xyz";
-	Bar["bar2"] = "x y z";
-	return Bar;
-}({});
 //#endregion
 //#region entry.ts
 inlined = [
 	obj["abc"],
-	obj[Bar.bar1],
+	obj["xyz"],
 	obj?.["abc"],
-	obj?.[Bar.bar1],
+	obj?.["xyz"],
 	obj?.prop["abc"],
-	obj?.prop[Bar.bar1]
+	obj?.prop["xyz"]
 ];
 notInlined = [
 	obj["a b c"],
-	obj[Bar.bar2],
+	obj["x y z"],
 	obj?.["a b c"],
-	obj?.[Bar.bar2],
+	obj?.["x y z"],
 	obj?.prop["a b c"],
-	obj?.prop[Bar.bar2]
+	obj?.prop["x y z"]
 ];
 //#endregion
 

@@ -30,7 +30,6 @@ console.log(["string"], ["foobar"], [
 ## enum-entry.js
 
 ```js
-//#endregion
 //#region enum-entry.ts
 console.log(["string"], ["foobar"], [
 	false,
@@ -55,7 +54,6 @@ console.log(["string"], ["foobar"], [
 ## nested-entry.js
 
 ```js
-//#endregion
 //#region nested-entry.ts
 console.log({
 	"should be foobarbaz": "foobarbaz",

@@ -51,7 +51,6 @@ console.log([
 ## enum-entry.js
 
 ```js
-//#endregion
 //#region enum-entry.ts
 console.log([
 	6,
@@ -97,7 +96,6 @@ console.log([
 ## nested-entry.js
 
 ```js
-//#endregion
 //#region nested-entry.ts
 console.log({
 	"should be 4": 4,

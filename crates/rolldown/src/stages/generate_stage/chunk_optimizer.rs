@@ -1029,8 +1029,7 @@ impl GenerateStage<'_> {
         self.link_output.metas[runtime_module_idx].depended_runtime_helper,
       );
       module_is_assigned.set_bit(runtime_module_idx);
-    } else if let Some(current_runtime_chunk_idx) =
-      chunk_graph.module_to_chunk[runtime_module_idx]
+    } else if let Some(current_runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_module_idx]
     {
       // The runtime module is already assigned to a chunk (typically the entry chunk).
       // If facade elimination added runtime helper dependencies to OTHER chunks, those
@@ -1042,11 +1041,12 @@ impl GenerateStage<'_> {
       // depend on common chunks (which may be the runtime-dependent chunks). If the runtime
       // is already in a dedicated common chunk (e.g. from manual code splitting), there's
       // no cycle risk since common chunks don't import from their dependents.
-      let is_entry_chunk =
-        matches!(chunk_graph.chunk_table[current_runtime_chunk_idx].kind, ChunkKind::EntryPoint { .. });
-      let has_external_runtime_dependents = runtime_dependent_chunks
-        .iter()
-        .any(|&chunk_idx| chunk_idx != current_runtime_chunk_idx);
+      let is_entry_chunk = matches!(
+        chunk_graph.chunk_table[current_runtime_chunk_idx].kind,
+        ChunkKind::EntryPoint { .. }
+      );
+      let has_external_runtime_dependents =
+        runtime_dependent_chunks.iter().any(|&chunk_idx| chunk_idx != current_runtime_chunk_idx);
 
       if is_entry_chunk && has_external_runtime_dependents {
         // Remove runtime module from its current chunk

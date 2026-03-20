@@ -14,7 +14,7 @@ import assert from 'node:assert';
 // an entry chunk and other chunks need runtime helpers, breaking the potential cycle.
 
 const distDir = path.join(import.meta.dirname, 'dist');
-const files = fs.readdirSync(distDir).filter(f => f.endsWith('.js'));
+const files = fs.readdirSync(distDir).filter((f) => f.endsWith('.js'));
 
 for (const file of files) {
   const content = fs.readFileSync(path.join(distDir, file), 'utf8');

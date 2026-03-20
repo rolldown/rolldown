@@ -1,3 +1,3 @@
-exports.helper = function() {
+exports.helper = function () {
   return 'cjs-helper';
 };

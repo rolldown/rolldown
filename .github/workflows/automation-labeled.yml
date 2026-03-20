@@ -48,7 +48,21 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           issue-number: ${{ github.event.issue.number }}
-          body: 'Hello @${{ github.event.issue.user.login }}. Please provide a [minimal reproduction](https://stackoverflow.com/help/minimal-reproducible-example) using a GitHub repository or [StackBlitz](https://stackblitz.com/fork/github/rolldown/rolldown-starter-stackblitz?file=README.md). Issues marked with `needs-reproduction` will be closed if they have no activity within 14 days. Thanks!'
+          body: |
+            Hello @${{ github.event.issue.user.login }} 👋
+
+            Please provide a [minimal reproduction](https://stackoverflow.com/help/minimal-reproducible-example) using a GitHub repository or [StackBlitz](https://stackblitz.com/fork/github/rolldown/rolldown-starter-stackblitz?file=README.md). This helps us understand and resolve your issue much faster.
+
+            **A good reproduction should be:**
+            - **Minimal** – include only the code necessary to demonstrate the issue
+            - **Complete** – contain everything needed to run and observe the problem
+            - **Reproducible** – consistently show the issue with clear steps
+
+            Issues marked with `needs-reproduction` will be closed if there is no activity within 14 days.
+
+            For more context on why this is required, please read: https://antfu.me/posts/why-reproductions-are-required
+
+            Thanks!
           reactions-edit-mode: 'replace'
           edit-mode: replace
 

@@ -38,5 +38,8 @@ jobs:
       - name: Build `@rolldown/test-dev-server`
         run: vp run --filter '@rolldown/test-dev-server' build
 
+      - name: Install Playwright
+        run: vp exec playwright install chromium
+
       - name: Dev Server Test
         run: vp run --filter '@rolldown/test-dev-server-tests' test

@@ -9,11 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region nested-number.ts
 let foo;
 (function(_foo) {
-	_foo.x = /* @__PURE__ */ function(x) {
-		x[x["y"] = 0] = "y";
-		x[x["yy"] = 0] = "yy";
-		return x;
-	}({});
+	_foo.x = x;
 })(foo || (foo = {}));
 (function(_foo2) {
 	_foo2.x = /* @__PURE__ */ function(x) {
@@ -25,7 +21,7 @@ let foo;
 	let x;
 	(function(_x) {
 		console.log(y, z);
-		console.log(x.y, x.z);
+		console.log(0, x.z);
 	})(x || (x = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
 //#endregion
@@ -39,10 +35,7 @@ export { foo };
 //#region nested-propagation.ts
 let n;
 (function(_n) {
-	_n.a = /* @__PURE__ */ function(a) {
-		a[a["b"] = 100] = "b";
-		return a;
-	}({});
+	_n.a = a;
 })(n || (n = {}));
 (function(_n2) {
 	_n2.x = /* @__PURE__ */ function(x) {
@@ -72,11 +65,7 @@ export { n };
 //#region nested-string.ts
 let foo;
 (function(_foo) {
-	_foo.x = /* @__PURE__ */ function(x) {
-		x["y"] = "a";
-		x["yy"] = "a";
-		return x;
-	}({});
+	_foo.x = x;
 })(foo || (foo = {}));
 (function(_foo2) {
 	_foo2.x = /* @__PURE__ */ function(x) {
@@ -88,7 +77,7 @@ let foo;
 	let x;
 	(function(_x) {
 		console.log(y, z);
-		console.log(x.y, x.z);
+		console.log("a", x.z);
 	})(x || (x = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
 //#endregion

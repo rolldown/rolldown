@@ -1,7 +1,7 @@
 use std::{borrow::Cow, path::Path};
 
 use json_escape_simd::escape;
-use oxc::{semantic::Scoping, span::CompactStr, span::SourceType as OxcSourceType, syntax::symbol::SymbolId};
+use oxc::{semantic::Scoping, span::CompactStr, span::SourceType as OxcSourceType};
 use oxc::syntax::constant_value::ConstantValue;
 use rolldown_common::{
   ModuleDefFormat, ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes,
@@ -43,9 +43,9 @@ pub struct ParseToEcmaAstResult {
   /// Whether JSX syntax should be preserved in the output, determined per-module
   /// during transformation based on the resolved tsconfig.
   pub preserve_jsx: bool,
-  /// Enum member constant values extracted from semantic analysis.
-  /// Keyed by enum declaration SymbolId (from the rebuilt Scoping) → Vec of (member_name, value).
-  pub enum_member_values: FxHashMap<SymbolId, Vec<(CompactStr, ConstantValue)>>,
+  /// Enum member constant values extracted from semantic analysis, keyed by enum name.
+  /// Used by the finalizer to inline cross-module enum member accesses (e.g., `Direction.Up` → `0`).
+  pub enum_member_values: FxHashMap<CompactStr, Vec<(CompactStr, ConstantValue)>>,
 }
 
 pub async fn parse_to_ecma_ast(

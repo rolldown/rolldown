@@ -516,8 +516,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
       _ => {
-        if !self.ctx.module.ecma_view.enum_member_value_map.is_empty() {
-          // Try to inline enum member accesses (e.g., `Direction.Up` → `0`, `ns.c.x` → `"c"`)
+        // Try to inline enum member accesses (e.g., `Direction.Up` → `0`, `ns.c.x` → `"c"`)
+        // This handles both same-module and cross-module enum inlining.
+        // Cross-module: `try_inline_enum_member` resolves via canonical ref to the target module.
+        if self.ctx.has_enum_inlining {
           if let ast::Expression::StaticMemberExpression(member_expr) = expr {
             if let ast::Expression::Identifier(ident) = &member_expr.object {
               if let Some(new_expr) =
@@ -559,7 +561,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           *expr = new_expr;
           // After namespace rewriting (e.g., `ns.c.x` → `c.x`), check if the result
           // is an enum member access that can be inlined.
-          if !self.ctx.module.ecma_view.enum_member_value_map.is_empty() {
+          if self.ctx.has_enum_inlining {
             if let ast::Expression::StaticMemberExpression(member_expr) = expr {
               if let ast::Expression::Identifier(ident) = &member_expr.object {
                 if let Some(inlined) =

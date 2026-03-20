@@ -110,7 +110,9 @@ jobs:
         run: pip install setuptools
         if: ${{ matrix.os == 'macos-latest' }}
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Build Binding
         run: ${{ matrix.build }}
@@ -180,7 +182,9 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Build `@rolldown/pluginutils`
         run: pnpm --filter '@rolldown/pluginutils' build
@@ -204,7 +208,9 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
@@ -261,7 +267,9 @@ jobs:
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
@@ -306,7 +314,9 @@ jobs:
           restore-cache: false
           save-cache: false
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Build `@rolldown/debug`
         # This binary is only used to build the node package itself. It's won't be published.

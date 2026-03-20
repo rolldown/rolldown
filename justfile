@@ -8,13 +8,10 @@ _default:
   just --list -u
 
 setup:
-  just check-setup-prerequisites
-  # Rust related setup
+  curl -fsSL https://vite.plus | bash
+  vp install
   cargo install cargo-binstall
   cargo binstall cargo-insta cargo-deny cargo-shear@1.11.2 typos-cli -y
-  # Node.js related setup
-  corepack enable
-  pnpm install
   just setup-submodule
   just setup-bench
   @echo "✅✅✅ Setup complete!"
@@ -32,10 +29,10 @@ update-submodule:
 # --- `roll` series commands will run all relevant commands in one go.
 
 # Run all relevant commands.
-roll: pnpm-install roll-rust roll-node roll-repo update-esbuild-diff
+roll: roll-rust roll-node roll-repo update-esbuild-diff
 
 # Run all relevant commands for Rust.
-roll-rust: pnpm-install test-rust lint-rust
+roll-rust: test-rust lint-rust
 
 # Run all relevant commands for Node.js.
 roll-node: test-node lint-node
@@ -44,7 +41,7 @@ roll-node: test-node lint-node
 roll-repo: lint-repo
 
 update-esbuild-diff *args="":
-    pnpm --filter=scripts esbuild-snap-diff {{ args }}
+  vp run --filter=scripts esbuild-snap-diff {{ args }}
 
 # --- `test` series commands aim to run tests and update snapshots automatically.
 test: test-rust test-node update-generated-code
@@ -59,7 +56,7 @@ test-update-node:
   just test-node --update
 
 # Run Rust tests.
-test-rust: pnpm-install
+test-rust:
   cargo test --workspace --exclude rolldown_binding
 
 # Run Node.js tests for Rolldown.
@@ -84,11 +81,11 @@ test-node-hmr *args: build build-test-dev-server
   just test-node-hmr-only {{ args }}
 
 test-node-hmr-only *args:
-  pnpm run --filter @rolldown/test-dev-server-tests test {{ args }}
+  vp run --filter @rolldown/test-dev-server-tests test {{ args }}
 
 # Run Vite's test suite to check Rolldown's behaviors.
 test-vite: # We don't use `test-node-vite` because it's not expected to run in `just test-node`.
-  pnpm run --filter vite-tests test
+  vp run --filter vite-tests test
 
 # --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.
 
@@ -97,12 +94,12 @@ t-node: t-node-rolldown t-node-rollup
 
 # Run Rolldown's tests without building Rolldown.
 t-node-rolldown *args="":
-  pnpm run --filter rolldown-tests test:main {{ args }}
-  pnpm run --filter rolldown-tests test:watcher {{ args }}
+  vp run --filter rolldown-tests test:main {{ args }}
+  vp run --filter rolldown-tests test:watcher {{ args }}
 
 # Run Rollup's test suite without building Rolldown.
 t-node-rollup *args="":
-  pnpm run --filter rollup-tests test {{ args }}
+  vp run --filter rollup-tests test {{ args }}
 
 # Run specific rust test without enabling extended tests.
 [unix]
@@ -126,12 +123,11 @@ fix-rust:
 
 # Fix linting issues for Node.js files.
 fix-node:
-  pnpm lint-code -- --fix
+  vp lint --fix
 
 # Fix formatting issues for all files except Rust files.
 fix-repo:
-  pnpm run fmt
-
+  vp fmt
 
 # --- `lint` series commands aim to catch linting and type checking issues.
 
@@ -147,71 +143,68 @@ lint-rust: clippy
 clippy:
   cargo clippy --workspace --all-targets -- --deny warnings
 
-
 lint-node:
-  pnpm lint-code
-  pnpm type-check
-  pnpm lint-knip
-  pnpm lint-publint
+  vp check
+  vp run type-check
+  vp run lint-knip
+  vp run lint-publint
 
 lint-repo:
   typos # Check if the spelling is correct.
   cargo ls-lint # Check if the file names are correct.
-  pnpm fmt-check # Check if files are formatted correctly.
+  vp fmt # Check if files are formatted correctly.
 
 # --- `build` series commands aim to provide a easy way to build the project.
-
-
 
 # Build both `@rolldown/pluginutils` and rolldown
 build: build-pluginutils build-rolldown
 
 # Build `@rolldown/debug` located in `packages/debug`.
 build-rolldown-debug:
-  pnpm run --filter "@rolldown/debug" build
+  vp run --filter "@rolldown/debug" build
 
 # Only build `rolldown` located in `packages/rolldown` itself without triggering building binding `crates/rolldown_binding`.
 build-glue:
-  pnpm run --filter rolldown build-js-glue
+  vp run --filter rolldown build-js-glue
 
 # Only build `.node` binding located in `packages/rolldown`.
 build-rolldown-binding:
-  pnpm run --filter rolldown build-binding
+  vp run --filter rolldown build-binding
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding.
 build-rolldown: build-pluginutils
-  pnpm run --filter rolldown build-native:debug
+  vp run --filter rolldown build-native:debug
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.wasm` binding for WASI.
 build-rolldown-wasi: build-pluginutils
-  pnpm run --filter rolldown build-wasi:debug
+  vp run --filter rolldown build-wasi:debug
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in release mode.
 build-rolldown-release: build-pluginutils
-  pnpm run --filter rolldown build-native:release
+  vp run --filter rolldown build-native:release
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in profile mode.
 build-rolldown-profile:
-  pnpm run --filter rolldown build-native:profile
+  vp run --filter rolldown build-native:profile
 
 build-rolldown-memory-profile:
-  pnpm run --filter rolldown build-native:memory-profile
+  vp run --filter rolldown build-native:memory-profile
 
 # Build `@rolldown/browser` located in `packages/browser` itself and its `.wasm` binding.
 build-browser: build-pluginutils
-  pnpm run --filter "@rolldown/browser" build:debug
+  vp run --filter "@rolldown/browser" build:debug
 
 # Build `@rolldown/browser` located in `packages/browser` itself and its `.wasm` binding in release mode.
 build-browser-release: build-pluginutils
-  pnpm run --filter "@rolldown/browser" build:release
+  vp run --filter "@rolldown/browser" build:release
 
 # Build `@rolldown/pluginutils` located in `packages/pluginutils`.
 build-pluginutils:
-  pnpm run --filter "@rolldown/pluginutils" build
+  vp run --filter "@rolldown/pluginutils" build
 
 # Build `@rolldown/test-dev-server` located in `packages/test-dev-server`.
 build-test-dev-server:
-  pnpm run --filter @rolldown/test-dev-server build
+  vp run --filter @rolldown/test-dev-server build
 
 # --- `bench` series commands aim to provide a easy way to run benchmarks.
 
@@ -219,23 +212,15 @@ bench-rust:
   cargo bench -p bench
 
 bench-node:
-  pnpm --filter bench run bench
+  vp --filter bench run bench
 
 bench-node-par:
-  pnpm --filter bench exec node ./benches/par.js
-
+  vp --filter bench exec node ./benches/par.js
 
 # --- Misc
 
 bump-packages *args:
   node --import @oxc-node/core/register ./scripts/misc/bump-version.js {{ args }}
-
-check-setup-prerequisites:
-  node ./scripts/misc/setup-prerequisites/node.js
-
-# Trigger pnpm install. This is used the ensure up-to-date dependencies before running any commands.
-pnpm-install:
-  pnpm install
 
 # Regenerate auto-generated code files from templates (must run after core changes).
 # This generates:
@@ -248,4 +233,4 @@ update-generated-code:
 
 # Run the `rolldown` cli using node.
 run *args:
-  pnpm rolldown {{ args }}
+  ./node_modules/.bin/rolldown {{ args }}

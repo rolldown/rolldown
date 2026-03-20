@@ -148,7 +148,9 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Download Native Rolldown Build
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -157,13 +159,13 @@ jobs:
           path: ./packages
 
       - name: Build `@rolldown/test-dev-server`
-        run: pnpm --filter '@rolldown/test-dev-server' build
+        run: vp run --filter '@rolldown/test-dev-server' build
 
       - name: Type Check
-        run: pnpm type-check
+        run: vp run type-check
 
       - name: Node Type Test
-        run: pnpm run --filter rolldown-tests test:types
+        run: vp run --filter rolldown-tests test:types
 
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]
@@ -239,10 +241,12 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Test `@rolldown/pluginutils`
-        run: pnpm --filter '@rolldown/pluginutils' test
+        run: vp run --filter '@rolldown/pluginutils' test
 
   node-validation:
     name: Node Validation
@@ -259,7 +263,9 @@ jobs:
           cache-key: native-build
           save-cache: false
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
@@ -280,13 +286,13 @@ jobs:
         run: just build-pluginutils
 
       - name: Lint Code
-        run: pnpm lint-code
+        run: vp lint
 
       - name: Lint publint
-        run: pnpm lint-publint
+        run: vp run lint-publint
 
       - name: Lint exports & dependencies
-        run: pnpm lint-knip
+        run: vp run lint-knip
 
       - name: Validate workspace package
         run: node scripts/misc/published-package-check.mjs
@@ -304,7 +310,9 @@ jobs:
           save-cache: ${{ github.ref_name == 'main' }}
           components: rustfmt
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Lint Filename
         run: cargo ls-lint

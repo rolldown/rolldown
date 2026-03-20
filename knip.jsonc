@@ -6,6 +6,7 @@
     ".": {
       "project": [],
       "ignoreDependencies": [
+        "oxfmt",
         "@oxc-project/runtime",
         "cjs-module-lexer",
         "remove-unused-vars",

@@ -106,7 +106,9 @@ jobs:
           save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+        uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - if: steps.check-update.outputs.update_needed == 'true'
         name: Build Native Rolldown
@@ -217,7 +219,9 @@ jobs:
           save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+        uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Run Test
         if: steps.check-update.outputs.update_needed == 'true'
@@ -327,7 +331,9 @@ jobs:
           save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+        uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Generate esbuild tests
         if: steps.check-update.outputs.update_needed == 'true'

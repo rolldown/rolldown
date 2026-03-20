@@ -5,11 +5,9 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings --type-aware",
+    "prepare": "vp config",
     "lint-knip": "knip",
     "lint-publint": "pnpm run -r --aggregate-output publint",
-    "fmt": "oxfmt",
-    "fmt-check": "oxfmt --check",
     "build": "echo \"Use just build\"",
     "build:release": "echo \"Use just build native release\"",
     "test": "echo \"Use just test-node\"",
@@ -17,32 +15,21 @@
     "type-check": "tsc -b tsconfig.json",
     "docs": "pnpm --filter rolldown-docs run dev",
     "docs:build": "pnpm --filter rolldown-docs run generate && pnpm --filter rolldown-docs run build",
-    "docs:preview": "pnpm --filter rolldown-docs run preview",
-    "prepare": "husky",
-    "preinstall": "npx only-allow pnpm"
+    "docs:preview": "pnpm --filter rolldown-docs run preview"
   },
   "devDependencies": {
     "@oxc-node/core": "catalog:",
     "@oxc-project/runtime": "catalog:",
     "@types/node": "catalog:",
     "cjs-module-lexer": "^2.1.0",
-    "husky": "^9.1.7",
     "knip": "^5.61.3",
-    "lint-staged": "^16.1.2",
     "oxfmt": "^0.41.0",
-    "oxlint": "^1.31.0",
-    "oxlint-tsgolint": "0.17.1",
     "playwright-chromium": "^1.56.1",
     "publint": "^0.3.16",
     "remove-unused-vars": "^0.0.12",
     "rolldown": "workspace:*",
-    "typescript": "catalog:"
-  },
-  "lint-staged": {
-    "*": "oxfmt --no-error-on-unmatched-pattern",
-    "*.@(js|ts|tsx)": [
-      "pnpm lint-code -- --fix"
-    ]
+    "typescript": "catalog:",
+    "vite-plus": "^0.1.13"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

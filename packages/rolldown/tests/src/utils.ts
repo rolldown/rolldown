@@ -58,8 +58,7 @@ export function testsDir(...joined: string[]) {
   return projectDir('tests', ...joined);
 }
 
-assert.deepEqual(testsDir().split(path.sep).slice(-4), [
-  'rolldown',
+assert.deepEqual(testsDir().split(path.sep).slice(-3), [
   'packages',
   'rolldown',
   'tests',

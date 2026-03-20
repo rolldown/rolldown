@@ -1,2 +1,2 @@
-import { foo } from 'virtual'
-console.log(foo)
+import { foo } from 'virtual';
+console.log(foo);

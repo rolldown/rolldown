@@ -56,24 +56,24 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
   let first_map = sourcemap_chain.first().expect("sourcemap_chain should not be empty");
   let chain_without_last = &sourcemap_chain[..sourcemap_chain.len() - 1];
 
-  let sourcemap_and_lookup_table = chain_without_last
+  // Pre-compute lookup tables in reverse order so we avoid reversing on every token lookup.
+  let sourcemap_and_lookup_table: Vec<_> = chain_without_last
     .iter()
-    .map(|sourcemap| (sourcemap, sourcemap.generate_lookup_table()))
-    .collect::<Vec<_>>();
+    .rev()
+    .map(|sourcemap| (*sourcemap, sourcemap.generate_lookup_table()))
+    .collect();
 
-  let tokens = last_map
+  let tokens: Box<[Token]> = last_map
     .get_source_view_tokens()
     .filter_map(|token| {
-      let original_token = sourcemap_and_lookup_table.iter().rev().try_fold(
-        token,
-        |token, (sourcemap, lookup_table)| {
+      let original_token =
+        sourcemap_and_lookup_table.iter().try_fold(token, |token, (sourcemap, lookup_table)| {
           sourcemap.lookup_source_view_token(
             lookup_table,
             token.get_src_line(),
             token.get_src_col(),
           )
-        },
-      );
+        });
       original_token.map(|original_token| {
         Token::new(
           token.get_dst_line(),
@@ -85,15 +85,15 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
         )
       })
     })
-    .collect::<Vec<_>>();
+    .collect();
 
   SourceMap::new(
     None,
-    first_map.get_names().map(Arc::clone).collect::<Vec<_>>(),
+    first_map.get_names().cloned().collect(),
     None,
-    first_map.get_sources().map(Arc::clone).collect::<Vec<_>>(),
-    first_map.get_source_contents().map(|x| x.map(Arc::clone)).collect::<Vec<_>>(),
-    tokens.into_boxed_slice(),
+    first_map.get_sources().cloned().collect(),
+    first_map.get_source_contents().map(|x| x.map(Arc::clone)).collect(),
+    tokens,
     None,
   )
 }

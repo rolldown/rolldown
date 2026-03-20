@@ -3,7 +3,6 @@ use std::{sync::Arc, thread};
 use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc_index::IndexVec;
-#[cfg(not(target_os = "macos"))]
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
@@ -61,10 +60,7 @@ impl NormalizedScanStageOutput {
     Self {
       module_table: self.module_table.clone(),
       index_ecma_ast: {
-        #[cfg(not(target_os = "macos"))]
         let iter = self.index_ecma_ast.raw.par_iter();
-        #[cfg(target_os = "macos")]
-        let iter = self.index_ecma_ast.raw.iter();
 
         let index_ecma_ast = iter
           .map(|ast| ast.as_ref().map(rolldown_ecmascript::EcmaAst::clone_with_another_arena))

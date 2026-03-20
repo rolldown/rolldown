@@ -1422,6 +1422,7 @@ export declare class BindingBundler {
 
 export declare class BindingCallableBuiltinPlugin {
   constructor(plugin: BindingBuiltinPlugin)
+  getOrder(hookName: string): string | null
   resolveId(id: string, importer?: string | undefined | null, options?: BindingHookJsResolveIdOptions | undefined | null): Promise<BindingHookJsResolveIdOutput | undefined | null>
   load(id: string): Promise<BindingHookJsLoadOutput | undefined | null>
   transform(code: string, id: string, options: BindingTransformHookExtraArgs): Promise<BindingHookTransformOutput | undefined | null>

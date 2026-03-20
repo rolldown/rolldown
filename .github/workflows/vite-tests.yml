@@ -35,7 +35,7 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'test: vite-tests')
     strategy:
       matrix:
-        target: [ubuntu-latest, windows-latest]
+        target: [namespace-profile-linux-x64-default, windows-latest]
       fail-fast: false
     runs-on: ${{ matrix.target }}
     timeout-minutes: 30

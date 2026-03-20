@@ -28,7 +28,7 @@ concurrency:
 jobs:
   update-rollup:
     name: Update Rollup Submodule
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     permissions:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
@@ -145,7 +145,7 @@ jobs:
 
   update-test262:
     name: Update Test262 Submodule
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     permissions:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
@@ -253,7 +253,7 @@ jobs:
 
   update-esbuild:
     name: Update esbuild Version
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     permissions:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request

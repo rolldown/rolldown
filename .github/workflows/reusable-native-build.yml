@@ -16,7 +16,7 @@ jobs:
   run:
     name: Build Rolldown Native
     if: ${{ inputs.changed }}
-    runs-on: ${{ inputs.os }}
+    runs-on: ${{ inputs.os == 'ubuntu-latest' && 'namespace-profile-linux-x64-default' || inputs.os == 'macos-latest' && 'namespace-profile-mac-default' || inputs.os }}
     timeout-minutes: 15
     steps:
       - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1

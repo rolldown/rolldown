@@ -18,7 +18,7 @@ on:
 jobs:
   compile-time-and-binary-size:
     name: Compile Time and Binary Size
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     outputs:
       time: ${{ steps.run.outputs.COMPILE_TIME }}
       binary_size: ${{ steps.run.outputs.BINARY_SIZE }}
@@ -46,7 +46,7 @@ jobs:
   metric:
     name: Metric
     needs: [compile-time-and-binary-size]
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-x64-default
     steps:
       - name: Checkout rolldown metric repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

@@ -100,3 +100,7 @@ Licenses of these projects are listed in [THIRD-PARTY-LICENSE](/THIRD-PARTY-LICE
 
 [badge-binary-size-windows]: [https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-win32-x64-msvc/latest]
 [badge-binary-size-macos]: [https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-darwin-arm64/latest]
+
+## Sponsors
+
+Thanks to [namespace.so](https://namespace.so) for powering our CI/CD pipelines with fast, free macOS and Linux runners.

@@ -17,62 +17,62 @@ jobs:
         include:
           - os: macos-latest
             target: x86_64-apple-darwin
-            build: pnpm ci:build-release-binding --target x86_64-apple-darwin
+            build: vp run ci:build-release-binding --target x86_64-apple-darwin
 
           - os: macos-latest
             target: aarch64-apple-darwin
-            build: pnpm ci:build-release-binding --target aarch64-apple-darwin
+            build: vp run ci:build-release-binding --target aarch64-apple-darwin
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            build: pnpm ci:build-release-binding --target x86_64-pc-windows-msvc
+            build: vp run ci:build-release-binding --target x86_64-pc-windows-msvc
 
           - os: windows-latest
             target: aarch64-pc-windows-msvc
-            build: pnpm ci:build-release-binding --target aarch64-pc-windows-msvc
+            build: vp run ci:build-release-binding --target aarch64-pc-windows-msvc
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            build: pnpm ci:build-release-binding --target x86_64-unknown-linux-gnu --use-napi-cross
+            build: vp run ci:build-release-binding --target x86_64-unknown-linux-gnu --use-napi-cross
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            build: pnpm ci:build-release-binding --target x86_64-unknown-linux-musl -x
+            build: vp run ci:build-release-binding --target x86_64-unknown-linux-musl -x
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            build: pnpm ci:build-release-binding --use-napi-cross --target aarch64-unknown-linux-gnu
+            build: vp run ci:build-release-binding --use-napi-cross --target aarch64-unknown-linux-gnu
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-ohos
-            build: pnpm ci:build-release-binding --target aarch64-unknown-linux-ohos
+            build: vp run ci:build-release-binding --target aarch64-unknown-linux-ohos
 
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
-            build: pnpm ci:build-release-binding --target armv7-unknown-linux-gnueabihf --use-napi-cross
+            build: vp run ci:build-release-binding --target armv7-unknown-linux-gnueabihf --use-napi-cross
 
           - os: ubuntu-latest
             target: aarch64-linux-android
-            build: pnpm ci:build-release-binding --target aarch64-linux-android
+            build: vp run ci:build-release-binding --target aarch64-linux-android
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
-            build: pnpm ci:build-release-binding -x --target aarch64-unknown-linux-musl
+            build: vp run ci:build-release-binding -x --target aarch64-unknown-linux-musl
 
           - os: ubuntu-latest
             target: s390x-unknown-linux-gnu
             build: |
               export CFLAGS="-fuse-ld=lld"
-              pnpm ci:build-release-binding --target s390x-unknown-linux-gnu --use-napi-cross
+              vp run ci:build-release-binding --target s390x-unknown-linux-gnu --use-napi-cross
 
           - os: ubuntu-latest
             target: powerpc64le-unknown-linux-gnu
-            build: pnpm ci:build-release-binding --target powerpc64le-unknown-linux-gnu --use-napi-cross
+            build: vp run ci:build-release-binding --target powerpc64le-unknown-linux-gnu --use-napi-cross
 
           - os: ubuntu-latest
             target: wasm32-wasip1-threads
             build: |
-              pnpm --filter rolldown build-binding:wasi:release
+              vp run --filter rolldown build-binding:wasi:release
 
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
@@ -110,7 +110,9 @@ jobs:
         run: pip install setuptools
         if: ${{ matrix.os == 'macos-latest' }}
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Build Binding
         run: ${{ matrix.build }}
@@ -162,7 +164,7 @@ jobs:
             sudo corepack enable
             sudo npm i -g corepack@latest # use a newer corepack due to https://github.com/nodejs/corepack/issues/612
             pnpm install --ignore-scripts
-            pnpm ci:build-release-binding --target x86_64-unknown-freebsd
+            pnpm run ci:build-release-binding --target x86_64-unknown-freebsd
             rm -rf node_modules
             rm -rf target
       - name: Upload artifact
@@ -180,10 +182,12 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Build `@rolldown/pluginutils`
-        run: pnpm --filter '@rolldown/pluginutils' build
+        run: vp run --filter '@rolldown/pluginutils' build
 
       - name: Upload `@rolldown/pluginutils` Artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -204,11 +208,13 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
-        run: pnpm --filter rolldown build-binding
+        run: vp run --filter rolldown build-binding
 
       - name: Determine Version
         if: ${{ inputs.version != 'noop' }}
@@ -224,7 +230,7 @@ jobs:
 
       - name: Build Node Packages
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
-        run: pnpm --filter rolldown build-node
+        run: vp run --filter rolldown build-node
 
       - name: Upload Node Artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -261,11 +267,13 @@ jobs:
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
-        run: pnpm --filter rolldown build-binding
+        run: vp run --filter rolldown build-binding
 
       - name: Determine Version
         if: ${{ inputs.version != 'noop' }}
@@ -281,7 +289,7 @@ jobs:
 
       - name: Build `@rolldown/browser`
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
-        run: pnpm --filter "@rolldown/browser" build:release
+        run: vp run --filter "@rolldown/browser" build:release
 
       - name: Upload `@rolldown/browser` Artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -306,11 +314,13 @@ jobs:
           restore-cache: false
           save-cache: false
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Build `@rolldown/debug`
         # This binary is only used to build the node package itself. It's won't be published.
-        run: pnpm --filter "@rolldown/debug" build
+        run: vp run --filter "@rolldown/debug" build
 
       - name: Upload `@rolldown/debug` Artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0

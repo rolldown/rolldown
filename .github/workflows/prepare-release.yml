@@ -29,7 +29,9 @@ jobs:
         with:
           tool: just
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
 
       - name: Get and bump version
         run: |
@@ -43,7 +45,7 @@ jobs:
       - run: just bump-packages ${VERSION}
 
       - name: Regenerate binding.js after version bump
-        run: pnpm --filter rolldown build-binding
+        run: vp run --filter rolldown build-binding
 
       - name: Generate changelog via git cliff
         id: changelog

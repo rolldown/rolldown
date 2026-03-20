@@ -24,7 +24,10 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
 
-      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: true
 
       - name: Download Native Rolldown Build
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -33,16 +36,10 @@ jobs:
           path: ./packages
 
       - name: Build `@rolldown/test-dev-server`
-        run: pnpm --filter '@rolldown/test-dev-server' build
+        run: vp run --filter '@rolldown/test-dev-server' build
 
       - name: Install Playwright
-        run: pnpm playwright install chromium
-
-      - name: Setup Node${{ inputs.node-version }} For Testing
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          node-version: ${{ inputs.node-version }}
-          package-manager-cache: false
+        run: vp exec playwright install chromium
 
       - name: Dev Server Test
-        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
+        run: vp run --filter '@rolldown/test-dev-server-tests' test

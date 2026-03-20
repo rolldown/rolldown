@@ -1029,6 +1029,48 @@ impl GenerateStage<'_> {
         self.link_output.metas[runtime_module_idx].depended_runtime_helper,
       );
       module_is_assigned.set_bit(runtime_module_idx);
+    } else if let Some(current_runtime_chunk_idx) =
+      chunk_graph.module_to_chunk[runtime_module_idx]
+    {
+      // The runtime module is already assigned to a chunk (typically the entry chunk).
+      // If facade elimination added runtime helper dependencies to OTHER chunks, those
+      // chunks will need to import the helper (e.g. __exportAll) from the runtime's chunk.
+      // When the runtime's chunk also imports from one of those dependent chunks, a circular
+      // dependency is created, causing the helper to be `undefined` at ESM evaluation time.
+      //
+      // This only happens when the runtime is in an entry chunk, because entry chunks
+      // depend on common chunks (which may be the runtime-dependent chunks). If the runtime
+      // is already in a dedicated common chunk (e.g. from manual code splitting), there's
+      // no cycle risk since common chunks don't import from their dependents.
+      let is_entry_chunk =
+        matches!(chunk_graph.chunk_table[current_runtime_chunk_idx].kind, ChunkKind::EntryPoint { .. });
+      let has_external_runtime_dependents = runtime_dependent_chunks
+        .iter()
+        .any(|&chunk_idx| chunk_idx != current_runtime_chunk_idx);
+
+      if is_entry_chunk && has_external_runtime_dependents {
+        // Remove runtime module from its current chunk
+        chunk_graph.chunk_table[current_runtime_chunk_idx]
+          .modules
+          .retain(|&m| m != runtime_module_idx);
+
+        // Create a dedicated runtime chunk
+        let runtime_chunk = Chunk::new(
+          Some("rolldown-runtime".into()),
+          None,
+          index_splitting_info[runtime_module_idx].bits.clone(),
+          vec![],
+          ChunkKind::Common,
+          input_base.clone(),
+          None,
+        );
+        let new_runtime_chunk_idx = chunk_graph.add_chunk(runtime_chunk);
+        chunk_graph.module_to_chunk[runtime_module_idx] = Some(new_runtime_chunk_idx);
+        chunk_graph.chunk_table[new_runtime_chunk_idx].modules.push(runtime_module_idx);
+        chunk_graph.chunk_table[new_runtime_chunk_idx]
+          .depended_runtime_helper
+          .insert(self.link_output.metas[runtime_module_idx].depended_runtime_helper);
+      }
     }
 
     // Restore the included info back to metas

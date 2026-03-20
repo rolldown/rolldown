@@ -275,9 +275,6 @@ importers:
       oxfmt:
         specifier: ^0.41.0
         version: 0.41.0
-      playwright-chromium:
-        specifier: ^1.56.1
-        version: 1.58.2
       publint:
         specifier: ^0.3.16
         version: 0.3.18
@@ -5907,11 +5904,6 @@ packages:
 
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
-
-  playwright-chromium@1.58.2:
-    resolution: {integrity: sha512-SCoQ3hjBs7FfO46CoOtgAUg77BuYwCni1bzQgm47IUyLBTipnGkLxLnaUNRKXvPYO4hAyt8++Z6wVShVnhrzmw==}
-    engines: {node: '>=18'}
-    hasBin: true
 
   playwright-core@1.58.2:
     resolution: {integrity: sha512-yZkEtftgwS8CsfYo7nm0KE8jsvm6i/PTgVtB8DL726wNf6H2IMsDuxCpJj59KDaxCtSnrWan2AeDqM7JBaultg==}
@@ -11544,10 +11536,6 @@ snapshots:
       confbox: 0.2.4
       exsolve: 1.0.8
       pathe: 2.0.3
-
-  playwright-chromium@1.58.2:
-    dependencies:
-      playwright-core: 1.58.2
 
   playwright-core@1.58.2: {}
 

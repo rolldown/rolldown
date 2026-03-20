@@ -24,7 +24,6 @@
     "cjs-module-lexer": "^2.1.0",
     "knip": "^5.61.3",
     "oxfmt": "^0.41.0",
-    "playwright-chromium": "^1.56.1",
     "publint": "^0.3.16",
     "remove-unused-vars": "^0.0.12",
     "rolldown": "workspace:*",

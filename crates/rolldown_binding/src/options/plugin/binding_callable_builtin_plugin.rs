@@ -10,8 +10,8 @@ use rolldown::ModuleType;
 use rolldown_common::WatcherChangeKind;
 use rolldown_plugin::{
   CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput,
-  HookTransformArgs, LoadPluginContext, PluginIdx, Pluginable, SharedTransformPluginContext,
-  TransformPluginContext,
+  HookTransformArgs, LoadPluginContext, PluginIdx, PluginOrder, Pluginable,
+  SharedTransformPluginContext, TransformPluginContext,
 };
 use rolldown_plugin_vite_resolve::ResolveIdOptionsScan;
 use rolldown_utils::unique_arc::UniqueArc;
@@ -51,6 +51,30 @@ impl BindingCallableBuiltinPlugin {
         PluginIdx::new(0),
         None,
       )),
+    })
+  }
+
+  #[napi]
+  pub fn get_order(&self, hook_name: String) -> Option<String> {
+    let meta = match hook_name.as_str() {
+      "resolveId" => self.inner.call_resolve_id_meta(),
+      "load" => self.inner.call_load_meta(),
+      "transform" => self.inner.call_transform_meta(),
+      "watchChange" => self.inner.call_watch_change_meta(),
+      _ => None,
+    };
+    meta.and_then(|meta| {
+      meta.order.map(|order| {
+        (match order {
+          PluginOrder::Pre => "pre",
+          PluginOrder::Post => "post",
+          PluginOrder::PinPost => {
+            debug_assert!(false, "PinPost order is not supported in BindingCallableBuiltinPlugin");
+            "pre"
+          }
+        })
+        .to_string()
+      })
     })
   }
 

@@ -31,8 +31,7 @@ export function makeBuiltinPluginCallable(
 
   const wrappedPlugin: Partial<BindingCallableBuiltinPluginLike> & BuiltinPlugin = plugin;
   for (const key in callablePlugin) {
-    // @ts-expect-error
-    wrappedPlugin[key] = async function (...args) {
+    const wrappedHook = async function (...args: any[]) {
       try {
         // @ts-expect-error
         return await callablePlugin[key](...args);
@@ -52,6 +51,18 @@ export function makeBuiltinPluginCallable(
         );
       }
     };
+
+    const order = callablePlugin.getOrder(key);
+    if (order == undefined) {
+      // @ts-expect-error
+      wrappedPlugin[key] = wrappedHook;
+    } else {
+      // @ts-expect-error
+      wrappedPlugin[key] = {
+        handler: wrappedHook,
+        order,
+      };
+    }
   }
   return wrappedPlugin as BuiltinPlugin & BindingCallableBuiltinPluginLike;
 }

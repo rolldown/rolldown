@@ -249,7 +249,6 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       &self.ctx.options,
       ast.allocator(),
       runtime_flat_options,
-      &rustc_hash::FxHashMap::default(),
     );
     let scan_result = scanner.scan(ast.program())?;
 

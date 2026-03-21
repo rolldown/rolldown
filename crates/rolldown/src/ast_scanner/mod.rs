@@ -121,9 +121,6 @@ pub struct ScanResult {
   pub cjs_reexport_require_spans: Vec<Span>,
   /// Import record indices for `module.exports = require(...)` patterns.
   pub cjs_reexport_import_record_ids: Vec<ImportRecordIdx>,
-  /// Enum member constant values, keyed by enum name → member name → value.
-  /// Used by the finalizer to inline `Direction.Up` style accesses across modules.
-  pub enum_member_value_map: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>>,
 }
 
 bitflags::bitflags! {
@@ -192,7 +189,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     options: &'me SharedOptions,
     allocator: &'ast oxc::allocator::Allocator,
     flat_options: FlatOptions,
-    enum_member_values: &FxHashMap<CompactStr, Vec<(CompactStr, oxc::syntax::constant_value::ConstantValue)>>,
   ) -> Self {
     let root_scope_id = scoping.root_scope_id();
     let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, idx, root_scope_id);
@@ -237,25 +233,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       import_attribute_map: FxHashMap::default(),
       cjs_reexport_require_spans: Vec::new(),
       cjs_reexport_import_record_ids: Vec::new(),
-      enum_member_value_map: FxHashMap::default(),
     };
-
-    // Populate enum_member_value_map from pre-computed enum values (keyed by enum name).
-    for (enum_name, members) in enum_member_values {
-      let member_map = members
-        .iter()
-        .map(|(name, value)| {
-          let rolldown_value = match value {
-            oxc::syntax::constant_value::ConstantValue::Number(n) => ConstantValue::Number(*n),
-            oxc::syntax::constant_value::ConstantValue::String(s) => {
-              ConstantValue::String(s.to_string())
-            }
-          };
-          (name.clone(), ConstExportMeta::new(rolldown_value, false))
-        })
-        .collect();
-      result.enum_member_value_map.insert(enum_name.clone(), member_map);
-    }
 
     Self {
       immutable_ctx: AstScannerImmutableCtx {

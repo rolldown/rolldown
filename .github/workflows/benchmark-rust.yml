@@ -1,7 +1,5 @@
 name: Benchmarks Rust
 
-permissions: {}
-
 on:
   workflow_dispatch:
   push:
@@ -57,82 +55,3 @@ jobs:
           run: cargo codspeed build -p bench --features codspeed && cargo codspeed run -p bench
           token: ${{ secrets.CODSPEED_TOKEN }}
           mode: simulation
-
-  benchmark-rust:
-    permissions:
-      pull-requests: write
-    name: Benchmark Rust
-    if: >
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.draft != true &&
-      !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
-
-      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
-        with:
-          cache: true
-
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
-        with:
-          tools: just, critcmp
-          cache-key: rust-benchmark
-
-      - name: Setup Benchmark Input
-        run: just setup-bench
-
-      - name: Run Bench on PR Branch
-        run: cargo bench -p bench -- --save-baseline pr
-
-      - name: Checkout Target Branch
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          clean: false
-          ref: ${{ github.event.pull_request.base.ref }}
-          persist-credentials: false
-
-      - name: Run Bench on Target Branch
-        run: cargo bench -p bench -- --save-baseline target
-
-      - name: Compare Bench Results
-        id: bench_comparison
-        shell: bash
-        env:
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha  }}
-        run: |
-          echo "### Benchmarks Rust" > output
-          echo "- target: \`${BASE_REF}\`(${BASE_SHA})" >> output
-          echo "- pr: \`${HEAD_REF}\`(${HEAD_SHA})" >> output
-          echo "\`\`\`"  >> output
-          critcmp target pr >> output
-          echo "\`\`\`" >> output
-          cat output
-          comment="$(cat output)"
-          comment="${comment//'%'/%25}"
-          comment="${comment//$'\n'/%0A}"
-          comment="${comment//$'\r'/%0D}"
-          echo "::set-output name=comment::$comment"
-
-      - name: Find Comment
-        uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad # v4.0.0
-        id: find-comment
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: Benchmarks Rust
-
-      - name: Write a new comment
-        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
-        continue-on-error: true
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          comment-id: ${{ steps.find-comment.outputs.comment-id }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: ${{ steps.bench_comparison.outputs.comment }}
-          reactions-edit-mode: 'replace'
-          edit-mode: replace

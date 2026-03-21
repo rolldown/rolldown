@@ -51,9 +51,18 @@ jobs:
       - name: Setup Benchmark Input
         run: just setup-bench
 
+      - name: Build benchmark
+        env:
+          RUSTFLAGS: '-C debuginfo=1 -C strip=none -g -C lto=false -C codegen-units=16 --cfg codspeed'
+        run: |
+          cargo build --release -p bench --bench bench --features codspeed
+          mkdir -p target/codspeed/analysis/bench
+          mv target/release/deps/bench-* target/codspeed/analysis/bench
+          rm target/codspeed/analysis/bench/*.d
+
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@281164b0f014a4e7badd2c02cecad9b595b70537 # v4.11.1
         with:
-          run: cargo codspeed build -p bench --features codspeed && cargo codspeed run -p bench
+          run: cargo codspeed run -p bench
           token: ${{ secrets.CODSPEED_TOKEN }}
           mode: simulation

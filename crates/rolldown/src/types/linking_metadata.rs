@@ -82,6 +82,9 @@ pub struct LinkingMetadata {
   /// also need to link the exported facade symbol.
   pub included_commonjs_export_symbol: FxHashSet<SymbolRef>,
   pub depended_runtime_helper: RuntimeHelper,
+  /// Whether this module needs the runtime chunk loaded for its side effects.
+  /// Set when the runtime module has side effects (e.g. dev/HMR mode).
+  pub has_side_effectful_runtime_dep: bool,
   pub module_namespace_included_reason: ModuleNamespaceIncludedReason,
   /// Tracks which statements in this module are included after tree-shaking.
   /// Each entry corresponds to a statement in the module's `stmt_infos`.

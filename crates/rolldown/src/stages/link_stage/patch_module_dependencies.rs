@@ -127,6 +127,7 @@ impl LinkStage<'_> {
         if runtime_module.side_effects.has_side_effects() {
           for &entry_module_idx in self.entries.keys() {
             self.metas[entry_module_idx].dependencies.insert(runtime_idx);
+            self.metas[entry_module_idx].has_side_effectful_runtime_dep = true;
           }
         }
       }

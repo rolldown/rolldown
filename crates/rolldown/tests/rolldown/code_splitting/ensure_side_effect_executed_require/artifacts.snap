@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as require_shared } from "./shared.js";
+//#region a.js
+require_shared();
+//#endregion
+
+```
+
+## b.js
+
+```js
+import { t as require_shared } from "./shared.js";
+//#region b.js
+require_shared();
+//#endregion
+
+```
+
+## shared.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region shared.js
+var require_shared = /* @__PURE__ */ __commonJSMin((() => {
+	globalThis.sideEffectExecuted = true;
+}));
+//#endregion
+export { require_shared as t };
+
+```

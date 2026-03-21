@@ -490,8 +490,18 @@ impl GenerateStage<'_> {
           }
         }
 
-        // If this is an entry point, make sure we import all chunks belonging to this entry point, even if there are no imports. We need to make sure these chunks are evaluated for their side effects too.
-        if let ChunkKind::EntryPoint { bit: importer_chunk_bit, .. } = &chunk.kind {
+        if let ChunkKind::EntryPoint { module: entry_module_idx, .. } = &chunk.kind {
+          // If the entry module is in a different chunk (facade entry), ensure that chunk
+          // is imported. Without this, the facade would be empty and the entry module's
+          // code would never execute.
+          if let Some(entry_chunk_idx) = chunk_graph.module_to_chunk[*entry_module_idx] {
+            if entry_chunk_idx != chunk_id {
+              index_cross_chunk_imports[chunk_id].insert(entry_chunk_idx);
+              let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
+              imports_from_other_chunks.entry(entry_chunk_idx).or_default();
+            }
+          }
+
           if self.options.preserve_modules {
             let entry_module =
               chunk.entry_module(&self.link_output.module_table).expect("Should have entry module");
@@ -511,63 +521,56 @@ impl GenerateStage<'_> {
                 let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
                 imports_from_other_chunks.entry(importee_chunk_idx).or_default();
               });
-          } else if !self.options.is_strict_execution_order_enabled() {
-            // With strict_execution_order/wrapping, modules aren't executed in loading but on-demand.
-            // So we don't need to do plain imports to address the side effects. It would be ensured
-            // by those `init_xxx()` calls.
-            chunk_graph
-              .chunk_table
-              .iter_enumerated()
-              .filter(|(id, _)| *id != chunk_id)
-              .filter(|(_, importee_chunk)| {
-                importee_chunk.bits.has_bit(*importer_chunk_bit)
-                  && importee_chunk.has_side_effect(&self.link_output.module_table)
-              })
-              .for_each(|(importee_chunk_id, _)| {
-                index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
-                let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
-                imports_from_other_chunks.entry(importee_chunk_id).or_default();
-              });
+          }
+        }
 
-            // Also check direct imports from all modules in this chunk to modules in other chunks.
-            // This handles cases where the bit-based check above misses cross-chunk dependencies:
-            // 1. Entry A imports entry B - entry B's chunk bits don't contain entry A's bit
-            // 2. Dynamic chunk imports a module that was inlined into another chunk
-            //
-            // We need to check ALL modules in the chunk because non-entry modules may be
-            // inlined into the entry chunk and their imports need to be preserved.
-            for &module_idx in &chunk.modules {
-              let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+        // Add bare imports for side-effectful dependencies in other chunks.
+        //
+        // With strict_execution_order/wrapping, modules aren't executed in loading but on-demand.
+        // So we don't need to do plain imports to address the side effects. It would be ensured
+        // by those `init_xxx()` calls.
+        if !self.options.is_strict_execution_order_enabled() {
+          for &module_idx in &chunk.modules {
+            let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+              continue;
+            };
+
+            // From import records.
+            // This adds side-effectful imports as bare imports if necessary.
+            for rec in &module.import_records {
+              if rec.kind != ImportKind::Import {
+                continue;
+              }
+              let Some(importee_module_idx) = rec.resolved_module else {
                 continue;
               };
-              for rec in &module.import_records {
-                if rec.kind == ImportKind::DynamicImport {
-                  continue;
+              if !self.link_output.module_table[importee_module_idx]
+                .side_effects()
+                .has_side_effects()
+              {
+                continue;
+              }
+              let Some(importee_chunk_idx) = chunk_graph.module_to_chunk[importee_module_idx]
+              else {
+                continue;
+              };
+              if importee_chunk_idx == chunk_id {
+                continue;
+              }
+              index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
+              let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
+              imports_from_other_chunks.entry(importee_chunk_idx).or_default();
+            }
+
+            // Runtime module may have side effects (e.g. dev/HMR mode) without an import record.
+            if self.link_output.metas[module_idx].has_side_effectful_runtime_dep {
+              let runtime_idx = self.link_output.runtime.id();
+              if let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_idx] {
+                if runtime_chunk_idx != chunk_id {
+                  index_cross_chunk_imports[chunk_id].insert(runtime_chunk_idx);
+                  let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
+                  imports_from_other_chunks.entry(runtime_chunk_idx).or_default();
                 }
-                let Some(importee_module_idx) = rec.resolved_module else {
-                  continue;
-                };
-                if !self.link_output.module_table[importee_module_idx]
-                  .side_effects()
-                  .has_side_effects()
-                {
-                  continue;
-                }
-                let Some(importee_chunk_idx) = chunk_graph.module_to_chunk[importee_module_idx]
-                else {
-                  continue;
-                };
-                if importee_chunk_idx == chunk_id {
-                  continue;
-                }
-                // Skip if already covered by the bit-based check above
-                let importee_chunk = &chunk_graph.chunk_table[importee_chunk_idx];
-                if importee_chunk.bits.has_bit(*importer_chunk_bit) {
-                  continue;
-                }
-                index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
-                let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
-                imports_from_other_chunks.entry(importee_chunk_idx).or_default();
               }
             }
           }

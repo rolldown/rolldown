@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import "./c2.js";
 import "./b2.js";
 
 ```
@@ -14,7 +13,6 @@ import "./b2.js";
 ## b.js
 
 ```js
-import "./c2.js";
 import "./b2.js";
 
 ```
@@ -22,6 +20,7 @@ import "./b2.js";
 ## b2.js
 
 ```js
+import "./c2.js";
 
 ```
 

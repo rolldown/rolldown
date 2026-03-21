@@ -15,8 +15,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import "./cjs.js";
-import "./b.js";
 import "./a2.js";
 
 ```
@@ -25,6 +23,7 @@ import "./a2.js";
 
 ```js
 import { t as require_cjs } from "./cjs.js";
+import "./b.js";
 require_cjs();
 //#endregion
 
@@ -70,8 +69,6 @@ export { require_cjs as t };
 ## main.js
 
 ```js
-import "./cjs.js";
-import "./b.js";
 import "./a2.js";
 
 ```

@@ -1,0 +1,76 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+import { t as createSorter } from "./sorter2.js";
+//#region index.js
+async function main() {
+	const v3 = await import("./v3.js");
+	return {
+		sorter: createSorter(),
+		v3
+	};
+}
+//#endregion
+export { main };
+
+```
+
+## resolve.js
+
+```js
+//#region resolve.js
+const counter = new SomethingNew();
+function resolveJsFrom(base, id) {
+	return counter;
+}
+//#endregion
+export { resolveJsFrom as t };
+
+```
+
+## sorter.js
+
+```js
+import { t as createSorter } from "./sorter2.js";
+export { createSorter };
+
+```
+
+## sorter2.js
+
+```js
+import { t as resolveJsFrom } from "./resolve.js";
+//#region sorting.js
+function sort(input) {
+	return resolveJsFrom(input, "some-pkg");
+}
+//#endregion
+//#region sorter.js
+function createSorter() {
+	return {
+		sort,
+		resolveJsFrom
+	};
+}
+//#endregion
+export { createSorter as t };
+
+```
+
+## v3.js
+
+```js
+import { t as resolveJsFrom } from "./resolve.js";
+//#region v3.js
+function loadV3() {
+	return resolveJsFrom("v3-dir", "v3-config");
+}
+//#endregion
+export { loadV3 };
+
+```

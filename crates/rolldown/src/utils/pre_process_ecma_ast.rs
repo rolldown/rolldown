@@ -6,16 +6,15 @@ use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, SemanticBuilder, Stats};
 use oxc::span::CompactStr;
-use oxc::syntax::constant_value::ConstantValue;
 use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
   InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
 };
 
-use rolldown_common::NormalizedBundlerOptions;
-use rustc_hash::FxHashMap;
+use rolldown_common::{ConstExportMeta, ConstantValue, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
+use rustc_hash::FxHashMap;
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
 
@@ -92,7 +91,7 @@ impl PreProcessEcmaAst {
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
 
     // Extract enum member values before the transformer converts enums.
-    let enum_member_values = {
+    let enum_member_value_map = {
       let scoping_ref = scoping.as_mut().unwrap();
       // Clone (not take) so the transformer can still read values from Scoping
       // during IIFE generation (e.g., `all_members_evaluable()` checks member values
@@ -102,7 +101,7 @@ impl PreProcessEcmaAst {
       if raw_values.is_empty() {
         FxHashMap::default()
       } else {
-        let mut enum_values: FxHashMap<CompactStr, Vec<(CompactStr, ConstantValue)>> =
+        let mut enum_values: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>> =
           FxHashMap::default();
 
         // Build a reverse map: body_scope_id → enum_name
@@ -122,6 +121,7 @@ impl PreProcessEcmaAst {
         }
 
         // For each enum member with a value, find its parent enum via scope mapping.
+        // Convert to final ConstExportMeta type here (single conversion site).
         for (symbol_id, value) in &raw_values {
           if !scoping_ref.symbol_flags(*symbol_id).is_enum_member() {
             continue;
@@ -130,10 +130,16 @@ impl PreProcessEcmaAst {
           let member_scope = scoping_ref.symbol_scope_id(*symbol_id);
 
           if let Some(enum_name) = scope_to_enum.get(&member_scope) {
+            let rolldown_value = match value {
+              oxc::syntax::constant_value::ConstantValue::Number(n) => ConstantValue::Number(*n),
+              oxc::syntax::constant_value::ConstantValue::String(s) => {
+                ConstantValue::String(s.to_string())
+              }
+            };
             enum_values
               .entry(enum_name.clone())
               .or_default()
-              .push((member_name, value.clone()));
+              .insert(member_name, ConstExportMeta::new(rolldown_value, false));
           }
         }
         enum_values
@@ -238,7 +244,7 @@ impl PreProcessEcmaAst {
       has_lazy_export,
       warnings,
       preserve_jsx,
-      enum_member_values,
+      enum_member_value_map,
     })
   }
 

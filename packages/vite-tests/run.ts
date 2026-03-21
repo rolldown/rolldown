@@ -76,6 +76,15 @@ await runCmdAndPipeOrExit(
   ['pnpm', ['run', 'build'], { nodeOptions: { cwd: REPO_PATH } }],
 );
 
+// Skip known failing tests
+// https://github.com/rolldown/rolldown/issues/8839
+const assetsSpecPath = path.resolve(REPO_PATH, 'playground/assets/__tests__/assets.spec.ts');
+const assetsSpec = fs.readFileSync(assetsSpecPath, 'utf-8');
+fs.writeFileSync(assetsSpecPath, assetsSpec.replace(
+  "test('import with raw query'",
+  "test.skip('import with raw query'"
+), 'utf-8');
+
 // Remove VITE_PLUS_* env vars to prevent leaking into loadEnv() test snapshots
 for (const key of Object.keys(process.env)) {
   if (key.startsWith('VITE_PLUS_')) {

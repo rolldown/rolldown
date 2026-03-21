@@ -7,8 +7,8 @@ export default defineConfig({
   lint: {
     options: {
       denyWarnings: true,
-      // typeAware: true,
-      // typeCheck: true
+      typeAware: true,
+      typeCheck: true,
     },
     plugins: ['import', 'jsdoc', 'unicorn', 'typescript', 'oxc'],
     jsPlugins: ['./scripts/lint/index.ts'],

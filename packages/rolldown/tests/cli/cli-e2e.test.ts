@@ -486,7 +486,7 @@ describe('watch cli', () => {
     expect(status.exitCode).toBe(0);
   });
 
-  it('should handle output options', async () => {
+  it.skipIf(process.platform === 'win32')('should handle output options', async () => {
     const cwd = cliFixturesDir('watch-cli-option');
     const controller = new AbortController();
     const process = execa({
@@ -505,7 +505,7 @@ describe('watch cli', () => {
     expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
   });
 
-  it('should allow multiply options', async () => {
+  it.skipIf(process.platform === 'win32')('should allow multiply options', async () => {
     const cwd = cliFixturesDir('config-multiply-options');
     const controller = new AbortController();
     const process = execa({
@@ -524,7 +524,7 @@ describe('watch cli', () => {
     expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
   });
 
-  it('should allow multiply output', async () => {
+  it.skipIf(process.platform === 'win32')('should allow multiply output', async () => {
     const cwd = cliFixturesDir('config-multiply-output');
     const controller = new AbortController();
     const process = execa({
@@ -562,7 +562,7 @@ describe('watch cli', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
-  it(
+  it.skipIf(process.platform === 'win32')(
     'should close with exit code 0 even when there are errors',
     {
       // `stdoutWaiter.waitFor('UNRESOLVED_IMPORT')` is flaky

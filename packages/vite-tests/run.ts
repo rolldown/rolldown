@@ -76,6 +76,13 @@ await runCmdAndPipeOrExit(
   ['pnpm', ['run', 'build'], { nodeOptions: { cwd: REPO_PATH } }],
 );
 
+// Remove VITE_PLUS_* env vars to prevent leaking into loadEnv() test snapshots
+for (const key of Object.keys(process.env)) {
+  if (key.startsWith('VITE_PLUS_')) {
+    delete process.env[key];
+  }
+}
+
 const failed = []
 
 const failedTestUnit = await runCmdAndPipe(

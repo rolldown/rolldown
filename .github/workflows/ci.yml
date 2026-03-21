@@ -210,6 +210,77 @@ jobs:
       node-version: ${{ matrix.node-version }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
+  vite-test-ubuntu:
+    name: Vite Test
+    needs: [changes, build-rolldown-ubuntu]
+    if: |
+      always() &&
+      (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
+    runs-on: namespace-profile-linux-x64-default
+    timeout-minutes: 30
+    steps:
+      - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
+
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
+
+      - name: Download Native Rolldown Build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rolldown-native-ubuntu-latest
+          path: ./packages
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Run Vite Tests
+        if: ${{ needs.changes.outputs.node-changes == 'true' }}
+        run: |
+          # Unset all VITE_PLUS_* env vars to prevent leaking into loadEnv() test snapshots
+          for var in $(env | grep '^VITE_PLUS_' | cut -d= -f1); do unset "$var"; done
+          vp run --filter vite-tests test
+
+  vite-test-windows:
+    name: Vite Test
+    needs: [changes, build-rolldown-windows]
+    if: |
+      github.ref_name == 'main' &&
+      always() &&
+      (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
+
+      - uses: samypr100/setup-dev-drive@30f0f98ae5636b2b6501e181dfb3631b9974818d # v4.0.0
+        with:
+          drive-size: 12GB
+          drive-format: ReFS
+          env-mapping: |
+            PNPM_HOME,{{ DEV_DRIVE }}/.pnpm
+
+      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
+        with:
+          cache: true
+
+      - name: Download Native Rolldown Build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rolldown-native-windows-latest
+          path: ./packages
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Run Vite Tests
+        if: ${{ needs.changes.outputs.node-changes == 'true' }}
+        run: vp run --filter vite-tests test
+
   build-rolldown-windows:
     needs: changes
     if: github.ref_name == 'main'

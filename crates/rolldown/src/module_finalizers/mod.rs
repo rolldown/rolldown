@@ -463,6 +463,31 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ))
   }
 
+  /// Try to inline an enum member access from an expression. Handles:
+  /// - `Direction.Up` (static member with identifier object)
+  /// - `ns.Direction.Up` (chained static member via namespace import)
+  /// - `Direction["Up"]` (computed member with string literal key)
+  fn try_inline_enum_access(
+    &self,
+    expr: &ast::Expression<'_>,
+  ) -> Option<ast::Expression<'ast>> {
+    match expr {
+      ast::Expression::StaticMemberExpression(member_expr) => {
+        if let ast::Expression::Identifier(ident) = &member_expr.object {
+          self.try_inline_enum_member(ident, &member_expr.property.name)
+        } else {
+          self.try_inline_chained_enum_member(member_expr)
+        }
+      }
+      ast::Expression::ComputedMemberExpression(member_expr) => {
+        let ast::Expression::Identifier(ident) = &member_expr.object else { return None };
+        let ast::Expression::StringLiteral(prop) = &member_expr.expression else { return None };
+        self.try_inline_enum_member(ident, prop.value.as_str())
+      }
+      _ => None,
+    }
+  }
+
   /// Try to inline an enum member access like `Direction.Up` → `0`.
   /// Resolves the identifier to its canonical symbol, then looks up the enum member
   /// value in the owning module's `enum_member_value_map`.

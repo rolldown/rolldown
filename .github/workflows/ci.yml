@@ -211,7 +211,7 @@ jobs:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   vite-test-ubuntu:
-    name: Vite Test
+    name: Vite Test Ubuntu
     needs: [changes, build-rolldown-ubuntu]
     if: |
       always() &&
@@ -238,13 +238,14 @@ jobs:
 
       - name: Run Vite Tests
         if: ${{ needs.changes.outputs.node-changes == 'true' }}
+        env:
+          VITE_PLUS_CLI_BIN: ''
         run: |
-          # Unset all VITE_PLUS_* env vars to prevent leaking into loadEnv() test snapshots
-          for var in $(env | grep '^VITE_PLUS_' | cut -d= -f1); do unset "$var"; done
+          unset VITE_PLUS_CLI_BIN
           vp run --filter vite-tests test
 
   vite-test-windows:
-    name: Vite Test
+    name: Vite Test Windows
     needs: [changes, build-rolldown-windows]
     if: |
       github.ref_name == 'main' &&
@@ -279,7 +280,12 @@ jobs:
 
       - name: Run Vite Tests
         if: ${{ needs.changes.outputs.node-changes == 'true' }}
-        run: vp run --filter vite-tests test
+        env:
+          VITE_PLUS_CLI_BIN: ''
+        shell: bash
+        run: |
+          unset VITE_PLUS_CLI_BIN
+          vp run --filter vite-tests test
 
   build-rolldown-windows:
     needs: changes

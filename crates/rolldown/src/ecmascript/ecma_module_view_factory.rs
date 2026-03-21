@@ -32,7 +32,7 @@ pub async fn create_ecma_view(
     has_lazy_export,
     warnings,
     preserve_jsx,
-    enum_member_values,
+    enum_member_value_map,
   } = parse_to_ecma_ast(ctx, source).await?;
   ctx.flat_options.set(FlatOptions::JsxPreserve, preserve_jsx);
   ctx.warnings.extend(warnings);
@@ -53,7 +53,6 @@ pub async fn create_ecma_view(
     ctx.options,
     ast.allocator(),
     ctx.flat_options,
-    &enum_member_values,
   );
 
   let ScanResult {
@@ -82,7 +81,6 @@ pub async fn create_ecma_view(
     dummy_record_set,
     constant_export_map,
     import_attribute_map,
-    enum_member_value_map,
   } = scanner.scan(ast.program())?;
   // If a export symbol in commonjs defined in multiple time, we just bailout treeshake it.
   for (k, v) in commonjs_exports {

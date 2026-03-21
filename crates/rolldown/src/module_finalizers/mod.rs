@@ -479,6 +479,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   /// Try to inline a chained enum member access like `ns.c.x` → `"c"`.
   /// `ns` is a namespace import (`import * as ns`), `c` is a named export (enum), `x` is the member.
+  ///
+  /// This is separate from `try_rewrite_member_expr` because `resolved_member_expr_refs` resolves
+  /// `ns.c` → identifier `c` with `.x` as a remaining prop. The post-rewrite enum check only
+  /// matches `Identifier.property` patterns, so by the time `member_expr_or_ident_ref` rebuilds
+  /// `c.x`, the inlining window has passed. This method resolves all three levels in one pass.
   fn try_inline_chained_enum_member(
     &self,
     outer_expr: &ast::StaticMemberExpression<'_>,

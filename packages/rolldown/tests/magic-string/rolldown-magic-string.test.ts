@@ -11,7 +11,7 @@ describe('offset', () => {
   describe('underflow guard — negative (index + offset) must throw, not panic', () => {
     it('remove() throws when offset causes index underflow', () => {
       const s = new MagicString('hello world', { offset: -1 });
-      assert.throws(() => s.remove(0, 1), /out of bounds/);
+      assert.throws(() => s.remove(0, 1), /end must be greater than start/);
     });
 
     it('prependLeft() throws when offset causes index underflow', () => {

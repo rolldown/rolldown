@@ -744,15 +744,29 @@ impl BindingMagicString<'_> {
   }
 
   #[napi]
-  pub fn remove<'s>(&'s mut self, this: This<'s>, start: u32, end: u32) -> napi::Result<This<'s>> {
+  pub fn remove<'s>(&'s mut self, this: This<'s>, start: i64, end: i64) -> napi::Result<This<'s>> {
+    // Apply offset, then handle negative indices (matching reset/slice pattern)
+    let start = self.utf16_to_byte_mapper.normalize_index(self.apply_offset_i64(start));
+    let end = self.utf16_to_byte_mapper.normalize_index(self.apply_offset_i64(end));
+
+    if start == end {
+      return Ok(this);
+    }
+
+    // Convert character indices to byte indices
+    // indices are non-negative after normalize_index and files are < 4GB
+    #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     let start_byte = self
       .utf16_to_byte_mapper
-      .utf16_to_byte(self.apply_offset_u32(start)?)
-      .ok_or_else(|| napi::Error::from_reason("Invalid start character index"))?;
+      .utf16_to_byte(start as u32)
+      .ok_or_else(|| napi::Error::from_reason("Character is out of bounds"))?;
+
+    #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     let end_byte = self
       .utf16_to_byte_mapper
-      .utf16_to_byte(self.apply_offset_u32(end)?)
-      .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
+      .utf16_to_byte(end as u32)
+      .ok_or_else(|| napi::Error::from_reason("Character is out of bounds"))?;
+
     self.inner.remove(start_byte, end_byte).map_err(napi::Error::from_reason)?;
     Ok(this)
   }

@@ -234,23 +234,14 @@ impl GenerateStage<'_> {
             stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
               match reference_ref {
                 rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
-                  let mut canonical_ref = symbols.canonical_ref_for(*referenced);
-                  if let Some(namespace_alias) = &symbols.get(canonical_ref).namespace_alias {
-                    canonical_ref = namespace_alias.namespace_ref;
-                  }
-                  depended_symbols.insert(canonical_ref);
+                  depended_symbols.insert(symbols.canonical_ref_resolving_namespace(*referenced));
                 }
                 rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
                   match member_expr.represent_symbol_ref(
                     &self.link_output.metas[module.idx].resolved_member_expr_refs,
                   ) {
                     Some(sym_ref) => {
-                      let mut canonical_ref = self.link_output.symbol_db.canonical_ref_for(sym_ref);
-                      let symbol = symbols.get(canonical_ref);
-                      if let Some(ref ns_alias) = symbol.namespace_alias {
-                        canonical_ref = ns_alias.namespace_ref;
-                      }
-                      depended_symbols.insert(canonical_ref);
+                      depended_symbols.insert(symbols.canonical_ref_resolving_namespace(sym_ref));
                     }
                     _ => {
                       // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
@@ -275,12 +266,8 @@ impl GenerateStage<'_> {
               // out a exported symbol that came from a cjs module.
               .filter(|resolved_export| !resolved_export.came_from_cjs)
             {
-              let mut canonical_ref = symbols.canonical_ref_for(export_ref.symbol_ref);
-              let symbol = symbols.get(canonical_ref);
-              if let Some(ns_alias) = &symbol.namespace_alias {
-                canonical_ref = ns_alias.namespace_ref;
-              }
-              depended_symbols.insert(canonical_ref);
+              depended_symbols
+                .insert(symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref));
             }
           }
 

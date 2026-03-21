@@ -350,6 +350,16 @@ impl SymbolRefDb {
     canonical
   }
 
+  /// Resolves a symbol reference to its canonical form, following namespace aliases.
+  pub fn canonical_ref_resolving_namespace(&self, symbol_ref: SymbolRef) -> SymbolRef {
+    let canonical_ref = self.canonical_ref_for(symbol_ref);
+    if let Some(namespace_alias) = &self.get(canonical_ref).namespace_alias {
+      namespace_alias.namespace_ref
+    } else {
+      canonical_ref
+    }
+  }
+
   pub fn is_declared_in_root_scope(&self, refer: SymbolRef) -> bool {
     let local_db = self.inner[refer.owner].unpack_ref();
     local_db.ast_scopes.symbol_scope_id(refer.symbol) == local_db.root_scope_id

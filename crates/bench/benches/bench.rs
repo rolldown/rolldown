@@ -6,6 +6,11 @@ use rustc_hash::FxHashMap;
 fn items() -> Vec<(&'static str, BundlerOptions)> {
   vec![
     ("threejs", bench_preset("threejs", "tmp/bench/three", "entry.js")),
+    ("threejs-sourcemap", {
+      let mut opts = bench_preset("threejs", "tmp/bench/three", "entry.js");
+      opts.sourcemap = Some(rolldown::SourceMapType::File);
+      opts
+    }),
     ("rome_ts", rome_ts_preset()),
     ("multi-duplicated-top-level-symbol", {
       let mut opts = bench_preset(
@@ -16,13 +21,11 @@ fn items() -> Vec<(&'static str, BundlerOptions)> {
       opts.module_types = Some(FxHashMap::from_iter([("css".to_string(), ModuleType::Empty)]));
       opts
     }),
-    #[cfg(not(feature = "codspeed"))]
-    ("threejs10x", bench_preset("threejs", "tmp/bench/three10x", "entry.js")),
   ]
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  let derive_options = DeriveOptions { sourcemap: true, minify: false };
+  let derive_options = DeriveOptions { sourcemap: false, minify: false };
   run_bench_group(c, "bundle", BenchMode::Bundle, &derive_options, items());
 }
 

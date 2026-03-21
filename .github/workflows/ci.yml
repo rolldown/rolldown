@@ -250,7 +250,7 @@ jobs:
 
   node-validation:
     name: Node Validation
-    needs: changes
+    needs: [changes, build-rolldown-ubuntu]
     if: ${{ needs.changes.outputs.node-changes == 'true' }}
     runs-on: namespace-profile-linux-x64-default
     steps:
@@ -267,11 +267,14 @@ jobs:
         with:
           cache: true
 
+      - name: Download Native Rolldown Build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rolldown-native-ubuntu-latest
+          path: ./packages
+
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
-
-      - name: Build Native Rolldown
-        run: just build-rolldown
 
       - name: Build @rolldown/browser
         run: just build-browser

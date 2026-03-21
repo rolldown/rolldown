@@ -63,7 +63,7 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
       - name: Run Vite Tests
-        run: vp run --filter vite-tests test
-        env:
-          # Unset to prevent leaking into loadEnv() test snapshots
-          VITE_PLUS_CLI_BIN: ''
+        run: |
+          # Unset all VITE_PLUS_* env vars to prevent leaking into loadEnv() test snapshots
+          for var in $(env | grep '^VITE_PLUS_' | cut -d= -f1); do unset "$var"; done
+          vp run --filter vite-tests test

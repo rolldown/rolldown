@@ -238,11 +238,7 @@ jobs:
 
       - name: Run Vite Tests
         if: ${{ needs.changes.outputs.node-changes == 'true' }}
-        env:
-          VITE_PLUS_CLI_BIN: ''
-        run: |
-          unset VITE_PLUS_CLI_BIN
-          vp run --filter vite-tests test
+        run: vp run --filter vite-tests test
 
   vite-test-windows:
     name: Vite Test Windows
@@ -280,12 +276,7 @@ jobs:
 
       - name: Run Vite Tests
         if: ${{ needs.changes.outputs.node-changes == 'true' }}
-        env:
-          VITE_PLUS_CLI_BIN: ''
-        shell: bash
-        run: |
-          unset VITE_PLUS_CLI_BIN
-          vp run --filter vite-tests test
+        run: vp run --filter vite-tests test
 
   build-rolldown-windows:
     needs: changes

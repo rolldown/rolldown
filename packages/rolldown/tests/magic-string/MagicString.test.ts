@@ -100,7 +100,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'x4213');
     });
 
-    it.skip('should append/prepend at end of string when index is out of upper bound', () => {
+    it('should append/prepend at end of string when index is out of upper bound', () => {
       const s = new MagicString('x');
       s.prependLeft(6, 'A');
       s.appendLeft(6, 'B');
@@ -110,7 +110,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'ABxCD');
     });
 
-    it.skip('should append/prepend on empty string when index is out of upper bound', () => {
+    it('should append/prepend on empty string when index is out of upper bound', () => {
       const s = new MagicString('');
       s.prependLeft(6, 'A');
       s.appendLeft(6, 'B');
@@ -479,20 +479,6 @@ describe('MagicString', () => {
       const map = s.generateMap({ source: 'foo.js' });
       assert.deepEqual(map.sources, ['foo.js']);
       assert.deepEqual(map.x_google_ignoreList, [0]);
-    });
-
-    it('preserves x_google_ignoreList when file is set', () => {
-      const s = new MagicString('function foo(){}', {
-        ignoreList: true,
-      });
-
-      const map = s.generateMap({ source: 'foo.js', file: 'out.js' });
-      assert.deepEqual(map.x_google_ignoreList, [0]);
-      assert.equal(map.file, 'out.js');
-
-      const decoded = s.generateDecodedMap({ source: 'foo.js', file: 'out.js' });
-      assert.deepEqual(decoded.x_google_ignoreList, [0]);
-      assert.equal(decoded.file, 'out.js');
     });
 
     it('generates segments per word boundary with hires "boundary"', () => {

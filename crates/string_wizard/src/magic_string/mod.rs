@@ -235,11 +235,11 @@ impl<'text> MagicString<'text> {
     self.outro.push_back(content.into());
   }
 
-  fn prepend_outro(&mut self, content: impl Into<CowStr<'text>>) {
+  pub fn prepend_outro(&mut self, content: impl Into<CowStr<'text>>) {
     self.outro.push_front(content.into());
   }
 
-  fn append_intro(&mut self, content: impl Into<CowStr<'text>>) {
+  pub fn append_intro(&mut self, content: impl Into<CowStr<'text>>) {
     self.intro.push_back(content.into());
   }
 

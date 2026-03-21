@@ -91,8 +91,7 @@ const SKIP_TESTS = [
   'should noop', // edge cases that may differ
   'negative indices', // may not be supported
   'should split original chunk', // internal behavior
-  'out of upper bound', // out of bounds indices cause panic
-  'out of bounds', // out of bounds indices cause panic
+  // Note: 'out of upper bound' and 'out of bounds' are now supported (indices clamp to intro/outro)
   'replaces an empty string', // empty string edge case
   'empty string should be movable', // empty string edge case
   'split point', // split point errors cause panic
@@ -144,9 +143,7 @@ const SKIP_TESTS = [
   'should ignore non-changed replacements', // uses function replacer
   'global regex result the same as .replace', // regex not supported
   'rejects with non-global regexp', // regex not supported
-  // length/isEmpty tests that rely on modified length
-  'should support length', // length returns original length
-  'should support isEmpty', // isEmpty behavior differs
+  // Note: 'should support length' and 'should support isEmpty' now work correctly
   // generateMap-specific skips (features not in string_wizard)
   'should generate a correct sourcemap including correct lines', // uses generateDecodedMap which has different mappings count
   'should generate a sourcemap using specified locations', // addSourcemapLocation not implemented

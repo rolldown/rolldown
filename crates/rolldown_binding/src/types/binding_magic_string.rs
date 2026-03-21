@@ -478,11 +478,15 @@ impl BindingMagicString<'_> {
     index: u32,
     content: String,
   ) -> napi::Result<This<'s>> {
-    let byte_index = self
-      .utf16_to_byte_mapper
-      .utf16_to_byte(self.apply_offset_u32(index)?)
-      .ok_or_else(|| napi::Error::from_reason("Invalid character index"))?;
-    self.inner.prepend_left(byte_index, content);
+    // Match original magic-string: out-of-bound indices fall through to prepend_intro
+    match self.utf16_to_byte_mapper.utf16_to_byte(self.apply_offset_u32(index)?) {
+      Some(byte_index) => {
+        self.inner.prepend_left(byte_index, content);
+      }
+      None => {
+        self.inner.prepend(content);
+      }
+    }
     Ok(this)
   }
 
@@ -493,11 +497,15 @@ impl BindingMagicString<'_> {
     index: u32,
     content: String,
   ) -> napi::Result<This<'s>> {
-    let byte_index = self
-      .utf16_to_byte_mapper
-      .utf16_to_byte(self.apply_offset_u32(index)?)
-      .ok_or_else(|| napi::Error::from_reason("Invalid character index"))?;
-    self.inner.prepend_right(byte_index, content);
+    // Match original magic-string: out-of-bound indices fall through to prepend_outro
+    match self.utf16_to_byte_mapper.utf16_to_byte(self.apply_offset_u32(index)?) {
+      Some(byte_index) => {
+        self.inner.prepend_right(byte_index, content);
+      }
+      None => {
+        self.inner.prepend_outro(content);
+      }
+    }
     Ok(this)
   }
 
@@ -508,11 +516,15 @@ impl BindingMagicString<'_> {
     index: u32,
     content: String,
   ) -> napi::Result<This<'s>> {
-    let byte_index = self
-      .utf16_to_byte_mapper
-      .utf16_to_byte(self.apply_offset_u32(index)?)
-      .ok_or_else(|| napi::Error::from_reason("Invalid character index"))?;
-    self.inner.append_left(byte_index, content);
+    // Match original magic-string: out-of-bound indices fall through to append_intro
+    match self.utf16_to_byte_mapper.utf16_to_byte(self.apply_offset_u32(index)?) {
+      Some(byte_index) => {
+        self.inner.append_left(byte_index, content);
+      }
+      None => {
+        self.inner.append_intro(content);
+      }
+    }
     Ok(this)
   }
 
@@ -523,11 +535,15 @@ impl BindingMagicString<'_> {
     index: u32,
     content: String,
   ) -> napi::Result<This<'s>> {
-    let byte_index = self
-      .utf16_to_byte_mapper
-      .utf16_to_byte(self.apply_offset_u32(index)?)
-      .ok_or_else(|| napi::Error::from_reason("Invalid character index"))?;
-    self.inner.append_right(byte_index, content);
+    // Match original magic-string: out-of-bound indices fall through to append_outro
+    match self.utf16_to_byte_mapper.utf16_to_byte(self.apply_offset_u32(index)?) {
+      Some(byte_index) => {
+        self.inner.append_right(byte_index, content);
+      }
+      None => {
+        self.inner.append(content);
+      }
+    }
     Ok(this)
   }
 

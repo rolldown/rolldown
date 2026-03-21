@@ -64,3 +64,6 @@ jobs:
 
       - name: Run Vite Tests
         run: vp run --filter vite-tests test
+        env:
+          # Unset to prevent leaking into loadEnv() test snapshots
+          VITE_PLUS_CLI_BIN: ''

@@ -91,11 +91,13 @@ impl PreProcessEcmaAst {
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
 
     // Extract enum member values before the transformer converts enums.
+    // This runs before Step 3 (transformer) because `optimize_const_enums` / `optimize_enums`
+    // remove or rewrite enum declarations, making member values unrecoverable afterward.
     let enum_member_value_map = {
       let scoping_ref = scoping.as_mut().unwrap();
-      // Clone (not take) so the transformer can still read values from Scoping
-      // during IIFE generation (e.g., `all_members_evaluable()` checks member values
-      // to decide whether to use `({})` or `(Foo || {})` as the IIFE argument).
+      // Clone (not take) so that `Scoping.enum_member_values()` remains populated for the
+      // transformer in Step 3, which reads them via `all_members_evaluable()` to decide
+      // whether to use `({})` or `(Foo || {})` as the IIFE argument.
       let raw_values = scoping_ref.enum_member_values().clone();
 
       if raw_values.is_empty() {

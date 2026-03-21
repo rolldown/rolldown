@@ -426,7 +426,7 @@ const config = defineConfig({
   markdown: {
     async config(md) {
       md.use(groupIconMdPlugin);
-      await graphvizMarkdownPlugin(md, {
+      await graphvizMarkdownPlugin(md as any, {
         processors: { 'hooks-graph': createHooksGraphProcessor() },
       });
     },

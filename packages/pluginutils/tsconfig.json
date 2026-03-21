@@ -24,8 +24,7 @@
     "declaration": true,
     "isolatedDeclarations": true,
 
-    /* If your code doesn't run in the DOM: */
-    "lib": ["es2022"]
+    "lib": ["es2022", "dom"]
   },
   "include": ["src"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test-d.ts"]

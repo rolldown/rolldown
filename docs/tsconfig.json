@@ -10,7 +10,9 @@
     "strict": true,
     "noUnusedLocals": true,
     "skipLibCheck": true,
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "noEmit": true,
+    "allowImportingTsExtensions": true
   },
   "include": ["src/**/*", ".vitepress/**/*"]
 }

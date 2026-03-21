@@ -139,34 +139,6 @@ jobs:
       node-version: ${{ matrix.node-version }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
-  type-check:
-    name: Type Check
-    needs: [changes, build-rolldown-ubuntu]
-    if: needs.changes.outputs.node-changes == 'true'
-    runs-on: namespace-profile-linux-x64-default
-    timeout-minutes: 10
-    steps:
-      - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
-
-      - uses: voidzero-dev/setup-vp@af9f92ccd3e5694c919913c47be133a1847ea58e # v1.0.0
-        with:
-          cache: true
-
-      - name: Download Native Rolldown Build
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: rolldown-native-ubuntu-latest
-          path: ./packages
-
-      - name: Build `@rolldown/test-dev-server`
-        run: vp run --filter '@rolldown/test-dev-server' build
-
-      - name: Type Check
-        run: vp run type-check
-
-      - name: Node Type Test
-        run: vp run --filter rolldown-tests test:types
-
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
@@ -350,6 +322,9 @@ jobs:
       - name: Build @rolldown/debug
         run: just build-rolldown-debug
 
+      - name: Build `@rolldown/test-dev-server`
+        run: vp run --filter '@rolldown/test-dev-server' build
+
       - name: Make sure generated code of `@rolldown/debug` is up-to-date
         run: git diff --exit-code
 
@@ -358,6 +333,9 @@ jobs:
 
       - name: Lint Code
         run: vp lint
+
+      - name: Node Type Test
+        run: vp run --filter rolldown-tests test:types
 
       - name: Lint publint
         run: vp run lint-publint

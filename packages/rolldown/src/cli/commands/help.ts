@@ -1,4 +1,4 @@
-import { description, version } from '../../../package.json' assert { type: 'json' };
+import { description, version } from '../../../package.json' with { type: 'json' };
 import { styleText } from '../../utils/style-text';
 import { options } from '../arguments';
 import { camelCaseToKebabCase } from '../arguments/utils';

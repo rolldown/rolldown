@@ -14,6 +14,7 @@ export default defineConfig({
   ],
   plugins: [
     {
+      name: 'test-hooks',
       options: function () {
         console.log('called options hook');
       },

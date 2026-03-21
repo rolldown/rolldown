@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import { cleanUrl, extractQueryWithoutFragment } from '../utils.ts';
 
 type StringOrRegExp = string | RegExp;

@@ -1,4 +1,4 @@
-import { execa, ExecaError, type ResultPromise } from 'execa';
+import { execa, ExecaError } from 'execa';
 // @ts-expect-error `kill-port` does not have types
 import killPortImpl from 'kill-port';
 import nodeFs from 'node:fs';
@@ -8,7 +8,7 @@ import type { Browser, Page } from 'playwright';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 import { CONFIG } from './src/config';
 
-let devServerProcess: ResultPromise<{}> | null = null;
+let devServerProcess: ReturnType<typeof execa> | null = null;
 let browser: Browser | null = null;
 let page: Page | null = null;
 

@@ -6,7 +6,7 @@ import { groupIconMdPlugin, groupIconVitePlugin } from 'vitepress-plugin-group-i
 import llmstxt from 'vitepress-plugin-llms';
 import { addOgImage } from 'vitepress-plugin-og';
 import { graphvizMarkdownPlugin } from 'vitepress-plugin-graphviz';
-import { createHooksGraphProcessor } from './markdown-hooks-graph.ts';
+import { createHooksGraphProcessor } from './markdown-hooks-graph';
 
 const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
   {
@@ -426,7 +426,7 @@ const config = defineConfig({
   markdown: {
     async config(md) {
       md.use(groupIconMdPlugin);
-      await graphvizMarkdownPlugin(md, {
+      await graphvizMarkdownPlugin(md as any, {
         processors: { 'hooks-graph': createHooksGraphProcessor() },
       });
     },

@@ -7,8 +7,8 @@ use std::{
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkKind, ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupTest,
-  Module, ModuleIdx, ModuleTable,
+  Chunk, ChunkKind, ChunkingContext, EntryPoint, ManualCodeSplittingOptions, MatchGroup,
+  MatchGroupTest, Module, ModuleIdx, ModuleTable,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::SharedPluginDriver;
@@ -75,6 +75,7 @@ struct ManualSplitter<'a> {
   input_base: &'a ArcStr,
   chunk_graph: &'a mut ChunkGraph,
   module_to_assigned: &'a mut IndexBitSet<ModuleIdx>,
+  flattened_entries: Vec<&'a EntryPoint>,
 }
 
 impl ManualSplitter<'_> {
@@ -363,7 +364,12 @@ impl ManualSplitter<'_> {
     };
 
     let chunk_name = if entries_aware {
-      derive_entries_aware_chunk_name(&group.name, chunk_bits, self.link_output)
+      derive_entries_aware_chunk_name(
+        &group.name,
+        chunk_bits,
+        &self.flattened_entries,
+        self.link_output,
+      )
     } else {
       group.name.clone()
     };
@@ -428,6 +434,8 @@ impl GenerateStage<'_> {
       return Ok(());
     }
 
+    let flattened_entries: Vec<&EntryPoint> =
+      self.link_output.entries.iter().flat_map(|(_idx, entries)| entries.iter()).collect();
     let mut splitter = ManualSplitter {
       link_output: self.link_output,
       index_splitting_info,
@@ -438,6 +446,7 @@ impl GenerateStage<'_> {
       input_base,
       chunk_graph,
       module_to_assigned,
+      flattened_entries,
     };
     splitter.split().await
   }
@@ -720,21 +729,20 @@ fn pick_relevance_split_index(
 fn derive_entries_aware_chunk_name(
   group_name: &str,
   bits: &BitSet,
+  flattened_entries: &[&EntryPoint],
   link_output: &crate::stages::link_stage::LinkStageOutput,
 ) -> ArcStr {
   const MAX_CHUNK_NAME_LEN: usize = 100;
   const HASH_DISPLAY_LEN: usize = 8;
   const TRUNCATED_LEN: usize = MAX_CHUNK_NAME_LEN - HASH_DISPLAY_LEN - 1; // 1 for the `~` separator
 
-  let entry_names: Vec<String> = link_output
-    .entries
-    .iter()
-    .flat_map(|(_idx, entries)| entries.iter())
-    .enumerate()
-    .filter_map(|(index, entry_point)| {
-      if bits.has_bit(index.try_into().unwrap()) {
+  let entry_names: Vec<String> = bits
+    .index_of_one()
+    .filter_map(|index| {
+      let idx = index as usize;
+      if idx < flattened_entries.len() {
+        let entry_point = flattened_entries[idx];
         Some(entry_point.name.as_ref().map(ArcStr::to_string).unwrap_or_else(|| {
-          // Fall back to file stem of the entry module's stable_id
           let module = &link_output.module_table[entry_point.idx];
           Path::new(module.stable_id().as_str())
             .file_stem()

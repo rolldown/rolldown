@@ -1,4 +1,6 @@
-use rolldown_common::{ImportRecordIdx, IndexModules, ModuleIdx, NamedImport, NormalModule, Specifier};
+use rolldown_common::{
+  ImportRecordIdx, IndexModules, ModuleIdx, NamedImport, NormalModule, Specifier,
+};
 
 /// Check if a specific import specifier needs the `__toESM` helper.
 /// Only namespace imports (`import * as foo`) and default imports (`import foo`)

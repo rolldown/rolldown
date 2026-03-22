@@ -3,7 +3,8 @@ use crate::utils::chunk::render_chunk_exports::{
   get_chunk_export_names_with_ctx, render_wrapped_entry_chunk,
 };
 use crate::{
-  ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext,
+  ecmascript::ecma_generator::RenderedModuleSources,
+  types::generator::GenerateContext,
   utils::chunk::render_chunk_exports::render_chunk_exports,
   utils::external_import_interop::{
     external_import_is_in_node_mode, external_import_needs_interop,
@@ -149,8 +150,9 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           // external_module_symbol_name = __toESM(external_module_symbol_name);
           // or in node mode:
           // external_module_symbol_name = __toESM(external_module_symbol_name, 1);
-          let is_node_mode = named_imports
-            .is_some_and(|imports| external_import_is_in_node_mode(imports, &ctx.link_output.module_table));
+          let is_node_mode = named_imports.is_some_and(|imports| {
+            external_import_is_in_node_mode(imports, &ctx.link_output.module_table)
+          });
           let require_external = concat_string!(
             "let ",
             external_module_symbol_name,

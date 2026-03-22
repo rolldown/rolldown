@@ -85,7 +85,8 @@ Object.defineProperty(exports, "default", {
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
-node_assert = __toESM(node_assert, 1);
+let node_assert$1 = __toESM(node_assert, 1);
+node_assert = __toESM(node_assert);
 //#region non-node-mode.js
 async function main$1() {
 	const exports = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lib.js").default));
@@ -98,9 +99,9 @@ main$1();
 //#region node-mode-by-mjs-extension.mjs
 async function main() {
 	const exports = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lib.js").default, 1));
-	node_assert.default.deepEqual(Object.keys(exports).sort(), ["default", "parse"]);
-	node_assert.default.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
-	node_assert.default.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
+	node_assert$1.default.deepEqual(Object.keys(exports).sort(), ["default", "parse"]);
+	node_assert$1.default.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
+	node_assert$1.default.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
 }
 main();
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {

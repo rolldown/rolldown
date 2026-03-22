@@ -77,6 +77,18 @@ pub struct Chunk {
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, CompactStr>,
+  /// For CJS/IIFE/UMD formats: maps external module `namespace_ref` → the node-mode canonical
+  /// name for that external's `__toESM`-wrapped binding.
+  ///
+  /// This is only populated for external modules that have **both** node-mode (`.mjs`/`.mts` or
+  /// `"type": "module"`) **and** non-node-mode importers performing default or namespace imports
+  /// within the same chunk.  In that mixed-mode scenario we must emit two separate bindings:
+  ///
+  /// - The entry in `canonical_names[namespace_ref]` holds the **non-node-mode** name
+  ///   (used by `.js` importers; `__toESM(mod)` without the `1` flag).
+  /// - The entry in this map holds the **node-mode** name
+  ///   (used by `.mjs` importers; `__toESM(mod, 1)`).
+  pub node_mode_external_ns_names: FxHashMap<SymbolRef, CompactStr>,
   // Sorted by Module#stable_id of modules in the chunk
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,

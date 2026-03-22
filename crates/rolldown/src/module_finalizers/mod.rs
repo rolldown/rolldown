@@ -300,7 +300,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     let mut hint = FinalizedExprProcessHint::empty();
     let mut expr = if self.ctx.modules[canonical_ref.owner].is_external() {
-      self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+      // For the mixed-mode case, the chunk may contain both node-mode (.mjs / "type":"module")
+      // and non-node-mode (.js) importers of the same external module.  When that happens we
+      // emit two `__toESM`-wrapped bindings and store the node-mode variant's canonical name in
+      // `chunk.node_mode_external_ns_names`.  A node-mode importing module must reference the
+      // node-mode binding so that its default export gets the correct value.
+      if let Some(node_mode_name) =
+        self.ctx.chunk.node_mode_external_ns_names.get(&canonical_ref)
+      {
+        if self.ctx.module.should_consider_node_esm_spec_for_static_import() {
+          self.snippet.id_ref_expr(node_mode_name.as_str(), SPAN)
+        } else {
+          self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+        }
+      } else {
+        self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+      }
     } else {
       match self.ctx.options.format {
         rolldown_common::OutputFormat::Cjs => {

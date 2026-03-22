@@ -145,32 +145,69 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         let needs_interop =
           named_imports.is_some_and(|imports| external_import_needs_interop(imports));
         if needs_interop {
-          // generate code like:
-          // let external_module_symbol_name = require("external-module");
-          // external_module_symbol_name = __toESM(external_module_symbol_name);
-          // or in node mode:
-          // external_module_symbol_name = __toESM(external_module_symbol_name, 1);
-          let is_node_mode = named_imports.is_some_and(|imports| {
-            external_import_is_in_node_mode(imports, &ctx.link_output.module_table)
-          });
-          let require_external = concat_string!(
-            "let ",
-            external_module_symbol_name,
-            " = ",
-            require_path_str,
-            ";\n",
-            external_module_symbol_name,
-            " = ",
-            ctx.finalized_string_pattern_for_symbol_ref(
-              ctx.link_output.runtime.resolve_symbol("__toESM"),
-              ctx.chunk_idx,
-              &ctx.chunk.canonical_names,
-            ),
-            "(",
-            external_module_symbol_name,
-            if is_node_mode { ", 1);\n" } else { ");\n" }
+          let to_esm = ctx.finalized_string_pattern_for_symbol_ref(
+            ctx.link_output.runtime.resolve_symbol("__toESM"),
+            ctx.chunk_idx,
+            &ctx.chunk.canonical_names,
           );
-          s.push_str(&require_external);
+
+          // Check for the mixed-mode case: the same external is imported by both node-mode
+          // (.mjs / "type":"module") and non-node-mode (.js) modules in this chunk, with at
+          // least one side doing a default or namespace import.  In that situation two
+          // separate `__toESM`-wrapped bindings are emitted – one with the node-mode flag
+          // (`, 1`) and one without – so each importer group gets the correct semantics.
+          if let Some(node_mode_name) =
+            ctx.chunk.node_mode_external_ns_names.get(&importee.namespace_ref)
+          {
+            // Mixed-mode: emit
+            //   let <non_node> = require("ext");
+            //   let <node>     = __toESM(<non_node>, 1);
+            //   <non_node>     = __toESM(<non_node>);
+            let require_external = concat_string!(
+              "let ",
+              external_module_symbol_name,
+              " = ",
+              require_path_str,
+              ";\n",
+              "let ",
+              node_mode_name.as_str(),
+              " = ",
+              to_esm,
+              "(",
+              external_module_symbol_name,
+              ", 1);\n",
+              external_module_symbol_name,
+              " = ",
+              to_esm,
+              "(",
+              external_module_symbol_name,
+              ");\n"
+            );
+            s.push_str(&require_external);
+          } else {
+            // Single-mode: generate code like:
+            //   let external_module_symbol_name = require("external-module");
+            //   external_module_symbol_name = __toESM(external_module_symbol_name);
+            // or in node mode:
+            //   external_module_symbol_name = __toESM(external_module_symbol_name, 1);
+            let is_node_mode = named_imports.is_some_and(|imports| {
+              external_import_is_in_node_mode(imports, &ctx.link_output.module_table)
+            });
+            let require_external = concat_string!(
+              "let ",
+              external_module_symbol_name,
+              " = ",
+              require_path_str,
+              ";\n",
+              external_module_symbol_name,
+              " = ",
+              to_esm,
+              "(",
+              external_module_symbol_name,
+              if is_node_mode { ", 1);\n" } else { ");\n" }
+            );
+            s.push_str(&require_external);
+          }
         } else {
           // generate code like:
           // let external_module_symbol_name = require("external-module");

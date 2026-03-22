@@ -251,6 +251,11 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
+  pub fn sourcemap_exclude_sources(&self) -> bool {
+    self.inner.sourcemap_exclude_sources
+  }
+
+  #[napi(getter)]
   pub fn polyfill_require(&self) -> bool {
     self.inner.polyfill_require
   }

@@ -78,6 +78,8 @@ export interface NormalizedOutputOptions {
   hashCharacters: 'base64' | 'base36' | 'hex';
   /** @see {@linkcode OutputOptions.sourcemapDebugIds | sourcemapDebugIds} */
   sourcemapDebugIds: boolean;
+  /** @see {@linkcode OutputOptions.sourcemapExcludeSources | sourcemapExcludeSources} */
+  sourcemapExcludeSources: boolean;
   /** @see {@linkcode OutputOptions.sourcemapIgnoreList | sourcemapIgnoreList} */
   sourcemapIgnoreList: boolean | SourcemapIgnoreListOption | StringOrRegExp | undefined;
   /** @see {@linkcode OutputOptions.sourcemapPathTransform | sourcemapPathTransform} */
@@ -255,6 +257,11 @@ export class NormalizedOutputOptionsImpl
   @lazyProp
   get sourcemapDebugIds(): boolean {
     return this.inner.sourcemapDebugIds;
+  }
+
+  @lazyProp
+  get sourcemapExcludeSources(): boolean {
+    return this.inner.sourcemapExcludeSources;
   }
 
   @lazyProp

@@ -853,6 +853,10 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Base URL used to prefix sourcemap paths'),
   ),
   sourcemapDebugIds: v.pipe(v.optional(v.boolean()), v.description('Inject sourcemap debug IDs')),
+  sourcemapExcludeSources: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Exclude source content from sourcemaps'),
+  ),
   sourcemapIgnoreList: v.optional(
     v.union([v.boolean(), v.custom<SourcemapIgnoreListOption>(() => true), StringOrRegExpSchema]),
   ),

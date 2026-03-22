@@ -212,8 +212,6 @@
  - rollup@function@amd-base-path-id: throws when using both the amd.basePath and the amd.id option
  - rollup@function@amd-base-path: throws when using only amd.basePath option
 
-### The `output.sourcemapExcludeSources` is not supported
- - rollup@form@sourcemaps-excludesources: correct sourcemaps are written (excluding sourceContent)@generates es
 
 ### The `output.sourcemapBaseUrl` is not compatible yet
  - rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl

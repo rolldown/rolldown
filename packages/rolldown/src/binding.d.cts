@@ -1601,6 +1601,7 @@ export declare class BindingNormalizedOptions {
   get globals(): Record<string, string> | undefined
   get hashCharacters(): 'base64' | 'base36' | 'hex'
   get sourcemapDebugIds(): boolean
+  get sourcemapExcludeSources(): boolean
   get polyfillRequire(): boolean
   get minify(): false | 'dce-only' | MinifyOptions
   get legalComments(): 'none' | 'inline'
@@ -2388,6 +2389,7 @@ export interface BindingOutputOptions {
   sourcemapIgnoreList?: boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)
   sourcemapDebugIds?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
+  sourcemapExcludeSources?: boolean
   strict?: boolean | 'auto'
   minify?: boolean | 'dce-only' | MinifyOptions
   manualCodeSplitting?: BindingManualCodeSplittingOptions

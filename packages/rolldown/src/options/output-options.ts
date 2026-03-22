@@ -246,6 +246,16 @@ export interface OutputOptions {
    */
   sourcemapPathTransform?: SourcemapPathTransformOption;
   /**
+   * Whether to exclude the original source code from sourcemaps.
+   *
+   * When `true`, the `sourcesContent` field is omitted from the generated sourcemap,
+   * reducing the sourcemap file size. The sourcemap will still contain source file paths
+   * and mappings, so debugging works if the original files are available.
+   *
+   * @default false
+   */
+  sourcemapExcludeSources?: boolean;
+  /**
    * A string to prepend to the bundle before {@linkcode Plugin.renderChunk | renderChunk} hook.
    *
    * See {@linkcode intro | output.intro}, {@linkcode postBanner | output.postBanner} as well.

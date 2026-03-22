@@ -132,7 +132,7 @@ pub struct BindingOutputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => string")]
   pub sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
-  // sourcemapExcludeSources: boolean;
+  pub sourcemap_exclude_sources: Option<bool>,
   // sourcemapFile: string | undefined;
   #[napi(ts_type = "boolean | 'auto'")]
   pub strict: Option<Either<bool, String>>,

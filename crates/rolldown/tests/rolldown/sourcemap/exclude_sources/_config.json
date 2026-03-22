@@ -1,0 +1,8 @@
+{
+  "config": {
+    "entryFilenames": "assets/[name].js",
+    "sourcemap": "File",
+    "sourcemapExcludeSources": true
+  },
+  "expectExecuted": false
+}

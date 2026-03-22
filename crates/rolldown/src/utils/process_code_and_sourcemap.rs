@@ -24,6 +24,10 @@ pub async fn process_code_and_sourcemap(
   let file_base_name = Path::new(filename).file_name().expect("should have file name");
   map.set_file(file_base_name.to_string_lossy().as_ref());
 
+  if options.sourcemap_exclude_sources {
+    map.set_source_contents(vec![]);
+  }
+
   let map_filename = format!("{filename}.map");
   let map_path = file_dir.join(&map_filename);
 

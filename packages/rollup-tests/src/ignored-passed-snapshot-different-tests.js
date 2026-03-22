@@ -152,6 +152,7 @@ module.exports = [
     "rollup@function@sourcemap-inline-generatebundle: includes inline sourcemap comments in generateBundle hook",
     "rollup@form@sourcemaps-external: correct sourcemaps are written (separate file)@generates es", // the mappping is not same as rollup
     "rollup@form@sourcemaps-hidden: correct sourcemaps are written (separate file) without comment@generates es", // the mappping is not same as rollup
+    "rollup@form@sourcemaps-excludesources: correct sourcemaps are written (excluding sourceContent)@generates es", // the mapping is not same as rollup
     "rollup@sourcemaps@render-chunk-babili: generates valid sourcemap when source could not be determined@generates es", // The rolldown output chunk including `module comment` caused line offset, the rollup provider the fake sourcemap can't remapping.
     "rollup@form@render-chunk-plugin-sourcemaps: supports returning undefined source maps from render chunk hooks, when source maps are enabled@generates es", // the mappping is not same as rollup, the `sources/sourcesContent` perseved original sourcemap is correct
     "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es",// the input string `'bar'`, the rolldown output `"bar"`, caused search original position failed

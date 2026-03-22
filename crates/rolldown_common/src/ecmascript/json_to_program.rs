@@ -171,6 +171,33 @@ mod tests {
     assert_snapshot!(to_code(&serde_json::from_str::<Value>(r#"{"a": 1, "a": 2}"#).unwrap()), @r#"({ "a": 2 });"#);
   }
 
+  /// Test that 17-significant-digit floats roundtrip correctly through JSON→AST→codegen.
+  /// The codegen may use a shorter representation (e.g. 15 digits) if it roundtrips to the same f64.
+  /// Regression test for https://github.com/vitejs/vite/issues/21982
+  #[test]
+  fn test_float_17_significant_digits() {
+    let inputs = [
+      114.35143799257997_f64,
+      406.31486713248995_f64,
+      163.41498018498498_f64,
+      364.09498724900986_f64,
+    ];
+    let json: Value = serde_json::from_str(
+      r#"[114.35143799257997, 406.31486713248995, 163.41498018498498, 364.09498724900986]"#,
+    )
+    .unwrap();
+    let code = to_code(&json);
+
+    // Extract numbers from generated code and verify they parse to the same f64 values
+    for expected in &inputs {
+      let found = code
+        .split(|c: char| !c.is_ascii_digit() && c != '.' && c != '-')
+        .filter_map(|s| s.parse::<f64>().ok())
+        .any(|v| v.to_bits() == expected.to_bits());
+      assert!(found, "f64 value {expected} not found (same bits) in output: {code}");
+    }
+  }
+
   #[test]
   fn test_nested() {
     assert_snapshot!(to_code(&serde_json::json!({

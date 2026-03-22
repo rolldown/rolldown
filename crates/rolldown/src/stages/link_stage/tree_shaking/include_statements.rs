@@ -5,9 +5,9 @@ use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
-  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind,
-  ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
-  ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
+  CjsExportInclusion, ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint,
+  EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module,
+  ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
   RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, SideEffectDetail,
   StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
@@ -63,9 +63,11 @@ pub struct IncludeContext<'a> {
   pub constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
   pub options: &'a NormalizedBundlerOptions,
   pub normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
-  /// It is necessary since we can't mutate `module.meta` during the tree shaking process.
-  /// see [rolldown_common::ecmascript::ecma_view::EcmaViewMeta]
-  pub bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
+  /// Per-export tracking for CJS tree-shaking. Maps CJS module indices to which
+  /// exports need to be included. Replaces the previous binary bailout set.
+  /// `All` means opaque/dynamic usage (include everything), `Specific` means
+  /// only the named exports in the set are needed.
+  pub cjs_included_exports: FxHashMap<ModuleIdx, CjsExportInclusion>,
   /// Tracks whether any new module was included during the current convergence iteration.
   /// Used to detect fixpoint without O(N) scanning of `is_module_included_vec`.
   pub module_inclusion_changed: bool,
@@ -101,31 +103,52 @@ impl<'a> IncludeContext<'a> {
       constant_symbol_map,
       options,
       normal_symbol_exports_chain_map,
-      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
+      cjs_included_exports: FxHashMap::default(),
       module_inclusion_changed: false,
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
     }
   }
+
+  /// Mark a CJS module as needing all exports included (opaque/dynamic usage).
+  #[inline]
+  fn mark_cjs_all(&mut self, module_idx: ModuleIdx) {
+    self.cjs_included_exports.insert(module_idx, CjsExportInclusion::All);
+  }
 }
 
-fn include_cjs_bailout_exports(
+fn include_cjs_tracked_exports(
   context: &mut IncludeContext,
   metas: &LinkingMetadataVec,
-  bailout_modules: impl IntoIterator<Item = ModuleIdx>,
+  cjs_exports: FxHashMap<ModuleIdx, CjsExportInclusion>,
 ) {
-  for idx in bailout_modules {
-    metas[idx]
-      .resolved_exports
-      .iter()
-      .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
-      .for_each(|local| {
-        include_symbol_and_check_cjs_bailout(
-          context,
-          local.symbol_ref,
-          SymbolIncludeReason::Normal,
-        );
-      });
+  for (idx, inclusion) in cjs_exports {
+    match inclusion {
+      CjsExportInclusion::All => {
+        metas[idx]
+          .resolved_exports
+          .iter()
+          .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
+          .for_each(|local| {
+            include_symbol_and_check_cjs_bailout(
+              context,
+              local.symbol_ref,
+              SymbolIncludeReason::Normal,
+            );
+          });
+      }
+      CjsExportInclusion::Specific(names) => {
+        for (name, local) in &metas[idx].resolved_exports {
+          if local.came_from_cjs && names.contains(name) {
+            include_symbol_and_check_cjs_bailout(
+              context,
+              local.symbol_ref,
+              SymbolIncludeReason::Normal,
+            );
+          }
+        }
+      }
+    }
   }
 }
 
@@ -156,11 +179,11 @@ fn check_cjs_bailout(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
   if let Some(idx) =
     ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
   {
-    ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
+    ctx.mark_cjs_all(*idx);
   }
   // If the symbol IS a CJS module's namespace object, bail out that module.
   if ctx.modules[canonical_ref.owner].namespace_object_ref() == Some(canonical_ref) {
-    ctx.bailout_cjs_tree_shaking_modules.insert(canonical_ref.owner);
+    ctx.mark_cjs_all(canonical_ref.owner);
   }
 
   // If the symbol has a namespace_alias importing "default" from a CJS module,
@@ -172,7 +195,7 @@ fn check_cjs_bailout(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
       .get(&namespace_alias.namespace_ref)
     {
       if namespace_alias.property_name.as_str() == "default" {
-        ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
+        ctx.mark_cjs_all(*idx);
       }
     }
   }
@@ -244,7 +267,7 @@ impl LinkStage<'_> {
           return;
         }
       };
-      context.bailout_cjs_tree_shaking_modules.insert(module.idx);
+      context.mark_cjs_all(module.idx);
       let meta = &self.metas[entry.idx];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, _came_from_cjs)| {
@@ -271,12 +294,11 @@ impl LinkStage<'_> {
     loop {
       context.module_inclusion_changed = false;
 
-      // It could be safely take since it is no more used.
-      // We extract bailout_modules first to avoid borrowing conflict:
+      // We extract cjs_included_exports first to avoid borrowing conflict:
       // passing `context` requires a mutable borrow, which conflicts with
-      // borrowing `context.bailout_cjs_tree_shaking_modules` inside the call.
-      let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
-      include_cjs_bailout_exports(context, &self.metas, bailout_modules);
+      // borrowing `context.cjs_included_exports` inside the call.
+      let cjs_exports = std::mem::take(&mut context.cjs_included_exports);
+      include_cjs_tracked_exports(context, &self.metas, cjs_exports);
 
       dynamic_entries.iter().for_each(|entry| {
         if included_dynamic_entry.contains(&entry.idx) {
@@ -883,10 +905,10 @@ pub fn include_statement(
           .nth(1)
           .is_some();
         if has_more_than_one_cjs_requires {
-          ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
+          ctx.mark_cjs_all(module_idx);
         }
       } else {
-        ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
+        ctx.mark_cjs_all(module_idx);
       }
     });
   let mut include_kind = if stmt_info.meta.contains(StmtInfoMeta::ReExportDynamicExports) {

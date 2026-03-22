@@ -150,6 +150,7 @@ version = "0.1.0"
 dependencies = [
  "criterion2",
  "ignore",
+ "mimalloc-safe",
  "rolldown",
  "rolldown_fs",
  "rolldown_resolver",

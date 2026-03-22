@@ -32,3 +32,4 @@ codspeed = ["criterion2/codspeed"]
 
 [dev-dependencies]
 rustc-hash = { workspace = true }
+mimalloc-safe = { workspace = true }

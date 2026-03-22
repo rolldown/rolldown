@@ -1,3 +1,6 @@
+#[global_allocator]
+static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
+
 use bench::{BenchMode, DeriveOptions, bench_preset, rome_ts_preset, run_bench_group};
 use criterion::{Criterion, criterion_group, criterion_main};
 use rolldown::{BundlerOptions, ModuleType};

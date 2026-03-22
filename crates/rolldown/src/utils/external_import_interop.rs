@@ -44,6 +44,6 @@ pub fn external_import_is_in_node_mode(
     }
     module_table[*importer_idx]
       .as_normal()
-      .is_some_and(|m| m.should_consider_node_esm_spec_for_static_import())
+      .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import)
   })
 }

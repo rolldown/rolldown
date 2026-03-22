@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let jsonc_parser = require("jsonc-parser");
+jsonc_parser = __toESM(jsonc_parser, 1);
+//#region main.js
+jsonc_parser.default.parse("{}");
+//#endregion
+
+```

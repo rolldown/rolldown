@@ -5,7 +5,9 @@ use rolldown_sourcemap::SourceJoiner;
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
   types::generator::GenerateContext,
-  utils::external_import_interop::external_import_needs_interop,
+  utils::external_import_interop::{
+    external_import_is_in_node_mode, external_import_needs_interop,
+  },
 };
 
 pub mod namespace;
@@ -74,13 +76,19 @@ pub fn render_chunk_external_imports<'a>(
             ctx.link_output.runtime.resolve_symbol("__toESM"),
             &ctx.chunk.canonical_names,
           );
+          let is_node_mode =
+            external_import_is_in_node_mode(named_imports, &ctx.link_output.module_table);
 
           import_code.push_str(external_module_symbol_name);
           import_code.push_str(" = ");
           import_code.push_str(to_esm_fn_name);
           import_code.push('(');
           import_code.push_str(external_module_symbol_name);
-          import_code.push_str(");\n");
+          if is_node_mode {
+            import_code.push_str(", 1);\n");
+          } else {
+            import_code.push_str(");\n");
+          }
         }
         Some(ExternalImportKind::Used(importee))
       } else if importee.side_effects.has_side_effects() {

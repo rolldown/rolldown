@@ -85,7 +85,7 @@ Object.defineProperty(exports, "default", {
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
-node_assert = __toESM(node_assert);
+node_assert = __toESM(node_assert, 1);
 //#region non-node-mode.js
 async function main$1() {
 	const exports = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lib.js").default));

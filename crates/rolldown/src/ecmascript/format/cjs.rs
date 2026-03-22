@@ -5,7 +5,9 @@ use crate::utils::chunk::render_chunk_exports::{
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext,
   utils::chunk::render_chunk_exports::render_chunk_exports,
-  utils::external_import_interop::external_import_needs_interop,
+  utils::external_import_interop::{
+    external_import_is_in_node_mode, external_import_needs_interop,
+  },
 };
 use rolldown_common::{AddonRenderContext, OutputExports};
 use rolldown_error::BuildDiagnostic;
@@ -145,6 +147,10 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           // generate code like:
           // let external_module_symbol_name = require("external-module");
           // external_module_symbol_name = __toESM(external_module_symbol_name);
+          // or in node mode:
+          // external_module_symbol_name = __toESM(external_module_symbol_name, 1);
+          let is_node_mode = named_imports
+            .is_some_and(|imports| external_import_is_in_node_mode(imports, &ctx.link_output.module_table));
           let require_external = concat_string!(
             "let ",
             external_module_symbol_name,
@@ -160,7 +166,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
             ),
             "(",
             external_module_symbol_name,
-            ");\n"
+            if is_node_mode { ", 1);\n" } else { ");\n" }
           );
           s.push_str(&require_external);
         } else {

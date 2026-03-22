@@ -1,0 +1,13 @@
+{
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "external": ["jsonc-parser"],
+    "format": "cjs"
+  }
+}

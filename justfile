@@ -8,7 +8,7 @@ _default:
   just --list -u
 
 setup:
-  curl -fsSL https://vite.plus | bash
+  just setup-vite-plus
   vp install
   cargo install cargo-binstall
   cargo binstall cargo-insta cargo-deny cargo-shear@1.11.2 typos-cli -y
@@ -21,6 +21,17 @@ setup-submodule:
 
 setup-bench:
   node --import @oxc-node/core/register ./scripts/misc/setup-benchmark-input/index.js
+
+
+[unix]
+setup-vite-plus:
+    @echo "Running on Unix-like system..."
+    @sh -c "curl -fsSL https://vite.plus | bash"
+
+[windows]
+setup-vite-plus:
+    @echo "Running on Windows PowerShell..."
+    @powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://viteplus.dev/install.ps1 | iex"
 
 # Update the submodule to the latest commit
 update-submodule:

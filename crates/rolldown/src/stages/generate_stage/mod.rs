@@ -148,9 +148,18 @@ impl<'a> GenerateStage<'a> {
 
     let mut index_chunk_id_to_representative_name = FxHashMap::default();
 
+    // Sanitize preserveModulesRoot so that a custom sanitizeFileName (e.g. '+' → '__')
+    // doesn't break the starts_with prefix comparison against sanitized absolute filenames.
+    let sanitized_preserve_modules_root =
+      if let Some(ref preserve_modules_root) = self.options.preserve_modules_root {
+        Some(self.options.sanitize_filename.call(preserve_modules_root).await?)
+      } else {
+        None
+      };
+
     let index_pre_generated_names_futures = chunk_graph.chunk_table.iter().map(|chunk| {
       let sanitize_filename = self.options.sanitize_filename.clone();
-      let preserve_modules_root = self.options.preserve_modules_root.clone();
+      let preserve_modules_root = sanitized_preserve_modules_root.clone();
       let input_base = chunk.input_base.clone();
       let virtual_dirname = self.options.virtual_dirname.clone();
       async move {
@@ -296,6 +305,7 @@ impl<'a> GenerateStage<'a> {
           &pre_generated_chunk_name.chunk_filename,
           &mut hash_placeholder_generator,
           &used_name_counts,
+          sanitized_preserve_modules_root.as_ref(),
         )
         .await?;
 

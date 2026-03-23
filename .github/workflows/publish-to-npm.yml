@@ -107,12 +107,12 @@ jobs:
 
       - name: Publish(Dry Run)
         run: |
-          vp publish -r --tag latest --dry-run --no-git-checks
+          vp pm publish -r --tag latest --dry-run --no-git-checks
 
       - name: Publish
         run: |
           npm install -g npm
-          vp publish -r --tag latest --no-git-checks
+          vp pm publish -r --tag latest --no-git-checks
 
   release:
     needs: [check, publish]

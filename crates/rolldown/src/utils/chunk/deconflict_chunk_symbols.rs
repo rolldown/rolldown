@@ -2,7 +2,10 @@ use oxc::span::CompactStr;
 
 use crate::{
   stages::link_stage::LinkStageOutput,
-  utils::{external_import_interop::specifier_needs_interop, renamer::{NestedScopeRenamer, Renamer}},
+  utils::{
+    external_import_interop::specifier_needs_interop,
+    renamer::{NestedScopeRenamer, Renamer},
+  },
 };
 use arcstr::ArcStr;
 use rolldown_common::{
@@ -173,50 +176,48 @@ pub fn deconflict_chunk_symbols(
   //
   // This must be done **before** `into_canonical_names()` so the renamer can mark these
   // extra names as used and avoid future collisions.
-  let mixed_mode_node_names: Vec<_> = if matches!(
-    format,
-    OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs
-  ) {
-    chunk
-      .direct_imports_from_external_modules
-      .iter()
-      .filter_map(|(external_idx, named_imports)| {
-        let external = link_output.module_table[*external_idx].as_external()?;
+  let mixed_mode_node_names: Vec<_> =
+    if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
+      chunk
+        .direct_imports_from_external_modules
+        .iter()
+        .filter_map(|(external_idx, named_imports)| {
+          let external = link_output.module_table[*external_idx].as_external()?;
 
-        // Walk the importer list once, setting two flags:
-        // `has_node_mode_interop`     – a node-mode (.mjs / "type":"module") importer doing
-        //                               a default or namespace import from this external.
-        // `has_non_node_mode_interop` – a non-node-mode (.js) importer doing the same.
-        let (mut has_node_mode_interop, mut has_non_node_mode_interop) = (false, false);
-        for (importer_idx, import) in named_imports {
-          if specifier_needs_interop(&import.imported) {
-            let is_node = link_output.module_table[*importer_idx]
-              .as_normal()
-              .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import);
-            if is_node {
-              has_node_mode_interop = true;
-            } else {
-              has_non_node_mode_interop = true;
-            }
-            if has_node_mode_interop && has_non_node_mode_interop {
-              break; // both flags set – no need to look further
+          // Walk the importer list once, setting two flags:
+          // `has_node_mode_interop`     – a node-mode (.mjs / "type":"module") importer doing
+          //                               a default or namespace import from this external.
+          // `has_non_node_mode_interop` – a non-node-mode (.js) importer doing the same.
+          let (mut has_node_mode_interop, mut has_non_node_mode_interop) = (false, false);
+          for (importer_idx, import) in named_imports {
+            if specifier_needs_interop(&import.imported) {
+              let is_node = link_output.module_table[*importer_idx]
+                .as_normal()
+                .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import);
+              if is_node {
+                has_node_mode_interop = true;
+              } else {
+                has_non_node_mode_interop = true;
+              }
+              if has_node_mode_interop && has_non_node_mode_interop {
+                break; // both flags set – no need to look further
+              }
             }
           }
-        }
 
-        if has_node_mode_interop && has_non_node_mode_interop {
-          // Build a unique name for the node-mode binding, e.g. `foo2` or `foo$1`.
-          let hint = legitimize_identifier_name(external.name.as_str());
-          let node_mode_name = renamer.create_conflictless_name(&hint);
-          Some((external.namespace_ref, CompactStr::new(&node_mode_name)))
-        } else {
-          None
-        }
-      })
-      .collect()
-  } else {
-    vec![]
-  };
+          if has_node_mode_interop && has_non_node_mode_interop {
+            // Build a unique name for the node-mode binding, e.g. `foo2` or `foo$1`.
+            let hint = legitimize_identifier_name(external.name.as_str());
+            let node_mode_name = renamer.create_conflictless_name(&hint);
+            Some((external.namespace_ref, CompactStr::new(&node_mode_name)))
+          } else {
+            None
+          }
+        })
+        .collect()
+    } else {
+      vec![]
+    };
 
   chunk.canonical_names = renamer.into_canonical_names();
 

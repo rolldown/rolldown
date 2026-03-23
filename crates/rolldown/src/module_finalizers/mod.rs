@@ -305,9 +305,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // emit two `__toESM`-wrapped bindings and store the node-mode variant's canonical name in
       // `chunk.node_mode_external_ns_names`.  A node-mode importing module must reference the
       // node-mode binding so that its default export gets the correct value.
-      if let Some(node_mode_name) =
-        self.ctx.chunk.node_mode_external_ns_names.get(&canonical_ref)
-      {
+      if let Some(node_mode_name) = self.ctx.chunk.node_mode_external_ns_names.get(&canonical_ref) {
         if self.ctx.module.should_consider_node_esm_spec_for_static_import() {
           self.snippet.id_ref_expr(node_mode_name.as_str(), SPAN)
         } else {

@@ -1,2 +1,2 @@
-import foo from 'foo'
-console.log(foo.baz)
+import foo from 'foo';
+console.log(foo.baz);

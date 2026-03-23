@@ -1261,14 +1261,14 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'abcdef');
     });
 
-    it.skip('should treat zero-length removals as a no-op', () => {
+    it('should treat zero-length removals as a no-op', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.remove(0, 0).remove(6, 6).remove(9, -3);
       assert.equal(s.toString(), 'abcdefghijkl');
     });
 
-    it.skip('should remove overlapping ranges', () => {
+    it('should remove overlapping ranges', () => {
       const s1 = new MagicString('abcdefghijkl');
 
       s1.remove(3, 7).remove(5, 9);
@@ -1280,7 +1280,7 @@ describe('MagicString', () => {
       assert.equal(s2.toString(), 'abchijkl');
     });
 
-    it.skip('should remove overlapping ranges, redux', () => {
+    it('should remove overlapping ranges, redux', () => {
       const s = new MagicString('abccde');
 
       s.remove(2, 3); // c
@@ -1288,7 +1288,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'acde');
     });
 
-    it.skip('should remove modified ranges', () => {
+    it('should remove modified ranges', () => {
       const s = new MagicString('abcdefghi');
 
       s.overwrite(3, 6, 'DEF');
@@ -1306,7 +1306,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), '(ab);');
     });
 
-    it.skip('should remove interior inserts', () => {
+    it('should remove interior inserts', () => {
       const s = new MagicString('abc;');
 
       s.appendLeft(1, '[');
@@ -1330,7 +1330,7 @@ describe('MagicString', () => {
       assert.strictEqual(s.remove(3, 4), s);
     });
 
-    it.skip('removes across moved content', () => {
+    it('removes across moved content', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.move(6, 9, 3);
@@ -1339,7 +1339,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'abchidejkl');
     });
 
-    it.skip('should accept negative indices', () => {
+    it('should accept negative indices', () => {
       const s = new MagicString('abcde');
       // "abcde"
       //     ^
@@ -1347,7 +1347,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'abce');
     });
 
-    it.skip('should throw error when using negative indices with empty string', () => {
+    it('should throw error when using negative indices with empty string', () => {
       const s = new MagicString('');
       assert.throws(() => s.remove(-2, -1), /Error: Character is out of bounds/);
     });

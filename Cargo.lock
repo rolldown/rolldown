@@ -2862,6 +2862,8 @@ dependencies = [
  "oxc_resolver_napi",
  "oxc_sourcemap",
  "oxc_transform_napi",
+ "regex",
+ "regress",
  "rolldown",
  "rolldown_common",
  "rolldown_dev",

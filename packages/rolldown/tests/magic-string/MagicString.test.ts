@@ -1845,7 +1845,7 @@ describe('MagicString', () => {
       assert.strictEqual(new MagicString('122121').replace('12', '21').toString(), '212121');
     });
 
-    it.skip('works with global regex replace', () => {
+    it('works with global regex replace', () => {
       const s = new MagicString('1 2 3 4 a b c');
 
       s.replace(/(\d)/g, 'xx$1$10');
@@ -1853,7 +1853,7 @@ describe('MagicString', () => {
       assert.strictEqual(s.toString(), 'xx1$10 xx2$10 xx3$10 xx4$10 a b c');
     });
 
-    it.skip('works with global regex replace $$', () => {
+    it('works with global regex replace $$', () => {
       const s = new MagicString('1 2 3 4 a b c');
 
       s.replace(/(\d)/g, '$$');

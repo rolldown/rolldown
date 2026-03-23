@@ -1489,6 +1489,12 @@ export declare class BindingMagicString {
   set offset(offset: number)
   replace(from: string, to: string): this
   replaceAll(from: string, to: string): this
+  /**
+   * Returns the UTF-16 offset past the last match, or -1 if no match was found.
+   * The JS wrapper uses this to update `lastIndex` on the caller's RegExp.
+   * Global/sticky behavior is derived from the regex's own flags.
+   */
+  replaceRegex(from: RegExp, to: string): number
   prepend(content: string): this
   append(content: string): this
   prependLeft(index: number, content: string): this

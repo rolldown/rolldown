@@ -6,8 +6,11 @@ use napi::{Env, JsString};
 use napi_derive::napi;
 use rolldown_sourcemap::{JSONSourceMap, SourceMap};
 use rolldown_utils::base64::to_standard_base64;
+use rolldown_utils::js_regex::HybridRegex;
 use serde::Serialize;
-use string_wizard::{MagicString, MagicStringOptions, SourceMapOptions};
+use string_wizard::{MagicString, MagicStringOptions, SourceMapOptions, UpdateOptions};
+
+use super::js_regex::JsRegExp;
 
 /// Internal representation preserving the original JS format (flat `[start, end]` vs nested
 /// `[[start, end], ...]`) so the getter returns the same shape the user passed in.
@@ -158,6 +161,20 @@ impl Utf16ToByteMapper {
     #[expect(clippy::cast_possible_wrap)]
     let count = (self.entries.len() - 1) as i64;
     count
+  }
+
+  /// Converts a UTF-8 byte offset to a UTF-16 code unit offset.
+  /// Returns `None` if the byte offset is past the end of the mapping.
+  #[expect(clippy::cast_possible_truncation)]
+  fn byte_to_utf16(&self, byte_offset: u32) -> Option<u32> {
+    let mut idx = self.entries.partition_point(|e| e.byte_offset < byte_offset);
+    // If we landed on a low surrogate, the byte offset is "after" the
+    // supplementary character. The correct UTF-16 position is the next
+    // index (which shares the same byte_offset).
+    if idx < self.entries.len() && self.entries[idx].is_low_surrogate() {
+      idx += 1;
+    }
+    (idx < self.entries.len()).then_some(idx as u32)
   }
 
   /// Returns the total UTF-8 byte length of the original string.
@@ -415,6 +432,119 @@ impl BindingMagicString<'_> {
     self.offset = offset;
   }
 
+  /// Performs regex-based replace on the original source string.
+  /// When `global` is true, replaces all matches; otherwise replaces only the first.
+  /// Handles `$&`, `$$`, and `$N` substitution patterns in the replacement string.
+  ///
+  /// NOTE: Uses `HybridRegex` which tries `regex::Regex` first (orders of magnitude
+  /// faster) and only falls back to `regress::Regex` when the pattern uses syntax
+  /// not supported by the `regex` crate (e.g. backreferences, lookaround).
+  /// Sticky (`y`) flag always uses the `regress` path since `regex` doesn't support it,
+  /// and `lastIndex` is respected via `find_from`.
+  fn regex_replace(&mut self, js_regex: &JsRegExp, replacement: &str) -> napi::Result<Option<u32>> {
+    let global = js_regex.flags.contains('g');
+    let flags_without_g: String = js_regex.flags.chars().filter(|&c| c != 'g').collect();
+    let reg = HybridRegex::with_flags(&js_regex.source, &flags_without_g)
+      .map_err(|e| napi::Error::from_reason(format!("Invalid regex: {e}")))?;
+    let source = self.inner.source();
+
+    // Track last match end (byte offset) for lastIndex writeback.
+    // This includes no-op matches (where replacement == matched text).
+    let mut last_match_end: Option<u32> = None;
+
+    // Collect into Vec to release the borrow on `source` before mutating `self.inner`.
+    #[expect(clippy::cast_possible_truncation)]
+    let overwrites: Vec<(u32, u32, String)> = match &reg {
+      HybridRegex::Optimize(r) => {
+        // The `regex` crate path is only used for non-sticky patterns (the `y` flag
+        // causes `regex::Regex::new` to fail, falling back to regress).
+        // For non-sticky regexes, JS resets `lastIndex` before matching, so we
+        // always start from the beginning.
+        let iter = r.captures_iter(source);
+        let iter = if global {
+          itertools::Either::Left(iter)
+        } else {
+          itertools::Either::Right(iter.take(1))
+        };
+        iter
+          .filter_map(|caps| {
+            let full = caps.get(0).unwrap();
+            let matched = full.as_str();
+            let group_count = caps.len();
+            last_match_end = Some(full.end() as u32);
+            let rep = apply_replacement_regex(replacement, matched, &caps, group_count);
+            (rep != matched).then(|| (full.start() as u32, full.end() as u32, rep))
+          })
+          .collect()
+      }
+      HybridRegex::Ecma(r) => {
+        let is_sticky = js_regex.flags.contains('y');
+        // For global regexes, JS resets lastIndex to 0 before matching.
+        // For non-global sticky, use the caller's lastIndex (converted from UTF-16 to byte offset).
+        // If lastIndex is out of bounds, sticky must immediately fail (no match).
+        let start = if global || !is_sticky {
+          0
+        } else {
+          match self.utf16_to_byte_mapper.utf16_to_byte(js_regex.last_index as u32) {
+            Some(byte_offset) => byte_offset as usize,
+            None => return Ok(None),
+          }
+        };
+
+        if is_sticky {
+          // Sticky: only accept contiguous matches starting at `start`.
+          // For non-global sticky, this is at most one match.
+          let mut results = Vec::new();
+          let mut pos = start;
+          for m in r.find_from(source, start) {
+            if m.range.start != pos {
+              break; // non-contiguous — stop
+            }
+            pos = m.range.end;
+            last_match_end = Some(m.range.end as u32);
+            let matched = &source[m.range.clone()];
+            let rep = apply_replacement_regress(replacement, matched, &m, source);
+            if rep != matched {
+              results.push((m.range.start as u32, m.range.end as u32, rep));
+            }
+            if !global {
+              break; // non-global: one match only
+            }
+          }
+          results
+        } else {
+          // Non-sticky
+          let iter = r.find_from(source, 0);
+          let iter = if global {
+            itertools::Either::Left(iter)
+          } else {
+            itertools::Either::Right(iter.take(1))
+          };
+          iter
+            .filter_map(|m| {
+              last_match_end = Some(m.range.end as u32);
+              let matched = &source[m.range.clone()];
+              let rep = apply_replacement_regress(replacement, matched, &m, source);
+              (rep != matched).then_some((m.range.start as u32, m.range.end as u32, rep))
+            })
+            .collect()
+        }
+      }
+    };
+
+    // Convert byte offset back to UTF-16 code units for JS lastIndex writeback.
+    let last_match_end_utf16 =
+      last_match_end.and_then(|b| self.utf16_to_byte_mapper.byte_to_utf16(b));
+
+    for (start, end, rep) in overwrites {
+      self
+        .inner
+        .update_with(start, end, rep, UpdateOptions { overwrite: true, keep_original: false })
+        .map_err(napi::Error::from_reason)?;
+    }
+    Ok(last_match_end_utf16)
+  }
+
   /// Applies `self.offset` to a u32 character index.
   /// Returns an error if the resulting index would be negative (underflow).
   #[inline]
@@ -457,6 +587,20 @@ impl BindingMagicString<'_> {
   ) -> napi::Result<This<'s>> {
     self.inner.replace_all(&from, to).map_err(napi::Error::from_reason)?;
     Ok(this)
+  }
+
+  /// Returns the UTF-16 offset past the last match, or -1 if no match was found.
+  /// The JS wrapper uses this to update `lastIndex` on the caller's RegExp.
+  /// Global/sticky behavior is derived from the regex's own flags.
+  #[napi(js_name = "replaceRegex")]
+  pub fn replace_regex(
+    &mut self,
+    #[napi(ts_arg_type = "RegExp")] from: JsRegExp,
+    to: String,
+  ) -> napi::Result<i32> {
+    let last_end = self.regex_replace(&from, &to)?;
+    #[expect(clippy::cast_possible_wrap)]
+    Ok(last_end.map_or(-1, |v| v as i32))
   }
 
   #[napi]
@@ -1000,4 +1144,97 @@ impl BindingMagicString<'_> {
     let json = source_map.to_json();
     BindingDecodedMap { inner: source_map, json }
   }
+}
+
+/// Applies `$&`, `$$`, and `$N` substitution patterns in a replacement string,
+/// matching the original magic-string `_replaceRegexp` semantics (which differ slightly
+/// from strict ECMAScript spec — e.g. `$0` resolves to the full match, all consecutive
+/// digits are parsed as one group number, not just 1-2 digits).
+///
+/// `group_count` is the total number of groups including the full match (i.e. JS `match.length`).
+/// `get_group` returns the matched text for group index `n` (0 = full match), or `None`.
+fn apply_replacement<'a>(
+  replacement: &str,
+  matched: &str,
+  group_count: usize,
+  get_group: impl Fn(usize) -> Option<&'a str>,
+) -> String {
+  // Fast path: no substitution tokens — return replacement as-is.
+  if !replacement.contains('$') {
+    return replacement.to_owned();
+  }
+  let mut result = String::with_capacity(replacement.len());
+  let bytes = replacement.as_bytes();
+  let len = bytes.len();
+  let mut i = 0;
+  while i < len {
+    if bytes[i] == b'$' && i + 1 < len {
+      match bytes[i + 1] {
+        b'$' => {
+          result.push('$');
+          i += 2;
+        }
+        b'&' => {
+          result.push_str(matched);
+          i += 2;
+        }
+        b'0'..=b'9' => {
+          // Parse all consecutive digits after $
+          let start = i + 1;
+          let mut end = start + 1;
+          while end < len && bytes[end].is_ascii_digit() {
+            end += 1;
+          }
+          let num: usize = replacement[start..end].parse().unwrap_or(0);
+          // Match JS semantics: check if group exists (num < match.length)
+          if num < group_count {
+            if let Some(text) = get_group(num) {
+              result.push_str(text);
+            }
+            // group matched empty or didn't participate — output nothing
+            i = end;
+          } else {
+            // No such group — keep literal `$N`
+            result.push_str(&replacement[i..end]);
+            i = end;
+          }
+        }
+        _ => {
+          result.push('$');
+          i += 1;
+        }
+      }
+    } else {
+      // Find the next '$' or end of string; copy the span in one shot.
+      // This is correct for multi-byte UTF-8 since we only split on ASCII '$'.
+      let span_start = i;
+      i += 1;
+      while i < len && bytes[i] != b'$' {
+        i += 1;
+      }
+      result.push_str(&replacement[span_start..i]);
+    }
+  }
+  result
+}
+
+/// `apply_replacement` adapter for `regex::Captures` (fast path).
+fn apply_replacement_regex(
+  replacement: &str,
+  matched: &str,
+  caps: &regex::Captures<'_>,
+  group_count: usize,
+) -> String {
+  apply_replacement(replacement, matched, group_count, |n| caps.get(n).map(|m| m.as_str()))
+}
+
+/// `apply_replacement` adapter for `regress::Match` (slow/fallback path).
+fn apply_replacement_regress(
+  replacement: &str,
+  matched: &str,
+  m: &regress::Match,
+  source: &str,
+) -> String {
+  let group_count = 1 + m.captures.len();
+  apply_replacement(replacement, matched, group_count, |n| m.group(n).map(|range| &source[range]))
 }

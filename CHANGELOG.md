@@ -53,6 +53,7 @@
 
 ### ⚙️ Miscellaneous Tasks
 
+- publish-to-npm: use correct vp pm publish (#8871) by @shulaoda
 - justfile: skip setup-vite-plus if vp is already installed (#8862) by @Boshen
 - add expectWarning option to test config (#8861) by @IWANABETHATGUY
 - justfile: support windows for `just setup` (#8846) by @AliceLanniste

@@ -133,6 +133,7 @@ impl IntegrationTest {
   }
 
   /// Run multiple bundler configurations in HMR mode
+  #[expect(clippy::too_many_lines)]
   async fn run_multiple_for_dev(
     &self,
     multiple_options: Vec<NamedBundlerOptions>,
@@ -298,6 +299,20 @@ impl IntegrationTest {
             !self.test_meta.expect_error,
             "Expected the bundling to be failed with diagnosable errors, but got success"
           );
+          if let Some(expect_warning) = self.test_meta.expect_warning {
+            if expect_warning {
+              assert!(
+                !output.warnings.is_empty(),
+                "Expected the bundling to produce warnings, but got none"
+              );
+            } else {
+              assert!(
+                output.warnings.is_empty(),
+                "Expected the bundling to produce no warnings, but got: {:#?}",
+                output.warnings
+              );
+            }
+          }
 
           // Process HMR updates and patches for execution
           let mut patch_chunks: Vec<String> = vec![];
@@ -434,6 +449,20 @@ impl IntegrationTest {
             !self.test_meta.expect_error,
             "Expected the bundling to be failed with diagnosable errors, but got success"
           );
+          if let Some(expect_warning) = self.test_meta.expect_warning {
+            if expect_warning {
+              assert!(
+                !output.warnings.is_empty(),
+                "Expected the bundling to produce warnings, but got none"
+              );
+            } else {
+              assert!(
+                output.warnings.is_empty(),
+                "Expected the bundling to produce no warnings, but got: {:#?}",
+                output.warnings
+              );
+            }
+          }
           let config_name = named_options
             .config_name
             .as_deref()

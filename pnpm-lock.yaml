@@ -28,8 +28,8 @@ catalogs:
       specifier: ^0.0.35
       version: 0.0.35
     '@oxc-project/runtime':
-      specifier: '=0.121.0'
-      version: 0.121.0
+      specifier: '=0.122.0'
+      version: 0.122.0
     '@oxc-project/types':
       specifier: '=0.122.0'
       version: 0.122.0
@@ -262,7 +262,7 @@ importers:
         version: 0.0.35
       '@oxc-project/runtime':
         specifier: 'catalog:'
-        version: 0.121.0
+        version: 0.122.0
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.3
@@ -2789,8 +2789,8 @@ packages:
     resolution: {integrity: sha512-7fvACzS46TkHuzA+Tag8ac40qfwURXRTdc4AtyItF59AoNPOO/QjPMqPyvJH8CaUdGu0ntWDX1CCUNyLMxxX5g==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
-  '@oxc-project/runtime@0.121.0':
-    resolution: {integrity: sha512-p0bQukD8OEHxzY4T9OlANBbEFGnOnjo1CYi50HES7OD36UO2yPh6T+uOJKLtlg06eclxroipRCpQGMpeH8EJ/g==}
+  '@oxc-project/runtime@0.122.0':
+    resolution: {integrity: sha512-vevyz3bNjevQFCV2Yg5o6Sp9BSoiYiJVymMrzA3S1ZGj4J8ak4YiywhFyQMueQ3UNlJU6HZOZYDy70TUc99aHw==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
   '@oxc-project/types@0.101.0':
@@ -8567,7 +8567,7 @@ snapshots:
 
   '@oxc-project/runtime@0.120.0': {}
 
-  '@oxc-project/runtime@0.121.0': {}
+  '@oxc-project/runtime@0.122.0': {}
 
   '@oxc-project/types@0.101.0': {}
 

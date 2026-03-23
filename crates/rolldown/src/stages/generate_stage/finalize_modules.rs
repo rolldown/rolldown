@@ -38,6 +38,12 @@ impl GenerateStage<'_> {
       .flatten()
       .collect::<FxHashSet<SymbolRef>>();
 
+    let has_enum_inlining = self
+      .link_output
+      .module_table
+      .iter()
+      .any(|m| m.as_normal().is_some_and(|n| !n.ecma_view.enum_member_value_map.is_empty()));
+
     let transfer_parts_rendered_maps = debug_span!("finalize_modules").in_scope(|| {
       self
         .link_output
@@ -73,6 +79,7 @@ impl GenerateStage<'_> {
             safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
             used_symbol_refs: &self.link_output.used_symbol_refs,
             resolved_paths: self.resolved_paths.as_ref(),
+            has_enum_inlining,
           };
 
           let concatenated_wrapped_module_kind = ctx.linking_info.concatenated_wrapped_module_kind;

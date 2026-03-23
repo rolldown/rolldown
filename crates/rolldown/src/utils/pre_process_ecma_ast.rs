@@ -5,13 +5,16 @@ use oxc::ast_visit::VisitMut;
 use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, SemanticBuilder, Stats};
+use oxc::span::CompactStr;
+use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
   InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
 };
 
-use rolldown_common::NormalizedBundlerOptions;
+use rolldown_common::{ConstExportMeta, ConstantValue, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
+use rustc_hash::FxHashMap;
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
 
@@ -86,6 +89,47 @@ impl PreProcessEcmaAst {
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
+
+    // Extract enum member values before the transformer converts enums.
+    // This runs before Step 3 (transformer) because `optimize_const_enums` / `optimize_enums`
+    // remove or rewrite enum declarations, making member values unrecoverable afterward.
+    let enum_member_value_map = {
+      let scoping_ref = scoping.as_mut().unwrap();
+      let mut enum_values: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>> =
+        FxHashMap::default();
+
+      // Walk enum declarations → body scopes → member bindings to collect values.
+      for symbol_id in scoping_ref.symbol_ids() {
+        let flags = scoping_ref.symbol_flags(symbol_id);
+        if !(flags.is_const_enum() || flags.contains(SymbolFlags::RegularEnum)) {
+          continue;
+        }
+        let Some(body_scopes) = scoping_ref.get_enum_body_scopes(symbol_id) else { continue };
+        let members = enum_values
+          .entry(CompactStr::from(scoping_ref.symbol_name(symbol_id)))
+          .or_default();
+
+        for &body_scope in body_scopes {
+          for (member_name, &member_sym) in scoping_ref.get_bindings(body_scope) {
+            if let Some(value) = scoping_ref.get_enum_member_value(member_sym) {
+              let rolldown_value = match value {
+                oxc::syntax::constant_value::ConstantValue::Number(n) => {
+                  ConstantValue::Number(*n)
+                }
+                oxc::syntax::constant_value::ConstantValue::String(s) => {
+                  ConstantValue::String(s.to_string())
+                }
+              };
+              members.insert(
+                CompactStr::from(member_name.as_str()),
+                ConstExportMeta::new(rolldown_value, false),
+              );
+            }
+          }
+        }
+      }
+      enum_values
+    };
 
     // Step 2: Run define plugin.
     if let Some(replace_global_define_config) = replace_global_define_config {
@@ -179,7 +223,14 @@ impl PreProcessEcmaAst {
       self.recreate_scoping(&mut None, program)
     });
 
-    Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings, preserve_jsx })
+    Ok(ParseToEcmaAstResult {
+      ast,
+      scoping,
+      has_lazy_export,
+      warnings,
+      preserve_jsx,
+      enum_member_value_map,
+    })
   }
 
   fn recreate_scoping(&mut self, scoping: &mut Option<Scoping>, program: &Program<'_>) -> Scoping {

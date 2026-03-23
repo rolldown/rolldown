@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+//#endregion
+//#region entry.ts
+console.log("a_val");
+console.log("a_val", "b_val");
+console.log("a_val", 100);
+console.log("a_val");
+console.log("c_val");
+//#endregion
+
+```

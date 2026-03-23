@@ -6,19 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region cross-file.ts
-let CrossFileGood = /* @__PURE__ */ function(CrossFileGood) {
-	CrossFileGood["STR"] = "str 2";
-	CrossFileGood[CrossFileGood["NUM"] = 321] = "NUM";
-	return CrossFileGood;
-}({});
-let CrossFileBad = /* @__PURE__ */ function(CrossFileBad) {
-	CrossFileBad["PROTO"] = "__proto__";
-	CrossFileBad["CONSTRUCTOR"] = "constructor";
-	CrossFileBad["PROTOTYPE"] = "prototype";
-	return CrossFileBad;
-}({});
-//#endregion
 //#region entry.ts
 var SameFileGood = /* @__PURE__ */ function(SameFileGood) {
 	SameFileGood["STR"] = "str 1";
@@ -31,32 +18,31 @@ var SameFileBad = /* @__PURE__ */ function(SameFileBad) {
 	SameFileBad["PROTOTYPE"] = "prototype";
 	return SameFileBad;
 }(SameFileBad || {});
-SameFileGood.STR, SameFileGood.NUM, CrossFileGood.STR, CrossFileGood.NUM;
 shouldNotBeComputed(class {
 	[100] = 100;
 	"200" = 200;
 	["300"] = 300;
-	[SameFileGood.STR] = SameFileGood.STR;
-	[SameFileGood.NUM] = SameFileGood.NUM;
-	[CrossFileGood.STR] = CrossFileGood.STR;
-	[CrossFileGood.NUM] = CrossFileGood.NUM;
+	["str 1"] = "str 1";
+	[123] = 123;
+	["str 2"] = "str 2";
+	[321] = 321;
 }, {
 	[100]: 100,
 	"200": 200,
 	["300"]: 300,
-	[SameFileGood.STR]: SameFileGood.STR,
-	[SameFileGood.NUM]: SameFileGood.NUM,
-	[CrossFileGood.STR]: CrossFileGood.STR,
-	[CrossFileGood.NUM]: CrossFileGood.NUM
+	["str 1"]: "str 1",
+	[123]: 123,
+	["str 2"]: "str 2",
+	[321]: 321
 });
-mustBeComputed({ [SameFileBad.PROTO]: null }, { [CrossFileBad.PROTO]: null }, class {
-	[SameFileBad.CONSTRUCTOR]() {}
+mustBeComputed({ ["__proto__"]: null }, { ["__proto__"]: null }, class {
+	["constructor"]() {}
 }, class {
-	[CrossFileBad.CONSTRUCTOR]() {}
+	["constructor"]() {}
 }, class {
-	static [SameFileBad.PROTOTYPE]() {}
+	static ["prototype"]() {}
 }, class {
-	static [CrossFileBad.PROTOTYPE]() {}
+	static ["prototype"]() {}
 });
 //#endregion
 

@@ -24,7 +24,7 @@ jobs:
       - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
 
       - name: Check version changes
-        uses: EndBug/version-check@5102328418c0130d66ca712d755c303e93368ce2 # v2.1.7
+        uses: EndBug/version-check@095362f3cd50f690c8fa0e6afeea81834bd8d320 # v3.0.0
         id: version
         with:
           static-checking: localIsNew

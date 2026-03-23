@@ -196,7 +196,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(legitimized_repr_name, "_hot"))
     });
 
-    let mut result = ScanResult {
+    let result = ScanResult {
       named_imports: FxIndexMap::default(),
       named_exports: FxHashMap::default(),
       stmt_infos: StmtInfos::new(),

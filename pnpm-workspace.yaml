@@ -22,7 +22,7 @@ catalog:
   '@oxc-node/cli': ^0.0.35
   '@oxc-node/core': ^0.0.35
   '@oxc-project/runtime': '=0.121.0'
-  '@oxc-project/types': '=0.121.0'
+  '@oxc-project/types': '=0.122.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rollup/plugin-commonjs': ^29.0.0
   '@rollup/plugin-json': ^6.1.0

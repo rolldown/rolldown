@@ -341,13 +341,12 @@ impl LinkStage<'_> {
             // `export { foo } from './bar.js'`) and exported import bindings
             // (e.g., `import * as ns from './bar.js'` when `ns` is re-exported)
             // from plain unused imports (e.g., `import { unused } from './bar.js'`).
-            let has_used_exported_declared =
-              stmt_info.declared_symbols.iter().any(|tagged_ref| {
-                let sym_ref = tagged_ref.inner();
-                let canonical = context.symbols.canonical_ref_for(sym_ref);
-                context.used_symbol_refs.contains(&canonical)
-                  && module.named_exports.values().any(|export| export.referenced == sym_ref)
-              });
+            let has_used_exported_declared = stmt_info.declared_symbols.iter().any(|tagged_ref| {
+              let sym_ref = tagged_ref.inner();
+              let canonical = context.symbols.canonical_ref_for(sym_ref);
+              context.used_symbol_refs.contains(&canonical)
+                && module.named_exports.values().any(|export| export.referenced == sym_ref)
+            });
             if !has_used_exported_declared {
               continue;
             }

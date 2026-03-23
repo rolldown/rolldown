@@ -1343,9 +1343,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         } else if let Some(export_all_decl) = top_stmt.as_export_all_declaration() {
           let rec_idx = self.ctx.module.imports[&export_all_decl.span];
           if rescue_for_esm_init {
-            if let Some(importee_idx) =
-              self.ctx.module.import_records[rec_idx].resolved_module
-            {
+            if let Some(importee_idx) = self.ctx.module.import_records[rec_idx].resolved_module {
               self.generate_transitive_esm_init(importee_idx, &mut program.body);
             }
             return;
@@ -1608,9 +1606,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             // `export { foo } from 'path'`
             let rec_idx = self.ctx.module.imports[&named_decl.span];
             if rescue_for_esm_init {
-              if let Some(importee_idx) =
-                self.ctx.module.import_records[rec_idx].resolved_module
-              {
+              if let Some(importee_idx) = self.ctx.module.import_records[rec_idx].resolved_module {
                 self.generate_transitive_esm_init(importee_idx, &mut program.body);
               }
               return;

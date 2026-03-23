@@ -25,13 +25,21 @@ setup-bench:
 
 [unix]
 setup-vite-plus:
-    @echo "Running on Unix-like system..."
-    @sh -c "curl -fsSL https://vite.plus | bash"
+    #!/bin/sh
+    if command -v vp >/dev/null 2>&1; then
+        echo "vp is already installed, skipping."
+        exit 0
+    fi
+    curl -fsSL https://vite.plus | bash
 
 [windows]
 setup-vite-plus:
-    @echo "Running on Windows PowerShell..."
-    @powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://viteplus.dev/install.ps1 | iex"
+    #!powershell
+    if (Get-Command vp -ErrorAction SilentlyContinue) {
+        Write-Host "vp is already installed, skipping."
+        exit 0
+    }
+    irm https://viteplus.dev/install.ps1 | iex
 
 # Update the submodule to the latest commit
 update-submodule:

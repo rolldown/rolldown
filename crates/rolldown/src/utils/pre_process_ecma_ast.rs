@@ -95,57 +95,40 @@ impl PreProcessEcmaAst {
     // remove or rewrite enum declarations, making member values unrecoverable afterward.
     let enum_member_value_map = {
       let scoping_ref = scoping.as_mut().unwrap();
-      // Clone (not take) so that `Scoping.enum_member_values()` remains populated for the
-      // transformer in Step 3, which reads them via `all_members_evaluable()` to decide
-      // whether to use `({})` or `(Foo || {})` as the IIFE argument.
-      let raw_values = scoping_ref.enum_member_values().clone();
+      let mut enum_values: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>> =
+        FxHashMap::default();
 
-      if raw_values.is_empty() {
-        FxHashMap::default()
-      } else {
-        let mut enum_values: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>> =
-          FxHashMap::default();
+      // Walk enum declarations → body scopes → member bindings to collect values.
+      for symbol_id in scoping_ref.symbol_ids() {
+        let flags = scoping_ref.symbol_flags(symbol_id);
+        if !(flags.is_const_enum() || flags.contains(SymbolFlags::RegularEnum)) {
+          continue;
+        }
+        let Some(body_scopes) = scoping_ref.get_enum_body_scopes(symbol_id) else { continue };
+        let members = enum_values
+          .entry(CompactStr::from(scoping_ref.symbol_name(symbol_id)))
+          .or_default();
 
-        // Build a reverse map: body_scope_id → enum_name
-        // using the enum_body_scopes stored during semantic analysis.
-        let mut scope_to_enum: FxHashMap<oxc::semantic::ScopeId, CompactStr> =
-          FxHashMap::default();
-        for symbol_id in scoping_ref.symbol_ids() {
-          let flags = scoping_ref.symbol_flags(symbol_id);
-          if flags.is_const_enum() || flags.contains(SymbolFlags::RegularEnum) {
-            if let Some(body_scopes) = scoping_ref.get_enum_body_scopes(symbol_id) {
-              let name = CompactStr::from(scoping_ref.symbol_name(symbol_id));
-              for &body_scope in body_scopes {
-                scope_to_enum.insert(body_scope, name.clone());
-              }
+        for &body_scope in body_scopes {
+          for (member_name, &member_sym) in scoping_ref.get_bindings(body_scope) {
+            if let Some(value) = scoping_ref.get_enum_member_value(member_sym) {
+              let rolldown_value = match value {
+                oxc::syntax::constant_value::ConstantValue::Number(n) => {
+                  ConstantValue::Number(*n)
+                }
+                oxc::syntax::constant_value::ConstantValue::String(s) => {
+                  ConstantValue::String(s.to_string())
+                }
+              };
+              members.insert(
+                CompactStr::from(member_name.as_str()),
+                ConstExportMeta::new(rolldown_value, false),
+              );
             }
           }
         }
-
-        // For each enum member with a value, find its parent enum via scope mapping.
-        // Convert to final ConstExportMeta type here (single conversion site).
-        for (symbol_id, value) in &raw_values {
-          if !scoping_ref.symbol_flags(*symbol_id).is_enum_member() {
-            continue;
-          }
-          let member_name = CompactStr::from(scoping_ref.symbol_name(*symbol_id));
-          let member_scope = scoping_ref.symbol_scope_id(*symbol_id);
-
-          if let Some(enum_name) = scope_to_enum.get(&member_scope) {
-            let rolldown_value = match value {
-              oxc::syntax::constant_value::ConstantValue::Number(n) => ConstantValue::Number(*n),
-              oxc::syntax::constant_value::ConstantValue::String(s) => {
-                ConstantValue::String(s.to_string())
-              }
-            };
-            enum_values
-              .entry(enum_name.clone())
-              .or_default()
-              .insert(member_name, ConstExportMeta::new(rolldown_value, false));
-          }
-        }
-        enum_values
       }
+      enum_values
     };
 
     // Step 2: Run define plugin.

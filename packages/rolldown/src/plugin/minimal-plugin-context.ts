@@ -44,8 +44,6 @@ export interface PluginContextMeta {
 
 /** @category Plugin APIs */
 export interface MinimalPluginContext {
-  /** @hidden */
-  readonly pluginName: string;
   /**
    * Similar to {@linkcode warn | this.warn}, except that it will also abort
    * the bundling process with an error.

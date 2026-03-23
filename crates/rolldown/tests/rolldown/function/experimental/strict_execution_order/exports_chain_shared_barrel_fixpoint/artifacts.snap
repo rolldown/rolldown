@@ -27,15 +27,9 @@ var init_inner = __esmMin((() => {
 }));
 
 //#endregion
-//#region ns.js
-var init_ns = __esmMin((() => {
-	init_inner();
-}));
-
-//#endregion
 //#region outer.js
 var init_outer = __esmMin((() => {
-	init_ns();
+	init_inner();
 }));
 
 //#endregion

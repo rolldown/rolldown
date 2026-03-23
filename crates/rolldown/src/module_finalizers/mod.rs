@@ -124,6 +124,53 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     expr
   }
 
+  /// For excluded re-export statements in strict execution order, generate init
+  /// calls by traversing through non-included barrel modules to find included
+  /// importees whose wrappers are available in this chunk.
+  fn generate_transitive_esm_init(
+    &mut self,
+    module_idx: ModuleIdx,
+    body: &mut allocator::Vec<'ast, Statement<'ast>>,
+  ) {
+    let Module::Normal(importee) = &self.ctx.modules[module_idx] else { return };
+    let importee_linking_info = &self.ctx.linking_infos[importee.idx];
+    if !matches!(importee_linking_info.wrap_kind(), WrapKind::Esm) {
+      return;
+    }
+
+    // Only generate init calls for modules in the same chunk whose wrapper is
+    // declared (i.e. the module is included in the output).
+    if importee_linking_info.is_included
+      && self.ctx.chunk_graph.module_to_chunk[importee.idx] == Some(self.ctx.chunk_idx)
+    {
+      if self.generated_init_esm_importee_ids.contains(&importee.idx) {
+        return;
+      }
+      self.generated_init_esm_importee_ids.insert(importee.idx);
+      let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(
+        importee_linking_info.wrapper_ref.unwrap(),
+        false,
+        false,
+      );
+      let init_call = self.snippet.builder.expression_call(
+        SPAN,
+        wrapper_ref_expr,
+        NONE,
+        self.snippet.builder.vec(),
+        false,
+      );
+      body.push(self.snippet.builder.statement_expression(SPAN, init_call));
+    } else {
+      // Importee is not included (barrel module) — traverse its import records
+      // to find included importees transitively.
+      for rec in importee.import_records.iter() {
+        if let Some(sub_importee_idx) = rec.resolved_module {
+          self.generate_transitive_esm_init(sub_importee_idx, body);
+        }
+      }
+    }
+  }
+
   /// If return true the import stmt should be removed,
   /// or transform the import stmt to target form.
   fn transform_or_remove_import_export_stmt(
@@ -1261,13 +1308,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .enumerate()
       .zip(self.ctx.module.stmt_infos.iter_enumerated().skip(1))
       .for_each(|((_top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
-        if !self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx) {
+        let is_stmt_included = self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx);
+
+        // In strict execution order with ESM wrapping, excluded import/export
+        // declarations still need init calls for correct initialization order.
+        // Let them pass through to the import/export handling below.
+        let rescue_for_esm_init = !is_stmt_included
+          && self.ctx.options.is_strict_execution_order_enabled()
+          && matches!(self.ctx.linking_info.wrap_kind(), WrapKind::Esm);
+
+        if !is_stmt_included && !rescue_for_esm_init {
           return;
         }
 
-        let is_module_decl = top_stmt.is_module_declaration_with_source();
+        let is_module_decl = is_stmt_included && top_stmt.is_module_declaration_with_source();
 
         if let Some(import_decl) = top_stmt.as_import_declaration() {
+          if !is_stmt_included {
+            return;
+          }
           let span = import_decl.span;
           let rec_idx = self.ctx.module.imports[&import_decl.span];
           if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
@@ -1283,6 +1342,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           }
         } else if let Some(export_all_decl) = top_stmt.as_export_all_declaration() {
           let rec_idx = self.ctx.module.imports[&export_all_decl.span];
+          if rescue_for_esm_init {
+            if let Some(importee_idx) =
+              self.ctx.module.import_records[rec_idx].resolved_module
+            {
+              self.generate_transitive_esm_init(importee_idx, &mut program.body);
+            }
+            return;
+          }
           // "export * as ns from 'path'"
           if let Some(_alias) = &export_all_decl.exported {
             if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
@@ -1540,10 +1607,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           } else {
             // `export { foo } from 'path'`
             let rec_idx = self.ctx.module.imports[&named_decl.span];
+            if rescue_for_esm_init {
+              if let Some(importee_idx) =
+                self.ctx.module.import_records[rec_idx].resolved_module
+              {
+                self.generate_transitive_esm_init(importee_idx, &mut program.body);
+              }
+              return;
+            }
             if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
               return;
             }
           }
+        }
+
+        // Excluded non-import/export statements should not be emitted.
+        if !is_stmt_included {
+          return;
         }
 
         if self.ctx.options.top_level_var {

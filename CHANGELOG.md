@@ -80,10 +80,6 @@
 - upgrade oxc to 0.121.0 (#8784) by @shulaoda
 - increase Windows dev drive size from 12GB to 20GB (#8779) by @Copilot
 
-### ◀️ Revert
-
-- "release: v1.0.0-rc.11 (#8868)" (#8875) by @shulaoda
-
 ### ❤️ New Contributors
 
 * @younggglcy made their first contribution in [#8870](https://github.com/rolldown/rolldown/pull/8870)

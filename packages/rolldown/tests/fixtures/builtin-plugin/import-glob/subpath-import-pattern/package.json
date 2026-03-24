@@ -1,6 +1,10 @@
 {
   "name": "subpath-import-pattern",
+  "private": true,
   "imports": {
     "#src/*": "./src/*"
+  },
+  "dependencies": {
+    "rolldown-tests": "workspace:*"
   }
 }

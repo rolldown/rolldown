@@ -268,9 +268,7 @@ impl Plugin for ViteResolvePlugin {
         .get(&rolldown_plugin_utils::constants::ViteImportGlob)
         .is_some_and(|v| v.is_sub_imports_pattern())
       {
-        let joined = if Path::new(id.as_ref()).is_absolute() {
-          PathBuf::from(id.as_ref())
-        } else if id.starts_with("./") || id.starts_with("../") {
+        let joined = if id.starts_with("./") || id.starts_with("../") {
           args
             .importer
             .and_then(|importer| Path::new(importer).parent())

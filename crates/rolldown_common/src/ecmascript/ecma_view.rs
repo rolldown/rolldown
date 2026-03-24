@@ -135,6 +135,6 @@ pub struct PrependRenderedImport {
 
 impl SourceMutation for PrependRenderedImport {
   fn apply(&self, magic_string: &mut string_wizard::MagicString<'_>) {
-    magic_string.prepend(self.intro.clone());
+    magic_string.append_intro(self.intro.clone());
   }
 }

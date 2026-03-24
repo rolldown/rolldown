@@ -22,8 +22,8 @@ var require_basic_ref_with_named_default = /* @__PURE__ */ __commonJSMin(((expor
 var require_cjs$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "export-star-from-cjs-a";
 }));
-require_basic_ref_with_named_default();
 require_basic_ns();
+require_basic_ref_with_named_default();
 __reExport(/* @__PURE__ */ __exportAll({}), /* @__PURE__ */ __toESM(require_cjs$2()));
 __reExport(/* @__PURE__ */ __exportAll({}), /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "named-import-export-star-from-cjs-a";

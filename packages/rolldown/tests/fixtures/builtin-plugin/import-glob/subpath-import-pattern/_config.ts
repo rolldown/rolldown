@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { defineTest } from '../../../../src/index.ts';
+import { defineTest } from 'rolldown-tests';
 import { viteImportGlobPlugin, viteResolvePlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 

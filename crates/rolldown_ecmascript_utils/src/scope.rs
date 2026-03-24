@@ -18,8 +18,8 @@ use oxc::semantic::ScopeFlags;
 /// }
 /// ```
 pub fn is_top_level(scope_stack: &[ScopeFlags]) -> bool {
-  scope_stack.iter().rev().all(|flag| {
-    flag.intersects(ScopeFlags::Top | ScopeFlags::StrictMode | ScopeFlags::ClassStaticBlock)
-      || flag.is_empty()
-  })
+  scope_stack
+    .iter()
+    .rev()
+    .all(|flag| flag.is_top() || flag.contains(ScopeFlags::ClassStaticBlock) || flag.is_block())
 }

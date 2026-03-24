@@ -261,7 +261,9 @@ impl GenerateStage<'_> {
           if !matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
             for export_ref in entry_meta
               .resolved_exports
-              .values()
+              .iter()
+              .sorted_by_key(|(name, _)| *name)
+              .map(|(_, export)| export)
               // A chunk should always consume a cjs export symbol by property access, so filter
               // out a exported symbol that came from a cjs module.
               .filter(|resolved_export| !resolved_export.came_from_cjs)

@@ -10,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "acorn-import-assertions": "catalog:",
+    "acorn-import-phases": "^1.0.4",
     "fixturify": "catalog:",
     "fs-extra": "catalog:",
     "mocha": "catalog:",

@@ -661,6 +661,9 @@ importers:
       acorn-import-assertions:
         specifier: 'catalog:'
         version: 1.9.0(acorn@8.16.0)
+      acorn-import-phases:
+        specifier: ^1.0.4
+        version: 1.0.4(acorn@8.16.0)
       fixturify:
         specifier: 'catalog:'
         version: 3.0.0
@@ -4390,6 +4393,12 @@ packages:
     deprecated: package has been renamed to acorn-import-attributes
     peerDependencies:
       acorn: ^8
+
+  acorn-import-phases@1.0.4:
+    resolution: {integrity: sha512-wKmbr/DDiIXzEOiWrTTUcDm24kQ2vGfZQvM2fwg2vXqR5uW6aapr7ObPtj1th32b9u90/Pf4AItvdTh42fBmVQ==}
+    engines: {node: '>=10.13.0'}
+    peerDependencies:
+      acorn: ^8.14.0
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -9818,6 +9827,10 @@ snapshots:
       acorn: 6.4.2
 
   acorn-import-assertions@1.9.0(acorn@8.16.0):
+    dependencies:
+      acorn: 8.16.0
+
+  acorn-import-phases@1.0.4(acorn@8.16.0):
     dependencies:
       acorn: 8.16.0
 

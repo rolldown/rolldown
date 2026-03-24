@@ -76,6 +76,7 @@
       "ignoreDependencies": [
         "acorn",
         "acorn-import-assertions",
+        "acorn-import-phases",
         "locate-character",
         "requirejs",
         "terser",

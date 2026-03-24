@@ -93,12 +93,12 @@ impl ChunkOptimizationGraph {
         }
       })
       .collect();
-    Self {
-      chunks,
-      bits_to_chunk_idx: bits_to_chunk_idx.iter().map(|(k, v)| (k.clone(), *v)).collect(),
-      module_to_chunk,
-      chunk_idx_to_temp_chunk_idx,
-    }
+
+    let mut bits_to_chunk_idx: FxIndexMap<_, _> =
+      bits_to_chunk_idx.iter().map(|(k, v)| (k.clone(), *v)).collect();
+    bits_to_chunk_idx.sort_unstable_keys();
+
+    Self { chunks, bits_to_chunk_idx, module_to_chunk, chunk_idx_to_temp_chunk_idx }
   }
 
   /// Assigns a module to a temporary chunk based on its reachability bits.

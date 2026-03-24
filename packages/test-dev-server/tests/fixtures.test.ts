@@ -96,6 +96,12 @@ function main() {
         await waitForBuildStable(port);
 
         for (const [index, [step, hmrEdits]] of hmrEditFiles.entries()) {
+          // Wait for the previous build's debounce window to close so the
+          // watcher treats the next file write as a new change.
+          if (index !== 0) {
+            await waitForBuildStable(port);
+          }
+
           console.log(
             `🔄 Processing HMR edit files for step ${step} with edits: ${JSON.stringify(
               hmrEdits,

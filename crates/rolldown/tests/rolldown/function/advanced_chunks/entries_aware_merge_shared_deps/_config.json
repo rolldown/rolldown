@@ -1,0 +1,19 @@
+{
+  "_comment": "Shared deps must not be duplicated across entries_aware subgroups. On main, each subgroup gets deps independently, inflating sizes and preventing merge.",
+  "config": {
+    "input": [
+      { "name": "entry-a", "import": "./entry-a.js" },
+      { "name": "entry-b", "import": "./entry-b.js" }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "vendor",
+          "test": "lib-",
+          "entriesAware": true,
+          "entriesAwareMergeThreshold": 50
+        }
+      ]
+    }
+  }
+}

@@ -13,6 +13,10 @@ pub struct TestMeta {
   #[serde(default)]
   /// If `true`, the fixture are expected to fail to compile/build.
   pub expect_error: bool,
+  #[serde(default)]
+  /// If `true`, the fixture are expected to produce warnings. If `false`, the fixture are expected
+  /// to produce no warnings. If not set, no assertion is made on warnings.
+  pub expect_warning: Option<bool>,
   #[serde(default, rename = "_comment")]
   /// A workaround for writing comments in JSON.
   pub _comment: String,

@@ -1,4 +1,93 @@
 
+## [1.0.0-rc.11] - 2026-03-23
+
+### 🚀 Features
+
+- magicString replace with regex (#8802) by @IWANABETHATGUY
+- support `output.sourcemapExcludeSources` option (#8828) by @sapphi-red
+- support `getIndentString` in MagicString (#8775) by @IWANABETHATGUY
+- MagicString ignoreList support (#8773) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- forward test filters through vp run (#8870) by @younggglcy
+- types: remove `pluginName` from `MinimalPluginContext` (#8864) by @sapphi-red
+- do not report eval?.() as direct eval (#8860) by @IWANABETHATGUY
+- handle negative indices, overlapping ranges, and moved content in MagicString remove (#8829) by @IWANABETHATGUY
+- enable arbitrary_precision for serde_json to fix JSON float parsing (#8848) by @elderapo
+- resolve TypeScript lint errors (#8841) by @Boshen
+- avoid panic on multi-byte UTF-8 chars in hash placeholder iterator (#8790) by @shulaoda
+- ci: skip failing vite build watch raw query test (#8840) by @Boshen
+- ci: use step-level env override to unset VITE_PLUS_CLI_BIN in vite tests (#8838) by @Boshen
+- ci: move vite tests into CI workflow by @Boshen
+- ci: unset all VITE_PLUS_* env vars in vite-tests workflow (#8837) by @Boshen
+- test: skip watch CLI tests on Windows (#8830) by @Boshen
+- ci: unset VITE_PLUS_CLI_BIN in vite-tests workflow (#8832) by @Boshen
+- remove redundant bare side-effect imports in entry/facade chunks (#8804) by @h-a-n-a
+- magicString prepend issues (#8797) by @IWANABETHATGUY
+- ci: use `vpx` instead of `vp exec` for `pkg-pr-new` (#8827) by @Boshen
+- set `order` for callable plugins (#8815) by @sapphi-red
+- handle reversed slice ranges with moved content (#8750) by @IWANABETHATGUY
+- update emnapi to latest to avoid version mismatch (#8781) by @sapphi-red
+- external.md on Windows OS (#8780) by @bddjr
+- align MagicString length/isEmpty with reference magic-string (#8776) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- extract canonical_ref_resolving_namespace helper (#8836) by @Boshen
+
+### 📚 Documentation
+
+- improve external examples for cross-platform correctness (#8786) by @hyf0-agent
+- update reference to transform function in plugin API documentation (#8778) by @zOadT
+
+### ⚡ Performance
+
+- reduce timing of `dervie_entries_aware_chunk_name` (#8847) by @AliceLanniste
+- bench: remove redundant sourcemap benchmark cases (#8825) by @Boshen
+- reduce intermediate allocations in `collapse_sourcemaps` (#8821) by @Boshen
+- enable parallel AST cloning on macOS (#8814) by @Boshen
+
+### 🧪 Testing
+
+- watch: use polling watcher and retry for watch error test (#8772) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency @oxc-project/types to v0.122.0 (#8873) by @renovate[bot]
+- publish-to-npm: use correct vp pm publish (#8871) by @shulaoda
+- justfile: skip setup-vite-plus if vp is already installed (#8862) by @Boshen
+- add expectWarning option to test config (#8861) by @IWANABETHATGUY
+- justfile: support windows for `just setup` (#8846) by @AliceLanniste
+- deps: update rust crates (#8852) by @renovate[bot]
+- deps: update endbug/version-check action to v3 (#8855) by @renovate[bot]
+- deps: update github-actions (#8853) by @renovate[bot]
+- deps: update dependency vitepress to v2.0.0-alpha.17 (#8854) by @renovate[bot]
+- deps: update npm packages (#8851) by @renovate[bot]
+- bench: use mimalloc as global allocator in bench crate (#8844) by @IWANABETHATGUY
+- reuse native build artifact in node-validation job (#8826) by @Boshen
+- speed up CodSpeed benchmark build by disabling LTO (#8824) by @Boshen
+- remove redundant critcmp benchmark job (#8823) by @Boshen
+- deps: update rust crate oxc_sourcemap to v6.1.0 (#8785) by @renovate[bot]
+- node: migrate oxlint and oxfmt to Vite+ (#8813) by @Boshen
+- revert namespace runners for release build jobs (#8820) by @Boshen
+- migrate runners to namespace (#8819) by @Boshen
+- test: relax test utils path assertion to support git worktrees (#8816) by @younggglcy
+- rename `examples/lazy` to `examples/lazy-compilation` (#8789) by @shulaoda
+- improve "needs reproduction" wording by @Boshen
+- deps: update dependency oxlint-tsgolint to v0.17.1 (#8807) by @renovate[bot]
+- enable 7 previously-skipped MagicString tests (#8771) by @IWANABETHATGUY
+- upgrade oxc to 0.121.0 (#8784) by @shulaoda
+- increase Windows dev drive size from 12GB to 20GB (#8779) by @Copilot
+
+### ❤️ New Contributors
+
+* @younggglcy made their first contribution in [#8870](https://github.com/rolldown/rolldown/pull/8870)
+* @elderapo made their first contribution in [#8848](https://github.com/rolldown/rolldown/pull/8848)
+* @bddjr made their first contribution in [#8780](https://github.com/rolldown/rolldown/pull/8780)
+* @zOadT made their first contribution in [#8778](https://github.com/rolldown/rolldown/pull/8778)
+
+
 ## [1.0.0-rc.10] - 2026-03-18
 
 ### 🚀 Features

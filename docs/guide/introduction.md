@@ -44,7 +44,6 @@ Finally, Rolldown provides some features that esbuild and Rollup do not (and may
 
 - [Manual code splitting](./notable-features#manual-code-splitting)
 - HMR support (WIP)
-- Module Federation (planned)
 
 ## Credits
 

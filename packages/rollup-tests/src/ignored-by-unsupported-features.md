@@ -297,6 +297,13 @@
  - rollup@function@deprecated@transform-attributes: does not allow returning attributes from the "transform" hook
  - rollup@function@extend-more-hooks-to-include-import-attributes: extend load, transform and renderDynamicImport to include import attributes
 
+### Source phase import is not supported
+ - rollup@form@source-phase-imports-external: preserves source phase import externals
+ - rollup@function@source-phase-dynamic-import-error-resolved: throws for non-external dynamic source phase imports with dynamic attributes
+ - rollup@function@source-phase-dynamic-import-error: throws for non-external dynamic source phase imports
+ - rollup@function@source-phase-format-unsupported: throws for source phase imports in non-ES output formats
+ - rollup@function@source-phase-import-error: throws for non-external source phase imports
+
 ### watch behavior is not compatible yet
  - rollup@hooks@allows to enforce plugin hook order in watch mode
 

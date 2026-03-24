@@ -14,6 +14,7 @@ use rolldown_utils::js_regex::HybridRegex;
 pub struct JsRegExp {
   pub source: String,
   pub flags: String,
+  pub last_index: usize,
 }
 
 impl ValidateNapiValue for JsRegExp {}
@@ -39,8 +40,9 @@ impl FromNapiValue for JsRegExp {
     if js_object.instanceof(regexp_constructor)? {
       let source = js_object.get_named_property::<String>("source")?;
       let flags = js_object.get_named_property::<String>("flags")?;
+      let last_index = js_object.get_named_property::<u32>("lastIndex").unwrap_or(0) as usize;
 
-      Ok(JsRegExp { source, flags })
+      Ok(JsRegExp { source, flags, last_index })
     } else {
       Err(Error::new(Status::ObjectExpected, "Expect a RegExp object"))
     }

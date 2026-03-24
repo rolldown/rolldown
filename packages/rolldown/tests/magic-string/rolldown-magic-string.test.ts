@@ -11,7 +11,7 @@ describe('offset', () => {
   describe('underflow guard — negative (index + offset) must throw, not panic', () => {
     it('remove() throws when offset causes index underflow', () => {
       const s = new MagicString('hello world', { offset: -1 });
-      assert.throws(() => s.remove(0, 1), /out of bounds/);
+      assert.throws(() => s.remove(0, 1), /end must be greater than start/);
     });
 
     it('prependLeft() throws when offset causes index underflow', () => {
@@ -205,5 +205,35 @@ describe('unicode handling', () => {
 
     assert.strictEqual(s.toString(), 'abIJefgh🤷kl');
     assert.strictEqual(s.slice(-3, 3), 'Jefgh\uD83E');
+  });
+});
+
+describe('regex replace', () => {
+  it('uses UTF-16 lastIndex for sticky regexes with emoji before the match', () => {
+    const s = new MagicString('\u{1F937}a');
+    const regex = /a/y;
+
+    // JS lastIndex is in UTF-16 code units: the emoji occupies indices 0-2.
+    regex.lastIndex = 2;
+    s.replace(regex, 'x');
+
+    assert.strictEqual(s.toString(), '\u{1F937}x');
+    assert.strictEqual(regex.lastIndex, 3);
+  });
+
+  it('returns correct lastIndex when match ends at a supplementary character boundary', () => {
+    // Matching the emoji itself — the match end byte offset lands on the
+    // low surrogate entry in the mapper, which must be skipped to produce
+    // the correct UTF-16 lastIndex.
+    const s = new MagicString('A\u{1F937}B');
+    const regex = /./uy;
+
+    // Start at the emoji (UTF-16 index 1).
+    regex.lastIndex = 1;
+    s.replace(regex, 'X');
+
+    assert.strictEqual(s.toString(), 'AXB');
+    // The emoji occupies UTF-16 indices 1-2, so lastIndex should be 3.
+    assert.strictEqual(regex.lastIndex, 3);
   });
 });

@@ -735,7 +735,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   ) -> Option<()> {
     let parent = self.visit_path.last()?;
     if let AstKind::CallExpression(call_expr) = parent {
-      if ident_ref.name == "eval" && call_expr.callee.address() == ident_ref.unstable_address() {
+      if ident_ref.name == "eval"
+        && !call_expr.optional
+        && call_expr.callee.address() == ident_ref.unstable_address()
+      {
         // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
         // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
         self.result.ecma_view_meta.insert(EcmaViewMeta::Eval);

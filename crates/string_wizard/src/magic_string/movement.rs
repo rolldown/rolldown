@@ -1,16 +1,32 @@
-use crate::MagicString;
-
-use super::update::UpdateOptions;
+use crate::{MagicString, chunk::EditOptions};
 
 impl MagicString<'_> {
+  /// Removes characters in the range `[start, end)` from the generated output.
+  ///
+  /// Unlike `update`/`overwrite`, this iterates by original position (via `chunk_by_start`)
+  /// rather than by linked-list order, so it works correctly across moved content.
   pub fn remove(&mut self, start: u32, end: u32) -> Result<&mut Self, String> {
-    self.inner_update_with(
-      start,
-      end,
-      "".into(),
-      UpdateOptions { keep_original: false, overwrite: true },
-      false,
-    )
+    if start == end {
+      return Ok(self);
+    }
+    if start > end {
+      return Err(format!("end must be greater than start, got start: {start}, end: {end}"));
+    }
+
+    self.split_at(start)?;
+    self.split_at(end)?;
+
+    let mut chunk_idx = self.chunk_by_start.get(&start).copied();
+
+    while let Some(idx) = chunk_idx {
+      let chunk = &mut self.chunks[idx];
+      let chunk_end = chunk.end();
+      chunk.edit("".into(), EditOptions { overwrite: true, store_name: false });
+
+      chunk_idx = if end > chunk_end { self.chunk_by_start.get(&chunk_end).copied() } else { None };
+    }
+
+    Ok(self)
   }
 
   /// Moves the characters from start and end to index. Returns this.

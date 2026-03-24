@@ -141,13 +141,16 @@ beforeAll(async () => {
 beforeEach(async (ctx) => {
   const retryCount = ctx.task.result?.retryCount ?? 0;
   if (retryCount > 0) {
+    // On retry, restart the dev server with fresh files to avoid stale state
+    if (devServerProcess) {
+      devServerProcess.kill('SIGTERM');
+      devServerProcess = null;
+    }
+    await killPort(3000);
     await resetTestFiles();
-    // Wait for file system watcher to detect and process the changes
-    await new Promise((resolve) => setTimeout(resolve, 1000 * 3));
-    // Reload the page to ensure it reflects the reset file state
-    // This is necessary because after a failed test, the page may show stale content
+    ({ devServerProcess } = await startDevServer());
     if (page) {
-      await page.reload({ waitUntil: 'networkidle' });
+      await page.goto('http://localhost:3000', { waitUntil: 'networkidle' });
     }
   }
 });

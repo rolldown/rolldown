@@ -22,6 +22,14 @@
       "type": "boolean",
       "default": false
     },
+    "expectWarning": {
+      "description": "If `true`, the fixture are expected to produce warnings. If `false`, the fixture are expected\nto produce no warnings. If not set, no assertion is made on warnings.",
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "default": null
+    },
     "_comment": {
       "description": "A workaround for writing comments in JSON.",
       "type": "string",

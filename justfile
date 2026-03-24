@@ -25,13 +25,21 @@ setup-bench:
 
 [unix]
 setup-vite-plus:
-    @echo "Running on Unix-like system..."
-    @sh -c "curl -fsSL https://vite.plus | bash"
+    #!/bin/sh
+    if command -v vp >/dev/null 2>&1; then
+        echo "vp is already installed, skipping."
+        exit 0
+    fi
+    curl -fsSL https://vite.plus | bash
 
 [windows]
 setup-vite-plus:
-    @echo "Running on Windows PowerShell..."
-    @powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://viteplus.dev/install.ps1 | iex"
+    #!powershell
+    if (Get-Command vp -ErrorAction SilentlyContinue) {
+        Write-Host "vp is already installed, skipping."
+        exit 0
+    }
+    irm https://viteplus.dev/install.ps1 | iex
 
 # Update the submodule to the latest commit
 update-submodule:
@@ -92,7 +100,7 @@ test-node-hmr *args: build build-test-dev-server
   just test-node-hmr-only {{ args }}
 
 test-node-hmr-only *args:
-  vp run --filter @rolldown/test-dev-server-tests test {{ args }}
+  vp run --filter @rolldown/test-dev-server-tests test -- {{ args }}
 
 # Run Vite's test suite to check Rolldown's behaviors.
 test-vite: # We don't use `test-node-vite` because it's not expected to run in `just test-node`.
@@ -105,12 +113,12 @@ t-node: t-node-rolldown t-node-rollup
 
 # Run Rolldown's tests without building Rolldown.
 t-node-rolldown *args="":
-  vp run --filter rolldown-tests test:main {{ args }}
-  vp run --filter rolldown-tests test:watcher {{ args }}
+  vp run --filter rolldown-tests test:main -- {{ args }}
+  vp run --filter rolldown-tests test:watcher -- {{ args }}
 
 # Run Rollup's test suite without building Rolldown.
 t-node-rollup *args="":
-  vp run --filter rollup-tests test {{ args }}
+  vp run --filter rollup-tests test -- {{ args }}
 
 # Run specific rust test without enabling extended tests.
 [unix]

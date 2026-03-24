@@ -16,14 +16,6 @@ export function removeDirSync(path: string) {
   }
 }
 
-export function sensibleTimeoutInMs(ms: number) {
-  const actualMs = process.env.CI ? ms * 3 : ms;
-
-  return new Promise<void>((resolve) => {
-    setTimeout(resolve, actualMs);
-  });
-}
-
 export async function isDirectoryExists(path: string): Promise<boolean> {
   try {
     return await nodeFs.promises.access(path).then(() => true);

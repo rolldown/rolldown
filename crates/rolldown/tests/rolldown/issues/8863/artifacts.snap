@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region sheets.cjs
+var require_sheets = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	var GC;
+	(function() {
+		GC ??= {};
+		GC.Spread = {};
+	})();
+	(function(t) {
+		module.exports = t;
+	})(GC || {});
+}));
+//#endregion
+//#region resource.cjs
+var require_resource = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	(function(factory) {
+		if (typeof module === "object" && typeof module.exports === "object") module.exports = factory(require_sheets());
+		else factory(GC);
+	})(function(GC) {
+		GC = GC || {};
+		GC.Spread = GC.Spread || {};
+		GC.Spread.Sheets = GC.Spread.Sheets || {};
+		GC.Spread.Sheets.Designer = GC.Spread.Sheets.Designer || {};
+		GC.Spread.Sheets.Designer.DR = GC.Spread.Sheets.Designer.DR || {};
+		return {};
+	});
+}));
+//#endregion
+//#region designer.cjs
+var require_designer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	(function(factory) {
+		if (typeof module === "object" && typeof module.exports === "object") {
+			let SJS_NS = require_sheets();
+			factory(SJS_NS);
+			module.exports = SJS_NS;
+		} else factory(GC);
+	})(function(GC) {
+		console.log(GC.Spread.Sheets.Designer.DR.res);
+		GC = GC || {};
+		GC.Spread = GC.Spread || {};
+		GC.Spread.Sheets = GC.Spread.Sheets || {};
+		GC.Spread.Sheets.Designer = GC.Spread.Sheets.Designer || {};
+	});
+}));
+require_resource();
+require_designer();
+//#endregion
+
+```

@@ -90,10 +90,17 @@ class DevServer {
       onHmrUpdates: (errOrUpdates) => {
         if (errOrUpdates instanceof Error) {
           console.error('HMR update error:', errOrUpdates);
+          this.#buildSeq++;
         } else {
           this.handleHmrUpdates(errOrUpdates.updates);
+          // Only increment if no FullReload — a FullReload triggers a rebuild
+          // which will call onOutput, so we let onOutput do the increment to
+          // avoid double-counting a single build cycle.
+          const hasFullReload = errOrUpdates.updates.some((u) => u.update.type === 'FullReload');
+          if (!hasFullReload) {
+            this.#buildSeq++;
+          }
         }
-        this.#buildSeq++;
       },
       onOutput: (errOrOutputs) => {
         if (errOrOutputs instanceof Error) {

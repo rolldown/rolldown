@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## chunk.js
+
+```js
+//#region chunk.js
+function Ub() {}
+//#endregion
+export { Ub as Pb };
+
+```
+
+## index.js
+
+```js
+import { Pb as Ub$1 } from "./chunk.js";
+//#region index.js
+console.log(() => {
+	"use strict";
+	return 0;
+});
+var Ub = [
+	"open",
+	"opening",
+	"toggle"
+];
+console.log(class {
+	constructor() {
+		console.log(Ub);
+	}
+	static p = Ub$1({});
+});
+//#endregion
+
+```

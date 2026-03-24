@@ -1,0 +1,6 @@
+{
+  "name": "subpath-import-pattern",
+  "imports": {
+    "#src/*": "./src/*"
+  }
+}

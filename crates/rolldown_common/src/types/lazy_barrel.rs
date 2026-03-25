@@ -125,6 +125,9 @@ impl ImportedExports {
 pub struct ExportSource {
   imported: Specifier,
   record_idx: ImportRecordIdx,
+  /// `true` for `export { a } from './x'` (dedicated re-export record).
+  /// `false` for `import { a } from './x'; export { a }` (shared import record).
+  is_direct_reexport: bool,
 }
 
 #[derive(Debug, Default)]
@@ -226,7 +229,8 @@ impl BarrelInfo {
         }
         if has_local_export {
           let mut reexports = FxHashSet::with_capacity(self.named.len() + self.star.len());
-          reexports.extend(self.named.values().map(|v| v.record_idx));
+          reexports
+            .extend(self.named.values().filter(|v| v.is_direct_reexport).map(|v| v.record_idx));
           reexports.extend(self.star.iter().copied());
           imported_exports_per_record.retain(|rec_idx, rec| match needs_records.entry(*rec_idx) {
             Entry::Occupied(_) => true,
@@ -294,11 +298,14 @@ pub fn try_extract_lazy_barrel_info(
   for (export_name, local_export) in &ecma_view.named_exports {
     if let Some(named_import) = ecma_view.named_imports.get(&local_export.referenced) {
       // Re-export: the export references an import
+      let is_direct_reexport =
+        raw_import_records[named_import.record_idx].meta.contains(ImportRecordMeta::IsReExportOnly);
       barrel_info.named.insert(
         export_name.clone(),
         ExportSource {
           record_idx: named_import.record_idx,
           imported: named_import.imported.clone(),
+          is_direct_reexport,
         },
       );
     } else {

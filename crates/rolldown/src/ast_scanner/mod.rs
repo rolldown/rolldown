@@ -665,6 +665,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if let Some(exported) = &decl.exported {
       // export * as ns from '...'
       self.add_star_re_export(exported.name().as_str(), id, decl.span);
+      self.result.import_records[id].meta.insert(ImportRecordMeta::IsReExportOnly);
     } else {
       // export * from '...'
       self.result.import_records[id].meta.insert(ImportRecordMeta::IsExportStar);
@@ -717,6 +718,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
       }
       self.result.imports.insert(decl.span, record_idx);
+      self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsReExportOnly);
     } else {
       decl.specifiers.iter().for_each(|spec| {
         if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {

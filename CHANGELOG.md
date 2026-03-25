@@ -1,4 +1,31 @@
 
+## [1.0.0-rc.12] - 2026-03-25
+
+### 🐛 Bug Fixes
+
+- correct execution order of transferred CJS init calls (#8877) by @IWANABETHATGUY
+- mcs: `entriesAware` should calculate sizes without duplication (#8887) by @hyf0
+- non-deterministic chunk generation (#8882) by @sapphi-red
+- `is_top_level` incorrectly treats strict-mode scopes as top-level (#8878) by @Dunqing
+
+### 🚜 Refactor
+
+- treeshake: migrate SideEffectDetector to Oxc's MayHaveSideEffects trait (#8624) by @Dunqing
+
+### 🧪 Testing
+
+- make dev server tests deterministic by replacing fixed sleeps with event-driven polling (#8561) by @Boshen
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency oxfmt to ^0.42.0 (#8891) by @renovate[bot]
+- deps: update rust crate oxc_sourcemap to v6.1.1 (#8890) by @renovate[bot]
+- remove Rolldown MF plan (#8883) by @shulaoda
+- deps: update rollup submodule for tests to v4.60.0 (#8881) by @sapphi-red
+- deps: update test262 submodule for tests (#8880) by @sapphi-red
+- deps: upgrade oxc crates to 0.122.0 (#8879) by @shulaoda
+
+
 ## [1.0.0-rc.11] - 2026-03-23
 
 ### 🚀 Features

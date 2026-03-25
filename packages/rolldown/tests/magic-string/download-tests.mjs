@@ -82,7 +82,7 @@ const SKIP_DESCRIBE_BLOCKS = [
 
 // Individual tests to skip (by partial match of test name)
 const SKIP_TESTS = [
-  'should throw when given non-string content', // error handling differs
+  // Note: 'should throw when given non-string content' now works via JS-side TypeError wrapper
   // Note: 'should throw' broad pattern removed — overlapping replacement error tests now pass
   // Remaining 'should throw' tests are covered by specific patterns (non-string content, negative indices)
   // options-specific skips

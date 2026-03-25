@@ -37,7 +37,7 @@ describe('MagicString', () => {
       assert.strictEqual(s.append('xyz'), s);
     });
 
-    it.skip('should throw when given non-string content', () => {
+    it('should throw when given non-string content', () => {
       const s = new MagicString('');
       assert.throws(() => s.append([]), TypeError);
     });
@@ -1005,7 +1005,7 @@ describe('MagicString', () => {
       );
     });
 
-    it.skip('should throw when given non-string content', () => {
+    it('should throw when given non-string content', () => {
       const s = new MagicString('');
       assert.throws(() => s.overwrite(0, 1, []), TypeError);
     });
@@ -1146,7 +1146,7 @@ describe('MagicString', () => {
       );
     });
 
-    it.skip('should throw when given non-string content', () => {
+    it('should throw when given non-string content', () => {
       const s = new MagicString('');
       assert.throws(() => s.update(0, 1, []), TypeError);
     });

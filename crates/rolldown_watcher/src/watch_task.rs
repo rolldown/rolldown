@@ -1,7 +1,12 @@
 use arcstr::ArcStr;
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig};
-use rolldown_common::{BundleMode, NormalizedBundlerOptions, ScanMode, WatcherChangeKind};
-use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
+use rolldown_common::{
+  BundleMode, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
+};
+use rolldown_error::{
+  BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, DiagnosticOptions, ResultExt,
+  filter_out_disabled_diagnostics,
+};
 use rolldown_fs_watcher::{DynFsWatcher, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use std::path::Path;
@@ -132,12 +137,24 @@ impl WatchTask {
     self.needs_rebuild = false;
 
     match result {
-      Ok(_output) => Ok(BuildOutcome::Success(BundleEndEventData {
-        task_index,
-        output: self.options.cwd.join(&self.options.out_dir).to_string_lossy().into_owned(),
-        duration,
-        bundle_handle,
-      })),
+      Ok(output) => {
+        // Emit build warnings (e.g. CIRCULAR_DEPENDENCY) via the on_log callback,
+        // matching the behavior of the non-watch build path.
+        if let Err(err) = Self::emit_warnings(&self.options, output.warnings).await {
+          return Ok(BuildOutcome::Error(WatchErrorEventData {
+            task_index,
+            diagnostics: Arc::from(BatchedBuildDiagnostic::from(err).into_vec()),
+            cwd: self.options.cwd.clone(),
+            bundle_handle,
+          }));
+        }
+        Ok(BuildOutcome::Success(BundleEndEventData {
+          task_index,
+          output: self.options.cwd.join(&self.options.out_dir).to_string_lossy().into_owned(),
+          duration,
+          bundle_handle,
+        }))
+      }
       Err(errs) => Ok(BuildOutcome::Error(WatchErrorEventData {
         task_index,
         diagnostics: Arc::from(errs.into_vec()),
@@ -145,6 +162,57 @@ impl WatchTask {
         bundle_handle,
       })),
     }
+  }
+
+  /// Emit build warnings via the `on_log` callback.
+  /// This mirrors the warning-handling logic in the non-watch build path so that
+  /// diagnostics such as CIRCULAR_DEPENDENCY are surfaced during watch rebuilds.
+  async fn emit_warnings(
+    options: &NormalizedBundlerOptions,
+    warnings: Vec<BuildDiagnostic>,
+  ) -> anyhow::Result<()> {
+    if warnings.is_empty() || options.log_level == Some(LogLevel::Silent) {
+      return Ok(());
+    }
+    if let Some(on_log) = options.on_log.as_ref() {
+      for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
+        let diag = warning.to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() });
+        let code = warning.kind().to_string();
+        #[expect(
+          clippy::cast_possible_truncation,
+          reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
+        )]
+        let (loc, pos) = if let Some((_file, line, column, position)) = diag.get_primary_location()
+        {
+          (
+            Some(rolldown_common::LogLocation {
+              line: line as u32,
+              column: column as u32,
+              file: warning.id(),
+            }),
+            Some(position as u32),
+          )
+        } else {
+          (None, None)
+        };
+        on_log
+          .call(
+            LogLevel::Warn,
+            rolldown_common::Log {
+              id: warning.id(),
+              exporter: warning.exporter(),
+              code: Some(code),
+              message: diag.to_color_string(),
+              plugin: None,
+              loc,
+              pos,
+              ids: warning.ids(),
+            },
+          )
+          .await?;
+      }
+    }
+    Ok(())
   }
 
   /// Start event data for this task

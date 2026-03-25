@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
 
-      - uses: voidzero-dev/setup-vp@e1609b468742ba9232ce5e12b3a77bdf14495277 # v1.1.0
+      - uses: voidzero-dev/setup-vp@bf09c8df8b55f615b00dd85146069c02e4761235
         with:
           node-version: ${{ inputs.node-version }}
           cache: true

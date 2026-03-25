@@ -6,7 +6,7 @@ oxc_index::define_index_type! {
     pub struct ChunkIdx = u32;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct EditOptions {
   /// `true` will clear the `intro` and `outro` of the [Chunk]
   pub overwrite: bool,

@@ -1501,13 +1501,13 @@ export declare class BindingMagicString {
   prependRight(index: number, content: string): this
   appendLeft(index: number, content: string): this
   appendRight(index: number, content: string): this
-  overwrite(start: number, end: number, content: string): this
+  overwrite(start: number, end: number, content: string, options?: BindingOverwriteOptions | undefined | null): this
   toString(): string
   hasChanged(): boolean
   length(): number
   isEmpty(): boolean
   remove(start: number, end: number): this
-  update(start: number, end: number, content: string): this
+  update(start: number, end: number, content: string, options?: BindingUpdateOptions | undefined | null): this
   relocate(start: number, end: number, to: number): this
   /**
    * Alias for `relocate` to match the original magic-string API.
@@ -2416,6 +2416,10 @@ export interface BindingOutputs {
   assets: Array<BindingOutputAsset>
 }
 
+export interface BindingOverwriteOptions {
+  contentOnly?: boolean
+}
+
 export interface BindingPluginContextResolvedId {
   id: string
   packageJsonPath?: string
@@ -2657,6 +2661,10 @@ export interface BindingTsconfigRawOptions {
 export interface BindingTsconfigResult {
   tsconfig: BindingTsconfig
   tsconfigFilePaths: Array<string>
+}
+
+export interface BindingUpdateOptions {
+  overwrite?: boolean
 }
 
 export interface BindingViteAliasPluginAlias {

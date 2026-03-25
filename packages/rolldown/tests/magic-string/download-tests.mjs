@@ -21,13 +21,13 @@
  *   - prependRight(index: number, content: string): this
  *   - appendLeft(index: number, content: string): this
  *   - appendRight(index: number, content: string): this
- *   - overwrite(start: number, end: number, content: string): this
+ *   - overwrite(start: number, end: number, content: string, options?: { contentOnly? }): this
  *   - toString(): string
  *   - hasChanged(): boolean
  *   - length(): number
  *   - isEmpty(): boolean
  *   - remove(start: number, end: number): this
- *   - update(start: number, end: number, content: string): this
+ *   - update(start: number, end: number, content: string, options?: { overwrite? }): this
  *   - relocate(start: number, end: number, to: number): this
  *   - move(start: number, end: number, index: number): this (alias for relocate)
  *   - indent(indentor?: string | undefined | null, options?: { exclude? }): this
@@ -45,6 +45,7 @@
  *   - constructor options: filename, offset, indentExclusionRanges, and ignoreList ARE supported
  *   - addSourcemapLocation (not in string_wizard)
  *   - storeName option in overwrite/update (not exposed in binding)
+ *   - Note: overwrite option in update and contentOnly option in overwrite ARE now supported
  *   - x_google_ignoreList / ignoreList in generateMap output is now supported
  *   - replace/replaceAll with regex or function replacer
  */
@@ -82,7 +83,8 @@ const SKIP_DESCRIBE_BLOCKS = [
 // Individual tests to skip (by partial match of test name)
 const SKIP_TESTS = [
   'should throw when given non-string content', // error handling differs
-  'should throw', // error handling differs
+  // Note: 'should throw' broad pattern removed — overlapping replacement error tests now pass
+  // Remaining 'should throw' tests are covered by specific patterns (non-string content, negative indices)
   // options-specific skips
   // Note: 'stores ignore-list hint' is now supported (ignoreList option)
   // Note: 'indentExclusionRanges' is now supported (constructor option + getter + clone)
@@ -96,12 +98,9 @@ const SKIP_TESTS = [
   'empty string should be movable', // empty string edge case
   'split point', // split point errors cause panic
   'storeName', // storeName option not supported
-  'contentOnly', // contentOnly option not supported
   'should remove overlapping ranges', // overlapping replacements cause panic
-  'error if overlapping replacements', // overlapping replacements cause panic
   // Note: 'should allow contiguous but non-overlapping replacements' now works
   'already been edited', // Cannot split a chunk that has already been edited
-  'non-zero-length inserts inside', // causes split chunk panic
   'should remove modified ranges', // causes split chunk panic
 
   'should replace then remove', // causes split chunk panic
@@ -111,14 +110,11 @@ const SKIP_TESTS = [
   'should remove everything', // edge case
   'should adjust other removals', // complex removal interaction
   'should treat zero-length removals as a no-op', // remove(0,0) throws error in binding
-  // update/overwrite-specific skips
-  'inserts inside', // causes split chunk panic
-  'disallows overwriting partially', // causes panic
-  'disallows updating partially', // causes panic
-  'disallows overwriting fully', // causes panic
-  'disallows updating fully', // causes panic
-  'replaces interior inserts', // causes split chunk panic
-  'allows later insertions at the end', // causes split chunk panic
+  // Note: update/overwrite options (overwrite, contentOnly) are now supported
+  // Note: split-point detection is now implemented for update/overwrite across moved content
+  // Note: non-zero-length and zero-length inserts inside update/overwrite now work
+  // Note: interior inserts with overwrite/contentOnly now work
+  // Note: later insertions at the end now work
   // remove-specific complex cases
   // Note: "removes across moved content" appears in both remove and reset sections
   // The reset version passes, so we handle this with a special transformation below

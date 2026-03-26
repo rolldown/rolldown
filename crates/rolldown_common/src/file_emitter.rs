@@ -377,6 +377,7 @@ impl FileEmitter {
     self.base_reference_id.store(0, Ordering::Relaxed);
     self.emitted_files.clear();
     self.emitted_chunks.clear();
+    self.emitted_filenames.clear();
     self.module_to_file_ref.clear();
   }
 }

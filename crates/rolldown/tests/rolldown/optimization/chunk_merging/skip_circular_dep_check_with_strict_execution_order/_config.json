@@ -1,9 +1,0 @@
-{
-  "config": {},
-  "configVariants": [
-    {
-      "strictExecutionOrder": true,
-      "_configName": "strict_execution_order"
-    }
-  ]
-}

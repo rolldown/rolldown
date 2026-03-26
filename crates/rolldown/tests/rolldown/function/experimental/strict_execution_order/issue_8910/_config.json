@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      {
+        "import": "./node1.cjs",
+        "name": "node1"
+      }
+    ],
+    "external": ["node:assert"],
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "false"
+  }
+}

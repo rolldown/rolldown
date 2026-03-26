@@ -18,31 +18,10 @@ pub fn deconflict_chunk_symbols(
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
 ) {
-  deconflict_chunk_symbols_impl(chunk, link_output, format, index_chunk_id_to_name, false);
-}
-
-/// Like `deconflict_chunk_symbols` but also mangles (shortens) symbol names
-/// using base54 encoding when `mangle` is true.
-pub fn deconflict_chunk_symbols_with_mangle(
-  chunk: &mut Chunk,
-  link_output: &LinkStageOutput,
-  format: OutputFormat,
-  index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
-) {
-  deconflict_chunk_symbols_impl(chunk, link_output, format, index_chunk_id_to_name, true);
-}
-
-fn deconflict_chunk_symbols_impl(
-  chunk: &mut Chunk,
-  link_output: &LinkStageOutput,
-  format: OutputFormat,
-  index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
-  mangle: bool,
-) {
 
   // Estimate symbol count based on module count (typically ~2 symbols per module for deconflicting)
   let estimated_symbols = chunk.modules.len() * 2;
-  let mut renamer = Renamer::with_capacity_and_mangle(chunk.entry_module_idx(), &link_output.symbol_db, format, estimated_symbols, mangle);
+  let mut renamer = Renamer::with_capacity(chunk.entry_module_idx(), &link_output.symbol_db, format, estimated_symbols);
   // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
   // These are identifiers referenced but not defined in the module's scope (e.g., `console`, `window`).
   chunk

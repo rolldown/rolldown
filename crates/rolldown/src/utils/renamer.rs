@@ -14,31 +14,6 @@ use rolldown_utils::concat_string;
 
 use crate::stages::link_stage::LinkStageOutput;
 
-/// Base54 character set for generating mangled names.
-/// Characters are ordered by frequency in typical JS code for better gzip compression.
-const BASE54_CHARS: &[u8; 64] = b"etnriaoscludfpmhg_vybxSCwTEDOkAjMNPFILRzBVHUWGKqJYXZQ$1024368579";
-
-/// Generate a short mangled name from an index using base54 encoding.
-fn base54_name(n: u32) -> CompactStr {
-  let mut result = Vec::with_capacity(4);
-  let mut num = n as usize;
-
-  // First character: base 54 (no digits allowed as first char in JS identifiers)
-  const FIRST_BASE: usize = 54;
-  result.push(BASE54_CHARS[num % FIRST_BASE]);
-  num /= FIRST_BASE;
-
-  // Rest: base 64 (digits allowed in subsequent positions)
-  const REST_BASE: usize = 64;
-  while num > 0 {
-    num -= 1;
-    result.push(BASE54_CHARS[num % REST_BASE]);
-    num /= REST_BASE;
-  }
-
-  CompactStr::from(unsafe { std::str::from_utf8_unchecked(&result) })
-}
-
 #[derive(Debug)]
 pub struct Renamer<'name> {
   /// Tracks all canonical names used in the top-level scope.
@@ -66,11 +41,6 @@ pub struct Renamer<'name> {
   /// Built lazily on first access per module. Avoids repeated iteration
   /// over all scopes in `has_nested_scope_binding`.
   nested_binding_cache: FxHashMap<ModuleIdx, FxHashSet<CompactStr>>,
-  /// When true, generate short mangled names (a, b, c...) instead of
-  /// deconflicted names (original, original$1, original$2...).
-  mangle: bool,
-  /// Counter for generating the next base54 name.
-  mangle_counter: u32,
 }
 
 impl<'name> Renamer<'name> {
@@ -87,16 +57,6 @@ impl<'name> Renamer<'name> {
     symbol_db: &'name SymbolRefDb,
     format: OutputFormat,
     estimated_symbols: usize,
-  ) -> Self {
-    Self::with_capacity_and_mangle(base_module_index, symbol_db, format, estimated_symbols, false)
-  }
-
-  pub fn with_capacity_and_mangle(
-    base_module_index: Option<ModuleIdx>,
-    symbol_db: &'name SymbolRefDb,
-    format: OutputFormat,
-    estimated_symbols: usize,
-    mangle: bool,
   ) -> Self {
     // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
     let mut manual_reserved = match format {
@@ -121,8 +81,6 @@ impl<'name> Renamer<'name> {
       used_canonical_names,
       entry_module_idx: base_module_index,
       nested_binding_cache: FxHashMap::default(),
-      mangle,
-      mangle_counter: 0,
     }
   }
 
@@ -233,32 +191,18 @@ impl<'name> Renamer<'name> {
     true
   }
 
-  /// Generate the next available base54 name, skipping reserved/used names.
-  fn next_mangled_name(&mut self) -> CompactStr {
-    loop {
-      let name = base54_name(self.mangle_counter);
-      self.mangle_counter += 1;
-      // Skip names that are already reserved (keywords, globals, unresolved references)
-      if !self.used_canonical_names.contains_key(&name) {
-        return name;
-      }
-    }
-  }
-
   /// Assign a canonical name to a top-level symbol, avoiding conflicts with
   /// other top-level names and nested scope names that could cause capture.
   pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef, needs_deconflict: bool) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
 
-    if self.canonical_names.contains_key(&canonical_ref) {
+    if !needs_deconflict {
+      let canonical_name = canonical_ref.name(self.symbol_db);
+      self.canonical_names.insert(canonical_ref, CompactStr::new(canonical_name));
       return;
     }
 
-    // When mangling is enabled, generate short base54 names
-    if self.mangle {
-      let name = self.next_mangled_name();
-      self.used_canonical_names.insert(name.clone(), 0);
-      self.canonical_names.insert(canonical_ref, name);
+    if self.canonical_names.contains_key(&canonical_ref) {
       return;
     }
 

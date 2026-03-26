@@ -85,6 +85,7 @@ impl EcmaCompiler {
     let legal = if options.comments.legal { LegalComment::Inline } else { LegalComment::None };
     Codegen::new()
       .with_options(CodegenOptions {
+        minify: options.minify,
         comments: CommentOptions {
           normal: false,
           legal,
@@ -141,6 +142,8 @@ pub struct PrintOptions {
   pub filename: String,
   pub sourcemap: bool,
   pub initial_indent: u32,
+  /// Enable whitespace minification in codegen output.
+  pub minify: bool,
 }
 
 #[derive(Debug, Default, Clone, Copy)]

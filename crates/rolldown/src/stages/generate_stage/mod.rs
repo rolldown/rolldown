@@ -40,7 +40,7 @@ use crate::{
   stages::link_stage::LinkStageOutput,
   types::generator::GenerateContext,
   utils::chunk::{
-    deconflict_chunk_symbols::{deconflict_chunk_symbols, deconflict_chunk_symbols_with_mangle},
+    deconflict_chunk_symbols::deconflict_chunk_symbols,
     determine_export_mode::determine_export_mode, generate_pre_rendered_chunk,
     render_chunk_exports::get_chunk_export_names,
     validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
@@ -109,24 +109,14 @@ impl<'a> GenerateStage<'a> {
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
-    let should_mangle = self.options.minify.is_enabled();
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
       chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
-        if should_mangle {
-          deconflict_chunk_symbols_with_mangle(
-            chunk,
-            self.link_output,
-            self.options.format,
-            &index_chunk_id_to_name,
-          );
-        } else {
-          deconflict_chunk_symbols(
-            chunk,
-            self.link_output,
-            self.options.format,
-            &index_chunk_id_to_name,
-          );
-        }
+        deconflict_chunk_symbols(
+          chunk,
+          self.link_output,
+          self.options.format,
+          &index_chunk_id_to_name,
+        );
       });
     });
 

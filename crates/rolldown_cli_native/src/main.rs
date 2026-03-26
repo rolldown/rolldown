@@ -2,7 +2,6 @@
 static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Instant;
 
 // Hold trace guard alive until program exit
@@ -11,6 +10,8 @@ use rolldown_tracing::try_init_tracing;
 use rolldown::{
     Bundler, BundlerOptions, InputItem, IsExternal, OutputFormat, RawMinifyOptions, SourceMapType,
 };
+use rolldown_utils::pattern_filter::StringOrRegex;
+use rolldown_utils::js_regex::HybridRegex;
 use rolldown_common::bundler_options::CommentsOptions;
 
 #[tokio::main(flavor = "multi_thread")]
@@ -101,27 +102,24 @@ async fn main() {
         external_patterns.push("*.css".to_string());
     }
 
+    // Convert glob patterns to StringOrRegex for zero-overhead matching (no async Fn overhead).
     let external = if !external_patterns.is_empty() {
-        let patterns = Arc::new(external_patterns);
-        Some(IsExternal::Fn(Some(Arc::new(
-            move |specifier: &str,
-             _importer: Option<&str>,
-             _is_resolved: bool|
-             -> std::pin::Pin<
-                Box<dyn std::future::Future<Output = anyhow::Result<bool>> + Send + 'static>,
-            > {
-                let is_external = patterns.iter().any(|pat| {
-                    if pat.starts_with('*') {
-                        specifier.ends_with(&pat[1..])
-                    } else if pat.ends_with('*') {
-                        specifier.starts_with(&pat[..pat.len()-1])
-                    } else {
-                        specifier == pat
-                    }
-                });
-                Box::pin(async move { Ok(is_external) })
-            },
-        ))))
+        let sor_patterns: Vec<StringOrRegex> = external_patterns
+            .into_iter()
+            .map(|pat| {
+                if pat.contains('*') {
+                    // Convert glob to regex: *.css -> ^.*\.css$
+                    let regex_str = format!("^{}$", pat.replace('.', r"\.").replace('*', ".*"));
+                    StringOrRegex::Regex(
+                        HybridRegex::new(&regex_str)
+                            .expect("invalid regex pattern"),
+                    )
+                } else {
+                    StringOrRegex::String(pat)
+                }
+            })
+            .collect();
+        Some(IsExternal::StringOrRegex(sor_patterns))
     } else {
         None
     };

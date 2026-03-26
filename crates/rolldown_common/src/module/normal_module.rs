@@ -202,24 +202,29 @@ impl NormalModule {
         // Because oxc codegen sourcemap is last of sourcemap chain,
         // If here no extra sourcemap need remapping, we using it as final module sourcemap.
         // So here make sure using correct `source_name` and `source_content.
+        let minify_whitespace = options.minify.is_enabled();
         let render_output = EcmaCompiler::print_with(
           ast,
           PrintOptions {
             sourcemap: enable_sourcemap,
             filename: self.id.to_string(),
             comments: {
-              let mut c: rolldown_ecmascript::PrintCommentsOptions = options.comments.into();
-              // Annotation comments must survive into the rendered text because
-              // `minify_chunks` re-parses it; without them the parser won't set
-              // `expr.pure` and DCE can't eliminate unused pure calls.
-              // `minify_chunks` codegen will honour the user's `comments.annotation`
-              // setting when it emits the final output.
-              // Only `annotation` needs this override — `legal` and `jsdoc` comments
-              // have no effect on DCE behaviour.
-              c.annotation = true;
-              c
+              let c: rolldown_ecmascript::PrintCommentsOptions = options.comments.into();
+              if minify_whitespace {
+                // When minification is integrated into codegen, comments are controlled
+                // by the user's comment settings directly.
+                c
+              } else {
+                let mut c = c;
+                // Annotation comments must survive into the rendered text because
+                // `minify_chunks` re-parses it; without them the parser won't set
+                // `expr.pure` and DCE can't eliminate unused pure calls.
+                c.annotation = true;
+                c
+              }
             },
             initial_indent,
+            minify: minify_whitespace,
           },
         );
         if !self.ecma_view.mutations.is_empty() {

@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+//#region logger.js
+let send = () => {};
+const setup = () => {
+	send = (msg) => {
+		globalThis.result = msg;
+	};
+};
+//#endregion
+//#region consumer.js
+const doWork = () => {
+	send("hello from doWork");
+};
+//#endregion
+//#region main.js
+setup();
+doWork();
+assert.strictEqual(globalThis.result, "hello from doWork");
+//#endregion
+
+```

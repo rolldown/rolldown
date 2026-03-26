@@ -186,8 +186,15 @@ impl LinkStage<'_> {
                       }
                       WrapKind::Esm => {
                         // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
+                        let needs_init_for_named_reexport =
+                          self.options.is_strict_execution_order_enabled()
+                            && rec.meta.contains(ImportRecordMeta::IsReExportOnly)
+                            && !is_reexport_all;
                         stmt_info.side_effect =
-                          (is_reexport_all || importee.side_effects.has_side_effects()).into();
+                          (is_reexport_all
+                            || importee.side_effects.has_side_effects()
+                            || needs_init_for_named_reexport)
+                            .into();
                         // Reference to `init_foo`
                         stmt_info
                           .referenced_symbols

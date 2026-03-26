@@ -2914,6 +2914,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_cli_native"
+version = "0.1.0"
+dependencies = [
+ "rolldown",
+ "rolldown_common",
+ "tokio",
+]
+
+[[package]]
 name = "rolldown_common"
 version = "0.1.0"
 dependencies = [

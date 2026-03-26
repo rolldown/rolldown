@@ -209,6 +209,9 @@ impl<'a> LinkStage<'a> {
     self.include_statements(&unreachable_import_expression_addrs);
     self.patch_module_dependencies();
 
+    // Flatten all symbol link chains so canonical_ref_for becomes O(1) in the generate stage.
+    self.symbols.flatten_all_links();
+
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 
     LinkStageOutput {

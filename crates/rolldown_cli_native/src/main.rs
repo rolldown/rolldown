@@ -5,6 +5,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
+// Hold trace guard alive until program exit
+use rolldown_tracing::try_init_tracing;
+
 use rolldown::{
     Bundler, BundlerOptions, InputItem, IsExternal, OutputFormat, RawMinifyOptions, SourceMapType,
 };
@@ -12,6 +15,8 @@ use rolldown_common::bundler_options::CommentsOptions;
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
+    let _trace_guard = try_init_tracing();
+
     let args: Vec<String> = std::env::args().collect();
 
     // Native Rolldown CLI — bypasses Node.js for maximum performance
@@ -34,6 +39,7 @@ async fn main() {
     let mut sourcemap = false;
     let mut cwd: Option<PathBuf> = None;
     let mut external_css = false;
+    let mut external_patterns: Vec<String> = Vec::new();
     let mut no_comments = false;
     let mut defines: Vec<(String, String)> = Vec::new();
 
@@ -69,6 +75,10 @@ async fn main() {
             "--external-css" => {
                 external_css = true;
             }
+            "--external-pattern" => {
+                i += 1;
+                external_patterns.push(args[i].clone());
+            }
             "--no-comments" => {
                 no_comments = true;
             }
@@ -86,15 +96,30 @@ async fn main() {
         i += 1;
     }
 
-    let external = if external_css {
+    // Merge --external-css into patterns
+    if external_css {
+        external_patterns.push("*.css".to_string());
+    }
+
+    let external = if !external_patterns.is_empty() {
+        let patterns = Arc::new(external_patterns);
         Some(IsExternal::Fn(Some(Arc::new(
-            |specifier: &str,
+            move |specifier: &str,
              _importer: Option<&str>,
              _is_resolved: bool|
              -> std::pin::Pin<
                 Box<dyn std::future::Future<Output = anyhow::Result<bool>> + Send + 'static>,
-            > { let ends_with_css = specifier.ends_with(".css");
-                Box::pin(async move { Ok(ends_with_css) })
+            > {
+                let is_external = patterns.iter().any(|pat| {
+                    if pat.starts_with('*') {
+                        specifier.ends_with(&pat[1..])
+                    } else if pat.ends_with('*') {
+                        specifier.starts_with(&pat[..pat.len()-1])
+                    } else {
+                        specifier == pat
+                    }
+                });
+                Box::pin(async move { Ok(is_external) })
             },
         ))))
     } else {

@@ -11,3 +11,4 @@ rolldown_utils = { path = "../rolldown_utils" }
 anyhow = { workspace = true }
 mimalloc-safe = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "rt-multi-thread"] }
+rolldown_tracing = { path = "../rolldown_tracing" }

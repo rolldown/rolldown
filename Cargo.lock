@@ -2921,6 +2921,7 @@ dependencies = [
  "mimalloc-safe",
  "rolldown",
  "rolldown_common",
+ "rolldown_tracing",
  "rolldown_utils",
  "tokio",
 ]

@@ -360,6 +360,33 @@ impl SymbolRefDb {
     }
   }
 
+  /// Flatten all symbol link chains so that every linked symbol points directly
+  /// to its root. After this, `canonical_ref_for` becomes O(1) for all symbols.
+  /// Call this once after all `link()` calls are done (i.e., after the link stage).
+  pub fn flatten_all_links(&mut self) {
+    for module_idx in 0..self.inner.len() {
+      let module_idx = ModuleIdx::from_usize(module_idx);
+      let Some(local_db) = &self.inner[module_idx] else {
+        continue;
+      };
+      let symbol_count = local_db.classic_data.len();
+      for symbol_idx in 0..symbol_count {
+        let symbol_id = oxc::semantic::SymbolId::from_usize(symbol_idx);
+        let symbol_ref = SymbolRef::from((module_idx, symbol_id));
+        // Only process symbols that have a link
+        if self.get(symbol_ref).link.is_none() {
+          continue;
+        }
+        // Follow chain to root
+        let root = self.canonical_ref_for(symbol_ref);
+        // Point directly to root (skip intermediate links)
+        if root != symbol_ref {
+          self.get_mut(symbol_ref).link = Some(root);
+        }
+      }
+    }
+  }
+
   pub fn is_declared_in_root_scope(&self, refer: SymbolRef) -> bool {
     let local_db = self.inner[refer.owner].unpack_ref();
     local_db.ast_scopes.symbol_scope_id(refer.symbol) == local_db.root_scope_id

@@ -22,6 +22,13 @@ export const SNAPSHOT_FILES = [
 export type SnapshotFileName = (typeof SNAPSHOT_FILES)[number];
 
 const SNAPSHOTS_DIR = path.resolve(import.meta.dirname, '../../../tmp/esbuild-tests/snapshots');
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function isCacheFresh(filePath: string): boolean {
+  if (!fs.existsSync(filePath)) return false;
+  const mtime = fs.statSync(filePath).mtimeMs;
+  return Date.now() - mtime < CACHE_TTL_MS;
+}
 
 async function downloadSnapshot(filename: SnapshotFileName): Promise<string> {
   const url = `${ESBUILD_SNAPSHOTS_URL}/${filename}`;
@@ -29,6 +36,14 @@ async function downloadSnapshot(filename: SnapshotFileName): Promise<string> {
 
   const response = await fetch(url);
   if (!response.ok) {
+    // If download fails and we have a stale cache, use it
+    const filePath = path.join(SNAPSHOTS_DIR, filename);
+    if (fs.existsSync(filePath)) {
+      console.warn(
+        `Download failed (${response.status} ${response.statusText}), using stale cache for ${filename}`,
+      );
+      return fs.readFileSync(filePath, 'utf-8');
+    }
     throw new Error(`Failed to download ${filename}: ${response.status} ${response.statusText}`);
   }
 
@@ -42,7 +57,8 @@ export async function ensureSnapshot(
 ): Promise<string> {
   const filePath = path.join(SNAPSHOTS_DIR, filename);
 
-  if (!options.force && fs.existsSync(filePath)) {
+  // Skip download if cache is fresh (less than 24h old) and not forced
+  if (!options.force && isCacheFresh(filePath)) {
     return fs.readFileSync(filePath, 'utf-8');
   }
 

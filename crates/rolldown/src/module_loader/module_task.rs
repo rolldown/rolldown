@@ -78,6 +78,19 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
   }
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
+  pub fn run_sync(mut self) {
+    let rt = self.ctx.tokio_handle.clone();
+    if let Err(errs) = rt.block_on(self.run_inner()) {
+      self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
+      self
+        .ctx
+        .tx
+        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
+        .expect("ModuleLoader: failed to send build errors - main thread terminated while processing module errors");
+    }
+  }
+
+  #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
   pub async fn run(mut self) {
     if let Err(errs) = self.run_inner().await {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
@@ -85,7 +98,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         .ctx
         .tx
         .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
-        .await
         .expect("ModuleLoader: failed to send build errors - main thread terminated while processing module errors");
     }
   }
@@ -214,7 +226,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       barrel_info,
     }));
 
-    self.ctx.tx.send(result).await.expect(
+    self.ctx.tx.send(result).expect(
       "ModuleLoader channel closed while sending module completion - main thread terminated unexpectedly"
     );
 

@@ -43,6 +43,7 @@ serde_json = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }
+crossbeam-channel = { workspace = true }
 tracing = { workspace = true, features = ["valuable"] }
 typedmap = { workspace = true }
 

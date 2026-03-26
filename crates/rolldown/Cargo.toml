@@ -37,6 +37,7 @@ oxc_index = { workspace = true }
 oxc_traverse = { workspace = true }
 petgraph = { workspace = true }
 rayon = { workspace = true }
+crossbeam-channel = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_dev_common = { workspace = true }
 rolldown_devtools = { workspace = true }

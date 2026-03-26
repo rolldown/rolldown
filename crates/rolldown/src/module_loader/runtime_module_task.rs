@@ -58,13 +58,24 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     Self { module_idx, ctx: shared_context, flat_options }
   }
 
+  pub fn run_sync(self) {
+    let rt = self.ctx.tokio_handle.clone();
+    if let Err(errs) = rt.block_on(self.run_inner()) {
+      self
+        .ctx
+        .tx
+        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
+        .expect("Send should not fail");
+    }
+  }
+
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
   pub async fn run(self) {
     if let Err(errs) = self.run_inner().await {
       self
         .ctx
         .tx
-        .try_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
+        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
         .expect("Send should not fail");
     }
   }
@@ -216,7 +227,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     }));
 
     // If the main thread is dead, nothing we can do to handle these send failures.
-    let _ = self.ctx.tx.try_send(result);
+    let _ = self.ctx.tx.send(result);
 
     Ok(())
   }

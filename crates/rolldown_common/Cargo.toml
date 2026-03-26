@@ -37,6 +37,7 @@ simdutf8 = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true }
+crossbeam-channel = { workspace = true }
 
 num-bigint = { workspace = true }
 

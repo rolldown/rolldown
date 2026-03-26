@@ -15,7 +15,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use sugar_path::SugarPath;
-use tokio::sync::Mutex;
+use std::sync::Mutex;
 
 #[derive(Debug, Default)]
 pub struct EmittedAsset {
@@ -73,7 +73,7 @@ pub struct EmittedPrebuiltChunk {
 
 #[derive(Debug)]
 pub struct FileEmitter {
-  tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
+  tx: Arc<Mutex<Option<crossbeam_channel::Sender<ModuleLoaderMsg>>>>,
   source_hash_to_reference_id: FxDashMap<ArcStr, ArcStr>,
   names: FxDashMap<ArcStr, u32>,
   files: FxDashMap<ArcStr, OutputAsset>,
@@ -120,13 +120,12 @@ impl FileEmitter {
     self
     .tx
     .lock()
-    .await
+    .unwrap()
     .as_ref()
     .context(
       "The `PluginContext.emitFile` with `type: 'chunk'` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks.",
     )?
     .send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg { chunk: Arc::clone(&chunk), reference_id: reference_id.clone() })))
-    .await
     .context("FileEmitter: failed to send AddEntryModule message - module loader shut down during file emission")?;
     self.chunks.insert(reference_id.clone(), chunk);
     Ok(reference_id)
@@ -351,9 +350,9 @@ impl FileEmitter {
 
   pub async fn set_context_load_modules_tx(
     &self,
-    tx: Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>,
+    tx: Option<crossbeam_channel::Sender<ModuleLoaderMsg>>,
   ) {
-    let mut tx_guard = self.tx.lock().await;
+    let mut tx_guard = self.tx.lock().unwrap();
     *tx_guard = tx;
   }
 

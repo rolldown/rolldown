@@ -14,7 +14,6 @@ use rolldown_common::{
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::FxDashSet;
-use tokio::sync::Mutex;
 use tracing::Instrument;
 
 use crate::{
@@ -41,7 +40,7 @@ pub struct NativePluginContextImpl {
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<FxDashSet<ArcStr>>,
   pub(crate) module_infos: SharedModuleInfoDashMap,
-  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
+  pub(crate) tx: Arc<std::sync::Mutex<Option<crossbeam_channel::Sender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_devtools::Session,
   pub(crate) bundle_span: Arc<tracing::Span>,
   // `resolve_id` hook not only will be triggered by the rolldown's resolve process, but also could be triggered
@@ -57,9 +56,9 @@ impl NativePluginContextImpl {
     side_effects: Option<HookSideEffects>,
     module_def_format: ModuleDefFormat,
   ) -> anyhow::Result<()> {
-    // Clone out the sender under the lock, then drop the lock before awaiting.
+    // Clone out the sender under the lock, then drop the lock before sending.
     let sender = {
-      let guard = self.tx.lock().await.clone();
+      let guard = self.tx.lock().unwrap().clone();
       guard.context("The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.")?
     };
     sender
@@ -69,7 +68,6 @@ impl NativePluginContextImpl {
         module_def_format,
         ..Default::default()
       })))
-      .await
       .context("PluginContext: failed to send FetchModule message - module loader shut down during plugin execution")?;
     let plugin_driver = self
       .plugin_driver

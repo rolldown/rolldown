@@ -16,7 +16,7 @@ use rolldown_common::{
 };
 use rolldown_utils::dashmap::FxDashSet;
 use sugar_path::SugarPath;
-use tokio::sync::{Mutex, broadcast};
+use tokio::sync::broadcast;
 
 use crate::{
   __inner::SharedPluginable,
@@ -38,7 +38,7 @@ pub struct PluginDriver {
   /// Module dependencies tracked during load/transform hooks for HMR invalidation
   pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   context_load_completion_manager: ContextLoadCompletionManager,
-  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
+  pub(crate) tx: Arc<std::sync::Mutex<Option<crossbeam_channel::Sender<ModuleLoaderMsg>>>>,
   /// Timing collector for plugin hooks (None if plugin timing is disabled)
   pub hook_timing_collector: Option<Arc<HookTimingCollector>>,
 }
@@ -62,9 +62,9 @@ impl PluginDriver {
 
   pub async fn set_context_load_modules_tx(
     &self,
-    tx: Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>,
+    tx: Option<crossbeam_channel::Sender<ModuleLoaderMsg>>,
   ) {
-    let mut tx_guard = self.tx.lock().await;
+    let mut tx_guard = self.tx.lock().unwrap();
     *tx_guard = tx;
   }
 

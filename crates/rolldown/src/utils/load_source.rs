@@ -66,17 +66,7 @@ pub async fn load_source<Fs: FileSystem + 'static>(
           // - User don't specify moduleTypeMapping, we treated it as JS
           Ok((
             StrOrBytes::Str({
-              #[cfg(not(target_family = "wasm"))]
-              {
-                let id = resolved_id.id.clone();
-                tokio::runtime::Handle::current()
-                  .spawn_blocking(move || fs.read_to_string(id.as_path()))
-                  .await??
-              }
-              #[cfg(target_family = "wasm")]
-              {
-                fs.read_to_string(resolved_id.id.as_path())?
-              }
+              fs.read_to_string(resolved_id.id.as_path())?
             }),
             ModuleType::Js,
           ))
@@ -87,14 +77,7 @@ pub async fn load_source<Fs: FileSystem + 'static>(
               match source {
                 Some(s) => s.into_bytes(),
                 None => {
-                  if cfg!(target_family = "wasm") {
-                    fs.read(resolved_id.id.as_path())?
-                  } else {
-                    let id = resolved_id.id.clone();
-                    tokio::runtime::Handle::current()
-                      .spawn_blocking(move || fs.read(id.as_path()))
-                      .await??
-                  }
+                  fs.read(resolved_id.id.as_path())?
                 }
               }
             }),
@@ -123,17 +106,7 @@ pub async fn load_source<Fs: FileSystem + 'static>(
               if let Some(s) = source {
                 s
               } else {
-                #[cfg(not(target_family = "wasm"))]
-                {
-                  let id = resolved_id.id.clone();
-                  tokio::runtime::Handle::current()
-                    .spawn_blocking(move || fs.read_to_string(id.as_path()))
-                    .await??
-                }
-                #[cfg(target_family = "wasm")]
-                {
-                  fs.read_to_string(resolved_id.id.as_path())?
-                }
+                fs.read_to_string(resolved_id.id.as_path())?
               }
             }),
             guessed,
@@ -179,23 +152,13 @@ async fn read_file_by_module_type<Fs: FileSystem + 'static>(
     | ModuleType::Empty
     | ModuleType::Copy
     | ModuleType::Custom(_)
-    | ModuleType::Text => Ok(StrOrBytes::Str({
-      if cfg!(target_family = "wasm") {
-        fs.read_to_string(&path)?
-      } else {
-        tokio::runtime::Handle::current().spawn_blocking(move || fs.read_to_string(&path)).await??
-      }
-    })),
+    | ModuleType::Text => Ok(StrOrBytes::Str(fs.read_to_string(&path)?)),
     ModuleType::Asset => Err(anyhow::format_err!(
       "Encountered a module with type `asset` in read_file_by_module_type. \
          Asset modules should be handled by the builtin asset-module plugin."
     ))?,
-    ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok(StrOrBytes::Bytes({
-      if cfg!(target_family = "wasm") {
-        fs.read(&path)?
-      } else {
-        tokio::runtime::Handle::current().spawn_blocking(move || fs.read(&path)).await??
-      }
-    })),
+    ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => {
+      Ok(StrOrBytes::Bytes(fs.read(&path)?))
+    }
   }
 }

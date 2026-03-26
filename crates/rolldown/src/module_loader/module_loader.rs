@@ -29,6 +29,7 @@ use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::Instrument;
+use crossbeam_channel;
 
 use crate::module_loader::module_task::ModuleTaskOwner;
 use crate::types::scan_stage_cache::ScanStageCache;
@@ -96,7 +97,7 @@ impl VisitState {
 
 pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   pub shared_context: Arc<TaskContext<Fs>>,
-  rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
+  rx: crossbeam_channel::Receiver<ModuleLoaderMsg>,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
@@ -168,10 +169,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       },
     };
 
-    // 1024 should be enough for most cases
-    // over 1024 pending tasks are insane
-    let (tx, rx) = tokio::sync::mpsc::channel(1024);
-    let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta });
+    let (tx, rx) = crossbeam_channel::unbounded();
+    let tokio_handle = tokio::runtime::Handle::current();
+    let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta, tokio_handle });
 
     let importers = std::mem::take(&mut cache.importers);
     let intermediate_normal_modules = IntermediateNormalModules::new(is_full_scan, importers);
@@ -240,7 +240,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let ctx = Arc::clone(&self.shared_context);
     if resolved_id.external.is_external() {
       let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
-      tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
+      rayon::spawn(move || task.run_sync());
     } else {
       let task = ModuleTask::new(
         ctx,
@@ -252,7 +252,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         self.flat_options,
         self.magic_string_tx.clone(),
       );
-      tokio::spawn(task.run().instrument(tracing::info_span!("normal_module_task")));
+      rayon::spawn(move || task.run_sync());
     }
     self.remaining += 1;
     idx
@@ -278,7 +278,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     if let Entry::Vacant(e) = self.cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
       let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
       let task = RuntimeModuleTask::new(idx, Arc::clone(&self.shared_context), self.flat_options);
-      tokio::spawn(task.run().instrument(tracing::info_span!("runtime_module_task")));
+      rayon::spawn(move || task.run_sync());
       e.insert(VisitState::Seen(idx));
       self.remaining += 1;
     }
@@ -352,8 +352,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut runtime_brief = None;
     let mut overrode_preserve_entry_signature_map = FxHashMap::default();
 
+    // Use block_in_place to allow blocking crossbeam recv on tokio worker thread.
+    // This converts the current tokio worker into a blocking thread temporarily,
+    // freeing the runtime to schedule other tasks on remaining workers.
+    tokio::task::block_in_place(|| {
     while self.remaining > 0 {
-      let Some(msg) = self.rx.recv().await else {
+      let Ok(msg) = self.rx.recv() else {
         break;
       };
       match msg {
@@ -579,13 +583,26 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         }
         ModuleLoaderMsg::AddEntryModule(msg) => {
           let data = msg.chunk;
-          let result = load_entry_module(
-            &self.shared_context.resolver,
-            &self.shared_context.plugin_driver,
-            &data.id,
-            data.importer.as_deref(),
-          )
-          .await;
+          // Use oneshot channel to run async work on tokio without blocking_on from within
+          // the runtime (which would panic). Spawn a task on the runtime and wait synchronously.
+          let (res_tx, res_rx) = std::sync::mpsc::channel();
+          {
+            let resolver = Arc::clone(&self.shared_context.resolver);
+            let plugin_driver = Arc::clone(&self.shared_context.plugin_driver);
+            let id = data.id.clone();
+            let importer = data.importer.clone();
+            self.shared_context.tokio_handle.spawn(async move {
+              let result = load_entry_module(
+                &resolver,
+                &plugin_driver,
+                &id,
+                importer.as_deref(),
+              )
+              .await;
+              let _ = res_tx.send(result);
+            });
+          }
+          let result = res_rx.recv().expect("load_entry_module tokio task panicked");
 
           let module_idx = match result {
             Ok(resolved_id) => {
@@ -624,6 +641,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         }
       }
     }
+    }); // end block_in_place
 
     if !errors.is_empty() {
       // Enrich UNRESOLVED_IMPORT errors with import chain

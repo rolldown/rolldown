@@ -190,11 +190,10 @@ impl LinkStage<'_> {
                           self.options.is_strict_execution_order_enabled()
                             && rec.meta.contains(ImportRecordMeta::IsReExportOnly)
                             && !is_reexport_all;
-                        stmt_info.side_effect =
-                          (is_reexport_all
-                            || importee.side_effects.has_side_effects()
-                            || needs_init_for_named_reexport)
-                            .into();
+                        stmt_info.side_effect = (is_reexport_all
+                          || importee.side_effects.has_side_effects()
+                          || needs_init_for_named_reexport)
+                          .into();
                         // Reference to `init_foo`
                         stmt_info
                           .referenced_symbols

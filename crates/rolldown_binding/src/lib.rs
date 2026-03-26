@@ -82,6 +82,14 @@ pub fn start_async_runtime() {
 
 #[napi_derive::module_init]
 fn init() {
+  // Node.js sets stdout and stderr to non-blocking mode (O_NONBLOCK) for its native streams.
+  // This causes Rust's `println!` (and similar macros that panic on write failure) to panic
+  // with "failed printing to stdout: Resource temporarily unavailable (os error 35)" when the
+  // write buffer is full. Setting both streams to blocking mode prevents this panic when
+  // rolldown runs as a Node.js native addon.
+  #[cfg(unix)]
+  set_stdio_blocking();
+
   #[cfg(not(target_family = "wasm"))]
   {
     use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
@@ -114,4 +122,28 @@ fn init() {
       "\nPlease report this issue at: https://github.com/rolldown/rolldown/issues/new?template=panic_report.yml"
     );
   }));
+}
+
+/// Sets stdout and stderr to blocking mode on Unix systems.
+///
+/// Node.js puts stdout/stderr into non-blocking mode, which causes Rust's `println!` to panic
+/// with EAGAIN when the write would block. This function restores blocking mode so that writes
+/// succeed (possibly with a short delay) instead of panicking.
+#[cfg(unix)]
+fn set_stdio_blocking() {
+  use std::os::unix::io::AsRawFd;
+  // SAFETY: `stdout` and `stderr` are valid file descriptors for the lifetime of the process.
+  // `fcntl` with `F_GETFL`/`F_SETFL` is safe to call on any valid fd. We check the return
+  // value of `F_GETFL` before calling `F_SETFL`, and also check the result of `F_SETFL`.
+  unsafe {
+    for stream_fd in [std::io::stdout().as_raw_fd(), std::io::stderr().as_raw_fd()] {
+      let flags = libc::fcntl(stream_fd, libc::F_GETFL, 0);
+      if flags != -1 {
+        // If F_SETFL fails (returns -1), the fd remains non-blocking. There is nothing
+        // meaningful we can do here since writing to stdout/stderr would also fail, so
+        // we silently ignore the error.
+        let _ = libc::fcntl(stream_fd, libc::F_SETFL, flags & !libc::O_NONBLOCK);
+      }
+    }
+  }
 }

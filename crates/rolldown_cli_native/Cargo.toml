@@ -7,4 +7,7 @@ publish = false
 [dependencies]
 rolldown = { path = "../rolldown" }
 rolldown_common = { path = "../rolldown_common" }
+rolldown_utils = { path = "../rolldown_utils" }
+anyhow = { workspace = true }
+mimalloc-safe = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "rt-multi-thread"] }

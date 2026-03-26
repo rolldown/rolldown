@@ -2917,8 +2917,11 @@ dependencies = [
 name = "rolldown_cli_native"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "mimalloc-safe",
  "rolldown",
  "rolldown_common",
+ "rolldown_utils",
  "tokio",
 ]
 

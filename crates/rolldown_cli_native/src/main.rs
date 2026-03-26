@@ -1,3 +1,6 @@
+#[global_allocator]
+static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
+
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
@@ -7,7 +10,10 @@ use rolldown::{
 };
 use rolldown_common::bundler_options::CommentsOptions;
 
-#[tokio::main]
+#[global_allocator]
+static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
+
+#[tokio::main(flavor = "multi_thread")]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
 
@@ -131,7 +137,11 @@ async fn main() {
         external,
         define,
         comments: if no_comments {
-            Some(CommentsOptions::None)
+            Some(CommentsOptions {
+                legal: false,
+                annotation: false,
+                jsdoc: false,
+            })
         } else {
             None
         },

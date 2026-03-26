@@ -64,21 +64,14 @@ pub async fn load_source<Fs: FileSystem + 'static>(
           // - Unknown module type,
           // - No loader to load corresponding module
           // - User don't specify moduleTypeMapping, we treated it as JS
-          Ok((
-            StrOrBytes::Str({
-              fs.read_to_string(resolved_id.id.as_path())?
-            }),
-            ModuleType::Js,
-          ))
+          Ok((StrOrBytes::Str({ fs.read_to_string(resolved_id.id.as_path())? }), ModuleType::Js))
         }
         (source, Some(guessed)) => match &guessed {
           ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok((
             StrOrBytes::Bytes({
               match source {
                 Some(s) => s.into_bytes(),
-                None => {
-                  fs.read(resolved_id.id.as_path())?
-                }
+                None => fs.read(resolved_id.id.as_path())?,
               }
             }),
             guessed,
@@ -103,11 +96,7 @@ pub async fn load_source<Fs: FileSystem + 'static>(
           | ModuleType::Css
           | ModuleType::Custom(_) => Ok((
             StrOrBytes::Str({
-              if let Some(s) = source {
-                s
-              } else {
-                fs.read_to_string(resolved_id.id.as_path())?
-              }
+              if let Some(s) = source { s } else { fs.read_to_string(resolved_id.id.as_path())? }
             }),
             guessed,
           )),

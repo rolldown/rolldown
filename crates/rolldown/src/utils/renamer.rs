@@ -70,7 +70,8 @@ impl<'name> Renamer<'name> {
     let reserved_count = manual_reserved.len() + RESERVED_KEYWORDS.len() + GLOBAL_OBJECTS.len();
     let map_capacity = reserved_count + estimated_symbols;
 
-    let mut used_canonical_names = FxHashMap::with_capacity_and_hasher(map_capacity, Default::default());
+    let mut used_canonical_names =
+      FxHashMap::with_capacity_and_hasher(map_capacity, Default::default());
     for s in manual_reserved.iter().chain(RESERVED_KEYWORDS.iter()).chain(GLOBAL_OBJECTS.iter()) {
       used_canonical_names.insert(CompactStr::new(s), 0);
     }

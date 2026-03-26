@@ -3,6 +3,7 @@ use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
+use crossbeam_channel;
 use futures::future::join_all;
 use itertools::Itertools;
 use oxc::semantic::{ScopeId, Scoping};
@@ -29,7 +30,6 @@ use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::Instrument;
-use crossbeam_channel;
 
 use crate::module_loader::module_task::ModuleTaskOwner;
 use crate::types::scan_stage_cache::ScanStageCache;
@@ -171,7 +171,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
     let (tx, rx) = crossbeam_channel::unbounded();
     let tokio_handle = tokio::runtime::Handle::current();
-    let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta, tokio_handle });
+    let shared_context =
+      Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta, tokio_handle });
 
     let importers = std::mem::take(&mut cache.importers);
     let intermediate_normal_modules = IntermediateNormalModules::new(is_full_scan, importers);
@@ -356,291 +357,287 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // This converts the current tokio worker into a blocking thread temporarily,
     // freeing the runtime to schedule other tasks on remaining workers.
     tokio::task::block_in_place(|| {
-    while self.remaining > 0 {
-      let Ok(msg) = self.rx.recv() else {
-        break;
-      };
-      match msg {
-        ModuleLoaderMsg::NormalModuleDone(task_result) => {
-          let NormalModuleTaskResult {
-            mut module,
-            mut barrel_info,
-            ecma_related:
-              EcmaRelated { ast, symbols, mut dynamic_import_rec_exports_usage, preserve_jsx },
-            resolved_deps,
-            raw_import_records,
-            warnings,
-          } = *task_result;
-          all_warnings.extend(warnings);
+      while self.remaining > 0 {
+        let Ok(msg) = self.rx.recv() else {
+          break;
+        };
+        match msg {
+          ModuleLoaderMsg::NormalModuleDone(task_result) => {
+            let NormalModuleTaskResult {
+              mut module,
+              mut barrel_info,
+              ecma_related:
+                EcmaRelated { ast, symbols, mut dynamic_import_rec_exports_usage, preserve_jsx },
+              resolved_deps,
+              raw_import_records,
+              warnings,
+            } = *task_result;
+            all_warnings.extend(warnings);
 
-          let module_idx = module.idx();
+            let module_idx = module.idx();
 
-          // remove importers from previous scan
-          if !self.is_full_scan
-            && let Some(previous_module) =
-              self.cache.get_snapshot().module_table.modules.get(module_idx)
-          {
-            let resolved_deps =
-              previous_module.import_records().into_iter().filter_map(|r| r.resolved_module);
-            for dep_idx in resolved_deps {
-              self.intermediate_normal_modules.importers[dep_idx]
-                .retain(|v| v.importer_idx != module_idx);
-            }
-          }
-
-          let normal_module = module.as_normal().unwrap();
-          if normal_module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
-            self.tla_module_count += 1;
-          }
-          let mut import_records = IndexVec::with_capacity(raw_import_records.len());
-
-          let mut tracked_records = FxHashMap::default();
-          let mut initialized_barrel_tracking =
-            self.flat_options.is_lazy_barrel_enabled().then(|| {
-              self.cache.barrel_state.initialize_barrel_tracking(
-                normal_module,
-                &raw_import_records,
-                &mut barrel_info,
-              )
-            });
-
-          for ((rec_idx, mut raw_rec), resolved_id) in
-            raw_import_records.into_iter_enumerated().zip(resolved_deps)
-          {
-            if self.shared_context.options.experimental.vite_mode.unwrap_or_default()
-              && resolved_id.id.as_str().ends_with(".json")
+            // remove importers from previous scan
+            if !self.is_full_scan
+              && let Some(previous_module) =
+                self.cache.get_snapshot().module_table.modules.get(module_idx)
             {
-              raw_rec.meta.insert(ImportRecordMeta::JsonModule);
-            }
-
-            // Lazy barrel optimization: skip loading modules that are not needed yet.
-            // - `imported_exports_per_record`: maps all import records to their required imported exports
-            // - `initial_needed_records`: subset of records that need to be loaded initially
-            if let Some((ref imported_exports_per_record, ref initial_needed_records)) =
-              initialized_barrel_tracking
-              && raw_rec.kind == ImportKind::Import
-            {
-              // Track remaining import records for later on-demand loading
-              if imported_exports_per_record.contains_key(&rec_idx) {
-                tracked_records.insert(rec_idx, (raw_rec.state.clone(), resolved_id.clone()));
-              }
-              // Skip records not in initial_needed_records - they may be loaded later if needed
-              if !initial_needed_records.contains_key(&rec_idx) {
-                import_records.push(raw_rec.into_resolved(None));
-                continue;
+              let resolved_deps =
+                previous_module.import_records().into_iter().filter_map(|r| r.resolved_module);
+              for dep_idx in resolved_deps {
+                self.intermediate_normal_modules.importers[dep_idx]
+                  .retain(|v| v.importer_idx != module_idx);
               }
             }
 
-            let is_external = resolved_id.external.is_external();
-            let idx = self.try_spawn_new_task(
-              resolved_id,
-              Some(ModuleTaskOwner::new(normal_module, raw_rec.span)),
-              false,
-              raw_rec.asserted_module_type.as_ref(),
-              &user_defined_entries,
-            );
+            let normal_module = module.as_normal().unwrap();
+            if normal_module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
+              self.tla_module_count += 1;
+            }
+            let mut import_records = IndexVec::with_capacity(raw_import_records.len());
 
-            if let Some((_, ref mut initial_needed_records)) = initialized_barrel_tracking {
-              let imported_exports = if raw_rec.kind == ImportKind::Import {
-                initial_needed_records.remove(&rec_idx).expect(
+            let mut tracked_records = FxHashMap::default();
+            let mut initialized_barrel_tracking =
+              self.flat_options.is_lazy_barrel_enabled().then(|| {
+                self.cache.barrel_state.initialize_barrel_tracking(
+                  normal_module,
+                  &raw_import_records,
+                  &mut barrel_info,
+                )
+              });
+
+            for ((rec_idx, mut raw_rec), resolved_id) in
+              raw_import_records.into_iter_enumerated().zip(resolved_deps)
+            {
+              if self.shared_context.options.experimental.vite_mode.unwrap_or_default()
+                && resolved_id.id.as_str().ends_with(".json")
+              {
+                raw_rec.meta.insert(ImportRecordMeta::JsonModule);
+              }
+
+              // Lazy barrel optimization: skip loading modules that are not needed yet.
+              // - `imported_exports_per_record`: maps all import records to their required imported exports
+              // - `initial_needed_records`: subset of records that need to be loaded initially
+              if let Some((ref imported_exports_per_record, ref initial_needed_records)) =
+                initialized_barrel_tracking
+                && raw_rec.kind == ImportKind::Import
+              {
+                // Track remaining import records for later on-demand loading
+                if imported_exports_per_record.contains_key(&rec_idx) {
+                  tracked_records.insert(rec_idx, (raw_rec.state.clone(), resolved_id.clone()));
+                }
+                // Skip records not in initial_needed_records - they may be loaded later if needed
+                if !initial_needed_records.contains_key(&rec_idx) {
+                  import_records.push(raw_rec.into_resolved(None));
+                  continue;
+                }
+              }
+
+              let is_external = resolved_id.external.is_external();
+              let idx = self.try_spawn_new_task(
+                resolved_id,
+                Some(ModuleTaskOwner::new(normal_module, raw_rec.span)),
+                false,
+                raw_rec.asserted_module_type.as_ref(),
+                &user_defined_entries,
+              );
+
+              if let Some((_, ref mut initial_needed_records)) = initialized_barrel_tracking {
+                let imported_exports = if raw_rec.kind == ImportKind::Import {
+                  initial_needed_records.remove(&rec_idx).expect(
                   "If initial_needed_records does not contain the record idx, it should have been skipped above"
                 )
-              } else {
-                ImportedExports::All
-              };
-              work_queue.push_back((idx, imported_exports));
-            }
+                } else {
+                  ImportedExports::All
+                };
+                work_queue.push_back((idx, imported_exports));
+              }
 
-            // Dynamic imported module will be considered as an entry
-            self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
-              kind: raw_rec.kind,
-              importer_path: module.id().clone(),
-              importer_idx: module_idx,
-            });
+              // Dynamic imported module will be considered as an entry
+              self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
+                kind: raw_rec.kind,
+                importer_path: module.id().clone(),
+                importer_idx: module_idx,
+              });
 
-            // Defer usage merging - with only one consumer, keep fetch actions simple
-            if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
-              dynamic_import_exports_usage_pairs.push((idx, usage));
-            }
-            // External modules are excluded here to preserve the bit-position-to-ChunkIdx
-            // invariant in code splitting. User-defined and emitted entries are already
-            // guaranteed non-external by `load_entry_module()` which rejects them with
-            // `entry_cannot_be_external`.
-            if matches!(raw_rec.kind, ImportKind::DynamicImport)
-              && !is_external
-              && !user_defined_entry_ids.contains(&idx)
-            {
-              match dynamic_import_entry_ids.entry(idx) {
-                Entry::Vacant(vac) => match raw_rec.dynamic_import_expr_info.as_ref() {
-                  Some(info) => {
-                    vac.insert(vec![(module_idx, info.stmt_info_idx, info.address, rec_idx)]);
-                  }
-                  None => {
-                    vac.insert(vec![]);
-                  }
-                },
-                Entry::Occupied(mut occ) => {
-                  if let Some(info) = raw_rec.dynamic_import_expr_info.as_ref() {
-                    occ.get_mut().push((module_idx, info.stmt_info_idx, info.address, rec_idx));
+              // Defer usage merging - with only one consumer, keep fetch actions simple
+              if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
+                dynamic_import_exports_usage_pairs.push((idx, usage));
+              }
+              // External modules are excluded here to preserve the bit-position-to-ChunkIdx
+              // invariant in code splitting. User-defined and emitted entries are already
+              // guaranteed non-external by `load_entry_module()` which rejects them with
+              // `entry_cannot_be_external`.
+              if matches!(raw_rec.kind, ImportKind::DynamicImport)
+                && !is_external
+                && !user_defined_entry_ids.contains(&idx)
+              {
+                match dynamic_import_entry_ids.entry(idx) {
+                  Entry::Vacant(vac) => match raw_rec.dynamic_import_expr_info.as_ref() {
+                    Some(info) => {
+                      vac.insert(vec![(module_idx, info.stmt_info_idx, info.address, rec_idx)]);
+                    }
+                    None => {
+                      vac.insert(vec![]);
+                    }
+                  },
+                  Entry::Occupied(mut occ) => {
+                    if let Some(info) = raw_rec.dynamic_import_expr_info.as_ref() {
+                      occ.get_mut().push((module_idx, info.stmt_info_idx, info.address, rec_idx));
+                    }
                   }
                 }
               }
+              import_records.push(raw_rec.into_resolved(Some(idx)));
             }
-            import_records.push(raw_rec.into_resolved(Some(idx)));
+
+            module.set_import_records(import_records);
+            *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
+            *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
+
+            if let Some((imported_exports_per_record, _)) = initialized_barrel_tracking {
+              self.cache.barrel_state.barrel_infos.insert(
+                module_idx,
+                if tracked_records.is_empty() {
+                  None
+                } else {
+                  barrel_info.map(|info| {
+                    info.into_barrel_module_state(tracked_records, imported_exports_per_record)
+                  })
+                },
+              );
+              self.process_barrel_import_record(&mut work_queue, &user_defined_entries);
+            }
+
+            self.symbol_ref_db.store_local_db(module_idx, symbols);
+            if preserve_jsx {
+              self.symbol_ref_db.set_has_module_preserve_jsx();
+            }
+            self.remaining -= 1;
           }
+          ModuleLoaderMsg::ExternalModuleDone(task_result) => {
+            let ExternalModuleTaskResult {
+              id,
+              name,
+              idx,
+              identifier_name,
+              side_effects,
+              need_renormalize_render_path,
+            } = *task_result;
 
-          module.set_import_records(import_records);
-          *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
-          *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
-
-          if let Some((imported_exports_per_record, _)) = initialized_barrel_tracking {
-            self.cache.barrel_state.barrel_infos.insert(
-              module_idx,
-              if tracked_records.is_empty() {
-                None
-              } else {
-                barrel_info.map(|info| {
-                  info.into_barrel_module_state(tracked_records, imported_exports_per_record)
-                })
-              },
+            self.symbol_ref_db.store_local_db(
+              idx,
+              SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)),
             );
-            self.process_barrel_import_record(&mut work_queue, &user_defined_entries);
+            let symbol_ref =
+              self.symbol_ref_db.create_facade_root_symbol_ref(idx, &identifier_name);
+            let external_module = Module::External(Box::new(ExternalModule::new(
+              idx,
+              id,
+              name,
+              identifier_name,
+              side_effects,
+              symbol_ref,
+              need_renormalize_render_path,
+            )));
+
+            *self.intermediate_normal_modules.modules.get_mut(idx) = Some(external_module);
+            self.remaining -= 1;
           }
+          ModuleLoaderMsg::RuntimeNormalModuleDone(task_result) => {
+            let RuntimeModuleTaskResult {
+              local_symbol_ref_db,
+              mut module,
+              runtime,
+              ast,
+              raw_import_records,
+              resolved_deps,
+            } = *task_result;
 
-          self.symbol_ref_db.store_local_db(module_idx, symbols);
-          if preserve_jsx {
-            self.symbol_ref_db.set_has_module_preserve_jsx();
-          }
-          self.remaining -= 1;
-        }
-        ModuleLoaderMsg::ExternalModuleDone(task_result) => {
-          let ExternalModuleTaskResult {
-            id,
-            name,
-            idx,
-            identifier_name,
-            side_effects,
-            need_renormalize_render_path,
-          } = *task_result;
-
-          self.symbol_ref_db.store_local_db(
-            idx,
-            SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)),
-          );
-          let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(idx, &identifier_name);
-          let external_module = Module::External(Box::new(ExternalModule::new(
-            idx,
-            id,
-            name,
-            identifier_name,
-            side_effects,
-            symbol_ref,
-            need_renormalize_render_path,
-          )));
-
-          *self.intermediate_normal_modules.modules.get_mut(idx) = Some(external_module);
-          self.remaining -= 1;
-        }
-        ModuleLoaderMsg::RuntimeNormalModuleDone(task_result) => {
-          let RuntimeModuleTaskResult {
-            local_symbol_ref_db,
-            mut module,
-            runtime,
-            ast,
-            raw_import_records,
-            resolved_deps,
-          } = *task_result;
-
-          let mut import_records = IndexVec::with_capacity(raw_import_records.len());
-          for (raw_rec, info) in raw_import_records.into_iter().zip(resolved_deps) {
-            let idx = self.try_spawn_new_task(
-              info,
-              None,
-              false,
-              raw_rec.asserted_module_type.as_ref(),
-              &user_defined_entries,
-            );
-            self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
-              kind: raw_rec.kind,
-              importer_path: module.id.clone(),
-              importer_idx: module.idx,
-            });
-            import_records.push(raw_rec.into_resolved(Some(idx)));
-          }
-          module.import_records = import_records;
-
-          *self.intermediate_normal_modules.modules.get_mut(runtime.id()) = Some(module.into());
-          *self.intermediate_normal_modules.index_ecma_ast.get_mut(runtime.id()) = Some(ast);
-
-          self.symbol_ref_db.store_local_db(runtime.id(), local_symbol_ref_db);
-          self.remaining -= 1;
-
-          errors.extend(runtime.validate_symbols(&rolldown_common::RUNTIME_HELPER_NAMES));
-          runtime_brief = Some(runtime);
-        }
-        ModuleLoaderMsg::FetchModule(resolve_id) => {
-          self.try_spawn_new_task(*resolve_id, None, false, None, &user_defined_entries);
-        }
-        ModuleLoaderMsg::AddEntryModule(msg) => {
-          let data = msg.chunk;
-          // Use oneshot channel to run async work on tokio without blocking_on from within
-          // the runtime (which would panic). Spawn a task on the runtime and wait synchronously.
-          let (res_tx, res_rx) = std::sync::mpsc::channel();
-          {
-            let resolver = Arc::clone(&self.shared_context.resolver);
-            let plugin_driver = Arc::clone(&self.shared_context.plugin_driver);
-            let id = data.id.clone();
-            let importer = data.importer.clone();
-            self.shared_context.tokio_handle.spawn(async move {
-              let result = load_entry_module(
-                &resolver,
-                &plugin_driver,
-                &id,
-                importer.as_deref(),
-              )
-              .await;
-              let _ = res_tx.send(result);
-            });
-          }
-          let result = res_rx.recv().expect("load_entry_module tokio task panicked");
-
-          let module_idx = match result {
-            Ok(resolved_id) => {
-              self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries)
+            let mut import_records = IndexVec::with_capacity(raw_import_records.len());
+            for (raw_rec, info) in raw_import_records.into_iter().zip(resolved_deps) {
+              let idx = self.try_spawn_new_task(
+                info,
+                None,
+                false,
+                raw_rec.asserted_module_type.as_ref(),
+                &user_defined_entries,
+              );
+              self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
+                kind: raw_rec.kind,
+                importer_path: module.id.clone(),
+                importer_idx: module.idx,
+              });
+              import_records.push(raw_rec.into_resolved(Some(idx)));
             }
-            Err(e) => {
-              errors.push(e);
-              continue;
-            }
-          };
+            module.import_records = import_records;
 
-          if let Some(preserve_entry_signatures) = data.preserve_entry_signatures {
-            overrode_preserve_entry_signature_map.insert(module_idx, preserve_entry_signatures);
+            *self.intermediate_normal_modules.modules.get_mut(runtime.id()) = Some(module.into());
+            *self.intermediate_normal_modules.index_ecma_ast.get_mut(runtime.id()) = Some(ast);
+
+            self.symbol_ref_db.store_local_db(runtime.id(), local_symbol_ref_db);
+            self.remaining -= 1;
+
+            errors.extend(runtime.validate_symbols(&rolldown_common::RUNTIME_HELPER_NAMES));
+            runtime_brief = Some(runtime);
           }
+          ModuleLoaderMsg::FetchModule(resolve_id) => {
+            self.try_spawn_new_task(*resolve_id, None, false, None, &user_defined_entries);
+          }
+          ModuleLoaderMsg::AddEntryModule(msg) => {
+            let data = msg.chunk;
+            // Use oneshot channel to run async work on tokio without blocking_on from within
+            // the runtime (which would panic). Spawn a task on the runtime and wait synchronously.
+            let (res_tx, res_rx) = std::sync::mpsc::channel();
+            {
+              let resolver = Arc::clone(&self.shared_context.resolver);
+              let plugin_driver = Arc::clone(&self.shared_context.plugin_driver);
+              let id = data.id.clone();
+              let importer = data.importer.clone();
+              self.shared_context.tokio_handle.spawn(async move {
+                let result =
+                  load_entry_module(&resolver, &plugin_driver, &id, importer.as_deref()).await;
+                let _ = res_tx.send(result);
+              });
+            }
+            let result = res_rx.recv().expect("load_entry_module tokio task panicked");
 
-          user_defined_entry_ids.insert(module_idx);
+            let module_idx = match result {
+              Ok(resolved_id) => {
+                self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries)
+              }
+              Err(e) => {
+                errors.push(e);
+                continue;
+              }
+            };
 
-          let entry = EntryPoint {
-            name: data.name.clone(),
-            idx: module_idx,
-            kind: EntryPointKind::EmittedUserDefined,
-            file_name: data.file_name.clone(),
-            related_stmt_infos: vec![],
-          };
+            if let Some(preserve_entry_signatures) = data.preserve_entry_signatures {
+              overrode_preserve_entry_signature_map.insert(module_idx, preserve_entry_signatures);
+            }
 
-          entry_point_to_reference_ids
-            .entry(entry.clone())
-            .or_default()
-            .push(msg.reference_id.clone());
+            user_defined_entry_ids.insert(module_idx);
 
-          extra_entry_points.push(entry);
-        }
-        ModuleLoaderMsg::BuildErrors(e) => {
-          errors.extend(e);
-          self.remaining -= 1;
+            let entry = EntryPoint {
+              name: data.name.clone(),
+              idx: module_idx,
+              kind: EntryPointKind::EmittedUserDefined,
+              file_name: data.file_name.clone(),
+              related_stmt_infos: vec![],
+            };
+
+            entry_point_to_reference_ids
+              .entry(entry.clone())
+              .or_default()
+              .push(msg.reference_id.clone());
+
+            extra_entry_points.push(entry);
+          }
+          ModuleLoaderMsg::BuildErrors(e) => {
+            errors.extend(e);
+            self.remaining -= 1;
+          }
         }
       }
-    }
     }); // end block_in_place
 
     if !errors.is_empty() {

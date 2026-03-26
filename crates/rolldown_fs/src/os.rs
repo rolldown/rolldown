@@ -82,7 +82,7 @@ impl OsFileSystem {
           Some(entries) => {
             match entries.get(dir_name) {
               Some(info) => !info.is_dir && !info.is_symlink, // file, not dir
-              None => true, // doesn't exist in parent listing
+              None => true,                                   // doesn't exist in parent listing
             }
           }
           None => true, // parent not a dir
@@ -104,12 +104,10 @@ impl OsFileSystem {
         // Now check again if dir is known to not be a directory
         if let Some(parent_cache) = self.dir_cache.get(parent) {
           let should_skip = match parent_cache.value() {
-            Some(entries) => {
-              match entries.get(dir_name) {
-                Some(info) => !info.is_dir && !info.is_symlink,
-                None => true,
-              }
-            }
+            Some(entries) => match entries.get(dir_name) {
+              Some(info) => !info.is_dir && !info.is_symlink,
+              None => true,
+            },
             None => true,
           };
           drop(parent_cache);
@@ -147,9 +145,7 @@ impl OsFileSystem {
           Some(Err(io::Error::new(io::ErrorKind::NotFound, "not found (cached)")))
         }
       }
-      None => {
-        Some(Err(io::Error::new(io::ErrorKind::NotFound, "parent not a directory (cached)")))
-      }
+      None => Some(Err(io::Error::new(io::ErrorKind::NotFound, "parent not a directory (cached)"))),
     }
   }
 
@@ -168,9 +164,7 @@ impl OsFileSystem {
           Some(Err(io::Error::new(io::ErrorKind::NotFound, "not found (cached)")))
         }
       }
-      None => {
-        Some(Err(io::Error::new(io::ErrorKind::NotFound, "parent not a directory (cached)")))
-      }
+      None => Some(Err(io::Error::new(io::ErrorKind::NotFound, "parent not a directory (cached)"))),
     }
   }
 }

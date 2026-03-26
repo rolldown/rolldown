@@ -13,9 +13,9 @@ use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
 use std::ffi::OsStr;
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use sugar_path::SugarPath;
-use std::sync::Mutex;
 
 #[derive(Debug, Default)]
 pub struct EmittedAsset {

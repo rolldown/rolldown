@@ -117,7 +117,6 @@ impl<'a> SideEffectDetector<'a> {
       && matches!(&expr.callee, Expression::Identifier(id) if self.is_unresolved_reference(id));
 
     let mut detail = SideEffectDetail::from(has_side_effect);
-    detail.set(SideEffectDetail::PureAnnotation, is_pure_annotated);
     detail.set(SideEffectDetail::GlobalVarAccess, is_global_call);
 
     if !has_side_effect {
@@ -202,12 +201,8 @@ impl<'a> SideEffectDetector<'a> {
         // METADATA: GlobalVarAccess — constructor is a known global
         let is_global_constructor = !has_side_effect
           && matches!(&expr.callee, Expression::Identifier(id) if self.is_unresolved_reference(id));
-        // METADATA: PureAnnotation — marked with /*@__PURE__*/
-        let is_pure_annotated = !self.flat_options.ignore_annotations() && expr.pure;
-
         let mut detail = SideEffectDetail::from(has_side_effect);
         detail.set(SideEffectDetail::GlobalVarAccess, is_global_constructor);
-        detail.set(SideEffectDetail::PureAnnotation, is_pure_annotated);
 
         if !has_side_effect {
           // Oxc already verified args are side-effect-free; only collect metadata flags.
@@ -1086,7 +1081,7 @@ mod test {
     // sideEffectful Global variable access with pure annotation
     assert_eq!(
       get_statements_side_effect_details("let a = /*@__PURE__ */ Reflect.something()"),
-      vec![SideEffectDetail::GlobalVarAccess | SideEffectDetail::PureAnnotation]
+      vec![SideEffectDetail::GlobalVarAccess]
     );
   }
 

@@ -159,6 +159,10 @@ impl GenerateStage<'_> {
   ) {
     let symbols = &self.link_output.symbol_db;
     let chunk_id_to_symbols_vec = append_only_vec::AppendOnlyVec::new();
+    // When there's only a single chunk, all symbols are in the same chunk,
+    // so we can skip collecting depended symbols (used only for cross-chunk import detection).
+    // We still need to assign chunk_idx to declared symbols and handle external module imports.
+    let is_single_chunk = chunk_graph.chunk_table.len() == 1;
 
     let chunks_iter = multizip((
       chunk_graph.chunk_table.iter_enumerated(),
@@ -231,66 +235,74 @@ impl GenerateStage<'_> {
               symbol_needs_to_assign.push(*declared);
             });
 
-            stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
-              match reference_ref {
-                rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
-                  depended_symbols.insert(symbols.canonical_ref_resolving_namespace(*referenced));
-                }
-                rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-                  match member_expr.represent_symbol_ref(
-                    &self.link_output.metas[module.idx].resolved_member_expr_refs,
-                  ) {
-                    Some(sym_ref) => {
-                      depended_symbols.insert(symbols.canonical_ref_resolving_namespace(sym_ref));
-                    }
-                    _ => {
-                      // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
-                      // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
+            // Skip collecting referenced symbols for cross-chunk analysis when there's only one chunk,
+            // since all symbols are in the same chunk and no cross-chunk imports are possible.
+            if !is_single_chunk {
+              stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+                match reference_ref {
+                  rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
+                    depended_symbols.insert(symbols.canonical_ref_resolving_namespace(*referenced));
+                  }
+                  rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+                    match member_expr.represent_symbol_ref(
+                      &self.link_output.metas[module.idx].resolved_member_expr_refs,
+                    ) {
+                      Some(sym_ref) => {
+                        depended_symbols.insert(symbols.canonical_ref_resolving_namespace(sym_ref));
+                      }
+                      _ => {
+                        // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
+                        // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
+                      }
                     }
                   }
                 }
-              }
-            });
+              });
+            }
           });
         });
 
-        if let Some(entry_id) = &chunk.entry_module_idx() {
-          let entry = &self.link_output.module_table[*entry_id].as_normal().unwrap();
-          let entry_meta = &self.link_output.metas[entry.idx];
+        // Skip entry-point and runtime helper depended symbol collection for single-chunk builds.
+        // These are only used to detect cross-chunk imports, which can't exist with one chunk.
+        if !is_single_chunk {
+          if let Some(entry_id) = &chunk.entry_module_idx() {
+            let entry = &self.link_output.module_table[*entry_id].as_normal().unwrap();
+            let entry_meta = &self.link_output.metas[entry.idx];
 
-          if !matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
-            for export_ref in entry_meta
-              .resolved_exports
-              .iter()
-              .sorted_by_key(|(name, _)| *name)
-              .map(|(_, export)| export)
-              // A chunk should always consume a cjs export symbol by property access, so filter
-              // out a exported symbol that came from a cjs module.
-              .filter(|resolved_export| !resolved_export.came_from_cjs)
-            {
+            if !matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+              for export_ref in entry_meta
+                .resolved_exports
+                .iter()
+                .sorted_by_key(|(name, _)| *name)
+                .map(|(_, export)| export)
+                // A chunk should always consume a cjs export symbol by property access, so filter
+                // out a exported symbol that came from a cjs module.
+                .filter(|resolved_export| !resolved_export.came_from_cjs)
+              {
+                depended_symbols
+                  .insert(symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref));
+              }
+            }
+
+            if !matches!(entry_meta.wrap_kind(), WrapKind::None) {
               depended_symbols
-                .insert(symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref));
+                .insert(entry_meta.wrapper_ref.expect("cjs should be wrapped in esm output"));
+            }
+
+            if matches!(self.options.format, OutputFormat::Cjs)
+              && matches!(entry.exports_kind, ExportsKind::Esm)
+            {
+              depended_symbols.insert(self.link_output.runtime.resolve_symbol("__toCommonJS"));
+              depended_symbols.insert(entry.namespace_object_ref);
             }
           }
 
-          if !matches!(entry_meta.wrap_kind(), WrapKind::None) {
-            depended_symbols
-              .insert(entry_meta.wrapper_ref.expect("cjs should be wrapped in esm output"));
+          // Depending runtime helpers
+          for helper in chunk.depended_runtime_helper {
+            let index = helper.bits().trailing_zeros() as usize;
+            let name = RUNTIME_HELPER_NAMES[index];
+            depended_symbols.insert(self.link_output.runtime.resolve_symbol(name));
           }
-
-          if matches!(self.options.format, OutputFormat::Cjs)
-            && matches!(entry.exports_kind, ExportsKind::Esm)
-          {
-            depended_symbols.insert(self.link_output.runtime.resolve_symbol("__toCommonJS"));
-            depended_symbols.insert(entry.namespace_object_ref);
-          }
-        }
-
-        // Depending runtime helpers
-        for helper in chunk.depended_runtime_helper {
-          let index = helper.bits().trailing_zeros() as usize;
-          let name = RUNTIME_HELPER_NAMES[index];
-          depended_symbols.insert(self.link_output.runtime.resolve_symbol(name));
         }
 
         chunk_id_to_symbols_vec.push((chunk_id, symbol_needs_to_assign));

@@ -27,13 +27,41 @@ async function downloadSnapshot(filename: SnapshotFileName): Promise<string> {
   const url = `${ESBUILD_SNAPSHOTS_URL}/${filename}`;
   console.log(`Downloading ${filename}...`);
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to download ${filename}: ${response.status} ${response.statusText}`);
+  const MAX_RETRIES = 5;
+  let delay = 1000;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const response = await fetch(url);
+
+    if (response.ok) {
+      return response.text();
+    }
+
+    if (response.status === 429 && attempt < MAX_RETRIES) {
+      const retryAfter = response.headers.get('retry-after');
+      let waitMs = delay;
+      if (retryAfter) {
+        const seconds = parseInt(retryAfter, 10);
+        if (!Number.isNaN(seconds)) {
+          waitMs = seconds * 1000;
+        } else {
+          const date = Date.parse(retryAfter);
+          if (!Number.isNaN(date)) {
+            waitMs = Math.max(0, date - Date.now());
+          }
+        }
+      }
+      console.log(
+        `Rate limited downloading ${filename}, retrying in ${waitMs}ms (attempt ${attempt}/${MAX_RETRIES})...`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      delay *= 2;
+    } else {
+      throw new Error(`Failed to download ${filename}: ${response.status} ${response.statusText}`);
+    }
   }
 
-  const content = await response.text();
-  return content;
+  throw new Error(`Failed to download ${filename} after ${MAX_RETRIES} attempts`);
 }
 
 export async function ensureSnapshot(

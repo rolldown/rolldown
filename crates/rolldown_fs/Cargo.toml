@@ -21,5 +21,6 @@ memory = []
 os = []
 
 [dependencies]
+dashmap = { workspace = true }
 oxc_resolver = { workspace = true }
 vfs = { workspace = true }

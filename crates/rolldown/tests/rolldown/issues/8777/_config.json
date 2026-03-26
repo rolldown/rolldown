@@ -1,0 +1,6 @@
+{
+  "config": {
+    "strictExecutionOrder": true
+  },
+  "expectExecuted": true
+}

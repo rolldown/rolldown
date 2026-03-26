@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region foo.js
+var value;
+var init_foo = __esmMin((() => {
+	value = "foo";
+}));
+//#endregion
+//#region proxy.js
+var init_proxy = __esmMin((() => {
+	init_foo();
+}));
+//#endregion
+__esmMin((() => {
+	init_proxy();
+	assert.strictEqual(value, "foo");
+}))();
+
+```

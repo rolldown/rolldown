@@ -10,9 +10,6 @@ use rolldown::{
 };
 use rolldown_common::bundler_options::CommentsOptions;
 
-#[global_allocator]
-static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
-
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();

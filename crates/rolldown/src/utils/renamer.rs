@@ -37,6 +37,10 @@ pub struct Renamer<'name> {
   symbol_db: &'name SymbolRefDb,
   /// Entry module index for this chunk, if any.
   entry_module_idx: Option<ModuleIdx>,
+  /// Cache of all nested-scope binding names per module.
+  /// Built lazily on first access per module. Avoids repeated iteration
+  /// over all scopes in `has_nested_scope_binding`.
+  nested_binding_cache: FxHashMap<ModuleIdx, FxHashSet<CompactStr>>,
 }
 
 impl<'name> Renamer<'name> {
@@ -44,6 +48,15 @@ impl<'name> Renamer<'name> {
     base_module_index: Option<ModuleIdx>,
     symbol_db: &'name SymbolRefDb,
     format: OutputFormat,
+  ) -> Self {
+    Self::with_capacity(base_module_index, symbol_db, format, 0)
+  }
+
+  pub fn with_capacity(
+    base_module_index: Option<ModuleIdx>,
+    symbol_db: &'name SymbolRefDb,
+    format: OutputFormat,
+    estimated_symbols: usize,
   ) -> Self {
     // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
     let mut manual_reserved = match format {
@@ -54,16 +67,20 @@ impl<'name> Renamer<'name> {
     // https://github.com/rollup/rollup/blob/bfbea66569491f5466fbba99de2ba6a0225f851b/src/Chunk.ts#L1359
     manual_reserved.extend(["Object", "Promise"]);
 
+    let reserved_count = manual_reserved.len() + RESERVED_KEYWORDS.len() + GLOBAL_OBJECTS.len();
+    let map_capacity = reserved_count + estimated_symbols;
+
+    let mut used_canonical_names = FxHashMap::with_capacity_and_hasher(map_capacity, Default::default());
+    for s in manual_reserved.iter().chain(RESERVED_KEYWORDS.iter()).chain(GLOBAL_OBJECTS.iter()) {
+      used_canonical_names.insert(CompactStr::new(s), 0);
+    }
+
     Self {
-      canonical_names: FxHashMap::default(),
+      canonical_names: FxHashMap::with_capacity_and_hasher(estimated_symbols, Default::default()),
       symbol_db,
-      used_canonical_names: manual_reserved
-        .iter()
-        .chain(RESERVED_KEYWORDS.iter())
-        .chain(GLOBAL_OBJECTS.iter())
-        .map(|s| (CompactStr::new(s), 0))
-        .collect(),
+      used_canonical_names,
       entry_module_idx: base_module_index,
+      nested_binding_cache: FxHashMap::default(),
     }
   }
 
@@ -86,12 +103,24 @@ impl<'name> Renamer<'name> {
 
   /// Returns true if `name` exists in any nested (non-root) scope of the module.
   /// Returns false for modules without AST (external modules).
-  fn has_nested_scope_binding(&self, module_idx: ModuleIdx, name: &str) -> bool {
+  fn has_nested_scope_binding(&mut self, module_idx: ModuleIdx, name: &str) -> bool {
+    // Use cached set of nested binding names, building it on first access per module.
+    if let Some(cached) = self.nested_binding_cache.get(&module_idx) {
+      return cached.contains(name);
+    }
     let Some(db) = &self.symbol_db[module_idx] else {
       return false;
     };
-    // Skip root scope (index 0), check nested scopes only
-    db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
+    // Build the cache: collect all binding names from non-root scopes.
+    let mut names = FxHashSet::default();
+    for (_, bindings) in db.ast_scopes.scoping().iter_bindings().skip(1) {
+      for (&binding_name, _) in bindings {
+        names.insert(CompactStr::new(binding_name.as_str()));
+      }
+    }
+    let result = names.contains(name);
+    self.nested_binding_cache.insert(module_idx, names);
+    result
   }
 
   /// Check if a candidate name is available for a top-level symbol without causing
@@ -140,7 +169,7 @@ impl<'name> Renamer<'name> {
   /// Here the author intentionally wrote a parameter named `value` that shadows the import.
   /// We allow this (`is_original_name = true`), so the import keeps its name `value`.
   fn is_name_available(
-    &self,
+    &mut self,
     candidate_name: &str,
     symbol_ref: SymbolRef,
     is_original_name: bool,

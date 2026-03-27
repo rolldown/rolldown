@@ -3,7 +3,7 @@ use oxc::ast::{
   AstKind, MemberExpressionKind,
   ast::{self, AssignmentExpression, Expression, IdentifierReference, PropertyKey},
 };
-use oxc::span::CompactStr;
+use oxc::span::{CompactStr, Span};
 use rolldown_common::{AstScopes, EcmaModuleAstUsage};
 use rolldown_ecmascript_utils::ExpressionExt;
 
@@ -41,7 +41,7 @@ pub enum CommonJsAstType {
   /// `console.log(exports)`
   ExportsRead,
   EsModuleFlag,
-  Reexport,
+  Reexport(Span),
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -118,8 +118,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       Some(CommonJsAstType::ExportsPropWrite(prop)) if prop == "*" => {
         self.result.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
       }
-      Some(CommonJsAstType::Reexport) => {
+      Some(CommonJsAstType::Reexport(span)) => {
         self.result.ast_usage.insert(EcmaModuleAstUsage::IsCjsReexport);
+        self.result.cjs_reexport_require_spans.push(*span);
       }
       _ => {}
     }
@@ -179,7 +180,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .as_expression()?
       .as_string_literal()
       .is_some()
-      .then_some(CommonJsAstType::Reexport)
+      .then_some(CommonJsAstType::Reexport(call_expr.span))
   }
 }
 

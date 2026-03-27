@@ -75,6 +75,8 @@ pub async fn create_ecma_view(
     dummy_record_set,
     constant_export_map,
     import_attribute_map,
+    cjs_reexport_require_spans: _,
+    cjs_reexport_import_record_ids,
   } = scanner.scan(ast.program())?;
   // If a export symbol in commonjs defined in multiple time, we just bailout treeshake it.
   for (k, v) in commonjs_exports {
@@ -136,6 +138,7 @@ pub async fn create_ecma_view(
     depended_runtime_helper: Box::default(),
     import_attribute_map,
     json_module_none_self_reference_included_symbol: None,
+    cjs_reexport_import_record_ids,
   };
 
   let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage, preserve_jsx };

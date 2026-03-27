@@ -62,6 +62,7 @@ impl PartialEq for MatchImportKindNormal {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[expect(clippy::box_collection)]
 pub enum MatchImportKind {
   /// The import is either external or not defined.
   _Ignore,
@@ -81,7 +82,7 @@ pub enum MatchImportKind {
   // The import resolved to multiple symbols via "export * from"
   Ambiguous {
     symbol_ref: SymbolRef,
-    potentially_ambiguous_symbol_refs: Vec<SymbolRef>,
+    potentially_ambiguous_symbol_refs: Box<Vec<SymbolRef>>,
   },
   NoMatch,
 }
@@ -145,12 +146,7 @@ impl LinkStage<'_> {
         .named_exports
         .iter()
         .map(|(name, local)| {
-          let resolved_export = ResolvedExport {
-            symbol_ref: local.referenced,
-            potentially_ambiguous_symbol_refs: None,
-            came_from_cjs: local.came_from_commonjs,
-          };
-          (name.clone(), resolved_export)
+          (name.clone(), ResolvedExport::new(local.referenced, local.came_from_commonjs))
         })
         .collect::<FxHashMap<_, _>>();
 
@@ -222,7 +218,7 @@ impl LinkStage<'_> {
         {
           let main_ref = self.symbols.canonical_ref_for(resolved_export.symbol_ref);
 
-          for ambiguous_ref in potentially_ambiguous_symbol_refs {
+          for ambiguous_ref in potentially_ambiguous_symbol_refs.iter() {
             let ambiguous_ref = self.symbols.canonical_ref_for(*ambiguous_ref);
             if main_ref != ambiguous_ref {
               continue 'next_export;
@@ -319,12 +315,19 @@ impl LinkStage<'_> {
       return;
     };
 
-    let is_cjsreexports = module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport);
+    let cjs_reexport_modules: Vec<ModuleIdx> =
+      if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
+        module
+          .ecma_view
+          .cjs_reexport_import_record_ids
+          .iter()
+          .filter_map(|&rec_idx| module.import_records[rec_idx].resolved_module)
+          .collect()
+      } else {
+        vec![]
+      };
 
-    let cjs_reexport_module =
-      is_cjsreexports.then(|| module.import_records.first().unwrap().into_resolved_module());
-
-    for dep_id in module.star_export_module_ids().chain(cjs_reexport_module) {
+    for dep_id in module.star_export_module_ids().chain(cjs_reexport_modules) {
       let Module::Normal(dep_module) = &normal_modules[dep_id] else {
         continue;
       };
@@ -348,20 +351,27 @@ impl LinkStage<'_> {
         // We have filled `resolve_exports` with `named_exports`. If the export is already exists, it means that the importer
         // has a named export with the same name. So the export from dep module is shadowed.
         if let Some(resolved_export) = resolve_exports.get_mut(exported_name) {
-          if named_export.referenced != resolved_export.symbol_ref && !resolved_export.came_from_cjs
-          {
-            resolved_export
-              .potentially_ambiguous_symbol_refs
-              .get_or_insert(Vec::default())
-              .push(named_export.referenced);
+          if named_export.referenced != resolved_export.symbol_ref {
+            if resolved_export.came_from_cjs || named_export.came_from_commonjs {
+              // CJS conflict: at least one side came from CJS (e.g., conditional re-exports
+              // mixing ESM and CJS targets). Track these separately — they're expected runtime
+              // branches, not static ambiguity errors.
+              resolved_export
+                .cjs_conflicting_symbol_refs
+                .get_or_insert(Box::default())
+                .push(named_export.referenced);
+            } else {
+              resolved_export
+                .potentially_ambiguous_symbol_refs
+                .get_or_insert(Box::default())
+                .push(named_export.referenced);
+            }
           }
         } else {
-          let resolved_export = ResolvedExport {
-            symbol_ref: named_export.referenced,
-            potentially_ambiguous_symbol_refs: None,
-            came_from_cjs: named_export.came_from_commonjs,
-          };
-          resolve_exports.insert(exported_name.clone(), resolved_export);
+          resolve_exports.insert(
+            exported_name.clone(),
+            ResolvedExport::new(named_export.referenced, named_export.came_from_commonjs),
+          );
         }
       }
 
@@ -853,7 +863,8 @@ impl BindImportsAndExportsContext<'_> {
                 symbol: export.symbol_ref,
                 potentially_ambiguous_export_star_refs: export
                   .potentially_ambiguous_symbol_refs
-                  .clone()
+                  .as_deref()
+                  .cloned()
                   .unwrap_or_default(),
               }
             }
@@ -1023,15 +1034,19 @@ impl BindImportsAndExportsContext<'_> {
         if let MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) = ret {
           return MatchImportKind::Ambiguous {
             symbol_ref: symbol,
-            potentially_ambiguous_symbol_refs: ambiguous_results
-              .iter()
-              .filter_map(|kind| match *kind {
-                MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) => Some(symbol),
-                MatchImportKind::Namespace { namespace_ref }
-                | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => Some(namespace_ref),
-                _ => None,
-              })
-              .collect(),
+            potentially_ambiguous_symbol_refs: Box::new(
+              ambiguous_results
+                .iter()
+                .filter_map(|kind| match *kind {
+                  MatchImportKind::Normal(MatchImportKindNormal { symbol, .. }) => Some(symbol),
+                  MatchImportKind::Namespace { namespace_ref }
+                  | MatchImportKind::NormalAndNamespace { namespace_ref, .. } => {
+                    Some(namespace_ref)
+                  }
+                  _ => None,
+                })
+                .collect(),
+            ),
           };
         }
 

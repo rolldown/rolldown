@@ -116,6 +116,11 @@ pub struct ScanResult {
   pub directive_range: Vec<Span>,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
   pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
+  /// Temporary storage for spans of `require()` calls in `module.exports = require(...)` patterns.
+  /// Resolved to `cjs_reexport_import_record_ids` after scanning completes.
+  pub cjs_reexport_require_spans: Vec<Span>,
+  /// Import record indices for `module.exports = require(...)` patterns.
+  pub cjs_reexport_import_record_ids: Vec<ImportRecordIdx>,
 }
 
 bitflags::bitflags! {
@@ -223,6 +228,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       constant_export_map: FxHashMap::default(),
       ecma_view_meta: EcmaViewMeta::default(),
       import_attribute_map: FxHashMap::default(),
+      cjs_reexport_require_spans: Vec::new(),
+      cjs_reexport_import_record_ids: Vec::new(),
     };
 
     Self {
@@ -353,6 +360,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
 
     self.result.exports_kind = exports_kind;
+
+    // Resolve CJS re-export require spans to import record indices
+    self.result.cjs_reexport_import_record_ids = self
+      .result
+      .cjs_reexport_require_spans
+      .iter()
+      .filter_map(|span| self.result.imports.get(span).copied())
+      .collect();
 
     // If some commonjs module facade exports was used locally, we need to explicitly mark them as
     // has side effects, so that they should not be removed in linking stage.

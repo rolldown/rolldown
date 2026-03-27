@@ -25,7 +25,7 @@ pub struct ResolvedExport {
   // deferred to linking imports.
   pub potentially_ambiguous_symbol_refs: Option<Box<Vec<SymbolRef>>>,
   pub symbol_ref: SymbolRef,
-  pub came_from_cjs: bool,
+  pub came_from_commonjs: bool,
   /// When multiple CJS sources (conditional re-exports) provide the same export name,
   /// this tracks the alternative symbols. Unlike ESM ambiguity (which is an error),
   /// CJS conflicts are expected — only one branch runs at runtime, but statically
@@ -38,7 +38,7 @@ impl ResolvedExport {
     Self {
       symbol_ref,
       potentially_ambiguous_symbol_refs: None,
-      came_from_cjs,
+      came_from_commonjs: came_from_cjs,
       cjs_conflicting_symbol_refs: None,
     }
   }

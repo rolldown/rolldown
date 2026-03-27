@@ -118,7 +118,7 @@ fn include_cjs_bailout_exports(
     metas[idx]
       .resolved_exports
       .iter()
-      .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
+      .filter_map(|(_name, local)| local.came_from_commonjs.then_some(local))
       .for_each(|local| {
         include_symbol_and_check_cjs_bailout(
           context,

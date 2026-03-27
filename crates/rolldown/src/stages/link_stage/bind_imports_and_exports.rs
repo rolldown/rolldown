@@ -226,7 +226,7 @@ impl LinkStage<'_> {
           }
         }
         sorted_and_non_ambiguous_resolved_exports
-          .push((exported_name.clone(), resolved_export.came_from_cjs));
+          .push((exported_name.clone(), resolved_export.came_from_commonjs));
       }
       sorted_and_non_ambiguous_resolved_exports.sort_unstable();
       meta.sorted_and_non_ambiguous_resolved_exports =
@@ -352,7 +352,7 @@ impl LinkStage<'_> {
         // has a named export with the same name. So the export from dep module is shadowed.
         if let Some(resolved_export) = resolve_exports.get_mut(exported_name) {
           if named_export.referenced != resolved_export.symbol_ref {
-            if resolved_export.came_from_cjs || named_export.came_from_commonjs {
+            if resolved_export.came_from_commonjs || named_export.came_from_commonjs {
               // CJS conflict: at least one side came from CJS (e.g., conditional re-exports
               // mixing ESM and CJS targets). Track these separately — they're expected runtime
               // branches, not static ambiguity errors.
@@ -432,7 +432,7 @@ impl LinkStage<'_> {
                   let name = &prop.name;
                   let meta = &self.metas[canonical_ref_owner.idx];
                   let export_symbol = meta.resolved_exports.get(name).and_then(|resolved_export| {
-                    (!resolved_export.came_from_cjs).then_some(resolved_export)
+                    (!resolved_export.came_from_commonjs).then_some(resolved_export)
                   });
                   let Some(export_symbol) = export_symbol else {
                     // when we try to resolve `a.b.c`, and found that `b` is not exported by module
@@ -549,7 +549,7 @@ impl LinkStage<'_> {
                           .resolved_exports
                           .get(&member_expr_ref.prop_and_span_list[cursor].name)
                           .and_then(|resolved_export| {
-                            resolved_export.came_from_cjs.then_some(resolved_export)
+                            resolved_export.came_from_commonjs.then_some(resolved_export)
                           })
                       })
                   {
@@ -621,7 +621,7 @@ impl LinkStage<'_> {
             self.metas[*cjs_module_idx]
               .resolved_exports
               .values()
-              .filter(|e| e.came_from_cjs)
+              .filter(|e| e.came_from_commonjs)
               .map(|e| e.symbol_ref),
           );
         }
@@ -852,7 +852,7 @@ impl BindImportsAndExportsContext<'_> {
       Specifier::Literal(literal_imported) => {
         match self.metas[importee_id].resolved_exports.get(literal_imported) {
           Some(export) => {
-            if export.came_from_cjs {
+            if export.came_from_commonjs {
               ImportStatus::DynamicFallbackWithCommonjsReference {
                 namespace_ref: importee.namespace_object_ref,
                 commonjs_symbol: export.symbol_ref,

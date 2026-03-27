@@ -202,6 +202,18 @@ pub struct BindingMagicStringOptions {
 
 #[napi(object)]
 #[derive(Default)]
+pub struct BindingUpdateOptions {
+  pub overwrite: Option<bool>,
+}
+
+#[napi(object)]
+#[derive(Default)]
+pub struct BindingOverwriteOptions {
+  pub content_only: Option<bool>,
+}
+
+#[napi(object)]
+#[derive(Default)]
 pub struct BindingIndentOptions {
   pub exclude: Option<Either<Vec<Vec<i64>>, Vec<i64>>>,
 }
@@ -698,6 +710,7 @@ impl BindingMagicString<'_> {
     start: u32,
     end: u32,
     content: String,
+    options: Option<BindingOverwriteOptions>,
   ) -> napi::Result<This<'s>> {
     let start_byte = self
       .utf16_to_byte_mapper
@@ -707,13 +720,14 @@ impl BindingMagicString<'_> {
       .utf16_to_byte_mapper
       .utf16_to_byte(self.apply_offset_u32(end)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
+    let content_only = options.and_then(|o| o.content_only).unwrap_or(false);
     self
       .inner
       .update_with(
         start_byte,
         end_byte,
         content,
-        string_wizard::UpdateOptions { overwrite: true, keep_original: false },
+        string_wizard::UpdateOptions { overwrite: !content_only, keep_original: false },
       )
       .map_err(napi::Error::from_reason)?;
     Ok(this)
@@ -778,6 +792,7 @@ impl BindingMagicString<'_> {
     start: u32,
     end: u32,
     content: String,
+    options: Option<BindingUpdateOptions>,
   ) -> napi::Result<This<'s>> {
     let start_byte = self
       .utf16_to_byte_mapper
@@ -787,7 +802,16 @@ impl BindingMagicString<'_> {
       .utf16_to_byte_mapper
       .utf16_to_byte(self.apply_offset_u32(end)?)
       .ok_or_else(|| napi::Error::from_reason("Invalid end character index"))?;
-    self.inner.update(start_byte, end_byte, content).map_err(napi::Error::from_reason)?;
+    let overwrite = options.and_then(|o| o.overwrite).unwrap_or(false);
+    self
+      .inner
+      .update_with(
+        start_byte,
+        end_byte,
+        content,
+        string_wizard::UpdateOptions { overwrite, keep_original: false },
+      )
+      .map_err(napi::Error::from_reason)?;
     Ok(this)
   }
 

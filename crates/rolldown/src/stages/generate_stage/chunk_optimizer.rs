@@ -61,9 +61,6 @@ pub struct ChunkOptimizationGraph {
   /// Initial chunks share identical indices; newly-created common chunks
   /// in chunk_graph are registered here so callers can translate.
   chunk_idx_to_temp_chunk_idx: FxHashMap<ChunkIdx, ChunkIdx>,
-  /// When true, `would_create_circular_dependency` always returns false because
-  /// init_() wrappers guarantee correct execution order regardless of chunk load order.
-  strict_execution_order: bool,
 }
 
 impl ChunkOptimizationGraph {
@@ -71,7 +68,6 @@ impl ChunkOptimizationGraph {
     chunk_optimization: bool,
     chunk_graph: &ChunkGraph,
     bits_to_chunk_idx: &FxHashMap<BitSet, ChunkIdx>,
-    strict_execution_order: bool,
   ) -> Self {
     if !chunk_optimization {
       return Self::default();
@@ -102,13 +98,7 @@ impl ChunkOptimizationGraph {
       bits_to_chunk_idx.iter().map(|(k, v)| (k.clone(), *v)).collect();
     bits_to_chunk_idx.sort_unstable_keys();
 
-    Self {
-      chunks,
-      bits_to_chunk_idx,
-      module_to_chunk,
-      chunk_idx_to_temp_chunk_idx,
-      strict_execution_order,
-    }
+    Self { chunks, bits_to_chunk_idx, module_to_chunk, chunk_idx_to_temp_chunk_idx }
   }
 
   /// Assigns a module to a temporary chunk based on its reachability bits.
@@ -196,11 +186,6 @@ impl ChunkOptimizationGraph {
     source_chunk_idx: ChunkIdx,
     target_chunk_idx: ChunkIdx,
   ) -> bool {
-    // When strictExecutionOrder is enabled, init_() wrappers handle execution order,
-    // so circular chunk dependencies are safe and we can skip this check.
-    if self.strict_execution_order {
-      return false;
-    }
     // Start BFS from the combined deps of source and target.
     let mut queue: VecDeque<ChunkIdx> = self.chunks[source_chunk_idx]
       .dependencies

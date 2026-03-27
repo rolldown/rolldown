@@ -51,6 +51,12 @@ jobs:
           # Reject updated snapshots https://insta.rs/docs/advanced/#controlling-snapshot-updating
           INSTA_UPDATE: no
 
+      - name: Cache esbuild snapshots
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: scripts/tmp/esbuild-tests/snapshots
+          key: esbuild-snapshots-${{ hashFiles('scripts/src/esbuild-tests/urls.ts') }}
+
       - name: Check if esbuild tests diff has changed
         run: |
           just ued

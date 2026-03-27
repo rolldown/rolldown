@@ -11,6 +11,80 @@ Object.defineProperty(NativeBindingMagicString.prototype, 'isRolldownMagicString
   configurable: false,
 });
 
+// Validate content type to match JS magic-string behavior.
+// napi-rs throws a generic Error on type mismatch, but JS magic-string throws TypeError.
+function assertString(content: unknown, msg: string): asserts content is string {
+  if (typeof content !== 'string') throw new TypeError(msg);
+}
+
+// Save native method refs before overriding.
+// eslint-disable-next-line @typescript-eslint/unbound-method
+const nativeAppend = NativeBindingMagicString.prototype.append;
+// eslint-disable-next-line @typescript-eslint/unbound-method
+const nativePrepend = NativeBindingMagicString.prototype.prepend;
+// eslint-disable-next-line @typescript-eslint/unbound-method
+const nativeAppendLeft = NativeBindingMagicString.prototype.appendLeft;
+// eslint-disable-next-line @typescript-eslint/unbound-method
+const nativeAppendRight = NativeBindingMagicString.prototype.appendRight;
+// eslint-disable-next-line @typescript-eslint/unbound-method
+const nativePrependLeft = NativeBindingMagicString.prototype.prependLeft;
+// eslint-disable-next-line @typescript-eslint/unbound-method
+const nativePrependRight = NativeBindingMagicString.prototype.prependRight;
+// eslint-disable-next-line @typescript-eslint/unbound-method
+const nativeOverwrite = NativeBindingMagicString.prototype.overwrite;
+// eslint-disable-next-line @typescript-eslint/unbound-method
+const nativeUpdate = NativeBindingMagicString.prototype.update;
+
+NativeBindingMagicString.prototype.append = function (content: any): any {
+  assertString(content, 'outro content must be a string');
+  return nativeAppend.call(this, content);
+};
+
+NativeBindingMagicString.prototype.prepend = function (content: any): any {
+  assertString(content, 'outro content must be a string');
+  return nativePrepend.call(this, content);
+};
+
+NativeBindingMagicString.prototype.appendLeft = function (index: any, content: any): any {
+  assertString(content, 'inserted content must be a string');
+  return nativeAppendLeft.call(this, index, content);
+};
+
+NativeBindingMagicString.prototype.appendRight = function (index: any, content: any): any {
+  assertString(content, 'inserted content must be a string');
+  return nativeAppendRight.call(this, index, content);
+};
+
+NativeBindingMagicString.prototype.prependLeft = function (index: any, content: any): any {
+  assertString(content, 'inserted content must be a string');
+  return nativePrependLeft.call(this, index, content);
+};
+
+NativeBindingMagicString.prototype.prependRight = function (index: any, content: any): any {
+  assertString(content, 'inserted content must be a string');
+  return nativePrependRight.call(this, index, content);
+};
+
+NativeBindingMagicString.prototype.overwrite = function (
+  start: any,
+  end: any,
+  content: any,
+  options?: any,
+): any {
+  assertString(content, 'replacement content must be a string');
+  return nativeOverwrite.call(this, start, end, content, options);
+};
+
+NativeBindingMagicString.prototype.update = function (
+  start: any,
+  end: any,
+  content: any,
+  options?: any,
+): any {
+  assertString(content, 'replacement content must be a string');
+  return nativeUpdate.call(this, start, end, content, options);
+};
+
 // Override replace/replaceAll to support RegExp patterns.
 // String patterns delegate to the native Rust implementation.
 // RegExp patterns delegate to native replaceRegex which uses the regress crate

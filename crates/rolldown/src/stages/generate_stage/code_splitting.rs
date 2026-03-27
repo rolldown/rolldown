@@ -821,12 +821,8 @@ impl GenerateStage<'_> {
     // TODO: maybe we could bailout peer chunk?
     let allow_chunk_optimization = self.options.experimental.is_chunk_optimization_enabled()
       && !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
-    let mut temp_chunk_graph = ChunkOptimizationGraph::new(
-      allow_chunk_optimization,
-      chunk_graph,
-      bits_to_chunk,
-      self.options.is_strict_execution_order_enabled(),
-    );
+    let mut temp_chunk_graph =
+      ChunkOptimizationGraph::new(allow_chunk_optimization, chunk_graph, bits_to_chunk);
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.

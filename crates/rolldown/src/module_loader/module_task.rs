@@ -117,9 +117,12 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     let stable_id = id.stabilize(&self.ctx.options.cwd);
 
     if matches!(module_type, ModuleType::Css) {
-      Err(anyhow::anyhow!(
-        "Bundling CSS is no longer supported (experimental support has been removed). See https://github.com/rolldown/rolldown/issues/4271 for details."
-      ))?;
+      Err(BuildDiagnostic::unsupported_feature(
+        match &source { StrOrBytes::Bytes(_) => ArcStr::new(), StrOrBytes::Str(s) => s.into() },
+        id.as_arc_str().clone(),
+        Span::empty(0),
+        "Bundling CSS is no longer supported (experimental support has been removed). See https://github.com/rolldown/rolldown/issues/4271 for details.".to_string())
+      )?;
     }
 
     let mut warnings = vec![];

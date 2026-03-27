@@ -269,145 +269,167 @@ impl GenerateStage<'_> {
       // guaranteed.
       return;
     }
-    chunk_graph
-      .chunk_table
-      .iter_mut()
-      .filter(|chunk| matches!(chunk.kind, ChunkKind::EntryPoint { .. }))
-      .for_each(|chunk| {
-        let ChunkKind::EntryPoint { module: entry_module, .. } = &chunk.kind else {
-          return;
-        };
-        // After modules in chunk is sorted, it is always sorted by execution order whatever the
-        // `chunk_modules_order` is `exec_order` or `module_id`. Because for `module_id` we only sort
-        // by `module_id` for side effects free leaf modules, those should always execute first and
-        // has no wrapping.
-        let mut wrapped_modules = vec![];
-        // If a none wrapped module has higher execution order than a wrapped module
-        // we called the none wrapped module depended on the wrapped module(e.g. the none wrapped
-        // module may depended on a global variable initialization in the wrapped module, however
-        // the wrapped module are usually lazy evaluate). So we need to adjust the initialization
-        // order
-        // manually.
-        let imported_symbol_owner_from_other_chunk = chunk
-          .imports_from_other_chunks
-          .iter()
-          .flat_map(|(_, import_items)| {
-            import_items
-              .iter()
-              .map(|item| self.link_output.symbol_db.canonical_ref_for(item.import_ref).owner)
-          })
-          .filter_map(|idx| {
-            let module = self.link_output.module_table[idx].as_normal()?;
-            (!self.link_output.metas[module.idx].original_wrap_kind().is_none()).then_some(idx)
-          })
-          .collect::<FxHashSet<_>>();
-        let chunk_module_to_exec_order = chunk
-          .modules
-          .iter()
-          .chain(imported_symbol_owner_from_other_chunk.iter())
-          .map(|idx| (*idx, self.link_output.module_table[*idx].exec_order()))
-          .collect::<FxHashMap<_, _>>();
-
-        // the key is the module_idx of none wrapped module
-        // the value is the how many wrapped modules did the none wrapped module depends on.
-        // when getting all depended wrapped modules, just use wrapped_modules[0..none_wrapped_module_to_wrapped_dependency_length[none_wrap_module_idx]].
-        let mut none_wrapped_module_to_wrapped_dependency_length = FxHashMap::default();
-        let js_import_order = self.js_import_order(*entry_module, &chunk_module_to_exec_order);
-        for idx in js_import_order {
-          match self.link_output.metas[idx].original_wrap_kind() {
-            WrapKind::None => {
-              if !wrapped_modules.is_empty() {
-                none_wrapped_module_to_wrapped_dependency_length.insert(idx, wrapped_modules.len());
-              }
-            }
-            WrapKind::Cjs | WrapKind::Esm => {
-              wrapped_modules.push(idx);
-            }
-          }
-        }
-        // All modules that we need to ensure the initialization order.
-        let mut modules_need_to_check: FxHashSet<ModuleIdx> = FxHashSet::default();
-        let mut max_length = 0;
-        for (none_wrapped, dep_length) in &none_wrapped_module_to_wrapped_dependency_length {
-          modules_need_to_check.insert(*none_wrapped);
-          max_length = max_length.max(*dep_length);
-        }
-        modules_need_to_check.extend(&wrapped_modules[0..max_length]);
-
-        if modules_need_to_check.is_empty() {
-          // No wrapped modules or none wrapped modules that depends on wrapped modules, so we can
-          // skip the initialization order check.
-          return;
-        }
-
-        // Record each module in `modules_need_to_check` first init position.
-        let mut module_init_position = FxIndexMap::default();
-
-        for idx in &chunk.modules {
-          let Some(module) = self.link_output.module_table[*idx].as_normal() else {
-            continue;
-          };
-          module
-            .import_records
-            .iter_enumerated()
-            .filter_map(|(rec_idx, rec)| {
-              rec.resolved_module.map(|module_idx| (rec_idx, rec, module_idx))
+    chunk_graph.chunk_table.iter_mut().for_each(|chunk| {
+      // Determine DFS roots based on chunk kind.
+      // For entry chunks, the root is the entry module.
+      // For common chunks, roots are modules not imported by any other module in the chunk.
+      let roots: Vec<ModuleIdx> = match &chunk.kind {
+        ChunkKind::EntryPoint { module, .. } => vec![*module],
+        ChunkKind::Common => {
+          let chunk_modules_set: FxHashSet<ModuleIdx> = chunk.modules.iter().copied().collect();
+          let imported_in_chunk: FxHashSet<ModuleIdx> = chunk
+            .modules
+            .iter()
+            .filter_map(|&idx| self.link_output.module_table[idx].as_normal())
+            .flat_map(|normal| &normal.import_records)
+            .filter_map(|rec| {
+              let resolved_module = rec.resolved_module?;
+              (rec.kind == ImportKind::Import && chunk_modules_set.contains(&resolved_module))
+                .then_some(resolved_module)
             })
-            .for_each(|(rec_idx, rec, module_idx)| {
-              if rec.kind == ImportKind::Import && modules_need_to_check.contains(&module_idx) {
-                module_init_position.entry(module_idx).or_insert((*idx, rec_idx));
-              }
-            });
-          if module_init_position.len() == modules_need_to_check.len() {
-            break;
+            .collect();
+          let mut roots: Vec<ModuleIdx> =
+            chunk.modules.iter().filter(|idx| !imported_in_chunk.contains(idx)).copied().collect();
+          roots.sort_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order());
+          roots
+        }
+      };
+
+      if roots.is_empty() {
+        return;
+      }
+
+      // After modules in chunk is sorted, it is always sorted by execution order whatever the
+      // `chunk_modules_order` is `exec_order` or `module_id`. Because for `module_id` we only sort
+      // by `module_id` for side effects free leaf modules, those should always execute first and
+      // has no wrapping.
+      let mut wrapped_modules = vec![];
+      // If a none wrapped module has higher execution order than a wrapped module
+      // we called the none wrapped module depended on the wrapped module(e.g. the none wrapped
+      // module may depended on a global variable initialization in the wrapped module, however
+      // the wrapped module are usually lazy evaluate). So we need to adjust the initialization
+      // order
+      // manually.
+      let imported_symbol_owner_from_other_chunk = chunk
+        .imports_from_other_chunks
+        .iter()
+        .flat_map(|(_, import_items)| {
+          import_items
+            .iter()
+            .map(|item| self.link_output.symbol_db.canonical_ref_for(item.import_ref).owner)
+        })
+        .filter_map(|idx| {
+          let module = self.link_output.module_table[idx].as_normal()?;
+          (!self.link_output.metas[module.idx].original_wrap_kind().is_none()).then_some(idx)
+        })
+        .collect::<FxHashSet<_>>();
+      let chunk_module_to_exec_order = chunk
+        .modules
+        .iter()
+        .chain(imported_symbol_owner_from_other_chunk.iter())
+        .map(|idx| (*idx, self.link_output.module_table[*idx].exec_order()))
+        .collect::<FxHashMap<_, _>>();
+
+      // the key is the module_idx of none wrapped module
+      // the value is the how many wrapped modules did the none wrapped module depends on.
+      // when getting all depended wrapped modules, just use wrapped_modules[0..none_wrapped_module_to_wrapped_dependency_length[none_wrap_module_idx]].
+      let mut none_wrapped_module_to_wrapped_dependency_length = FxHashMap::default();
+      let js_import_order = self.js_import_order(&roots, &chunk_module_to_exec_order);
+      for idx in js_import_order {
+        match self.link_output.metas[idx].original_wrap_kind() {
+          WrapKind::None => {
+            if !wrapped_modules.is_empty() {
+              none_wrapped_module_to_wrapped_dependency_length.insert(idx, wrapped_modules.len());
+            }
+          }
+          WrapKind::Cjs | WrapKind::Esm => {
+            wrapped_modules.push(idx);
           }
         }
+      }
+      // All modules that we need to ensure the initialization order.
+      let mut modules_need_to_check: FxHashSet<ModuleIdx> = FxHashSet::default();
+      let mut max_length = 0;
+      for (none_wrapped, dep_length) in &none_wrapped_module_to_wrapped_dependency_length {
+        modules_need_to_check.insert(*none_wrapped);
+        max_length = max_length.max(*dep_length);
+      }
+      modules_need_to_check.extend(&wrapped_modules[0..max_length]);
 
-        let mut module_init_position = module_init_position.into_iter().collect_vec();
-        module_init_position.sort_by_cached_key(|(idx, _)| chunk_module_to_exec_order[idx]);
+      if modules_need_to_check.is_empty() {
+        // No wrapped modules or none wrapped modules that depends on wrapped modules, so we can
+        // skip the initialization order check.
+        return;
+      }
 
-        let mut pending_transfer = vec![];
-        let mut insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>> =
-          FxHashMap::default();
-        let mut remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>> = FxHashMap::default();
-        for (module_idx, (importer_idx, rec_idx)) in module_init_position {
-          match self.link_output.metas[module_idx].original_wrap_kind() {
-            WrapKind::None => {
-              if let Some(deps_length) =
-                none_wrapped_module_to_wrapped_dependency_length.get(&module_idx)
-              {
-                let transfer_item = pending_transfer
-                  .extract_if(0.., |(midx, _, _)| wrapped_modules[0..*deps_length].contains(midx));
-                for (_midx, iidx, ridx) in transfer_item {
-                  // Should always avoid transfer any initialization from a low execution order module to a high execution order module.
-                  if chunk_module_to_exec_order[&iidx] <= chunk_module_to_exec_order[&module_idx] {
-                    // If the module is the same, we can skip the transfer.
-                    continue;
-                  }
-                  insert_map.entry(module_idx).or_default().push((iidx, ridx));
-                  remove_map.entry(iidx).or_default().push(ridx);
+      // Record each module in `modules_need_to_check` first init position.
+      let mut module_init_position = FxIndexMap::default();
+
+      for idx in &chunk.modules {
+        let Some(module) = self.link_output.module_table[*idx].as_normal() else {
+          continue;
+        };
+        module
+          .import_records
+          .iter_enumerated()
+          .filter_map(|(rec_idx, rec)| {
+            rec.resolved_module.map(|module_idx| (rec_idx, rec, module_idx))
+          })
+          .for_each(|(rec_idx, rec, module_idx)| {
+            if rec.kind == ImportKind::Import && modules_need_to_check.contains(&module_idx) {
+              module_init_position.entry(module_idx).or_insert((*idx, rec_idx));
+            }
+          });
+        if module_init_position.len() == modules_need_to_check.len() {
+          break;
+        }
+      }
+
+      let mut module_init_position = module_init_position.into_iter().collect_vec();
+      module_init_position.sort_by_cached_key(|(idx, _)| chunk_module_to_exec_order[idx]);
+
+      let mut pending_transfer = vec![];
+      let mut insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>> =
+        FxHashMap::default();
+      let mut remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>> = FxHashMap::default();
+      for (module_idx, (importer_idx, rec_idx)) in module_init_position {
+        match self.link_output.metas[module_idx].original_wrap_kind() {
+          WrapKind::None => {
+            if let Some(deps_length) =
+              none_wrapped_module_to_wrapped_dependency_length.get(&module_idx)
+            {
+              let transfer_item = pending_transfer
+                .extract_if(0.., |(midx, _, _)| wrapped_modules[0..*deps_length].contains(midx));
+              for (_midx, iidx, ridx) in transfer_item {
+                // Should always avoid transfer any initialization from a low execution order module to a high execution order module.
+                if chunk_module_to_exec_order[&iidx] <= chunk_module_to_exec_order[&module_idx] {
+                  // If the module is the same, we can skip the transfer.
+                  continue;
                 }
+                insert_map.entry(module_idx).or_default().push((iidx, ridx));
+                remove_map.entry(iidx).or_default().push(ridx);
               }
             }
-            WrapKind::Cjs | WrapKind::Esm => {
-              pending_transfer.push((module_idx, importer_idx, rec_idx));
-            }
+          }
+          WrapKind::Cjs | WrapKind::Esm => {
+            pending_transfer.push((module_idx, importer_idx, rec_idx));
           }
         }
-        chunk.insert_map = insert_map;
-        chunk.remove_map = remove_map;
-      });
+      }
+      chunk.insert_map = insert_map;
+      chunk.remove_map = remove_map;
+    });
   }
 
   /// Only considering module eager initialization order, both `require()` and `import()` are lazy
   /// initialization.
   fn js_import_order(
     &self,
-    entry: ModuleIdx,
+    roots: &[ModuleIdx],
     chunk_modules_map: &FxHashMap<ModuleIdx, u32>,
   ) -> Vec<ModuleIdx> {
     // traverse module graph with depth-first search to determine the order of JS imports
-    let mut stack = vec![entry];
+    let mut stack: Vec<ModuleIdx> = roots.iter().copied().rev().collect();
     let mut visited = FxHashSet::default();
     let mut js_import_order = vec![];
     while let Some(module_idx) = stack.pop() {

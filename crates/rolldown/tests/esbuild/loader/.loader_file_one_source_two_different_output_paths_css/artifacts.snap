@@ -1,0 +1,56 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/common-CHxUrMdU.png
+
+```png
+x
+```
+
+## common-DfJE1WzA.css
+
+```css
+div {
+	background: url(assets/common-CHxUrMdU.png);
+}
+
+```
+
+## common.js
+
+```js
+//#region shared/common.png
+var common_default = "assets/common-CHxUrMdU.png";
+
+//#endregion
+```
+
+## entries_entry.css
+
+```css
+
+
+```
+
+## entries_entry.js
+
+```js
+import "./common.js";
+
+```
+
+## entries_other_entry.css
+
+```css
+
+
+```
+
+## entries_other_entry.js
+
+```js
+import "./common.js";
+
+```

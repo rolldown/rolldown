@@ -127,30 +127,23 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
     let mut warnings = vec![];
 
-    let ret = create_ecma_view(
-      &mut CreateModuleContext {
-        stable_id: &stable_id,
-        module_idx: self.module_idx,
-        plugin_driver: &self.ctx.plugin_driver,
-        resolved_id: &self.resolved_id,
-        options: &self.ctx.options,
-        warnings: &mut warnings,
-        module_type: module_type.clone(),
-        replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
-        is_user_defined_entry: self.is_user_defined_entry,
-        flat_options: self.flat_options,
-      },
-      CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
-    )
-    .await?;
-
-    let CreateEcmaViewReturn {
-      mut ecma_view,
-      ecma_related,
-      raw_import_records: ecma_raw_import_records,
-    } = ret;
-
-    let raw_import_records = ecma_raw_import_records;
+    let CreateEcmaViewReturn { mut ecma_view, ecma_related, raw_import_records } =
+      create_ecma_view(
+        &mut CreateModuleContext {
+          stable_id: &stable_id,
+          module_idx: self.module_idx,
+          plugin_driver: &self.ctx.plugin_driver,
+          resolved_id: &self.resolved_id,
+          options: &self.ctx.options,
+          warnings: &mut warnings,
+          module_type: module_type.clone(),
+          replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
+          is_user_defined_entry: self.is_user_defined_entry,
+          flat_options: self.flat_options,
+        },
+        CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
+      )
+      .await?;
 
     let resolved_deps = resolve_dependencies(
       &self.resolved_id,

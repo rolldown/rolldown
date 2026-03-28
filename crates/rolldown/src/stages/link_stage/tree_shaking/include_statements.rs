@@ -9,7 +9,7 @@ use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
   RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, SideEffectDetail,
-  StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
@@ -296,6 +296,79 @@ impl LinkStage<'_> {
 
       if !context.module_inclusion_changed {
         break;
+      }
+    }
+
+    // For ESM-wrapped modules in strict execution order, re-export statements like
+    // `export { default } from './Foo.js'` may be excluded by tree-shaking because
+    // the binding resolves transitively (the declared facade symbol links directly
+    // to the canonical symbol in Foo.js). However, these statements must be included
+    // so the module finalizer generates init calls for the importee's wrapper.
+    //
+    // We include excluded statements that:
+    // (a) declare symbols that are part of the module's exports (i.e., re-export
+    //     facades or exported import bindings, not mere local import bindings),
+    // (b) whose canonical ref is used, and
+    // (c) have import records for ESM-wrapped importees.
+    //
+    // This runs as a fixpoint loop because including a statement may transitively
+    // include new modules (via `include_statement` → `include_symbol` →
+    // `include_module`), which in turn may have their own excluded re-export
+    // statements that need to be recovered. For example, in a chain like
+    // `outer.js → ns.js → inner.js`, including outer's re-export includes ns,
+    // and the next iteration includes ns's import statement.
+    if self.options.is_strict_execution_order_enabled() {
+      loop {
+        let mut changed = false;
+        for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
+          if !matches!(context.metas[module.idx].wrap_kind(), WrapKind::Esm) {
+            continue;
+          }
+          if !context.is_module_included_vec.has_bit(module.idx) {
+            continue;
+          }
+
+          for (stmt_idx, stmt_info) in module.stmt_infos.iter_enumerated() {
+            if context.is_included_vec[module.idx].has_bit(stmt_idx) {
+              continue;
+            }
+            if stmt_info.import_records.is_empty() {
+              continue;
+            }
+
+            // Only consider statements whose declared symbols are part of the
+            // module's exports. This distinguishes re-export statements (e.g.,
+            // `export { foo } from './bar.js'`) and exported import bindings
+            // (e.g., `import * as ns from './bar.js'` when `ns` is re-exported)
+            // from plain unused imports (e.g., `import { unused } from './bar.js'`).
+            let has_used_exported_declared = stmt_info.declared_symbols.iter().any(|tagged_ref| {
+              let sym_ref = tagged_ref.inner();
+              let canonical = context.symbols.canonical_ref_for(sym_ref);
+              context.used_symbol_refs.contains(&canonical)
+                && module.named_exports.values().any(|export| export.referenced == sym_ref)
+            });
+            if !has_used_exported_declared {
+              continue;
+            }
+
+            let needs_init = stmt_info.import_records.iter().any(|&rec_idx| {
+              let rec = &module.import_records[rec_idx];
+              matches!(rec.kind, ImportKind::Import)
+                && rec
+                  .resolved_module
+                  .is_some_and(|idx| matches!(context.metas[idx].wrap_kind(), WrapKind::Esm))
+            });
+            if !needs_init {
+              continue;
+            }
+
+            changed = true;
+            include_statement(context, module, stmt_idx);
+          }
+        }
+        if !changed {
+          break;
+        }
       }
     }
 

@@ -155,7 +155,7 @@ function withShared({
 }
 
 // alias binding file to rolldown-binding.wasi.js and mark it as external
-// alias its dts file to rolldown-binding.d.ts without external
+// skip redirection for .d.ts importers so the dts plugin can bundle types
 function resolveWasiBinding(isBrowserBuild?: boolean): Plugin {
   return {
     name: 'resolve-wasi-binding',
@@ -165,6 +165,8 @@ function resolveWasiBinding(isBrowserBuild?: boolean): Plugin {
         const resolution = await this.resolve(id, importer, options);
 
         if (resolution?.id === bindingFile) {
+          // Let .d.ts importers resolve normally so binding types get bundled inline
+          if (importer && /\.d\.[cm]?ts$/.test(importer)) return resolution;
           const id = isBrowserBuild ? bindingFileWasiBrowser : bindingFileWasi;
           return { id, external: 'relative' };
         }

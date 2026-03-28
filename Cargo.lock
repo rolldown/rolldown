@@ -2849,6 +2849,7 @@ dependencies = [
  "futures",
  "indexmap",
  "itertools",
+ "libc",
  "mimalloc-safe",
  "napi",
  "napi-build",

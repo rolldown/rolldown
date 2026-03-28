@@ -55,14 +55,27 @@ generate_chunks()
               │
               ▼
          ChunkGraph                   Final module-to-chunk assignment
+
+Post-ChunkGraph processing (in generate()):
+
+ChunkGraph
+    │
+    ├─ compute_cross_chunk_links()                    Determine cross-chunk imports/exports
+    │
+    ├─ ensure_lazy_module_initialization_order()      Reorder wrapped module init calls
+    │
+    ├─ on_demand_wrapping()                           Strip unnecessary wrappers
+    │
+    └─ merge_cjs_namespace()                          Merge CJS namespace objects
 ```
 
 **Key files:**
 
-- `crates/rolldown/src/stages/generate_stage/code_splitting.rs` — pipeline orchestration
+- `crates/rolldown/src/stages/generate_stage/code_splitting.rs` — pipeline orchestration, `generate_chunks()`, `ensure_lazy_module_initialization_order()`
 - `crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs` — merge/optimization
 - `crates/rolldown/src/chunk_graph.rs` — output data structure
 - `crates/rolldown_utils/src/bitset.rs` — compact reachability representation
+- `crates/rolldown/src/types/linking_metadata.rs` — `original_wrap_kind()` used for init order analysis
 
 ## Bit Positions and Entry Points
 
@@ -126,6 +139,121 @@ Dynamic/emitted entries can become empty facades when all their modules are pull
 
 - Merges the facade into its target chunk
 - Marks it as `Removed` in `post_chunk_optimization_operations`
+
+## Lazy Module Initialization Order
+
+`ensure_lazy_module_initialization_order()` runs after chunk creation as a post-processing step on the `ChunkGraph`. It fixes a correctness issue with lazy evaluation of wrapped modules.
+
+### The Problem
+
+When `strict_execution_order` is **not** enabled, CJS modules are wrapped in `__commonJSMin()` and their body doesn't execute until the wrapper's init function (`require_xxx()`) is explicitly called. Some ESM modules may also be wrapped in `__esm()` (e.g., those with circular dependencies or TLA), but most ESM modules remain unwrapped — their top-level code executes eagerly in the order it appears in the bundle.
+
+During scope hoisting, each `require_xxx()` init call is placed at the point where the CJS module is first referenced. This default placement can produce incorrect initialization order when unwrapped ESM modules reference different wrapped CJS modules that have a dependency between them.
+
+The root cause is how modules are laid out in the bundle. The link stage's `sort_modules()` (in `sort_modules.rs`) computes a global execution order via DFS of the import graph — in that analysis, `require()` is treated as an implicit static import so that required modules are ordered before their requirers. Modules are then emitted in this order. For **wrapped** modules (CJS/ESM), only the wrapper definition is placed at that position; the actual init call (`require_xxx()`) is placed wherever the module is first referenced by an **unwrapped** module. When two wrapped modules are referenced by different unwrapped modules, the init calls can end up in the wrong relative order.
+
+Note: `sort_modules()` and `js_import_order()` (described below) are two different DFS analyses with different traversal rules. `sort_modules()` follows both `import` and `require()` edges to determine global execution order. `js_import_order()` only follows `import` edges because it specifically analyzes **eager** initialization — `require()` calls produce lazy wrappers that don't contribute to eager init order.
+
+Consider this example (based on [#5531](https://github.com/rolldown/rolldown/issues/5531)):
+
+```js
+// leaflet.js (CJS → wrapped)
+global.L = exports;
+exports.foo = 'foo';
+
+// leaflet-toolbar.js (CJS → wrapped, reads global.L)
+global.bar = global.L.foo;
+
+// lib.js (ESM → unwrapped, uses require internally)
+require('./leaflet-toolbar.js');
+
+// main.js (ESM → unwrapped)
+import './leaflet.js';
+import './lib.js';
+assert.equal(bar, 'foo');
+```
+
+`sort_modules()` DFS from `main.js` produces: `leaflet(1) < leaflet-toolbar(2) < lib(3) < main(4)`. The execution order correctly puts `leaflet` before `leaflet-toolbar`. But in the bundled output, since both are **wrapped**, their wrapper definitions are just inert function declarations — what matters is where the init calls land:
+
+- `lib.js` (exec_order 3, unwrapped) references `leaflet-toolbar` via `require()` → `require_leaflet_toolbar()` is placed here
+- `main.js` (exec_order 4, unwrapped) references `leaflet` via `import` → `require_leaflet()` is placed here
+
+Since `lib.js` appears before `main.js` in the bundle, `require_leaflet_toolbar()` runs first — but it needs `global.L` which `require_leaflet()` hasn't set yet:
+
+```js
+// ❌ Wrong output: require_leaflet_toolbar() runs before require_leaflet()
+//#region lib.js
+require_leaflet_toolbar(); // 💥 global.L is undefined here
+//#endregion
+//#region main.js
+var import_leaflet = require_leaflet(); // too late — toolbar already failed
+assert.equal(bar, 'foo');
+//#endregion
+```
+
+Note: if `main.js` imported `leaflet-toolbar.js` directly (without `lib.js` as intermediary), both init calls would land in the same module region and rolldown would order them correctly. The problem only arises when init calls are split across different unwrapped modules.
+
+**With** this pass, `require_leaflet()` is transferred from `main.js` to before `lib.js`'s region:
+
+```js
+// ✅ Correct output: require_leaflet() runs before require_leaflet_toolbar()
+//#region lib.js
+require_leaflet(); // ← transferred here by insert_map
+require_leaflet_toolbar();
+//#endregion
+//#region main.js
+assert.equal(bar, 'foo'); // require_leaflet() removed from here by remove_map
+//#endregion
+```
+
+The function builds `insert_map` and `remove_map` on each chunk to move init calls from their default position to the correct one. `remove_map` suppresses the init call at the original location; `insert_map` prepends it before the module that needs it.
+
+When `strict_execution_order` **is** enabled, all modules are already wrapped and execute in the correct order, so this pass is skipped entirely.
+
+### Algorithm
+
+The function iterates over every chunk in the `ChunkGraph` and performs six steps:
+
+**Step 1 — Find DFS roots.** Entry chunks use the entry module as root. Common chunks have no single entry module, so roots are computed as modules not imported (via `ImportKind::Import`) by any other module _within the same chunk_ — i.e., the "top" of the chunk-local import graph. These are the modules that would execute first when the chunk loads, making them the correct starting points for the DFS that determines eager initialization order. Roots are sorted by execution order to ensure deterministic traversal.
+
+**Step 2 — Build execution order map.** Collects execution order for all modules in the chunk, plus any wrapped modules from other chunks whose symbols are imported. This cross-chunk awareness is needed because a wrapped module in another chunk still requires its init call to run before dependents in this chunk.
+
+**Step 3 — Classify modules via DFS (`js_import_order`).** Runs iterative DFS from roots, following only `ImportKind::Import` edges (skipping `require()` and `import()` since those are inherently lazy). Each visited module is classified:
+
+- `WrapKind::Cjs` or `WrapKind::Esm` → pushed onto a `wrapped_modules` list
+- `WrapKind::None` → records how many wrapped modules appeared before it in DFS order (its "wrapped dependency count")
+
+Uses `original_wrap_kind()` from `LinkingMetadata`, which preserves the pre-`strictExecutionOrder` wrap kind.
+
+**Step 4 — Determine modules to check.** Collects all unwrapped modules that have wrapped dependencies, plus the wrapped modules they depend on (up to the maximum dependency count). If this set is empty, no reordering is needed and the function returns early.
+
+**Step 5 — Find first init position.** Walks chunk modules in order, scanning import records. For each module in the check set, records the first `(importer, import_record_idx)` that imports it. Stops early once all positions are found.
+
+**Step 6 — Build transfer maps.** Sorts init positions by execution order, then iterates:
+
+- **Wrapped module** → added to `pending_transfer`
+- **Unwrapped module** → pulls matching wrapped modules from `pending_transfer` and builds:
+  - `insert_map[module_idx]` → init calls to prepend before this module's output
+  - `remove_map[importer_idx]` → init calls to remove from their original location
+
+A guard prevents transferring init calls from a lower-exec-order module to a higher one, which would incorrectly reorder execution.
+
+### Helper: `js_import_order()`
+
+Iterative DFS from the chunk's roots. Only follows `ImportKind::Import` edges — `require()` and `import()` are inherently lazy so they don't contribute to eager initialization order. Returns modules in DFS visit order.
+
+### Output: `insert_map` and `remove_map`
+
+These maps are stored on each `Chunk` and consumed during module finalization:
+
+- **`remove_map`** — Read in `finalizer_context.rs`. The `ScopeHoistingFinalizer` checks whether any of the current module's import records should have their init calls suppressed (the init call is being moved elsewhere).
+- **`insert_map`** — Read in `finalize_modules.rs`. For each target module, the rendered init call strings from the original locations are prepended to the module's output via `PrependRenderedImport` mutations.
+
+```rust
+// On Chunk (in rolldown_common::chunk)
+pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
+pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
+```
 
 ## ChunkGraph
 

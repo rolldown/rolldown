@@ -118,7 +118,7 @@ fn include_cjs_bailout_exports(
     metas[idx]
       .resolved_exports
       .iter()
-      .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
+      .filter_map(|(_name, local)| local.came_from_commonjs.then_some(local))
       .for_each(|local| {
         include_symbol_and_check_cjs_bailout(
           context,
@@ -861,28 +861,9 @@ pub fn include_statement(
         return;
       }
       if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
-        // When the importer is a CJS re-export (`module.exports = require('./mod')`),
-        // we normally skip bailout since resolved_exports tracks needed exports.
-        // However, for conditional re-export patterns like:
-        //   if (cond) module.exports = require('./a');
-        //   else module.exports = require('./b');
-        // resolved_exports only captures one branch, causing the other branch's
-        // `exports.xxx = value` statements to be incorrectly tree-shaken.
-        // Detect this by checking if the importer requires multiple CJS modules.
-        let has_more_than_one_cjs_requires = module
-          .import_records
-          .iter()
-          .filter(|rec| {
-            matches!(rec.kind, ImportKind::Require)
-              && rec.resolved_module.is_some_and(|idx| {
-                ctx.modules[idx]
-                  .as_normal()
-                  .is_some_and(|m| matches!(m.exports_kind, ExportsKind::CommonJs))
-              })
-          })
-          .nth(1)
-          .is_some();
-        if has_more_than_one_cjs_requires {
+        // When the importer has multiple CJS re-export targets (conditional re-exports),
+        // bail out to prevent tree-shaking from dropping any branch's exports.
+        if module.ecma_view.cjs_reexport_import_record_ids.len() > 1 {
           ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
         }
       } else {

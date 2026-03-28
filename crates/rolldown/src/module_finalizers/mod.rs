@@ -446,6 +446,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let resolved_export =
       self.ctx.linking_infos[importee.idx].resolved_exports.get(&namespace_alias.property_name)?;
+
+    // Don't inline when there are conflicting CJS sources — the value could differ per branch
+    // TODO(hana): Optimize this with conditional inlining
+    if resolved_export.cjs_conflicting_symbol_refs.is_some() {
+      return None;
+    }
+
     let export_symbol = resolved_export.symbol_ref;
     let canonical_export_ref = self.ctx.symbol_db.canonical_ref_for(export_symbol);
 

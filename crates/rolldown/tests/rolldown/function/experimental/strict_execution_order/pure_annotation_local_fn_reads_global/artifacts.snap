@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+function getGlobalValue() {
+	return globalValue;
+}
+var dep_default;
+__esmMin((() => {
+	//#region setup.js
+	globalThis.globalValue = "foo";
+	//#endregion
+	//#region dep.js
+	dep_default = /* @__PURE__ */ getGlobalValue();
+	//#endregion
+	//#region main.js
+	assert.strictEqual(dep_default, "foo");
+	//#endregion
+}))();
+
+```

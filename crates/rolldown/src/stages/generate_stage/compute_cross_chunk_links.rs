@@ -266,7 +266,7 @@ impl GenerateStage<'_> {
               .map(|(_, export)| export)
               // A chunk should always consume a cjs export symbol by property access, so filter
               // out a exported symbol that came from a cjs module.
-              .filter(|resolved_export| !resolved_export.came_from_cjs)
+              .filter(|resolved_export| !resolved_export.came_from_commonjs)
             {
               depended_symbols
                 .insert(symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref));

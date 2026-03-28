@@ -1,0 +1,10 @@
+{
+  "config": {
+    "experimental": {
+      "devMode": {}
+    },
+    "optimization": {
+      "inlineConst": true
+    }
+  }
+}

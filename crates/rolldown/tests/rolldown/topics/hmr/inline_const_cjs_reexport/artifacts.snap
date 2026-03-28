@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region jsx-dev-runtime.development.js
+var require_jsx_dev_runtime_development = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	__rolldown_runtime__.createModuleHotContext("jsx-dev-runtime.development.js");
+	__rolldown_runtime__.registerModule("jsx-dev-runtime.development.js", module);
+	exports.jsxDEV = function jsxDEV(type, props) {
+		return {
+			type,
+			props
+		};
+	};
+}));
+//#endregion
+//#region jsx-dev-runtime.js
+var require_jsx_dev_runtime = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	__rolldown_runtime__.createModuleHotContext("jsx-dev-runtime.js");
+	__rolldown_runtime__.registerModule("jsx-dev-runtime.js", module);
+	module.exports = require_jsx_dev_runtime_development();
+}));
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+var import_jsx_dev_runtime = require_jsx_dev_runtime();
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+const result = (0, import_jsx_dev_runtime.jsxDEV)("span", { children: "hello" });
+assert.deepStrictEqual(result, {
+	type: "span",
+	props: { children: "hello" }
+});
+main_hot.accept();
+//#endregion
+
+```

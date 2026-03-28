@@ -107,6 +107,8 @@ pub struct EcmaView {
   pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
   /// Use `Box` since it is rarely used also it could reduce the size of `EcmaView`, .
   pub json_module_none_self_reference_included_symbol: Option<Box<FxHashSet<SymbolRef>>>,
+  /// Import record indices for `module.exports = require(...)` patterns.
+  pub cjs_reexport_import_record_ids: Vec<ImportRecordIdx>,
 }
 
 bitflags! {

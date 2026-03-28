@@ -285,7 +285,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           }
           if id.name == "exports" && self.is_global_identifier_reference(id) {
             self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
-
             if let Some((span, export_name)) = member_expr.static_property_info() {
               // `exports.test = ...`
               let exported_symbol =
@@ -593,7 +592,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 self.cjs_named_exports_usage.entry(prop).or_default().write += 1;
               }
               Some(CommonJsAstType::EsModuleFlag) => {}
-              Some(CommonJsAstType::Reexport) => {
+              Some(CommonJsAstType::Reexport(_)) => {
                 // This is only usd for `module.exports = require('mod')`
                 // should only reached when `ident_ref` is `module`
                 unreachable!()

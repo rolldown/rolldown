@@ -61,11 +61,10 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
   pub async fn run(self) {
     if let Err(errs) = self.run_inner().await {
-      self
+      let _ = self
         .ctx
         .tx
-        .try_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
-        .expect("Send should not fail");
+        .try_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
   }
 

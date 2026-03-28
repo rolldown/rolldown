@@ -38,12 +38,11 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
   #[tracing::instrument(name="ExternalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
   pub async fn run(self) {
     if let Err(errs) = self.run_inner().await {
-      self
+      let _ = self
         .ctx
         .tx
         .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
-        .await
-        .expect("ModuleLoader: failed to send external module build errors - main thread terminated while processing errors");
+        .await;
     }
   }
 
@@ -101,9 +100,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
       side_effects: external_module_side_effects,
       need_renormalize_render_path,
     }));
-    self.ctx.tx.send(msg).await.expect(
-      "ModuleLoader channel closed while sending external module completion - main thread terminated unexpectedly"
-    );
+    let _ = self.ctx.tx.send(msg).await;
     Ok(())
   }
 }

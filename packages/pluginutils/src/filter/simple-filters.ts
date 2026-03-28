@@ -23,6 +23,33 @@ export function exactRegex(str: string, flags?: string): RegExp {
 }
 
 /**
+ * Constructs a RegExp that matches the exact file extension specified.
+ *
+ * The returned RegExp matches the specified extension, preceded by a dot,
+ * when it appears at the end of a string or immediately before a query (`?`)
+ * or hash (`#`) fragment. This is useful for plugin hook filters that need
+ * to restrict IDs by file extension.
+ *
+ * @param ext the file extension to match, without the leading dot (for example, `'js'` to match `.js` files).
+ * @returns a RegExp that matches the exact file extension.
+ *
+ * @example
+ * ```ts
+ * import { matchExt } from '@rolldown/pluginutils';
+ * const plugin = {
+ *   name: 'plugin',
+ *   load: {
+ *     filter: { id: matchExt('js') },
+ *     handler(id) {} // will only be called for IDs ending with `.js`, even if query params or hash are present
+ *   }
+ * }
+ * ```
+ */
+export function matchExt(ext: string): RegExp {
+  return new RegExp(`^[^?#]*\\.${escapeRegex(ext)}(?=$|[?#])`);
+}
+
+/**
  * Constructs a RegExp that matches a value that has the specified prefix.
  *
  * This is useful for plugin hook filters.

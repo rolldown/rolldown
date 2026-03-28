@@ -1,0 +1,7 @@
+{
+  "expectExecuted": false,
+  "config": {
+    "format": "iife",
+    "name": "module"
+  }
+}

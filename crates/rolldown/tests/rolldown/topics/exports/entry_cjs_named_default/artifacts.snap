@@ -6,6 +6,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lib.js
 
 ```js
+const require_lib$1 = require("./lib2.js");
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return require_lib$1.require_lib();
+	}
+});
+
+```
+
+## lib2.js
+
+```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -13,13 +26,18 @@ var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports.named = "named_value";
 }));
 //#endregion
-Object.defineProperty(exports, "default", {
+Object.defineProperty(exports, "__toESM", {
 	enumerable: true,
 	get: function() {
-		return require_lib();
+		return __toESM;
 	}
 });
-exports.__toESM = __toESM;
+Object.defineProperty(exports, "require_lib", {
+	enumerable: true,
+	get: function() {
+		return require_lib;
+	}
+});
 
 ```
 
@@ -27,11 +45,11 @@ exports.__toESM = __toESM;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_lib$1 = require("./lib.js");
+const require_lib$1 = require("./lib2.js");
 let node_assert = require("node:assert");
 node_assert = require_lib$1.__toESM(node_assert);
 //#region main.js
-var import_lib = /* @__PURE__ */ require_lib$1.__toESM(require_lib$1.default);
+var import_lib = /* @__PURE__ */ require_lib$1.__toESM(require_lib$1.require_lib());
 node_assert.default.strictEqual(import_lib.default.value, 42);
 //#endregion
 exports.lib = import_lib.default;

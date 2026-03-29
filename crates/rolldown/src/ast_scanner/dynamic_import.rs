@@ -1,6 +1,6 @@
 use oxc::{
   ast::{
-    AstKind, MemberExpressionKind,
+    AstKind,
     ast::{self, Argument, IdentifierReference},
   },
   span::CompactStr,
@@ -32,7 +32,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let parent = self.visit_path.last()?;
     // if the property could be converted as a static property name, e.g.
     // a.b // static
-    // a.['b'] // static
+    // a['b'] // static
     // a[b] // dynamic
     let partial_name =
       parent.as_member_expression_kind().and_then(|expr| expr.static_property_name());
@@ -40,36 +40,28 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .dynamic_import_usage_info
       .dynamic_import_binding_to_import_record_idx
       .get(&symbol_id)?;
-
+    let usage = match partial_name {
+      Some(name) => DynamicImportExportsUsage::Single(name.into()),
+      None => DynamicImportExportsUsage::Complete,
+    };
     match self.dynamic_import_usage_info.dynamic_import_exports_usage.entry(rec_idx) {
-      std::collections::hash_map::Entry::Occupied(mut occ) => match partial_name {
-        Some(name) => occ.get_mut().merge(DynamicImportExportsUsage::Single(name.into())),
-        None => occ.get_mut().merge(DynamicImportExportsUsage::Complete),
-      },
-      std::collections::hash_map::Entry::Vacant(vac) => match partial_name {
-        Some(name) => {
-          vac.insert(DynamicImportExportsUsage::Single(name.into()));
-        }
-        None => {
-          vac.insert(DynamicImportExportsUsage::Complete);
-        }
-      },
+      std::collections::hash_map::Entry::Occupied(mut occ) => occ.get_mut().merge(usage),
+      std::collections::hash_map::Entry::Vacant(vac) => {
+        vac.insert(usage);
+      }
     }
 
     None
   }
 
-  pub fn init_dynamic_import_binding_usage_info(
-    &mut self,
-    import_record_idx: ImportRecordIdx,
-  ) -> Option<()> {
-    let ancestor_len = self.visit_path.len();
-    let init_set = match self.visit_path.last()? {
-      kind if kind.is_member_expression_kind() => self.init_dynamic_import_usage_with_member_expr(
-        &kind.as_member_expression_kind().unwrap(),
-        ancestor_len,
-        import_record_idx,
-      ),
+  pub fn init_dynamic_import_binding_usage_info(&mut self, import_record_idx: ImportRecordIdx) {
+    let Some(last_visit_path) = self.visit_path.last() else {
+      return;
+    };
+    let init_set = match last_visit_path {
+      AstKind::StaticMemberExpression(expr) if expr.property.name == "then" => {
+        self.init_dynamic_import_usage_with_static_member_expr(import_record_idx)
+      }
       AstKind::AwaitExpression(_) => {
         self.extract_init_set_from_await_expr_ancestor(import_record_idx)
       }
@@ -79,27 +71,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       _ => None,
     };
 
-    match init_set {
-      Some(init_set) => {
-        self
-          .dynamic_import_usage_info
-          .dynamic_import_exports_usage
-          .insert(import_record_idx, DynamicImportExportsUsage::Partial(init_set));
-      }
-      None => {
-        self
-          .dynamic_import_usage_info
-          .dynamic_import_exports_usage
-          .insert(import_record_idx, DynamicImportExportsUsage::Complete);
-      }
-    }
-    None
+    let usage = match init_set {
+      Some(init_set) => DynamicImportExportsUsage::Partial(init_set),
+      None => DynamicImportExportsUsage::Complete,
+    };
+    self.dynamic_import_usage_info.dynamic_import_exports_usage.insert(import_record_idx, usage);
   }
 
   fn extract_init_set_from_await_expr_ancestor(
     &mut self,
     import_record_idx: ImportRecordIdx,
-  ) -> Option<std::collections::HashSet<CompactStr, rustc_hash::FxBuildHasher>> {
+  ) -> Option<FxHashSet<CompactStr>> {
     let ast_after_remove_paren_idx = self
       .visit_path
       .iter()
@@ -150,26 +132,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
   }
 
-  fn init_dynamic_import_usage_with_member_expr(
+  fn init_dynamic_import_usage_with_static_member_expr(
     &mut self,
-    parent: &MemberExpressionKind<'ast>,
-    ancestor_len: usize,
     import_record_idx: ImportRecordIdx,
   ) -> Option<FxHashSet<CompactStr>> {
-    let MemberExpressionKind::Static(parent) = parent else {
-      return None;
-    };
-    if parent.property.name != "then" {
-      return None;
-    }
-    let parent_parent = self.visit_path.get(ancestor_len - 2)?.as_call_expression()?;
+    let parent_parent_idx = self.visit_path.len().saturating_sub(2);
+    let parent_parent = self.visit_path.get(parent_parent_idx)?.as_call_expression()?;
     let first_arg = parent_parent.arguments.first()?;
     let dynamic_import_binding = match first_arg {
       Argument::FunctionExpression(func) => func.params.items.first(),
       Argument::ArrowFunctionExpression(func) => func.params.items.first(),
-      _ => {
-        return None;
-      }
+      _ => return None,
     };
     let Some(dynamic_import_binding) = dynamic_import_binding else {
       return Some(FxHashSet::default());

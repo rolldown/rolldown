@@ -186,6 +186,7 @@ impl Chunk {
     chunk_name: &ArcStr,
     hash_placeholder_generator: &mut HashPlaceholderGenerator,
     used_name_counts: &FxDashMap<ArcStr, u32>,
+    sanitized_preserve_modules_root: Option<&ArcStr>,
   ) -> anyhow::Result<PreliminaryFilename> {
     if let Some(file) = &options.file {
       let basename = PathBuf::from(file)
@@ -213,7 +214,11 @@ impl Chunk {
         Ok(hash)
       }
     });
-    let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
+    let chunk_name = self.get_preserve_modules_chunk_name(
+      options,
+      chunk_name.as_str(),
+      sanitized_preserve_modules_root,
+    );
 
     let filename = filename_template
       .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
@@ -228,6 +233,7 @@ impl Chunk {
     &'b self,
     options: &NormalizedBundlerOptions,
     chunk_name: &'a str,
+    sanitized_preserve_modules_root: Option<&ArcStr>,
   ) -> Cow<'a, str> {
     if !options.preserve_modules {
       return Cow::Borrowed(chunk_name);
@@ -241,8 +247,8 @@ impl Chunk {
 
     let p = PathBuf::from(chunk_name);
     let p = if p.is_absolute() {
-      if let Some(ref preserve_modules_root) = options.preserve_modules_root {
-        if chunk_name.starts_with(preserve_modules_root) {
+      if let Some(preserve_modules_root) = sanitized_preserve_modules_root {
+        if chunk_name.starts_with(preserve_modules_root.as_str()) {
           return Cow::Borrowed(
             chunk_name[preserve_modules_root.len()..].trim_start_matches(['/', '\\']),
           );

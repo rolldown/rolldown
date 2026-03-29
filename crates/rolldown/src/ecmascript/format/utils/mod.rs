@@ -1,11 +1,14 @@
 use itertools::Itertools;
 use rolldown_common::ExternalModule;
 use rolldown_sourcemap::SourceJoiner;
+use rolldown_utils::concat_string;
 
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
   types::generator::GenerateContext,
-  utils::external_import_interop::external_import_needs_interop,
+  utils::external_import_interop::{
+    external_import_is_in_node_mode, external_import_needs_interop,
+  },
 };
 
 pub mod namespace;
@@ -75,12 +78,45 @@ pub fn render_chunk_external_imports<'a>(
             &ctx.chunk.canonical_names,
           );
 
-          import_code.push_str(external_module_symbol_name);
-          import_code.push_str(" = ");
-          import_code.push_str(to_esm_fn_name);
-          import_code.push('(');
-          import_code.push_str(external_module_symbol_name);
-          import_code.push_str(");\n");
+          // Mixed-mode: the same external is imported by both node-mode and non-node-mode
+          // importers in this chunk.  We emit a node-mode binding first (while the factory
+          // parameter still holds the raw value), then reassign the parameter for non-node mode.
+          //
+          //   let <node_mode_name> = __toESM(<param>, 1);
+          //   <param> = __toESM(<param>);
+          if let Some(node_mode_name) =
+            ctx.chunk.node_mode_external_ns_names.get(&importee.namespace_ref)
+          {
+            import_code.push_str(&concat_string!(
+              "let ",
+              node_mode_name.as_str(),
+              " = ",
+              to_esm_fn_name,
+              "(",
+              external_module_symbol_name,
+              ", 1);\n",
+              external_module_symbol_name,
+              " = ",
+              to_esm_fn_name,
+              "(",
+              external_module_symbol_name,
+              ");\n"
+            ));
+          } else {
+            let is_node_mode =
+              external_import_is_in_node_mode(named_imports, &ctx.link_output.module_table);
+
+            import_code.push_str(external_module_symbol_name);
+            import_code.push_str(" = ");
+            import_code.push_str(to_esm_fn_name);
+            import_code.push('(');
+            import_code.push_str(external_module_symbol_name);
+            if is_node_mode {
+              import_code.push_str(", 1);\n");
+            } else {
+              import_code.push_str(");\n");
+            }
+          }
         }
         Some(ExternalImportKind::Used(importee))
       } else if importee.side_effects.has_side_effects() {

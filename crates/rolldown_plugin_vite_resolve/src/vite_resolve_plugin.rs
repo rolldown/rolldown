@@ -268,7 +268,11 @@ impl Plugin for ViteResolvePlugin {
         .get(&rolldown_plugin_utils::constants::ViteImportGlob)
         .is_some_and(|v| v.is_sub_imports_pattern())
       {
-        let joined = Path::new(&self.resolve_options.root).join(id.as_ref());
+        let base_dir = args
+          .importer
+          .and_then(|importer| Path::new(importer).parent())
+          .unwrap_or(Path::new(&self.resolve_options.root));
+        let joined = base_dir.join(id.as_ref());
         let path = joined.normalize();
         let package_json_path = (!self.legacy_inconsistent_cjs_interop)
           .then(|| {

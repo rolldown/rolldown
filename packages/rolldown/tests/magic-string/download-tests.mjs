@@ -91,35 +91,30 @@ const SKIP_TESTS = [
   'sourcemapLocations', // not supported
   'should return cloned content', // clone-related
   'should noop', // edge cases that may differ
-  'negative indices', // may not be supported
+  // Note: 'negative indices' now works in remove (normalize_index handles them correctly)
   'should split original chunk', // internal behavior
   // Note: 'out of upper bound' and 'out of bounds' are now supported (indices clamp to intro/outro)
   'replaces an empty string', // empty string edge case
   'empty string should be movable', // empty string edge case
   'split point', // split point errors cause panic
   'storeName', // storeName option not supported
-  'should remove overlapping ranges', // overlapping replacements cause panic
+  // Note: 'should remove overlapping ranges' now works (empty-edited chunks can be split)
   // Note: 'should allow contiguous but non-overlapping replacements' now works
   'already been edited', // Cannot split a chunk that has already been edited
-  'should remove modified ranges', // causes split chunk panic
+  // Note: 'should remove modified ranges' now works (remove correctly overwrites edited chunks)
 
   'should replace then remove', // causes split chunk panic
   // Note: 'preserves intended order' now works (append/prepend ordering with slice)
   // Note: 'excluded characters' (indent exclude option) is now supported
-  // remove-specific skips
-  'should remove everything', // edge case
-  'should adjust other removals', // complex removal interaction
-  'should treat zero-length removals as a no-op', // remove(0,0) throws error in binding
+  // Note: 'should treat zero-length removals as a no-op' now works (zero-length is no-op)
   // Note: update/overwrite options (overwrite, contentOnly) are now supported
   // Note: split-point detection is now implemented for update/overwrite across moved content
   // Note: non-zero-length and zero-length inserts inside update/overwrite now work
   // Note: interior inserts with overwrite/contentOnly now work
   // Note: later insertions at the end now work
-  // remove-specific complex cases
-  // Note: "removes across moved content" appears in both remove and reset sections
-  // The reset version passes, so we handle this with a special transformation below
+  // Note: "removes across moved content" now works in both remove and reset sections
   // Note: 'should not remove content inserted after the end of removed range' now works
-  'should remove interior inserts', // causes panic
+  // Note: 'should remove interior inserts' now works (overwrite:true clears intro/outro correctly)
   // Note: 'should provide a useful error' now works — errors are properly thrown, not panicked
   // slice-specific skips
   // Note: 'should return the generated content between the specified original characters' now works
@@ -247,13 +242,6 @@ function transformTestFile(content, filename) {
   // Note: We don't add [constructor options not supported] suffix since tests
   // using constructor options are inside describe blocks that are already skipped
   // (e.g., 'options', 'clone', etc.) or matched by SKIP_TESTS patterns
-
-  // Special case: skip "removes across moved content" only in the remove section, not in reset
-  // The remove version causes panic, but the reset version passes
-  transformed = transformed.replace(
-    /(\tdescribe\('remove',[\s\S]*?)\n(\t\t)it\('removes across moved content'/g,
-    "$1\n$2it.skip('removes across moved content'",
-  );
 
   // Note: "should reset modified ranges" now passes (overwrite+remove+reset works correctly)
 

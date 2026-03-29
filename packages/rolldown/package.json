@@ -168,7 +168,8 @@
       "initialMemory": 16384,
       "browser": {
         "fs": true,
-        "asyncInit": true
+        "asyncInit": true,
+        "errorEvent": true
       }
     }
   },

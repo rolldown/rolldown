@@ -17,8 +17,8 @@ catalog:
   '@babel/core': ^7.24.7
   '@babel/preset-env': ^7.24.7
   '@babel/preset-typescript': ^7.24.7
-  '@napi-rs/cli': ^3.4.1
-  '@napi-rs/wasm-runtime': ^1.0.0
+  '@napi-rs/cli': ^3.6.0
+  '@napi-rs/wasm-runtime': ^1.1.0
   '@oxc-node/cli': ^0.0.35
   '@oxc-node/core': ^0.0.35
   '@oxc-project/runtime': '=0.122.0'

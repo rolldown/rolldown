@@ -3,6 +3,8 @@ import { memfsExported as __memfsExported } from '@napi-rs/wasm-runtime/fs'
 
 const fs = createFsProxy(__memfsExported)
 
+const errorOutputs = []
+
 const handler = new MessageHandler({
   onLoad({ wasmModule, wasmMemory }) {
     const wasi = new WASI({
@@ -17,6 +19,8 @@ const handler = new MessageHandler({
       printErr: function() {
         // eslint-disable-next-line no-console
         console.error.apply(console, arguments)
+        
+        errorOutputs.push([...arguments])
       },
     })
     return instantiateNapiModuleSync(wasmModule, {
@@ -32,6 +36,10 @@ const handler = new MessageHandler({
       },
     })
   },
+  onError(error) {
+    postMessage({ type: 'error', error, errorOutputs })
+    errorOutputs.length = 0
+  }
 })
 
 globalThis.onmessage = function (e) {

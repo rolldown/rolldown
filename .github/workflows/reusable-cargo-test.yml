@@ -41,7 +41,7 @@ jobs:
           save-cache: ${{ github.ref_name == 'main' }}
           target-dir: ${{ runner.os == 'Windows' && format('{0}/target', env.DEV_DRIVE) || '' }}
 
-      - uses: voidzero-dev/setup-vp@e1609b468742ba9232ce5e12b3a77bdf14495277 # v1.1.0
+      - uses: voidzero-dev/setup-vp@e34774bccb4e7d7f2e23514ca980177a71425e43 # v1.5.0
         with:
           cache: true
 
@@ -52,7 +52,7 @@ jobs:
           INSTA_UPDATE: no
 
       - name: Cache esbuild snapshots
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: scripts/tmp/esbuild-tests/snapshots
           key: esbuild-snapshots-${{ hashFiles('scripts/src/esbuild-tests/urls.ts') }}

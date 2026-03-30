@@ -379,12 +379,9 @@ impl GenerateStage<'_> {
       // The cycle check added by #8371 was correct for runtime-dependent chunks
       // but overly conservative for regular ESM chunks, blocking legitimate
       // merges and causing significantly more output files in large applications.
-      let source_involves_runtime = temp_chunk_graph.chunks[temp_chunk_idx]
-        .modules
-        .iter()
-        .any(|m| {
-          *m == runtime_module_idx
-            || !self.link_output.metas[*m].depended_runtime_helper.is_empty()
+      let source_involves_runtime =
+        temp_chunk_graph.chunks[temp_chunk_idx].modules.iter().any(|m| {
+          *m == runtime_module_idx || !self.link_output.metas[*m].depended_runtime_helper.is_empty()
         });
       let merge_target = match merge_target {
         Some(target_chunk_idx)

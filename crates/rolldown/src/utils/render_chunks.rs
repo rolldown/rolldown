@@ -8,7 +8,7 @@ use rolldown_common::{
 };
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
-use rustc_hash::FxHashMap;
+use rolldown_utils::indexmap::FxIndexMap;
 
 use crate::type_alias::IndexInstantiatedChunks;
 
@@ -28,7 +28,7 @@ pub async fn render_chunks(
           None
         }
       })
-      .collect::<FxHashMap<ArcStr, Arc<RollupRenderedChunk>>>(),
+      .collect::<FxIndexMap<ArcStr, Arc<RollupRenderedChunk>>>(),
   );
 
   let result = try_join_all(assets.iter_mut().enumerate().map(|(index, asset)| {

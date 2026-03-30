@@ -261,6 +261,76 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     true
   }
 
+  /// For a `WrapKind::None` importee (e.g. a re-export barrel module), checks whether any of the
+  /// named imports from that import record ultimately resolve to a `WrapKind::Esm` module. If so,
+  /// emits an `init_*()` call (or `await init_*()` for TLA) for each such module that hasn't
+  /// already been initialized.
+  ///
+  /// This fixes the case where an import like `import { createIcon } from './reexport.js'` is
+  /// silently dropped because `reexport.js` has `WrapKind::None`, yet `createIcon` is actually
+  /// defined in a `WrapKind::Esm` module whose init function was never called.
+  fn generate_init_calls_for_transitive_esm_modules(
+    &mut self,
+    rec_idx: ImportRecordIdx,
+    program: &mut ast::Program<'ast>,
+  ) {
+    let rec = &self.ctx.module.import_records[rec_idx];
+    let Some(module_idx) = rec.resolved_module else { return };
+    let Module::Normal(importee) = &self.ctx.modules[module_idx] else { return };
+    if !matches!(self.ctx.linking_infos[importee.idx].wrap_kind(), WrapKind::None) {
+      return;
+    }
+
+    // Collect the (owner_idx, is_tla) pairs for transitive ESM-wrapped modules.
+    // We intentionally do not check `generated_init_esm_importee_ids` here, because the
+    // deduplication happens below when we call `.insert()` (returns false if already present).
+    let esm_modules: Vec<(ModuleIdx, bool)> = self
+      .ctx
+      .module
+      .named_imports
+      .values()
+      .filter(|ni| ni.record_idx == rec_idx)
+      .filter_map(|ni| {
+        let canonical = self.ctx.symbol_db.canonical_ref_for(ni.imported_as);
+        let owner_idx = canonical.owner;
+        let owner_li = &self.ctx.linking_infos[owner_idx];
+        (matches!(owner_li.wrap_kind(), WrapKind::Esm)
+          && !matches!(
+            owner_li.concatenated_wrapped_module_kind,
+            ConcatenateWrappedModuleKind::Inner
+          ))
+        .then_some((owner_idx, owner_li.is_tla_or_contains_tla_dependency))
+      })
+      .collect();
+
+    for (owner_idx, is_tla) in esm_modules {
+      if self.generated_init_esm_importee_ids.insert(owner_idx) {
+        let wrapper_ref = self.ctx.linking_infos[owner_idx].wrapper_ref.unwrap();
+        let (wrapper_ref_expr, _) =
+          self.finalized_expr_for_symbol_ref(wrapper_ref, false, false);
+        let init_call =
+          ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+            SPAN,
+            wrapper_ref_expr,
+            NONE,
+            self.snippet.builder.vec(),
+            false,
+          ));
+        let stmt = if is_tla {
+          self.snippet.builder.statement_expression(
+            SPAN,
+            ast::Expression::AwaitExpression(
+              self.snippet.builder.alloc_await_expression(SPAN, init_call),
+            ),
+          )
+        } else {
+          self.snippet.builder.statement_expression(SPAN, init_call)
+        };
+        program.body.push(stmt);
+      }
+    }
+  }
+
   /// `optimize_namespace_alias_transform` is a flag to determine whether optimize interop code with commonjs
   /// e.g.
   /// We could try to rewrite `import_cjs.default.exported` into `import_cjs.exported`
@@ -1278,6 +1348,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let span = import_decl.span;
           let rec_idx = self.ctx.module.imports[&import_decl.span];
           if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
+            // When the importee has WrapKind::None (e.g. a re-export barrel), it may
+            // transitively depend on ESM-wrapped modules. Emit their init calls here so
+            // that those modules are initialised before any code in this module runs.
+            self.generate_init_calls_for_transitive_esm_modules(rec_idx, program);
             for comment in &mut program.comments {
               if comment.attached_to == span.start {
                 comment.attached_to = 0;

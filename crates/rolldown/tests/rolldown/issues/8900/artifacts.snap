@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## createIcon.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region SvgIcon.js
+var SvgIcon_exports = /* @__PURE__ */ __exportAll({ SvgIcon: () => SvgIcon });
+var SvgIcon;
+var init_SvgIcon = __esmMin((() => {
+	SvgIcon = { muiName: "SvgIcon" };
+}));
+//#endregion
+//#region createIcon.js
+var createIcon_exports = /* @__PURE__ */ __exportAll({ createIcon: () => createIcon });
+function createIcon(name) {
+	return {
+		name,
+		muiName: SvgIcon.muiName
+	};
+}
+var init_createIcon = __esmMin((() => {
+	init_SvgIcon();
+}));
+//#endregion
+export { init_SvgIcon as a, SvgIcon_exports as i, createIcon_exports as n, __toCommonJS as o, init_createIcon as r, createIcon as t };
+
+```
+
+## entry1.js
+
+```js
+import { r as init_createIcon, t as createIcon } from "./createIcon.js";
+//#region entry1.js
+init_createIcon();
+var entry1_default = createIcon("Arrow");
+//#endregion
+export { entry1_default as default };
+
+```
+
+## entry2.js
+
+```js
+import { a as init_SvgIcon, i as SvgIcon_exports, n as createIcon_exports, o as __toCommonJS, r as init_createIcon } from "./createIcon.js";
+//#region entry2.js
+const { SvgIcon } = (init_SvgIcon(), __toCommonJS(SvgIcon_exports));
+const { createIcon } = (init_createIcon(), __toCommonJS(createIcon_exports));
+const value = SvgIcon.muiName;
+const icon = createIcon("Star");
+//#endregion
+export { icon, value };
+
+```

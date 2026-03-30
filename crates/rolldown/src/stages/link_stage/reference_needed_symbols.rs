@@ -1,8 +1,9 @@
 use std::ptr::addr_of;
 
 use rolldown_common::{
-  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, RuntimeHelper,
-  StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
+  ConcatenateWrappedModuleKind, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module,
+  ModuleIdx, OutputFormat, RuntimeHelper, Specifier, StmtInfoIdx, StmtInfoMeta, SymbolOrMemberExprRef,
+  SymbolRef, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -299,5 +300,84 @@ impl LinkStage<'_> {
       symbols.set_has_module_preserve_jsx();
     }
     self.symbols = symbols;
+
+    // Post-processing pass (sequential, after symbols are fully restored):
+    //
+    // For named imports from a `WrapKind::None` importee (e.g. a re-export barrel module),
+    // check whether the imported symbol ultimately resolves — via the canonical-ref chain —
+    // to a `WrapKind::Esm` module.  If so, add that module's wrapper ref (`init_xxx`) to the
+    // import statement's `referenced_symbols`.
+    //
+    // Why here and not in the parallel pass above?  In the parallel pass `self.symbols` is
+    // temporarily taken apart (`into_inner`) so `canonical_ref_for` is not available.  We
+    // need the full `SymbolRefDb` to follow the link chain across modules.
+    //
+    // Why this is needed:
+    //   The module finalizer generates an `init_xxx()` call when it sees that the imported
+    //   symbol's canonical owner has `WrapKind::Esm` (see
+    //   `generate_init_calls_for_transitive_esm_modules`).  But for that call to be valid
+    //   in the output, `init_xxx` must be (a) exported from its chunk and (b) imported by
+    //   the importer's chunk.  Both are driven by the symbol appearing in
+    //   `referenced_symbols` of an included statement.
+    self.reference_transitive_esm_wrappers();
+  }
+
+  /// Sequential post-pass: for import statements whose direct importee has `WrapKind::None`,
+  /// add the `wrapper_ref` of every transitively-referenced `WrapKind::Esm` module to the
+  /// statement's `referenced_symbols`.
+  fn reference_transitive_esm_wrappers(&mut self) {
+    // Phase 1 – collect: gather (module_idx, stmt_info_idx, wrapper_ref) triples.
+    // All borrows here are immutable.
+    let mut additions: Vec<(ModuleIdx, StmtInfoIdx, SymbolRef)> = Vec::new();
+
+    for (module_idx, module) in self.module_table.modules.iter_enumerated() {
+      let Some(importer) = module.as_normal() else { continue };
+      for (stmt_info_idx, stmt_info) in importer.stmt_infos.iter_enumerated() {
+        for rec_id in &stmt_info.import_records {
+          let rec = &importer.import_records[*rec_id];
+          // Only care about static `import … from '…'` statements (not require / dynamic).
+          if !matches!(rec.kind, ImportKind::Import) { continue }
+          // `export * from '…'` is handled elsewhere; skip.
+          if rec.meta.contains(ImportRecordMeta::IsExportStar) { continue }
+          let Some(importee_module_idx) = rec.resolved_module else { continue };
+          let Some(importee) = self.module_table[importee_module_idx].as_normal() else { continue };
+          let importee_linking_info = &self.metas[importee.idx];
+          if !matches!(importee_linking_info.wrap_kind(), WrapKind::None) { continue }
+
+          // The direct importee has WrapKind::None.  Walk each named import to find the
+          // canonical defining module; if it is WrapKind::Esm, record its wrapper ref.
+          for named_import in importer.named_imports.values().filter(|ni| ni.record_idx == *rec_id) {
+            if !matches!(named_import.imported, Specifier::Literal(_)) { continue }
+            let canonical = self.symbols.canonical_ref_for(named_import.imported_as);
+            let owner_idx = canonical.owner;
+            let owner_li = &self.metas[owner_idx];
+            if matches!(owner_li.wrap_kind(), WrapKind::Esm)
+              && !matches!(
+                owner_li.concatenated_wrapped_module_kind,
+                ConcatenateWrappedModuleKind::Inner
+              )
+            {
+              if let Some(wrapper_ref) = owner_li.wrapper_ref {
+                additions.push((module_idx, stmt_info_idx, wrapper_ref));
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Phase 2 – apply: push wrapper refs to the appropriate stmt_info, deduplicating with a
+    // small per-statement set so that multiple named imports from the same barrel don't yield
+    // duplicate `init_xxx()` calls.
+    for (module_idx, stmt_info_idx, wrapper_ref) in additions {
+      let Some(module) = self.module_table[module_idx].as_normal_mut() else { continue };
+      let referenced = &mut module.stmt_infos.infos[stmt_info_idx].referenced_symbols;
+      let already_present = referenced
+        .iter()
+        .any(|r| matches!(r, SymbolOrMemberExprRef::Symbol(s) if *s == wrapper_ref));
+      if !already_present {
+        referenced.push(wrapper_ref.into());
+      }
+    }
   }
 }

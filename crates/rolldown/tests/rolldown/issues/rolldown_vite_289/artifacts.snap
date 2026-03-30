@@ -22,6 +22,7 @@ var init_lib_impl = __esmMin((() => {
 init_lib_impl();
 //#endregion
 //#region trigger-error.js
+init_lib_impl();
 nodeAssert(foo() === 1, "foo() should return 1");
 //#endregion
 //#region trigger-wrapping.js

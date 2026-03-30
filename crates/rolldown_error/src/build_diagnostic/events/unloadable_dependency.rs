@@ -63,5 +63,11 @@ impl BuildEvent for UnloadableDependency {
         diagnostic.title = self.message(opts);
       }
     }
+
+    if self.resolved.starts_with("\\0") {
+      diagnostic.add_help(String::from(
+        "This module seems to be a virtual module, but no plugin handled it via the load hook.",
+      ));
+    }
   }
 }

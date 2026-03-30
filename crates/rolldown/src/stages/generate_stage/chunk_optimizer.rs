@@ -312,6 +312,7 @@ impl GenerateStage<'_> {
     input_base: &ArcStr,
     temp_chunk_graph: &mut ChunkOptimizationGraph,
   ) {
+    let runtime_module_idx = self.link_output.runtime.id();
     let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
 
@@ -367,13 +368,31 @@ impl GenerateStage<'_> {
 
     // Second pass: apply chunk assignments
     for (bits, temp_chunk_idx, chunk_idxs, merge_target) in assignments {
-      // Check if merging would create a circular dependency
+      // Only check for circular dependencies when the source chunk contains
+      // the runtime module or modules that depend on runtime helpers.
+      // Circular chunk imports are only harmful when runtime helpers (e.g.,
+      // __commonJSMin, __toESM) must be available synchronously before the
+      // importing module executes. For pure ESM modules, the module system
+      // handles circular imports fine.
+      //
+      // Before #8371, no cycle check existed here and most merges were safe.
+      // The cycle check added by #8371 was correct for runtime-dependent chunks
+      // but overly conservative for regular ESM chunks, blocking legitimate
+      // merges and causing significantly more output files in large applications.
+      let source_involves_runtime = temp_chunk_graph.chunks[temp_chunk_idx]
+        .modules
+        .iter()
+        .any(|m| {
+          *m == runtime_module_idx
+            || !self.link_output.metas[*m].depended_runtime_helper.is_empty()
+        });
       let merge_target = match merge_target {
         Some(target_chunk_idx)
-          if temp_chunk_graph
-            .would_create_circular_dependency(temp_chunk_idx, target_chunk_idx) =>
+          if source_involves_runtime
+            && temp_chunk_graph
+              .would_create_circular_dependency(temp_chunk_idx, target_chunk_idx) =>
         {
-          // Skip merge if it would create a circular dependency
+          // Skip merge if it would create a circular dependency with runtime-involved modules
           None
         }
         other => other,

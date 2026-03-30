@@ -19,8 +19,7 @@
     "test:watcher": "RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run watch.test.ts --reporter verbose --hideSkippedTests",
     "test:cli": "RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run cli-e2e.test.ts --reporter verbose --hideSkippedTests",
     "test:stability": "node ./stability/issue-3453/src/build.mjs && node ./stability/issue-3453/verify.mjs",
-    "test:types": "vitest run --typecheck.only --reporter verbose --hideSkippedTests",
-    "type-check": "tsc --noEmit"
+    "test:types": "vitest run --typecheck.only --reporter verbose --hideSkippedTests"
   },
   "dependencies": {
     "rolldown": "workspace:*",

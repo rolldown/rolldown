@@ -164,7 +164,6 @@ clippy:
 
 lint-node:
   vp check
-  vp run type-check
   vp run lint-knip
   vp run lint-publint
 

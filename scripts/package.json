@@ -3,7 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "type-check": "tsc -b",
     "setup-bench": "oxnode ./misc/setup-benchmark-input/index.js",
     "gen-esbuild-tests": "oxnode ./src/esbuild-tests/gen-tests.ts",
     "esbuild-snap-diff": "oxnode ./src/esbuild-tests/snap-diff/index.ts"

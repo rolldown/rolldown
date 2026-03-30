@@ -1,0 +1,63 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## completion.js
+
+```js
+//#region completion.js
+async function complete() {
+	return (await import("./daemon2.js")).start();
+}
+//#endregion
+export { complete };
+
+```
+
+## daemon.js
+
+```js
+//#region daemon-impl.js
+function start() {
+	return "start";
+}
+function stop() {
+	return "stop";
+}
+//#endregion
+export { stop as n, start as t };
+
+```
+
+## daemon2.js
+
+```js
+import { t as start } from "./daemon.js";
+export { start };
+
+```
+
+## entry.js
+
+```js
+import { n as stop, t as start } from "./daemon.js";
+// HIDDEN [\0rolldown/runtime.js]
+//#region gateway.js
+var import_cjs_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.helper = function() {
+		return "cjs-helper";
+	};
+})))();
+function gateway() {
+	return start() + stop();
+}
+//#endregion
+//#region entry.js
+function main() {
+	return (0, import_cjs_dep.helper)() + gateway();
+}
+//#endregion
+export { main };
+
+```

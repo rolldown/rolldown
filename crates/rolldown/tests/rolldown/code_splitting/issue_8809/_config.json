@@ -1,0 +1,8 @@
+{
+  "config": {
+    "input": [
+      { "name": "entry", "import": "entry.js" },
+      { "name": "completion", "import": "completion.js" }
+    ]
+  }
+}

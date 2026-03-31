@@ -293,6 +293,78 @@ impl GenerateStage<'_> {
           depended_symbols.insert(self.link_output.runtime.resolve_symbol(name));
         }
 
+        // For any depended symbol whose owner module has WrapKind::Esm, also
+        // depend on that module's wrapper_ref (init_*).
+        let extra_wrapper_refs: Vec<SymbolRef> = depended_symbols
+          .iter()
+          .filter_map(|sym_ref| {
+            let owner_meta = &self.link_output.metas[sym_ref.owner];
+            if matches!(owner_meta.wrap_kind(), WrapKind::Esm) {
+              owner_meta.wrapper_ref
+            } else {
+              None
+            }
+          })
+          .collect();
+        for wr in extra_wrapper_refs {
+          depended_symbols.insert(wr);
+        }
+
+        // For imports through WrapKind::None re-export modules, traverse to
+        // find cross-chunk ESM-wrapped modules and add their wrapper_refs.
+        // Only iterate actual import records of chunk modules (not all depended
+        // symbols) to avoid adding unnecessary dependencies.
+        if matches!(chunk.kind, ChunkKind::EntryPoint { .. }) {
+          let chunk_modules_set: FxHashSet<ModuleIdx> =
+            chunk.modules.iter().copied().collect();
+          let mut extra_reexport_wrs: Vec<SymbolRef> = Vec::new();
+          for &module_idx in &chunk.modules {
+            let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+              continue;
+            };
+            for rec in &module.import_records {
+              if rec.kind != ImportKind::Import {
+                continue;
+              }
+              let Some(importee_idx) = rec.resolved_module else { continue };
+              if !matches!(self.link_output.metas[importee_idx].wrap_kind(), WrapKind::None) {
+                continue;
+              }
+              let mut stack = vec![importee_idx];
+              let mut visited = FxHashSet::default();
+              while let Some(mid) = stack.pop() {
+                if !visited.insert(mid) {
+                  continue;
+                }
+                let Some(m) = self.link_output.module_table[mid].as_normal() else {
+                  continue;
+                };
+                let meta = &self.link_output.metas[m.idx];
+                match meta.wrap_kind() {
+                  WrapKind::Esm => {
+                    if meta.is_included && !chunk_modules_set.contains(&m.idx) {
+                      if let Some(wr) = meta.wrapper_ref {
+                        extra_reexport_wrs.push(wr);
+                      }
+                    }
+                  }
+                  WrapKind::None => {
+                    for sub_rec in &m.import_records {
+                      if let Some(sub_idx) = sub_rec.resolved_module {
+                        stack.push(sub_idx);
+                      }
+                    }
+                  }
+                  WrapKind::Cjs => {}
+                }
+              }
+            }
+          }
+          for wr in extra_reexport_wrs {
+            depended_symbols.insert(wr);
+          }
+        }
+
         chunk_id_to_symbols_vec.push((chunk_id, symbol_needs_to_assign));
       },
     );

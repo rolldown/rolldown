@@ -531,30 +531,98 @@ impl LinkStage<'_> {
                     };
                   // corresponding to cases in:
                   // https://github.com/rolldown/rolldown/blob/30a5a2fc8fa6785821153922e21dc0273cc00c7a/crates/rolldown/tests/rolldown/tree_shaking/commonjs/main.js?plain=1#L3-L10
-                  if continue_resolve
-                    && let Some(m) = self.metas[maybe_namespace.owner]
-                      .named_import_to_cjs_module
-                      .get(&maybe_namespace)
-                      .or_else(|| {
-                        self.metas[maybe_namespace.owner]
-                          .import_record_ns_to_cjs_module
-                          .get(&maybe_namespace)
-                      })
-                      .or_else(|| {
-                        (self.metas[maybe_namespace.owner].has_dynamic_exports)
-                          .then_some(&maybe_namespace.owner)
-                      })
-                      .and_then(|idx| {
-                        self.metas[*idx]
-                          .resolved_exports
-                          .get(&member_expr_ref.prop_and_span_list[cursor].name)
-                          .and_then(|resolved_export| {
-                            resolved_export.came_from_commonjs.then_some(resolved_export)
-                          })
+                  let cjs_module_idx = continue_resolve
+                    .then(|| {
+                      self.metas[maybe_namespace.owner]
+                        .named_import_to_cjs_module
+                        .get(&maybe_namespace)
+                        .or_else(|| {
+                          self.metas[maybe_namespace.owner]
+                            .import_record_ns_to_cjs_module
+                            .get(&maybe_namespace)
+                        })
+                        .or_else(|| {
+                          (self.metas[maybe_namespace.owner].has_dynamic_exports)
+                            .then_some(&maybe_namespace.owner)
+                        })
+                        .copied()
+                    })
+                    .flatten();
+                  if let Some(cjs_idx) = cjs_module_idx
+                    && let Some(m) = self.metas[cjs_idx]
+                      .resolved_exports
+                      .get(&member_expr_ref.prop_and_span_list[cursor].name)
+                      .and_then(|resolved_export| {
+                        resolved_export.came_from_commonjs.then_some(resolved_export)
                       })
                   {
                     let is_default = member_expr_ref.prop_and_span_list[cursor].name == "default";
-                    target_commonjs_exported_symbol = Some((m.symbol_ref, is_default));
+                    // When the accessed property is `default`, check if `.default` represents
+                    // the whole `module.exports` (rather than `exports.default`). This is true when:
+                    // - Node ESM mode: __toESM always ignores __esModule flag
+                    // - Non-node mode without __esModule: __toESM sets .default = module.exports
+                    // In these cases, skip resolving `.default` to a specific CJS export.
+                    let default_is_module_exports = is_default && {
+                      let is_node_esm = module.should_consider_node_esm_spec_for_static_import();
+                      let importee_has_es_module_flag =
+                        self.module_table[cjs_idx].as_normal().is_some_and(|importee| {
+                          importee.ecma_view.ast_usage.contains(EcmaModuleAstUsage::EsModuleFlag)
+                        });
+                      is_node_esm || !importee_has_es_module_flag
+                    };
+
+                    // If the current property is `default` and it represents the whole `module.exports`,
+                    // try to resolve the next property as a CJS export.
+                    if default_is_module_exports
+                      && cursor + 1 < member_expr_ref.prop_and_span_list.len()
+                    {
+                      if let Some(property) = self.metas[cjs_idx]
+                        .resolved_exports
+                        .get(&member_expr_ref.prop_and_span_list[cursor + 1].name)
+                        .and_then(|resolved_export| {
+                          resolved_export.came_from_commonjs.then_some(resolved_export)
+                        })
+                      {
+                        let is_next_default =
+                          member_expr_ref.prop_and_span_list[cursor + 1].name == "default";
+                        if is_next_default && maybe_namespace_symbol.namespace_alias.is_none() {
+                          // import * as ns; ns.default.default — can't optimize.
+                          //
+                          // __toESM sets import_ns.default = module.exports and __copyProps
+                          // skips "default" (already set), so exports.default is only
+                          // reachable via import_ns.default.default (two levels).
+                          // If we advance cursor, props becomes ["default"] and the finalizer
+                          // base is import_ns (#LOCAL_NAMESPACE has no namespace_alias to
+                          // append .default), so the result is import_ns.default which is
+                          // module.exports — not module.exports.default.
+                          //
+                          // Other non-"default" properties (e.g. ns.default.foo) work fine
+                          // because __copyProps copies them onto the __toESM target, so
+                          // import_ns.foo = module.exports.foo.
+                        } else {
+                          cursor += 1;
+                          target_commonjs_exported_symbol =
+                            Some((property.symbol_ref, is_next_default));
+                          depended_refs.push(property.symbol_ref);
+
+                          if member_expr_ref.is_write {
+                            written_cjs_exports.push(property.symbol_ref);
+                          }
+                        }
+                      }
+                    } else if default_is_module_exports {
+                      // This represents the case like `import * as ns from 'cjs';
+                      // `ns.default` where `.default` is the whole `module.exports`.
+                      //
+                      // Currently, m.namespace_object_ref is not set to the constant value map.
+                      // So in this case, it's not going to be inlined as a constant.
+                      target_commonjs_exported_symbol = self.module_table[cjs_idx]
+                        .as_normal()
+                        .map(|m| (m.namespace_object_ref, true));
+                    } else {
+                      target_commonjs_exported_symbol = Some((m.symbol_ref, is_default));
+                    }
+
                     depended_refs.push(m.symbol_ref);
                     // If this member expression is a write (e.g. `cjs.c = 'abcd'`), the
                     // CJS exported symbol should not be inlined as a constant since its

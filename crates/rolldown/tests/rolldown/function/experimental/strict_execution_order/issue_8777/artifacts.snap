@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region components/Foo/fooClasses.js
+function getFooUtilityClass(slot) {
+	return "MuiFoo-" + slot;
+}
+var fooClasses;
+var init_fooClasses = __esmMin((() => {
+	fooClasses = { root: "MuiFoo-root" };
+}));
+//#endregion
+//#region components/Foo/Foo.js
+var Foo;
+var init_Foo$1 = __esmMin((() => {
+	init_fooClasses();
+	Foo = {
+		name: "Foo",
+		root: fooClasses.root
+	};
+}));
+//#endregion
+//#region components/Foo/index.js
+var init_Foo = __esmMin((() => {
+	init_Foo$1();
+	init_fooClasses();
+	init_fooClasses();
+}));
+//#endregion
+__esmMin((() => {
+	init_Foo();
+	init_Foo();
+}))();
+export { Foo, fooClasses, getFooUtilityClass };
+
+```

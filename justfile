@@ -3,6 +3,7 @@ set shell := ["bash", "-cu"]
 
 alias dt := t-run
 alias ued := update-esbuild-diff
+alias update-submodule := setup-submodule
 
 _default:
   just --list -u
@@ -40,10 +41,6 @@ setup-vite-plus:
         exit 0
     }
     irm https://viteplus.dev/install.ps1 | iex
-
-# Update the submodule to the latest commit
-update-submodule:
-  git submodule update --init
 
 # --- `roll` series commands will run all relevant commands in one go.
 

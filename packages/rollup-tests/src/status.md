@@ -1,6 +1,6 @@
 |  | number |
 |----| ---- |
-| failed | 0 |
+| failed | 1 |
 | skipFailed | 11 |
 | ignored | 103 |
 | ignored(unsupported features) | 317 |

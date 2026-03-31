@@ -25,9 +25,9 @@ function test() {
 	console.log("test function called");
 }
 API_ENDPOINTS[unknown];
+/*#__PURE__*/ test().a.b.c;
 test().a.b.c;
-test().a.b.c;
-test()?.a?.b.c;
+/*#__PURE__*/ test()?.a?.b.c;
 test()?.a?.b.c;
 const { d } = console.log("side effect") || someObject;
 const { e } = (() => {

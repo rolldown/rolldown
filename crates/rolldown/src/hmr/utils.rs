@@ -15,10 +15,10 @@ pub trait HmrAstBuilder<'any, 'ast> {
   fn module(&self) -> &NormalModule;
 
   // `${ns_name}` in `var ${ns_name} = ...`
-  fn binding_name_for_namespace_object_ref_atom(&self) -> ast::Atom<'ast>;
+  fn binding_name_for_namespace_object_ref_atom(&self) -> ast::Str<'ast>;
 
   // `$hot_name` in var `$hot_name = __rolldown_runtime__.createModuleHotContext($stable_id);`
-  fn alias_name_for_import_meta_hot(&self) -> ast::Atom<'ast>;
+  fn alias_name_for_import_meta_hot(&self) -> ast::Str<'ast>;
 
   fn cjs_module_name() -> &'static str;
 
@@ -67,7 +67,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
     let arguments = self.builder().vec_from_array([
       ast::Argument::StringLiteral(self.builder().alloc_string_literal(
         SPAN,
-        self.builder().atom(&self.module().stable_id),
+        self.builder().str(&self.module().stable_id),
         None,
       )),
       module_exports,
@@ -122,7 +122,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
                 self.builder().vec1(ast::Argument::StringLiteral(
                   self.builder().alloc_string_literal(
                     SPAN,
-                    self.builder().atom(&self.module().stable_id),
+                    self.builder().str(&self.module().stable_id),
                     None,
                   ),
                 )),
@@ -147,12 +147,12 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
     self.module
   }
 
-  fn binding_name_for_namespace_object_ref_atom(&self) -> ast::Atom<'ast> {
-    self.builder().atom(MODULE_EXPORTS_NAME_FOR_ESM)
+  fn binding_name_for_namespace_object_ref_atom(&self) -> ast::Str<'ast> {
+    self.builder().str(MODULE_EXPORTS_NAME_FOR_ESM)
   }
 
-  fn alias_name_for_import_meta_hot(&self) -> ast::Atom<'ast> {
-    self.builder().atom(&format!("hot_{}", self.module.repr_name))
+  fn alias_name_for_import_meta_hot(&self) -> ast::Str<'ast> {
+    self.builder().str(&format!("hot_{}", self.module.repr_name))
   }
 
   fn cjs_module_name() -> &'static str {
@@ -169,15 +169,15 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast
     self.ctx.module
   }
 
-  fn binding_name_for_namespace_object_ref_atom(&self) -> ast::Atom<'ast> {
+  fn binding_name_for_namespace_object_ref_atom(&self) -> ast::Str<'ast> {
     let name = self.canonical_name_for(self.ctx.module.namespace_object_ref);
-    self.builder().atom(name)
+    self.builder().str(name)
   }
 
-  fn alias_name_for_import_meta_hot(&self) -> ast::Atom<'ast> {
+  fn alias_name_for_import_meta_hot(&self) -> ast::Str<'ast> {
     let name =
       self.canonical_name_for(self.ctx.module.hmr_hot_ref.expect("HMR hot ref should be set"));
-    self.builder().atom(name)
+    self.builder().str(name)
   }
 
   fn cjs_module_name() -> &'static str {

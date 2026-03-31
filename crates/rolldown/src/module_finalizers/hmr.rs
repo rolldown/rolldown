@@ -59,7 +59,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         string_literal.value = self
           .snippet
           .builder
-          .atom(self.ctx.modules[import_record.into_resolved_module()].stable_id());
+          .str(self.ctx.modules[import_record.into_resolved_module()].stable_id());
       }
       ast::Argument::ArrayExpression(array_expression) => {
         // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
@@ -74,7 +74,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
             string_literal.value = self
               .snippet
               .builder
-              .atom(self.ctx.modules[import_record.into_resolved_module()].stable_id());
+              .str(self.ctx.modules[import_record.into_resolved_module()].stable_id());
           }
         });
       }

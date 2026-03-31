@@ -2,7 +2,7 @@ use itertools::Itertools;
 use oxc::allocator::FromIn;
 use oxc::ast::AstType;
 use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression};
-use oxc::span::{Atom, CompactStr};
+use oxc::span::{CompactStr, Str};
 use oxc::{
   allocator::{self, Dummy as _, IntoIn, TakeIn},
   ast::{
@@ -469,7 +469,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             ThisExprReplaceKind::Context => {
               *expr = self.snippet.builder.expression_identifier(
                 SPAN,
-                Atom::from_in(self.ctx.options.context.as_str(), self.alloc),
+                Str::from_in(self.ctx.options.context.as_str(), self.alloc),
               );
             }
           }

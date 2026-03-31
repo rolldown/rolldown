@@ -73,7 +73,7 @@ pub fn json_value_to_expression<'a>(
       builder.expression_numeric_literal(SPAN, f, None, oxc::ast::ast::NumberBase::Decimal)
     }
 
-    Value::String(s) => builder.expression_string_literal(SPAN, builder.atom(s), None),
+    Value::String(s) => builder.expression_string_literal(SPAN, builder.str(s), None),
 
     Value::Array(arr) => {
       let elements = builder.vec_from_iter(arr.iter().map(|item| {
@@ -85,7 +85,7 @@ pub fn json_value_to_expression<'a>(
 
     Value::Object(obj) => {
       let properties = builder.vec_from_iter(obj.iter().map(|(key, val)| {
-        let key_expr = builder.expression_string_literal(SPAN, builder.atom(key), None);
+        let key_expr = builder.expression_string_literal(SPAN, builder.str(key), None);
         let value_expr = json_value_to_expression(val, builder);
 
         builder.object_property_kind_object_property(

@@ -41,7 +41,7 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
                 self
                   .ast_snippet
                   .builder
-                  .alloc_identifier_name(SPAN, self.ast_snippet.builder.atom("url")),
+                  .alloc_identifier_name(SPAN, self.ast_snippet.builder.str("url")),
               ),
               self.create_self_location_href_expr(),
               false,

@@ -5,13 +5,13 @@ use oxc::{
     ast::{self, ExportDefaultDeclarationKind, Expression, ObjectPropertyKind, Statement},
   },
   semantic::{IsGlobalReference, Scoping, SymbolId},
-  span::{Atom, SPAN, Span},
+  span::{SPAN, Span, Str},
 };
 
 use rolldown_common::{
   ExternalModule, ImportRecordIdx, IndexModules, Module, ModuleIdx, NormalModule,
 };
-use rolldown_ecmascript::CJS_REQUIRE_REF_ATOM;
+use rolldown_ecmascript::CJS_REQUIRE_REF_STR;
 use rolldown_ecmascript_utils::{AstSnippet, ExpressionExt};
 use rolldown_utils::{
   ecmascript::is_validate_identifier_name,
@@ -59,7 +59,7 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub generated_static_import_infos: FxHashMap<ModuleIdx, String>,
   // We need to store the static import statements for external separately, so we could put them outside of the `try` block.
   pub generated_static_import_stmts_from_external: FxIndexMap<ModuleIdx, ast::Statement<'ast>>,
-  pub named_exports: FxHashMap<Atom<'ast>, NamedExport>,
+  pub named_exports: FxHashMap<Str<'ast>, NamedExport>,
 }
 
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
@@ -390,7 +390,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     // let arguments = self.snippet.builder.vec_from_array([
     //   ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
     //     SPAN,
-    //     self.snippet.builder.atom(&self.module.stable_id),
+    //     self.snippet.builder.str(&self.module.stable_id),
     //     None,
     //   )),
     //   module_exports,
@@ -432,7 +432,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           [self.module.hmr_info.module_request_to_import_record_idx[string_literal.value.as_str()]];
         let Some(module_idx) = import_record.resolved_module else { return };
         // Use stable module ID for consistent runtime lookup
-        string_literal.value = self.snippet.builder.atom(self.modules[module_idx].stable_id());
+        string_literal.value = self.snippet.builder.str(self.modules[module_idx].stable_id());
       }
       ast::Argument::ArrayExpression(array_expression) => {
         // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
@@ -443,7 +443,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                 [string_literal.value.as_str()]];
             let Some(module_idx) = import_record.resolved_module else { return };
             // Use stable module ID for consistent runtime lookup
-            string_literal.value = self.snippet.builder.atom(self.modules[module_idx].stable_id());
+            string_literal.value = self.snippet.builder.str(self.modules[module_idx].stable_id());
           }
         });
       }
@@ -605,7 +605,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         NONE,
         self.builder.vec1(ast::Argument::StringLiteral(self.builder.alloc_string_literal(
           SPAN,
-          self.builder.atom(&importee.id),
+          self.builder.str(&importee.id),
           None,
         ))),
         false,
@@ -616,19 +616,19 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         let quasis = self.builder.vec_from_iter([
           self.builder.template_element(
             SPAN,
-            ast::TemplateElementValue { raw: self.builder.atom("/@vite/lazy?id="), cooked: None },
+            ast::TemplateElementValue { raw: self.builder.str("/@vite/lazy?id="), cooked: None },
             false,
             false,
           ),
           self.builder.template_element(
             SPAN,
-            ast::TemplateElementValue { raw: self.builder.atom("&clientId="), cooked: None },
+            ast::TemplateElementValue { raw: self.builder.str("&clientId="), cooked: None },
             false,
             false,
           ),
           self.builder.template_element(
             SPAN,
-            ast::TemplateElementValue { raw: self.builder.atom(""), cooked: None },
+            ast::TemplateElementValue { raw: self.builder.str(""), cooked: None },
             true,
             false,
           ),
@@ -657,7 +657,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         self.snippet.builder.vec1(ast::Argument::StringLiteral(
           self.snippet.builder.alloc_string_literal(
             SPAN,
-            self.snippet.builder.atom(&importee.stable_id),
+            self.snippet.builder.str(&importee.stable_id),
             None,
           ),
         )),
@@ -731,7 +731,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     // Rewrite standalone `require` to `__rolldown_runtime__.loadExports`
     if let Some(id_ref) = it.as_identifier()
-      && id_ref.name == CJS_REQUIRE_REF_ATOM
+      && id_ref.name == CJS_REQUIRE_REF_STR
       && id_ref.is_global_reference(scoping)
       && !ctx.parent().is_call_expression()
     {
@@ -747,7 +747,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     if !call_expr
       .callee
       .as_identifier()
-      .is_some_and(|id| id.name == CJS_REQUIRE_REF_ATOM && id.is_global_reference(scoping))
+      .is_some_and(|id| id.name == CJS_REQUIRE_REF_STR && id.is_global_reference(scoping))
     {
       return;
     }

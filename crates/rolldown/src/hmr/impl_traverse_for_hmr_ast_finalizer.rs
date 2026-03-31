@@ -5,7 +5,7 @@ use oxc::{
 };
 use oxc_traverse::Traverse;
 use rolldown_ecmascript::{
-  CJS_EXPORTS_REF_ATOM, CJS_MODULE_REF_ATOM, CJS_ROLLDOWN_EXPORTS_REF,
+  CJS_EXPORTS_REF_STR, CJS_MODULE_REF_STR, CJS_ROLLDOWN_EXPORTS_REF,
   CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF_IDENT,
 };
 use rolldown_ecmascript_utils::ExpressionExt;
@@ -162,7 +162,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           self
             .snippet
             .builder
-            .binding_pattern_binding_identifier(SPAN, self.snippet.builder.atom(init_fn_name)),
+            .binding_pattern_binding_identifier(SPAN, self.snippet.builder.str(init_fn_name)),
           NONE,
           Some(ast::Expression::CallExpression(initializer_call)),
           false,
@@ -206,10 +206,10 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
             *node = self.snippet.id_ref_expr(binding_name.as_str(), ident.span);
             return;
           }
-        } else if ident.name == CJS_EXPORTS_REF_ATOM {
+        } else if ident.name == CJS_EXPORTS_REF_STR {
           // Rewrite `exports` to `__rolldown_exports__`
           ident.name = CJS_ROLLDOWN_EXPORTS_REF_IDENT;
-        } else if ident.name == CJS_MODULE_REF_ATOM {
+        } else if ident.name == CJS_MODULE_REF_STR {
           // Rewrite `module` to `__rolldown_module__`
           ident.name = CJS_ROLLDOWN_MODULE_REF_IDENT;
         }

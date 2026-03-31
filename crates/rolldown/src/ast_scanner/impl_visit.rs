@@ -339,7 +339,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       let should_warn = parent
         .as_member_expression_kind()
         .map(|member_expr| {
-          let static_name = member_expr.static_property_name().unwrap_or(ast::Atom::from(""));
+          let static_name = member_expr.static_property_name().unwrap_or(ast::Str::from(""));
           let is_special_property =
             static_name == "url" || static_name == "dirname" || static_name == "filename";
           let format = &self.immutable_ctx.options.format;

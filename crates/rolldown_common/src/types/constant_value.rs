@@ -71,11 +71,11 @@ impl ConstantValue {
       }
       ConstantValue::BigInt(b) => ast.expression_big_int_literal(
         SPAN,
-        ast.atom(&b.to_string()),
+        ast.str(&b.to_string()),
         None,
         oxc::ast::ast::BigintBase::Decimal,
       ),
-      ConstantValue::String(s) => ast.expression_string_literal(SPAN, ast.atom(s), None),
+      ConstantValue::String(s) => ast.expression_string_literal(SPAN, ast.str(s), None),
       ConstantValue::Boolean(b) => ast.expression_boolean_literal(SPAN, *b),
       ConstantValue::Undefined => ast.void_0(SPAN),
       ConstantValue::Null => ast.expression_null_literal(SPAN),

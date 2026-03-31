@@ -3,11 +3,11 @@ use oxc::{
     ExportNamedDeclaration, ImportDeclaration, ImportDeclarationSpecifier, ImportOrExportKind,
   },
   ast_visit::VisitMut,
-  span::Atom,
+  span::Str,
 };
 
 pub struct TypeImportVisitor<'ast> {
-  pub imported: Vec<Atom<'ast>>,
+  pub imported: Vec<Str<'ast>>,
 }
 
 impl<'ast> VisitMut<'ast> for TypeImportVisitor<'ast> {

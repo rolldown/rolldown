@@ -768,7 +768,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             self.snippet.builder.vec_from_array([
               ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
                 SPAN,
-                self.snippet.builder.atom(relative_asset_path),
+                self.snippet.builder.str(relative_asset_path),
                 None,
               )),
               ast::Argument::StaticMemberExpression(
@@ -1230,7 +1230,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     self
                       .snippet
                       .builder
-                      .expression_identifier(SPAN, self.snippet.builder.atom(to_esm_fn_name)),
+                      .expression_identifier(SPAN, self.snippet.builder.str(to_esm_fn_name)),
                     self.snippet.call_expr_expr(importee_wrapper_ref_name),
                     self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
                   ),
@@ -1695,7 +1695,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       let name_ref = self.canonical_ref_for_runtime("__name");
       let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
       let target =
-        self.snippet.builder.expression_identifier(SPAN, self.snippet.builder.atom(new_name));
+        self.snippet.builder.expression_identifier(SPAN, self.snippet.builder.str(new_name));
       statements.insert(
         *stmt_index,
         self.snippet.builder.statement_expression(
@@ -2063,7 +2063,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               self
                 .snippet
                 .builder
-                .binding_pattern_binding_identifier(SPAN, self.snippet.builder.atom("m")),
+                .binding_pattern_binding_identifier(SPAN, self.snippet.builder.str("m")),
               NONE,
               NONE,
               false,

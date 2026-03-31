@@ -164,7 +164,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
             &mut property.value,
             snippet
               .builder
-              .expression_identifier(SPAN, snippet.builder.atom(legitimized_ident.as_str())),
+              .expression_identifier(SPAN, snippet.builder.str(legitimized_ident.as_str())),
           );
           // TODO(shulaoda): Waiting for oxc transform to support the ES feature `ShorthandProperties`.
           if key == "__proto__" {
@@ -174,7 +174,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
             property.key = ast::PropertyKey::StaticIdentifier(
               snippet
                 .builder
-                .alloc_identifier_name(SPAN, snippet.builder.atom(legitimized_ident.as_ref())),
+                .alloc_identifier_name(SPAN, snippet.builder.str(legitimized_ident.as_ref())),
             );
           }
           match index_map.entry(legitimized_ident) {

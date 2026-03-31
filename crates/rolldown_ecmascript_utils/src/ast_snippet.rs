@@ -7,7 +7,7 @@ use oxc::{
       ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
     },
   },
-  span::{Atom, GetSpanMut, SPAN, Span},
+  span::{GetSpanMut, SPAN, Span, Str},
   syntax::identifier,
 };
 use rolldown_common::{EcmaModuleAstUsage, Interop, MemberExprProp};
@@ -31,13 +31,13 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   #[inline]
-  pub fn atom(&self, value: &str) -> Atom<'ast> {
-    self.builder.atom(value)
+  pub fn atom(&self, value: &str) -> Str<'ast> {
+    self.builder.str(value)
   }
 
   #[inline]
   pub fn id(&self, name: PassedStr, span: Span) -> ast::BindingIdentifier<'ast> {
-    self.builder.binding_identifier(span, self.builder.atom(name))
+    self.builder.binding_identifier(span, self.builder.str(name))
   }
 
   #[inline]
@@ -46,17 +46,17 @@ impl<'ast> AstSnippet<'ast> {
     name: PassedStr,
     span: Span,
   ) -> Box<'ast, ast::IdentifierReference<'ast>> {
-    self.builder.alloc_identifier_reference(span, self.builder.atom(name))
+    self.builder.alloc_identifier_reference(span, self.builder.str(name))
   }
 
   #[inline]
   pub fn id_name(&self, name: PassedStr, span: Span) -> ast::IdentifierName<'ast> {
-    self.builder.identifier_name(span, self.builder.atom(name))
+    self.builder.identifier_name(span, self.builder.str(name))
   }
 
   #[inline]
   pub fn id_ref_expr(&self, name: PassedStr, span: Span) -> ast::Expression<'ast> {
-    self.builder.expression_identifier(span, self.builder.atom(name))
+    self.builder.expression_identifier(span, self.builder.str(name))
   }
 
   /// Helper function to create a `__reExport` call expression with optional symbol arguments
@@ -89,7 +89,7 @@ impl<'ast> AstSnippet<'ast> {
         ast::Expression::from(self.builder.member_expression_computed(
           SPAN,
           cur,
-          self.builder.expression_string_literal(prop.span, self.builder.atom(&prop.name), None),
+          self.builder.expression_string_literal(prop.span, self.builder.str(&prop.name), None),
           prop.optional,
         ))
       };
@@ -121,7 +121,7 @@ impl<'ast> AstSnippet<'ast> {
     ast::MemberExpression::StaticMemberExpression(self.builder.alloc_static_member_expression(
       SPAN,
       self.id_ref_expr(object, SPAN),
-      self.builder.identifier_name(SPAN, self.builder.atom(property)),
+      self.builder.identifier_name(SPAN, self.builder.str(property)),
       false,
     ))
   }
@@ -140,7 +140,7 @@ impl<'ast> AstSnippet<'ast> {
   pub fn call_expr_expr(&self, name: PassedStr) -> ast::Expression<'ast> {
     self.builder.expression_call(
       SPAN,
-      self.builder.expression_identifier(SPAN, self.builder.atom(name)),
+      self.builder.expression_identifier(SPAN, self.builder.str(name)),
       NONE,
       self.builder.vec(),
       false,
@@ -169,7 +169,7 @@ impl<'ast> AstSnippet<'ast> {
     let arg = ast::Argument::from(arg);
     let mut call_expr = self.builder.call_expression(
       SPAN,
-      self.builder.expression_identifier(SPAN, self.builder.atom(name)),
+      self.builder.expression_identifier(SPAN, self.builder.str(name)),
       NONE,
       self.builder.vec(),
       false,
@@ -200,7 +200,7 @@ impl<'ast> AstSnippet<'ast> {
   ) -> ast::Expression<'ast> {
     self.builder.expression_call(
       SPAN,
-      self.builder.expression_identifier(SPAN, self.builder.atom(name)),
+      self.builder.expression_identifier(SPAN, self.builder.str(name)),
       NONE,
       self.builder.vec_from_iter([Argument::from(arg1), Argument::from(arg2)]),
       false,
@@ -238,7 +238,7 @@ impl<'ast> AstSnippet<'ast> {
     let declarations = self.builder.vec1(self.builder.variable_declarator(
       SPAN,
       ast::VariableDeclarationKind::Var,
-      self.builder.binding_pattern_binding_identifier(SPAN, self.builder.atom(name)),
+      self.builder.binding_pattern_binding_identifier(SPAN, self.builder.str(name)),
       NONE,
       Some(init),
       false,
@@ -332,7 +332,7 @@ impl<'ast> AstSnippet<'ast> {
           PropertyKind::Init,
           ast::PropertyKey::from(self.builder.expression_string_literal(
             SPAN,
-            self.builder.atom(stable_id),
+            self.builder.str(stable_id),
             None,
           )),
           Expression::ArrowFunctionExpression(arrow_expr),
@@ -394,7 +394,7 @@ impl<'ast> AstSnippet<'ast> {
           PropertyKind::Init,
           ast::PropertyKey::from(self.builder.expression_string_literal(
             SPAN,
-            self.builder.atom(stable_id),
+            self.builder.str(stable_id),
             None,
           )),
           Expression::ArrowFunctionExpression(arrow_expr),
@@ -438,7 +438,7 @@ impl<'ast> AstSnippet<'ast> {
     ast::Expression::NumericLiteral(self.builder.alloc_numeric_literal(
       SPAN,
       value,
-      Some(Atom::from(raw)),
+      Some(Str::from(raw)),
       oxc::syntax::number::NumberBase::Decimal,
     ))
   }
@@ -489,7 +489,7 @@ impl<'ast> AstSnippet<'ast> {
     value: PassedStr,
     span: Span,
   ) -> Box<'ast, ast::StringLiteral<'ast>> {
-    self.builder.alloc_string_literal(span, self.builder.atom(value), None)
+    self.builder.alloc_string_literal(span, self.builder.str(value), None)
   }
 
   pub fn string_literal_expr(&self, value: PassedStr, span: Span) -> ast::Expression<'ast> {
@@ -503,7 +503,7 @@ impl<'ast> AstSnippet<'ast> {
     ast::Statement::ImportDeclaration(self.builder.alloc_import_declaration(
       SPAN,
       Some(specifiers),
-      self.builder.string_literal(SPAN, self.builder.atom(source), None),
+      self.builder.string_literal(SPAN, self.builder.str(source), None),
       None,
       NONE,
       ImportOrExportKind::Value,
@@ -523,7 +523,7 @@ impl<'ast> AstSnippet<'ast> {
       self.builder.vec1(self.builder.variable_declarator(
         SPAN,
         VariableDeclarationKind::Var,
-        self.builder.binding_pattern_binding_identifier(SPAN, self.builder.atom(assignee)),
+        self.builder.binding_pattern_binding_identifier(SPAN, self.builder.str(assignee)),
         NONE,
         Some(init),
         false,
@@ -594,11 +594,11 @@ impl<'ast> AstSnippet<'ast> {
       if computed {
         ast::PropertyKey::from(self.builder.expression_string_literal(
           SPAN,
-          self.builder.atom(key),
+          self.builder.str(key),
           None,
         ))
       } else {
-        self.builder.property_key_static_identifier(SPAN, self.builder.atom(key))
+        self.builder.property_key_static_identifier(SPAN, self.builder.str(key))
       },
       self.only_return_arrow_expr(expr),
       true,
@@ -715,15 +715,15 @@ impl<'ast> AstSnippet<'ast> {
           SPAN,
           self
             .builder
-            .module_export_name_identifier_reference(SPAN, self.builder.atom(local.as_ref())),
+            .module_export_name_identifier_reference(SPAN, self.builder.str(local.as_ref())),
           if *legal_ident {
             self
               .builder
-              .module_export_name_identifier_name(SPAN, self.builder.atom(exported.as_ref()))
+              .module_export_name_identifier_name(SPAN, self.builder.str(exported.as_ref()))
           } else {
             self.builder.module_export_name_string_literal(
               SPAN,
-              self.builder.atom(exported.as_ref()),
+              self.builder.str(exported.as_ref()),
               None,
             )
           },
@@ -777,7 +777,7 @@ impl<'ast> AstSnippet<'ast> {
             let mut items = self.builder.vec_with_capacity(2);
             items.push(self.builder.expression_this(SPAN).into());
             items.push(
-              self.builder.expression_string_literal(SPAN, self.builder.atom(name), None).into(),
+              self.builder.expression_string_literal(SPAN, self.builder.str(name), None).into(),
             );
             items
           },
@@ -837,7 +837,7 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.vec1(self.builder.formal_parameter(
           SPAN,
           self.builder.vec(),
-          self.builder.binding_pattern_binding_identifier(SPAN, self.builder.atom("n")),
+          self.builder.binding_pattern_binding_identifier(SPAN, self.builder.str("n")),
           NONE,
           NONE,
           false,
@@ -857,7 +857,7 @@ impl<'ast> AstSnippet<'ast> {
             Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
               SPAN,
               self.builder.expression_identifier(SPAN, "n"),
-              self.builder.identifier_name(SPAN, self.builder.atom(property_name)),
+              self.builder.identifier_name(SPAN, self.builder.str(property_name)),
               false,
             )),
           ),
@@ -927,7 +927,7 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.vec1(self.builder.formal_parameter(
           SPAN,
           self.builder.vec(),
-          self.builder.binding_pattern_binding_identifier(SPAN, self.builder.atom("n")),
+          self.builder.binding_pattern_binding_identifier(SPAN, self.builder.str("n")),
           NONE,
           NONE,
           false,
@@ -978,7 +978,7 @@ impl<'ast> AstSnippet<'ast> {
       Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
         SPAN,
         self.builder.expression_identifier(SPAN, "n"),
-        self.builder.identifier_name(SPAN, self.builder.atom(property_name)),
+        self.builder.identifier_name(SPAN, self.builder.str(property_name)),
         false,
       ));
     // n.property_name()
@@ -1005,7 +1005,7 @@ impl<'ast> AstSnippet<'ast> {
       Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
         SPAN,
         self.builder.expression_identifier(SPAN, "n"),
-        self.builder.identifier_name(SPAN, self.builder.atom(wrapper_name)),
+        self.builder.identifier_name(SPAN, self.builder.str(wrapper_name)),
         false,
       ));
     // n.wrapper_name()
@@ -1017,7 +1017,7 @@ impl<'ast> AstSnippet<'ast> {
       Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
         SPAN,
         self.builder.expression_identifier(SPAN, "n"),
-        self.builder.identifier_name(SPAN, self.builder.atom(namespace_name)),
+        self.builder.identifier_name(SPAN, self.builder.str(namespace_name)),
         false,
       ));
 

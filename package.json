@@ -22,7 +22,7 @@
     "@types/node": "catalog:",
     "cjs-module-lexer": "^2.1.0",
     "knip": "^6.0.0",
-    "oxfmt": "^0.42.0",
+    "oxfmt": "^0.43.0",
     "playwright-chromium": "^1.56.1",
     "publint": "^0.3.16",
     "remove-unused-vars": "^0.0.12",

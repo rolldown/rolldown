@@ -15,11 +15,17 @@ catalogs:
     '@babel/preset-typescript':
       specifier: ^7.24.7
       version: 7.28.5
+    '@emnapi/core':
+      specifier: ^1.9.1
+      version: 1.9.1
+    '@emnapi/runtime':
+      specifier: ^1.9.1
+      version: 1.9.1
     '@napi-rs/cli':
       specifier: ^3.6.0
       version: 3.6.0
     '@napi-rs/wasm-runtime':
-      specifier: ^1.1.0
+      specifier: ^1.1.2
       version: 1.1.2
     '@oxc-node/cli':
       specifier: ^0.0.35
@@ -524,6 +530,12 @@ importers:
 
   packages/browser:
     dependencies:
+      '@emnapi/core':
+        specifier: 'catalog:'
+        version: 1.9.1
+      '@emnapi/runtime':
+        specifier: 'catalog:'
+        version: 1.9.1
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
         version: 1.1.2(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)

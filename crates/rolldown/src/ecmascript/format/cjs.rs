@@ -7,7 +7,7 @@ use crate::{
   utils::chunk::render_chunk_exports::render_chunk_exports,
   utils::external_import_interop::external_import_needs_interop,
 };
-use rolldown_common::{AddonRenderContext, OutputExports};
+use rolldown_common::{AddonRenderContext, NormalModule, OutputExports};
 use rolldown_error::BuildDiagnostic;
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::concat_string;
@@ -142,27 +142,60 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         let needs_interop =
           named_imports.is_some_and(|imports| external_import_needs_interop(imports));
         if needs_interop {
-          // generate code like:
-          // let external_module_symbol_name = require("external-module");
-          // external_module_symbol_name = __toESM(external_module_symbol_name);
-          let require_external = concat_string!(
-            "let ",
-            external_module_symbol_name,
-            " = ",
-            require_path_str,
-            ";\n",
-            external_module_symbol_name,
-            " = ",
-            ctx.finalized_string_pattern_for_symbol_ref(
-              ctx.link_output.runtime.resolve_symbol("__toESM"),
-              ctx.chunk_idx,
-              &ctx.chunk.canonical_names,
-            ),
-            "(",
-            external_module_symbol_name,
-            ");\n"
+          let to_esm_fn = ctx.finalized_string_pattern_for_symbol_ref(
+            ctx.link_output.runtime.resolve_symbol("__toESM"),
+            ctx.chunk_idx,
+            &ctx.chunk.canonical_names,
           );
-          s.push_str(&require_external);
+          let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(importee.namespace_ref);
+          if let Some(node_mode_name) = ctx.chunk.node_mode_external_ns_names.get(&canonical_ref) {
+            // Mixed-mode: emit two __toESM bindings (node-mode and non-node-mode)
+            let require_external = concat_string!(
+              "let ",
+              external_module_symbol_name,
+              " = ",
+              require_path_str,
+              ";\nlet ",
+              node_mode_name,
+              " = ",
+              to_esm_fn,
+              "(",
+              external_module_symbol_name,
+              ", 1);\n",
+              external_module_symbol_name,
+              " = ",
+              to_esm_fn,
+              "(",
+              external_module_symbol_name,
+              ");\n"
+            );
+            s.push_str(&require_external);
+          } else {
+            // Single-mode: check if any importer is ESM for node-mode flag
+            let is_node_esm = named_imports.is_some_and(|imports| {
+              imports.iter().any(|(importer_idx, _)| {
+                ctx.link_output.module_table[*importer_idx]
+                  .as_normal()
+                  .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import)
+              })
+            });
+            let node_mode_arg = if is_node_esm { ", 1" } else { "" };
+            let require_external = concat_string!(
+              "let ",
+              external_module_symbol_name,
+              " = ",
+              require_path_str,
+              ";\n",
+              external_module_symbol_name,
+              " = ",
+              to_esm_fn,
+              "(",
+              external_module_symbol_name,
+              node_mode_arg,
+              ");\n"
+            );
+            s.push_str(&require_external);
+          }
         } else {
           // generate code like:
           // let external_module_symbol_name = require("external-module");

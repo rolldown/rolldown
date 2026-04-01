@@ -20,7 +20,7 @@ catalog:
   '@emnapi/core': ^1.9.1
   '@emnapi/runtime': ^1.9.1
   '@napi-rs/cli': ^3.6.0
-  '@napi-rs/wasm-runtime': ^1.1.0
+  '@napi-rs/wasm-runtime': ^1.1.2
   '@oxc-node/cli': ^0.0.35
   '@oxc-node/core': ^0.0.35
   '@oxc-project/runtime': '=0.123.0'

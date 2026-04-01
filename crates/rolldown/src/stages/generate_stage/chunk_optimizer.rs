@@ -45,6 +45,8 @@ struct ChunkCandidate {
   /// Whether this chunk needs to be created in the final chunk graph.
   needs_creation: bool,
   dependencies: FxHashSet<ChunkIdx>,
+  /// Whether any module in this chunk has side effects.
+  has_side_effects: bool,
 }
 
 type TempIndexChunks = IndexVec<ChunkIdx, ChunkCandidate>;
@@ -68,6 +70,7 @@ impl ChunkOptimizationGraph {
     chunk_optimization: bool,
     chunk_graph: &ChunkGraph,
     bits_to_chunk_idx: &FxHashMap<BitSet, ChunkIdx>,
+    module_table: &ModuleTable,
   ) -> Self {
     if !chunk_optimization {
       return Self::default();
@@ -86,10 +89,15 @@ impl ChunkOptimizationGraph {
         }
         // Initial chunks have identical indices in both graphs
         chunk_idx_to_temp_chunk_idx.insert(chunk_idx, chunk_idx);
+        let has_side_effects = item
+          .modules
+          .iter()
+          .any(|&module_idx| module_table[module_idx].side_effects().has_side_effects());
         ChunkCandidate {
           modules: item.modules.clone(),
           needs_creation: false,
           dependencies: FxHashSet::default(),
+          has_side_effects,
         }
       })
       .collect();
@@ -106,15 +114,23 @@ impl ChunkOptimizationGraph {
   /// If a chunk already exists for the given bit pattern, the module is added to it.
   /// Otherwise, a new temporary chunk is created and marked as `needs_created: true`,
   /// indicating it will need to be materialized in the final chunk graph.
-  pub fn init_module_assignment(&mut self, module_idx: ModuleIdx, bits: &BitSet) {
+  pub fn init_module_assignment(
+    &mut self,
+    module_idx: ModuleIdx,
+    bits: &BitSet,
+    module_table: &ModuleTable,
+  ) {
+    let module_has_side_effects = module_table[module_idx].side_effects().has_side_effects();
     if let Some(&chunk_idx) = self.bits_to_chunk_idx.get(bits) {
       self.chunks[chunk_idx].modules.push(module_idx);
+      self.chunks[chunk_idx].has_side_effects |= module_has_side_effects;
       self.module_to_chunk[module_idx] = Some(chunk_idx);
     } else {
       let temp_chunk = ChunkCandidate {
         modules: vec![module_idx],
         needs_creation: true,
         dependencies: FxHashSet::default(),
+        has_side_effects: module_has_side_effects,
       };
       let chunk_idx = self.chunks.push(temp_chunk);
       self.bits_to_chunk_idx.insert(bits.clone(), chunk_idx);
@@ -122,8 +138,15 @@ impl ChunkOptimizationGraph {
     }
   }
 
-  pub fn add_module_to_chunk(&mut self, module_idx: ModuleIdx, chunk_idx: ChunkIdx) {
+  pub fn add_module_to_chunk(
+    &mut self,
+    module_idx: ModuleIdx,
+    chunk_idx: ChunkIdx,
+    module_table: &ModuleTable,
+  ) {
     self.chunks[chunk_idx].modules.push(module_idx);
+    self.chunks[chunk_idx].has_side_effects |=
+      module_table[module_idx].side_effects().has_side_effects();
     self.module_to_chunk[module_idx] = Some(chunk_idx);
   }
 
@@ -245,6 +268,8 @@ impl ChunkOptimizationGraph {
     target_chunk_idx: ChunkIdx,
     source_chunk_idx: ChunkIdx,
   ) {
+    let source = &self.chunks[source_chunk_idx];
+    let source_has_side_effects = source.has_side_effects;
     let source_dependencies = std::mem::take(&mut self.chunks[source_chunk_idx].dependencies);
     for dep_chunk_idx in source_dependencies {
       // Don't add self-reference
@@ -254,6 +279,7 @@ impl ChunkOptimizationGraph {
     }
     // Remove self-reference if it exists (source might have depended on target)
     self.chunks[target_chunk_idx].dependencies.remove(&target_chunk_idx);
+    self.chunks[target_chunk_idx].has_side_effects |= source_has_side_effects;
   }
 }
 
@@ -587,11 +613,7 @@ impl GenerateStage<'_> {
         .iter()
         .any(|dynamic_chunk_idx| temp_chunk_graph.is_reachable(*dynamic_chunk_idx, temp_chunk_idx));
       if would_make_dynamic_entry_depend_on_user_entry {
-        let entry_has_side_effects = chunk
-          .modules
-          .iter()
-          .any(|&module_idx| module_table[module_idx].side_effects().has_side_effects());
-        if entry_has_side_effects {
+        if temp_chunk_graph.chunks[chunk_idx].has_side_effects {
           return None;
         }
       }

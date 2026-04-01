@@ -843,8 +843,12 @@ impl GenerateStage<'_> {
     // TODO: maybe we could bailout peer chunk?
     let allow_chunk_optimization = self.options.experimental.is_chunk_optimization_enabled()
       && !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
-    let mut temp_chunk_graph =
-      ChunkOptimizationGraph::new(allow_chunk_optimization, chunk_graph, bits_to_chunk);
+    let mut temp_chunk_graph = ChunkOptimizationGraph::new(
+      allow_chunk_optimization,
+      chunk_graph,
+      bits_to_chunk,
+      &self.link_output.module_table,
+    );
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
@@ -875,10 +879,18 @@ impl GenerateStage<'_> {
           self.link_output.metas[normal_module.idx].depended_runtime_helper,
         );
         if allow_chunk_optimization {
-          temp_chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
+          temp_chunk_graph.add_module_to_chunk(
+            normal_module.idx,
+            chunk_id,
+            &self.link_output.module_table,
+          );
         }
       } else if allow_chunk_optimization {
-        temp_chunk_graph.init_module_assignment(normal_module.idx, bits);
+        temp_chunk_graph.init_module_assignment(
+          normal_module.idx,
+          bits,
+          &self.link_output.module_table,
+        );
       } else {
         let mut chunk =
           Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);

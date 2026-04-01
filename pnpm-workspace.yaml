@@ -62,9 +62,9 @@ catalog:
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
   mocha: ^11.7.5
-  oxc-minify: '=0.121.0'
-  oxc-parser: '=0.121.0'
-  oxc-transform: '=0.121.0'
+  oxc-minify: '=0.123.0'
+  oxc-parser: '=0.123.0'
+  oxc-transform: '=0.123.0'
   pathe: ^2.0.3
   picomatch: ^4.0.2
   react: ^19.0.0

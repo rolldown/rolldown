@@ -315,8 +315,7 @@ impl GenerateStage<'_> {
         // Only iterate actual import records of chunk modules (not all depended
         // symbols) to avoid adding unnecessary dependencies.
         if matches!(chunk.kind, ChunkKind::EntryPoint { .. }) {
-          let chunk_modules_set: FxHashSet<ModuleIdx> =
-            chunk.modules.iter().copied().collect();
+          let chunk_modules_set: FxHashSet<ModuleIdx> = chunk.modules.iter().copied().collect();
           let mut extra_reexport_wrs: Vec<SymbolRef> = Vec::new();
           for &module_idx in &chunk.modules {
             let Some(module) = self.link_output.module_table[module_idx].as_normal() else {

@@ -12,8 +12,8 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind,
   ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
-  ModuleNamespaceIncludedReason, PostChunkOptimizationOperation, PreserveEntrySignatures, SymbolRef,
-  WrapKind,
+  ModuleNamespaceIncludedReason, PostChunkOptimizationOperation, PreserveEntrySignatures,
+  SymbolRef, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
@@ -476,7 +476,6 @@ impl GenerateStage<'_> {
       chunk.insert_map = insert_map;
       chunk.remove_map = remove_map;
     });
-
   }
 
   /// Only considering module eager initialization order, both `require()` and `import()` are lazy

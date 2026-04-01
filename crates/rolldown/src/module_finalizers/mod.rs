@@ -1360,14 +1360,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   }
                   let linking_info = &self.ctx.linking_infos[esm_idx];
                   let Some(wrapper_ref) = linking_info.wrapper_ref else { continue };
-                  let (expr, _) =
-                    self.finalized_expr_for_symbol_ref(wrapper_ref, false, false);
+                  let (expr, _) = self.finalized_expr_for_symbol_ref(wrapper_ref, false, false);
                   let call = self.snippet.builder.expression_call(
-                    SPAN, expr, NONE, self.snippet.builder.vec(), false,
+                    SPAN,
+                    expr,
+                    NONE,
+                    self.snippet.builder.vec(),
+                    false,
                   );
-                  program
-                    .body
-                    .push(self.snippet.builder.statement_expression(SPAN, call));
+                  program.body.push(self.snippet.builder.statement_expression(SPAN, call));
                 }
               }
             }

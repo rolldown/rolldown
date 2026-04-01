@@ -1,4 +1,68 @@
 
+## [1.0.0-rc.13] - 2026-04-01
+
+### 🚀 Features
+
+- add friendly error for unloadable virtual modules (#8955) by @sapphi-red
+- better error message for unsupported CSS error (#8911) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- generate init calls for excluded re-exports in strict execution order (#8858) by @IWANABETHATGUY
+- consistent order for `meta.chunks` in `renderChunk` hook (#8956) by @sapphi-red
+- subpath imports in glob imports failing to find files (#8885) by @kalvenschraut
+- browser: bundle binding types in dts output (#8930) by @nyan-left
+- ci: guard artifact download step in `vite-test-ubuntu` when build is skipped (#8934) by @Copilot
+- track CJS re-export import records to fix inline const and tree-shaking (#8925) by @h-a-n-a
+- use ImportKind::Import for common-chunk root computation (#8899) by @IWANABETHATGUY
+- watch: clear emitted_filenames between rebuilds (#8914) by @IWANABETHATGUY
+- ci: cache esbuild snapshots to avoid 429 rate limiting (#8921) by @IWANABETHATGUY
+- always check circular deps in chunk optimizer (#8915) by @IWANABETHATGUY
+- don't mark calls to reassigned bindings as pure (#8917) by @IWANABETHATGUY
+- magic-string: throw TypeError for non-string content args (#8905) by @IWANABETHATGUY
+- magic-string: add split-point validation and overwrite/update options (#8904) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- cleanup and simplify in dynamic_import.rs (#8927) by @ulrichstark
+- rename came_from_cjs to came_from_commonjs for consistency (#8938) by @IWANABETHATGUY
+- inline `create_ecma_view` return destructuring and remove redundant binding (#8932) by @shulaoda
+
+### 📚 Documentation
+
+- document ensure_lazy_module_initialization_order in code-splitting design doc (#8931) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- add regression test for runtime helper circular dependency (#8958) by @h-a-n-a
+- enable 8 previously-skipped MagicString remove tests (#8945) by @IWANABETHATGUY
+- add test for why PureAnnotation is needed in execution order check (#8933) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency vite-plus to v0.1.15 (#8970) by @renovate[bot]
+- deps: update dependency oxfmt to ^0.43.0 (#8969) by @renovate[bot]
+- deps: upgrade oxc to 0.123.0 (#8967) by @shulaoda
+- justfile: deduplicate update-submodule as alias of setup-submodule (#8968) by @shulaoda
+- deps: update rollup submodule for tests to v4.60.1 (#8965) by @sapphi-red
+- deps: update test262 submodule for tests (#8966) by @sapphi-red
+- remove unused `type-check` scripts (#8957) by @sapphi-red
+- deps: update actions/cache action to v5 (#8953) by @renovate[bot]
+- deps: update npm packages to v6 (major) (#8954) by @renovate[bot]
+- deps: update npm packages (#8948) by @renovate[bot]
+- deps: update rust crates (#8949) by @renovate[bot]
+- deps: update github-actions (#8947) by @renovate[bot]
+- deps: update napi (#8943) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to ^0.23.0 (#8944) by @renovate[bot]
+- regenerate testing snapshots (#8928) by @ulrichstark
+- deps: update dependency rust to v1.94.1 (#8923) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @kalvenschraut made their first contribution in [#8885](https://github.com/rolldown/rolldown/pull/8885)
+* @nyan-left made their first contribution in [#8930](https://github.com/rolldown/rolldown/pull/8930)
+
+
 ## [1.0.0-rc.12] - 2026-03-25
 
 ### 🚀 Features

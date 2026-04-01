@@ -1,0 +1,15 @@
+{
+  "snapshotOutputStats": true,
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "main.js"
+      },
+      {
+        "name": "admin",
+        "import": "admin.js"
+      }
+    ]
+  }
+}

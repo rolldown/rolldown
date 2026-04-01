@@ -6,22 +6,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## allow-extension.js
 
 ```js
-//#region allow-extension/lib.js
-const shared = "shared";
-//#endregion
+import { t as shared } from "./lib.js";
 //#region allow-extension/main.js
 console.log(shared);
 import("./dynamic.js");
 const unused = 42;
 //#endregion
-export { shared as t, unused };
+export { unused };
 
 ```
 
 ## dynamic.js
 
 ```js
-import { t as shared } from "./allow-extension.js";
+import { t as shared } from "./lib.js";
 //#region allow-extension/dynamic.js
 console.log(shared);
 //#endregion
@@ -31,7 +29,7 @@ console.log(shared);
 ## dynamic2.js
 
 ```js
-import { t as shared } from "./false.js";
+import { t as shared } from "./lib2.js";
 //#region false/dynamic.js
 console.log(shared);
 //#endregion
@@ -41,7 +39,7 @@ console.log(shared);
 ## dynamic3.js
 
 ```js
-import { t as shared } from "./lib.js";
+import { t as shared } from "./lib3.js";
 //#region not-specified/dynamic.js
 console.log(shared);
 //#endregion
@@ -51,7 +49,7 @@ console.log(shared);
 ## dynamic4.js
 
 ```js
-import { t as shared } from "./lib2.js";
+import { t as shared } from "./lib4.js";
 //#region strict/dynamic.js
 console.log(shared);
 //#endregion
@@ -61,18 +59,35 @@ console.log(shared);
 ## false.js
 
 ```js
-//#region false/lib.js
-const shared = "shared";
-//#endregion
+import { t as shared } from "./lib2.js";
 //#region false/main.js
 console.log(shared);
 import("./dynamic2.js");
+//#endregion
+
+```
+
+## lib.js
+
+```js
+//#region allow-extension/lib.js
+const shared = "shared";
 //#endregion
 export { shared as t };
 
 ```
 
-## lib.js
+## lib2.js
+
+```js
+//#region false/lib.js
+const shared = "shared";
+//#endregion
+export { shared as t };
+
+```
+
+## lib3.js
 
 ```js
 //#region not-specified/lib.js
@@ -82,7 +97,7 @@ export { shared as t };
 
 ```
 
-## lib2.js
+## lib4.js
 
 ```js
 //#region strict/lib.js
@@ -101,7 +116,7 @@ export { shared as t };
 ## not-specified.js
 
 ```js
-import { t as shared } from "./lib.js";
+import { t as shared } from "./lib3.js";
 //#region not-specified/main.js
 console.log(shared);
 import("./dynamic3.js");
@@ -114,7 +129,7 @@ export { unused };
 ## strict.js
 
 ```js
-import { t as shared } from "./lib2.js";
+import { t as shared } from "./lib4.js";
 //#region strict/main.js
 console.log(shared);
 import("./dynamic4.js");

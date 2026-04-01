@@ -217,6 +217,24 @@ impl ChunkOptimizationGraph {
     false
   }
 
+  /// Returns true if `from` can transitively reach `to` through the dependency graph.
+  pub fn is_reachable(&self, from: ChunkIdx, to: ChunkIdx) -> bool {
+    let mut queue: VecDeque<ChunkIdx> = self.chunks[from].dependencies.iter().copied().collect();
+    let mut visited = FxHashSet::default();
+    while let Some(chunk_idx) = queue.pop_front() {
+      if chunk_idx == to {
+        return true;
+      }
+      if !visited.insert(chunk_idx) {
+        continue;
+      }
+      queue.extend(
+        self.chunks[chunk_idx].dependencies.iter().copied().filter(|dep| !visited.contains(dep)),
+      );
+    }
+    false
+  }
+
   /// Merges the dependencies of source chunk into target chunk.
   ///
   /// When modules from one chunk are merged into another chunk, the dependencies
@@ -359,6 +377,8 @@ impl GenerateStage<'_> {
           &self.link_output.module_table,
           &dynamic_entry_to_dynamic_importers,
           temp_chunk,
+          temp_chunk_graph,
+          *temp_chunk_idx,
         );
 
         Some((bits.clone(), *temp_chunk_idx, chunk_idxs, merge_target))
@@ -511,6 +531,7 @@ impl GenerateStage<'_> {
   /// entry chunk when possible, rather than creating a separate common chunk.
   ///
   /// Returns `Some(ChunkIdx)` if a suitable merge target is found, `None` otherwise.
+  #[expect(clippy::too_many_arguments)]
   fn try_insert_into_existing_chunk(
     chunk_idxs: &[ChunkIdx],
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
@@ -518,6 +539,8 @@ impl GenerateStage<'_> {
     module_table: &ModuleTable,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
     info: &ChunkCandidate,
+    temp_chunk_graph: &ChunkOptimizationGraph,
+    temp_chunk_idx: ChunkIdx,
   ) -> Option<ChunkIdx> {
     let mut user_defined_entry = vec![];
     let mut dynamic_entry = vec![];
@@ -554,6 +577,23 @@ impl GenerateStage<'_> {
         dynamic_entry.iter().all(|idx| reached_dynamic_chunk.is_some_and(|set| set.contains(idx)));
       if !all_dynamic_entries_reachable {
         return None;
+      }
+      // If any dynamic entry chunk depends on the pending common chunk,
+      // merging into the user-defined entry would make the dynamic entry
+      // import the entry chunk. This is only safe if the entry chunk
+      // has no side effects; otherwise loading the dynamic chunk would
+      // trigger the entry's side effects unexpectedly.
+      let would_make_dynamic_entry_depend_on_user_entry = dynamic_entry
+        .iter()
+        .any(|dynamic_chunk_idx| temp_chunk_graph.is_reachable(*dynamic_chunk_idx, temp_chunk_idx));
+      if would_make_dynamic_entry_depend_on_user_entry {
+        let entry_has_side_effects = chunk
+          .modules
+          .iter()
+          .any(|&module_idx| module_table[module_idx].side_effects().has_side_effects());
+        if entry_has_side_effects {
+          return None;
+        }
       }
       let modules_set = chunk
         .modules

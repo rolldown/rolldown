@@ -1,0 +1,70 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## common-a.js
+
+```js
+import { t as sharedB } from "./common-b.js";
+//#region common-a.js
+function getSharedB() {
+	return sharedB;
+}
+//#endregion
+export { getSharedB as t };
+
+```
+
+## common-b.js
+
+```js
+//#region common-b.js
+const sharedB = "shared-b";
+//#endregion
+export { sharedB as t };
+
+```
+
+## dynamic1.js
+
+```js
+import { t as getSharedB } from "./common-a.js";
+//#region dynamic1.js
+const value = getSharedB();
+console.log(`dynamic1:${value}`);
+//#endregion
+export { value };
+
+```
+
+## dynamic2.js
+
+```js
+import { t as getSharedB } from "./common-a.js";
+//#region dynamic2.js
+const value = getSharedB();
+//#endregion
+export { value };
+
+```
+
+## entry-a.js
+
+```js
+//#region entry-a.js
+console.log("entry-a");
+globalThis.loadDynamic1FromEntryA = () => import("./dynamic1.js");
+globalThis.loadDynamic2FromEntryA = () => import("./dynamic2.js");
+//#endregion
+
+```
+
+## main.js
+
+```js
+//#region main.js
+import("./dynamic1.js");
+//#endregion
+
+```

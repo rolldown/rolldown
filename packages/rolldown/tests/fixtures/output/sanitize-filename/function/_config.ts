@@ -33,8 +33,9 @@ export default defineTest({
       [
         "assets/sanitized-+emitted-C6bBH0W1.txt",
         "assets/sanitized-asset-BIR0xpQL",
-        "sanitized-dynamic-DVinTJUZ.js",
+        "sanitized-dynamic-Bz1iwkVe.js",
         "sanitized-main.js",
+        "sanitized-share-CSwYeRHk.js",
       ]
     `);
   },

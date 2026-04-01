@@ -531,30 +531,49 @@ impl LinkStage<'_> {
                     };
                   // corresponding to cases in:
                   // https://github.com/rolldown/rolldown/blob/30a5a2fc8fa6785821153922e21dc0273cc00c7a/crates/rolldown/tests/rolldown/tree_shaking/commonjs/main.js?plain=1#L3-L10
-                  if continue_resolve
-                    && let Some(m) = self.metas[maybe_namespace.owner]
-                      .named_import_to_cjs_module
-                      .get(&maybe_namespace)
-                      .or_else(|| {
-                        self.metas[maybe_namespace.owner]
-                          .import_record_ns_to_cjs_module
-                          .get(&maybe_namespace)
-                      })
-                      .or_else(|| {
-                        (self.metas[maybe_namespace.owner].has_dynamic_exports)
-                          .then_some(&maybe_namespace.owner)
-                      })
-                      .and_then(|idx| {
-                        self.metas[*idx]
-                          .resolved_exports
-                          .get(&member_expr_ref.prop_and_span_list[cursor].name)
-                          .and_then(|resolved_export| {
-                            resolved_export.came_from_commonjs.then_some(resolved_export)
-                          })
+                  let cjs_module_idx = continue_resolve
+                    .then(|| {
+                      self.metas[maybe_namespace.owner]
+                        .named_import_to_cjs_module
+                        .get(&maybe_namespace)
+                        .or_else(|| {
+                          self.metas[maybe_namespace.owner]
+                            .import_record_ns_to_cjs_module
+                            .get(&maybe_namespace)
+                        })
+                        .or_else(|| {
+                          (self.metas[maybe_namespace.owner].has_dynamic_exports)
+                            .then_some(&maybe_namespace.owner)
+                        })
+                        .copied()
+                    })
+                    .flatten();
+                  if let Some(cjs_idx) = cjs_module_idx
+                    && let Some(m) = self.metas[cjs_idx]
+                      .resolved_exports
+                      .get(&member_expr_ref.prop_and_span_list[cursor].name)
+                      .and_then(|resolved_export| {
+                        resolved_export.came_from_commonjs.then_some(resolved_export)
                       })
                   {
                     let is_default = member_expr_ref.prop_and_span_list[cursor].name == "default";
-                    target_commonjs_exported_symbol = Some((m.symbol_ref, is_default));
+                    // When the accessed property is `default`, check if `.default` represents
+                    // the whole `module.exports` (rather than `exports.default`). This is true when:
+                    // - Node ESM mode: __toESM always ignores __esModule flag
+                    // - Non-node mode without __esModule: __toESM sets .default = module.exports
+                    // In these cases, skip resolving `.default` to a specific CJS export.
+                    let default_is_module_exports = is_default && {
+                      let is_node_esm = module.should_consider_node_esm_spec_for_static_import();
+                      let importee_has_es_module_flag =
+                        self.module_table[cjs_idx].as_normal().is_some_and(|importee| {
+                          importee.ecma_view.ast_usage.contains(EcmaModuleAstUsage::EsModuleFlag)
+                        });
+                      is_node_esm || !importee_has_es_module_flag
+                    };
+
+                    if !default_is_module_exports {
+                      target_commonjs_exported_symbol = Some((m.symbol_ref, is_default));
+                    }
                     depended_refs.push(m.symbol_ref);
                     // If this member expression is a write (e.g. `cjs.c = 'abcd'`), the
                     // CJS exported symbol should not be inlined as a constant since its

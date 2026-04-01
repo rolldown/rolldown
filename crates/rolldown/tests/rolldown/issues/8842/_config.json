@@ -1,0 +1,8 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./index.ts" }],
+    "external": ["jsonc-parser"],
+    "format": "cjs"
+  },
+  "expectExecuted": true
+}

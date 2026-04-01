@@ -3,7 +3,7 @@ use rolldown_common::{ImportRecordIdx, NamedImport, NormalModule, Specifier};
 /// Check if a specific import specifier needs the `__toESM` helper.
 /// Only namespace imports (`import * as foo`) and default imports (`import foo`)
 /// need the `__toESM` helper. Named imports (`import { foo }`) do not need it.
-fn specifier_needs_interop(specifier: &Specifier) -> bool {
+pub fn specifier_needs_interop(specifier: &Specifier) -> bool {
   matches!(specifier, Specifier::Star)
     || matches!(specifier, Specifier::Literal(name) if name.as_str() == "default")
 }

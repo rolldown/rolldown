@@ -2,11 +2,14 @@ use oxc::span::CompactStr;
 
 use crate::{
   stages::link_stage::LinkStageOutput,
-  utils::renamer::{NestedScopeRenamer, Renamer},
+  utils::{
+    external_import_interop::{external_import_needs_interop, specifier_needs_interop},
+    renamer::{NestedScopeRenamer, Renamer},
+  },
 };
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, TaggedSymbolRef, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, NormalModule, OutputFormat, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
@@ -164,6 +167,44 @@ pub fn deconflict_chunk_symbols(
       )
     })
     .collect();
+
+  // Detect mixed-mode external imports: both ESM (node-mode) and non-ESM importers
+  // needing interop on the same external. Create a separate binding name for node-mode.
+  if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
+    let mut node_mode_names = FxHashMap::default();
+    for (ext_idx, named_imports) in &chunk.direct_imports_from_external_modules {
+      if !external_import_needs_interop(named_imports) {
+        continue;
+      }
+      let mut has_node_mode = false;
+      let mut has_non_node_mode = false;
+      for (importer_idx, import) in named_imports {
+        if !specifier_needs_interop(&import.imported) {
+          continue;
+        }
+        if link_output.module_table[*importer_idx]
+          .as_normal()
+          .is_some_and(NormalModule::should_consider_node_esm_spec_for_static_import)
+        {
+          has_node_mode = true;
+        } else {
+          has_non_node_mode = true;
+        }
+        if has_node_mode && has_non_node_mode {
+          break;
+        }
+      }
+      if has_node_mode && has_non_node_mode {
+        let ext =
+          link_output.module_table[*ext_idx].as_external().expect("Should be external module here");
+        let canonical_ref = link_output.symbol_db.canonical_ref_for(ext.namespace_ref);
+        let original_name = canonical_ref.name(&link_output.symbol_db);
+        let node_name = renamer.create_conflictless_name(original_name);
+        node_mode_names.insert(canonical_ref, CompactStr::new(&node_name));
+      }
+    }
+    chunk.node_mode_external_ns_names = node_mode_names;
+  }
 
   rename_shadowing_symbols_in_nested_scopes(chunk, link_output, format, &mut renamer);
 

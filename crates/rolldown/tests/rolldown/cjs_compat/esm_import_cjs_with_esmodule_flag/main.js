@@ -21,7 +21,7 @@ assert.deepStrictEqual(cjs.foo, 'foo');
 assert.deepStrictEqual(cjs_foo, 'foo');
 assert.deepStrictEqual(cjs_default_default.foo, 'foo');
 
-// Does't support inline `module.exports`. Not inlined
+// Doesn't support inline `module.exports`. Not inlined
 assert.deepStrictEqual(cjs2.default, 'module.exports');
 
 assert.deepStrictEqual(cjs3.bar(), 'bar');

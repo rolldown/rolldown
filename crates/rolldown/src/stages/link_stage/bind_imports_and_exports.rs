@@ -571,7 +571,50 @@ impl LinkStage<'_> {
                       is_node_esm || !importee_has_es_module_flag
                     };
 
-                    if !default_is_module_exports {
+                    // If the current property is `default` and it represents the whole `module.exports`,
+                    // try to resolve the next property as a CJS export.
+                    if default_is_module_exports
+                      && let Some(next_prop) = member_expr_ref.prop_and_span_list.get(cursor + 1)
+                    {
+                      if let Some(property) = self.metas[cjs_idx]
+                        .resolved_exports
+                        .get(&next_prop.name)
+                        .and_then(|resolved_export| {
+                          resolved_export.came_from_commonjs.then_some(resolved_export)
+                        })
+                      {
+                        let is_next_default = next_prop.name == "default";
+                        if is_next_default && maybe_namespace_symbol.namespace_alias.is_none() {
+                          // import * as ns; ns.default.default — can't optimize.
+                          //
+                          // __toESM sets import_ns.default = module.exports and __copyProps
+                          // skips "default" (already set), so exports.default is only
+                          // reachable via import_ns.default.default (two levels).
+                          // If we advance cursor, props becomes ["default"] and the finalizer
+                          // base is import_ns (#LOCAL_NAMESPACE has no namespace_alias to
+                          // append .default), so the result is import_ns.default which is
+                          // module.exports — not module.exports.default.
+                          //
+                          // Other non-"default" properties (e.g. ns.default.foo) work fine
+                          // because __copyProps copies them onto the __toESM target, so
+                          // import_ns.foo = module.exports.foo.
+                        } else {
+                          cursor += 1;
+                          target_commonjs_exported_symbol =
+                            Some((property.symbol_ref, is_next_default));
+                          depended_refs.push(property.symbol_ref);
+
+                          if member_expr_ref.is_write {
+                            written_cjs_exports.push(property.symbol_ref);
+                          }
+                        }
+                      }
+                    } else if default_is_module_exports {
+                      // `.default` represents the whole `module.exports` with no further
+                      // property access. Leave target_commonjs_exported_symbol as None so
+                      // that include_statements runs the CJS bailout check and keeps all
+                      // exports for this opaque usage.
+                    } else {
                       target_commonjs_exported_symbol = Some((m.symbol_ref, is_default));
                     }
                     depended_refs.push(m.symbol_ref);

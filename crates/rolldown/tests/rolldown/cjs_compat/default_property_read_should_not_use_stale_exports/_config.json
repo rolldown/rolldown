@@ -1,0 +1,8 @@
+{
+  "config": {
+    "minify": false,
+    "optimization": {
+      "inlineConst": true
+    }
+  }
+}

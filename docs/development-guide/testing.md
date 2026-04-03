@@ -217,6 +217,49 @@ just test-node-rollup --grep "function"
 
 This will run only tests whose names match "function". For more filtering options, see [Mocha's grep documentation](https://mochajs.org/#grep).
 
+### Node version compatibility
+
+Some Rollup tests require specific Node.js versions to run, which means **the number of passed tests will differ across Node versions**. This is expected behavior and not a bug.
+
+#### How it works
+
+Tests can specify a `minNodeVersion` in their `_config.js` file. The test framework automatically skips tests when the running Node version is older than required:
+
+- Test filtering logic:
+  - `packages/rollup-tests/test/utils.js:377` — checks `config.minNodeVersion` against the current Node version and skips the test if the running Node is too old
+  - `rollup/test/testHelpers.js:318` — same check in the upstream rollup test helpers
+
+#### Tests with Node version requirements
+
+Currently, these Rollup tests require specific Node versions:
+
+- **Node 24+** (2 tests):
+  - `rollup/test/function/samples/using-statement-symbol-dispose` — uses `Symbol.dispose`
+  - `rollup/test/function/samples/using-statement-symbol-async-dispose` — uses `Symbol.asyncDispose`
+
+- **Node 22+** (1 test):
+  - `rollup/test/cli/samples/config-import-attributes-key` — uses import attributes
+
+- **Node 16+** (1 test):
+  - `rollup/test/function/samples/use-class-name-in-static-block` — uses class static blocks
+
+#### Expected pass counts by Node version
+
+When running `just test-node-rollup`, you'll see different pass counts depending on your Node version:
+
+- **Node 24**: All tests run (highest pass count, e.g., 903 tests)
+- **Node 22**: Skips 2 tests requiring Node 24 (e.g., 901 tests)
+- **Node 20**: Skips 3 tests requiring Node 22+ (e.g., 900 tests)
+
+#### CI configuration
+
+The CI workflow handles this automatically:
+
+- `.github/workflows/reusable-node-test.yml:59` — sets `SKIP_PASS_DIFF=1` for Node versions != 24, so the expected pass count difference doesn't cause CI failures
+- `.github/workflows/ci.yml:132,175` — runs tests against Node 20, 22, and 24
+
+When `SKIP_PASS_DIFF=1` is set, the test runner (`packages/rollup-tests/src/intercept/check.js:73-81`) tolerates differences in the number of passed tests and only verifies that the number of failed tests matches expectations.
+
 ## How to choose test technique
 
 Our Rust test infra is powerful enough to cover most of the case of JavaScript (plugin, passing function inside config).

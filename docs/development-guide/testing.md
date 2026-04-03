@@ -217,11 +217,10 @@ just test-node-rollup --grep "function"
 
 This will run only tests whose names match "function". For more filtering options, see [Mocha's grep documentation](https://mochajs.org/#grep).
 
-### Node version compatibility
-
-Some Rollup tests require specific Node.js versions to run. Tests specify a `minNodeVersion` in their `_config.js` file and are automatically skipped when the running Node version is older than required.
-
-**The number of passed tests will differ unless your Node version is 24 or higher.** This is expected behavior and not a bug.
+> [!NOTE]
+> Some Rollup tests require specific Node.js versions to run. Tests specify a `minNodeVersion` in their `_config.js` file and are automatically skipped when the running Node version is older than required.
+>
+> **The number of passed tests will differ unless your Node version is 24 or higher.** This is expected behavior and not a bug.
 
 ## How to choose test technique
 

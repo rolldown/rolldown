@@ -1,0 +1,16 @@
+{
+  "config": {
+    "experimental": {
+      "devMode": {
+        "lazy": true
+      }
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "strictExecutionOrder",
+      "strictExecutionOrder": true
+    }
+  ],
+  "expectExecuted": false
+}

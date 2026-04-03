@@ -3,8 +3,9 @@ use std::fmt::Write as _;
 
 use oxc::span::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
-  OutputFormat, Platform, SymbolRef, SymbolRefDb, WrapKind,
+  Chunk, ChunkKind, EcmaModuleAstUsage, ExportsKind, IndexModules, ModuleIdx,
+  NormalizedBundlerOptions, OutputExports, OutputFormat, Platform, SymbolRef, SymbolRefDb,
+  WrapKind,
 };
 use rolldown_utils::{
   concat_string,
@@ -342,7 +343,11 @@ pub fn get_chunk_export_names(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<Com
   if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
     let entry_meta = &graph.metas[*entry_id];
     if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
-      return vec![CompactStr::new("default")];
+      let entry_module =
+        graph.module_table[*entry_id].as_normal().expect("entry module should be normal");
+      if entry_module.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports) {
+        return vec![CompactStr::new("default")];
+      }
     }
   }
 
@@ -354,7 +359,11 @@ pub fn get_chunk_export_names_with_ctx(ctx: &GenerateContext<'_>) -> Vec<Compact
   if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
     let entry_meta = &link_output.metas[*entry_id];
     if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
-      return vec![CompactStr::new("default")];
+      let entry_module =
+        link_output.module_table[*entry_id].as_normal().expect("entry module should be normal");
+      if entry_module.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports) {
+        return vec![CompactStr::new("default")];
+      }
     }
   }
   render_export_items_index_vec[ctx.chunk_idx].values().flatten().cloned().collect::<Vec<_>>()

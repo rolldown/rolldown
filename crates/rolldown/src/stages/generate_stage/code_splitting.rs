@@ -10,9 +10,10 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason,
-  PostChunkOptimizationOperation, PreserveEntrySignatures, SymbolRef, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
+  ModuleNamespaceIncludedReason, PostChunkOptimizationOperation, PreserveEntrySignatures,
+  SymbolRef, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
@@ -355,6 +356,62 @@ impl GenerateStage<'_> {
         max_length = max_length.max(*dep_length);
       }
       modules_need_to_check.extend(&wrapped_modules[0..max_length]);
+
+      // Detect cross-chunk ESM dependencies through WrapKind::None re-exports
+      // BEFORE the early return, since cross-chunk wrapped modules aren't in
+      // this chunk's wrapped_modules list. Only entry chunks need this — common
+      // chunks don't execute user code that imports through re-exports.
+      if matches!(chunk.kind, ChunkKind::EntryPoint { .. }) {
+        let chunk_modules_set: FxHashSet<ModuleIdx> = chunk.modules.iter().copied().collect();
+        let mut reexport_cross_chunk_inits: FxHashMap<ModuleIdx, Vec<ModuleIdx>> =
+          FxHashMap::default();
+        for &module_idx in &chunk.modules {
+          let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+            continue;
+          };
+          for rec in &module.import_records {
+            if rec.kind != ImportKind::Import {
+              continue;
+            }
+            let Some(importee_idx) = rec.resolved_module else { continue };
+            if reexport_cross_chunk_inits.contains_key(&importee_idx) {
+              continue;
+            }
+            if !matches!(self.link_output.metas[importee_idx].wrap_kind(), WrapKind::None) {
+              continue;
+            }
+            let mut stack = vec![importee_idx];
+            let mut visited = FxHashSet::default();
+            let mut cross_chunk_esm = Vec::new();
+            while let Some(mid) = stack.pop() {
+              if !visited.insert(mid) {
+                continue;
+              }
+              let Some(m) = self.link_output.module_table[mid].as_normal() else { continue };
+              let meta = &self.link_output.metas[m.idx];
+              match meta.wrap_kind() {
+                WrapKind::Esm => {
+                  if meta.is_included && !chunk_modules_set.contains(&m.idx) {
+                    cross_chunk_esm.push(m.idx);
+                  }
+                }
+                WrapKind::None => {
+                  for sub_rec in &m.import_records {
+                    if let Some(sub_idx) = sub_rec.resolved_module {
+                      stack.push(sub_idx);
+                    }
+                  }
+                }
+                WrapKind::Cjs => {}
+              }
+            }
+            if !cross_chunk_esm.is_empty() {
+              reexport_cross_chunk_inits.insert(importee_idx, cross_chunk_esm);
+            }
+          }
+        }
+        chunk.reexport_cross_chunk_inits = reexport_cross_chunk_inits;
+      }
 
       if modules_need_to_check.is_empty() {
         // No wrapped modules or none wrapped modules that depends on wrapped modules, so we can

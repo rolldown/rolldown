@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## barrel.js
+
+```js
+import { n as __exportAll, r as __toCommonJS, t as __esmMin } from "./rolldown-runtime.js";
+//#region leaf.js
+var leaf_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var value;
+var init_leaf = __esmMin((() => {
+	value = 0;
+	value = 1;
+	globalThis.reexportNamespaceSelf = (init_leaf(), __toCommonJS(leaf_exports));
+}));
+//#endregion
+//#region barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+init_leaf();
+//#endregion
+export { init_leaf as n, barrel_exports as t };
+
+```
+
+## main.js
+
+```js
+import { n as init_leaf, t as barrel_exports } from "./barrel.js";
+//#region main.js
+init_leaf();
+//#endregion
+export { barrel_exports as ns };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __toCommonJS as r, __esmMin as t };
+
+```

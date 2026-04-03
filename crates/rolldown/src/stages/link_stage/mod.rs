@@ -76,6 +76,9 @@ pub struct LinkStageOutput {
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  /// True if any module has enum member values to inline. Computed once to avoid
+  /// repeated full module table scans.
+  pub has_enum_inlining: bool,
 }
 
 #[derive(Debug)]
@@ -102,6 +105,8 @@ pub struct LinkStage<'a> {
   pub side_effects_free_function_symbol_ref: FxHashSet<SymbolRef>,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   pub tla_module_count: usize,
+  /// Computed during `include_statements`, reused when building `LinkStageOutput`.
+  pub has_enum_inlining: bool,
 }
 
 impl<'a> LinkStage<'a> {
@@ -190,6 +195,7 @@ impl<'a> LinkStage<'a> {
       side_effects_free_function_symbol_ref: FxHashSet::default(),
       user_defined_entry_modules: scan_stage_output.user_defined_entry_modules,
       tla_module_count: scan_stage_output.tla_module_count,
+      has_enum_inlining: false,
     }
   }
 
@@ -230,6 +236,7 @@ impl<'a> LinkStage<'a> {
       global_constant_symbol_map: self.global_constant_symbol_map,
       normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
       user_defined_entry_modules: self.user_defined_entry_modules,
+      has_enum_inlining: self.has_enum_inlining,
     }
   }
 

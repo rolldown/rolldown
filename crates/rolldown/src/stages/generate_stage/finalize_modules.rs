@@ -38,11 +38,7 @@ impl GenerateStage<'_> {
       .flatten()
       .collect::<FxHashSet<SymbolRef>>();
 
-    let has_enum_inlining = self
-      .link_output
-      .module_table
-      .iter()
-      .any(|m| m.as_normal().is_some_and(|n| !n.ecma_view.enum_member_value_map.is_empty()));
+    let has_enum_inlining = self.link_output.has_enum_inlining;
 
     let transfer_parts_rendered_maps = debug_span!("finalize_modules").in_scope(|| {
       self

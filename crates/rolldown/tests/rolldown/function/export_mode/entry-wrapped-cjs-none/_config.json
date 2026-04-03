@@ -1,0 +1,7 @@
+{
+  "expectExecuted": false,
+  "config": {
+    "format": "umd",
+    "input": [{ "import": "./main.cjs" }]
+  }
+}

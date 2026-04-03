@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.cjs" }],
+    "name": "myLib",
+    "minify": false
+  },
+  "configVariants": [
+    {
+      "format": "iife"
+    },
+    {
+      "format": "umd"
+    }
+  ]
+}

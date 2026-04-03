@@ -93,6 +93,11 @@ impl PreProcessEcmaAst {
     // Extract enum member values before the transformer converts enums.
     // This runs before Step 3 (transformer) because `optimize_const_enums` / `optimize_enums`
     // remove or rewrite enum declarations, making member values unrecoverable afterward.
+    //
+    // Both const and regular enums are extracted so member accesses can be inlined.
+    // Tree-shaking in `include_statements.rs` skips including the enum declaration
+    // when a member access will be inlined. Regular enum IIFEs are `@__PURE__`, so
+    // they are naturally tree-shaken if no other references keep them alive.
     let enum_member_value_map = {
       let scoping_ref = scoping.as_mut().unwrap();
       let mut enum_values: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>> =

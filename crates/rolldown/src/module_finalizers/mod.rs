@@ -590,6 +590,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let resolved_export = self.ctx.linking_infos[importee.idx]
       .resolved_exports
       .get(inner_expr.property.name.as_str())?;
+
+    // Don't inline when there are conflicting CJS sources — the value could differ per branch
+    if resolved_export.cjs_conflicting_symbol_refs.is_some() {
+      return None;
+    }
+
     let canonical_export = self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref);
 
     // Now try to inline the outer property (e.g., `x`) as an enum member

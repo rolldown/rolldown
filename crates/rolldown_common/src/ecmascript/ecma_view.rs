@@ -106,6 +106,7 @@ pub struct EcmaView {
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
   /// Enum member constant values, keyed by enum name → member name → value.
   /// Used by the finalizer to inline `Direction.Up` style accesses across modules.
+  /// Contains both const and regular enums.
   pub enum_member_value_map: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>>,
   pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
   /// Use `Box` since it is rarely used also it could reduce the size of `EcmaView`, .

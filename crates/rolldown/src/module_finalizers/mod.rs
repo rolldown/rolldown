@@ -1738,7 +1738,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     last_import_stmt_idx.unwrap_or(0)
   }
 
-
   fn process_fn(
     &self,
     symbol_binding_id: Option<KeepNameId>,
@@ -2330,4 +2329,3 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     Some(())
   }
 }
-

@@ -1,6 +1,8 @@
 use std::ptr::addr_of;
 
-use rolldown_common::{ExportsKind, ImportKind, ImportRecordMeta, Module, OutputFormat, WrapKind};
+use rolldown_common::{
+  EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordMeta, Module, OutputFormat, WrapKind,
+};
 
 use crate::utils::external_import_interop::import_record_needs_interop;
 
@@ -84,7 +86,10 @@ impl LinkStage<'_> {
 
       let is_entry = self.entries.contains_key(&importer.idx);
       if matches!(importer.exports_kind, ExportsKind::CommonJs)
-        && (!is_entry || matches!(self.options.format, OutputFormat::Esm))
+        && (!is_entry
+          || matches!(self.options.format, OutputFormat::Esm)
+          || (matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd)
+            && importer.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports)))
       {
         self.metas[importer.idx].sync_wrap_kind(WrapKind::Cjs);
       }

@@ -1,0 +1,20 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.cjs" }],
+    "name": "myLib",
+    "minify": false
+  },
+  "configVariants": [
+    {
+      "_configName": "iife",
+      "format": "iife",
+      "entryFilenames": "main.cjs",
+      "footer": "module.exports = myLib;"
+    },
+    {
+      "_configName": "umd",
+      "format": "umd",
+      "entryFilenames": "main.cjs"
+    }
+  ]
+}

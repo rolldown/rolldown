@@ -127,9 +127,7 @@ console.log(void 0);
 //#region es6-ns-export-const-enum.ts
 let ns$2;
 (function(_ns) {
-	_ns.Foo = /* @__PURE__ */ function(Foo) {
-		return Foo;
-	}({});
+	_ns.Foo = Foo;
 })(ns$2 || (ns$2 = {}));
 console.log(void 0);
 //#endregion

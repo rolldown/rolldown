@@ -7,14 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.ts
-var a_num = /* @__PURE__ */ function(a_num) {
-	a_num[a_num["x"] = 123] = "x";
-	return a_num;
-}(a_num || {});
-var b_num = /* @__PURE__ */ function(b_num) {
-	b_num[b_num["x"] = 123] = "x";
-	return b_num;
-}(b_num || {});
 var c_num = /* @__PURE__ */ function(c_num) {
 	c_num[c_num["x"] = 123] = "x";
 	return c_num;
@@ -27,14 +19,6 @@ var e_num = /* @__PURE__ */ function(e_num) {
 	e_num[e_num["x"] = 123] = "x";
 	return e_num;
 }(e_num || {});
-var a_str = /* @__PURE__ */ function(a_str) {
-	a_str["x"] = "abc";
-	return a_str;
-}(a_str || {});
-var b_str = /* @__PURE__ */ function(b_str) {
-	b_str["x"] = "abc";
-	return b_str;
-}(b_str || {});
 var c_str = /* @__PURE__ */ function(c_str) {
 	c_str["x"] = "abc";
 	return c_str;
@@ -48,10 +32,10 @@ var e_str = /* @__PURE__ */ function(e_str) {
 	return e_str;
 }(e_str || {});
 inlined = [
-	a_num.x,
-	b_num["x"],
-	a_str.x,
-	b_str["x"]
+	123,
+	123,
+	"abc",
+	"abc"
 ];
 not_inlined = [
 	c_num?.x,

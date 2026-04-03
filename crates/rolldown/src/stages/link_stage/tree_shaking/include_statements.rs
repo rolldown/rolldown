@@ -71,6 +71,9 @@ pub struct IncludeContext<'a> {
   pub module_inclusion_changed: bool,
   pub module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
   pub json_module_none_self_reference_included_symbol: FxHashMap<ModuleIdx, FxHashSet<SymbolRef>>,
+  /// True if any module has enum member values to inline. Allows skipping enum
+  /// checks in the hot tree-shaking loop for enum-free bundles.
+  pub has_enum_inlining: bool,
 }
 
 impl<'a> IncludeContext<'a> {
@@ -87,6 +90,7 @@ impl<'a> IncludeContext<'a> {
     options: &'a NormalizedBundlerOptions,
     normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
     module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
+    has_enum_inlining: bool,
   ) -> Self {
     Self {
       modules,
@@ -105,6 +109,7 @@ impl<'a> IncludeContext<'a> {
       module_inclusion_changed: false,
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
+      has_enum_inlining,
     }
   }
 }
@@ -217,6 +222,9 @@ impl LinkStage<'_> {
       IndexBitSet::new(self.module_table.modules.len());
     let mut module_namespace_included_reason: ModuleNamespaceReasonVec =
       oxc_index::index_vec![ModuleNamespaceIncludedReason::empty(); self.module_table.len()];
+    self.has_enum_inlining = self.module_table.modules.iter().any(|m| {
+      m.as_normal().is_some_and(|n| !n.ecma_view.enum_member_value_map.is_empty())
+    });
     let context = &mut IncludeContext::new(
       &self.module_table.modules,
       &self.symbols,
@@ -229,6 +237,7 @@ impl LinkStage<'_> {
       self.options,
       &self.normal_symbol_exports_chain_map,
       &mut module_namespace_included_reason,
+      self.has_enum_inlining,
     );
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
@@ -377,6 +386,7 @@ impl LinkStage<'_> {
       self.options,
       &self.normal_symbol_exports_chain_map,
       &mut module_namespace_included_reason,
+      self.has_enum_inlining,
     );
     include_runtime_symbol(context, &self.runtime, depended_runtime_helper);
 
@@ -914,6 +924,35 @@ pub fn include_statement(
         // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
       }
     } else {
+      // For enum member accesses (e.g., `B.member`), check if the member will be inlined
+      // by the finalizer. If so, skip including the enum's declaration — it's dead code
+      // after inlining. This mirrors the `constant_symbol_map` bypass in `include_symbol`.
+      //
+      // This applies to both const and regular enums. The member access will be replaced
+      // by a literal, so the reference no longer needs the declaration. If the enum is
+      // also referenced as a bare symbol (e.g., `typeof E`, `console.log(E)`), that
+      // separate reference will independently include the declaration via `include_symbol`.
+      // Regular enum IIFEs are `@__PURE__`, so they'll be tree-shaken if truly unused.
+      if ctx.has_enum_inlining {
+        if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = reference_ref {
+          let canonical_ref = ctx.symbols.canonical_ref_for(member_expr_ref.object_ref);
+          if let Some(Module::Normal(owner_module)) = ctx.modules.get(canonical_ref.owner) {
+            let symbol_name = canonical_ref.name(ctx.symbols);
+            if let Some(members) = owner_module.ecma_view.enum_member_value_map.get(symbol_name) {
+              // Only bypass for simple member accesses (e.g., `E.member`), not deep chains
+              // like `E.member.something` which wouldn't be inlined.
+              if member_expr_ref.prop_and_span_list.len() == 1 {
+                let prop_name =
+                  member_expr_ref.prop_and_span_list.first().map(|p| p.name.as_str());
+                if prop_name.is_some_and(|name| members.contains_key(name)) {
+                  // This member access will be inlined — don't include the enum declaration.
+                  return;
+                }
+              }
+            }
+          }
+        }
+      }
       let original_ref = reference_ref.symbol_ref();
       std::iter::once(original_ref)
         .chain(

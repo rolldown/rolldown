@@ -6,22 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## foo.js
 
 ```js
-//#region bar.ts
-let Foo = /* @__PURE__ */ function(Foo) {
-	Foo[Foo["%/*"] = 1] = "%/*";
-	Foo[Foo["*/%"] = 2] = "*/%";
-	return Foo;
-}({});
-//#endregion
 //#region foo.ts
-var Bar = /* @__PURE__ */ function(Bar) {
-	Bar[Bar["%/*"] = 1] = "%/*";
-	Bar[Bar["*/%"] = 2] = "*/%";
-	return Bar;
-}(Bar || {});
 console.log({
-	"should have comments": [Foo["%/*"], Bar["%/*"]],
-	"should not have comments": [Foo["*/%"], Bar["*/%"]]
+	"should have comments": [1, 1],
+	"should not have comments": [2, 2]
 });
 //#endregion
 

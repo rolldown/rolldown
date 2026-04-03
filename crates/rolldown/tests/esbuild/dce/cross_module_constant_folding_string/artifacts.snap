@@ -30,29 +30,22 @@ console.log(["string"], ["foobar"], [
 ## enum-entry.js
 
 ```js
-//#region enum-constants.ts
-let x = /* @__PURE__ */ function(x) {
-	x["a"] = "foo";
-	x["b"] = "bar";
-	return x;
-}({});
-//#endregion
 //#region enum-entry.ts
-console.log([typeof x.b], [x.a + x.b], [
-	x.a < x.b,
-	x.a > x.b,
-	x.a <= x.b,
-	x.a >= x.b,
-	x.a == x.b,
-	x.a != x.b,
-	x.a === x.b,
-	x.a !== x.b
+console.log(["string"], ["foobar"], [
+	false,
+	true,
+	false,
+	true,
+	false,
+	true,
+	false,
+	true
 ], [
-	x.a && x.b,
-	x.a || x.b,
-	x.a ?? x.b,
-	x.a ? "y" : "n",
-	!x.b ? "y" : "n"
+	"bar",
+	"foo",
+	"foo",
+	"y",
+	"n"
 ]);
 //#endregion
 
@@ -61,18 +54,10 @@ console.log([typeof x.b], [x.a + x.b], [
 ## nested-entry.js
 
 ```js
-//#region nested-constants.ts
-let x = /* @__PURE__ */ function(x) {
-	x["a"] = "FOO";
-	x["b"] = "BAR";
-	x["c"] = "BAZ";
-	return x;
-}({});
-//#endregion
 //#region nested-entry.ts
 console.log({
 	"should be foobarbaz": "foobarbaz",
-	"should be FOOBARBAZ": x.a + x.b + x.c
+	"should be FOOBARBAZ": "FOOBARBAZ"
 });
 //#endregion
 

@@ -433,6 +433,7 @@ impl GlobImportVisit<'_> {
 
     let common = self.get_common_base(&positive_globs);
     let entries = walkdir::WalkDir::new(common.as_ref())
+      .follow_links(true)
       .sort_by(|a, b| a.file_name().cmp(b.file_name()))
       .into_iter()
       .filter_entry(|entry| {

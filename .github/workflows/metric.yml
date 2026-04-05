@@ -23,7 +23,7 @@ jobs:
       time: ${{ steps.run.outputs.COMPILE_TIME }}
       binary_size: ${{ steps.run.outputs.BINARY_SIZE }}
     steps:
-      - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
       - uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
         with:
           cache-key: metric
@@ -56,7 +56,7 @@ jobs:
           token: ${{ secrets.METRIC_SECRET_KEY }}
           persist-credentials: true # required by `git push` below
 
-      - uses: voidzero-dev/setup-vp@e34774bccb4e7d7f2e23514ca980177a71425e43 # v1.5.0
+      - uses: voidzero-dev/setup-vp@8ecb39174989ce55af90f45cf55b02738599831d # v1.6.0
         with:
           cache: true
 

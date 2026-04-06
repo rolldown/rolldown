@@ -1,0 +1,12 @@
+{
+  "expectExecuted": false,
+  "config": {
+    "format": "iife",
+    "input": [{ "import": "./main.cjs" }]
+  },
+  "configVariants": [
+    {
+      "format": "umd"
+    }
+  ]
+}

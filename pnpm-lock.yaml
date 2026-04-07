@@ -278,9 +278,6 @@ importers:
       knip:
         specifier: ^6.0.0
         version: 6.1.0(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)
-      oxfmt:
-        specifier: ^0.43.0
-        version: 0.43.0
       playwright-chromium:
         specifier: ^1.56.1
         version: 1.58.2

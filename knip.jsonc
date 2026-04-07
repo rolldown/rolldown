@@ -6,7 +6,6 @@
     ".": {
       "project": [],
       "ignoreDependencies": [
-        "oxfmt",
         "@oxc-project/runtime",
         "cjs-module-lexer",
         "playwright-chromium",

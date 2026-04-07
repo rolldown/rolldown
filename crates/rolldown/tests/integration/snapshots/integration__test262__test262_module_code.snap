@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 542 passed, 50 failed, 592 total
+Summary: 543 passed, 51 failed, 594 total
 
 ---
 
@@ -1597,6 +1597,21 @@ Cannot assign to import 'indirect'
 Cannot assign to import 'local1'
 Cannot assign to import 'local2'
 Cannot assign to import 'renamed'
+---
+
+# language/module-code/namespace/internals/super-access-to-tdz-binding.js
+Result: FAIL
+Expected: success
+Actual:
+Runtime error: Failed to import test module: Test262Error {
+  message: 'Expected a ReferenceError but got a TypeError'
+}
+---
+
+# language/module-code/namespace/internals/super-set-to-tdz-binding-with-accessor.js
+Result: PASS
+Expected: success
+Actual: Runtime execution succeeded
 ---
 
 # language/module-code/parse-err-decl-pos-export-arrow-function.js

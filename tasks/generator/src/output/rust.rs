@@ -41,20 +41,25 @@ pub fn rust_fmt(source_text: &str) -> String {
 }
 
 pub fn ecma_fmt(source_text: &str, path: &str) -> String {
-  let npx = if cfg!(target_os = "windows") { "npx.cmd" } else { "npx" };
-  let mut npx = Command::new(npx)
-    .args(["oxfmt", "--stdin-filepath", path])
+  let vp = if cfg!(target_os = "windows") { "vp.cmd" } else { "vp" };
+  let mut vp = Command::new(vp)
+    .args(["fmt", "--stdin-filepath", path])
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
     .spawn()
     .expect("Failed to run `oxfmt` (is it installed?)");
 
-  let stdin = npx.stdin.as_mut().unwrap();
+  let stdin = vp.stdin.as_mut().unwrap();
   stdin.write_all(source_text.as_bytes()).unwrap();
   stdin.flush().unwrap();
 
-  let output = npx.wait_with_output().unwrap();
-  String::from_utf8(output.stdout).unwrap()
+  let output = vp.wait_with_output().unwrap();
+  let stdout = String::from_utf8(output.stdout).unwrap();
+  // Strip the "VITE+ - The Unified Toolchain for the Web\n\n" banner from vp stdout
+  stdout
+    .strip_prefix("VITE+ - The Unified Toolchain for the Web\n\n")
+    .unwrap_or(&stdout)
+    .to_string()
 }
 
 pub fn replace_range_string(original: &str, span: Span, replacement: &str) -> String {

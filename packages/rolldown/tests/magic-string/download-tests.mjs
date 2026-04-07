@@ -252,16 +252,20 @@ function escapeRegex(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function formatWithOxfmt(content, filepath) {
+function formatWithVpFmt(content, filepath) {
   try {
-    const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-    return execSync(`${npx} oxfmt --stdin-filepath ${filepath}`, {
+    const vp = process.platform === 'win32' ? 'vp.cmd' : 'vp';
+    const banner = 'VITE+ - The Unified Toolchain for the Web\n\n';
+    const output = execSync(`${vp} fmt --stdin-filepath ${filepath}`, {
       input: content,
       encoding: 'utf-8',
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large files
     });
+    return output.startsWith(banner) ? output.slice(banner.length) : output;
   } catch (error) {
-    console.warn(`  Warning: oxfmt formatting failed, using unformatted content: ${error.message}`);
+    console.warn(
+      `  Warning: vp fmt formatting failed, using unformatted content: ${error.message}`,
+    );
     return content;
   }
 }
@@ -278,8 +282,8 @@ async function main() {
       const outputFilename = filename.replace('.test.js', '.test.ts');
       const outputPath = join(__dirname, outputFilename);
 
-      // Format with oxfmt before saving
-      const formatted = formatWithOxfmt(transformed, outputFilename);
+      // Format with vp fmt before saving
+      const formatted = formatWithVpFmt(transformed, outputFilename);
 
       writeFileSync(outputPath, formatted, 'utf-8');
       console.log(`  Saved: ${outputFilename}`);

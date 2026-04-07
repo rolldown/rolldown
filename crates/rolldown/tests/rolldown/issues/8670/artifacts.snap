@@ -1,0 +1,66 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.cjs
+var require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.foo = "foo";
+}));
+
+//#endregion
+export default require_main();
+
+```
+
+# Variant: iife: [entry_filenames: "main.cjs"] [format: Iife]
+
+## Assets
+
+### main.cjs
+
+```js
+var myLib = (function() {
+
+// HIDDEN [\0rolldown/runtime.js]
+
+//#region main.cjs
+	var require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.foo = "foo";
+	}));
+
+//#endregion
+return require_main();
+
+})();
+module.exports = myLib;
+```
+
+# Variant: umd: [entry_filenames: "main.cjs"] [format: Umd]
+
+## Assets
+
+### main.cjs
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports =  factory() :
+  typeof define === 'function' && define.amd ? define([], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.myLib = factory()));
+})(this, function() {
+// HIDDEN [\0rolldown/runtime.js]
+
+//#region main.cjs
+	var require_main = /* @__PURE__ */ __commonJSMin(((exports) => {
+		exports.foo = "foo";
+	}));
+
+//#endregion
+return require_main();
+
+});
+```

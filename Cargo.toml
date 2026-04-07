@@ -234,9 +234,7 @@ napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-# NOTE: Using local path deps for const enum support development.
-# Revert to version-based deps before merging.
-oxc = { path = "../oxc/crates/oxc", features = [
+oxc = { git = "https://github.com/oxc-project/oxc.git", branch = "test/enum-string-alias-member", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -248,13 +246,15 @@ oxc = { path = "../oxc/crates/oxc", features = [
   "regular_expression",
   "cfg",
 ] }
-oxc_allocator = { path = "../oxc/crates/oxc_allocator", features = ["pool"] }
-oxc_ecmascript = { path = "../oxc/crates/oxc_ecmascript" }
-oxc_napi = { version = "0.123.0" }
-oxc_minify_napi = { version = "0.123.0" }
-oxc_parser_napi = { version = "0.123.0" }
-oxc_transform_napi = { version = "0.123.0" }
-oxc_traverse = { path = "../oxc/crates/oxc_traverse" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc.git", branch = "test/enum-string-alias-member", features = [
+  "pool",
+] }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc.git", branch = "test/enum-string-alias-member" }
+oxc_napi = { git = "https://github.com/oxc-project/oxc.git", branch = "test/enum-string-alias-member" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc.git", branch = "test/enum-string-alias-member" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc.git", branch = "test/enum-string-alias-member" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc.git", branch = "test/enum-string-alias-member" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc.git", branch = "test/enum-string-alias-member" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

@@ -51,50 +51,43 @@ console.log([
 ## enum-entry.js
 
 ```js
-//#region enum-constants.ts
-let x = /* @__PURE__ */ function(x) {
-	x[x["a"] = 3] = "a";
-	x[x["b"] = 6] = "b";
-	return x;
-}({});
-//#endregion
 //#region enum-entry.ts
 console.log([
-	+x.b,
-	-x.b,
-	~x.b,
-	!x.b,
-	typeof x.b
+	6,
+	-6,
+	-7,
+	false,
+	"number"
 ], [
-	x.a + x.b,
-	x.a - x.b,
-	x.a * x.b,
-	x.a / x.b,
-	x.a % x.b,
-	x.a ** x.b
+	9,
+	-3,
+	18,
+	3 / 6,
+	3 % 6,
+	3 ** 6
 ], [
-	x.a < x.b,
-	x.a > x.b,
-	x.a <= x.b,
-	x.a >= x.b,
-	x.a == x.b,
-	x.a != x.b,
-	x.a === x.b,
-	x.a !== x.b
+	true,
+	false,
+	true,
+	false,
+	false,
+	true,
+	false,
+	true
 ], [
-	x.b << 1,
-	x.b >> 1,
-	x.b >>> 1
+	12,
+	3,
+	3
 ], [
-	x.a & x.b,
-	x.a | x.b,
-	x.a ^ x.b
+	2,
+	7,
+	5
 ], [
-	x.a && x.b,
-	x.a || x.b,
-	x.a ?? x.b,
-	x.a ? "y" : "n",
-	!x.b ? "y" : "n"
+	6,
+	3,
+	3,
+	"y",
+	"n"
 ]);
 //#endregion
 
@@ -103,18 +96,10 @@ console.log([
 ## nested-entry.js
 
 ```js
-//#region nested-constants.ts
-let x = /* @__PURE__ */ function(x) {
-	x[x["a"] = 16] = "a";
-	x[x["b"] = 32] = "b";
-	x[x["c"] = 64] = "c";
-	return x;
-}({});
-//#endregion
 //#region nested-entry.ts
 console.log({
 	"should be 4": 4,
-	"should be 32": ~(~x.a & ~x.b) & (x.b | x.c)
+	"should be 32": 32
 });
 //#endregion
 

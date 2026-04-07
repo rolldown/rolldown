@@ -47,7 +47,7 @@ pub fn ecma_fmt(source_text: &str, path: &str) -> String {
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
     .spawn()
-    .expect("Failed to run `oxfmt` (is it installed?)");
+    .expect("Failed to run `vp fmt` (is vp installed?)");
 
   let stdin = vp.stdin.as_mut().unwrap();
   stdin.write_all(source_text.as_bytes()).unwrap();

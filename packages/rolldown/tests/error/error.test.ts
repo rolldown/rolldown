@@ -2,6 +2,15 @@ import type { Plugin } from 'rolldown';
 import { rolldown } from 'rolldown';
 import { describe, expect, test, vi } from 'vitest';
 
+async function buildWithOptions(options: Parameters<typeof rolldown>[0]) {
+  try {
+    const build = await rolldown(options);
+    await build.generate();
+  } catch (e) {
+    return e as Error;
+  }
+}
+
 async function buildWithPlugin(plugin: Plugin) {
   try {
     const build = await rolldown({
@@ -208,3 +217,31 @@ describe('Error output format', () => {
 function removeAnsiColors(str: string) {
   return str.replace(/\x1b\[[0-9;]*m/g, '');
 }
+
+// #3997
+describe('"external" option error messages', () => {
+  test('should throw a descriptive error when external function returns a non-boolean value', async () => {
+    const error = await buildWithOptions({
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          name: 'virtual',
+          resolveId(id) {
+            if (id === 'entry') return id;
+          },
+          load(id) {
+            if (id === 'entry') return 'import "foo";';
+          },
+        },
+      ],
+      input: 'entry',
+      // Array.find() returns the matched value (a string) or undefined, not boolean
+      // @ts-expect-error - intentionally passing wrong return type
+      external: (id) => ['foo'].find((name) => id === name),
+    });
+    expect(error).toBeDefined();
+    expect(error!.message).toContain('"external"');
+    expect(error!.message).toContain('boolean');
+    expect(error!.message).toContain('"foo"');
+  });
+});

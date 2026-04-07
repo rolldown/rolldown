@@ -14,9 +14,9 @@ use oxc::transformer_plugins::{
 
 use rolldown_common::{ConstExportMeta, ConstantValue, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
-use rustc_hash::FxHashMap;
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
+use rustc_hash::FxHashMap;
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -63,7 +63,7 @@ impl PreProcessEcmaAst {
 
     // Step 1: Build initial semantic data and check for semantic errors.
     let semantic_ret = ast.program.with_dependent(|_owner, dep| {
-      SemanticBuilder::new().with_check_syntax_error(true).build(&dep.program)
+      SemanticBuilder::new().with_check_syntax_error(true).with_enum_eval(true).build(&dep.program)
     });
 
     let (errors, warnings): (Vec<_>, Vec<_>) =
@@ -110,17 +110,14 @@ impl PreProcessEcmaAst {
           continue;
         }
         let Some(body_scopes) = scoping_ref.get_enum_body_scopes(symbol_id) else { continue };
-        let members = enum_values
-          .entry(CompactStr::from(scoping_ref.symbol_name(symbol_id)))
-          .or_default();
+        let members =
+          enum_values.entry(CompactStr::from(scoping_ref.symbol_name(symbol_id))).or_default();
 
         for &body_scope in body_scopes {
           for (member_name, &member_sym) in scoping_ref.get_bindings(body_scope) {
             if let Some(value) = scoping_ref.get_enum_member_value(member_sym) {
               let rolldown_value = match value {
-                oxc::syntax::constant_value::ConstantValue::Number(n) => {
-                  ConstantValue::Number(*n)
-                }
+                oxc::syntax::constant_value::ConstantValue::Number(n) => ConstantValue::Number(*n),
                 oxc::syntax::constant_value::ConstantValue::String(s) => {
                   ConstantValue::String(s.to_string())
                 }

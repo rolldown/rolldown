@@ -37,7 +37,10 @@ impl ValidateNapiValue for AnyReturnValue {
     _env: napi::sys::napi_env,
     _napi_val: napi::sys::napi_value,
   ) -> napi::Result<napi::sys::napi_value> {
-    // Always valid — this is the catch-all fallback in Either<Ret, AnyReturnValue>
+    // Returning a null pointer signals "valid, no promise rejection needed".
+    // A non-null pointer would represent a `Promise.reject()` value to silence
+    // a rejected promise (used by other NAPI-RS validators for async return types).
+    // Since AnyReturnValue is a synchronous catch-all, null is always correct here.
     Ok(std::ptr::null_mut())
   }
 }

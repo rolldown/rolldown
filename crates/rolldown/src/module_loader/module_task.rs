@@ -85,7 +85,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         .ctx
         .tx
         .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
-        .await
         .expect("ModuleLoader: failed to send build errors - main thread terminated while processing module errors");
     }
   }
@@ -210,7 +209,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       barrel_info,
     }));
 
-    self.ctx.tx.send(result).await.expect(
+    self.ctx.tx.send(result).expect(
       "ModuleLoader channel closed while sending module completion - main thread terminated unexpectedly"
     );
 

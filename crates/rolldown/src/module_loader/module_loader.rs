@@ -96,7 +96,7 @@ impl VisitState {
 
 pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   pub shared_context: Arc<TaskContext<Fs>>,
-  rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
+  rx: tokio::sync::mpsc::UnboundedReceiver<ModuleLoaderMsg>,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
@@ -168,9 +168,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       },
     };
 
-    // 1024 should be enough for most cases
-    // over 1024 pending tasks are insane
-    let (tx, rx) = tokio::sync::mpsc::channel(1024);
+    // Use an unbounded channel to avoid deadlocks when plugins emit many
+    // chunks from synchronous plugin hooks (e.g. `transform`). The napi
+    // `emit_chunk` binding is sync and uses `block_on` on the JS thread;
+    // with a bounded channel, once the channel filled up the send future
+    // would await capacity that only the loader could free — but the loader
+    // needs the JS thread (blocked in `block_on`) to run plugin hooks for
+    // the queued entries. See fixture `plugin/context/emit-chunk-many-from-transform`.
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
     let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta });
 
     let importers = std::mem::take(&mut cache.importers);

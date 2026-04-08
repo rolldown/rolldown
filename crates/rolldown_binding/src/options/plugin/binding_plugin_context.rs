@@ -89,12 +89,19 @@ impl BindingPluginContext {
   }
 
   #[napi]
+  // SYNC-SAFE: `emit_chunk` no longer awaits anything — the entire path
+  // down through `FileEmitter::emit_chunk` is synchronous (see the comment
+  // there for the contention/locking analysis). Closes the `emit_chunk`
+  // item from the sync-NAPI audit in #7311 without changing the JS API.
   pub fn emit_chunk<'env>(
     &self,
     env: &'env Env,
     file: BindingEmittedChunk,
   ) -> napi::Result<napi::JsString<'env>> {
-    let arc_str = napi::bindgen_prelude::block_on(self.inner.emit_chunk(file.try_into()?))?;
+    let arc_str = self
+      .inner
+      .emit_chunk(file.try_into()?)
+      .map_err(|e| napi::Error::from_reason(format!("{e:#}")))?;
     env.create_string(arc_str)
   }
 

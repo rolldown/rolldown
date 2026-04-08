@@ -243,8 +243,16 @@ impl<'text> MagicString<'text> {
     self.intro.push_back(content.into());
   }
 
-  fn iter_chunks(&self) -> impl Iterator<Item = &Chunk<'_>> {
+  pub(crate) fn iter_chunks(&self) -> impl Iterator<Item = &Chunk<'_>> {
     IterChunks { next: Some(self.first_chunk_idx), chunks: &self.chunks }
+  }
+
+  pub(crate) fn global_intro(&self) -> &VecDeque<CowStr<'_>> {
+    &self.intro
+  }
+
+  pub(crate) fn global_outro(&self) -> &VecDeque<CowStr<'_>> {
+    &self.outro
   }
 
   pub(crate) fn fragments(&'text self) -> impl Iterator<Item = &'text str> {

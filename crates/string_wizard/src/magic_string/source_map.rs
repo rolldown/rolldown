@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
-use rustc_hash::FxHashMap;
-
 use crate::{
   MagicString,
   source_map::{
     locator::Locator,
+    precompute_utf16_index_map,
     sourcemap_builder::{Hires, SourcemapBuilder},
   },
 };
@@ -69,27 +68,3 @@ impl MagicString<'_> {
   }
 }
 
-fn precompute_utf16_index_map(
-  source: &str,
-  byte_indices: impl Iterator<Item = u32>,
-) -> FxHashMap<u32, u32> {
-  // Chunk traversal order may not be sorted (e.g. after relocate()), so sort is required.
-  let mut byte_indices: Vec<u32> = byte_indices.collect();
-  byte_indices.sort_unstable();
-  let mut index: u32 = 0;
-  let mut index_utf16: u32 = 0;
-  let mut map: FxHashMap<u32, u32> =
-    FxHashMap::with_capacity_and_hasher(byte_indices.len(), Default::default());
-  for &i in &byte_indices {
-    let slice = &source[index as usize..i as usize];
-    // Fast path: ASCII strings have 1:1 byte-to-UTF-16 mapping
-    index_utf16 += if slice.is_ascii() {
-      slice.len() as u32
-    } else {
-      slice.chars().map(|c| c.len_utf16() as u32).sum::<u32>()
-    };
-    index = i;
-    map.insert(i, index_utf16);
-  }
-  map
-}

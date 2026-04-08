@@ -646,6 +646,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.3
+      magic-string:
+        specifier: ^0.30.17
+        version: 0.30.21
       source-map-js:
         specifier: ^1.2.1
         version: 1.2.1

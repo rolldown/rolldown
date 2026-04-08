@@ -35,6 +35,7 @@
     "@rolldown/test-side-effects-field": "link:./package-fixtures/test-side-effects-field",
     "@rolldown/test-side-effects-field-glob": "file:./package-fixtures/test-side-effects-field-glob",
     "@types/node": "catalog:",
+    "magic-string": "catalog:rollup-tests",
     "source-map-js": "^1.2.1",
     "terser": "catalog:rollup-tests",
     "tsx": "catalog:"

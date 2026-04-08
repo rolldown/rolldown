@@ -337,20 +337,36 @@ impl PluginDriver {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         let map_was_omitted = matches!(r.map, crate::HookTransformOutputMap::Omitted);
         let map_was_null = matches!(r.map, crate::HookTransformOutputMap::Null);
+        // A `Transform` or `Omitted` element sits between the MagicString steps of this module,
+        // so the sourcemap worker must close its in-progress `MagicStringChain` before the next
+        // MagicString arrives, even if the code is unchanged.
+        let mut splits_magic_string_chain = false;
         if let Some(map) = Self::normalize_transform_sourcemap(r.map.into_sourcemap(), id, &code) {
           original_sourcemap_chain.push(SourcemapChainElement::Transform((plugin_idx, map)));
+          splits_magic_string_chain = true;
         } else if map_was_omitted && r.code.is_some() {
           original_sourcemap_chain.push(SourcemapChainElement::Omitted {
             plugin_idx,
             plugin_name: plugin.call_name().as_ref().into(),
           });
+          splits_magic_string_chain = true;
         } else if map_was_null && r.code.as_ref().is_some_and(|new_code| new_code != &code) {
           // The plugin returned `map: null` together with changed code.
+          // This needs no barrier: a `Null` element does not remap positions, and the changed
+          // code already closes the chain in the worker. A native MagicString step also returns
+          // `map: null`, so a barrier here would close the chain after every step.
           original_sourcemap_chain.push(SourcemapChainElement::Null {
             plugin_idx,
             // it will be restored as `sourcesContent` when the map is materialized.
             original_content: ArcStr::from(code.as_str()),
           });
+        }
+        if splits_magic_string_chain {
+          if let Some(tx) = magic_string_tx.as_ref() {
+            tx.send(rolldown_common::SourceMapGenMsg::Barrier(module_idx)).expect(
+              "Failed to send Barrier to sourcemap worker — worker thread terminated unexpectedly",
+            );
+          }
         }
         plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
         if let Some(v) = r.side_effects {

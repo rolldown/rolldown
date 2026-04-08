@@ -24,6 +24,7 @@ simd-utf16-len = { workspace = true }
 
 [dev-dependencies]
 insta = { workspace = true }
+rolldown_sourcemap = { workspace = true }
 
 [features]
 default = ["sourcemap", "serde"]

@@ -841,6 +841,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.3
+      magic-string:
+        specifier: catalog:rollup-tests
+        version: 1.4.5
       source-map-js:
         specifier: ^1.2.1
         version: 1.2.2

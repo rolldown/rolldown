@@ -7,9 +7,9 @@ use oxc_index::IndexVec;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
-  EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
-  ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement, StmtInfos, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PluginIdx,
+  PreserveEntrySignatures, ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement,
+  StmtInfos, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -145,6 +145,18 @@ pub struct ScanStageOutput {
   pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
+/// The MagicString steps of one module that the sourcemap worker composes into one map.
+struct OpenMagicStringChain {
+  chain: string_wizard::MagicStringChain,
+  /// The plugin of the last step. The composed map takes the place of this plugin in the
+  /// module's sourcemap chain.
+  plugin_idx: PluginIdx,
+  /// The module id, which fills the `source` of the composed map.
+  id: ArcStr,
+  /// The resolution of the composed map. All steps in the chain have this resolution.
+  hires: string_wizard::Hires,
+}
+
 impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
   pub fn new(
     options: SharedOptions,
@@ -211,7 +223,24 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     {
       let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
       let handler = thread::spawn(move || {
-        let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();
+        let mut chains: FxHashMap<ModuleIdx, OpenMagicStringChain> = FxHashMap::default();
+        let mut result: FxHashMap<ModuleIdx, Vec<SourcemapChainElement>> = FxHashMap::default();
+
+        let flush_chain =
+          |open: OpenMagicStringChain,
+           module_idx: ModuleIdx,
+           result: &mut FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>| {
+            let sourcemap = open.chain.source_map(string_wizard::SourceMapOptions {
+              source: open.id.as_str().into(),
+              hires: open.hires,
+              ..Default::default()
+            });
+            result
+              .entry(module_idx)
+              .or_default()
+              .push(SourcemapChainElement::Transform((open.plugin_idx, sourcemap)));
+          };
+
         while let Ok(msg) = rx.recv() {
           match msg {
             SourceMapGenMsg::MagicString(v) => {
@@ -219,22 +248,42 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
               // A line-level map loses every column and name behind it once the chain is
               // composed, so the default keeps the word boundaries. The `hires` option of the
               // MagicString overrides it.
-              let generated_sourcemap = magic_string.source_map(string_wizard::SourceMapOptions {
-                source: id.as_str().into(),
-                hires: magic_string.hires().unwrap_or(string_wizard::Hires::Boundary),
-                ..Default::default()
+              let hires = magic_string.hires().unwrap_or(string_wizard::Hires::Boundary);
+
+              // Flush if a non-MagicString plugin changed the code, or if this step asks for a
+              // different resolution. One chain generates one map with one `hires`.
+              if let std::collections::hash_map::Entry::Occupied(entry) = chains.entry(module_idx)
+                && (entry.get().hires != hires
+                  || !entry.get().chain.is_source_compatible(magic_string.source()))
+              {
+                flush_chain(entry.remove(), module_idx, &mut result);
+              }
+
+              let open = chains.entry(module_idx).or_insert_with(|| OpenMagicStringChain {
+                chain: string_wizard::MagicStringChain::new(magic_string.source().to_string()),
+                plugin_idx,
+                id,
+                hires,
               });
-              map
-                .entry(module_idx)
-                .or_default()
-                .push(SourcemapChainElement::Transform((plugin_idx, generated_sourcemap)));
+              open.chain.end(magic_string);
+              open.plugin_idx = plugin_idx;
+            }
+            SourceMapGenMsg::Barrier(module_idx) => {
+              if let Some(open) = chains.remove(&module_idx) {
+                flush_chain(open, module_idx, &mut result);
+              }
             }
             SourceMapGenMsg::Terminate => {
               break;
             }
           }
         }
-        map
+
+        for (module_idx, open) in chains {
+          flush_chain(open, module_idx, &mut result);
+        }
+
+        result
       });
       (Some(tx), Some(handler))
     } else {

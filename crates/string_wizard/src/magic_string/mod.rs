@@ -297,7 +297,7 @@ impl<'text> MagicString<'text> {
     ordered
   }
 
-  fn iter_chunks(&self) -> impl Iterator<Item = &Chunk<'_>> {
+  pub(crate) fn iter_chunks(&self) -> impl Iterator<Item = &Chunk<'_>> {
     IterChunks { next: Some(self.first_chunk_idx), chunks: &self.chunks }
   }
 
@@ -308,6 +308,14 @@ impl<'text> MagicString<'text> {
   /// this returns `true`.
   pub fn is_range_within_edited_chunk(&self, start: u32, end: u32) -> bool {
     self.iter_chunks().any(|c| c.start() <= start && end <= c.end() && c.is_edited())
+  }
+
+  pub(crate) fn global_intro(&self) -> &VecDeque<CowStr<'_>> {
+    &self.intro
+  }
+
+  pub(crate) fn global_outro(&self) -> &VecDeque<CowStr<'_>> {
+    &self.outro
   }
 
   pub(crate) fn fragments(&'text self) -> impl Iterator<Item = &'text str> {

@@ -67,4 +67,3 @@ impl MagicString<'_> {
     source_map
   }
 }
-

@@ -155,9 +155,9 @@ impl MagicStringChain {
           ));
           chunk.edited_content = Some(content.into());
           chunk.keep_in_mappings = segment.keep_in_mappings;
-          let name = segment
-            .keep_in_mappings
-            .then(|| &self.original_source[segment.original_start as usize..segment.original_end as usize]);
+          let name = segment.keep_in_mappings.then(|| {
+            &self.original_source[segment.original_start as usize..segment.original_end as usize]
+          });
           builder.add_chunk(
             &chunk,
             utf16_map[&segment.original_start],

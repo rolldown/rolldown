@@ -105,6 +105,10 @@ pub struct Chunk {
   pub entry_level_external_module_idx: Vec<ModuleIdx>,
   pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
   pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
+  /// For imports through WrapKind::None re-export modules that resolve to
+  /// cross-chunk ESM-wrapped modules: maps the re-export module idx to the
+  /// list of ESM module indices needing init calls.
+  pub reexport_cross_chunk_inits: FxHashMap<ModuleIdx, Vec<ModuleIdx>>,
   pub transformed_parts_rendered: FxIndexMap<(ModuleIdx, ImportRecordIdx), String>,
   pub module_groups: Vec<ModuleGroup>,
   pub module_idx_to_group_idx: FxHashMap<ModuleIdx, usize>,

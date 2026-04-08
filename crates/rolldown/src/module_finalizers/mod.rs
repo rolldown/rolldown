@@ -139,7 +139,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
 
     // Only generate init calls for modules in the same chunk whose wrapper is
-    // declared (i.e. the module is included in the output).
+    // declared locally. Cross-chunk init calls are handled separately via
+    // reexport_cross_chunk_inits.
     if importee_linking_info.is_included
       && self.ctx.chunk_graph.module_to_chunk[importee.idx] == Some(self.ctx.chunk_idx)
     {
@@ -1353,6 +1354,34 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let span = import_decl.span;
           let rec_idx = self.ctx.module.imports[&import_decl.span];
           if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
+            // For WrapKind::None importees (re-exports), generate init calls for
+            // cross-chunk ESM-wrapped modules (precomputed by
+            // ensure_lazy_module_initialization_order).
+            if let Some(resolved_module_idx) =
+              self.ctx.module.import_records[rec_idx].resolved_module
+            {
+              if let Some(esm_modules) = self.ctx.chunk_graph.chunk_table[self.ctx.chunk_idx]
+                .reexport_cross_chunk_inits
+                .get(&resolved_module_idx)
+              {
+                for &esm_idx in esm_modules {
+                  if !self.generated_init_esm_importee_ids.insert(esm_idx) {
+                    continue;
+                  }
+                  let linking_info = &self.ctx.linking_infos[esm_idx];
+                  let Some(wrapper_ref) = linking_info.wrapper_ref else { continue };
+                  let (expr, _) = self.finalized_expr_for_symbol_ref(wrapper_ref, false, false);
+                  let call = self.snippet.builder.expression_call(
+                    SPAN,
+                    expr,
+                    NONE,
+                    self.snippet.builder.vec(),
+                    false,
+                  );
+                  program.body.push(self.snippet.builder.statement_expression(SPAN, call));
+                }
+              }
+            }
             for comment in &mut program.comments {
               if comment.attached_to == span.start {
                 comment.attached_to = 0;
@@ -1368,6 +1397,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           // "export * as ns from 'path'"
           if let Some(_alias) = &export_all_decl.exported {
             if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
+              if let Some(resolved_module_idx) =
+                self.ctx.module.import_records[rec_idx].resolved_module
+              {
+                if let Some(esm_modules) = self.ctx.chunk_graph.chunk_table[self.ctx.chunk_idx]
+                  .reexport_cross_chunk_inits
+                  .get(&resolved_module_idx)
+                {
+                  for esm_idx in esm_modules.clone() {
+                    self.generate_transitive_esm_init(esm_idx, &mut program.body);
+                  }
+                }
+              }
               return;
             }
           } else {
@@ -1623,6 +1664,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             // `export { foo } from 'path'`
             let rec_idx = self.ctx.module.imports[&named_decl.span];
             if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
+              if let Some(resolved_module_idx) =
+                self.ctx.module.import_records[rec_idx].resolved_module
+              {
+                if let Some(esm_modules) = self.ctx.chunk_graph.chunk_table[self.ctx.chunk_idx]
+                  .reexport_cross_chunk_inits
+                  .get(&resolved_module_idx)
+                {
+                  for esm_idx in esm_modules.clone() {
+                    self.generate_transitive_esm_init(esm_idx, &mut program.body);
+                  }
+                }
+              }
               return;
             }
           }

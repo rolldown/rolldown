@@ -1,0 +1,22 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "barrel",
+          "test": "barrel\\.js$"
+        },
+        {
+          "name": "leaf",
+          "test": "leaf\\.js$"
+        }
+      ]
+    }
+  }
+}

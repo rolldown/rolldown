@@ -1,4 +1,53 @@
 
+## [1.0.0-rc.14] - 2026-04-08
+
+### 🚀 Features
+
+- rust: add `disable_panic_hook` feature to disable the panic hook (#9023) by @sapphi-red
+- support inlineConst for CJS exports accessed through module.exports (#8976) by @h-a-n-a
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_vite_import_glob: normalize resolved alias path to prevent double slashes (#9032) by @shulaoda
+- rolldown_plugin_vite_import_glob: follow symlinks in file scanning (#9000) by @Copilot
+- wrap CJS entry modules for IIFE/UMD when using exports/module (#8999) by @IWANABETHATGUY
+- emit separate __toESM bindings for mixed ESM/CJS external imports (#8987) by @IWANABETHATGUY
+- tree-shake dead dynamic imports to side-effect-free CJS modules (#8529) by @sapphi-red
+- skip inlining stale CJS export constants on module.exports reassignment (#8990) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- generator: migrate ecma formatting from npx oxfmt to vp fmt (#9022) by @shulaoda
+- generator: replace npx oxfmt with vp fmt for ecma formatting (#9021) by @shulaoda
+
+### 📚 Documentation
+
+- contrib-guide: mention that running tests on older Node.js version will have different stat results (#8996) by @Claude
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update npm packages (#9002) by @renovate[bot]
+- deps: update dependency @napi-rs/cli to v3.6.1 (#9034) by @renovate[bot]
+- deps: upgrade oxc to 0.124.0 (#9018) by @shulaoda
+- deps: update test262 submodule for tests (#9010) by @sapphi-red
+- deps: update dependency oxfmt to ^0.44.0 (#9012) by @renovate[bot]
+- deps: update dependency vite to v8.0.5 [security] (#9009) by @renovate[bot]
+- deps: update dependency vite-plus to v0.1.16 (#9008) by @renovate[bot]
+- deps: update rust crates (#9003) by @renovate[bot]
+- deps: update github-actions (#9004) by @renovate[bot]
+- deps: update dependency lodash-es to v4.18.1 [security] (#8992) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.45.0 (#8988) by @renovate[bot]
+- upgrade oxc npm packages to 0.123.0 (#8985) by @shulaoda
+
+### ◀️ Revert
+
+- "chore(deps): update dependency oxfmt to ^0.44.0 (#9012)" (#9019) by @shulaoda
+
+### ❤️ New Contributors
+
+* @Claude made their first contribution in [#8996](https://github.com/rolldown/rolldown/pull/8996)
+
+
 ## [1.0.0-rc.13] - 2026-04-01
 
 ### 🚀 Features

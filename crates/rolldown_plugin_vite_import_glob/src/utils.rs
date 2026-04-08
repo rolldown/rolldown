@@ -300,10 +300,10 @@ impl GlobImportVisit<'_> {
         }),
       );
 
-      let resolved_id = rolldown_utils::futures::block_on(future)
-        .ok()
-        .and_then(Result::ok)
-        .map(|resolved| resolved.id.to_string());
+      let resolved_id =
+        rolldown_utils::futures::block_on(future).ok().and_then(Result::ok).map(|resolved| {
+          PathBuf::from(resolved.id.as_str()).normalize().to_slash_lossy().into_owned()
+        });
 
       if let Some(ref id) = resolved_id
         && Path::new(id.as_str()).is_absolute()

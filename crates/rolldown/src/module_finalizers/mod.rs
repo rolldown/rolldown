@@ -132,44 +132,48 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     module_idx: ModuleIdx,
     body: &mut allocator::Vec<'ast, Statement<'ast>>,
   ) {
-    let Module::Normal(importee) = &self.ctx.modules[module_idx] else { return };
-    let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-    if !matches!(importee_linking_info.wrap_kind(), WrapKind::Esm) {
-      return;
-    }
+    let mut stack = vec![module_idx];
+    while let Some(module_idx) = stack.pop() {
+      let Module::Normal(importee) = &self.ctx.modules[module_idx] else { continue };
+      let importee_linking_info = &self.ctx.linking_infos[importee.idx];
+      if !matches!(importee_linking_info.wrap_kind(), WrapKind::Esm) {
+        continue;
+      }
 
-    // Guard against infinite recursion from circular dependencies.
-    // `generated_init_esm_importee_ids` serves double duty: it tracks both
-    // modules for which we already emitted an init call AND modules we have
-    // already visited during transitive traversal.
-    if !self.generated_init_esm_importee_ids.insert(importee.idx) {
-      return;
-    }
+      // `generated_init_esm_importee_ids` serves double duty: it tracks both
+      // modules for which we already emitted an init call AND modules we have
+      // already visited during transitive traversal.
+      if !self.generated_init_esm_importee_ids.insert(importee.idx) {
+        continue;
+      }
 
-    // Only generate init calls for modules in the same chunk whose wrapper is
-    // declared (i.e. the module is included in the output).
-    if importee_linking_info.is_included
-      && self.ctx.chunk_graph.module_to_chunk[importee.idx] == Some(self.ctx.chunk_idx)
-    {
-      let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(
-        importee_linking_info.wrapper_ref.unwrap(),
-        false,
-        false,
-      );
-      let init_call = self.snippet.builder.expression_call(
-        SPAN,
-        wrapper_ref_expr,
-        NONE,
-        self.snippet.builder.vec(),
-        false,
-      );
-      body.push(self.snippet.builder.statement_expression(SPAN, init_call));
-    } else {
-      // Importee is not included (barrel module) — traverse its import records
-      // to find included importees transitively.
-      for rec in &importee.import_records {
-        if let Some(sub_importee_idx) = rec.resolved_module {
-          self.generate_transitive_esm_init(sub_importee_idx, body);
+      // Only generate init calls for modules in the same chunk whose wrapper is
+      // declared (i.e. the module is included in the output).
+      if importee_linking_info.is_included
+        && self.ctx.chunk_graph.module_to_chunk[importee.idx] == Some(self.ctx.chunk_idx)
+      {
+        let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(
+          importee_linking_info.wrapper_ref.unwrap(),
+          false,
+          false,
+        );
+        let init_call = self.snippet.builder.expression_call(
+          SPAN,
+          wrapper_ref_expr,
+          NONE,
+          self.snippet.builder.vec(),
+          false,
+        );
+        body.push(self.snippet.builder.statement_expression(SPAN, init_call));
+      } else {
+        // Importee is not included (barrel module) — traverse its import records
+        // to find included importees transitively.
+        // Preserve the old recursive DFS order when using an explicit LIFO stack:
+        // pushing children in reverse keeps source-order visitation left-to-right.
+        for rec in importee.import_records.iter().rev() {
+          if let Some(sub_importee_idx) = rec.resolved_module {
+            stack.push(sub_importee_idx);
+          }
         }
       }
     }

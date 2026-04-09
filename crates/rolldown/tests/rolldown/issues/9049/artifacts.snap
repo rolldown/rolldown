@@ -1,0 +1,91 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## base.js
+
+```js
+//#region base.js
+function base() {
+	return "base";
+}
+//#endregion
+export { base as t };
+
+```
+
+## entry1.js
+
+```js
+import { t as base } from "./base.js";
+import { t as shared12 } from "./shared_12.js";
+import { t as shared123 } from "./shared_123.js";
+//#region entry1.js
+const e1 = shared12() + shared123() + base();
+//#endregion
+export { e1 };
+
+```
+
+## entry2.js
+
+```js
+import { t as base } from "./base.js";
+import { t as shared12 } from "./shared_12.js";
+import { t as shared123 } from "./shared_123.js";
+//#region entry2.js
+const e2 = shared12() + shared123() + base();
+//#endregion
+export { e2 };
+
+```
+
+## entry3.js
+
+```js
+import { t as base } from "./base.js";
+import { t as shared123 } from "./shared_123.js";
+//#region entry3.js
+const e3 = shared123() + base();
+//#endregion
+export { e3 };
+
+```
+
+## entry4.js
+
+```js
+import { t as base } from "./base.js";
+//#region entry4.js
+const e4 = base();
+//#endregion
+export { e4 };
+
+```
+
+## shared_12.js
+
+```js
+import { t as base } from "./base.js";
+//#region shared_12.js
+function shared12() {
+	return "shared12:" + base();
+}
+//#endregion
+export { shared12 as t };
+
+```
+
+## shared_123.js
+
+```js
+import { t as base } from "./base.js";
+//#region shared_123.js
+function shared123() {
+	return "shared123:" + base();
+}
+//#endregion
+export { shared123 as t };
+
+```

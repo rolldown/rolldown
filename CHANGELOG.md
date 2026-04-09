@@ -1,4 +1,15 @@
 
+## [1.0.0-rc.15] - 2026-04-09
+
+### 🐛 Bug Fixes
+
+- prevent stack overflow in `generate_transitive_esm_init` on circular dependencies (#9041) by @shulaoda
+
+### 🚜 Refactor
+
+- agents: rename Spec-Driven Development to Context Engineering (#9036) by @hyf0
+
+
 ## [1.0.0-rc.14] - 2026-04-08
 
 ### 🚀 Features

@@ -40,7 +40,9 @@ impl From<BindingViteReporterPluginConfig> for ViteReporterPlugin {
       log_info: config.log_info.map(|log_info| -> Arc<LogInfoFn> {
         Arc::new(move |msg: String| {
           let cb = Arc::clone(&log_info);
-          Box::pin(async move { cb.invoke_async(msg).await.map_err(anyhow::Error::from) })
+          Box::pin(async move {
+            cb.invoke_async(msg, "viteReporter.callback").await.map_err(anyhow::Error::from)
+          })
         })
       }),
     }

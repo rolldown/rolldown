@@ -19,28 +19,36 @@ struct NapiWatcherEventHandler {
 impl WatcherEventHandler for NapiWatcherEventHandler {
   async fn on_event(&self, event: WatchEvent) {
     let binding_event = BindingWatcherEvent::from_watch_event(event);
-    if let Err(e) = self.listener.await_call(FnArgs { data: (binding_event,) }).await {
+    if let Err(e) =
+      self.listener.await_call(FnArgs { data: (binding_event,) }, "watcher.onEvent").await
+    {
       eprintln!("watcher on_event listener error: {e:?}");
     }
   }
 
   async fn on_change(&self, path: &str, kind: WatcherChangeKind) {
     let binding_event = BindingWatcherEvent::from_change(path.to_string(), kind.to_string());
-    if let Err(e) = self.listener.await_call(FnArgs { data: (binding_event,) }).await {
+    if let Err(e) =
+      self.listener.await_call(FnArgs { data: (binding_event,) }, "watcher.onChange").await
+    {
       eprintln!("watcher on_change listener error: {e:?}");
     }
   }
 
   async fn on_restart(&self) {
     let binding_event = BindingWatcherEvent::from_restart();
-    if let Err(e) = self.listener.await_call(FnArgs { data: (binding_event,) }).await {
+    if let Err(e) =
+      self.listener.await_call(FnArgs { data: (binding_event,) }, "watcher.onRestart").await
+    {
       eprintln!("watcher on_restart listener error: {e:?}");
     }
   }
 
   async fn on_close(&self) {
     let binding_event = BindingWatcherEvent::from_close();
-    if let Err(e) = self.listener.await_call(FnArgs { data: (binding_event,) }).await {
+    if let Err(e) =
+      self.listener.await_call(FnArgs { data: (binding_event,) }, "watcher.onClose").await
+    {
       eprintln!("watcher on_close listener error: {e:?}");
     }
   }

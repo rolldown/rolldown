@@ -73,6 +73,7 @@ impl Plugin for JsPlugin {
     if let Some(cb) = &self.build_start {
       cb.await_call(
         (ctx.clone().into(), BindingNormalizedOptions::new(Arc::clone(args.options))).into(),
+        "buildStart",
       )
       .instrument(debug_span!("build_start_hook", plugin_name = self.name))
       .await
@@ -121,6 +122,7 @@ impl Plugin for JsPlugin {
         extra_args,
       )
         .into(),
+      "resolveId",
     )
     .instrument(debug_span!("resolve_id_hook", plugin_name = self.name))
     .await?
@@ -149,6 +151,7 @@ impl Plugin for JsPlugin {
         .await_call(
           (ctx.clone().into(), args.specifier.to_string(), args.importer.map(str::to_string))
             .into(),
+          "resolveDynamicImport",
         )
         .instrument(debug_span!("resolve_dynamic_import_hook", plugin_name = self.name))
         .await?
@@ -190,7 +193,7 @@ impl Plugin for JsPlugin {
     }
 
     let binding_ctx = BindingLoadPluginContext::new(Arc::clone(&ctx));
-    cb.await_call((binding_ctx, args.id.to_string()).into())
+    cb.await_call((binding_ctx, args.id.to_string()).into(), "load")
       .instrument(debug_span!("load_hook", plugin_name = self.name))
       .await?
       .map(TryInto::try_into)
@@ -232,6 +235,7 @@ impl Plugin for JsPlugin {
         extra_args,
       )
         .into(),
+      "transform",
     )
     .instrument(debug_span!("transform_hook", plugin_name = self.name))
     .await?
@@ -251,12 +255,15 @@ impl Plugin for JsPlugin {
     _normal_module: &NormalModule,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.module_parsed {
-      cb.await_call((ctx.clone().into(), BindingModuleInfo::new(Arc::clone(&module_info))).into())
-        .instrument(debug_span!("module_parsed_hook", plugin_name = self.name))
-        .await
-        .with_context(|| {
-          format!("moduleParsed hook threw an error for id={}", module_info.id.as_ref())
-        })?;
+      cb.await_call(
+        (ctx.clone().into(), BindingModuleInfo::new(Arc::clone(&module_info))).into(),
+        "moduleParsed",
+      )
+      .instrument(debug_span!("module_parsed_hook", plugin_name = self.name))
+      .await
+      .with_context(|| {
+        format!("moduleParsed hook threw an error for id={}", module_info.id.as_ref())
+      })?;
     }
     Ok(())
   }
@@ -283,6 +290,7 @@ impl Plugin for JsPlugin {
           }),
         )
           .into(),
+        "buildEnd",
       )
       .instrument(debug_span!("build_end_hook", plugin_name = self.name))
       .await
@@ -305,6 +313,7 @@ impl Plugin for JsPlugin {
     if let Some(cb) = &self.render_start {
       cb.await_call(
         (ctx.clone().into(), BindingNormalizedOptions::new(Arc::clone(args.options))).into(),
+        "renderStart",
       )
       .instrument(debug_span!("render_start_hook", plugin_name = self.name))
       .await
@@ -326,6 +335,7 @@ impl Plugin for JsPlugin {
       Some(cb) => Ok(
         cb.await_call(
           (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+          "banner",
         )
         .instrument(debug_span!("banner_hook", plugin_name = self.name))
         .await?
@@ -350,6 +360,7 @@ impl Plugin for JsPlugin {
       Some(cb) => Ok(
         cb.await_call(
           (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+          "intro",
         )
         .instrument(debug_span!("intro_hook", plugin_name = self.name))
         .await?
@@ -374,6 +385,7 @@ impl Plugin for JsPlugin {
       Some(cb) => Ok(
         cb.await_call(
           (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+          "outro",
         )
         .instrument(debug_span!("outro_hook", plugin_name = self.name))
         .await?
@@ -398,6 +410,7 @@ impl Plugin for JsPlugin {
       Some(cb) => Ok(
         cb.await_call(
           (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+          "footer",
         )
         .instrument(debug_span!("footer_hook", plugin_name = self.name))
         .await?
@@ -442,6 +455,7 @@ impl Plugin for JsPlugin {
         BindingRenderedChunkMeta::new(Arc::clone(&args.chunks)),
       )
         .into(),
+      "renderChunk",
     )
     .instrument(debug_span!("render_chunk_hook", plugin_name = self.name))
     .await?
@@ -461,12 +475,15 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
     match &self.augment_chunk_hash {
       Some(cb) => Ok(
-        cb.await_call((ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&chunk))).into())
-          .instrument(debug_span!("augment_chunk_hash_hook", plugin_name = self.name))
-          .await
-          .with_context(|| {
-            format!("augmentChunkHash hook threw an error for chunkName={}", chunk.name)
-          })?,
+        cb.await_call(
+          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&chunk))).into(),
+          "augmentChunkHash",
+        )
+        .instrument(debug_span!("augment_chunk_hash_hook", plugin_name = self.name))
+        .await
+        .with_context(|| {
+          format!("augmentChunkHash hook threw an error for chunkName={}", chunk.name)
+        })?,
       ),
       _ => Ok(None),
     }
@@ -492,6 +509,7 @@ impl Plugin for JsPlugin {
             .collect(),
         )
           .into(),
+        "renderError",
       )
       .instrument(debug_span!("render_error_hook", plugin_name = self.name))
       .await
@@ -519,6 +537,7 @@ impl Plugin for JsPlugin {
             BindingNormalizedOptions::new(Arc::clone(args.options)),
           )
             .into(),
+          "generateBundle",
         )
         .instrument(debug_span!("generate_bundle_hook", plugin_name = self.name))
         .await
@@ -546,6 +565,7 @@ impl Plugin for JsPlugin {
             BindingNormalizedOptions::new(Arc::clone(args.options)),
           )
             .into(),
+          "writeBundle",
         )
         .instrument(debug_span!("write_bundle_hook", plugin_name = self.name))
         .await
@@ -577,6 +597,7 @@ impl Plugin for JsPlugin {
           }),
         )
           .into(),
+        "closeBundle",
       )
       .instrument(debug_span!("close_bundle_hook", plugin_name = self.name))
       .await
@@ -596,12 +617,13 @@ impl Plugin for JsPlugin {
     event: rolldown_common::WatcherChangeKind,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.watch_change {
-      cb.await_call((ctx.clone().into(), path.to_string(), event.to_string()).into())
-        .instrument(debug_span!("watch_change_hook", plugin_name = self.name))
-        .await
-        .with_context(|| {
-          format!("watchChange hook threw an error for path={path} event={event}")
-        })?;
+      cb.await_call(
+        (ctx.clone().into(), path.to_string(), event.to_string()).into(),
+        "watchChange",
+      )
+      .instrument(debug_span!("watch_change_hook", plugin_name = self.name))
+      .await
+      .with_context(|| format!("watchChange hook threw an error for path={path} event={event}"))?;
     }
     Ok(())
   }
@@ -615,7 +637,7 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.close_watcher {
-      cb.await_call(FnArgs { data: (ctx.clone().into(),) })
+      cb.await_call(FnArgs { data: (ctx.clone().into(),) }, "closeWatcher")
         .instrument(debug_span!("close_watcher_hook", plugin_name = self.name))
         .await
         .context("closeWatcher hook threw an error")?;

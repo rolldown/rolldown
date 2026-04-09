@@ -53,6 +53,7 @@ fn normalize_generated_code_option(
 
 fn normalize_addon_option(
   addon_option: Option<crate::options::AddonOutputOption>,
+  option_name: &'static str,
 ) -> Option<AddonOutputOption> {
   addon_option.map(move |value| match value {
     // Static string - no JS function call needed
@@ -62,7 +63,7 @@ fn normalize_addon_option(
       let fn_js = Arc::clone(&fn_js);
       Box::pin(async move {
         fn_js
-          .await_call(FnArgs { data: (BindingRenderedChunk::new(chunk),) })
+          .await_call(FnArgs { data: (BindingRenderedChunk::new(chunk),) }, option_name)
           .await
           .map_err(anyhow::Error::from)
       })
@@ -72,6 +73,7 @@ fn normalize_addon_option(
 
 fn normalize_chunk_file_names_option(
   option: Option<ChunkFileNamesOutputOption>,
+  option_name: &'static str,
 ) -> napi::Result<Option<ChunkFilenamesOutputOption>> {
   option
     .map(move |value| match value {
@@ -80,7 +82,10 @@ fn normalize_chunk_file_names_option(
         let func = Arc::clone(&func);
         let chunk = (chunk.clone().into(),);
         Box::pin(async move {
-          func.invoke_async(FnArgs { data: chunk }).await.map_err(anyhow::Error::from)
+          func
+            .invoke_async(FnArgs { data: chunk }, option_name)
+            .await
+            .map_err(anyhow::Error::from)
         })
       }))),
     })
@@ -97,7 +102,10 @@ fn normalize_sanitize_filename(
         let func = Arc::clone(&func);
         let name = name.to_string();
         Box::pin(async move {
-          func.invoke_async(FnArgs { data: (name,) }).await.map_err(anyhow::Error::from)
+          func
+            .invoke_async(FnArgs { data: (name,) }, "sanitizeFileName")
+            .await
+            .map_err(anyhow::Error::from)
         })
       }))),
     })
@@ -114,7 +122,10 @@ fn normalize_asset_file_names_option(
         let func = Arc::clone(&func);
         let asset = (asset.clone().into(),);
         Box::pin(async move {
-          func.invoke_async(FnArgs { data: asset }).await.map_err(anyhow::Error::from)
+          func
+            .invoke_async(FnArgs { data: asset }, "assetFileNames")
+            .await
+            .map_err(anyhow::Error::from)
         })
       }))),
     })
@@ -129,7 +140,9 @@ fn normalize_globals_option(
     Either::B(func) => rolldown_common::GlobalsOutputOption::Fn(Arc::new(move |name| {
       let func = Arc::clone(&func);
       let name = name.to_string();
-      Box::pin(async move { func.invoke_async((name,).into()).await.map_err(anyhow::Error::from) })
+      Box::pin(async move {
+        func.invoke_async((name,).into(), "globals").await.map_err(anyhow::Error::from)
+      })
     })),
   })
 }
@@ -142,7 +155,9 @@ fn normalize_paths_option(
     Either::B(func) => rolldown_common::PathsOutputOption::Fn(Arc::new(move |id| {
       let func = Arc::clone(&func);
       let id = id.to_string();
-      Box::pin(async move { func.invoke_async((id,).into()).await.map_err(anyhow::Error::from) })
+      Box::pin(async move {
+        func.invoke_async((id,).into(), "paths").await.map_err(anyhow::Error::from)
+      })
     })),
   })
 }
@@ -206,7 +221,7 @@ pub fn normalize_binding_options(
         let is_external = Arc::clone(&is_external);
         Box::pin(async move {
           is_external
-            .invoke_async((source.clone(), importer, is_resolved).into())
+            .invoke_async((source.clone(), importer, is_resolved).into(), "external")
             .await
             .map_err(anyhow::Error::from)
         })
@@ -219,7 +234,7 @@ pub fn normalize_binding_options(
       let ts_fn = Arc::clone(&ts_fn);
       Box::pin(async move {
         ts_fn
-          .invoke_async(())
+          .invoke_async((), "deferSyncScanData")
           .await
           .and_then(|ret| {
             ret.into_iter().map(TryInto::try_into).collect::<Result<Vec<DeferSyncScanData>, _>>()
@@ -240,7 +255,10 @@ pub fn normalize_binding_options(
         let source = source.to_string();
         let sourcemap_path = sourcemap_path.to_string();
         Box::pin(async move {
-          ts_fn.invoke_async((source, sourcemap_path).into()).await.map_err(anyhow::Error::from)
+          ts_fn
+            .invoke_async((source, sourcemap_path).into(), "sourcemapIgnoreList")
+            .await
+            .map_err(anyhow::Error::from)
         })
       }))
     }
@@ -252,7 +270,10 @@ pub fn normalize_binding_options(
       let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();
       Box::pin(async move {
-        ts_fn.invoke_async((source, sourcemap_path).into()).await.map_err(anyhow::Error::from)
+        ts_fn
+          .invoke_async((source, sourcemap_path).into(), "sourcemapPathTransform")
+          .await
+          .map_err(anyhow::Error::from)
       })
     }))
   });
@@ -260,7 +281,9 @@ pub fn normalize_binding_options(
   let invalidate_js_side_cache = input_options.invalidate_js_side_cache.map(|ts_fn| {
     rolldown::InvalidateJsSideCache::new(Arc::new(move || {
       let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move { ts_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
+      Box::pin(async move {
+        ts_fn.invoke_async((), "invalidateJsSideCache").await.map_err(anyhow::Error::from)
+      })
     }))
   });
 
@@ -269,7 +292,7 @@ pub fn normalize_binding_options(
       let ts_fn = Arc::clone(&ts_fn);
       Box::pin(async move {
         ts_fn
-          .invoke_async((level.to_string(), log.into()).into())
+          .invoke_async((level.to_string(), log.into()).into(), "onLog")
           .await?
           .await
           .map_err(anyhow::Error::from)
@@ -310,8 +333,8 @@ pub fn normalize_binding_options(
     shim_missing_exports: input_options.shim_missing_exports,
     name: output_options.name,
     asset_filenames: normalize_asset_file_names_option(output_options.asset_file_names)?,
-    entry_filenames: normalize_chunk_file_names_option(output_options.entry_file_names)?,
-    chunk_filenames: normalize_chunk_file_names_option(output_options.chunk_file_names)?,
+    entry_filenames: normalize_chunk_file_names_option(output_options.entry_file_names, "entryFileNames")?,
+    chunk_filenames: normalize_chunk_file_names_option(output_options.chunk_file_names, "chunkFileNames")?,
     sanitize_filename: normalize_sanitize_filename(output_options.sanitize_file_name)?,
     dir: output_options.dir,
     file: output_options.file,
@@ -320,12 +343,12 @@ pub fn normalize_binding_options(
       Either::A(es_module_bool) => es_module_bool.into(),
       Either::B(es_module_string) => es_module_string.into(),
     }),
-    banner: normalize_addon_option(output_options.banner),
-    footer: normalize_addon_option(output_options.footer),
-    post_banner: normalize_addon_option(output_options.post_banner),
-    post_footer: normalize_addon_option(output_options.post_footer),
-    intro: normalize_addon_option(output_options.intro),
-    outro: normalize_addon_option(output_options.outro),
+    banner: normalize_addon_option(output_options.banner, "banner"),
+    footer: normalize_addon_option(output_options.footer, "footer"),
+    post_banner: normalize_addon_option(output_options.post_banner, "postBanner"),
+    post_footer: normalize_addon_option(output_options.post_footer, "postFooter"),
+    intro: normalize_addon_option(output_options.intro, "intro"),
+    outro: normalize_addon_option(output_options.outro, "outro"),
     sourcemap_base_url: output_options
       .sourcemap_base_url
       .map(|maybe_url| {
@@ -490,7 +513,7 @@ pub fn normalize_binding_options(
                   let owned_ctx = ctx.clone();
                   Box::pin(async move {
                     func
-                      .invoke_async((module_id, BindingChunkingContext::new(owned_ctx)).into())
+                      .invoke_async((module_id, BindingChunkingContext::new(owned_ctx)).into(), "advancedChunks.groups[].name")
                       .await
                       .map_err(anyhow::Error::from)
                   })
@@ -505,7 +528,7 @@ pub fn normalize_binding_options(
                 let id = id.to_string();
                 let func = Arc::clone(&func);
                 Box::pin(async move {
-                  func.invoke_async((id,).into()).await.map_err(anyhow::Error::from)
+                  func.invoke_async((id,).into(), "advancedChunks.groups[].test").await.map_err(anyhow::Error::from)
                 })
               })),
             }),

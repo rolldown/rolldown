@@ -60,7 +60,10 @@ impl FromNapiValue for BindingModulePreload {
                 let resolve_dependencies = Arc::clone(&resolve_dependencies);
                 Box::pin(async move {
                   resolve_dependencies
-                    .invoke_async((filename, deps, context).into())
+                    .invoke_async(
+                      (filename, deps, context).into(),
+                      "modulePreload.resolveDependencies",
+                    )
                     .await
                     .map_err(anyhow::Error::from)
                 })

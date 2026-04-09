@@ -31,7 +31,7 @@ impl From<BindingViteManifestPluginConfig> for ViteManifestPlugin {
           let is_legacy_fn = Arc::clone(&cb);
           Box::pin(async move {
             is_legacy_fn
-              .invoke_async(BindingNormalizedOptions::new(opts))
+              .invoke_async(BindingNormalizedOptions::new(opts), "viteManifest.getBaseName")
               .await
               .map_err(anyhow::Error::from)
           })
@@ -39,7 +39,12 @@ impl From<BindingViteManifestPluginConfig> for ViteManifestPlugin {
       }),
       css_entries: Arc::new(move || {
         let css_entries_fn = Arc::clone(&value.css_entries);
-        Box::pin(async move { css_entries_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
+        Box::pin(async move {
+          css_entries_fn
+            .invoke_async((), "viteManifest.cssEntries")
+            .await
+            .map_err(anyhow::Error::from)
+        })
       }),
     }
   }

@@ -85,7 +85,10 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
             let importer = importer.map(ToString::to_string);
             Box::pin(async move {
               finalizer_fn
-                .invoke_async((resolved_id, raw_id, importer).into())
+                .invoke_async(
+                  (resolved_id, raw_id, importer).into(),
+                  "viteResolve.finalizeBareSpecifier",
+                )
                 .await
                 .map_err(anyhow::Error::from)
             })
@@ -100,7 +103,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
             let raw_id = raw_id.to_owned();
             Box::pin(async move {
               finalizer_fn
-                .invoke_async((resolved_id, raw_id).into())
+                .invoke_async((resolved_id, raw_id).into(), "viteResolve.finalizeOtherSpecifiers")
                 .await
                 .map_err(anyhow::Error::from)
             })
@@ -114,7 +117,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
           let importer = importer.map(std::string::ToString::to_string);
           Box::pin(async move {
             resolve_fn
-              .invoke_async((id, importer, is_require, scan).into())
+              .invoke_async((id, importer, is_require, scan).into(), "viteResolve.resolveDeep")
               .await
               .map_err(anyhow::Error::from)
           })
@@ -124,7 +127,11 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
         Arc::new(move |message: String| {
           let on_warn = Arc::clone(&on_warn);
           Box::pin(async move {
-            on_warn.invoke_async((message,).into()).await?.await.map_err(anyhow::Error::from)
+            on_warn
+              .invoke_async((message,).into(), "viteResolve.onWarn")
+              .await?
+              .await
+              .map_err(anyhow::Error::from)
           })
         })
       }),
@@ -132,7 +139,11 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
         Arc::new(move |message: String| {
           let on_debug = Arc::clone(&on_debug);
           Box::pin(async move {
-            on_debug.invoke_async((message,).into()).await?.await.map_err(anyhow::Error::from)
+            on_debug
+              .invoke_async((message,).into(), "viteResolve.onDebug")
+              .await?
+              .await
+              .map_err(anyhow::Error::from)
           })
         })
       }),

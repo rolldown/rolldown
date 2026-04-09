@@ -86,7 +86,10 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
           let id = id.to_string();
           let ts_fn = Arc::clone(&ts_fn);
           Box::pin(async move {
-            ts_fn.invoke_async((id.clone(), is_external).into()).await.map_err(anyhow::Error::from)
+            ts_fn
+              .invoke_async((id.clone(), is_external).into(), "treeshake.moduleSideEffects")
+              .await
+              .map_err(anyhow::Error::from)
           })
         }))
       }

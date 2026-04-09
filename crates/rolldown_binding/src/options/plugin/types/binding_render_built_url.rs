@@ -57,7 +57,7 @@ impl FromNapiValue for BindingRenderBuiltUrl {
         let config = config.into();
         Box::pin(async move {
           render_built_url
-            .invoke_async((filename, config).into())
+            .invoke_async((filename, config).into(), "renderBuiltUrl")
             .await
             .map(|v| {
               v.map(|v| match v {

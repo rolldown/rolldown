@@ -138,15 +138,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return;
     }
 
+    // Guard against infinite recursion from circular dependencies.
+    // `generated_init_esm_importee_ids` serves double duty: it tracks both
+    // modules for which we already emitted an init call AND modules we have
+    // already visited during transitive traversal.
+    if self.generated_init_esm_importee_ids.contains(&importee.idx) {
+      return;
+    }
+    self.generated_init_esm_importee_ids.insert(importee.idx);
+
     // Only generate init calls for modules in the same chunk whose wrapper is
     // declared (i.e. the module is included in the output).
     if importee_linking_info.is_included
       && self.ctx.chunk_graph.module_to_chunk[importee.idx] == Some(self.ctx.chunk_idx)
     {
-      if self.generated_init_esm_importee_ids.contains(&importee.idx) {
-        return;
-      }
-      self.generated_init_esm_importee_ids.insert(importee.idx);
       let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(
         importee_linking_info.wrapper_ref.unwrap(),
         false,

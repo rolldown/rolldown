@@ -736,6 +736,13 @@ export interface OutputOptions {
   strict?: boolean | 'auto';
 }
 
+/**
+ * Built-in module tag names computed by rolldown.
+ *
+ * - `'$initial'` — the module is statically imported by at least one user-defined entry point, or is part of its static dependency chain.
+ */
+export type BuiltinModuleTag = '$initial';
+
 export type CodeSplittingGroup = {
   /**
    * Name of the group. It will be also used as the name of the chunk and replace the `[name]` placeholder in the {@linkcode OutputOptions.chunkFileNames | output.chunkFileNames} option.
@@ -899,6 +906,21 @@ export type CodeSplittingGroup = {
    * @default 0
    */
   entriesAwareMergeThreshold?: number;
+  /**
+   * Filter modules by tags. Only modules that have **all** specified tags
+   * are captured by this group. Combines with `test` and other filters —
+   * a module must match all criteria.
+   *
+   * Built-in tags: `'$initial'` (module is statically imported by a user-defined entry or part of its dependency chain).
+   *
+   * @see {@link https://rolldown.rs/guide/manual-code-splitting | Manual Code Splitting}
+   *
+   * @example
+   * ```js
+   * { name: 'initial-deps', tags: ['$initial'], maxSize: 1048576 }
+   * ```
+   */
+  tags?: BuiltinModuleTag[];
 };
 
 /**

@@ -9,7 +9,7 @@ use arcstr::ArcStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, EntryPoint, ManualCodeSplittingOptions, MatchGroup,
-  MatchGroupTest, Module, ModuleIdx, ModuleTable,
+  MatchGroupTest, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::SharedPluginDriver;
@@ -80,6 +80,9 @@ struct ManualSplitter<'a> {
   options: &'a SharedOptions,
   chunking_options: &'a ManualCodeSplittingOptions,
   match_groups: Vec<&'a MatchGroup>,
+  /// Precomputed tag bitsets per match group (parallel to `match_groups`).
+  /// `None` if the group has no `tags` filter.
+  match_group_required_tags: Vec<Option<ModuleTagBitSet>>,
   plugin_driver: &'a SharedPluginDriver,
   input_base: &'a ArcStr,
   chunk_graph: &'a mut ChunkGraph,
@@ -142,6 +145,13 @@ impl ManualSplitter<'_> {
 
         if !is_matched {
           continue;
+        }
+
+        // Filter by module tags. See meta/design/module-tags.md
+        if let Some(required_tags) = &self.match_group_required_tags[match_group_index] {
+          if !splitting_info.tags_bit_set.contains_all(required_tags) {
+            continue;
+          }
         }
 
         let allow_min_module_size =
@@ -508,6 +518,7 @@ impl GenerateStage<'_> {
     module_to_assigned: &mut IndexBitSet<ModuleIdx>,
     chunk_graph: &mut ChunkGraph,
     input_base: &ArcStr,
+    tag_registry: &ModuleTagRegistry,
   ) -> BuildResult<()> {
     let Some(chunking_options) = &self.options.manual_code_splitting else {
       return Ok(());
@@ -525,12 +536,17 @@ impl GenerateStage<'_> {
 
     let flattened_entries: Vec<&EntryPoint> =
       self.link_output.entries.iter().flat_map(|(_idx, entries)| entries.iter()).collect();
+    let match_group_required_tags: Vec<Option<ModuleTagBitSet>> = match_groups
+      .iter()
+      .map(|group| group.tags.as_ref().map(|tags| tag_registry.compile_tags_to_bit_set(tags)))
+      .collect();
     let mut splitter = ManualSplitter {
       link_output: self.link_output,
       index_splitting_info,
       options: self.options,
       chunking_options,
       match_groups,
+      match_group_required_tags,
       plugin_driver: self.plugin_driver,
       input_base,
       chunk_graph,

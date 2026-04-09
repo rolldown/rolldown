@@ -1311,11 +1311,28 @@
             "null"
           ],
           "format": "double"
+        },
+        "tags": {
+          "description": "Filter modules by tags. Only modules with all specified tags are captured.\nSee meta/design/module-tags.md",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/BuiltinModuleTag"
+          }
         }
       },
       "additionalProperties": false,
       "required": [
         "name"
+      ]
+    },
+    "BuiltinModuleTag": {
+      "description": "Schema-only enum for built-in module tags. Used by `schemars` to generate\na restricted JSON Schema for the `tags` field. Not used at runtime.",
+      "type": "string",
+      "enum": [
+        "$initial"
       ]
     },
     "ChecksOptions": {

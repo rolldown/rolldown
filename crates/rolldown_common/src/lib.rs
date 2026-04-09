@@ -188,6 +188,7 @@ pub use crate::{
   types::module_namespace_included_reason::ModuleNamespaceIncludedReason,
   types::module_render_output::ModuleRenderOutput,
   types::module_table::{IndexModules, ModuleTable},
+  types::module_tag::{ModuleTag, ModuleTagBitSet, ModuleTagRegistry},
   types::named_export::LocalExport,
   types::named_import::{NamedImport, Specifier},
   types::namespace_alias::NamespaceAlias,

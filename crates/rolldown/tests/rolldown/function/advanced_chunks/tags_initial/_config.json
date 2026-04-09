@@ -1,0 +1,23 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "initial-deps",
+          "tags": ["$initial"]
+        }
+      ]
+    }
+  },
+  "extendedTests": {
+    "preserveEntrySignaturesAllowExtension": false,
+    "preserveEntrySignaturesStrict": false,
+    "oppositeMinifyInternalExports": false
+  }
+}

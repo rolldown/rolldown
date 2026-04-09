@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## DUPLICATE_SHEBANG
+
+```text
+[DUPLICATE_SHEBANG] Warning: Both the code and banner and postBanner contain shebang in "main.js". This will cause a syntax error.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+#! from banner
+#! from postBanner
+(function(factory) {
+	typeof define === "function" && define.amd ? define([], factory) : factory();
+})(function() {
+	//#region main.js
+	console.log("umd duplicate shebang");
+	//#endregion
+});
+
+```

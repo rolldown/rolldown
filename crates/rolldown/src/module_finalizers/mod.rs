@@ -142,10 +142,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // `generated_init_esm_importee_ids` serves double duty: it tracks both
     // modules for which we already emitted an init call AND modules we have
     // already visited during transitive traversal.
-    if self.generated_init_esm_importee_ids.contains(&importee.idx) {
+    if !self.generated_init_esm_importee_ids.insert(importee.idx) {
       return;
     }
-    self.generated_init_esm_importee_ids.insert(importee.idx);
 
     // Only generate init calls for modules in the same chunk whose wrapper is
     // declared (i.e. the module is included in the output).

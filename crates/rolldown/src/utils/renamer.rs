@@ -488,6 +488,22 @@ impl NestedScopeRenamer<'_, '_> {
       }));
     }
 
+    // For CJS-wrapped modules, also check nested scope bindings against the canonical
+    // names of factory functions (require_XXX) of other CJS-wrapped modules that this
+    // module imports. These factory functions are at the chunk's root scope, and a nested
+    // binding with the same name would shadow them inside the __commonJS closure.
+    if is_cjs_wrapped {
+      wrapper_param_names.extend(self.module.import_records.iter().filter_map(|rec| {
+        let resolved_module = rec.resolved_module?;
+        let resolved_meta = &self.link_output.metas[resolved_module];
+        if !matches!(resolved_meta.wrap_kind(), WrapKind::Cjs) {
+          return None;
+        }
+        let wrapper_ref = resolved_meta.wrapper_ref?;
+        self.renamer.get_canonical_name(wrapper_ref).cloned()
+      }));
+    }
+
     if wrapper_param_names.is_empty() {
       return;
     }
@@ -500,6 +516,93 @@ impl NestedScopeRenamer<'_, '_> {
           self.renamer.register_nested_scope_symbols(symbol_ref, name.as_str());
         }
       }
+    }
+  }
+
+  /// Rename top-level bindings in CJS-wrapped modules that would shadow CJS factory functions.
+  ///
+  /// When a CJS-wrapped module has a top-level (root scope) binding with the same name as a
+  /// factory function (like `require_greet`) of another CJS-wrapped module it imports, the
+  /// top-level binding shadows the factory function inside the `__commonJS` closure, causing
+  /// a Temporal Dead Zone (TDZ) error.
+  ///
+  /// # Example
+  ///
+  /// ```js
+  /// // greet.cjs → wrapped as: var require_greet = __commonJS(...)
+  ///
+  /// // cjs-dependency.cjs → wrapped as:
+  /// var require_cjs_dependency = __commonJS((exports) => {
+  ///   const require_greet = require_greet(); // Bug: local binding shadows factory (TDZ error)
+  ///   exports.greet = require_greet.greet;
+  /// });
+  /// ```
+  ///
+  /// Fixed output:
+  /// ```js
+  /// var require_greet = __commonJS(...)
+  /// var require_cjs_dependency = __commonJS((exports) => {
+  ///   const require_greet$1 = require_greet(); // Renamed to avoid shadowing
+  ///   exports.greet = require_greet$1.greet;
+  /// });
+  /// ```
+  pub fn rename_root_scope_bindings_shadowing_cjs_factories(&mut self) {
+    let is_cjs_wrapped =
+      matches!(self.link_output.metas[self.module_idx].wrap_kind(), WrapKind::Cjs);
+    if !is_cjs_wrapped {
+      return;
+    }
+
+    // Collect canonical names of factory functions for CJS-wrapped modules that this module
+    // imports. These factory functions are at the chunk's root scope and can be shadowed by
+    // bindings inside this module's __commonJS closure.
+    let factory_names: FxHashSet<CompactStr> = self
+      .module
+      .import_records
+      .iter()
+      .filter_map(|rec| {
+        let resolved_module = rec.resolved_module?;
+        let resolved_meta = &self.link_output.metas[resolved_module];
+        if !matches!(resolved_meta.wrap_kind(), WrapKind::Cjs) {
+          return None;
+        }
+        let wrapper_ref = resolved_meta.wrapper_ref?;
+        self.renamer.get_canonical_name(wrapper_ref).cloned()
+      })
+      .collect();
+
+    if factory_names.is_empty() {
+      return;
+    }
+
+    // Check the module's root scope (scope 0) bindings.
+    // For a CJS-wrapped module, scope 0 bindings are inside the __commonJS closure,
+    // so they can shadow the chunk-root-scope factory functions.
+    let Some((_, root_scope_bindings)) = self.scoping.iter_bindings().next() else {
+      return;
+    };
+
+    // Collect conflicting bindings first to avoid borrow issues.
+    let conflicting: Vec<_> = root_scope_bindings
+      .iter()
+      .filter_map(|(&name, &symbol_id)| {
+        let symbol_ref: SymbolRef = (self.module_idx, symbol_id).into();
+        let canonical_ref = symbol_ref.canonical_ref(self.renamer.symbol_db);
+        let current_canonical_name =
+          self.renamer.canonical_names.get(&canonical_ref).cloned()?;
+        if factory_names.contains(&current_canonical_name) {
+          Some((name, symbol_ref, canonical_ref))
+        } else {
+          None
+        }
+      })
+      .collect();
+
+    for (name, symbol_ref, canonical_ref) in conflicting {
+      // Remove the conflicting canonical name so it can be reassigned with a unique name.
+      self.renamer.canonical_names.remove(&canonical_ref);
+      // Register with a new unique name that doesn't conflict with chunk-level symbols.
+      self.renamer.register_nested_scope_symbols(symbol_ref, name.as_str());
     }
   }
 }

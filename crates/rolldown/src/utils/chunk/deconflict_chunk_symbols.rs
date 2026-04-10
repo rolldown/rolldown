@@ -246,5 +246,6 @@ fn rename_shadowing_symbols_in_nested_scopes<'a>(
       output_format,
       OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs
     ));
+    ctx.rename_root_scope_bindings_shadowing_cjs_factories();
   }
 }

@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region greet.cjs
+var require_greet = /* @__PURE__ */ __commonJSMin(((exports) => {
+	function greet() {
+		return "hello from cjs-dependency";
+	}
+	exports.greet = greet;
+}));
+//#endregion
+//#region main.js
+var import_cjs_dependency = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	const require_greet$1 = require_greet();
+	exports.greet = require_greet$1.greet;
+	exports.greetModule = require_greet$1;
+})))();
+console.log(import_cjs_dependency.greet);
+//#endregion
+
+```

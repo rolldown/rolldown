@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## greet.js
+
+```js
+//#region greet.js
+function greet() {
+	return "Hello";
+}
+//#endregion
+exports.greet = greet;
+
+```
+
+## main.js
+
+```js
+//#region main.js
+Promise.resolve().then(() => require("./greet.js")).then((m) => {
+	console.log(m.greet());
+});
+//#endregion
+
+```

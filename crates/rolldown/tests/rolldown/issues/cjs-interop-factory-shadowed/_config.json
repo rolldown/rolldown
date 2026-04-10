@@ -1,3 +1,5 @@
 {
-  "config": "rolldown.config.js"
+  "config": {
+    "format": "cjs"
+  }
 }

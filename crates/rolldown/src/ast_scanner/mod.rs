@@ -123,19 +123,6 @@ pub struct ScanResult {
   pub cjs_reexport_import_record_ids: Vec<ImportRecordIdx>,
 }
 
-bitflags::bitflags! {
-    #[derive(Debug, Clone, Copy)]
-    struct TraverseState: u8 {
-        /// If this flag is set, all top level symbol id during traverse should be inserted into
-        /// [`rolldown_common::types::stmt_info::StmtInfos::symbol_ref_to_referenced_stmt_idx`]
-        const RootSymbolReferenceStmtInfoId = 1;
-        /// If current position all parent scopes are block scope or top level scope.
-        /// A cache state of [AstScanner::is_valid_tla_scope]
-        const TopLevel = 1 << 1;
-        /// Set when traversing a member expression that is an assignment target (write context).
-        const MemberExprIsWrite = 1 << 2;
-    }
-}
 
 pub struct AstScannerImmutableCtx<'me, 'ast> {
   idx: ModuleIdx,
@@ -171,7 +158,9 @@ pub struct AstScanner<'me, 'ast> {
   /// Set when `module.exports = <value>` is detected. All prior `exports.xxx`
   /// constants are stale since the entire exports object is replaced at runtime.
   has_module_exports_reassignment: bool,
-  traverse_state: TraverseState,
+  /// Whether the current position is at the top level (all parent scopes are block or top-level).
+  /// A cache of [AstScanner::is_valid_tla_scope].
+  is_top_level: bool,
   current_comment_idx: usize,
   untranspiled_syntax: UntranspiledSyntax,
 }
@@ -264,7 +253,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         CommonjsExportSymbolUsage { read: 0, write: 0, bailout: true },
       )]),
       has_module_exports_reassignment: false,
-      traverse_state: TraverseState::empty(),
+      is_top_level: false,
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
     }
@@ -992,6 +981,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       )
       .into(),
     );
+  }
+
+  /// Check if this identifier reference is the object of a member expression in a write context
+  /// (e.g., `A` in `A.foo = 1`, `A.foo += 1`, `A.foo++`, `delete A.foo`).
+  fn is_member_write_target(&self, ident_ref: &IdentifierReference) -> bool {
+    ident_ref.reference_id.get().is_some_and(|ref_id| {
+      self.result.symbol_ref_db.scoping().get_reference(ref_id).flags().is_member_write_target()
+    })
   }
 
   fn is_root_symbol(&self, symbol_id: SymbolId) -> bool {

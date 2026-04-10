@@ -1,0 +1,24 @@
+{
+  "config": {
+    "input": [
+      {
+        "import": "./node0.js",
+        "name": "entry0"
+      },
+      {
+        "import": "./node1.js",
+        "name": "entry1"
+      },
+      {
+        "import": "./node2.js",
+        "name": "entry2"
+      },
+      {
+        "import": "./node3.js",
+        "name": "entry3"
+      }
+    ],
+    "minify": false,
+    "preserveEntrySignatures": "allow-extension"
+  }
+}

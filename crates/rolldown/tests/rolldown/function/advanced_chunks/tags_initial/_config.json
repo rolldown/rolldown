@@ -15,9 +15,5 @@
       ]
     }
   },
-  "extendedTests": {
-    "preserveEntrySignaturesAllowExtension": false,
-    "preserveEntrySignaturesStrict": false,
-    "oppositeMinifyInternalExports": false
-  }
+  "extendedTests": false
 }

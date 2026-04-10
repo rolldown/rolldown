@@ -1928,6 +1928,19 @@
       "additionalProperties": false
     },
     "ExtendedTests": {
+      "description": "Controls which extended test variants are generated.\nCan be `false` to disable all, `true` to enable all (default), or an object to control each individually.",
+      "anyOf": [
+        {
+          "description": "`false` disables all extended tests, `true` enables all (default).",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/ExtendedTestsConfig"
+        }
+      ]
+    },
+    "ExtendedTestsConfig": {
+      "description": "Inner struct for deserializing the object form and generating JSON Schema.",
       "type": "object",
       "properties": {
         "oppositeMinifyInternalExports": {

@@ -913,7 +913,7 @@ export type CodeSplittingGroup = {
    *
    * Built-in tags: `'$initial'` (module is statically imported by a user-defined entry or part of its dependency chain).
    *
-   * @see {@link https://rolldown.rs/guide/manual-code-splitting | Manual Code Splitting}
+   * @see {@link https://rolldown.rs/in-depth/manual-code-splitting | Manual Code Splitting}
    *
    * @example
    * ```js

@@ -16,15 +16,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region c.js
-import("./a2.js");
+import("./a.js");
 //#endregion
-
-```
-
-## a2.js
-
-```js
-import "./a.js";
 
 ```
 

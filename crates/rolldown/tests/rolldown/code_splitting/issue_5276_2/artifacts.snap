@@ -6,15 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## imp.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region imp.js
-var imp_exports = /* @__PURE__ */ __exportAll({
-	imp2: () => 2,
-	imp22: () => 22
-});
 const imp22 = 22;
 //#endregion
-export { imp_exports as n, imp22 as t };
+export { imp22 };
 
 ```
 
@@ -27,7 +21,7 @@ import assert from "node:assert";
 assert.strictEqual(2, 2);
 assert.strictEqual(22, 22);
 const load = async () => {
-	import("./imp.js").then((n) => n.n).then((m) => {
+	import("./imp.js").then((m) => {
 		assert.strictEqual(m.imp22, 22);
 	});
 };
@@ -43,23 +37,12 @@ load();
 ### imp.js
 
 ```js
-//#region imp.js
-var imp_exports = /* @__PURE__ */ require("./rolldown-runtime.js").__exportAll({
-	imp2: () => 2,
-	imp22: () => 22
-});
 const imp22 = 22;
 //#endregion
 Object.defineProperty(exports, "imp22", {
 	enumerable: true,
 	get: function() {
 		return imp22;
-	}
-});
-Object.defineProperty(exports, "imp_exports", {
-	enumerable: true,
-	get: function() {
-		return imp_exports;
 	}
 });
 
@@ -76,7 +59,7 @@ node_assert = require_rolldown_runtime.__toESM(node_assert);
 node_assert.default.strictEqual(2, 2);
 node_assert.default.strictEqual(22, 22);
 const load = async () => {
-	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp_exports).then((m) => {
+	Promise.resolve().then(() => require("./imp.js")).then((m) => {
 		node_assert.default.strictEqual(m.imp22, 22);
 	});
 };
@@ -89,12 +72,6 @@ load();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__exportAll", {
-	enumerable: true,
-	get: function() {
-		return __exportAll;
-	}
-});
 Object.defineProperty(exports, "__toESM", {
 	enumerable: true,
 	get: function() {

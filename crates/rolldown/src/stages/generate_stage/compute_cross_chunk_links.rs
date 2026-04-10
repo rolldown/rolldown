@@ -427,6 +427,26 @@ impl GenerateStage<'_> {
           }
         }
 
+        // Handle direct exports from eliminated facade chunks.
+        // These modules have statically known exports and don't need __exportAll.
+        // Export their individual symbols directly with original names.
+        if let Some(set) = chunk_graph.common_chunk_facade_direct_exports.get(&chunk_id) {
+          for &dynamic_entry_module in set {
+            let meta = &self.link_output.metas[dynamic_entry_module];
+            for (name, export) in meta.referenced_canonical_exports_symbols(
+              dynamic_entry_module,
+              EntryPointKind::DynamicImport,
+              &self.link_output.dynamic_import_exports_usage_map,
+              false,
+            ) {
+              index_chunk_exported_symbols[chunk_id]
+                .entry(export.symbol_ref)
+                .or_default()
+                .push(name.clone());
+            }
+          }
+        }
+
         let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
         for import_ref in chunk_meta_imports.iter().copied() {
           if !self.link_output.used_symbol_refs.contains(&import_ref) {
@@ -625,6 +645,31 @@ impl GenerateStage<'_> {
               chunk.exports_to_other_chunks.entry(export_ref).or_default().push(name.clone());
               processed_entry_exports.insert(export_ref);
             });
+          }
+        }
+        // Preserve export names from eliminated facade chunks with direct exports.
+        // These names were already pushed into index_chunk_exported_symbols with the
+        // correct original names by referenced_canonical_exports_symbols.
+        // We use those predefined names directly instead of re-iterating canonical_exports,
+        // which avoids issues with canonical ref resolution mismatches.
+        if chunk_graph.common_chunk_facade_direct_exports.contains_key(&chunk_id) {
+          for (chunk_export, predefined_names) in &index_chunk_exported_symbols[chunk_id] {
+            if predefined_names.is_empty() {
+              continue;
+            }
+            let export_ref = self.link_output.symbol_db.canonical_ref_for(*chunk_export);
+            if processed_entry_exports.contains(&export_ref) {
+              continue;
+            }
+            for name in predefined_names {
+              used_names.insert(name.clone());
+            }
+            chunk
+              .exports_to_other_chunks
+              .entry(export_ref)
+              .or_default()
+              .extend_from_slice(predefined_names);
+            processed_entry_exports.insert(export_ref);
           }
         }
         for (chunk_export, _predefined_names) in index_chunk_exported_symbols[chunk_id]

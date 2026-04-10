@@ -15,13 +15,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## b.js
 
 ```js
-import { n as __exportAll, r as __toESM } from "./chunk.js";
+import { n as __toESM } from "./chunk.js";
 //#region b.js
-var b_exports = /* @__PURE__ */ __exportAll({});
 import("./cjs.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
-Promise.resolve().then(() => b_exports);
+import("./b.js");
 //#endregion
-export { b_exports as t };
 
 ```
 
@@ -29,7 +27,7 @@ export { b_exports as t };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __toESM as r, __commonJSMin as t };
+export { __toESM as n, __commonJSMin as t };
 
 ```
 

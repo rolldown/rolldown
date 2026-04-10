@@ -1072,9 +1072,7 @@ impl GenerateStage<'_> {
       //   namespace and individual exports visible to the dynamic import consumer)
       let target_is_entry_point =
         matches!(chunk_graph.chunk_table[*to_chunk_idx].kind, ChunkKind::EntryPoint { .. });
-      let namespace_already_used = context
-        .used_symbol_refs
-        .contains(&module.namespace_object_ref);
+      let namespace_already_used = context.used_symbol_refs.contains(&module.namespace_object_ref);
       let can_use_direct_exports = matches!(wrap_kind, WrapKind::None)
         && !self.link_output.metas[*entry_module_idx].has_dynamic_exports
         && dynamic_facade_count_by_target.get(to_chunk_idx).copied().unwrap_or(0) <= 1

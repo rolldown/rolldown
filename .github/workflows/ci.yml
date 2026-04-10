@@ -37,16 +37,19 @@ jobs:
         id: filter
         with:
           filters: |
-            rust-changes: &rust-changes
+            infra-changes: &infra-changes
               - '.github/workflows/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+            rust-changes: &rust-changes
+              - *infra-changes
               - 'crates/**'
               - 'tasks/**'
               - 'scripts/src/esbuild-tests/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
               - 'rust-toolchain.toml'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
               - '.gitattributes'
               - 'justfile'
               - 'test262'
@@ -55,24 +58,17 @@ jobs:
               - 'packages/**'
               - 'examples/**'
               - 'scripts/**'
-              - 'package.json'
-              - 'justfile'
               - 'rollup'
             pluginutils-changes:
+              - *infra-changes
               - 'packages/pluginutils/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
             docs-changes:
-              - '.github/workflows/**'
+              - *infra-changes
               - 'docs/**'
               - 'packages/rolldown/src/**'
               - 'packages/rolldown/package.json'
               - 'packages/rolldown/tsconfig*.json'
               - 'packages/pluginutils/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
       - name: Show outputs
         run: |
           echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}"

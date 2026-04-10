@@ -140,6 +140,60 @@ Dynamic/emitted entries can become empty facades when all their modules are pull
 - Merges the facade into its target chunk
 - Marks it as `Removed` in `post_chunk_optimization_operations`
 
+### Runtime Module Placement
+
+Facade elimination can introduce **new runtime-helper consumers** after the merge phase has already placed the runtime module. When eliminating a dynamic-import facade with `WrapKind::Esm | WrapKind::None`, the elimination calls `include_symbol(module.namespace_object_ref)` to materialize the simulated namespace and explicitly inserts `RuntimeHelper::ExportAll` into the target chunk's `depended_runtime_helper` (the emitted JS symbol is `__exportAll`). The target chunk is added to `runtime_dependent_chunks`. For `WrapKind::Cjs | WrapKind::Esm` the elimination calls `include_symbol(wrapper_ref)` instead — the `require_xxx` symbol transitively pulls in whatever helpers the wrapper depends on (`RuntimeHelper::ToEsm`, `RuntimeHelper::CommonJsMin`, etc., emitted as `__toESM`, `__commonJSMin`, …) via the existing inclusion-propagation machinery, and the target chunk is again added to `runtime_dependent_chunks`.
+
+The danger is that the runtime module may already be **co-located** with other modules in some host chunk from the merge phase (the chunker placed it there because the host's bitset matched the runtime's bitset). If the new helper-import edge points from a facade-elim consumer back to that host, and the host has any forward path back to the consumer, the dependency graph closes a cycle. See [#8989](https://github.com/rolldown/rolldown/issues/8989) for the canonical reproduction:
+
+```
+chunk(node2) ──forward──> chunk(node3) ──forward──> chunk(node4)
+     ▲                                                   │
+     └──────── helper edge after facade elim ────────────┘
+```
+
+The placement logic at the bottom of `optimize_facade_entry_chunks` runs whenever `runtime_dependent_chunks` is non-empty. It is a **two-step decision**:
+
+**Step 1 — Peel decision (cycle prevention)**
+
+Peel the runtime out of its current host chunk if both predicates hold:
+
+- `host_has_other_modules` — the host contains modules besides the runtime. If runtime is alone in its chunk, that chunk is already a leaf and cannot participate in a cycle. (Skipping this case also avoids leaving an empty chunk that would crash downstream code expecting `chunk.modules[0]` to exist.)
+- `has_external_consumer` — `runtime_dependent_chunks` contains a chunk that is _not_ the host. If every facade-elim consumer IS the host itself, helpers don't have to cross any chunk boundary and no new edges are introduced.
+
+When both are true, the implementation removes `runtime_module_idx` from the host's `modules` vec via `swap_remove` (ordering doesn't matter — `sort_chunk_modules` re-establishes it later) and sets `module_to_chunk[runtime_module_idx] = None`.
+
+**Step 2 — Placement decision (consumer-set count)**
+
+When the runtime is unplaced (either because Step 1 just peeled it, or because the merge phase never placed it), compute the full consumer set:
+
+```
+consumer_chunks = (non-removed chunks with non-empty depended_runtime_helper) ∪ runtime_dependent_chunks
+```
+
+The first term picks up chunks that already required helpers from the linking stage; the second term picks up chunks that facade elimination just announced. Deduplication is automatic via `FxHashSet`. Then:
+
+- `consumer_chunks.len() == 1` → runtime moves into that single consumer chunk. No extra chunk is created; the lone consumer hosts both its own modules and the runtime.
+- `consumer_chunks.len() > 1` → runtime is placed in a fresh `rolldown-runtime.js` chunk created with the runtime's bitset. Every consumer imports from it. This chunk is structurally a leaf — not because being freshly created prevents outgoing edges, but because the runtime module itself contains no `import` statements, so the only module assigned to the chunk has no dependencies for the cross-chunk linker to translate into outgoing imports. Cycles are therefore impossible.
+
+**Why both steps are needed**
+
+The peel gate exists because relying on the consumer-count alone over-triggers — many fixtures have multiple consumers that don't actually form cycles (e.g., `import_missing_neither_es6_nor_common_js`, where runtime lives in `foo.js` and `require.js` imports `__toCommonJS` from it without any back-edge). The peel gate keeps these untouched.
+
+The consumer-set count exists because relying on `runtime_dependent_chunks.len()` alone (the original code's optimization) undercounts: it ignores chunks that already required helpers from the linking stage. After peeling, the unioned set correctly identifies whether runtime can piggyback on a single consumer or needs its own home.
+
+**Regression coverage**
+
+`crates/rolldown/tests/rolldown/issues/8989/` contains the cycle reproduction with explicit `_test.mjs` assertions covering the full set of structural invariants:
+
+- `node4.js` is a leaf — no static imports from any sibling `entry*.js` / `node*.js` chunk
+- `node4.js` hosts the runtime module (`HIDDEN [\0rolldown/runtime.js]`) and re-exports `__exportAll`
+- `entry2.js` imports `__exportAll` _from_ `node4.js`, never the reverse, and never self-imports
+- `entry3.js` statically imports from `node4.js` (the original forward edge that the bug used to close into a cycle)
+- `entry1.js` imports from both `entry2.js` and `entry3.js`
+
+If a future regression caused runtime to land back in `entry2.js`, the leaf-invariant assertion on `node4.js` (or the direction-check on `entry2 → node4`) would fire.
+
 ## Lazy Module Initialization Order
 
 `ensure_lazy_module_initialization_order()` runs after chunk creation as a post-processing step on the `ChunkGraph`. It fixes a correctness issue with lazy evaluation of wrapped modules.

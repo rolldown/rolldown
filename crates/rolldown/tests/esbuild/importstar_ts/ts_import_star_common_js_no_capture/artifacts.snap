@@ -12,7 +12,7 @@ Object.getOwnPropertyDescriptor;
 Object.getOwnPropertyNames;
 Object.getPrototypeOf;
 Object.prototype.hasOwnProperty;
-var __commonJSMin = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
 (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 123;
 })))();

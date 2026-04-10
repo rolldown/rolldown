@@ -798,10 +798,7 @@ impl GenerateStage<'_> {
         if temp_runtime_chunk_idx
           .and_then(|temp_runtime_idx| {
             let temp_target_idx = temp_chunk_opt_graph.to_temp_idx(target_chunk_idx)?;
-            Some(
-              temp_chunk_opt_graph
-                .would_create_circular_dependency(temp_runtime_idx, temp_target_idx),
-            )
+            Some(temp_chunk_opt_graph.is_reachable(temp_runtime_idx, temp_target_idx))
           })
           // If runtime is not included before, it will not create circular dependency, because
           // the runtime module will be either included in the target chunk or in a separate chunk loaded before.

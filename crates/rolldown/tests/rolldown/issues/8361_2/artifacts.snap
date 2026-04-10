@@ -15,17 +15,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import "./a2.js";
-
-```
-
-## a2.js
-
-```js
+import { n as __exportAll } from "./chunk.js";
 import { t as require_cjs } from "./cjs.js";
 import "./b.js";
+//#region a.js
+var a_exports = /* @__PURE__ */ __exportAll({});
 require_cjs();
 //#endregion
+export { a_exports as t };
 
 ```
 
@@ -36,7 +33,7 @@ import { n as __exportAll, r as __toESM } from "./chunk.js";
 //#region b.js
 var b_exports = /* @__PURE__ */ __exportAll({ foo2: () => foo2 });
 function foo2() {
-	import("./a.js");
+	import("./a.js").then((n) => n.t);
 	Promise.resolve().then(() => b_exports);
 }
 import("./cjs.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
@@ -69,6 +66,6 @@ export { require_cjs as t };
 ## main.js
 
 ```js
-import "./a2.js";
+import "./a.js";
 
 ```

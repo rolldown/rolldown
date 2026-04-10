@@ -9,7 +9,8 @@ use crate::{
 };
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, NormalModule, OutputFormat, TaggedSymbolRef, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, NormalModule, OutputFormat, SymbolRef, TaggedSymbolRef,
+  WrapKind,
 };
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
@@ -18,6 +19,7 @@ use rustc_hash::FxHashMap;
 pub fn deconflict_chunk_symbols(
   chunk: &mut Chunk,
   link_output: &LinkStageOutput,
+  chunk_to_wrapper_refs: &FxHashMap<ChunkIdx, Vec<SymbolRef>>,
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
 ) {
@@ -153,6 +155,21 @@ pub fn deconflict_chunk_symbols(
   chunk.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
     renamer.add_symbol_in_root_scope(item.import_ref, true);
   });
+
+  // For CJS format, also reserve wrapper_ref symbols from imported chunks to prevent shadowing.
+  // When re-bundling rolldown-emitted CJS output, we need to avoid name collisions between:
+  // 1. The CJS require binding (e.g., `const require_greet = require('./greet.js')`)
+  // 2. Wrapper functions exported from the imported chunk (e.g., `var require_greet = __commonJS(...)`)
+  // Without this, we'd generate code like: `const require_greet = require_greet();` (TDZ error)
+  if matches!(format, OutputFormat::Cjs) {
+    for imported_chunk_idx in chunk.imports_from_other_chunks.keys() {
+      if let Some(wrapper_refs) = chunk_to_wrapper_refs.get(imported_chunk_idx) {
+        for &wrapper_ref in wrapper_refs {
+          renamer.add_symbol_in_root_scope(wrapper_ref, true);
+        }
+      }
+    }
+  }
 
   chunk.require_binding_names_for_other_chunks = chunk
     .imports_from_other_chunks

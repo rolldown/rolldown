@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use futures::future::try_join_all;
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
-use rolldown_common::{ChunkIdx, ChunkKind, OutputExports, PathsOutputOption};
+use rolldown_common::{ChunkIdx, ChunkKind, OutputExports, PathsOutputOption, SymbolRef};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
@@ -109,11 +109,32 @@ impl<'a> GenerateStage<'a> {
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
+    // Pre-compute wrapper_refs for all modules in each chunk to avoid borrowing issues
+    // during parallel deconflicting. This is needed for CJS format to prevent shadowing
+    // of CJS wrapper functions (e.g., require_foo) by chunk import bindings.
+    let chunk_to_wrapper_refs: FxHashMap<ChunkIdx, Vec<SymbolRef>> = chunk_graph
+      .chunk_table
+      .iter_enumerated()
+      .map(|(chunk_idx, chunk)| {
+        let wrapper_refs = chunk
+          .modules
+          .iter()
+          .filter_map(|&module_idx| {
+            self.link_output.module_table[module_idx]
+              .as_normal()
+              .and_then(|_| self.link_output.metas[module_idx].wrapper_ref)
+          })
+          .collect();
+        (chunk_idx, wrapper_refs)
+      })
+      .collect();
+
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
       chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
         deconflict_chunk_symbols(
           chunk,
           self.link_output,
+          &chunk_to_wrapper_refs,
           self.options.format,
           &index_chunk_id_to_name,
         );

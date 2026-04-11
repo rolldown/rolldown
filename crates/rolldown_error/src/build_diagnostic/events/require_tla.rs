@@ -54,30 +54,29 @@ impl BuildEvent for RequireTla {
 
   fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {
     // A module can appear in multiple labels (e.g. the importer of the
-    // require() call is also the TLA source in a self-require), so we
-    // deduplicate file registration before calling `add_file` (which
-    // `debug_assert!`s against duplicates).
+    // require() call is also the TLA source in a self-require), and
+    // `add_file` debug-asserts against duplicates — so register every
+    // distinct source once up front, then only look up ids when adding
+    // labels.
     let mut file_ids: FxHashMap<ArcStr, DiagnosticFileId> = FxHashMap::default();
-    let mut get_or_add_file =
-      |diagnostic: &mut Diagnostic, stable_id: &ArcStr, source: &ArcStr| -> DiagnosticFileId {
-        file_ids
-          .entry(stable_id.clone())
-          .or_insert_with(|| diagnostic.add_file(opts.stabilize_path(stable_id.as_str()), source))
-          .clone()
-      };
+    let files = std::iter::once((&self.importer_stable_id, &self.importer_source))
+      .chain(self.import_chain.iter().map(|step| (&step.importer_stable_id, &step.importer_source)))
+      .chain(std::iter::once((&self.tla_source_stable_id, &self.tla_source_text)));
+    for (stable_id, source) in files {
+      file_ids
+        .entry(stable_id.clone())
+        .or_insert_with(|| diagnostic.add_file(opts.stabilize_path(stable_id.as_str()), source));
+    }
 
-    let importer_file_id =
-      get_or_add_file(diagnostic, &self.importer_stable_id, &self.importer_source);
     diagnostic.add_label(
-      &importer_file_id,
+      &file_ids[&self.importer_stable_id],
       self.require_span.start..self.require_span.end,
-      String::new(),
+      "The require() call is here:".to_string(),
     );
 
     for step in &self.import_chain {
-      let file_id = get_or_add_file(diagnostic, &step.importer_stable_id, &step.importer_source);
       diagnostic.add_label(
-        &file_id,
+        &file_ids[&step.importer_stable_id],
         step.import_span.start..step.import_span.end,
         format!(
           "The file \"{}\" imports the file \"{}\" here:",
@@ -87,10 +86,8 @@ impl BuildEvent for RequireTla {
       );
     }
 
-    let tla_file_id =
-      get_or_add_file(diagnostic, &self.tla_source_stable_id, &self.tla_source_text);
     diagnostic.add_label(
-      &tla_file_id,
+      &file_ids[&self.tla_source_stable_id],
       self.tla_keyword_span.start..self.tla_keyword_span.end,
       format!(
         "The top-level await in \"{}\" is here:",

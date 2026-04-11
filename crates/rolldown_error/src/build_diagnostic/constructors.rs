@@ -33,7 +33,7 @@ use super::events::missing_name_option_for_iife_export::MissingNameOptionForIife
 use super::events::plugin_error::{CausedPlugin, PluginError};
 use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
-use super::events::require_tla::{ImportChainNote, RequireTla};
+use super::events::require_tla::RequireTla;
 use super::events::resolve_error::DiagnosableResolveError;
 
 use super::events::tsconfig_error::TsConfigError;
@@ -234,25 +234,8 @@ impl BuildDiagnostic {
 
   // --- Rolldown related
 
-  #[expect(clippy::too_many_arguments)]
-  pub fn require_tla(
-    importer_stable_id: ArcStr,
-    importer_source: ArcStr,
-    require_span: Span,
-    tla_source_stable_id: ArcStr,
-    tla_source_text: ArcStr,
-    tla_keyword_span: Span,
-    import_chain: Vec<ImportChainNote>,
-  ) -> Self {
-    Self::new_inner(RequireTla {
-      importer_stable_id,
-      importer_source,
-      require_span,
-      tla_source_stable_id,
-      tla_source_text,
-      tla_keyword_span,
-      import_chain,
-    })
+  pub fn require_tla(inner: RequireTla) -> Self {
+    Self::new_inner(inner)
   }
 
   pub fn oxc_error(

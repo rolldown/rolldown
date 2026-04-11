@@ -3,7 +3,7 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   EcmaModuleAstUsage, ImportKind, ImportRecordIdx, ModuleIdx, ModuleTable, NormalModule,
 };
-use rolldown_error::{BuildDiagnostic, ImportChainNote};
+use rolldown_error::{BuildDiagnostic, ImportChainNote, RequireTla};
 
 use super::LinkStage;
 
@@ -19,12 +19,18 @@ enum TlaVisitState {
 
 /// Look up the source span of a given import record within a module. Linear
 /// in `imports.len()` but only called on error paths.
+///
+/// Every `Import`/`Require` record is registered in `module.imports` by the
+/// ast scanner, so this lookup must succeed for the kinds the TLA check
+/// traverses. A miss indicates a scanner invariant violation.
 fn import_span_for(module: &NormalModule, target: ImportRecordIdx) -> Span {
-  module
-    .imports
-    .iter()
-    .find_map(|(span, &idx)| (idx == target).then_some(*span))
-    .unwrap_or(Span::empty(0))
+  let span = module.imports.iter().find_map(|(span, &idx)| (idx == target).then_some(*span));
+  debug_assert!(
+    span.is_some(),
+    "import record {target:?} missing from imports map in module {:?}",
+    module.stable_id
+  );
+  span.unwrap_or(Span::empty(0))
 }
 
 impl LinkStage<'_> {
@@ -139,18 +145,25 @@ impl LinkStage<'_> {
           build_import_chain(dep_idx, tla_source_idx, &self.module_table, &visited);
 
         let tla_module = &self.module_table[tla_source_idx];
-        let tla_keyword_span =
-          self.tla_keyword_span_map.get(&tla_source_idx).copied().unwrap_or(Span::empty(0));
+        // `find_tla_source` only returns modules whose `ast_usage` contains
+        // `TopLevelAwait`, and the scanner always records a keyword span for
+        // those modules, so this map lookup must hit.
+        let tla_keyword_span = self.tla_keyword_span_map.get(&tla_source_idx).copied();
+        debug_assert!(
+          tla_keyword_span.is_some(),
+          "tla_keyword_span missing for TLA source module {tla_source_idx:?}"
+        );
+        let tla_keyword_span = tla_keyword_span.unwrap_or(Span::empty(0));
 
-        self.errors.push(BuildDiagnostic::require_tla(
-          module.stable_id.as_arc_str().clone(),
-          module.source.clone(),
+        self.errors.push(BuildDiagnostic::require_tla(RequireTla {
+          importer_stable_id: module.stable_id.as_arc_str().clone(),
+          importer_source: module.source.clone(),
           require_span,
-          tla_module.stable_id().as_arc_str().clone(),
-          tla_module.as_normal().map(|m| m.source.clone()).unwrap_or_default(),
+          tla_source_stable_id: tla_module.stable_id().as_arc_str().clone(),
+          tla_source_text: tla_module.as_normal().map(|m| m.source.clone()).unwrap_or_default(),
           tla_keyword_span,
           import_chain,
-        ));
+        }));
       }
     });
   }

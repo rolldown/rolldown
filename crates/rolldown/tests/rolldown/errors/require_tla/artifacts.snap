@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │
  1 │ const tla = require('./tla.js');
    │             ─────────┬─────────  
-   │                      ╰─────────── 
+   │                      ╰─────────── The require() call is here:
    │
    ├─[ tla.js:1:22 ]
    │

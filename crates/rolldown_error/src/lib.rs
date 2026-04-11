@@ -15,7 +15,7 @@ pub use crate::{
   build_diagnostic::events::invalid_option::InvalidOptionType,
   build_diagnostic::events::plugin_error::CausedPlugin,
   build_diagnostic::events::plugin_timings::PluginTimingInfo,
-  build_diagnostic::events::require_tla::ImportChainNote,
+  build_diagnostic::events::require_tla::{ImportChainNote, RequireTla},
   build_diagnostic::events::resolve_error::DiagnosableResolveError,
   build_diagnostic::events::unloadable_dependency::UnloadableDependencyContext,
   build_diagnostic::{BatchedBuildDiagnostic, BuildDiagnostic, Severity},

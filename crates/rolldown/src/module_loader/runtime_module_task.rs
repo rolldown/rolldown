@@ -186,7 +186,6 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         def_format: ModuleDefFormat::EsmMjs,
         ast_usage,
         self_referenced_class_decl_symbol_ids: FxHashSet::default(),
-        tla_keyword_span: None,
         hashbang_range: None,
         meta: ecma_view_meta,
         mutations: vec![],

@@ -165,8 +165,11 @@ impl LinkStage<'_> {
               let tla_module = self.module_table[tla_source_idx].as_normal();
               let tla_stable_id = self.module_table[tla_source_idx].stable_id().to_string();
               let tla_source_text = tla_module.map(|m| m.source.clone()).unwrap_or_default();
-              let tla_keyword_span =
-                tla_module.and_then(|m| m.tla_keyword_span).unwrap_or(Span::empty(0));
+              let tla_keyword_span = self
+                .tla_keyword_span_map
+                .get(&tla_source_idx)
+                .copied()
+                .unwrap_or(Span::empty(0));
 
               self.errors.push(BuildDiagnostic::require_tla(
                 module.stable_id.to_string(),

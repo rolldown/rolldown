@@ -127,8 +127,12 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
     let mut warnings = vec![];
 
-    let CreateEcmaViewReturn { mut ecma_view, ecma_related, raw_import_records } =
-      create_ecma_view(
+    let CreateEcmaViewReturn {
+      mut ecma_view,
+      ecma_related,
+      raw_import_records,
+      tla_keyword_span,
+    } = create_ecma_view(
         &mut CreateModuleContext {
           stable_id: &stable_id,
           module_idx: self.module_idx,
@@ -208,6 +212,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       raw_import_records,
       warnings,
       barrel_info,
+      tla_keyword_span,
     }));
 
     self.ctx.tx.send(result).await.expect(

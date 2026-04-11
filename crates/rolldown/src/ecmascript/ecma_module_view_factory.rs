@@ -1,3 +1,4 @@
+use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, FlatOptions, ImportRecordIdx,
@@ -19,6 +20,10 @@ pub struct CreateEcmaViewReturn {
   pub ecma_view: EcmaView,
   pub ecma_related: EcmaRelated,
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
+  /// The span of the first top-level `await` keyword, if any. Routed through
+  /// the task result into a centralized map on the link stage so it doesn't
+  /// need to live on every `EcmaView`.
+  pub tla_keyword_span: Option<Span>,
 }
 
 pub async fn create_ecma_view(
@@ -127,7 +132,6 @@ pub async fn create_ecma_view(
     },
     ast_usage,
     self_referenced_class_decl_symbol_ids,
-    tla_keyword_span,
     hashbang_range,
     mutations: vec![],
     new_url_references: new_url_imports,
@@ -144,7 +148,7 @@ pub async fn create_ecma_view(
   };
 
   let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage, preserve_jsx };
-  Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records })
+  Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records, tla_keyword_span })
 }
 
 /// The side effects priority is:

@@ -6,6 +6,7 @@ use arcstr::ArcStr;
 use futures::future::join_all;
 use itertools::Itertools;
 use oxc::semantic::{ScopeId, Scoping};
+use oxc::span::Span;
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
 use oxc_allocator::Address;
 use oxc_index::IndexVec;
@@ -106,6 +107,10 @@ pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   pub flat_options: FlatOptions,
   pub magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
   tla_module_count: usize,
+  /// Centralized map from modules that contain top-level `await` to the span
+  /// of the first TLA keyword. Stored here instead of on every `EcmaView`
+  /// because top-level await is rarely used in real-world apps.
+  tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
 pub struct ModuleLoaderOutput {
@@ -128,6 +133,7 @@ pub struct ModuleLoaderOutput {
   pub flat_options: FlatOptions,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   pub tla_module_count: usize,
+  pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
 impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
@@ -188,6 +194,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       flat_options,
       magic_string_tx,
       tla_module_count: 0,
+      tla_keyword_span_map: FxHashMap::default(),
     })
   }
 
@@ -366,6 +373,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             resolved_deps,
             raw_import_records,
             warnings,
+            tla_keyword_span,
           } = *task_result;
           all_warnings.extend(warnings);
 
@@ -387,6 +395,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           let normal_module = module.as_normal().unwrap();
           if normal_module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
             self.tla_module_count += 1;
+          }
+          if let Some(span) = tla_keyword_span {
+            self.tla_keyword_span_map.insert(module_idx, span);
           }
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
 
@@ -760,6 +771,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       flat_options: self.flat_options,
       user_defined_entry_modules: user_defined_entry_ids,
       tla_module_count: self.tla_module_count,
+      tla_keyword_span_map: std::mem::take(&mut self.tla_keyword_span_map),
     })
   }
 

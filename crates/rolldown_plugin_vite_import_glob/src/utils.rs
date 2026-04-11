@@ -339,13 +339,13 @@ impl GlobImportVisit<'_> {
   }
 
   fn get_common_base(&self, globs: &[PathWithGlob]) -> Cow<'_, str> {
-    if globs.is_empty() {
+    let Some((head, tail)) = globs.split_first() else {
       return self.root.to_string_lossy();
-    }
+    };
 
-    let first = globs[0].path.as_bytes();
+    let first = head.path.as_bytes();
     let mut end = first.len();
-    for PathWithGlob { path, .. } in &globs[1..] {
+    for PathWithGlob { path, .. } in tail {
       let bytes = path.as_bytes();
       let max_len = end.min(bytes.len());
 
@@ -360,11 +360,7 @@ impl GlobImportVisit<'_> {
       }
     }
 
-    if end == 0 {
-      self.root.to_string_lossy()
-    } else {
-      Cow::Owned(globs[0].path[..end].to_string())
-    }
+    if end == 0 { self.root.to_string_lossy() } else { Cow::Owned(head.path[..end].to_string()) }
   }
 
   fn eval_glob_expr(

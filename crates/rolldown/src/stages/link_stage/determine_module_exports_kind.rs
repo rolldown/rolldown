@@ -12,7 +12,6 @@ impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn determine_module_exports_kind(&mut self) {
     self.module_table.modules.iter().filter_map(Module::as_normal).for_each(|importer| {
-      // TODO(hyf0): should check if importer is a js module
       importer
         .import_records
         .iter()

@@ -4,6 +4,7 @@ use rolldown_common::{
   EcmaModuleAstUsage, ImportKind, ImportRecordIdx, ModuleIdx, ModuleTable, NormalModule,
 };
 use rolldown_error::{BuildDiagnostic, ImportChainNote, RequireTla};
+use rustc_hash::FxHashSet;
 
 use super::LinkStage;
 
@@ -40,6 +41,13 @@ impl LinkStage<'_> {
       return;
     }
 
+    // Known limitation: on a cycle hit we return `None` for the visiting
+    // edge and then memoize modules along the current DFS path even
+    // though a later branch of the same parent might still discover TLA
+    // through them. If a subsequent `require(...)` lookup lands on one
+    // of those prematurely memoized siblings we silently miss the error.
+    // A proper fix would delay memoization until the enclosing SCC
+    // resolves.
     fn find_tla_source(
       module_idx: ModuleIdx,
       module_table: &ModuleTable,
@@ -82,41 +90,58 @@ impl LinkStage<'_> {
       visited: &IndexVec<ModuleIdx, TlaVisitState>,
     ) -> Vec<ImportChainNote> {
       let mut chain = Vec::new();
+      let mut seen: FxHashSet<ModuleIdx> = FxHashSet::default();
       let mut current_idx = start_idx;
 
-      while current_idx != tla_source_idx {
+      // `seen` guards against cycles: cycle back-edges are memoized as
+      // `Some(tla_source_idx)` just like forward edges, so a naive
+      // first-match would walk into the cycle. Prefer the direct edge
+      // to `tla_source_idx` when one exists so the chain stays short.
+      while current_idx != tla_source_idx && seen.insert(current_idx) {
         let module = &module_table[current_idx];
         let Some(normal) = module.as_normal() else {
           break;
         };
 
-        let next = normal
-          .import_records
-          .iter_enumerated()
-          .filter(|(_, rec)| matches!(rec.kind, ImportKind::Import))
-          .find_map(|(rec_idx, rec)| {
-            let dep_idx = rec.resolved_module?;
-            let dep_module_idx = module_table[dep_idx].idx();
-            match visited[dep_module_idx] {
-              TlaVisitState::Visited(Some(source)) if source == tla_source_idx => {
-                let importee = &module_table[dep_idx];
-                Some((dep_module_idx, import_span_for(normal, rec_idx), importee.stable_id()))
-              }
-              _ => None,
-            }
-          });
-
-        if let Some((next_idx, import_span, importee_stable_id)) = next {
-          chain.push(ImportChainNote {
-            importer_stable_id: module.stable_id().as_arc_str().clone(),
-            importer_source: normal.source.clone(),
-            importee_stable_id: importee_stable_id.as_arc_str().clone(),
-            import_span,
-          });
-          current_idx = next_idx;
-        } else {
-          break;
+        let mut direct = None;
+        let mut indirect = None;
+        for (rec_idx, rec) in normal.import_records.iter_enumerated() {
+          if !matches!(rec.kind, ImportKind::Import) {
+            continue;
+          }
+          let Some(dep_idx) = rec.resolved_module else { continue };
+          let dep_module_idx = module_table[dep_idx].idx();
+          if seen.contains(&dep_module_idx) {
+            continue;
+          }
+          if dep_module_idx == tla_source_idx {
+            let importee = &module_table[dep_idx];
+            direct = Some((dep_module_idx, import_span_for(normal, rec_idx), importee.stable_id()));
+            break;
+          }
+          if indirect.is_none()
+            && matches!(
+              visited[dep_module_idx],
+              TlaVisitState::Visited(Some(source)) if source == tla_source_idx
+            )
+          {
+            let importee = &module_table[dep_idx];
+            indirect =
+              Some((dep_module_idx, import_span_for(normal, rec_idx), importee.stable_id()));
+          }
         }
+
+        let Some((next_idx, import_span, importee_stable_id)) = direct.or(indirect) else {
+          break;
+        };
+
+        chain.push(ImportChainNote {
+          importer_stable_id: module.stable_id().as_arc_str().clone(),
+          importer_source: normal.source.clone(),
+          importee_stable_id: importee_stable_id.as_arc_str().clone(),
+          import_span,
+        });
+        current_idx = next_idx;
       }
 
       chain

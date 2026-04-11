@@ -350,11 +350,25 @@ impl GlobImportVisit<'_> {
       let max_len = end.min(bytes.len());
 
       let mut i = 0;
+      let mut last_slash = 0;
       while i < max_len && first[i] == bytes[i] {
+        if first[i] == MAIN_SEPARATOR as u8 {
+          last_slash = i;
+        }
         i += 1;
       }
 
-      end = i;
+      // If the walk finished at `max_len` (not a byte mismatch), `i` itself
+      // may already be a deeper boundary than any separator we recorded —
+      // e.g. when one path fully matched the other up to a segment split.
+      if i == max_len
+        && (i == first.len() || first[i] == MAIN_SEPARATOR as u8)
+        && (i == bytes.len() || bytes[i] == MAIN_SEPARATOR as u8)
+      {
+        last_slash = i;
+      }
+
+      end = last_slash;
       if end == 0 {
         break;
       }

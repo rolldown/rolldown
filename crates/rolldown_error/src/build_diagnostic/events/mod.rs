@@ -43,6 +43,7 @@ pub mod oxc_error;
 pub mod plugin_error;
 pub mod plugin_timings;
 pub mod prefer_builtin_feature;
+pub mod require_tla;
 pub mod resolve_error;
 pub mod runtime_module_symbol_not_found;
 pub mod tsconfig_error;

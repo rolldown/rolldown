@@ -92,6 +92,8 @@ pub struct EcmaView {
   pub ast_usage: EcmaModuleAstUsage,
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
   // the range of hashbang in source
+  /// The span of the first top-level `await` keyword, if any.
+  pub tla_keyword_span: Option<Span>,
   pub hashbang_range: Option<Span>,
   pub directive_range: Vec<Span>,
   pub meta: EcmaViewMeta,

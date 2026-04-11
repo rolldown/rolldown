@@ -1,34 +1,95 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
 
-## entry.js
+## REQUIRE_TLA
 
-```js
-var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
-var __commonJSMin = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
-//#endregion
-//#region c.js
-var require_c = /* @__PURE__ */ __commonJSMin((async () => {
-	await 0;
-}));
-var init_b = __esmMin((async () => {
-	require_c();
-}));
-var init_a = __esmMin((async () => {
-	await init_b();
-}));
-//#endregion
-//#region entry.js
-var require_entry = /* @__PURE__ */ __commonJSMin((async () => {
-	init_a();
-	init_b();
-	require_c();
-	require_entry();
-	await 0;
-}));
-//#endregion
-export default require_entry();
+```text
+[REQUIRE_TLA] Error: This require call is not allowed because the imported file "c.js" contains a top-level await
+   ╭─[ entry.js:3:1 ]
+   │
+ 3 │ require('./c')
+   │ ───────┬──────  
+   │        ╰──────── 
+   │
+   ├─[ c.js:1:1 ]
+   │
+ 1 │ await 0
+   │ ───┬───  
+   │    ╰───── The top-level await in "c.js" is here:
+───╯
+
+```
+
+## REQUIRE_TLA
+
+```text
+[REQUIRE_TLA] Error: This require call is not allowed because the imported file "entry.js" contains a top-level await
+   ╭─[ entry.js:4:1 ]
+   │
+ 4 │ require('./entry')
+   │ ─────────┬────────  
+   │          ╰────────── 
+ 5 │ await 0
+   │ ───┬───  
+   │    ╰───── The top-level await in "entry.js" is here:
+───╯
+
+```
+
+## REQUIRE_TLA
+
+```text
+[REQUIRE_TLA] Error: This require call is not allowed because the transitive dependency "c.js" contains a top-level await
+   ╭─[ entry.js:1:1 ]
+   │
+ 1 │ require('./a')
+   │ ───────┬──────  
+   │        ╰──────── 
+   │
+   ├─[ a.js:2:1 ]
+   │
+ 2 │ import './b'
+   │ ──────┬─────  
+   │       ╰─────── The file "a.js" imports the file "b.js" here:
+   │
+   ├─[ b.js:1:1 ]
+   │
+ 1 │ import './c'
+   │ ──────┬─────  
+   │       ╰─────── The file "b.js" imports the file "c.js" here:
+   │
+   ├─[ c.js:1:1 ]
+   │
+ 1 │ await 0
+   │ ───┬───  
+   │    ╰───── The top-level await in "c.js" is here:
+───╯
+
+```
+
+## REQUIRE_TLA
+
+```text
+[REQUIRE_TLA] Error: This require call is not allowed because the transitive dependency "c.js" contains a top-level await
+   ╭─[ entry.js:2:1 ]
+   │
+ 2 │ require('./b')
+   │ ───────┬──────  
+   │        ╰──────── 
+   │
+   ├─[ b.js:1:1 ]
+   │
+ 1 │ import './c'
+   │ ──────┬─────  
+   │       ╰─────── The file "b.js" imports the file "c.js" here:
+   │
+   ├─[ c.js:1:1 ]
+   │
+ 1 │ await 0
+   │ ───┬───  
+   │    ╰───── The top-level await in "c.js" is here:
+───╯
 
 ```

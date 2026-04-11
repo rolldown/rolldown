@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## REQUIRE_TLA
+
+```text
+[REQUIRE_TLA] Error: This require call is not allowed because the imported file "tla.js" contains a top-level await
+   ╭─[ main.js:1:13 ]
+   │
+ 1 │ const tla = require('./tla.js');
+   │             ─────────┬─────────  
+   │                      ╰─────────── 
+   │
+   ├─[ tla.js:1:22 ]
+   │
+ 1 │ export const value = await Promise.resolve('hello');
+   │                      ───────────────┬──────────────  
+   │                                     ╰──────────────── The top-level await in "tla.js" is here:
+───╯
+
+```

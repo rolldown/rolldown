@@ -393,8 +393,8 @@ impl BuildDiagnostic {
     Self::new_inner(PluginTimings { plugins })
   }
 
-  pub fn duplicate_shebang(filename: String) -> Self {
-    Self::new_inner(DuplicateShebang { filename })
+  pub fn duplicate_shebang(filename: String, source: &str) -> Self {
+    Self::new_inner(DuplicateShebang { filename, source: source.to_string() })
   }
 
   pub fn tsconfig_error(file_path: String, reason: ResolveError) -> Self {

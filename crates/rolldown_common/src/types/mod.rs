@@ -34,6 +34,7 @@ pub mod module_info;
 pub mod module_namespace_included_reason;
 pub mod module_render_output;
 pub mod module_table;
+pub mod module_tag;
 pub mod named_export;
 pub mod named_import;
 pub mod namespace_alias;

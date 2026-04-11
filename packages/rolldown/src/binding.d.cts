@@ -2341,6 +2341,7 @@ export interface BindingMatchGroup {
   maxSize?: number
   entriesAware?: boolean
   entriesAwareMergeThreshold?: number
+  tags?: Array<string>
 }
 
 export interface BindingModulePreloadOptions {

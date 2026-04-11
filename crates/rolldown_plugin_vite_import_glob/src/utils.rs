@@ -339,32 +339,42 @@ impl GlobImportVisit<'_> {
   }
 
   fn get_common_base(&self, globs: &[PathWithGlob]) -> Cow<'_, str> {
-    if globs.is_empty() {
+    let Some((head, tail)) = globs.split_first() else {
       return self.root.to_string_lossy();
-    }
+    };
 
-    let first = globs[0].path.as_bytes();
+    let first = head.path.as_bytes();
     let mut end = first.len();
-    for PathWithGlob { path, .. } in &globs[1..] {
+    for PathWithGlob { path, .. } in tail {
       let bytes = path.as_bytes();
       let max_len = end.min(bytes.len());
 
       let mut i = 0;
+      let mut last_slash = 0;
       while i < max_len && first[i] == bytes[i] {
+        if first[i] == MAIN_SEPARATOR as u8 {
+          last_slash = i;
+        }
         i += 1;
       }
 
-      end = i;
+      // If the walk finished at `max_len` (not a byte mismatch), `i` itself
+      // may already be a deeper boundary than any separator we recorded —
+      // e.g. when one path fully matched the other up to a segment split.
+      if i == max_len
+        && (i == first.len() || first[i] == MAIN_SEPARATOR as u8)
+        && (i == bytes.len() || bytes[i] == MAIN_SEPARATOR as u8)
+      {
+        last_slash = i;
+      }
+
+      end = last_slash;
       if end == 0 {
         break;
       }
     }
 
-    if end == 0 {
-      self.root.to_string_lossy()
-    } else {
-      Cow::Owned(globs[0].path[..end].to_string())
-    }
+    if end == 0 { self.root.to_string_lossy() } else { Cow::Owned(head.path[..end].to_string()) }
   }
 
   fn eval_glob_expr(

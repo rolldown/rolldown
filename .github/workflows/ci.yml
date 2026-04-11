@@ -29,6 +29,7 @@ jobs:
       rust-changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}
       node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}
       pluginutils-changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}
+      docs-changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
@@ -36,16 +37,19 @@ jobs:
         id: filter
         with:
           filters: |
-            rust-changes: &rust-changes
+            infra-changes: &infra-changes
               - '.github/workflows/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+            rust-changes: &rust-changes
+              - *infra-changes
               - 'crates/**'
               - 'tasks/**'
               - 'scripts/src/esbuild-tests/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
               - 'rust-toolchain.toml'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
               - '.gitattributes'
               - 'justfile'
               - 'test262'
@@ -54,19 +58,23 @@ jobs:
               - 'packages/**'
               - 'examples/**'
               - 'scripts/**'
-              - 'package.json'
-              - 'justfile'
               - 'rollup'
             pluginutils-changes:
+              - *infra-changes
               - 'packages/pluginutils/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
+            docs-changes:
+              - *infra-changes
+              - 'docs/**'
+              - 'packages/rolldown/src/**'
+              - 'packages/rolldown/package.json'
+              - 'packages/rolldown/tsconfig*.json'
+              - 'packages/pluginutils/**'
       - name: Show outputs
         run: |
           echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}"
           echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}"
           echo "PluginUtils changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}"
+          echo "Docs changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}"
 
   rust-validation:
     name: Rust Validation
@@ -380,3 +388,21 @@ jobs:
       - uses: crate-ci/typos@02ea592e44b3a53c302f697cddca7641cd051c3d # v1.45.0
         with:
           files: .
+
+  docs-validation:
+    name: Docs Validation
+    needs: changes
+    if: ${{ needs.changes.outputs.docs-changes == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - uses: voidzero-dev/setup-vp@8ecb39174989ce55af90f45cf55b02738599831d # v1.6.0
+        with:
+          cache: true
+
+      - name: Build @rolldown/pluginutils
+        run: vp run --filter '@rolldown/pluginutils' build
+
+      - name: Build Docs
+        run: vp run docs:build

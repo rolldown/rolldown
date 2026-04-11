@@ -7,7 +7,20 @@ use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
 
-use crate::{ModuleInfo, SharedModuleInfoDashMap};
+use crate::{ModuleInfo, ModuleTag, SharedModuleInfoDashMap};
+
+/// Schema-only enum for built-in module tags. Used by `schemars` to generate
+/// a restricted JSON Schema for the `tags` field. Not used at runtime.
+#[cfg(feature = "deserialize_bundler_options")]
+#[derive(JsonSchema)]
+#[expect(dead_code)]
+enum BuiltinModuleTag {
+  #[schemars(rename = "$initial")]
+  Initial,
+  // Phase 2:
+  // #[schemars(rename = "$lazy")]
+  // Lazy,
+}
 
 #[derive(Default, Debug, Clone)]
 #[cfg_attr(
@@ -54,6 +67,13 @@ pub struct MatchGroup {
   pub entries_aware: Option<bool>,
   /// Only effective when `entriesAware` is set to `true`.
   pub entries_aware_merge_threshold: Option<f64>,
+  /// Filter modules by tags. Only modules with all specified tags are captured.
+  /// See meta/design/module-tags.md
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    schemars(with = "Option<Vec<BuiltinModuleTag>>")
+  )]
+  pub tags: Option<Vec<ModuleTag>>,
 }
 
 type MatchGroupTestFn = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static>>

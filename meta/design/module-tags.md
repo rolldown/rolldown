@@ -46,6 +46,14 @@ output: {
 
 `tags` uses AND semantics: only modules that have **all** specified tags are captured by the group. It combines with other filters (`test`, `minShareCount`, etc.) — a module must match all criteria.
 
+### Internal representation
+
+Tag names are mapped to bit indices at build time via a registry (`$initial` → bit 0, `$lazy` → bit 1, etc.). Each module stores its tags as a `u64` bitset rather than a set of strings. Matching a module against a group's `tags` filter is a single bitwise AND + comparison — no string allocation or comparison at match time.
+
+### Incremental build
+
+Built-in tags like `$initial` are computed from the module graph structure (which modules are statically reachable from which entries). When a file changes during incremental/watch rebuilds, the module graph may change — an `import` statement added or removed can shift a module between `$initial` and `$lazy`. Tags must be recomputed from scratch on each rebuild during the code splitting stage. This is acceptable because tag computation piggybacks on the existing entry reachability BFS (no separate pass), and the bitset operations are negligible compared to the rest of code splitting.
+
 ### Implementation priority
 
 **Phase 1:**

@@ -11,8 +11,9 @@ use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason,
-  PostChunkOptimizationOperation, PreserveEntrySignatures, SymbolRef, WrapKind,
+  ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTag,
+  ModuleTagBitSet, ModuleTagRegistry, PostChunkOptimizationOperation, PreserveEntrySignatures,
+  SymbolRef, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
@@ -30,6 +31,8 @@ use super::{GenerateStage, chunk_ext::ChunkCreationReason};
 pub struct SplittingInfo {
   pub bits: BitSet,
   pub share_count: u32,
+  /// Module tags bitset. See meta/design/module-tags.md
+  pub tags_bit_set: ModuleTagBitSet,
 }
 
 pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
@@ -54,7 +57,8 @@ impl GenerateStage<'_> {
 
     let mut index_splitting_info: IndexSplittingInfo = oxc_index::index_vec![SplittingInfo {
         bits: BitSet::new(entries_len),
-        share_count: 0
+        share_count: 0,
+        tags_bit_set: ModuleTagBitSet::default(),
       }; self.link_output.module_table.modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity(entries_len as usize);
 
@@ -821,17 +825,23 @@ impl GenerateStage<'_> {
     input_base: &ArcStr,
   ) -> BuildResult<()> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
-    for (entry_index, (&module_idx, _)) in self
+    let tag_registry = ModuleTagRegistry::new();
+    for (entry_index, (&module_idx, entry_point)) in self
       .link_output
       .entries
       .iter()
       .flat_map(|(idx, entries)| entries.iter().map(move |e| (idx, e)))
       .enumerate()
     {
+      let is_user_defined_entry = matches!(
+        entry_point.kind,
+        EntryPointKind::UserDefined | EntryPointKind::EmittedUserDefined
+      );
       self.determine_reachable_modules_for_entry(
         module_idx,
         entry_index.try_into().expect("Too many entries, u32 overflowed."),
         index_splitting_info,
+        is_user_defined_entry,
       );
     }
 
@@ -844,6 +854,7 @@ impl GenerateStage<'_> {
         &mut module_is_assigned,
         chunk_graph,
         input_base,
+        &tag_registry,
       )
       .await?;
 
@@ -943,6 +954,7 @@ impl GenerateStage<'_> {
     entry_module_idx: ModuleIdx,
     entry_index: u32,
     index_splitting_info: &mut IndexSplittingInfo,
+    is_user_defined_entry: bool,
   ) {
     debug_assert!(
       self.link_output.module_table[entry_module_idx].is_normal(),
@@ -966,6 +978,11 @@ impl GenerateStage<'_> {
 
       index_splitting_info[module_idx].bits.set_bit(entry_index);
       index_splitting_info[module_idx].share_count += 1;
+      // Tag as initial if reachable from a user-defined entry via static imports.
+      // See meta/design/module-tags.md
+      if is_user_defined_entry {
+        index_splitting_info[module_idx].tags_bit_set.set_bit(ModuleTag::INITIAL_BIT);
+      }
       meta.dependencies.iter().copied().for_each(|dep_idx| {
         q.push_back(dep_idx);
       });

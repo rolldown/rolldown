@@ -23,6 +23,7 @@ use rolldown::{
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
+use rolldown_common::ModuleTag;
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
 use rolldown_utils::rustc_hash::FxHashMapExt;
@@ -517,6 +518,7 @@ pub fn normalize_binding_options(
             max_size: item.max_size,
             entries_aware: item.entries_aware,
             entries_aware_merge_threshold: item.entries_aware_merge_threshold,
+            tags: item.tags.map(|tags| tags.into_iter().map(ModuleTag::from).collect()),
           })
           .collect::<Vec<_>>()
       }),

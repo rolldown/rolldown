@@ -53,10 +53,7 @@ impl BuildEvent for RequireTla {
     let mut get_or_add_file =
       |diagnostic: &mut Diagnostic, stable_id: &str, source: &ArcStr| -> DiagnosticFileId {
         let path = opts.stabilize_path(stable_id);
-        file_ids
-          .entry(path.clone())
-          .or_insert_with(|| diagnostic.add_file(path, source))
-          .clone()
+        file_ids.entry(path.clone()).or_insert_with(|| diagnostic.add_file(path, source)).clone()
       };
 
     // Label 1: the require() call site
@@ -70,8 +67,7 @@ impl BuildEvent for RequireTla {
 
     // Labels 2..N: the import chain (for transitive TLA)
     for step in &self.import_chain {
-      let file_id =
-        get_or_add_file(diagnostic, &step.importer_stable_id, &step.importer_source);
+      let file_id = get_or_add_file(diagnostic, &step.importer_stable_id, &step.importer_source);
       diagnostic.add_label(
         &file_id,
         step.import_span.start..step.import_span.end,

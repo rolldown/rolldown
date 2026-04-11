@@ -57,9 +57,9 @@ impl LinkStage<'_> {
         .iter()
         .filter(|rec| matches!(rec.kind, ImportKind::Import))
         .find_map(|rec| {
-          rec.resolved_module.and_then(|dep_idx| {
-            find_tla_source(module_table[dep_idx].idx(), module_table, visited)
-          })
+          rec
+            .resolved_module
+            .and_then(|dep_idx| find_tla_source(module_table[dep_idx].idx(), module_table, visited))
         });
 
       visited[module_idx] = TlaVisitState::Visited(tla_source);
@@ -140,8 +140,7 @@ impl LinkStage<'_> {
         if matches!(rec.kind, ImportKind::Require) {
           if let Some(resolved_module_idx) = rec.resolved_module {
             let dep_idx = self.module_table[resolved_module_idx].idx();
-            if let Some(tla_source_idx) =
-              find_tla_source(dep_idx, &self.module_table, &mut visited)
+            if let Some(tla_source_idx) = find_tla_source(dep_idx, &self.module_table, &mut visited)
             {
               let is_direct = dep_idx == tla_source_idx;
 
@@ -164,10 +163,8 @@ impl LinkStage<'_> {
               };
 
               let tla_module = self.module_table[tla_source_idx].as_normal();
-              let tla_stable_id =
-                self.module_table[tla_source_idx].stable_id().to_string();
-              let tla_source_text =
-                tla_module.map(|m| m.source.clone()).unwrap_or_default();
+              let tla_stable_id = self.module_table[tla_source_idx].stable_id().to_string();
+              let tla_source_text = tla_module.map(|m| m.source.clone()).unwrap_or_default();
               let tla_keyword_span =
                 tla_module.and_then(|m| m.tla_keyword_span).unwrap_or(Span::empty(0));
 
@@ -182,7 +179,12 @@ impl LinkStage<'_> {
                 import_chain
                   .into_iter()
                   .map(|step| {
-                    (step.importer_stable_id, step.importer_source, step.importee_stable_id, step.import_span)
+                    (
+                      step.importer_stable_id,
+                      step.importer_source,
+                      step.importee_stable_id,
+                      step.import_span,
+                    )
                   })
                   .collect(),
               ));

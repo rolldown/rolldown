@@ -1,8 +1,9 @@
-use arcstr::ArcStr;
 use oxc::span::Span;
 use oxc_index::{IndexVec, index_vec};
-use rolldown_common::{EcmaModuleAstUsage, ImportKind, ModuleIdx, ModuleTable};
-use rolldown_error::BuildDiagnostic;
+use rolldown_common::{
+  EcmaModuleAstUsage, ImportKind, ImportRecordIdx, ModuleIdx, ModuleTable, NormalModule,
+};
+use rolldown_error::{BuildDiagnostic, ImportChainNote};
 
 use super::LinkStage;
 
@@ -16,12 +17,14 @@ enum TlaVisitState {
   Visited(Option<ModuleIdx>),
 }
 
-#[derive(Debug, Clone)]
-struct ImportChainStep {
-  importer_stable_id: String,
-  importer_source: ArcStr,
-  importee_stable_id: String,
-  import_span: Span,
+/// Look up the source span of a given import record within a module. Linear
+/// in `imports.len()` but only called on error paths.
+fn import_span_for(module: &NormalModule, target: ImportRecordIdx) -> Span {
+  module
+    .imports
+    .iter()
+    .find_map(|(span, &idx)| (idx == target).then_some(*span))
+    .unwrap_or(Span::empty(0))
 }
 
 impl LinkStage<'_> {
@@ -71,15 +74,11 @@ impl LinkStage<'_> {
       tla_source_idx: ModuleIdx,
       module_table: &ModuleTable,
       visited: &IndexVec<ModuleIdx, TlaVisitState>,
-    ) -> Vec<ImportChainStep> {
+    ) -> Vec<ImportChainNote> {
       let mut chain = Vec::new();
       let mut current_idx = start_idx;
 
-      loop {
-        if current_idx == tla_source_idx {
-          break;
-        }
-
+      while current_idx != tla_source_idx {
         let module = &module_table[current_idx];
         let Some(normal) = module.as_normal() else {
           break;
@@ -87,37 +86,25 @@ impl LinkStage<'_> {
 
         let next = normal
           .import_records
-          .iter()
-          .filter(|rec| matches!(rec.kind, ImportKind::Import))
-          .find_map(|rec| {
+          .iter_enumerated()
+          .filter(|(_, rec)| matches!(rec.kind, ImportKind::Import))
+          .find_map(|(rec_idx, rec)| {
             let dep_idx = rec.resolved_module?;
             let dep_module_idx = module_table[dep_idx].idx();
             match visited[dep_module_idx] {
               TlaVisitState::Visited(Some(source)) if source == tla_source_idx => {
-                let import_span = normal
-                  .imports
-                  .iter()
-                  .find_map(|(span, &rec_idx)| {
-                    if normal.import_records[rec_idx].module_request == rec.module_request {
-                      Some(*span)
-                    } else {
-                      None
-                    }
-                  })
-                  .unwrap_or(Span::empty(0));
-
                 let importee = &module_table[dep_idx];
-                Some((dep_module_idx, import_span, importee.stable_id().to_string()))
+                Some((dep_module_idx, import_span_for(normal, rec_idx), importee.stable_id()))
               }
               _ => None,
             }
           });
 
         if let Some((next_idx, import_span, importee_stable_id)) = next {
-          chain.push(ImportChainStep {
-            importer_stable_id: module.stable_id().to_string(),
+          chain.push(ImportChainNote {
+            importer_stable_id: module.stable_id().as_arc_str().clone(),
             importer_source: normal.source.clone(),
-            importee_stable_id,
+            importee_stable_id: importee_stable_id.as_arc_str().clone(),
             import_span,
           });
           current_idx = next_idx;
@@ -136,61 +123,34 @@ impl LinkStage<'_> {
       self.metas[module.idx].is_tla_or_contains_tla_dependency = tla_source.is_some();
 
       // Check for require() of TLA modules — this is forbidden.
-      for rec in &module.import_records {
-        if matches!(rec.kind, ImportKind::Require) {
-          if let Some(resolved_module_idx) = rec.resolved_module {
-            let dep_idx = self.module_table[resolved_module_idx].idx();
-            if let Some(tla_source_idx) = find_tla_source(dep_idx, &self.module_table, &mut visited)
-            {
-              let is_direct = dep_idx == tla_source_idx;
-
-              let require_span = module
-                .imports
-                .iter()
-                .find_map(|(span, &rec_idx)| {
-                  if module.import_records[rec_idx].module_request == rec.module_request {
-                    Some(*span)
-                  } else {
-                    None
-                  }
-                })
-                .unwrap_or(Span::empty(0));
-
-              let import_chain = if is_direct {
-                vec![]
-              } else {
-                build_import_chain(dep_idx, tla_source_idx, &self.module_table, &visited)
-              };
-
-              let tla_module = self.module_table[tla_source_idx].as_normal();
-              let tla_stable_id = self.module_table[tla_source_idx].stable_id().to_string();
-              let tla_source_text = tla_module.map(|m| m.source.clone()).unwrap_or_default();
-              let tla_keyword_span =
-                self.tla_keyword_span_map.get(&tla_source_idx).copied().unwrap_or(Span::empty(0));
-
-              self.errors.push(BuildDiagnostic::require_tla(
-                module.stable_id.to_string(),
-                module.source.clone(),
-                require_span,
-                tla_stable_id,
-                tla_source_text,
-                tla_keyword_span,
-                is_direct,
-                import_chain
-                  .into_iter()
-                  .map(|step| {
-                    (
-                      step.importer_stable_id,
-                      step.importer_source,
-                      step.importee_stable_id,
-                      step.import_span,
-                    )
-                  })
-                  .collect(),
-              ));
-            }
-          }
+      for (rec_idx, rec) in module.import_records.iter_enumerated() {
+        if !matches!(rec.kind, ImportKind::Require) {
+          continue;
         }
+        let Some(resolved_module_idx) = rec.resolved_module else { continue };
+        let dep_idx = self.module_table[resolved_module_idx].idx();
+        let Some(tla_source_idx) = find_tla_source(dep_idx, &self.module_table, &mut visited)
+        else {
+          continue;
+        };
+
+        let require_span = import_span_for(module, rec_idx);
+        let import_chain =
+          build_import_chain(dep_idx, tla_source_idx, &self.module_table, &visited);
+
+        let tla_module = &self.module_table[tla_source_idx];
+        let tla_keyword_span =
+          self.tla_keyword_span_map.get(&tla_source_idx).copied().unwrap_or(Span::empty(0));
+
+        self.errors.push(BuildDiagnostic::require_tla(
+          module.stable_id.as_arc_str().clone(),
+          module.source.clone(),
+          require_span,
+          tla_module.stable_id().as_arc_str().clone(),
+          tla_module.as_normal().map(|m| m.source.clone()).unwrap_or_default(),
+          tla_keyword_span,
+          import_chain,
+        ));
       }
     });
   }

@@ -236,14 +236,13 @@ impl BuildDiagnostic {
 
   #[expect(clippy::too_many_arguments)]
   pub fn require_tla(
-    importer_stable_id: String,
+    importer_stable_id: ArcStr,
     importer_source: ArcStr,
     require_span: Span,
-    tla_source_stable_id: String,
+    tla_source_stable_id: ArcStr,
     tla_source_text: ArcStr,
     tla_keyword_span: Span,
-    is_direct: bool,
-    import_chain: Vec<(String, ArcStr, String, Span)>,
+    import_chain: Vec<ImportChainNote>,
   ) -> Self {
     Self::new_inner(RequireTla {
       importer_stable_id,
@@ -252,13 +251,7 @@ impl BuildDiagnostic {
       tla_source_stable_id,
       tla_source_text,
       tla_keyword_span,
-      is_direct,
-      import_chain: import_chain
-        .into_iter()
-        .map(|(importer_stable_id, importer_source, importee_stable_id, import_span)| {
-          ImportChainNote { importer_stable_id, importer_source, importee_stable_id, import_span }
-        })
-        .collect(),
+      import_chain,
     })
   }
 

@@ -1,1 +1,3 @@
-export function base() { return 'base'; }
+export function base() {
+  return 'base';
+}

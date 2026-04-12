@@ -2,7 +2,9 @@ use bitflags::bitflags;
 use oxc::ast::ast::ObjectPropertyKind;
 use oxc::semantic::{ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
-  allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
+  allocator::{
+    self, Address, Allocator, Box as ArenaBox, CloneIn, Dummy, GetAddress, IntoIn, TakeIn,
+  },
   ast::{
     AstBuilder, NONE,
     ast::{
@@ -88,6 +90,8 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub top_level_var_bindings: FxIndexSet<Ident<'ast>>,
   pub cur_stmt_index: usize,
   pub keep_name_statement_to_insert: Vec<(usize, CompactStr, CompactStr)>,
+  /// Tracks expression addresses already processed for keepNames to prevent double insertion.
+  pub keep_name_processed_exprs: FxHashSet<Address>,
   pub needs_hosted_top_level_binding: bool,
   pub module_namespace_included: bool,
   pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
@@ -1657,61 +1661,72 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     last_import_stmt_idx.unwrap_or(0)
   }
 
-  fn process_fn(
+  /// Returns `(insert_position, original_name, canonical_name)` for function declaration
+  /// keepNames statement insertion. Only used for function declarations (not expressions).
+  fn process_fn_decl_keep_name(
     &self,
-    symbol_binding_id: Option<KeepNameId>,
-    name_binding_id: Option<KeepNameId>,
+    keep_name_id: Option<KeepNameId>,
   ) -> Option<(usize, CompactStr, CompactStr)> {
     if !self.ctx.options.keep_names {
       return None;
     }
-    let (original_name, _) = self.get_keep_name_info(name_binding_id?)?;
-    let (_, canonical_name) = self.get_keep_name_info(symbol_binding_id?)?;
-    let original_name: CompactStr = CompactStr::new(original_name);
-    let new_name = CompactStr::new(canonical_name);
-    let insert_position = self.cur_stmt_index + 1;
-    Some((insert_position, original_name, new_name))
+    let (original_name, canonical_name) = self.get_keep_name_info(keep_name_id?)?;
+    Some((self.cur_stmt_index + 1, CompactStr::new(original_name), CompactStr::new(canonical_name)))
   }
 
-  fn process_keep_name_for_expression(
-    &self,
+  /// Unified keepNames handler for all expression types (class, function, arrow).
+  /// Uses `keep_name_processed_exprs` set to prevent double processing.
+  ///
+  /// - `keep_name_id`: outer binding id from var decl or assignment (None for standalone expressions)
+  /// - `expr`: the expression to potentially wrap with `__name()` or add static block to
+  fn apply_keep_name_for_expr(
+    &mut self,
     keep_name_id: Option<KeepNameId>,
     expr: &mut ast::Expression<'ast>,
   ) {
-    // Don't rewrite `__name` runtime helper itself.
     if !self.ctx.options.keep_names || self.ctx.runtime.id() == self.ctx.idx {
+      return;
+    }
+    let expr_address = expr.address();
+    if self.keep_name_processed_exprs.contains(&expr_address) {
       return;
     }
 
     match expr {
       ast::Expression::ClassExpression(class_expression) => {
-        // Named class expressions are handled in visit_expression
-        if class_expression.id.is_some() {
-          return;
-        }
-        if let Some(element) = self.keep_name_helper_for_class(keep_name_id, &class_expression.body)
+        // For named class expressions, prefer inner id; for anonymous, use outer keep_name_id
+        let effective_id = class_expression
+          .id
+          .as_ref()
+          .and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId))
+          .or(keep_name_id);
+        if let Some(element) = self.keep_name_helper_for_class(effective_id, &class_expression.body)
         {
+          self.keep_name_processed_exprs.insert(expr_address);
           class_expression.body.body.insert(0, element);
         }
       }
       ast::Expression::FunctionExpression(fn_expression) => {
-        // Named function expressions are handled in visit_expression
-        if fn_expression.id.is_some() {
-          return;
-        }
-        if let Some((_insert_position, original_name, _)) =
-          self.process_fn(keep_name_id, keep_name_id)
-        {
+        // For named fn expressions, prefer inner id; for anonymous, use outer keep_name_id
+        let effective_id = fn_expression
+          .id
+          .as_ref()
+          .and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId))
+          .or(keep_name_id);
+        if let Some((original_name, _)) = effective_id.and_then(|id| self.get_keep_name_info(id)) {
+          self.keep_name_processed_exprs.insert(expr_address);
+          let original_name = CompactStr::new(original_name);
           let fn_expr = expr.take_in(self.alloc);
           let name_ref = self.canonical_ref_for_runtime("__name");
           let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
           *expr = self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_callee, true);
         }
       }
-      ast::Expression::ArrowFunctionExpression(_fn_expr) => {
-        if let Some((_insert_position, original_name, _)) =
-          self.process_fn(keep_name_id, keep_name_id)
-        {
+      ast::Expression::ArrowFunctionExpression(_) => {
+        // Arrows never have their own id, always use outer keep_name_id
+        if let Some((original_name, _)) = keep_name_id.and_then(|id| self.get_keep_name_info(id)) {
+          self.keep_name_processed_exprs.insert(expr_address);
+          let original_name = CompactStr::new(original_name);
           let fn_expr = expr.take_in(self.alloc);
           let name_ref = self.canonical_ref_for_runtime("__name");
           let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);

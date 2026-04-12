@@ -2429,6 +2429,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "path-posix"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "252f3dfa42084a2ba8294ec1cf6bf7beaed19753989bd17da833c33c6a3ddf9d"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "pathdiff"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3403,6 +3412,7 @@ dependencies = [
  "fast-glob",
  "itoa",
  "oxc",
+ "path-posix",
  "rolldown_common",
  "rolldown_ecmascript_utils",
  "rolldown_plugin",

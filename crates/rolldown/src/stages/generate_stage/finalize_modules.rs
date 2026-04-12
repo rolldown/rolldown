@@ -48,6 +48,7 @@ impl GenerateStage<'_> {
             .as_normal()
             .is_some_and(|m| self.link_output.metas[m.idx].is_included)
         })
+        .filter(|(idx, _ast)| chunk_graph.module_to_chunk[*idx].is_some())
         .filter_map(|(idx, ast)| {
           let ast = ast.as_mut()?;
           let module = self.link_output.module_table[idx].as_normal().unwrap();

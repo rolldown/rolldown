@@ -41,26 +41,36 @@ console.log("dep");
 
 ```
 
-## Build Output
+# HMR Step 1
 
-### Errors
+## Code
 
-#### PARSE_ERROR
+```js
+//#region dep.js
+var init_dep_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule("dep.js", { exports: __rolldown_exports__ });
+		const hot_dep = __rolldown_runtime__.createModuleHotContext("dep.js");
+		const value = "dep";
+		if (hot_dep) {
+			hot_dep.accept();
+		}
+	} finally {}
+}));
 
-```text
-[PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
-   ╭─[ dep.js:1:8 ]
-   │
- 1 │ invalid syntax
-   │        │ 
-   │        ╰─ 
-   │ 
-   │ Help: Try inserting a semicolon here
-───╯
-
+//#endregion
+init_dep_0()
+__rolldown_runtime__.applyUpdates([['dep.js', 'dep.js']]);
 ```
 
-# HMR Step 1
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: dep.js, accepted_via: dep.js
 
 ## Build Output
 

@@ -408,14 +408,10 @@ impl BundleCoordinator {
         })
       }
       CoordinatorState::FullBuildFailed | CoordinatorState::Failed => {
-        // Clear all queued tasks and schedule a new full build
-        self.queued_tasks.clear();
-        self.queued_tasks.push_back(TaskInput::FullBuild);
-        let schedule_result = self.schedule_build_if_stale().await;
-        schedule_result.map(|ret| EnsureLatestBundleOutputReturn {
-          future: ret.future,
-          is_ensure_latest_bundle_output_future: true,
-        })
+        tracing::trace!(
+          "[BundleCoordinator] latest output cannot be ensured after a failed build without a new invalidation"
+        );
+        None
       }
     }
   }
@@ -450,5 +446,59 @@ impl BundleCoordinator {
     }
     paths_mut.commit()?;
     Ok(())
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::sync::Arc;
+
+  use rolldown::BundlerOptions;
+  use rolldown_fs_watcher::{FsWatcherExt, NoopFsWatcher};
+  use tokio::sync::{Mutex, mpsc::unbounded_channel};
+
+  use crate::{DevOptions, SharedClients, dev_context::DevContext, normalize_dev_options};
+
+  use super::*;
+
+  fn create_coordinator(state: CoordinatorState) -> BundleCoordinator {
+    let bundler =
+      Arc::new(Mutex::new(Bundler::new(BundlerOptions::default()).expect("bundler should build")));
+    let (coordinator_tx, coordinator_rx) = unbounded_channel();
+    let ctx = Arc::new(DevContext {
+      options: normalize_dev_options(DevOptions::default()),
+      coordinator_tx,
+      clients: SharedClients::default(),
+    });
+
+    let mut coordinator =
+      BundleCoordinator::new(bundler, ctx, coordinator_rx, NoopFsWatcher.into_dyn_fs_watcher());
+    coordinator.state = state;
+    coordinator.has_stale_bundle_output = true;
+    coordinator
+  }
+
+  #[tokio::test]
+  async fn ensure_latest_output_does_not_reschedule_after_full_build_failure() {
+    let mut coordinator = create_coordinator(CoordinatorState::FullBuildFailed);
+
+    let result = coordinator.ensure_latest_bundle_output().await;
+
+    assert!(result.is_none());
+    assert!(coordinator.queued_tasks.is_empty());
+    assert_eq!(coordinator.state, CoordinatorState::FullBuildFailed);
+    assert!(coordinator.has_stale_bundle_output);
+  }
+
+  #[tokio::test]
+  async fn ensure_latest_output_does_not_reschedule_after_incremental_failure() {
+    let mut coordinator = create_coordinator(CoordinatorState::Failed);
+
+    let result = coordinator.ensure_latest_bundle_output().await;
+
+    assert!(result.is_none());
+    assert!(coordinator.queued_tasks.is_empty());
+    assert_eq!(coordinator.state, CoordinatorState::Failed);
+    assert!(coordinator.has_stale_bundle_output);
   }
 }

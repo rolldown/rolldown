@@ -1,6 +1,6 @@
 import { build, rolldown } from 'rolldown';
-import { scan } from 'rolldown/experimental';
-import { describe, expect, test } from 'vitest';
+import { dev, scan } from 'rolldown/experimental';
+import { describe, expect, test, vi } from 'vitest';
 
 describe('Dev mode validation', () => {
   test('should throw error when using dev mode with build API', async () => {
@@ -150,5 +150,46 @@ describe('Dev mode validation', () => {
     );
 
     await bundle.close();
+  });
+
+  test('should not trigger a second full build after initial dev build failure', async () => {
+    const onOutput = vi.fn();
+    const devEngine = await dev(
+      {
+        input: 'virtual',
+        plugins: [
+          {
+            name: 'test-fail-initial-build',
+            resolveId(id) {
+              if (id === 'virtual') return '\0' + id;
+            },
+            load(id) {
+              if (id === '\0virtual') {
+                throw new Error('initial build failed');
+              }
+            },
+          },
+        ],
+      },
+      {},
+      {
+        onOutput,
+        watch: {
+          skipWrite: true,
+        },
+      },
+    );
+
+    try {
+      await expect(devEngine.run()).resolves.toBeUndefined();
+      expect(onOutput).toHaveBeenCalledTimes(1);
+      expect(onOutput).toHaveBeenCalledWith(expect.any(Error));
+      await expect(devEngine.getBundleState()).resolves.toMatchObject({
+        lastFullBuildFailed: true,
+        hasStaleOutput: true,
+      });
+    } finally {
+      await devEngine.close();
+    }
   });
 });

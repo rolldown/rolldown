@@ -51,7 +51,8 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
       tracing_subscriber::registry()
         .with(Targets::from_str(&env_var).unwrap())
         .with(chrome_layer.with_filter(filter_for_removing_devtools_event))
-        .init();
+        .try_init()
+        .ok();
       Some(Box::new(guard))
     }
     "json" => {
@@ -66,7 +67,8 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
         .with(
           fmt::layer().pretty().with_span_events(FmtSpan::NONE).with_level(true).with_target(false),
         )
-        .init();
+        .try_init()
+        .ok();
       tracing::debug!("Tracing initialized");
       None
     }
@@ -75,7 +77,8 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
         .with(filter_for_removing_devtools_event)
         .with(Targets::from_str(&env_var).unwrap())
         .with(fmt::layer().pretty().with_span_events(FmtSpan::CLOSE | FmtSpan::ENTER))
-        .init();
+        .try_init()
+        .ok();
       tracing::debug!("Tracing initialized");
       None
     }

@@ -38,7 +38,8 @@ impl DebugTracer {
     tracing_subscriber::registry()
       .with(DevtoolsLayer.with_filter(devtools_event_filter))
       .with(fmt::layer().event_format(DevtoolsFormatter))
-      .init();
+      .try_init()
+      .ok();
 
     tracer
   }

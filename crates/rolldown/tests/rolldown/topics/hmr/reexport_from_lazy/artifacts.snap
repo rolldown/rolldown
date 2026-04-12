@@ -1,0 +1,103 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```
+
+## foo-parent.js
+
+```js
+import { t as __exportAll } from "./chunk.js";
+//#region foo-parent.js?rolldown-lazy=1
+var foo_parent_exports = /* @__PURE__ */ __exportAll({ "rolldown:exports": () => lazyExports });
+__rolldown_runtime__.createModuleHotContext("foo-parent.js?rolldown-lazy=1");
+__rolldown_runtime__.registerModule("foo-parent.js?rolldown-lazy=1", { exports: foo_parent_exports });
+const lazyExports = (async () => {
+	await import(
+		/* @vite-ignore */
+		`/@vite/lazy?id=${encodeURIComponent("D:documentsGitHub\rolldowncrates\rolldown	ests\rolldown	opicshmr\reexport_from_lazy\foo-parent.js?rolldown-lazy=1")}&clientId=${__rolldown_runtime__.clientId}`
+);
+	return __rolldown_runtime__.loadExports("foo-parent.js");
+})();
+//#endregion
+export { lazyExports as "rolldown:exports" };
+
+```
+
+## main.js
+
+```js
+import "./chunk.js";
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", {});
+function __unwrap_lazy_compilation_entry(m) {
+	var e = m["rolldown:exports"];
+	return e ? e : m;
+}
+import("./foo-parent.js").then(__unwrap_lazy_compilation_entry).then((mod) => {
+	console.log(mod);
+});
+//#endregion
+
+```
+
+# Variant: strictExecutionOrder: [strict_execution_order: true]
+
+## Assets
+
+### chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+### foo-parent.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./chunk.js";
+//#region foo-parent.js?rolldown-lazy=1
+var foo_parent_exports = /* @__PURE__ */ __exportAll({ "rolldown:exports": () => lazyExports }), lazyExports;
+//#endregion
+__esmMin((() => {
+	__rolldown_runtime__.createModuleHotContext("foo-parent.js?rolldown-lazy=1");
+	__rolldown_runtime__.registerModule("foo-parent.js?rolldown-lazy=1", { exports: foo_parent_exports });
+	lazyExports = (async () => {
+		await import(
+			/* @vite-ignore */
+			`/@vite/lazy?id=${encodeURIComponent("D:documentsGitHub\rolldowncrates\rolldown	ests\rolldown	opicshmr\reexport_from_lazy\foo-parent.js?rolldown-lazy=1")}&clientId=${__rolldown_runtime__.clientId}`
+);
+		return __rolldown_runtime__.loadExports("foo-parent.js");
+	})();
+}))();
+export { lazyExports as "rolldown:exports" };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./chunk.js";
+//#region main.js
+function __unwrap_lazy_compilation_entry(m) {
+	var e = m["rolldown:exports"];
+	return e ? e : m;
+}
+//#endregion
+__esmMin((() => {
+	__rolldown_runtime__.createModuleHotContext("main.js");
+	__rolldown_runtime__.registerModule("main.js", {});
+	import("./foo-parent.js").then(__unwrap_lazy_compilation_entry).then((mod) => {
+		console.log(mod);
+	});
+}))();
+
+```

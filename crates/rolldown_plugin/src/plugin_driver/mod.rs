@@ -6,7 +6,10 @@ mod watch_hooks;
 
 pub use plugin_driver_factory::PluginDriverFactory;
 
-use std::{ops::Deref, sync::Arc};
+use std::{
+  ops::Deref,
+  sync::{Arc, Mutex},
+};
 
 use arcstr::ArcStr;
 use dashmap::DashMap;
@@ -16,7 +19,7 @@ use rolldown_common::{
 };
 use rolldown_utils::dashmap::FxDashSet;
 use sugar_path::SugarPath;
-use tokio::sync::{Mutex, broadcast};
+use tokio::sync::broadcast;
 
 use crate::{
   __inner::SharedPluginable,
@@ -38,7 +41,7 @@ pub struct PluginDriver {
   /// Module dependencies tracked during load/transform hooks for HMR invalidation
   pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   context_load_completion_manager: ContextLoadCompletionManager,
-  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
+  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   /// Timing collector for plugin hooks (None if plugin timing is disabled)
   pub hook_timing_collector: Option<Arc<HookTimingCollector>>,
 }
@@ -60,11 +63,11 @@ impl PluginDriver {
     self.module_infos.insert(module_id.as_arc_str().into(), module_info);
   }
 
-  pub async fn set_context_load_modules_tx(
+  pub fn set_context_load_modules_tx(
     &self,
-    tx: Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>,
+    tx: Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>,
   ) {
-    let mut tx_guard = self.tx.lock().await;
+    let mut tx_guard = self.tx.lock().expect("PluginDriver tx mutex poisoned");
     *tx_guard = tx;
   }
 

@@ -6,21 +6,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## foo.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({ "😈": () => devil });
 const devil = "devil";
 //#endregion
-export { foo_exports as n, devil as t };
+export { devil as "😈" };
 
 ```
 
 ## main.js
 
 ```js
-import { t as devil } from "./foo.js";
+import { "😈" as devil } from "./foo.js";
 //#region main.js
-const moduleFoo = import("./foo.js").then((n) => n.n);
+const moduleFoo = import("./foo.js");
 //#endregion
 export { moduleFoo, devil as "😈" };
 

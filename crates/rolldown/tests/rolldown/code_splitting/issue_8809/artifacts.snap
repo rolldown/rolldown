@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region completion.js
 async function complete() {
-	return (await import("./daemon2.js")).start();
+	return (await import("./daemon.js")).start();
 }
 //#endregion
 export { complete };
@@ -26,22 +26,14 @@ function stop() {
 	return "stop";
 }
 //#endregion
-export { stop as n, start as t };
-
-```
-
-## daemon2.js
-
-```js
-import { t as start } from "./daemon.js";
-export { start };
+export { start, stop as t };
 
 ```
 
 ## entry.js
 
 ```js
-import { n as stop, t as start } from "./daemon.js";
+import { start, t as stop } from "./daemon.js";
 // HIDDEN [\0rolldown/runtime.js]
 //#region gateway.js
 var import_cjs_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {

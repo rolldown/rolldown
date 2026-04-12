@@ -6,12 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bar.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
 //#region bar.mjs
-var bar_exports = /* @__PURE__ */ __exportAll({ default: () => "bar" });
 var bar_default = "bar";
 //#endregion
-export { bar_exports as n, bar_default as t };
+export { bar_default as default };
 
 ```
 
@@ -21,7 +19,7 @@ export { bar_exports as n, bar_default as t };
 import "./bar.js";
 import assert from "node:assert";
 //#region main.js
-const glob = { "./bar.css": () => import("./bar.js").then((n) => n.n) };
+const glob = { "./bar.css": () => import("./bar.js") };
 assert.strictEqual({ "./bar.css": "bar" }["./bar.css"], "bar");
 //#endregion
 export { glob };

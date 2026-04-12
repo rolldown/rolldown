@@ -21,6 +21,10 @@ pub struct ChunkGraph {
   pub finalized_cjs_ns_map_idx_vec: IndexVec<ChunkIdx, FxHashMap<SymbolRef, SymbolRef>>,
   pub chunk_idx_to_reference_ids: FxHashMap<ChunkIdx, Vec<ArcStr>>,
   pub common_chunk_exported_facade_chunk_namespace: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
+  /// Modules from eliminated facade chunks whose individual exports are directly
+  /// exported from the target chunk, without namespace wrapping or `__exportAll`.
+  /// Only for `WrapKind::None` + `!has_dynamic_exports` modules.
+  pub common_chunk_facade_direct_exports: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
   /// Modules from emitted chunks with AllowExtension that were merged into common chunks.
   /// Their export names should be preserved (not minified).
   pub common_chunk_preserve_export_names_modules: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
@@ -44,6 +48,7 @@ impl ChunkGraph {
       finalized_cjs_ns_map_idx_vec: index_vec![],
       chunk_idx_to_reference_ids: FxHashMap::default(),
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
+      common_chunk_facade_direct_exports: FxHashMap::default(),
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
     }

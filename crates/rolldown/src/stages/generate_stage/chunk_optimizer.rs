@@ -728,6 +728,23 @@ impl GenerateStage<'_> {
     let mut emitted_chunk_groups: FxHashMap<ChunkIdx, Vec<ChunkIdx>> = FxHashMap::default();
     let temp_runtime_chunk_idx = chunk_graph.module_to_chunk[self.link_output.runtime.id()]
       .and_then(|idx| temp_chunk_opt_graph.to_temp_idx(idx));
+
+    // Pre-count how many potential dynamic facade eliminations target each chunk.
+    // Direct exports can only be used when a chunk has a single facade target.
+    let mut potential_dynamic_facade_count: FxHashMap<ChunkIdx, usize> = FxHashMap::default();
+    for (_, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      let ChunkKind::EntryPoint { meta, module, .. } = chunk.kind else { continue };
+      if !meta.contains(ChunkMeta::DynamicImported) || !chunk.modules.is_empty() {
+        continue;
+      }
+      if meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) {
+        continue;
+      }
+      if let Some(target_chunk_idx) = chunk_graph.module_to_chunk[module] {
+        *potential_dynamic_facade_count.entry(target_chunk_idx).or_default() += 1;
+      }
+    }
+
     for (from_chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
       let ChunkKind::EntryPoint { meta, bit: _, module } = chunk.kind else {
         continue;
@@ -792,18 +809,41 @@ impl GenerateStage<'_> {
       if is_target_manual_chunk && is_emitted_entry_chunk {
         emitted_chunk_groups.entry(target_chunk_idx).or_default().push(from_chunk_idx);
       } else if !is_emitted_entry_chunk {
+        // Modules with statically known exports (WrapKind::None + !has_dynamic_exports)
+        // can be directly exported without __exportAll, so they don't need the runtime
+        // and can't create circular chunk dependencies.
+        // Additional conditions must match the apply phase in optimize_facade_entry_chunks:
+        // - Single facade target per chunk (no export name conflicts)
+        // - Target is not an entry point chunk (no duplicate exports)
+        let entry_meta = &self.link_output.metas[module];
+        let target_is_entry_point =
+          matches!(chunk_graph.chunk_table[target_chunk_idx].kind, ChunkKind::EntryPoint { .. });
+        // If the module's namespace is already used (e.g. via static `import *`),
+        // the namespace object will be exported from the target chunk. Adding individual
+        // direct exports on top would make both visible to the dynamic import consumer.
+        let namespace_already_used = self.link_output.module_table[module]
+          .namespace_object_ref()
+          .is_some_and(|ns_ref| self.link_output.used_symbol_refs.contains(&ns_ref));
+        let can_use_direct_exports = matches!(entry_meta.wrap_kind(), WrapKind::None)
+          && !entry_meta.has_dynamic_exports
+          && potential_dynamic_facade_count.get(&target_chunk_idx).copied().unwrap_or(0) <= 1
+          && !target_is_entry_point
+          && !namespace_already_used;
+
         // Check if merging would create a circular dependency.
+        // Only needed when the merge would introduce a runtime dependency (namespace + __exportAll).
         // Translate chunk_graph indices to temp_chunk_graph indices, since the two
         // graphs may diverge once new common chunks are materialised.
-        if temp_runtime_chunk_idx
-          .and_then(|temp_runtime_idx| {
-            let temp_target_idx = temp_chunk_opt_graph.to_temp_idx(target_chunk_idx)?;
-            Some(temp_chunk_opt_graph.is_reachable(temp_runtime_idx, temp_target_idx))
-          })
-          // If runtime is not included before, it will not create circular dependency, because
-          // the runtime module will be either included in the target chunk or in a separate chunk loaded before.
-          // If either index has no temp counterpart, we conservatively allow the merge.
-          .unwrap_or(false)
+        if !can_use_direct_exports
+          && temp_runtime_chunk_idx
+            .and_then(|temp_runtime_idx| {
+              let temp_target_idx = temp_chunk_opt_graph.to_temp_idx(target_chunk_idx)?;
+              Some(temp_chunk_opt_graph.is_reachable(temp_runtime_idx, temp_target_idx))
+            })
+            // If runtime is not included before, it will not create circular dependency, because
+            // the runtime module will be either included in the target chunk or in a separate chunk loaded before.
+            // If either index has no temp counterpart, we conservatively allow the merge.
+            .unwrap_or(false)
         {
           continue;
         }
@@ -964,6 +1004,19 @@ impl GenerateStage<'_> {
 
     let mut runtime_dependent_chunks = FxHashSet::default();
 
+    // Pre-compute how many dynamically-imported facade eliminations target each chunk.
+    // Direct exports can only be used when a chunk has a single facade target,
+    // otherwise export names from different modules would conflict.
+    let mut dynamic_facade_count_by_target: FxHashMap<ChunkIdx, usize> = FxHashMap::default();
+    for elimination in &facade_eliminations {
+      let from_chunk = &chunk_graph.chunk_table[elimination.from_chunk_idx];
+      if let ChunkKind::EntryPoint { meta, .. } = from_chunk.kind {
+        if meta.contains(ChunkMeta::DynamicImported) {
+          *dynamic_facade_count_by_target.entry(elimination.to_chunk_idx).or_default() += 1;
+        }
+      }
+    }
+
     let mut needs_export_all_helper = false;
     for elimination in &facade_eliminations {
       let FacadeChunkElimination { reason, entry_module_idx, from_chunk_idx, to_chunk_idx } =
@@ -1006,11 +1059,75 @@ impl GenerateStage<'_> {
       if !chunk_meta.contains(ChunkMeta::DynamicImported) {
         continue;
       }
-      chunk_graph
-        .common_chunk_exported_facade_chunk_namespace
-        .entry(*to_chunk_idx)
-        .or_default()
-        .insert(*entry_module_idx);
+
+      // Modules with statically known exports can be directly exported from the target
+      // chunk without __exportAll, avoiding a runtime dependency.
+      // This is only safe when:
+      // - The module has no dynamic exports (all exports statically known)
+      // - No wrapper is needed (WrapKind::None)
+      // - This is the only facade elimination targeting this chunk (avoids export name conflicts
+      //   when multiple dynamic modules are bundled into the same chunk)
+      // - The target is not an entry point chunk (avoids duplicate exports with entry module's own exports)
+      // - The module's namespace is not already used (e.g. static `import *` would make both
+      //   namespace and individual exports visible to the dynamic import consumer)
+      let target_is_entry_point =
+        matches!(chunk_graph.chunk_table[*to_chunk_idx].kind, ChunkKind::EntryPoint { .. });
+      let namespace_already_used = context.used_symbol_refs.contains(&module.namespace_object_ref);
+      let can_use_direct_exports = matches!(wrap_kind, WrapKind::None)
+        && !self.link_output.metas[*entry_module_idx].has_dynamic_exports
+        && dynamic_facade_count_by_target.get(to_chunk_idx).copied().unwrap_or(0) <= 1
+        && !target_is_entry_point
+        && !namespace_already_used;
+
+      if can_use_direct_exports {
+        // Direct export path: export individual symbols, no namespace wrapping.
+        // Export names are preserved via referenced_canonical_exports_symbols in
+        // compute_cross_chunk_links, which pushes explicit name entries — no need
+        // for common_chunk_preserve_export_names_modules here.
+        chunk_graph
+          .common_chunk_facade_direct_exports
+          .entry(*to_chunk_idx)
+          .or_default()
+          .insert(*entry_module_idx);
+
+        // Include individual export symbols (collect first to avoid borrow conflict with context)
+        let export_symbols: Vec<_> = self.link_output.metas[*entry_module_idx]
+          .canonical_exports(false)
+          .map(|(_, resolved_export)| resolved_export.symbol_ref)
+          .collect();
+        for symbol_ref in export_symbols {
+          include_symbol(context, symbol_ref, SymbolIncludeReason::SimulatedFacadeChunk);
+        }
+      } else {
+        // Namespace path: use __exportAll to create namespace object
+        chunk_graph
+          .common_chunk_exported_facade_chunk_namespace
+          .entry(*to_chunk_idx)
+          .or_default()
+          .insert(*entry_module_idx);
+
+        // For CJS modules, include the wrapper_ref (require_xxx) instead of namespace
+        // and use ToEsm runtime helper instead of ExportAll
+        if matches!(wrap_kind, WrapKind::Cjs | WrapKind::Esm) {
+          if let Some(wrapper_ref) = self.link_output.metas[*entry_module_idx].wrapper_ref {
+            include_symbol(context, wrapper_ref, SymbolIncludeReason::SimulatedFacadeChunk);
+          }
+          runtime_dependent_chunks.insert(*to_chunk_idx);
+        }
+        if matches!(wrap_kind, WrapKind::Esm | WrapKind::None) {
+          include_symbol(
+            context,
+            module.namespace_object_ref,
+            SymbolIncludeReason::SimulatedFacadeChunk,
+          );
+          context.module_namespace_included_reason[*entry_module_idx]
+            .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
+          let target_chunk = &mut chunk_graph.chunk_table[*to_chunk_idx];
+          target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
+          runtime_dependent_chunks.insert(*to_chunk_idx);
+          needs_export_all_helper = true;
+        }
+      }
 
       // Add debug info about eliminated facade chunk to target chunk
       if self.options.experimental.is_attach_debug_info_full() || self.options.devtools {
@@ -1026,28 +1143,6 @@ impl GenerateStage<'_> {
             reason: *reason,
           },
         );
-      }
-
-      // For CJS modules, include the wrapper_ref (require_xxx) instead of namespace
-      // and use ToEsm runtime helper instead of ExportAll
-      if matches!(wrap_kind, WrapKind::Cjs | WrapKind::Esm) {
-        if let Some(wrapper_ref) = self.link_output.metas[*entry_module_idx].wrapper_ref {
-          include_symbol(context, wrapper_ref, SymbolIncludeReason::SimulatedFacadeChunk);
-        }
-        runtime_dependent_chunks.insert(*to_chunk_idx);
-      }
-      if matches!(wrap_kind, WrapKind::Esm | WrapKind::None) {
-        include_symbol(
-          context,
-          module.namespace_object_ref,
-          SymbolIncludeReason::SimulatedFacadeChunk,
-        );
-        context.module_namespace_included_reason[*entry_module_idx]
-          .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
-        let target_chunk = &mut chunk_graph.chunk_table[*to_chunk_idx];
-        target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
-        runtime_dependent_chunks.insert(*to_chunk_idx);
-        needs_export_all_helper = true;
       }
     }
 
@@ -1170,6 +1265,17 @@ impl GenerateStage<'_> {
       {
         chunk_graph
           .common_chunk_exported_facade_chunk_namespace
+          .entry(merge.to_chunk_idx)
+          .or_default()
+          .extend(modules);
+      }
+
+      // Retarget facade chunk direct exports
+      if let Some(modules) =
+        chunk_graph.common_chunk_facade_direct_exports.remove(&merge.from_chunk_idx)
+      {
+        chunk_graph
+          .common_chunk_facade_direct_exports
           .entry(merge.to_chunk_idx)
           .or_default()
           .extend(modules);

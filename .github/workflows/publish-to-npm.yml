@@ -120,7 +120,7 @@ jobs:
     name: GitHub Release
     runs-on: ubuntu-latest
     permissions:
-      contents: write # for softprops/action-gh-release@v1
+      contents: write # for gh release create
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
@@ -134,9 +134,12 @@ jobs:
           } >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
-        with:
-          draft: false
-          tag_name: v${{ needs.check.outputs.version }} # tags the current commit
-          target_commitish: ${{ github.sha }}
-          body: ${{ steps.changelog.outputs.CHANGELOG }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANGELOG: ${{ steps.changelog.outputs.CHANGELOG }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          echo "$CHANGELOG" > /tmp/release-notes.md
+          gh release create "v${VERSION}" \
+            --target "${{ github.sha }}" \
+            --notes-file /tmp/release-notes.md

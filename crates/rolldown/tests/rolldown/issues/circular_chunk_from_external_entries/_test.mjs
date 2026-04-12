@@ -1,6 +1,5 @@
-import fs from 'node:fs';
 import path from 'node:path';
-import assert from 'node:assert';
+import { assertNoCircularImports } from '../../../assert_no_circular_imports.mjs';
 
 // Before the fix, external dynamic imports (`@optional/ext`) caused
 // bit-position/chunk-index mismatches in the chunk optimizer, producing
@@ -8,10 +7,4 @@ import assert from 'node:assert';
 //
 // Expected: plugin.js imports parser-a.js (not the reverse)
 
-const distDir = path.join(import.meta.dirname, 'dist');
-const parserA = fs.readFileSync(path.join(distDir, 'parser-a.js'), 'utf8');
-
-assert(
-  !parserA.includes('from "./plugin.js"'),
-  'parser-a.js should not import from plugin.js (would create a cycle)',
-);
+assertNoCircularImports(path.join(import.meta.dirname, 'dist'));

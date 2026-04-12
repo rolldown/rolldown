@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::Write as _;
-use std::path::{MAIN_SEPARATOR, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use oxc::ast::ast::{
@@ -75,7 +75,7 @@ impl<'a> PathWithGlob<'a> {
     for (i, b) in path.as_bytes().iter().enumerate() {
       if *b == b'/' {
         last_slash = i;
-      } else if [b'*', b'?', b'[', b']', b'{', b'}'].contains(b) {
+      } else if [b'\\', b'*', b'?', b'[', b']', b'{', b'}'].contains(b) {
         return path.len() - last_slash;
       }
     }
@@ -89,14 +89,12 @@ impl<'a> PathWithGlob<'a> {
     let mut num_equal = 0;
     let max_equal = path.len().min(glob.len());
     while num_equal < max_equal {
-      let r_ch = path[path.len() - 1 - num_equal];
-      let g_ch = glob[glob.len() - 1 - num_equal];
-
-      if r_ch == g_ch || (g_ch == b'/' && r_ch == MAIN_SEPARATOR as u8) {
-        num_equal += 1;
-      } else {
+      let p = path[path.len() - 1 - num_equal];
+      let g = glob[glob.len() - 1 - num_equal];
+      if p != g {
         break;
       }
+      num_equal += 1;
     }
 
     num_equal
@@ -270,21 +268,25 @@ impl GlobImportVisit<'_> {
   fn to_absolute_glob<'a>(
     &self,
     glob: &'a str,
-    dir: &Path,
-    root: &Path,
+    dir: &str,
+    root: &str,
     base: Option<&str>,
   ) -> Option<PathWithGlob<'a>> {
     let dir = if let Some(base) = base {
-      if let Some(base) = base.strip_prefix('/') { root.join(base) } else { dir.join(base) }
+      if let Some(base) = base.strip_prefix('/') {
+        path_posix::join(&[root, base])
+      } else {
+        path_posix::join(&[dir, base])
+      }
     } else {
-      dir.to_path_buf()
+      Cow::Borrowed(dir)
     };
     let absolute_glob = if let Some(glob) = glob.strip_prefix('/') {
-      root.join(glob)
+      path_posix::join(&[root, glob])
     } else if glob.starts_with("**") {
-      root.join(glob)
+      path_posix::join(&[root, glob])
     } else if glob.starts_with("./") || glob.starts_with("../") {
-      dir.join(glob)
+      path_posix::join(&[&dir, glob])
     } else {
       let is_sub_imports_pattern = glob.starts_with('#') && glob.contains('*');
       let future = self.ctx.resolve(
@@ -302,7 +304,10 @@ impl GlobImportVisit<'_> {
 
       let resolved_id =
         rolldown_utils::futures::block_on(future).ok().and_then(Result::ok).map(|resolved| {
-          PathBuf::from(resolved.id.as_str()).normalize().to_slash_lossy().into_owned()
+          path_posix::normalize(&rolldown_utils::pattern_filter::normalize_path(
+            resolved.id.as_str(),
+          ))
+          .into_owned()
         });
 
       if let Some(ref id) = resolved_id
@@ -324,7 +329,7 @@ impl GlobImportVisit<'_> {
 
       return None;
     };
-    Some(PathWithGlob::new(absolute_glob.normalize().to_string_lossy().into_owned(), glob))
+    Some(PathWithGlob::new(absolute_glob.into_owned(), glob))
   }
 
   fn relative_path(&self, path: &Path, to: Option<&Path>) -> String {
@@ -340,7 +345,7 @@ impl GlobImportVisit<'_> {
 
   fn get_common_base(&self, globs: &[PathWithGlob]) -> Cow<'_, str> {
     let Some((head, tail)) = globs.split_first() else {
-      return self.root.to_string_lossy();
+      return self.root.to_slash_lossy();
     };
 
     let first = head.path.as_bytes();
@@ -352,7 +357,7 @@ impl GlobImportVisit<'_> {
       let mut i = 0;
       let mut last_slash = 0;
       while i < max_len && first[i] == bytes[i] {
-        if first[i] == MAIN_SEPARATOR as u8 {
+        if first[i] == b'/' {
           last_slash = i;
         }
         i += 1;
@@ -362,8 +367,8 @@ impl GlobImportVisit<'_> {
       // may already be a deeper boundary than any separator we recorded —
       // e.g. when one path fully matched the other up to a segment split.
       if i == max_len
-        && (i == first.len() || first[i] == MAIN_SEPARATOR as u8)
-        && (i == bytes.len() || bytes[i] == MAIN_SEPARATOR as u8)
+        && (i == first.len() || first[i] == b'/')
+        && (i == bytes.len() || bytes[i] == b'/')
       {
         last_slash = i;
       }
@@ -374,7 +379,7 @@ impl GlobImportVisit<'_> {
       }
     }
 
-    if end == 0 { self.root.to_string_lossy() } else { Cow::Owned(head.path[..end].to_string()) }
+    if end == 0 { self.root.to_slash_lossy() } else { Cow::Owned(head.path[..end].to_string()) }
   }
 
   fn eval_glob_expr(
@@ -392,6 +397,9 @@ impl GlobImportVisit<'_> {
       let id = Path::new(self.id);
       id.parent().unwrap_or(root)
     };
+
+    let dir_slash = dir.to_slash_lossy();
+    let root_slash = root.to_slash_lossy();
 
     let mut is_relative = true;
     let mut negated_globs = vec![];
@@ -423,9 +431,19 @@ impl GlobImportVisit<'_> {
 
     for value in values {
       if let Some(glob) = value.strip_prefix('!') {
-        negated_globs.push(self.to_absolute_glob(glob, dir, root, options.base.as_deref())?);
+        negated_globs.push(self.to_absolute_glob(
+          glob,
+          &dir_slash,
+          &root_slash,
+          options.base.as_deref(),
+        )?);
       } else {
-        positive_globs.push(self.to_absolute_glob(value, dir, root, options.base.as_deref())?);
+        positive_globs.push(self.to_absolute_glob(
+          value,
+          &dir_slash,
+          &root_slash,
+          options.base.as_deref(),
+        )?);
         if !value.starts_with('.') {
           is_relative = false;
         }
@@ -462,7 +480,7 @@ impl GlobImportVisit<'_> {
 
     for entry in entries {
       let file = entry.path();
-      let path = file.to_string_lossy();
+      let path = file.to_slash_lossy();
 
       let matches_rule = |v: &PathWithGlob| -> bool {
         path.strip_prefix(&v.path).map(|path| fast_glob::glob_match(v.glob, path)).unwrap_or(false)

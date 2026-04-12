@@ -209,7 +209,11 @@ pub fn normalize_binding_options(
           is_external
             .invoke_async((source.clone(), importer, is_resolved).into())
             .await
-            .map_err(anyhow::Error::from)
+            .map_err(|_err| {
+              anyhow::anyhow!(
+                "The \"external\" option callback returned an invalid value for module \"{source}\". The callback must return a boolean or null/undefined."
+              )
+            })
         })
       })))
     }

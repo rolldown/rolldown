@@ -90,9 +90,9 @@ export var __toESM = (mod, isNodeMode, target) => (
       // file that has been converted to a CommonJS file using a Babel-
       // compatible transform (i.e. "__esModule" has not been set), then set
       // "default" to the CommonJS "module.exports" for node compatibility.
-      isNodeMode || !mod || !mod.__esModule
-        ? __defProp(target, 'default', { value: mod, enumerable: true })
-        : target,
+      (isNodeMode ? mod && mod[Symbol.toStringTag] === 'Module' : mod && mod.__esModule)
+        ? target
+        : __defProp(target, 'default', { value: mod, enumerable: true }),
       mod,
     )
 );

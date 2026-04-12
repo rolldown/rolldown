@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let esm_pkg = require("esm-pkg");
+esm_pkg = __toESM(esm_pkg, 1);
+let assert = require("assert");
+assert = __toESM(assert, 1);
+//#region main.mjs
+const instance = new esm_pkg.default();
+assert.default.strictEqual(instance.ok, true);
+//#endregion
+
+```

@@ -82,7 +82,7 @@ impl Plugin for ViteManifestPlugin {
                 (self.css_entries)().await?
               };
               let mut filenames = FxHashMap::with_capacity(reference_ids.len());
-              for (name, reference_id) in reference_ids {
+              for (reference_id, name) in reference_ids {
                 if let Ok(filename) = ctx.get_file_name(&reference_id) {
                   filenames.insert(filename, name);
                 }

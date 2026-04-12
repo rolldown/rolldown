@@ -7,9 +7,9 @@ use oxc_index::IndexVec;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
-  EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
-  ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PluginIdx,
+  PreserveEntrySignatures, ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement,
+  SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -201,24 +201,60 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     {
       let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
       let handler = thread::spawn(move || {
-        let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();
+        let mut chains: FxHashMap<ModuleIdx, (string_wizard::MagicStringChain, PluginIdx)> =
+          FxHashMap::default();
+        let mut result: FxHashMap<ModuleIdx, Vec<SourcemapChainElement>> = FxHashMap::default();
+
+        let flush_chain =
+          |chain: string_wizard::MagicStringChain,
+           plugin_idx: PluginIdx,
+           module_idx: ModuleIdx,
+           result: &mut FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>| {
+            let sourcemap = chain.source_map(string_wizard::SourceMapOptions::default());
+            result
+              .entry(module_idx)
+              .or_default()
+              .push(SourcemapChainElement::Transform((plugin_idx, sourcemap)));
+          };
+
         while let Ok(msg) = rx.recv() {
           match msg {
             SourceMapGenMsg::MagicString(v) => {
               let (module_idx, plugin_idx, magic_string) = *v;
-              let generated_sourcemap =
-                magic_string.source_map(string_wizard::SourceMapOptions::default());
-              map
-                .entry(module_idx)
-                .or_default()
-                .push(SourcemapChainElement::Transform((plugin_idx, generated_sourcemap)));
+
+              // Flush if source changed (non-MagicString plugin changed code).
+              if let std::collections::hash_map::Entry::Occupied(entry) = chains.entry(module_idx) {
+                if !entry.get().0.is_source_compatible(magic_string.source()) {
+                  let (chain, last_plugin_idx) = entry.remove();
+                  flush_chain(chain, last_plugin_idx, module_idx, &mut result);
+                }
+              }
+
+              let entry = chains.entry(module_idx).or_insert_with(|| {
+                (
+                  string_wizard::MagicStringChain::new(magic_string.source().to_string()),
+                  plugin_idx,
+                )
+              });
+              entry.0.end(magic_string);
+              entry.1 = plugin_idx;
+            }
+            SourceMapGenMsg::Barrier(module_idx) => {
+              if let Some((chain, last_plugin_idx)) = chains.remove(&module_idx) {
+                flush_chain(chain, last_plugin_idx, module_idx, &mut result);
+              }
             }
             SourceMapGenMsg::Terminate => {
               break;
             }
           }
         }
-        map
+
+        for (module_idx, (chain, last_plugin_idx)) in chains {
+          flush_chain(chain, last_plugin_idx, module_idx, &mut result);
+        }
+
+        result
       });
       (Some(Arc::new(tx)), Some(handler))
     } else {

@@ -111,6 +111,7 @@ pub enum EventKind {
   RuntimeModuleSymbolNotFoundError = 42,
   /// Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   IneffectiveDynamicImport = 44,
+  RequireTlaError = 45,
 }
 
 impl Display for EventKind {
@@ -169,6 +170,7 @@ impl Display for EventKind {
         write!(f, "RUNTIME_MODULE_SYMBOL_NOT_FOUND")
       }
       EventKind::IneffectiveDynamicImport => write!(f, "INEFFECTIVE_DYNAMIC_IMPORT"),
+      EventKind::RequireTlaError => write!(f, "REQUIRE_TLA"),
     }
   }
 }

@@ -95,6 +95,10 @@ pub struct ScanResult {
   /// `cjs_exports_ident` and `cjs_module_ident` only only recorded when they are appear in
   /// lhs of AssignmentExpression
   pub ast_usage: EcmaModuleAstUsage,
+  /// The span of the first top-level `await` keyword, if any. Routed into
+  /// a centralized map on the link stage instead of being stored on every
+  /// `EcmaView`, since top-level await is rare.
+  pub tla_keyword_span: Option<Span>,
   pub symbol_ref_db: SymbolRefDbForModule,
   /// https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_parser/js_parser_lower_class.go#L2277-L2283
   /// used for check if current class decl symbol was referenced in its class scope
@@ -217,6 +221,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       errors: Vec::new(),
       ast_usage: EcmaModuleAstUsage::empty()
         .union(EcmaModuleAstUsage::AllStaticExportPropertyAccess),
+      tla_keyword_span: None,
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: FxHashSet::default(),
       hashbang_range: None,

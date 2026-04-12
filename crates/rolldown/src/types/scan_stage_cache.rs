@@ -98,11 +98,16 @@ impl ScanStageCache {
       // Update `module_idx_by_stable_id`
       self.module_idx_by_stable_id.insert(new_module.stable_id().clone(), new_module.idx());
 
+      let incoming_tla_span = scan_stage_output.tla_keyword_span_map.get(&new_idx).copied();
+
       if new_idx.index() >= cache.module_table.modules.len() {
         let new_module_idx = ModuleIdx::from_usize(cache.module_table.modules.len());
 
         if module_has_tla(&new_module) {
           cache.tla_module_count += 1;
+        }
+        if let Some(span) = incoming_tla_span {
+          cache.tla_keyword_span_map.insert(new_module_idx, span);
         }
         cache.symbol_ref_db.store_local_db(
           new_module_idx,
@@ -122,6 +127,14 @@ impl ScanStageCache {
         cache.tla_module_count -= 1;
       } else if !old_has_tla && new_has_tla {
         cache.tla_module_count += 1;
+      }
+      match incoming_tla_span {
+        Some(span) => {
+          cache.tla_keyword_span_map.insert(idx, span);
+        }
+        None => {
+          cache.tla_keyword_span_map.remove(&idx);
+        }
       }
       cache.module_table[idx] = new_module;
       cache.index_ecma_ast[idx] = scan_stage_output.index_ecma_ast.get_mut(new_idx).take();
@@ -231,6 +244,7 @@ impl ScanStageCache {
       flat_options: cache.flat_options,
       user_defined_entry_modules: cache.user_defined_entry_modules.clone(),
       tla_module_count: cache.tla_module_count,
+      tla_keyword_span_map: cache.tla_keyword_span_map.clone(),
     }
   }
 }

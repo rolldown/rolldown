@@ -1,5 +1,6 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
+use oxc::span::Span;
 use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
@@ -102,6 +103,9 @@ pub struct LinkStage<'a> {
   pub side_effects_free_function_symbol_ref: FxHashSet<SymbolRef>,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   pub tla_module_count: usize,
+  /// Centralized map of modules that use top-level `await` → span of the
+  /// first TLA keyword. Populated during the scan stage.
+  pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -190,6 +194,7 @@ impl<'a> LinkStage<'a> {
       side_effects_free_function_symbol_ref: FxHashSet::default(),
       user_defined_entry_modules: scan_stage_output.user_defined_entry_modules,
       tla_module_count: scan_stage_output.tla_module_count,
+      tla_keyword_span_map: scan_stage_output.tla_keyword_span_map,
     }
   }
 

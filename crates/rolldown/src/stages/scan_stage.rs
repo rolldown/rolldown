@@ -2,6 +2,7 @@ use std::{sync::Arc, thread};
 
 use arcstr::ArcStr;
 use futures::future::join_all;
+use oxc::span::Span;
 use oxc_index::IndexVec;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::SourceMapGenMsg;
@@ -51,6 +52,7 @@ pub struct NormalizedScanStageOutput {
   pub flat_options: FlatOptions,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   pub tla_module_count: usize,
+  pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
 impl NormalizedScanStageOutput {
@@ -77,6 +79,7 @@ impl NormalizedScanStageOutput {
       flat_options: self.flat_options,
       user_defined_entry_modules: self.user_defined_entry_modules.clone(),
       tla_module_count: self.tla_module_count,
+      tla_keyword_span_map: self.tla_keyword_span_map.clone(),
     }
   }
 }
@@ -108,6 +111,7 @@ impl TryFrom<ScanStageOutput> for NormalizedScanStageOutput {
       flat_options: value.flat_options,
       user_defined_entry_modules: value.user_defined_entry_modules,
       tla_module_count: value.tla_module_count,
+      tla_keyword_span_map: value.tla_keyword_span_map,
     })
   }
 }
@@ -126,6 +130,7 @@ pub struct ScanStageOutput {
   pub flat_options: FlatOptions,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   pub tla_module_count: usize,
+  pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
 }
 
 impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
@@ -327,6 +332,7 @@ impl From<ModuleLoaderOutput> for ScanStageOutput {
       flat_options,
       user_defined_entry_modules,
       tla_module_count,
+      tla_keyword_span_map,
     } = module_loader_output;
     ScanStageOutput {
       module_table,
@@ -341,6 +347,7 @@ impl From<ModuleLoaderOutput> for ScanStageOutput {
       flat_options,
       user_defined_entry_modules,
       tla_module_count,
+      tla_keyword_span_map,
     }
   }
 }

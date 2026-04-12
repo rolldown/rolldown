@@ -4,6 +4,7 @@ use crate::{
   types::lazy_barrel::BarrelInfo,
 };
 use arcstr::ArcStr;
+use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
@@ -16,6 +17,10 @@ pub struct NormalModuleTaskResult {
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub warnings: Vec<BuildDiagnostic>,
   pub barrel_info: Option<BarrelInfo>,
+  /// The span of the first top-level `await` keyword, if any. Collected by
+  /// the module loader into a centralized map rather than stored per-module
+  /// on `EcmaView`, since top-level await is rare.
+  pub tla_keyword_span: Option<Span>,
 }
 
 pub struct ExternalModuleTaskResult {

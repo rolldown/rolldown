@@ -199,6 +199,9 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     }
     if is_top_level_await {
       self.result.ast_usage.insert(EcmaModuleAstUsage::TopLevelAwait);
+      if self.result.tla_keyword_span.is_none() {
+        self.result.tla_keyword_span = Some(it.span());
+      }
     }
 
     walk::walk_for_of_statement(self, it);
@@ -219,6 +222,9 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     }
     if is_top_level_await {
       self.result.ast_usage.insert(EcmaModuleAstUsage::TopLevelAwait);
+      if self.result.tla_keyword_span.is_none() {
+        self.result.tla_keyword_span = Some(it.span());
+      }
     }
     walk::walk_await_expression(self, it);
   }

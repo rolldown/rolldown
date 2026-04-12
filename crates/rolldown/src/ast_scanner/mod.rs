@@ -786,12 +786,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                     .result
                     .ecma_view_meta
                     .insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-                  let flags = self
-                    .result
-                    .symbol_ref_db
-                    .flags
-                    .entry(symbol_id)
-                    .or_default();
+                  let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
                   flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
                   if is_pure_annotation_only {
                     flags.insert(SymbolRefFlags::PureAnnotationOnly);
@@ -807,12 +802,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             let empty = fn_decl.is_side_effect_free();
             if empty || fn_decl.pure {
               self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-              let flags = self
-                .result
-                .symbol_ref_db
-                .flags
-                .entry(symbol_id)
-                .or_default();
+              let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
               flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
               if fn_decl.pure && !empty {
                 flags.insert(SymbolRefFlags::PureAnnotationOnly);

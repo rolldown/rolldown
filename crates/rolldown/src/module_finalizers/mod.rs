@@ -1402,6 +1402,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     importee_linking_info.concatenated_wrapped_module_kind,
                     ConcatenateWrappedModuleKind::Inner
                   )
+                  // Deduplicate: skip if this importee's init was already emitted by
+                  // another statement (e.g. a named import earlier in the same module).
+                  && self.generated_init_esm_importee_ids.insert(importee.idx)
                 {
                   let wrapper_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());

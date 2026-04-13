@@ -9,6 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region deep.js
 await Promise.resolve();
 await Promise.resolve();
+await Promise.resolve();
+await Promise.resolve();
+globalThis.__deepReady = true;
 //#endregion
 //#region sync.js
 const syncValue = "sync";
@@ -29,6 +32,9 @@ export { syncValue };
 var init_deep = __esmMin((async () => {
 	await Promise.resolve();
 	await Promise.resolve();
+	await Promise.resolve();
+	await Promise.resolve();
+	globalThis.__deepReady = true;
 }));
 //#endregion
 //#region sync.js

@@ -6,6 +6,39 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry1.js
 
 ```js
+import "./run-dep.js";
+//#region init-dep-1.js
+global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
+//#endregion
+
+```
+
+## entry2.js
+
+```js
+import "./run-dep.js";
+//#region init-dep-2.js
+global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
+//#endregion
+
+```
+
+## run-dep.js
+
+```js
+//#region run-dep.js
+global.foo.log();
+//#endregion
+
+```
+
+# Variant: strict: [strict_execution_order: true]
+
+## Assets
+
+### entry1.js
+
+```js
 import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
 //#region init-dep-1.js
 var init_init_dep_1 = __esmMin((() => {
@@ -19,7 +52,7 @@ __esmMin((() => {
 
 ```
 
-## entry2.js
+### entry2.js
 
 ```js
 import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
@@ -35,7 +68,7 @@ __esmMin((() => {
 
 ```
 
-## run-dep.js
+### run-dep.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]

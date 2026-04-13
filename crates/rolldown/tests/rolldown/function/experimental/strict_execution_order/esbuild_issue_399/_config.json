@@ -11,5 +11,11 @@
       }
     ]
   },
+  "configVariants": [
+    {
+      "_configName": "strict",
+      "strictExecutionOrder": true
+    }
+  ],
   "expectExecuted": false
 }

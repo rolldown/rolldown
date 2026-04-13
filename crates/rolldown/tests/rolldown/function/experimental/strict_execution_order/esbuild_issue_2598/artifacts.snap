@@ -6,6 +6,39 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lazy-chunk.js
 
 ```js
+import { t as foo } from "./main.js";
+//#region lazy-chunk.js
+foo();
+//#endregion
+
+```
+
+## main.js
+
+```js
+//#region polyfill.js
+Object.somePolyfilledFunction = () => {};
+//#endregion
+//#region user-lib.js
+Object.somePolyfilledFunction();
+async function foo() {
+	return import("./lazy-chunk.js");
+}
+//#endregion
+//#region main.js
+foo();
+//#endregion
+export { foo as t };
+
+```
+
+# Variant: strict: [strict_execution_order: true]
+
+## Assets
+
+### lazy-chunk.js
+
+```js
 import { n as init_user_lib, r as __esmMin, t as foo } from "./main.js";
 //#endregion
 __esmMin((() => {
@@ -15,7 +48,7 @@ __esmMin((() => {
 
 ```
 
-## main.js
+### main.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]

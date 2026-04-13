@@ -22,6 +22,7 @@ anyhow = { workspace = true }
 fast-glob = { workspace = true }
 itoa = { workspace = true }
 oxc = { workspace = true }
+path-posix = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_ecmascript_utils = { workspace = true }
 rolldown_plugin = { workspace = true }

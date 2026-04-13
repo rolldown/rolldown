@@ -10,19 +10,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 await Promise.resolve();
 await Promise.resolve();
 //#endregion
-//#region middle.js
-const manager = {
-	value: "hello",
-	ready: false
-};
-function setup() {
-	manager.ready = true;
-}
+//#region sync.js
+const syncValue = "sync";
 //#endregion
-//#region main.js
-setup();
-//#endregion
-export { manager };
+export { syncValue };
 
 ```
 
@@ -35,35 +26,26 @@ export { manager };
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region deep.js
-var value;
 var init_deep = __esmMin((async () => {
 	await Promise.resolve();
 	await Promise.resolve();
-	value = "hello";
 }));
 //#endregion
-//#region middle.js
-function setup() {
-	manager.ready = true;
-}
-var manager;
-var init_middle = __esmMin((async () => {
-	await init_deep();
-	manager = {
-		value,
-		ready: false
-	};
+//#region sync.js
+var syncValue;
+var init_sync = __esmMin((() => {
+	syncValue = "sync";
 }));
 //#endregion
 //#region barrel.js
 var init_barrel = __esmMin((async () => {
-	await init_middle();
+	await init_deep();
+	init_sync();
 }));
 //#endregion
 await __esmMin((async () => {
 	await init_barrel();
-	setup();
 }))();
-export { manager };
+export { syncValue };
 
 ```

@@ -1,0 +1,12 @@
+{
+  "config": {
+    "format": "cjs",
+    "external": ["esm-pkg"],
+    "input": [
+      {
+        "name": "main",
+        "import": "main.mjs"
+      }
+    ]
+  }
+}

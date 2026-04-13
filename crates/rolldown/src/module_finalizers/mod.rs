@@ -157,14 +157,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           false,
           false,
         );
-        let init_call = self.snippet.builder.expression_call(
-          SPAN,
-          wrapper_ref_expr,
-          NONE,
-          self.snippet.builder.vec(),
-          false,
+        let init_call = ast::Expression::CallExpression(
+          self.snippet.builder.alloc_call_expression(
+            SPAN,
+            wrapper_ref_expr,
+            NONE,
+            self.snippet.builder.vec(),
+            false,
+          ),
         );
-        body.push(self.snippet.builder.statement_expression(SPAN, init_call));
+        if importee_linking_info.is_tla_or_contains_tla_dependency {
+          body.push(self.snippet.builder.statement_expression(
+            SPAN,
+            ast::Expression::AwaitExpression(
+              self.snippet.builder.alloc_await_expression(SPAN, init_call),
+            ),
+          ));
+        } else {
+          body.push(self.snippet.builder.statement_expression(SPAN, init_call));
+        }
       } else {
         // Importee is not included (barrel module) — traverse its import records
         // to find included importees transitively.
@@ -1394,7 +1405,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 {
                   let wrapper_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-                  program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name));
+                  if importee_linking_info.is_tla_or_contains_tla_dependency {
+                    let init_call = self.snippet.call_expr_expr(wrapper_ref_name);
+                    program.body.push(self.snippet.builder.statement_expression(
+                      SPAN,
+                      ast::Expression::AwaitExpression(
+                        self.snippet.builder.alloc_await_expression(SPAN, init_call),
+                      ),
+                    ));
+                  } else {
+                    program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name));
+                  }
                 }
 
                 match importee.exports_kind {

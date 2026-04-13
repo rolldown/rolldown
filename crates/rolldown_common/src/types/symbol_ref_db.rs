@@ -26,6 +26,10 @@ bitflags::bitflags! {
   #[derive(Debug, Default, Clone, Copy)]
   pub struct SymbolRefFlags: u8 {
     const IsNotReassigned = 1;
+    /// The function is side-effect-free solely because of a `@__NO_SIDE_EFFECTS__` annotation,
+    /// NOT because its body is empty. Such functions may still use their arguments, so
+    /// dynamic imports inside callback arguments should not be treated as unreachable.
+    const PureAnnotationOnly = 1 << 1;
     const MustStartWithCapitalLetterForJSX = 1 << 2;
     /// If the SymbolRef points to a side-effects-free function
     const SideEffectsFreeFunction = 1 << 3;

@@ -771,29 +771,31 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 if let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref()) {
                   self.add_constant_symbol(symbol_id, ConstExportMeta::new(value, false));
                 }
-                let is_side_effect_free_function = decl
+                let (is_side_effect_free_function, is_pure_annotation_only) = decl
                   .init
                   .as_ref()
                   .map(|expr| match expr {
-                    Expression::FunctionExpression(func) => func.is_side_effect_free() || func.pure,
-                    Expression::ArrowFunctionExpression(func) => {
-                      func.is_side_effect_free() || func.pure
+                    Expression::FunctionExpression(func) => {
+                      let empty = func.is_side_effect_free();
+                      (empty || func.pure, func.pure && !empty)
                     }
-                    _ => false,
+                    Expression::ArrowFunctionExpression(func) => {
+                      let empty = func.is_side_effect_free();
+                      (empty || func.pure, func.pure && !empty)
+                    }
+                    _ => (false, false),
                   })
-                  .unwrap_or(false);
+                  .unwrap_or((false, false));
                 if is_side_effect_free_function {
                   self
                     .result
                     .ecma_view_meta
                     .insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-                  self
-                    .result
-                    .symbol_ref_db
-                    .flags
-                    .entry(symbol_id)
-                    .or_default()
-                    .insert(SymbolRefFlags::SideEffectsFreeFunction);
+                  let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
+                  flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
+                  if is_pure_annotation_only {
+                    flags.insert(SymbolRefFlags::PureAnnotationOnly);
+                  }
                 }
               }
             });
@@ -802,15 +804,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             let binding_id = fn_decl.id.as_ref().unwrap();
             let symbol_id = binding_id.symbol_id();
             self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
-            if fn_decl.is_side_effect_free() || fn_decl.pure {
+            let empty = fn_decl.is_side_effect_free();
+            if empty || fn_decl.pure {
               self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-              self
-                .result
-                .symbol_ref_db
-                .flags
-                .entry(symbol_id)
-                .or_default()
-                .insert(SymbolRefFlags::SideEffectsFreeFunction);
+              let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
+              flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
+              if fn_decl.pure && !empty {
+                flags.insert(SymbolRefFlags::PureAnnotationOnly);
+              }
             }
           }
           ast::Declaration::ClassDeclaration(cls_decl) => {
@@ -863,15 +864,19 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         None
       }
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
-        if fn_decl.is_side_effect_free() || fn_decl.pure {
+        let empty = fn_decl.is_side_effect_free();
+        if empty || fn_decl.pure {
           self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-          self
+          let flags = self
             .result
             .symbol_ref_db
             .flags
             .entry(self.result.default_export_ref.symbol)
-            .or_default()
-            .insert(SymbolRefFlags::SideEffectsFreeFunction);
+            .or_default();
+          flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
+          if fn_decl.pure && !empty {
+            flags.insert(SymbolRefFlags::PureAnnotationOnly);
+          }
         }
         fn_decl.id.as_ref().map(|id| {
           let symbol_id = id.symbol_id();

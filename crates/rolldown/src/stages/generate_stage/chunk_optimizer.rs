@@ -404,7 +404,6 @@ impl GenerateStage<'_> {
           &dynamic_entry_to_dynamic_importers,
           temp_chunk,
           temp_chunk_graph,
-          *temp_chunk_idx,
         );
 
         Some((bits.clone(), *temp_chunk_idx, chunk_idxs, merge_target))
@@ -557,7 +556,6 @@ impl GenerateStage<'_> {
   /// entry chunk when possible, rather than creating a separate common chunk.
   ///
   /// Returns `Some(ChunkIdx)` if a suitable merge target is found, `None` otherwise.
-  #[expect(clippy::too_many_arguments)]
   fn try_insert_into_existing_chunk(
     chunk_idxs: &[ChunkIdx],
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
@@ -566,7 +564,6 @@ impl GenerateStage<'_> {
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
     info: &ChunkCandidate,
     temp_chunk_graph: &ChunkOptimizationGraph,
-    temp_chunk_idx: ChunkIdx,
   ) -> Option<ChunkIdx> {
     let mut user_defined_entry = vec![];
     let mut dynamic_entry = vec![];
@@ -609,11 +606,24 @@ impl GenerateStage<'_> {
       // import the entry chunk. This is only safe if the entry chunk
       // has no side effects; otherwise loading the dynamic chunk would
       // trigger the entry's side effects unexpectedly.
-      let would_make_dynamic_entry_depend_on_user_entry = dynamic_entry
-        .iter()
-        .any(|dynamic_chunk_idx| temp_chunk_graph.is_reachable(*dynamic_chunk_idx, temp_chunk_idx));
-      if would_make_dynamic_entry_depend_on_user_entry {
-        if temp_chunk_graph.chunks[chunk_idx].has_side_effects {
+      //
+      // However, the leak only happens if the dynamic entry can be reached
+      // via some *other* user-defined entry. If the dynamic entry is only
+      // reachable from `chunk_idx` (the merge target), then loading the
+      // dynamic entry always implies `chunk_idx` has already been loaded,
+      // so its side effects have already run — no leak.
+      // All dynamic entries in `dynamic_entry` already depend on `temp_chunk_idx`
+      // (that's how they ended up in `chunk_idxs`), so we check them all directly.
+      if temp_chunk_graph.chunks[chunk_idx].has_side_effects && !dynamic_entry.is_empty() {
+        // Check whether any *other* user-defined entry can reach these
+        // dynamic entries (directly or transitively via dynamic import).
+        // If yes, merging would leak `chunk_idx`'s side effects into that
+        // other entry's dynamic load.
+        let leak_possible = entry_chunk_reference.iter().any(|(other_entry_chunk_idx, reached)| {
+          *other_entry_chunk_idx != chunk_idx
+            && dynamic_entry.iter().any(|dyn_idx| reached.contains(dyn_idx))
+        });
+        if leak_possible {
           return None;
         }
       }

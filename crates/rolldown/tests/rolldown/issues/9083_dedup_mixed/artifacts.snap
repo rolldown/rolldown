@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region deep.js
+await Promise.resolve();
+await Promise.resolve();
+await Promise.resolve();
+await Promise.resolve();
+globalThis.__deepReady = true;
+const value = "deep-value";
+//#endregion
+export { value };
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region deep.js
+var value;
+var init_deep = __esmMin((async () => {
+	await Promise.resolve();
+	await Promise.resolve();
+	await Promise.resolve();
+	await Promise.resolve();
+	globalThis.__deepReady = true;
+	value = "deep-value";
+}));
+//#endregion
+//#region barrel.js
+var init_barrel = __esmMin((async () => {
+	await init_deep();
+}));
+//#endregion
+await __esmMin((async () => {
+	await init_barrel();
+	await init_deep();
+}))();
+export { value };
+
+```

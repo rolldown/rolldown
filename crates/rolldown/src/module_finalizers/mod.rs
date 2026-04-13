@@ -157,15 +157,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           false,
           false,
         );
-        let init_call = ast::Expression::CallExpression(
-          self.snippet.builder.alloc_call_expression(
+        let init_call =
+          ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
             SPAN,
             wrapper_ref_expr,
             NONE,
             self.snippet.builder.vec(),
             false,
-          ),
-        );
+          ));
         if importee_linking_info.is_tla_or_contains_tla_dependency {
           body.push(self.snippet.builder.statement_expression(
             SPAN,

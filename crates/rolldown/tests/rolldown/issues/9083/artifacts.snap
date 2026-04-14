@@ -1,0 +1,59 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region deep.js
+const value = "hello";
+await Promise.resolve();
+//#endregion
+//#region middle.js
+const manager = {
+	value,
+	ready: false
+};
+function setup() {
+	manager.ready = true;
+}
+//#endregion
+export { manager, setup };
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region deep.js
+var value;
+var init_deep = __esmMin((async () => {
+	value = "hello";
+	await Promise.resolve();
+}));
+//#endregion
+//#region middle.js
+function setup() {
+	manager.ready = true;
+}
+var manager;
+var init_middle = __esmMin((async () => {
+	await init_deep();
+	manager = {
+		value,
+		ready: false
+	};
+}));
+//#endregion
+await __esmMin((async () => {
+	await init_middle();
+}))();
+export { manager, setup };
+
+```

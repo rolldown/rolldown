@@ -146,11 +146,9 @@ impl ScanStageCache {
 
     // merge entries
     for entry_point in scan_stage_output.entry_points {
-      if let Some(old_entry_point) = cache
-        .entry_points
-        .iter_mut()
-        .find(|old_entry| old_entry.kind == entry_point.kind && old_entry.idx == entry_point.idx)
-      {
+      if let Some(old_entry_point) = cache.entry_points.iter_mut().find(|old_entry| {
+        old_entry.kind == entry_point.kind && old_entry.module_idx == entry_point.module_idx
+      }) {
         let removed_module_idxs = entry_point
           .related_stmt_infos
           .iter()

@@ -243,7 +243,7 @@ impl LinkStage<'_> {
         .flatten()
         .partition(|item| item.kind.is_user_defined());
     user_defined_entries.iter().filter(|entry| entry.kind.is_user_defined()).for_each(|entry| {
-      let module = match &self.module_table[entry.idx] {
+      let module = match &self.module_table[entry.module_idx] {
         Module::Normal(module) => module,
         Module::External(_module) => {
           // Case: import('external').
@@ -251,7 +251,7 @@ impl LinkStage<'_> {
         }
       };
       context.bailout_cjs_tree_shaking_modules.insert(module.idx);
-      let meta = &self.metas[entry.idx];
+      let meta = &self.metas[entry.module_idx];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, _came_from_cjs)| {
           if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
@@ -285,7 +285,7 @@ impl LinkStage<'_> {
       include_cjs_bailout_exports(context, &self.metas, bailout_modules);
 
       dynamic_entries.iter().for_each(|entry| {
-        if included_dynamic_entry.contains(&entry.idx) {
+        if included_dynamic_entry.contains(&entry.module_idx) {
           return;
         }
         let included = self.process_and_retain_dynamic_entry(
@@ -296,7 +296,7 @@ impl LinkStage<'_> {
           unreachable_import_expression_addrs,
         );
         if included {
-          included_dynamic_entry.insert(entry.idx);
+          included_dynamic_entry.insert(entry.module_idx);
         }
       });
 
@@ -305,7 +305,7 @@ impl LinkStage<'_> {
       }
     }
 
-    dynamic_entries.retain(|entry| included_dynamic_entry.contains(&entry.idx));
+    dynamic_entries.retain(|entry| included_dynamic_entry.contains(&entry.module_idx));
 
     // update entries with lived only.
     self.entries = {
@@ -317,7 +317,7 @@ impl LinkStage<'_> {
           itertools::Either::Right(dynamic_entries.into_iter())
         })
       {
-        entries.entry(entry.idx).or_insert_with(Vec::new).push(entry);
+        entries.entry(entry.module_idx).or_insert_with(Vec::new).push(entry);
       }
       entries
     };
@@ -421,7 +421,7 @@ impl LinkStage<'_> {
     unused_record_idxs: &mut Vec<(ModuleIdx, ImportRecordIdx)>,
     unreachable_import_expression_addr: &FxHashSet<Address>,
   ) -> bool {
-    if !cycled_idx.contains(&entry.idx) {
+    if !cycled_idx.contains(&entry.module_idx) {
       if let Some(item) = self.is_dynamic_entry_alive(
         entry,
         context.is_included_vec,
@@ -431,14 +431,14 @@ impl LinkStage<'_> {
         return false;
       }
     }
-    let module = match &self.module_table[entry.idx] {
+    let module = match &self.module_table[entry.module_idx] {
       Module::Normal(module) => module,
       Module::External(_module) => {
         // Case: import('external').
         return true;
       }
     };
-    let meta = &self.metas[entry.idx];
+    let meta = &self.metas[entry.module_idx];
     meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|(symbol_ref, _came_from_cjs)| {
       if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
         module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
@@ -494,7 +494,7 @@ impl LinkStage<'_> {
     // and they are all connected, the performance may be impacted. But this seems rare in real world,
     // we could optimize it later if needed.
     for entry in dynamic_entries.iter() {
-      let mut entry_module_idx = entry.idx;
+      let mut entry_module_idx = entry.module_idx;
       let cur = entry_module_idx;
       let mut visited = FxHashSet::default();
       self.construct_dynamic_entry_graph(&mut graph, &mut visited, &mut entry_module_idx, cur);
@@ -517,7 +517,7 @@ impl LinkStage<'_> {
     // We only need to ensure the relative order of those none cycled dynamic entries are correct, rest of them
     // we just bailout them
     dynamic_entries.sort_by_key(|item| {
-      idx_to_order_map.get(&item.idx).map_or(Reverse(usize::MAX), |&order| Reverse(order))
+      idx_to_order_map.get(&item.module_idx).map_or(Reverse(usize::MAX), |&order| Reverse(order))
     });
     cycled_dynamic_entries
   }
@@ -573,7 +573,7 @@ impl LinkStage<'_> {
       EntryPointKind::UserDefined | EntryPointKind::EmittedUserDefined => true,
       EntryPointKind::DynamicImport => {
         let is_dynamic_imported_module_exports_unused =
-          self.dynamic_import_exports_usage_map.get(&entry_point.idx).is_some_and(
+          self.dynamic_import_exports_usage_map.get(&entry_point.module_idx).is_some_and(
             |item| matches!(item, DynamicImportExportsUsage::Partial(set) if set.is_empty()),
           );
 

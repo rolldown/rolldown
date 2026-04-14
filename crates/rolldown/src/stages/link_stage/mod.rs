@@ -5,8 +5,8 @@ use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  ConstExportMeta, EntryPoint, EntryPointKind, FlatOptions, ImportKind, ModuleIdx, ModuleTable,
-  PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb, UsedSymbolRefs,
+  ConstExportMeta, EntryIdx, EntryPoint, EntryPointKind, FlatOptions, ImportKind, ModuleIdx,
+  ModuleTable, PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb, UsedSymbolRefs,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
@@ -134,16 +134,19 @@ impl<'a> LinkStage<'a> {
     };
 
     // We need to preserve the original order of user defined entry points.
-    let mut rest = scan_stage_output
-      .entry_points
+    let mut entry_points = scan_stage_output.entry_points;
+    let mut rest = entry_points
       .extract_if(0.., |item| !matches!(item.kind, EntryPointKind::UserDefined))
       .collect_vec();
 
     rest.sort_by_cached_key(|item| {
-      (item.kind, scan_stage_output.module_table.modules[item.idx].id().as_str())
+      (item.kind, scan_stage_output.module_table.modules[item.module_idx].id().as_str())
     });
 
-    scan_stage_output.entry_points.extend(rest);
+    entry_points.extend(rest);
+    for (i, entry) in entry_points.iter_mut().enumerate() {
+      entry.entry_index = EntryIdx::from_raw(i.try_into().expect("Too many entry points"));
+    }
 
     Self {
       sorted_modules: Vec::new(),
@@ -175,8 +178,8 @@ impl<'a> LinkStage<'a> {
       module_table: scan_stage_output.module_table,
       entries: {
         let mut entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>> = FxIndexMap::default();
-        for entry in scan_stage_output.entry_points {
-          entries.entry(entry.idx).or_default().push(entry);
+        for entry in entry_points {
+          entries.entry(entry.module_idx).or_default().push(entry);
         }
         entries
       },

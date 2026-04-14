@@ -13,10 +13,10 @@ rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_utils = { workspace = true }
 anyhow = { workspace = true }
+serde_json = { workspace = true }
 
 [lints]
 workspace = true
 
 [lib]
-test = false
 doctest = false

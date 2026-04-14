@@ -152,14 +152,7 @@ impl Plugin for LazyCompilationPlugin {
         // The proxy module ID includes the ?rolldown-lazy=1 suffix
         let proxy_id = args.id;
 
-        // Replace placeholders in order: longer ones first to avoid partial matches
-        // $PROXY_MODULE_ID and $STABLE_MODULE_ID contain "MODULE_ID" as substring
-
-        // // TODO: hyf0 prevent xss vulnerabilities by escaping IDs properly
-        let code = template
-          .replace("$PROXY_MODULE_ID", &format!("\"{proxy_id}\""))
-          .replace("$STABLE_MODULE_ID", &format!("\"{}\"", stable_id.as_str()))
-          .replace("$MODULE_ID", &format!("\"{original_id}\""));
+        let code = render_proxy_template(template, proxy_id, stable_id.as_str(), original_id)?;
         return Ok(Some(rolldown_plugin::HookLoadOutput {
           code: ArcStr::from(code),
           ..Default::default()
@@ -202,5 +195,49 @@ impl Plugin for LazyCompilationPlugin {
     });
 
     Ok(args.ast)
+  }
+}
+
+// Replace placeholders in order: longer ones first to avoid partial matches
+// $PROXY_MODULE_ID and $STABLE_MODULE_ID contain "MODULE_ID" as substring
+fn render_proxy_template(
+  template: &str,
+  proxy_id: &str,
+  stable_id: &str,
+  original_id: &str,
+) -> serde_json::Result<String> {
+  Ok(
+    template
+      .replace("$PROXY_MODULE_ID", &serde_json::to_string(proxy_id)?)
+      .replace("$STABLE_MODULE_ID", &serde_json::to_string(stable_id)?)
+      .replace("$MODULE_ID", &serde_json::to_string(original_id)?),
+  )
+}
+
+#[cfg(test)]
+mod tests {
+  use super::render_proxy_template;
+
+  #[test]
+  fn windows_path() {
+    let proxy_id = r"D:\Users\foo\bar\baz.js?rolldown-lazy=1";
+    let stable_id = r"src\bar\baz.js";
+    let original_id = r"D:\Users\foo\bar\baz.js";
+
+    let template = "P=$PROXY_MODULE_ID;S=$STABLE_MODULE_ID;M=$MODULE_ID;";
+    let rendered = render_proxy_template(template, proxy_id, stable_id, original_id).unwrap();
+
+    assert_eq!(
+      rendered,
+      r#"P="D:\\Users\\foo\\bar\\baz.js?rolldown-lazy=1";S="src\\bar\\baz.js";M="D:\\Users\\foo\\bar\\baz.js";"#
+    );
+  }
+
+  #[test]
+  fn unix_path() {
+    let id = "/Users/foo/bar.js?rolldown-lazy=1";
+    let rendered =
+      render_proxy_template("$PROXY_MODULE_ID", id, "src/bar.js", "/Users/foo/bar.js").unwrap();
+    assert_eq!(rendered, "\"/Users/foo/bar.js?rolldown-lazy=1\"");
   }
 }

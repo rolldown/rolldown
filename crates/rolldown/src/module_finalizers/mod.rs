@@ -164,7 +164,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.snippet.builder.vec(),
           false,
         );
-        body.push(self.snippet.builder.statement_expression(SPAN, init_call));
+        let init_stmt = if importee_linking_info.is_tla_or_contains_tla_dependency {
+          self.snippet.builder.statement_expression(
+            SPAN,
+            ast::Expression::AwaitExpression(
+              self.snippet.builder.alloc_await_expression(SPAN, init_call),
+            ),
+          )
+        } else {
+          self.snippet.builder.statement_expression(SPAN, init_call)
+        };
+        body.push(init_stmt);
       } else {
         // Importee is not included (barrel module) — traverse its import records
         // to find included importees transitively.

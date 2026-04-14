@@ -1,0 +1,68 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region lib.js
+const value = 42;
+//#endregion
+//#region deep.js
+const value$1 = "hello";
+await Promise.resolve();
+//#endregion
+//#region middle.js
+globalThis.__bug2_ready = value$1 === "hello";
+//#endregion
+//#region main.js
+const ready = globalThis.__bug2_ready === true;
+//#endregion
+export { ready, value };
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.js
+var value;
+var init_lib = __esmMin((() => {
+	value = 42;
+}));
+//#endregion
+//#region deep.js
+var value$1;
+var init_deep = __esmMin((async () => {
+	value$1 = "hello";
+	await Promise.resolve();
+}));
+//#endregion
+//#region middle.js
+var init_middle = __esmMin((async () => {
+	await init_deep();
+	globalThis.__bug2_ready = value$1 === "hello";
+}));
+//#endregion
+//#region barrel.js
+var init_barrel = __esmMin((async () => {
+	init_lib();
+	await init_middle();
+}));
+//#endregion
+//#region main.js
+var ready;
+//#endregion
+await __esmMin((async () => {
+	await init_barrel();
+	ready = globalThis.__bug2_ready === true;
+}))();
+export { ready, value };
+
+```

@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 use rolldown_utils::indexmap::FxIndexSet;
 
 use crate::{ExportsKind, ModuleId};

@@ -15,7 +15,7 @@ pub mod chunk_table;
 pub mod types;
 
 use arcstr::ArcStr;
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{
   BitSet,

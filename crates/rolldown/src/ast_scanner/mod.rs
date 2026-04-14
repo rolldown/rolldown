@@ -24,8 +24,9 @@ use oxc::{
   },
   ast_visit::Visit,
   semantic::SymbolId,
-  span::{CompactStr, GetSpan, Span},
+  span::{GetSpan, Span},
 };
+use oxc_str::CompactStr;
 use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};

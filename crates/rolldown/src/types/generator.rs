@@ -1,4 +1,4 @@
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, OutputExports,

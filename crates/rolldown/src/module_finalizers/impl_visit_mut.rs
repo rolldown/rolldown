@@ -1,8 +1,8 @@
 use itertools::Itertools;
 use oxc::allocator::FromIn;
 use oxc::ast::AstType;
-use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression};
-use oxc::span::{CompactStr, Str};
+use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression, Str};
+use oxc_str::CompactStr;
 use oxc::{
   allocator::{self, Dummy as _, IntoIn, TakeIn},
   ast::{

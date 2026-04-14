@@ -1,6 +1,6 @@
 use std::collections::hash_map::Entry;
 
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_utils::rustc_hash::{FxHashMapExt as _, FxHashSetExt as _};
 use rustc_hash::{FxHashMap, FxHashSet};

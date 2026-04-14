@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 use rolldown_sourcemap::SourceMap;
 use rustc_hash::FxHashMap;
 

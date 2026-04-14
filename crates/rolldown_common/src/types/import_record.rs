@@ -5,8 +5,9 @@ use std::{
 
 use oxc::{
   allocator::Address,
-  span::{CompactStr, Span},
+  span::Span,
 };
+use oxc_str::CompactStr;
 
 use crate::{ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
 

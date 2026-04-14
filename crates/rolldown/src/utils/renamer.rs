@@ -3,7 +3,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::hash_map::Entry;
 
 use oxc::semantic::Scoping;
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 
 use rolldown_common::{

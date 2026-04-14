@@ -3,8 +3,9 @@ use arcstr::ArcStr;
 use bitflags::bitflags;
 use oxc::{
   semantic::SymbolId,
-  span::{CompactStr, Span},
+  span::Span,
 };
+use oxc_str::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};

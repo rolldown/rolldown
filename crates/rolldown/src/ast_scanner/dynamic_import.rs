@@ -3,8 +3,9 @@ use oxc::{
     AstKind,
     ast::{self, Argument, IdentifierReference},
   },
-  span::CompactStr,
+  span,
 };
+use oxc_str::CompactStr;
 use rolldown_common::{ImportRecordIdx, dynamic_import_usage::DynamicImportExportsUsage};
 use rustc_hash::FxHashSet;
 

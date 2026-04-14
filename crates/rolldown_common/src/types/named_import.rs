@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
-use oxc::span::{CompactStr, Span};
+use oxc::span::Span;
+use oxc_str::CompactStr;
 
 use crate::SymbolRef;
 

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
   OutputFormat, Platform, SymbolRef, SymbolRefDb, WrapKind,

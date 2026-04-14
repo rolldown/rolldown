@@ -5,8 +5,9 @@ use oxc::{
     ast::{self, ExportDefaultDeclarationKind, Expression, ObjectPropertyKind, Statement},
   },
   semantic::{IsGlobalReference, Scoping, SymbolId},
-  span::{SPAN, Span, Str},
+  span::{SPAN, Span},
 };
+use oxc::ast::ast::Str;
 
 use rolldown_common::{
   ExternalModule, ImportRecordIdx, IndexModules, Module, ModuleIdx, NormalModule,

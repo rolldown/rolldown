@@ -1,6 +1,6 @@
 use crate::types::generator::GenerateContext;
 use arcstr::ArcStr;
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 use rolldown_common::{NormalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 

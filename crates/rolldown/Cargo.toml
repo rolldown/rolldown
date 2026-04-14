@@ -34,6 +34,7 @@ oxc = { workspace = true }
 oxc_allocator = { workspace = true }
 oxc_ecmascript = { workspace = true }
 oxc_index = { workspace = true }
+oxc_str = { workspace = true }
 oxc_traverse = { workspace = true }
 petgraph = { workspace = true }
 rayon = { workspace = true }

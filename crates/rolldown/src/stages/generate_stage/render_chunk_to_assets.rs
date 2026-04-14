@@ -1,7 +1,7 @@
 use std::{ops::Deref, pin::Pin, sync::Arc};
 
 use futures::future::try_join_all;
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Asset, ChunkIdx, ConcatenateWrappedModuleKind, EmittedChunkInfo, InstantiationKind,

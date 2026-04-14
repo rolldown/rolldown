@@ -1,5 +1,5 @@
 use indexmap::map::Entry;
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 use oxc::{
   allocator::TakeIn,
   ast::ast::{self, Expression},

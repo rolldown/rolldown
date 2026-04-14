@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use arcstr::ArcStr;
 use indexmap::IndexSet;
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{

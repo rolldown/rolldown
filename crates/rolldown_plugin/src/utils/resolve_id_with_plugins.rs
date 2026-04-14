@@ -25,12 +25,7 @@ fn should_preserve_ignored<Fs: FileSystem>(
   // `this.resolve()` may surface browser:false mappings as the ignored path itself.
   // If a plugin returns that object from `resolveId`, recover the ignored bit so
   // module loading still produces an empty module instead of trying to read the path.
-  match resolver.resolve(
-    importer.map(Path::new),
-    specifier,
-    import_kind,
-    is_user_defined_entry,
-  ) {
+  match resolver.resolve(importer.map(Path::new), specifier, import_kind, is_user_defined_entry) {
     Err(ResolveError::Ignored(path)) => path == Path::new(resolved_id),
     _ => false,
   }

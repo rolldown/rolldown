@@ -14,6 +14,28 @@ fn is_http_url(s: &str) -> bool {
   s.starts_with("http://") || s.starts_with("https://") || s.starts_with("//")
 }
 
+fn should_preserve_ignored<Fs: FileSystem>(
+  resolver: &Resolver<Fs>,
+  specifier: &str,
+  importer: Option<&str>,
+  import_kind: ImportKind,
+  is_user_defined_entry: bool,
+  resolved_id: &str,
+) -> bool {
+  // `this.resolve()` may surface browser:false mappings as the ignored path itself.
+  // If a plugin returns that object from `resolveId`, recover the ignored bit so
+  // module loading still produces an empty module instead of trying to read the path.
+  match resolver.resolve(
+    importer.map(Path::new),
+    specifier,
+    import_kind,
+    is_user_defined_entry,
+  ) {
+    Err(ResolveError::Ignored(path)) => path == Path::new(resolved_id),
+    _ => false,
+  }
+}
+
 /// Infers ModuleDefFormat from file path and optional package.json.
 /// This matches the logic used in the internal resolver's `infer_module_def_format`.
 pub fn infer_module_def_format(
@@ -78,10 +100,22 @@ pub async fn resolve_id_with_plugins<Fs: FileSystem>(
         .as_ref()
         .map(|p| resolver.try_get_package_json_or_create(p.as_path()))
         .transpose()?;
+      let external = r.external.unwrap_or_default();
+      let ignored = package_json.is_none()
+        && !external.is_external()
+        && should_preserve_ignored(
+          resolver,
+          specifier,
+          importer,
+          import_kind,
+          is_user_defined_entry,
+          r.id.as_str(),
+        );
       return Ok(Ok(ResolvedId {
         module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
         id: ModuleId::new(r.id),
-        external: r.external.unwrap_or_default(),
+        ignored,
+        external,
         normalize_external_id: r.normalize_external_id,
         side_effects: r.side_effects,
         package_json,
@@ -108,10 +142,22 @@ pub async fn resolve_id_with_plugins<Fs: FileSystem>(
       .as_ref()
       .map(|p| resolver.try_get_package_json_or_create(p.as_path()))
       .transpose()?;
+    let external = r.external.unwrap_or_default();
+    let ignored = package_json.is_none()
+      && !external.is_external()
+      && should_preserve_ignored(
+        resolver,
+        specifier,
+        importer,
+        import_kind,
+        is_user_defined_entry,
+        r.id.as_str(),
+      );
     return Ok(Ok(ResolvedId {
       module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
       id: ModuleId::new(r.id),
-      external: r.external.unwrap_or_default(),
+      ignored,
+      external,
       normalize_external_id: r.normalize_external_id,
       side_effects: r.side_effects,
       package_json,

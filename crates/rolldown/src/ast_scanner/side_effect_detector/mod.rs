@@ -3,12 +3,14 @@ use oxc::ast::ast::{
   IdentifierReference, UnaryOperator, VariableDeclarationKind,
 };
 use oxc::ast::match_member_expression;
+use oxc::semantic::SymbolId;
 use oxc_allocator::{Address, UnstableAddress};
 use oxc_ecmascript::GlobalContext;
 use oxc_ecmascript::side_effects::{
   MayHaveSideEffects, MayHaveSideEffectsContext, PropertyReadSideEffects,
 };
 use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, SideEffectDetail};
+use rolldown_ecmascript_utils::ExpressionExt;
 use rustc_hash::FxHashSet;
 
 /// Detect if a statement "may" have side effect.
@@ -18,6 +20,10 @@ pub struct SideEffectDetector<'a> {
   flat_options: FlatOptions,
   /// Cross-module optimization: addresses of call expressions to known-pure functions.
   side_effect_free_call_expr_addr: Option<&'a FxHashSet<Address>>,
+  /// Symbol IDs of namespace imports (`import * as ns from '...'`).
+  /// Property reads on ES module namespace objects are guaranteed side-effect-free
+  /// because namespace objects are frozen/sealed by spec with no getters.
+  namespace_object_symbol_ids: Option<&'a FxHashSet<SymbolId>>,
 }
 
 impl<'a> SideEffectDetector<'a> {
@@ -26,8 +32,15 @@ impl<'a> SideEffectDetector<'a> {
     flat_options: FlatOptions,
     options: &'a SharedNormalizedBundlerOptions,
     side_effect_free_call_expr_addr: Option<&'a FxHashSet<Address>>,
+    namespace_object_symbol_ids: Option<&'a FxHashSet<SymbolId>>,
   ) -> Self {
-    Self { scope, options, flat_options, side_effect_free_call_expr_addr }
+    Self {
+      scope,
+      options,
+      flat_options,
+      side_effect_free_call_expr_addr,
+      namespace_object_symbol_ids,
+    }
   }
 
   /// Check if a call expression has been marked pure by cross-module optimization.
@@ -53,11 +66,27 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
+  /// Check if the member expression's direct object is an ES module namespace import.
+  /// ES module namespace objects are frozen/sealed by spec — property reads on them
+  /// can never have side effects (no getters possible).
+  fn is_namespace_member_access(&self, member_expr: &ast::MemberExpression) -> Option<bool> {
+    let namespace_ids = self.namespace_object_symbol_ids?;
+    let ident = member_expr.object().as_identifier()?;
+    let ref_id = ident.reference_id.get()?;
+    let symbol_id = self.scope.symbol_id_for(ref_id)?;
+    Some(namespace_ids.contains(&symbol_id))
+  }
+
   fn detect_side_effect_of_member_expr(
     &self,
     member_expr: &ast::MemberExpression,
   ) -> SideEffectDetail {
     if self.is_expr_manual_pure_functions(member_expr.object()) {
+      return false.into();
+    }
+    // ES module namespace objects are frozen/sealed by spec — property reads
+    // on them are guaranteed side-effect-free.
+    if self.is_namespace_member_access(member_expr) == Some(true) {
       return false.into();
     }
     // Only `import.meta.url` is a spec-defined side-effect-free property read.
@@ -558,7 +587,7 @@ mod test {
     let options = Arc::new(NormalizedBundlerOptions::default());
     let flags = FlatOptions::from_shared_options(&options);
     ast.program().body.iter().any(|stmt| {
-      SideEffectDetector::new(&ast_scopes, flags, &options, None)
+      SideEffectDetector::new(&ast_scopes, flags, &options, None, None)
         .detect_side_effect_of_stmt(stmt)
         .has_side_effect()
     })
@@ -578,7 +607,8 @@ mod test {
       .body
       .iter()
       .map(|stmt| {
-        SideEffectDetector::new(&ast_scopes, flags, &options, None).detect_side_effect_of_stmt(stmt)
+        SideEffectDetector::new(&ast_scopes, flags, &options, None, None)
+          .detect_side_effect_of_stmt(stmt)
       })
       .collect_vec()
   }

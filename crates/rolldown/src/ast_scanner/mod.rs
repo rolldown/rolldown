@@ -178,6 +178,9 @@ pub struct AstScanner<'me, 'ast> {
   traverse_state: TraverseState,
   current_comment_idx: usize,
   untranspiled_syntax: UntranspiledSyntax,
+  /// Symbol IDs of namespace imports (`import * as ns from '...'`).
+  /// Used to treat property reads on namespace objects as side-effect-free.
+  namespace_object_symbol_ids: FxHashSet<SymbolId>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -272,6 +275,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       traverse_state: TraverseState::empty(),
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
+      namespace_object_symbol_ids: FxHashSet::default(),
     }
   }
 
@@ -552,6 +556,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         span_imported,
       },
     );
+    self.namespace_object_symbol_ids.insert(local);
   }
 
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {

@@ -335,6 +335,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
           self.immutable_ctx.flat_options,
           self.immutable_ctx.options,
           Some(&self.side_effect_free_call_expr_addr),
+          None,
         )
         .detect_side_effect_of_stmt(stmt);
         self.side_effect_detail_mutations.insert(stmt_info_idx, side_effect_detail);

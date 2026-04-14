@@ -116,6 +116,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         self.immutable_ctx.flat_options,
         self.immutable_ctx.options,
         None,
+        Some(&self.namespace_object_symbol_ids),
       );
       self.current_stmt_info.side_effect = detector.detect_side_effect_of_stmt(stmt);
 

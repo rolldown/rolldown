@@ -1,12 +1,9 @@
 use crate::{ConstExportMeta, DependedRuntimeHelperMap, ImportAttribute, SourcemapChainElement};
 use arcstr::ArcStr;
 use bitflags::bitflags;
-use oxc::{
-  semantic::SymbolId,
-  span::Span,
-};
-use oxc_str::CompactStr;
+use oxc::{semantic::SymbolId, span::Span};
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 

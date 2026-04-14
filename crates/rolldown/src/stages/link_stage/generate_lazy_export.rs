@@ -1,11 +1,11 @@
 use indexmap::map::Entry;
-use oxc_str::CompactStr;
 use oxc::{
   allocator::TakeIn,
   ast::ast::{self, Expression},
   semantic::{SemanticBuilder, Stats},
   span::SPAN,
 };
+use oxc_str::CompactStr;
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, GetLocalDbMut, LocalExport, Module, ModuleIdx, ModuleType,
   NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDbForModule,

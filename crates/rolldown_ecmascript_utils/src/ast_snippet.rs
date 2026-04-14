@@ -1,3 +1,4 @@
+use oxc::ast::ast::Str;
 use oxc::{
   allocator::{self, Allocator, Box, IntoIn, TakeIn},
   ast::{
@@ -10,7 +11,6 @@ use oxc::{
   span::{GetSpanMut, SPAN, Span},
   syntax::identifier,
 };
-use oxc::ast::ast::Str;
 use rolldown_common::{EcmaModuleAstUsage, Interop, MemberExprProp};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 

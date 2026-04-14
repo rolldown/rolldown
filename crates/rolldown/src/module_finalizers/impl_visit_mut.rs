@@ -2,7 +2,6 @@ use itertools::Itertools;
 use oxc::allocator::FromIn;
 use oxc::ast::AstType;
 use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression, Str};
-use oxc_str::CompactStr;
 use oxc::{
   allocator::{self, Dummy as _, IntoIn, TakeIn},
   ast::{
@@ -14,6 +13,7 @@ use oxc::{
   semantic::ScopeFlags,
   span::{SPAN, Span},
 };
+use oxc_str::CompactStr;
 use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};

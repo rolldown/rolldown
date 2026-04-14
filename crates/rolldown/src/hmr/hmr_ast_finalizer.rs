@@ -1,3 +1,4 @@
+use oxc::ast::ast::Str;
 use oxc::{
   allocator::{Allocator, Box as ArenaBox, IntoIn, TakeIn},
   ast::{
@@ -7,7 +8,6 @@ use oxc::{
   semantic::{IsGlobalReference, Scoping, SymbolId},
   span::{SPAN, Span},
 };
-use oxc::ast::ast::Str;
 
 use rolldown_common::{
   ExternalModule, ImportRecordIdx, IndexModules, Module, ModuleIdx, NormalModule,

@@ -3,10 +3,7 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-use oxc::{
-  allocator::Address,
-  span::Span,
-};
+use oxc::{allocator::Address, span::Span};
 use oxc_str::CompactStr;
 
 use crate::{ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};

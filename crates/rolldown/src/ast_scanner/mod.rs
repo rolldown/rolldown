@@ -26,9 +26,9 @@ use oxc::{
   semantic::SymbolId,
   span::{GetSpan, Span},
 };
-use oxc_str::CompactStr;
 use oxc_allocator::Address;
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
   ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,

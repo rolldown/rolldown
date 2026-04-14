@@ -1,7 +1,4 @@
-use oxc::{
-  semantic::ReferenceId,
-  span::Span,
-};
+use oxc::{semantic::ReferenceId, span::Span};
 use oxc_str::CompactStr;
 
 use crate::{MemberExprRefResolution, SymbolRef, type_aliases::MemberExprRefResolutionMap};

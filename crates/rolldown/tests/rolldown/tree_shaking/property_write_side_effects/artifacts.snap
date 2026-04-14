@@ -18,13 +18,6 @@ const temp = {};
 o.foo = 100;
 temp["bar"] = 200;
 console.log(temp);
-counter.value++;
-(class {
-	static {
-		++counter.count;
-	}
-});
-counter.another++;
 console.log(counter);
 const config = {};
 config.option = true;

@@ -11,13 +11,13 @@ let foo;
 (function(_foo) {
 	_foo.x = /* @__PURE__ */ function(x) {
 		x[x["y"] = 0] = "y";
-		x[x["yy"] = 0] = "yy";
+		x[x["yy"] = x.y] = "yy";
 		return x;
 	}({});
 })(foo || (foo = {}));
 (function(_foo2) {
 	_foo2.x = /* @__PURE__ */ function(x) {
-		x[x["z"] = 1] = "z";
+		x[x["z"] = y + 1] = "z";
 		return x;
 	}({});
 })(foo || (foo = {}));
@@ -55,7 +55,7 @@ let n;
 })(n || (n = {}));
 (function(_n3) {
 	let x = /* @__PURE__ */ function(x) {
-		x[x["g"] = x.f >> 4] = "g";
+		x[x["g"] = f >> 4] = "g";
 		return x;
 	}({});
 	_n3.x = x;
@@ -74,13 +74,13 @@ let foo;
 (function(_foo) {
 	_foo.x = /* @__PURE__ */ function(x) {
 		x["y"] = "a";
-		x["yy"] = "a";
+		x[x["yy"] = x.y] = "yy";
 		return x;
 	}({});
 })(foo || (foo = {}));
 (function(_foo2) {
 	_foo2.x = /* @__PURE__ */ function(x) {
-		x["z"] = "a";
+		x[x["z"] = y] = "z";
 		return x;
 	}({});
 })(foo || (foo = {}));
@@ -102,11 +102,11 @@ export { foo };
 //#region number.ts
 let x = /* @__PURE__ */ function(x) {
 	x[x["y"] = 0] = "y";
-	x[x["yy"] = 0] = "yy";
+	x[x["yy"] = x.y] = "yy";
 	return x;
 }({});
 x = /* @__PURE__ */ function(x) {
-	x[x["z"] = 1] = "z";
+	x[x["z"] = y + 1] = "z";
 	return x;
 }(x || {});
 (function(_x) {
@@ -127,14 +127,14 @@ let a = /* @__PURE__ */ function(a) {
 	return a;
 }({});
 let x = /* @__PURE__ */ function(x) {
-	x[x["c"] = 100] = "c";
-	x[x["d"] = 200] = "d";
+	x[x["c"] = a.b] = "c";
+	x[x["d"] = x.c * 2] = "d";
 	x[x["e"] = x.d ** 2] = "e";
 	x[x["f"] = x["e"] / 4] = "f";
 	return x;
 }({});
 x = /* @__PURE__ */ function(x) {
-	x[x["g"] = x.f >> 4] = "g";
+	x[x["g"] = f >> 4] = "g";
 	return x;
 }(x || {});
 console.log(a.b, a["b"], x.g, x["g"]);
@@ -149,11 +149,11 @@ export { a, x };
 //#region string.ts
 let x = /* @__PURE__ */ function(x) {
 	x["y"] = "a";
-	x["yy"] = "a";
+	x[x["yy"] = x.y] = "yy";
 	return x;
 }({});
 x = /* @__PURE__ */ function(x) {
-	x["z"] = "a";
+	x[x["z"] = y] = "z";
 	return x;
 }(x || {});
 (function(_x) {

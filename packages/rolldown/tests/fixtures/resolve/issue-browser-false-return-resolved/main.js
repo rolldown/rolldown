@@ -1,1 +1,1 @@
-import 'demo-pkg';
+import './demo/index.js';

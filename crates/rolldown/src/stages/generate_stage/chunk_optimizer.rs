@@ -1235,7 +1235,12 @@ mod tests {
     let mut chunks = TempIndexChunks::new();
     for deps in chunk_deps {
       let dep_set: FxHashSet<ChunkIdx> = deps.iter().map(|&d| ChunkIdx::from_usize(d)).collect();
-      chunks.push(ChunkCandidate { modules: vec![], needs_creation: false, dependencies: dep_set, has_side_effects: false });
+      chunks.push(ChunkCandidate {
+        modules: vec![],
+        needs_creation: false,
+        dependencies: dep_set,
+        has_side_effects: false,
+      });
     }
     ChunkOptimizationGraph {
       chunks,

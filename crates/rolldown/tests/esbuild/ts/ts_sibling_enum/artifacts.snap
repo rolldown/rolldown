@@ -11,7 +11,7 @@ let foo;
 (function(_foo) {
 	_foo.x = /* @__PURE__ */ function(x) {
 		x[x["y"] = 0] = "y";
-		x[x["yy"] = x.y] = "yy";
+		x[x["yy"] = 0] = "yy";
 		return x;
 	}({});
 })(foo || (foo = {}));
@@ -25,7 +25,7 @@ let foo;
 	let x;
 	(function(_x) {
 		console.log(y, z);
-		console.log(x.y, x.z);
+		console.log(0, x.z);
 	})(x || (x = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
 //#endregion
@@ -74,7 +74,7 @@ let foo;
 (function(_foo) {
 	_foo.x = /* @__PURE__ */ function(x) {
 		x["y"] = "a";
-		x[x["yy"] = x.y] = "yy";
+		x["yy"] = "a";
 		return x;
 	}({});
 })(foo || (foo = {}));
@@ -88,7 +88,7 @@ let foo;
 	let x;
 	(function(_x) {
 		console.log(y, z);
-		console.log(x.y, x.z);
+		console.log("a", x.z);
 	})(x || (x = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
 //#endregion
@@ -102,17 +102,17 @@ export { foo };
 //#region number.ts
 let x = /* @__PURE__ */ function(x) {
 	x[x["y"] = 0] = "y";
-	x[x["yy"] = x.y] = "yy";
+	x[x["yy"] = 0] = "yy";
 	return x;
 }({});
 x = /* @__PURE__ */ function(x) {
-	x[x["z"] = y + 1] = "z";
+	x[x["z"] = 1] = "z";
 	return x;
 }(x || {});
 (function(_x) {
 	console.log(y, z);
 })(x || (x = {}));
-console.log(x.y, x.z);
+console.log(0, 1);
 //#endregion
 export { x };
 
@@ -127,17 +127,17 @@ let a = /* @__PURE__ */ function(a) {
 	return a;
 }({});
 let x = /* @__PURE__ */ function(x) {
-	x[x["c"] = a.b] = "c";
-	x[x["d"] = x.c * 2] = "d";
-	x[x["e"] = x.d ** 2] = "e";
-	x[x["f"] = x["e"] / 4] = "f";
+	x[x["c"] = 100] = "c";
+	x[x["d"] = 200] = "d";
+	x[x["e"] = 4e4] = "e";
+	x[x["f"] = 1e4] = "f";
 	return x;
 }({});
 x = /* @__PURE__ */ function(x) {
-	x[x["g"] = f >> 4] = "g";
+	x[x["g"] = 625] = "g";
 	return x;
 }(x || {});
-console.log(a.b, a["b"], x.g, x["g"]);
+console.log(100, 100, 625, 625);
 //#endregion
 export { a, x };
 
@@ -149,17 +149,17 @@ export { a, x };
 //#region string.ts
 let x = /* @__PURE__ */ function(x) {
 	x["y"] = "a";
-	x[x["yy"] = x.y] = "yy";
+	x["yy"] = "a";
 	return x;
 }({});
 x = /* @__PURE__ */ function(x) {
-	x[x["z"] = y] = "z";
+	x["z"] = "a";
 	return x;
 }(x || {});
 (function(_x) {
 	console.log(y, z);
 })(x || (x = {}));
-console.log(x.y, x.z);
+console.log("a", "a");
 //#endregion
 export { x };
 

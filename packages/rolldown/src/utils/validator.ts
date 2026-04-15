@@ -421,6 +421,7 @@ const CompressTreeshakeOptionsSchema = v.strictObject({
   annotations: v.optional(v.boolean()),
   manualPureFunctions: v.optional(v.array(v.string())),
   propertyReadSideEffects: v.optional(v.union([v.boolean(), v.literal('always')])),
+  propertyWriteSideEffects: v.optional(v.boolean()),
   unknownGlobalSideEffects: v.optional(v.boolean()),
   invalidImportSideEffects: v.optional(v.boolean()),
 });

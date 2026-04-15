@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 
 use crate::ModuleId;
 

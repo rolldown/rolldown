@@ -1,4 +1,4 @@
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 
 /// We only concatenate wrapped modules when `WrapKind` is `Esm`
 #[derive(Debug, Clone, Copy, Default)]

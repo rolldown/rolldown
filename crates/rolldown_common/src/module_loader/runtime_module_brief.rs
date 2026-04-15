@@ -1,4 +1,5 @@
-use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
+use oxc::semantic::SymbolId;
+use oxc_str::CompactStr as CompactString;
 use rolldown_error::BuildDiagnostic;
 use rustc_hash::FxHashMap;
 

@@ -39,6 +39,7 @@ mime = { workspace = true }
 nom = { workspace = true }
 oxc = { workspace = true }
 oxc_index = { workspace = true }
+oxc_str = { workspace = true }
 regex = { workspace = true }
 regress = { workspace = true }
 rolldown_error = { workspace = true }

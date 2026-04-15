@@ -1,4 +1,5 @@
-use oxc::{ast::ast, span::Str};
+use oxc::ast::ast;
+use oxc::ast::ast::Str;
 
 pub trait ExpressionExt<'ast> {
   fn as_call_expression(&self) -> Option<&ast::CallExpression<'ast>>;

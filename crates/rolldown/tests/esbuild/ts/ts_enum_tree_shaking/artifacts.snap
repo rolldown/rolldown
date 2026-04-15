@@ -43,7 +43,7 @@ var x = /* @__PURE__ */ function(x) {
 	return x;
 }(x || {});
 x = /* @__PURE__ */ function(x) {
-	x[x["z"] = 246] = "z";
+	x[x["z"] = y * 2] = "z";
 	return x;
 }(x || {});
 console.log(x);
@@ -61,7 +61,7 @@ var x = /* @__PURE__ */ function(x) {
 	return x;
 }(x || {});
 x = /* @__PURE__ */ function(x) {
-	x[x["z"] = 246] = "z";
+	x[x["z"] = y * 2] = "z";
 	return x;
 }(x || {});
 //#endregion
@@ -78,7 +78,7 @@ var x = /* @__PURE__ */ function(x) {
 }(x || {});
 console.log(x);
 x = /* @__PURE__ */ function(x) {
-	x[x["z"] = 246] = "z";
+	x[x["z"] = y * 2] = "z";
 	return x;
 }(x || {});
 //#endregion
@@ -94,7 +94,7 @@ var x = /* @__PURE__ */ function(x) {
 	return x;
 }(x || {});
 x = /* @__PURE__ */ function(x) {
-	x[x["z"] = 246] = "z";
+	x[x["z"] = y * 2] = "z";
 	return x;
 }(x || {});
 console.log(x.y, x.z);

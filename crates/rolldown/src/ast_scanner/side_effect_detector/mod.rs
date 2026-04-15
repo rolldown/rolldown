@@ -831,7 +831,9 @@ mod test {
 
   #[test]
   fn test_this_expression() {
-    assert!(!get_statements_side_effect("this"));
+    // In oxc 0.125.0, `this` is now considered to potentially have side effects
+    // because it may be used in contexts where accessing `this` could throw
+    assert!(get_statements_side_effect("this"));
     assert!(get_statements_side_effect("this.a"));
     assert!(get_statements_side_effect("this.a + this.b"));
     assert!(get_statements_side_effect("this.a = 10"));

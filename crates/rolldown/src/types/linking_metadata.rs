@@ -1,6 +1,6 @@
 use crate::stages::link_stage::{ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec};
-use oxc::span::CompactStr;
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 use rolldown_common::{
   ConcatenateWrappedModuleKind, EntryPointKind, ImportRecordIdx, MemberExprRefResolutionMap,
   ModuleIdx, ModuleNamespaceIncludedReason, ResolvedExport, RuntimeHelper, StmtInfoIdx, SymbolRef,

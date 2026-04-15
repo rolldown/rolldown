@@ -24,10 +24,11 @@ use oxc::{
   },
   ast_visit::Visit,
   semantic::SymbolId,
-  span::{CompactStr, GetSpan, Span},
+  span::{GetSpan, Span},
 };
 use oxc_allocator::Address;
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
   ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,

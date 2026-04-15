@@ -10,5 +10,7 @@ routes['r1'] = () => import('./routes/route1.js');
 
 const routeName = location.hash.slice(1) || 'r0';
 if (routes[routeName]) {
-  routes[routeName]().then(m => { document.body.textContent = m.render(); });
+  routes[routeName]().then((m) => {
+    document.body.textContent = m.render();
+  });
 }

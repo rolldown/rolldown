@@ -11,7 +11,7 @@ exports.__commonJSMin = __commonJSMin;
 
 ```
 
-## config.js
+## config.json.js
 
 ```js
 //#region config.json
@@ -31,7 +31,7 @@ Object.defineProperty(exports, "default", {
 ## main.js
 
 ```js
-const require_config$1 = require("./config.js");
+const require_config$1 = require("./config.json.js");
 //#region main.js
 const assert = require("assert");
 const config = require_config$1.default;
@@ -53,7 +53,7 @@ export { __commonJSMin, __require };
 
 ```
 
-### config.js
+### config.json.js
 
 ```js
 import { __commonJSMin } from "./_virtual/_rolldown/runtime.js";
@@ -71,7 +71,7 @@ export { require_config };
 
 ```js
 import { __require } from "./_virtual/_rolldown/runtime.js";
-import { require_config } from "./config.js";
+import { require_config } from "./config.json.js";
 //#region main.js
 const assert = __require("assert");
 const config = require_config();

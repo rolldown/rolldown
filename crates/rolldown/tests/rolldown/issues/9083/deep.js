@@ -1,6 +1,7 @@
-// Has top-level await — value is assigned after two awaits so a missing
-// await through the export-star barrel leaves downstream init incomplete.
-await Promise.resolve();
-await Promise.resolve();
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+await sleep(100);
 
 export const value = 'hello';

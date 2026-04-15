@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region deep.js
-await Promise.resolve();
-await Promise.resolve();
+function sleep(ms) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+await sleep(100);
 //#endregion
 //#region middle.js
 const manager = {
@@ -35,10 +37,12 @@ export { manager };
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region deep.js
+function sleep(ms) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
 var value;
 var init_deep = __esmMin((async () => {
-	await Promise.resolve();
-	await Promise.resolve();
+	await sleep(100);
 	value = "hello";
 }));
 //#endregion

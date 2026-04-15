@@ -223,8 +223,11 @@ impl Chunk {
       // Reusing the pre-rendered name avoids re-deriving it from a sanitized path here.
       rollup_pre_rendered_chunk.name.as_str()
     } else {
-      chunk_name_storage =
-        self.get_preserve_modules_chunk_name(options, chunk_name.as_str(), sanitized_preserve_modules_root);
+      chunk_name_storage = self.get_preserve_modules_chunk_name(
+        options,
+        chunk_name.as_str(),
+        sanitized_preserve_modules_root,
+      );
       chunk_name_storage.as_ref()
     };
 

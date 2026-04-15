@@ -10,7 +10,11 @@ const jsFiles = readdirSync(distDir).filter((f) => f.endsWith('.js'));
 // detection falsely blocks the merge, creating an extra common chunk (4 chunks).
 // Under preserveEntrySignatures: 'strict', the entry can't gain extra exports,
 // so the shared service stays in its own chunk (4 chunks is expected).
-assert(
-  jsFiles.length <= 3,
-  `Expected at most 4 chunks but got ${jsFiles.length}: ${jsFiles.join(', ')}`,
+const isStrict =
+  globalThis.__configName === 'extended-preserve-entry-signatures-strict';
+const expected = isStrict ? 4 : 3;
+assert.strictEqual(
+  jsFiles.length,
+  expected,
+  `Expected ${expected} chunks but got ${jsFiles.length}: ${jsFiles.join(', ')}`,
 );

@@ -1,9 +1,6 @@
-use oxc::{
-  ast::{
-    AstKind,
-    ast::{self, Argument, IdentifierReference},
-  },
-  span,
+use oxc::ast::{
+  AstKind,
+  ast::{self, Argument, IdentifierReference},
 };
 use oxc_str::CompactStr;
 use rolldown_common::{ImportRecordIdx, dynamic_import_usage::DynamicImportExportsUsage};

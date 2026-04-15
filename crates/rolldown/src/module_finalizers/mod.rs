@@ -1394,18 +1394,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 {
                   let wrapper_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-                  let init_call = self.snippet.call_expr_expr(wrapper_ref_name);
-                  let init_stmt = if importee_linking_info.is_tla_or_contains_tla_dependency {
-                    self.snippet.builder.statement_expression(
-                      SPAN,
-                      ast::Expression::AwaitExpression(
-                        self.snippet.builder.alloc_await_expression(SPAN, init_call),
-                      ),
-                    )
-                  } else {
-                    self.snippet.builder.statement_expression(SPAN, init_call)
-                  };
-                  program.body.push(init_stmt);
+                  let mut init_expr = self.snippet.call_expr_expr(wrapper_ref_name);
+                  if importee_linking_info.is_tla_or_contains_tla_dependency {
+                    init_expr = ast::Expression::AwaitExpression(
+                      self.snippet.builder.alloc_await_expression(SPAN, init_expr),
+                    );
+                  }
+                  program.body.push(self.snippet.builder.statement_expression(SPAN, init_expr));
                 }
 
                 match importee.exports_kind {

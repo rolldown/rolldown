@@ -38,7 +38,7 @@ use rolldown_common::{
   StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
   TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
-use rolldown_ecmascript_utils::{BindingPatternExt, FunctionExt};
+use rolldown_ecmascript_utils::FunctionExt;
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
@@ -769,7 +769,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         match decl {
           ast::Declaration::VariableDeclaration(var_decl) => {
             var_decl.declarations.iter().for_each(|decl| {
-              decl.id.binding_identifiers().into_iter().for_each(|id| {
+              decl.id.get_binding_identifiers().into_iter().for_each(|id| {
                 self.add_local_export(&id.name, id.symbol_id(), id.span);
               });
               if let BindingPattern::BindingIdentifier(ref binding) = decl.id {

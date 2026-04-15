@@ -148,8 +148,8 @@ impl<'a> GenerateStage<'a> {
 
     let mut index_chunk_id_to_representative_name = FxHashMap::default();
 
-    // Sanitize preserveModulesRoot so that a custom sanitizeFileName (e.g. '+' → '__')
-    // doesn't break the starts_with prefix comparison against sanitized absolute filenames.
+    // Keep the sanitized preserveModulesRoot for preliminary filename generation,
+    // which still operates on sanitized chunk filenames later in this stage.
     let sanitized_preserve_modules_root =
       if let Some(ref preserve_modules_root) = self.options.preserve_modules_root {
         Some(self.options.sanitize_filename.call(preserve_modules_root).await?)
@@ -159,7 +159,7 @@ impl<'a> GenerateStage<'a> {
 
     let index_pre_generated_names_futures = chunk_graph.chunk_table.iter().map(|chunk| {
       let sanitize_filename = self.options.sanitize_filename.clone();
-      let preserve_modules_root = sanitized_preserve_modules_root.clone();
+      let preserve_modules_root = self.options.preserve_modules_root.clone();
       let input_base = chunk.input_base.clone();
       let virtual_dirname = self.options.virtual_dirname.clone();
       async move {
@@ -184,11 +184,13 @@ impl<'a> GenerateStage<'a> {
 
               // Apply the same logic as get_preserve_modules_chunk_name to include directory structure
               let chunk_name = {
-                let p = PathBuf::from(sanitized_absolute_filename.as_str());
+                let p = PathBuf::from(absolute_chunk_file_name.as_str());
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
-                    if sanitized_absolute_filename.starts_with(preserve_modules_root.as_str()) {
-                      sanitized_absolute_filename[preserve_modules_root.len()..]
+                    // Compare the original paths before sanitization so distinct directories
+                    // like `foo+bar` and `foo#bar` don't collide on the same sanitized prefix.
+                    if absolute_chunk_file_name.starts_with(preserve_modules_root.as_str()) {
+                      absolute_chunk_file_name[preserve_modules_root.len()..]
                         .trim_start_matches(['/', '\\'])
                         .to_string()
                     } else {
@@ -203,18 +205,19 @@ impl<'a> GenerateStage<'a> {
                 // `p` may be an absolute or relative path without extension, depending on the module path.
                 // Now we need to add the extension back when generating the relative chunk name.
                 // skip some common extension https://github.com/rollup/rollup/pull/4565/files
-                match ext.as_deref() {
+                let name_with_ext = match ext.as_deref() {
                   Some(e) if COMMON_JS_EXTENSIONS.contains(&e) => relative_path,
                   Some(e) if !e.is_empty() => format!("{relative_path}.{e}"),
                   _ => relative_path,
-                }
+                };
+                sanitize_filename.call(&name_with_ext).await?
               };
 
               let sanitized_representative_chunk_name =
                 sanitize_filename.call(&representative_chunk_name).await?;
               PreGeneratedChunkName {
                 representative_chunk_name: sanitized_representative_chunk_name,
-                chunk_name: chunk_name.into(),
+                chunk_name,
                 chunk_filename: sanitized_absolute_filename,
               }
             } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {

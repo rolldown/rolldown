@@ -1,7 +1,10 @@
 {
   "config": {
-    "input": {
-      "main": "./src/main.js"
-    }
+    "input": [
+      {
+        "name": "main",
+        "import": "./src/main.js"
+      }
+    ]
   }
 }

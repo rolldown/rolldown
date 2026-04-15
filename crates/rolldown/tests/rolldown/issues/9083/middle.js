@@ -1,9 +1,6 @@
 import { value } from './deep.js';
 
-const manager = { value, ready: false };
-
-function setup() {
+export const manager = { value, ready: false };
+export function setup() {
   manager.ready = true;
 }
-
-export { manager, setup };

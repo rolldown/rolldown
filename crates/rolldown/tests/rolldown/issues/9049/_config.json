@@ -1,0 +1,7 @@
+{
+  "config": {
+    "input": {
+      "main": "./src/main.js"
+    }
+  }
+}

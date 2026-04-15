@@ -12,6 +12,8 @@ use super::GenerateStage;
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn finalize_modules(&mut self, chunk_graph: &mut ChunkGraph) {
+    let has_enum_inlining = self.link_output.has_enum_inlining;
+
     let transfer_parts_rendered_maps = debug_span!("finalize_modules").in_scope(|| {
       self
         .link_output
@@ -46,6 +48,7 @@ impl GenerateStage<'_> {
             safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
             used_symbol_refs: &self.link_output.used_symbol_refs,
             resolved_paths: self.resolved_paths.as_ref(),
+            has_enum_inlining,
           };
 
           let concatenated_wrapped_module_kind = ctx.linking_info.concatenated_wrapped_module_kind;

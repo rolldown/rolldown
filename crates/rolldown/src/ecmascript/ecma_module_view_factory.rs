@@ -31,8 +31,14 @@ pub async fn create_ecma_view(
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
   let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects } = args;
-  let ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings, preserve_jsx } =
-    parse_to_ecma_ast(ctx, source).await?;
+  let ParseToEcmaAstResult {
+    ast,
+    scoping,
+    has_lazy_export,
+    warnings,
+    preserve_jsx,
+    enum_member_value_map,
+  } = parse_to_ecma_ast(ctx, source).await?;
   ctx.flat_options.set(FlatOptions::JsxPreserve, preserve_jsx);
   ctx.warnings.extend(warnings);
 
@@ -141,6 +147,7 @@ pub async fn create_ecma_view(
     directive_range,
     dummy_record_set,
     constant_export_map,
+    enum_member_value_map,
     depended_runtime_helper: Box::default(),
     import_attribute_map,
     json_module_none_self_reference_included_symbol: None,

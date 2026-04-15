@@ -6,24 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region cross-file.ts
-let CrossFile = /* @__PURE__ */ function(CrossFile) {
-	CrossFile["STR"] = "str 2";
-	CrossFile[CrossFile["NUM"] = 321] = "NUM";
-	return CrossFile;
-}({});
-//#endregion
 //#region entry.ts
-var SameFile = /* @__PURE__ */ function(SameFile) {
-	SameFile["STR"] = "str 1";
-	SameFile[SameFile["NUM"] = 123] = "NUM";
-	return SameFile;
-}(SameFile || {});
 console.log(`
-	SameFile.STR = ${SameFile.STR}
-	SameFile.NUM = ${SameFile.NUM}
-	CrossFile.STR = ${CrossFile.STR}
-	CrossFile.NUM = ${CrossFile.NUM}
+	SameFile.STR = str 1
+	SameFile.NUM = 123
+	CrossFile.STR = str 2
+	CrossFile.NUM = 321
 `);
 //#endregion
 

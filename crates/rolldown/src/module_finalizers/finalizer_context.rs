@@ -41,6 +41,9 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub used_symbol_refs: &'me FxHashSet<SymbolRef>,
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   pub resolved_paths: Option<&'me PathsOutputOption>,
+  /// True if any module in the bundle has enum member values to inline.
+  /// Allows skipping enum inlining checks in the hot visitor path for enum-free bundles.
+  pub has_enum_inlining: bool,
 }
 
 impl<'me> ScopeHoistingFinalizerContext<'me> {

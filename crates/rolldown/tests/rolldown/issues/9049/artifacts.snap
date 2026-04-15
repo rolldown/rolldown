@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+function fn0(x) {
+	return x + "u0";
+}
+function fn1(x) {
+	return x + "u1";
+}
+//#endregion
+//#region src/services/svc0.js
+function svc0(d) {
+	return fn0(d) + ":" + fn1(d);
+}
+//#endregion
+//#region src/services/svc1.js
+function svc1(d) {
+	return fn1(d) + ":" + fn0(d);
+}
+//#endregion
+//#region src/main.js
+document.title = [svc0("i"), svc1("i")].join("");
+const routes = {};
+routes["r0"] = () => import("./route0.js");
+routes["r1"] = () => import("./route1.js");
+const routeName = location.hash.slice(1) || "r0";
+if (routes[routeName]) routes[routeName]().then((m) => {
+	document.body.textContent = m.render();
+});
+//#endregion
+export { svc0 as n, svc1 as t };
+
+```
+
+## route0.js
+
+```js
+import { n as svc0, t as svc1 } from "./main.js";
+//#region src/routes/route0.js
+function render() {
+	return svc0("r0") + svc1("r0") + "u1";
+}
+//#endregion
+export { render };
+
+```
+
+## route1.js
+
+```js
+import { n as svc0, t as svc1 } from "./main.js";
+//#region src/routes/route1.js
+function render() {
+	return svc1("r1") + svc0("r1") + "u0";
+}
+//#endregion
+export { render };
+
+```

@@ -100,7 +100,6 @@ pub struct LinkStage<'a> {
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub flat_options: FlatOptions,
-  pub side_effects_free_function_symbol_ref: FxHashSet<SymbolRef>,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   pub tla_module_count: usize,
   /// Centralized map of modules that use top-level `await` → span of the
@@ -191,7 +190,6 @@ impl<'a> LinkStage<'a> {
         .overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: scan_stage_output.entry_point_to_reference_ids,
       flat_options: scan_stage_output.flat_options,
-      side_effects_free_function_symbol_ref: FxHashSet::default(),
       user_defined_entry_modules: scan_stage_output.user_defined_entry_modules,
       tla_module_count: scan_stage_output.tla_module_count,
       tla_keyword_span_map: scan_stage_output.tla_keyword_span_map,

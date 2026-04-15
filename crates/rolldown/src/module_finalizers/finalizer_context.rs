@@ -37,7 +37,6 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub options: &'me SharedOptions,
   pub file_emitter: &'me SharedFileEmitter,
   pub constant_value_map: &'me FxHashMap<SymbolRef, ConstExportMeta>,
-  pub side_effect_free_function_symbols: &'me FxHashSet<SymbolRef>,
   pub safely_merge_cjs_ns_map: &'me FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub used_symbol_refs: &'me FxHashSet<SymbolRef>,
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).

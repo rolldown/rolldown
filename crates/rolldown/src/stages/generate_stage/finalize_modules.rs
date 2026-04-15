@@ -1,10 +1,8 @@
 use std::sync::Arc;
 
-use rolldown_common::{
-  ConcatenateWrappedModuleKind, EcmaViewMeta, PrependRenderedImport, SymbolRef, SymbolRefFlags,
-};
+use rolldown_common::{ConcatenateWrappedModuleKind, PrependRenderedImport};
 use rolldown_utils::{index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as _};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use tracing::debug_span;
 
 use crate::{chunk_graph::ChunkGraph, module_finalizers::ScopeHoistingFinalizerContext};
@@ -14,30 +12,6 @@ use super::GenerateStage;
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn finalize_modules(&mut self, chunk_graph: &mut ChunkGraph) {
-    let side_effect_free_function_symbols = self
-      .link_output
-      .module_table
-      .iter()
-      .zip(self.link_output.symbol_db.inner().iter())
-      .filter_map(|(m, symbol_for_module)| {
-        let normal_module = m.as_normal()?;
-        let idx = normal_module.idx;
-        normal_module
-          .meta
-          .contains(EcmaViewMeta::TopExportedSideEffectsFreeFunction)
-          .then(move || {
-            let symbol_for_module = symbol_for_module.as_ref()?;
-            Some(symbol_for_module.flags.iter().filter_map(move |(symbol_id, flag)| {
-              flag
-                .contains(SymbolRefFlags::SideEffectsFreeFunction)
-                .then_some(SymbolRef::from((idx, *symbol_id)))
-            }))
-          })
-          .flatten()
-      })
-      .flatten()
-      .collect::<FxHashSet<SymbolRef>>();
-
     let transfer_parts_rendered_maps = debug_span!("finalize_modules").in_scope(|| {
       self
         .link_output
@@ -69,7 +43,6 @@ impl GenerateStage<'_> {
             options: self.options,
             file_emitter: &self.plugin_driver.file_emitter,
             constant_value_map: &self.link_output.global_constant_symbol_map,
-            side_effect_free_function_symbols: &side_effect_free_function_symbols,
             safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
             used_symbol_refs: &self.link_output.used_symbol_refs,
             resolved_paths: self.resolved_paths.as_ref(),

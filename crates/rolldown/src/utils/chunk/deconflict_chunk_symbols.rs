@@ -1,4 +1,4 @@
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 
 use crate::{
   stages::link_stage::LinkStageOutput,

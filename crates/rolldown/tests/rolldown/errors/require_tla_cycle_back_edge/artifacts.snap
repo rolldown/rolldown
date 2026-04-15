@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## REQUIRE_TLA
+
+```text
+[REQUIRE_TLA] Error: This require call is not allowed because the transitive dependency "c.js" contains a top-level await
+   ╭─[ main.js:1:1 ]
+   │
+ 1 │ require('./a.js');
+   │ ────────┬────────  
+   │         ╰────────── The require() call is here:
+   │
+   ├─[ a.js:1:1 ]
+   │
+ 1 │ import './b.js';
+   │ ────────┬───────  
+   │         ╰───────── The file "a.js" imports the file "b.js" here:
+   │
+   ├─[ b.js:2:1 ]
+   │
+ 2 │ import './c.js';
+   │ ────────┬───────  
+   │         ╰───────── The file "b.js" imports the file "c.js" here:
+   │
+   ├─[ c.js:1:1 ]
+   │
+ 1 │ await 0;
+   │ ───┬───  
+   │    ╰───── The top-level await in "c.js" is here:
+───╯
+
+```

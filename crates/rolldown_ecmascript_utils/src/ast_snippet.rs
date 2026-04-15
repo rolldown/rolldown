@@ -1,3 +1,4 @@
+use oxc::ast::ast::Str;
 use oxc::{
   allocator::{self, Allocator, Box, IntoIn, TakeIn},
   ast::{
@@ -7,7 +8,7 @@ use oxc::{
       ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
     },
   },
-  span::{GetSpanMut, SPAN, Span, Str},
+  span::{GetSpanMut, SPAN, Span},
   syntax::identifier,
 };
 use rolldown_common::{EcmaModuleAstUsage, Interop, MemberExprProp};

@@ -404,7 +404,6 @@ impl GenerateStage<'_> {
           &dynamic_entry_to_dynamic_importers,
           temp_chunk,
           temp_chunk_graph,
-          *temp_chunk_idx,
         );
 
         Some((bits.clone(), *temp_chunk_idx, chunk_idxs, merge_target))
@@ -557,7 +556,6 @@ impl GenerateStage<'_> {
   /// entry chunk when possible, rather than creating a separate common chunk.
   ///
   /// Returns `Some(ChunkIdx)` if a suitable merge target is found, `None` otherwise.
-  #[expect(clippy::too_many_arguments)]
   fn try_insert_into_existing_chunk(
     chunk_idxs: &[ChunkIdx],
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
@@ -566,7 +564,6 @@ impl GenerateStage<'_> {
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
     info: &ChunkCandidate,
     temp_chunk_graph: &ChunkOptimizationGraph,
-    temp_chunk_idx: ChunkIdx,
   ) -> Option<ChunkIdx> {
     let mut user_defined_entry = vec![];
     let mut dynamic_entry = vec![];
@@ -609,11 +606,24 @@ impl GenerateStage<'_> {
       // import the entry chunk. This is only safe if the entry chunk
       // has no side effects; otherwise loading the dynamic chunk would
       // trigger the entry's side effects unexpectedly.
-      let would_make_dynamic_entry_depend_on_user_entry = dynamic_entry
-        .iter()
-        .any(|dynamic_chunk_idx| temp_chunk_graph.is_reachable(*dynamic_chunk_idx, temp_chunk_idx));
-      if would_make_dynamic_entry_depend_on_user_entry {
-        if temp_chunk_graph.chunks[chunk_idx].has_side_effects {
+      //
+      // However, the leak only happens if the dynamic entry can be reached
+      // via some *other* user-defined entry. If the dynamic entry is only
+      // reachable from `chunk_idx` (the merge target), then loading the
+      // dynamic entry always implies `chunk_idx` has already been loaded,
+      // so its side effects have already run — no leak.
+      // All dynamic entries in `dynamic_entry` already depend on `temp_chunk_idx`
+      // (that's how they ended up in `chunk_idxs`), so we check them all directly.
+      if temp_chunk_graph.chunks[chunk_idx].has_side_effects && !dynamic_entry.is_empty() {
+        // Check whether any *other* user-defined entry can reach these
+        // dynamic entries (directly or transitively via dynamic import).
+        // If yes, merging would leak `chunk_idx`'s side effects into that
+        // other entry's dynamic load.
+        let leak_possible = entry_chunk_reference.iter().any(|(other_entry_chunk_idx, reached)| {
+          *other_entry_chunk_idx != chunk_idx
+            && dynamic_entry.iter().any(|dyn_idx| reached.contains(dyn_idx))
+        });
+        if leak_possible {
           return None;
         }
       }
@@ -1061,15 +1071,50 @@ impl GenerateStage<'_> {
       include_runtime_symbol(context, runtime, RuntimeHelper::ExportAll);
     }
 
-    // Ensure runtime module is properly assigned to chunk graph
-    if chunk_graph.module_to_chunk[runtime_module_idx].is_none()
-      && !runtime_dependent_chunks.is_empty()
-    {
-      // If only one common chunk was appended with dynamic entry module, we just put runtime module into that chunk.
-      // Else create a new common chunk to store runtime module.
-      let runtime_chunk_idx = match runtime_dependent_chunks.len() {
-        1 => runtime_dependent_chunks.into_iter().next().unwrap(),
-        _ => {
+    // Ensure runtime module is properly assigned to chunk graph.
+    //
+    // Facade elimination above can introduce new runtime-helper consumers
+    // (`runtime_dependent_chunks`). The runtime module may also already be
+    // co-located with other modules in some host chunk from the merge phase.
+    // When the host has other modules AND a facade-elim consumer that is not
+    // the host exists, we have ≥2 distinct consumers that both need helpers
+    // from the host. If the host also has a forward path back to the other
+    // consumer, the dependency graph closes a cycle. Peel the runtime out in
+    // that case and let the placement step below re-home it.
+    if !runtime_dependent_chunks.is_empty() {
+      if let Some(host_idx) = chunk_graph.module_to_chunk[runtime_module_idx] {
+        let host_chunk = &chunk_graph.chunk_table[host_idx];
+        let host_has_other_modules = host_chunk.modules.len() > 1;
+        let has_external_consumer = runtime_dependent_chunks.iter().any(|&c| c != host_idx);
+        if host_has_other_modules
+          && has_external_consumer
+          && let Some(pos) = host_chunk.modules.iter().position(|m| *m == runtime_module_idx)
+        {
+          let host_chunk = &mut chunk_graph.chunk_table[host_idx];
+          host_chunk.modules.swap_remove(pos);
+          chunk_graph.module_to_chunk[runtime_module_idx] = None;
+        }
+      }
+
+      if chunk_graph.module_to_chunk[runtime_module_idx].is_none() {
+        // Pick a placement based on the full set of consumer chunks: every
+        // non-removed chunk with a non-empty `depended_runtime_helper`,
+        // unioned with `runtime_dependent_chunks`. Single consumer → reuse it;
+        // multiple consumers → dedicated leaf `rolldown-runtime` chunk.
+        let removed_chunks = &chunk_graph.post_chunk_optimization_operations;
+        let mut consumer_chunks: FxHashSet<ChunkIdx> = chunk_graph
+          .chunk_table
+          .iter_enumerated()
+          .filter_map(|(idx, chunk)| {
+            (!removed_chunks.contains_key(&idx) && !chunk.depended_runtime_helper.is_empty())
+              .then_some(idx)
+          })
+          .collect();
+        consumer_chunks.extend(runtime_dependent_chunks.iter().copied());
+
+        let runtime_chunk_idx = if consumer_chunks.len() == 1 {
+          consumer_chunks.into_iter().next().unwrap()
+        } else {
           let runtime_chunk = Chunk::new(
             Some("rolldown-runtime".into()),
             None,
@@ -1080,14 +1125,14 @@ impl GenerateStage<'_> {
             None,
           );
           chunk_graph.add_chunk(runtime_chunk)
-        }
-      };
-      chunk_graph.add_module_to_chunk(
-        runtime_module_idx,
-        runtime_chunk_idx,
-        self.link_output.metas[runtime_module_idx].depended_runtime_helper,
-      );
-      module_is_assigned.set_bit(runtime_module_idx);
+        };
+        chunk_graph.add_module_to_chunk(
+          runtime_module_idx,
+          runtime_chunk_idx,
+          self.link_output.metas[runtime_module_idx].depended_runtime_helper,
+        );
+        module_is_assigned.set_bit(runtime_module_idx);
+      }
     }
 
     // Restore the included info back to metas

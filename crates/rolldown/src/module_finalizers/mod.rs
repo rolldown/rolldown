@@ -26,7 +26,7 @@ use rolldown_ecmascript_utils::{
 mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
-use oxc::span::{CompactStr, Ident};
+use oxc_str::{CompactStr, Ident};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -546,7 +546,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     let mut ret = vec![];
     let exprs = decl.declarations.iter_mut().filter_map(|var_decl| {
-      ret.extend(var_decl.id.binding_identifiers().iter().map(|item| item.name));
+      ret.extend(var_decl.id.get_binding_identifiers().iter().map(|item| item.name));
       // Turn `var ... = ...` to `... = ...`
       if let Some(ref mut init_expr) = var_decl.init {
         let left = var_decl.id.take_in(self.alloc).into_assignment_target(self.alloc);
@@ -1394,7 +1394,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 {
                   let wrapper_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-                  program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name));
+                  let init_call = self.snippet.call_expr_expr(wrapper_ref_name);
+                  let init_stmt = if importee_linking_info.is_tla_or_contains_tla_dependency {
+                    self.snippet.builder.statement_expression(
+                      SPAN,
+                      ast::Expression::AwaitExpression(
+                        self.snippet.builder.alloc_await_expression(SPAN, init_call),
+                      ),
+                    )
+                  } else {
+                    self.snippet.builder.statement_expression(SPAN, init_call)
+                  };
+                  program.body.push(init_stmt);
                 }
 
                 match importee.exports_kind {

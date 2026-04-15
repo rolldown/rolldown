@@ -1,3 +1,4 @@
+use oxc::ast::ast::Str;
 use oxc::{
   allocator::{Allocator, Box as ArenaBox, IntoIn, TakeIn},
   ast::{
@@ -5,7 +6,7 @@ use oxc::{
     ast::{self, ExportDefaultDeclarationKind, Expression, ObjectPropertyKind, Statement},
   },
   semantic::{IsGlobalReference, Scoping, SymbolId},
-  span::{SPAN, Span, Str},
+  span::{SPAN, Span},
 };
 
 use rolldown_common::{

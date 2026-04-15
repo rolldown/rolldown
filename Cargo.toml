@@ -177,7 +177,7 @@ itertools = "0.14.0"
 itoa = "1.0.15"
 json-escape-simd = "3"
 json-strip-comments = "3"
-jsonschema = { version = "0.45.0", default-features = false }
+jsonschema = { version = "0.46.0", default-features = false }
 memchr = "2.7.4"
 mimalloc-safe = "0.1.52"
 mime = "0.3.17"
@@ -188,6 +188,7 @@ num-format = "0.4"
 num_cpus = "1.17"
 owo-colors = "4.2.2"
 parking_lot = "0.12.5"
+path-posix = "0.0.1"
 percent-encoding = "2.3.1"
 petgraph = "0.8.1"
 phf = "0.13.0"
@@ -205,7 +206,6 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 serde_yaml = "0.9.34"
 simdutf8 = "0.1.5"
-smallvec = "1.15.0"
 string_cache = "0.9.0"
 sugar_path = { version = "2.0.1", features = ["cached_current_dir"] }
 terminal_size = "0.4.2"
@@ -234,7 +234,7 @@ napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.124.0", features = [
+oxc = { version = "0.125.0", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -246,13 +246,14 @@ oxc = { version = "0.124.0", features = [
   "regular_expression",
   "cfg",
 ] }
-oxc_allocator = { version = "0.124.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.124.0" }
-oxc_napi = { version = "0.124.0" }
-oxc_minify_napi = { version = "0.124.0" }
-oxc_parser_napi = { version = "0.124.0" }
-oxc_transform_napi = { version = "0.124.0" }
-oxc_traverse = { version = "0.124.0" }
+oxc_allocator = { version = "0.125.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.125.0" }
+oxc_napi = { version = "0.125.0" }
+oxc_str = { version = "0.125.0" }
+oxc_minify_napi = { version = "0.125.0" }
+oxc_parser_napi = { version = "0.125.0" }
+oxc_transform_napi = { version = "0.125.0" }
+oxc_traverse = { version = "0.125.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

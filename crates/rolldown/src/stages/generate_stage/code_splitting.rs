@@ -538,11 +538,17 @@ impl GenerateStage<'_> {
         let meta = &self.link_output.metas[module_idx];
 
         let module_namespace_included_reason = &meta.module_namespace_included_reason;
-        let is_namespace_referenced = matches!(m.exports_kind, ExportsKind::Esm)
-          && if module_namespace_included_reason.intersects(
-            ModuleNamespaceIncludedReason::Unknown
-              | ModuleNamespaceIncludedReason::SimulateFacadeChunk,
-          ) {
+        // SimulateFacadeChunk is set by the chunk optimizer when a dynamic entry is merged
+        // into a common chunk. This is an authoritative decision that the namespace must
+        // exist regardless of the module's exports_kind (e.g. empty modules have
+        // ExportsKind::None but still need their namespace declaration when exported
+        // cross-chunk).
+        let is_namespace_referenced = if module_namespace_included_reason
+          .contains(ModuleNamespaceIncludedReason::SimulateFacadeChunk)
+        {
+          true
+        } else if matches!(m.exports_kind, ExportsKind::Esm) {
+          if module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown) {
             true
           } else if module_namespace_included_reason
             .contains(ModuleNamespaceIncludedReason::ReExportDynamicExports)
@@ -553,7 +559,10 @@ impl GenerateStage<'_> {
             meta.has_dynamic_exports
           } else {
             false
-          };
+          }
+        } else {
+          false
+        };
         Some((m.namespace_object_ref, is_namespace_referenced))
       })
       .collect_vec();

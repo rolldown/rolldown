@@ -1,0 +1,17 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  },
+  "configVariants": [
+    {
+      "_configName": "strict",
+      "strictExecutionOrder": true
+    }
+  ],
+  "expectExecuted": false
+}

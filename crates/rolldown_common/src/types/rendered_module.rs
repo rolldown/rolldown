@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use derive_more::derive::Debug;
-use oxc::span::CompactStr;
+use oxc_str::CompactStr;
 use rolldown_sourcemap::{Source, SourceJoiner};
 
 #[derive(Clone, Default, Debug)]

@@ -335,6 +335,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
           self.immutable_ctx.flat_options,
           self.immutable_ctx.options,
           Some(&self.side_effect_free_call_expr_addr),
+          None,
         )
         .detect_side_effect_of_stmt(stmt);
         self.side_effect_detail_mutations.insert(stmt_info_idx, side_effect_detail);
@@ -366,7 +367,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
 
   fn visit_call_expression(&mut self, it: &oxc::ast::ast::CallExpression<'ast>) {
     let mut pre_addr = None;
-    let is_side_effects_free_function = it
+    let (is_side_effects_free_function, is_pure_annotation_only) = it
       .callee
       .as_identifier()
       .and_then(|item| {
@@ -377,13 +378,29 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
           .immutable_ctx
           .symbols
           .canonical_ref_for((self.immutable_ctx.module_idx, symbol_id).into());
-        Some(self.immutable_ctx.global_side_effect_free_function_symbols.contains(&symbol_ref))
+        let is_free =
+          self.immutable_ctx.global_side_effect_free_function_symbols.contains(&symbol_ref);
+        let is_annotation_only = is_free
+          && self
+            .immutable_ctx
+            .symbols
+            .local_db(symbol_ref.owner)
+            .flags
+            .get(&symbol_ref.symbol)
+            .is_some_and(|f| f.contains(SymbolRefFlags::PureAnnotationOnly));
+        Some((is_free, is_annotation_only))
       })
-      .unwrap_or(false);
+      .unwrap_or((false, false));
 
     if is_side_effects_free_function {
       self.side_effect_free_call_expr_addr.insert(it.unstable_address());
-      pre_addr = self.latest_side_effect_free_call_expr_addr.replace(it.unstable_address());
+      // Only track as latest side-effect-free call for unreachable import detection
+      // when the function is truly empty (not just annotated with @__NO_SIDE_EFFECTS__).
+      // Annotated functions may still use their arguments, so dynamic imports in
+      // callback arguments should not be treated as unreachable.
+      if !is_pure_annotation_only {
+        pre_addr = self.latest_side_effect_free_call_expr_addr.replace(it.unstable_address());
+      }
     }
     walk::walk_call_expression(self, it);
     if let Some(addr) = pre_addr {

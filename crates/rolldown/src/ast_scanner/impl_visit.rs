@@ -116,6 +116,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         self.immutable_ctx.flat_options,
         self.immutable_ctx.options,
         None,
+        Some(&self.namespace_object_symbol_ids),
       );
       self.current_stmt_info.side_effect = detector.detect_side_effect_of_stmt(stmt);
 
@@ -185,40 +186,15 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_for_of_statement(&mut self, it: &ast::ForOfStatement<'ast>) {
-    let is_top_level_await = it.r#await && self.is_valid_tla_scope();
-    if is_top_level_await && !self.immutable_ctx.flat_options.keep_esm_import_export_syntax() {
-      self.result.errors.push(BuildDiagnostic::unsupported_feature(
-        self.immutable_ctx.id.as_arc_str().clone(),
-        self.immutable_ctx.source.clone(),
-        it.span(),
-        format!(
-          "Top-level await is currently not supported with the '{format}' output format",
-          format = self.immutable_ctx.options.format
-        ),
-      ));
+    if it.r#await && self.is_valid_tla_scope() {
+      self.handle_top_level_await(it.span());
     }
-    if is_top_level_await {
-      self.result.ast_usage.insert(EcmaModuleAstUsage::TopLevelAwait);
-    }
-
     walk::walk_for_of_statement(self, it);
   }
 
   fn visit_await_expression(&mut self, it: &ast::AwaitExpression<'ast>) {
-    let is_top_level_await = self.is_valid_tla_scope();
-    if !self.immutable_ctx.flat_options.keep_esm_import_export_syntax() && is_top_level_await {
-      self.result.errors.push(BuildDiagnostic::unsupported_feature(
-        self.immutable_ctx.id.as_arc_str().clone(),
-        self.immutable_ctx.source.clone(),
-        it.span(),
-        format!(
-          "Top-level await is currently not supported with the '{format}' output format",
-          format = self.immutable_ctx.options.format
-        ),
-      ));
-    }
-    if is_top_level_await {
-      self.result.ast_usage.insert(EcmaModuleAstUsage::TopLevelAwait);
+    if self.is_valid_tla_scope() {
+      self.handle_top_level_await(it.span());
     }
     walk::walk_await_expression(self, it);
   }
@@ -563,6 +539,24 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
+  fn handle_top_level_await(&mut self, span: Span) {
+    if !self.immutable_ctx.flat_options.keep_esm_import_export_syntax() {
+      self.result.errors.push(BuildDiagnostic::unsupported_feature(
+        self.immutable_ctx.id.as_arc_str().clone(),
+        self.immutable_ctx.source.clone(),
+        span,
+        format!(
+          "Top-level await is currently not supported with the '{format}' output format",
+          format = self.immutable_ctx.options.format
+        ),
+      ));
+    }
+    self.result.ast_usage.insert(EcmaModuleAstUsage::TopLevelAwait);
+    if self.result.tla_keyword_span.is_none() {
+      self.result.tla_keyword_span = Some(span);
+    }
+  }
+
   /// visit `Class` of declaration
   #[expect(clippy::unused_self)]
   pub fn get_class_id(&self, class: &ast::Class<'ast>) -> Option<SymbolId> {

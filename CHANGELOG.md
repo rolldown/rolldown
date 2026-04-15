@@ -1,4 +1,66 @@
 
+## [1.0.0-rc.16] - 2026-04-15
+
+### 🚀 Features
+
+- implement module tagging system for code splitting (#9045) by @hyf0
+
+### 🐛 Bug Fixes
+
+- rolldown: set worker thread count with ROLLDOWN_WORKER_THREADS (#9086) by @fpotter
+- rolldown_plugin_lazy_compilation: escape request ID in proxy modules (#9102) by @h-a-n-a
+- treat namespace member access as side-effect-free (#9099) by @IWANABETHATGUY
+- relax overly conservative side-effect leak check in chunk optimizer (#9085) by @IWANABETHATGUY
+- runtime: release `cb` reference after `__commonJS` factory initialization (#9067) by @hyf0-agent
+- `@__NO_SIDE_EFFECTS__` wrapper should not remove dynamic imports (#9075) by @IWANABETHATGUY
+- rolldown_plugin_vite_import_glob: use POSIX path join/normalize for glob resolution (#9077) by @shulaoda
+- emit REQUIRE_TLA error when require() loads a module with top-level await (#9071) by @jaehafe
+- emit namespace declaration for empty modules in manual chunks (#8993) by @privatenumber
+- rolldown_plugin_vite_import_glob: keep common base on path segment boundary (#9070) by @shulaoda
+- prevent circular runtime helper imports during facade elimination (#8989) (#9057) by @IWANABETHATGUY
+- correct circular dependency check in facade elimination (#9047) by @h-a-n-a
+- docs: correct dead link in CodeSplittingGroup.tags JSDoc (#9051) by @hyf0
+- emit DUPLICATE_SHEBANG warning when banner contains shebang (#9026) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- extract duplicated top-level await handling into shared helper (#9087) by @IWANABETHATGUY
+- rolldown_plugin_vite_import_glob: use split_first for get_common_base (#9069) by @shulaoda
+- simplify ESM init deduplication with idiomatic insert check (#9044) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- document runtime module placement strategy in code-splitting design (#9062) by @IWANABETHATGUY
+- clarify `options` hook behavior difference with Rollup in watch mode (#9053) by @sapphi-red
+- meta/design: introduce module tags (#9017) by @hyf0
+
+### ⚡ Performance
+
+- convert `generate_transitive_esm_init` to iterative (#9046) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- merge strict/non_strict test variants using configVariants (#9089) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency follow-redirects to v1.16.0 [security] (#9103) by @renovate[bot]
+- deps: update test262 submodule for tests (#9097) by @sapphi-red
+- deps: update crate-ci/typos action to v1.45.1 (#9096) by @renovate[bot]
+- deps: update rust crates (#9081) by @renovate[bot]
+- deps: update npm packages (#9080) by @renovate[bot]
+- remove outdated TODO in determine_module_exports_kind (#9072) by @jaehafe
+- rust/test: support `extendedTests: false` shorthand in test config (#9050) by @hyf0
+- ci: extract shared infra-changes anchor in path filters (#9054) by @hyf0
+- add docs build check to catch dead links in PRs (#9052) by @hyf0
+
+### ❤️ New Contributors
+
+* @fpotter made their first contribution in [#9086](https://github.com/rolldown/rolldown/pull/9086)
+* @jaehafe made their first contribution in [#9071](https://github.com/rolldown/rolldown/pull/9071)
+* @privatenumber made their first contribution in [#8993](https://github.com/rolldown/rolldown/pull/8993)
+
+
 ## [1.0.0-rc.15] - 2026-04-09
 
 ### 🐛 Bug Fixes

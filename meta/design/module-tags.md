@@ -49,69 +49,97 @@ output: {
 
 ### `$lazy-entry` matching
 
-`$lazy-entry:<identifier>` is a parameterized tag — the identifier after the colon selects a specific dynamic import target in the module graph. Rolldown collects every `$lazy-entry:*` reference from `codeSplitting.groups` at config parse time, resolves each identifier to exactly one dynamic import target, and tags that target plus its static-import closure.
+`$lazy-entry:<identifier>` is a parameterized tag that selects a specific dynamic import target and tags that target plus its static-import closure. It has **two sub-features**, disambiguated by identifier syntax — they are independently motivated, independently shippable, and track different data, but share the same tag prefix, error semantics, priority behavior, and config surface.
 
-#### Matching rule
+- **Path form** — `$lazy-entry:./…` — matches against the **resolved filesystem path** of dynamic import targets. Marked by a leading `./`. Use for `import('./signup.module.ts')`.
+- **Bare-specifier form** — `$lazy-entry:<bare>` — matches against the **bare specifier** used in dynamic `import()` calls. Use for `import('react')`.
 
-A dynamic-import target module matches `<identifier>` if _either_:
+Rolldown collects every `$lazy-entry:*` reference from `codeSplitting.groups` at config parse time, classifies each by the leading-`./` rule, resolves to exactly one dynamic import target, and applies the tag.
 
-1. A **bare specifier** that dynamically imports this module **equals** the identifier exactly, or
-2. The module's **resolved path** has a path-segment-aligned suffix matching the identifier.
+#### Sub-feature A — path form (`$lazy-entry:./…`)
 
-Extensions are included on both sides — no stripping, no case-insensitive matching. Segments align on `/` boundaries (no mid-segment matching).
+The identifier starts with `./`. Rolldown strips the `./` and treats the remainder as a **path-segment-aligned suffix** of the resolved module path.
 
-| Identifier | Source import | Resolved path | Matches? | Why |
-|---|---|---|---|---|
-| `react` | `import('react')` | `…/node_modules/react/index.js` | ✅ | bare specifier, exact |
-| `react/index.js` | `import('react')` | `…/node_modules/react/index.js` | ✅ | resolved-path suffix |
-| `debounce` | `import('lodash-es/debounce')` | — | ❌ | bare is exact-only |
-| `lodash-es/debounce` | `import('lodash-es/debounce')` | — | ✅ | bare specifier, exact |
-| `signup.module.ts` | — | `/project/src/auth/signup.module.ts` | ✅ | resolved-path suffix |
-| `auth/signup.module.ts` | — | `/project/src/auth/signup.module.ts` | ✅ | resolved-path suffix |
-| `./signup.module.ts` | — | — | ❌ | not a bare specifier; leading `./` not a valid path-segment suffix |
-| `bar.ts` | `import('./bar.js')` | `/project/src/bar.ts` | ✅ | resolved-path suffix (resolution picked the `.ts` source) |
-| `bar.js` | `import('./bar.js')` | `/project/src/bar.ts` | ❌ | resolved extension is `.ts`, not `.js` |
-| `foo.js` | — | `/project/src/foo.ts` | ❌ | different extension |
-| `th/signup.module.ts` | — | `/project/src/auth/signup.module.ts` | ❌ | mid-segment — `th` is not a full path segment |
+**Matching rule:** after stripping `./`, the identifier must equal a suffix of the resolved path, aligned on `/` boundaries. Extensions included — no stripping, no case-insensitive match.
 
-#### Why the asymmetry (bare = exact, path = suffix)
+| Identifier | Resolved path of target | Match? | Why |
+|---|---|---|---|
+| `./signup.module.ts` | `/project/src/auth/signup.module.ts` | ✅ | `signup.module.ts` is a `/`-aligned suffix |
+| `./auth/signup.module.ts` | `/project/src/auth/signup.module.ts` | ✅ | multi-segment suffix |
+| `./src/auth/signup.module.ts` | `/project/src/auth/signup.module.ts` | ✅ | longer suffix, narrows ambiguity |
+| `./bar.ts` | `/project/src/bar.ts` (from `import('./bar.js')`) | ✅ | matches what's on disk, not the specifier |
+| `./bar.js` | `/project/src/bar.ts` | ❌ | resolved extension is `.ts` |
+| `./foo.js` | `/project/src/foo.ts` | ❌ | different extension |
+| `./th/signup.module.ts` | `/project/src/auth/signup.module.ts` | ❌ | mid-segment — `th` isn't a full segment |
 
-Bare specifiers are already the minimal canonical form — `react`, `lodash-es/debounce`. There is no boilerplate to trim; writing the whole thing costs nothing and stays unambiguous across packages (`debounce` must not silently match both `rxjs/debounce` and `lodash-es/debounce`).
+**Rationale:** resolved paths carry absolute-path prefixes (`/Users/you/project/…`) that users don't care about — suffix match strips that noise. Segment alignment prevents silent substring matches like `signup.module.ts` accidentally matching `foosignup.module.ts`.
 
-Resolved paths carry absolute-path prefixes (`/Users/you/project/…`) that users don't care about. Path-suffix match strips that noise cleanly. Segment alignment prevents silent substring matches such as `signup.module.ts` accidentally matching `foosignup.module.ts`.
+**Data tracking:** reuses existing resolved-path data. No new per-module metadata.
 
-#### Errors (raised at config parse time)
+**Primary motivation:** route-scoped chunk grouping like ClickUp's signup and task-view trees — the common case where a lazy boundary is a project-local file and the user wants its static closure isolated.
 
-- **Zero matches** — no dynamic import target resolves the identifier:
+#### Sub-feature B — bare-specifier form (`$lazy-entry:<bare>`)
+
+The identifier does **not** start with `./`. Rolldown matches it against the bare specifiers used in dynamic `import()` calls in the module graph.
+
+**Matching rule:** exact equality. No suffix, no prefix, no fuzziness.
+
+| Identifier | Dynamic import | Match? | Why |
+|---|---|---|---|
+| `react` | `import('react')` | ✅ | exact |
+| `lodash-es/debounce` | `import('lodash-es/debounce')` | ✅ | exact, including subpath |
+| `debounce` | `import('lodash-es/debounce')` | ❌ | bare is exact-only, no suffix match |
+| `@scope/pkg/sub` | `import('@scope/pkg/sub')` | ✅ | exact |
+| `react` | `import('React')` | ❌ | case-sensitive |
+
+**Rationale:** bare specifiers are already the minimal canonical form — there's no boilerplate to trim. Allowing suffix would silently cross package boundaries (`debounce` would match both `rxjs/debounce` and `lodash-es/debounce`).
+
+**Data tracking (new):** rolldown records, per module, the set of bare specifiers used to dynamically import it. Needed only for modules reached via at least one dynamic bare import.
+
+**Primary motivation:** isolating the closure of a specific npm dependency (e.g. a heavy chart library dynamically imported on demand). Less common than path form but genuinely useful.
+
+#### Form disambiguation
+
+A leading `./` selects path form; anything else selects bare-specifier form. There is no silent fallback between forms:
+
+- `./auth/signup.module.ts` is path form — if no resolved path has that suffix, the error is path-specific ("no dynamic import resolves to `…/auth/signup.module.ts`").
+- `auth/signup.module.ts` is bare-specifier form — rolldown looks for a bare specifier exactly equal to `auth/signup.module.ts`; on failure the error can hint: "did you mean `./auth/signup.module.ts`?"
+
+This syntactic discrimination means each form can be implemented, shipped, and reasoned about independently.
+
+#### Errors (raised at config parse time, shared by both forms)
+
+- **Zero matches**
 
   ```
-  tag `$lazy-entry:bar.js` did not match any dynamic import target.
-  did you mean `bar.ts`?
+  tag `$lazy-entry:./bar.js` did not match any dynamic import target.
+  did you mean `./bar.ts`?
   ```
 
-  When rolldown can suggest a near-match (e.g. identical basename with a different extension), it does.
+  When rolldown can suggest a near-match (basename collision with different extension, or the opposite form), it does.
 
-- **Multiple matches** — the identifier resolves to two or more modules:
+- **Multiple matches**
 
   ```
-  tag `$lazy-entry:signup.module.ts` matched multiple dynamic import targets:
+  tag `$lazy-entry:./signup.module.ts` matched multiple dynamic import targets:
     - ./src/auth/signup.module.ts
     - ./src/admin/signup.module.ts
-  disambiguate by narrowing, e.g. `$lazy-entry:auth/signup.module.ts`.
+  disambiguate by narrowing, e.g. `$lazy-entry:./auth/signup.module.ts`.
   ```
 
 No silent best-effort fallback — rolldown fails the build with an actionable message.
 
 #### Interaction with other groups (priority handles exclusion)
 
-Higher-priority groups claim modules first. If `initial-deps` (priority 10) captures all `$initial` modules, a lower-priority `$lazy-entry:signup` group receives only the modules reachable from `signup` that are **not** already in `$initial`. Set-difference falls out of priority ordering — no explicit `exclude` filter is needed.
+Higher-priority groups claim modules first. If `initial-deps` (priority 10) captures all `$initial` modules, a lower-priority `$lazy-entry:./signup.module.ts` group receives only the modules reachable from that entry that are **not** already in `$initial`. Set-difference falls out of priority ordering — no explicit `exclude` filter is needed.
 
 ```js
 codeSplitting: {
   groups: [
-    { name: 'initial-deps',  tags: ['$initial'],                       priority: 10 },
-    { name: 'signup-deps',   tags: ['$lazy-entry:signup.module.ts'],   priority: 5  },
-    { name: 'taskview-deps', tags: ['$lazy-entry:task-view.module.ts'], priority: 3  },
+    { name: 'initial-deps',  tags: ['$initial'],                            priority: 10 },
+    { name: 'signup-deps',   tags: ['$lazy-entry:./signup.module.ts'],      priority: 5  },
+    { name: 'taskview-deps', tags: ['$lazy-entry:./task-view.module.ts'],   priority: 3  },
+    { name: 'chart-deps',    tags: ['$lazy-entry:chart.js'],                priority: 2  },
   ],
 }
 ```
@@ -119,9 +147,9 @@ codeSplitting: {
 #### Scope for initial implementation
 
 - **Only dynamic `import()` targets are matched.** Named static entries from the `input` config are not covered by `$lazy-entry:*`; the `$entry:<input-key>` direction for those remains future work (see [Future directions](#future-directions)).
-- **No magic comments.** Identifiers come from the import specifier or the resolved path directly — the user cannot annotate import sites.
-- **No wildcards, globs, or case-insensitive match.** Exact bare-specifier match or extension-strict path-suffix match only.
-- **Per-module tracking:** rolldown records the resolved path (already tracked) plus the set of bare specifiers used in dynamic imports of each module (new — needed only for modules reached via at least one dynamic bare import).
+- **No magic comments.** Identifiers come from the specifier (bare form) or the resolved path (path form) directly — the user cannot annotate import sites.
+- **No wildcards, globs, or case-insensitive match** in either form.
+- **Two forms, independently shippable.** Path form and bare-specifier form can land in either order (or together). Path form is the higher-priority driver — it covers the motivating ClickUp use case and needs no new per-module data.
 
 ### Internal representation
 
@@ -139,13 +167,21 @@ Built-in tags like `$initial` are computed from the module graph structure (whic
 - `tags` filter in manual code splitting groups
 - This alone enables initial-load parallelization: capture initial-loading modules into reasonably-sized parallel chunks
 
-**Phase 2:**
+**Phase 2 (primary): `$lazy-entry:./…` path form**
 
-- Parameterized `$lazy-entry:<identifier>` tag — per-dynamic-entry reachability
-- Motivated by real-world cases (e.g. ClickUp's signup and task-view chunk grouping) where users need to isolate the static tree of a specific lazy boundary into its own chunk, independent of what other route-specific trees contain
-- Config-time identifier resolution with hard errors on zero/ambiguous matches — no silent fallbacks
+- Parameterized `$lazy-entry:<./path>` tag — per-dynamic-entry reachability via resolved-path suffix
+- Motivated by real-world cases (e.g. ClickUp's signup and task-view chunk grouping) where users need to isolate the static tree of a project-local lazy boundary into its own chunk
+- Reuses existing resolved-path data; no new per-module metadata
+- Config-time identifier resolution with hard errors on zero/ambiguous matches
 
-**Phase 3:**
+**Phase 3: `$lazy-entry:<bare>` bare-specifier form**
+
+- Parameterized `$lazy-entry:<bare>` tag — per-dynamic-entry reachability via exact bare specifier match
+- Enables isolating the closure of dynamically imported npm packages
+- Requires new per-module tracking: set of bare specifiers used in dynamic imports
+- Can land independently of Phase 2; users writing bare identifiers before this ships see a "did you mean `./…`?" error
+
+**Phase 4:**
 
 - Built-in `$lazy` tag (unparameterized — all modules reachable only via `import()`)
 
@@ -161,7 +197,7 @@ These are not planned for initial implementation but could be added based on rea
   ];
   ```
 
-  The dynamic-import counterpart is covered by `$lazy-entry:<identifier>` (Phase 2). Magic-comment-based naming (`import(/* rolldownEntryName: 'admin' */ ...)`) is not planned — lazy identifiers come directly from the specifier or resolved path; static identifiers come from the `input` config key.
+  The dynamic-import counterpart is covered by `$lazy-entry:<identifier>` (Phases 2–3, split by form). Magic-comment-based naming (`import(/* rolldownEntryName: 'admin' */ ...)`) is not planned — lazy identifiers come directly from the specifier or resolved path; static identifiers come from the `input` config key.
 
 - **User-defined tags on entries** — `tags: ['browser']` in input config, propagating to reachable modules. Enables server/browser code separation in multi-entry builds.
 - **Magic comments** — tag modules at import sites via magic comments (e.g., `import(/* rolldownTag: 'heavy' */ './chart.js')`). Semantics for conflicting tags at different import sites need further design (see Unresolved Questions).

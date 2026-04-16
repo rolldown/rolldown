@@ -74,6 +74,16 @@ impl Plugin for CopyModulePlugin {
       Err(_) => return Ok(None),
     };
 
+    // Honor external resolutions from other plugins. `rolldown-plugin-dts`,
+    // for instance, marks TypeScript ambient-module glob specifiers like
+    // `typeof import("*.jpg")` as `{ id, external: true }` so they pass
+    // through untouched. Without this check the copy plugin would ignore the
+    // `external` flag and try to read `*.jpg` from disk, emitting a
+    // confusing `Failed to read copy module *.jpg` error.
+    if resolved_id.external.is_external() {
+      return Ok(None);
+    }
+
     // Strip query/fragment (e.g. `file.txt?url`) before extension check and file read
     let clean_id = clean_url(resolved_id.id.as_str());
     let resolved_path = Path::new(clean_id);

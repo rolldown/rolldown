@@ -7,7 +7,7 @@ export interface ExistingRawSourceMap {
   mappings: string;
   names?: string[];
   sources?: (string | null)[];
-  sourcesContent?: (string | null | undefined)[];
+  sourcesContent?: (string | null | undefined)[];
   sourceRoot?: string;
   version?: number; // make it optional to compat { mappings: '' }
   x_google_ignoreList?: number[];

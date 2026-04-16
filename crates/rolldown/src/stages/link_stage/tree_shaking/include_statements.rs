@@ -10,7 +10,8 @@ use rolldown_common::{
   ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
   RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, SideEffectDetail,
   StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
+  UsedSymbolRefs, dynamic_import_usage::DynamicImportExportsUsage,
+  side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -59,7 +60,7 @@ pub struct IncludeContext<'a> {
   pub inline_const_smart: bool,
   pub runtime_idx: ModuleIdx,
   pub metas: &'a LinkingMetadataVec,
-  pub used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
+  pub used_symbol_refs: &'a mut UsedSymbolRefs,
   pub constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
   pub options: &'a NormalizedBundlerOptions,
   pub normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -82,7 +83,7 @@ impl<'a> IncludeContext<'a> {
     is_module_included_vec: &'a mut ModuleInclusionVec,
     runtime_idx: ModuleIdx,
     metas: &'a LinkingMetadataVec,
-    used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
+    used_symbol_refs: &'a mut UsedSymbolRefs,
     constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
     options: &'a NormalizedBundlerOptions,
     normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -212,7 +213,7 @@ impl LinkStage<'_> {
         m.as_normal().map_or(IndexBitSet::default(), |m| IndexBitSet::new(m.stmt_infos.len()))
       })
       .collect::<IndexVec<ModuleIdx, _>>();
-    let mut used_symbol_refs = FxHashSet::default();
+    let mut used_symbol_refs = UsedSymbolRefs::default();
     let mut is_module_included_vec: ModuleInclusionVec =
       IndexBitSet::new(self.module_table.modules.len());
     let mut module_namespace_included_reason: ModuleNamespaceReasonVec =

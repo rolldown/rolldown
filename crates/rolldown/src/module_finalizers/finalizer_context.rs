@@ -1,7 +1,7 @@
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
   ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts, RuntimeModuleBrief,
-  SharedFileEmitter, SymbolRef, SymbolRefDb,
+  SharedFileEmitter, SymbolRef, SymbolRefDb, UsedSymbolRefs,
 };
 
 pub type FinalizerMutableFields = (
@@ -38,7 +38,7 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub file_emitter: &'me SharedFileEmitter,
   pub constant_value_map: &'me FxHashMap<SymbolRef, ConstExportMeta>,
   pub safely_merge_cjs_ns_map: &'me FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
-  pub used_symbol_refs: &'me FxHashSet<SymbolRef>,
+  pub used_symbol_refs: &'me UsedSymbolRefs,
   /// Pre-resolved paths for external modules (always a `FxHashMap` variant).
   pub resolved_paths: Option<&'me PathsOutputOption>,
   /// True if any module in the bundle has enum member values to inline.

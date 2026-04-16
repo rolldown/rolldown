@@ -6,7 +6,7 @@ use oxc_index::IndexVec;
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
   ConstExportMeta, EntryPoint, EntryPointKind, FlatOptions, ImportKind, ModuleIdx, ModuleTable,
-  PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
+  PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb, UsedSymbolRefs,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
@@ -66,7 +66,7 @@ pub struct LinkStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
-  pub used_symbol_refs: FxHashSet<SymbolRef>,
+  pub used_symbol_refs: UsedSymbolRefs,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
@@ -94,7 +94,7 @@ pub struct LinkStage<'a> {
   pub errors: Vec<BuildDiagnostic>,
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
-  pub used_symbol_refs: FxHashSet<SymbolRef>,
+  pub used_symbol_refs: UsedSymbolRefs,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -187,7 +187,7 @@ impl<'a> LinkStage<'a> {
       ast_table: scan_stage_output.index_ecma_ast,
       dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
-      used_symbol_refs: FxHashSet::default(),
+      used_symbol_refs: UsedSymbolRefs::default(),
       safely_merge_cjs_ns_map: FxHashMap::default(),
       normal_symbol_exports_chain_map: FxHashMap::default(),
       external_import_namespace_merger: FxHashMap::default(),

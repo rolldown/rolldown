@@ -426,7 +426,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             .and_then(|ref_id| self.scope.scoping().get_reference(ref_id).symbol_id())
             .map(|id| {
               let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.idx, id).into());
-              self.ctx.side_effect_free_function_symbols.contains(&symbol_ref)
+              symbol_ref.is_side_effect_free_function(self.ctx.symbol_db, self.ctx.modules)
                 && symbol_ref.is_not_reassigned(self.ctx.symbol_db) == Some(true)
             })
             .unwrap_or(false);
@@ -516,10 +516,26 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
       _ => {
+        // Try to inline enum member accesses (e.g., `Direction.Up` → `0`, `ns.c.x` → `"c"`)
+        if self.ctx.has_enum_inlining {
+          if let Some(new_expr) = self.try_inline_enum_access(expr) {
+            *expr = new_expr;
+            self.rewrite_import_meta_hot(expr);
+            walk_mut::walk_expression(self, expr);
+            return;
+          }
+        }
         if let Some(new_expr) =
           expr.as_member_expression().and_then(|expr| self.try_rewrite_member_expr(expr))
         {
           *expr = new_expr;
+          // After namespace rewriting (e.g., `ns.c` → `c`), the result may be
+          // an enum member access that can be inlined.
+          if self.ctx.has_enum_inlining {
+            if let Some(inlined) = self.try_inline_enum_access(expr) {
+              *expr = inlined;
+            }
+          }
         }
       }
     }

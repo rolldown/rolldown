@@ -22,7 +22,7 @@ use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
 
-use crate::ast_scanner::{TraverseState, cjs_export_analyzer::CommonJsAstType};
+use crate::ast_scanner::cjs_export_analyzer::CommonJsAstType;
 
 use super::{
   AstScanner, UntranspiledSyntax, cjs_export_analyzer::CjsGlobalAssignmentType,
@@ -36,12 +36,12 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     _scope_id: &std::cell::Cell<Option<oxc::semantic::ScopeId>>,
   ) {
     self.scope_stack.push(flags);
-    self.traverse_state.set(TraverseState::TopLevel, is_top_level(&self.scope_stack));
+    self.is_top_level = is_top_level(&self.scope_stack);
   }
 
   fn leave_scope(&mut self) {
     self.scope_stack.pop();
-    self.traverse_state.set(TraverseState::TopLevel, is_top_level(&self.scope_stack));
+    self.is_top_level = is_top_level(&self.scope_stack);
   }
 
   fn enter_node(&mut self, kind: oxc::ast::AstKind<'ast>) {
@@ -50,43 +50,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn leave_node(&mut self, _it: oxc::ast::AstKind<'ast>) {
     self.visit_path.pop();
-  }
-
-  fn visit_simple_assignment_target(&mut self, it: &ast::SimpleAssignmentTarget<'ast>) {
-    match it {
-      ast::SimpleAssignmentTarget::ComputedMemberExpression(_)
-      | ast::SimpleAssignmentTarget::StaticMemberExpression(_) => {
-        let pre = self.traverse_state;
-        self.traverse_state.insert(TraverseState::MemberExprIsWrite);
-        if !self.immutable_ctx.flat_options.property_write_side_effects()
-          && pre.contains(TraverseState::TopLevel)
-        {
-          self.traverse_state.insert(TraverseState::RootSymbolReferenceStmtInfoId);
-        }
-        walk::walk_simple_assignment_target(self, it);
-        self.traverse_state = pre;
-        return;
-      }
-      _ => {}
-    }
-    walk::walk_simple_assignment_target(self, it);
-  }
-
-  fn visit_computed_member_expression(&mut self, it: &ast::ComputedMemberExpression<'ast>) {
-    if self.traverse_state.contains(TraverseState::MemberExprIsWrite) {
-      let kind = AstKind::ComputedMemberExpression(self.alloc(it));
-      self.enter_node(kind);
-      // In assignment targets, only the member object is written.
-      // The computed key expression is evaluated as a read.
-      let pre = self.traverse_state;
-      self.visit_expression(&it.object);
-      self.traverse_state.remove(TraverseState::MemberExprIsWrite);
-      self.visit_expression(&it.expression);
-      self.traverse_state = pre;
-      self.leave_node(kind);
-      return;
-    }
-    walk::walk_computed_member_expression(self, it);
   }
 
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
@@ -214,7 +177,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_return_statement(&mut self, stmt: &ast::ReturnStatement<'ast>) {
     // Top-level return statements are only valid in CommonJS modules
-    if self.traverse_state.contains(TraverseState::TopLevel) {
+    if self.is_top_level {
       self.result.ast_usage.insert(EcmaModuleAstUsage::TopLevelReturn);
     }
     walk::walk_return_statement(self, stmt);
@@ -633,6 +596,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self.process_global_identifier_ref_by_ancestor(ident_ref);
       }
       super::IdentifierReferenceKind::Root(root_symbol_id) => {
+        let is_member_write = self.is_member_write_target(ident_ref);
+
         // if the identifier_reference is a NamedImport MemberExpr access, we store it as a `MemberExpr`
         // use this flag to avoid insert it as `Symbol` at the same time.
         let mut is_inserted_before = false;
@@ -657,7 +622,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               is_inserted_before = true;
 
               if matches!(ty, MemberExprObjectReferencedType::Namespace)
-                && self.traverse_state.contains(TraverseState::MemberExprIsWrite)
+                && is_member_write
                 && props[0].name == "default"
               {
                 // Write through namespace default (e.g. `ns.default.a = value`). Since
@@ -673,10 +638,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 span,
                 ty,
                 ident_ref.reference_id.get(),
-                self.traverse_state.contains(TraverseState::MemberExprIsWrite),
+                is_member_write,
               );
             }
-          } else if self.traverse_state.contains(TraverseState::MemberExprIsWrite)
+          } else if is_member_write
             && matches!(
               ty,
               MemberExprObjectReferencedType::Default | MemberExprObjectReferencedType::Namespace
@@ -692,7 +657,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           self.add_referenced_symbol(root_symbol_id);
         }
 
-        if self.traverse_state.contains(TraverseState::RootSymbolReferenceStmtInfoId) {
+        if is_member_write
+          && !self.immutable_ctx.flat_options.property_write_side_effects()
+          && self.is_top_level
+        {
           // Since `0` is always namespace object stmt info
           self
             .result

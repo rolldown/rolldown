@@ -534,6 +534,101 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ))
   }
 
+  /// Try to inline an enum member access from an expression. Handles:
+  /// - `Direction.Up` (static member with identifier object)
+  /// - `ns.Direction.Up` (chained static member via namespace import)
+  /// - `Direction["Up"]` (computed member with string literal key)
+  fn try_inline_enum_access(&self, expr: &ast::Expression<'_>) -> Option<ast::Expression<'ast>> {
+    match expr {
+      ast::Expression::StaticMemberExpression(member_expr) => {
+        if let ast::Expression::Identifier(ident) = &member_expr.object {
+          self.try_inline_enum_member(ident, &member_expr.property.name)
+        } else {
+          self.try_inline_chained_enum_member(member_expr)
+        }
+      }
+      ast::Expression::ComputedMemberExpression(member_expr) => {
+        let ast::Expression::Identifier(ident) = &member_expr.object else { return None };
+        let ast::Expression::StringLiteral(prop) = &member_expr.expression else { return None };
+        self.try_inline_enum_member(ident, prop.value.as_str())
+      }
+      _ => None,
+    }
+  }
+
+  /// Try to inline an enum member access like `Direction.Up` → `0`.
+  /// Resolves the identifier to its canonical symbol, then looks up the enum member
+  /// value in the owning module's `enum_member_value_map`.
+  fn try_inline_enum_member(
+    &self,
+    ident: &ast::IdentifierReference<'_>,
+    property_name: &str,
+  ) -> Option<ast::Expression<'ast>> {
+    let ref_id = ident.reference_id.get()?;
+    let symbol_id = self.scope.scoping().get_reference(ref_id).symbol_id()?;
+    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+    self.try_inline_enum_member_by_ref(symbol_ref, property_name)
+  }
+
+  /// Try to inline a chained enum member access like `ns.c.x` → `"c"`.
+  /// `ns` is a namespace import (`import * as ns`), `c` is a named export (enum), `x` is the member.
+  ///
+  /// This is separate from `try_rewrite_member_expr` because `resolved_member_expr_refs` resolves
+  /// `ns.c` → identifier `c` with `.x` as a remaining prop. The post-rewrite enum check only
+  /// matches `Identifier.property` patterns, so by the time `member_expr_or_ident_ref` rebuilds
+  /// `c.x`, the inlining window has passed. This method resolves all three levels in one pass.
+  fn try_inline_chained_enum_member(
+    &self,
+    outer_expr: &ast::StaticMemberExpression<'_>,
+  ) -> Option<ast::Expression<'ast>> {
+    // The object must be a StaticMemberExpression (e.g., `ns.c`)
+    let ast::Expression::StaticMemberExpression(inner_expr) = &outer_expr.object else {
+      return None;
+    };
+    // The inner object must be an identifier (e.g., `ns`)
+    let ast::Expression::Identifier(ns_ident) = &inner_expr.object else {
+      return None;
+    };
+
+    // Resolve `ns` to its symbol
+    let ref_id = ns_ident.reference_id.get()?;
+    let symbol_id = self.scope.scoping().get_reference(ref_id).symbol_id()?;
+    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+
+    // Find which module this namespace belongs to.
+    // For `import * as ns from './enums'`, canonical_ref.owner is the importee module.
+    let importee = self.ctx.modules[canonical_ref.owner].as_normal()?;
+
+    // Find the exported symbol for the inner property name (e.g., `c`)
+    let resolved_export = self.ctx.linking_infos[importee.idx]
+      .resolved_exports
+      .get(inner_expr.property.name.as_str())?;
+
+    // Don't inline when there are conflicting CJS sources — the value could differ per branch
+    if resolved_export.cjs_conflicting_symbol_refs.is_some() {
+      return None;
+    }
+
+    let canonical_export = self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref);
+
+    // Now try to inline the outer property (e.g., `x`) as an enum member
+    self.try_inline_enum_member_by_ref(canonical_export, outer_expr.property.name.as_str())
+  }
+
+  fn try_inline_enum_member_by_ref(
+    &self,
+    symbol_ref: SymbolRef,
+    property_name: &str,
+  ) -> Option<ast::Expression<'ast>> {
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+    let module = self.ctx.modules[canonical_ref.owner].as_normal()?;
+    let symbol_name = canonical_ref.name(self.ctx.symbol_db);
+    let member_map = module.ecma_view.enum_member_value_map.get(symbol_name)?;
+    let meta = member_map.get(property_name)?;
+    Some(meta.value.to_expression(AstBuilder::new(self.alloc)))
+  }
+
   fn var_declaration_to_expr_seq_and_bindings(
     &self,
     decl: &mut ast::VariableDeclaration<'ast>,
@@ -1394,18 +1489,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 {
                   let wrapper_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-                  let init_call = self.snippet.call_expr_expr(wrapper_ref_name);
-                  let init_stmt = if importee_linking_info.is_tla_or_contains_tla_dependency {
-                    self.snippet.builder.statement_expression(
-                      SPAN,
-                      ast::Expression::AwaitExpression(
-                        self.snippet.builder.alloc_await_expression(SPAN, init_call),
-                      ),
-                    )
-                  } else {
-                    self.snippet.builder.statement_expression(SPAN, init_call)
-                  };
-                  program.body.push(init_stmt);
+                  let mut init_expr = self.snippet.call_expr_expr(wrapper_ref_name);
+                  if importee_linking_info.is_tla_or_contains_tla_dependency {
+                    init_expr = ast::Expression::AwaitExpression(
+                      self.snippet.builder.alloc_await_expression(SPAN, init_expr),
+                    );
+                  }
+                  program.body.push(self.snippet.builder.statement_expression(SPAN, init_expr));
                 }
 
                 match importee.exports_kind {

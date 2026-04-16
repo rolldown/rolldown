@@ -196,6 +196,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         directive_range: vec![],
         dummy_record_set,
         constant_export_map: FxHashMap::default(),
+        enum_member_value_map: FxHashMap::default(),
         depended_runtime_helper: Box::default(),
         import_attribute_map: FxHashMap::default(),
         json_module_none_self_reference_included_symbol: None,

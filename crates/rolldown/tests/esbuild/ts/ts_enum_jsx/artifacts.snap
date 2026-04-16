@@ -11,7 +11,7 @@ let Foo = /* @__PURE__ */ function(Foo) {
 	Foo["Div"] = "div";
 	return Foo;
 }({});
-console.log(/* @__PURE__ */ React.createElement(Foo.Div, null));
+console.log(/* @__PURE__ */ React.createElement("div", null));
 //#endregion
 export { Foo };
 
@@ -25,7 +25,7 @@ let React = /* @__PURE__ */ function(React) {
 	React["Fragment"] = "div";
 	return React;
 }({});
-console.log(/* @__PURE__ */ React.createElement(React.Fragment, null, "test"));
+console.log(/* @__PURE__ */ React.createElement("div", null, "test"));
 //#endregion
 export { React };
 

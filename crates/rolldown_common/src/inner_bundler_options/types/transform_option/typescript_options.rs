@@ -54,8 +54,12 @@ impl From<TypeScriptOptions> for oxc::transformer::TypeScriptOptions {
       remove_class_fields_without_initializer: options
         .remove_class_fields_without_initializer
         .unwrap_or(ops.remove_class_fields_without_initializer),
-      optimize_const_enums: false,
-      optimize_enums: false,
+      // Inline const enum member accesses and remove non-exported const enum declarations.
+      // Exported const enums are kept by oxc so cross-module consumers can resolve them.
+      optimize_const_enums: true,
+      // Inline regular (non-const) enum member accesses when values are statically known.
+      // Unlike optimize_const_enums, this keeps the IIFE declaration for runtime use.
+      optimize_enums: true,
       rewrite_import_extensions: options.rewrite_import_extensions.and_then(|value| match value {
         Either::Left(v) => {
           if v {

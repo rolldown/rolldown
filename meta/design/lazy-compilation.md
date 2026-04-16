@@ -544,4 +544,4 @@ For future debugging, these files handle lazy compilation:
 
 - Current implementation: `crates/rolldown_plugin_lazy_compilation/`
 - Dev engine: `crates/rolldown_dev/`
-- Example: `examples/lazy/`
+- Example: `examples/lazy-compilation/`

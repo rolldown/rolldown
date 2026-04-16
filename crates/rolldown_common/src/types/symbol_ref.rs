@@ -1,7 +1,7 @@
 use oxc::semantic::SymbolId;
 use rolldown_std_utils::OptionExt;
 
-use crate::{IndexModules, Module, ModuleIdx, SymbolRefDb, SymbolRefFlags};
+use crate::{EcmaViewMeta, IndexModules, Module, ModuleIdx, SymbolRefDb, SymbolRefFlags};
 
 use super::symbol_ref_db::{GetLocalDb, GetLocalDbMut};
 
@@ -46,6 +46,16 @@ impl SymbolRef {
     let flags = self.flags(db)?;
     // Not having this flag means we don't know
     flags.contains(SymbolRefFlags::IsNotReassigned).then_some(true)
+  }
+
+  pub fn is_side_effect_free_function(&self, db: &SymbolRefDb, modules: &IndexModules) -> bool {
+    let Some(normal_module) = modules[self.owner].as_normal() else {
+      return false;
+    };
+    if !normal_module.meta.contains(EcmaViewMeta::TopExportedSideEffectsFreeFunction) {
+      return false;
+    }
+    self.flags(db).is_some_and(|flag| flag.contains(SymbolRefFlags::SideEffectsFreeFunction))
   }
 
   pub fn is_declared_in_root_scope(&self, db: &SymbolRefDb) -> bool {

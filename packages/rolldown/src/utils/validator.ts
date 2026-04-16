@@ -194,6 +194,8 @@ const TypescriptSchema = v.object({
   allowNamespaces: v.optional(v.boolean()),
   allowDeclareFields: v.optional(v.boolean()),
   removeClassFieldsWithoutInitializer: v.optional(v.boolean()),
+  optimizeConstEnums: v.optional(v.boolean()),
+  optimizeEnums: v.optional(v.boolean()),
   declaration: v.optional(
     v.object({
       stripInternal: v.optional(v.boolean()),

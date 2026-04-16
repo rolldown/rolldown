@@ -6,7 +6,7 @@ use oxc_index::IndexVec;
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
   ConstExportMeta, EntryPoint, EntryPointKind, FlatOptions, ImportKind, ModuleIdx, ModuleTable,
-  PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
+  PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb, UsedSymbolRefs,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
@@ -66,7 +66,7 @@ pub struct LinkStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
-  pub used_symbol_refs: FxHashSet<SymbolRef>,
+  pub used_symbol_refs: UsedSymbolRefs,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
@@ -77,6 +77,9 @@ pub struct LinkStageOutput {
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
+  /// True if any module has enum member values to inline. Computed once to avoid
+  /// repeated full module table scans.
+  pub has_enum_inlining: bool,
 }
 
 #[derive(Debug)]
@@ -91,7 +94,7 @@ pub struct LinkStage<'a> {
   pub errors: Vec<BuildDiagnostic>,
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
-  pub used_symbol_refs: FxHashSet<SymbolRef>,
+  pub used_symbol_refs: UsedSymbolRefs,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -100,12 +103,13 @@ pub struct LinkStage<'a> {
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub flat_options: FlatOptions,
-  pub side_effects_free_function_symbol_ref: FxHashSet<SymbolRef>,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
   pub tla_module_count: usize,
   /// Centralized map of modules that use top-level `await` → span of the
   /// first TLA keyword. Populated during the scan stage.
   pub tla_keyword_span_map: FxHashMap<ModuleIdx, Span>,
+  /// Computed during `include_statements`, reused when building `LinkStageOutput`.
+  pub has_enum_inlining: bool,
 }
 
 impl<'a> LinkStage<'a> {
@@ -183,7 +187,7 @@ impl<'a> LinkStage<'a> {
       ast_table: scan_stage_output.index_ecma_ast,
       dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
-      used_symbol_refs: FxHashSet::default(),
+      used_symbol_refs: UsedSymbolRefs::default(),
       safely_merge_cjs_ns_map: FxHashMap::default(),
       normal_symbol_exports_chain_map: FxHashMap::default(),
       external_import_namespace_merger: FxHashMap::default(),
@@ -191,10 +195,10 @@ impl<'a> LinkStage<'a> {
         .overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: scan_stage_output.entry_point_to_reference_ids,
       flat_options: scan_stage_output.flat_options,
-      side_effects_free_function_symbol_ref: FxHashSet::default(),
       user_defined_entry_modules: scan_stage_output.user_defined_entry_modules,
       tla_module_count: scan_stage_output.tla_module_count,
       tla_keyword_span_map: scan_stage_output.tla_keyword_span_map,
+      has_enum_inlining: false,
     }
   }
 
@@ -235,6 +239,7 @@ impl<'a> LinkStage<'a> {
       global_constant_symbol_map: self.global_constant_symbol_map,
       normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
       user_defined_entry_modules: self.user_defined_entry_modules,
+      has_enum_inlining: self.has_enum_inlining,
     }
   }
 

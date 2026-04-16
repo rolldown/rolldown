@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var Foo = @x.y() @(new y.x()) class Foo {
 	constructor() {
 		this.mDef = 1;
+		this.#mDef = 1;
 	}
 	@x @y method() {
 		return new Foo();
@@ -25,7 +26,7 @@ var Foo = @x.y() @(new y.x()) class Foo {
 	@x @y static accessor asUndef;
 	@x @y static accessor asDef = 1;
 	@x @y #mUndef;
-	@x @y #mDef = 1;
+	@x @y #mDef;
 	@x @y #method() {
 		return new Foo();
 	}

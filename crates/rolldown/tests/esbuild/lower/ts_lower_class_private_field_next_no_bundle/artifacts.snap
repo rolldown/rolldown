@@ -8,9 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (class {
 	constructor() {
+		this.#foo = 123;
 		this.foo = 123;
 	}
-	#foo = 123;
+	#foo;
 	#bar;
 	static #s_foo = 123;
 	static #s_bar;

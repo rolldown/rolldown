@@ -19,6 +19,11 @@
       "matchManagers": ["npm"],
       "matchPackageNames": ["oxc-node"],
       "schedule": ["at any time"]
+    },
+    {
+      "description": "Disable oxc auto-updates — upgraded manually via `upgrade-oxc` skill",
+      "matchPackageNames": ["/^oxc/", "/^@oxc-project/"],
+      "enabled": false
     }
   ]
 }

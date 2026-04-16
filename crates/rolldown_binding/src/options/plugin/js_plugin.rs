@@ -195,7 +195,7 @@ impl Plugin for JsPlugin {
       .await?
       .map(TryInto::try_into)
       .transpose()
-      .with_context(|| format!("load hook threw an error for id={}", args.id,))
+      .with_context(|| format!("load hook threw an error for id={}", args.id))
   }
 
   fn load_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {

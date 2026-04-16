@@ -917,7 +917,7 @@ mod tests {
     match (result, case.expected) {
       (Some((split, _, _)), Some(expected)) => {
         let (left, right) = (&case.keys[..split], &case.keys[split..]);
-        assert_eq!((left, right), expected, "similarities: {similarities:?}",);
+        assert_eq!((left, right), expected, "similarities: {similarities:?}");
       }
       (None, None) => {}
       (Some((split, _, _)), None) => {

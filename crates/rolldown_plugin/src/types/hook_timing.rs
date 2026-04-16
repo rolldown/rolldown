@@ -80,7 +80,7 @@ impl HookTimingCollector {
         PluginTimingSummary { plugin_name: entry.value().name.clone(), total_duration_micros }
       })
       .collect::<Vec<_>>();
-    summaries.sort_by(|a, b| b.total_duration_micros.cmp(&a.total_duration_micros));
+    summaries.sort_by_key(|b| std::cmp::Reverse(b.total_duration_micros));
     summaries
   }
 

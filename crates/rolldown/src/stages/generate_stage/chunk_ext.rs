@@ -79,9 +79,9 @@ impl ChunkDebugExt for Chunk {
         name: entry_point_name,
       } => {
         if is_user_defined_entry {
-          format!("User-defined Entry: [Entry-Module-Id: {debug_id}] [Name: {entry_point_name:?}]",)
+          format!("User-defined Entry: [Entry-Module-Id: {debug_id}] [Name: {entry_point_name:?}]")
         } else {
-          format!("Dynamic Entry: [Entry-Module-Id: {debug_id}] [Name: {entry_point_name:?}]",)
+          format!("Dynamic Entry: [Entry-Module-Id: {debug_id}] [Name: {entry_point_name:?}]")
         }
       }
       ChunkCreationReason::CommonChunk { bits, link_output } => {

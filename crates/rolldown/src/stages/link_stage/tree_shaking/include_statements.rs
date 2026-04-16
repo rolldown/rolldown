@@ -217,6 +217,11 @@ impl LinkStage<'_> {
       IndexBitSet::new(self.module_table.modules.len());
     let mut module_namespace_included_reason: ModuleNamespaceReasonVec =
       oxc_index::index_vec![ModuleNamespaceIncludedReason::empty(); self.module_table.len()];
+    self.has_enum_inlining = self
+      .module_table
+      .modules
+      .iter()
+      .any(|m| m.as_normal().is_some_and(|n| !n.ecma_view.enum_member_value_map.is_empty()));
     let context = &mut IncludeContext::new(
       &self.module_table.modules,
       &self.symbols,
@@ -925,6 +930,34 @@ pub fn include_statement(
         // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
       }
     } else {
+      // For enum member accesses (e.g., `B.member`), check if the member will be inlined
+      // by the finalizer. If so, skip including the enum's declaration — it's dead code
+      // after inlining. This mirrors the `constant_symbol_map` bypass in `include_symbol`.
+      //
+      // This applies to both const and regular enums. The member access will be replaced
+      // by a literal, so the reference no longer needs the declaration. If the enum is
+      // also referenced as a bare symbol (e.g., `typeof E`, `console.log(E)`), that
+      // separate reference will independently include the declaration via `include_symbol`.
+      // Regular enum IIFEs are `@__PURE__`, so they'll be tree-shaken if truly unused.
+      if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = reference_ref {
+        let canonical_ref = ctx.symbols.canonical_ref_for(member_expr_ref.object_ref);
+        if let Some(Module::Normal(owner_module)) = ctx.modules.get(canonical_ref.owner) {
+          let symbol_name = canonical_ref.name(ctx.symbols);
+          if let Some(members) = owner_module.ecma_view.enum_member_value_map.get(symbol_name) {
+            // Only bypass for simple member accesses (e.g., `E.member`), not deep chains
+            // like `E.member.something` which wouldn't be inlined.
+            if member_expr_ref.prop_and_span_list.len() == 1 {
+              let prop_name = member_expr_ref.prop_and_span_list.first().map(|p| p.name.as_str());
+              if prop_name.is_some_and(|name| members.contains_key(name)) {
+                // This member access will be inlined — don't include the enum declaration.
+                // Enum inlining is unconditional (not gated by inlineConst mode) because
+                // it implements TypeScript's const enum semantics, which mandate replacement.
+                return;
+              }
+            }
+          }
+        }
+      }
       let original_ref = reference_ref.symbol_ref();
       std::iter::once(original_ref)
         .chain(

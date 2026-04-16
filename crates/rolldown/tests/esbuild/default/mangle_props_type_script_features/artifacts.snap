@@ -48,17 +48,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region enum-values.ts
-var TopLevelNumber = /* @__PURE__ */ function(TopLevelNumber) {
-	TopLevelNumber[TopLevelNumber["foo_"] = 0] = "foo_";
-	return TopLevelNumber;
-}(TopLevelNumber || {});
-var TopLevelString = /* @__PURE__ */ function(TopLevelString) {
-	TopLevelString["bar_"] = "";
-	return TopLevelString;
-}(TopLevelString || {});
 console.log({
-	foo: TopLevelNumber.foo_,
-	bar: TopLevelString.bar_
+	foo: 0,
+	bar: ""
 });
 //#endregion
 

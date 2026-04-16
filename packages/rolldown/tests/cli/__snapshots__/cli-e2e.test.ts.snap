@@ -113,6 +113,8 @@ OPTIONS
   --transform.typescript.jsx-pragma <transform.typescript.jsx-pragma>.
   --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
   --transform.typescript.only-remove-type-imports .
+  --transform.typescript.optimize-const-enums .
+  --transform.typescript.optimize-enums .
   --transform.typescript.remove-class-fields-without-initializer .
   --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
   --tsconfig <tsconfig>       Path to the tsconfig.json file.
@@ -254,6 +256,8 @@ OPTIONS
   --transform.typescript.jsx-pragma <transform.typescript.jsx-pragma>.
   --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
   --transform.typescript.only-remove-type-imports .
+  --transform.typescript.optimize-const-enums .
+  --transform.typescript.optimize-enums .
   --transform.typescript.remove-class-fields-without-initializer .
   --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
   --tsconfig <tsconfig>       Path to the tsconfig.json file.
@@ -395,6 +399,8 @@ OPTIONS
   --transform.typescript.jsx-pragma <transform.typescript.jsx-pragma>.
   --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
   --transform.typescript.only-remove-type-imports .
+  --transform.typescript.optimize-const-enums .
+  --transform.typescript.optimize-enums .
   --transform.typescript.remove-class-fields-without-initializer .
   --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
   --tsconfig <tsconfig>       Path to the tsconfig.json file.
@@ -536,6 +542,8 @@ OPTIONS
   --transform.typescript.jsx-pragma <transform.typescript.jsx-pragma>.
   --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
   --transform.typescript.only-remove-type-imports .
+  --transform.typescript.optimize-const-enums .
+  --transform.typescript.optimize-enums .
   --transform.typescript.remove-class-fields-without-initializer .
   --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
   --tsconfig <tsconfig>       Path to the tsconfig.json file.

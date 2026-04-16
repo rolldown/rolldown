@@ -43,7 +43,7 @@ var x = /* @__PURE__ */ function(x) {
 	return x;
 }(x || {});
 x = /* @__PURE__ */ function(x) {
-	x[x["z"] = y * 2] = "z";
+	x[x["z"] = 246] = "z";
 	return x;
 }(x || {});
 console.log(x);
@@ -61,7 +61,7 @@ var x = /* @__PURE__ */ function(x) {
 	return x;
 }(x || {});
 x = /* @__PURE__ */ function(x) {
-	x[x["z"] = y * 2] = "z";
+	x[x["z"] = 246] = "z";
 	return x;
 }(x || {});
 //#endregion
@@ -78,7 +78,7 @@ var x = /* @__PURE__ */ function(x) {
 }(x || {});
 console.log(x);
 x = /* @__PURE__ */ function(x) {
-	x[x["z"] = y * 2] = "z";
+	x[x["z"] = 246] = "z";
 	return x;
 }(x || {});
 //#endregion
@@ -89,15 +89,7 @@ x = /* @__PURE__ */ function(x) {
 
 ```js
 //#region sibling-member.ts
-var x = /* @__PURE__ */ function(x) {
-	x[x["y"] = 123] = "y";
-	return x;
-}(x || {});
-x = /* @__PURE__ */ function(x) {
-	x[x["z"] = y * 2] = "z";
-	return x;
-}(x || {});
-console.log(x.y, x.z);
+console.log(123, 246);
 //#endregion
 
 ```
@@ -119,11 +111,7 @@ console.log(x);
 
 ```js
 //#region simple-member.ts
-var x = /* @__PURE__ */ function(x) {
-	x[x["y"] = 123] = "y";
-	return x;
-}(x || {});
-console.log(x.y);
+console.log(123);
 //#endregion
 
 ```

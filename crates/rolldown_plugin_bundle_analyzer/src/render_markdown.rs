@@ -86,7 +86,7 @@ fn render_largest_modules(out: &mut String, data: &AnalyzeData, total_output_siz
   );
 
   let mut all_modules: Vec<(usize, &ModuleData)> = data.modules.iter().enumerate().collect();
-  all_modules.sort_by(|a, b| b.1.size.cmp(&a.1.size));
+  all_modules.sort_by_key(|b| std::cmp::Reverse(b.1.size));
 
   out.push_str("| Output Bytes | % of Total | Module |\n");
   out.push_str("|--------------|------------|--------|\n");
@@ -282,7 +282,7 @@ fn render_optimization_suggestions(out: &mut String, data: &AnalyzeData) {
         .iter()
         .filter_map(|&i| data.modules.get(i).map(|m| (m.path.as_str(), m.size)))
         .collect();
-      modules.sort_by(|a, b| b.1.cmp(&a.1));
+      modules.sort_by_key(|b| std::cmp::Reverse(b.1));
 
       let total_size: usize = modules.iter().map(|(_, s)| *s).sum();
 
@@ -300,7 +300,7 @@ fn render_optimization_suggestions(out: &mut String, data: &AnalyzeData) {
     return;
   }
 
-  suggestions.sort_by(|a, b| b.total_size.cmp(&a.total_size));
+  suggestions.sort_by_key(|b| std::cmp::Reverse(b.total_size));
 
   // Step 3: Render
   out.push_str("## Optimization Suggestions\n\n");
@@ -419,7 +419,7 @@ fn render_raw_data(
 
   // All Modules
   let mut all_modules: Vec<(usize, &ModuleData)> = data.modules.iter().enumerate().collect();
-  all_modules.sort_by(|a, b| b.1.size.cmp(&a.1.size));
+  all_modules.sort_by_key(|b| std::cmp::Reverse(b.1.size));
 
   out.push_str("### All Modules\n\n```\n");
   for &(_, module) in &all_modules {

@@ -66,7 +66,7 @@ impl Display for ImportAttribute {
       .entries
       .iter()
       .map(|(key, value)| match key {
-        ImportAttributeKey::String(s) => format!("\"{s}\": \"{value}\"",),
+        ImportAttributeKey::String(s) => format!("\"{s}\": \"{value}\""),
         ImportAttributeKey::Identifier(id) => format!("{id}: \"{value}\""),
       })
       .collect::<Vec<_>>()

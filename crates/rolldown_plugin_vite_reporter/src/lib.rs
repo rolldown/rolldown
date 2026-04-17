@@ -224,7 +224,7 @@ impl Plugin for ViteReporterPlugin {
         if filtered.is_empty() {
           continue;
         }
-        filtered.sort_by(|a, b| a.size.cmp(&b.size));
+        filtered.sort_by_key(|a| a.size);
         for log_entry in filtered {
           let _ = write!(
             &mut info,

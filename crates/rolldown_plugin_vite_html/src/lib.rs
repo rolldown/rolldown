@@ -136,10 +136,8 @@ impl Plugin for ViteHtmlPlugin {
             let mut is_ignored = false;
             for attr in attrs.borrow().iter() {
               match &*attr.name {
-                "src" => {
-                  if src.is_none() {
-                    src = Some((attr.value.clone(), attr.span));
-                  }
+                "src" if src.is_none() => {
+                  src = Some((attr.value.clone(), attr.span));
                 }
                 "type" if attr.value == "module" => {
                   is_module = true;

@@ -15,7 +15,7 @@ pub enum HybridRegex {
 impl From<&str> for HybridRegex {
   fn from(pattern: &str) -> Self {
     HybridRegex::new(pattern).unwrap_or_else(|err| {
-      panic!("failed to create HybridRegex from {pattern}, error details: {err}",)
+      panic!("failed to create HybridRegex from {pattern}, error details: {err}")
     })
   }
 }

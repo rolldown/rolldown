@@ -8,14 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region completion.js
 async function complete() {
-	return (await import("./daemon2.js")).start();
+	return (await import("./daemon.js")).start();
 }
 //#endregion
 export { complete };
 
 ```
 
-## daemon.js
+## daemon-impl.js
 
 ```js
 //#region daemon-impl.js
@@ -30,10 +30,10 @@ export { stop as n, start as t };
 
 ```
 
-## daemon2.js
+## daemon.js
 
 ```js
-import { t as start } from "./daemon.js";
+import { t as start } from "./daemon-impl.js";
 export { start };
 
 ```
@@ -41,7 +41,7 @@ export { start };
 ## entry.js
 
 ```js
-import { n as stop, t as start } from "./daemon.js";
+import { n as stop, t as start } from "./daemon-impl.js";
 // HIDDEN [\0rolldown/runtime.js]
 //#region gateway.js
 var import_cjs_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {

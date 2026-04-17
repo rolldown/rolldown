@@ -6,7 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## component.js
 
 ```js
-import { n as setInnerHtml, t as htmlEscape } from "./shared.js";
+import { n as SafeHtml, t as htmlEscape } from "./shared.js";
+//#region safe.js
+function setInnerHtml(elem, html) {
+	if (html instanceof SafeHtml) elem.innerHTML = html.unwrap();
+}
+//#endregion
 //#region component.js
 var Component = class {
 	constructor(name) {
@@ -24,7 +29,7 @@ export { Component };
 ## safehtml.js
 
 ```js
-import { r as SafeHtml } from "./shared.js";
+import { n as SafeHtml } from "./shared.js";
 export { SafeHtml };
 
 ```
@@ -48,11 +53,6 @@ var SafeHtml = class {
 	}
 };
 //#endregion
-//#region safe.js
-function setInnerHtml(elem, html) {
-	if (html instanceof SafeHtml) elem.innerHTML = html.unwrap();
-}
-//#endregion
 //#region shared.js
 function compareVersions(a, b) {
 	return a > b ? 1 : a < b ? -1 : 0;
@@ -61,6 +61,6 @@ function htmlEscape(str) {
 	return str.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 }
 //#endregion
-export { setInnerHtml as n, SafeHtml as r, htmlEscape as t };
+export { SafeHtml as n, htmlEscape as t };
 
 ```

@@ -6,23 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## common-a.js
 
 ```js
-import { t as sharedB } from "./common-b.js";
+//#region common-b.js
+const sharedB = "shared-b";
+//#endregion
 //#region common-a.js
 function getSharedB() {
 	return sharedB;
 }
 //#endregion
 export { getSharedB as t };
-
-```
-
-## common-b.js
-
-```js
-//#region common-b.js
-const sharedB = "shared-b";
-//#endregion
-export { sharedB as t };
 
 ```
 

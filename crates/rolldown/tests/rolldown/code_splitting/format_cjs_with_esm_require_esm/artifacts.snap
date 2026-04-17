@@ -3,44 +3,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## chunk.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__esmMin", {
-	enumerable: true,
-	get: function() {
-		return __esmMin;
-	}
-});
-Object.defineProperty(exports, "__exportAll", {
-	enumerable: true,
-	get: function() {
-		return __exportAll;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
-
-```
-
 ## main1.js
 
 ```js
-require("./chunk.js");
+require("./main2.js");
 
 ```
 
 ## main2.js
 
 ```js
-//#endregion
+// HIDDEN [\0rolldown/runtime.js]
 //#region main2.js
-require("./chunk.js").__esmMin((() => {}))();
+__esmMin((() => {}))();
 //#endregion
+exports.__toESM = __toESM;
 
 ```

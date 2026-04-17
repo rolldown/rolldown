@@ -6,7 +6,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as createRouter } from "./router.js";
+//#region router.mjs
+const createRouter = (page) => {
+	let readyResolve;
+	const isReady = new Promise((_r) => {
+		readyResolve = _r;
+	});
+	page().then(() => readyResolve());
+	return { isReady };
+};
+//#endregion
 //#region main.js
 await createRouter(() => import("./page.js")).isReady;
 globalThis.result.push("ready");
@@ -20,22 +29,5 @@ globalThis.result.push("ready");
 //#region page.mjs
 globalThis.result = ["foo"];
 //#endregion
-
-```
-
-## router.js
-
-```js
-//#region router.mjs
-const createRouter = (page) => {
-	let readyResolve;
-	const isReady = new Promise((_r) => {
-		readyResolve = _r;
-	});
-	page().then(() => readyResolve());
-	return { isReady };
-};
-//#endregion
-export { createRouter as t };
 
 ```

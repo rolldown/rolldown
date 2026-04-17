@@ -124,7 +124,7 @@ impl ManualSplitter<'_> {
 
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
     {
-      if !metas[normal_module.idx].is_included {
+      if !metas[normal_module.idx].is_included() {
         continue;
       }
 
@@ -327,7 +327,7 @@ impl ManualSplitter<'_> {
       "rolldown runtime is always a normal module"
     );
 
-    if metas[runtime_module_idx].is_included {
+    if metas[runtime_module_idx].is_included() {
       let runtime_chunk = Chunk::new(
         Some("rolldown-runtime".into()),
         None,
@@ -876,7 +876,7 @@ fn add_module_and_dependencies_to_group_recursively(
     return;
   }
 
-  if !module_metas[module_idx].is_included {
+  if !module_metas[module_idx].is_included() {
     return;
   }
 

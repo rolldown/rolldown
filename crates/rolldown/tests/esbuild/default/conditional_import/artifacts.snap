@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { n as __toESM } from "./chunk.js";
+import { n as __toESM } from "./import.js";
 //#region a.js
 x ? import("a") : y ? import("./import.js").then((m) => /* @__PURE__ */ __toESM(m.default)) : import("c");
 //#endregion
@@ -16,30 +16,32 @@ x ? import("a") : y ? import("./import.js").then((m) => /* @__PURE__ */ __toESM(
 ## b.js
 
 ```js
-import { n as __toESM } from "./chunk.js";
+import { n as __toESM } from "./import.js";
 //#region b.js
 x ? y ? import("a") : import("./import.js").then((m) => /* @__PURE__ */ __toESM(m.default)) : import(c);
 //#endregion
 
 ```
 
-## chunk.js
+## import.js
 
 ```js
+import { t as require_import } from "./import2.js";
 // HIDDEN [\0rolldown/runtime.js]
+export default require_import();
 export { __toESM as n, __commonJSMin as t };
 
 ```
 
-## import.js
+## import2.js
 
 ```js
-import { t as __commonJSMin } from "./chunk.js";
+import { t as __commonJSMin } from "./import.js";
 //#region import.js
 var require_import = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 213;
 }));
 //#endregion
-export default require_import();
+export { require_import as t };
 
 ```

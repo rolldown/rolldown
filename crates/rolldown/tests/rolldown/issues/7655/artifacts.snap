@@ -6,8 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
+// HIDDEN [\0rolldown/runtime.js]
 //#region a.js
-var require_a = /* @__PURE__ */ require("./main.js").__commonJSMin(((exports, module) => {
+var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {
 		value: 42,
 		hello: "world"
@@ -20,16 +21,16 @@ Object.defineProperty(exports, "default", {
 		return require_a();
 	}
 });
+exports.__toESM = __toESM;
 
 ```
 
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+const require_a = require("./a.js");
 //#region main.js
-Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./a.js").default)).then((m) => console.log(m.default));
+Promise.resolve().then(() => /* @__PURE__ */ require_a.__toESM(require("./a.js").default)).then((m) => console.log(m.default));
 //#endregion
-exports.__commonJSMin = __commonJSMin;
 
 ```

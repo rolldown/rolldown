@@ -974,6 +974,13 @@ impl GenerateStage<'_> {
     let (mut stmt_info_included_vec, mut module_included_vec, mut module_namespace_reason_vec) =
       linking_metadata_vec_to_included_info(&mut self.link_output.metas);
 
+    // The per-entry bitsets were sized `real_entry_count + 1` during tree-shaking
+    // (the extra slot is the post-tree-shaking sentinel). Reconstruct those values
+    // here so chunk-optimizer inclusions attribute to the sentinel.
+    let real_entry_count: usize = self.link_output.entries.values().map(Vec::len).sum();
+    let entry_bitset_capacity = real_entry_count + 1;
+    let global_entry_idx = rolldown_common::EntryIdx::from_usize(real_entry_count);
+
     let runtime = &self.link_output.runtime;
     let context = &mut IncludeContext {
       modules: &self.link_output.module_table.modules,
@@ -987,11 +994,15 @@ impl GenerateStage<'_> {
       constant_symbol_map: &self.link_output.global_constant_symbol_map,
       options: self.options,
       normal_symbol_exports_chain_map: &self.link_output.normal_symbol_exports_chain_map,
-      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
-      module_inclusion_changed: false,
+      bailout_cjs_tree_shaking_modules: FxHashMap::default(),
+      inclusion_changed: false,
       module_namespace_included_reason: &mut module_namespace_reason_vec,
       inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
+      current_entry_idx: None,
+      global_entry_idx,
+      entry_bitset_capacity,
+      per_entry_stmt_visited: FxHashMap::default(),
     };
 
     let mut runtime_dependent_chunks = FxHashSet::default();
@@ -1161,7 +1172,7 @@ impl GenerateStage<'_> {
     included_info_to_linking_metadata_vec(
       &mut self.link_output.metas,
       stmt_info_included_vec,
-      &module_included_vec,
+      &mut module_included_vec,
       &module_namespace_reason_vec,
     );
   }

@@ -22,7 +22,7 @@ impl GenerateStage<'_> {
         .filter(|(idx, _ast)| {
           self.link_output.module_table[*idx]
             .as_normal()
-            .is_some_and(|m| self.link_output.metas[m.idx].is_included)
+            .is_some_and(|m| self.link_output.metas[m.idx].is_included())
         })
         .filter_map(|(idx, ast)| {
           let ast = ast.as_mut()?;

@@ -6,17 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## c.js
 
 ```js
-import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./index.js";
-//#region d.js
-var d_exports = /* @__PURE__ */ __exportAll({ loadEventStreamCapability: () => loadEventStreamCapability });
-async function loadEventStreamCapability() {
-	const { EventStreamSerde } = await import("./e.js");
-	console.log(`EventStreamSerde: `, EventStreamSerde);
-}
-var init_d = __esmMin((() => {
-	loadEventStreamCapability();
-}));
-//#endregion
+import { i as __toCommonJS, t as __commonJSMin } from "./rolldown-runtime.js";
+import { n as init_d, t as d_exports } from "./index.js";
 //#region c.js
 var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.validateSsoProfile = function test() {
@@ -24,14 +15,14 @@ var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
 	};
 }));
 //#endregion
-export default require_c();
+export { require_c as t };
 
 ```
 
 ## e.js
 
 ```js
-import { n as __esmMin } from "./index.js";
+import { n as __esmMin } from "./rolldown-runtime.js";
 //#endregion
 __esmMin((() => {
 	console.log("event");
@@ -42,15 +33,34 @@ __esmMin((() => {
 ## index.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { a as __toESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+//#endregion
 //#region a.js
 (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.defaultProvider = async function test() {
-		const { fromIni } = await import("./c.js").then((m) => /* @__PURE__ */ __toESM(m.default));
+		const { fromIni } = await import("./c.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
 		console.log(fromIni);
 	};
 })))();
 //#endregion
-export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+//#region d.js
+var d_exports = /* @__PURE__ */ __exportAll({ loadEventStreamCapability: () => loadEventStreamCapability });
+async function loadEventStreamCapability() {
+	const { EventStreamSerde } = await import("./e.js");
+	console.log(`EventStreamSerde: `, EventStreamSerde);
+}
+var init_d = __esmMin((() => {
+	loadEventStreamCapability();
+}));
+//#endregion
+export { init_d as n, d_exports as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as a, __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```

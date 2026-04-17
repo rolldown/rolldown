@@ -15,7 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { n as __exportAll } from "./chunk.js";
+import { n as __exportAll } from "./rolldown-runtime.js";
 import { t as require_cjs } from "./cjs.js";
 import "./b.js";
 //#region a.js
@@ -29,7 +29,7 @@ export { a_exports as t };
 ## b.js
 
 ```js
-import { n as __exportAll, r as __toESM } from "./chunk.js";
+import { n as __exportAll, r as __toESM } from "./rolldown-runtime.js";
 //#region b.js
 var b_exports = /* @__PURE__ */ __exportAll({ foo2: () => foo2 });
 function foo2() {
@@ -42,18 +42,10 @@ export { b_exports as t };
 
 ```
 
-## chunk.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __toESM as r, __commonJSMin as t };
-
-```
-
 ## cjs.js
 
 ```js
-import { t as __commonJSMin } from "./chunk.js";
+import { t as __commonJSMin } from "./rolldown-runtime.js";
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 42;
@@ -67,5 +59,13 @@ export { require_cjs as t };
 
 ```js
 import "./a.js";
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __toESM as r, __commonJSMin as t };
 
 ```

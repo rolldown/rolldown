@@ -5,9 +5,9 @@ use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  ConstExportMeta, EntryIdx, EntryPoint, EntryPointKind, FlatOptions, ImportKind, ModuleIdx,
-  ModuleTable, PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb, UsedSymbolRefs,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  ConstExportMeta, EntryIdx, EntryPoint, EntryPointKind, FlatOptions, ImportKind, Module,
+  ModuleIdx, ModuleTable, PreserveEntrySignatures, RuntimeHelper, RuntimeModuleBrief, SymbolRef,
+  SymbolRefDb, UsedSymbolRefs, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 #[cfg(target_family = "wasm")]
@@ -220,6 +220,7 @@ impl<'a> LinkStage<'a> {
     let unreachable_import_expression_addrs = self.cross_module_optimization();
     self.include_statements(&unreachable_import_expression_addrs);
     self.patch_module_dependencies();
+    self.attribute_runtime_per_entry();
 
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 
@@ -253,5 +254,134 @@ impl<'a> LinkStage<'a> {
   #[cfg_attr(debug_assertions, expect(unused))]
   pub fn debug_symbol_ref(&self, symbol_ref: SymbolRef) -> String {
     common_debug_symbol_ref(symbol_ref, &self.module_table.modules, &self.symbols)
+  }
+
+  /// Per-entry runtime module attribution. Runs after
+  /// [`patch_module_dependencies`](Self::patch_module_dependencies) so that
+  /// helper inheritance (`RuntimeHelper::ToEsm` propagated from eliminated
+  /// deps — see issues/4585) is reflected.
+  ///
+  /// For each real entry, compute the set of helpers it transitively needs
+  /// from modules it reached, and replay [`include_runtime_symbol`] under
+  /// that entry's context so the runtime module gets that entry's bit and
+  /// the helper stmts land in the global stmt inclusion set.
+  #[tracing::instrument(level = "debug", skip_all)]
+  pub(super) fn attribute_runtime_per_entry(&mut self) {
+    use crate::types::linking_metadata::{
+      included_info_to_linking_metadata_vec, linking_metadata_vec_to_included_info,
+    };
+    use rolldown_utils::IndexBitSet;
+
+    let real_entry_count: usize = self.entries.values().map(Vec::len).sum();
+    if real_entry_count == 0 {
+      return;
+    }
+    let global_entry_idx = EntryIdx::from_usize(real_entry_count);
+    let entry_bitset_capacity = real_entry_count + 1;
+
+    let runtime_idx = self.runtime.id();
+    let runtime_has_side_effects = matches!(
+      &self.module_table.modules[runtime_idx],
+      Module::Normal(m) if m.side_effects.has_side_effects()
+    );
+
+    let mut per_entry_helpers: FxHashMap<EntryIdx, RuntimeHelper> = FxHashMap::default();
+    for (module_idx, meta) in self.metas.iter_enumerated() {
+      let helpers = meta.depended_runtime_helper;
+      if helpers.is_empty() {
+        continue;
+      }
+      let _ = module_idx;
+      for entry_idx in meta.included_by_entries.index_of_one() {
+        if entry_idx == global_entry_idx {
+          continue;
+        }
+        let slot = per_entry_helpers.entry(entry_idx).or_default();
+        *slot |= helpers;
+      }
+    }
+
+    if runtime_has_side_effects {
+      for (module_idx, meta) in self.metas.iter_enumerated() {
+        if module_idx == runtime_idx {
+          continue;
+        }
+        for entry_idx in meta.included_by_entries.index_of_one() {
+          if entry_idx == global_entry_idx {
+            continue;
+          }
+          per_entry_helpers.entry(entry_idx).or_default();
+        }
+      }
+    }
+
+    if per_entry_helpers.is_empty() && !runtime_has_side_effects {
+      return;
+    }
+
+    // Deterministic iteration order.
+    let mut per_entry_helpers: Vec<(EntryIdx, RuntimeHelper)> =
+      per_entry_helpers.into_iter().collect();
+    per_entry_helpers.sort_unstable_by_key(|(entry_idx, _)| entry_idx.raw());
+
+    let (mut stmt_info_included_vec, mut module_included_vec, mut module_namespace_reason_vec) =
+      linking_metadata_vec_to_included_info(&mut self.metas);
+
+    // Ensure every per-module bitset matches the capacity we expect (modules
+    // added after include_statements — e.g. via plugin-generated modules —
+    // might have defaulted bitsets).
+    for bitset in &mut module_included_vec {
+      if bitset.is_empty() && bitset.bit_count() == 0 {
+        // `IndexBitSet::default()` allocates zero capacity; rebuild it sized
+        // to `entry_bitset_capacity` so the sentinel bit can be set if needed.
+        // Keep existing set bits.
+        let existing: Vec<EntryIdx> = bitset.index_of_one().collect();
+        if existing.is_empty() && entry_bitset_capacity > 0 {
+          *bitset = IndexBitSet::new(entry_bitset_capacity);
+        }
+      }
+    }
+
+    let context = &mut IncludeContext::new(
+      &self.module_table.modules,
+      &self.symbols,
+      &mut stmt_info_included_vec,
+      &mut module_included_vec,
+      self.runtime.id(),
+      &self.metas,
+      &mut self.used_symbol_refs,
+      &self.global_constant_symbol_map,
+      self.options,
+      &self.normal_symbol_exports_chain_map,
+      &mut module_namespace_reason_vec,
+      global_entry_idx,
+      entry_bitset_capacity,
+    );
+    for (entry_idx, helpers) in per_entry_helpers {
+      context.current_entry_idx = Some(entry_idx);
+      include_runtime_symbol(context, &self.runtime, helpers);
+    }
+    context.current_entry_idx = None;
+
+    included_info_to_linking_metadata_vec(
+      &mut self.metas,
+      stmt_info_included_vec,
+      &mut module_included_vec,
+      &module_namespace_reason_vec,
+    );
+
+    // Mirror the dev-mode side-effect runtime-dep propagation that
+    // `patch_module_dependencies` does — but runs it here so it sees the
+    // runtime inclusion we just produced. Without this, entries whose chunks
+    // should load a side-effectful runtime (e.g. HMR bootstrap) miss the
+    // cross-chunk import and `__rolldown_runtime__` ends up undefined at
+    // runtime (see topics/hmr/mutiply_entires).
+    if self.metas[runtime_idx].is_included() && runtime_has_side_effects {
+      let entry_module_ids: Vec<ModuleIdx> = self.entries.keys().copied().collect();
+      for entry_module_idx in entry_module_ids {
+        self.metas[entry_module_idx].dependencies.insert(runtime_idx);
+        self.metas[entry_module_idx].has_side_effectful_runtime_dep = true;
+      }
+    }
   }
 }

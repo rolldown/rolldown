@@ -3,10 +3,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## lib.js
+## chunk.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+export { __toESM as n, __commonJSMin as t };
+
+```
+
+## lib.js
+
+```js
+import { t as __commonJSMin } from "./chunk.js";
 //#region plugin.js
 var require_plugin = /* @__PURE__ */ __commonJSMin(((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
@@ -23,14 +31,13 @@ var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 }));
 //#endregion
 export default require_lib();
-export { __toESM as t };
 
 ```
 
 ## main.js
 
 ```js
-import { t as __toESM } from "./lib.js";
+import { n as __toESM } from "./chunk.js";
 import assert from "node:assert";
 //#region entry.js
 const mod = await import("./lib.js").then((m) => /* @__PURE__ */ __toESM(m.default));

@@ -6,7 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bar.js
 
 ```js
-import { r as __exportAll, t as trim } from "./string.js";
+import { t as __exportAll } from "./main.js";
+import { t as trim } from "./string.js";
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ default: () => bar_default });
 __rolldown_runtime__.createModuleHotContext("bar.js");
@@ -22,7 +23,8 @@ export { bar_default as default };
 ## foo.js
 
 ```js
-import { n as unused, r as __exportAll, t as trim } from "./string.js";
+import { t as __exportAll } from "./main.js";
+import { n as unused, t as trim } from "./string.js";
 //#region utils/index.js
 var utils_exports = /* @__PURE__ */ __exportAll({
 	trim: () => trim,
@@ -46,18 +48,15 @@ export { foo_default as default };
 ## main.js
 
 ```js
-import "./string.js";
-__rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", {});
-import("./foo.js"), import("./bar.js");
-//#endregion
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
 
 ```
 
 ## string.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { t as __exportAll } from "./main.js";
 //#region utils/string.js
 var string_exports = /* @__PURE__ */ __exportAll({
 	trim: () => trim,
@@ -72,6 +71,6 @@ function unused() {
 	return "unused";
 }
 //#endregion
-export { unused as n, __exportAll as r, trim as t };
+export { unused as n, trim as t };
 
 ```

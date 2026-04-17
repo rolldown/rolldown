@@ -26,234 +26,234 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  update-rollup:
-    name: Update Rollup Submodule
-    runs-on: namespace-profile-linux-x64-default
-    permissions:
-      contents: write # for create-pull-request
-      pull-requests: write # for create-pull-request
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: true
-          fetch-depth: 0
-          persist-credentials: true # for create-pull-request
+  # update-rollup:
+  #   name: Update Rollup Submodule
+  #   runs-on: namespace-profile-linux-x64-default
+  #   permissions:
+  #     contents: write # for create-pull-request
+  #     pull-requests: write # for create-pull-request
+  #   steps:
+  #     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+  #       with:
+  #         submodules: true
+  #         fetch-depth: 0
+  #         persist-credentials: true # for create-pull-request
 
-      - name: Get latest Rollup tag on master branch
-        id: get-latest-tag
-        env:
-          INPUT_ROLLUP_TAG: ${{ inputs.rollup_tag }}
-        run: |
-          if [ -n "$INPUT_ROLLUP_TAG" ]; then
-            echo "LATEST_TAG=$INPUT_ROLLUP_TAG" >> $GITHUB_OUTPUT
-            echo "Using provided tag: $INPUT_ROLLUP_TAG"
-          else
-            cd rollup
-            git fetch --tags origin master
-            LATEST_TAG=$(git tag --sort=-version:refname --merged origin/master | head -n 1)
-            if [ -z "$LATEST_TAG" ]; then
-              echo "Error: No tags found on rollup master branch"
-              exit 1
-            fi
-            echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
-            echo "Latest rollup tag on master: $LATEST_TAG"
-          fi
+  #     - name: Get latest Rollup tag on master branch
+  #       id: get-latest-tag
+  #       env:
+  #         INPUT_ROLLUP_TAG: ${{ inputs.rollup_tag }}
+  #       run: |
+  #         if [ -n "$INPUT_ROLLUP_TAG" ]; then
+  #           echo "LATEST_TAG=$INPUT_ROLLUP_TAG" >> $GITHUB_OUTPUT
+  #           echo "Using provided tag: $INPUT_ROLLUP_TAG"
+  #         else
+  #           cd rollup
+  #           git fetch --tags origin master
+  #           LATEST_TAG=$(git tag --sort=-version:refname --merged origin/master | head -n 1)
+  #           if [ -z "$LATEST_TAG" ]; then
+  #             echo "Error: No tags found on rollup master branch"
+  #             exit 1
+  #           fi
+  #           echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
+  #           echo "Latest rollup tag on master: $LATEST_TAG"
+  #         fi
 
-      - name: Get current and target commit SHAs
-        id: get-shas
-        env:
-          LATEST_TAG: ${{ steps.get-latest-tag.outputs.LATEST_TAG }}
-        run: |
-          CURRENT_SHA="$(git submodule status rollup | awk '{print $1}' | sed 's/^[-+]//')"
-          echo "CURRENT_SHA=$CURRENT_SHA" >> $GITHUB_OUTPUT
-          echo "Current rollup SHA: $CURRENT_SHA"
-          cd rollup
-          TARGET_SHA="$(git rev-list -n 1 "$LATEST_TAG")"
-          echo "TARGET_SHA=$TARGET_SHA" >> $GITHUB_OUTPUT
-          echo "Target SHA for $LATEST_TAG: $TARGET_SHA"
+  #     - name: Get current and target commit SHAs
+  #       id: get-shas
+  #       env:
+  #         LATEST_TAG: ${{ steps.get-latest-tag.outputs.LATEST_TAG }}
+  #       run: |
+  #         CURRENT_SHA="$(git submodule status rollup | awk '{print $1}' | sed 's/^[-+]//')"
+  #         echo "CURRENT_SHA=$CURRENT_SHA" >> $GITHUB_OUTPUT
+  #         echo "Current rollup SHA: $CURRENT_SHA"
+  #         cd rollup
+  #         TARGET_SHA="$(git rev-list -n 1 "$LATEST_TAG")"
+  #         echo "TARGET_SHA=$TARGET_SHA" >> $GITHUB_OUTPUT
+  #         echo "Target SHA for $LATEST_TAG: $TARGET_SHA"
 
-      - name: Check if update is needed
-        id: check-update
-        env:
-          CURRENT_SHA: ${{ steps.get-shas.outputs.CURRENT_SHA }}
-          TARGET_SHA: ${{ steps.get-shas.outputs.TARGET_SHA }}
-          LATEST_TAG: ${{ steps.get-latest-tag.outputs.LATEST_TAG }}
-        run: |
-          if [ "$CURRENT_SHA" = "$TARGET_SHA" ]; then
-            echo "update_needed=false" >> $GITHUB_OUTPUT
-            echo "Rollup submodule is already at $LATEST_TAG ($TARGET_SHA)"
-          else
-            echo "update_needed=true" >> $GITHUB_OUTPUT
-            echo "Update needed: $CURRENT_SHA -> $TARGET_SHA ($LATEST_TAG)"
-          fi
+  #     - name: Check if update is needed
+  #       id: check-update
+  #       env:
+  #         CURRENT_SHA: ${{ steps.get-shas.outputs.CURRENT_SHA }}
+  #         TARGET_SHA: ${{ steps.get-shas.outputs.TARGET_SHA }}
+  #         LATEST_TAG: ${{ steps.get-latest-tag.outputs.LATEST_TAG }}
+  #       run: |
+  #         if [ "$CURRENT_SHA" = "$TARGET_SHA" ]; then
+  #           echo "update_needed=false" >> $GITHUB_OUTPUT
+  #           echo "Rollup submodule is already at $LATEST_TAG ($TARGET_SHA)"
+  #         else
+  #           echo "update_needed=true" >> $GITHUB_OUTPUT
+  #           echo "Update needed: $CURRENT_SHA -> $TARGET_SHA ($LATEST_TAG)"
+  #         fi
 
-      - name: Update rollup submodule
-        if: steps.check-update.outputs.update_needed == 'true'
-        env:
-          TARGET_SHA: ${{ steps.get-shas.outputs.TARGET_SHA }}
-        run: |
-          cd rollup
-          git checkout "$TARGET_SHA"
-          cd ..
-          git add rollup
+  #     - name: Update rollup submodule
+  #       if: steps.check-update.outputs.update_needed == 'true'
+  #       env:
+  #         TARGET_SHA: ${{ steps.get-shas.outputs.TARGET_SHA }}
+  #       run: |
+  #         cd rollup
+  #         git checkout "$TARGET_SHA"
+  #         cd ..
+  #         git add rollup
 
-      - name: Setup Rust
-        if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
-        with:
-          tools: just
-          cache-key: native-build
-          save-cache: false
+  #     - name: Setup Rust
+  #       if: steps.check-update.outputs.update_needed == 'true'
+  #       uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+  #       with:
+  #         tools: just
+  #         cache-key: native-build
+  #         save-cache: false
 
-      - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@8ecb39174989ce55af90f45cf55b02738599831d # v1.6.0
-        with:
-          cache: true
+  #     - if: steps.check-update.outputs.update_needed == 'true'
+  #       uses: voidzero-dev/setup-vp@8ecb39174989ce55af90f45cf55b02738599831d # v1.6.0
+  #       with:
+  #         cache: true
 
-      - if: steps.check-update.outputs.update_needed == 'true'
-        name: Build Native Rolldown
-        run: just build-rolldown
+  #     - if: steps.check-update.outputs.update_needed == 'true'
+  #       name: Build Native Rolldown
+  #       run: just build-rolldown
 
-      - name: Update rollup snapshots
-        if: steps.check-update.outputs.update_needed == 'true'
-        run: |
-          vp install
-          vp run --filter rollup-tests test --update
+  #     - name: Update rollup snapshots
+  #       if: steps.check-update.outputs.update_needed == 'true'
+  #       run: |
+  #         vp install
+  #         vp run --filter rollup-tests test --update
 
-      - name: Create Pull Request
-        if: steps.check-update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
-        with:
-          token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
-          commit-message: 'chore(deps): update rollup submodule for tests to ${{ steps.get-latest-tag.outputs.LATEST_TAG }}'
-          branch: update-rollup-submodule
-          branch-suffix: timestamp
-          base: main
-          title: 'chore(deps): update rollup submodule for tests to ${{ steps.get-latest-tag.outputs.LATEST_TAG }}'
-          assignees: sapphi-red
-          body: |
-            Updates the rollup submodule to the latest tag on master branch.
+  #     - name: Create Pull Request
+  #       if: steps.check-update.outputs.update_needed == 'true'
+  #       uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+  #       with:
+  #         token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
+  #         commit-message: 'chore(deps): update rollup submodule for tests to ${{ steps.get-latest-tag.outputs.LATEST_TAG }}'
+  #         branch: update-rollup-submodule
+  #         branch-suffix: timestamp
+  #         base: main
+  #         title: 'chore(deps): update rollup submodule for tests to ${{ steps.get-latest-tag.outputs.LATEST_TAG }}'
+  #         assignees: sapphi-red
+  #         body: |
+  #           Updates the rollup submodule to the latest tag on master branch.
 
-            ## Changes
+  #           ## Changes
 
-            - rollup: `${{ steps.get-shas.outputs.CURRENT_SHA }}` -> `${{ steps.get-shas.outputs.TARGET_SHA }}` (${{ steps.get-latest-tag.outputs.LATEST_TAG }})
+  #           - rollup: `${{ steps.get-shas.outputs.CURRENT_SHA }}` -> `${{ steps.get-shas.outputs.TARGET_SHA }}` (${{ steps.get-latest-tag.outputs.LATEST_TAG }})
 
-            ## Links
+  #           ## Links
 
-            - [Rollup ${{ steps.get-latest-tag.outputs.LATEST_TAG }} Release](https://github.com/rollup/rollup/releases/tag/${{ steps.get-latest-tag.outputs.LATEST_TAG }})
+  #           - [Rollup ${{ steps.get-latest-tag.outputs.LATEST_TAG }} Release](https://github.com/rollup/rollup/releases/tag/${{ steps.get-latest-tag.outputs.LATEST_TAG }})
 
-            ---
-            This PR was automatically generated by the [update-test-dependencies workflow](https://github.com/rolldown/rolldown/blob/main/.github/workflows/update-test-dependencies.yml).
+  #           ---
+  #           This PR was automatically generated by the [update-test-dependencies workflow](https://github.com/rolldown/rolldown/blob/main/.github/workflows/update-test-dependencies.yml).
 
-  update-test262:
-    name: Update Test262 Submodule
-    runs-on: namespace-profile-linux-x64-default
-    permissions:
-      contents: write # for create-pull-request
-      pull-requests: write # for create-pull-request
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: true
-          fetch-depth: 0
-          persist-credentials: true # for create-pull-request
+  # update-test262:
+  #   name: Update Test262 Submodule
+  #   runs-on: namespace-profile-linux-x64-default
+  #   permissions:
+  #     contents: write # for create-pull-request
+  #     pull-requests: write # for create-pull-request
+  #   steps:
+  #     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+  #       with:
+  #         submodules: true
+  #         fetch-depth: 0
+  #         persist-credentials: true # for create-pull-request
 
-      - name: Get latest Test262 commit SHA
-        id: get-latest-sha
-        env:
-          INPUT_TEST262_SHA: ${{ inputs.test262_sha }}
-        run: |
-          if [ -n "$INPUT_TEST262_SHA" ]; then
-            echo "LATEST_SHA=$INPUT_TEST262_SHA" >> $GITHUB_OUTPUT
-            echo "Using provided SHA: $INPUT_TEST262_SHA"
-          else
-            cd test262
-            git fetch origin main
-            LATEST_SHA="$(git rev-list -n 1 origin/main)"
-            if [ -z "$LATEST_SHA" ]; then
-              echo "Failed to get latest test262 commit"
-              exit 1
-            fi
-            echo "LATEST_SHA=$LATEST_SHA" >> $GITHUB_OUTPUT
-            echo "Latest test262 SHA: $LATEST_SHA"
-          fi
+  #     - name: Get latest Test262 commit SHA
+  #       id: get-latest-sha
+  #       env:
+  #         INPUT_TEST262_SHA: ${{ inputs.test262_sha }}
+  #       run: |
+  #         if [ -n "$INPUT_TEST262_SHA" ]; then
+  #           echo "LATEST_SHA=$INPUT_TEST262_SHA" >> $GITHUB_OUTPUT
+  #           echo "Using provided SHA: $INPUT_TEST262_SHA"
+  #         else
+  #           cd test262
+  #           git fetch origin main
+  #           LATEST_SHA="$(git rev-list -n 1 origin/main)"
+  #           if [ -z "$LATEST_SHA" ]; then
+  #             echo "Failed to get latest test262 commit"
+  #             exit 1
+  #           fi
+  #           echo "LATEST_SHA=$LATEST_SHA" >> $GITHUB_OUTPUT
+  #           echo "Latest test262 SHA: $LATEST_SHA"
+  #         fi
 
-      - name: Get current Test262 SHA
-        id: get-current-sha
-        run: |
-          CURRENT_SHA="$(git submodule status test262 | awk '{print $1}' | sed 's/^[-+]//')"
-          echo "CURRENT_SHA=$CURRENT_SHA" >> $GITHUB_OUTPUT
-          echo "Current test262 SHA: $CURRENT_SHA"
+  #     - name: Get current Test262 SHA
+  #       id: get-current-sha
+  #       run: |
+  #         CURRENT_SHA="$(git submodule status test262 | awk '{print $1}' | sed 's/^[-+]//')"
+  #         echo "CURRENT_SHA=$CURRENT_SHA" >> $GITHUB_OUTPUT
+  #         echo "Current test262 SHA: $CURRENT_SHA"
 
-      - name: Check if update is needed
-        id: check-update
-        env:
-          CURRENT_SHA: ${{ steps.get-current-sha.outputs.CURRENT_SHA }}
-          LATEST_SHA: ${{ steps.get-latest-sha.outputs.LATEST_SHA }}
-        run: |
-          if [ "$CURRENT_SHA" = "$LATEST_SHA" ]; then
-            echo "update_needed=false" >> $GITHUB_OUTPUT
-            echo "Test262 submodule is already at latest ($LATEST_SHA)"
-          else
-            echo "update_needed=true" >> $GITHUB_OUTPUT
-            echo "Update needed: $CURRENT_SHA -> $LATEST_SHA"
-          fi
+  #     - name: Check if update is needed
+  #       id: check-update
+  #       env:
+  #         CURRENT_SHA: ${{ steps.get-current-sha.outputs.CURRENT_SHA }}
+  #         LATEST_SHA: ${{ steps.get-latest-sha.outputs.LATEST_SHA }}
+  #       run: |
+  #         if [ "$CURRENT_SHA" = "$LATEST_SHA" ]; then
+  #           echo "update_needed=false" >> $GITHUB_OUTPUT
+  #           echo "Test262 submodule is already at latest ($LATEST_SHA)"
+  #         else
+  #           echo "update_needed=true" >> $GITHUB_OUTPUT
+  #           echo "Update needed: $CURRENT_SHA -> $LATEST_SHA"
+  #         fi
 
-      - name: Update test262 submodule
-        if: steps.check-update.outputs.update_needed == 'true'
-        env:
-          LATEST_SHA: ${{ steps.get-latest-sha.outputs.LATEST_SHA }}
-        run: |
-          cd test262
-          git fetch origin main
-          git checkout "$LATEST_SHA"
-          cd ..
-          git add test262
+  #     - name: Update test262 submodule
+  #       if: steps.check-update.outputs.update_needed == 'true'
+  #       env:
+  #         LATEST_SHA: ${{ steps.get-latest-sha.outputs.LATEST_SHA }}
+  #       run: |
+  #         cd test262
+  #         git fetch origin main
+  #         git checkout "$LATEST_SHA"
+  #         cd ..
+  #         git add test262
 
-      - name: Setup Rust
-        if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
-        with:
-          tools: just
-          cache-key: native-build
-          save-cache: false
+  #     - name: Setup Rust
+  #       if: steps.check-update.outputs.update_needed == 'true'
+  #       uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+  #       with:
+  #         tools: just
+  #         cache-key: native-build
+  #         save-cache: false
 
-      - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@8ecb39174989ce55af90f45cf55b02738599831d # v1.6.0
-        with:
-          cache: true
+  #     - if: steps.check-update.outputs.update_needed == 'true'
+  #       uses: voidzero-dev/setup-vp@8ecb39174989ce55af90f45cf55b02738599831d # v1.6.0
+  #       with:
+  #         cache: true
 
-      - name: Run Test
-        if: steps.check-update.outputs.update_needed == 'true'
-        run: just test-rust
-        env:
-          # Update snapshots https://insta.rs/docs/advanced/#controlling-snapshot-updating
-          INSTA_UPDATE: always
+  #     - name: Run Test
+  #       if: steps.check-update.outputs.update_needed == 'true'
+  #       run: just test-rust
+  #       env:
+  #         # Update snapshots https://insta.rs/docs/advanced/#controlling-snapshot-updating
+  #         INSTA_UPDATE: always
 
-      - name: Create Pull Request
-        if: steps.check-update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
-        with:
-          token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
-          commit-message: 'chore(deps): update test262 submodule for tests'
-          branch: update-test262-submodule
-          branch-suffix: timestamp
-          base: main
-          title: 'chore(deps): update test262 submodule for tests'
-          assignees: sapphi-red
-          body: |
-            Updates the test262 submodule to the latest commit on main branch.
+  #     - name: Create Pull Request
+  #       if: steps.check-update.outputs.update_needed == 'true'
+  #       uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+  #       with:
+  #         token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
+  #         commit-message: 'chore(deps): update test262 submodule for tests'
+  #         branch: update-test262-submodule
+  #         branch-suffix: timestamp
+  #         base: main
+  #         title: 'chore(deps): update test262 submodule for tests'
+  #         assignees: sapphi-red
+  #         body: |
+  #           Updates the test262 submodule to the latest commit on main branch.
 
-            ## Changes
+  #           ## Changes
 
-            - test262: `${{ steps.get-current-sha.outputs.CURRENT_SHA }}` -> `${{ steps.get-latest-sha.outputs.LATEST_SHA }}`
+  #           - test262: `${{ steps.get-current-sha.outputs.CURRENT_SHA }}` -> `${{ steps.get-latest-sha.outputs.LATEST_SHA }}`
 
-            ## Links
+  #           ## Links
 
-            - [Test262 Repository](https://github.com/tc39/test262)
+  #           - [Test262 Repository](https://github.com/tc39/test262)
 
-            ---
-            This PR was automatically generated by the [update-test-dependencies workflow](https://github.com/rolldown/rolldown/blob/main/.github/workflows/update-test-dependencies.yml).
+  #           ---
+  #           This PR was automatically generated by the [update-test-dependencies workflow](https://github.com/rolldown/rolldown/blob/main/.github/workflows/update-test-dependencies.yml).
 
   update-esbuild:
     name: Update esbuild Version
@@ -322,6 +322,9 @@ jobs:
           echo "Updated ESBUILD_VERSION from $CURRENT_VERSION to $LATEST_VERSION"
           grep "const ESBUILD_VERSION = " scripts/src/esbuild-tests/urls.ts
 
+      - name: Debug 1
+        run: cat scripts/src/esbuild-tests/urls.ts
+
       - name: Setup Rust
         if: steps.check-update.outputs.update_needed == 'true'
         uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
@@ -335,33 +338,36 @@ jobs:
         with:
           cache: true
 
+      - name: Debug 2
+        run: cat scripts/src/esbuild-tests/urls.ts
+
       - name: Generate esbuild tests
         if: steps.check-update.outputs.update_needed == 'true'
         run: |
           vp install
           vp run --filter scripts gen-esbuild-tests all
 
-      - name: Create Pull Request
-        if: steps.check-update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
-        with:
-          token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
-          commit-message: 'chore(deps): update esbuild for tests to ${{ steps.get-latest-version.outputs.LATEST_VERSION }}'
-          branch: update-esbuild-version
-          branch-suffix: timestamp
-          base: main
-          title: 'chore(deps): update esbuild for tests to ${{ steps.get-latest-version.outputs.LATEST_VERSION }}'
-          assignees: sapphi-red
-          body: |
-            Updates the esbuild test version to the latest release.
+      # - name: Create Pull Request
+      #   if: steps.check-update.outputs.update_needed == 'true'
+      #   uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+      #   with:
+      #     token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
+      #     commit-message: 'chore(deps): update esbuild for tests to ${{ steps.get-latest-version.outputs.LATEST_VERSION }}'
+      #     branch: update-esbuild-version
+      #     branch-suffix: timestamp
+      #     base: main
+      #     title: 'chore(deps): update esbuild for tests to ${{ steps.get-latest-version.outputs.LATEST_VERSION }}'
+      #     assignees: sapphi-red
+      #     body: |
+      #       Updates the esbuild test version to the latest release.
 
-            ## Changes
+      #       ## Changes
 
-            - esbuild: `${{ steps.get-current-version.outputs.CURRENT_VERSION }}` -> `${{ steps.get-latest-version.outputs.LATEST_VERSION }}`
+      #       - esbuild: `${{ steps.get-current-version.outputs.CURRENT_VERSION }}` -> `${{ steps.get-latest-version.outputs.LATEST_VERSION }}`
 
-            ## Links
+      #       ## Links
 
-            - [esbuild v${{ steps.get-latest-version.outputs.LATEST_VERSION }} Release](https://github.com/evanw/esbuild/releases/tag/v${{ steps.get-latest-version.outputs.LATEST_VERSION }})
+      #       - [esbuild v${{ steps.get-latest-version.outputs.LATEST_VERSION }} Release](https://github.com/evanw/esbuild/releases/tag/v${{ steps.get-latest-version.outputs.LATEST_VERSION }})
 
-            ---
-            This PR was automatically generated by the [update-test-dependencies workflow](https://github.com/rolldown/rolldown/blob/main/.github/workflows/update-test-dependencies.yml).
+      #       ---
+      #       This PR was automatically generated by the [update-test-dependencies workflow](https://github.com/rolldown/rolldown/blob/main/.github/workflows/update-test-dependencies.yml).

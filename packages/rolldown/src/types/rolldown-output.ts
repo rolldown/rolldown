@@ -38,8 +38,21 @@ export interface SourceMap {
 
 /** @category Plugin APIs */
 export interface RenderedModule {
+  /**
+   * The rendered code of this module.
+   *
+   * The unused variables and functions are removed.
+   */
   readonly code: string | null;
+  /**
+   * The length of the rendered code of this module.
+   */
   renderedLength: number;
+  /**
+   * The list of exported names from this module.
+   *
+   * The names that are not used are not included.
+   */
   renderedExports: string[];
 }
 

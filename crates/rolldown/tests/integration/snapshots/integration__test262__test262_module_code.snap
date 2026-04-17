@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 543 passed, 51 failed, 594 total
+Summary: 543 passed, 53 failed, 596 total
 
 ---
 
@@ -1245,6 +1245,32 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: success
 Actual: Runtime execution succeeded
+---
+
+# language/module-code/instn-star-iee-multi-cycle-same-name.js
+Result: FAIL
+Expected: success
+Actual:
+'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
+'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
+'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
+'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
+'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
+'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
+'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
+'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
+'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
+'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
+'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
+'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
+---
+
+# language/module-code/instn-star-iee-single-cycle-same-name.js
+Result: FAIL
+Expected: success
+Actual:
+'foo' cannot be exported from 'instn-star-iee-single-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
+'foo' cannot be exported from 'instn-star-iee-single-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
 ---
 
 # language/module-code/instn-star-props-circular.js

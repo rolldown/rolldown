@@ -10,7 +10,7 @@ use oxc::{
   ast_visit::{Visit, walk},
 };
 use rolldown_common::{
-  AstScopes, ConstExportMeta, EcmaViewMeta, FlatOptions, GetLocalDb, ModuleIdx,
+  AstScopes, ConstExportMeta, EcmaViewMeta, FlatOptions, GetLocalDb, IndexModules, ModuleIdx,
   SharedNormalizedBundlerOptions, SideEffectDetail, StmtInfoIdx, SymbolRef, SymbolRefDb,
   SymbolRefFlags,
 };
@@ -53,34 +53,14 @@ type ModuleIdxAndStmtIdxToDynamicImportExprAddrMap =
   FxHashMap<ModuleIdx, FxHashMap<StmtInfoIdx, FxHashSet<Address>>>;
 
 impl LinkStage<'_> {
-  fn prepare_cross_module_optimization(&mut self) -> CrossModuleOptimizationConfig {
-    let side_effect_free_function_symbols = self
-      .module_table
-      .iter()
-      .zip(self.symbols.inner().iter())
-      .filter_map(|(m, symbol_for_module)| {
-        let normal_module = m.as_normal()?;
-        let idx = normal_module.idx;
-        normal_module
-          .meta
-          .contains(EcmaViewMeta::TopExportedSideEffectsFreeFunction)
-          .then(move || {
-            let symbol_for_module = symbol_for_module.as_ref()?;
-            Some(symbol_for_module.flags.iter().filter_map(move |(symbol_id, flag)| {
-              flag
-                .contains(SymbolRefFlags::SideEffectsFreeFunction)
-                .then_some(SymbolRef::from((idx, *symbol_id)))
-            }))
-          })
-          .flatten()
-      })
-      .flatten()
-      .collect::<FxHashSet<SymbolRef>>();
-    self.side_effects_free_function_symbol_ref = side_effect_free_function_symbols;
+  fn prepare_cross_module_optimization(&self) -> CrossModuleOptimizationConfig {
+    let has_side_effect_free_functions = self.module_table.iter().any(|m| {
+      m.as_normal()
+        .is_some_and(|n| n.meta.contains(EcmaViewMeta::TopExportedSideEffectsFreeFunction))
+    });
 
     #[expect(clippy::bool_to_int_with_if)]
-    let other_optimization_pass =
-      if self.side_effects_free_function_symbol_ref.is_empty() { 0 } else { 1 };
+    let other_optimization_pass = if has_side_effect_free_functions { 1 } else { 0 };
     let cross_module_inline_const_pass = self.options.optimization.inline_const_pass() - 1;
     CrossModuleOptimizationConfig {
       pass: cross_module_inline_const_pass.max(other_optimization_pass),
@@ -222,7 +202,7 @@ impl LinkStage<'_> {
               export_default_symbol: module.default_export_ref,
               module_idx,
               config: &cross_module_inline_const_ctx.config,
-              global_side_effect_free_function_symbols: &self.side_effects_free_function_symbol_ref,
+              modules: &self.module_table.modules,
               symbols: &self.symbols,
               flat_options: self.flat_options,
               options: self.options,
@@ -285,7 +265,7 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
   export_default_symbol: SymbolRef,
   module_idx: ModuleIdx,
   config: &'a CrossModuleOptimizationConfig,
-  global_side_effect_free_function_symbols: &'a FxHashSet<SymbolRef>,
+  modules: &'a IndexModules,
   symbols: &'a SymbolRefDb,
   flat_options: FlatOptions,
   options: &'a SharedNormalizedBundlerOptions,
@@ -335,6 +315,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
           self.immutable_ctx.flat_options,
           self.immutable_ctx.options,
           Some(&self.side_effect_free_call_expr_addr),
+          None,
         )
         .detect_side_effect_of_stmt(stmt);
         self.side_effect_detail_mutations.insert(stmt_info_idx, side_effect_detail);
@@ -377,8 +358,8 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
           .immutable_ctx
           .symbols
           .canonical_ref_for((self.immutable_ctx.module_idx, symbol_id).into());
-        let is_free =
-          self.immutable_ctx.global_side_effect_free_function_symbols.contains(&symbol_ref);
+        let is_free = symbol_ref
+          .is_side_effect_free_function(self.immutable_ctx.symbols, self.immutable_ctx.modules);
         let is_annotation_only = is_free
           && self
             .immutable_ctx

@@ -1,5 +1,6 @@
 use oxc::semantic::{NodeId, Reference, ReferenceId, ScopeId, Scoping, SymbolFlags, SymbolId};
-use oxc::span::{Ident, SPAN};
+use oxc::span::SPAN;
+use oxc_str::Ident;
 
 #[derive(Debug)]
 pub struct AstScopes {

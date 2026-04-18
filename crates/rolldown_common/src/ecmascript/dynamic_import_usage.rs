@@ -1,7 +1,5 @@
-use oxc::{
-  semantic::{ReferenceId, SymbolId},
-  span::CompactStr,
-};
+use oxc::semantic::{ReferenceId, SymbolId};
+use oxc_str::CompactStr;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::ImportRecordIdx;

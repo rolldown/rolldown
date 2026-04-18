@@ -1,6 +1,6 @@
 import type { ExistingRawSourceMap, SourceMapInput } from '../types/sourcemap';
 
-export function isEmptySourcemapFiled(array: undefined | (string | null)[]): boolean {
+export function isEmptySourcemapFiled(array: undefined | (string | null | undefined)[]): boolean {
   if (!array) {
     return true;
   }

@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
-use oxc::{ast::ast, span::CompactStr};
+use oxc::ast::ast;
+use oxc_str::CompactStr;
 use rolldown_utils::indexmap::FxIndexMap;
 
 #[derive(Debug, Clone, Default)]
@@ -65,7 +66,7 @@ impl Display for ImportAttribute {
       .entries
       .iter()
       .map(|(key, value)| match key {
-        ImportAttributeKey::String(s) => format!("\"{s}\": \"{value}\"",),
+        ImportAttributeKey::String(s) => format!("\"{s}\": \"{value}\""),
         ImportAttributeKey::Identifier(id) => format!("{id}: \"{value}\""),
       })
       .collect::<Vec<_>>()

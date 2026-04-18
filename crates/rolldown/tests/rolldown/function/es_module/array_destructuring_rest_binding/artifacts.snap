@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.js
+var stages;
+var init_lib = __esmMin((() => {
+	stages = {
+		a: "1",
+		b: "2",
+		c: "3"
+	};
+}));
+//#endregion
+//#region main.js
+var first, rest, all;
+//#endregion
+__esmMin((() => {
+	init_lib();
+	[first, ...rest] = Object.values(stages);
+	if (!first) throw new Error("empty");
+	all = [first, ...rest];
+	assert.deepStrictEqual(all, [
+		"1",
+		"2",
+		"3"
+	]);
+}))();
+export { all };
+
+```

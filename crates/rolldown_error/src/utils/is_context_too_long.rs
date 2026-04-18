@@ -10,15 +10,17 @@ pub fn is_context_too_long(
 ) -> bool {
   let span = label.span();
   let source_id = span.source();
-  let source = files.get(source_id).expect("should have file");
+  let Some(source) = files.get(source_id) else {
+    return true;
+  };
   if source.len() < 600 {
     return false;
   }
   let rope = ropey::Rope::from_str(source);
 
   if span.start() > rope.len_bytes() || span.end() > rope.len_bytes() {
-    unreachable!(
-      "Internal error: Diagnostic span is out of range. This should never happen! \
+    eprintln!(
+      "Internal error: Diagnostic span is out of range. \
        Span: {}..{}, Rope length: {} bytes, Source ID: {:?}, Label message: {:?}. \
        Please report this bug with the source file that triggered this error.",
       span.start(),
@@ -27,6 +29,7 @@ pub fn is_context_too_long(
       source_id,
       label.display_info().msg()
     );
+    return true;
   }
 
   // 1. If start to beginning of the file is less than 300 characters, treated as it has line feed before.

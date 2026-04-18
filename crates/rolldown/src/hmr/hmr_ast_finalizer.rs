@@ -1,3 +1,4 @@
+use oxc::ast::ast::Str;
 use oxc::{
   allocator::{Allocator, Box as ArenaBox, IntoIn, TakeIn},
   ast::{
@@ -5,7 +6,7 @@ use oxc::{
     ast::{self, ExportDefaultDeclarationKind, Expression, ObjectPropertyKind, Statement},
   },
   semantic::{IsGlobalReference, Scoping, SymbolId},
-  span::{SPAN, Span, Str},
+  span::{SPAN, Span},
 };
 
 use rolldown_common::{
@@ -188,11 +189,11 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                 ast::Declaration::VariableDeclaration(var_decl) => {
                   // export var foo = 1
                   // export var { foo, bar } = { foo: 1, bar: 2 }
-                  self.exports.extend(var_decl.declarations.iter().filter_map(|decl| {
-                    decl.id.get_identifier_name().map(|ident| {
+                  self.exports.extend(var_decl.declarations.iter().flat_map(|decl| {
+                    decl.id.get_binding_identifiers().into_iter().map(|ident| {
                       self.snippet.object_property_kind_object_property(
-                        ident.as_str(),
-                        self.snippet.id_ref_expr(ident.as_str(), SPAN),
+                        ident.name.as_str(),
+                        self.snippet.id_ref_expr(ident.name.as_str(), SPAN),
                         false,
                       )
                     })

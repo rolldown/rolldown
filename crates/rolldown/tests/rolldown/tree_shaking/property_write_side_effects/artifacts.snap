@@ -7,6 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region constants.js
+const obj = {
+	nested: { deep: { value: 0 } },
+	prop: 10,
+	other: 20
+};
 const counter = {
 	value: 0,
 	count: 0,
@@ -15,6 +20,7 @@ const counter = {
 const temp = {};
 //#endregion
 //#region main.js
+obj.nested.deep.value = 42;
 o.foo = 100;
 temp["bar"] = 200;
 console.log(temp);
@@ -26,6 +32,10 @@ counter.value++;
 });
 counter.another++;
 console.log(counter);
+obj.prop--;
+--obj.other;
+const key = Math.random() > .5 ? "a" : "b";
+obj[key] = "computed";
 const config = {};
 config.option = true;
 var main_default = { config };

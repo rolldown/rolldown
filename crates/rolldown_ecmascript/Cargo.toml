@@ -16,6 +16,7 @@ workspace = true
 arcstr = { workspace = true }
 oxc = { workspace = true }
 oxc_sourcemap = { workspace = true }
+oxc_str = { workspace = true }
 rolldown_error = { workspace = true }
 self_cell = { workspace = true }
 

@@ -62,7 +62,7 @@ impl BuildEvent for DiagnosableResolveError {
       diagnostic.add_help(help.clone());
     }
     if let Some(chain) = &self.import_chain {
-      let mut help = format!("'{stable_id}' is imported by the following path:",);
+      let mut help = format!("'{stable_id}' is imported by the following path:");
       let _ = write!(help, "\n  - {stable_id}");
       for path in chain {
         let _ = write!(help, "\n  - {}", opts.stabilize_path(path));

@@ -86,25 +86,23 @@ impl LinkStage<'_> {
                       }
                     }
                   }
-                  ImportKind::Require => {
+                  ImportKind::Require
                     if self.options.format.should_call_runtime_require()
-                      && self.options.polyfill_require_for_esm_format_with_node_platform()
-                    {
-                      stmt_info
-                        .referenced_symbols
-                        .push(self.runtime.resolve_symbol("__require").into());
-                      record_meta_pairs.push((*rec_id, ImportRecordMeta::CallRuntimeRequire));
-                    }
+                      && self.options.polyfill_require_for_esm_format_with_node_platform() =>
+                  {
+                    stmt_info
+                      .referenced_symbols
+                      .push(self.runtime.resolve_symbol("__require").into());
+                    record_meta_pairs.push((*rec_id, ImportRecordMeta::CallRuntimeRequire));
                   }
-                  ImportKind::DynamicImport => {
+                  ImportKind::DynamicImport
+                    if matches!(self.options.format, OutputFormat::Cjs)
+                      && !self.options.dynamic_import_in_cjs =>
+                  {
                     // When format is CJS and dynamicImportInCjs is false, we need __toESM
                     // to wrap the require call: `Promise.resolve().then(() => __toESM(require("external")))`
-                    if matches!(self.options.format, OutputFormat::Cjs)
-                      && !self.options.dynamic_import_in_cjs
-                    {
-                      depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
-                        .push(stmt_info_idx);
-                    }
+                    depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
+                      .push(stmt_info_idx);
                   }
                   _ => {}
                 }

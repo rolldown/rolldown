@@ -24,10 +24,11 @@ use oxc::{
   },
   ast_visit::Visit,
   semantic::SymbolId,
-  span::{CompactStr, GetSpan, Span},
+  span::{GetSpan, Span},
 };
 use oxc_allocator::Address;
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
   ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
@@ -37,7 +38,7 @@ use rolldown_common::{
   StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
   TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
-use rolldown_ecmascript_utils::{BindingPatternExt, FunctionExt};
+use rolldown_ecmascript_utils::FunctionExt;
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
@@ -127,20 +128,6 @@ pub struct ScanResult {
   pub cjs_reexport_import_record_ids: Vec<ImportRecordIdx>,
 }
 
-bitflags::bitflags! {
-    #[derive(Debug, Clone, Copy)]
-    struct TraverseState: u8 {
-        /// If this flag is set, all top level symbol id during traverse should be inserted into
-        /// [`rolldown_common::types::stmt_info::StmtInfos::symbol_ref_to_referenced_stmt_idx`]
-        const RootSymbolReferenceStmtInfoId = 1;
-        /// If current position all parent scopes are block scope or top level scope.
-        /// A cache state of [AstScanner::is_valid_tla_scope]
-        const TopLevel = 1 << 1;
-        /// Set when traversing a member expression that is an assignment target (write context).
-        const MemberExprIsWrite = 1 << 2;
-    }
-}
-
 pub struct AstScannerImmutableCtx<'me, 'ast> {
   idx: ModuleIdx,
   source: &'me ArcStr,
@@ -175,9 +162,14 @@ pub struct AstScanner<'me, 'ast> {
   /// Set when `module.exports = <value>` is detected. All prior `exports.xxx`
   /// constants are stale since the entire exports object is replaced at runtime.
   has_module_exports_reassignment: bool,
-  traverse_state: TraverseState,
+  /// Whether the current position is at the top level (all parent scopes are block or top-level).
+  /// A cache of [AstScanner::is_valid_tla_scope].
+  is_top_level: bool,
   current_comment_idx: usize,
   untranspiled_syntax: UntranspiledSyntax,
+  /// Symbol IDs of namespace imports (`import * as ns from '...'`).
+  /// Used to treat property reads on namespace objects as side-effect-free.
+  namespace_object_symbol_ids: FxHashSet<SymbolId>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -269,9 +261,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         CommonjsExportSymbolUsage { read: 0, write: 0, bailout: true },
       )]),
       has_module_exports_reassignment: false,
-      traverse_state: TraverseState::empty(),
+      is_top_level: false,
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
+      namespace_object_symbol_ids: FxHashSet::default(),
     }
   }
 
@@ -552,6 +545,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         span_imported,
       },
     );
+    self.namespace_object_symbol_ids.insert(local);
   }
 
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
@@ -763,7 +757,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         match decl {
           ast::Declaration::VariableDeclaration(var_decl) => {
             var_decl.declarations.iter().for_each(|decl| {
-              decl.id.binding_identifiers().into_iter().for_each(|id| {
+              decl.id.get_binding_identifiers().into_iter().for_each(|id| {
                 self.add_local_export(&id.name, id.symbol_id(), id.span);
               });
               if let BindingPattern::BindingIdentifier(ref binding) = decl.id {
@@ -1002,6 +996,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       )
       .into(),
     );
+  }
+
+  /// Check if this identifier reference is the object of a member expression in a write context
+  /// (e.g., `A` in `A.foo = 1`, `A.foo += 1`, `A.foo++`, `delete A.foo`).
+  fn is_member_write_target(&self, ident_ref: &IdentifierReference) -> bool {
+    ident_ref.reference_id.get().is_some_and(|ref_id| {
+      self.result.symbol_ref_db.scoping().get_reference(ref_id).flags().is_member_write_target()
+    })
   }
 
   fn is_root_symbol(&self, symbol_id: SymbolId) -> bool {

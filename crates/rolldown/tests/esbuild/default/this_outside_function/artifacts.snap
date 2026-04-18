@@ -30,13 +30,17 @@ if (shouldBeThisNotExports) {
 		foo = this;
 	});
 	console.log(class {
-		foo() {}
+		foo() {
+			this;
+		}
 	});
 	console.log(class {
 		static foo = this;
 	});
 	console.log(class {
-		static foo() {}
+		static foo() {
+			this;
+		}
 	});
 }
 //#endregion

@@ -6,25 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region enums.ts
-let a = /* @__PURE__ */ function(a) {
-	a["x"] = "a";
-	return a;
-}({});
-let b = /* @__PURE__ */ function(b) {
-	b["x"] = "b";
-	return b;
-}({});
-let c = /* @__PURE__ */ function(c) {
-	c["x"] = "c";
-	return c;
-}({});
 //#endregion
 //#region entry.js
 console.log([
-	a.x,
-	b.x,
-	c.x
+	"a",
+	"b",
+	"c"
 ]);
 //#endregion
 

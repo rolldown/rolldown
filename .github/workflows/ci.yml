@@ -30,9 +30,8 @@ jobs:
       node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}
       pluginutils-changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}
       docs-changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}
-      # Run Windows CI on `main` pushes, or on PRs labeled with `ci: windows`.
-      # Allows opting into Windows coverage per-PR without running it for every PR.
-      run-windows: "${{ (github.ref_name == 'main') || ((github.event_name == 'pull_request') && contains(github.event.pull_request.labels.*.name, 'ci: windows')) }}"
+      # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
+      run-windows: "${{ (github.event_name == 'pull_request') && contains(github.event.pull_request.labels.*.name, 'ci: windows') }}"
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
@@ -114,7 +113,7 @@ jobs:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-test.yml
     if: |
-      needs.changes.outputs.run-windows == 'true' &&
+      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
@@ -157,7 +156,7 @@ jobs:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
     if: |
-      needs.changes.outputs.run-windows == 'true' &&
+      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
@@ -231,7 +230,7 @@ jobs:
     name: Vite Test Windows
     needs: [changes, build-rolldown-windows]
     if: |
-      needs.changes.outputs.run-windows == 'true' &&
+      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     runs-on: windows-latest
@@ -267,7 +266,7 @@ jobs:
 
   build-rolldown-windows:
     needs: changes
-    if: needs.changes.outputs.run-windows == 'true'
+    if: github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true'
     uses: ./.github/workflows/reusable-native-build.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}

@@ -32,7 +32,7 @@ jobs:
       docs-changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}
       # Run Windows CI on `main` pushes, or on PRs labeled with `ci: windows`.
       # Allows opting into Windows coverage per-PR without running it for every PR.
-      run-windows: ${{ (github.ref_name == 'main') || contains(github.event.pull_request.labels.*.name, 'ci: windows') }}
+      run-windows: "${{ (github.ref_name == 'main') || contains(github.event.pull_request.labels.*.name, 'ci: windows') }}"
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 

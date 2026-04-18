@@ -353,7 +353,12 @@ impl GenerateStage<'_> {
           continue;
         };
 
-        for dep_idx in module.import_records.iter().filter_map(|r| r.resolved_module) {
+        for dep_idx in module
+          .import_records
+          .iter()
+          .filter(|rec| rec.kind.is_static())
+          .filter_map(|r| r.resolved_module)
+        {
           // Can't put it at the beginning of the loop,
           if let Some(chunk_idx) = dynamic_entry_modules.get(&dep_idx) {
             ret.entry(entry_chunk_idx).or_default().insert(*chunk_idx);
@@ -620,9 +625,6 @@ impl GenerateStage<'_> {
       // the dynamic entries would not be able to access the shared modules.
       let all_dynamic_entries_reachable =
         dynamic_entry.iter().all(|idx| reached_dynamic_chunk.is_some_and(|set| set.contains(idx)));
-      if !all_dynamic_entries_reachable {
-        return None;
-      }
       // If any dynamic entry chunk depends on the pending common chunk,
       // merging into the user-defined entry would make the dynamic entry
       // import the entry chunk. This is only safe if the entry chunk
@@ -649,6 +651,39 @@ impl GenerateStage<'_> {
           return None;
         }
       }
+      let candidate_modules =
+        chunk.modules.iter().copied().chain(info.modules.iter().copied()).collect::<FxHashSet<_>>();
+      let mut statically_owned_modules = chunk.modules.iter().copied().collect::<FxHashSet<_>>();
+      let mut changed = true;
+      while changed {
+        changed = false;
+        for &module_idx in &info.modules {
+          if statically_owned_modules.contains(&module_idx) {
+            continue;
+          }
+          let Some(module) = module_table[module_idx].as_normal() else {
+            continue;
+          };
+
+          let is_statically_owned = module.importers_idx.iter().any(|importer_idx| {
+            candidate_modules.contains(importer_idx)
+              && statically_owned_modules.contains(importer_idx)
+              && module_table[*importer_idx].as_normal().is_some_and(|importer| {
+                importer
+                  .import_records
+                  .iter()
+                  .any(|rec| rec.kind.is_static() && rec.resolved_module == Some(module_idx))
+              })
+          });
+
+          if is_statically_owned {
+            statically_owned_modules.insert(module_idx);
+            changed = true;
+          }
+        }
+      }
+      let modules_are_statically_used_by_target_chunk =
+        info.modules.iter().all(|module_idx| statically_owned_modules.contains(module_idx));
       let modules_set = chunk
         .modules
         .iter()
@@ -673,7 +708,23 @@ impl GenerateStage<'_> {
         // all importer are in current chunk (includes those modules will be merged)
         importers.iter().all(|importer| modules_set.contains(importer))
       });
-      all_dynamic_entry_importers_valid.then_some(chunk_idx)
+      let all_dynamic_entries_importers_valid = dynamic_entry.iter().all(|dynamic_chunk_idx| {
+        let dynamic_chunk = &chunk_graph.chunk_table[*dynamic_chunk_idx];
+        let Some(dynamic_entry_module_idx) = dynamic_chunk.entry_module_idx() else {
+          return false;
+        };
+        let Some(importers) = dynamic_entry_to_dynamic_importers.get(&dynamic_entry_module_idx)
+        else {
+          return false;
+        };
+
+        importers.iter().all(|importer| modules_set.contains(importer))
+      });
+
+      ((all_dynamic_entries_reachable
+        || (modules_are_statically_used_by_target_chunk && all_dynamic_entries_importers_valid))
+        && all_dynamic_entry_importers_valid)
+        .then_some(chunk_idx)
     }
   }
 

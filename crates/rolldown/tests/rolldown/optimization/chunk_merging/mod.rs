@@ -1,2 +1,3 @@
 mod allow_extension_exports;
 mod allow_extension_merge_same_exports;
+mod startup_entry_shared_module_not_eager_chunked;

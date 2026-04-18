@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+//#region route-shared.js
+const shared = "shared";
+//#endregion
+//#region route-graph.js
+const eagerValue = `${shared}-eager`;
+const loadRouteComponent = () => import("./route-component.js");
+//#endregion
+//#region main.js
+assert.strictEqual(eagerValue, "shared-eager");
+loadRouteComponent().then((mod) => {
+	assert.strictEqual(mod.componentValue, "shared-lazy");
+});
+//#endregion
+export { shared as t };
+
+```
+
+## route-component.js
+
+```js
+import { t as shared } from "./main.js";
+//#region route-component.js
+const componentValue = `${shared}-lazy`;
+//#endregion
+export { componentValue };
+
+```

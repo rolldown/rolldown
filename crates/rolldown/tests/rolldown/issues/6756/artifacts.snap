@@ -6,13 +6,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { n as utilityClass, t as helper } from "./main.js";
+import { n as utilityClass, t as helper } from "./shared.js";
 new utilityClass(helper());
 //#endregion
 
 ```
 
 ## main.js
+
+```js
+import { t as helper } from "./shared.js";
+//#region main.js
+console.log(helper());
+import("./dynamic.js");
+//#endregion
+
+```
+
+## shared.js
 
 ```js
 //#region shared.js
@@ -24,10 +35,6 @@ var utilityClass = class {
 		this.value = value;
 	}
 };
-//#endregion
-//#region main.js
-console.log(helper());
-import("./dynamic.js");
 //#endregion
 export { utilityClass as n, helper as t };
 

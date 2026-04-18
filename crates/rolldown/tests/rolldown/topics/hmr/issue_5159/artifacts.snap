@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bar.js
 
 ```js
-import { t as __exportAll } from "./main.js";
+import { t as __exportAll } from "./chunk.js";
 import { t as trim } from "./string.js";
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ default: () => bar_default });
@@ -20,10 +20,18 @@ export { bar_default as default };
 
 ```
 
+## chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```
+
 ## foo.js
 
 ```js
-import { t as __exportAll } from "./main.js";
+import { t as __exportAll } from "./chunk.js";
 import { n as unused, t as trim } from "./string.js";
 //#region utils/index.js
 var utils_exports = /* @__PURE__ */ __exportAll({
@@ -48,15 +56,18 @@ export { foo_default as default };
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as t };
+import "./chunk.js";
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", {});
+import("./foo.js"), import("./bar.js");
+//#endregion
 
 ```
 
 ## string.js
 
 ```js
-import { t as __exportAll } from "./main.js";
+import { t as __exportAll } from "./chunk.js";
 //#region utils/string.js
 var string_exports = /* @__PURE__ */ __exportAll({
 	trim: () => trim,

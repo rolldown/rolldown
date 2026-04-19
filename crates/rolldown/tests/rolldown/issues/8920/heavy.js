@@ -1,5 +1,5 @@
 export class HeavyService {
   run() {
-    return "heavy";
+    return 'heavy';
   }
 }

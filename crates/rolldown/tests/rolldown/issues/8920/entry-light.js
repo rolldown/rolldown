@@ -1,2 +1,2 @@
-import { light } from "./barrel.js";
+import { light } from './barrel.js';
 console.log(light());

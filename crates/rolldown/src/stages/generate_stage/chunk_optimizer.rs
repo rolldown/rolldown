@@ -216,8 +216,17 @@ impl ChunkOptimizationGraph {
       // Including target's deps causes false positives because the simulation
       // finds that target can trivially "reach itself" through any transitive
       // dependency that also depends on source.
-      let mut queue: VecDeque<ChunkIdx> =
-        self.chunks[source_chunk_idx].dependencies.iter().copied().collect();
+      //
+      // Also skip target itself: after merge, a direct `source -> target`
+      // edge becomes the merged chunk's self-loop (internal dep), not a
+      // cross-chunk cycle. Only indirect reachability through another
+      // chunk counts.
+      let mut queue: VecDeque<ChunkIdx> = self.chunks[source_chunk_idx]
+        .dependencies
+        .iter()
+        .copied()
+        .filter(|&c| c != target_chunk_idx)
+        .collect();
       let mut visited = FxHashSet::default();
 
       while let Some(chunk_idx) = queue.pop_front() {

@@ -379,53 +379,81 @@ impl LinkStage<'_> {
       entries
     };
 
-    // Per-entry re-walk of namespace statements.
-    //
-    // The main walk dedups stmt traversal per entry via `per_entry_stmt_visited`:
-    // once one entry walks a module's ns stmt (typically triggered by an
-    // importer consuming the namespace object via `import *` or similar),
-    // other entries that reach the module via different paths never traverse
-    // the ns stmt under their own entry context. That leaves runtime helpers
-    // embedded in the ns stmt (notably `__exportAll`, wired in by
-    // `create_exports_for_ecma_modules`) attributed only to the first walker —
-    // which then gives the runtime module narrower per-entry bits than main's
-    // dep-graph BFS would produce (see issues/8595 and
-    // code_splitting/dynamic_import_and_static_import_one_file).
-    //
-    // The ns stmt is the only stmt with this gap (the rest of the graph is
-    // walked naturally because referenced_symbols fan out from there). So
-    // replay `include_statement` for each module's ns stmt under every entry
-    // already reaching the module; the existing per-entry dedup short-circuits
-    // the already-walked ones.
-    let ns_walk_plan: Vec<(ModuleIdx, Vec<EntryIdx>)> = context
-      .is_module_included_vec
-      .iter_enumerated()
-      .filter_map(|(module_idx, bitset)| {
-        if bitset.is_empty() {
-          return None;
-        }
-        context.modules[module_idx].as_normal()?;
-        if !context.is_included_vec[module_idx].has_bit(StmtInfos::NAMESPACE_STMT_IDX) {
-          return None;
-        }
-        let entries: Vec<EntryIdx> =
-          bitset.index_of_one().filter(|e| *e != global_entry_idx).collect();
-        if entries.is_empty() { None } else { Some((module_idx, entries)) }
-      })
-      .collect();
-    for (module_idx, entries) in ns_walk_plan {
-      let Module::Normal(module) = &context.modules[module_idx] else { continue };
-      for entry_idx in entries {
-        context.current_entry_idx = Some(entry_idx);
-        include_statement(context, module, StmtInfos::NAMESPACE_STMT_IDX);
-      }
-    }
-    context.current_entry_idx = None;
-
     // Free the per-entry dedup scratch now that the fixpoint has converged.
     // Nothing below uses it; aggregated results live in `is_included_vec` and
     // `is_module_included_vec`.
     context.per_entry_stmt_visited.clear();
+
+    // Per-entry closure over stmt-level referenced symbols.
+    //
+    // The main walk's per-entry stmt dedup means that once any entry walks
+    // a stmt, other entries reaching the owning module won't re-traverse
+    // that stmt's referenced_symbols. That's the per-entry tree-shaking fix
+    // for 8920, but it also means the per-entry bits on reference *targets*
+    // end up narrower than the chunk-import-order invariant needs: if
+    // module M's included stmt references a symbol in M', then every entry
+    // reaching M must also reach M' (otherwise M's chunk imports from M''s
+    // chunk but M''s chunk isn't loaded for that entry — the cycle pattern
+    // in `issues/chunk_cycle_self_build_repro` and rolldown's self-build).
+    //
+    // Walk this once per module to fixpoint, attributing every entry that
+    // reached M to each referenced-symbol's canonical owner. 8920 is
+    // preserved because re-export stmts that short-circuit via canonical_ref
+    // aren't included in the barrel's stmt set for entries that don't use
+    // the relevant symbol.
+    loop {
+      let mut changed = false;
+      for module_idx in (0..self.module_table.modules.len()).map(ModuleIdx::from_usize) {
+        let Some(module) = self.module_table[module_idx].as_normal() else { continue };
+        let entries_reaching: Vec<EntryIdx> = context.is_module_included_vec[module_idx]
+          .index_of_one()
+          .filter(|e| *e != global_entry_idx)
+          .collect();
+        if entries_reaching.is_empty() {
+          continue;
+        }
+        for (stmt_idx, stmt_info) in module.stmt_infos.iter_enumerated() {
+          if !context.is_included_vec[module_idx].has_bit(stmt_idx) {
+            continue;
+          }
+          for reference_ref in &stmt_info.referenced_symbols {
+            let canonical_ref = match reference_ref {
+              SymbolOrMemberExprRef::Symbol(sym_ref) => context.symbols.canonical_ref_for(*sym_ref),
+              SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+                match member_expr
+                  .represent_symbol_ref(&context.metas[module_idx].resolved_member_expr_refs)
+                {
+                  Some(sym_ref) => context.symbols.canonical_ref_for(sym_ref),
+                  None => continue,
+                }
+              }
+            };
+            let owner = canonical_ref.owner;
+            if owner == module_idx || !context.modules[owner].is_normal() {
+              continue;
+            }
+            // Mirror the constant-inline bypass in `include_symbol`: a
+            // reference that will be inlined as a literal didn't pull the
+            // owner in. Only propagate when the owner is already reached by
+            // some other path — this preserves the drop-constant-only-
+            // shared-modules property (esbuild/default/many_entry_points).
+            if context.is_module_included_vec[owner].is_empty() {
+              continue;
+            }
+            for &entry_idx in &entries_reaching {
+              let bits = &mut context.is_module_included_vec[owner];
+              if !bits.has_bit(entry_idx) {
+                bits.set_bit(entry_idx);
+                changed = true;
+              }
+            }
+          }
+        }
+      }
+      if !changed {
+        break;
+      }
+    }
 
     // Setting the json module none self reference included symbol map
     for (mi, set) in std::mem::take(&mut context.json_module_none_self_reference_included_symbol) {
@@ -471,7 +499,6 @@ impl LinkStage<'_> {
         meta.module_namespace_included_reason = module_namespace_included_reason[module.idx];
       });
 
-
     self.used_symbol_refs = used_symbol_refs;
     // Store the final statement inclusion results back to metas.
     is_stmt_info_included_vec.into_iter_enumerated().for_each(|(module_idx, stmt_included_vec)| {
@@ -481,6 +508,7 @@ impl LinkStage<'_> {
     for (module_idx, bitset) in is_module_included_vec.into_iter_enumerated() {
       self.metas[module_idx].included_by_entries = bitset;
     }
+
 
     tracing::trace!(
       "included statements {:#?}",
@@ -829,8 +857,11 @@ pub fn include_symbol(
   {
     // If the symbol is a constant value and it is not a commonjs module export, we don't need to include it since it would be always inlined.
     // In smart mode, we only skip if `safe_to_inline` is true (meaning it will be inlined regardless of context).
-    // We don't need to add any flag since if `inlineConst` is disabled, the test expr will always
-    // return `false`
+    // Per-entry attribution is handled uniformly by the post-walk stmt-level
+    // closure pass at the end of `include_statements` — it sees the symbol
+    // ref in the enclosing stmt and widens the canonical owner's bitset
+    // with the already-non-empty gate, achieving the same co-location as
+    // the previous explicit (entry, owner) side-map.
     return;
   }
 

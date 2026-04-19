@@ -1,11 +1,3 @@
 {
-  "snapshotOutputStats": true,
-  "config": {
-    "experimental": {
-      "chunkOptimization": false
-    },
-    "optimization": {
-      "inlineConst": false
-    }
-  }
+  "snapshotOutputStats": true
 }

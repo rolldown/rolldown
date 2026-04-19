@@ -1,2 +1,2 @@
-import { createService } from "./barrel.js";
+import { createService } from './barrel.js';
 console.log(createService().run());

@@ -1,3 +1,3 @@
 export function light() {
-  return "light";
+  return 'light';
 }

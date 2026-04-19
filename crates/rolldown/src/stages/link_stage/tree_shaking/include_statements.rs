@@ -509,7 +509,6 @@ impl LinkStage<'_> {
       self.metas[module_idx].included_by_entries = bitset;
     }
 
-
     tracing::trace!(
       "included statements {:#?}",
       self

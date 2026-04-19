@@ -311,6 +311,16 @@ jobs:
             echo "Update needed: $CURRENT_VERSION -> $LATEST_VERSION"
           fi
 
+      # make sure to run this step before updating the version in urls.ts
+      # as this step will call `git restore .` which will reset the changes to urls.ts
+      - name: Setup Rust
+        if: steps.check-update.outputs.update_needed == 'true'
+        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        with:
+          tools: just
+          cache-key: native-build
+          save-cache: false
+
       - name: Update esbuild version in urls.ts
         if: steps.check-update.outputs.update_needed == 'true'
         env:
@@ -321,14 +331,6 @@ jobs:
             scripts/src/esbuild-tests/urls.ts
           echo "Updated ESBUILD_VERSION from $CURRENT_VERSION to $LATEST_VERSION"
           grep "const ESBUILD_VERSION = " scripts/src/esbuild-tests/urls.ts
-
-      - name: Setup Rust
-        if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
-        with:
-          tools: just
-          cache-key: native-build
-          save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
         uses: voidzero-dev/setup-vp@8ecb39174989ce55af90f45cf55b02738599831d # v1.6.0

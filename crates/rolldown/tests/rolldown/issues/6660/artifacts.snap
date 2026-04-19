@@ -3,10 +3,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## c.js
+## e.js
 
 ```js
-import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./index.js";
+import { t as __esmMin } from "./index.js";
+//#endregion
+__esmMin((() => {
+	console.log("event");
+}))();
+
+```
+
+## index.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region a.js
+(/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.defaultProvider = async function test() {
+		const { fromIni } = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_c()));
+		console.log(fromIni);
+	};
+})))();
+//#endregion
 //#region d.js
 var d_exports = /* @__PURE__ */ __exportAll({ loadEventStreamCapability: () => loadEventStreamCapability });
 async function loadEventStreamCapability() {
@@ -24,33 +43,6 @@ var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
 	};
 }));
 //#endregion
-export default require_c();
-
-```
-
-## e.js
-
-```js
-import { n as __esmMin } from "./index.js";
-//#endregion
-__esmMin((() => {
-	console.log("event");
-}))();
-
-```
-
-## index.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region a.js
-(/* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.defaultProvider = async function test() {
-		const { fromIni } = await import("./c.js").then((m) => /* @__PURE__ */ __toESM(m.default));
-		console.log(fromIni);
-	};
-})))();
-//#endregion
-export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+export { __esmMin as t };
 
 ```

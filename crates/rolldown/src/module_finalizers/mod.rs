@@ -149,7 +149,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
       // Only generate init calls for modules in the same chunk whose wrapper is
       // declared (i.e. the module is included in the output).
-      if importee_linking_info.is_included
+      if importee_linking_info.is_included()
         && self.ctx.chunk_graph.module_to_chunk[importee.idx] == Some(self.ctx.chunk_idx)
       {
         let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(

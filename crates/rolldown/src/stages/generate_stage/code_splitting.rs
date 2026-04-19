@@ -81,7 +81,7 @@ impl GenerateStage<'_> {
         };
         let matched_entry =
           self.link_output.entries.get(&module.idx).and_then(|entries| entries.first());
-        if !self.link_output.metas[module.idx].is_included {
+        if !self.link_output.metas[module.idx].is_included() {
           continue;
         }
 
@@ -161,7 +161,7 @@ impl GenerateStage<'_> {
         .iter()
         .filter_map(|item| {
           let module = self.link_output.module_table[item.owner].as_normal()?;
-          self.link_output.metas[module.idx].is_included.then_some(item)
+          self.link_output.metas[module.idx].is_included().then_some(item)
         })
         .into_group_map_by(|item| {
           chunk_graph.module_to_chunk[item.owner].expect("should have chunk idx")
@@ -689,7 +689,7 @@ impl GenerateStage<'_> {
     let mut ret: Option<String> = None;
     let iter = modules.iter().filter_map(|m| match m {
       Module::Normal(item) => {
-        if !self.link_output.metas[item.idx].is_included {
+        if !self.link_output.metas[item.idx].is_included() {
           return None;
         }
         if self.options.preserve_modules
@@ -826,7 +826,7 @@ impl GenerateStage<'_> {
   ) -> BuildResult<()> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     let tag_registry = ModuleTagRegistry::new();
-    for (entry_index, (&module_idx, entry_point)) in self
+    for (entry_bit, (_module_idx, entry_point)) in self
       .link_output
       .entries
       .iter()
@@ -838,8 +838,8 @@ impl GenerateStage<'_> {
         EntryPointKind::UserDefined | EntryPointKind::EmittedUserDefined
       );
       self.determine_reachable_modules_for_entry(
-        module_idx,
-        entry_index.try_into().expect("Too many entries, u32 overflowed."),
+        entry_point.entry_index,
+        entry_bit.try_into().expect("Too many entries, u32 overflowed."),
         index_splitting_info,
         is_user_defined_entry,
       );
@@ -876,7 +876,7 @@ impl GenerateStage<'_> {
       let Some(normal_module) = self.link_output.module_table[*idx].as_normal() else {
         continue;
       };
-      if !self.link_output.metas[normal_module.idx].is_included {
+      if !self.link_output.metas[normal_module.idx].is_included() {
         continue;
       }
 
@@ -949,43 +949,37 @@ impl GenerateStage<'_> {
     Ok(())
   }
 
+  /// Populate per-entry reachability bits in `index_splitting_info` using the
+  /// per-entry inclusion bitset populated during tree-shaking
+  /// (`meta.included_by_entries`). This is a direct scan — no BFS is needed
+  /// because tree-shaking already produced a per-entry reachability answer.
+  ///
+  /// `entry_idx` is the tree-shaking `EntryIdx` (its bit in `included_by_entries`).
+  /// `entry_bit` is the splitting bit position in `SplittingInfo::bits` (both
+  /// are the enumeration position of the flattened entry list, and therefore
+  /// equal, but the types are distinct so we take them separately).
   fn determine_reachable_modules_for_entry(
     &self,
-    entry_module_idx: ModuleIdx,
-    entry_index: u32,
+    entry_idx: rolldown_common::EntryIdx,
+    entry_bit: u32,
     index_splitting_info: &mut IndexSplittingInfo,
     is_user_defined_entry: bool,
   ) {
-    debug_assert!(
-      self.link_output.module_table[entry_module_idx].is_normal(),
-      "Entry module {entry_module_idx:?} should be a normal module. External dynamic imports should be filtered out in module_loader.rs."
-    );
-    let mut q = VecDeque::from([entry_module_idx]);
-    while let Some(module_idx) = q.pop_front() {
-      if !self.link_output.module_table[module_idx].is_normal() {
+    for (module_idx, meta) in self.link_output.metas.iter_enumerated() {
+      if !meta.included_by_entries.has_bit(entry_idx) {
         continue;
       }
-
-      let meta = &self.link_output.metas[module_idx];
-
-      if !self.link_output.metas[module_idx].is_included {
+      let info = &mut index_splitting_info[module_idx];
+      if info.bits.has_bit(entry_bit) {
         continue;
       }
-
-      if index_splitting_info[module_idx].bits.has_bit(entry_index) {
-        continue;
-      }
-
-      index_splitting_info[module_idx].bits.set_bit(entry_index);
-      index_splitting_info[module_idx].share_count += 1;
+      info.bits.set_bit(entry_bit);
+      info.share_count += 1;
       // Tag as initial if reachable from a user-defined entry via static imports.
       // See meta/design/module-tags.md
       if is_user_defined_entry {
-        index_splitting_info[module_idx].tags_bit_set.set_bit(ModuleTag::INITIAL_BIT);
+        info.tags_bit_set.set_bit(ModuleTag::INITIAL_BIT);
       }
-      meta.dependencies.iter().copied().for_each(|dep_idx| {
-        q.push_back(dep_idx);
-      });
     }
   }
 }

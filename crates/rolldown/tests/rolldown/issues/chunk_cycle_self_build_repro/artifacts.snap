@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## input-options.js
+
+```js
+//#region plain-object.js
+var PlainObjectLike = class {};
+//#endregion
+//#region normalize.js
+function normalize(x) {
+	return x;
+}
+//#endregion
+//#region input-options.js
+function preserveEntrySignatures(value) {
+	return value;
+}
+function bindingifyInputOptions(opts) {
+	return normalize(opts);
+}
+//#endregion
+export { preserveEntrySignatures as n, PlainObjectLike as r, bindingifyInputOptions as t };
+
+```
+
+## main.js
+
+```js
+import { r as PlainObjectLike, t as bindingifyInputOptions } from "./input-options.js";
+//#region output-impl.js
+var RolldownOutputImpl = class extends PlainObjectLike {};
+//#endregion
+//#region main.js
+function build(opts) {
+	bindingifyInputOptions(opts);
+	return new RolldownOutputImpl();
+}
+//#endregion
+export { build };
+
+```
+
+## worker.js
+
+```js
+import { n as preserveEntrySignatures, r as PlainObjectLike } from "./input-options.js";
+//#region plugin-context.js
+var PluginContextImpl = class extends PlainObjectLike {
+	preserve(value) {
+		return preserveEntrySignatures(value);
+	}
+};
+//#endregion
+//#region worker.js
+function setupWorker() {
+	return new PluginContextImpl();
+}
+//#endregion
+export { setupWorker };
+
+```

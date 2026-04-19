@@ -18,33 +18,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## c.js
 
 ```js
-import { n as setY2, t as setZ2 } from "./z.js";
-//#region c.js
-setY2();
-setZ2();
-//#endregion
-
-```
-
-## x.js
-
-```js
-//#region x.js
-function setX(v) {}
-//#endregion
-export { setX as t };
-
-```
-
-## z.js
-
-```js
-import "./x.js";
 function setY2(v) {}
 //#endregion
 //#region z.js
 function setZ2(v) {}
 //#endregion
-export { setY2 as n, setZ2 as t };
+//#region c.js
+setY2();
+setZ2();
+//#endregion
 
 ```

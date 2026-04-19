@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
+//#endregion
 //#region lib.js
 assert.strictEqual("b", "b", "CloseButton should be \"b\"");
 assert.strictEqual("a", "a", "Transition should be \"a\"");

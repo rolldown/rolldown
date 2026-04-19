@@ -1,0 +1,18 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry-light",
+        "import": "./entry-light.js"
+      },
+      {
+        "name": "entry-heavy",
+        "import": "./entry-heavy.js"
+      }
+    ],
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  },
+  "expectExecuted": false
+}

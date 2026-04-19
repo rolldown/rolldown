@@ -5,8 +5,8 @@ use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
-  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind,
-  ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
+  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryIdx, EntryPoint, EntryPointKind,
+  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
   RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, SideEffectDetail,
   StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
@@ -15,9 +15,7 @@ use rolldown_common::{
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
-use rolldown_utils::rayon::{
-  IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
-};
+use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 
 use rolldown_utils::IndexBitSet;
 use rolldown_utils::indexmap::FxIndexMap;
@@ -26,7 +24,11 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
 
 pub type StmtInclusionVec = IndexVec<ModuleIdx, IndexBitSet<StmtInfoIdx>>;
-pub type ModuleInclusionVec = IndexBitSet<ModuleIdx>;
+/// Per-module bitset of entries that have reached the module. A module is
+/// considered "included" whenever any entry has reached it. Tree-shaking sizes
+/// each bitset to `real_entry_count + 1` so that post-tree-shaking inclusions
+/// by the chunk optimizer can attribute to a sentinel slot (`global_entry_idx`).
+pub type ModuleInclusionVec = IndexVec<ModuleIdx, IndexBitSet<EntryIdx>>;
 pub type ModuleNamespaceReasonVec = IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>;
 
 bitflags::bitflags! {
@@ -54,7 +56,13 @@ bitflags::bitflags! {
 pub struct IncludeContext<'a> {
   pub modules: &'a IndexModules,
   pub symbols: &'a SymbolRefDb,
+  /// Global per-module bitset of included statements (OR across entries).
+  /// Lives inside `meta.stmt_info_included` after the walk.
   pub is_included_vec: &'a mut StmtInclusionVec,
+  /// Per-module bitset of entries that have reached the module. Authoritative
+  /// per-entry reachability — downstream reads this as `meta.included_by_entries`
+  /// (and `meta.is_included()` is `!bitset.is_empty()`). Each bitset is sized
+  /// to `entry_bitset_capacity` to also hold the post-tree-shaking sentinel.
   pub is_module_included_vec: &'a mut ModuleInclusionVec,
   pub tree_shaking: bool,
   pub inline_const_smart: bool,
@@ -64,14 +72,32 @@ pub struct IncludeContext<'a> {
   pub constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
   pub options: &'a NormalizedBundlerOptions,
   pub normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
-  /// It is necessary since we can't mutate `module.meta` during the tree shaking process.
-  /// see [rolldown_common::ecmascript::ecma_view::EcmaViewMeta]
-  pub bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
-  /// Tracks whether any new module was included during the current convergence iteration.
-  /// Used to detect fixpoint without O(N) scanning of `is_module_included_vec`.
-  pub module_inclusion_changed: bool,
+  /// CJS bailout tracking: for each module that needs its CJS exports force-
+  /// included, the set of entries that caused the bailout. On each fixpoint
+  /// iteration, `include_cjs_bailout_exports` replays those inclusions with
+  /// the triggering entry as `current_entry_idx`, so the forced exports get
+  /// attributed to the correct entries' reachability sets.
+  pub bailout_cjs_tree_shaking_modules: FxHashMap<ModuleIdx, IndexBitSet<EntryIdx>>,
+  /// True if any per-entry inclusion bit was newly set during the current
+  /// convergence iteration. Detects fixpoint without O(N) rescans.
+  pub inclusion_changed: bool,
   pub module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
   pub json_module_none_self_reference_included_symbol: FxHashMap<ModuleIdx, FxHashSet<SymbolRef>>,
+  /// The entry currently being walked. `None` means "no entry context" — used
+  /// by the chunk optimizer when it re-enters the tree-shaking helpers after
+  /// code splitting; those inclusions are attributed to `global_entry_idx`.
+  pub current_entry_idx: Option<EntryIdx>,
+  /// Sentinel entry slot for post-tree-shaking inclusions (chunk optimizer).
+  /// Equal to `real_entry_count`; bitsets are sized `real_entry_count + 1`.
+  /// Code splitting only iterates real entries, so this slot is invisible to
+  /// per-entry reachability consumers.
+  pub global_entry_idx: EntryIdx,
+  /// Capacity of per-entry bitsets (real entries + 1 sentinel slot).
+  pub entry_bitset_capacity: usize,
+  /// Per-entry statement dedup during the walk. Sparse — only (entry, module)
+  /// pairs actually touched allocate a bitset. Not persisted after the walk;
+  /// aggregated stmt inclusion lives in `is_included_vec`.
+  pub per_entry_stmt_visited: FxHashMap<EntryIdx, FxHashMap<ModuleIdx, IndexBitSet<StmtInfoIdx>>>,
 }
 
 impl<'a> IncludeContext<'a> {
@@ -88,6 +114,8 @@ impl<'a> IncludeContext<'a> {
     options: &'a NormalizedBundlerOptions,
     normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
     module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
+    global_entry_idx: EntryIdx,
+    entry_bitset_capacity: usize,
   ) -> Self {
     Self {
       modules,
@@ -102,31 +130,62 @@ impl<'a> IncludeContext<'a> {
       constant_symbol_map,
       options,
       normal_symbol_exports_chain_map,
-      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
-      module_inclusion_changed: false,
+      bailout_cjs_tree_shaking_modules: FxHashMap::default(),
+      inclusion_changed: false,
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
+      current_entry_idx: None,
+      global_entry_idx,
+      entry_bitset_capacity,
+      per_entry_stmt_visited: FxHashMap::default(),
     }
+  }
+
+  /// Entry that inclusions should be attributed to. Real entry when a walk is
+  /// active, otherwise the sentinel slot (for chunk-optimizer inclusions).
+  #[inline]
+  pub fn active_entry(&self) -> EntryIdx {
+    self.current_entry_idx.unwrap_or(self.global_entry_idx)
+  }
+
+  /// Record that `module_idx` should have its CJS exports force-included due
+  /// to opaque namespace use by the currently-walking entry.
+  #[inline]
+  pub fn mark_cjs_bailout(&mut self, module_idx: ModuleIdx) {
+    let entry_idx = self.active_entry();
+    let capacity = self.entry_bitset_capacity;
+    self
+      .bailout_cjs_tree_shaking_modules
+      .entry(module_idx)
+      .or_insert_with(|| IndexBitSet::new(capacity))
+      .set_bit(entry_idx);
   }
 }
 
 fn include_cjs_bailout_exports(
   context: &mut IncludeContext,
   metas: &LinkingMetadataVec,
-  bailout_modules: impl IntoIterator<Item = ModuleIdx>,
+  bailout_modules: FxHashMap<ModuleIdx, IndexBitSet<EntryIdx>>,
 ) {
-  for idx in bailout_modules {
-    metas[idx]
+  // For each bailed-out CJS module, replay the forced-include under each entry
+  // that caused the bailout so the exports are attributed to the right entries.
+  for (bailed_idx, triggering_entries) in bailout_modules {
+    let cjs_locals: Vec<SymbolRef> = metas[bailed_idx]
       .resolved_exports
       .iter()
-      .filter_map(|(_name, local)| local.came_from_commonjs.then_some(local))
-      .for_each(|local| {
-        include_symbol_and_check_cjs_bailout(
-          context,
-          local.symbol_ref,
-          SymbolIncludeReason::Normal,
-        );
-      });
+      .filter_map(|(_name, local)| local.came_from_commonjs.then_some(local.symbol_ref))
+      .collect();
+    if cjs_locals.is_empty() {
+      continue;
+    }
+    let prior_entry = context.current_entry_idx;
+    for entry_idx in triggering_entries.index_of_one() {
+      context.current_entry_idx = Some(entry_idx);
+      for symbol_ref in &cjs_locals {
+        include_symbol_and_check_cjs_bailout(context, *symbol_ref, SymbolIncludeReason::Normal);
+      }
+    }
+    context.current_entry_idx = prior_entry;
   }
 }
 
@@ -155,13 +214,13 @@ fn check_cjs_bailout(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
 
   // If the symbol is a CJS namespace import ref, bail out the target CJS module.
   if let Some(idx) =
-    ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
+    ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref).copied()
   {
-    ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
+    ctx.mark_cjs_bailout(idx);
   }
   // If the symbol IS a CJS module's namespace object, bail out that module.
   if ctx.modules[canonical_ref.owner].namespace_object_ref() == Some(canonical_ref) {
-    ctx.bailout_cjs_tree_shaking_modules.insert(canonical_ref.owner);
+    ctx.mark_cjs_bailout(canonical_ref.owner);
   }
 
   // If the symbol has a namespace_alias importing "default" from a CJS module,
@@ -171,39 +230,18 @@ fn check_cjs_bailout(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
     if let Some(idx) = ctx.metas[namespace_alias.namespace_ref.owner]
       .import_record_ns_to_cjs_module
       .get(&namespace_alias.namespace_ref)
+      .copied()
     {
       if namespace_alias.property_name.as_str() == "default" {
-        ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
+        ctx.mark_cjs_bailout(idx);
       }
     }
   }
 }
 
-/// Collects all depended runtime helpers from included modules only.
-/// Eliminated modules may have runtime helpers set (for propagation to importers),
-/// but we should only include the runtime if an included module actually needs it.
-fn collect_depended_runtime_helpers(
-  modules: &IndexModules,
-  metas: &LinkingMetadataVec,
-  is_module_included_vec: &ModuleInclusionVec,
-) -> RuntimeHelper {
-  let iter = modules.par_iter().zip_eq(metas.par_iter()).filter_map(|(module, meta)| {
-    module
-      .as_normal()
-      .filter(|m| is_module_included_vec.has_bit(m.idx))
-      .map(|_| meta.depended_runtime_helper)
-  });
-
-  #[cfg(not(target_family = "wasm"))]
-  let depended_runtime_helper = iter.reduce(RuntimeHelper::default, |a, b| a | b);
-  #[cfg(target_family = "wasm")]
-  let depended_runtime_helper = iter.reduce(|a, b| a | b).unwrap_or_default();
-
-  depended_runtime_helper
-}
-
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
+  #[expect(clippy::too_many_lines)]
   pub fn include_statements(&mut self, unreachable_import_expression_addrs: &FxHashSet<Address>) {
     let mut is_stmt_info_included_vec: StmtInclusionVec = self
       .module_table
@@ -214,8 +252,18 @@ impl LinkStage<'_> {
       })
       .collect::<IndexVec<ModuleIdx, _>>();
     let mut used_symbol_refs = UsedSymbolRefs::default();
-    let mut is_module_included_vec: ModuleInclusionVec =
-      IndexBitSet::new(self.module_table.modules.len());
+
+    // Count total entry points (flattened). Each `EntryPoint` has a unique
+    // `entry_index: EntryIdx`, assigned during link stage setup. We reserve
+    // one extra slot past the real entries for post-tree-shaking inclusions
+    // (chunk optimizer) — see `IncludeContext::global_entry_idx`.
+    let real_entry_count: usize = self.entries.values().map(Vec::len).sum();
+    let entry_bitset_capacity = real_entry_count + 1;
+    let global_entry_idx = EntryIdx::from_usize(real_entry_count);
+
+    let mut is_module_included_vec: ModuleInclusionVec = (0..self.module_table.modules.len())
+      .map(|_| IndexBitSet::new(entry_bitset_capacity))
+      .collect::<IndexVec<ModuleIdx, _>>();
     let mut module_namespace_included_reason: ModuleNamespaceReasonVec =
       oxc_index::index_vec![ModuleNamespaceIncludedReason::empty(); self.module_table.len()];
     self.has_enum_inlining = self
@@ -235,6 +283,8 @@ impl LinkStage<'_> {
       self.options,
       &self.normal_symbol_exports_chain_map,
       &mut module_namespace_included_reason,
+      global_entry_idx,
+      entry_bitset_capacity,
     );
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
@@ -250,7 +300,10 @@ impl LinkStage<'_> {
           return;
         }
       };
-      context.bailout_cjs_tree_shaking_modules.insert(module.idx);
+      context.current_entry_idx = Some(entry.entry_index);
+      // Entry modules are force-bailed out for their own entry so all CJS exports
+      // resolve. Mark it directly — `mark_cjs_bailout` reads `current_entry_idx`.
+      context.mark_cjs_bailout(module.idx);
       let meta = &self.metas[entry.module_idx];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, _came_from_cjs)| {
@@ -269,18 +322,20 @@ impl LinkStage<'_> {
         },
       );
       include_module(context, module);
+      context.current_entry_idx = None;
     });
 
     let mut unused_record_idxs = vec![];
     let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
     let mut included_dynamic_entry = FxHashSet::default();
     loop {
-      context.module_inclusion_changed = false;
+      context.inclusion_changed = false;
 
-      // It could be safely take since it is no more used.
-      // We extract bailout_modules first to avoid borrowing conflict:
-      // passing `context` requires a mutable borrow, which conflicts with
-      // borrowing `context.bailout_cjs_tree_shaking_modules` inside the call.
+      // Extract bailout_modules first to avoid borrowing conflict: passing
+      // `context` requires a mutable borrow, which conflicts with borrowing
+      // `context.bailout_cjs_tree_shaking_modules` inside the call.
+      // `include_cjs_bailout_exports` sets `current_entry_idx` internally for
+      // each triggering entry.
       let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
       include_cjs_bailout_exports(context, &self.metas, bailout_modules);
 
@@ -288,6 +343,7 @@ impl LinkStage<'_> {
         if included_dynamic_entry.contains(&entry.module_idx) {
           return;
         }
+        context.current_entry_idx = Some(entry.entry_index);
         let included = self.process_and_retain_dynamic_entry(
           entry,
           &cycled_idx,
@@ -295,12 +351,13 @@ impl LinkStage<'_> {
           &mut unused_record_idxs,
           unreachable_import_expression_addrs,
         );
+        context.current_entry_idx = None;
         if included {
           included_dynamic_entry.insert(entry.module_idx);
         }
       });
 
-      if !context.module_inclusion_changed {
+      if !context.inclusion_changed {
         break;
       }
     }
@@ -321,6 +378,82 @@ impl LinkStage<'_> {
       }
       entries
     };
+
+    // Free the per-entry dedup scratch now that the fixpoint has converged.
+    // Nothing below uses it; aggregated results live in `is_included_vec` and
+    // `is_module_included_vec`.
+    context.per_entry_stmt_visited.clear();
+
+    // Per-entry closure over stmt-level referenced symbols.
+    //
+    // The main walk's per-entry stmt dedup means that once any entry walks
+    // a stmt, other entries reaching the owning module won't re-traverse
+    // that stmt's referenced_symbols. That's the per-entry tree-shaking fix
+    // for 8920, but it also means the per-entry bits on reference *targets*
+    // end up narrower than the chunk-import-order invariant needs: if
+    // module M's included stmt references a symbol in M', then every entry
+    // reaching M must also reach M' (otherwise M's chunk imports from M''s
+    // chunk but M''s chunk isn't loaded for that entry — the cycle pattern
+    // in `issues/chunk_cycle_self_build_repro` and rolldown's self-build).
+    //
+    // Walk this once per module to fixpoint, attributing every entry that
+    // reached M to each referenced-symbol's canonical owner. 8920 is
+    // preserved because re-export stmts that short-circuit via canonical_ref
+    // aren't included in the barrel's stmt set for entries that don't use
+    // the relevant symbol.
+    loop {
+      let mut changed = false;
+      for module_idx in (0..self.module_table.modules.len()).map(ModuleIdx::from_usize) {
+        let Some(module) = self.module_table[module_idx].as_normal() else { continue };
+        let entries_reaching: Vec<EntryIdx> = context.is_module_included_vec[module_idx]
+          .index_of_one()
+          .filter(|e| *e != global_entry_idx)
+          .collect();
+        if entries_reaching.is_empty() {
+          continue;
+        }
+        for (stmt_idx, stmt_info) in module.stmt_infos.iter_enumerated() {
+          if !context.is_included_vec[module_idx].has_bit(stmt_idx) {
+            continue;
+          }
+          for reference_ref in &stmt_info.referenced_symbols {
+            let canonical_ref = match reference_ref {
+              SymbolOrMemberExprRef::Symbol(sym_ref) => context.symbols.canonical_ref_for(*sym_ref),
+              SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+                match member_expr
+                  .represent_symbol_ref(&context.metas[module_idx].resolved_member_expr_refs)
+                {
+                  Some(sym_ref) => context.symbols.canonical_ref_for(sym_ref),
+                  None => continue,
+                }
+              }
+            };
+            let owner = canonical_ref.owner;
+            if owner == module_idx || !context.modules[owner].is_normal() {
+              continue;
+            }
+            // Mirror the constant-inline bypass in `include_symbol`: a
+            // reference that will be inlined as a literal didn't pull the
+            // owner in. Only propagate when the owner is already reached by
+            // some other path — this preserves the drop-constant-only-
+            // shared-modules property (esbuild/default/many_entry_points).
+            if context.is_module_included_vec[owner].is_empty() {
+              continue;
+            }
+            for &entry_idx in &entries_reaching {
+              let bits = &mut context.is_module_included_vec[owner];
+              if !bits.has_bit(entry_idx) {
+                bits.set_bit(entry_idx);
+                changed = true;
+              }
+            }
+          }
+        }
+      }
+      if !changed {
+        break;
+      }
+    }
 
     // Setting the json module none self reference included symbol map
     for (mi, set) in std::mem::take(&mut context.json_module_none_self_reference_included_symbol) {
@@ -344,6 +477,7 @@ impl LinkStage<'_> {
       .filter_map(|(m, meta)| m.as_normal_mut().map(|m| (m, meta)))
       .for_each(|(module, meta)| {
         let idx = module.idx;
+        let module_included = !is_module_included_vec[idx].is_empty();
         let mut normalized_runtime_helper = RuntimeHelper::default();
         for (index, stmt_info_idxs) in module.depended_runtime_helper.iter().enumerate() {
           if stmt_info_idxs.is_empty() {
@@ -356,8 +490,7 @@ impl LinkStage<'_> {
           // Note: `RuntimeHelper` is a bitmask with at most 32 bits, so the index is guaranteed to fit in u32.
           normalized_runtime_helper.set(
             RuntimeHelper::from_bits(1 << index as u32).unwrap(),
-            any_included
-              || (module.id != RUNTIME_MODULE_ID && !is_module_included_vec.has_bit(idx)),
+            any_included || (module.id != RUNTIME_MODULE_ID && !module_included),
           );
           // We also need to process the runtime helper of the eliminate module so that we
           // could propagate them to its importers later
@@ -366,34 +499,14 @@ impl LinkStage<'_> {
         meta.module_namespace_included_reason = module_namespace_included_reason[module.idx];
       });
 
-    let depended_runtime_helper = collect_depended_runtime_helpers(
-      &self.module_table.modules,
-      &self.metas,
-      &is_module_included_vec,
-    );
-    let context = &mut IncludeContext::new(
-      &self.module_table.modules,
-      &self.symbols,
-      &mut is_stmt_info_included_vec,
-      &mut is_module_included_vec,
-      self.runtime.id(),
-      &self.metas,
-      &mut used_symbol_refs,
-      &self.global_constant_symbol_map,
-      self.options,
-      &self.normal_symbol_exports_chain_map,
-      &mut module_namespace_included_reason,
-    );
-    include_runtime_symbol(context, &self.runtime, depended_runtime_helper);
-
     self.used_symbol_refs = used_symbol_refs;
     // Store the final statement inclusion results back to metas.
     is_stmt_info_included_vec.into_iter_enumerated().for_each(|(module_idx, stmt_included_vec)| {
       self.metas[module_idx].stmt_info_included = stmt_included_vec;
     });
-    // Store the final module inclusion results back to metas.
-    for (module_idx, meta) in self.metas.iter_mut_enumerated() {
-      meta.is_included = is_module_included_vec.has_bit(module_idx);
+    // Store the final per-entry module inclusion results back to metas.
+    for (module_idx, bitset) in is_module_included_vec.into_iter_enumerated() {
+      self.metas[module_idx].included_by_entries = bitset;
     }
 
     tracing::trace!(
@@ -404,7 +517,7 @@ impl LinkStage<'_> {
         .iter()
         .filter_map(Module::as_normal)
         .map(|m| m.to_debug_normal_module_for_tree_shaking(
-          self.metas[m.idx].is_included,
+          self.metas[m.idx].is_included(),
           &self.metas[m.idx].stmt_info_included
         ))
         .collect::<Vec<_>>()
@@ -637,12 +750,17 @@ pub fn include_runtime_symbol(
 
 /// if no export is used, and the module has no side effects, the module should not be included
 pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
-  if ctx.is_module_included_vec.has_bit(module.idx) {
+  // Per-entry dedup: each entry walks its reachable subgraph independently so
+  // that per-entry reachability (used by code splitting) falls out of the same
+  // walk as global inclusion. The sentinel `global_entry_idx` handles
+  // chunk-optimizer calls that lack an entry context.
+  let entry_idx = ctx.active_entry();
+  let bits = &mut ctx.is_module_included_vec[module.idx];
+  if bits.has_bit(entry_idx) {
     return;
   }
-
-  ctx.is_module_included_vec.set_bit(module.idx);
-  ctx.module_inclusion_changed = true;
+  bits.set_bit(entry_idx);
+  ctx.inclusion_changed = true;
 
   if module.idx == ctx.runtime_idx && !module.side_effects.has_side_effects() {
     // Unmodified runtime: statements included only via references.
@@ -738,8 +856,11 @@ pub fn include_symbol(
   {
     // If the symbol is a constant value and it is not a commonjs module export, we don't need to include it since it would be always inlined.
     // In smart mode, we only skip if `safe_to_inline` is true (meaning it will be inlined regardless of context).
-    // We don't need to add any flag since if `inlineConst` is disabled, the test expr will always
-    // return `false`
+    // Per-entry attribution is handled uniformly by the post-walk stmt-level
+    // closure pass at the end of `include_statements` — it sees the symbol
+    // ref in the enclosing stmt and widens the canonical owner's bitset
+    // with the already-non-empty gate, achieving the same co-location as
+    // the previous explicit (entry, owner) side-map.
     return;
   }
 
@@ -835,13 +956,21 @@ pub fn include_statement(
   module: &NormalModule,
   stmt_info_idx: StmtInfoIdx,
 ) {
-  if ctx.is_included_vec[module.idx].has_bit(stmt_info_idx) {
+  // Per-entry stmt dedup so each entry's walk follows referenced_symbols
+  // independently. Global stmt bits are maintained for downstream consumers.
+  let entry_idx = ctx.active_entry();
+  let stmt_len = module.stmt_infos.len();
+  let per_entry = ctx.per_entry_stmt_visited.entry(entry_idx).or_default();
+  let visited = per_entry.entry(module.idx).or_insert_with(|| IndexBitSet::new(stmt_len));
+  if visited.has_bit(stmt_info_idx) {
     return;
   }
+  visited.set_bit(stmt_info_idx);
 
   let stmt_info = module.stmt_infos.get(stmt_info_idx);
 
-  // include the statement itself
+  // Global stmt-inclusion bit (OR across entries) — consumed by downstream code
+  // as `meta.stmt_info_included`.
   ctx.is_included_vec[module.idx].set_bit(stmt_info_idx);
 
   // FIXME: bailout for require() import for now
@@ -881,10 +1010,10 @@ pub fn include_statement(
         // When the importer has multiple CJS re-export targets (conditional re-exports),
         // bail out to prevent tree-shaking from dropping any branch's exports.
         if module.ecma_view.cjs_reexport_import_record_ids.len() > 1 {
-          ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
+          ctx.mark_cjs_bailout(module_idx);
         }
       } else {
-        ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
+        ctx.mark_cjs_bailout(module_idx);
       }
     });
   let mut include_kind = if stmt_info.meta.contains(StmtInfoMeta::ReExportDynamicExports) {

@@ -187,7 +187,7 @@ impl GenerateStage<'_> {
               match &self.link_output.module_table[module_idx] {
                 Module::Normal(_) => {
                   // The the resolved module is not included in module graph, skip it.
-                  if !self.link_output.metas[module_idx].is_included {
+                  if !self.link_output.metas[module_idx].is_included() {
                     return;
                   }
                   if matches!(rec.kind, ImportKind::DynamicImport) {

@@ -19,6 +19,7 @@
     "typedoc-plugin-merge-modules": "^7.0.0",
     "typedoc-vitepress-theme": "^1.1.2",
     "vitepress": "catalog:",
+    "vitepress-plugin-feedback-tracker": "^0.1.1-alpha.0",
     "vitepress-plugin-graphviz": "catalog:",
     "vitepress-plugin-group-icons": "catalog:",
     "vitepress-plugin-llms": "catalog:",

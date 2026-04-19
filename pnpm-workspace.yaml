@@ -50,7 +50,7 @@ catalog:
   connect: ^3.7.0
   consola: ^3.4.2
   dedent: ^1.5.3
-  diff: ^8.0.0
+  diff: ^9.0.0
   esbuild: ^0.28.0
   estree-toolkit: ^1.7.8
   execa: ^9.2.0

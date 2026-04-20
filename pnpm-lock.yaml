@@ -16,10 +16,10 @@ catalogs:
       specifier: ^7.24.7
       version: 7.28.5
     '@emnapi/core':
-      specifier: ^1.9.2
+      specifier: ^1.10.0
       version: 1.10.0
     '@emnapi/runtime':
-      specifier: ^1.9.2
+      specifier: ^1.10.0
       version: 1.10.0
     '@napi-rs/cli':
       specifier: ^3.6.1

@@ -185,6 +185,9 @@ impl GenerateStage<'_> {
       }
     }
 
+    if self.options.manual_code_splitting.is_none() {
+      self.merge_side_effect_free_chunks(&mut chunk_graph);
+    }
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
 
     chunk_graph
@@ -797,6 +800,7 @@ impl GenerateStage<'_> {
         input_base.clone(),
         preserve_entry_signature,
       );
+
       chunk.add_creation_reason(
         ChunkCreationReason::Entry {
           is_user_defined_entry,

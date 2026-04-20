@@ -26,7 +26,7 @@ require_foo();
 ```diff
 ===================================================================
 --- esbuild	/Users/user/project/out.js
-+++ rolldown	
++++ rolldown
 @@ -1,11 +0,0 @@
 -var require_bar = __commonJS({
 -    "Users/user/project/src/node_modules/pkg/sub/bar.js"() {

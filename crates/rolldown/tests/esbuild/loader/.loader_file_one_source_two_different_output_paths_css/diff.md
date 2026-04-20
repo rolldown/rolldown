@@ -11,7 +11,7 @@ x
 ```diff
 ===================================================================
 --- esbuild	/out/common-LSAMBFUD.png
-+++ rolldown	
++++ rolldown
 @@ -1,1 +0,0 @@
 -x;
 
@@ -34,7 +34,7 @@ div {
 ```diff
 ===================================================================
 --- esbuild	/out/entries/entry.css
-+++ rolldown	
++++ rolldown
 @@ -1,6 +0,0 @@
 -/* src/shared/common.css */
 -div {
@@ -63,7 +63,7 @@ div {
 ```diff
 ===================================================================
 --- esbuild	/out/entries/other/entry.css
-+++ rolldown	
++++ rolldown
 @@ -1,6 +0,0 @@
 -/* src/shared/common.css */
 -div {

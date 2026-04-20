@@ -64,8 +64,5 @@
     "@emnapi/core": "catalog:",
     "@emnapi/runtime": "catalog:",
     "@napi-rs/wasm-runtime": "catalog:"
-  },
-  "devDependencies": {
-    "emnapi": "catalog:"
   }
 }

@@ -539,10 +539,6 @@ importers:
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
         version: 1.1.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
-    devDependencies:
-      emnapi:
-        specifier: 'catalog:'
-        version: 1.10.0
 
   packages/debug:
     devDependencies:
@@ -595,6 +591,9 @@ importers:
       consola:
         specifier: 'catalog:'
         version: 3.4.2
+      emnapi:
+        specifier: 'catalog:'
+        version: 1.10.0
       execa:
         specifier: 'catalog:'
         version: 9.6.1
@@ -5172,14 +5171,6 @@ packages:
       node-addon-api:
         optional: true
 
-  emnapi@1.9.2:
-    resolution: {integrity: sha512-OdUoQe/8so7FvubnE/DNV9sNNSFwDYQiK4ZCAz4agMnD1s6faLuDn2gzxfJrmMoKfxZhhsckqGNwqPnS5K140A==}
-    peerDependencies:
-      node-addon-api: '>= 6.1.0'
-    peerDependenciesMeta:
-      node-addon-api:
-        optional: true
-
   emoji-regex@8.0.0:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
 
@@ -8496,7 +8487,7 @@ snapshots:
       '@octokit/rest': 22.0.1
       clipanion: 4.0.0-rc.4(typanion@3.14.0)
       colorette: 2.0.20
-      emnapi: 1.9.2
+      emnapi: 1.10.0
       es-toolkit: 1.45.1
       js-yaml: 4.1.1
       obug: 2.1.1
@@ -10792,8 +10783,6 @@ snapshots:
   electron-to-chromium@1.5.321: {}
 
   emnapi@1.10.0: {}
-
-  emnapi@1.9.2: {}
 
   emoji-regex@8.0.0: {}
 

@@ -1093,68 +1093,15 @@ impl GenerateStage<'_> {
       include_runtime_symbol(context, runtime, RuntimeHelper::ExportAll);
     }
 
-    // Ensure runtime module is properly assigned to chunk graph.
-    //
-    // Facade elimination above can introduce new runtime-helper consumers
-    // (`runtime_dependent_chunks`). The runtime module may also already be
-    // co-located with other modules in some host chunk from the merge phase.
-    // When the host has other modules AND a facade-elim consumer that is not
-    // the host exists, we have ≥2 distinct consumers that both need helpers
-    // from the host. If the host also has a forward path back to the other
-    // consumer, the dependency graph closes a cycle. Peel the runtime out in
-    // that case and let the placement step below re-home it.
     if !runtime_dependent_chunks.is_empty() {
-      if let Some(host_idx) = chunk_graph.module_to_chunk[runtime_module_idx] {
-        let host_chunk = &chunk_graph.chunk_table[host_idx];
-        let host_has_other_modules = host_chunk.modules.len() > 1;
-        let has_external_consumer = runtime_dependent_chunks.iter().any(|&c| c != host_idx);
-        if host_has_other_modules
-          && has_external_consumer
-          && let Some(pos) = host_chunk.modules.iter().position(|m| *m == runtime_module_idx)
-        {
-          let host_chunk = &mut chunk_graph.chunk_table[host_idx];
-          host_chunk.modules.swap_remove(pos);
-          chunk_graph.module_to_chunk[runtime_module_idx] = None;
-        }
-      }
-
-      if chunk_graph.module_to_chunk[runtime_module_idx].is_none() {
-        // Pick a placement based on the full set of consumer chunks: every
-        // non-removed chunk with a non-empty `depended_runtime_helper`,
-        // unioned with `runtime_dependent_chunks`. Single consumer → reuse it;
-        // multiple consumers → dedicated leaf `rolldown-runtime` chunk.
-        let removed_chunks = &chunk_graph.post_chunk_optimization_operations;
-        let mut consumer_chunks: FxHashSet<ChunkIdx> = chunk_graph
-          .chunk_table
-          .iter_enumerated()
-          .filter_map(|(idx, chunk)| {
-            (!removed_chunks.contains_key(&idx) && !chunk.depended_runtime_helper.is_empty())
-              .then_some(idx)
-          })
-          .collect();
-        consumer_chunks.extend(runtime_dependent_chunks.iter().copied());
-
-        let runtime_chunk_idx = if consumer_chunks.len() == 1 {
-          consumer_chunks.into_iter().next().unwrap()
-        } else {
-          let runtime_chunk = Chunk::new(
-            Some("rolldown-runtime".into()),
-            None,
-            index_splitting_info[runtime_module_idx].bits.clone(),
-            vec![],
-            ChunkKind::Common,
-            input_base.clone(),
-            None,
-          );
-          chunk_graph.add_chunk(runtime_chunk)
-        };
-        chunk_graph.add_module_to_chunk(
-          runtime_module_idx,
-          runtime_chunk_idx,
-          self.link_output.metas[runtime_module_idx].depended_runtime_helper,
-        );
-        module_is_assigned.set_bit(runtime_module_idx);
-      }
+      self.rehome_runtime_module(
+        chunk_graph,
+        runtime_module_idx,
+        &runtime_dependent_chunks,
+        index_splitting_info,
+        input_base,
+        module_is_assigned,
+      );
     }
 
     // Restore the included info back to metas
@@ -1164,6 +1111,81 @@ impl GenerateStage<'_> {
       &module_included_vec,
       &module_namespace_reason_vec,
     );
+  }
+
+  /// Assign the runtime module to a chunk once facade elimination has run.
+  ///
+  /// Facade elimination can introduce new runtime-helper consumers
+  /// (`runtime_dependent_chunks`). The runtime module may also already be
+  /// co-located with other modules in some host chunk from the merge phase.
+  /// When the host has other modules AND a facade-elim consumer that is not
+  /// the host exists, ≥2 distinct consumers need helpers from the host; if
+  /// the host also has a forward path back to the other consumer, the
+  /// dependency graph closes a cycle. Peel the runtime out in that case and
+  /// let the placement step below re-home it into the single consumer chunk
+  /// (when there is exactly one) or a dedicated `rolldown-runtime.js` chunk.
+  fn rehome_runtime_module(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    runtime_module_idx: ModuleIdx,
+    runtime_dependent_chunks: &FxHashSet<ChunkIdx>,
+    index_splitting_info: &IndexSplittingInfo,
+    input_base: &ArcStr,
+    module_is_assigned: &mut IndexBitSet<ModuleIdx>,
+  ) {
+    if let Some(host_idx) = chunk_graph.module_to_chunk[runtime_module_idx] {
+      let host_chunk = &chunk_graph.chunk_table[host_idx];
+      let host_has_other_modules = host_chunk.modules.len() > 1;
+      let has_external_consumer = runtime_dependent_chunks.iter().any(|&c| c != host_idx);
+      if host_has_other_modules
+        && has_external_consumer
+        && let Some(pos) = host_chunk.modules.iter().position(|m| *m == runtime_module_idx)
+      {
+        let host_chunk = &mut chunk_graph.chunk_table[host_idx];
+        host_chunk.modules.swap_remove(pos);
+        chunk_graph.module_to_chunk[runtime_module_idx] = None;
+      }
+    }
+
+    if chunk_graph.module_to_chunk[runtime_module_idx].is_some() {
+      return;
+    }
+
+    // Pick a placement based on the full set of consumer chunks: every
+    // non-removed chunk with a non-empty `depended_runtime_helper`,
+    // unioned with `runtime_dependent_chunks`. Single consumer → reuse it;
+    // multiple consumers → dedicated leaf `rolldown-runtime` chunk.
+    let removed_chunks = &chunk_graph.post_chunk_optimization_operations;
+    let mut consumer_chunks: FxHashSet<ChunkIdx> = chunk_graph
+      .chunk_table
+      .iter_enumerated()
+      .filter_map(|(idx, chunk)| {
+        (!removed_chunks.contains_key(&idx) && !chunk.depended_runtime_helper.is_empty())
+          .then_some(idx)
+      })
+      .collect();
+    consumer_chunks.extend(runtime_dependent_chunks.iter().copied());
+
+    let runtime_chunk_idx = if consumer_chunks.len() == 1 {
+      consumer_chunks.into_iter().next().unwrap()
+    } else {
+      let runtime_chunk = Chunk::new(
+        Some("rolldown-runtime".into()),
+        None,
+        index_splitting_info[runtime_module_idx].bits.clone(),
+        vec![],
+        ChunkKind::Common,
+        input_base.clone(),
+        None,
+      );
+      chunk_graph.add_chunk(runtime_chunk)
+    };
+    chunk_graph.add_module_to_chunk(
+      runtime_module_idx,
+      runtime_chunk_idx,
+      self.link_output.metas[runtime_module_idx].depended_runtime_helper,
+    );
+    module_is_assigned.set_bit(runtime_module_idx);
   }
 
   /// Move modules from common chunks into facade entry chunks, then retarget

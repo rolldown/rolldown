@@ -14,7 +14,6 @@ import semver from 'semver';
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const TRACKED = ['@napi-rs/wasm-runtime', '@emnapi/core', '@emnapi/runtime'];
 const BINDING_PKG = path.join(REPO_ROOT, 'packages/rolldown/npm/wasm32-wasi/package.json');
-const BROWSER_DIR = path.join(REPO_ROOT, 'packages/browser');
 
 function readBindingSpecifiers() {
   const pkg = JSON.parse(fs.readFileSync(BINDING_PKG, 'utf8'));
@@ -31,16 +30,18 @@ function readBindingSpecifiers() {
 }
 
 function readBrowserResolved() {
-  const stdout = execFileSync('pnpm', ['--dir', BROWSER_DIR, 'ls', ...TRACKED, '--json'], {
-    encoding: 'utf8',
-  });
+  const stdout = execFileSync(
+    'vp',
+    ['pm', 'list', '--filter', '@rolldown/browser', '--json', '--', ...TRACKED],
+    { encoding: 'utf8', cwd: REPO_ROOT },
+  );
   const parsed = JSON.parse(stdout);
   const deps = parsed[0]?.dependencies ?? {};
   const out = {};
   for (const name of TRACKED) {
     const entry = deps[name];
     if (!entry?.version) {
-      console.error(`${name} is not installed under @rolldown/browser — did \`pnpm install\` run?`);
+      console.error(`${name} is not installed under @rolldown/browser — did \`vp install\` run?`);
       process.exit(1);
     }
     out[name] = entry.version;

@@ -27,6 +27,7 @@ module.exports = [
     "rollup@form@default-export-anonymous-class-extends: handles default exported classes extending a regular expression argument (#4783)",
     "rollup@form@default-export-class: puts the export after the declaration for default exported classes in SystemJS@generates es",
     "rollup@form@default-export-mode: allows specifying the export mode to be \"default\"@generates es",
+    "rollup@form@comment-start-inside-comment: properly remove comments above import statements@generates es",
     "rollup@form@effect-in-for-of-loop-in-functions: includes effects in for-of loop (#870)@generates es",
     "rollup@form@exponentiation-operator: folds exponentiation operator when considering dead code@generates es",
     "rollup@form@export-default-2: re-exporting a default export@generates es",

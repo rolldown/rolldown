@@ -64,6 +64,11 @@
  - rollup@function@implicit-dependencies@dependant-not-part-of-graph: throws when a module that is loaded before an emitted chunk is not part of the module graph
  - rollup@function@implicit-dependencies@external-dependant: throws when a module that is loaded before an emitted chunk does not exist
  - rollup@function@implicit-dependencies@missing-dependant: throws when a module that is loaded before an emitted chunk is external
+ - rollup@function@implicit-dependencies@dependent-dynamic-import-no-effects: throws when a module that is loaded before an emitted chunk is fully tree-shaken
+ - rollup@function@implicit-dependencies@dependent-dynamic-import-not-included: throws when a module that is loaded before an emitted chunk is only linked to the module graph via a tree-shaken dynamic import
+ - rollup@function@implicit-dependencies@dependent-not-part-of-graph: throws when a module that is loaded before an emitted chunk is not part of the module graph
+ - rollup@function@implicit-dependencies@external-dependent: throws when a module that is loaded before an emitted chunk does not exist
+ - rollup@function@implicit-dependencies@missing-dependent: throws when a module that is loaded before an emitted chunk is external
  - rollup@function@emit-file@set-asset-source-chunk: throws when trying to set the asset source of a chunk
  - rollup@function@emit-file@modules-loaded: Throws when adding a chunk after the modules have finished loading
  - rollup@function@emit-file@invalid-chunk-id: throws for invalid chunk ids

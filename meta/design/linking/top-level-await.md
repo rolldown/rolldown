@@ -13,12 +13,12 @@ The pass runs as the second step of `LinkStage::link`, immediately after `sort_m
 
 TLA turns a module's initialization into an async operation. Any construct that expects synchronous module evaluation has to be adjusted, or rejected:
 
-| Consumer                                       | Use                                                                                  |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `module_finalizers/mod.rs:296`                 | Emits `await init_foo()` instead of `init_foo()` when the importee has TLA transitively |
-| `utils/chunk/render_chunk_exports.rs:33`       | Wrapped ESM entries emit `await init_entry()` so `import` from a host can itself await |
-| `generate_stage/code_splitting.rs:865`         | Chunk optimization is disabled when any module has TLA — chunk merging can reorder initialization and reintroduce deadlocks |
-| `compute_tla.rs` itself (this pass)            | `require(tla_module)` becomes a `RequireTla` diagnostic with a full import-chain note |
+| Consumer                                 | Use                                                                                                                         |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `module_finalizers/mod.rs:296`           | Emits `await init_foo()` instead of `init_foo()` when the importee has TLA transitively                                     |
+| `utils/chunk/render_chunk_exports.rs:33` | Wrapped ESM entries emit `await init_entry()` so `import` from a host can itself await                                      |
+| `generate_stage/code_splitting.rs:865`   | Chunk optimization is disabled when any module has TLA — chunk merging can reorder initialization and reintroduce deadlocks |
+| `compute_tla.rs` itself (this pass)      | `require(tla_module)` becomes a `RequireTla` diagnostic with a full import-chain note                                       |
 
 Because downstream stages read only the boolean flag, the pass's real job is computing it once, correctly, and cheaply.
 
@@ -85,9 +85,9 @@ Documented in the source comment at the top of `compute_tla`:
 
 > On a cycle hit we return `None` for the visiting edge and then memoize modules along the current DFS path even though a later branch of the same parent might still discover TLA through them. If a subsequent `require(...)` lookup lands on one of those prematurely memoized siblings we silently miss the error.
 
-Concretely: in `A → B → A` with TLA buried behind a *different* edge of `B` discovered later, `B`'s first recursion returns `None` because `A` is still `Visiting`. If we memoize `B` as `Visited(None)` before trying `B`'s other edges… we don't, actually — `find_map` short-circuits only on `Some`, so all of `B`'s other `Import` edges are explored before memoization. The limitation bites when the **parent** of the cycle memoizes its result before all cycle members have been re-entered from a non-cycle root.
+Concretely: in `A → B → A` with TLA buried behind a _different_ edge of `B` discovered later, `B`'s first recursion returns `None` because `A` is still `Visiting`. If we memoize `B` as `Visited(None)` before trying `B`'s other edges… we don't, actually — `find_map` short-circuits only on `Some`, so all of `B`'s other `Import` edges are explored before memoization. The limitation bites when the **parent** of the cycle memoizes its result before all cycle members have been re-entered from a non-cycle root.
 
-A proper fix would use Tarjan-style SCC memoization: delay writing `Visited(..)` for any module in a pending SCC until the SCC fully resolves. Not implemented because (a) the miss only produces a missing *error*, never a wrong compilation, and (b) the incidence in practice is low.
+A proper fix would use Tarjan-style SCC memoization: delay writing `Visited(..)` for any module in a pending SCC until the SCC fully resolves. Not implemented because (a) the miss only produces a missing _error_, never a wrong compilation, and (b) the incidence in practice is low.
 
 ## Invariants
 

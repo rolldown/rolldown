@@ -98,6 +98,7 @@
 ## [inject_jsx_dot_names](../../../../../crates/rolldown/tests/esbuild/default/inject_jsx_dot_names)
 ## [inject_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/inject_no_bundle)
 ## [inject_with_define](../../../../../crates/rolldown/tests/esbuild/default/inject_with_define)
+## [inject_with_string_re_export_name_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/inject_with_string_re_export_name_no_bundle)
 ## [jsx_automatic_imports_common_js](../../../../../crates/rolldown/tests/esbuild/default/jsx_automatic_imports_common_js)
 ## [jsx_automatic_imports_es6](../../../../../crates/rolldown/tests/esbuild/default/jsx_automatic_imports_es6)
 ## [jsx_constant_fragments](../../../../../crates/rolldown/tests/esbuild/default/jsx_constant_fragments)

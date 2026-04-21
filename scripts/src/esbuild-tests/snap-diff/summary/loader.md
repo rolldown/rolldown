@@ -45,6 +45,8 @@
 ## [require_custom_extension_string](../../../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_string)
 ## [with_type_json_override_loader_glob](../../../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader_glob)
 # Ignored Cases
+## [loader_data_url_hash_suffix_issue4370](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_hash_suffix_issue4370)
+  CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
 ## [loader_data_url_text_css](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_css)
   CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)
 ## [loader_inline_source_map_absolute_path_issue4075_unix](../../../../../crates/rolldown/tests/esbuild/loader/loader_inline_source_map_absolute_path_issue4075_unix)
@@ -110,3 +112,7 @@
   glob is not supported
 ## [with_type_json_override_loader](../../../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader)
   import attributes is not supported
+## [with_type_text_override_loader](../../../../../crates/rolldown/tests/esbuild/loader/with_type_text_override_loader)
+  import attributes is not supported
+## [with_type_text_override_loader_glob](../../../../../crates/rolldown/tests/esbuild/loader/with_type_text_override_loader_glob)
+  glob is not supported

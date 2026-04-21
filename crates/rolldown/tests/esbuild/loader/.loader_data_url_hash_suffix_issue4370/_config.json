@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "icons_css",
+        "import": "icons.css"
+      }
+    ]
+  }
+}

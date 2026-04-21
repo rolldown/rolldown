@@ -39,6 +39,8 @@ export const failedReasons: Record<string, string> = {
   'packagejson/package_json_browser_issue2002_b': '`sub` is not resolved',
   'packagejson/package_json_disabled_type_module_issue3367':
     'ignored module debug name seems not correct',
+  'ts/parameter_props_use_define_for_class_fields_true':
+    'https://github.com/oxc-project/oxc/issues/21600',
   'ts/ts_export_default_type_issue316':
     'related to https://github.com/rolldown/rolldown/issues/3048, export pointing to a value declared by `declare var` should be kept',
 };
@@ -130,6 +132,7 @@ export const notSupportedReasons: Record<string, string> = {
   'glob/ts_glob_basic_splitting': 'glob is not supported',
   'default/require_and_dynamic_import_invalid_template': 'glob is not supported',
   'loader/with_type_bytes_override_loader_glob': 'glob is not supported',
+  'loader/with_type_text_override_loader_glob': 'glob is not supported',
 
   'loader/loader_file_public_path_js': 'publicPath equivalent option is not supported',
   'loader/loader_file_public_path_css': 'publicPath equivalent option is not supported',
@@ -150,6 +153,7 @@ export const notSupportedReasons: Record<string, string> = {
   'loader/with_bad_attribute': 'import attributes is not supported',
   'loader/with_bad_type': 'import attributes is not supported',
   'loader/with_type_bytes_override_loader': 'import attributes is not supported',
+  'loader/with_type_text_override_loader': 'import attributes is not supported',
   'loader/with_type_json_override_loader': 'import attributes is not supported',
 
   'default/conditional_require_resolve':
@@ -242,6 +246,8 @@ export const ignoreReasons: Record<string, string> = {
   'default/legal_comments_modify_indent':
     'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
   'default/metafile_no_bundle':
+    'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
+  'loader/loader_data_url_hash_suffix_issue4370':
     'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',
   'loader/loader_data_url_text_css':
     'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',

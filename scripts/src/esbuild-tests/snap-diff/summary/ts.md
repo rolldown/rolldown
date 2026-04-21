@@ -1,7 +1,11 @@
 # Failed Cases
+## [parameter_props_use_define_for_class_fields_true](../../../../../crates/rolldown/tests/esbuild/ts/parameter_props_use_define_for_class_fields_true/diff.md)
+  https://github.com/oxc-project/oxc/issues/21600
 ## [ts_export_default_type_issue316](../../../../../crates/rolldown/tests/esbuild/ts/ts_export_default_type_issue316/diff.md)
   related to https://github.com/rolldown/rolldown/issues/3048, export pointing to a value declared by `declare var` should be kept
 # Passed Cases
+## [parameter_props_use_define_for_class_fields_false](../../../../../crates/rolldown/tests/esbuild/ts/parameter_props_use_define_for_class_fields_false)
+## [parameter_props_use_define_for_class_fields_true_lowered](../../../../../crates/rolldown/tests/esbuild/ts/parameter_props_use_define_for_class_fields_true_lowered)
 ## [this_inside_function_ts](../../../../../crates/rolldown/tests/esbuild/ts/this_inside_function_ts)
 ## [this_inside_function_ts_no_bundle](../../../../../crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle)
 ## [this_inside_function_ts_no_bundle_use_define_for_class_fields](../../../../../crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle_use_define_for_class_fields)

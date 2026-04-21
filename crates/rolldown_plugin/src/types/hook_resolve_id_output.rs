@@ -8,6 +8,7 @@ pub struct HookResolveIdOutput {
   pub normalize_external_id: Option<bool>,
   pub side_effects: Option<HookSideEffects>,
   pub package_json_path: Option<String>,
+  pub ignored: bool,
 }
 
 impl HookResolveIdOutput {
@@ -24,6 +25,7 @@ impl HookResolveIdOutput {
       package_json_path: resolved_id
         .package_json
         .map(|p| p.realpath().to_string_lossy().to_string()),
+      ignored: resolved_id.ignored,
     }
   }
 }

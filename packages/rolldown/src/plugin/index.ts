@@ -71,6 +71,8 @@ export interface ModuleOptions {
 export interface ResolvedId extends ModuleOptions {
   external: boolean | 'absolute';
   id: string;
+  /** @internal When true, the module is ignored (e.g. browser: false mapping). */
+  ignored?: boolean;
 }
 
 // Separate interface to dedupe the JSDoc comment
@@ -111,6 +113,8 @@ export interface PartialResolvedId
    */
   external?: boolean | 'absolute' | 'relative';
   id: string;
+  /** @internal When true, the module is ignored (e.g. browser: false mapping). */
+  ignored?: boolean;
 }
 
 /** @category Plugin APIs */

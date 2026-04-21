@@ -70,6 +70,7 @@ impl BindingPluginContext {
       // TODO: should use `&str` instead. (claude code) Attempt failed due to PathBuf conversion requires to_string_lossy()
       package_json_path:
         info.package_json.map(|item| item.realpath().to_string_lossy().to_string()),
+      ignored: info.ignored,
     }))
   }
 
@@ -150,4 +151,5 @@ pub struct BindingPluginContextResolvedId {
   pub external: BindingResolvedExternal,
   #[napi(ts_type = "boolean | 'no-treeshake'")]
   pub module_side_effects: Option<BindingHookSideEffects>,
+  pub ignored: bool,
 }

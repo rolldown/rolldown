@@ -85,6 +85,7 @@ pub async fn resolve_id_with_plugins<Fs: FileSystem>(
         normalize_external_id: r.normalize_external_id,
         side_effects: r.side_effects,
         package_json,
+        ignored: r.ignored,
         ..Default::default()
       }));
     }
@@ -115,6 +116,7 @@ pub async fn resolve_id_with_plugins<Fs: FileSystem>(
       normalize_external_id: r.normalize_external_id,
       side_effects: r.side_effects,
       package_json,
+      ignored: r.ignored,
       ..Default::default()
     }));
   }

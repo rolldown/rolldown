@@ -18,6 +18,8 @@ pub struct BindingHookResolveIdOutput {
   /// we could get the related package json object via the path string.
   #[napi(ts_type = "string | null")]
   pub package_json_path: Option<String>,
+  /// @internal When true, the module should be treated as ignored (browser: false mapping).
+  pub ignored: Option<bool>,
 }
 
 impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutput {
@@ -30,6 +32,7 @@ impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutpu
       normalize_external_id: value.normalize_external_id,
       side_effects: value.module_side_effects.map(TryInto::try_into).transpose()?,
       package_json_path: value.package_json_path,
+      ignored: value.ignored.unwrap_or(false),
     })
   }
 }

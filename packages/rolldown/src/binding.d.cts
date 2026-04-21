@@ -2218,6 +2218,8 @@ export interface BindingHookResolveIdOutput {
    * we could get the related package json object via the path string.
    */
   packageJsonPath?: string | null
+  /** @internal When true, the module should be treated as ignored (browser: false mapping). */
+  ignored?: boolean
 }
 
 export type BindingHookSideEffects =
@@ -2453,6 +2455,7 @@ export interface BindingPluginContextResolvedId {
   packageJsonPath?: string
   external: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
+  ignored: boolean
 }
 
 export interface BindingPluginContextResolveOptions {

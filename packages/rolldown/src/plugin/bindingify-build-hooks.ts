@@ -137,6 +137,7 @@ export function bindingifyResolveId(
         normalizeExternalId: false,
         moduleSideEffects: exist.moduleSideEffects ?? undefined,
         packageJsonPath: ret.packageJsonPath,
+        ignored: ret.ignored,
       };
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -179,6 +180,7 @@ export function bindingifyResolveDynamicImport(
         id: ret.id,
         external: ret.external,
         packageJsonPath: ret.packageJsonPath,
+        ignored: ret.ignored,
       };
 
       if (ret.moduleSideEffects !== null) {

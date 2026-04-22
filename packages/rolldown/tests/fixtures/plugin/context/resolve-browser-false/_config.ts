@@ -1,8 +1,8 @@
 import { defineTest } from 'rolldown-tests';
-import { expect } from 'vitest';
+import { expect, vi } from 'vitest';
 
-// Regression test: Returning the result of `this.resolve()` from `resolveId` should
-// preserve `browser: false` handling (the module should be ignored/empty).
+const onResolved = vi.fn();
+
 export default defineTest({
   config: {
     input: './main.js',
@@ -18,14 +18,14 @@ export default defineTest({
             ...options,
             skipSelf: true,
           });
+          onResolved(resolved);
           return resolved;
         },
       },
     ],
   },
-  afterTest(output) {
-    expect(output.output).toHaveLength(1);
-    expect(output.output[0].type).toBe('chunk');
-    expect(output.output[0].code).toBe('');
+  afterTest() {
+    expect(onResolved).toHaveBeenCalledTimes(1);
+    expect(onResolved).toHaveBeenCalledWith(expect.objectContaining({ ignored: true }));
   },
 });

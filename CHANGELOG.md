@@ -9,6 +9,7 @@
 - collect destructured bindings in HMR module exports (#9146) by @h-a-n-a
 - esbuild-tests: handle 0.28.0 test cases (#9149) by @sapphi-red
 - plugin/copy-module: honor external resolutions from other plugins (#9139) by @TheAlexLichter
+- allow undefined in sourcesContent type (#9136) by @jurijzahn8019
 - reduce false positives in chunk optimizer circular dependency detection (#9049) by @AlonMiz
 
 ### 🚜 Refactor

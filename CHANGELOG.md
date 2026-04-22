@@ -1,4 +1,59 @@
 
+## [1.0.0-rc.17] - 2026-04-22
+
+### 🐛 Bug Fixes
+
+- link: error on missing export between TS modules (#9197) by @IWANABETHATGUY
+- rolldown_plugin_vite_import_glob: import path should not be affected by absolute base option (#9145) by @kermanx
+- `this.resolve()` returns null for bare relative paths without importer (#9142) by @Copilot
+- collect destructured bindings in HMR module exports (#9146) by @h-a-n-a
+- esbuild-tests: handle 0.28.0 test cases (#9149) by @sapphi-red
+- plugin/copy-module: honor external resolutions from other plugins (#9139) by @TheAlexLichter
+- reduce false positives in chunk optimizer circular dependency detection (#9049) by @AlonMiz
+
+### 🚜 Refactor
+
+- chunk-optimizer: extract runtime-module placement into rehome_runtime_module (#9163) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- add design doc for sort_modules execution ordering (#9169) by @IWANABETHATGUY
+- add document for `RenderedModule` (#9147) by @sapphi-red
+
+### ⚡ Performance
+
+- rolldown_plugin_vite_import_glob: skip self-import earlier using raw path comparison (#9193) by @shulaoda
+
+### 🧪 Testing
+
+- lazy: add `playground/lazy-compilation` (#7974) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- use app token for release PR (#9198) by @Boshen
+- upgrade oxc to 0.127.0 (#9194) by @Dunqing
+- use oxc security action (#9196) by @Boshen
+- esbuild-tests: remove some tests from ignored list as enum inline is now supported (#9184) by @sapphi-red
+- deps: update dependency vite-plus to v0.1.19 (#9183) by @renovate[bot]
+- use vp instead of pnpm in check-wasi-binding-deps (#9182) by @shulaoda
+- verify wasm32-wasi binding deps match @rolldown/browser before publish (#9162) by @shulaoda
+- deps: update esbuild for tests to 0.28.0 (#9172) by @sapphi-red
+- deps: update rollup submodule for tests to v4.60.2 (#9173) by @sapphi-red
+- deps: update test262 submodule for tests (#9174) by @sapphi-red
+- sort_modules: fix stale async-entry sort key comment (#9170) by @IWANABETHATGUY
+- deps: update npm packages (#9157) by @renovate[bot]
+- deps: update dependency diff to v9 (#9158) by @renovate[bot]
+- deps: update rust crates (#9156) by @renovate[bot]
+- run Windows CI on PRs labeled with `ci: windows` (#9153) by @hyf0
+- update-test-dependencies: run setup-rust before file changes (#9151) by @sapphi-red
+- deps: update dependency rust to v1.95.0 (#9140) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @jurijzahn8019 made their first contribution in [#9136](https://github.com/rolldown/rolldown/pull/9136)
+* @AlonMiz made their first contribution in [#9049](https://github.com/rolldown/rolldown/pull/9049)
+
+
 ## [1.0.0-rc.16] - 2026-04-16
 
 ### 🚀 Features

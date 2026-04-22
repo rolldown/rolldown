@@ -7,7 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region main.js
-await import("./hyper-cube.js");
+await import(
+	/* @vite-ignore */
+	"./hyper-cube.js"
+);
 //#endregion
 
 ```

@@ -9,8 +9,10 @@ use rolldown_common::{
   ModuleTable, PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, StmtInfos,
   WrapKind,
 };
+use rolldown_std_utils::PathExt as _;
 use rolldown_utils::{BitSet, IndexBitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath as _;
 
 use crate::{
   chunk_graph::ChunkGraph,
@@ -1420,5 +1422,204 @@ impl GenerateStage<'_> {
         runtime_dependent_chunks.insert(merge.to_chunk_idx);
       }
     }
+  }
+
+  /// Merges common chunks that have no side effects into entry chunks
+  /// when advanced chunks option is not specified.
+  /// This optimization reduces the total number of chunks by merging shared modules
+  /// into an appropriate entry chunk when possible.
+  pub fn merge_side_effect_free_chunks(&self, chunk_graph: &mut ChunkGraph) {
+    let side_effect_free_common_chunks = chunk_graph
+      .chunk_table
+      .iter_enumerated()
+      .filter(|(_, chunk)| {
+        matches!(chunk.kind, ChunkKind::Common)
+          && !chunk.has_side_effect(&self.link_output.module_table)
+          && (chunk.name != Some(ArcStr::from("rolldown-runtime")))
+      })
+      .filter(|(_, chunk)| {
+        chunk.modules.iter().any(|module_idx| {
+          let module = &self.link_output.module_table[*module_idx].as_normal().unwrap();
+          module.ecma_view.dynamic_importers.is_empty()
+        })
+      })
+      .sorted_by(|(_, chunk_a), (_, chunk_b)| {
+        let a_chunk_first_module_exec_order =
+          self.link_output.module_table[chunk_a.modules[0]].exec_order();
+        let b_chunk_first_module_exec_order =
+          self.link_output.module_table[chunk_b.modules[0]].exec_order();
+        a_chunk_first_module_exec_order.cmp(&b_chunk_first_module_exec_order)
+      })
+      .map(|(chunk_idx, _)| chunk_idx)
+      .collect::<Vec<_>>();
+
+    let mut common_chunk_to_entry_chunk_idxs: FxIndexMap<ChunkIdx, Vec<ChunkIdx>> =
+      FxIndexMap::default();
+
+    let static_side_effect_free_entry_chunks = chunk_graph
+      .chunk_table
+      .iter_enumerated()
+      .filter(|(_, chunk)| {
+        matches!(chunk.kind, ChunkKind::EntryPoint { meta,.. } if meta == ChunkMeta::UserDefinedEntry)
+          && !chunk.is_async_entry()
+          && !chunk.has_side_effect(&self.link_output.module_table)
+      })
+      .sorted_by(|(_, chunk_a), (_, chunk_b)| {
+        let a_module_id = chunk_a.entry_module_idx().unwrap();
+        let b_module_id = chunk_b.entry_module_idx().unwrap();
+        let module_a = &self.link_output.module_table[a_module_id];
+        let module_b = &self.link_output.module_table[b_module_id];
+        module_a.exec_order().cmp(&module_b.exec_order())
+      })
+      .map(|(chunk_idx, _)| chunk_idx)
+      .collect::<Vec<_>>();
+
+    if static_side_effect_free_entry_chunks.len() > 1 && !side_effect_free_common_chunks.is_empty()
+    {
+      let target_entry_chunk_idx = static_side_effect_free_entry_chunks[0];
+
+      let side_effect_free_entry_chunks = &static_side_effect_free_entry_chunks[1..];
+
+      let mut module_idxs: Vec<ModuleIdx> = Vec::new();
+
+      for chunk_idx in &side_effect_free_common_chunks {
+        module_idxs.extend(chunk_graph.chunk_table[*chunk_idx].modules.iter().copied());
+      }
+
+      for chunk_idx in side_effect_free_entry_chunks {
+        module_idxs.extend(chunk_graph.chunk_table[*chunk_idx].modules.iter().copied());
+      }
+
+      if !module_idxs.is_empty() {
+        self.add_side_effect_free_modules_to_chunk(
+          chunk_graph,
+          target_entry_chunk_idx,
+          &module_idxs,
+        );
+
+        for chunk_idx in side_effect_free_entry_chunks {
+          self.delete_module_from_merge_entry_chunk(chunk_graph, chunk_idx);
+        }
+
+        for chunk_idx in &side_effect_free_common_chunks {
+          self.delete_module_from_merge_entry_chunk(chunk_graph, chunk_idx);
+        }
+
+        self.mark_optimization_to_chunk(
+          chunk_graph,
+          &side_effect_free_common_chunks,
+          PostChunkOptimizationOperation::RemovedWithSideEffectFree,
+        );
+
+        self.mark_optimization_to_chunk(
+          chunk_graph,
+          side_effect_free_entry_chunks,
+          PostChunkOptimizationOperation::EntryReplacedWithReexports,
+        );
+
+        self.add_name_to_target_chunk(chunk_graph, target_entry_chunk_idx);
+      }
+    } else if side_effect_free_common_chunks.len() >= 2 {
+      for common_chunk_idx in &side_effect_free_common_chunks {
+        Self::find_entry_chunks_for_common_chunk(
+          chunk_graph,
+          common_chunk_idx,
+          &mut common_chunk_to_entry_chunk_idxs,
+        );
+      }
+
+      let is_side_effect_entry = common_chunk_to_entry_chunk_idxs
+        .iter()
+        .flat_map(|(_, entry_chunk_idx)| entry_chunk_idx.iter())
+        .any(|entry_chunk_idx| {
+          chunk_graph.chunk_table[*entry_chunk_idx].has_side_effect(&self.link_output.module_table)
+        });
+
+      if is_side_effect_entry {
+        let skip_side_effect_free_common_chunk = &side_effect_free_common_chunks[1..];
+        let first_chunk_id = side_effect_free_common_chunks[0];
+        let module_idxs: Vec<ModuleIdx> = skip_side_effect_free_common_chunk
+          .iter()
+          .flat_map(|chunk_idx| chunk_graph.chunk_table[*chunk_idx].modules.iter())
+          .copied()
+          .collect();
+        self.add_side_effect_free_modules_to_chunk(chunk_graph, first_chunk_id, &module_idxs);
+
+        for chunk_idx in skip_side_effect_free_common_chunk {
+          self.delete_module_from_merge_entry_chunk(chunk_graph, chunk_idx);
+        }
+        self.mark_optimization_to_chunk(
+          chunk_graph,
+          skip_side_effect_free_common_chunk,
+          PostChunkOptimizationOperation::RemovedWithSideEffectFree,
+        );
+        self.add_name_to_target_chunk(chunk_graph, first_chunk_id);
+      }
+    }
+  }
+
+  fn find_entry_chunks_for_common_chunk(
+    chunk_graph: &ChunkGraph,
+    common_chunk_idx: &ChunkIdx,
+    common_chunk_to_entry_chunk_idxs: &mut FxIndexMap<ChunkIdx, Vec<ChunkIdx>>,
+  ) {
+    for (entry_chunk_idx, entry_chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      if matches!(entry_chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta == ChunkMeta::UserDefinedEntry)
+      {
+        common_chunk_to_entry_chunk_idxs
+          .entry(*common_chunk_idx)
+          .or_default()
+          .push(entry_chunk_idx);
+      }
+    }
+  }
+
+  fn add_side_effect_free_modules_to_chunk(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    target_chunk_id: ChunkIdx,
+    module_idxs: &Vec<ModuleIdx>,
+  ) {
+    for module_idx in module_idxs {
+      chunk_graph.add_module_to_chunk(
+        *module_idx,
+        target_chunk_id,
+        self.link_output.metas[*module_idx].depended_runtime_helper,
+      );
+
+      chunk_graph.module_to_chunk[*module_idx] = Some(target_chunk_id);
+    }
+  }
+
+  fn delete_module_from_merge_entry_chunk(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    chunk_idx: &ChunkIdx,
+  ) {
+    chunk_graph.chunk_table[*chunk_idx].modules.clear();
+  }
+
+  fn mark_optimization_to_chunk(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    fixing_chunk_idx_vec: &[ChunkIdx],
+    marker: PostChunkOptimizationOperation,
+  ) {
+    for chunk_idx in fixing_chunk_idx_vec {
+      chunk_graph.post_chunk_optimization_operations.insert(*chunk_idx, marker);
+    }
+  }
+
+  fn add_name_to_target_chunk(&self, chunk_graph: &mut ChunkGraph, target_chunk_id: ChunkIdx) {
+    let target_chunk = chunk_graph.chunk_table.get_mut(target_chunk_id).unwrap();
+
+    let target_module = if matches!(target_chunk.kind, ChunkKind::EntryPoint { .. }) {
+      target_chunk.entry_module_idx().unwrap()
+    } else {
+      target_chunk.modules[0]
+    };
+    let module_id = self.link_output.module_table[target_module].id().as_str();
+    let name = module_id.as_path().representative_file_name();
+    target_chunk.name = Some(name.into());
   }
 }

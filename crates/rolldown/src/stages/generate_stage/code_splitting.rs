@@ -38,6 +38,7 @@ pub struct SplittingInfo {
 pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 
 impl GenerateStage<'_> {
+  #[expect(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate_chunks(&mut self) -> BuildResult<ChunkGraph> {
     // Count total entry points (not unique modules) to handle duplicates correctly
@@ -196,6 +197,10 @@ impl GenerateStage<'_> {
       .filter(|(chunk_idx, _chunk)| {
         chunk_graph.post_chunk_optimization_operations.get(chunk_idx).copied()
           != Some(PostChunkOptimizationOperation::Removed)
+      })
+      .filter(|(chunk_idx, _chunk)| {
+        chunk_graph.post_chunk_optimization_operations.get(chunk_idx).copied()
+          != Some(PostChunkOptimizationOperation::RemovedWithSideEffectFree)
       })
       .sorted_by(|(_ai, a), (_bi, b)| {
         let a_should_be_first = Ordering::Less;

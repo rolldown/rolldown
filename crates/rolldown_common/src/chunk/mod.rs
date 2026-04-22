@@ -52,6 +52,7 @@ pub enum PostChunkOptimizationOperation {
   Removed,
   /// The chunk has been removed and merged into another chunk,because it is side effect free.
   RemovedWithSideEffectFree,
+  EntryReplacedWithReexports,
   /// The chunk has been removed, but its exports should be preserved in the target chunk.
   /// e.g., an emitted chunk with `preserveEntrySignatures: 'allow-extension'` merged into
   /// a manual chunks group - all exports should be preserved even though the original

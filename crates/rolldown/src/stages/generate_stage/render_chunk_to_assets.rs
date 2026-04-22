@@ -170,7 +170,7 @@ impl GenerateStage<'_> {
         .filter_map(|(idx, module_id_to_codegen_ret)| {
           let chunk_idx =
             ChunkIdx::from_raw(u32::try_from(idx).expect("chunk index should fit in u32"));
-          if chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx) {
+          if chunk_graph.is_chunk_removed(&chunk_idx) {
             return None;
           }
           let chunk = chunk_graph.chunk_table.get(chunk_idx)?;

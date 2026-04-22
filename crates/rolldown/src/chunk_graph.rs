@@ -71,6 +71,19 @@ impl ChunkGraph {
     self.chunk_table.chunks[chunk_idx].depended_runtime_helper.insert(depended_runtime_helper);
   }
 
+  pub fn is_chunk_removed(&self, chunk_idx: &ChunkIdx) -> bool {
+    let post_operation = self.post_chunk_optimization_operations.get(chunk_idx);
+
+    matches!(
+      post_operation,
+      Some(
+        PostChunkOptimizationOperation::Removed
+          | PostChunkOptimizationOperation::RemovedWithPreservedExports
+          | PostChunkOptimizationOperation::RemovedWithSideEffectFree
+      )
+    )
+  }
+
   pub fn sort_chunk_modules(&mut self, link_output: &LinkStageOutput, options: &SharedOptions) {
     // Sort modules in each chunk by execution order
     self.chunk_table.iter_mut().for_each(|chunk| {

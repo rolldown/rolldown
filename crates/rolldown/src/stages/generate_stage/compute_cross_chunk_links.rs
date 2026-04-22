@@ -298,6 +298,7 @@ impl GenerateStage<'_> {
         chunk_id_to_symbols_vec.push((chunk_id, symbol_needs_to_assign));
       },
     );
+
     // shadowing previous immutable borrow
     let symbols = &mut self.link_output.symbol_db;
     for (chunk_idx, symbol_list) in chunk_id_to_symbols_vec {

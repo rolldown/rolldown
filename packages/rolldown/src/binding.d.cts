@@ -1613,6 +1613,7 @@ export declare class BindingNormalizedOptions {
   get name(): string | null
   get entryFilenames(): string | undefined
   get chunkFilenames(): string | undefined
+  get sourcemapFilenames(): string | undefined
   get assetFilenames(): string | undefined
   get dir(): string | null
   get file(): string | null
@@ -2419,6 +2420,7 @@ export interface BindingOutputOptions {
   paths?: Record<string, string> | ((id: string) => string)
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
+  sourcemapFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sourcemapBaseUrl?: string
   sourcemapIgnoreList?: boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)
   sourcemapDebugIds?: boolean

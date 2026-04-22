@@ -122,6 +122,9 @@ pub struct BindingOutputOptions<'env> {
   // preferConst: boolean;
   #[napi(ts_type = "'file' | 'inline' | 'hidden'")]
   pub sourcemap: Option<String>,
+  #[debug(skip)]
+  #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
+  pub sourcemap_file_names: Option<ChunkFileNamesOutputOption>,
   pub sourcemap_base_url: Option<String>,
   #[debug(skip)]
   #[napi(

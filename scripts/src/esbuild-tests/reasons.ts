@@ -43,6 +43,9 @@ export const failedReasons: Record<string, string> = {
     'https://github.com/oxc-project/oxc/issues/21600',
   'ts/ts_export_default_type_issue316':
     'related to https://github.com/rolldown/rolldown/issues/3048, export pointing to a value declared by `declare var` should be kept',
+  'ts/ts_print_non_finite_number_inside_with':
+    'with statement is rejected due to https://github.com/rolldown/rolldown/issues/7009',
+  'ts/ts_enum_cross_module_inlining_access': 'https://github.com/rolldown/rolldown/issues/9181',
 };
 
 export const notSupportedReasons: Record<string, string> = {
@@ -83,24 +86,6 @@ export const notSupportedReasons: Record<string, string> = {
   'default/legal_comments_no_escape_slash_style_end_of_file':
     "`legalComments: 'eof'` is not supported",
   'default/legal_comments_none': "`legalComments: 'none'` is not supported for CSS files",
-
-  'ts/enum_rules_from_type_script_5_0': 'const enum inline is not supported',
-  'ts/ts_const_enum_comments': 'const enum inline is not supported',
-  'ts/ts_enum_cross_module_inlining_access': 'enum inline is not supported',
-  'ts/ts_enum_cross_module_inlining_definitions': 'enum inline is not supported',
-  'ts/ts_enum_cross_module_inlining_minify_index_into_dot': 'const enum inline is not supported',
-  'ts/ts_enum_cross_module_inlining_re_export': 'enum inline is not supported',
-  'ts/ts_enum_cross_module_tree_shaking': 'enum inline is not supported',
-  'ts/ts_enum_export_clause': 'enum inline is not supported',
-  'ts/ts_enum_jsx': 'enum inline is not supported',
-  'ts/ts_enum_same_module_inlining_access': 'enum inline is not supported',
-  'ts/ts_enum_tree_shaking': 'enum inline is not supported',
-  'ts/ts_enum_use_before_declare': 'enum inline is not supported',
-  'ts/ts_minify_enum_cross_file_inline_strings_into_templates': 'enum inline is not supported',
-  'ts/ts_minify_enum_property_names': 'enum inline is not supported',
-  'ts/ts_print_non_finite_number_inside_with':
-    'with statement is rejected due to https://github.com/rolldown/rolldown/issues/7009 and enum inline is not supported',
-  'ts/ts_sibling_enum': 'enum inline is not supported',
 
   'default/metafile_various_cases': 'copy loader is not supported',
   'default/metafile_very_long_external_paths': 'copy loader is not supported',

@@ -500,12 +500,15 @@ impl GlobImportVisit<'_> {
         continue;
       }
 
-      let import_path = self.relative_path(file, Some(dir));
+      let mut import_path = self.relative_path(file, Some(dir));
       if self_path == import_path {
         continue;
       }
 
       let file_path = if let Some(base) = &options.base {
+        if base.starts_with('/') {
+          import_path = format!("/{}", file.relative(self.root).to_slash_lossy());
+        }
         let base_path = if let Some(base) = base.strip_prefix('/') {
           self.root.join(base)
         } else {

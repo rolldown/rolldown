@@ -1,12 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
+# Errors
 
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Warning: "default" is not exported by "foo.ts".
+[MISSING_EXPORT] Error: "default" is not exported by "foo.ts".
    ╭─[ main.ts:1:8 ]
    │
  1 │ import dc_def, { bar as dc } from "./foo";
@@ -15,17 +15,5 @@ source: crates/rolldown_testing/src/integration_test.rs
    │ 
    │ Note: If you meant to import a type rather than a value, make sure to add the `type` modifier (e.g. `import { type Foo } from './foo'`).
 ───╯
-
-```
-
-# Assets
-
-## main.js
-
-```js
-//#region main.ts
-var main_default = [dc_def, 123];
-//#endregion
-export { main_default as default };
 
 ```

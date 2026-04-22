@@ -18,8 +18,12 @@ impl BitSet {
     (self.entries[idx] & (1 << (bit & 7))) != 0
   }
 
-  pub fn set_bit(&mut self, bit: u32) {
-    self.entries[bit as usize / 8] |= 1 << (bit & 7);
+  pub fn set_bit(&mut self, bit: u32) -> bool {
+    let byte = &mut self.entries[bit as usize / 8];
+    let mask = 1 << (bit & 7);
+    let was_set = *byte & mask != 0;
+    *byte |= mask;
+    !was_set
   }
 
   pub fn clear_bit(&mut self, bit: u32) {

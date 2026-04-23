@@ -161,7 +161,12 @@ impl<Fs: FileSystem> Resolver<Fs> {
       selected_resolver.resolve(self.cwd.as_path(), specifier)
     };
 
-    if resolution.is_err() && is_user_defined_entry {
+    // Apply Rollup compatibility resolve when resolution fails and either:
+    // 1. It's a user-defined entry (e.g. `{ input: 'main' }` in rolldown config), or
+    // 2. There is no importer (e.g. `this.resolve('src/index.ts')` called from a plugin
+    //    without an importer), matching Rollup's behavior of resolving bare relative paths
+    //    against CWD when no importer is present.
+    if resolution.is_err() && (is_user_defined_entry || importer.is_none()) {
       resolution =
         self.try_rollup_compatibility_resolve(selected_resolver, importer, specifier, resolution);
     }

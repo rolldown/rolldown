@@ -1,6 +1,7 @@
 # Failed Cases
 # Passed Cases
 ## [class_super_this_issue242_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/class_super_this_issue242_no_bundle)
+## [for_await_with_optional_catch_issue4378](../../../../../crates/rolldown/tests/esbuild/lower/for_await_with_optional_catch_issue4378)
 ## [java_script_auto_accessor_es_next](../../../../../crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es_next)
 ## [java_script_auto_accessor_es2021](../../../../../crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es2021)
 ## [java_script_auto_accessor_es2022](../../../../../crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es2022)

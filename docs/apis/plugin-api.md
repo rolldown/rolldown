@@ -262,6 +262,10 @@ These are the concrete differences:
 - Build hooks are called for each output separately, whereas Rollup calls them once for all outputs
 - [`closeBundle`](/reference/Interface.FunctionPluginHooks#closebundle) hook is called **only** when you called [`generate()`](/reference/Interface.RolldownBuild#generate) or [`write()`](/reference/Interface.RolldownBuild#write) at least once, whereas Rollup calls it regardless of whether you called `generate()` or `write()`
 
+### Watch Mode Hook Behavior
+
+In Rollup, the [`options`](/reference/Interface.Plugin#options) hook is called on every rebuild in watch mode. In Rolldown, the `options` hook is only called once when the watcher is created, and is not called again on subsequent rebuilds.
+
 ### Sequential Hook Execution
 
 In Rollup, certain hooks like [`writeBundle`](/reference/Interface.FunctionPluginHooks#writebundle) are "parallel" by default, meaning they run concurrently across multiple plugins. This requires plugins to explicitly set `sequential: true` if they need their hooks to run one after another.

@@ -252,11 +252,10 @@ impl From<&NormalizedTreeshakeOptions> for oxc::minifier::TreeShakeOptions {
         PropertyReadSideEffects::Always => oxc::minifier::PropertyReadSideEffects::All,
         PropertyReadSideEffects::False => oxc::minifier::PropertyReadSideEffects::None,
       },
-      // TODO: Add property_write_side_effects when oxc::minifier supports it
-      // property_write_side_effects: match value.property_write_side_effects() {
-      //   PropertyWriteSideEffects::Always => oxc::minifier::PropertyWriteSideEffects::All,
-      //   PropertyWriteSideEffects::False => oxc::minifier::PropertyWriteSideEffects::None,
-      // },
+      property_write_side_effects: match value.property_write_side_effects() {
+        PropertyWriteSideEffects::Always => true,
+        PropertyWriteSideEffects::False => false,
+      },
       unknown_global_side_effects: value.unknown_global_side_effects(),
       invalid_import_side_effects: value.invalid_import_side_effects(),
     }

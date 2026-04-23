@@ -92,14 +92,19 @@ fn init() {
       // it's too high for us
       // we don't have that many `blocking` tasks to run at this moment
       .unwrap_or(4);
+    let worker_threads = std::env::var("ROLLDOWN_WORKER_THREADS")
+      .ok()
+      .and_then(|v| v.parse::<usize>().ok())
+      // unlike the web server scenario
+      // rolldown puts a lot of blocking tasks in the worker threads rather than blocking_threads
+      // so we need to increase the worker threads rather than the blocking_threads
+      .unwrap_or(num_cpus::get_physical() * 3 / 2);
     let mut builder = tokio::runtime::Builder::new_multi_thread();
 
     let rt = builder
       .max_blocking_threads(max_blocking_threads)
-      // unlike the web server scenario
-      // rolldown puts a lot of blocking tasks in the worker threads rather than blocking_threads
-      // so we need to increase the worker threads rather than the blocking_threads
-      .worker_threads(num_cpus::get_physical() * 3 / 2)
+      .worker_threads(worker_threads)
+      .thread_name("rolldown-worker")
       .enable_all()
       .build()
       .expect("Failed to create tokio runtime");

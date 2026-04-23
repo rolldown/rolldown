@@ -1,7 +1,5 @@
-use oxc::{
-  span::CompactStr,
-  syntax::{identifier, keyword},
-};
+use oxc::syntax::{identifier, keyword};
+use oxc_str::CompactStr;
 use std::{borrow::Cow, path::Path};
 
 use crate::{concat_string, indexmap::FxIndexMap};

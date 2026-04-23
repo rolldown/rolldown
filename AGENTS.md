@@ -9,15 +9,17 @@ Rolldown is a JavaScript/TypeScript bundler written in Rust and TypeScript, desi
 
 </tips>
 
-# Spec-Driven Development
+# Context Engineering
 
-Design docs live in `meta/design/`. They capture high-level vision and design intent, giving both humans and AI a shared understanding of what the system should be.
+## Design Docs
 
-When a design doc exists for a topic, treat it as the source of truth — read it before coding, update it before changing the design. When there isn't one, just code.
+AI needs more context to produce correct code, and code alone doesn't carry all the context. Design docs in `meta/design/` capture what's missing — trade-offs, intentions, and decisions.
 
-- **Format:** See `meta/design/template.md` for the suggested format. Keep it freeform — one concept per file, link between docs, no rigid structure required.
-- **Reference in code:** When code implements something described in a design doc, add a comment referencing the doc (e.g. `// See meta/design/watch-mode.md`) so readers can find the rationale.
-- **Keep docs in sync:** When changing code that affects a design doc, update the doc in the same change. Design docs that drift from reality are worse than no docs.
+- **Read first:** If a design doc covers the area you're working in, read it before starting.
+- **Keep in sync:** If your changes affect a design doc, update it in the same change.
+- **Format:** See `meta/design/template.md`. Keep it freeform — one concept per file, link between docs. Capture not just the _what_ but the _why_: trade-offs considered, alternatives rejected, known pitfalls, future directions.
+- **Reference in code:** When code implements something described in a design doc, add a comment referencing the doc (e.g. `// See meta/design/watch-mode.md`).
+- **Maintain like a garden:** Docs that drift from reality are worse than no docs. Trim what's been implemented and is now obvious from the code. Keep what's still valuable — the "why" behind decisions, failure modes, unresolved questions.
 
 # Architecture
 
@@ -46,7 +48,7 @@ Rust Core (crates/rolldown)
 - `packages/rollup-tests`: Compatibility test suite for Rollup plugins.
 - `crates/rolldown_watcher`: Watch mode coordinator. See `meta/design/watch-mode.md` for architecture, state machine, debounce/consolidation rules, and event lifecycle.
 - `docs/`: Documentation site built with VitePress.
-- `meta/design/`: Design documents. See the "Spec-Driven Development" section above.
+- `meta/design/`: Design documents. See the "Context Engineering" section above.
 
 ## Auto-generated or Submodule Files
 

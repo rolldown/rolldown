@@ -17,9 +17,7 @@ mod utils;
 pub mod bundler_options {
   pub use crate::generated::{
     checks_options::ChecksOptions,
-    runtime_helper::{
-      DependedRuntimeHelperMap, DependedRuntimeHelperMapExt, RUNTIME_HELPER_NAMES, RuntimeHelper,
-    },
+    runtime_helper::{DependedRuntimeHelperMap, RUNTIME_HELPER_NAMES, RuntimeHelper},
   };
 
   #[cfg(feature = "deserialize_bundler_options")]
@@ -188,6 +186,7 @@ pub use crate::{
   types::module_namespace_included_reason::ModuleNamespaceIncludedReason,
   types::module_render_output::ModuleRenderOutput,
   types::module_table::{IndexModules, ModuleTable},
+  types::module_tag::{ModuleTag, ModuleTagBitSet, ModuleTagRegistry},
   types::named_export::LocalExport,
   types::named_import::{NamedImport, Specifier},
   types::namespace_alias::NamespaceAlias,
@@ -215,6 +214,7 @@ pub use crate::{
   types::symbol_ref_db::{
     GetLocalDb, GetLocalDbMut, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags,
   },
+  types::used_symbol_refs::UsedSymbolRefs,
   types::watch::WatcherChangeKind,
   types::wrap_kind::WrapKind,
 };

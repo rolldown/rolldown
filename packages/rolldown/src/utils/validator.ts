@@ -194,6 +194,8 @@ const TypescriptSchema = v.object({
   allowNamespaces: v.optional(v.boolean()),
   allowDeclareFields: v.optional(v.boolean()),
   removeClassFieldsWithoutInitializer: v.optional(v.boolean()),
+  optimizeConstEnums: v.optional(v.boolean()),
+  optimizeEnums: v.optional(v.boolean()),
   declaration: v.optional(
     v.object({
       stripInternal: v.optional(v.boolean()),
@@ -421,6 +423,7 @@ const CompressTreeshakeOptionsSchema = v.strictObject({
   annotations: v.optional(v.boolean()),
   manualPureFunctions: v.optional(v.array(v.string())),
   propertyReadSideEffects: v.optional(v.union([v.boolean(), v.literal('always')])),
+  propertyWriteSideEffects: v.optional(v.boolean()),
   unknownGlobalSideEffects: v.optional(v.boolean()),
   invalidImportSideEffects: v.optional(v.boolean()),
 });
@@ -795,6 +798,7 @@ const AdvancedChunksSchema = v.strictObject({
         maxModuleSize: v.optional(v.number()),
         entriesAware: v.optional(v.boolean()),
         entriesAwareMergeThreshold: v.optional(v.number()),
+        tags: v.optional(v.array(v.string())),
       }),
     ),
   ),

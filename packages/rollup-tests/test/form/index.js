@@ -53,7 +53,8 @@ runTestSuiteWithSamples(
 								},
 								strictDeprecations: true,
 								...config.options,
-								plugins: config.options?.plugins
+								// skip JSON plugin as it's incompatible with Rolldown and is not needed
+								plugins: config.options?.plugins?.filter(plugin => plugin.name !== 'json')
 									// config.verifyAst === false
 									// 	? config.options?.plugins
 									// 	: config.options?.plugins === undefined

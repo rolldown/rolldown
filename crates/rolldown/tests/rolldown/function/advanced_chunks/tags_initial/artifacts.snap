@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## initial-deps.js
+
+```js
+//#region shared.js
+const shared = "shared-initial";
+//#endregion
+//#region main.js
+const lazy = import("./lazy.js");
+//#endregion
+export { shared as n, lazy as t };
+
+```
+
+## lazy.js
+
+```js
+//#region lazy-dep.js
+const lazyDep = "lazy-dep";
+//#endregion
+export { lazyDep };
+
+```
+
+## main.js
+
+```js
+import { n as shared, t as lazy } from "./initial-deps.js";
+export { lazy, shared };
+
+```

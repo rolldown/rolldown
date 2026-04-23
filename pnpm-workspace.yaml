@@ -17,14 +17,12 @@ catalog:
   '@babel/core': ^7.24.7
   '@babel/preset-env': ^7.24.7
   '@babel/preset-typescript': ^7.24.7
-  '@emnapi/core': ^1.9.1
-  '@emnapi/runtime': ^1.9.1
-  '@napi-rs/cli': ^3.6.0
-  '@napi-rs/wasm-runtime': ^1.1.2
-  '@oxc-node/cli': ^0.0.35
-  '@oxc-node/core': ^0.0.35
-  '@oxc-project/runtime': '=0.124.0'
-  '@oxc-project/types': '=0.124.0'
+  '@napi-rs/cli': ^3.6.1
+  '@napi-rs/wasm-runtime': ^1.1.4
+  '@oxc-node/cli': ^0.1.0
+  '@oxc-node/core': ^0.1.0
+  '@oxc-project/runtime': '=0.127.0'
+  '@oxc-project/types': '=0.127.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rollup/plugin-commonjs': ^29.0.0
   '@rollup/plugin-json': ^6.1.0
@@ -50,8 +48,8 @@ catalog:
   connect: ^3.7.0
   consola: ^3.4.2
   dedent: ^1.5.3
-  diff: ^8.0.0
-  esbuild: ^0.27.0
+  diff: ^9.0.0
+  esbuild: ^0.28.0
   estree-toolkit: ^1.7.8
   execa: ^9.2.0
   fast-glob: ^3.3.3
@@ -62,9 +60,9 @@ catalog:
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
   mocha: ^11.7.5
-  oxc-minify: '=0.124.0'
-  oxc-parser: '=0.124.0'
-  oxc-transform: '=0.124.0'
+  oxc-minify: '=0.127.0'
+  oxc-parser: '=0.127.0'
+  oxc-transform: '=0.127.0'
   pathe: ^2.0.3
   picomatch: ^4.0.2
   react: ^19.0.0

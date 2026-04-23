@@ -1,9 +1,8 @@
 use oxc::{
   ast::ast::{
-    ExportNamedDeclaration, ImportDeclaration, ImportDeclarationSpecifier, ImportOrExportKind,
+    ExportNamedDeclaration, ImportDeclaration, ImportDeclarationSpecifier, ImportOrExportKind, Str,
   },
   ast_visit::VisitMut,
-  span::Str,
 };
 
 pub struct TypeImportVisitor<'ast> {

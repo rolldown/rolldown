@@ -2,14 +2,16 @@ use std::{borrow::Cow, path::Path};
 
 use json_escape_simd::escape;
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
+use oxc_str::CompactStr;
 use rolldown_common::{
-  ModuleDefFormat, ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes,
-  json_value_to_ecma_ast,
+  ConstExportMeta, ModuleDefFormat, ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY,
+  StrOrBytes, json_value_to_ecma_ast,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookTransformAstArgs;
 use rolldown_utils::mime::guess_mime;
+use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
 use super::pre_process_ecma_ast::PreProcessEcmaAst;
@@ -41,6 +43,9 @@ pub struct ParseToEcmaAstResult {
   /// Whether JSX syntax should be preserved in the output, determined per-module
   /// during transformation based on the resolved tsconfig.
   pub preserve_jsx: bool,
+  /// Enum member constant values, keyed by enum name → member name → value.
+  /// Used by the finalizer to inline cross-module enum member accesses (e.g., `Direction.Up` → `0`).
+  pub enum_member_value_map: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>>,
 }
 
 pub async fn parse_to_ecma_ast(

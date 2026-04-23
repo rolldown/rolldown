@@ -1,3 +1,4 @@
+use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, FlatOptions, ImportRecordIdx,
@@ -19,6 +20,10 @@ pub struct CreateEcmaViewReturn {
   pub ecma_view: EcmaView,
   pub ecma_related: EcmaRelated,
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
+  /// The span of the first top-level `await` keyword, if any. Routed through
+  /// the task result into a centralized map on the link stage so it doesn't
+  /// need to live on every `EcmaView`.
+  pub tla_keyword_span: Option<Span>,
 }
 
 pub async fn create_ecma_view(
@@ -26,8 +31,14 @@ pub async fn create_ecma_view(
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
   let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects } = args;
-  let ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings, preserve_jsx } =
-    parse_to_ecma_ast(ctx, source).await?;
+  let ParseToEcmaAstResult {
+    ast,
+    scoping,
+    has_lazy_export,
+    warnings,
+    preserve_jsx,
+    enum_member_value_map,
+  } = parse_to_ecma_ast(ctx, source).await?;
   ctx.flat_options.set(FlatOptions::JsxPreserve, preserve_jsx);
   ctx.warnings.extend(warnings);
 
@@ -62,6 +73,7 @@ pub async fn create_ecma_view(
     warnings: scan_warnings,
     errors,
     ast_usage,
+    tla_keyword_span,
     symbol_ref_db: symbols,
     self_referenced_class_decl_symbol_ids,
     hashbang_range,
@@ -135,6 +147,7 @@ pub async fn create_ecma_view(
     directive_range,
     dummy_record_set,
     constant_export_map,
+    enum_member_value_map,
     depended_runtime_helper: Box::default(),
     import_attribute_map,
     json_module_none_self_reference_included_symbol: None,
@@ -142,7 +155,7 @@ pub async fn create_ecma_view(
   };
 
   let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage, preserve_jsx };
-  Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records })
+  Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records, tla_keyword_span })
 }
 
 /// The side effects priority is:

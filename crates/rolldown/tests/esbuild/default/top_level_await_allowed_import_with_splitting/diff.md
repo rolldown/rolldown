@@ -49,7 +49,7 @@ import "./chunk-GETF6B5C.js";
 ```diff
 ===================================================================
 --- esbuild	/out/c-DMBKURS2.js
-+++ rolldown	
++++ rolldown
 @@ -1,1 +0,0 @@
 -import "./chunk-GETF6B5C.js";
 
@@ -68,7 +68,7 @@ import "./chunk-GETF6B5C.js";
 ```diff
 ===================================================================
 --- esbuild	/out/b-2IGVSUS7.js
-+++ rolldown	
++++ rolldown
 @@ -1,2 +0,0 @@
 -import "./chunk-QJYGFXJG.js";
 -import "./chunk-GETF6B5C.js";
@@ -88,7 +88,7 @@ import "./chunk-GETF6B5C.js";
 ```diff
 ===================================================================
 --- esbuild	/out/a-3BAWOBN3.js
-+++ rolldown	
++++ rolldown
 @@ -1,2 +0,0 @@
 -import "./chunk-QJYGFXJG.js";
 -import "./chunk-GETF6B5C.js";
@@ -108,7 +108,7 @@ await 0;
 ```diff
 ===================================================================
 --- esbuild	/out/chunk-GETF6B5C.js
-+++ rolldown	
++++ rolldown
 @@ -1,1 +0,0 @@
 -await 0;
 

@@ -10,7 +10,7 @@ use rolldown_common::{
   AddonRenderContext, EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId, ModuleIdx,
   OutputFormat, RenderedModule, StrictMode,
 };
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookAddonArgs;
 use rolldown_sourcemap::Source;
 #[cfg(not(target_family = "wasm"))]
@@ -187,6 +187,40 @@ impl Generator for EcmaGenerator {
     };
 
     let mut warnings = vec![];
+
+    // Warn when multiple shebang sources would produce duplicate shebangs in the output.
+    // UMD format silently drops the entry hashbang, so it doesn't count as a shebang source.
+    let entry_has_shebang = hashbang.is_some() && !matches!(ctx.options.format, OutputFormat::Umd);
+    let banner_has_shebang = banner.as_ref().is_some_and(|b| b.starts_with("#!"));
+    let post_banner_has_shebang = post_banner.as_ref().is_some_and(|pb| pb.starts_with("#!"));
+
+    if (entry_has_shebang && (banner_has_shebang || post_banner_has_shebang))
+      || (banner_has_shebang && post_banner_has_shebang)
+    {
+      let filename = ctx
+        .chunk
+        .preliminary_filename
+        .as_deref()
+        .expect("chunk file name should be generated before rendering")
+        .to_string();
+      if entry_has_shebang && banner_has_shebang {
+        warnings.push(
+          BuildDiagnostic::duplicate_shebang(filename.clone(), "banner").with_severity_warning(),
+        );
+      }
+      if entry_has_shebang && post_banner_has_shebang {
+        warnings.push(
+          BuildDiagnostic::duplicate_shebang(filename.clone(), "postBanner")
+            .with_severity_warning(),
+        );
+      }
+      if banner_has_shebang && post_banner_has_shebang {
+        warnings.push(
+          BuildDiagnostic::duplicate_shebang(filename, "banner and postBanner")
+            .with_severity_warning(),
+        );
+      }
+    }
 
     let addon_render_context = AddonRenderContext {
       hashbang,

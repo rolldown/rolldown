@@ -10,7 +10,8 @@ use rolldown_common::{
   ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
   RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, SideEffectDetail,
   StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
+  UsedSymbolRefs, dynamic_import_usage::DynamicImportExportsUsage,
+  side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -59,7 +60,7 @@ pub struct IncludeContext<'a> {
   pub inline_const_smart: bool,
   pub runtime_idx: ModuleIdx,
   pub metas: &'a LinkingMetadataVec,
-  pub used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
+  pub used_symbol_refs: &'a mut UsedSymbolRefs,
   pub constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
   pub options: &'a NormalizedBundlerOptions,
   pub normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -82,7 +83,7 @@ impl<'a> IncludeContext<'a> {
     is_module_included_vec: &'a mut ModuleInclusionVec,
     runtime_idx: ModuleIdx,
     metas: &'a LinkingMetadataVec,
-    used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
+    used_symbol_refs: &'a mut UsedSymbolRefs,
     constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
     options: &'a NormalizedBundlerOptions,
     normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -115,17 +116,15 @@ fn include_cjs_bailout_exports(
   bailout_modules: impl IntoIterator<Item = ModuleIdx>,
 ) {
   for idx in bailout_modules {
-    metas[idx]
-      .resolved_exports
-      .iter()
-      .filter_map(|(_name, local)| local.came_from_commonjs.then_some(local))
-      .for_each(|local| {
+    metas[idx].resolved_exports.values().filter(|local| local.came_from_commonjs).for_each(
+      |local| {
         include_symbol_and_check_cjs_bailout(
           context,
           local.symbol_ref,
           SymbolIncludeReason::Normal,
         );
-      });
+      },
+    );
   }
 }
 
@@ -212,11 +211,16 @@ impl LinkStage<'_> {
         m.as_normal().map_or(IndexBitSet::default(), |m| IndexBitSet::new(m.stmt_infos.len()))
       })
       .collect::<IndexVec<ModuleIdx, _>>();
-    let mut used_symbol_refs = FxHashSet::default();
+    let mut used_symbol_refs = UsedSymbolRefs::default();
     let mut is_module_included_vec: ModuleInclusionVec =
       IndexBitSet::new(self.module_table.modules.len());
     let mut module_namespace_included_reason: ModuleNamespaceReasonVec =
       oxc_index::index_vec![ModuleNamespaceIncludedReason::empty(); self.module_table.len()];
+    self.has_enum_inlining = self
+      .module_table
+      .modules
+      .iter()
+      .any(|m| m.as_normal().is_some_and(|n| !n.ecma_view.enum_member_value_map.is_empty()));
     let context = &mut IncludeContext::new(
       &self.module_table.modules,
       &self.symbols,
@@ -339,22 +343,20 @@ impl LinkStage<'_> {
       .for_each(|(module, meta)| {
         let idx = module.idx;
         let mut normalized_runtime_helper = RuntimeHelper::default();
-        for (index, stmt_info_idxs) in module.depended_runtime_helper.iter().enumerate() {
+        for (helper, stmt_info_idxs) in module.depended_runtime_helper.iter() {
           if stmt_info_idxs.is_empty() {
             continue;
           }
           let any_included = stmt_info_idxs
             .iter()
             .any(|stmt_info_idx| is_stmt_info_included_vec[module.idx].has_bit(*stmt_info_idx));
-          #[expect(clippy::cast_possible_truncation)]
-          // Note: `RuntimeHelper` is a bitmask with at most 32 bits, so the index is guaranteed to fit in u32.
+          // We also need to process the runtime helper of an eliminated module so that we
+          // can propagate it to its importers later.
           normalized_runtime_helper.set(
-            RuntimeHelper::from_bits(1 << index as u32).unwrap(),
+            helper,
             any_included
               || (module.id != RUNTIME_MODULE_ID && !is_module_included_vec.has_bit(idx)),
           );
-          // We also need to process the runtime helper of the eliminate module so that we
-          // could propagate them to its importers later
         }
         meta.depended_runtime_helper = normalized_runtime_helper;
         meta.module_namespace_included_reason = module_namespace_included_reason[module.idx];
@@ -631,11 +633,9 @@ pub fn include_runtime_symbol(
 
 /// if no export is used, and the module has no side effects, the module should not be included
 pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
-  if ctx.is_module_included_vec.has_bit(module.idx) {
+  if !ctx.is_module_included_vec.set_bit(module.idx) {
     return;
   }
-
-  ctx.is_module_included_vec.set_bit(module.idx);
   ctx.module_inclusion_changed = true;
 
   if module.idx == ctx.runtime_idx && !module.side_effects.has_side_effects() {
@@ -829,14 +829,12 @@ pub fn include_statement(
   module: &NormalModule,
   stmt_info_idx: StmtInfoIdx,
 ) {
-  if ctx.is_included_vec[module.idx].has_bit(stmt_info_idx) {
+  // include the statement itself
+  if !ctx.is_included_vec[module.idx].set_bit(stmt_info_idx) {
     return;
   }
 
   let stmt_info = module.stmt_infos.get(stmt_info_idx);
-
-  // include the statement itself
-  ctx.is_included_vec[module.idx].set_bit(stmt_info_idx);
 
   // FIXME: bailout for require() import for now
   // it is fine for now, since webpack did not support it either
@@ -925,6 +923,34 @@ pub fn include_statement(
         // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
       }
     } else {
+      // For enum member accesses (e.g., `B.member`), check if the member will be inlined
+      // by the finalizer. If so, skip including the enum's declaration — it's dead code
+      // after inlining. This mirrors the `constant_symbol_map` bypass in `include_symbol`.
+      //
+      // This applies to both const and regular enums. The member access will be replaced
+      // by a literal, so the reference no longer needs the declaration. If the enum is
+      // also referenced as a bare symbol (e.g., `typeof E`, `console.log(E)`), that
+      // separate reference will independently include the declaration via `include_symbol`.
+      // Regular enum IIFEs are `@__PURE__`, so they'll be tree-shaken if truly unused.
+      if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = reference_ref {
+        let canonical_ref = ctx.symbols.canonical_ref_for(member_expr_ref.object_ref);
+        if let Some(Module::Normal(owner_module)) = ctx.modules.get(canonical_ref.owner) {
+          let symbol_name = canonical_ref.name(ctx.symbols);
+          if let Some(members) = owner_module.ecma_view.enum_member_value_map.get(symbol_name) {
+            // Only bypass for simple member accesses (e.g., `E.member`), not deep chains
+            // like `E.member.something` which wouldn't be inlined.
+            if member_expr_ref.prop_and_span_list.len() == 1 {
+              let prop_name = member_expr_ref.prop_and_span_list.first().map(|p| p.name.as_str());
+              if prop_name.is_some_and(|name| members.contains_key(name)) {
+                // This member access will be inlined — don't include the enum declaration.
+                // Enum inlining is unconditional (not gated by inlineConst mode) because
+                // it implements TypeScript's const enum semantics, which mandate replacement.
+                return;
+              }
+            }
+          }
+        }
+      }
       let original_ref = reference_ref.symbol_ref();
       std::iter::once(original_ref)
         .chain(

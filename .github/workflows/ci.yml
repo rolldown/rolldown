@@ -29,6 +29,9 @@ jobs:
       rust-changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}
       node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}
       pluginutils-changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}
+      docs-changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}
+      # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
+      run-windows: "${{ (github.event_name == 'pull_request') && contains(github.event.pull_request.labels.*.name, 'ci: windows') }}"
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
@@ -36,16 +39,19 @@ jobs:
         id: filter
         with:
           filters: |
-            rust-changes: &rust-changes
+            infra-changes: &infra-changes
               - '.github/workflows/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+            rust-changes: &rust-changes
+              - *infra-changes
               - 'crates/**'
               - 'tasks/**'
               - 'scripts/src/esbuild-tests/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
               - 'rust-toolchain.toml'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
               - '.gitattributes'
               - 'justfile'
               - 'test262'
@@ -54,19 +60,23 @@ jobs:
               - 'packages/**'
               - 'examples/**'
               - 'scripts/**'
-              - 'package.json'
-              - 'justfile'
               - 'rollup'
             pluginutils-changes:
+              - *infra-changes
               - 'packages/pluginutils/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
+            docs-changes:
+              - *infra-changes
+              - 'docs/**'
+              - 'packages/rolldown/src/**'
+              - 'packages/rolldown/package.json'
+              - 'packages/rolldown/tsconfig*.json'
+              - 'packages/pluginutils/**'
       - name: Show outputs
         run: |
           echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}"
           echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}"
           echo "PluginUtils changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}"
+          echo "Docs changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}"
 
   rust-validation:
     name: Rust Validation
@@ -90,7 +100,10 @@ jobs:
     needs: changes
     strategy:
       matrix:
-        target: ${{ github.ref_name == 'main' && fromJSON('["ubuntu-latest","macos-latest","windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
+        target: >-
+          ${{ (github.ref_name == 'main') && fromJSON('["ubuntu-latest","macos-latest","windows-latest"]')
+              || (needs.changes.outputs.run-windows == 'true') && fromJSON('["ubuntu-latest","windows-latest"]')
+              || fromJSON('["ubuntu-latest"]') }}
     uses: ./.github/workflows/reusable-cargo-test.yml
     with:
       os: ${{ matrix.target }}
@@ -100,7 +113,7 @@ jobs:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-test.yml
     if: |
-      github.ref_name == 'main' &&
+      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
@@ -143,7 +156,7 @@ jobs:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
     if: |
-      github.ref_name == 'main' &&
+      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
@@ -217,7 +230,7 @@ jobs:
     name: Vite Test Windows
     needs: [changes, build-rolldown-windows]
     if: |
-      github.ref_name == 'main' &&
+      (github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true') &&
       always() &&
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     runs-on: windows-latest
@@ -253,7 +266,7 @@ jobs:
 
   build-rolldown-windows:
     needs: changes
-    if: github.ref_name == 'main'
+    if: github.ref_name == 'main' || needs.changes.outputs.run-windows == 'true'
     uses: ./.github/workflows/reusable-native-build.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
@@ -377,6 +390,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: crate-ci/typos@02ea592e44b3a53c302f697cddca7641cd051c3d # v1.45.0
+      - uses: crate-ci/typos@cf5f1c29a8ac336af8568821ec41919923b05a83 # v1.45.1
         with:
           files: .
+
+  docs-validation:
+    name: Docs Validation
+    needs: changes
+    if: ${{ needs.changes.outputs.docs-changes == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - uses: voidzero-dev/setup-vp@8ecb39174989ce55af90f45cf55b02738599831d # v1.6.0
+        with:
+          cache: true
+
+      - name: Build @rolldown/pluginutils
+        run: vp run --filter '@rolldown/pluginutils' build
+
+      - name: Build Docs
+        run: vp run docs:build

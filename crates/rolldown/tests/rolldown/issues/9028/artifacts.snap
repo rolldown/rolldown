@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.js
+var init_lib = __esmMin((() => {}));
+//#endregion
+//#region barrel.js
+var init_barrel = __esmMin((() => {
+	init_lib();
+}));
+//#endregion
+__esmMin((() => {
+	init_barrel();
+	console.log(42);
+}))();
+
+```

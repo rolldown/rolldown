@@ -33,6 +33,7 @@ use super::events::missing_name_option_for_iife_export::MissingNameOptionForIife
 use super::events::plugin_error::{CausedPlugin, PluginError};
 use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
+use super::events::require_tla::RequireTla;
 use super::events::resolve_error::DiagnosableResolveError;
 
 use super::events::tsconfig_error::TsConfigError;
@@ -233,6 +234,10 @@ impl BuildDiagnostic {
 
   // --- Rolldown related
 
+  pub fn require_tla(inner: RequireTla) -> Self {
+    Self::new_inner(inner)
+  }
+
   pub fn oxc_error(
     source: ArcStr,
     id: String,
@@ -393,8 +398,8 @@ impl BuildDiagnostic {
     Self::new_inner(PluginTimings { plugins })
   }
 
-  pub fn duplicate_shebang(filename: String) -> Self {
-    Self::new_inner(DuplicateShebang { filename })
+  pub fn duplicate_shebang(filename: String, source: &str) -> Self {
+    Self::new_inner(DuplicateShebang { filename, source: source.to_string() })
   }
 
   pub fn tsconfig_error(file_path: String, reason: ResolveError) -> Self {

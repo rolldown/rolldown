@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/browser",
-  "version": "1.0.0-rc.13",
+  "version": "1.0.0-rc.17",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
     "bundler",
@@ -61,8 +61,8 @@
     "publint": "publint ."
   },
   "dependencies": {
-    "@emnapi/core": "catalog:",
-    "@emnapi/runtime": "catalog:",
+    "@emnapi/core": "1.10.0",
+    "@emnapi/runtime": "1.10.0",
     "@napi-rs/wasm-runtime": "catalog:"
   }
 }

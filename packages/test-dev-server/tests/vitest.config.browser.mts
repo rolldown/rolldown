@@ -4,9 +4,9 @@ export default defineConfig({
   test: {
     hookTimeout: process.env.CI ? 1000 * 30 : 1000 * 10,
     // Include playground tests
-    include: ['hmr-full-bundle-mode.spec.ts'],
+    include: ['browser.spec.ts'],
     environment: 'node',
-    setupFiles: ['./vitest-setup-playwright.ts'],
+    setupFiles: ['./vitest-setup-browser.ts'],
 
     // Increase timeout for HMR tests (server startup + file watching)
     testTimeout: 90000,

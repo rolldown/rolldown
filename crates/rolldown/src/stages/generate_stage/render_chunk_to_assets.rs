@@ -1,8 +1,8 @@
 use std::{ops::Deref, pin::Pin, sync::Arc};
 
 use futures::future::try_join_all;
-use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
+use oxc_str::CompactStr;
 use rolldown_common::{
   Asset, ChunkIdx, ConcatenateWrappedModuleKind, EmittedChunkInfo, InstantiationKind,
   ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter,
@@ -54,8 +54,7 @@ impl GenerateStage<'_> {
 
     Self::minify_chunks(self.options, &mut instantiated_chunks)?;
 
-    let post_banner_warnings = Self::post_banner_footer(&mut instantiated_chunks)?;
-    warnings.extend(post_banner_warnings);
+    Self::post_banner_footer(&mut instantiated_chunks)?;
 
     let assets = finalize_assets(
       chunk_graph,

@@ -3,7 +3,8 @@ use oxc::ast::{
   AstKind, MemberExpressionKind,
   ast::{self, AssignmentExpression, Expression, IdentifierReference, PropertyKey},
 };
-use oxc::span::{CompactStr, Span};
+use oxc::span::Span;
+use oxc_str::CompactStr;
 use rolldown_common::{AstScopes, EcmaModuleAstUsage};
 use rolldown_ecmascript_utils::ExpressionExt;
 

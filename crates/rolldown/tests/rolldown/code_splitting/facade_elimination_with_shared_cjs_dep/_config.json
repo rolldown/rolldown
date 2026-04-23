@@ -1,0 +1,17 @@
+{
+  "snapshotOutputStats": true,
+  "config": {
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "i18n-ar",
+          "test": "ar_EG"
+        },
+        {
+          "name": "i18n-en-US",
+          "test": "en_US"
+        }
+      ]
+    }
+  }
+}

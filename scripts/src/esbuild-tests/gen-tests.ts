@@ -186,6 +186,47 @@ function getTopLevelBinding(root: SyntaxNode): Record<string, SyntaxNode> {
   return binding;
 }
 
+function collectFunctionLocalBindings(
+  root: SyntaxNode,
+  base: Record<string, SyntaxNode>,
+): Record<string, SyntaxNode> {
+  const binding: Record<string, SyntaxNode> = { ...base };
+  const stack: SyntaxNode[] = [root];
+  while (stack.length > 0) {
+    const node = stack.pop()!;
+    if (node.type === 'short_var_declaration') {
+      const lhs = node.namedChild(0);
+      const rhs = node.namedChild(1);
+      if (lhs && rhs) {
+        const names = lhs.namedChildren;
+        const values = rhs.namedChildren;
+        for (let i = 0; i < names.length && i < values.length; i++) {
+          const name = names[i]?.text;
+          const value = values[i];
+          if (name && value) {
+            binding[name] = value;
+          }
+        }
+      }
+    } else if (node.type === 'var_declaration') {
+      node.namedChildren.forEach((spec) => {
+        if (!spec || spec.type !== 'var_spec') {
+          return;
+        }
+        const name = spec.namedChild(0)?.text;
+        const decl = spec.namedChild(1);
+        if (name && decl) {
+          binding[name] = decl;
+        }
+      });
+    }
+    node.namedChildren.forEach((c) => {
+      if (c) stack.push(c);
+    });
+  }
+  return binding;
+}
+
 function isDirEmptySync(dir: string): boolean {
   const list = fs.readdirSync(dir);
   return list.length === 0;
@@ -211,24 +252,47 @@ function calculatePrefixDir(paths: string[]): string {
   return commonPrefix.join('/');
 }
 
-function extractStringLiteral(node: SyntaxNode | null | undefined): string {
+function extractStringLiteral(
+  node: SyntaxNode | null | undefined,
+  binding: Record<string, SyntaxNode> = {},
+): string {
   if (!node) {
     return '';
   }
-  let ret = '';
   switch (node.type) {
+    case 'parenthesized_expression':
+      return extractStringLiteral(node.namedChild(0), binding);
     case 'binary_expression':
-      ret += extractStringLiteral(node.namedChild(0));
-      ret += extractStringLiteral(node.namedChild(1));
-      break;
+      return (
+        extractStringLiteral(node.namedChild(0), binding) +
+        extractStringLiteral(node.namedChild(1), binding)
+      );
     case 'raw_string_literal':
     case 'interpreted_string_literal':
-      ret += node.text.slice(1, -1);
-      break;
+      return node.text.slice(1, -1);
+    case 'identifier': {
+      const resolved = binding[node.text];
+      if (resolved) {
+        return extractStringLiteral(resolved, binding);
+      }
+      throw new Error(`Unbound identifier: ${node.text}`);
+    }
+    case 'call_expression': {
+      const fn = node.namedChild(0);
+      const args = node.namedChild(1);
+      if (fn?.text === 'strings.Repeat' && args) {
+        const s = extractStringLiteral(args.namedChild(0), binding);
+        const countText = args.namedChild(1)?.text;
+        const count = countText ? Number.parseInt(countText, 10) : Number.NaN;
+        if (Number.isFinite(count)) {
+          return s.repeat(count);
+        }
+      }
+      throw new Error(`Unsupported call expression: ${node.text}`);
+    }
     default:
       throw new Error(`Unexpected node type: ${node.type}`);
   }
-  return ret;
 }
 
 function processFiles(node: SyntaxNode, binding: Record<string, SyntaxNode>): FileEntry[] {
@@ -239,32 +303,27 @@ function processFiles(node: SyntaxNode, binding: Record<string, SyntaxNode>): Fi
     }
   }
   const fileList: FileEntry[] = [];
-  const compositeLiteral = node.namedChild(0);
+  const compositeLiteral = node.type === 'composite_literal' ? node : node.namedChild(0);
   const body = compositeLiteral?.namedChild(1);
-  try {
-    if (!body) {
-      throw new Error('No body');
-    }
-    body.namedChildren.forEach((child) => {
-      if (child!.type !== 'keyed_element') {
-        return;
-      }
-      const name = child!.namedChild(0)?.text.slice(1, -1);
-      if (!name) {
-        throw new Error(`File has no name`);
-      }
-      let content = extractStringLiteral(child!.namedChild(1)?.namedChild?.(0));
-      content = dedent.default(content);
-      fileList.push({
-        name,
-        content,
-      });
-    });
-    return fileList;
-  } catch (err) {
-    console.error(`Error occurred when processFiles: ${chalk.red(err)}`);
-    return [];
+  if (!body) {
+    throw new Error('No body');
   }
+  body.namedChildren.forEach((child) => {
+    if (child!.type !== 'keyed_element') {
+      return;
+    }
+    const name = extractStringLiteral(child!.namedChild(0)?.namedChild?.(0), binding);
+    if (!name) {
+      throw new Error(`File has no name`);
+    }
+    let content = extractStringLiteral(child!.namedChild(1)?.namedChild?.(0), binding);
+    content = dedent.default(content);
+    fileList.push({
+      name,
+      content,
+    });
+  });
+  return fileList;
 }
 
 function processEntryPath(node: SyntaxNode, binding: Record<string, SyntaxNode>): string[] {
@@ -275,25 +334,20 @@ function processEntryPath(node: SyntaxNode, binding: Record<string, SyntaxNode>)
     }
   }
   const entryList: string[] = [];
-  const compositeLiteral = node.namedChild(0);
+  const compositeLiteral = node.type === 'composite_literal' ? node : node.namedChild(0);
   const body = compositeLiteral?.namedChild(1);
-  try {
-    if (!body) {
-      throw new Error('No body');
-    }
-    body.namedChildren.forEach((child) => {
-      const entry = child!.namedChild(0)?.text.slice(1, -1);
-      if (!entry) {
-        throw new Error('No entry');
-      }
-      entryList.push(entry);
-    });
-
-    return entryList;
-  } catch (err) {
-    console.error(`Error occurred when processEntryPath: ${chalk.red(err)}`);
-    return [];
+  if (!body) {
+    throw new Error('No body');
   }
+  body.namedChildren.forEach((child) => {
+    const entry = child!.namedChild(0)?.text.slice(1, -1);
+    if (!entry) {
+      throw new Error('No entry');
+    }
+    entryList.push(entry);
+  });
+
+  return entryList;
 }
 
 // TODO: only preserve mode ModeBundle test case
@@ -383,10 +437,20 @@ for (const suiteName of SUITE_NAMES) {
       const bundle_field_list = query.captures(child).filter((item) => {
         return item.name === 'element_list';
       });
+      const functionBindingMap = collectFunctionLocalBindings(child, topLevelBindingMap);
       const jsConfig: JsConfig = Object.create(null);
-      bundle_field_list.forEach((cap) => {
-        processKeyElement(cap.node, jsConfig, topLevelBindingMap);
-      });
+      try {
+        bundle_field_list.forEach((cap) => {
+          processKeyElement(cap.node, jsConfig, functionBindingMap);
+        });
+      } catch (err) {
+        throw new Error(
+          `while processing test case "${testCaseName}" in ${suiteName}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+          { cause: err },
+        );
+      }
 
       const fileList = jsConfig.files;
 

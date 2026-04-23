@@ -178,6 +178,15 @@ export interface TreeShakeOptions {
    */
   propertyReadSideEffects?: boolean | 'always'
   /**
+   * Whether property write accesses (assignments to member expressions) have side effects.
+   *
+   * When false, assignments like `obj.prop = value` are considered side-effect-free
+   * (assuming the object and value expressions themselves are side-effect-free).
+   *
+   * @default true
+   */
+  propertyWriteSideEffects?: boolean
+  /**
    * Whether accessing a global variable has side effects.
    *
    * Accessing a non-existing global variable will throw an error.
@@ -1378,6 +1387,24 @@ export interface TypeScriptOptions {
    */
   removeClassFieldsWithoutInitializer?: boolean
   /**
+   * When true, optimize const enums by inlining their values at usage sites
+   * and removing the enum declaration.
+   *
+   * @default false
+   */
+  optimizeConstEnums?: boolean
+  /**
+   * When true, optimize regular (non-const) enums by inlining their member
+   * accesses at usage sites when the member value is statically known.
+   *
+   * Non-exported enum declarations are also removed when all members are
+   * evaluable and no references to the enum as a runtime value exist
+   * (e.g., `console.log(Foo)`, `typeof Foo`, or passing the enum as an argument).
+   *
+   * @default false
+   */
+  optimizeEnums?: boolean
+  /**
    * Also generate a `.d.ts` declaration file for TypeScript files.
    *
    * The source file must be compliant with all
@@ -2341,6 +2368,7 @@ export interface BindingMatchGroup {
   maxSize?: number
   entriesAware?: boolean
   entriesAwareMergeThreshold?: number
+  tags?: Array<string>
 }
 
 export interface BindingModulePreloadOptions {

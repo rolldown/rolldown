@@ -2,52 +2,23 @@ use oxc::{
   allocator::{Allocator, Box, Dummy as _, IntoIn as _, TakeIn as _},
   ast::ast::{
     ArrayAssignmentTarget, ArrayExpressionElement, AssignmentTarget, AssignmentTargetMaybeDefault,
-    AssignmentTargetRest, AssignmentTargetWithDefault, BindingIdentifier, BindingPattern,
-    Expression, ObjectAssignmentTarget, ObjectPropertyKind, PropertyKind,
+    AssignmentTargetRest, AssignmentTargetWithDefault, BindingPattern, Expression,
+    ObjectAssignmentTarget, ObjectPropertyKind, PropertyKind,
   },
   span::SPAN,
 };
-use smallvec::SmallVec;
 
 use crate::AstSnippet;
 
 use super::binding_property_ext::BindingPropertyExt as _;
 
 pub trait BindingPatternExt<'ast> {
-  fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<'_, BindingIdentifier<'ast>>; 1]>;
-
   fn into_assignment_target(self, alloc: &'ast Allocator) -> AssignmentTarget<'ast>;
 
   fn into_expression(self, snippet: &AstSnippet<'ast>) -> Expression<'ast>;
 }
 
 impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
-  fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<'_, BindingIdentifier<'ast>>; 1]> {
-    let mut stack = vec![self];
-    let mut ret = SmallVec::default();
-    while let Some(binding) = stack.pop() {
-      match binding {
-        BindingPattern::BindingIdentifier(id) => {
-          ret.push(id);
-        }
-        BindingPattern::ArrayPattern(arr_pat) => {
-          stack.extend(arr_pat.elements.iter().flatten().rev());
-        }
-        BindingPattern::ObjectPattern(obj_pat) => {
-          if let Some(obj_pat) = &obj_pat.rest {
-            stack.push(&obj_pat.argument);
-          }
-          stack.extend(obj_pat.properties.iter().map(|prop| &prop.value).rev());
-        }
-        //
-        BindingPattern::AssignmentPattern(assign_pat) => {
-          stack.push(&assign_pat.left);
-        }
-      }
-    }
-    ret
-  }
-
   fn into_assignment_target(self, alloc: &'ast Allocator) -> AssignmentTarget<'ast> {
     match self {
       // Turn `var a = 1` into `a = 1`

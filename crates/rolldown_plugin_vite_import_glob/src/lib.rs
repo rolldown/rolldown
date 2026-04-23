@@ -1,4 +1,5 @@
 mod utils;
+mod walk;
 
 use std::{borrow::Cow, path::PathBuf};
 

@@ -13,6 +13,8 @@ use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
 
+use crate::walk::{PathWithGlob, walk_glob_matches};
+
 pub struct GlobImportVisit<'a> {
   pub ctx: &'a PluginContext,
   pub id: &'a str,
@@ -54,51 +56,6 @@ pub struct ImportGlobOptions {
 struct ImportGlobFileData {
   file_path: Option<String>,
   import_path: String,
-}
-
-#[derive(Debug)]
-struct PathWithGlob<'a> {
-  pub path: String,
-  pub glob: &'a str,
-}
-
-impl<'a> PathWithGlob<'a> {
-  fn new(mut path: String, glob: &'a str) -> Self {
-    let j = Self::split_path_and_glob_inner(&path, glob);
-    let i = Self::find_glob_syntax(&glob[glob.len() - j..]);
-    path.truncate(path.len() - i);
-    Self { path, glob: &glob[glob.len() - i..] }
-  }
-
-  fn find_glob_syntax(path: &str) -> usize {
-    let mut last_slash = 0;
-    for (i, b) in path.as_bytes().iter().enumerate() {
-      if *b == b'/' {
-        last_slash = i;
-      } else if [b'\\', b'*', b'?', b'[', b']', b'{', b'}'].contains(b) {
-        return path.len() - last_slash;
-      }
-    }
-    path.len() - last_slash
-  }
-
-  fn split_path_and_glob_inner(path: &str, glob: &str) -> usize {
-    let path = path.as_bytes();
-    let glob = glob.as_bytes();
-
-    let mut num_equal = 0;
-    let max_equal = path.len().min(glob.len());
-    while num_equal < max_equal {
-      let p = path[path.len() - 1 - num_equal];
-      let g = glob[glob.len() - 1 - num_equal];
-      if p != g {
-        break;
-      }
-      num_equal += 1;
-    }
-
-    num_equal
-  }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -460,50 +417,27 @@ impl GlobImportVisit<'_> {
     );
 
     let common = self.get_common_base(&positive_globs);
-    let entries = walkdir::WalkDir::new(common.as_ref())
-      .follow_links(true)
-      .sort_by(|a, b| a.file_name().cmp(b.file_name()))
-      .into_iter()
-      .filter_entry(|entry| {
-        options.exhaustive || entry.depth() == 0 || {
-          let path = entry.file_name();
-          if path.as_encoded_bytes().first() == Some(&b'.') {
-            return false;
-          }
-          path.to_str().is_none_or(|s| s != "node_modules")
-        }
-      })
-      .filter_map(Result::ok)
-      .filter(|e| !e.file_type().is_dir());
+    let matched = walk_glob_matches(
+      common.as_ref(),
+      &positive_globs,
+      &negated_globs,
+      options.exhaustive,
+      self.id,
+    );
 
-    for entry in entries {
-      let file = entry.path();
-      let path = file.to_slash_lossy();
-
-      // Skip the file itself if it matches the glob pattern, to avoid self-importing.
-      if self.id == path {
-        continue;
-      }
-
-      let matches_rule = |v: &PathWithGlob| -> bool {
-        path.strip_prefix(&v.path).map(|path| fast_glob::glob_match(v.glob, path)).unwrap_or(false)
-      };
-      if negated_globs.iter().any(matches_rule) || !positive_globs.iter().any(matches_rule) {
-        continue;
-      }
-
-      let file_path = self.relative_path(file, None);
+    for file in matched {
+      let file_path = self.relative_path(&file, None);
       if is_virtual_module {
         let import_path =
           if file_path.starts_with('/') { file_path } else { format!("/{file_path}") };
         let file_path = options.base.as_ref().map(|base| {
-          self.relative_path(file, Some(&self.root.join(base.strip_prefix('/').unwrap_or(base))))
+          self.relative_path(&file, Some(&self.root.join(base.strip_prefix('/').unwrap_or(base))))
         });
         files.push(ImportGlobFileData { file_path, import_path });
         continue;
       }
 
-      let mut import_path = self.relative_path(file, Some(dir));
+      let mut import_path = self.relative_path(&file, Some(dir));
       let file_path = if let Some(base) = &options.base {
         if base.starts_with('/') {
           import_path = format!("/{}", file.relative(self.root).to_slash_lossy());
@@ -513,7 +447,7 @@ impl GlobImportVisit<'_> {
         } else {
           dir.join(base)
         };
-        Some(self.relative_path(file, Some(&base_path)))
+        Some(self.relative_path(&file, Some(&base_path)))
       } else if is_relative {
         None
       } else {

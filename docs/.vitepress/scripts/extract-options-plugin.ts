@@ -41,8 +41,7 @@ function findJSDocAbove(sourceText: string, propertyLine: number): string | unde
 function resolveIncludePaths(property: td.Reflection): string[] {
   const source = property.sources?.[0];
   if (!source) return [];
-  const filePath =
-    (source as { fullFileName?: string }).fullFileName ?? source.fileName;
+  const filePath = (source as { fullFileName?: string }).fullFileName ?? source.fileName;
   if (!filePath || !fs.existsSync(filePath)) return [];
   const jsdoc = findJSDocAbove(readSourceFile(filePath), source.line);
   if (!jsdoc) return [];

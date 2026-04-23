@@ -6,6 +6,117 @@ function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+const sourceFileCache = new Map<string, string>();
+function readSourceFile(filePath: string): string {
+  let contents = sourceFileCache.get(filePath);
+  if (contents === undefined) {
+    contents = fs.readFileSync(filePath, 'utf8');
+    sourceFileCache.set(filePath, contents);
+  }
+  return contents;
+}
+
+/**
+ * Walk upward from a property's source line to find the `/** ... *\/` JSDoc
+ * block that immediately precedes it. Returns the raw text including the
+ * opening and closing markers, or undefined if no adjacent block exists.
+ */
+function findJSDocAbove(sourceText: string, propertyLine: number): string | undefined {
+  const lines = sourceText.split('\n');
+  let end = propertyLine - 2;
+  while (end >= 0 && lines[end].trim() === '') end--;
+  if (end < 0 || !lines[end].trimEnd().endsWith('*/')) return undefined;
+  let start = end;
+  while (start >= 0 && !lines[start].trimStart().startsWith('/**')) start--;
+  if (start < 0) return undefined;
+  return lines.slice(start, end + 1).join('\n');
+}
+
+/**
+ * Resolve the {@link include} targets of a property's JSDoc to absolute paths.
+ * Mirrors TypeDoc's `{@include}` inline-tag semantics, but gives us a handle
+ * on the original `.md` content before TypeDoc's block lexer rewrites escape
+ * sequences — see https://github.com/rolldown/rolldown/issues/8792.
+ */
+function resolveIncludePaths(property: td.Reflection): string[] {
+  const source = property.sources?.[0];
+  if (!source) return [];
+  const filePath =
+    (source as { fullFileName?: string }).fullFileName ?? source.fileName;
+  if (!filePath || !fs.existsSync(filePath)) return [];
+  const jsdoc = findJSDocAbove(readSourceFile(filePath), source.line);
+  if (!jsdoc) return [];
+  const sourceDir = path.dirname(filePath);
+  const targets: string[] = [];
+  const includeRe = /\{@include\s+(\S+?\.md)\s*\}/g;
+  let match: RegExpExecArray | null;
+  while ((match = includeRe.exec(jsdoc)) !== null) {
+    const resolved = path.resolve(sourceDir, match[1]);
+    if (fs.existsSync(resolved)) targets.push(resolved);
+  }
+  return targets;
+}
+
+const fencedCodeRe = /^(```[^\n]*\n)([\s\S]*?)(^```)/gm;
+
+/**
+ * Locate the `[start, end)` slice of a single property's section inside a
+ * rendered container page. Mirrors the heading-walk in
+ * `extractPropertySection` but returns a range instead of mutated text, so
+ * callers can splice a modified slice back into place.
+ */
+function findPropertyRange(
+  contents: string,
+  propertyName: string,
+): { start: number; end: number } | undefined {
+  const namePattern = escapeRegex(propertyName);
+  const headingRe = new RegExp(
+    '^(#{1,6})\\s*(?:~{2})?(?:`?' + namePattern + '\\b`?)(?:~{2})?.*$',
+    'm',
+  );
+  const m = contents.match(headingRe);
+  if (!m) return undefined;
+  const start = m.index ?? 0;
+  const startLevel = m[1].length;
+  const nextHeadingRe = /^#{1,6}.*$/gm;
+  nextHeadingRe.lastIndex = start + m[0].length;
+  let end = contents.length;
+  let nh: RegExpExecArray | null;
+  while ((nh = nextHeadingRe.exec(contents)) !== null) {
+    const hashes = nh[0].match(/^#{1,6}/);
+    if (!hashes) continue;
+    if (hashes[0].length <= startLevel) {
+      end = nh.index;
+      break;
+    }
+  }
+  return { start, end };
+}
+
+/**
+ * Swap the content of each fenced code block in `rendered` with the content
+ * of the corresponding block (by position) from the concatenated raw
+ * `{@include}` sources. TypeDoc's block lexer URL-encodes `[`, `\`, and `]`
+ * inside injected code fences; restoring from the original `.md` sidesteps
+ * that parser entirely without touching surrounding prose, heading
+ * adjustments, or cross-reference links.
+ *
+ * No-ops when the block count differs, to avoid corrupting pages whose JSDoc
+ * adds `@example` blocks on top of `{@include}` content.
+ */
+function restoreFencedCodeBlocks(rendered: string, includePaths: string[]): string {
+  if (includePaths.length === 0) return rendered;
+  const rawSource = includePaths.map(readSourceFile).join('\n\n');
+  const rawBlocks = [...rawSource.matchAll(fencedCodeRe)].map((m) => m[2]);
+  if (rawBlocks.length === 0) return rendered;
+  const renderedBlockCount = [...rendered.matchAll(fencedCodeRe)].length;
+  if (renderedBlockCount !== rawBlocks.length) return rendered;
+  let i = 0;
+  return rendered.replace(fencedCodeRe, (_, open, _body, close) => {
+    return `${open}${rawBlocks[i++]}${close}`;
+  });
+}
+
 /**
  * Parses a type reference from the option content's Type line only.
  * Matches patterns like: [`ChecksOptions`](Interface.ChecksOptions.md)
@@ -110,6 +221,31 @@ export function load(app: td.Application) {
     string,
     { typeFile: string; optionFile: string; optionName: string; parentName: string }
   > = new Map();
+
+  // TypeDoc's block lexer URL-encodes `[`, `\`, `]` inside fenced code blocks
+  // that are injected via `{@include}` tags. Run this first on every
+  // container page so the subsequent per-property extractor reads clean
+  // content, and so interface pages like Interface.WatchOptions are fixed
+  // in place too. See https://github.com/rolldown/rolldown/issues/8792.
+  app.renderer.on(td.Renderer.EVENT_END_PAGE, (page) => {
+    const model = page.model;
+    if (!(model instanceof td.ContainerReflection) || !model.children) return;
+    let contents = page.contents ?? '';
+    let changed = false;
+    for (const property of model.children) {
+      const includes = resolveIncludePaths(property);
+      if (includes.length === 0) continue;
+      const range = findPropertyRange(contents, property.name);
+      if (!range) continue;
+      const slice = contents.slice(range.start, range.end);
+      const restored = restoreFencedCodeBlocks(slice, includes);
+      if (restored !== slice) {
+        contents = contents.slice(0, range.start) + restored + contents.slice(range.end);
+        changed = true;
+      }
+    }
+    if (changed) page.contents = contents;
+  });
 
   app.renderer.on(td.Renderer.EVENT_END_PAGE, (page) => {
     if (page.model?.name === 'InputOptions' || page.model?.name === 'OutputOptions') {

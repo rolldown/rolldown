@@ -9,8 +9,6 @@ use sugar_path::SugarPath as _;
 
 #[derive(Debug, Default)]
 pub struct ViteImportGlobPlugin {
-  /// vite also support `source_map` config, but we can't support it now.
-  /// Since the source map now follow the codegen option.
   pub root: Option<String>,
   pub sourcemap: bool,
   pub restore_query_extension: bool,

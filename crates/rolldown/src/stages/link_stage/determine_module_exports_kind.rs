@@ -105,8 +105,6 @@ impl LinkStage<'_> {
   /// a single namespace binding, reducing code size.
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn determine_safely_merge_cjs_ns(&mut self) {
-    self.safely_merge_cjs_ns_map.clear();
-
     for importer in self.module_table.modules.iter().filter_map(Module::as_normal) {
       for (rec_idx, rec) in importer.import_records.iter_enumerated() {
         if !matches!(rec.kind, ImportKind::Import)

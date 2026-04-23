@@ -97,11 +97,11 @@ pub enum BundleMode {
 }
 ```
 
-| Mode                   | `ScanStageCache` in | `ScanStageCache` out | Shared state reset | Use case                                   |
-| ---------------------- | ------------------- | -------------------- | ------------------ | ------------------------------------------ |
-| `FullBuild`            | None                | Discarded            | Yes                | One-shot build, non-incremental watch      |
-| `IncrementalFullBuild` | None                | Saved                | Yes                | First build with `incremental: true`       |
-| `IncrementalBuild`     | Existing            | Updated              | No                 | Subsequent builds with `incremental: true` |
+| Mode                   | `ScanStageCache` in | `ScanStageCache` out | Shared state reset | Use case                                                                        |
+| ---------------------- | ------------------- | -------------------- | ------------------ | ------------------------------------------------------------------------------- |
+| `FullBuild`            | None                | Discarded            | Yes                | One-shot build, non-incremental watch                                           |
+| `IncrementalFullBuild` | Fresh               | Saved                | Yes                | First build with `incremental: true`, or dev-mode recovery after a failed build |
+| `IncrementalBuild`     | Existing            | Updated              | No                 | Subsequent builds with `incremental: true`                                      |
 
 **Key distinction:** `IncrementalFullBuild` vs `FullBuild` — both do a full scan, but `IncrementalFullBuild` retains the resulting `ScanStageCache` for later incremental builds. Without this distinction, watch mode with `incremental: false` was silently paying the cost of materializing and retaining scan-stage state on every rebuild for no benefit.
 

@@ -58,7 +58,7 @@ impl NativePluginContextImpl {
   ) -> anyhow::Result<()> {
     // Clone out the sender under the lock, then drop the lock before awaiting.
     let sender = {
-      let guard = self.tx.lock().expect("PluginDriver tx mutex poisoned").clone();
+      let guard = self.tx.lock().ok().context("Failed to acquire PluginDriver tx lock")?.clone();
       guard.context("The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.")?
     };
     sender

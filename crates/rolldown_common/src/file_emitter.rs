@@ -130,7 +130,8 @@ impl FileEmitter {
     let sender = self
       .tx
       .lock()
-      .expect("FileEmitter tx mutex poisoned")
+      .ok()
+      .context("Failed to acquire FileEmitter tx lock")?
       .clone()
       .context(
         "The `PluginContext.emitFile` with `type: 'chunk'` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks.",
@@ -372,9 +373,9 @@ impl FileEmitter {
   pub fn set_context_load_modules_tx(
     &self,
     tx: Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>,
-  ) {
-    let mut tx_guard = self.tx.lock().expect("FileEmitter tx mutex poisoned");
-    *tx_guard = tx;
+  ) -> anyhow::Result<()> {
+    *self.tx.lock().ok().context("Failed to acquire FileEmitter tx lock")? = tx;
+    Ok(())
   }
 
   /// Associate a module ID with an emitted file reference ID.

@@ -11,6 +11,7 @@ use std::{
   sync::{Arc, Mutex},
 };
 
+use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use rolldown_common::{
@@ -66,9 +67,9 @@ impl PluginDriver {
   pub fn set_context_load_modules_tx(
     &self,
     tx: Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>,
-  ) {
-    let mut tx_guard = self.tx.lock().expect("PluginDriver tx mutex poisoned");
-    *tx_guard = tx;
+  ) -> anyhow::Result<()> {
+    *self.tx.lock().ok().context("Failed to acquire PluginDriver tx lock")? = tx;
+    Ok(())
   }
 
   pub fn mark_context_load_modules_loaded(&self, module_id: ModuleId) {

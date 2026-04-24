@@ -855,7 +855,7 @@ impl BindImportsAndExportsContext<'_> {
               importee.as_normal().map(|m| &m.module_type),
               Some(ModuleType::Ts | ModuleType::Tsx)
             ) && matches!(module.module_type, ModuleType::Ts | ModuleType::Tsx);
-          let mut diagnostic = BuildDiagnostic::missing_export(
+          let diagnostic = BuildDiagnostic::missing_export(
             module.id.to_string(),
             module.stable_id.to_string(),
             importee.id().to_string(),
@@ -865,12 +865,7 @@ impl BindImportsAndExportsContext<'_> {
             named_import.span_imported,
             is_ts_like_importing_ts_like.then(|| format!("If you meant to import a type rather than a value, make sure to add the `type` modifier (e.g. `import {{ type Foo }} from '{}'`).", rec.module_request))
           );
-          if is_ts_like_importing_ts_like {
-            diagnostic = diagnostic.with_severity_warning();
-            self.warnings.push(diagnostic);
-          } else {
-            self.errors.push(diagnostic);
-          }
+          self.errors.push(diagnostic);
         }
       }
     }

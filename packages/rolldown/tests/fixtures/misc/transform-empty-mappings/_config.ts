@@ -34,22 +34,22 @@ export default defineTest({
     ]).toMatchInlineSnapshot(`
       [
         {
-          "column": 15,
-          "line": 1,
-          "name": null,
-          "source": "../dep1.js",
+          "column": 12,
+          "line": 4,
+          "name": "dep1",
+          "source": "../main.js",
         },
         {
-          "column": 15,
-          "line": 1,
-          "name": null,
-          "source": "../dep1.js",
+          "column": 18,
+          "line": 4,
+          "name": "dep2",
+          "source": "../main.js",
         },
         {
-          "column": 15,
-          "line": 1,
-          "name": null,
-          "source": "../dep3.js",
+          "column": 24,
+          "line": 4,
+          "name": "dep3",
+          "source": "../main.js",
         },
       ]
     `);

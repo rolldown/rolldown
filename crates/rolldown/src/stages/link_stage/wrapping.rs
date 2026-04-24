@@ -20,10 +20,9 @@ struct Context<'a> {
 
 fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
   // Only consider `NormalModule`
-  if ctx.visited_modules.has_bit(target) {
+  if !ctx.visited_modules.set_bit(target) {
     return;
   }
-  ctx.visited_modules.set_bit(target);
 
   let Module::Normal(module) = &ctx.modules[target] else {
     return;
@@ -66,10 +65,9 @@ fn has_dynamic_exports_due_to_export_star(
   linking_infos: &mut LinkingMetadataVec,
   visited_modules: &mut IndexBitSet<ModuleIdx>,
 ) -> bool {
-  if visited_modules.has_bit(target) {
+  if !visited_modules.set_bit(target) {
     return linking_infos[target].has_dynamic_exports;
   }
-  visited_modules.set_bit(target);
 
   let has_dynamic_exports = match &modules[target] {
     Module::Normal(module) => {

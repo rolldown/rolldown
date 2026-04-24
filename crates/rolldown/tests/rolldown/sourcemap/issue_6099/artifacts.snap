@@ -16,7 +16,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```
 - ../main.js
 (2:0) "const " --> (22:0) "const "
-(2:6) "foo = mod.version.startsWith('1');\n" --> (22:6) "foo = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {\n"
+(2:6) "foo = mod.version.startsWith('1');\n" --> (22:6) "foo = ("
+(2:6) "foo = mod.version.startsWith('1');\n" --> (22:13) "/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {\n"
 - ../cjs.js
 (0:0) "exports." --> (23:0) "\texports."
 (0:8) "version = " --> (23:9) "version = "
@@ -36,6 +37,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 (5:1) ")" --> (26:4) ")"
 (5:2) ";\n" --> (26:5) ";\n"
 - ../main.js
+(2:6) "foo = mod." --> (27:7) ")."
 (2:16) "version." --> (27:9) "version."
 (2:24) "startsWith(" --> (27:17) "startsWith("
 (2:35) "'1')" --> (27:28) "\"1\")"

@@ -343,22 +343,20 @@ impl LinkStage<'_> {
       .for_each(|(module, meta)| {
         let idx = module.idx;
         let mut normalized_runtime_helper = RuntimeHelper::default();
-        for (index, stmt_info_idxs) in module.depended_runtime_helper.iter().enumerate() {
+        for (helper, stmt_info_idxs) in module.depended_runtime_helper.iter() {
           if stmt_info_idxs.is_empty() {
             continue;
           }
           let any_included = stmt_info_idxs
             .iter()
             .any(|stmt_info_idx| is_stmt_info_included_vec[module.idx].has_bit(*stmt_info_idx));
-          #[expect(clippy::cast_possible_truncation)]
-          // Note: `RuntimeHelper` is a bitmask with at most 32 bits, so the index is guaranteed to fit in u32.
+          // We also need to process the runtime helper of an eliminated module so that we
+          // can propagate it to its importers later.
           normalized_runtime_helper.set(
-            RuntimeHelper::from_bits(1 << index as u32).unwrap(),
+            helper,
             any_included
               || (module.id != RUNTIME_MODULE_ID && !is_module_included_vec.has_bit(idx)),
           );
-          // We also need to process the runtime helper of the eliminate module so that we
-          // could propagate them to its importers later
         }
         meta.depended_runtime_helper = normalized_runtime_helper;
         meta.module_namespace_included_reason = module_namespace_included_reason[module.idx];
@@ -635,11 +633,9 @@ pub fn include_runtime_symbol(
 
 /// if no export is used, and the module has no side effects, the module should not be included
 pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
-  if ctx.is_module_included_vec.has_bit(module.idx) {
+  if !ctx.is_module_included_vec.set_bit(module.idx) {
     return;
   }
-
-  ctx.is_module_included_vec.set_bit(module.idx);
   ctx.module_inclusion_changed = true;
 
   if module.idx == ctx.runtime_idx && !module.side_effects.has_side_effects() {
@@ -833,14 +829,12 @@ pub fn include_statement(
   module: &NormalModule,
   stmt_info_idx: StmtInfoIdx,
 ) {
-  if ctx.is_included_vec[module.idx].has_bit(stmt_info_idx) {
+  // include the statement itself
+  if !ctx.is_included_vec[module.idx].set_bit(stmt_info_idx) {
     return;
   }
 
   let stmt_info = module.stmt_infos.get(stmt_info_idx);
-
-  // include the statement itself
-  ctx.is_included_vec[module.idx].set_bit(stmt_info_idx);
 
   // FIXME: bailout for require() import for now
   // it is fine for now, since webpack did not support it either

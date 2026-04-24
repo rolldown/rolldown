@@ -37,8 +37,6 @@ impl From<bool> for ResolvedExternal {
 #[derive(Debug, Default, Clone)]
 pub struct ResolvedId {
   pub id: ModuleId,
-  // https://github.com/defunctzombie/package-browser-field-spec/blob/8c4869f6a5cb0de26d208de804ad0a62473f5a03/README.md?plain=1#L62-L77
-  pub ignored: bool,
   pub module_def_format: ModuleDefFormat,
   pub external: ResolvedExternal,
   // If the js side is return object, the relative id is finally id, else it will be converted to an absolute id
@@ -54,7 +52,6 @@ impl ResolvedId {
   pub fn make_dummy() -> Self {
     Self {
       id: ModuleId::default(),
-      ignored: false,
       module_def_format: ModuleDefFormat::Unknown,
       external: false.into(),
       normalize_external_id: None,
@@ -72,14 +69,16 @@ impl ResolvedId {
       return format!("<{}>", self.id.as_str());
     }
 
-    let stable = stabilize_id(&self.id, cwd.as_ref());
-    if self.ignored { format!("(ignored) {stable}") } else { stable }
+    if let Some(original) = self.id.strip_empty_prefix() {
+      return format!("(ignored) {}", stabilize_id(original, cwd.as_ref()));
+    }
+
+    stabilize_id(&self.id, cwd.as_ref())
   }
 
   pub fn new_external_without_side_effects(id: ArcStr) -> Self {
     Self {
       id: ModuleId::new(id),
-      ignored: false,
       module_def_format: ModuleDefFormat::Unknown,
       external: true.into(),
       normalize_external_id: None,

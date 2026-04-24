@@ -174,13 +174,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       },
     };
 
-    // Use an unbounded channel to avoid deadlocks when plugins emit many
-    // chunks from synchronous plugin hooks (e.g. `transform`). The napi
-    // `emit_chunk` binding is sync and uses `block_on` on the JS thread;
-    // with a bounded channel, once the channel filled up the send future
-    // would await capacity that only the loader could free — but the loader
-    // needs the JS thread (blocked in `block_on`) to run plugin hooks for
-    // the queued entries. See fixture `plugin/context/emit-chunk-many-from-transform`.
+    // Unbounded as defense in depth. If any sender ends up driven from a sync
+    // napi binding through `block_on`, a bounded channel could deadlock: the
+    // send future would wait on capacity that only the consumer can free, but
+    // the consumer may need the JS thread — pinned by `block_on` — to run
+    // plugin hooks first. Keeping the channel unbounded removes that edge.
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
     let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta });
 

@@ -116,17 +116,11 @@ impl FileEmitter {
   }
 
   pub fn emit_chunk(&self, chunk: Arc<EmittedChunk>) -> anyhow::Result<ArcStr> {
-    // `tx` is a `std::sync::Mutex` wrapping an `Option<UnboundedSender>`.
-    // Contention during a build is limited to concurrent `emit_chunk`
-    // callers; the critical section is a single `Option::as_ref()` plus an
-    // unbounded-channel `send` (both lock-free CAS), so even on hot paths
-    // the wait is bounded to nanoseconds. The install/clear path runs only
-    // at scan boundaries and is never contended with build traffic. The channel itself is
-    // unbounded, so `send()` is synchronous and infallible. This whole
-    // function is therefore sync, which lets the napi binding drop
-    // `block_on` on the JS thread and removes the
-    // producer-blocked-on-consumer-blocked-on-producer deadlock that used
-    // to trigger when plugins emitted many chunks from `transform`.
+    // Must stay synchronous: making this async would force the napi binding back
+    // onto `block_on`, pinning the JS thread while `send().await` waits on channel
+    // capacity — but the consumer draining the channel itself needs the JS thread
+    // to run plugin hooks. That cycle is the emit-chunk deadlock. Keep the channel
+    // unbounded (so `send()` never waits) and release the lock before the send.
     let sender = self
       .tx
       .lock()

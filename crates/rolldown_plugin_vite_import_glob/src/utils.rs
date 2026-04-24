@@ -22,7 +22,7 @@ pub struct GlobImportVisit<'a> {
   pub code: &'a str,
   pub magic_string: Option<MagicString<'a>>,
   pub import_decls: Vec<String>,
-  pub errors: Vec<String>,
+  pub(crate) errors: Vec<String>,
 }
 
 impl<'ast> Visit<'ast> for GlobImportVisit<'_> {
@@ -76,7 +76,7 @@ impl<'a> PathWithGlob<'a> {
     for (i, b) in path.as_bytes().iter().enumerate() {
       if *b == b'/' {
         last_slash = i;
-      } else if [b'\\', b'*', b'?', b'[', b']', b'{', b'}', b'!', b'('].contains(b) {
+      } else if [b'\\', b'*', b'?', b'[', b']', b'{', b'}'].contains(b) {
         return path.len() - last_slash;
       }
     }
@@ -386,7 +386,7 @@ impl GlobImportVisit<'_> {
   /// Returns `true` if the pattern contains extglob syntax: `!(`, `?(`, `*(`, `+(`, or `@(`.
   /// Extglob is not supported by the underlying `fast-glob` matcher and silently matches
   /// nothing. We detect it early to emit a build error instead.
-  fn has_extglob(pattern: &str) -> bool {
+  pub fn has_extglob(pattern: &str) -> bool {
     let bytes = pattern.as_bytes();
     let mut i = 0;
     while i + 1 < bytes.len() {
@@ -650,53 +650,5 @@ impl GlobImportVisit<'_> {
         _ => {}
       }
     }
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::GlobImportVisit;
-
-  #[test]
-  fn has_extglob_negation() {
-    assert!(GlobImportVisit::has_extglob("!(*.d.ts)"));
-    assert!(GlobImportVisit::has_extglob("**/!(*.d.ts)"));
-    assert!(GlobImportVisit::has_extglob("./routes/**/!(*.d.ts)"));
-  }
-
-  #[test]
-  fn has_extglob_other_forms() {
-    // Proper extglob: operator immediately before '('
-    assert!(GlobImportVisit::has_extglob("?(x)"));
-    assert!(GlobImportVisit::has_extglob("*(x)"));
-    assert!(GlobImportVisit::has_extglob("+(.js|.ts)"));
-    assert!(GlobImportVisit::has_extglob("@(foo|bar)"));
-    assert!(GlobImportVisit::has_extglob("[jt]s?(x)")); // correct extglob form
-    // Note: (x)? is NOT standard extglob — it was an accidental tinyglobby quirk
-  }
-
-  #[test]
-  fn has_extglob_standard_patterns_not_flagged() {
-    assert!(!GlobImportVisit::has_extglob("**/*.ts"));
-    assert!(!GlobImportVisit::has_extglob("./**/*.{ts,tsx}"));
-    assert!(!GlobImportVisit::has_extglob("./dir/*.js"));
-    assert!(!GlobImportVisit::has_extglob("[abc]"));
-    assert!(!GlobImportVisit::has_extglob("!**/*.d.ts")); // array-negation prefix, not extglob
-  }
-
-  #[test]
-  fn has_extglob_escaped_chars_not_flagged() {
-    assert!(!GlobImportVisit::has_extglob("\\!(*.d.ts)")); // escaped !
-    assert!(!GlobImportVisit::has_extglob("\\*(foo)")); // escaped *
-  }
-
-  #[test]
-  fn find_glob_syntax_detects_extglob_start() {
-    use super::PathWithGlob;
-    // !(*.d.ts) must be recognized as a glob-syntax start (! and ( are special)
-    let path = String::from("/root/routes/!(*.d.ts)");
-    let glob = "!(*.d.ts)";
-    let result = PathWithGlob::new(path, glob);
-    assert_eq!(result.glob, "!(*.d.ts)");
   }
 }

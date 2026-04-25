@@ -912,14 +912,11 @@ impl GenerateStage<'_> {
     temp_runtime_chunk_idx: Option<ChunkIdx>,
     target_chunk_idx: ChunkIdx,
   ) -> bool {
-    let Some((runtime_reaches_target, runtime_reaches_target_without_aliases)) =
-      temp_runtime_chunk_idx.and_then(|temp_runtime_idx| {
-        let temp_target_idx = temp_chunk_opt_graph.to_temp_idx(target_chunk_idx)?;
-        Some((
-          temp_chunk_opt_graph.is_reachable(temp_runtime_idx, temp_target_idx),
-          temp_chunk_opt_graph
-            .is_reachable_without_merged_aliases(temp_runtime_idx, temp_target_idx),
-        ))
+    let Some((temp_runtime_idx, temp_target_idx)) =
+      temp_runtime_chunk_idx.and_then(|runtime_idx| {
+        temp_chunk_opt_graph
+          .to_temp_idx(target_chunk_idx)
+          .map(|target_idx| (runtime_idx, target_idx))
       })
     else {
       // If runtime is not included before, it will not create circular dependency, because
@@ -928,9 +925,12 @@ impl GenerateStage<'_> {
       return false;
     };
 
-    if !runtime_reaches_target {
+    if !temp_chunk_opt_graph.is_reachable(temp_runtime_idx, temp_target_idx) {
       return false;
     }
+
+    let runtime_reaches_target_without_aliases =
+      temp_chunk_opt_graph.is_reachable_without_merged_aliases(temp_runtime_idx, temp_target_idx);
 
     let runtime_edge_will_be_local_or_rehomed =
       match chunk_graph.module_to_chunk[self.link_output.runtime.id()] {

@@ -16,3 +16,11 @@ packages/rolldown/tests/stability/**/*.js -linguist-detectable
 *.jpg -text
 *.bin -text
 *.md text eol=lf
+
+# Font files must be treated as binary; otherwise `* text eol=lf` above
+# corrupts them during check-in / checkout.
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary
+*.eot   binary

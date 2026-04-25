@@ -130,7 +130,7 @@ For each common chunk, translates its `bits` to chunk indices (bit positions dir
 
 Merging is skipped if it would:
 
-- **Create a circular dependency between chunks** — checked via BFS in `would_create_circular_dependency_after_merging()`. The check contracts the target plus the planned source chunks and resolves any source chunks already merged by earlier assignments through `merged_chunk_aliases`. This is stricter than Rollup (which warns but allows cycles) and matches esbuild's enforcement of acyclic static chunk graphs.
+- **Create a circular dependency between chunks** — checked via BFS in `would_create_circular_dependency_after_merging()`. The check contracts the target plus the planned source chunks and resolves any source chunks already merged by earlier assignments through `merged_chunk_aliases`. Merge application also normalizes the target dependency set through those aliases so the temporary graph stays minimal after atomically applied groups. This is stricter than Rollup (which warns but allows cycles) and matches esbuild's enforcement of acyclic static chunk graphs.
 - **Change an entry's export signature** — when `preserveEntrySignatures: 'strict'`, adding modules to an entry chunk would expose symbols that the original entry didn't export.
 
 The group-level check matters because a single common chunk can appear cyclic if tested alone while the complete group is safe after all sibling common chunks are contracted into the same target. When a group is safe, the optimizer applies that group atomically; otherwise it falls back to checking each source chunk individually and creates a separate common chunk for unsafe sources.
@@ -143,6 +143,8 @@ Dynamic/emitted entries can become empty facades when all their modules are pull
 
 - Merges the facade into its target chunk
 - Marks it as `Removed` in `post_chunk_optimization_operations`
+
+Facade reachability checks use the same temporary graph and resolve `merged_chunk_aliases`, so stale edges left by earlier common-chunk merges are interpreted as edges to the final merged chunk. A runtime-to-target path does not automatically block facade elimination: if the helper edge will be local to the runtime host, or the runtime host can be peeled and rehomed into a helper consumer, the optimizer proceeds and lets runtime placement preserve an acyclic final graph.
 
 ### Runtime Module Placement
 

@@ -261,9 +261,7 @@ impl ChunkOptimizationGraph {
 
     while let Some(chunk_idx) = queue.pop_front() {
       let chunk_idx = self.resolve_merged_chunk_idx(chunk_idx);
-      if chunk_idx == target_chunk_idx || source_chunk_idxs.contains(&chunk_idx) {
-        return true;
-      }
+      debug_assert!(chunk_idx != target_chunk_idx && !source_chunk_idxs.contains(&chunk_idx));
       if !visited.insert(chunk_idx) {
         continue;
       }
@@ -283,18 +281,26 @@ impl ChunkOptimizationGraph {
 
   /// Returns true if `from` can transitively reach `to` through the dependency graph.
   pub fn is_reachable(&self, from: ChunkIdx, to: ChunkIdx) -> bool {
-    let mut queue: VecDeque<ChunkIdx> = self.chunks[from].dependencies.iter().copied().collect();
+    let from = self.resolve_merged_chunk_idx(from);
+    let to = self.resolve_merged_chunk_idx(to);
+    let mut queue = self.chunks[from]
+      .dependencies
+      .iter()
+      .map(|&dep| self.resolve_merged_chunk_idx(dep))
+      .collect::<VecDeque<_>>();
     let mut visited = FxHashSet::default();
     while let Some(chunk_idx) = queue.pop_front() {
+      let chunk_idx = self.resolve_merged_chunk_idx(chunk_idx);
       if chunk_idx == to {
         return true;
       }
       if !visited.insert(chunk_idx) {
         continue;
       }
-      queue.extend(
-        self.chunks[chunk_idx].dependencies.iter().copied().filter(|dep| !visited.contains(dep)),
-      );
+      queue.extend(self.chunks[chunk_idx].dependencies.iter().filter_map(|&dep| {
+        let dep = self.resolve_merged_chunk_idx(dep);
+        (!visited.contains(&dep)).then_some(dep)
+      }));
     }
     false
   }
@@ -314,6 +320,14 @@ impl ChunkOptimizationGraph {
     if target_chunk_idx == source_chunk_idx {
       return;
     }
+    debug_assert!(
+      !self.merged_chunk_aliases.contains_key(&target_chunk_idx),
+      "target chunk should resolve to an unmerged root before aliasing"
+    );
+    debug_assert!(
+      !self.merged_chunk_aliases.contains_key(&source_chunk_idx),
+      "source chunk should resolve to an unmerged root before aliasing"
+    );
     let source = &self.chunks[source_chunk_idx];
     let source_has_side_effects = source.has_side_effects;
     let source_dependencies = std::mem::take(&mut self.chunks[source_chunk_idx].dependencies);
@@ -324,17 +338,26 @@ impl ChunkOptimizationGraph {
         self.chunks[target_chunk_idx].dependencies.insert(dep_chunk_idx);
       }
     }
-    // Remove self-reference if it exists (source might have depended on target)
-    self.chunks[target_chunk_idx].dependencies.remove(&target_chunk_idx);
     self.chunks[target_chunk_idx].has_side_effects |= source_has_side_effects;
     self.merged_chunk_aliases.insert(source_chunk_idx, target_chunk_idx);
+    let target_dependencies = std::mem::take(&mut self.chunks[target_chunk_idx].dependencies);
+    self.chunks[target_chunk_idx].dependencies = target_dependencies
+      .into_iter()
+      .filter_map(|dep_chunk_idx| {
+        let dep_chunk_idx = self.resolve_merged_chunk_idx(dep_chunk_idx);
+        (dep_chunk_idx != target_chunk_idx).then_some(dep_chunk_idx)
+      })
+      .collect();
   }
 
   fn resolve_merged_chunk_idx(&self, mut chunk_idx: ChunkIdx) -> ChunkIdx {
-    while let Some(&target_chunk_idx) = self.merged_chunk_aliases.get(&chunk_idx) {
+    for _ in 0..=self.merged_chunk_aliases.len() {
+      let Some(&target_chunk_idx) = self.merged_chunk_aliases.get(&chunk_idx) else {
+        return chunk_idx;
+      };
       chunk_idx = target_chunk_idx;
     }
-    chunk_idx
+    panic!("merged chunk aliases must be acyclic");
   }
 }
 
@@ -929,10 +952,12 @@ impl GenerateStage<'_> {
       if is_target_manual_chunk && is_emitted_entry_chunk {
         emitted_chunk_groups.entry(target_chunk_idx).or_default().push(from_chunk_idx);
       } else if !is_emitted_entry_chunk {
-        // Check if merging would create a circular dependency.
-        // Translate chunk_graph indices to temp_chunk_graph indices, since the two
-        // graphs may diverge once new common chunks are materialised.
-        if temp_runtime_chunk_idx
+        // Check if merging would create a runtime-helper circular dependency.
+        // Translate chunk_graph indices to temp_chunk_graph indices, since the two graphs may
+        // diverge once new common chunks are materialised. A path from the current runtime host
+        // to the target is safe when facade elimination will either keep the helper edge local to
+        // the target or peel the runtime into a helper consumer afterward.
+        let runtime_reaches_target = temp_runtime_chunk_idx
           .and_then(|temp_runtime_idx| {
             let temp_target_idx = temp_chunk_opt_graph.to_temp_idx(target_chunk_idx)?;
             Some(temp_chunk_opt_graph.is_reachable(temp_runtime_idx, temp_target_idx))
@@ -940,8 +965,14 @@ impl GenerateStage<'_> {
           // If runtime is not included before, it will not create circular dependency, because
           // the runtime module will be either included in the target chunk or in a separate chunk loaded before.
           // If either index has no temp counterpart, we conservatively allow the merge.
-          .unwrap_or(false)
-        {
+          .unwrap_or(false);
+        let runtime_edge_will_be_local_or_rehomed =
+          match chunk_graph.module_to_chunk[self.link_output.runtime.id()] {
+            Some(runtime_host_idx) if runtime_host_idx == target_chunk_idx => true,
+            Some(runtime_host_idx) => chunk_graph.chunk_table[runtime_host_idx].modules.len() > 1,
+            None => true,
+          };
+        if runtime_reaches_target && !runtime_edge_will_be_local_or_rehomed {
           continue;
         }
         let reason = if is_target_manual_chunk {
@@ -1422,6 +1453,16 @@ mod tests {
   }
 
   #[test]
+  fn reachability_resolves_previously_merged_chunks() {
+    // 2 has already been merged into 3, but 1 still has a stale edge to 2.
+    // Reachability must follow 1 -> 2(alias 3) -> 4 -> 5.
+    let mut graph = graph(&[&[1], &[2], &[], &[4], &[5], &[]]);
+    graph.merge_chunk_dependencies(idx(3), idx(2));
+
+    assert!(graph.is_reachable(idx(0), idx(5)));
+  }
+
+  #[test]
   fn cycle_check_contracts_whole_merge_group() {
     // Merging only 5 into 0 would create 0 -> 4 -> 0, but the complete group
     // contraction is safe because 3, 4, and 5 all become part of 0.
@@ -1429,5 +1470,53 @@ mod tests {
     let sources = FxHashSet::from_iter([idx(3), idx(4), idx(5)]);
 
     assert!(!graph.would_create_circular_dependency_after_merging(idx(0), &sources));
+  }
+
+  #[test]
+  fn cycle_check_allows_safe_single_source_when_group_is_cyclic() {
+    // Contracting 2 and 3 together would turn 0 -> 1 -> 3 into 0 -> 1 -> 0.
+    // If the group-level check fails, the fallback can still safely merge 2 alone.
+    let graph = graph(&[&[1], &[3], &[], &[]]);
+    let sources = FxHashSet::from_iter([idx(2), idx(3)]);
+
+    assert!(graph.would_create_circular_dependency_after_merging(idx(0), &sources));
+    assert!(!graph.would_create_circular_dependency(idx(2), idx(0)));
+    assert!(graph.would_create_circular_dependency(idx(3), idx(0)));
+  }
+
+  #[test]
+  fn merge_chunk_dependencies_removes_stale_intra_group_source_dependency() {
+    // Merging 1 first inserts its dependency on sibling 2 into target 0. When
+    // sibling 2 is later merged into 0, the stale 0 -> 2 edge should disappear.
+    let mut graph = graph(&[&[], &[2], &[]]);
+
+    graph.merge_chunk_dependencies(idx(0), idx(1));
+    assert!(graph.chunks[idx(0)].dependencies.contains(&idx(2)));
+
+    graph.merge_chunk_dependencies(idx(0), idx(2));
+    assert!(!graph.chunks[idx(0)].dependencies.contains(&idx(2)));
+  }
+
+  #[test]
+  fn merge_chunk_dependencies_normalizes_target_dependency_aliases() {
+    // Target 0 has a stale edge to 3. After 3 -> 2 and then 2 -> 0, that edge
+    // resolves back to target 0 and must be removed from the target deps.
+    let mut graph = graph(&[&[3], &[], &[], &[]]);
+
+    graph.merge_chunk_dependencies(idx(2), idx(3));
+    graph.merge_chunk_dependencies(idx(0), idx(2));
+
+    assert!(graph.chunks[idx(0)].dependencies.is_empty());
+  }
+
+  #[test]
+  fn cycle_check_preserves_source_without_dependencies_behavior() {
+    // A leaf source is unsafe when the target already reaches it.
+    let graph_with_target_path = graph(&[&[2], &[], &[1]]);
+    assert!(graph_with_target_path.would_create_circular_dependency(idx(1), idx(0)));
+
+    // With no target-side path back to the source, the same leaf source is safe.
+    let graph_without_target_path = graph(&[&[] as &[u32], &[], &[1]]);
+    assert!(!graph_without_target_path.would_create_circular_dependency(idx(1), idx(0)));
   }
 }

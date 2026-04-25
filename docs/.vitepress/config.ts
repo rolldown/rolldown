@@ -7,6 +7,7 @@ import llmstxt from 'vitepress-plugin-llms';
 import { addOgImage } from 'vitepress-plugin-og';
 import { graphvizMarkdownPlugin } from 'vitepress-plugin-graphviz';
 import { createHooksGraphProcessor } from './markdown-hooks-graph.ts';
+import { prepareOgTemplateWithFont } from './generate-og-template.ts';
 
 const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
   {
@@ -442,6 +443,7 @@ const config = defineConfig({
       await addOgImage(pageData, ctx, {
         domain: 'https://rolldown.rs',
         maxTitleSizePerLine: 16,
+        ogTemplate: prepareOgTemplateWithFont(),
       });
     }
   },

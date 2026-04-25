@@ -35,3 +35,4 @@ This list is not exhaustive.
 Additionally, we’re grateful to:
 
 - [Charlike Mike Reagent](https://github.com/tunnckoCore) for letting us use the `rolldown` package name on npm
+- The [Inter](https://github.com/rsms/inter) typeface by [Rasmus Andersson](https://github.com/rsms) and contributors, used in our Open Graph images. Licensed under the [SIL Open Font License 1.1](https://openfontlicense.org/).

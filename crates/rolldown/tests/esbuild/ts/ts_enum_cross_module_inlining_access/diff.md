@@ -46,9 +46,25 @@ not_inlined = [
 ### rolldown
 ```js
 //#region enums.ts
+let c_num = /* @__PURE__ */ function(c_num) {
+	c_num[c_num["x"] = 123] = "x";
+	return c_num;
+}({});
+let d_num = /* @__PURE__ */ function(d_num) {
+	d_num[d_num["x"] = 123] = "x";
+	return d_num;
+}({});
 let e_num = /* @__PURE__ */ function(e_num) {
 	e_num[e_num["x"] = 123] = "x";
 	return e_num;
+}({});
+let c_str = /* @__PURE__ */ function(c_str) {
+	c_str["x"] = "abc";
+	return c_str;
+}({});
+let d_str = /* @__PURE__ */ function(d_str) {
+	d_str["x"] = "abc";
+	return d_str;
 }({});
 let e_str = /* @__PURE__ */ function(e_str) {
 	e_str["x"] = "abc";
@@ -78,7 +94,7 @@ not_inlined = [
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,26 +1,10 @@
+@@ -1,26 +1,26 @@
 -var c_num = (c_num2 => {
 -    c_num2[c_num2["x"] = 123] = "x";
 -    return c_num2;
@@ -103,9 +119,25 @@ not_inlined = [
 -    e_str2["x"] = "abc";
 -    return e_str2;
 -})(e_str || ({}));
++var c_num = (function (c_num) {
++    c_num[c_num["x"] = 123] = "x";
++    return c_num;
++})({});
++var d_num = (function (d_num) {
++    d_num[d_num["x"] = 123] = "x";
++    return d_num;
++})({});
 +var e_num = (function (e_num) {
 +    e_num[e_num["x"] = 123] = "x";
 +    return e_num;
++})({});
++var c_str = (function (c_str) {
++    c_str["x"] = "abc";
++    return c_str;
++})({});
++var d_str = (function (d_str) {
++    d_str["x"] = "abc";
++    return d_str;
 +})({});
 +var e_str = (function (e_str) {
 +    e_str["x"] = "abc";

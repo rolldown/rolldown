@@ -260,7 +260,7 @@ impl ChunkOptimizationGraph {
     }
 
     while let Some(chunk_idx) = queue.pop_front() {
-      let chunk_idx = self.resolve_merged_chunk_idx(chunk_idx);
+      debug_assert_eq!(chunk_idx, self.resolve_merged_chunk_idx(chunk_idx));
       debug_assert!(chunk_idx != target_chunk_idx && !source_chunk_idxs.contains(&chunk_idx));
       if !visited.insert(chunk_idx) {
         continue;
@@ -397,6 +397,11 @@ struct CommonChunkAssignment {
   temp_chunk_idx: ChunkIdx,
   chunk_idxs: Vec<ChunkIdx>,
   merge_target: Option<ChunkIdx>,
+}
+
+enum CommonChunkMergePlan<'a> {
+  AppliedGroup { target_chunk_idx: ChunkIdx, group_indices: &'a [usize] },
+  Fallback(Option<ChunkIdx>),
 }
 
 impl GenerateStage<'_> {
@@ -541,43 +546,34 @@ impl GenerateStage<'_> {
         continue;
       }
       let assignment = &assignments[assignment_idx];
-      // Check if merging would create a circular dependency
-      let merge_target = match assignment.merge_target {
-        Some(target_chunk_idx) => {
-          let group_indices =
-            merge_groups.get(&target_chunk_idx).expect("merge group should exist");
-          let source_chunk_idxs = group_indices
-            .iter()
-            .filter(|&&group_assignment_idx| !processed_assignments[group_assignment_idx])
-            .map(|&group_assignment_idx| assignments[group_assignment_idx].temp_chunk_idx)
-            .collect::<FxHashSet<_>>();
-          let group_is_safe = !temp_chunk_graph
-            .would_create_circular_dependency_after_merging(target_chunk_idx, &source_chunk_idxs);
-          if group_is_safe {
-            // See meta/design/code-splitting.md: safe merge groups must be applied atomically.
-            // Apply a safe group atomically. A single source can be cyclic by itself but safe when
-            // its sibling common chunks are contracted into the same target.
-            for &group_assignment_idx in group_indices {
-              if processed_assignments[group_assignment_idx] {
-                continue;
-              }
-              self.apply_common_chunk_assignment(
-                &assignments[group_assignment_idx],
-                Some(target_chunk_idx),
-                chunk_graph,
-                bits_to_chunk,
-                input_base,
-                temp_chunk_graph,
-              );
-              processed_assignments[group_assignment_idx] = true;
+      let merge_target = match Self::resolve_common_chunk_merge_plan(
+        assignment,
+        &assignments,
+        &merge_groups,
+        &processed_assignments,
+        temp_chunk_graph,
+      ) {
+        CommonChunkMergePlan::AppliedGroup { target_chunk_idx, group_indices } => {
+          // See meta/design/code-splitting.md: safe merge groups must be applied atomically.
+          // Apply a safe group atomically. A single source can be cyclic by itself but safe when
+          // its sibling common chunks are contracted into the same target.
+          for &group_assignment_idx in group_indices {
+            if processed_assignments[group_assignment_idx] {
+              continue;
             }
-            continue;
+            self.apply_common_chunk_assignment(
+              &assignments[group_assignment_idx],
+              Some(target_chunk_idx),
+              chunk_graph,
+              bits_to_chunk,
+              input_base,
+              temp_chunk_graph,
+            );
+            processed_assignments[group_assignment_idx] = true;
           }
-          (!temp_chunk_graph
-            .would_create_circular_dependency(assignment.temp_chunk_idx, target_chunk_idx))
-          .then_some(target_chunk_idx)
+          continue;
         }
-        None => None,
+        CommonChunkMergePlan::Fallback(merge_target) => merge_target,
       };
 
       self.apply_common_chunk_assignment(
@@ -590,6 +586,39 @@ impl GenerateStage<'_> {
       );
       processed_assignments[assignment_idx] = true;
     }
+  }
+
+  fn resolve_common_chunk_merge_plan<'a>(
+    assignment: &CommonChunkAssignment,
+    assignments: &[CommonChunkAssignment],
+    merge_groups: &'a FxHashMap<ChunkIdx, Vec<usize>>,
+    processed_assignments: &[bool],
+    temp_chunk_graph: &ChunkOptimizationGraph,
+  ) -> CommonChunkMergePlan<'a> {
+    let Some(target_chunk_idx) = assignment.merge_target else {
+      return CommonChunkMergePlan::Fallback(None);
+    };
+
+    let group_indices = merge_groups.get(&target_chunk_idx).expect("merge group should exist");
+    let source_chunk_idxs = group_indices
+      .iter()
+      .filter(|&&group_assignment_idx| !processed_assignments[group_assignment_idx])
+      .map(|&group_assignment_idx| assignments[group_assignment_idx].temp_chunk_idx)
+      .collect::<FxHashSet<_>>();
+    let group_is_safe = !temp_chunk_graph
+      .would_create_circular_dependency_after_merging(target_chunk_idx, &source_chunk_idxs);
+    if group_is_safe {
+      return CommonChunkMergePlan::AppliedGroup {
+        target_chunk_idx,
+        group_indices: group_indices.as_slice(),
+      };
+    }
+
+    CommonChunkMergePlan::Fallback(
+      (!temp_chunk_graph
+        .would_create_circular_dependency(assignment.temp_chunk_idx, target_chunk_idx))
+      .then_some(target_chunk_idx),
+    )
   }
 
   fn apply_common_chunk_assignment(
@@ -929,16 +958,17 @@ impl GenerateStage<'_> {
       return false;
     }
 
-    let runtime_reaches_target_without_aliases =
-      temp_chunk_opt_graph.is_reachable_without_merged_aliases(temp_runtime_idx, temp_target_idx);
-
     let runtime_edge_will_be_local_or_rehomed =
       match chunk_graph.module_to_chunk[self.link_output.runtime.id()] {
         Some(runtime_host_idx) if runtime_host_idx == target_chunk_idx => true,
         Some(runtime_host_idx) => chunk_graph.chunk_table[runtime_host_idx].modules.len() > 1,
         None => true,
       };
-    runtime_reaches_target_without_aliases || !runtime_edge_will_be_local_or_rehomed
+    if !runtime_edge_will_be_local_or_rehomed {
+      return true;
+    }
+
+    temp_chunk_opt_graph.is_reachable_without_merged_aliases(temp_runtime_idx, temp_target_idx)
   }
 
   /// Finds empty dynamic entry chunks that should be merged with their target common chunks.

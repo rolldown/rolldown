@@ -52,7 +52,7 @@ export function makeBuiltinPluginCallable(
       }
     };
 
-    const order = callablePlugin.getOrder(key);
+    const order = callablePlugin.getOrder?.(key);
     if (order == undefined) {
       // @ts-expect-error
       wrappedPlugin[key] = wrappedHook;

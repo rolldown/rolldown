@@ -144,7 +144,7 @@ Dynamic/emitted entries can become empty facades when all their modules are pull
 - Merges the facade into its target chunk
 - Marks it as `Removed` in `post_chunk_optimization_operations`
 
-Facade reachability checks use the same temporary graph and resolve `merged_chunk_aliases`, so stale edges left by earlier common-chunk merges are interpreted as edges to the final merged chunk. A runtime-to-target path does not automatically block facade elimination: if the helper edge will be local to the runtime host, or the runtime host can be peeled and rehomed into a helper consumer, the optimizer proceeds and lets runtime placement preserve an acyclic final graph.
+Facade reachability checks use the same temporary graph and resolve `merged_chunk_aliases`, so stale edges left by earlier common-chunk merges are interpreted as edges to the final merged chunk. Direct runtime-to-target paths keep the existing conservative behavior and block facade elimination. If the path only appears after resolving merged aliases, the optimizer may still proceed when the helper edge will be local to the runtime host, or when the runtime host can be peeled and rehomed into a helper consumer.
 
 ### Runtime Module Placement
 

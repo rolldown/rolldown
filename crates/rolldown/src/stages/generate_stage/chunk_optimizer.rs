@@ -305,6 +305,23 @@ impl ChunkOptimizationGraph {
     false
   }
 
+  fn is_reachable_without_merged_aliases(&self, from: ChunkIdx, to: ChunkIdx) -> bool {
+    let mut queue: VecDeque<ChunkIdx> = self.chunks[from].dependencies.iter().copied().collect();
+    let mut visited = FxHashSet::default();
+    while let Some(chunk_idx) = queue.pop_front() {
+      if chunk_idx == to {
+        return true;
+      }
+      if !visited.insert(chunk_idx) {
+        continue;
+      }
+      queue.extend(
+        self.chunks[chunk_idx].dependencies.iter().copied().filter(|dep| !visited.contains(dep)),
+      );
+    }
+    false
+  }
+
   /// Merges the dependencies of source chunk into target chunk.
   ///
   /// When modules from one chunk are merged into another chunk, the dependencies
@@ -954,25 +971,33 @@ impl GenerateStage<'_> {
       } else if !is_emitted_entry_chunk {
         // Check if merging would create a runtime-helper circular dependency.
         // Translate chunk_graph indices to temp_chunk_graph indices, since the two graphs may
-        // diverge once new common chunks are materialised. A path from the current runtime host
-        // to the target is safe when facade elimination will either keep the helper edge local to
-        // the target or peel the runtime into a helper consumer afterward.
-        let runtime_reaches_target = temp_runtime_chunk_idx
+        // diverge once new common chunks are materialised. Preserve the existing conservative
+        // behavior for direct runtime-to-target paths; for paths that only appear after resolving
+        // merged aliases, allow the merge when facade elimination will either keep the helper edge
+        // local to the target or peel the runtime into a helper consumer afterward.
+        let runtime_reachability = temp_runtime_chunk_idx
           .and_then(|temp_runtime_idx| {
             let temp_target_idx = temp_chunk_opt_graph.to_temp_idx(target_chunk_idx)?;
-            Some(temp_chunk_opt_graph.is_reachable(temp_runtime_idx, temp_target_idx))
+            Some((
+              temp_chunk_opt_graph.is_reachable(temp_runtime_idx, temp_target_idx),
+              temp_chunk_opt_graph
+                .is_reachable_without_merged_aliases(temp_runtime_idx, temp_target_idx),
+            ))
           })
           // If runtime is not included before, it will not create circular dependency, because
           // the runtime module will be either included in the target chunk or in a separate chunk loaded before.
           // If either index has no temp counterpart, we conservatively allow the merge.
-          .unwrap_or(false);
+          .unwrap_or((false, false));
         let runtime_edge_will_be_local_or_rehomed =
           match chunk_graph.module_to_chunk[self.link_output.runtime.id()] {
             Some(runtime_host_idx) if runtime_host_idx == target_chunk_idx => true,
             Some(runtime_host_idx) => chunk_graph.chunk_table[runtime_host_idx].modules.len() > 1,
             None => true,
           };
-        if runtime_reaches_target && !runtime_edge_will_be_local_or_rehomed {
+        let (runtime_reaches_target, runtime_reaches_target_without_aliases) = runtime_reachability;
+        if runtime_reaches_target
+          && (runtime_reaches_target_without_aliases || !runtime_edge_will_be_local_or_rehomed)
+        {
           continue;
         }
         let reason = if is_target_manual_chunk {

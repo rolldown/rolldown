@@ -209,57 +209,35 @@ impl ChunkOptimizationGraph {
     source_chunk_idx: ChunkIdx,
     target_chunk_idx: ChunkIdx,
   ) -> bool {
-    let source_has_deps = !self.chunks[source_chunk_idx].dependencies.is_empty();
+    // Start BFS from the combined deps of source and target.
+    let mut queue: VecDeque<ChunkIdx> = self.chunks[source_chunk_idx]
+      .dependencies
+      .iter()
+      .chain(self.chunks[target_chunk_idx].dependencies.iter())
+      .copied()
+      .collect();
+    let mut visited = FxHashSet::default();
 
-    if source_has_deps {
-      // When source has dependencies, only BFS from source's deps.
-      // Including target's deps causes false positives because the simulation
-      // finds that target can trivially "reach itself" through any transitive
-      // dependency that also depends on source.
-      let mut queue: VecDeque<ChunkIdx> =
-        self.chunks[source_chunk_idx].dependencies.iter().copied().collect();
-      let mut visited = FxHashSet::default();
-
-      while let Some(chunk_idx) = queue.pop_front() {
-        if chunk_idx == target_chunk_idx {
-          return true;
-        }
-        if !visited.insert(chunk_idx) {
-          continue;
-        }
-        for &dep in &self.chunks[chunk_idx].dependencies {
-          if !visited.contains(&dep) {
-            queue.push_back(dep);
-          }
+    while let Some(chunk_idx) = queue.pop_front() {
+      if chunk_idx == target_chunk_idx {
+        return true;
+      }
+      if !visited.insert(chunk_idx) {
+        continue;
+      }
+      for &dep in &self.chunks[chunk_idx].dependencies {
+        if !visited.contains(&dep) {
+          queue.push_back(dep);
         }
       }
-      false
-    } else {
-      // When source has no dependencies (e.g., runtime chunk), we must check
-      // from target's deps with post-merge simulation to detect cycles like
-      // target -> chunk_A -> source(=target after merge).
-      let mut queue: VecDeque<ChunkIdx> =
-        self.chunks[target_chunk_idx].dependencies.iter().copied().collect();
-      let mut visited = FxHashSet::default();
-
-      while let Some(chunk_idx) = queue.pop_front() {
-        if chunk_idx == target_chunk_idx {
-          return true;
-        }
-        if !visited.insert(chunk_idx) {
-          continue;
-        }
-        for &dep in &self.chunks[chunk_idx].dependencies {
-          if !visited.contains(&dep) {
-            queue.push_back(dep);
-          }
-        }
-        if self.chunks[chunk_idx].dependencies.contains(&source_chunk_idx) {
-          queue.push_back(target_chunk_idx);
-        }
+      // Any chunk that depends on source will depend on target after the merge.
+      // Simulate this by also queuing target when we encounter such a chunk.
+      if self.chunks[chunk_idx].dependencies.contains(&source_chunk_idx) {
+        queue.push_back(target_chunk_idx);
       }
-      false
     }
+
+    false
   }
 
   /// Returns true if `from` can transitively reach `to` through the dependency graph.

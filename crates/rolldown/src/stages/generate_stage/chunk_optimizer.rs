@@ -63,6 +63,8 @@ pub struct ChunkOptimizationGraph {
   /// Initial chunks share identical indices; newly-created common chunks
   /// in chunk_graph are registered here so callers can translate.
   chunk_idx_to_temp_chunk_idx: FxHashMap<ChunkIdx, ChunkIdx>,
+  /// Tracks common chunks that have already been merged into existing chunks.
+  merged_chunk_aliases: FxHashMap<ChunkIdx, ChunkIdx>,
 }
 
 impl ChunkOptimizationGraph {
@@ -106,7 +108,13 @@ impl ChunkOptimizationGraph {
       bits_to_chunk_idx.iter().map(|(k, v)| (k.clone(), *v)).collect();
     bits_to_chunk_idx.sort_unstable_keys();
 
-    Self { chunks, bits_to_chunk_idx, module_to_chunk, chunk_idx_to_temp_chunk_idx }
+    Self {
+      chunks,
+      bits_to_chunk_idx,
+      module_to_chunk,
+      chunk_idx_to_temp_chunk_idx,
+      merged_chunk_aliases: FxHashMap::default(),
+    }
   }
 
   /// Assigns a module to a temporary chunk based on its reachability bits.
@@ -199,9 +207,8 @@ impl ChunkOptimizationGraph {
   /// that previously depended on `source` now depends on `target`. A cycle exists iff `target`
   /// is reachable from `source.deps ∪ target.deps` in the resulting graph.
   ///
-  /// We approximate this by doing a BFS from `source.deps ∪ target.deps`, treating any chunk
-  /// that depends on `source` as also pointing to `target` (since after the merge they would).
-  /// If `target` is reachable, the merge would create a cycle.
+  /// We detect this by contracting `source` into `target`, then checking whether the merged
+  /// target can reach itself through any external chunk.
   ///
   /// This is similar to Rollup's check in `getAdditionalSizeIfNoTransitiveDependencyOrNonCorrelatedSideEffect`.
   pub fn would_create_circular_dependency(
@@ -209,57 +216,69 @@ impl ChunkOptimizationGraph {
     source_chunk_idx: ChunkIdx,
     target_chunk_idx: ChunkIdx,
   ) -> bool {
-    let source_has_deps = !self.chunks[source_chunk_idx].dependencies.is_empty();
+    self.would_create_circular_dependency_after_merging(
+      target_chunk_idx,
+      &FxHashSet::from_iter([source_chunk_idx]),
+    )
+  }
 
-    if source_has_deps {
-      // When source has dependencies, only BFS from source's deps.
-      // Including target's deps causes false positives because the simulation
-      // finds that target can trivially "reach itself" through any transitive
-      // dependency that also depends on source.
-      let mut queue: VecDeque<ChunkIdx> =
-        self.chunks[source_chunk_idx].dependencies.iter().copied().collect();
-      let mut visited = FxHashSet::default();
+  /// Checks whether contracting `source_chunk_idxs` into `target_chunk_idx` would create a cycle.
+  ///
+  /// This handles batches of chunks that are all planned to merge into the same target. Evaluating
+  /// the whole batch avoids false positives where one soon-to-be-merged common chunk reaches
+  /// another soon-to-be-merged common chunk through the target.
+  ///
+  /// Dependencies that still point at chunks merged by earlier assignments are resolved through
+  /// `merged_chunk_aliases`, matching the final chunk graph without mutating every incoming edge.
+  pub fn would_create_circular_dependency_after_merging(
+    &self,
+    target_chunk_idx: ChunkIdx,
+    source_chunk_idxs: &FxHashSet<ChunkIdx>,
+  ) -> bool {
+    let target_chunk_idx = self.resolve_merged_chunk_idx(target_chunk_idx);
+    let source_chunk_idxs = source_chunk_idxs
+      .iter()
+      .map(|&source_chunk_idx| self.resolve_merged_chunk_idx(source_chunk_idx))
+      .filter(|&source_chunk_idx| source_chunk_idx != target_chunk_idx)
+      .collect::<FxHashSet<_>>();
+    let mut queue = VecDeque::new();
+    let mut visited = FxHashSet::default();
 
-      while let Some(chunk_idx) = queue.pop_front() {
-        if chunk_idx == target_chunk_idx {
-          return true;
-        }
-        if !visited.insert(chunk_idx) {
-          continue;
-        }
-        for &dep in &self.chunks[chunk_idx].dependencies {
-          if !visited.contains(&dep) {
-            queue.push_back(dep);
-          }
-        }
+    for &dep in &self.chunks[target_chunk_idx].dependencies {
+      let dep = self.resolve_merged_chunk_idx(dep);
+      if dep != target_chunk_idx && !source_chunk_idxs.contains(&dep) {
+        queue.push_back(dep);
       }
-      false
-    } else {
-      // When source has no dependencies (e.g., runtime chunk), we must check
-      // from target's deps with post-merge simulation to detect cycles like
-      // target -> chunk_A -> source(=target after merge).
-      let mut queue: VecDeque<ChunkIdx> =
-        self.chunks[target_chunk_idx].dependencies.iter().copied().collect();
-      let mut visited = FxHashSet::default();
-
-      while let Some(chunk_idx) = queue.pop_front() {
-        if chunk_idx == target_chunk_idx {
-          return true;
-        }
-        if !visited.insert(chunk_idx) {
-          continue;
-        }
-        for &dep in &self.chunks[chunk_idx].dependencies {
-          if !visited.contains(&dep) {
-            queue.push_back(dep);
-          }
-        }
-        if self.chunks[chunk_idx].dependencies.contains(&source_chunk_idx) {
-          queue.push_back(target_chunk_idx);
-        }
-      }
-      false
     }
+    for &source_chunk_idx in &source_chunk_idxs {
+      for &dep in &self.chunks[source_chunk_idx].dependencies {
+        let dep = self.resolve_merged_chunk_idx(dep);
+        if dep != target_chunk_idx && !source_chunk_idxs.contains(&dep) {
+          queue.push_back(dep);
+        }
+      }
+    }
+
+    while let Some(chunk_idx) = queue.pop_front() {
+      let chunk_idx = self.resolve_merged_chunk_idx(chunk_idx);
+      if chunk_idx == target_chunk_idx || source_chunk_idxs.contains(&chunk_idx) {
+        return true;
+      }
+      if !visited.insert(chunk_idx) {
+        continue;
+      }
+      for &dep in &self.chunks[chunk_idx].dependencies {
+        let dep = self.resolve_merged_chunk_idx(dep);
+        if dep == target_chunk_idx || source_chunk_idxs.contains(&dep) {
+          return true;
+        }
+        if !visited.contains(&dep) {
+          queue.push_back(dep);
+        }
+      }
+    }
+
+    false
   }
 
   /// Returns true if `from` can transitively reach `to` through the dependency graph.
@@ -290,10 +309,16 @@ impl ChunkOptimizationGraph {
     target_chunk_idx: ChunkIdx,
     source_chunk_idx: ChunkIdx,
   ) {
+    let target_chunk_idx = self.resolve_merged_chunk_idx(target_chunk_idx);
+    let source_chunk_idx = self.resolve_merged_chunk_idx(source_chunk_idx);
+    if target_chunk_idx == source_chunk_idx {
+      return;
+    }
     let source = &self.chunks[source_chunk_idx];
     let source_has_side_effects = source.has_side_effects;
     let source_dependencies = std::mem::take(&mut self.chunks[source_chunk_idx].dependencies);
     for dep_chunk_idx in source_dependencies {
+      let dep_chunk_idx = self.resolve_merged_chunk_idx(dep_chunk_idx);
       // Don't add self-reference
       if dep_chunk_idx != target_chunk_idx {
         self.chunks[target_chunk_idx].dependencies.insert(dep_chunk_idx);
@@ -302,6 +327,14 @@ impl ChunkOptimizationGraph {
     // Remove self-reference if it exists (source might have depended on target)
     self.chunks[target_chunk_idx].dependencies.remove(&target_chunk_idx);
     self.chunks[target_chunk_idx].has_side_effects |= source_has_side_effects;
+    self.merged_chunk_aliases.insert(source_chunk_idx, target_chunk_idx);
+  }
+
+  fn resolve_merged_chunk_idx(&self, mut chunk_idx: ChunkIdx) -> ChunkIdx {
+    while let Some(&target_chunk_idx) = self.merged_chunk_aliases.get(&chunk_idx) {
+      chunk_idx = target_chunk_idx;
+    }
+    chunk_idx
   }
 }
 
@@ -311,6 +344,13 @@ enum ChunkAssignment {
   Merged(ChunkIdx),
   /// A new common chunk was created in chunk_graph (chunk_graph index).
   Created(ChunkIdx),
+}
+
+struct CommonChunkAssignment {
+  bits: BitSet,
+  temp_chunk_idx: ChunkIdx,
+  chunk_idxs: Vec<ChunkIdx>,
+  merge_target: Option<ChunkIdx>,
 }
 
 impl GenerateStage<'_> {
@@ -405,8 +445,7 @@ impl GenerateStage<'_> {
       }
       map
     };
-    // First pass: collect chunk assignment decisions
-    // (bits, temp_chunk_idx, chunk_idxs, merge_target)
+    // First pass: collect chunk assignment decisions.
     let assignments: Vec<_> = temp_chunk_graph
       .bits_to_chunk_idx
       .iter()
@@ -426,51 +465,122 @@ impl GenerateStage<'_> {
           &dynamic_entry_to_dynamic_importers,
           temp_chunk,
           temp_chunk_graph,
-        );
+        )
+        .filter(|&target_chunk_idx| {
+          self.can_assign_modules_to_existing_chunk(
+            target_chunk_idx,
+            &temp_chunk.modules,
+            chunk_graph,
+          )
+        });
 
-        Some((bits.clone(), *temp_chunk_idx, chunk_idxs, merge_target))
+        Some(CommonChunkAssignment {
+          bits: bits.clone(),
+          temp_chunk_idx: *temp_chunk_idx,
+          chunk_idxs,
+          merge_target,
+        })
       })
       .collect();
 
+    let mut merge_groups: FxHashMap<ChunkIdx, Vec<usize>> = FxHashMap::default();
+    for (assignment_idx, assignment) in assignments.iter().enumerate() {
+      if let Some(target_chunk_idx) = assignment.merge_target {
+        merge_groups.entry(target_chunk_idx).or_default().push(assignment_idx);
+      }
+    }
+    let mut processed_assignments = vec![false; assignments.len()];
+
     // Second pass: apply chunk assignments
-    for (bits, temp_chunk_idx, chunk_idxs, merge_target) in assignments {
+    for assignment_idx in 0..assignments.len() {
+      if processed_assignments[assignment_idx] {
+        continue;
+      }
+      let assignment = &assignments[assignment_idx];
       // Check if merging would create a circular dependency
-      let merge_target = match merge_target {
-        Some(target_chunk_idx)
-          if temp_chunk_graph
-            .would_create_circular_dependency(temp_chunk_idx, target_chunk_idx) =>
-        {
-          // Skip merge if it would create a circular dependency
-          None
+      let merge_target = match assignment.merge_target {
+        Some(target_chunk_idx) => {
+          let group_indices =
+            merge_groups.get(&target_chunk_idx).expect("merge group should exist");
+          let source_chunk_idxs = group_indices
+            .iter()
+            .filter(|&&group_assignment_idx| !processed_assignments[group_assignment_idx])
+            .map(|&group_assignment_idx| assignments[group_assignment_idx].temp_chunk_idx)
+            .collect::<FxHashSet<_>>();
+          let group_is_safe = !temp_chunk_graph
+            .would_create_circular_dependency_after_merging(target_chunk_idx, &source_chunk_idxs);
+          if group_is_safe {
+            // See meta/design/code-splitting.md: safe merge groups must be applied atomically.
+            // Apply a safe group atomically. A single source can be cyclic by itself but safe when
+            // its sibling common chunks are contracted into the same target.
+            for &group_assignment_idx in group_indices {
+              if processed_assignments[group_assignment_idx] {
+                continue;
+              }
+              self.apply_common_chunk_assignment(
+                &assignments[group_assignment_idx],
+                Some(target_chunk_idx),
+                chunk_graph,
+                bits_to_chunk,
+                input_base,
+                temp_chunk_graph,
+              );
+              processed_assignments[group_assignment_idx] = true;
+            }
+            continue;
+          }
+          (!temp_chunk_graph
+            .would_create_circular_dependency(assignment.temp_chunk_idx, target_chunk_idx))
+          .then_some(target_chunk_idx)
         }
-        other => other,
+        None => None,
       };
 
-      let temp_modules = &temp_chunk_graph.chunks[temp_chunk_idx].modules;
-      match self.assign_modules_to_chunk(
+      self.apply_common_chunk_assignment(
+        assignment,
         merge_target,
-        &chunk_idxs,
-        temp_modules,
-        &bits,
         chunk_graph,
         bits_to_chunk,
         input_base,
-      ) {
-        ChunkAssignment::Merged(target_chunk_idx) => {
-          // Merge chunk dependencies immediately after successful merge
-          temp_chunk_graph.merge_chunk_dependencies(target_chunk_idx, temp_chunk_idx);
-        }
-        ChunkAssignment::Created(new_chunk_id) => {
-          temp_chunk_graph.register_chunk_graph_index(new_chunk_id, temp_chunk_idx);
-        }
+        temp_chunk_graph,
+      );
+      processed_assignments[assignment_idx] = true;
+    }
+  }
+
+  fn apply_common_chunk_assignment(
+    &self,
+    assignment: &CommonChunkAssignment,
+    merge_target: Option<ChunkIdx>,
+    chunk_graph: &mut ChunkGraph,
+    bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
+    input_base: &ArcStr,
+    temp_chunk_graph: &mut ChunkOptimizationGraph,
+  ) {
+    let temp_modules = &temp_chunk_graph.chunks[assignment.temp_chunk_idx].modules;
+    match self.assign_modules_to_chunk(
+      merge_target,
+      &assignment.chunk_idxs,
+      temp_modules,
+      &assignment.bits,
+      chunk_graph,
+      bits_to_chunk,
+      input_base,
+    ) {
+      ChunkAssignment::Merged(target_chunk_idx) => {
+        // Merge chunk dependencies immediately after successful merge.
+        temp_chunk_graph.merge_chunk_dependencies(target_chunk_idx, assignment.temp_chunk_idx);
+      }
+      ChunkAssignment::Created(new_chunk_id) => {
+        temp_chunk_graph.register_chunk_graph_index(new_chunk_id, assignment.temp_chunk_idx);
       }
     }
   }
 
   /// Assigns modules to either an existing entry chunk or a new common chunk.
   ///
-  /// If a valid merge target is found (and it doesn't have strict entry signature preservation),
-  /// modules are merged into that existing chunk. Otherwise, a new common chunk is created.
+  /// If a merge target is provided, modules are merged into that existing chunk. Otherwise, a new
+  /// common chunk is created. Callers are responsible for validating cycles and entry signatures.
   #[expect(clippy::too_many_arguments)]
   fn assign_modules_to_chunk(
     &self,
@@ -484,26 +594,8 @@ impl GenerateStage<'_> {
   ) -> ChunkAssignment {
     match merge_target {
       Some(chunk_idx) => {
-        let chunk = &chunk_graph.chunk_table[chunk_idx];
-        let is_async_entry_only = matches!(chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta == ChunkMeta::DynamicImported);
-        if matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict)) {
-          // We can safely merge into this chunk in two scenarios:
-          // 1. The target chunk is an async entry - dynamic chunks are not restricted by `PreserveEntrySignatures`.
-          // 2. The target chunk has strict signature preservation, but the modules being merged won't alter
-          //    the entry's exported interface (they either have no exports or only re-export existing entry symbols).
-          if is_async_entry_only || self.can_merge_without_changing_entry_signature(chunk, modules)
-          {
-            self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
-            ChunkAssignment::Merged(chunk_idx)
-          } else {
-            let new_chunk_id =
-              self.create_common_chunk(modules, bits, chunk_graph, bits_to_chunk, input_base);
-            ChunkAssignment::Created(new_chunk_id)
-          }
-        } else {
-          self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
-          ChunkAssignment::Merged(chunk_idx)
-        }
+        self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
+        ChunkAssignment::Merged(chunk_idx)
       }
       _ => {
         let new_chunk_id =
@@ -511,6 +603,19 @@ impl GenerateStage<'_> {
         ChunkAssignment::Created(new_chunk_id)
       }
     }
+  }
+
+  fn can_assign_modules_to_existing_chunk(
+    &self,
+    chunk_idx: ChunkIdx,
+    modules: &[ModuleIdx],
+    chunk_graph: &ChunkGraph,
+  ) -> bool {
+    let chunk = &chunk_graph.chunk_table[chunk_idx];
+    let is_async_entry_only = matches!(chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta == ChunkMeta::DynamicImported);
+    !matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict))
+      || is_async_entry_only
+      || self.can_merge_without_changing_entry_signature(chunk, modules)
   }
 
   /// Merges modules into an existing entry chunk.
@@ -1245,5 +1350,84 @@ impl GenerateStage<'_> {
         runtime_dependent_chunks.insert(merge.to_chunk_idx);
       }
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn idx(raw: u32) -> ChunkIdx {
+    ChunkIdx::from_raw(raw)
+  }
+
+  fn candidate(dependencies: &[u32]) -> ChunkCandidate {
+    ChunkCandidate {
+      modules: vec![],
+      needs_creation: false,
+      dependencies: dependencies.iter().map(|&dep| idx(dep)).collect(),
+      has_side_effects: false,
+    }
+  }
+
+  fn graph(dependencies: &[&[u32]]) -> ChunkOptimizationGraph {
+    let mut chunks = IndexVec::new();
+    for deps in dependencies {
+      chunks.push(candidate(deps));
+    }
+    ChunkOptimizationGraph {
+      chunks,
+      bits_to_chunk_idx: FxIndexMap::default(),
+      module_to_chunk: index_vec![],
+      chunk_idx_to_temp_chunk_idx: FxHashMap::default(),
+      merged_chunk_aliases: FxHashMap::default(),
+    }
+  }
+
+  #[test]
+  fn cycle_check_detects_target_reaching_source_with_deps() {
+    // Regression for the rc17 bug: source 2 has its own dependency, and target 0
+    // already reaches source through chunk 1. Merging 2 into 0 would create
+    // 0 -> 1 -> 0.
+    let graph = graph(&[&[1], &[2], &[3], &[]]);
+
+    assert!(graph.would_create_circular_dependency(idx(2), idx(0)));
+  }
+
+  #[test]
+  fn cycle_check_resolves_previously_merged_chunks() {
+    // 7 has already been merged into 1. A later merge of 3, 4, and 6 into 0
+    // would create 0 -> 2 -> 1 -> 0, but only if the stale 2 -> 7 edge is
+    // resolved through the previous 7 -> 1 merge.
+    let mut graph = graph(&[&[2, 3, 4], &[3, 6, 7], &[7], &[6], &[], &[], &[], &[]]);
+    graph.merge_chunk_dependencies(idx(1), idx(7));
+
+    let sources = FxHashSet::from_iter([idx(3), idx(4), idx(6)]);
+
+    assert!(graph.would_create_circular_dependency_after_merging(idx(0), &sources));
+  }
+
+  #[test]
+  fn cycle_check_resolves_alias_chains() {
+    // 7 -> 1 and then 1 -> 4 leaves stale external edges that still mention 7.
+    // When 4 is later considered for merging into 0, 0 -> 2 -> 7 must resolve
+    // through the full 7 -> 1 -> 4 chain and be rejected as 0 -> 2 -> 0.
+    let mut graph = graph(&[&[2], &[], &[7], &[], &[], &[], &[], &[]]);
+    graph.merge_chunk_dependencies(idx(1), idx(7));
+    graph.merge_chunk_dependencies(idx(4), idx(1));
+
+    let sources = FxHashSet::from_iter([idx(4)]);
+
+    assert!(graph.would_create_circular_dependency_after_merging(idx(0), &sources));
+  }
+
+  #[test]
+  fn cycle_check_contracts_whole_merge_group() {
+    // Merging only 5 into 0 would create 0 -> 4 -> 0, but the complete group
+    // contraction is safe because 3, 4, and 5 all become part of 0.
+    let graph = graph(&[&[3, 4], &[], &[], &[], &[5], &[]]);
+    let sources = FxHashSet::from_iter([idx(3), idx(4), idx(5)]);
+
+    assert!(!graph.would_create_circular_dependency_after_merging(idx(0), &sources));
   }
 }

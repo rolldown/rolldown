@@ -25,14 +25,14 @@ The trade-off is that this approach can produce many small chunks when there are
 
 ## How Other Bundlers Handle Key Problems
 
-| Problem                    | Rollup                                                  | esbuild                                                 | Rolldown                                                                         |
-| -------------------------- | ------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Shared module detection    | `Set<entryIndex>` per module                            | `BitSet` per file                                       | `BitSet` per module                                                              |
-| Separate chunk vs. inline? | Always separate; `experimentalMinChunkSize` for merging | Always separate; no merging                             | Separate by default; optimizer merges into entry chunks                          |
-| Circular chunk deps        | Warns; allows cyclic reexports                          | Enforces acyclic static chunk graph                     | Enforces acyclic via `would_create_circular_dependency` check before every merge |
-| Dynamic imports            | New entry points; computes "already loaded" atoms       | New entry points; rewrites to chunk unique keys         | New entry points; facade elimination for empty dynamic entries                   |
-| External modules           | Excluded from chunk graph                               | Excluded from bundling                                  | Filtered from entry list at source (never get bit positions)                     |
-| Granularity                | Module level                                            | File level (was statement-level, backed off due to TLA) | Module level                                                                     |
+| Problem                    | Rollup                                                  | esbuild                                                 | Rolldown                                                               |
+| -------------------------- | ------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Shared module detection    | `Set<entryIndex>` per module                            | `BitSet` per file                                       | `BitSet` per module                                                    |
+| Separate chunk vs. inline? | Always separate; `experimentalMinChunkSize` for merging | Always separate; no merging                             | Separate by default; optimizer merges into entry chunks                |
+| Circular chunk deps        | Warns; allows cyclic reexports                          | Enforces acyclic static chunk graph                     | Enforces acyclic via `ChunkOptimizationGraph` merge-contraction checks |
+| Dynamic imports            | New entry points; computes "already loaded" atoms       | New entry points; rewrites to chunk unique keys         | New entry points; facade elimination for empty dynamic entries         |
+| External modules           | Excluded from chunk graph                               | Excluded from bundling                                  | Filtered from entry list at source (never get bit positions)           |
+| Granularity                | Module level                                            | File level (was statement-level, backed off due to TLA) | Module level                                                           |
 
 ## Pipeline
 
@@ -126,10 +126,14 @@ The chunk optimizer reduces chunk count by merging common chunks back into entry
 
 ### Common Module Merging (`try_insert_common_module_to_exist_chunk`)
 
-For each common chunk, translates its `bits` to chunk indices (bit positions directly map to `ChunkIdx`), then tries to merge it into one of those entry chunks. Merging is skipped if it would:
+For each common chunk, translates its `bits` to chunk indices (bit positions directly map to `ChunkIdx`), then tries to merge it into one of those entry chunks. Before applying assignments, the optimizer groups all common chunks that target the same entry chunk and tests the group as a single contraction in the temporary `ChunkOptimizationGraph`.
 
-- **Create a circular dependency between chunks** — checked via BFS in `would_create_circular_dependency()`. This is stricter than Rollup (which warns but allows cycles) and matches esbuild's enforcement of acyclic static chunk graphs.
+Merging is skipped if it would:
+
+- **Create a circular dependency between chunks** — checked via BFS in `would_create_circular_dependency_after_merging()`. The check contracts the target plus the planned source chunks and resolves any source chunks already merged by earlier assignments through `merged_chunk_aliases`. This is stricter than Rollup (which warns but allows cycles) and matches esbuild's enforcement of acyclic static chunk graphs.
 - **Change an entry's export signature** — when `preserveEntrySignatures: 'strict'`, adding modules to an entry chunk would expose symbols that the original entry didn't export.
+
+The group-level check matters because a single common chunk can appear cyclic if tested alone while the complete group is safe after all sibling common chunks are contracted into the same target. When a group is safe, the optimizer applies that group atomically; otherwise it falls back to checking each source chunk individually and creates a separate common chunk for unsafe sources.
 
 The trade-off of merging: entry chunks may include modules that not all consumers of that entry need. This adds a small amount of unnecessary code loading but significantly reduces chunk count and HTTP requests.
 

@@ -281,16 +281,30 @@ impl ChunkOptimizationGraph {
 
   /// Returns true if `from` can transitively reach `to` through the dependency graph.
   pub fn is_reachable(&self, from: ChunkIdx, to: ChunkIdx) -> bool {
-    let from = self.resolve_merged_chunk_idx(from);
-    let to = self.resolve_merged_chunk_idx(to);
+    self.bfs_reachable(from, to, |chunk_idx| self.resolve_merged_chunk_idx(chunk_idx))
+  }
+
+  /// Alias-blind sibling of `is_reachable`, used to preserve the pre-merge
+  /// conservative facade-runtime path check.
+  fn is_reachable_without_merged_aliases(&self, from: ChunkIdx, to: ChunkIdx) -> bool {
+    self.bfs_reachable(from, to, |chunk_idx| chunk_idx)
+  }
+
+  fn bfs_reachable(
+    &self,
+    from: ChunkIdx,
+    to: ChunkIdx,
+    resolve_chunk_idx: impl Fn(ChunkIdx) -> ChunkIdx,
+  ) -> bool {
+    let from = resolve_chunk_idx(from);
+    let to = resolve_chunk_idx(to);
     let mut queue = self.chunks[from]
       .dependencies
       .iter()
-      .map(|&dep| self.resolve_merged_chunk_idx(dep))
+      .map(|&dep| resolve_chunk_idx(dep))
       .collect::<VecDeque<_>>();
     let mut visited = FxHashSet::default();
     while let Some(chunk_idx) = queue.pop_front() {
-      let chunk_idx = self.resolve_merged_chunk_idx(chunk_idx);
       if chunk_idx == to {
         return true;
       }
@@ -298,28 +312,9 @@ impl ChunkOptimizationGraph {
         continue;
       }
       queue.extend(self.chunks[chunk_idx].dependencies.iter().filter_map(|&dep| {
-        let dep = self.resolve_merged_chunk_idx(dep);
+        let dep = resolve_chunk_idx(dep);
         (!visited.contains(&dep)).then_some(dep)
       }));
-    }
-    false
-  }
-
-  /// Alias-blind sibling of `is_reachable`, used to preserve the pre-merge
-  /// conservative facade-runtime path check.
-  fn is_reachable_without_merged_aliases(&self, from: ChunkIdx, to: ChunkIdx) -> bool {
-    let mut queue: VecDeque<ChunkIdx> = self.chunks[from].dependencies.iter().copied().collect();
-    let mut visited = FxHashSet::default();
-    while let Some(chunk_idx) = queue.pop_front() {
-      if chunk_idx == to {
-        return true;
-      }
-      if !visited.insert(chunk_idx) {
-        continue;
-      }
-      queue.extend(
-        self.chunks[chunk_idx].dependencies.iter().copied().filter(|dep| !visited.contains(dep)),
-      );
     }
     false
   }
@@ -359,14 +354,21 @@ impl ChunkOptimizationGraph {
     }
     self.chunks[target_chunk_idx].has_side_effects |= source_has_side_effects;
     self.merged_chunk_aliases.insert(source_chunk_idx, target_chunk_idx);
-    let target_dependencies = std::mem::take(&mut self.chunks[target_chunk_idx].dependencies);
-    self.chunks[target_chunk_idx].dependencies = target_dependencies
-      .into_iter()
-      .filter_map(|dep_chunk_idx| {
-        let dep_chunk_idx = self.resolve_merged_chunk_idx(dep_chunk_idx);
-        (dep_chunk_idx != target_chunk_idx).then_some(dep_chunk_idx)
-      })
-      .collect();
+    let target_dependencies_need_normalization =
+      self.chunks[target_chunk_idx].dependencies.iter().any(|&dep_chunk_idx| {
+        let resolved_dep_chunk_idx = self.resolve_merged_chunk_idx(dep_chunk_idx);
+        resolved_dep_chunk_idx == target_chunk_idx || resolved_dep_chunk_idx != dep_chunk_idx
+      });
+    if target_dependencies_need_normalization {
+      let target_dependencies = std::mem::take(&mut self.chunks[target_chunk_idx].dependencies);
+      self.chunks[target_chunk_idx].dependencies = target_dependencies
+        .into_iter()
+        .filter_map(|dep_chunk_idx| {
+          let dep_chunk_idx = self.resolve_merged_chunk_idx(dep_chunk_idx);
+          (dep_chunk_idx != target_chunk_idx).then_some(dep_chunk_idx)
+        })
+        .collect();
+    }
   }
 
   fn resolve_merged_chunk_idx(&self, mut chunk_idx: ChunkIdx) -> ChunkIdx {
@@ -465,10 +467,8 @@ impl GenerateStage<'_> {
     let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
 
-    // Calculate on demand to avoid add a new field on each NormalModule.
+    // Calculate on demand to avoid adding a new field on each NormalModule.
     let dynamic_entry_to_dynamic_importers: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>> = {
-      // Get dynamic entry modules from chunk_table, then find matched entry points
-      // and extract importers from related_stmt_infos
       let mut map: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>> = FxHashMap::default();
       for chunk in chunk_graph.chunk_table.iter() {
         let ChunkKind::EntryPoint { meta, module, .. } = chunk.kind else {
@@ -903,6 +903,8 @@ impl GenerateStage<'_> {
   /// Direct runtime-to-target paths preserve the existing conservative behavior. Paths that only
   /// appear after resolving merged aliases may proceed when facade elimination will either keep the
   /// helper edge local to the target or peel the runtime into a helper consumer afterward.
+  /// Both reachability walks are required: resolving aliases can reveal post-merge paths and erase
+  /// stale pre-merge paths, so neither result safely dominates the other.
   fn runtime_path_blocks_facade_merge(
     &self,
     chunk_graph: &ChunkGraph,

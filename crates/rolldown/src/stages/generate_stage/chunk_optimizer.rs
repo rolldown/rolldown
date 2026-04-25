@@ -969,6 +969,7 @@ impl GenerateStage<'_> {
       if is_target_manual_chunk && is_emitted_entry_chunk {
         emitted_chunk_groups.entry(target_chunk_idx).or_default().push(from_chunk_idx);
       } else if !is_emitted_entry_chunk {
+        // See meta/design/code-splitting.md: facade reachability must account for runtime rehoming.
         // Check if merging would create a runtime-helper circular dependency.
         // Translate chunk_graph indices to temp_chunk_graph indices, since the two graphs may
         // diverge once new common chunks are materialised. Preserve the existing conservative

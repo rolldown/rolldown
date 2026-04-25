@@ -18,7 +18,10 @@ export { api as t };
 
 ```js
 import "./dep.js";
-export {};
+//#region dep-user.js
+const depUser = "dep";
+//#endregion
+export { depUser };
 
 ```
 
@@ -36,9 +39,10 @@ export {};
 
 ```js
 import { n as getEnvString } from "./env.js";
-getEnvString("SECONDARY");
+//#region env-user.js
+const envUser = getEnvString("SECONDARY");
 //#endregion
-export {};
+export { envUser };
 
 ```
 
@@ -65,8 +69,11 @@ export { getEnvString as n, getEnvInt as t };
 ## lazy.js
 
 ```js
-import "./api.js";
-export {};
+import { t as api } from "./api.js";
+//#region lazy.js
+const lazy = api;
+//#endregion
+export { lazy };
 
 ```
 
@@ -76,9 +83,11 @@ export {};
 import { n as getEnvString } from "./env.js";
 import { t as api } from "./api.js";
 //#region main.js
-import("./lazy.js");
-import("./env-user.js");
-import("./dep-user.js");
+globalThis.__rolldown_issue_7449_imports = [
+	import("./lazy.js"),
+	import("./env-user.js"),
+	import("./dep-user.js")
+];
 globalThis.__rolldown_issue_7449_value = api + Number(getEnvString("MISSING") || 0);
 //#endregion
 export {};

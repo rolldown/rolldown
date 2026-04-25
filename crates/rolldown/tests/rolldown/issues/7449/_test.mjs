@@ -3,7 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const distDir = path.join(import.meta.dirname, 'dist');
-const jsFiles = fs.readdirSync(distDir).filter((file) => file.endsWith('.js'));
+const jsFiles = fs
+  .readdirSync(distDir)
+  .filter((file) => file.endsWith('.js'))
+  .sort();
 
 const graph = Object.fromEntries(
   jsFiles.map((file) => {
@@ -55,3 +58,7 @@ assert.strictEqual(
 
 await import('./dist/main.js');
 assert.strictEqual(globalThis.__rolldown_issue_7449_value, 300000);
+assert.strictEqual(globalThis.__rolldown_issue_7449_side, 1);
+
+await Promise.all(globalThis.__rolldown_issue_7449_imports);
+assert.strictEqual(globalThis.__rolldown_issue_7449_side, 1);

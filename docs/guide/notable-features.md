@@ -34,7 +34,7 @@ The following transforms are supported:
 
 ## CJS support
 
-Rolldown supports mixed ESM / CJS module graphs out of the box, without the need for `@rollup/plugin-commonjs`. It largely follows esbuild's semantics and [passes all esbuild ESM / CJS interop tests](https://github.com/rolldown/bundler-esm-cjs-tests).
+Rolldown supports mixed ESM / CJS module graphs out of the box, without the need for `@rollup/plugin-commonjs`. It largely follows esbuild's semantics and [passes all esbuild ESM / CJS interop tests](https://github.com/evanw/bundler-esm-cjs-tests).
 
 See [Bundling CJS](/in-depth/bundling-cjs) for more details.
 

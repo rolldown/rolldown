@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-0.js
+
+```js
+import { node1_exports } from "./node1.js";
+//#region node0.js
+globalThis.__acyclic_output_fuzz_0 = 0;
+var use_0_1 = node1_exports;
+use_0_1.ref = 0;
+var node_0 = {};
+node_0.value = 0;
+//#endregion
+export { node_0, use_0_1 };
+
+```
+
+## entry-2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region node2.js
+var node2_exports = /* @__PURE__ */ __exportAll({ node_2: () => node_2 });
+globalThis.__acyclic_output_fuzz_2 = 2;
+import("./node1.js").then((n) => n.node1_exports);
+var node_2 = {};
+node_2.value = 2;
+//#endregion
+export { __exportAll, node2_exports, node_2 };
+
+```
+
+## node1.js
+
+```js
+import { __exportAll, node2_exports } from "./entry-2.js";
+//#region node1.js
+var node1_exports = /* @__PURE__ */ __exportAll({
+	node_1: () => node_1,
+	use_1_2: () => use_1_2
+});
+globalThis.__acyclic_output_fuzz_1 = 1;
+var use_1_2 = node2_exports;
+use_1_2.ref = 1;
+var node_1 = {};
+node_1.value = 1;
+//#endregion
+export { node1_exports };
+
+```

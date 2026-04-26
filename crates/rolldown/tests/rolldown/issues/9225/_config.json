@@ -1,0 +1,21 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "main.js"
+      }
+    ],
+    "platform": "node",
+    "preserveEntrySignatures": "false",
+    "manualCodeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "api",
+          "test": "api\\.js"
+        }
+      ]
+    }
+  }
+}

@@ -121,6 +121,7 @@ impl BundlingTask {
     Ok(())
   }
 
+  #[tracing::instrument(level = "trace", skip(self))]
   pub async fn generate_hmr_updates(
     &mut self,
     has_full_reload_update: &mut bool,
@@ -184,6 +185,7 @@ impl BundlingTask {
     }
   }
 
+  #[tracing::instrument(level = "trace", skip_all)]
   async fn rebuild(&mut self) -> BuildResult<()> {
     let mut bundler = self.bundler.lock().await;
 

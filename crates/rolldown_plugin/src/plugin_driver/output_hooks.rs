@@ -12,6 +12,11 @@ use rolldown_sourcemap::SourceMap;
 use tracing::Instrument;
 
 impl PluginDriver {
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::render_start",
+    skip_all
+  )]
   pub async fn render_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_render_start_meta)
@@ -25,6 +30,11 @@ impl PluginDriver {
     Ok(())
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::banner",
+    skip_all
+  )]
   pub async fn banner(&self, args: HookAddonArgs, mut banner: String) -> Result<Option<String>> {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_banner_meta)
@@ -43,6 +53,11 @@ impl PluginDriver {
     Ok(Some(banner))
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::footer",
+    skip_all
+  )]
   pub async fn footer(&self, args: HookAddonArgs, mut footer: String) -> Result<Option<String>> {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_footer_meta)
@@ -61,6 +76,11 @@ impl PluginDriver {
     Ok(Some(footer))
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::intro",
+    skip_all
+  )]
   pub async fn intro(&self, args: HookAddonArgs, mut intro: String) -> Result<Option<String>> {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_intro_meta)
@@ -79,6 +99,11 @@ impl PluginDriver {
     Ok(Some(intro))
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::outro",
+    skip_all
+  )]
   pub async fn outro(&self, args: HookAddonArgs, mut outro: String) -> Result<Option<String>> {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_outro_meta)
@@ -97,6 +122,11 @@ impl PluginDriver {
     Ok(Some(outro))
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::render_chunk",
+    skip_all
+  )]
   pub async fn render_chunk(
     &self,
     mut args: HookRenderChunkArgs<'_>,
@@ -149,6 +179,11 @@ impl PluginDriver {
     Ok((args.code, sourcemap_chain))
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::augment_chunk_hash",
+    skip_all
+  )]
   pub async fn augment_chunk_hash(
     &self,
     chunk: Arc<RollupRenderedChunk>,
@@ -167,6 +202,11 @@ impl PluginDriver {
     Ok(hash)
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::render_error",
+    skip_all
+  )]
   pub async fn render_error(&self, args: &HookRenderErrorArgs<'_>) -> HookNoopReturn {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_render_error_meta)
@@ -179,6 +219,11 @@ impl PluginDriver {
     Ok(())
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::generate_bundle",
+    skip_all
+  )]
   pub async fn generate_bundle(
     &self,
     bundle: &mut Vec<Output>,
@@ -199,6 +244,11 @@ impl PluginDriver {
     Ok(())
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::write_bundle",
+    skip_all
+  )]
   pub async fn write_bundle(
     &self,
     bundle: &mut Vec<Output>,
@@ -218,6 +268,11 @@ impl PluginDriver {
     Ok(())
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::output_hooks::total::close_bundle",
+    skip_all
+  )]
   pub async fn close_bundle(&self, args: Option<&HookCloseBundleArgs<'_>>) -> HookNoopReturn {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_close_bundle_meta)

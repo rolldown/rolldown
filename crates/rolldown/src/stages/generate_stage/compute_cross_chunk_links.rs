@@ -356,11 +356,10 @@ impl GenerateStage<'_> {
               module_idx,
             );
             let needs_export_entry_signatures = if self.options.preserve_modules {
-              if is_user_defined {
-                !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
-              } else {
-                is_dynamic_imported
-              }
+              // Preserve the export boundary of every emitted module chunk.
+              // Tree-shaking still applies later via `used_symbol_refs`, so
+              // unused exports are not reintroduced for preserve-modules mode.
+              true
             } else {
               is_dynamic_imported
                 || !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)

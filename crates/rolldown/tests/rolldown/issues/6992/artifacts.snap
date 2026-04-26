@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __exportAll, __reExport };
+export { __copyProps, __defProp, __exportAll, __getOwnPropDesc, __getOwnPropNames, __hasOwnProp, __reExport };
 
 ```
 

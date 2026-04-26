@@ -86,8 +86,8 @@ impl PluginContext {
     call_native_only!(self, "resolve", ctx => ctx.resolve(specifier, importer, extra_options).await)
   }
 
-  pub async fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
-    call_native_only!(self, "emit_chunk", ctx => ctx.emit_chunk(chunk).await)
+  pub fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
+    call_native_only!(self, "emit_chunk", ctx => ctx.emit_chunk(chunk))
   }
 
   pub fn emit_file(

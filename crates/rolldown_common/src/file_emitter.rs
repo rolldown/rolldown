@@ -13,9 +13,9 @@ use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
 use std::ffi::OsStr;
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use sugar_path::SugarPath;
-use tokio::sync::Mutex;
 
 #[derive(Debug, Default)]
 pub struct EmittedAsset {
@@ -73,7 +73,7 @@ pub struct EmittedPrebuiltChunk {
 
 #[derive(Debug)]
 pub struct FileEmitter {
-  tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
+  tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   source_hash_to_reference_id: FxDashMap<ArcStr, ArcStr>,
   names: FxDashMap<ArcStr, u32>,
   files: FxDashMap<ArcStr, OutputAsset>,
@@ -115,19 +115,34 @@ impl FileEmitter {
     }
   }
 
-  pub async fn emit_chunk(&self, chunk: Arc<EmittedChunk>) -> anyhow::Result<ArcStr> {
+  pub fn emit_chunk(&self, chunk: Arc<EmittedChunk>) -> anyhow::Result<ArcStr> {
+    // Must stay synchronous: making this async would force the napi binding back
+    // onto `block_on`, pinning the JS thread while `send().await` waits on channel
+    // capacity — but the consumer draining the channel itself needs the JS thread
+    // to run plugin hooks. That cycle is the emit-chunk deadlock. Keep the channel
+    // unbounded (so `send()` never waits) and release the lock before the send.
+    let sender = self
+      .tx
+      .lock()
+      .ok()
+      .context("Failed to acquire FileEmitter tx lock")?
+      .clone()
+      .context(
+        "The `PluginContext.emitFile` with `type: 'chunk'` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks.",
+      )?;
+    // Only assign a reference id once we know we have a live sender — keeps
+    // `emit_chunk` side-effect-free on the error path.
     let reference_id = self.assign_reference_id(chunk.name.clone());
-    self
-    .tx
-    .lock()
-    .await
-    .as_ref()
-    .context(
-      "The `PluginContext.emitFile` with `type: 'chunk'` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks.",
-    )?
-    .send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg { chunk: Arc::clone(&chunk), reference_id: reference_id.clone() })))
-    .await
-    .context("FileEmitter: failed to send AddEntryModule message - module loader shut down during file emission")?;
+    sender
+      .send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg {
+        chunk: Arc::clone(&chunk),
+        reference_id: reference_id.clone(),
+      })))
+      .map_err(|e| {
+        anyhow::Error::new(e).context(
+          "FileEmitter: failed to send AddEntryModule message - module loader shut down during file emission",
+        )
+      })?;
     self.chunks.insert(reference_id.clone(), chunk);
     Ok(reference_id)
   }
@@ -349,12 +364,12 @@ impl FileEmitter {
     });
   }
 
-  pub async fn set_context_load_modules_tx(
+  pub fn set_context_load_modules_tx(
     &self,
-    tx: Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>,
-  ) {
-    let mut tx_guard = self.tx.lock().await;
-    *tx_guard = tx;
+    tx: Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>,
+  ) -> anyhow::Result<()> {
+    *self.tx.lock().ok().context("Failed to acquire FileEmitter tx lock")? = tx;
+    Ok(())
   }
 
   /// Associate a module ID with an emitted file reference ID.

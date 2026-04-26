@@ -1,7 +1,7 @@
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
-  sync::{Arc, Weak},
+  sync::{Arc, Mutex, Weak},
 };
 
 use anyhow::Context;
@@ -14,7 +14,6 @@ use rolldown_common::{
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::FxDashSet;
-use tokio::sync::Mutex;
 use tracing::Instrument;
 
 use crate::{
@@ -41,7 +40,7 @@ pub struct NativePluginContextImpl {
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<FxDashSet<ArcStr>>,
   pub(crate) module_infos: SharedModuleInfoDashMap,
-  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
+  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_devtools::Session,
   pub(crate) bundle_span: Arc<tracing::Span>,
   // `resolve_id` hook not only will be triggered by the rolldown's resolve process, but also could be triggered
@@ -59,7 +58,7 @@ impl NativePluginContextImpl {
   ) -> anyhow::Result<()> {
     // Clone out the sender under the lock, then drop the lock before awaiting.
     let sender = {
-      let guard = self.tx.lock().await.clone();
+      let guard = self.tx.lock().ok().context("Failed to acquire PluginDriver tx lock")?.clone();
       guard.context("The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.")?
     };
     sender
@@ -69,8 +68,7 @@ impl NativePluginContextImpl {
         module_def_format,
         ..Default::default()
       })))
-      .await
-      .context("PluginContext: failed to send FetchModule message - module loader shut down during plugin execution")?;
+      .map_err(|e| anyhow::Error::new(e).context("PluginContext: failed to send FetchModule message - module loader shut down during plugin execution"))?;
     let plugin_driver = self
       .plugin_driver
       .upgrade()
@@ -135,8 +133,8 @@ impl NativePluginContextImpl {
     .await
   }
 
-  pub async fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
-    self.file_emitter.emit_chunk(Arc::new(chunk)).await
+  pub fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
+    self.file_emitter.emit_chunk(Arc::new(chunk))
   }
 
   pub fn emit_prebuilt_chunk(&self, chunk: rolldown_common::EmittedPrebuiltChunk) -> ArcStr {

@@ -40,7 +40,7 @@ impl PluginDriverFactory {
   ) -> Arc<crate::plugin_driver::PluginDriver> {
     let watch_files = Arc::new(FxDashSet::default());
     let meta = Arc::new(PluginContextMeta::default());
-    let tx = Arc::new(tokio::sync::Mutex::new(None));
+    let tx = Arc::new(std::sync::Mutex::new(None));
     let mut plugin_usage_vec = IndexVec::new();
 
     // Clone the Arc to share across contexts

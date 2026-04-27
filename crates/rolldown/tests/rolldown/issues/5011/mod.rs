@@ -19,22 +19,18 @@ impl Plugin for Test {
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     if args.id.ends_with("after-preload-dynamic.js") {
-      ctx
-        .emit_chunk(EmittedChunk {
-          id: "./src/after-preload-dynamic.js".into(),
-          preserve_entry_signatures: None,
-          ..Default::default()
-        })
-        .await?;
+      ctx.emit_chunk(EmittedChunk {
+        id: "./src/after-preload-dynamic.js".into(),
+        preserve_entry_signatures: None,
+        ..Default::default()
+      })?;
     }
     if args.id.ends_with("dynamic-foo.js") {
-      ctx
-        .emit_chunk(EmittedChunk {
-          id: "./src/before-preload-dynamic.js".into(),
-          preserve_entry_signatures: None,
-          ..Default::default()
-        })
-        .await?;
+      ctx.emit_chunk(EmittedChunk {
+        id: "./src/before-preload-dynamic.js".into(),
+        preserve_entry_signatures: None,
+        ..Default::default()
+      })?;
     }
     Ok(None)
   }

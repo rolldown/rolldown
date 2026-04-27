@@ -387,7 +387,7 @@ pub fn enhanced_transform(
 
   let scoping = scoping
     .take()
-    .unwrap_or_else(|| SemanticBuilder::new().build(&program).semantic.into_scoping());
+    .unwrap_or_else(|| SemanticBuilder::new().with_enum_eval(true).build(&program).semantic.into_scoping());
 
   let transform_ret = Transformer::new(&allocator, Path::new(filename), &oxc_transform_options)
     .build_with_scoping(scoping, &mut program);
@@ -402,7 +402,7 @@ pub fn enhanced_transform(
     && !inject.is_empty()
   {
     let config = build_inject_config(inject);
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping = SemanticBuilder::new().with_enum_eval(true).build(&program).semantic.into_scoping();
     let _ = InjectGlobalVariables::new(&allocator, config).build(scoping, &mut program);
   }
 

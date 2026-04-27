@@ -8,7 +8,6 @@ use rolldown_ecmascript::{
   CJS_EXPORTS_REF_STR, CJS_MODULE_REF_STR, CJS_ROLLDOWN_EXPORTS_REF,
   CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF_IDENT,
 };
-use rolldown_ecmascript_utils::ExpressionExt;
 
 use crate::hmr::{hmr_ast_finalizer::HmrAstFinalizer, utils::HmrAstBuilder};
 
@@ -198,26 +197,41 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       }
     }
 
-    if let Some(ident) = node.as_identifier_mut() {
-      if let Some(reference_id) = ident.reference_id.get() {
-        let reference = ctx.scoping().get_reference(reference_id);
-        if let Some(symbol_id) = reference.symbol_id() {
-          if let Some(binding_name) = self.import_bindings.get(&symbol_id) {
-            *node = self.snippet.id_ref_expr(binding_name.as_str(), ident.span);
-            return;
-          }
-        } else if ident.name == CJS_EXPORTS_REF_STR {
-          // Rewrite `exports` to `__rolldown_exports__`
-          ident.name = CJS_ROLLDOWN_EXPORTS_REF_IDENT;
-        } else if ident.name == CJS_MODULE_REF_STR {
-          // Rewrite `module` to `__rolldown_module__`
-          ident.name = CJS_ROLLDOWN_MODULE_REF_IDENT;
-        }
-      }
-    }
-
     self.try_rewrite_dynamic_import(node);
     self.try_rewrite_require(node, ctx);
     self.rewrite_import_meta_hot(node);
+  }
+
+  fn exit_identifier_reference(
+    &mut self,
+    node: &mut ast::IdentifierReference<'ast>,
+    ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    self.rewrite_identifier_reference(node, ctx);
+  }
+}
+
+impl<'ast> HmrAstFinalizer<'_, 'ast> {
+  /// Rewrite a bare `exports` / `module` identifier to the wrapper-parameter
+  /// name (`__rolldown_exports__` / `__rolldown_module__`), or an import-binding
+  /// identifier to its generated binding name.
+  fn rewrite_identifier_reference(
+    &self,
+    ident: &mut ast::IdentifierReference<'ast>,
+    ctx: &oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    let Some(reference_id) = ident.reference_id.get() else {
+      return;
+    };
+    let reference = ctx.scoping().get_reference(reference_id);
+    if let Some(symbol_id) = reference.symbol_id() {
+      if let Some(binding_name) = self.import_bindings.get(&symbol_id) {
+        ident.name = self.snippet.atom(binding_name.as_str()).into();
+      }
+    } else if ident.name == CJS_EXPORTS_REF_STR {
+      ident.name = CJS_ROLLDOWN_EXPORTS_REF_IDENT;
+    } else if ident.name == CJS_MODULE_REF_STR {
+      ident.name = CJS_ROLLDOWN_MODULE_REF_IDENT;
+    }
   }
 }

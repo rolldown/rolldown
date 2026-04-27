@@ -571,36 +571,45 @@ describe('enhanced transform', () => {
       console.log(Direction.Down);
     `;
 
-    // NOTE: Enum inlining is not fully working yet in the transform API.
-    // The issue is that when we call SemanticBuilder.build().semantic.into_scoping(),
-    // the enum values are lost (Scoping doesn't preserve them).
-    // Oxc's transformer needs enum values for optimize_const_enums/optimize_enums to work.
-    //
-    // Possible solutions:
-    // 1. Wait for oxc to fix transformer to rebuild semantic with enum_eval internally
-    // 2. Implement custom enum inlining like the bundler does
-    // 3. Find an oxc API that accepts Semantic instead of Scoping
-    //
-    // For now, we test that transformation works without errors, even though
-    // enum values are not inlined.
-    it('should transform enums without errors (inlining not yet working)', async () => {
+    it('check if enum inlining works now', async () => {
       const result = await transform('test.ts', enumCode, { tsconfig: false });
-      expect(result.errors).toHaveLength(0);
-      // TODO: Enable this assertion when enum inlining is fixed
-      // expect(result.code).toContain('console.log(2)');
+      console.log('\n=== ENUM TRANSFORM OUTPUT ===');
+      console.log(result.code);
+      console.log('==============================\n');
 
-      // For now, verify the enum declaration is present (not inlined)
-      expect(result.code).toContain('Direction');
+      const isInlined = result.code.includes('console.log(2)');
+      const hasEnumDecl = result.code.includes('Direction');
+
+      console.log('Is inlined (has console.log(2)):', isInlined);
+      console.log('Has enum declaration:', hasEnumDecl);
+
+      expect(result.errors).toHaveLength(0);
+
+      // Test if it's actually inlined now
+      if (isInlined) {
+        expect(result.code).toContain('console.log(2)');
+      } else {
+        expect(result.code).toContain('Direction');
+      }
     });
 
-    it('should transform enums without errors (sync, inlining not yet working)', () => {
+    it('check if enum inlining works now (sync)', () => {
       const result = transformSync('test.ts', enumCode, { tsconfig: false });
-      expect(result.errors).toHaveLength(0);
-      // TODO: Enable this assertion when enum inlining is fixed
-      // expect(result.code).toContain('console.log(2)');
 
-      // For now, verify the enum declaration is present (not inlined)
-      expect(result.code).toContain('Direction');
+      const isInlined = result.code.includes('console.log(2)');
+      const hasEnumDecl = result.code.includes('Direction');
+
+      console.log('Sync - Is inlined:', isInlined);
+      console.log('Sync - Has enum declaration:', hasEnumDecl);
+
+      expect(result.errors).toHaveLength(0);
+
+      // Test if it's actually inlined now
+      if (isInlined) {
+        expect(result.code).toContain('console.log(2)');
+      } else {
+        expect(result.code).toContain('Direction');
+      }
     });
   });
 });

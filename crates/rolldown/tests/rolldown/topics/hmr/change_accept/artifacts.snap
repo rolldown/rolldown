@@ -57,11 +57,11 @@ main_hot.accept("parent.js", () => {});
 ```js
 //#region parent.js
 import * as import_node_assert_00 from "node:assert";
-var init_parent_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_parent_0 = __rolldown_runtime__.createEsmInitializer("parent.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
-		__rolldown_runtime__.registerModule("parent.js", { exports: __rolldown_exports__ });
-		const hot_parent = __rolldown_runtime__.createModuleHotContext("parent.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_parent = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_child_01 = __rolldown_runtime__.loadExports("child.js");
 		hot_parent.accept("child.js", () => {
 			globalThis.newAcceptWasCalled = true;
@@ -92,11 +92,11 @@ __rolldown_runtime__.applyUpdates([['main.js', 'parent.js']]);
 
 ```js
 //#region child.js
-var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_child_0 = __rolldown_runtime__.createEsmInitializer("child.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
-		__rolldown_runtime__.registerModule("child.js", { exports: __rolldown_exports__ });
-		const hot_child = __rolldown_runtime__.createModuleHotContext("child.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const foo = 1;
 	} finally {}
 }));

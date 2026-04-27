@@ -152,7 +152,10 @@ impl Plugin for LazyCompilationPlugin {
         // The proxy module ID includes the ?rolldown-lazy=1 suffix
         let proxy_id = args.id;
 
-        let code = render_proxy_template(template, proxy_id, stable_id.as_str(), original_id)?;
+        let stable_proxy_id = format!("{stable_id}?rolldown-lazy=1");
+
+        let code =
+          render_proxy_template(template, proxy_id, &stable_id, &stable_proxy_id, original_id)?;
         return Ok(Some(rolldown_plugin::HookLoadOutput {
           code: ArcStr::from(code),
           ..Default::default()
@@ -204,12 +207,14 @@ fn render_proxy_template(
   template: &str,
   proxy_id: &str,
   stable_id: &str,
+  stable_proxy_id: &str,
   original_id: &str,
 ) -> serde_json::Result<String> {
   Ok(
     template
       .replace("$PROXY_MODULE_ID", &serde_json::to_string(proxy_id)?)
       .replace("$STABLE_MODULE_ID", &serde_json::to_string(stable_id)?)
+      .replace("$STABLE_PROXY_MODULE_ID", &serde_json::to_string(stable_proxy_id)?)
       .replace("$MODULE_ID", &serde_json::to_string(original_id)?),
   )
 }
@@ -222,10 +227,12 @@ mod tests {
   fn windows_path() {
     let proxy_id = r"D:\Users\foo\bar\baz.js?rolldown-lazy=1";
     let stable_id = r"src\bar\baz.js";
+    let stable_proxy_id = r"src\bar\baz.js?rolldown-lazy=1";
     let original_id = r"D:\Users\foo\bar\baz.js";
 
     let template = "P=$PROXY_MODULE_ID;S=$STABLE_MODULE_ID;M=$MODULE_ID;";
-    let rendered = render_proxy_template(template, proxy_id, stable_id, original_id).unwrap();
+    let rendered =
+      render_proxy_template(template, proxy_id, stable_id, stable_proxy_id, original_id).unwrap();
 
     assert_eq!(
       rendered,
@@ -236,8 +243,14 @@ mod tests {
   #[test]
   fn unix_path() {
     let id = "/Users/foo/bar.js?rolldown-lazy=1";
-    let rendered =
-      render_proxy_template("$PROXY_MODULE_ID", id, "src/bar.js", "/Users/foo/bar.js").unwrap();
+    let rendered = render_proxy_template(
+      "$PROXY_MODULE_ID",
+      id,
+      "src/bar.js",
+      "src/bar.js?rolldown-lazy=1",
+      "/Users/foo/bar.js",
+    )
+    .unwrap();
     assert_eq!(rendered, "\"/Users/foo/bar.js?rolldown-lazy=1\"");
   }
 }

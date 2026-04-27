@@ -103,11 +103,11 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ```js
 //#region self_accept.js
 import * as import_node_assert_00 from "node:assert";
-var init_self_accept_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_self_accept_0 = __rolldown_runtime__.createEsmInitializer("self_accept.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
-		__rolldown_runtime__.registerModule("self_accept.js", { exports: __rolldown_exports__ });
-		const hot_self_accept = __rolldown_runtime__.createModuleHotContext("self_accept.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_self_accept = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const foo = "foo2";
 		hot_self_accept.accept((mod) => {
 			import_node_assert_00.default.strictEqual(mod.foo, "foo2");
@@ -135,11 +135,11 @@ __rolldown_runtime__.applyUpdates([['self_accept.js', 'self_accept.js']]);
 ```js
 //#region self_accept.js
 import * as import_node_assert_00 from "node:assert";
-var init_self_accept_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_self_accept_0 = __rolldown_runtime__.createEsmInitializer("self_accept.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
-		__rolldown_runtime__.registerModule("self_accept.js", { exports: __rolldown_exports__ });
-		const hot_self_accept = __rolldown_runtime__.createModuleHotContext("self_accept.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_self_accept = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const foo = "foo3";
 		hot_self_accept.accept((mod) => {
 			import_node_assert_00.default.strictEqual(mod.foo, "foo3");
@@ -166,11 +166,11 @@ __rolldown_runtime__.applyUpdates([['self_accept.js', 'self_accept.js']]);
 
 ```js
 //#region single_accept/child.js
-var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_child_0 = __rolldown_runtime__.createEsmInitializer("single_accept/child.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
-		__rolldown_runtime__.registerModule("single_accept/child.js", { exports: __rolldown_exports__ });
-		const hot_child = __rolldown_runtime__.createModuleHotContext("single_accept/child.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const count = 1;
 	} finally {}
 }));
@@ -194,11 +194,11 @@ __rolldown_runtime__.applyUpdates([['single_accept/parent.js', 'single_accept/ch
 
 ```js
 //#region single_accept/child.js
-var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_child_0 = __rolldown_runtime__.createEsmInitializer("single_accept/child.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
-		__rolldown_runtime__.registerModule("single_accept/child.js", { exports: __rolldown_exports__ });
-		const hot_child = __rolldown_runtime__.createModuleHotContext("single_accept/child.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const count = 2;
 	} finally {}
 }));
@@ -222,11 +222,11 @@ __rolldown_runtime__.applyUpdates([['single_accept/parent.js', 'single_accept/ch
 
 ```js
 //#region array_accept/child.js
-var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_child_0 = __rolldown_runtime__.createEsmInitializer("array_accept/child.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
-		__rolldown_runtime__.registerModule("array_accept/child.js", { exports: __rolldown_exports__ });
-		const hot_child = __rolldown_runtime__.createModuleHotContext("array_accept/child.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const count = 1;
 	} finally {}
 }));
@@ -250,11 +250,11 @@ __rolldown_runtime__.applyUpdates([['array_accept/parent.js', 'array_accept/chil
 
 ```js
 //#region array_accept/child.js
-var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_child_0 = __rolldown_runtime__.createEsmInitializer("array_accept/child.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
-		__rolldown_runtime__.registerModule("array_accept/child.js", { exports: __rolldown_exports__ });
-		const hot_child = __rolldown_runtime__.createModuleHotContext("array_accept/child.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const count = 2;
 	} finally {}
 }));
@@ -279,11 +279,11 @@ __rolldown_runtime__.applyUpdates([['array_accept/parent.js', 'array_accept/chil
 ```js
 //#region optional_chaining.js
 import * as import_node_assert_00 from "node:assert";
-var init_optional_chaining_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_optional_chaining_0 = __rolldown_runtime__.createEsmInitializer("optional_chaining.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
-		__rolldown_runtime__.registerModule("optional_chaining.js", { exports: __rolldown_exports__ });
-		const hot_optional_chaining = __rolldown_runtime__.createModuleHotContext("optional_chaining.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_optional_chaining = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const foo = "foo2";
 		hot_optional_chaining?.accept((mod) => {
 			import_node_assert_00.default.strictEqual(mod.foo, "foo2");

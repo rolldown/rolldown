@@ -32,6 +32,19 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub affected_module_idx_to_init_fn_name: &'me FxHashMap<ModuleIdx, String>,
   pub use_pife_for_module_wrappers: bool,
 
+  /// Whether the runtime should short-circuit re-execution of the wrapped module body
+  /// when its stable id is already registered.
+  ///
+  /// `true` for lazy-compilation chunks: when a module appears in two lazy bundles served
+  /// concurrently, we want only the first one to actually execute the body.
+  ///
+  /// `false` for HMR patches: the patch's whole point is to re-execute the body and
+  /// replace the registered exports, so deduping would silently drop the update.
+  ///
+  /// Note: This works only as a **workaround**. In the future, HMR runtime should
+  /// provide a runtime API to trigger module disposal and re-execution. @hana
+  pub dedup_module_initializer: bool,
+
   // Each module has a unique index, which is used to generate something that needs to be unique.
   pub unique_index: usize,
 

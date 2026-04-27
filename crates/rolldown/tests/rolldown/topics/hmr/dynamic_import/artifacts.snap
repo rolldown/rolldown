@@ -63,14 +63,14 @@ export { __exportAll as n, __commonJSMin as t };
 
 ```js
 //#region hmr.js
-var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_hmr_0 = __rolldown_runtime__.createEsmInitializer("hmr.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			foo: () => foo,
 			bar: () => bar
 		});
-		__rolldown_runtime__.registerModule("hmr.js", { exports: __rolldown_exports__ });
-		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		async function foo() {
 			await Promise.resolve().then(() => __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports("exist-dep-cjs.js"))).then(console.log);
 			await Promise.resolve().then(() => __rolldown_runtime__.loadExports("exist-dep-esm.js")).then(console.log);
@@ -89,21 +89,21 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 //#region new-dep-cjs.js
-var require_new_dep_cjs_1 = __rolldown_runtime__.createCjsInitializer((function(__rolldown_exports__, __rolldown_module__) {
+var require_new_dep_cjs_1 = __rolldown_runtime__.createCjsInitializer("new-dep-cjs.js", (function(__rolldown_exports__, __rolldown_module__, __rolldown_module_id__) {
 	try {
-		__rolldown_runtime__.registerModule("new-dep-cjs.js", __rolldown_module__);
-		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext("new-dep-cjs.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
+		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		__rolldown_exports__.value = "new-cjs";
 	} finally {}
 }));
 
 //#endregion
 //#region new-dep-esm.js
-var init_new_dep_esm_2 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_new_dep_esm_2 = __rolldown_runtime__.createEsmInitializer("new-dep-esm.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
-		__rolldown_runtime__.registerModule("new-dep-esm.js", { exports: __rolldown_exports__ });
-		const hot_new_dep_esm = __rolldown_runtime__.createModuleHotContext("new-dep-esm.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_new_dep_esm = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const value = "new-esm";
 	} finally {}
 }));

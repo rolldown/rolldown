@@ -1,9 +1,10 @@
 use std::{
   collections::VecDeque,
   path::PathBuf,
-  sync::{Arc, atomic::AtomicU32},
+  sync::{Arc, Mutex as StdMutex, atomic::AtomicU32},
 };
 
+use anyhow::Context;
 use arcstr::ArcStr;
 use futures::FutureExt;
 use notify::EventKind;
@@ -35,7 +36,7 @@ pub struct BundleCoordinator {
   ctx: SharedDevContext,
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
-  watcher: Mutex<DynFsWatcher>,
+  watcher: StdMutex<DynFsWatcher>,
   watched_files: FxDashSet<ArcStr>,
   /// Tracks the state of the initial build
   state: CoordinatorState,
@@ -59,7 +60,7 @@ impl BundleCoordinator {
       ctx,
       next_hmr_patch_id: Arc::new(AtomicU32::new(0)),
       rx,
-      watcher: Mutex::new(watcher),
+      watcher: StdMutex::new(watcher),
       watched_files: FxDashSet::default(),
       state: CoordinatorState::Initialized,
       queued_file_changes_waited_for_full_build: FxIndexMap::default(),
@@ -439,7 +440,7 @@ impl BundleCoordinator {
     let bundler = self.bundler.lock().await;
     let watch_files = bundler.watch_files();
 
-    let mut watcher = self.watcher.lock().await;
+    let mut watcher = self.watcher.lock().ok().context("Failed to acquire watcher lock")?;
     let mut paths_mut = watcher.paths_mut();
     for watch_file in watch_files.iter() {
       let watch_file = &**watch_file;

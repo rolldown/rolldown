@@ -1,0 +1,17 @@
+{
+  "config": {
+    "input": [
+      { "name": "entry-0", "import": "./node0.js" },
+      { "name": "entry-2", "import": "./node2.js" }
+    ],
+    "external": ["external-0"],
+    "treeshake": false,
+    "preserveEntrySignatures": "allow-extension",
+    "strictExecutionOrder": false,
+    "minifyInternalExports": false,
+    "experimental": {
+      "chunkOptimization": true
+    }
+  },
+  "expectExecuted": false
+}

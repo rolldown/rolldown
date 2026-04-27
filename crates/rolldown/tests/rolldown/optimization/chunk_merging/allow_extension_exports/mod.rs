@@ -24,27 +24,21 @@ impl Plugin for EmitChunkPlugin {
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> Result<(), anyhow::Error> {
     // Emit all library files as entry chunks with AllowExtension
-    ctx
-      .emit_chunk(EmittedChunk {
-        id: "./lib1.js".to_string(),
-        preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
-        ..Default::default()
-      })
-      .await?;
-    ctx
-      .emit_chunk(EmittedChunk {
-        id: "./lib2.js".to_string(),
-        preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
-        ..Default::default()
-      })
-      .await?;
-    ctx
-      .emit_chunk(EmittedChunk {
-        id: "./lib3.js".to_string(),
-        preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
-        ..Default::default()
-      })
-      .await?;
+    ctx.emit_chunk(EmittedChunk {
+      id: "./lib1.js".to_string(),
+      preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
+      ..Default::default()
+    })?;
+    ctx.emit_chunk(EmittedChunk {
+      id: "./lib2.js".to_string(),
+      preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
+      ..Default::default()
+    })?;
+    ctx.emit_chunk(EmittedChunk {
+      id: "./lib3.js".to_string(),
+      preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
+      ..Default::default()
+    })?;
     Ok(())
   }
 

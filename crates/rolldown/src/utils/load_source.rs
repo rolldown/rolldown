@@ -21,25 +21,20 @@ pub async fn load_source<Fs: FileSystem + 'static>(
   is_read_from_disk: &mut bool,
   module_idx: ModuleIdx,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
-  let (maybe_source, mut maybe_module_type) = match plugin_driver
-    .load(&HookLoadArgs { id: &resolved_id.id, module_idx, asserted_module_type })
-    .await?
-  {
-    Some(load_hook_output) => {
-      sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
-      if let Some(v) = load_hook_output.side_effects {
-        *side_effects = Some(v);
-      }
-
-      (Some(load_hook_output.code.to_string()), load_hook_output.module_type)
-    }
-    _ => {
-      if resolved_id.ignored {
-        (Some(String::new()), Some(ModuleType::Empty))
-      } else {
-        (None, None)
-      }
-    }
+  let (maybe_source, mut maybe_module_type) = if resolved_id.id.is_empty_module() {
+    (Some(String::new()), Some(ModuleType::Empty))
+  } else {
+    plugin_driver
+      .load(&HookLoadArgs { id: &resolved_id.id, module_idx, asserted_module_type })
+      .await?
+      .map(|load_hook_output| {
+        sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
+        if let Some(v) = load_hook_output.side_effects {
+          *side_effects = Some(v);
+        }
+        (Some(load_hook_output.code.to_string()), load_hook_output.module_type)
+      })
+      .unwrap_or_default()
   };
 
   // If we're given a specific module type to use and the load hook did not provide a

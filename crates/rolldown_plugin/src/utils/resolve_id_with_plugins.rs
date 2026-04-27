@@ -161,9 +161,7 @@ fn resolve_id<Fs: FileSystem>(
         ..Default::default()
       }),
       ResolveError::Ignored(p) => Ok(ResolvedId {
-        //(hyf0) TODO: This `p` doesn't seem to contains `query` or `fragment` of the input. We need to make sure this is ok
-        id: ModuleId::new(p.to_str().expect("Should be valid utf8")),
-        ignored: true,
+        id: ModuleId::new_empty(p.to_str().expect("Should be valid utf8")),
         ..Default::default()
       }),
       _ => Err(err),

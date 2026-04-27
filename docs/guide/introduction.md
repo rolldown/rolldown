@@ -32,7 +32,6 @@ However, Rolldown's feature scope is more similar to esbuild, offering these [ad
 - ESM / CJS module interop
 - `define`
 - `inject`
-- CSS bundling (Experimental)
 - Minification (WIP)
 
 Rolldown also has a few concepts that have close equivalents in esbuild, but do not exist in Rollup:

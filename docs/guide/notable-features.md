@@ -65,12 +65,6 @@ Note it behaves differently from [`@rollup/plugin-replace`](https://github.com/r
 
 This feature provides a way to shim global variables with a specific value exported from a module. This feature is equivalent of [`@rollup/plugin-inject`](https://github.com/rollup/plugins/tree/master/packages/inject) and conceptually similar to [esbuild's `inject` option](https://esbuild.github.io/api/#inject).
 
-## CSS bundling
-
-- ⚠️ Experimental
-
-Rolldown supports bundling CSS imported from JS out of the box. Note this feature currently does not support CSS Modules and minification.
-
 ## Manual Code Splitting
 
 - Configurable via [`output.codeSplitting`](/reference/OutputOptions.codeSplitting) option.

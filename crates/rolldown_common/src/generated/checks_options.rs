@@ -32,6 +32,7 @@ pub struct ChecksOptions {
   pub duplicate_shebang: Option<bool>,
   pub unsupported_tsconfig_option: Option<bool>,
   pub ineffective_dynamic_import: Option<bool>,
+  pub lazy_barrel_large_reexports: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -107,6 +108,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::IneffectiveDynamicImport,
       value.ineffective_dynamic_import.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::LazyBarrelLargeReexports,
+      value.lazy_barrel_large_reexports.unwrap_or(true),
     );
     flag
   }

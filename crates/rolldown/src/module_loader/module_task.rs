@@ -10,7 +10,8 @@ use rolldown_common::{
   StrOrBytes, try_extract_lazy_barrel_info,
 };
 use rolldown_error::{
-  BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
+  BuildDiagnostic, BuildResult, EventKindSwitcher, UnloadableDependencyContext,
+  downcast_napi_error_diagnostics,
 };
 use rolldown_std_utils::PathExt as _;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
@@ -181,6 +182,25 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     } else {
       None
     };
+
+    // Eagerly resolving every import in a giant barrel is a known bottleneck.
+    // The threshold targets only the real outliers (large icon packs); normal
+    // component and utility barrels stay well below it.
+    if barrel_info.is_some()
+      && self.ctx.options.checks.contains(EventKindSwitcher::LazyBarrelLargeReexports)
+    {
+      const LARGE_BARREL_IMPORT_THRESHOLD: usize = 5000;
+      let import_record_count = raw_import_records.len();
+      if import_record_count > LARGE_BARREL_IMPORT_THRESHOLD {
+        warnings.push(
+          BuildDiagnostic::lazy_barrel_large_reexports(
+            self.resolved_id.id.to_string(),
+            import_record_count,
+          )
+          .with_severity_warning(),
+        );
+      }
+    }
 
     let module = NormalModule {
       repr_name,

@@ -433,4 +433,11 @@ impl BuildDiagnostic {
       dynamic_importers,
     })
   }
+
+  pub fn lazy_barrel_large_reexports(module_id: String, reexport_count: usize) -> Self {
+    Self::new_inner(super::events::lazy_barrel_large_reexports::LazyBarrelLargeReexports {
+      module_id,
+      reexport_count,
+    })
+  }
 }

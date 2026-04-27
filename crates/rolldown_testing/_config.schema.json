@@ -1485,6 +1485,12 @@
             "boolean",
             "null"
           ]
+        },
+        "lazyBarrelLargeReexports": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

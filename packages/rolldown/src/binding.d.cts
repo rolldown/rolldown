@@ -1877,6 +1877,7 @@ export interface BindingChecksOptions {
   duplicateShebang?: boolean
   unsupportedTsconfigOption?: boolean
   ineffectiveDynamicImport?: boolean
+  lazyBarrelLargeReexports?: boolean
 }
 
 export interface BindingChunkImportMap {

@@ -112,6 +112,12 @@ pub enum EventKind {
   /// Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
   IneffectiveDynamicImport = 44,
   RequireTlaError = 45,
+  /// Whether to emit warnings when a barrel module has a very large number of re-exports (more than 5000).
+  ///
+  /// Such modules can significantly slow down module resolution. Consider using
+  /// [`@rolldown/plugin-transform-imports`](https://github.com/rolldown/plugins/tree/main/packages/transform-imports)
+  /// to rewrite barrel imports at the source level so the barrel file is never loaded.
+  LazyBarrelLargeReexports = 46,
 }
 
 impl Display for EventKind {
@@ -171,6 +177,7 @@ impl Display for EventKind {
       }
       EventKind::IneffectiveDynamicImport => write!(f, "INEFFECTIVE_DYNAMIC_IMPORT"),
       EventKind::RequireTlaError => write!(f, "REQUIRE_TLA"),
+      EventKind::LazyBarrelLargeReexports => write!(f, "LAZY_BARREL_LARGE_REEXPORTS"),
     }
   }
 }

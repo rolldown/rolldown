@@ -410,6 +410,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting',
     ),
   ),
+  lazyBarrelLargeReexports: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a barrel module has a very large number of re-exports (more than 5000)',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 

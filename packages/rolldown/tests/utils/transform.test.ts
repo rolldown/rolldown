@@ -559,4 +559,33 @@ describe('enhanced transform', () => {
       expect(result.map?.sources).toEqual(['test.js']);
     });
   });
+
+  describe('enum inlining', () => {
+    const enumCode = `
+      enum Direction {
+        Up = 1,
+        Down = 2,
+        Left = 3,
+        Right = 4
+      }
+      const move = Direction.Up;
+      console.log(Direction.Down);
+    `;
+
+    it('should inline enum values', async () => {
+      const result = await transform('test.ts', enumCode);
+      expect(result.errors).toHaveLength(0);
+      // Enum values should be inlined as literals
+      expect(result.code).toContain('1');
+      expect(result.code).toContain('2');
+    });
+
+    it('should inline enum values (sync)', () => {
+      const result = transformSync('test.ts', enumCode);
+      expect(result.errors).toHaveLength(0);
+      // Enum values should be inlined as literals
+      expect(result.code).toContain('1');
+      expect(result.code).toContain('2');
+    });
+  });
 });

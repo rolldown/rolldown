@@ -332,7 +332,7 @@ pub fn enhanced_transform(
 
   let mut program = parse_ret.program;
 
-  let semantic_ret = SemanticBuilder::new().build(&program);
+  let semantic_ret = SemanticBuilder::new().with_enum_eval(true).build(&program);
   let mut scoping = Some(semantic_ret.semantic.into_scoping());
   if !semantic_ret.errors.is_empty() {
     append_oxc_diagnostics(semantic_ret.errors, &source, filename, &mut warnings, &mut errors);

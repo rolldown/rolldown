@@ -22,6 +22,7 @@ pub struct GlobImportVisit<'a> {
   pub code: &'a str,
   pub magic_string: Option<MagicString<'a>>,
   pub import_decls: Vec<String>,
+  pub(crate) errors: Vec<String>,
 }
 
 impl<'ast> Visit<'ast> for GlobImportVisit<'_> {
@@ -382,8 +383,27 @@ impl GlobImportVisit<'_> {
     if end == 0 { self.root.to_slash_lossy() } else { Cow::Owned(head.path[..end].to_string()) }
   }
 
+  /// Returns `true` if the pattern contains extglob syntax: `!(`, `?(`, `*(`, `+(`, or `@(`.
+  /// Extglob is not supported by the underlying `fast-glob` matcher and silently matches
+  /// nothing. We detect it early to emit a build error instead.
+  pub fn has_extglob(pattern: &str) -> bool {
+    let bytes = pattern.as_bytes();
+    let mut i = 0;
+    while i + 1 < bytes.len() {
+      if bytes[i] == b'\\' {
+        i += 2; // skip escaped character
+        continue;
+      }
+      if matches!(bytes[i], b'!' | b'?' | b'*' | b'+' | b'@') && bytes[i + 1] == b'(' {
+        return true;
+      }
+      i += 1;
+    }
+    false
+  }
+
   fn eval_glob_expr(
-    &self,
+    &mut self,
     arg: &Argument,
     files: &mut Vec<ImportGlobFileData>,
     options: &ImportGlobOptions,
@@ -427,6 +447,19 @@ impl GlobImportVisit<'_> {
         }
       }
       _ => {}
+    }
+
+    for value in &values {
+      let raw = value.strip_prefix('!').unwrap_or(value);
+      if Self::has_extglob(raw) {
+        self.errors.push(format!(
+          "import.meta.glob does not support extglob patterns: \"{value}\"\n\
+           Extglob syntax (e.g. `!(*.d.ts)`, `?(x)`, `*(x)`) is not supported by the glob matcher.\n\
+           Use an array with '!' prefix for negation instead:\n\
+           `['**/*.{{ts,tsx}}', '!**/*.d.ts']`  instead of  `'**/!(*.d.ts)'`"
+        ));
+        return None;
+      }
     }
 
     for value in values {

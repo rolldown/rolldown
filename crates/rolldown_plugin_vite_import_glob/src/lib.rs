@@ -1,4 +1,4 @@
-mod utils;
+pub mod utils;
 
 use std::{borrow::Cow, path::PathBuf};
 
@@ -63,8 +63,12 @@ impl Plugin for ViteImportGlobPlugin {
         magic_string: None,
         import_decls: Vec::new(),
         restore_query_extension: self.restore_query_extension,
+        errors: Vec::new(),
       };
       visitor.visit_program(&parser_ret.program);
+      if !visitor.errors.is_empty() {
+        return Err(anyhow::anyhow!(visitor.errors.join("\n\n")));
+      }
       if let Some(magic_string) = visitor.magic_string {
         return Ok(Some(HookTransformOutput {
           code: Some(magic_string.to_string()),

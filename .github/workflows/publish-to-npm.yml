@@ -44,8 +44,22 @@ jobs:
     name: Build bindings and node packages
     uses: ./.github/workflows/reusable-release-build.yml
 
+  notify-before-publish:
+    needs: [check, build]
+    if: github.repository == 'rolldown/rolldown'
+    name: Notify Before Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Discord
+        uses: tsickert/discord-webhook@b217a69502f52803de774ded2b1ab7c282e99645 # v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_ROLLDOWN_CHANNEL }}
+          embed-title: Rolldown Release
+          embed-description: Requesting approval for Rolldown v${{ needs.check.outputs.version }}.
+          embed-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
   publish:
-    needs: build
+    needs: [build, notify-before-publish]
     if: github.repository == 'rolldown/rolldown'
     name: Publish npm Packages
     runs-on: ubuntu-latest
@@ -138,9 +152,18 @@ jobs:
           } >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
+        id: github_release
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
         with:
           draft: false
           tag_name: v${{ needs.check.outputs.version }} # tags the current commit
           target_commitish: ${{ github.sha }}
           body: ${{ steps.changelog.outputs.CHANGELOG }}
+
+      - name: Notify Discord
+        uses: tsickert/discord-webhook@b217a69502f52803de774ded2b1ab7c282e99645 # v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_ROLLDOWN_CHANNEL }}
+          embed-title: Rolldown Release
+          embed-description: The GitHub release for v${{ needs.check.outputs.version }} is now live.
+          embed-url: ${{ steps.github_release.outputs.url }}

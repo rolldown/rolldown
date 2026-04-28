@@ -165,5 +165,5 @@ jobs:
         with:
           webhook-url: ${{ secrets.DISCORD_ROLLDOWN_CHANNEL }}
           embed-title: Rolldown Release
-          embed-description: The GitHub release for v${{ needs.check.outputs.version }} is now live.
+          embed-description: Released v${{ needs.check.outputs.version }}.
           embed-url: ${{ steps.github_release.outputs.url }}

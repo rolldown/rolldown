@@ -70,6 +70,14 @@ jobs:
             build: vp run ci:build-release-binding --target powerpc64le-unknown-linux-gnu --use-napi-cross
 
           - os: ubuntu-latest
+            target: loongarch64-unknown-linux-gnu
+            use-cross: true
+            # Setting `CARGO_TARGET_LOONGARCH64_UNKNOWN_LINUX_GNU_LINKER` for napi-rs selecting the correct linker in the cross-rs container
+            build: |
+              export CARGO_TARGET_LOONGARCH64_UNKNOWN_LINUX_GNU_LINKER=loongarch64-unknown-linux-gnu-gcc
+              vp run ci:build-release-binding --target loongarch64-unknown-linux-gnu --use-cross
+
+          - os: ubuntu-latest
             target: wasm32-wasip1-threads
             build: |
               vp run --filter rolldown build-binding:wasi:release
@@ -109,6 +117,14 @@ jobs:
       - name: Setup python
         run: pip install setuptools
         if: ${{ matrix.os == 'macos-latest' }}
+
+      - name: Setup cross
+        # TODO: Update cross-rs to v0.2.6 or higher when available
+        # We are pinning to this specific commit because it was the latest working
+        # version with loongarch64 support when added. The support for loongarch64
+        # is unavailable in the current stable release of cross-rs (v0.2.5).
+        run: cargo install cross --git https://github.com/cross-rs/cross --rev f86fd03bb70b4c6802847c18087e21391498b0b4
+        if: ${{ matrix.use-cross }}
 
       - uses: voidzero-dev/setup-vp@8ecb39174989ce55af90f45cf55b02738599831d # v1.6.0
         with:

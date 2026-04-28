@@ -49,6 +49,7 @@ Prebuilt binaries are distributed for the following platforms (grouped by [Node.
 - Experimental
   - Linux x64 musl (`x86_64-unknown-linux-musl`)
   - Linux armv7 (`armv7-unknown-linux-gnueabihf`)
+  - Linux loong64 glibc (`loongarch64-unknown-linux-gnu`)
   - FreeBSD x64 (`x86_64-unknown-freebsd`)
   - OpenHarmony arm64 (`aarch64-unknown-linux-ohos`)
 - Other

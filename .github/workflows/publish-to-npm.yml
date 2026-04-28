@@ -49,6 +49,7 @@ jobs:
     if: github.repository == 'rolldown/rolldown'
     name: Publish npm Packages
     runs-on: ubuntu-latest
+    environment: release
     permissions:
       id-token: write # for `npm publish --provenance`
     steps:

@@ -1,8 +1,6 @@
 # Failed Cases
 ## [parameter_props_use_define_for_class_fields_true](../../../../../crates/rolldown/tests/esbuild/ts/parameter_props_use_define_for_class_fields_true/diff.md)
   https://github.com/oxc-project/oxc/issues/21600
-## [ts_enum_cross_module_inlining_access](../../../../../crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_access/diff.md)
-  https://github.com/rolldown/rolldown/issues/9181
 ## [ts_export_default_type_issue316](../../../../../crates/rolldown/tests/esbuild/ts/ts_export_default_type_issue316/diff.md)
   related to https://github.com/rolldown/rolldown/issues/3048, export pointing to a value declared by `declare var` should be kept
 ## [ts_print_non_finite_number_inside_with](../../../../../crates/rolldown/tests/esbuild/ts/ts_print_non_finite_number_inside_with/diff.md)
@@ -31,6 +29,7 @@
 ## [ts_declare_let](../../../../../crates/rolldown/tests/esbuild/ts/ts_declare_let)
 ## [ts_declare_namespace](../../../../../crates/rolldown/tests/esbuild/ts/ts_declare_namespace)
 ## [ts_declare_var](../../../../../crates/rolldown/tests/esbuild/ts/ts_declare_var)
+## [ts_enum_cross_module_inlining_access](../../../../../crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_access)
 ## [ts_enum_cross_module_inlining_definitions](../../../../../crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_definitions)
 ## [ts_enum_cross_module_inlining_minify_index_into_dot](../../../../../crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_minify_index_into_dot)
 ## [ts_enum_cross_module_inlining_re_export](../../../../../crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_re_export)

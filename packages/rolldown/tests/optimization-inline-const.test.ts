@@ -34,4 +34,12 @@ describe('optimization.inlineConst', () => {
     const empty = await bundle({ inlineConst: {} });
     expect(empty).toBe(omitted);
   });
+
+  test('partial config without `mode` defaults to smart, not all', async () => {
+    // Per https://github.com/rolldown/rolldown/issues/9244, supplying only
+    // `pass` should not silently flip the mode to `all`.
+    const partial = await bundle({ inlineConst: { pass: 1 } });
+    const explicitSmart = await bundle({ inlineConst: { mode: 'smart', pass: 1 } });
+    expect(partial).toBe(explicitSmart);
+  });
 });

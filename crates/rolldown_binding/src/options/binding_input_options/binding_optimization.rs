@@ -36,7 +36,7 @@ impl TryFrom<BindingOptimization> for rolldown_common::OptimizationOption {
             }
           }
         } else {
-          None
+          Some(InlineConstMode::Smart)
         };
 
         Some(InlineConstOption::Config(InlineConstConfig {

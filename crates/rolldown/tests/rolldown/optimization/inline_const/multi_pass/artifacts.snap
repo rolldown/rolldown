@@ -39,7 +39,7 @@ demo();
 
 ```
 
-# Variant: inlineConstPass2: [inline_const: Config(InlineConstConfig { mode: None, pass: 2 })]
+# Variant: inlineConstPass2: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 2 })]
 
 ## Assets
 

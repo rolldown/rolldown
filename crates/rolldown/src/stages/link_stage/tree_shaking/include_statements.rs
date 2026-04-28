@@ -939,14 +939,15 @@ pub fn include_statement(
           if let Some(members) = owner_module.ecma_view.enum_member_value_map.get(symbol_name) {
             // Only bypass for simple member accesses (e.g., `E.member`), not deep chains
             // like `E.member.something` which wouldn't be inlined.
-            if member_expr_ref.prop_and_span_list.len() == 1 {
-              let prop_name = member_expr_ref.prop_and_span_list.first().map(|p| p.name.as_str());
-              if prop_name.is_some_and(|name| members.contains_key(name)) {
-                // This member access will be inlined — don't include the enum declaration.
-                // Enum inlining is unconditional (not gated by inlineConst mode) because
-                // it implements TypeScript's const enum semantics, which mandate replacement.
-                return;
-              }
+            if !member_expr_ref.is_write
+              && let [prop] = member_expr_ref.prop_and_span_list.as_slice()
+              && !prop.optional
+              && members.contains_key(prop.name.as_str())
+            {
+              // This member access will be inlined — don't include the enum declaration.
+              // Enum inlining is unconditional (not gated by inlineConst mode) because
+              // it implements TypeScript's const enum semantics, which mandate replacement.
+              return;
             }
           }
         }

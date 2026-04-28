@@ -45,7 +45,6 @@ export const failedReasons: Record<string, string> = {
     'related to https://github.com/rolldown/rolldown/issues/3048, export pointing to a value declared by `declare var` should be kept',
   'ts/ts_print_non_finite_number_inside_with':
     'with statement is rejected due to https://github.com/rolldown/rolldown/issues/7009',
-  'ts/ts_enum_cross_module_inlining_access': 'https://github.com/rolldown/rolldown/issues/9181',
 };
 
 export const notSupportedReasons: Record<string, string> = {

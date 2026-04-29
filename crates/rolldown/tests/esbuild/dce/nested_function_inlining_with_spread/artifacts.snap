@@ -6,10 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry-outer.js
 
 ```js
-//#region inner.js
-function empty1() {}
-function empty2() {}
-function empty3() {}
 function identity1(x) {
 	return x;
 }
@@ -21,7 +17,7 @@ function identity3(x) {
 }
 //#endregion
 //#region entry-outer.js
-check(/* @__PURE__ */ empty1(), /* @__PURE__ */ empty2(args), /* @__PURE__ */ empty3(...args), identity1(), identity2(args), identity3(...args));
+check(void 0, (args, void 0), ([...args], void 0), identity1(), identity2(args), identity3(...args));
 //#endregion
 
 ```
@@ -30,9 +26,6 @@ check(/* @__PURE__ */ empty1(), /* @__PURE__ */ empty2(args), /* @__PURE__ */ em
 
 ```js
 //#region entry.js
-function empty1() {}
-function empty2() {}
-function empty3() {}
 function identity1(x) {
 	return x;
 }
@@ -42,7 +35,7 @@ function identity2(x) {
 function identity3(x) {
 	return x;
 }
-check(empty1(), empty2(args), empty3(...args), identity1(), identity2(args), identity3(...args));
+check(void 0, (args, void 0), ([...args], void 0), identity1(), identity2(args), identity3(...args));
 //#endregion
 
 ```

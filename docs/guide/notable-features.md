@@ -34,7 +34,7 @@ The following transforms are supported:
 
 ## CJS support
 
-Rolldown supports mixed ESM / CJS module graphs out of the box, without the need for `@rollup/plugin-commonjs`. It largely follows esbuild's semantics and [passes all esbuild ESM / CJS interop tests](https://github.com/rolldown/bundler-esm-cjs-tests).
+Rolldown supports mixed ESM / CJS module graphs out of the box, without the need for `@rollup/plugin-commonjs`. It largely follows esbuild's semantics and [passes all esbuild ESM / CJS interop tests](https://github.com/evanw/bundler-esm-cjs-tests).
 
 See [Bundling CJS](/in-depth/bundling-cjs) for more details.
 
@@ -65,12 +65,6 @@ Note it behaves differently from [`@rollup/plugin-replace`](https://github.com/r
 
 This feature provides a way to shim global variables with a specific value exported from a module. This feature is equivalent of [`@rollup/plugin-inject`](https://github.com/rollup/plugins/tree/master/packages/inject) and conceptually similar to [esbuild's `inject` option](https://esbuild.github.io/api/#inject).
 
-## CSS bundling
-
-- ⚠️ Experimental
-
-Rolldown supports bundling CSS imported from JS out of the box. Note this feature currently does not support CSS Modules and minification.
-
 ## Manual Code Splitting
 
 - Configurable via [`output.codeSplitting`](/reference/OutputOptions.codeSplitting) option.
@@ -87,38 +81,6 @@ This is conceptually similar to [esbuild's `loader` option](https://esbuild.gith
 
 ## Minification
 
-- ⚠️ Experimental
 - Configurable via the [`output.minify`](/reference/OutputOptions.minify) option.
 
-The minification is powered by [`oxc-minifier`](https://github.com/oxc-project/oxc/tree/main/crates/oxc_minifier), which is currently in alpha and can still have bugs. We recommend thoroughly testing your output in production environments.
-
-If you prefer an external minifier instead, Rolldown is compatible with Rollup minifier plugins, such as:
-
-[`rollup-plugin-esbuild`](https://github.com/egoist/rollup-plugin-esbuild):
-
-```js [rolldown.config.js]
-import { defineConfig } from 'rolldown';
-import { minify } from 'rollup-plugin-esbuild';
-
-export default defineConfig({
-  plugins: [minify()],
-});
-```
-
-[`rollup-plugin-swc3`](https://github.com/SukkaW/rollup-plugin-swc):
-
-```js [rolldown.config.js]
-import { defineConfig } from 'rolldown';
-import { minify } from 'rollup-plugin-swc3';
-
-export default defineConfig({
-  plugins: [
-    minify({
-      module: true,
-      // swc's minify option here
-      mangle: {},
-      compress: {},
-    }),
-  ],
-});
-```
+The minification is powered by [Oxc Minifier](https://oxc.rs/docs/guide/usage/minifier). See its documentation for more details.

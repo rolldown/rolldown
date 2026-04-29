@@ -1,0 +1,95 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## api.js
+
+```js
+import { t as getEnvInt } from "./env.js";
+//#region api.js
+const api = getEnvInt("REQUEST_TIMEOUT_MS");
+//#endregion
+export { api as t };
+
+```
+
+## dep-user.js
+
+```js
+import "./dep.js";
+//#region dep-user.js
+const depUser = "dep";
+//#endregion
+export { depUser };
+
+```
+
+## dep.js
+
+```js
+//#region side.js
+globalThis.__rolldown_issue_7449_side = (globalThis.__rolldown_issue_7449_side || 0) + 1;
+//#endregion
+export {};
+
+```
+
+## env-user.js
+
+```js
+import { n as getEnvString } from "./env.js";
+//#region env-user.js
+const envUser = getEnvString("SECONDARY");
+//#endregion
+export { envUser };
+
+```
+
+## env.js
+
+```js
+import "./dep.js";
+//#region env.js
+const state = { config: {
+	REQUEST_TIMEOUT_MS: "300000",
+	marker: "dep"
+} };
+function getEnvString(key) {
+	return state.config?.[key];
+}
+function getEnvInt(key) {
+	return Number(getEnvString(key) || 3e5);
+}
+//#endregion
+export { getEnvString as n, getEnvInt as t };
+
+```
+
+## lazy.js
+
+```js
+import { t as api } from "./api.js";
+//#region lazy.js
+const lazy = api;
+//#endregion
+export { lazy };
+
+```
+
+## main.js
+
+```js
+import { n as getEnvString } from "./env.js";
+import { t as api } from "./api.js";
+//#region main.js
+globalThis.__rolldown_issue_7449_imports = [
+	import("./lazy.js"),
+	import("./env-user.js"),
+	import("./dep-user.js")
+];
+globalThis.__rolldown_issue_7449_value = api + Number(getEnvString("MISSING") || 0);
+//#endregion
+export {};
+
+```

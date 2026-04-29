@@ -23,13 +23,11 @@ impl Plugin for Test {
   ) -> rolldown_plugin::HookTransformReturn {
     // Emit chunk for dynamically imported module
     if args.id.ends_with("imp.js") {
-      ctx
-        .emit_chunk(EmittedChunk {
-          id: args.id.to_string(),
-          preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
-          ..Default::default()
-        })
-        .await?;
+      ctx.emit_chunk(EmittedChunk {
+        id: args.id.to_string(),
+        preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
+        ..Default::default()
+      })?;
     }
     Ok(None)
   }

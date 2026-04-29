@@ -95,7 +95,7 @@ const performanceData = [
       <div class="p-5 sm:p-15 pb-0 sm:pb-0 flex flex-col gap-3">
         <h5 class="text-white">Esbuild Feature Parity</h5>
         <p class="max-w-[26rem] text-pretty">
-          Built-in transforms, define, inject, minify, CSS bundling & more...
+          Built-in transforms, define, inject, minify & more...
         </p>
       </div>
       <div class="flex-1 flex items-center justify-center p-8 sm:p-15 sm:pt-10">

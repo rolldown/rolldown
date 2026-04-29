@@ -76,13 +76,13 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ```js
 //#region hmr.js
 import * as import_node_assert_00 from "node:assert";
-var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_hmr_0 = __rolldown_runtime__.createEsmInitializer("hmr.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
-		__rolldown_runtime__.registerModule("hmr.js", { exports: __rolldown_exports__ });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		require_new_dep_cjs_1();
 		init_new_dep_esm_2();
-		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_dep_cjs_01 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("modules/dep-cjs.js"));
 		var import_dep_esm_02 = __rolldown_runtime__.loadExports("modules/dep-esm.js");
 		var import_dep_cjs_default_03 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("modules/dep-cjs-default.js"));
@@ -115,21 +115,21 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 //#region modules/new-dep-cjs.js
-var require_new_dep_cjs_1 = __rolldown_runtime__.createCjsInitializer((function(__rolldown_exports__, __rolldown_module__) {
+var require_new_dep_cjs_1 = __rolldown_runtime__.createCjsInitializer("modules/new-dep-cjs.js", (function(__rolldown_exports__, __rolldown_module__, __rolldown_module_id__) {
 	try {
-		__rolldown_runtime__.registerModule("modules/new-dep-cjs.js", __rolldown_module__);
-		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext("modules/new-dep-cjs.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
+		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		__rolldown_exports__.value = "new-cjs";
 	} finally {}
 }));
 
 //#endregion
 //#region modules/new-dep-esm.js
-var init_new_dep_esm_2 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_new_dep_esm_2 = __rolldown_runtime__.createEsmInitializer("modules/new-dep-esm.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
-		__rolldown_runtime__.registerModule("modules/new-dep-esm.js", { exports: __rolldown_exports__ });
-		const hot_new_dep_esm = __rolldown_runtime__.createModuleHotContext("modules/new-dep-esm.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_new_dep_esm = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const value = "new-esm";
 	} finally {}
 }));

@@ -64,11 +64,11 @@ function text(el, text) {
 ```js
 //#region hmr.js
 import * as import_node_assert_00 from "node:assert";
-var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_hmr_0 = __rolldown_runtime__.createEsmInitializer("hmr.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
-		__rolldown_runtime__.registerModule("hmr.js", { exports: __rolldown_exports__ });
-		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_sub_01 = __rolldown_runtime__.loadExports("sub/index.js");
 		import_node_assert_00.default.strictEqual(import_sub_01.foo, "foo");
 		import_node_assert_00.default.strictEqual(import_sub_01.bar, "bar");

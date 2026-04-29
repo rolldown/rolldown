@@ -62,11 +62,11 @@ sayMessage();
 
 ```js
 //#region foo.js
-var init_foo_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_foo_0 = __rolldown_runtime__.createEsmInitializer("foo.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
-		__rolldown_runtime__.registerModule("foo.js", { exports: __rolldown_exports__ });
-		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_foo = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_common_00 = __rolldown_runtime__.loadExports("common.js");
 		const foo = import_common_00.prefix + "foo-new";
 	} finally {}
@@ -74,15 +74,15 @@ var init_foo_0 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 //#region messenger.js
-var init_messenger_1 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_messenger_1 = __rolldown_runtime__.createEsmInitializer("messenger.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			msg: () => msg,
 			sayMessage: () => sayMessage
 		});
-		__rolldown_runtime__.registerModule("messenger.js", { exports: __rolldown_exports__ });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		init_foo_0();
-		const hot_messenger = __rolldown_runtime__.createModuleHotContext("messenger.js");
+		const hot_messenger = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_foo_10 = __rolldown_runtime__.loadExports("foo.js");
 		var import_bar_11 = __rolldown_runtime__.loadExports("bar.js");
 		var import_common_12 = __rolldown_runtime__.loadExports("common.js");

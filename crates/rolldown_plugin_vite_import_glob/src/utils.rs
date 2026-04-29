@@ -22,6 +22,7 @@ pub struct GlobImportVisit<'a> {
   pub code: &'a str,
   pub magic_string: Option<MagicString<'a>>,
   pub import_decls: Vec<String>,
+  pub errors: Vec<anyhow::Error>,
 }
 
 impl<'ast> Visit<'ast> for GlobImportVisit<'_> {
@@ -383,7 +384,7 @@ impl GlobImportVisit<'_> {
   }
 
   fn eval_glob_expr(
-    &self,
+    &mut self,
     arg: &Argument,
     files: &mut Vec<ImportGlobFileData>,
     options: &ImportGlobOptions,
@@ -454,10 +455,10 @@ impl GlobImportVisit<'_> {
       return Some(());
     }
 
-    assert!(
-      !(is_virtual_module && is_relative && options.base.as_ref().is_none()),
-      "In virtual modules, all globs must start with '/'"
-    );
+    if is_virtual_module && is_relative && options.base.as_ref().is_none() {
+      self.errors.push(anyhow::anyhow!("In virtual modules, all globs must start with '/'"));
+      return None;
+    }
 
     let common = self.get_common_base(&positive_globs);
     let entries = walkdir::WalkDir::new(common.as_ref())
@@ -476,11 +477,14 @@ impl GlobImportVisit<'_> {
       .filter_map(Result::ok)
       .filter(|e| !e.file_type().is_dir());
 
-    let self_path = self.relative_path(Path::new(self.id), Some(dir));
-
     for entry in entries {
       let file = entry.path();
       let path = file.to_slash_lossy();
+
+      // Skip the file itself if it matches the glob pattern, to avoid self-importing.
+      if self.id == path {
+        continue;
+      }
 
       let matches_rule = |v: &PathWithGlob| -> bool {
         path.strip_prefix(&v.path).map(|path| fast_glob::glob_match(v.glob, path)).unwrap_or(false)
@@ -500,15 +504,8 @@ impl GlobImportVisit<'_> {
         continue;
       }
 
-      let mut import_path = self.relative_path(file, Some(dir));
-      if self_path == import_path {
-        continue;
-      }
-
+      let import_path = self.relative_path(file, Some(dir));
       let file_path = if let Some(base) = &options.base {
-        if base.starts_with('/') {
-          import_path = self.relative_path(file, None);
-        }
         let base_path = if let Some(base) = base.strip_prefix('/') {
           self.root.join(base)
         } else {

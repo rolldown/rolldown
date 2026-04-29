@@ -8,6 +8,8 @@ use sugar_path::SugarPath;
 
 use super::stable_module_id::StableModuleId;
 
+const EMPTY_MODULE_PREFIX: &str = "\0rolldown/empty.js?";
+
 /// `ModuleId` is the unique string identifier for each module.
 /// - It will be used to identify the module in the whole bundle.
 /// - Users could stored the `ModuleId` to track the module in different stages/hooks.
@@ -26,6 +28,22 @@ impl ModuleId {
   #[inline]
   pub const fn new_arc_str(inner: ArcStr) -> Self {
     Self { inner }
+  }
+
+  /// Construct the sentinel id used for `browser: false` ignored modules,
+  /// concatenated with the original resolved path so each ignored module
+  /// stays distinguishable while sharing the empty-module load behavior.
+  pub fn new_empty(original: &str) -> Self {
+    Self::new(format!("{EMPTY_MODULE_PREFIX}{original}"))
+  }
+
+  pub fn is_empty_module(&self) -> bool {
+    self.inner.starts_with(EMPTY_MODULE_PREFIX)
+  }
+
+  /// For an id created via `new_empty`, returns the original id portion.
+  pub fn strip_empty_prefix(&self) -> Option<&str> {
+    self.inner.strip_prefix(EMPTY_MODULE_PREFIX)
   }
 
   pub fn as_str(&self) -> &str {

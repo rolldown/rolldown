@@ -34,8 +34,8 @@ impl<I: Idx> IndexBitSet<I> {
     self.inner.has_bit(Self::bit(idx))
   }
 
-  pub fn set_bit(&mut self, idx: I) {
-    self.inner.set_bit(Self::bit(idx));
+  pub fn set_bit(&mut self, idx: I) -> bool {
+    self.inner.set_bit(Self::bit(idx))
   }
 
   pub fn clear_bit(&mut self, idx: I) {

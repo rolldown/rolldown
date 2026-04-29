@@ -9,22 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 function bar() {}
 foo(bar);
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
-bar();
 foo(bar);
 new foo(bar);
 foo(bar);

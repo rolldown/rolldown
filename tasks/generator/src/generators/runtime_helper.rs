@@ -83,15 +83,30 @@ impl RuntimeHelper {
   }
 }
 use crate::StmtInfoIdx;
-pub type DependedRuntimeHelperMap = [Vec<StmtInfoIdx>; RUNTIME_HELPER_NAMES.len()];
-pub trait DependedRuntimeHelperMapExt {
+
+/// Maps each single-bit `RuntimeHelper` to the `StmtInfoIdx`s that depend on it.
+#[derive(Debug, Default, Clone)]
+pub struct DependedRuntimeHelperMap([Vec<StmtInfoIdx>; RUNTIME_HELPER_NAMES.len()]);
+
+impl DependedRuntimeHelperMap {
+  /// Record that `stmt_info_idx` depends on `helper`. `helper` must have exactly one bit set.
+  #[inline]
+  pub fn push(&mut self, helper: RuntimeHelper, stmt_info_idx: StmtInfoIdx) {
+    self.0[helper.bit_index()].push(stmt_info_idx);
+  }
+
+  /// Iterate over `(single-bit helper, &statements)` pairs for each defined `RuntimeHelper` bit.
+  pub fn iter(&self) -> impl Iterator<Item = (RuntimeHelper, &Vec<StmtInfoIdx>)> {
+    self.0.iter().enumerate().map(|(i, v)| {
+      // `i` is always within `0..RUNTIME_HELPER_NAMES.len()`, matching a defined single-bit flag.
+      (RuntimeHelper::from_bits_truncate(1 << i), v)
+    })
+  }
+
   /// Debug function to print runtime names and their associated statement indices
-  fn debug_print(&self);
-}
-impl DependedRuntimeHelperMapExt for DependedRuntimeHelperMap {
-  fn debug_print(&self) {
+  pub fn debug_print(&self) {
     eprintln!("DependedRuntimeHelperMap debug:");
-    for (idx, stmt_infos) in self.iter().enumerate() {
+    for (idx, stmt_infos) in self.0.iter().enumerate() {
       if let Some(runtime_name) = RUNTIME_HELPER_NAMES.get(idx) {
         eprintln!("  {runtime_name} (idx: {idx}): {stmt_infos:?}");
       } else {

@@ -27,7 +27,7 @@ assert.strictEqual(mutable_let, "mutable_let1");
 
 ```
 
-# Variant: [inline_const: Config(InlineConstConfig { mode: None, pass: 2 })]
+# Variant: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 2 })]
 
 ## Assets
 

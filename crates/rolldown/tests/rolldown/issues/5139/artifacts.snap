@@ -11,7 +11,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 var Foo = class {};
 function foo() {}
 const baz = function() {};
-function __name() {}
+function __name() {
+	console.log();
+}
 __name();
 //#endregion
 //#region main.js

@@ -5,6 +5,11 @@ use rolldown_common::WatcherChangeKind;
 use rolldown_error::CausedPlugin;
 
 impl PluginDriver {
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::watch_hooks::total::watch_change",
+    skip(self)
+  )]
   pub async fn watch_change(&self, path: &str, event: WatcherChangeKind) -> HookNoopReturn {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_watch_change_meta)
@@ -17,6 +22,11 @@ impl PluginDriver {
     Ok(())
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::watch_hooks::total::close_watcher",
+    skip(self)
+  )]
   pub async fn close_watcher(&self) -> HookNoopReturn {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_close_watcher_meta)

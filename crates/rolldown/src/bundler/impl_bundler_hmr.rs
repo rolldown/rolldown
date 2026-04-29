@@ -9,6 +9,7 @@ use std::sync::{Arc, atomic::AtomicU32};
 
 impl Bundler {
   #[cfg(feature = "experimental")]
+  #[tracing::instrument(level = "debug", skip_all)]
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &FxIndexMap<String, WatcherChangeKind>,

@@ -8,6 +8,7 @@ use rolldown_ecmascript::{CJS_MODULE_REF, CJS_ROLLDOWN_MODULE_REF};
 use crate::{hmr::hmr_ast_finalizer::HmrAstFinalizer, module_finalizers::ScopeHoistingFinalizer};
 
 pub static MODULE_EXPORTS_NAME_FOR_ESM: &str = "__rolldown_exports__";
+pub static MODULE_ID_PARAM_FOR_HMR: &str = "__rolldown_module_id__";
 
 pub trait HmrAstBuilder<'any, 'ast> {
   fn builder(&self) -> &oxc::ast::AstBuilder<'ast>;
@@ -21,6 +22,20 @@ pub trait HmrAstBuilder<'any, 'ast> {
   fn alias_name_for_import_meta_hot(&self) -> ast::Str<'ast>;
 
   fn cjs_module_name() -> &'static str;
+
+  /// How to refer to the current module id at the emission site.
+  ///
+  /// The HMR/lazy path wraps each module body in `createEsmInitializer(id, function () { … })`,
+  /// so inside the body the id is available as an identifier (`__rolldown_module_id__`) passed in
+  /// by the runtime. The main-bundle path has no such wrapper, so it still needs to emit the
+  /// stable id as a string literal.
+  fn module_id_argument(&self) -> ast::Argument<'ast> {
+    ast::Argument::StringLiteral(self.builder().alloc_string_literal(
+      SPAN,
+      self.builder().str(&self.module().stable_id),
+      None,
+    ))
+  }
 
   /// `__rolldown_runtime__.registerModule(moduleId, module)`
   fn create_register_module_stmt(&self) -> ast::Statement<'ast> {
@@ -63,15 +78,9 @@ pub trait HmrAstBuilder<'any, 'ast> {
     };
 
     // ...(moduleId, module)
-    // Use stable module ID for consistent lookup in runtime
-    let arguments = self.builder().vec_from_array([
-      ast::Argument::StringLiteral(self.builder().alloc_string_literal(
-        SPAN,
-        self.builder().str(&self.module().stable_id),
-        None,
-      )),
-      module_exports,
-    ]);
+    // moduleId is either `__rolldown_module_id__` (HMR/lazy path) or the stable-id
+    // string literal (main-bundle path).
+    let arguments = self.builder().vec_from_array([self.module_id_argument(), module_exports]);
 
     // __rolldown_runtime__.registerModule(moduleId, module)
     let register_call = self.builder().alloc_call_expression(
@@ -119,13 +128,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
                   ),
                 ),
                 NONE,
-                self.builder().vec1(ast::Argument::StringLiteral(
-                  self.builder().alloc_string_literal(
-                    SPAN,
-                    self.builder().str(&self.module().stable_id),
-                    None,
-                  ),
-                )),
+                self.builder().vec1(self.module_id_argument()),
                 false,
               ),
             )),
@@ -157,6 +160,16 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
 
   fn cjs_module_name() -> &'static str {
     CJS_ROLLDOWN_MODULE_REF
+  }
+
+  /// HMR/lazy path: each module body is wrapped in
+  /// `createEsmInitializer(id, function (__rolldown_module_id__) { … })`
+  /// (or `createCjsInitializer(id, function (exports, module, __rolldown_module_id__) { … })`),
+  /// so the id is in lexical scope as a parameter.
+  fn module_id_argument(&self) -> ast::Argument<'ast> {
+    ast::Argument::Identifier(
+      self.builder().alloc_identifier_reference(SPAN, MODULE_ID_PARAM_FOR_HMR),
+    )
   }
 }
 

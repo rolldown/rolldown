@@ -1,30 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>Boshen/renovate", "helpers:pinGitHubActionDigestsToSemver"],
+  "extends": ["github>Boshen/renovate"],
   "ignorePaths": ["**/node_modules/**", "**/examples/**", "**/crates/rolldown/tests/**"],
-  "ignoreDeps": ["kill-port"],
   "packageRules": [
-    {
-      "matchPackageNames": ["pnpm"],
-      "allowedVersions": "10.23.0"
-    },
     {
       "groupName": "rolldown-plugin-dts",
       "matchManagers": ["npm"],
       "matchPackageNames": ["rolldown-plugin-dts"],
       "schedule": ["at any time"]
-    },
-    {
-      "groupName": "oxc-node",
-      "matchManagers": ["npm"],
-      "matchPackageNames": ["oxc-node"],
-      "schedule": ["at any time"]
-    },
-    {
-      "description": "Disable oxc auto-updates — upgraded manually via `upgrade-oxc` skill",
-      "matchPackageNames": ["/^oxc/", "/^@oxc-project/"],
-      "excludePackageNames": ["oxc-node"],
-      "enabled": false
     }
   ]
 }

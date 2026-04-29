@@ -45,11 +45,11 @@ assert.strictEqual(a.b.c, "c");
 ```js
 //#region c.js
 import * as import_node_assert_00 from "node:assert";
-var init_c_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_c_0 = __rolldown_runtime__.createEsmInitializer("c.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ c: () => c });
-		__rolldown_runtime__.registerModule("c.js", { exports: __rolldown_exports__ });
-		const hot_c = __rolldown_runtime__.createModuleHotContext("c.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_c = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		var import_b_01 = __rolldown_runtime__.loadExports("b.js");
 		const c = "cc";
 		import_node_assert_00.default.strictEqual(c, "cc");

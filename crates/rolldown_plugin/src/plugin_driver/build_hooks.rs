@@ -22,7 +22,11 @@ use string_wizard::{MagicString, SourceMapOptions};
 use tracing::{Instrument, debug_span};
 
 impl PluginDriver {
-  #[tracing::instrument(level = "trace", skip_all)]
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::build_hooks::total::build_start",
+    skip_all
+  )]
   pub async fn build_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_build_start_meta)
@@ -56,6 +60,11 @@ impl PluginDriver {
     skipped_plugins
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::build_hooks::total::resolve_id",
+    skip_all
+  )]
   pub async fn resolve_id(
     &self,
     args: &HookResolveIdArgs<'_>,
@@ -134,8 +143,13 @@ impl PluginDriver {
     Ok(None)
   }
 
-  #[expect(deprecated)]
   // Only for rollup compatibility
+  #[expect(deprecated)]
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::build_hooks::total::resolve_dynamic_import",
+    skip_all
+  )]
   pub async fn resolve_dynamic_import(
     &self,
     args: &HookResolveIdArgs<'_>,
@@ -173,6 +187,11 @@ impl PluginDriver {
     Ok(None)
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::build_hooks::total::load",
+    skip_all
+  )]
   pub async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_load_meta)
@@ -224,7 +243,11 @@ impl PluginDriver {
     Ok(None)
   }
 
-  #[tracing::instrument(target = "devtool", level = "trace", skip_all)]
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::build_hooks::total::transform",
+    skip_all
+  )]
   #[expect(clippy::too_many_arguments)]
   pub async fn transform(
     &self,
@@ -350,6 +373,11 @@ impl PluginDriver {
     }
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::build_hooks::total::transform_ast",
+    skip_all
+  )]
   pub async fn transform_ast(&self, mut args: HookTransformAstArgs<'_>) -> HookTransformAstReturn {
     for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_ast_meta)
@@ -373,6 +401,11 @@ impl PluginDriver {
     Ok(args.ast)
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::build_hooks::total::module_parsed",
+    skip_all
+  )]
   pub async fn module_parsed(
     &self,
     module_info: Arc<ModuleInfo>,
@@ -389,6 +422,11 @@ impl PluginDriver {
     Ok(())
   }
 
+  #[tracing::instrument(
+    level = "trace",
+    target = "rolldown_plugin::plugin_driver::build_hooks::total::build_end",
+    skip_all
+  )]
   pub async fn build_end(&self, args: Option<&HookBuildEndArgs<'_>>) -> HookNoopReturn {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_build_end_meta)

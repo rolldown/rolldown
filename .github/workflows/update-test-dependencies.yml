@@ -106,7 +106,7 @@ jobs:
           save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@8ecb39174989ce55af90f45cf55b02738599831d # v1.6.0
+        uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
         with:
           cache: true
 
@@ -122,7 +122,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
           commit-message: 'chore(deps): update rollup submodule for tests to ${{ steps.get-latest-tag.outputs.LATEST_TAG }}'
@@ -219,7 +219,7 @@ jobs:
           save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@8ecb39174989ce55af90f45cf55b02738599831d # v1.6.0
+        uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
         with:
           cache: true
 
@@ -232,7 +232,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
           commit-message: 'chore(deps): update test262 submodule for tests'
@@ -333,7 +333,7 @@ jobs:
           grep "const ESBUILD_VERSION = " scripts/src/esbuild-tests/urls.ts
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@8ecb39174989ce55af90f45cf55b02738599831d # v1.6.0
+        uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
         with:
           cache: true
 
@@ -345,7 +345,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
           commit-message: 'chore(deps): update esbuild for tests to ${{ steps.get-latest-version.outputs.LATEST_VERSION }}'

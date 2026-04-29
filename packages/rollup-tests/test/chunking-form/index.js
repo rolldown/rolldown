@@ -7,13 +7,8 @@ const { rollup } = require('../../dist/rollup');
 const { compareLogs } = require('../utils');
 const { runTestSuiteWithSamples, assertDirectoriesAreEqual } = require('../utils.js');
 
-// const FORMATS = ['es', 'cjs', 'amd', 'system'];
-const FORMATS = ['es']
-const whitelisted = ['sourcemap-file-names', 'sourcemap-file-names-function']
+const FORMATS = ['es', 'cjs', 'amd', 'system'];
 runTestSuiteWithSamples('chunking form', resolve(__dirname, '../../../../rollup/test/chunking-form/samples'), (directory, config) => {
-	if (!whitelisted.includes(basename(directory))) {
-		return;
-	}
 	(config.skip ? describe.skip : config.solo ? describe.only : describe)(
 		basename(directory) + ': ' + config.description,
 		() => {

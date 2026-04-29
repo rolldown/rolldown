@@ -7,14 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
+firstImportantSideEffect(void 0);
 (() => {
-	function f() {}
-	firstImportantSideEffect(f());
-})();
-(() => {
-	function g() {}
 	debugger;
-	secondImportantSideEffect(g());
+	secondImportantSideEffect(void 0);
 })();
 //#endregion
 

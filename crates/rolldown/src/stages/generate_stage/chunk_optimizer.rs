@@ -589,7 +589,17 @@ impl GenerateStage<'_> {
       Self::find_merge_target(&user_defined_entry, &user_defined_entry_modules, module_table);
     if user_defined_entry.is_empty() {
       let dynamic_chunk_entry_modules = Self::collect_entry_modules(&dynamic_entry, chunk_graph)?;
-      Self::find_merge_target(&dynamic_entry, &dynamic_chunk_entry_modules, module_table)
+      Self::find_merge_target(&dynamic_entry, &dynamic_chunk_entry_modules, module_table).or_else(
+        || {
+          Self::find_dynamic_dominator(
+            &dynamic_entry,
+            &dynamic_chunk_entry_modules,
+            module_table,
+            dynamic_entry_to_dynamic_importers,
+            entry_chunk_reference,
+          )
+        },
+      )
     } else {
       let chunk_idx = merged_user_defined_chunk?;
       let chunk = &chunk_graph.chunk_table[chunk_idx];
@@ -725,6 +735,90 @@ impl GenerateStage<'_> {
       });
       can_merge.then_some(*chunk_idx)
     })
+  }
+
+  /// Fallback merge-target search for the case where every chunk in `chunk_idxs`
+  /// is a dynamic entry (`find_merge_target` only inspects static
+  /// `importers_idx`, so it always fails here).
+  ///
+  /// Picks `D` from `dynamic_entry` such that the module-graph reachability
+  /// from `D`'s entry (following all import kinds) covers every other dynamic
+  /// entry in the set together with that entry's static and dynamic importers.
+  /// That guarantees every load path to those other entries goes through `D`,
+  /// so when shared modules are merged into `D`'s chunk and the other chunks
+  /// gain `D`'s chunk as a static dependency, no load can reach them without
+  /// `D` already being loaded.
+  ///
+  /// The leak guard rejects `D` when any user-defined entry reaches one of the
+  /// covered dynamic entries without also reaching `D` — after the merge that
+  /// other path would pull `D`'s chunk in as a static dep and run `D`'s side
+  /// effects on a load that previously did not touch `D`.
+  fn find_dynamic_dominator(
+    dynamic_entry: &[ChunkIdx],
+    dynamic_entry_modules: &[ModuleIdx],
+    module_table: &ModuleTable,
+    dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
+    entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
+  ) -> Option<ChunkIdx> {
+    if dynamic_entry.len() < 2 {
+      return None;
+    }
+    let dynamic_entry_set: FxHashSet<ChunkIdx> = dynamic_entry.iter().copied().collect();
+    for (candidate_pos, (chunk_idx, entry_module_idx)) in
+      dynamic_entry.iter().zip(dynamic_entry_modules.iter()).enumerate()
+    {
+      let mut reachable: FxHashSet<ModuleIdx> = FxHashSet::default();
+      let mut queue: VecDeque<ModuleIdx> = VecDeque::from([*entry_module_idx]);
+      while let Some(cur) = queue.pop_front() {
+        if !reachable.insert(cur) {
+          continue;
+        }
+        let Some(module) = module_table[cur].as_normal() else {
+          continue;
+        };
+        for rec in &module.import_records {
+          if let Some(dep_idx) = rec.resolved_module
+            && !reachable.contains(&dep_idx)
+          {
+            queue.push_back(dep_idx);
+          }
+        }
+      }
+
+      let dominates_others =
+        dynamic_entry_modules.iter().enumerate().all(|(idx, other_entry_module_idx)| {
+          if idx == candidate_pos {
+            return true;
+          }
+          if !reachable.contains(other_entry_module_idx) {
+            return false;
+          }
+          let Some(other_module) = module_table[*other_entry_module_idx].as_normal() else {
+            return false;
+          };
+          let static_importers_ok =
+            other_module.importers_idx.iter().all(|importer| reachable.contains(importer));
+          let dynamic_importers_ok = dynamic_entry_to_dynamic_importers
+            .get(other_entry_module_idx)
+            .is_none_or(|importers| importers.iter().all(|i| reachable.contains(i)));
+          static_importers_ok && dynamic_importers_ok
+        });
+      if !dominates_others {
+        continue;
+      }
+
+      let leak = entry_chunk_reference.values().any(|reached| {
+        let reaches_some_other = dynamic_entry_set.iter().any(|d| reached.contains(d));
+        let reaches_dominator = reached.contains(chunk_idx);
+        reaches_some_other && !reaches_dominator
+      });
+      if leak {
+        continue;
+      }
+
+      return Some(*chunk_idx);
+    }
+    None
   }
 
   /// Finds empty dynamic entry chunks that should be merged with their target common chunks.

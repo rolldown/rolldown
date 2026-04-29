@@ -15,11 +15,11 @@ impl LinkStage<'_> {
       importer
         .import_records
         .iter()
-        .filter_map(|rec| rec.resolved_module.map(|module_idx| (rec, module_idx)))
-        .for_each(|(rec, module_idx)| {
-          let Module::Normal(importee) = &self.module_table[module_idx] else {
-            return;
-          };
+        .filter_map(|rec| {
+          let importee = rec.resolved_module.and_then(|idx| self.module_table[idx].as_normal())?;
+          Some((rec, importee))
+        })
+        .for_each(|(rec, importee)| {
           match rec.kind {
             ImportKind::Import => {
               if matches!(importee.exports_kind, ExportsKind::None)

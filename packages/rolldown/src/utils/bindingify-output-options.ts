@@ -1,12 +1,16 @@
 import type { BindingChunkingContext, BindingOutputOptions } from '../binding.cjs';
 import type { OutputOptions } from '../options/output-options';
+import type { PluginContextData } from '../plugin/plugin-context-data';
 import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';
 import { logger } from '../cli/logger';
 
-export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOutputOptions {
+export function bindingifyOutputOptions(
+  outputOptions: OutputOptions,
+  pluginContextData: PluginContextData,
+): BindingOutputOptions {
   const {
     dir,
     format,
@@ -55,6 +59,7 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     outputOptions.inlineDynamicImports,
     outputOptions.advancedChunks,
     manualChunks,
+    pluginContextData,
   );
 
   return {
@@ -193,6 +198,7 @@ function bindingifyCodeSplitting(
   inlineDynamicImportsOption: OutputOptions['inlineDynamicImports'],
   advancedChunks: OutputOptions['advancedChunks'],
   manualChunks: OutputOptions['manualChunks'],
+  pluginContextData: PluginContextData,
 ): {
   inlineDynamicImports: BindingOutputOptions['inlineDynamicImports'];
   advancedChunks: BindingOutputOptions['manualCodeSplitting'];
@@ -298,7 +304,8 @@ function bindingifyCodeSplitting(
           ...restGroup,
           name:
             typeof name === 'function'
-              ? (id: string, ctx: BindingChunkingContext) => name(id, new ChunkingContextImpl(ctx))
+              ? (id: string, ctx: BindingChunkingContext) =>
+                  name(id, new ChunkingContextImpl(ctx, pluginContextData))
               : name,
         };
       }),

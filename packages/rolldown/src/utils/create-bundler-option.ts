@@ -67,7 +67,7 @@ export async function createBundlerOptions(
 
   try {
     // Convert `InputOptions` to `BindingInputOptions`
-    const bindingInputOptions = bindingifyInputOptions(
+    const { options: bindingInputOptions, pluginContextData } = bindingifyInputOptions(
       plugins,
       inputOptions,
       outputOptions,
@@ -78,8 +78,8 @@ export async function createBundlerOptions(
       watchMode,
     );
 
-    // Convert `OutputOptions` to `BindingInputOptions`
-    const bindingOutputOptions = bindingifyOutputOptions(outputOptions);
+    // Convert `OutputOptions` to `BindingOutputOptions`
+    const bindingOutputOptions = bindingifyOutputOptions(outputOptions, pluginContextData);
 
     return {
       bundlerOptions: {

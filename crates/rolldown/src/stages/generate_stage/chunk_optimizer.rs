@@ -597,6 +597,7 @@ impl GenerateStage<'_> {
             module_table,
             dynamic_entry_to_dynamic_importers,
             entry_chunk_reference,
+            &info.modules,
           )
         },
       )
@@ -749,18 +750,38 @@ impl GenerateStage<'_> {
   /// gain `D`'s chunk as a static dependency, no load can reach them without
   /// `D` already being loaded.
   ///
-  /// The leak guard rejects `D` when any user-defined entry reaches one of the
-  /// covered dynamic entries without also reaching `D` — after the merge that
-  /// other path would pull `D`'s chunk in as a static dep and run `D`'s side
-  /// effects on a load that previously did not touch `D`.
+  /// Two extra guards:
+  /// - **Export-pollution guard:** rejects the merge when any pending module
+  ///   has named exports. Those exports would still be needed cross-chunk by
+  ///   the other dynamic entries, forcing `D`'s chunk file to expose them at
+  ///   the file level — which is what `import('./D.js')` resolves to at
+  ///   runtime, polluting the dynamic-entry namespace observed by callers.
+  /// - **Side-effect leak guard:** rejects `D` when any user-defined entry
+  ///   reaches one of the covered dynamic entries without also reaching `D` —
+  ///   after the merge that other path would pull `D`'s chunk in as a static
+  ///   dep and run `D`'s side effects on a load that previously did not
+  ///   touch `D`.
   fn find_dynamic_dominator(
     dynamic_entry: &[ChunkIdx],
     dynamic_entry_modules: &[ModuleIdx],
     module_table: &ModuleTable,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
+    pending_modules: &[ModuleIdx],
   ) -> Option<ChunkIdx> {
     if dynamic_entry.len() < 2 {
+      return None;
+    }
+    // Refuse the merge whenever any pending module exposes named exports. The
+    // other dynamic-entry chunks in `chunk_idxs` still need those exports
+    // cross-chunk, so after the merge the dominator's chunk would have to add
+    // them to its file-level export list — and that list is what
+    // `import('./dominator.js')` resolves to at runtime, polluting the
+    // dynamic-entry namespace observed by callers.
+    let exposes_exports = pending_modules
+      .iter()
+      .any(|m| module_table[*m].as_normal().is_some_and(|n| !n.named_exports.is_empty()));
+    if exposes_exports {
       return None;
     }
     dynamic_entry.iter().zip(dynamic_entry_modules.iter()).find_map(

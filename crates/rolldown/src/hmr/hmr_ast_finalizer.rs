@@ -675,18 +675,17 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       let import_expr = self.builder.expression_import(SPAN, url_expr, None, None);
 
       // Build: __rolldown_runtime__.loadExports("<stable_proxy_id>")
-      let load_exports_call =
-        ast::Expression::CallExpression(self.builder.alloc_call_expression(
+      let load_exports_call = ast::Expression::CallExpression(self.builder.alloc_call_expression(
+        SPAN,
+        self.snippet.id_ref_expr("__rolldown_runtime__.loadExports", SPAN),
+        NONE,
+        self.builder.vec1(ast::Argument::StringLiteral(self.builder.alloc_string_literal(
           SPAN,
-          self.snippet.id_ref_expr("__rolldown_runtime__.loadExports", SPAN),
-          NONE,
-          self.builder.vec1(ast::Argument::StringLiteral(self.builder.alloc_string_literal(
-            SPAN,
-            self.builder.str(&importee.stable_id),
-            None,
-          ))),
-          false,
-        ));
+          self.builder.str(&importee.stable_id),
+          None,
+        ))),
+        false,
+      ));
 
       // Build: () => __rolldown_runtime__.loadExports("<stable_proxy_id>")
       let arrow_fn = self.builder.expression_arrow_function(

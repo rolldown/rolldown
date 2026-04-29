@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "default" is not exported by "foo.ts".
+[MISSING_EXPORT] "default" is not exported by "foo.ts".
    ╭─[ main.ts:1:8 ]
    │
  1 │ import dc_def, { bar as dc } from "./foo";

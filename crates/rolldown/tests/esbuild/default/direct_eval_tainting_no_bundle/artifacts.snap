@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Cannot assign to 'eval' in strict mode
+[PARSE_ERROR] Cannot assign to 'eval' in strict mode
     ╭─[ entry.js:21:16 ]
     │
  21 │ function test4(eval) {

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## IMPORT_IS_UNDEFINED
 
 ```text
-[IMPORT_IS_UNDEFINED] Warning: Import `missing` will always be undefined because there is no matching export in 'empty.js'
+[IMPORT_IS_UNDEFINED] Import `missing` will always be undefined because there is no matching export in 'empty.js'
    ╭─[ common.js:2:37 ]
    │
  2 │ export function foo() { return [ns, ns.missing] }
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## IMPORT_IS_UNDEFINED
 
 ```text
-[IMPORT_IS_UNDEFINED] Warning: Import `missing` will always be undefined because there is no matching export in 'empty.js'
+[IMPORT_IS_UNDEFINED] Import `missing` will always be undefined because there is no matching export in 'empty.js'
    ╭─[ common.js:3:33 ]
    │
  3 │ export function bar() { return [ns.missing] }

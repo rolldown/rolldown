@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
+[PARSE_ERROR] Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[ main.js:1:8 ]
    │
  1 │ invalid syntax

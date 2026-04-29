@@ -6,6 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_ENTRY
 
 ```text
-[UNRESOLVED_ENTRY] Error: Cannot resolve entry module ./main.js.
+[UNRESOLVED_ENTRY] Cannot resolve entry module ./main.js.
 
 ```

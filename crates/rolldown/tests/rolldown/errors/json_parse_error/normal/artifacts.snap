@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## JSON_PARSE
 
 ```text
-[JSON_PARSE] Error: expected value at line 3 column 1
+[JSON_PARSE] expected value at line 3 column 1
    ╭─[ test.json:3:1 ]
    │
  3 │ }

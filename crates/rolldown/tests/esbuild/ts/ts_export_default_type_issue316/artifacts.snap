@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "default" is not exported by "keep/declare-class.ts".
+[MISSING_EXPORT] "default" is not exported by "keep/declare-class.ts".
    ╭─[ entry.ts:1:8 ]
    │
  1 │ import dc_def, { bar as dc } from './keep/declare-class'
@@ -21,7 +21,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "default" is not exported by "keep/declare-let.ts".
+[MISSING_EXPORT] "default" is not exported by "keep/declare-let.ts".
    ╭─[ entry.ts:2:8 ]
    │
  2 │ import dl_def, { bar as dl } from './keep/declare-let'

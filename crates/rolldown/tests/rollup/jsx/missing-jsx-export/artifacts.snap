@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "jsx" is not exported by "local/jsx-runtime.js".
+[MISSING_EXPORT] "jsx" is not exported by "local/jsx-runtime.js".
    ╭─[ main.js:1:1 ]
    │
  1 │ const Foo = () => {};

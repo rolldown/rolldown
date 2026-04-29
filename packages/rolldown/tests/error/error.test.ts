@@ -145,7 +145,7 @@ describe('Plugin closeBundle hook', async () => {
     } catch (error: any) {
       expect(error.message).toMatchInlineSnapshot(
         `
-        "[ALREADY_CLOSED] Error: Bundle is already closed, no more calls to "generate" or "write" are allowed.
+        "[ALREADY_CLOSED] Bundle is already closed, no more calls to "generate" or "write" are allowed.
         "
       `,
       );

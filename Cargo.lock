@@ -2846,9 +2846,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-ariadne"
-version = "0.5.3"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77dff57c9de498bb1eb5b1ce682c2e3a0ae956b266fa0933c3e151b87b078967"
+checksum = "ee296fe9ac0007f2c0eff04d55c980de537aa3d736e873d70c9c47d4c737ea44"
 dependencies = [
  "unicode-width",
  "yansi",

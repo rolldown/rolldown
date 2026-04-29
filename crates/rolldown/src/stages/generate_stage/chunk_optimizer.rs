@@ -763,62 +763,67 @@ impl GenerateStage<'_> {
     if dynamic_entry.len() < 2 {
       return None;
     }
-    let dynamic_entry_set: FxHashSet<ChunkIdx> = dynamic_entry.iter().copied().collect();
-    for (candidate_pos, (chunk_idx, entry_module_idx)) in
-      dynamic_entry.iter().zip(dynamic_entry_modules.iter()).enumerate()
-    {
-      let mut reachable: FxHashSet<ModuleIdx> = FxHashSet::default();
-      let mut queue: VecDeque<ModuleIdx> = VecDeque::from([*entry_module_idx]);
-      while let Some(cur) = queue.pop_front() {
-        if !reachable.insert(cur) {
-          continue;
-        }
-        let Some(module) = module_table[cur].as_normal() else {
-          continue;
-        };
-        for rec in &module.import_records {
-          if let Some(dep_idx) = rec.resolved_module
-            && !reachable.contains(&dep_idx)
-          {
-            queue.push_back(dep_idx);
-          }
-        }
-      }
+    dynamic_entry.iter().zip(dynamic_entry_modules.iter()).find_map(
+      |(candidate_chunk_idx, candidate_module_idx)| {
+        let reach = Self::collect_module_graph_reach(*candidate_module_idx, module_table);
 
-      let dominates_others =
-        dynamic_entry_modules.iter().enumerate().all(|(idx, other_entry_module_idx)| {
-          if idx == candidate_pos {
-            return true;
-          }
-          if !reachable.contains(other_entry_module_idx) {
+        let dominates = dynamic_entry.iter().zip(dynamic_entry_modules.iter()).all(
+          |(other_chunk_idx, other_module_idx)| {
+            if other_chunk_idx == candidate_chunk_idx {
+              return true;
+            }
+            if !reach.contains(other_module_idx) {
+              return false;
+            }
+            let Some(other_module) = module_table[*other_module_idx].as_normal() else {
+              return false;
+            };
+            let static_importers_in_reach =
+              other_module.importers_idx.iter().all(|i| reach.contains(i));
+            let dynamic_importers_in_reach = dynamic_entry_to_dynamic_importers
+              .get(other_module_idx)
+              .is_none_or(|imps| imps.iter().all(|i| reach.contains(i)));
+            static_importers_in_reach && dynamic_importers_in_reach
+          },
+        );
+        if !dominates {
+          return None;
+        }
+
+        let leak = entry_chunk_reference.values().any(|reached_dynamic_chunks| {
+          if reached_dynamic_chunks.contains(candidate_chunk_idx) {
+            // The user-defined entry already loads the candidate before the
+            // other dynamic entries — no extra side effects can leak.
             return false;
           }
-          let Some(other_module) = module_table[*other_entry_module_idx].as_normal() else {
-            return false;
-          };
-          let static_importers_ok =
-            other_module.importers_idx.iter().all(|importer| reachable.contains(importer));
-          let dynamic_importers_ok = dynamic_entry_to_dynamic_importers
-            .get(other_entry_module_idx)
-            .is_none_or(|importers| importers.iter().all(|i| reachable.contains(i)));
-          static_importers_ok && dynamic_importers_ok
+          dynamic_entry
+            .iter()
+            .any(|other| other != candidate_chunk_idx && reached_dynamic_chunks.contains(other))
         });
-      if !dominates_others {
+        (!leak).then_some(*candidate_chunk_idx)
+      },
+    )
+  }
+
+  /// BFS the module graph from `start`, following every resolved import-record
+  /// edge regardless of import kind. Returns the set of modules transitively
+  /// reachable from `start`, including `start` itself.
+  fn collect_module_graph_reach(
+    start: ModuleIdx,
+    module_table: &ModuleTable,
+  ) -> FxHashSet<ModuleIdx> {
+    let mut reached = FxHashSet::default();
+    let mut queue = VecDeque::from([start]);
+    while let Some(cur) = queue.pop_front() {
+      if !reached.insert(cur) {
         continue;
       }
-
-      let leak = entry_chunk_reference.values().any(|reached| {
-        let reaches_some_other = dynamic_entry_set.iter().any(|d| reached.contains(d));
-        let reaches_dominator = reached.contains(chunk_idx);
-        reaches_some_other && !reaches_dominator
-      });
-      if leak {
+      let Some(module) = module_table[cur].as_normal() else {
         continue;
-      }
-
-      return Some(*chunk_idx);
+      };
+      queue.extend(module.import_records.iter().filter_map(|rec| rec.resolved_module));
     }
-    None
+    reached
   }
 
   /// Finds empty dynamic entry chunks that should be merged with their target common chunks.

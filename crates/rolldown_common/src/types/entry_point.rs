@@ -5,16 +5,41 @@ use oxc::allocator::Address;
 
 use crate::{ImportRecordIdx, ModuleIdx, StmtInfoIdx};
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+oxc_index::define_index_type! { pub struct EntryIdx = u32; }
+
+#[derive(Debug, Clone)]
 pub struct EntryPoint {
   pub name: Option<ArcStr>,
-  pub idx: ModuleIdx,
+  pub module_idx: ModuleIdx,
+  pub entry_index: EntryIdx,
   pub kind: EntryPointKind,
   /// emitted chunk specified filename, used to generate chunk filename
   pub file_name: Option<ArcStr>,
   /// which stmts create this entry point
   pub related_stmt_infos: Vec<(ModuleIdx, StmtInfoIdx, Address, ImportRecordIdx)>,
 }
+
+impl Hash for EntryPoint {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.name.hash(state);
+    self.module_idx.hash(state);
+    self.kind.hash(state);
+    self.file_name.hash(state);
+    self.related_stmt_infos.hash(state);
+  }
+}
+
+impl PartialEq for EntryPoint {
+  fn eq(&self, other: &Self) -> bool {
+    self.name == other.name
+      && self.module_idx == other.module_idx
+      && self.kind == other.kind
+      && self.file_name == other.file_name
+      && self.related_stmt_infos == other.related_stmt_infos
+  }
+}
+
+impl Eq for EntryPoint {}
 
 #[derive(Debug, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum EntryPointKind {

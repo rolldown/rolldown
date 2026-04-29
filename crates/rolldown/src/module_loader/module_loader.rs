@@ -4,7 +4,6 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use futures::future::join_all;
-use itertools::Itertools;
 use oxc::semantic::{ScopeId, Scoping};
 use oxc::span::Span;
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
@@ -12,7 +11,7 @@ use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::{
-  EcmaModuleAstUsage, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule,
+  EcmaModuleAstUsage, EcmaRelated, EntryIdx, EntryPoint, EntryPointKind, ExternalModule,
   ExternalModuleTaskResult, FlatOptions, HybridIndexVec, ImportKind, ImportRecordIdx,
   ImportRecordMeta, ImportedExports, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg,
   ModuleType, NormalModuleTaskResult, PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId,
@@ -306,11 +305,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut entry_points = FxIndexSet::default();
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
     for (name, resolved_id) in user_defined_entries.iter().cloned() {
-      let idx = self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries);
-      user_defined_entry_ids.insert(idx);
+      let module_idx =
+        self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries);
+      user_defined_entry_ids.insert(module_idx);
       entry_points.insert(EntryPoint {
-        idx,
+        module_idx,
         name,
+        entry_index: EntryIdx::from_raw(0),
         kind: EntryPointKind::UserDefined,
         file_name: None,
         related_stmt_infos: vec![],
@@ -619,7 +620,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
           let entry = EntryPoint {
             name: data.name.clone(),
-            idx: module_idx,
+            module_idx,
+            entry_index: EntryIdx::from_raw(0),
             kind: EntryPointKind::EmittedUserDefined,
             file_name: data.file_name.clone(),
             related_stmt_infos: vec![],
@@ -713,7 +715,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // Some module was not treated as an entry, but was emitted by `this.emitFile` during
     // processing, those module info also need to be updated
     // see https://github.com/rolldown/rolldown/issues/5030 as an example
-    idx_of_module_info_need_update.extend(extra_entry_points.iter().map(|item| item.idx));
+    idx_of_module_info_need_update.extend(extra_entry_points.iter().map(|item| item.module_idx));
     idx_of_module_info_need_update.into_par_iter().for_each(|idx| {
       let module = module_table.get(idx);
       let Some(module) = module.as_normal() else {
@@ -729,13 +731,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // When a module is both dynamically imported AND emitted via this.emitFile,
     // the emitted entry takes priority (it has user-specified name, fileName, preserveSignature)
     let emitted_entry_indices: FxHashSet<ModuleIdx> =
-      extra_entry_points.iter().map(|e| e.idx).collect();
+      extra_entry_points.iter().map(|e| e.module_idx).collect();
 
     for (idx, related_stmt_infos) in dynamic_import_entry_ids {
       if !emitted_entry_indices.contains(&idx) {
         entry_points.insert(EntryPoint {
           name: None,
-          idx,
+          module_idx: idx,
+          entry_index: EntryIdx::from_raw(0),
           kind: EntryPointKind::DynamicImport,
           file_name: None,
           related_stmt_infos,
@@ -748,7 +751,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       Err(BuildDiagnostic::invalid_option(rolldown_error::InvalidOptionType::NoEntryPoint))?;
     }
 
-    let entry_points = entry_points.into_iter().collect_vec();
+    let mut entry_points: Vec<EntryPoint> = entry_points.into_iter().collect();
+    for (i, entry) in entry_points.iter_mut().enumerate() {
+      entry.entry_index = EntryIdx::from_raw(i.try_into().expect("Too many entry points"));
+    }
     // if it is in incremental mode, we skip the runtime module, since it is always there
     // so use a dummy runtime_brief as a placeholder
     let runtime = if self.is_full_scan {

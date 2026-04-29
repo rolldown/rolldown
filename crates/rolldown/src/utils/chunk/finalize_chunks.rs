@@ -110,6 +110,11 @@ pub async fn finalize_assets(
     })
     .collect::<Vec<_>>()
     .into();
+  let sourcemap_final_hashes = if matches!(&options.sourcemap, Some(SourceMapType::Inline) | None) {
+    vec![]
+  } else {
+    generate_sourcemap_hashes_by_idx(&index_instantiated_chunks, hash_base)
+  };
 
   let final_hashes_by_placeholder = index_final_hashes
     .iter_enumerated()
@@ -119,6 +124,7 @@ pub async fn finalize_assets(
       })
     })
     .flatten()
+    .chain(get_sourcemap_hashes_by_placeholder(&sourcemap_final_hashes, &index_instantiated_chunks))
     .collect::<FxHashMap<_, _>>();
 
   let mut assets: AssetVec = index_instantiated_chunks
@@ -134,9 +140,20 @@ pub async fn finalize_assets(
       )
       .into();
 
+      let preliminary_filename_str =
+        instantiated_chunk.preliminary_sourcemap_filename.as_ref().map(|f| f.as_str());
+
       if let InstantiationKind::Ecma(ecma_meta) = &mut instantiated_chunk.kind {
         let (_, debug_id) = index_final_hashes[asset_idx];
         ecma_meta.debug_id = debug_id;
+        ecma_meta.sourcemap_filename = preliminary_filename_str.map(|str| {
+          replace_placeholder_with_hash(
+            str,
+            &final_hashes_by_placeholder,
+            &HASH_PLACEHOLDER_LEFT_FINDER,
+          )
+          .into()
+        });
       }
       if let StrOrBytes::Str(content) = &mut instantiated_chunk.content {
         if let Cow::Owned(replaced) = replace_placeholder_with_hash(
@@ -199,6 +216,7 @@ pub async fn finalize_assets(
             asset.filename.as_str(),
             ecma_meta.debug_id,
             /*is_css*/ false,
+            ecma_meta.sourcemap_filename.clone(),
           )
           .await?
           {
@@ -212,16 +230,17 @@ pub async fn finalize_assets(
                 original_file_names: sourcemap_asset.original_file_names,
               })),
             }));
+            if ecma_meta.sourcemap_filename.is_none() {
+              let sourcemap_filename =
+                if matches!(options.sourcemap, Some(SourceMapType::Inline) | None) {
+                  None
+                } else {
+                  Some(concat_string!(asset.filename, ".map"))
+                };
+              ecma_meta.sourcemap_filename = sourcemap_filename;
+            }
           }
         }
-
-        let sourcemap_filename = if matches!(options.sourcemap, Some(SourceMapType::Inline) | None)
-        {
-          None
-        } else {
-          Some(concat_string!(asset.filename, ".map"))
-        };
-        ecma_meta.sourcemap_filename = sourcemap_filename;
         asset.content = code.into();
       }
       InstantiationKind::None | InstantiationKind::Sourcemap(_) => {}
@@ -233,6 +252,46 @@ pub async fn finalize_assets(
   assets.extend(derived_assets.into_iter().flatten());
 
   Ok(assets)
+}
+
+fn generate_sourcemap_hashes_by_idx(
+  index_instantiated_chunks: &IndexInstantiatedChunks,
+  hash_base: u8,
+) -> Vec<(InsChunkIdx, String)> {
+  index_instantiated_chunks
+    .par_iter()
+    .enumerate()
+    .filter_map(|(idx, chunk)| {
+      // create hashes based on sourcemaps -> replace chunkhash with index_final_hashes -> replace hash with hashes based on sourcemaps -> assign en result to ecma_meta.sourcemap_filename
+      let (Some(map), Some(preliminary_sourcemap_filename)) =
+        (&chunk.map, &chunk.preliminary_sourcemap_filename)
+      else {
+        return None;
+      };
+      let mut hasher = Xxh3::default();
+      preliminary_sourcemap_filename.hash(&mut hasher);
+      map.to_json_string().hash(&mut hasher);
+      let hash = encode_hash_with_base(&hasher.digest128().to_le_bytes(), hash_base);
+      Some((InsChunkIdx::from(idx), hash))
+    })
+    .collect()
+}
+fn get_sourcemap_hashes_by_placeholder<'a>(
+  sourcemap_final_hashes: &'a [(InsChunkIdx, String)],
+  index_instantiated_chunks: &IndexInstantiatedChunks,
+) -> impl Iterator<Item = (String, &'a str)> {
+  sourcemap_final_hashes
+    .iter()
+    .filter_map(|(idx, hash)| {
+      index_instantiated_chunks[*idx]
+        .preliminary_sourcemap_filename
+        .as_ref()
+        .and_then(|filename| filename.hash_placeholder())
+        .map(|placeholders| {
+          placeholders.iter().map(|placeholder| (placeholder.clone(), &hash[..placeholder.len()]))
+        })
+    })
+    .flatten()
 }
 
 fn collect_transitive_dependencies(

@@ -102,7 +102,7 @@ pub mod bundler_options {
 // We don't want internal position adjustment of files affect users, so all items are exported in the root.
 pub use crate::{
   chunk::{
-    Chunk, ChunkMeta, PostChunkOptimizationOperation,
+    Chunk, ChunkMeta, PostChunkOptimizationOperation, PreliminarySourcemapFilename,
     chunk_table::ChunkTable,
     types::{
       AddonRenderContext,

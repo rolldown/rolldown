@@ -2900,6 +2900,7 @@ export interface JsOutputChunk {
   map?: BindingSourcemap
   sourcemapFilename?: string
   preliminaryFilename: string
+  preliminarySourcemapFilename?: string
 }
 
 /** Error emitted from native side, it only contains kind and message, no stack trace. */

@@ -296,6 +296,14 @@ impl PluginDriver {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         if let Some(map) = self.normalize_transform_sourcemap(r.map, id, &code, r.code.as_ref()) {
           original_sourcemap_chain.push(SourcemapChainElement::Transform((plugin_idx, map)));
+          // Signal the background sourcemap thread that a non-MagicString
+          // sourcemap was produced, so any in-progress MagicStringChain for
+          // this module must be flushed before the next MagicString arrives.
+          if let Some(tx) = magic_string_tx.as_ref() {
+            tx.send(rolldown_common::SourceMapGenMsg::Barrier(module_idx)).expect(
+              "Failed to send Barrier to sourcemap worker — worker thread terminated unexpectedly",
+            );
+          }
         }
         plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
         if let Some(v) = r.side_effects {

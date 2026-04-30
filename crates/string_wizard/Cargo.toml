@@ -18,6 +18,7 @@ serde = { workspace = true, optional = true }
 
 [dev-dependencies]
 insta = { workspace = true }
+rolldown_sourcemap = { workspace = true }
 
 [features]
 default = ["sourcemap", "serde"]

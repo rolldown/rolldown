@@ -1,6 +1,7 @@
 mod chunk;
 mod joiner;
 mod magic_string;
+mod magic_string_chain;
 #[cfg(feature = "sourcemap")]
 mod source_map;
 mod span;
@@ -16,6 +17,7 @@ pub use crate::{
     MagicString, MagicStringOptions, indent::IndentOptions, replace::ReplaceOptions,
     update::UpdateOptions,
   },
+  magic_string_chain::MagicStringChain,
 };
 
 #[cfg(feature = "sourcemap")]

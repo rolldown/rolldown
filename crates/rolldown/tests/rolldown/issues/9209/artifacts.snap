@@ -1,0 +1,46 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## card/components/card.js
+
+```js
+//#region packages/card/components/card.js
+function Card() {
+	return "card";
+}
+//#endregion
+export { Card as default };
+
+```
+
+## card/components/content-card.js
+
+```js
+//#region packages/card/components/content-card.js
+function BigCard() {
+	return "big-card";
+}
+//#endregion
+export { BigCard };
+
+```
+
+## card/index.js
+
+```js
+import Card from "./components/card.js";
+import { BigCard } from "./components/content-card.js";
+export { BigCard, Card };
+
+```
+
+## ui/index.js
+
+```js
+import Card from "../card/components/card.js";
+import { BigCard } from "../card/components/content-card.js";
+export { BigCard, Card };
+
+```

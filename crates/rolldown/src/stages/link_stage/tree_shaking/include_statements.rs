@@ -837,6 +837,12 @@ pub fn include_statement(
     return;
   }
 
+  // In preserve-modules mode, emitting a module file requires preserving the
+  // module boundary once any statement inside that module becomes reachable.
+  if ctx.options.preserve_modules {
+    include_module(ctx, module);
+  }
+
   let stmt_info = module.stmt_infos.get(stmt_info_idx);
 
   // FIXME: bailout for require() import for now

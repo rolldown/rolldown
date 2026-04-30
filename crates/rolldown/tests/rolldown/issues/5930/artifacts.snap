@@ -37,6 +37,13 @@ module.exports = plugin;
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 exports.__commonJSMin = __commonJSMin;
+exports.__copyProps = __copyProps;
+exports.__create = __create;
+exports.__defProp = __defProp;
+exports.__getOwnPropDesc = __getOwnPropDesc;
+exports.__getOwnPropNames = __getOwnPropNames;
+exports.__getProtoOf = __getProtoOf;
+exports.__hasOwnProp = __hasOwnProp;
 exports.__toESM = __toESM;
 
 ```

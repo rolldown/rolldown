@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      {
+        "import": "./packages/ui/index.js"
+      }
+    ],
+    "preserveModules": true
+  },
+  "expectExecuted": false
+}

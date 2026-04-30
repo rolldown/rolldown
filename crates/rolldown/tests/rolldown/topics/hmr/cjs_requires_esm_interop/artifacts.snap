@@ -1,0 +1,107 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: shim.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region data.json
+var require_data = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	__rolldown_runtime__.createModuleHotContext("data.json");
+	__rolldown_runtime__.registerModule("data.json", module);
+	module.exports = [
+		"a",
+		"b",
+		"c"
+	];
+}));
+//#endregion
+//#region esm.js
+var esm_exports = /* @__PURE__ */ __exportAll({
+	X: () => 1,
+	default: () => esm_default
+}), esm_default;
+var init_esm = __esmMin((() => {
+	__rolldown_runtime__.createModuleHotContext("esm.js");
+	__rolldown_runtime__.registerModule("esm.js", { exports: esm_exports });
+	esm_default = "esm-default";
+}));
+//#endregion
+//#region shim.js
+var shim_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("shim.js");
+__rolldown_runtime__.registerModule("shim.js", { exports: shim_exports });
+const tags = require_data();
+assert.deepStrictEqual(tags, [
+	"a",
+	"b",
+	"c"
+]);
+const fromEsm = (init_esm(), __toCommonJS(esm_exports));
+assert.strictEqual(fromEsm.X, 1);
+assert.strictEqual(fromEsm.default, "esm-default");
+assert.strictEqual(fromEsm.__esModule, true);
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+main_hot.accept("shim.js", () => {});
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.strictEqual(globalThis.__cjs_requires_esm_interop_patch_ran, true, "shim.js HMR patch should have executed");
+});
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+//#region shim.js
+import * as import_node_assert_00 from "node:assert";
+var init_shim_0 = __rolldown_runtime__.createEsmInitializer("shim.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_shim = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const tags = __rolldown_runtime__.loadExports("data.json");
+		import_node_assert_00.default.deepStrictEqual(tags, [
+			"a",
+			"b",
+			"c"
+		]);
+		const fromEsm = __rolldown_runtime__.__toCommonJS(__rolldown_runtime__.loadExports("esm.js"));
+		import_node_assert_00.default.strictEqual(fromEsm.X, 1);
+		import_node_assert_00.default.strictEqual(fromEsm.default, "esm-default");
+		import_node_assert_00.default.strictEqual(fromEsm.__esModule, true);
+		globalThis.__cjs_requires_esm_interop_patch_ran = true;
+	} finally {}
+}));
+
+//#endregion
+init_shim_0()
+__rolldown_runtime__.applyUpdates([['main.js', 'shim.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: main.js, accepted_via: shim.js

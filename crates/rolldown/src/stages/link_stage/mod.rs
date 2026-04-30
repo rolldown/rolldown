@@ -5,9 +5,9 @@ use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  ConstExportMeta, EntryPoint, EntryPointKind, FlatOptions, ImportKind, ModuleIdx, ModuleTable,
-  PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb, UsedSymbolRefs,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, EntryPointKind, FlatOptions, ImportKind,
+  ModuleIdx, ModuleTable, PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
+  UsedSymbolRefs, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 #[cfg(target_family = "wasm")]
@@ -87,6 +87,10 @@ pub struct LinkStage<'a> {
   pub module_table: ModuleTable,
   pub entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>>,
   pub symbols: SymbolRefDb,
+  /// Per-module runtime-helper-dependency map. Detached from `EcmaView` so the
+  /// parallel walk in `reference_needed_symbols` can mutate it through `&mut`
+  /// from a zipped iterator without aliasing tricks.
+  pub depended_runtime_helper: IndexVec<ModuleIdx, Box<DependedRuntimeHelperMap>>,
   pub runtime: RuntimeModuleBrief,
   pub sorted_modules: Vec<ModuleIdx>,
   pub metas: LinkingMetadataVec,
@@ -148,6 +152,12 @@ impl<'a> LinkStage<'a> {
     Self {
       sorted_modules: Vec::new(),
       global_constant_symbol_map: constant_symbol_map,
+      depended_runtime_helper: scan_stage_output
+        .module_table
+        .modules
+        .iter()
+        .map(|_| Box::default())
+        .collect::<IndexVec<ModuleIdx, _>>(),
       metas: scan_stage_output
         .module_table
         .modules

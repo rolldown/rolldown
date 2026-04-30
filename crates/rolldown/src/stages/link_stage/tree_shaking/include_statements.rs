@@ -339,11 +339,14 @@ impl LinkStage<'_> {
       .modules
       .par_iter_mut()
       .zip_eq(self.metas.par_iter_mut())
-      .filter_map(|(m, meta)| m.as_normal_mut().map(|m| (m, meta)))
-      .for_each(|(module, meta)| {
+      .zip_eq(self.depended_runtime_helper.par_iter())
+      .filter_map(|((m, meta), depended_helper)| {
+        m.as_normal_mut().map(|m| (m, meta, depended_helper))
+      })
+      .for_each(|(module, meta, depended_helper)| {
         let idx = module.idx;
         let mut normalized_runtime_helper = RuntimeHelper::default();
-        for (helper, stmt_info_idxs) in module.depended_runtime_helper.iter() {
+        for (helper, stmt_info_idxs) in depended_helper.iter() {
           if stmt_info_idxs.is_empty() {
             continue;
           }

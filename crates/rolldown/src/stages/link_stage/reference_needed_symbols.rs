@@ -34,8 +34,11 @@ impl LinkStage<'_> {
       .modules
       .par_iter()
       .zip(symbols_inner.par_iter_mut())
-      .filter_map(|(module, symbol_db)| module.as_normal().map(|importer| (importer, symbol_db)))
-      .map(|(importer, symbol_ref_for_module)| {
+      .zip(self.depended_runtime_helper.par_iter_mut())
+      .filter_map(|((module, symbol_db), depended_helper)| {
+        module.as_normal().map(|importer| (importer, symbol_db, depended_helper))
+      })
+      .map(|(importer, symbol_ref_for_module, depended_runtime_helper_map)| {
         let symbol_db =
           symbol_ref_for_module.as_mut().expect("normal module should have symbol db");
         let mut record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)> = vec![];
@@ -45,8 +48,6 @@ impl LinkStage<'_> {
         // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules
         // - Mutating and parallel reading is in different memory locations
         let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
-        let depended_runtime_helper_map =
-          unsafe { &mut *(addr_of!(importer.depended_runtime_helper).cast_mut()) };
         let mut symbols_to_be_declared = vec![];
         stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
           if stmt_info.meta.contains(StmtInfoMeta::HasDummyRecord) {

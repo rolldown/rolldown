@@ -1423,11 +1423,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let old_body = program.body.take_in(self.alloc);
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
-    old_body
-      .into_iter()
-      .enumerate()
-      .zip(self.ctx.module.stmt_infos.iter_enumerated().skip(1))
-      .for_each(|((_top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
+    old_body.into_iter().enumerate().zip(self.ctx.stmt_infos.iter_enumerated().skip(1)).for_each(
+      |((_top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
         let is_stmt_included = self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx);
 
         if !is_stmt_included {
@@ -1754,7 +1751,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if is_module_decl {
           last_import_stmt_idx = Some(program.body.len());
         }
-      });
+      },
+    );
     last_import_stmt_idx.unwrap_or(0)
   }
 

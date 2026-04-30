@@ -1,7 +1,7 @@
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
   ModuleType, NormalModule, PathsOutputOption, RenderedConcatenatedModuleParts, RuntimeModuleBrief,
-  SharedFileEmitter, SymbolRef, SymbolRefDb, UsedSymbolRefs,
+  SharedFileEmitter, StmtInfos, SymbolRef, SymbolRefDb, UsedSymbolRefs,
 };
 
 pub type FinalizerMutableFields = (
@@ -28,6 +28,9 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub chunk: &'me Chunk,
   pub chunk_idx: ChunkIdx,
   pub module: &'me NormalModule,
+  /// Statement-info table for the current module, threaded in from the
+  /// link-stage side `IndexVec<ModuleIdx, StmtInfos>` (see `LinkStage.stmt_infos`).
+  pub stmt_infos: &'me StmtInfos,
   pub modules: &'me IndexModules,
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,

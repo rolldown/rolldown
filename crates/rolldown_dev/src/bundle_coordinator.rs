@@ -449,7 +449,7 @@ impl BundleCoordinator {
     let mut paths_mut = watcher.paths_mut();
     for watch_file in watch_files.iter() {
       let watch_file = &**watch_file;
-      if !self.watched_files.contains(watch_file) {
+      if !self.watched_files.contains(watch_file) && !watch_file.contains("node_modules") {
         self.watched_files.insert(watch_file.to_string().into());
         paths_mut.add(watch_file.as_path(), RecursiveMode::NonRecursive)?;
       }

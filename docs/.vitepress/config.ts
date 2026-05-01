@@ -315,7 +315,7 @@ const config = defineConfig({
         items: [
           {
             text: 'Team',
-            activeMatch: '/team',
+            activeMatch: '/(team|acknowledgements)',
             link: '/team.md',
           },
           {
@@ -326,11 +326,6 @@ const config = defineConfig({
           {
             text: 'Roadmap',
             link: 'https://github.com/rolldown/rolldown/discussions/153',
-          },
-          {
-            text: 'Acknowledgements',
-            activeMatch: '/acknowledgements',
-            link: '/acknowledgements.md',
           },
         ],
       },

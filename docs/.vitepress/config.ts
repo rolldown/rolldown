@@ -8,7 +8,7 @@ import { addOgImage } from 'vitepress-plugin-og';
 import { graphvizMarkdownPlugin } from 'vitepress-plugin-graphviz';
 import { createHooksGraphProcessor } from './markdown-hooks-graph.ts';
 
-const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
+const sidebarForGuide: DefaultTheme.SidebarItem[] = [
   {
     text: 'Guide',
     items: [
@@ -22,9 +22,47 @@ const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
     ],
   },
   {
-    text: 'APIs',
+    text: 'In-Depth',
+    collapsed: true,
     items: [
-      { text: 'Configuration Options', link: '/reference' },
+      { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
+      {
+        text: 'Why Plugin Hook Filter',
+        link: '/in-depth/why-plugin-hook-filter.md',
+      },
+      { text: 'Module Types', link: '/in-depth/module-types.md' },
+      { text: 'External Modules', link: '/in-depth/external-modules.md' },
+      { text: 'Directives', link: '/in-depth/directives.md' },
+      { text: 'Automatic Code Splitting', link: '/in-depth/automatic-code-splitting.md' },
+      { text: 'Manual Code Splitting', link: '/in-depth/manual-code-splitting.md' },
+      { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
+      {
+        text: 'Non ESM Output Formats',
+        link: '/in-depth/non-esm-output-formats.md',
+      },
+      { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
+      { text: 'Dead Code Elimination', link: '/in-depth/dead-code-elimination.md' },
+      { text: 'Lazy Barrel Optimization', link: '/in-depth/lazy-barrel-optimization.md' },
+      { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
+    ],
+  },
+  {
+    text: 'Glossary',
+    collapsed: true,
+    items: [
+      { text: 'Barrel Module', link: '/glossary/barrel-module.md' },
+      { text: 'Entry', link: '/glossary/entry.md' },
+      { text: 'Entry Chunk', link: '/glossary/entry-chunk.md' },
+      { text: 'Entry Name', link: '/glossary/entry-name.md' },
+      { text: 'User-defined Entry', link: '/glossary/user-defined-entry.md' },
+    ],
+  },
+];
+
+const sidebarForApi: DefaultTheme.SidebarItem[] = [
+  {
+    text: 'API',
+    items: [
       { text: 'Bundler API', link: '/apis/bundler-api.md' },
       {
         text: 'Plugin API',
@@ -42,8 +80,11 @@ const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
       { text: 'Command Line Interface', link: '/apis/cli.md' },
     ],
   },
+];
+
+const sidebarForPlugins: DefaultTheme.SidebarItem[] = [
   {
-    text: 'Builtin Plugins',
+    text: 'Built-in Plugins',
     items: [
       {
         text: 'Introduction',
@@ -57,33 +98,6 @@ const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
         text: 'builtin:replace',
         link: '/builtin-plugins/replace.md',
       },
-    ],
-  },
-];
-
-const sidebarForInDepth: DefaultTheme.SidebarItem[] = [
-  {
-    text: 'In-Depth',
-    items: [
-      { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
-      { text: 'Module Types', link: '/in-depth/module-types.md' },
-      { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
-      { text: 'Automatic Code Splitting', link: '/in-depth/automatic-code-splitting.md' },
-      { text: 'Manual Code Splitting', link: '/in-depth/manual-code-splitting.md' },
-      { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
-      {
-        text: 'Non ESM Output Formats',
-        link: '/in-depth/non-esm-output-formats.md',
-      },
-      { text: 'Dead Code Elimination', link: '/in-depth/dead-code-elimination.md' },
-      { text: 'Lazy Barrel Optimization', link: '/in-depth/lazy-barrel-optimization.md' },
-      { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
-      {
-        text: 'Why Plugin Hook Filter',
-        link: '/in-depth/why-plugin-hook-filter.md',
-      },
-      { text: 'External Modules', link: '/in-depth/external-modules.md' },
-      { text: 'Directives', link: '/in-depth/directives.md' },
     ],
   },
 ];
@@ -198,19 +212,6 @@ const sidebarForDevGuide: DefaultTheme.SidebarItem[] = [
   },
 ];
 
-const sidebarForGlossary: DefaultTheme.SidebarItem[] = [
-  {
-    text: 'Glossary',
-    items: [
-      { text: 'Barrel Module', link: '/glossary/barrel-module.md' },
-      { text: 'Entry', link: '/glossary/entry.md' },
-      { text: 'Entry Chunk', link: '/glossary/entry-chunk.md' },
-      { text: 'Entry Name', link: '/glossary/entry-name.md' },
-      { text: 'User-defined Entry', link: '/glossary/user-defined-entry.md' },
-    ],
-  },
-];
-
 const sidebarForResources: DefaultTheme.SidebarItem[] = [
   {
     text: 'Team',
@@ -292,27 +293,21 @@ const config = defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       {
-        text: 'Docs',
-        activeMatch: '/(guide|in-depth|glossary|apis|builtin-plugins)',
-        items: [
-          {
-            text: 'Guide',
-            activeMatch: '/(guide|apis|builtin-plugins)',
-            link: '/guide/getting-started.md',
-          },
-          {
-            text: 'In-Depth',
-            activeMatch: '/in-depth',
-            link: '/in-depth/why-bundlers.md',
-          },
-          {
-            text: 'Glossary',
-            activeMatch: '/glossary',
-            link: '/glossary/',
-          },
-        ],
+        text: 'Guide',
+        activeMatch: '/(guide|in-depth|glossary)',
+        link: '/guide/getting-started.md',
       },
-      { text: 'Options & APIs', activeMatch: '/reference', link: '/reference' },
+      { text: 'Reference', activeMatch: '/reference', link: '/reference' },
+      {
+        text: 'Plugins',
+        activeMatch: '/builtin-plugins',
+        link: '/builtin-plugins/',
+      },
+      {
+        text: 'API',
+        activeMatch: '/apis',
+        link: '/apis/bundler-api.md',
+      },
       { text: 'REPL', link: 'https://repl.rolldown.rs/' },
       {
         text: 'Resources',
@@ -320,35 +315,38 @@ const config = defineConfig({
         items: [
           {
             text: 'Team',
-            activeMatch: '/(team|acknowledgements)',
+            activeMatch: '/team',
             link: '/team.md',
           },
           {
             text: 'Contribute',
             activeMatch: '/(contribution-guide|development-guide)',
-
             link: '/contribution-guide/',
           },
-
           {
             text: 'Roadmap',
             link: 'https://github.com/rolldown/rolldown/discussions/153',
+          },
+          {
+            text: 'Acknowledgements',
+            activeMatch: '/acknowledgements',
+            link: '/acknowledgements.md',
           },
         ],
       },
     ],
 
     sidebar: {
-      // --- Guide ---
-      '/guide/': sidebarForUserGuide,
-      '/apis/': sidebarForUserGuide,
-      '/builtin-plugins/': sidebarForUserGuide,
-      // --- In-Depth ---
-      '/in-depth/': sidebarForInDepth,
-      // --- Reference ---
+      // --- Guide (includes In-Depth and Glossary as collapsed sections) ---
+      '/guide/': sidebarForGuide,
+      '/in-depth/': sidebarForGuide,
+      '/glossary/': sidebarForGuide,
+      // --- Reference (options + typedoc dictionary) ---
       '/reference/': sidebarForReference,
-      // --- Glossary ---
-      '/glossary/': sidebarForGlossary,
+      // --- Plugins ---
+      '/builtin-plugins/': sidebarForPlugins,
+      // --- API ---
+      '/apis/': sidebarForApi,
       // --- Contribute ---
       '/contribution-guide/': sidebarForDevGuide,
       '/development-guide/': sidebarForDevGuide,
@@ -374,8 +372,9 @@ const config = defineConfig({
           title: 'Rolldown',
           items: [
             { text: 'Guide', link: '/guide/getting-started' },
-            { text: 'Options & APIs', link: '/reference' },
+            { text: 'Reference', link: '/reference' },
             { text: 'Plugins', link: '/builtin-plugins/' },
+            { text: 'API', link: '/apis/bundler-api' },
             { text: 'Contribute', link: '/contribution-guide/' },
             { text: 'REPL', link: 'https://repl.rolldown.rs/' },
           ],

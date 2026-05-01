@@ -1,125 +1,196 @@
 # Already-Loaded Atom Propagation — Default-On Regressions
 
 After flipping `experimental.alreadyLoadedAtomPropagation` default to `true`,
-3 fixtures fail in the rolldown integration suite (1697 pass, 3 fail).
+8 test cases regress (3 rolldown integration fixtures + 3 more
+fixtures uncovered by deeper investigation + 2 test262 cases).
 
-Root pattern: the optimization is mathematically correct (it strips
-dynamic-entry bits from modules guaranteed already-in-memory) but is unaware
-of rolldown-specific chunking constraints that the post-grouping
-`chunk_optimizer.rs` and `rehome_runtime_module` pipeline currently enforce.
-Pre-grouping bit mutation moves modules across chunks in ways those
-downstream passes don't expect.
+## Common root cause
 
-## Failing fixtures
+The pass is conceptually Rollup-like but currently too early and too
+unconditional. It strips dynamic-entry bits from modules **before** rolldown
+has enforced the safety constraints that the post-grouping `chunk_optimizer.rs`
++ `rehome_runtime_module` pipeline relies on. Specifically, the strip step is
+missing:
 
-### 1. `crates/rolldown/tests/rolldown/issues/9225/_config.json`
+1. **TLA / awaited dynamic-import distinction.** Rollup runs the analysis
+   twice (`already_loaded` and `awaited_already_loaded`) and only strips bits
+   that are loaded *non-awaited*. Rolldown does not track await context in
+   `import_record`, so we currently treat every dynamic import uniformly.
+2. **`preserveEntrySignatures` guard.** The chunk_optimizer's
+   `try_insert_into_existing_chunk` refuses to merge into a strict /
+   exports-only entry chunk when doing so would expose new exports. Our
+   pre-grouping strip routes modules directly into entry chunks via the bits
+   bucketing pass, bypassing that gate.
+3. **Cycle / dependency / side-effect validation.** Rollup's atom-level
+   analysis tracks `correlatedAtoms` and side-effect placement; our
+   per-module strip ignores these. Manual chunks, runtime helpers, and
+   shared static-dep chains can all close static-import cycles after a
+   strip.
+4. **DFS evaluation-order preservation.** Stripping a dynamic-entry bit
+   from a module that has side effects can hoist those side effects into a
+   different chunk and change the observable evaluation order.
 
-**Symptom**
+## Failing cases by root cause
 
+### A. TLA / awaited dynamic-import distinction
+
+#### `test262: language/module-code/top-level-await/module-graphs-does-not-hang.js`
+
+**Symptom:** `$DONE was not called` — the module never finishes resolving.
+
+**Shape:**
+```js
+import "./module-graphs-parent-tla_FIXTURE.js";
+await import("./module-graphs-grandparent-tla_FIXTURE.js");
+// parent → tla_FIXTURE.js (TLA)
+// grandparent → parent
+```
+
+**Why:** parent transitively depends on a TLA module; grandparent is
+imported via `await import(...)`. The pass strips bits without distinguishing
+awaited from non-awaited dynamic imports, producing an async evaluation
+shape that never settles.
+
+#### `test262: language/module-code/verify-dfs.js`
+
+**Symptom:** `Expected SameValue("B", "A") to be true` — modules evaluate
+out of DFS order.
+
+**Shape:**
+```js
+// verify-dfs.js
+import './verify-dfs-a_FIXTURE.js';
+import './verify-dfs-b_FIXTURE.js';
+
+// a fixture
+check(import('./verify-dfs-b_FIXTURE.js'));
+evaluated('A');
+
+// b fixture
+evaluated('B');
+```
+
+**Why:** B is treated as already-loaded for the dynamic import from A. The
+strip changes chunk placement / import edges enough that B's `evaluated('B')`
+side effect runs before A's, violating the spec'd DFS order.
+
+### B. `preserveEntrySignatures` guard
+
+#### `crates/rolldown/tests/rolldown/issues/9049/_config.json` — `extended-preserve-entry-signatures-strict` variant
+
+**Symptom:** `Expected 4 chunks but got 3`.
+
+**Why:** Shared services have their dynamic-route bits stripped (both routes'
+only importer is main, which statically reaches the services), leaving
+`bits = {main}`. Bucketing places them directly in main's entry chunk,
+bypassing the strict-signature check that lives inside
+`try_insert_into_existing_chunk`.
+
+The non-strict variant of this fixture passes correctly with the optimization.
+
+#### `crates/rolldown/tests/rolldown/issues/4895`
+
+**Symptom:** `strict.js` gains an unintended export. Output shifts from:
+
+```js
+import { t as shared } from "./lib2.js";
+export { unused };
+```
+
+to:
+
+```js
+const shared = "shared";
+export { shared as t, unused };
+```
+
+**Why:** `lib2.js` originally had bits for both the strict entry and its
+dynamic-import entry. The strip removes the dynamic bit (lib2 is reachable
+statically from the strict entry). Single-bit `lib2` then lands in strict's
+entry chunk via bucketing, exposing `shared as t` — a violation of
+`preserveEntrySignatures: 'strict'`.
+
+#### `crates/rolldown/tests/rolldown/misc/preserve_entry_signature/exports-only`
+
+**Symptom:** `main2.js` gains an unintended export. Same class as 4895 but
+for `preserveEntrySignatures: 'exports-only'` (which behaves like strict
+when the entry already has exports).
+
+```js
+// before
+export { unused };
+
+// after
+export { value as t, unused };
+```
+
+### C. Cycle / dependency / side-effect validation
+
+#### `crates/rolldown/tests/rolldown/issues/9225`
+
+**Symptom:**
 ```
 AssertionError: Output chunks must not have circular static imports
-graph: {"api.js":["main.js"],"lazy.js":["api.js"],"main.js":["api.js"], ...}
 cycle: api.js → main.js → api.js
 ```
 
-**Why it fires**
+**Why:** Manual code splitting extracts `api` into its own chunk. Static
+chain is `main → api → env → dep → side`. With the optimization, all
+dynamic bits get stripped from `env`/`dep`/`side` (the only dynamic-entry
+importers go through main, which statically reaches them). They land in
+main's chunk. `main → api` (static) and `api → main` (because main now holds
+`env` that api imports) close a cycle. Genuinely unsound — ESM evaluation
+hits TDZ on the back-edge.
 
-Manual code splitting extracts `api` into its own chunk. Static-import chain
-is `main → api → env → dep → side`. Without the optimization, `env`/`dep`/
-`side` carry multiple dynamic-entry bits and land in a common chunk separate
-from main, so the chain becomes `main → api → common-chunk` (acyclic).
+#### `crates/rolldown/tests/rolldown/tree_shaking/issue_4682`
 
-With the optimization, every dynamic entry's only importer is `main`, which
-statically reaches `env`/`dep`/`side`, so all dynamic bits get stripped.
-`env` lands in main's chunk. Now `main → api` (static) and
-`api → main` (because main holds `env` that api imports) closes the cycle.
+**Symptom:** Chunk graph gains an inverted edge — `static.js` ends up
+importing `main.js` while `main.js` still imports `static.js`.
 
-**What's needed**
-
-Make the strip step aware that `apply_manual_code_splitting` will pull
-modules into manual chunks. Either:
-- Run a cycle-detection-and-revert pass after stripping, OR
-- Don't strip a bit when stripping would route a static-dep edge through a
-  chunk that is itself statically downstream of the move target.
-
-This is genuinely unsound at runtime — ESM evaluation hits TDZ on the
-backedge. Fixing it likely requires reasoning about the eventual chunk
-graph, not just the bitsets in isolation.
-
-### 2. `crates/rolldown/tests/rolldown/issues/8920_2/_config.json`
-
-**Symptom**
-
-```
-AssertionError: entry-2.js should host the runtime module
+```js
+// static.js
+import "./main.js";
 ```
 
-The fixture asserts the runtime helpers (`__exportAll`) live in `entry-2.js`
-(the dominator of the runtime's consumer set). With the optimization, the
-runtime ends up in a separate `chunk.js`.
+**Why:** Strip moves part of the static-dep side-effect chain into main's
+chunk while `static.js` still depends on something main holds. Per-module
+stripping doesn't model Rollup's atom / correlated-side-effect grouping, so
+side-effect placement order is no longer preserved.
 
-**Why it fires**
+#### `crates/rolldown/tests/rolldown/issues/8920_2`
 
-The optimization moves `node2` out of a `{entry-2, node1-dyn}` common chunk
-into `entry-2`'s entry chunk. That changes the runtime-consumer chunk set
-seen by `rehome_runtime_module`'s dominator search; the new set has no
-dominator, so a fresh `rolldown-runtime.js`-style chunk gets emitted.
+**Symptom:** `entry-2.js should host the runtime module` — runtime ends up
+in a separate `chunk.js` instead of co-located with the dominator.
 
-I already special-cased the runtime module itself (excluded from the strip).
-That is necessary but not sufficient — the issue here is that *consumers* of
-runtime helpers (like `node2`) get repositioned, which still perturbs the
-dominator search.
+**Why:** Adjacent to category C (side-effect / placement). The strip moves
+`node2` out of the `{entry-2, node1-dyn}` common chunk into entry-2's entry
+chunk. That changes the runtime-consumer chunk set seen by
+`rehome_runtime_module`'s dominator search; the new set has no dominator,
+so a fresh runtime chunk is emitted.
 
-**What's needed**
+The runtime module itself is already excluded from the strip — necessary
+but not sufficient, because *consumers* of runtime helpers (modules with
+non-empty `depended_runtime_helper`) still get repositioned.
 
-Either: run the strip before bucketing as today but re-evaluate runtime
-placement against the post-strip topology (the existing `rehome_runtime_module`
-runs after bucketing — verify what it sees), or: exclude any module that
-has a non-empty `depended_runtime_helper` from the strip. The latter is
-heavy-handed (most modules touch helpers).
+## Suggested fix order
 
-### 3. `crates/rolldown/tests/rolldown/issues/9049/_config.json` — `extended-preserve-entry-signatures-strict` variant
+1. **Track awaited dynamic imports** in `import_record` and run the analysis
+   twice, only stripping bits that are loaded non-awaited. Closes test262
+   TLA + DFS cases.
+2. **Plumb `preserveEntrySignatures` into `apply_strip`.** Skip a strip if
+   the resulting bitset would land the module directly in a strict /
+   exports-only entry chunk that doesn't already export the relevant
+   bindings. Closes 9049-strict, 4895, exports-only.
+3. **Cycle-aware strip.** Either run a cycle-detection-and-revert pass on
+   the projected post-strip chunk graph, or restrict stripping to modules
+   whose static-dep closure does not pass through a chunk statically
+   downstream of the move target. Closes 9225, 4682, 8920_2.
+4. **Runtime-consumer awareness.** Once (3) lands, re-evaluate whether
+   modules with `depended_runtime_helper` need additional handling beyond
+   the cycle guard, or whether the dominator search just needs to be
+   re-run on the post-strip topology.
 
-**Symptom**
-
-```
-AssertionError: Expected 4 chunks but got 3: main.js, route0.js, route1.js
-```
-
-`svc0`/`svc1` are statically imported by main and dynamically reachable from
-both `route0` and `route1`. Under `preserveEntrySignatures: 'strict'`, the
-shared service must stay in its own chunk to avoid altering main's exports.
-
-**Why it fires**
-
-The optimization strips `svc0`/`svc1`'s `route0`/`route1` bits (both routes'
-only importer is main, which statically reaches the services). That leaves
-the services with bits = `{main}` only. They then land directly in main's
-entry chunk during bucketing — bypassing the strict-signature gate inside
-`try_insert_into_existing_chunk` (which only fires when a *common* chunk is
-about to be merged into a strict entry).
-
-**What's needed**
-
-Make the strip respect `preserveEntrySignatures: 'strict'`: do not strip the
-last non-entry bit from a module if the resulting bitset would route the
-module into a strict-signature entry chunk. Equivalent rule: `apply_strip`
-must check the target entry's `preserve_entry_signature` setting and bail.
-
-The default (non-strict) variant of 9049 actually *passes* with the
-optimization — 3 chunks, which matches the non-strict expected count.
-
-## Suggested next steps
-
-1. Add a cycle-detection-and-revert step inside `apply_strip`, or run the
-   strip through the same `would_create_circular_dependency` BFS that
-   `chunk_optimizer.rs` uses post-grouping (re-targeted to the projected
-   post-bucket chunk graph).
-2. Plumb `preserveEntrySignatures` info into the strip step and skip strips
-   that would land a module into a strict-signature entry.
-3. Re-evaluate runtime-helper module placement after the strip changes the
-   consumer set.
-
-Until those land, the flag should default off (or these three fixtures must
-be deleted/updated, which is not advised — 9225's cycle is a real ESM
-evaluation hazard, not a test-too-strict situation).
+Until at least (1)–(3) land, the flag should default off (or these eight
+cases must be triaged individually — they are not test-too-strict
+situations; in particular 9225's cycle and the test262 TLA hang are real
+correctness regressions, not snapshot drift).

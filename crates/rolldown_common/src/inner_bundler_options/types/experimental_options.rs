@@ -63,12 +63,17 @@ impl ExperimentalOptions {
     self.lazy_barrel.unwrap_or(false)
   }
 
-  /// Pre-grouping pass that strips redundant dynamic-entry bits from modules
-  /// guaranteed already-in-memory at the dynamic entry's load time. Mirrors
-  /// Rollup's `getAlreadyLoadedAtomsByEntry`. Off by default — pre-grouping
-  /// bit mutation can interact with the existing post-grouping chunk
-  /// optimizer's runtime placement and cycle-prevention logic in ways that
-  /// require further investigation.
+  /// Pre-grouping pass that strips redundant dynamic-entry bits from
+  /// modules guaranteed already-in-memory at the dynamic entry's load
+  /// time. Mirrors Rollup's `getAlreadyLoadedAtomsByEntry`. Enabled by
+  /// default. Strips are gated against `preserveEntrySignatures: 'strict'`
+  /// targets and rolled back when they would create a static-import cycle
+  /// in the projected post-strip chunk graph (manual chunks are visible
+  /// to the cycle projection because the pass runs after
+  /// `apply_manual_code_splitting`). Known remaining gaps: awaited vs
+  /// non-awaited dynamic imports are not distinguished (TLA hang on
+  /// specific topologies), and runtime-helper consumer placement may
+  /// differ from the pre-pass topology in some graphs.
   pub fn is_already_loaded_atom_propagation_enabled(&self) -> bool {
     self.already_loaded_atom_propagation.unwrap_or(true)
   }

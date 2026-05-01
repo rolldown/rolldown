@@ -98,14 +98,17 @@ non-empty `depended_runtime_helper`) still get repositioned.
    twice, only stripping bits that are loaded non-awaited. Closes test262
    TLA case (verify-dfs already cleared by step 2).
 2. ~~**Plumb `preserveEntrySignatures` into `apply_strip`.**~~ ✅ Done.
-3. **Cycle-aware strip.** Either run a cycle-detection-and-revert pass on
-   the projected post-strip chunk graph, or restrict stripping to modules
-   whose static-dep closure does not pass through a chunk statically
-   downstream of the move target. Closes 9225, 8920_2.
-4. **Runtime-consumer awareness.** Once (3) lands, re-evaluate whether
-   modules with `depended_runtime_helper` need additional handling beyond
-   the cycle guard, or whether the dominator search just needs to be
-   re-run on the post-strip topology.
+3. ~~**Cycle-aware strip.**~~ ✅ Done. Cycle-detection-and-revert pass
+   added in `revert_cycle_participants` (`already_loaded_analysis.rs`).
+   Pre-strip bits are snapshotted, post-strip the projected chunk graph
+   is built (manual-pinned modules use their pinned chunk identity, the
+   rest are bits-bucketed), Tarjan's SCC finds cycle participants, and
+   their bits are restored. Pass moved to run *after*
+   `apply_manual_code_splitting` so manual chunk pinning is visible.
+   Closes 9225, 4682.
+4. **Runtime-consumer awareness.** Re-evaluate runtime placement against
+   the post-strip topology (or pin runtime consumers similarly to how
+   manual-pinned modules are handled). Closes 8920_2.
 
-Until (1) and (3) land, the flag still ships 1 fixture cycle (9225) + 1
-runtime-placement regression (8920_2) + 1 test262 TLA hang.
+Until (1) and (4) land, the flag still ships 1 runtime-placement
+regression (8920_2) + 1 test262 TLA hang.

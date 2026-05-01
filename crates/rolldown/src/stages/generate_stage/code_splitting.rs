@@ -845,6 +845,22 @@ impl GenerateStage<'_> {
       );
     }
 
+    let mut module_is_assigned: IndexBitSet<ModuleIdx> =
+      IndexBitSet::new(self.link_output.module_table.modules.len());
+
+    self
+      .apply_manual_code_splitting(
+        index_splitting_info,
+        &mut module_is_assigned,
+        chunk_graph,
+        input_base,
+        &tag_registry,
+      )
+      .await?;
+
+    // Run already-loaded propagation *after* manual code splitting so the
+    // cycle projection can see manually-pinned modules in their actual
+    // destination chunks (manual chunks override bits-based bucketing).
     if self.options.experimental.is_already_loaded_atom_propagation_enabled() {
       let entries_len: u32 =
         u32::try_from(self.link_output.entries.values().map(Vec::len).sum::<usize>())
@@ -863,21 +879,10 @@ impl GenerateStage<'_> {
         entries_len,
         Some(self.link_output.runtime.id()),
         &strict_signature_entries,
+        &self.link_output.metas,
+        &chunk_graph.module_to_chunk,
       );
     }
-
-    let mut module_is_assigned: IndexBitSet<ModuleIdx> =
-      IndexBitSet::new(self.link_output.module_table.modules.len());
-
-    self
-      .apply_manual_code_splitting(
-        index_splitting_info,
-        &mut module_is_assigned,
-        chunk_graph,
-        input_base,
-        &tag_registry,
-      )
-      .await?;
 
     // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
     // This is used to generate less chunks when possible.

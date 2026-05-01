@@ -2,10 +2,7 @@
   "config": {
     "input": [
       { "name": "main", "import": "./main.js" }
-    ],
-    "experimental": {
-      "alreadyLoadedAtomPropagation": true
-    }
+    ]
   },
   "snapshotOutputStats": true
 }

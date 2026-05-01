@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+//#region a.js
+import("./b.js");
+//#endregion
+
+```
+
+## b.js
+
+```js
+//#region b.js
+import("./a.js");
+//#endregion
+
+```
+
+## main.js
+
+```js
+//#region main.js
+import("./a.js");
+import("./b.js");
+//#endregion
+
+```
+
+# Output Stats
+
+- a.js, is_entry false, is_dynamic_entry true, exports []
+- b.js, is_entry false, is_dynamic_entry true, exports []
+- main.js, is_entry true, is_dynamic_entry false, exports []

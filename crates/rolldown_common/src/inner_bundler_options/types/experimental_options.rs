@@ -26,6 +26,7 @@ pub struct ExperimentalOptions {
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<bool>,
   pub lazy_barrel: Option<bool>,
+  pub already_loaded_atom_propagation: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -60,5 +61,15 @@ impl ExperimentalOptions {
 
   pub fn is_lazy_barrel_enabled(&self) -> bool {
     self.lazy_barrel.unwrap_or(false)
+  }
+
+  /// Pre-grouping pass that strips redundant dynamic-entry bits from modules
+  /// guaranteed already-in-memory at the dynamic entry's load time. Mirrors
+  /// Rollup's `getAlreadyLoadedAtomsByEntry`. Off by default — pre-grouping
+  /// bit mutation can interact with the existing post-grouping chunk
+  /// optimizer's runtime placement and cycle-prevention logic in ways that
+  /// require further investigation.
+  pub fn is_already_loaded_atom_propagation_enabled(&self) -> bool {
+    self.already_loaded_atom_propagation.unwrap_or(true)
   }
 }

@@ -845,6 +845,16 @@ impl GenerateStage<'_> {
       );
     }
 
+    if self.options.experimental.is_already_loaded_atom_propagation_enabled() {
+      super::already_loaded_analysis::propagate_already_loaded_atoms(
+        &self.link_output.entries,
+        index_splitting_info,
+        u32::try_from(self.link_output.entries.values().map(Vec::len).sum::<usize>())
+          .expect("Too many entries, u32 overflowed."),
+        Some(self.link_output.runtime.id()),
+      );
+    }
+
     let mut module_is_assigned: IndexBitSet<ModuleIdx> =
       IndexBitSet::new(self.link_output.module_table.modules.len());
 

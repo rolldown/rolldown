@@ -57,6 +57,10 @@ impl<I: Idx> IndexBitSet<I> {
   pub fn union(&mut self, other: &Self) {
     self.inner.union(&other.inner);
   }
+
+  pub fn intersect_with(&mut self, other: &Self) {
+    self.inner.intersect_with(&other.inner);
+  }
 }
 
 impl<I: Idx> Default for IndexBitSet<I> {
@@ -155,6 +159,26 @@ mod tests {
     set.extend(vec![TestIdx::from_usize(3), TestIdx::from_usize(7)]);
     assert_eq!(set.bit_count(), 3);
     assert!(set.has_bit(TestIdx::from_usize(3)));
+  }
+
+  #[test]
+  fn intersect_with_sets() {
+    let mut a = IndexBitSet::<TestIdx>::new(16);
+    a.set_bit(TestIdx::from_usize(1));
+    a.set_bit(TestIdx::from_usize(3));
+    a.set_bit(TestIdx::from_usize(5));
+
+    let mut b = IndexBitSet::<TestIdx>::new(16);
+    b.set_bit(TestIdx::from_usize(3));
+    b.set_bit(TestIdx::from_usize(5));
+    b.set_bit(TestIdx::from_usize(7));
+
+    a.intersect_with(&b);
+    assert_eq!(a.bit_count(), 2);
+    assert!(!a.has_bit(TestIdx::from_usize(1)));
+    assert!(a.has_bit(TestIdx::from_usize(3)));
+    assert!(a.has_bit(TestIdx::from_usize(5)));
+    assert!(!a.has_bit(TestIdx::from_usize(7)));
   }
 
   #[test]

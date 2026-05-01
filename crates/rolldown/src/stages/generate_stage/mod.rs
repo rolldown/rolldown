@@ -47,6 +47,7 @@ use crate::{
   },
 };
 
+mod already_loaded_analysis;
 mod chunk_ext;
 mod chunk_optimizer;
 mod code_splitting;

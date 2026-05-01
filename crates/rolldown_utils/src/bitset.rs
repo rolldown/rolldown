@@ -44,6 +44,12 @@ impl BitSet {
     }
   }
 
+  pub fn intersect_with(&mut self, other: &Self) {
+    for (i, byte) in self.entries.iter_mut().enumerate() {
+      *byte &= other.entries.get(i).copied().unwrap_or(0);
+    }
+  }
+
   // It is safe to convert `usize` to `u32` here because we ensure that the bitset is created with a maximum bit count that fits within `u32`.
   #[expect(clippy::cast_possible_truncation)]
   pub fn index_of_one(&self) -> impl Iterator<Item = u32> + '_ {
@@ -144,6 +150,35 @@ mod tests {
     //
     bs.union(&bs2);
     assert_eq!(bs.to_string(), "10000001_10000011");
+  }
+
+  #[test]
+  fn intersect_with() {
+    let mut bs = BitSet::new(16);
+    bs.set_bit(0);
+    bs.set_bit(1);
+    bs.set_bit(7);
+    bs.set_bit(15);
+
+    let mut bs2 = BitSet::new(16);
+    bs2.set_bit(1);
+    bs2.set_bit(8);
+    bs2.set_bit(15);
+
+    bs.intersect_with(&bs2);
+    assert!(!bs.has_bit(0));
+    assert!(bs.has_bit(1));
+    assert!(!bs.has_bit(7));
+    assert!(!bs.has_bit(8));
+    assert!(bs.has_bit(15));
+    assert_eq!(bs.bit_count(), 2);
+
+    // Smaller `other` is treated as zero-extended.
+    let mut bs3 = BitSet::new(16);
+    bs3.set_bit(15);
+    let bs_small = BitSet::new(0);
+    bs3.intersect_with(&bs_small);
+    assert!(bs3.is_empty());
   }
 
   #[test]

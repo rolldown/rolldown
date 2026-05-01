@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## leaf.js
+
+```js
+import { t as shared } from "./mid.js";
+//#region leaf.js
+const leafVal = `leaf:${shared}`;
+//#endregion
+export { leafVal };
+
+```
+
+## main.js
+
+```js
+import assert from "node:assert";
+//#region main.js
+import("./mid.js").then(async (mid) => {
+	assert.strictEqual(mid.midVal, "mid:shared");
+	const leaf = await mid.getLeaf();
+	assert.strictEqual(leaf.leafVal, "leaf:shared");
+});
+//#endregion
+
+```
+
+## mid.js
+
+```js
+//#region shared.js
+const shared = "shared";
+//#endregion
+//#region mid.js
+const midVal = `mid:${shared}`;
+const getLeaf = () => import("./leaf.js");
+//#endregion
+export { getLeaf, midVal, shared as t };
+
+```
+
+# Output Stats
+
+- leaf.js, is_entry false, is_dynamic_entry true, exports ["leafVal"]
+- main.js, is_entry true, is_dynamic_entry false, exports []
+- mid.js, is_entry false, is_dynamic_entry true, exports ["getLeaf", "midVal", "t"]

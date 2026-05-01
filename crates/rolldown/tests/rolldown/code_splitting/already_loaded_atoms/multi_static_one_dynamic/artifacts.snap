@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a1.js
+
+```js
+import { t as shared } from "./shared.js";
+import assert from "node:assert";
+//#region a1.js
+assert.strictEqual(shared, "shared");
+import("./dyn.js").then((m) => {
+	assert.strictEqual(m.dynVal, "dyn:shared");
+});
+//#endregion
+
+```
+
+## a2.js
+
+```js
+import { t as shared } from "./shared.js";
+import assert from "node:assert";
+//#region a2.js
+assert.strictEqual(shared, "shared");
+import("./dyn.js").then((m) => {
+	assert.strictEqual(m.dynVal, "dyn:shared");
+});
+//#endregion
+
+```
+
+## dyn.js
+
+```js
+import { t as shared } from "./shared.js";
+//#region dyn.js
+const dynVal = `dyn:${shared}`;
+//#endregion
+export { dynVal };
+
+```
+
+## shared.js
+
+```js
+//#region shared.js
+const shared = "shared";
+//#endregion
+export { shared as t };
+
+```
+
+# Output Stats
+
+- a1.js, is_entry true, is_dynamic_entry false, exports []
+- a2.js, is_entry true, is_dynamic_entry false, exports []
+- dyn.js, is_entry false, is_dynamic_entry true, exports ["dynVal"]
+- shared.js, is_entry false, is_dynamic_entry false, exports ["t"]

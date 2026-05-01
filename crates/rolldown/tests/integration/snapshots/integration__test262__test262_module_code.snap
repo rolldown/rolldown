@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 543 passed, 53 failed, 596 total
+Summary: 541 passed, 55 failed, 596 total
 
 ---
 
@@ -2577,9 +2577,10 @@ Actual: Async test completed successfully
 ---
 
 # language/module-code/top-level-await/module-graphs-does-not-hang.js
-Result: PASS
+Result: FAIL
 Expected: success
-Actual: Async test completed successfully
+Actual:
+Async test failed: Test262Error: $DONE was not called
 ---
 
 # language/module-code/top-level-await/module-import-rejection-body.js
@@ -3979,7 +3980,8 @@ Actual: Async test completed successfully
 ---
 
 # language/module-code/verify-dfs.js
-Result: PASS
+Result: FAIL
 Expected: success
-Actual: Async test completed successfully
+Actual:
+Async test failed: Test262Error: Test262Error: Expected SameValue(«"B"», «"A"») to be true
 ---

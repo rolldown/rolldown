@@ -1038,6 +1038,12 @@
             "boolean",
             "null"
           ]
+        },
+        "alreadyLoadedAtomPropagation": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

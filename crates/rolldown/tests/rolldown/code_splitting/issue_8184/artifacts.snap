@@ -1,44 +1,42 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## INEFFECTIVE_DYNAMIC_IMPORT
-
-```text
-[INEFFECTIVE_DYNAMIC_IMPORT] Warning: a.js is dynamically imported by c.js but also statically imported by b.js, dbp-1.js, dynamic import will not move module into another chunk.
-
-```
-
 # Assets
 
 ## a.js
 
 ```js
-//#region c.js
-import("./a2.js");
-//#endregion
+import "./a2.js";
 
 ```
 
 ## a2.js
 
 ```js
-import "./a.js";
+import "./c.js";
+
+```
+
+## c.js
+
+```js
+//#region c.js
+import("./a.js");
+//#endregion
 
 ```
 
 ## dbp-1.js
 
 ```js
-import "./a.js";
+import "./a2.js";
 
 ```
 
 ## dbp-2.js
 
 ```js
-import "./a.js";
+import "./a2.js";
 // HIDDEN [\0rolldown/runtime.js]
 
 ```

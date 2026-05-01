@@ -846,12 +846,23 @@ impl GenerateStage<'_> {
     }
 
     if self.options.experimental.is_already_loaded_atom_propagation_enabled() {
+      let entries_len: u32 =
+        u32::try_from(self.link_output.entries.values().map(Vec::len).sum::<usize>())
+          .expect("Too many entries, u32 overflowed.");
+      let mut strict_signature_entries = BitSet::new(entries_len);
+      for chunk in chunk_graph.chunk_table.iter() {
+        if let ChunkKind::EntryPoint { bit, .. } = chunk.kind
+          && matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict))
+        {
+          strict_signature_entries.set_bit(bit);
+        }
+      }
       super::already_loaded_analysis::propagate_already_loaded_atoms(
         &self.link_output.entries,
         index_splitting_info,
-        u32::try_from(self.link_output.entries.values().map(Vec::len).sum::<usize>())
-          .expect("Too many entries, u32 overflowed."),
+        entries_len,
         Some(self.link_output.runtime.id()),
+        &strict_signature_entries,
       );
     }
 

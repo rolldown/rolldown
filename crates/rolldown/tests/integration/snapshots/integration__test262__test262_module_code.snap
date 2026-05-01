@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 541 passed, 55 failed, 596 total
+Summary: 542 passed, 54 failed, 596 total
 
 ---
 
@@ -3980,8 +3980,7 @@ Actual: Async test completed successfully
 ---
 
 # language/module-code/verify-dfs.js
-Result: FAIL
+Result: PASS
 Expected: success
-Actual:
-Async test failed: Test262Error: Test262Error: Expected SameValue(«"B"», «"A"») to be true
+Actual: Async test completed successfully
 ---

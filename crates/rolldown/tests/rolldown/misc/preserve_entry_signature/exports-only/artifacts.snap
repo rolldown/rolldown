@@ -15,10 +15,20 @@ console.log(`shared: `, "lib");
 ## dynamic2.js
 
 ```js
-import { t as value } from "./main2.js";
+import { t as value } from "./lib2.js";
 //#region dynamic2.js
 console.log(`shared: `, value);
 //#endregion
+
+```
+
+## lib2.js
+
+```js
+//#region lib2.js
+const value = "lib2";
+//#endregion
+export { value as t };
 
 ```
 
@@ -35,13 +45,11 @@ console.log(`shared: `, "lib");
 ## main2.js
 
 ```js
-//#region lib2.js
-const value = "lib2";
-//#endregion
+import { t as value } from "./lib2.js";
 //#region main2.js
 import("./dynamic2.js");
 const unused = value;
 //#endregion
-export { value as t, unused };
+export { unused };
 
 ```

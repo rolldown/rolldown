@@ -23,11 +23,23 @@ use super::code_splitting::IndexSplittingInfo;
 /// bitset reflecting every chunk that consumes its helpers. Mutating those
 /// bits prematurely would cause cycles — runtime moves into a single-bit
 /// chunk while other modules sharing the dynamic-entry bit cross-import it.
+///
+/// `strict_signature_entries` is a bitset (over entry indices) marking
+/// user-defined static entries whose `preserveEntrySignatures` resolves to
+/// `Strict`. A strip is suppressed if it would leave the module with a
+/// single remaining bit pointing at one of these entries — that path
+/// bypasses the strict-signature gate inside
+/// `try_insert_into_existing_chunk` (which only fires when a *common*
+/// chunk is about to be merged into a strict entry). Keeping the module
+/// multi-bit routes it through the common-chunk path, where the existing
+/// `can_merge_without_changing_entry_signature` check decides whether the
+/// merge is safe.
 pub fn propagate_already_loaded_atoms(
   entries: &FxIndexMap<ModuleIdx, Vec<EntryPoint>>,
   index_splitting_info: &mut IndexSplittingInfo,
   entries_len: u32,
   runtime_module_idx: Option<ModuleIdx>,
+  strict_signature_entries: &BitSet,
 ) {
   if entries_len == 0 {
     return;
@@ -40,6 +52,7 @@ pub fn propagate_already_loaded_atoms(
     entries_len,
     module_count,
     runtime_module_idx,
+    strict_signature_entries.clone(),
   );
 
   if ctx.dynamic_importers_by_dynamic_entry.is_empty() {
@@ -68,6 +81,10 @@ struct AnalysisContext {
   /// Module excluded from stripping (the runtime module; see
   /// [`propagate_already_loaded_atoms`] for rationale).
   excluded_module: Option<ModuleIdx>,
+  /// Entry indices whose preserve_entry_signature resolves to `Strict`.
+  /// A strip is suppressed if it would leave the module with a single bit
+  /// pointing at one of these entries (see [`propagate_already_loaded_atoms`]).
+  strict_signature_entries: BitSet,
 }
 
 impl AnalysisContext {
@@ -77,6 +94,7 @@ impl AnalysisContext {
     entries_len: u32,
     module_count: usize,
     excluded_module: Option<ModuleIdx>,
+    strict_signature_entries: BitSet,
   ) -> Self {
     let entries_len_usize = entries_len as usize;
     let mut entry_module = Vec::with_capacity(entries_len_usize);
@@ -144,6 +162,7 @@ impl AnalysisContext {
       dynamic_imports_by_entry,
       static_modules_by_entry,
       excluded_module,
+      strict_signature_entries,
     }
   }
 
@@ -229,6 +248,20 @@ impl AnalysisContext {
         if info.bits.bit_count() <= 1 {
           break;
         }
+        // Strict-signature gate: if this strip would leave the module with a
+        // single remaining bit pointing at a strict-signature entry, the
+        // module would land directly in that entry's chunk via the bucketing
+        // pass — bypassing `try_insert_into_existing_chunk`'s strict check.
+        // Keep the bit so the module flows through the common-chunk path
+        // where the existing signature gate runs.
+        if info.bits.bit_count() == 2 {
+          let remaining = info.bits.index_of_one().find(|&b| b != e);
+          if let Some(b) = remaining
+            && self.strict_signature_entries.has_bit(b)
+          {
+            continue;
+          }
+        }
         info.bits.clear_bit(e);
       }
     }
@@ -297,7 +330,13 @@ mod tests {
       mk_info(&[1], entries_len),
     ]);
 
-    propagate_already_loaded_atoms(&entries, &mut info, entries_len, None);
+    propagate_already_loaded_atoms(
+      &entries,
+      &mut info,
+      entries_len,
+      None,
+      &BitSet::new(entries_len),
+    );
 
     assert!(info[a].bits.has_bit(0) && !info[a].bits.has_bit(1));
     assert!(
@@ -335,7 +374,13 @@ mod tests {
       mk_info(&[0, 1, 2], entries_len), // M
     ]);
 
-    propagate_already_loaded_atoms(&entries, &mut info, entries_len, None);
+    propagate_already_loaded_atoms(
+      &entries,
+      &mut info,
+      entries_len,
+      None,
+      &BitSet::new(entries_len),
+    );
 
     assert!(info[m].bits.has_bit(0));
     assert!(info[m].bits.has_bit(1));
@@ -364,7 +409,13 @@ mod tests {
       mk_info(&[0, 1], entries_len), // M
     ]);
 
-    propagate_already_loaded_atoms(&entries, &mut info, entries_len, None);
+    propagate_already_loaded_atoms(
+      &entries,
+      &mut info,
+      entries_len,
+      None,
+      &BitSet::new(entries_len),
+    );
 
     assert!(info[m].bits.has_bit(0) && !info[m].bits.has_bit(1), "M's dynamic bit stripped");
     assert!(info[d].bits.has_bit(1), "D's own entry bit must not be stripped from D");
@@ -387,9 +438,87 @@ mod tests {
       IndexVec::from_iter([mk_info(&[0], entries_len), mk_info(&[1], entries_len)]);
 
     // Should not hang or panic.
-    propagate_already_loaded_atoms(&entries, &mut info, entries_len, None);
+    propagate_already_loaded_atoms(
+      &entries,
+      &mut info,
+      entries_len,
+      None,
+      &BitSet::new(entries_len),
+    );
 
     assert!(info[a].bits.has_bit(0));
     assert!(info[b].bits.has_bit(1));
+  }
+
+  /// Same shape as `basic_dynamic_already_loaded` (`A -> B; A => C; C -> B`)
+  /// but A is marked strict-signature. Stripping C's bit from B would leave
+  /// B with a single bit pointing at the strict entry A, bypassing the
+  /// strict-signature gate inside `try_insert_into_existing_chunk`. The
+  /// strip must therefore be suppressed and B kept multi-bit.
+  #[test]
+  fn strict_signature_gate_blocks_terminal_strip() {
+    let a = mk_module(0);
+    let b = mk_module(1);
+    let c = mk_module(2);
+
+    let mut entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>> = FxIndexMap::default();
+    entries.insert(a, vec![mk_entry(a, EntryPointKind::UserDefined, &[])]);
+    entries.insert(c, vec![mk_entry(c, EntryPointKind::DynamicImport, &[a])]);
+
+    let entries_len = 2u32;
+    let mut info: IndexVec<ModuleIdx, SplittingInfo> = IndexVec::from_iter([
+      mk_info(&[0], entries_len),
+      mk_info(&[0, 1], entries_len),
+      mk_info(&[1], entries_len),
+    ]);
+
+    let mut strict = BitSet::new(entries_len);
+    strict.set_bit(0);
+
+    propagate_already_loaded_atoms(&entries, &mut info, entries_len, None, &strict);
+
+    assert!(
+      info[b].bits.has_bit(0) && info[b].bits.has_bit(1),
+      "B's dynamic bit must be retained when stripping would land it in a strict entry"
+    );
+  }
+
+  /// With three dynamic siblings stripping into a strict entry, the gate
+  /// should suppress only the *last* strip — the earlier strips still leave
+  /// `bit_count() >= 2`, so the module flows through the common-chunk path
+  /// rather than landing directly in the strict entry's chunk.
+  #[test]
+  fn strict_signature_gate_only_blocks_final_strip() {
+    let a = mk_module(0);
+    let d1 = mk_module(1);
+    let d2 = mk_module(2);
+    let m = mk_module(3);
+
+    let mut entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>> = FxIndexMap::default();
+    entries.insert(a, vec![mk_entry(a, EntryPointKind::UserDefined, &[])]);
+    entries.insert(d1, vec![mk_entry(d1, EntryPointKind::DynamicImport, &[a])]);
+    entries.insert(d2, vec![mk_entry(d2, EntryPointKind::DynamicImport, &[a])]);
+
+    let entries_len = 3u32;
+    let mut info: IndexVec<ModuleIdx, SplittingInfo> = IndexVec::from_iter([
+      mk_info(&[0], entries_len),       // A
+      mk_info(&[1], entries_len),       // D1
+      mk_info(&[2], entries_len),       // D2
+      mk_info(&[0, 1, 2], entries_len), // M reachable from all three entries
+    ]);
+
+    let mut strict = BitSet::new(entries_len);
+    strict.set_bit(0);
+
+    propagate_already_loaded_atoms(&entries, &mut info, entries_len, None, &strict);
+
+    // Bit 1 (D1) is the first strippable candidate; stripping it leaves
+    // {0, 2} with bit_count == 2, so the gate does not fire.
+    // Bit 2 (D2) would then leave {0} alone — the gate fires and bit 2 is
+    // kept. Final state: {0, 2}, multi-bit, routed via common chunk.
+    assert!(info[m].bits.has_bit(0), "static entry bit retained");
+    assert!(!info[m].bits.has_bit(1), "first dynamic bit stripped (non-terminal)");
+    assert!(info[m].bits.has_bit(2), "final dynamic bit retained by strict gate");
+    assert_eq!(info[m].bits.bit_count(), 2);
   }
 }

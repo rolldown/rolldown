@@ -151,16 +151,25 @@ impl PluginContext {
 
   #[inline]
   pub fn info(&self, log: LogWithoutPlugin) {
-    call_native_only!(self, "info", ctx => ctx.info(log));
+    match self {
+      PluginContext::Napi(_) => {}
+      PluginContext::Native(ctx) => ctx.info(log),
+    }
   }
 
   #[inline]
   pub fn warn(&self, log: LogWithoutPlugin) {
-    call_native_only!(self, "warn", ctx => ctx.warn(log));
+    match self {
+      PluginContext::Napi(_) => {}
+      PluginContext::Native(ctx) => ctx.warn(log),
+    }
   }
 
   #[inline]
   pub fn debug(&self, log: LogWithoutPlugin) {
-    call_native_only!(self, "debug", ctx => ctx.debug(log));
+    match self {
+      PluginContext::Napi(_) => {}
+      PluginContext::Native(ctx) => ctx.debug(log),
+    }
   }
 }

@@ -174,7 +174,7 @@ impl<'a> GenerateStage<'a> {
                 sanitize_filename.call(absolute_chunk_file_name.as_str()).await?;
 
               // Apply the same logic as get_preserve_modules_chunk_name to include directory structure
-              let chunk_name = {
+              let raw_chunk_name = {
                 let p = PathBuf::from(sanitized_absolute_filename.as_str());
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
@@ -200,12 +200,13 @@ impl<'a> GenerateStage<'a> {
                   _ => relative_path,
                 }
               };
+              let chunk_name = sanitize_filename.call(&raw_chunk_name).await?;
 
               let sanitized_representative_chunk_name =
                 sanitize_filename.call(&representative_chunk_name).await?;
               PreGeneratedChunkName {
                 representative_chunk_name: sanitized_representative_chunk_name,
-                chunk_name: chunk_name.into(),
+                chunk_name,
                 chunk_filename: sanitized_absolute_filename,
               }
             } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {

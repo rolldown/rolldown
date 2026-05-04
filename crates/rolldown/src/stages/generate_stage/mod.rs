@@ -314,7 +314,7 @@ impl<'a> GenerateStage<'a> {
         );
         chunk.preliminary_filename = Some(preliminary_filename);
       }
-      if let PreliminarySourcemapFilename::Uninstantiated = chunk.preliminary_sourcemap_filename {
+      if chunk.preliminary_sourcemap_filename == PreliminarySourcemapFilename::Uninstantiated {
         let preliminary_sourcemap_filename = chunk
           .generate_preliminary_sourcemap_filename(
             self.options,

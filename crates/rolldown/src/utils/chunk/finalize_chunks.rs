@@ -12,7 +12,6 @@ use rolldown_error::BuildResult;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
-  concat_string,
   hash_placeholder::{
     HASH_PLACEHOLDER_LEFT_FINDER, extract_hash_placeholders, replace_placeholder_with_hash,
   },
@@ -235,7 +234,7 @@ pub async fn finalize_assets(
                 if matches!(options.sourcemap, Some(SourceMapType::Inline) | None) {
                   None
                 } else {
-                  Some(concat_string!(asset.filename, ".map"))
+                  Some(sourcemap_asset.filename.to_string())
                 };
               ecma_meta.sourcemap_filename = sourcemap_filename;
             }
@@ -262,7 +261,6 @@ fn generate_sourcemap_hashes_by_idx(
     .par_iter()
     .enumerate()
     .filter_map(|(idx, chunk)| {
-      // create hashes based on sourcemaps -> replace chunkhash with index_final_hashes -> replace hash with hashes based on sourcemaps -> assign en result to ecma_meta.sourcemap_filename
       let (Some(map), Some(preliminary_sourcemap_filename)) =
         (&chunk.map, &chunk.preliminary_sourcemap_filename)
       else {

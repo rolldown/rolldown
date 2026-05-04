@@ -239,11 +239,11 @@ impl LinkStage<'_> {
 
     let mut new_constant_refs = FxHashSet::default();
     for (side_effect_mutations, local_constants, unreachable_addresses) in mutation_result {
-      if let Some((module_idx, mutations)) = side_effect_mutations {
-        if let Some(module) = self.module_table[module_idx].as_normal_mut() {
-          for (stmt_info_idx, side_effect_detail) in mutations {
-            module.stmt_infos[stmt_info_idx].side_effect = side_effect_detail;
-          }
+      if let Some((module_idx, mutations)) = side_effect_mutations
+        && self.module_table[module_idx].as_normal().is_some()
+      {
+        for (stmt_info_idx, side_effect_detail) in mutations {
+          self.stmt_infos[module_idx][stmt_info_idx].side_effect = side_effect_detail;
         }
       }
 

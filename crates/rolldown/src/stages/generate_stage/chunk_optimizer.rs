@@ -1049,24 +1049,24 @@ impl GenerateStage<'_> {
     for elimination in &facade_eliminations {
       let entry_module_idx = elimination.entry_module_idx;
       let wrap_kind = self.link_output.metas[entry_module_idx].wrap_kind();
-      let Some(module) = self.link_output.module_table[entry_module_idx].as_normal_mut() else {
+      if self.link_output.module_table[entry_module_idx].as_normal().is_none() {
         continue;
-      };
+      }
       // For CJS modules, we don't need to include `__exportAll` and the namespace symbols.
       // Instead, we should include the wrapper_ref (`require_xxx`), which will be handled
       // in the include_symbol call below.
       if !matches!(wrap_kind, WrapKind::Cjs) {
         // Filter in place to avoid cloning
-        module.stmt_infos[StmtInfos::NAMESPACE_STMT_IDX].referenced_symbols.retain(
-          |item| match item {
+        self.link_output.stmt_infos[entry_module_idx][StmtInfos::NAMESPACE_STMT_IDX]
+          .referenced_symbols
+          .retain(|item| match item {
             rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
               // module namespace symbol requires `__exportAll` runtime helper
               self.link_output.used_symbol_refs.contains(symbol_ref)
                 || symbol_ref.owner == runtime_module_idx
             }
             rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
-          },
-        );
+          });
       }
     }
 
@@ -1076,6 +1076,7 @@ impl GenerateStage<'_> {
     let runtime = &self.link_output.runtime;
     let context = &mut IncludeContext {
       modules: &self.link_output.module_table.modules,
+      stmt_infos: &self.link_output.stmt_infos,
       symbols: &self.link_output.symbol_db,
       is_included_vec: &mut stmt_info_included_vec,
       is_module_included_vec: &mut module_included_vec,

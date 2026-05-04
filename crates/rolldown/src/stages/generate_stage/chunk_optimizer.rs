@@ -3,11 +3,12 @@ use std::collections::{VecDeque, hash_map::Entry};
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
+use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType,
   FacadeChunkEliminationReason, ImportKind, Module, ModuleIdx, ModuleNamespaceIncludedReason,
   ModuleTable, PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, StmtInfos,
-  WrapKind,
+  SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_utils::{BitSet, IndexBitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -402,6 +403,8 @@ impl GenerateStage<'_> {
           &static_entry_chunk_reference,
           chunk_graph,
           &self.link_output.module_table,
+          &self.link_output.metas,
+          &self.link_output.symbol_db,
           &dynamic_entry_to_dynamic_importers,
           temp_chunk,
           temp_chunk_graph,
@@ -557,11 +560,14 @@ impl GenerateStage<'_> {
   /// entry chunk when possible, rather than creating a separate common chunk.
   ///
   /// Returns `Some(ChunkIdx)` if a suitable merge target is found, `None` otherwise.
+  #[expect(clippy::too_many_arguments)]
   fn try_insert_into_existing_chunk(
     chunk_idxs: &[ChunkIdx],
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
     chunk_graph: &ChunkGraph,
     module_table: &ModuleTable,
+    metas: &IndexVec<ModuleIdx, LinkingMetadata>,
+    symbol_db: &SymbolRefDb,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
     info: &ChunkCandidate,
     temp_chunk_graph: &ChunkOptimizationGraph,
@@ -589,8 +595,8 @@ impl GenerateStage<'_> {
       Self::find_merge_target(&user_defined_entry, &user_defined_entry_modules, module_table);
     if user_defined_entry.is_empty() {
       let dynamic_chunk_entry_modules = Self::collect_entry_modules(&dynamic_entry, chunk_graph)?;
-      Self::find_merge_target(&dynamic_entry, &dynamic_chunk_entry_modules, module_table).or_else(
-        || {
+      Self::find_merge_target(&dynamic_entry, &dynamic_chunk_entry_modules, module_table)
+        .or_else(|| {
           Self::find_dynamic_dominator(
             &dynamic_entry,
             &dynamic_chunk_entry_modules,
@@ -599,8 +605,18 @@ impl GenerateStage<'_> {
             entry_chunk_reference,
             &info.modules,
           )
-        },
-      )
+        })
+        .or_else(|| {
+          Self::find_dynamic_re_exporter(
+            &dynamic_entry,
+            &dynamic_chunk_entry_modules,
+            metas,
+            symbol_db,
+            &info.modules,
+            entry_chunk_reference,
+            temp_chunk_graph,
+          )
+        })
     } else {
       let chunk_idx = merged_user_defined_chunk?;
       let chunk = &chunk_graph.chunk_table[chunk_idx];
@@ -822,6 +838,69 @@ impl GenerateStage<'_> {
             .any(|other| other != candidate_chunk_idx && reached_dynamic_chunks.contains(other))
         });
         (!leak).then_some(*candidate_chunk_idx)
+      },
+    )
+  }
+
+  /// Fallback when `find_dynamic_dominator` bails on export pollution: pick a
+  /// dynamic entry that already re-exports every named export of the pending
+  /// modules, so absorbing them adds nothing new to its file-level namespace.
+  ///
+  /// The candidate need not dominate; non-candidates simply gain a static-import
+  /// edge to its chunk, trading lazy-loading granularity for fewer chunks. Same
+  /// side-effect leak guard as `find_dynamic_dominator`.
+  fn find_dynamic_re_exporter(
+    dynamic_entry: &[ChunkIdx],
+    dynamic_entry_modules: &[ModuleIdx],
+    metas: &IndexVec<ModuleIdx, LinkingMetadata>,
+    symbol_db: &SymbolRefDb,
+    pending_modules: &[ModuleIdx],
+    entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
+    temp_chunk_graph: &ChunkOptimizationGraph,
+  ) -> Option<ChunkIdx> {
+    if dynamic_entry.len() < 2 {
+      return None;
+    }
+    let required: Vec<(&CompactStr, SymbolRef)> = pending_modules
+      .iter()
+      .flat_map(|m| {
+        metas[*m]
+          .resolved_exports
+          .iter()
+          .map(|(name, resolved)| (name, resolved.symbol_ref.canonical_ref(symbol_db)))
+      })
+      .collect();
+    if required.is_empty() {
+      return None;
+    }
+    dynamic_entry.iter().zip(dynamic_entry_modules.iter()).find_map(
+      |(candidate_chunk_idx, candidate_module_idx)| {
+        let candidate_meta = &metas[*candidate_module_idx];
+        let exposes_all = required.iter().all(|(name, sym)| {
+          candidate_meta
+            .resolved_exports
+            .get(*name)
+            .is_some_and(|r| r.symbol_ref.canonical_ref(symbol_db) == *sym)
+        });
+        if !exposes_all {
+          return None;
+        }
+        // Eagerly loading the candidate must not pull unrun side effects into
+        // a load path that previously skipped them.
+        if temp_chunk_graph.chunks[*candidate_chunk_idx].has_side_effects {
+          let leak = entry_chunk_reference.values().any(|reached_dynamic_chunks| {
+            if reached_dynamic_chunks.contains(candidate_chunk_idx) {
+              return false;
+            }
+            dynamic_entry
+              .iter()
+              .any(|other| other != candidate_chunk_idx && reached_dynamic_chunks.contains(other))
+          });
+          if leak {
+            return None;
+          }
+        }
+        Some(*candidate_chunk_idx)
       },
     )
   }

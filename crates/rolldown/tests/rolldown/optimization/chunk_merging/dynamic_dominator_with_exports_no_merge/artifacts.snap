@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic1.js
 
 ```js
-import "./sharedDynamic.js";
+import "./dynamic2.js";
 //#region dynamic1.js
 console.log(true);
 const promise = import("./dynamic2.js");
@@ -18,7 +18,9 @@ export { promise };
 ## dynamic2.js
 
 ```js
-import { t as sharedDynamic } from "./sharedDynamic.js";
+//#region sharedDynamic.js
+const sharedDynamic = true;
+//#endregion
 export { sharedDynamic };
 
 ```
@@ -29,15 +31,5 @@ export { sharedDynamic };
 //#region main.js
 import("./dynamic1.js").then(({ promise, ...ns }) => ns);
 //#endregion
-
-```
-
-## sharedDynamic.js
-
-```js
-//#region sharedDynamic.js
-const sharedDynamic = true;
-//#endregion
-export { sharedDynamic as t };
 
 ```

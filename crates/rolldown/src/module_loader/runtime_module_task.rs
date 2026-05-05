@@ -234,19 +234,22 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     // Always respect annotations in the runtime module, regardless of user config.
     // The runtime is trusted internal code.
     let runtime_flat_options = self.flat_options - FlatOptions::IgnoreAnnotations;
-    let scanner = AstScanner::new(
-      self.module_idx,
-      scoping,
-      "rolldown_runtime",
-      ModuleDefFormat::EsmMjs,
-      source,
-      &facade_path,
-      ast.comments(),
-      &self.ctx.options,
-      ast.allocator(),
-      runtime_flat_options,
-    );
-    let scan_result = scanner.scan(ast.program())?;
+    let scan_result = ast.program.with_mut(|fields| {
+      let program = &*fields.program;
+      let scanner = AstScanner::new(
+        self.module_idx,
+        scoping,
+        "rolldown_runtime",
+        ModuleDefFormat::EsmMjs,
+        source,
+        &facade_path,
+        &program.comments,
+        &self.ctx.options,
+        fields.allocator,
+        runtime_flat_options,
+      );
+      scanner.scan(program)
+    })?;
 
     Ok((ast, scan_result))
   }

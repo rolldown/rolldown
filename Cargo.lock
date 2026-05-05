@@ -3020,7 +3020,6 @@ name = "rolldown_devtools"
 version = "0.1.0"
 dependencies = [
  "blake3",
- "dashmap",
  "rolldown_devtools_action",
  "rustc-hash",
  "serde",

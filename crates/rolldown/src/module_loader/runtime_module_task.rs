@@ -175,7 +175,6 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         side_effects: determined_side_effects,
         named_imports,
         named_exports,
-        stmt_infos,
         imports,
         default_export_ref,
         exports_kind: ExportsKind::Esm,
@@ -207,6 +206,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     let result = ModuleLoaderMsg::RuntimeNormalModuleDone(Box::new(RuntimeModuleTaskResult {
       ast,
       module,
+      stmt_infos,
       runtime,
       resolved_deps,
       raw_import_records,

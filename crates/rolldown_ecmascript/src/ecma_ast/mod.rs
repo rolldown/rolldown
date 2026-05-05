@@ -45,10 +45,6 @@ impl EcmaAst {
     &self.program.borrow_owner().source
   }
 
-  pub fn allocator(&self) -> &Allocator {
-    &self.program.borrow_owner().allocator
-  }
-
   pub fn program(&self) -> &Program<'_> {
     &self.program.borrow_dependent().program
   }
@@ -65,7 +61,7 @@ impl EcmaAst {
     let program = ProgramCell::new(
       ProgramCellOwner {
         source: self.source().clone(),
-        allocator: Allocator::with_capacity(self.allocator().used_bytes()),
+        allocator: Allocator::with_capacity(self.program.borrow_owner().allocator.used_bytes()),
       },
       |owner| {
         let program = self.program().clone_in_with_semantic_ids(&owner.allocator);
@@ -88,5 +84,27 @@ impl Default for EcmaAst {
   }
 }
 
+// SAFETY: The `Allocator` (bumpalo `Bump`) is `Send` and the entire arena
+// moves with the `EcmaAst`. `Program<'static>` contains `NonNull` pointers
+// (via `oxc::allocator::Box`), but they all point into the bundled
+// `Allocator`, which moves alongside.
 unsafe impl Send for EcmaAst {}
+
+// SAFETY: `oxc::allocator::Allocator` is `!Sync` because allocation mutates
+// internal `Cell`s through `&self`. We assert `Sync` here under the
+// invariant: **the same `EcmaAst` must not have its bumpalo arena mutated
+// while another thread holds a shared reference to that `EcmaAst`**.
+//
+// This invariant is *not* fully enforced by the type system: `EcmaAst.program`
+// is `pub`, and `ProgramCell::borrow_owner` / `with_dependent` expose
+// `&ProgramCellOwner`, whose `allocator` field is `pub` — so safe code
+// holding `&EcmaAst` can construct an `oxc::ast::AstBuilder` that allocates
+// into the arena.
+//
+// [`ProgramCell::with_mut`] is the preferred access pattern because its
+// `&mut self` receiver makes the invariant statically checkable. Code that
+// reaches the allocator through `borrow_owner().allocator` must provide its
+// own synchronization or otherwise prove that each thread operates on a
+// distinct `EcmaAst` (for example, parallel chunk passes that index distinct
+// entries in `ast_table`).
 unsafe impl Sync for EcmaAst {}

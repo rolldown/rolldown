@@ -16,8 +16,8 @@ use rolldown_common::{
   ExternalModuleTaskResult, FlatOptions, HybridIndexVec, ImportKind, ImportRecordIdx,
   ImportRecordMeta, ImportedExports, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg,
   ModuleType, NormalModuleTaskResult, PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId,
-  RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, SymbolRefDb,
-  SymbolRefDbForModule,
+  RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, StmtInfos,
+  SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{
@@ -45,6 +45,10 @@ pub struct IntermediateNormalModules {
   pub modules: HybridIndexVec<ModuleIdx, Option<Module>>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
   pub index_ecma_ast: HybridIndexVec<ModuleIdx, Option<EcmaAst>>,
+  /// Per-module statement-info table collected as modules complete. Held here
+  /// instead of on `EcmaView` so the link stage can carry it as a side
+  /// `IndexVec<ModuleIdx, StmtInfos>` without a `mem::replace`.
+  pub stmt_infos: HybridIndexVec<ModuleIdx, Option<StmtInfos>>,
 }
 
 impl IntermediateNormalModules {
@@ -61,12 +65,18 @@ impl IntermediateNormalModules {
       } else {
         HybridIndexVec::Map(FxHashMap::default())
       },
+      stmt_infos: if is_full_scan {
+        HybridIndexVec::IndexVec(IndexVec::default())
+      } else {
+        HybridIndexVec::Map(FxHashMap::default())
+      },
     }
   }
 
   pub fn alloc_ecma_module_idx(&mut self) -> ModuleIdx {
     let id = self.modules.push(None);
     self.index_ecma_ast.push(None);
+    self.stmt_infos.push(None);
     self.importers.push(Vec::new());
     id
   }
@@ -74,6 +84,7 @@ impl IntermediateNormalModules {
   pub fn alloc_ecma_module_idx_sparse(&mut self, i: ModuleIdx) -> ModuleIdx {
     self.modules.insert(i, None);
     self.index_ecma_ast.insert(i, None);
+    self.stmt_infos.insert(i, None);
     if i >= self.importers.len() {
       self.importers.push(Vec::new());
     }
@@ -117,6 +128,11 @@ pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: HybridIndexVec<ModuleIdx, Module>,
   pub index_ecma_ast: HybridIndexVec<ModuleIdx, Option<EcmaAst>>,
+  /// Side table of per-module `StmtInfos` (one slot per module index, with
+  /// `StmtInfos::new()` placeholder for external modules). Threaded through
+  /// `ScanStageOutput`/`NormalizedScanStageOutput` to the link stage instead
+  /// of living on each `EcmaView`.
+  pub stmt_infos: HybridIndexVec<ModuleIdx, StmtInfos>,
   pub symbol_ref_db: SymbolRefDb,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -372,7 +388,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             mut module,
             mut barrel_info,
             ecma_related:
-              EcmaRelated { ast, symbols, mut dynamic_import_rec_exports_usage, preserve_jsx },
+              EcmaRelated {
+                ast,
+                symbols,
+                mut dynamic_import_rec_exports_usage,
+                preserve_jsx,
+                stmt_infos,
+              },
             resolved_deps,
             raw_import_records,
             warnings,
@@ -501,6 +523,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
           module.set_import_records(import_records);
           *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
+          *self.intermediate_normal_modules.stmt_infos.get_mut(module_idx) = Some(stmt_infos);
           *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
 
           if let Some((imported_exports_per_record, _)) = initialized_barrel_tracking {
@@ -555,6 +578,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           let RuntimeModuleTaskResult {
             local_symbol_ref_db,
             mut module,
+            stmt_infos,
             runtime,
             ast,
             raw_import_records,
@@ -581,6 +605,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
           *self.intermediate_normal_modules.modules.get_mut(runtime.id()) = Some(module.into());
           *self.intermediate_normal_modules.index_ecma_ast.get_mut(runtime.id()) = Some(ast);
+          *self.intermediate_normal_modules.stmt_infos.get_mut(runtime.id()) = Some(stmt_infos);
 
           self.symbol_ref_db.store_local_db(runtime.id(), local_symbol_ref_db);
           self.remaining -= 1;
@@ -710,6 +735,21 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       HybridIndexVec::Map(map)
     };
 
+    // Build the side `stmt_infos` table parallel to `module_table`. Slots that
+    // never received a `Some(stmt_infos)` (external modules, or normal modules
+    // not produced by tasks) get a fresh empty `StmtInfos` placeholder.
+    let stmt_infos_iter = std::mem::take(&mut self.intermediate_normal_modules.stmt_infos)
+      .into_iter_enumerated()
+      .into_iter()
+      .map(|(idx, stmt_infos)| (idx, stmt_infos.unwrap_or_else(StmtInfos::new)));
+    let stmt_infos = if is_dense_index_vec {
+      let vec = stmt_infos_iter.map(|(_, s)| s).collect();
+      HybridIndexVec::IndexVec(IndexVec::from_vec(vec))
+    } else {
+      let map = stmt_infos_iter.collect::<FxHashMap<_, _>>();
+      HybridIndexVec::Map(map)
+    };
+
     // Some module was not treated as an entry, but was emitted by `this.emitFile` during
     // processing, those module info also need to be updated
     // see https://github.com/rolldown/rolldown/issues/5030 as an example
@@ -768,6 +808,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       entry_point_to_reference_ids,
       symbol_ref_db: std::mem::take(&mut self.symbol_ref_db),
       index_ecma_ast: std::mem::take(&mut self.intermediate_normal_modules.index_ecma_ast),
+      stmt_infos,
       new_added_modules_from_partial_scan: std::mem::take(
         &mut self.new_added_modules_from_partial_scan,
       ),

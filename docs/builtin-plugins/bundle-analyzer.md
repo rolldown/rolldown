@@ -104,19 +104,19 @@ When `format: 'md'` is set, the plugin emits a structured markdown report instea
 
 The report is organized into the following sections:
 
-| Section                                    | Description                                                                                        |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| **Quick Summary**                          | Total output size, input module count, entry points, and number of code-split (common) chunks.     |
-| **Largest Modules by Output Contribution** | All modules sorted by size, with each module's percentage share of the total output.               |
-| **Entry Point Analysis**                   | For each entry: its output filename, bundle size, the chunks it loads, and the modules it bundles. |
-| **Dependency Chains**                      | Modules imported by multiple files, useful for understanding why a module ends up in the bundle.   |
-| **Optimization Suggestions**               | Actionable suggestions with severity levels (see below).                                           |
-| **Full Module Graph**                      | Complete per-module dependency information (imports, imported-by, size).                           |
-| **Raw Data for Searching**                 | Grep-friendly lines using `[MODULE:]`, `[IMPORT:]`, `[IMPORTED_BY:]`, `[ENTRY:]`, `[CHUNK:]` tags. |
+| Section                                    | Description                                                                                                           |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **Quick Summary**                          | Total output size, input module count, entry points, and number of code-split (common) chunks.                        |
+| **Largest Modules by Output Contribution** | All modules sorted by size, with each module's percentage share of the total output.                                  |
+| **Entry Point Analysis**                   | For each entry: its output filename, bundle size, the chunks it loads, and the modules it bundles.                    |
+| **Dependency Chains**                      | Modules imported by multiple files, useful for understanding why a module ends up in the bundle.                      |
+| **Optimization Suggestions**               | Actionable suggestions with severity levels (see below).                                                              |
+| **Full Module Graph**                      | Complete per-module dependency information (imports, imported-by, size).                                              |
+| **Raw Data for Searching**                 | Grep-friendly lines using `[MODULE:]`, `[OUTPUT_BYTES:]`, `[IMPORT:]`, `[IMPORTED_BY:]`, `[ENTRY:]`, `[CHUNK:]` tags. |
 
 ### Optimization Suggestions
 
-The suggestions section identifies modules that live in **shared common chunks** but are only reachable from a **single static entry**. Such modules are unnecessarily shared and could be moved closer to their entry point through code splitting configuration (for example, [`output.advancedChunks`](../reference/OutputOptions.advancedChunks.md)).
+The suggestions section identifies modules that live in **shared common chunks** but are only reachable from a **single static entry**. Such modules are unnecessarily shared and could be moved closer to their entry point by enabling [`entriesAware: true`](../reference/TypeAlias.CodeSplittingGroup.md#entriesaware) on your [`output.codeSplitting`](../reference/OutputOptions.codeSplitting.md) groups, which is the same fix the report's own optimization tip recommends.
 
 Each suggestion is tagged with a severity level based on the proportion of single-entry-reachable module size within the common chunk:
 

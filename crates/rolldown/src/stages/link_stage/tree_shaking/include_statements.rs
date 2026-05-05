@@ -23,7 +23,10 @@ use rolldown_utils::IndexBitSet;
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
+use crate::{
+  stages::link_stage::LinkStage, type_alias::IndexStmtInfos,
+  types::linking_metadata::LinkingMetadataVec,
+};
 
 pub type StmtInclusionVec = IndexVec<ModuleIdx, IndexBitSet<StmtInfoIdx>>;
 pub type ModuleInclusionVec = IndexBitSet<ModuleIdx>;
@@ -55,7 +58,7 @@ pub struct IncludeContext<'a> {
   pub modules: &'a IndexModules,
   /// Per-module statement-info table, detached from `EcmaView` and held on
   /// `LinkStage` for the duration of the link/generate stages.
-  pub stmt_infos: &'a IndexVec<ModuleIdx, StmtInfos>,
+  pub stmt_infos: &'a IndexStmtInfos,
   pub symbols: &'a SymbolRefDb,
   pub is_included_vec: &'a mut StmtInclusionVec,
   pub is_module_included_vec: &'a mut ModuleInclusionVec,
@@ -81,7 +84,7 @@ impl<'a> IncludeContext<'a> {
   #[expect(clippy::too_many_arguments)]
   pub fn new(
     modules: &'a IndexModules,
-    stmt_infos: &'a IndexVec<ModuleIdx, StmtInfos>,
+    stmt_infos: &'a IndexStmtInfos,
     symbols: &'a SymbolRefDb,
     is_included_vec: &'a mut StmtInclusionVec,
     is_module_included_vec: &'a mut ModuleInclusionVec,

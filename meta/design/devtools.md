@@ -34,6 +34,10 @@ When devtools is enabled, rolldown writes JSON-lines files to:
 
 Each line is a self-contained JSON object with an `action` discriminator field. Action events also carry `timestamp`, `session_id`, and `build_id` fields. `StringRef` entries contain only `action`, `id`, and `content` (no timestamp). The consumer reads the file and splits on newlines.
 
+### Read-after-close contract
+
+`meta.json` and `logs.json` are only guaranteed to be complete and readable **after `await bundle.close()` resolves**. Internally, events flow through a channel to a background writer thread and are buffered via `BufWriter`, so reading the files immediately after `generate()`/`write()` may return empty or truncated content. `bundle.close()` sends a `CloseSession` command with an ack channel and awaits the writer thread's signal, establishing the happens-before edge consumers depend on.
+
 ### Large String Deduplication
 
 Top-level string fields larger than 5 KB are cached by blake3 hash. A `StringRef` record is emitted before the action that references it:
@@ -56,7 +60,7 @@ Top-level string fields larger than 10 KB are additionally replaced with a `$ref
 
 ### Key Types
 
-- **`DebugTracer`** — Initializes a `tracing_subscriber` registry with the devtools-specific layer and formatter. Singleton init via `AtomicBool`. On drop, cleans up file handles and hash caches for its session.
+- **`DebugTracer`** — Initializes a `tracing_subscriber` registry with the devtools-specific layer and formatter. Singleton init via `AtomicBool`. On drop, sends a best-effort (no-ack) `CloseSession` to the writer thread as a cleanup fallback; the authoritative flush path is `ClassicBundler::close()`, which uses `rolldown_devtools::flush_session(session_id)` and awaits an ack before resolving.
 - **`Session`** — Holds a session `id` (e.g. `sid_0_1710000000000`) and a parent `tracing::Span`. All build spans are children of the session span. A `Session::dummy()` is used when devtools is disabled (no-op span).
 - **`DevtoolsLayer`** — A `tracing_subscriber::Layer` that extracts `CONTEXT_*` prefixed fields from spans and stores them as `ContextData` in span extensions.
 - **`DevtoolsFormatter`** — A `FormatEvent` impl that serializes `devtoolsAction`-tagged events to JSON lines, injects context variables, and writes to the appropriate file.
@@ -158,7 +162,7 @@ File handles and hash caches are stored in process-global `LazyLock<DashMap>` st
 - `OPENED_FILES_BY_SESSION` — tracks which files belong to which session (for cleanup)
 - `EXIST_HASH_BY_SESSION` — tracks already-emitted `StringRef` hashes per session (for dedup)
 
-These are cleaned up when `DebugTracer` is dropped.
+These are cleaned up when the background writer thread processes a `CloseSession` command — either sent synchronously via `flush_session(...)` from `ClassicBundler::close()` (ack-based, happens-before `close()` resolving) or best-effort from `DebugTracer::drop`.
 
 ## Consumer Side
 

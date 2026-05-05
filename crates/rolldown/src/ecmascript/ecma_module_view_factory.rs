@@ -112,7 +112,6 @@ pub async fn create_ecma_view(
     source: ast.source().clone(),
     named_imports,
     named_exports,
-    stmt_infos,
     imports,
     default_export_ref,
     exports_kind,
@@ -153,7 +152,8 @@ pub async fn create_ecma_view(
     cjs_reexport_import_record_ids,
   };
 
-  let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage, preserve_jsx };
+  let ecma_related =
+    EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage, preserve_jsx, stmt_infos };
   Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records, tla_keyword_span })
 }
 

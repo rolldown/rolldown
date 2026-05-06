@@ -14,6 +14,10 @@ For library bundling, check out [tsdown](https://tsdown.dev/).
 
 ::: code-group
 
+```sh [vp]
+$ vp add -D rolldown
+```
+
 ```sh [npm]
 $ npm install -D rolldown
 ```
@@ -129,9 +133,9 @@ $ node bundle.js
 
 You should see `Hello Rolldown!` printed.
 
-### Using the CLI in npm scripts
+### Adding a package.json build script
 
-To avoid typing the long command, we can move it inside an npm script:
+To avoid typing the long command, we can move it inside a `package.json` script:
 
 ```json{5} [package.json]
 {
@@ -148,9 +152,29 @@ To avoid typing the long command, we can move it inside an npm script:
 
 Now we can run the build with just:
 
-```sh
+::: code-group
+
+```sh [vp]
+$ vp run build
+```
+
+```sh [npm]
 $ npm run build
 ```
+
+```sh [pnpm]
+$ pnpm run build
+```
+
+```sh [yarn]
+$ yarn build
+```
+
+```sh [bun]
+$ bun run build
+```
+
+:::
 
 ## Using the Config File
 

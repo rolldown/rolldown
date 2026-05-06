@@ -1,4 +1,35 @@
 
+## [1.0.0-rc.19] - 2026-05-06
+
+### 🐛 Bug Fixes
+
+- implement dynamic dominator merge logic (#9270) by @TheAlexLichter
+- dev: apply __toCommonJS interop when CJS requires ESM in HMR finalizer (#9261) by @h-a-n-a
+
+### 🚜 Refactor
+
+- ecma_ast: tighten allocator access to enforce Sync invariant (#9278) by @IWANABETHATGUY
+- scan_stage: remove stmt_infos field from EcmaView (#9276) by @IWANABETHATGUY
+- link_stage: detach stmt_infos from EcmaView (#9274) by @IWANABETHATGUY
+- link_stage: detach depended_runtime_helper from EcmaView to remove unsafe (#9265) by @IWANABETHATGUY
+- link_stage: remove unsafe in determine_module_exports_kind (#9253) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- builtin-plugins: add bundle analyzer plugin docs (#9292) by @shulaoda
+- design doc for reference_needed_symbols (#9264) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- devtools: write logs on a background thread (#9219) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update rollup submodule for tests to v4.60.3 (#9294) by @sapphi-red
+- deps: update test262 submodule for tests (#9295) by @sapphi-red
+- ai: add rolldown REPL decode skill (#9245) by @Dunqing
+
+
 ## [1.0.0-rc.18] - 2026-04-29
 
 ### 💥 BREAKING CHANGES

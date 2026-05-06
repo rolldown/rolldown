@@ -103,5 +103,8 @@ test(`emit data for devtool`, async () => {
       ],
     });
     await bundle.generate();
+    // Devtools log files are only guaranteed complete after `close()` — the
+    // writer thread drains and flushes on the CloseSession ack.
+    await bundle.close();
   }
 });

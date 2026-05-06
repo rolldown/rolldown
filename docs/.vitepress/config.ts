@@ -91,6 +91,10 @@ const sidebarForPlugins: DefaultTheme.SidebarItem[] = [
         link: '/builtin-plugins/',
       },
       {
+        text: 'builtin:bundle-analyzer',
+        link: '/builtin-plugins/bundle-analyzer.md',
+      },
+      {
         text: 'builtin:esm-external-require',
         link: '/builtin-plugins/esm-external-require.md',
       },

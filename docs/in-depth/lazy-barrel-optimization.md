@@ -213,8 +213,10 @@ When a barrel module has its own exports (not just re-exports), all its import r
 // barrel/index.js
 import './a';
 import { b } from './b';
+import { e } from './e';
 export { c } from './c';
 export { d } from './d';
+export { e };
 
 console.log(b);
 
@@ -226,12 +228,15 @@ import { index, c } from './barrel';
 // or import b, { c } from './barrel';
 ```
 
-In this case, when `index` is imported: `a.js`, `b.js`, `c.js`, and `d.js` are all loaded:
+In this case, when `index` is imported: `a.js`, `b.js`, `c.js`, `d.js`, and `e.js` are all loaded:
 
 - `import './a'` - `a.js` is loaded with no specifier requested
-- `import { b } from './b'` - `b.js` is loaded with `b` requested
-- `export { c } from './c'` - `c.js` is loaded with `c` requested (because main.js imports `c`)
-- `export { d } from './d'` - `d.js` is loaded with no specifier requested (like `import './d'`, since `d` is not imported in main.js)
+- `import { b } from './b'` - `b.js` is loaded with `b` requested (used by the barrel's own code)
+- `import { e } from './e'; export { e }` (import-then-export) - `e.js` is loaded with `e` requested, because Rolldown cannot statically determine whether the barrel's own code also uses `e`
+- `export { c } from './c'` (dedicated re-export) - `c.js` is loaded with `c` requested (because main.js imports `c`)
+- `export { d } from './d'` (dedicated re-export) - `d.js` is loaded with no specifier requested (like `import './d'`, since `d` is not imported in main.js)
+
+Note the distinction between a dedicated re-export record (`export { .. } from '..'`, `export * as ns from '..'`) and a shared import record produced by the import-then-export pattern. When the barrel's own exports are loaded by main.js and the barrel must execute, dedicated re-export records can still fall back to an empty specifier set if their binding is not requested by main.js. Shared import records, by contrast, always keep their full specifiers, since their bindings may be referenced by the barrel's own code.
 
 This happens because `moduleSideEffects` can only be determined after the transform hook, but lazy barrel decisions are made at the load stage. When the barrel must execute (due to own exports being used), all its imports must be loaded to ensure correct behavior.
 

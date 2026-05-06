@@ -273,6 +273,11 @@ impl BundleCoordinator {
         // Clear current build
         self.current_bundling_future = None;
 
+        // Update watch paths so files pulled in by this rebuild,
+        // this can happen for lazy-compilation,
+        // because new files are pulled into `watch_files` only after browser hits the lazy proxy module.
+        let _ = self.update_watch_paths().await;
+
         if has_encountered_error {
           self.set_initial_build_state(CoordinatorState::Failed);
           self.has_stale_bundle_output = true;

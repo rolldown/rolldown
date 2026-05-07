@@ -589,6 +589,52 @@ impl GenerateStage<'_> {
       Self::find_merge_target(&user_defined_entry, &user_defined_entry_modules, module_table);
     if user_defined_entry.is_empty() {
       let dynamic_chunk_entry_modules = Self::collect_entry_modules(&dynamic_entry, chunk_graph)?;
+      // Cyclic-merge export-pollution guard for `find_merge_target`.
+      //
+      // `find_merge_target` accepts any candidate whose entry module is
+      // statically imported by every other entry module. When two or more
+      // dynamic entries form a static cycle, multiple candidates qualify
+      // simultaneously — picking one is arbitrary and leaks the other entry's
+      // module into the chosen target's chunk file. That file is what
+      // `import('./<target>.js')` resolves to at runtime, so the merged-in
+      // entry's named exports pollute the dynamic-import namespace observed
+      // by callers (issue #9320).
+      //
+      // Detect the cyclic shape by counting how many of the candidate
+      // chunks' own entry modules with named exports sit in `info.modules`.
+      // 0–1 collisions means the merge target is the rightful owner of every
+      // pending entry module — the optimization fires as before. >=2 means
+      // the cycle is real; refuse and let `assign_modules_to_chunk` create a
+      // separate common chunk so each dynamic entry stays a facade exposing
+      // only its own module's exports.
+      //
+      // The companion guard inside `find_dynamic_dominator` covers the
+      // shared-module case (pending modules that aren't themselves entry
+      // modules but still have exports needed cross-chunk).
+      //
+      // Perf: the guard runs on every common-chunk candidate, so it short-
+      // circuits aggressively. The cycle requires >=2 dynamic-entry
+      // candidates, so single-entry chunks (the common case) bail out with a
+      // length check. `dynamic_chunk_entry_modules` is a small Vec (one
+      // module per chunk in `chunk_idxs`); a linear `contains` over it beats
+      // building a HashSet for the typical handful of entries. The scan over
+      // `info.modules` stops the moment a second collision is found — the
+      // worst case (no second hit) only happens for non-cyclic candidates
+      // where the named-exports check filters most modules out before the
+      // membership test even runs.
+      if dynamic_chunk_entry_modules.len() >= 2 {
+        let mut collisions = 0u32;
+        for &m in &info.modules {
+          if dynamic_chunk_entry_modules.contains(&m)
+            && module_table[m].as_normal().is_some_and(|n| !n.named_exports.is_empty())
+          {
+            collisions += 1;
+            if collisions >= 2 {
+              return None;
+            }
+          }
+        }
+      }
       Self::find_merge_target(&dynamic_entry, &dynamic_chunk_entry_modules, module_table).or_else(
         || {
           Self::find_dynamic_dominator(
@@ -756,6 +802,8 @@ impl GenerateStage<'_> {
   ///   the other dynamic entries, forcing `D`'s chunk file to expose them at
   ///   the file level — which is what `import('./D.js')` resolves to at
   ///   runtime, polluting the dynamic-entry namespace observed by callers.
+  ///   (The cyclic variant of this collision is caught earlier at the call
+  ///   site, before `find_merge_target` runs.)
   /// - **Side-effect leak guard:** rejects `D` when any user-defined entry
   ///   reaches one of the covered dynamic entries without also reaching `D` —
   ///   after the merge that other path would pull `D`'s chunk in as a static

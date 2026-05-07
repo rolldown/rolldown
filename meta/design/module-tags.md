@@ -62,15 +62,15 @@ The identifier starts with `./`. Rolldown strips the `./` and treats the remaind
 
 **Matching rule:** after stripping `./`, the identifier must equal a suffix of the resolved path, aligned on `/` boundaries. Extensions included — no stripping, no case-insensitive match.
 
-| Identifier | Resolved path of target | Match? | Why |
-|---|---|---|---|
-| `./signup.module.ts` | `/project/src/auth/signup.module.ts` | ✅ | `signup.module.ts` is a `/`-aligned suffix |
-| `./auth/signup.module.ts` | `/project/src/auth/signup.module.ts` | ✅ | multi-segment suffix |
-| `./src/auth/signup.module.ts` | `/project/src/auth/signup.module.ts` | ✅ | longer suffix, narrows ambiguity |
-| `./bar.ts` | `/project/src/bar.ts` (from `import('./bar.js')`) | ✅ | matches what's on disk, not the specifier |
-| `./bar.js` | `/project/src/bar.ts` | ❌ | resolved extension is `.ts` |
-| `./foo.js` | `/project/src/foo.ts` | ❌ | different extension |
-| `./th/signup.module.ts` | `/project/src/auth/signup.module.ts` | ❌ | mid-segment — `th` isn't a full segment |
+| Identifier                    | Resolved path of target                           | Match? | Why                                        |
+| ----------------------------- | ------------------------------------------------- | ------ | ------------------------------------------ |
+| `./signup.module.ts`          | `/project/src/auth/signup.module.ts`              | ✅     | `signup.module.ts` is a `/`-aligned suffix |
+| `./auth/signup.module.ts`     | `/project/src/auth/signup.module.ts`              | ✅     | multi-segment suffix                       |
+| `./src/auth/signup.module.ts` | `/project/src/auth/signup.module.ts`              | ✅     | longer suffix, narrows ambiguity           |
+| `./bar.ts`                    | `/project/src/bar.ts` (from `import('./bar.js')`) | ✅     | matches what's on disk, not the specifier  |
+| `./bar.js`                    | `/project/src/bar.ts`                             | ❌     | resolved extension is `.ts`                |
+| `./foo.js`                    | `/project/src/foo.ts`                             | ❌     | different extension                        |
+| `./th/signup.module.ts`       | `/project/src/auth/signup.module.ts`              | ❌     | mid-segment — `th` isn't a full segment    |
 
 **Rationale:** resolved paths carry absolute-path prefixes (`/Users/you/project/…`) that users don't care about — suffix match strips that noise. Segment alignment prevents silent substring matches like `signup.module.ts` accidentally matching `foosignup.module.ts`.
 
@@ -84,13 +84,13 @@ The identifier does **not** start with `./`. Rolldown matches it against the bar
 
 **Matching rule:** exact equality. No suffix, no prefix, no fuzziness.
 
-| Identifier | Dynamic import | Match? | Why |
-|---|---|---|---|
-| `react` | `import('react')` | ✅ | exact |
-| `lodash-es/debounce` | `import('lodash-es/debounce')` | ✅ | exact, including subpath |
-| `debounce` | `import('lodash-es/debounce')` | ❌ | bare is exact-only, no suffix match |
-| `@scope/pkg/sub` | `import('@scope/pkg/sub')` | ✅ | exact |
-| `react` | `import('React')` | ❌ | case-sensitive |
+| Identifier           | Dynamic import                 | Match? | Why                                 |
+| -------------------- | ------------------------------ | ------ | ----------------------------------- |
+| `react`              | `import('react')`              | ✅     | exact                               |
+| `lodash-es/debounce` | `import('lodash-es/debounce')` | ✅     | exact, including subpath            |
+| `debounce`           | `import('lodash-es/debounce')` | ❌     | bare is exact-only, no suffix match |
+| `@scope/pkg/sub`     | `import('@scope/pkg/sub')`     | ✅     | exact                               |
+| `react`              | `import('React')`              | ❌     | case-sensitive                      |
 
 **Rationale:** bare specifiers are already the minimal canonical form — there's no boilerplate to trim. Allowing suffix would silently cross package boundaries (`debounce` would match both `rxjs/debounce` and `lodash-es/debounce`).
 
@@ -192,9 +192,7 @@ These are not planned for initial implementation but could be added based on rea
 - **Named-entry tags** — `$entry:<input-key>` for per-static-entry reachability. With `{ input: { main: './main.ts', admin: './admin.ts' } }`, a module reachable from the `admin` entry gets `$entry:admin`. Combined with `$initial`, this enables separating per-entry initial code across multi-entry builds:
 
   ```js
-  groups: [
-    { name: 'admin-initial', tags: ['$initial', '$entry:admin'], priority: 5 },
-  ];
+  groups: [{ name: 'admin-initial', tags: ['$initial', '$entry:admin'], priority: 5 }];
   ```
 
   The dynamic-import counterpart is covered by `$lazy-entry:<identifier>` (Phases 2–3, split by form). Magic-comment-based naming (`import(/* rolldownEntryName: 'admin' */ ...)`) is not planned — lazy identifiers come directly from the specifier or resolved path; static identifiers come from the `input` config key.

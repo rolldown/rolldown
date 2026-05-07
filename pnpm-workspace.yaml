@@ -106,3 +106,15 @@ trustPolicyExclude:
   - rxjs@7.8.2
 
 verifyDepsBeforeRun: install
+
+overrides:
+  vitepress>vite: npm:rolldown-vite@latest
+
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  oxc-resolver: true
+  playwright-chromium: true
+  sharp: true
+  tree-sitter: true
+  vue-demi: true

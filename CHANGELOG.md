@@ -1,4 +1,43 @@
 
+## [1.0.0] - 2026-05-07
+
+### 🐛 Bug Fixes
+
+- dev/lazy: lazily compiled modules should be watched (#9301) by @h-a-n-a
+- implement dynamic dominator merge logic (#9270) by @TheAlexLichter
+- dev: apply __toCommonJS interop when CJS requires ESM in HMR finalizer (#9261) by @h-a-n-a
+
+### 🚜 Refactor
+
+- ecma_ast: tighten allocator access to enforce Sync invariant (#9278) by @IWANABETHATGUY
+- scan_stage: remove stmt_infos field from EcmaView (#9276) by @IWANABETHATGUY
+- link_stage: detach stmt_infos from EcmaView (#9274) by @IWANABETHATGUY
+- link_stage: detach depended_runtime_helper from EcmaView to remove unsafe (#9265) by @IWANABETHATGUY
+- link_stage: remove unsafe in determine_module_exports_kind (#9253) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- getting-started: remove RC warning for 1.0.0 release (#9310) by @shulaoda
+- getting-started: update version references for 1.0.0 release (#9309) by @shulaoda
+- add Vite+ tab to getting-started snippets (#9285) by @shulaoda
+- lazy-barrel: clarify own-exports behavior for import-then-export records (#9298) by @shulaoda
+- restructure top navigation around Learn vs Reference (#9284) by @shulaoda
+- builtin-plugins: add bundle analyzer plugin docs (#9292) by @shulaoda
+- design doc for reference_needed_symbols (#9264) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- devtools: write logs on a background thread (#9219) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- mark esbuild/ts/parameter_props_use_define_for_class_fields_true as passed (#9308) by @sapphi-red
+- deps: upgrade oxc to 0.129.0 (#9297) by @shulaoda
+- deps: update rollup submodule for tests to v4.60.3 (#9294) by @sapphi-red
+- deps: update test262 submodule for tests (#9295) by @sapphi-red
+- ai: add rolldown REPL decode skill (#9245) by @Dunqing
+
+
 ## [1.0.0-rc.18] - 2026-04-29
 
 ### 💥 BREAKING CHANGES

@@ -118,7 +118,7 @@ jobs:
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
       os: windows-latest
-      node-version: 24
+      node-version: 26
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-test-macos:
@@ -130,7 +130,7 @@ jobs:
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
       os: macos-latest
-      node-version: 24
+      node-version: 26
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-test-ubuntu:
@@ -161,7 +161,7 @@ jobs:
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
       os: windows-latest
-      node-version: 24
+      node-version: 26
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-dev-server-test-macos:
@@ -173,7 +173,7 @@ jobs:
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
       os: macos-latest
-      node-version: 24
+      node-version: 26
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-dev-server-test-ubuntu:

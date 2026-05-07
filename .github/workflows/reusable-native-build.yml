@@ -55,5 +55,4 @@ jobs:
           name: rolldown-native-${{ inputs.os }}
           path: |
             packages/rolldown/dist
-            packages/pluginutils/dist
           if-no-files-found: error

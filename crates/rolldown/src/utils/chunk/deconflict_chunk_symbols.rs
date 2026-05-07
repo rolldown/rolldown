@@ -106,8 +106,7 @@ pub fn deconflict_chunk_symbols(
       let meta = &link_output.metas[module.idx];
       let is_cjs_wrapped_module = matches!(meta.wrap_kind(), WrapKind::Cjs);
 
-      module
-        .stmt_infos
+      link_output.stmt_infos[module.idx]
         .iter_enumerated()
         .filter(|(idx, _)| meta.stmt_info_included.has_bit(*idx))
         .for_each(|(_, stmt_info)| {

@@ -223,35 +223,37 @@ impl GenerateStage<'_> {
                   .push((module.idx, import.clone()));
               }
             });
-          module.stmt_infos.iter_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
-            if !self.link_output.metas[module.idx].stmt_info_included.has_bit(stmt_info_idx) {
-              return;
-            }
-            stmt_info.declared_symbols.iter().for_each(|declared| {
-              symbol_needs_to_assign.push(*declared);
-            });
+          self.link_output.stmt_infos[module.idx].iter_enumerated().for_each(
+            |(stmt_info_idx, stmt_info)| {
+              if !self.link_output.metas[module.idx].stmt_info_included.has_bit(stmt_info_idx) {
+                return;
+              }
+              stmt_info.declared_symbols.iter().for_each(|declared| {
+                symbol_needs_to_assign.push(*declared);
+              });
 
-            stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
-              match reference_ref {
-                rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
-                  depended_symbols.insert(symbols.canonical_ref_resolving_namespace(*referenced));
-                }
-                rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-                  match member_expr.represent_symbol_ref(
-                    &self.link_output.metas[module.idx].resolved_member_expr_refs,
-                  ) {
-                    Some(sym_ref) => {
-                      depended_symbols.insert(symbols.canonical_ref_resolving_namespace(sym_ref));
-                    }
-                    _ => {
-                      // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
-                      // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
+              stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+                match reference_ref {
+                  rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
+                    depended_symbols.insert(symbols.canonical_ref_resolving_namespace(*referenced));
+                  }
+                  rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+                    match member_expr.represent_symbol_ref(
+                      &self.link_output.metas[module.idx].resolved_member_expr_refs,
+                    ) {
+                      Some(sym_ref) => {
+                        depended_symbols.insert(symbols.canonical_ref_resolving_namespace(sym_ref));
+                      }
+                      _ => {
+                        // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
+                        // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
+                      }
                     }
                   }
                 }
-              }
-            });
-          });
+              });
+            },
+          );
         });
 
         if let Some(entry_id) = &chunk.entry_module_idx() {

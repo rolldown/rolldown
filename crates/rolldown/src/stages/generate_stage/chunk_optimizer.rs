@@ -589,7 +589,18 @@ impl GenerateStage<'_> {
       Self::find_merge_target(&user_defined_entry, &user_defined_entry_modules, module_table);
     if user_defined_entry.is_empty() {
       let dynamic_chunk_entry_modules = Self::collect_entry_modules(&dynamic_entry, chunk_graph)?;
-      Self::find_merge_target(&dynamic_entry, &dynamic_chunk_entry_modules, module_table)
+      Self::find_merge_target(&dynamic_entry, &dynamic_chunk_entry_modules, module_table).or_else(
+        || {
+          Self::find_dynamic_dominator(
+            &dynamic_entry,
+            &dynamic_chunk_entry_modules,
+            module_table,
+            dynamic_entry_to_dynamic_importers,
+            entry_chunk_reference,
+            &info.modules,
+          )
+        },
+      )
     } else {
       let chunk_idx = merged_user_defined_chunk?;
       let chunk = &chunk_graph.chunk_table[chunk_idx];
@@ -725,6 +736,115 @@ impl GenerateStage<'_> {
       });
       can_merge.then_some(*chunk_idx)
     })
+  }
+
+  /// Fallback merge-target search for the case where every chunk in `chunk_idxs`
+  /// is a dynamic entry (`find_merge_target` only inspects static
+  /// `importers_idx`, so it always fails here).
+  ///
+  /// Picks `D` from `dynamic_entry` such that the module-graph reachability
+  /// from `D`'s entry (following all import kinds) covers every other dynamic
+  /// entry in the set together with that entry's static and dynamic importers.
+  /// That guarantees every load path to those other entries goes through `D`,
+  /// so when shared modules are merged into `D`'s chunk and the other chunks
+  /// gain `D`'s chunk as a static dependency, no load can reach them without
+  /// `D` already being loaded.
+  ///
+  /// Two extra guards:
+  /// - **Export-pollution guard:** rejects the merge when any pending module
+  ///   has named exports. Those exports would still be needed cross-chunk by
+  ///   the other dynamic entries, forcing `D`'s chunk file to expose them at
+  ///   the file level — which is what `import('./D.js')` resolves to at
+  ///   runtime, polluting the dynamic-entry namespace observed by callers.
+  /// - **Side-effect leak guard:** rejects `D` when any user-defined entry
+  ///   reaches one of the covered dynamic entries without also reaching `D` —
+  ///   after the merge that other path would pull `D`'s chunk in as a static
+  ///   dep and run `D`'s side effects on a load that previously did not
+  ///   touch `D`.
+  fn find_dynamic_dominator(
+    dynamic_entry: &[ChunkIdx],
+    dynamic_entry_modules: &[ModuleIdx],
+    module_table: &ModuleTable,
+    dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
+    entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
+    pending_modules: &[ModuleIdx],
+  ) -> Option<ChunkIdx> {
+    if dynamic_entry.len() < 2 {
+      return None;
+    }
+    // Refuse the merge whenever any pending module exposes named exports. The
+    // other dynamic-entry chunks in `chunk_idxs` still need those exports
+    // cross-chunk, so after the merge the dominator's chunk would have to add
+    // them to its file-level export list — and that list is what
+    // `import('./dominator.js')` resolves to at runtime, polluting the
+    // dynamic-entry namespace observed by callers.
+    let exposes_exports = pending_modules
+      .iter()
+      .any(|m| module_table[*m].as_normal().is_some_and(|n| !n.named_exports.is_empty()));
+    if exposes_exports {
+      return None;
+    }
+    dynamic_entry.iter().zip(dynamic_entry_modules.iter()).find_map(
+      |(candidate_chunk_idx, candidate_module_idx)| {
+        let reach = Self::collect_module_graph_reach(*candidate_module_idx, module_table);
+
+        let dominates = dynamic_entry.iter().zip(dynamic_entry_modules.iter()).all(
+          |(other_chunk_idx, other_module_idx)| {
+            if other_chunk_idx == candidate_chunk_idx {
+              return true;
+            }
+            if !reach.contains(other_module_idx) {
+              return false;
+            }
+            let Some(other_module) = module_table[*other_module_idx].as_normal() else {
+              return false;
+            };
+            let static_importers_in_reach =
+              other_module.importers_idx.iter().all(|i| reach.contains(i));
+            let dynamic_importers_in_reach = dynamic_entry_to_dynamic_importers
+              .get(other_module_idx)
+              .is_none_or(|imps| imps.iter().all(|i| reach.contains(i)));
+            static_importers_in_reach && dynamic_importers_in_reach
+          },
+        );
+        if !dominates {
+          return None;
+        }
+
+        let leak = entry_chunk_reference.values().any(|reached_dynamic_chunks| {
+          if reached_dynamic_chunks.contains(candidate_chunk_idx) {
+            // The user-defined entry already loads the candidate before the
+            // other dynamic entries — no extra side effects can leak.
+            return false;
+          }
+          dynamic_entry
+            .iter()
+            .any(|other| other != candidate_chunk_idx && reached_dynamic_chunks.contains(other))
+        });
+        (!leak).then_some(*candidate_chunk_idx)
+      },
+    )
+  }
+
+  /// BFS the module graph from `start`, following every resolved import-record
+  /// edge regardless of import kind. Returns the set of modules transitively
+  /// reachable from `start`, including `start` itself.
+  fn collect_module_graph_reach(
+    start: ModuleIdx,
+    module_table: &ModuleTable,
+  ) -> FxHashSet<ModuleIdx> {
+    let mut reached = FxHashSet::default();
+    let mut queue = VecDeque::from([start]);
+    while let Some(cur) = queue.pop_front() {
+      if !reached.insert(cur) {
+        continue;
+      }
+      let Some(module) = module_table[cur].as_normal() else {
+        continue;
+      };
+      queue.extend(module.import_records.iter().filter_map(|rec| rec.resolved_module));
+    }
+    reached
   }
 
   /// Finds empty dynamic entry chunks that should be merged with their target common chunks.
@@ -929,24 +1049,24 @@ impl GenerateStage<'_> {
     for elimination in &facade_eliminations {
       let entry_module_idx = elimination.entry_module_idx;
       let wrap_kind = self.link_output.metas[entry_module_idx].wrap_kind();
-      let Some(module) = self.link_output.module_table[entry_module_idx].as_normal_mut() else {
+      if self.link_output.module_table[entry_module_idx].as_normal().is_none() {
         continue;
-      };
+      }
       // For CJS modules, we don't need to include `__exportAll` and the namespace symbols.
       // Instead, we should include the wrapper_ref (`require_xxx`), which will be handled
       // in the include_symbol call below.
       if !matches!(wrap_kind, WrapKind::Cjs) {
         // Filter in place to avoid cloning
-        module.stmt_infos[StmtInfos::NAMESPACE_STMT_IDX].referenced_symbols.retain(
-          |item| match item {
+        self.link_output.stmt_infos[entry_module_idx][StmtInfos::NAMESPACE_STMT_IDX]
+          .referenced_symbols
+          .retain(|item| match item {
             rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
               // module namespace symbol requires `__exportAll` runtime helper
               self.link_output.used_symbol_refs.contains(symbol_ref)
                 || symbol_ref.owner == runtime_module_idx
             }
             rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
-          },
-        );
+          });
       }
     }
 
@@ -956,6 +1076,7 @@ impl GenerateStage<'_> {
     let runtime = &self.link_output.runtime;
     let context = &mut IncludeContext {
       modules: &self.link_output.module_table.modules,
+      stmt_infos: &self.link_output.stmt_infos,
       symbols: &self.link_output.symbol_db,
       is_included_vec: &mut stmt_info_included_vec,
       is_module_included_vec: &mut module_included_vec,

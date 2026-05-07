@@ -61,11 +61,11 @@ assert.equal(import_cjs.a, void 0);
 (0:7) "exports = " --> (5:7) "exports = "
 (0:17) "1;\n" --> (5:17) "1;\n"
 - ../esm-import-cjs-export.js
-(1:0) "module." --> (15:0) "\tmodule."
+(1:0) "module." --> (15:1) "module."
 (1:7) "exports = " --> (15:8) "exports = "
 (1:17) "1;\n" --> (15:18) "1;\n"
 - ../cjs.js
-(0:0) "module." --> (20:0) "\tmodule."
+(0:0) "module." --> (20:1) "module."
 (0:7) "exports = " --> (20:8) "exports = "
 (0:17) "1;\n" --> (20:18) "1;\n"
 - ../esm-import-cjs-require.js

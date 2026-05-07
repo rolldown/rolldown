@@ -23,7 +23,10 @@ use rolldown_utils::IndexBitSet;
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
+use crate::{
+  stages::link_stage::LinkStage, type_alias::IndexStmtInfos,
+  types::linking_metadata::LinkingMetadataVec,
+};
 
 pub type StmtInclusionVec = IndexVec<ModuleIdx, IndexBitSet<StmtInfoIdx>>;
 pub type ModuleInclusionVec = IndexBitSet<ModuleIdx>;
@@ -53,6 +56,9 @@ bitflags::bitflags! {
 
 pub struct IncludeContext<'a> {
   pub modules: &'a IndexModules,
+  /// Per-module statement-info table, detached from `EcmaView` and held on
+  /// `LinkStage` for the duration of the link/generate stages.
+  pub stmt_infos: &'a IndexStmtInfos,
   pub symbols: &'a SymbolRefDb,
   pub is_included_vec: &'a mut StmtInclusionVec,
   pub is_module_included_vec: &'a mut ModuleInclusionVec,
@@ -78,6 +84,7 @@ impl<'a> IncludeContext<'a> {
   #[expect(clippy::too_many_arguments)]
   pub fn new(
     modules: &'a IndexModules,
+    stmt_infos: &'a IndexStmtInfos,
     symbols: &'a SymbolRefDb,
     is_included_vec: &'a mut StmtInclusionVec,
     is_module_included_vec: &'a mut ModuleInclusionVec,
@@ -91,6 +98,7 @@ impl<'a> IncludeContext<'a> {
   ) -> Self {
     Self {
       modules,
+      stmt_infos,
       symbols,
       is_included_vec,
       is_module_included_vec,
@@ -207,8 +215,9 @@ impl LinkStage<'_> {
       .module_table
       .modules
       .iter()
-      .map(|m| {
-        m.as_normal().map_or(IndexBitSet::default(), |m| IndexBitSet::new(m.stmt_infos.len()))
+      .zip(self.stmt_infos.iter())
+      .map(|(m, stmt_infos)| {
+        m.as_normal().map_or(IndexBitSet::default(), |_| IndexBitSet::new(stmt_infos.len()))
       })
       .collect::<IndexVec<ModuleIdx, _>>();
     let mut used_symbol_refs = UsedSymbolRefs::default();
@@ -223,6 +232,7 @@ impl LinkStage<'_> {
       .any(|m| m.as_normal().is_some_and(|n| !n.ecma_view.enum_member_value_map.is_empty()));
     let context = &mut IncludeContext::new(
       &self.module_table.modules,
+      &self.stmt_infos,
       &self.symbols,
       &mut is_stmt_info_included_vec,
       &mut is_module_included_vec,
@@ -253,11 +263,13 @@ impl LinkStage<'_> {
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, _came_from_cjs)| {
           if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
-            module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
-              |stmt_info_id| {
+            context.stmt_infos[symbol_ref.owner]
+              .declared_stmts_by_symbol(symbol_ref)
+              .iter()
+              .copied()
+              .for_each(|stmt_info_id| {
                 include_statement(context, module, stmt_info_id);
-              },
-            );
+              });
             include_symbol_and_check_cjs_bailout(
               context,
               *symbol_ref,
@@ -339,11 +351,14 @@ impl LinkStage<'_> {
       .modules
       .par_iter_mut()
       .zip_eq(self.metas.par_iter_mut())
-      .filter_map(|(m, meta)| m.as_normal_mut().map(|m| (m, meta)))
-      .for_each(|(module, meta)| {
+      .zip_eq(self.depended_runtime_helper.par_iter())
+      .filter_map(|((m, meta), depended_helper)| {
+        m.as_normal_mut().map(|m| (m, meta, depended_helper))
+      })
+      .for_each(|(module, meta, depended_helper)| {
         let idx = module.idx;
         let mut normalized_runtime_helper = RuntimeHelper::default();
-        for (helper, stmt_info_idxs) in module.depended_runtime_helper.iter() {
+        for (helper, stmt_info_idxs) in depended_helper.iter() {
           if stmt_info_idxs.is_empty() {
             continue;
           }
@@ -369,6 +384,7 @@ impl LinkStage<'_> {
     );
     let context = &mut IncludeContext::new(
       &self.module_table.modules,
+      &self.stmt_infos,
       &self.symbols,
       &mut is_stmt_info_included_vec,
       &mut is_module_included_vec,
@@ -400,6 +416,7 @@ impl LinkStage<'_> {
         .iter()
         .filter_map(Module::as_normal)
         .map(|m| m.to_debug_normal_module_for_tree_shaking(
+          &self.stmt_infos[m.idx],
           self.metas[m.idx].is_included,
           &self.metas[m.idx].stmt_info_included
         ))
@@ -437,11 +454,13 @@ impl LinkStage<'_> {
     let meta = &self.metas[entry.idx];
     meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|(symbol_ref, _came_from_cjs)| {
       if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
-        module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
-          |stmt_info_id| {
+        context.stmt_infos[symbol_ref.owner]
+          .declared_stmts_by_symbol(symbol_ref)
+          .iter()
+          .copied()
+          .for_each(|stmt_info_id| {
             include_statement(context, module, stmt_info_id);
-          },
-        );
+          });
         include_symbol_and_check_cjs_bailout(
           context,
           *symbol_ref,
@@ -645,7 +664,7 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
 
   let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
   if ctx.tree_shaking && !forced_no_treeshake {
-    module.stmt_infos.iter_enumerated_without_namespace_stmt().for_each(
+    ctx.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt().for_each(
       |(stmt_info_id, stmt_info)| {
         // No need to handle the namespace statement specially, because it doesn't have side effects and will only be included if it is used.
         let bail_eval = module.meta.has_eval()
@@ -665,7 +684,7 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
     );
   } else {
     // Skip the namespace statement. It should be included only if it is used no matter tree shaking is enabled or not.
-    module.stmt_infos.iter_enumerated_without_namespace_stmt().for_each(
+    ctx.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt().for_each(
       |(stmt_info_id, stmt_info)| {
         if stmt_info.force_tree_shaking {
           if stmt_info.side_effect.has_side_effect() {
@@ -794,11 +813,13 @@ pub fn include_symbol(
         .or_default()
         .insert(canonical_ref);
     }
-    module.stmt_infos.declared_stmts_by_symbol(&canonical_ref).iter().copied().for_each(
-      |stmt_info_id| {
+    ctx.stmt_infos[canonical_ref.owner]
+      .declared_stmts_by_symbol(&canonical_ref)
+      .iter()
+      .copied()
+      .for_each(|stmt_info_id| {
         include_statement(ctx, module, stmt_info_id);
-      },
-    );
+      });
     if !is_simulated_facade_chunk {
       include_module(ctx, module);
     }
@@ -808,8 +829,7 @@ pub fn include_symbol(
     rolldown_common::PropertyWriteSideEffects::False
   ) {
     ctx.modules[symbol_ref.owner].as_normal().inspect(|module| {
-      module
-        .stmt_infos
+      ctx.stmt_infos[symbol_ref.owner]
         .symbol_ref_to_referenced_stmt_idx()
         .get(&symbol_ref)
         .as_ref()
@@ -834,7 +854,7 @@ pub fn include_statement(
     return;
   }
 
-  let stmt_info = module.stmt_infos.get(stmt_info_idx);
+  let stmt_info = ctx.stmt_infos[module.idx].get(stmt_info_idx);
 
   // FIXME: bailout for require() import for now
   // it is fine for now, since webpack did not support it either
@@ -904,11 +924,13 @@ pub fn include_statement(
       if let Some(resolved_ref) = member_expr_resolution.resolved {
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
           if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
-            module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(
-              |stmt_info_id| {
+            ctx.stmt_infos[sym_ref.owner]
+              .declared_stmts_by_symbol(sym_ref)
+              .iter()
+              .copied()
+              .for_each(|stmt_info_id| {
                 include_statement(ctx, module, stmt_info_id);
-              },
-            );
+              });
           }
         });
         include_symbol(ctx, resolved_ref, include_kind);
@@ -959,11 +981,13 @@ pub fn include_statement(
         )
         .for_each(|sym_ref| {
           if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
-            module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(
-              |stmt_info_id| {
+            ctx.stmt_infos[sym_ref.owner]
+              .declared_stmts_by_symbol(sym_ref)
+              .iter()
+              .copied()
+              .for_each(|stmt_info_id| {
                 include_statement(ctx, module, stmt_info_id);
-              },
-            );
+              });
           }
         });
       include_symbol_and_check_cjs_bailout(ctx, *original_ref, include_kind);

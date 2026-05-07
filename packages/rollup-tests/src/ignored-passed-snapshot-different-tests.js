@@ -66,6 +66,7 @@ module.exports = [
     "rollup@form@namespace-import-reexport-2: properly associate or shadow variables in and around functions@generates es",
     "rollup@form@namespace-import-reexport: properly associate or shadow variables in and around functions@generates es",
     "rollup@form@namespace-object-import: properly encodes reserved names if namespace import is used@generates es",
+    "rollup@form@namespace-optimization: it does static lookup optimization of internal namespaces",
     "rollup@form@namespace-optimization-b: it does static lookup optimization of internal namespaces, coping with multiple namespaces in one function@generates es",
     "rollup@form@namespace-reexport-name: uses correct names when reexporting from namespace reexports (#4049)@generates es", // the rollup result is simply
     "rollup@form@namespace-self-import: namespace early import hoisting@generates es",

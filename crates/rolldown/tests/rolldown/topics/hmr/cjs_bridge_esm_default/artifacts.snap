@@ -1,0 +1,79 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: bridge.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region esm.js
+var esm_exports = /* @__PURE__ */ __exportAll({ default: () => esm_default }), esm_default;
+var init_esm = __esmMin((() => {
+	__rolldown_runtime__.createModuleHotContext("esm.js");
+	__rolldown_runtime__.registerModule("esm.js", { exports: esm_exports });
+	esm_default = "esm-default";
+}));
+//#endregion
+//#region bridge.js
+var require_bridge = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	__rolldown_runtime__.createModuleHotContext("bridge.js");
+	__rolldown_runtime__.registerModule("bridge.js", module);
+	module.exports = (init_esm(), __toCommonJS(esm_exports));
+}));
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+var import_bridge = /* @__PURE__ */ __toESM(require_bridge());
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+assert.strictEqual(import_bridge.default, "esm-default");
+main_hot.accept("bridge.js", (mod) => {
+	assert.strictEqual(mod.__esModule, true);
+	assert.strictEqual(mod.default, "esm-default");
+	globalThis.__cjs_bridge_esm_default_patch_verified = true;
+});
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.strictEqual(globalThis.__cjs_bridge_esm_default_patch_verified, true, "bridge.js HMR patch accept handler should have run and verified");
+});
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+//#region bridge.js
+var require_bridge_0 = __rolldown_runtime__.createCjsInitializer("bridge.js", (function(__rolldown_exports__, __rolldown_module__, __rolldown_module_id__) {
+	try {
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
+		const hot_bridge = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		__rolldown_module__.exports = __rolldown_runtime__.__toCommonJS(__rolldown_runtime__.loadExports("esm.js"));
+	} finally {}
+}));
+
+//#endregion
+require_bridge_0()
+__rolldown_runtime__.applyUpdates([['main.js', 'bridge.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: main.js, accepted_via: bridge.js

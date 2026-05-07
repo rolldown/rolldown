@@ -1,4 +1,102 @@
 
+## [1.0.0] - 2026-05-07
+
+### 🐛 Bug Fixes
+
+- dev/lazy: lazily compiled modules should be watched (#9301) by @h-a-n-a
+- implement dynamic dominator merge logic (#9270) by @TheAlexLichter
+- dev: apply __toCommonJS interop when CJS requires ESM in HMR finalizer (#9261) by @h-a-n-a
+
+### 🚜 Refactor
+
+- ecma_ast: tighten allocator access to enforce Sync invariant (#9278) by @IWANABETHATGUY
+- scan_stage: remove stmt_infos field from EcmaView (#9276) by @IWANABETHATGUY
+- link_stage: detach stmt_infos from EcmaView (#9274) by @IWANABETHATGUY
+- link_stage: detach depended_runtime_helper from EcmaView to remove unsafe (#9265) by @IWANABETHATGUY
+- link_stage: remove unsafe in determine_module_exports_kind (#9253) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- getting-started: remove RC warning for 1.0.0 release (#9310) by @shulaoda
+- getting-started: update version references for 1.0.0 release (#9309) by @shulaoda
+- add Vite+ tab to getting-started snippets (#9285) by @shulaoda
+- lazy-barrel: clarify own-exports behavior for import-then-export records (#9298) by @shulaoda
+- restructure top navigation around Learn vs Reference (#9284) by @shulaoda
+- builtin-plugins: add bundle analyzer plugin docs (#9292) by @shulaoda
+- design doc for reference_needed_symbols (#9264) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- devtools: write logs on a background thread (#9219) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- mark esbuild/ts/parameter_props_use_define_for_class_fields_true as passed (#9308) by @sapphi-red
+- deps: upgrade oxc to 0.129.0 (#9297) by @shulaoda
+- deps: update rollup submodule for tests to v4.60.3 (#9294) by @sapphi-red
+- deps: update test262 submodule for tests (#9295) by @sapphi-red
+- ai: add rolldown REPL decode skill (#9245) by @Dunqing
+
+
+## [1.0.0-rc.18] - 2026-04-29
+
+### 💥 BREAKING CHANGES
+
+- optimization: default unspecified inlineConst.mode to smart (#9248) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_vite_import_glob: return error instead of panicking when virtual module uses a relative glob (#9241) by @shulaoda
+- binding: treat empty inlineConst object as omitted (#9247) by @IWANABETHATGUY
+- rolldown: keep enum declaration for optional-chain access (#9229) by @Dunqing
+- link_stage: restore inline let-else in exports-kind filter (#9237) by @IWANABETHATGUY
+- dev/lazy: avoid module reinitialization in lazy compilation patches (#9179) by @h-a-n-a
+- dev: visit identifier references for runtime rewrites in HMR finalizer (#9191) by @h-a-n-a
+- chunk-optimizer: pick dominator for runtime placement to avoid cycles (#9164) by @IWANABETHATGUY
+- make `this.emitFile` chunk path synchronous to avoid deadlock (#9031) by @lazarv
+- use sentinel id for `browser: false` ignored modules (#9192) by @shulaoda
+- prevent chunk optimizer from creating import cycles (#9228) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- replace tokio::sync::Mutex with std::sync::Mutex for non-IO data (#9176) by @shulaoda
+- rolldown_plugin_vite_import_glob: do not rewrite import path for absolute base (#9195) by @shulaoda
+- runtime_helper: wrap DependedRuntimeHelperMap in a struct (#9215) by @IWANABETHATGUY
+- drop redundant clear() in determine_safely_merge_cjs_ns (#9206) by @IWANABETHATGUY
+- clean up generate_lazy_export (#9208) by @IWANABETHATGUY
+- bitset: return bool from set_bit to fuse guard-and-set (#9207) by @IWANABETHATGUY
+- link_stage: simplify exports-kind filter and clarify safety comments (#9205) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- determine_module_exports_kind (#9252) by @IWANABETHATGUY
+- fix dead link to esbuild ESM/CJS interop tests (#9230) by @Copilot
+- remove CSS bundling references (#9234) by @shulaoda
+- correct IncrementalFullBuild row in BundleMode table (#9214) by @IWANABETHATGUY
+- design: add bundler data lifecycle design doc (#9212) by @hyf0
+- remove minifier alpha status notices (#9202) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- upgrade oxc to 0.128.0 (#9260) by @shulaoda
+- deps: bump rolldown-ariadne to 0.6.0 (#9254) by @IWANABETHATGUY
+- deps: update github actions (#9259) by @renovate[bot]
+- deps: update github actions (#9258) by @renovate[bot]
+- remove renovate overrides (#9257) by @Boshen
+- use ubuntu-latest for security workflow (#9256) by @Boshen
+- notify Discord around release publish (#9251) by @Boshen
+- add release environment to npm publish workflow (#9250) by @Boshen
+- justfile: drop the `--` separator before forwarded args in `vp run` (#9246) by @shulaoda
+- deps: update test262 submodule for tests (#9243) by @sapphi-red
+- add more tracing instrumentations (#9220) by @sapphi-red
+- rolldown_plugin_vite_import_glob: remove outdated sourcemap doc comment (#9213) by @shulaoda
+- update security workflow (#9201) by @Boshen
+
+### ❤️ New Contributors
+
+* @lazarv made their first contribution in [#9031](https://github.com/rolldown/rolldown/pull/9031)
+
+
 ## [1.0.0-rc.17] - 2026-04-22
 
 ### 🐛 Bug Fixes

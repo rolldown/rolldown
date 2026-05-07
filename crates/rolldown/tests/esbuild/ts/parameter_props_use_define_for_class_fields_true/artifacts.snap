@@ -7,6 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (class {
+	b1;
+	b2;
 	static {
 		console.log("a");
 	}

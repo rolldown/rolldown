@@ -8,6 +8,17 @@ All development happens directly on [GitHub](https://github.com/rolldown/rolldow
 
 Outside of GitHub, we also use a [Discord server](https://chat.rolldown.rs) for real-time discussions.
 
+## AI Usage Policy
+
+When using AI tools (including LLMs like ChatGPT, Claude, Copilot, etc.) to contribute to Rolldown:
+
+- **Please disclose AI usage** to reduce maintainer fatigue
+- **You are responsible** for all AI-generated issues or PRs you submit
+- **Low-quality or unreviewed AI content will be closed immediately**
+- **Contributors who submit repeated low-quality ("slop") PRs will be banned without prior warning.** Bans may be lifted if you commit to contributing to Rolldown in accordance with this policy. You may request an unban via our [Discord](https://chat.rolldown.rs/).
+
+We encourage the use of AI tools to assist with development, but all contributions must be thoroughly reviewed and tested by the contributor before submission. AI-generated code should be understood, validated, and adapted to meet Rolldown's standards.
+
 ## Reporting a bug
 
 Please report bugs to GitHub only after you have previously searched for the issue and found no results. Be sure to be as descriptive as possible and to include all applicable labels.

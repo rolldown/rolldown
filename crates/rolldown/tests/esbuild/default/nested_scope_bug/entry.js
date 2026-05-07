@@ -3,7 +3,7 @@
 		b()
 	}
 	{
-		var b = () => {}
+		var b = () => {console.log()}
 	}
 	a()
 })()

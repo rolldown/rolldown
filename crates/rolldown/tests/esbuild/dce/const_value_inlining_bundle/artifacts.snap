@@ -45,10 +45,6 @@ function bar() {
 ## cross-module-entry.js
 
 ```js
-foo();
-function foo() {
-	return [1, 1];
-}
 //#endregion
 //#region cross-module-entry.js
 console.log(1, 1);

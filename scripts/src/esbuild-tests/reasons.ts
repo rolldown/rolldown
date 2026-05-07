@@ -39,8 +39,6 @@ export const failedReasons: Record<string, string> = {
   'packagejson/package_json_browser_issue2002_b': '`sub` is not resolved',
   'packagejson/package_json_disabled_type_module_issue3367':
     'ignored module debug name seems not correct',
-  'ts/parameter_props_use_define_for_class_fields_true':
-    'https://github.com/oxc-project/oxc/issues/21600',
   'ts/ts_export_default_type_issue316':
     'related to https://github.com/rolldown/rolldown/issues/3048, export pointing to a value declared by `declare var` should be kept',
   'ts/ts_print_non_finite_number_inside_with':

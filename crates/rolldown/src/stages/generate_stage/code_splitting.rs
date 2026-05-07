@@ -467,13 +467,13 @@ impl GenerateStage<'_> {
         .iter()
         .filter_map(|ns| {
           // We must check statement inclusion here (not in linking stage) because
-          // `include_statements` runs after `reference_needed_symbols` where the
-          // `safely_merge_cjs_ns_map` is populated. At that point, we don't yet
-          // know which statements will be tree-shaken.
+          // `include_statements` runs after the pass that populates
+          // `safely_merge_cjs_ns_map` (`determine_safely_merge_cjs_ns`) and after
+          // `reference_needed_symbols`, which is the last point the map is read.
+          // At that point, we don't yet know which statements will be tree-shaken.
           // related context: https://github.com/rolldown/rolldown/blob/dbd0f6de5d44be2327e7532bb6f0a38bc04a1047/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs#L187-L194
           let importer = self.link_output.module_table[ns.owner].as_normal()?;
-          let is_stmt_included = importer
-            .stmt_infos
+          let is_stmt_included = self.link_output.stmt_infos[importer.idx]
             .declared_stmts_by_symbol(ns)
             .iter()
             .all(|item| self.link_output.metas[importer.idx].stmt_info_included.has_bit(*item));

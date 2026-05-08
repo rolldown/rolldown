@@ -192,49 +192,45 @@ impl ChunkOptimizationGraph {
     }
   }
 
-  /// Checks if merging `source_chunk` into `target_chunk` would create a circular dependency.
-  ///
-  /// Returns `true` if the merge would create a cycle, `false` if it's safe to merge.
-  ///
-  /// After merging, the combined chunk has deps = `source.deps ∪ target.deps`, and any chunk
-  /// that previously depended on `source` now depends on `target`. A cycle exists iff `target`
-  /// is reachable from `source.deps ∪ target.deps` in the resulting graph.
-  ///
-  /// We approximate this by doing a BFS from `source.deps ∪ target.deps`, treating any chunk
-  /// that depends on `source` as also pointing to `target` (since after the merge they would).
-  /// If `target` is reachable, the merge would create a cycle.
-  ///
-  /// This is similar to Rollup's check in `getAdditionalSizeIfNoTransitiveDependencyOrNonCorrelatedSideEffect`.
+  /// Checks if merging `source_chunk_idx` into `target_chunk_idx` would create a circular dependency.
   pub fn would_create_circular_dependency(
     &self,
     source_chunk_idx: ChunkIdx,
     target_chunk_idx: ChunkIdx,
+    same_target_merges: Option<&FxHashSet<ChunkIdx>>,
   ) -> bool {
-    // Start BFS from the combined deps of source and target.
-    let mut queue: VecDeque<ChunkIdx> = self.chunks[source_chunk_idx]
-      .dependencies
-      .iter()
-      .chain(self.chunks[target_chunk_idx].dependencies.iter())
-      .copied()
-      .collect();
-    let mut visited = FxHashSet::default();
+    let mut merged_chunks = FxHashSet::default();
+    merged_chunks.insert(target_chunk_idx);
+    merged_chunks.insert(source_chunk_idx);
+    if let Some(same_target_merges) = same_target_merges {
+      merged_chunks.extend(same_target_merges.iter().copied());
+    }
 
+    let mut queue = VecDeque::new();
+    for chunk_idx in &merged_chunks {
+      queue.extend(
+        self.chunks[*chunk_idx]
+          .dependencies
+          .iter()
+          .filter_map(|dep| if merged_chunks.contains(dep) { None } else { Some(*dep) }),
+      );
+    }
+
+    let mut visited = FxHashSet::default();
     while let Some(chunk_idx) = queue.pop_front() {
-      if chunk_idx == target_chunk_idx {
+      if merged_chunks.contains(&chunk_idx) {
         return true;
       }
       if !visited.insert(chunk_idx) {
         continue;
       }
       for &dep in &self.chunks[chunk_idx].dependencies {
+        if merged_chunks.contains(&dep) {
+          return true;
+        }
         if !visited.contains(&dep) {
           queue.push_back(dep);
         }
-      }
-      // Any chunk that depends on source will depend on target after the merge.
-      // Simulate this by also queuing target when we encounter such a chunk.
-      if self.chunks[chunk_idx].dependencies.contains(&source_chunk_idx) {
-        queue.push_back(target_chunk_idx);
       }
     }
 
@@ -411,13 +407,33 @@ impl GenerateStage<'_> {
       })
       .collect();
 
+    let merge_groups = assignments.iter().fold(
+      FxHashMap::<ChunkIdx, FxHashSet<ChunkIdx>>::default(),
+      |mut acc, (_, temp_chunk_idx, _, merge_target)| {
+        if let Some(target_chunk_idx) = merge_target {
+          let temp_chunk = &temp_chunk_graph.chunks[*temp_chunk_idx];
+          if self.can_merge_modules_into_existing_chunk(
+            chunk_graph,
+            *target_chunk_idx,
+            &temp_chunk.modules,
+          ) {
+            acc.entry(*target_chunk_idx).or_default().insert(*temp_chunk_idx);
+          }
+        }
+        acc
+      },
+    );
+
     // Second pass: apply chunk assignments
     for (bits, temp_chunk_idx, chunk_idxs, merge_target) in assignments {
       // Check if merging would create a circular dependency
       let merge_target = match merge_target {
         Some(target_chunk_idx)
-          if temp_chunk_graph
-            .would_create_circular_dependency(temp_chunk_idx, target_chunk_idx) =>
+          if temp_chunk_graph.would_create_circular_dependency(
+            temp_chunk_idx,
+            target_chunk_idx,
+            merge_groups.get(&target_chunk_idx),
+          ) =>
         {
           // Skip merge if it would create a circular dependency
           None
@@ -462,27 +478,11 @@ impl GenerateStage<'_> {
     input_base: &ArcStr,
   ) -> ChunkAssignment {
     match merge_target {
-      Some(chunk_idx) => {
-        let chunk = &chunk_graph.chunk_table[chunk_idx];
-        let is_async_entry_only = matches!(chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta == ChunkMeta::DynamicImported);
-        if matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict)) {
-          // We can safely merge into this chunk in two scenarios:
-          // 1. The target chunk is an async entry - dynamic chunks are not restricted by `PreserveEntrySignatures`.
-          // 2. The target chunk has strict signature preservation, but the modules being merged won't alter
-          //    the entry's exported interface (they either have no exports or only re-export existing entry symbols).
-          if is_async_entry_only || self.can_merge_without_changing_entry_signature(chunk, modules)
-          {
-            self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
-            ChunkAssignment::Merged(chunk_idx)
-          } else {
-            let new_chunk_id =
-              self.create_common_chunk(modules, bits, chunk_graph, bits_to_chunk, input_base);
-            ChunkAssignment::Created(new_chunk_id)
-          }
-        } else {
-          self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
-          ChunkAssignment::Merged(chunk_idx)
-        }
+      Some(chunk_idx)
+        if self.can_merge_modules_into_existing_chunk(chunk_graph, chunk_idx, modules) =>
+      {
+        self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
+        ChunkAssignment::Merged(chunk_idx)
       }
       _ => {
         let new_chunk_id =
@@ -490,6 +490,21 @@ impl GenerateStage<'_> {
         ChunkAssignment::Created(new_chunk_id)
       }
     }
+  }
+
+  fn can_merge_modules_into_existing_chunk(
+    &self,
+    chunk_graph: &ChunkGraph,
+    chunk_idx: ChunkIdx,
+    modules: &[ModuleIdx],
+  ) -> bool {
+    let chunk = &chunk_graph.chunk_table[chunk_idx];
+    if !matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict)) {
+      return true;
+    }
+
+    let is_async_entry_only = matches!(chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta == ChunkMeta::DynamicImported);
+    is_async_entry_only || self.can_merge_without_changing_entry_signature(chunk, modules)
   }
 
   /// Merges modules into an existing entry chunk.

@@ -1,0 +1,70 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## child.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: child.js] [Name: None]
+import { t as require_jsx_runtime } from "./entry.js";
+//#region child.js
+var import_jsx_runtime = require_jsx_runtime();
+console.log("child", (0, import_jsx_runtime.jsx)("child", {}));
+//#endregion
+
+```
+
+## entry.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: entry.js] [Name: Some("entry")]
+// HIDDEN [\0rolldown/runtime.js]
+//#region node_modules/react/cjs/react.production.js
+var require_react_production = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.version = "19";
+}));
+//#endregion
+//#region node_modules/react/index.js
+var require_react = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = require_react_production();
+}));
+//#endregion
+//#region node_modules/react/cjs/react-jsx-runtime.production.js
+var require_react_jsx_runtime_production = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.jsx = (type) => ({ type });
+	exports.jsxs = exports.jsx;
+	exports.Fragment = Symbol.for("react.fragment");
+}));
+//#endregion
+//#region node_modules/react/jsx-runtime.js
+var require_jsx_runtime = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = require_react_jsx_runtime_production();
+}));
+require_react();
+var import_jsx_runtime = require_jsx_runtime();
+console.log("entry", "19", (0, import_jsx_runtime.jsx)("main", {}));
+import("./route.js");
+//#endregion
+export { require_react as n, __toESM as r, require_jsx_runtime as t };
+
+```
+
+## route.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: route.js] [Name: None]
+import { n as require_react, t as require_jsx_runtime } from "./entry.js";
+require_react();
+var import_jsx_runtime = require_jsx_runtime();
+console.log("route", "19", (0, import_jsx_runtime.jsx)("route", {}));
+import("./child.js");
+//#endregion
+
+```
+
+# Output Stats
+
+- child.js, is_entry false, is_dynamic_entry true, exports []
+- entry.js, is_entry true, is_dynamic_entry false, exports ["n", "r", "t"]
+- route.js, is_entry false, is_dynamic_entry true, exports []

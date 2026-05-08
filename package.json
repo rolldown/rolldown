@@ -22,7 +22,7 @@
     "@types/node": "catalog:",
     "cjs-module-lexer": "^2.1.0",
     "knip": "^6.0.0",
-    "playwright-chromium": "^1.56.1",
+    "playwright-chromium": "1.60.0-beta-1778142790000",
     "publint": "^0.3.16",
     "remove-unused-vars": "^0.0.12",
     "rolldown": "workspace:*",

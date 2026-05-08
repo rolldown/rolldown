@@ -273,8 +273,8 @@ importers:
         specifier: ^6.0.0
         version: 6.4.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       playwright-chromium:
-        specifier: ^1.56.1
-        version: 1.59.1
+        specifier: 1.60.0-beta-1778142790000
+        version: 1.60.0-beta-1778142790000
       publint:
         specifier: ^0.3.16
         version: 0.3.18
@@ -749,8 +749,8 @@ importers:
         version: 4.1.4(@opentelemetry/api@1.9.0)(@types/node@24.10.3)(vite@8.0.8(@types/node@24.10.3)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
     devDependencies:
       playwright:
-        specifier: ^1.48.0
-        version: 1.59.1
+        specifier: 1.60.0-beta-1778142790000
+        version: 1.60.0-beta-1778142790000
 
   packages/test-dev-server/tests/fixtures/client-module-execution-status:
     devDependencies:
@@ -6167,18 +6167,18 @@ packages:
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
 
-  playwright-chromium@1.59.1:
-    resolution: {integrity: sha512-aTsPenkxsr9np4vIHuMEND6comqepVvzbL0MwkozFNliwGZjTqrBUQ7TF6Ay1ZIU/e7rcUpGsCTUG+nqwxG2Xw==}
+  playwright-chromium@1.60.0-beta-1778142790000:
+    resolution: {integrity: sha512-4y45Sdl995Obim0U8LcIBCF8zKYDs4xqVw8hzejeMFCurCsSd3PYcV9VdRTvR6XVYE9XPiRTs4qL3UhPqonJpA==}
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright-core@1.59.1:
-    resolution: {integrity: sha512-HBV/RJg81z5BiiZ9yPzIiClYV/QMsDCKUyogwH9p3MCP6IYjUFu/MActgYAvK0oWyV9NlwM3GLBjADyWgydVyg==}
+  playwright-core@1.60.0-beta-1778142790000:
+    resolution: {integrity: sha512-/iQNa/tJLSVuN43FBs1U7QZkZ5FreXV6jqoVFbwy1MITrg+nhlZ73iw08E7+Jg3v6ijn2gsbSc40yKITVdJDog==}
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.59.1:
-    resolution: {integrity: sha512-C8oWjPR3F81yljW9o5OxcWzfh6avkVwDD2VYdwIGqTkl+OGFISgypqzfu7dOe4QNLL2aqcWBmI3PMtLIK233lw==}
+  playwright@1.60.0-beta-1778142790000:
+    resolution: {integrity: sha512-56LneJjvRh9+Rhv1H1HiDltUaTn2hDNTW07lc3VMV81JZHHs6u3nozNc/dceE/sUW9K+2VG1qr9J6n3+9a+fXg==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -12038,15 +12038,15 @@ snapshots:
       exsolve: 1.0.8
       pathe: 2.0.3
 
-  playwright-chromium@1.59.1:
+  playwright-chromium@1.60.0-beta-1778142790000:
     dependencies:
-      playwright-core: 1.59.1
+      playwright-core: 1.60.0-beta-1778142790000
 
-  playwright-core@1.59.1: {}
+  playwright-core@1.60.0-beta-1778142790000: {}
 
-  playwright@1.59.1:
+  playwright@1.60.0-beta-1778142790000:
     dependencies:
-      playwright-core: 1.59.1
+      playwright-core: 1.60.0-beta-1778142790000
     optionalDependencies:
       fsevents: 2.3.2
 

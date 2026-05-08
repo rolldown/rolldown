@@ -289,7 +289,7 @@ import { watch } from 'rolldown';
 
 const watcher = watch({
   /* option */
-}); // or watch([/* multiply option */] )
+}); // or watch([/* multiple option */] )
 
 watcher.on('event', () => {});
 

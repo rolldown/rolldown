@@ -142,7 +142,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [22, 24, 26]
+        node-version: [20, 26]
     uses: ./.github/workflows/reusable-node-test.yml
     if: |
       always() &&
@@ -185,7 +185,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [22, 24, 26]
+        node-version: [20, 26]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
     if: |
       always() &&

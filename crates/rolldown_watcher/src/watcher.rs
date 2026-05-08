@@ -75,7 +75,7 @@ struct CoordinatorState {
 pub struct Watcher {
   coordinator_state: std::sync::Mutex<CoordinatorState>,
   tx: mpsc::UnboundedSender<WatcherMsg>,
-  cancelled: Arc<AtomicBool>,
+  closed: Arc<AtomicBool>,
 }
 
 impl Watcher {
@@ -87,8 +87,8 @@ impl Watcher {
     watcher_config: &WatcherConfig,
   ) -> BuildResult<Self> {
     let (tx, rx) = mpsc::unbounded_channel();
-    let cancelled = Arc::new(AtomicBool::new(false));
-    let tasks = Self::create_tasks(configs, watcher_config, &tx, Arc::clone(&cancelled))?;
+    let closed = Arc::new(AtomicBool::new(false));
+    let tasks = Self::create_tasks(configs, watcher_config, &tx, Arc::clone(&closed))?;
     let coordinator = WatchCoordinator::new(rx, handler, tasks, watcher_config);
     let coordinator_future: Pin<Box<dyn Future<Output = ()> + Send>> = Box::pin(coordinator.run());
 
@@ -98,7 +98,7 @@ impl Watcher {
         handle: None,
       }),
       tx,
-      cancelled,
+      closed,
     })
   }
 
@@ -125,7 +125,7 @@ impl Watcher {
   /// Close the watcher and wait for the coordinator to finish.
   /// Must be called after `run()` — calling before `run()` will skip cleanup hooks.
   pub async fn close(&self) -> Result<()> {
-    self.cancelled.store(true, std::sync::atomic::Ordering::SeqCst);
+    self.closed.store(true, std::sync::atomic::Ordering::SeqCst);
     let _ = self.tx.send(WatcherMsg::Close);
     self.wait_for_close().await;
     Ok(())
@@ -135,7 +135,7 @@ impl Watcher {
     configs: Vec<BundlerConfig>,
     watcher_config: &WatcherConfig,
     tx: &mpsc::UnboundedSender<WatcherMsg>,
-    cancelled: Arc<AtomicBool>,
+    closed: Arc<AtomicBool>,
   ) -> BuildResult<IndexVec<WatchTaskIdx, WatchTask>> {
     let fs_watcher_config = watcher_config.to_fs_watcher_config();
     let mut tasks = IndexVec::with_capacity(configs.len());
@@ -144,7 +144,7 @@ impl Watcher {
       let fs_handler = TaskFsEventHandler { task_index, tx: tx.clone() };
       let fs_watcher =
         rolldown_fs_watcher::create_fs_watcher(fs_handler, fs_watcher_config.clone())?;
-      let task = WatchTask::new(config, fs_watcher, Arc::clone(&cancelled))?;
+      let task = WatchTask::new(config, fs_watcher, Arc::clone(&closed))?;
       tasks.push(task);
     }
     Ok(tasks)

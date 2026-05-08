@@ -107,7 +107,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
           self.handler.on_event(WatchEvent::Error(data)).await;
         }
         Ok(BuildOutcome::Skipped) => {}
-        Ok(BuildOutcome::Cancelled) => return,
+        Ok(BuildOutcome::Closed) => return,
         Err(errs) => {
           let error_messages: Vec<String> =
             errs.iter().map(|e| e.to_diagnostic().to_string()).collect();
@@ -163,7 +163,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
           self.handler.on_event(WatchEvent::Error(data)).await;
         }
         Ok(BuildOutcome::Skipped) => {}
-        Ok(BuildOutcome::Cancelled) => return,
+        Ok(BuildOutcome::Closed) => return,
         Err(errs) => {
           let error_messages: Vec<String> =
             errs.iter().map(|e| e.to_diagnostic().to_string()).collect();

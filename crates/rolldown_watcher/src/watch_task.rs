@@ -28,7 +28,7 @@ pub struct WatchTask {
   fs_watcher: std::sync::Mutex<DynFsWatcher>,
   watched_files: FxDashSet<ArcStr>,
   pub(crate) needs_rebuild: bool,
-  cancelled: Arc<AtomicBool>,
+  closed: Arc<AtomicBool>,
 }
 
 impl WatchTask {
@@ -63,7 +63,7 @@ impl WatchTask {
       fs_watcher: std::sync::Mutex::new(fs_watcher),
       watched_files: FxDashSet::default(),
       needs_rebuild: true,
-      cancelled,
+      closed: cancelled,
     })
   }
 
@@ -84,7 +84,7 @@ impl WatchTask {
     let options_ref = &*self.options;
 
     // Scope the bundler lock to minimize lock duration
-    let cancelled = Arc::clone(&self.cancelled);
+    let cancelled = Arc::clone(&self.closed);
     let (result, new_watch_files, bundle_handle) = {
       let mut bundler = self.bundler.lock().await;
 
@@ -120,7 +120,7 @@ impl WatchTask {
           // If close() was called during scan, skip write
           // Rollup's: `if (this.closed) return` between rollupInternal() and write().
           if cancelled.load(Ordering::SeqCst) {
-            return Ok(BuildOrCancelled::Cancelled);
+            return Ok(BuildOrClosed::Closed);
           }
 
           let output = if skip_write {
@@ -128,7 +128,7 @@ impl WatchTask {
           } else {
             bundle.bundle_write(scan_output).await?
           };
-          Ok(BuildOrCancelled::Built(output))
+          Ok(BuildOrClosed::Built(output))
         })
         .await;
 
@@ -146,8 +146,8 @@ impl WatchTask {
     // Also register any files discovered during render/write phase
     self.update_watch_files(&new_watch_files)?;
 
-    if self.cancelled.load(Ordering::SeqCst) {
-      return Ok(BuildOutcome::Cancelled);
+    if self.closed.load(Ordering::SeqCst) {
+      return Ok(BuildOutcome::Closed);
     }
 
     #[expect(clippy::cast_possible_truncation)]
@@ -156,8 +156,8 @@ impl WatchTask {
     self.needs_rebuild = false;
 
     match result {
-      Ok(BuildOrCancelled::Cancelled) => return Ok(BuildOutcome::Cancelled),
-      Ok(BuildOrCancelled::Built(output)) => {
+      Ok(BuildOrClosed::Closed) => return Ok(BuildOutcome::Closed),
+      Ok(BuildOrClosed::Built(output)) => {
         // Emit build warnings (e.g. CIRCULAR_DEPENDENCY) via the on_log callback,
         // matching the behavior of the non-watch build path.
         if let Err(err) = Self::emit_warnings(&self.options, output.warnings).await {
@@ -356,9 +356,9 @@ impl WatchTask {
   }
 }
 
-enum BuildOrCancelled {
+enum BuildOrClosed {
   Built(BundleOutput),
-  Cancelled,
+  Closed,
 }
 
 /// Outcome of a build attempt
@@ -370,5 +370,5 @@ pub enum BuildOutcome {
   /// Build had errors (but didn't fail fatally)
   Error(WatchErrorEventData),
   /// `watcher.close()` was called during the build; output was discarded.
-  Cancelled,
+  Closed,
 }

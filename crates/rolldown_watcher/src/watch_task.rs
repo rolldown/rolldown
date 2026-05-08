@@ -117,8 +117,6 @@ impl WatchTask {
 
           let scan_output = scan_result?;
 
-          // If close() was called during scan, skip write
-          // Rollup's: `if (this.closed) return` between rollupInternal() and write().
           if closed.load(Ordering::SeqCst) {
             return Ok(BuildOrClosed::Closed);
           }

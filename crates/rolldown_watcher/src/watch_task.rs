@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use rolldown::{Bundler, BundlerBuilder, BundlerConfig};
+use rolldown::{BundleOutput, Bundler, BundlerBuilder, BundlerConfig};
 use rolldown_common::{
   BundleMode, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
 };
@@ -11,6 +11,7 @@ use rolldown_fs_watcher::{DynFsWatcher, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 use tokio::sync::Mutex as TokioMutex;
 
@@ -27,10 +28,15 @@ pub struct WatchTask {
   fs_watcher: std::sync::Mutex<DynFsWatcher>,
   watched_files: FxDashSet<ArcStr>,
   pub(crate) needs_rebuild: bool,
+  cancelled: Arc<AtomicBool>,
 }
 
 impl WatchTask {
-  pub(crate) fn new(config: BundlerConfig, fs_watcher: DynFsWatcher) -> BuildResult<Self> {
+  pub(crate) fn new(
+    config: BundlerConfig,
+    fs_watcher: DynFsWatcher,
+    cancelled: Arc<AtomicBool>,
+  ) -> BuildResult<Self> {
     // Validation: dev_mode not allowed with watch
     if config.options.experimental.as_ref().and_then(|e| e.dev_mode.as_ref()).is_some() {
       return Err(
@@ -57,6 +63,7 @@ impl WatchTask {
       fs_watcher: std::sync::Mutex::new(fs_watcher),
       watched_files: FxDashSet::default(),
       needs_rebuild: true,
+      cancelled,
     })
   }
 
@@ -77,6 +84,7 @@ impl WatchTask {
     let options_ref = &*self.options;
 
     // Scope the bundler lock to minimize lock duration
+    let cancelled = Arc::clone(&self.cancelled);
     let (result, new_watch_files, bundle_handle) = {
       let mut bundler = self.bundler.lock().await;
 
@@ -109,11 +117,18 @@ impl WatchTask {
 
           let scan_output = scan_result?;
 
-          if skip_write {
-            bundle.bundle_generate(scan_output).await
-          } else {
-            bundle.bundle_write(scan_output).await
+          // If close() was called during scan, skip write
+          // Rollup's: `if (this.closed) return` between rollupInternal() and write().
+          if cancelled.load(Ordering::SeqCst) {
+            return Ok(BuildOrCancelled::Cancelled);
           }
+
+          let output = if skip_write {
+            bundle.bundle_generate(scan_output).await?
+          } else {
+            bundle.bundle_write(scan_output).await?
+          };
+          Ok(BuildOrCancelled::Built(output))
         })
         .await;
 
@@ -131,13 +146,18 @@ impl WatchTask {
     // Also register any files discovered during render/write phase
     self.update_watch_files(&new_watch_files)?;
 
+    if self.cancelled.load(Ordering::SeqCst) {
+      return Ok(BuildOutcome::Cancelled);
+    }
+
     #[expect(clippy::cast_possible_truncation)]
     let duration = start_time.elapsed().as_millis() as u32;
 
     self.needs_rebuild = false;
 
     match result {
-      Ok(output) => {
+      Ok(BuildOrCancelled::Cancelled) => return Ok(BuildOutcome::Cancelled),
+      Ok(BuildOrCancelled::Built(output)) => {
         // Emit build warnings (e.g. CIRCULAR_DEPENDENCY) via the on_log callback,
         // matching the behavior of the non-watch build path.
         if let Err(err) = Self::emit_warnings(&self.options, output.warnings).await {
@@ -336,6 +356,11 @@ impl WatchTask {
   }
 }
 
+enum BuildOrCancelled {
+  Built(BundleOutput),
+  Cancelled,
+}
+
 /// Outcome of a build attempt
 pub enum BuildOutcome {
   /// Build was skipped (no rebuild needed)
@@ -344,4 +369,6 @@ pub enum BuildOutcome {
   Success(BundleEndEventData),
   /// Build had errors (but didn't fail fatally)
   Error(WatchErrorEventData),
+  /// `watcher.close()` was called during the build; output was discarded.
+  Cancelled,
 }

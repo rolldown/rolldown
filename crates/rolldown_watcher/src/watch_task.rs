@@ -35,7 +35,7 @@ impl WatchTask {
   pub(crate) fn new(
     config: BundlerConfig,
     fs_watcher: DynFsWatcher,
-    cancelled: Arc<AtomicBool>,
+    closed: Arc<AtomicBool>,
   ) -> BuildResult<Self> {
     // Validation: dev_mode not allowed with watch
     if config.options.experimental.as_ref().and_then(|e| e.dev_mode.as_ref()).is_some() {
@@ -63,7 +63,7 @@ impl WatchTask {
       fs_watcher: std::sync::Mutex::new(fs_watcher),
       watched_files: FxDashSet::default(),
       needs_rebuild: true,
-      closed: cancelled,
+      closed,
     })
   }
 
@@ -84,7 +84,7 @@ impl WatchTask {
     let options_ref = &*self.options;
 
     // Scope the bundler lock to minimize lock duration
-    let cancelled = Arc::clone(&self.closed);
+    let closed = Arc::clone(&self.closed);
     let (result, new_watch_files, bundle_handle) = {
       let mut bundler = self.bundler.lock().await;
 
@@ -119,7 +119,7 @@ impl WatchTask {
 
           // If close() was called during scan, skip write
           // Rollup's: `if (this.closed) return` between rollupInternal() and write().
-          if cancelled.load(Ordering::SeqCst) {
+          if closed.load(Ordering::SeqCst) {
             return Ok(BuildOrClosed::Closed);
           }
 

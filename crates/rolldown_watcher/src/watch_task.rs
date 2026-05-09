@@ -35,7 +35,7 @@ impl WatchTask {
   pub(crate) fn new(
     config: BundlerConfig,
     fs_watcher: DynFsWatcher,
-    closed: Arc<AtomicBool>,
+    closed: &Arc<AtomicBool>,
   ) -> BuildResult<Self> {
     // Validation: dev_mode not allowed with watch
     if config.options.experimental.as_ref().and_then(|e| e.dev_mode.as_ref()).is_some() {
@@ -63,7 +63,7 @@ impl WatchTask {
       fs_watcher: std::sync::Mutex::new(fs_watcher),
       watched_files: FxDashSet::default(),
       needs_rebuild: true,
-      closed,
+      closed: Arc::clone(closed),
     })
   }
 

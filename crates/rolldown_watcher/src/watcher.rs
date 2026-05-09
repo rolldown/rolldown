@@ -88,7 +88,7 @@ impl Watcher {
   ) -> BuildResult<Self> {
     let (tx, rx) = mpsc::unbounded_channel();
     let closed = Arc::new(AtomicBool::new(false));
-    let tasks = Self::create_tasks(configs, watcher_config, &tx, Arc::clone(&closed))?;
+    let tasks = Self::create_tasks(configs, watcher_config, &tx, &closed)?;
     let coordinator = WatchCoordinator::new(rx, handler, tasks, watcher_config);
     let coordinator_future: Pin<Box<dyn Future<Output = ()> + Send>> = Box::pin(coordinator.run());
 
@@ -135,7 +135,7 @@ impl Watcher {
     configs: Vec<BundlerConfig>,
     watcher_config: &WatcherConfig,
     tx: &mpsc::UnboundedSender<WatcherMsg>,
-    closed: Arc<AtomicBool>,
+    closed: &Arc<AtomicBool>,
   ) -> BuildResult<IndexVec<WatchTaskIdx, WatchTask>> {
     let fs_watcher_config = watcher_config.to_fs_watcher_config();
     let mut tasks = IndexVec::with_capacity(configs.len());
@@ -144,7 +144,7 @@ impl Watcher {
       let fs_handler = TaskFsEventHandler { task_index, tx: tx.clone() };
       let fs_watcher =
         rolldown_fs_watcher::create_fs_watcher(fs_handler, fs_watcher_config.clone())?;
-      let task = WatchTask::new(config, fs_watcher, Arc::clone(&closed))?;
+      let task = WatchTask::new(config, fs_watcher, closed)?;
       tasks.push(task);
     }
     Ok(tasks)

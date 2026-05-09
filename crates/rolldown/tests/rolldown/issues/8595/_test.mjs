@@ -1,18 +1,7 @@
-import fs from 'node:fs';
 import path from 'node:path';
-import assert from 'node:assert';
+import { assertNoStaticImportCycle } from '../../_test_helpers/find-static-cycle.mjs';
 
-// Before the fix, external dynamic imports (@prettier/plugin-oxc, etc.)
-// caused bit-position/chunk-index mismatches, producing a circular static
-// import: babel.js <-> tt.js
-//
-// Expected: tt.js imports babel.js (not the reverse).
-// babel.js should import from chunk.js (the runtime chunk), not tt.js.
-
-const distDir = path.join(import.meta.dirname, 'dist');
-const babel = fs.readFileSync(path.join(distDir, 'babel.js'), 'utf8');
-
-assert(
-  !babel.includes('from "./tt.js"'),
-  'babel.js should not import from tt.js (would create a cycle)',
-);
+// Original bug (#8595): external dynamic imports caused bit-position/chunk-index
+// mismatches that produced a circular static import babel.js <-> tt.js.
+// Static import cycles cause TDZ hazards, so verify the static graph is acyclic.
+assertNoStaticImportCycle(path.join(import.meta.dirname, 'dist'));

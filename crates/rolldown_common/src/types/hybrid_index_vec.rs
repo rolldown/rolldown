@@ -58,9 +58,7 @@ impl<I: Idx, T> HybridIndexVec<I, T> {
     match self {
       HybridIndexVec::IndexVec(index_vec) => &mut index_vec[i],
       HybridIndexVec::Map(map) => {
-        if !map.contains_key(&i) {
-          panic!("HybridIndexVec::Map missing idx {i:?} (len={})", map.len());
-        }
+        assert!(map.contains_key(&i), "HybridIndexVec::Map missing idx {i:?} (len={})", map.len());
         map.get_mut(&i).unwrap()
       }
     }

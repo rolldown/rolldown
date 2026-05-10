@@ -117,6 +117,10 @@ t-node-rolldown *args="":
 t-node-rollup *args="":
   vp run --filter rollup-tests test {{ args }}
 
+# Record real-rollup chunk counts for rollup/test/chunking-form/samples.
+record-chunking-form-chunks *args="":
+  vp run --filter rollup-tests record-chunk-counts {{ args }}
+
 # Run specific rust test without enabling extended tests.
 [unix]
 t-run *args:

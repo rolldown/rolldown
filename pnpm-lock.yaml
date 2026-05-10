@@ -683,6 +683,9 @@ importers:
         specifier: 'catalog:'
         version: 0.5.21
     devDependencies:
+      '@oxc-node/cli':
+        specifier: 'catalog:'
+        version: 0.1.0
       '@types/mocha':
         specifier: 'catalog:'
         version: 10.0.10
@@ -692,6 +695,9 @@ importers:
       '@types/strip-comments':
         specifier: 'catalog:'
         version: 2.0.4
+      rollup:
+        specifier: 'catalog:'
+        version: 4.60.1
       source-map:
         specifier: 'catalog:'
         version: 0.7.6

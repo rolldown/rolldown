@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "test": "ROLLUP_TEST=1 mocha --file ./src/intercept/main.js test/test.js",
-    "update-treeshaking-failures": "mocha ./test/form/found-tree-shaking-not-align.js"
+    "update-treeshaking-failures": "mocha ./test/form/found-tree-shaking-not-align.js",
+    "record-chunk-counts": "oxnode ./src/record-chunking-form-chunks.mts"
   },
   "keywords": [],
   "author": "",
@@ -18,9 +19,11 @@
     "source-map-support": "catalog:"
   },
   "devDependencies": {
+    "@oxc-node/cli": "catalog:",
     "@types/mocha": "catalog:",
     "@types/node": "catalog:",
     "@types/strip-comments": "catalog:",
+    "rollup": "catalog:",
     "source-map": "catalog:",
     "strip-comments": "catalog:",
     "terser": "catalog:"

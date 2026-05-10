@@ -120,6 +120,10 @@ jobs:
           vp install
           vp run --filter rollup-tests test --update
 
+      - name: Record real-rollup chunking-form chunk counts
+        if: steps.check-update.outputs.update_needed == 'true'
+        run: vp run --filter rollup-tests record-chunk-counts
+
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1

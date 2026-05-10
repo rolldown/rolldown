@@ -1,0 +1,1137 @@
+{
+  "rollupVersion": "4.60.1",
+  "samples": {
+    "aliasing-extensions": {
+      "count": 5,
+      "description": "chunk aliasing with extensions"
+    },
+    "allow-extension-exports": {
+      "count": 3,
+      "description": "preserves exports for modules with allow-extension signature"
+    },
+    "allow-extension-exports-with-explicat-file-name": {
+      "count": 3,
+      "description": "generate the separate chunk for the entry module with explicated file name"
+    },
+    "allow-extension-exports-with-explicat-name-In-input-options": {
+      "count": 2,
+      "description": "generate a separate chunk for the entry module with explicit name in input options"
+    },
+    "allow-extension-merge-same-exports": {
+      "count": 2,
+      "description": "merges same exports for modules with allow-extension signature"
+    },
+    "amd-id-auto": {
+      "count": 2,
+      "description": "allows to use amd.autoId"
+    },
+    "amd-id-auto-base-path": {
+      "count": 2,
+      "description": "allows to use amd.autoId with amd.basePath, and chunks folder"
+    },
+    "amd-id-auto-base-path-concat": {
+      "count": 2,
+      "description": "allows to use amd.autoId with amd.basePath and works when concat'd into one file"
+    },
+    "asset-needs-code-reference": {
+      "count": 1,
+      "description": "does not emit unreferenced assets if needsCodeReference is true"
+    },
+    "asset-needs-code-reference-same-source": {
+      "count": 1,
+      "description": "emits unreferenced assets if needsCodeReference is true if they are also emitted without that flag"
+    },
+    "avoid-chunk-import-hoisting": {
+      "count": 3,
+      "description": "avoids hoisting transitive dependencies via flag"
+    },
+    "basic-chunking": {
+      "count": 3,
+      "description": "simple chunking"
+    },
+    "chunk-assigment-in-dynamic": {
+      "count": 4,
+      "description": "the content of c.js is complete"
+    },
+    "chunk-deshadowing-reassignment": {
+      "count": 4,
+      "description": "chunk reassignment import deshadowing"
+    },
+    "chunk-execution-order": {
+      "count": 4,
+      "description": "maintains execution order "
+    },
+    "chunk-export-deshadowing": {
+      "count": 3,
+      "description": "chunk export deshadowing"
+    },
+    "chunk-export-renaming": {
+      "count": 3,
+      "description": "chunk export renaming"
+    },
+    "chunk-import-deshadowing": {
+      "count": 3,
+      "description": "chunk import deshadowing"
+    },
+    "chunk-live-bindings": {
+      "count": 3,
+      "description": "ES module live bindings in chunks"
+    },
+    "chunk-namespace-boundary": {
+      "count": 3,
+      "description": "chunk with a namespace boundary"
+    },
+    "chunk-naming": {
+      "count": 6,
+      "description": "simple chunking"
+    },
+    "chunk-variable-name-conflict": {
+      "count": 3,
+      "description": "chunk variable name conflict"
+    },
+    "chunking-compact": {
+      "count": 3,
+      "description": "chunking compact and mangled output"
+    },
+    "chunking-externals": {
+      "count": 3,
+      "description": "chunking external module handling"
+    },
+    "chunking-reexport": {
+      "count": 2,
+      "description": "chunking star external"
+    },
+    "chunking-source-maps": {
+      "count": 3,
+      "description": "source maps"
+    },
+    "chunking-star-external": {
+      "count": 3,
+      "description": "chunking star external"
+    },
+    "circular-chunks-warning-caused-by-manual-chunks-conflict": {
+      "count": 3,
+      "description": "Throw a warning for circular chunks caused by manual chunks conflict"
+    },
+    "circular-chunks-warning-caused-by-only-explicit-manual-chunks": {
+      "count": 2,
+      "description": "Throw a warning for circular chunks caused by onlyExplicitManualChunks"
+    },
+    "circular-entry-points": {
+      "count": 2,
+      "description": "chunking circular entry points"
+    },
+    "circular-entry-points2": {
+      "count": 2,
+      "description": "does not create a facade for one circular entry point if possible"
+    },
+    "circular-entry-points3": {
+      "count": 3,
+      "description": "creates facades for all circular entry points if they become tainted by another entry"
+    },
+    "circular-manual-chunks": {
+      "count": 3,
+      "description": "handles manual chunks with circular dependencies"
+    },
+    "combined-namespace-reexport": {
+      "count": 3,
+      "description": "correctly handles combined namespace reexports"
+    },
+    "custom-sanitizer": {
+      "count": 1,
+      "description": "supports custom file name sanitizer functions"
+    },
+    "deconflict-globals": {
+      "count": 3,
+      "description": "does not deconflict due to global variables used in other chunks"
+    },
+    "deconflict-system-default-export-variable": {
+      "count": 2,
+      "description": "deconflicts SystemJS default export variable with namespace imports"
+    },
+    "deduplicate-imports-referencing-originals": {
+      "count": 3,
+      "description": "do not import variables that reference an original if the original is already imported"
+    },
+    "deduplicate-imports-referencing-originals-2": {
+      "count": 3,
+      "description": "do not import variables that reference an original if another variable referencing it is already imported"
+    },
+    "default-export-name-conflict": {
+      "count": 3,
+      "description": "does not produce name conflicts when reexporting via default exports"
+    },
+    "default-identifier-renaming": {
+      "count": 3,
+      "description": "Default export identifier name handling"
+    },
+    "default-reexport-namespace": {
+      "count": 2,
+      "description": "Properly handle adding a default reexport to a namespace (#3583)"
+    },
+    "deoptimized-module-with-dynamic-import": {
+      "count": 1,
+      "description": "deoptimized module with dynamic import"
+    },
+    "deprecated/emit-file/filenames-function-patterns": {
+      "count": 2,
+      "description": "supports using a function that returns a pattern for FileNames"
+    },
+    "deprecated/emit-file/generate-emission-names": {
+      "count": 1,
+      "description": "updates asset names when emitting in generate phase"
+    },
+    "dynamic-import": {
+      "count": 3,
+      "description": "handles dynamic imports with a shared dependency"
+    },
+    "dynamic-import-chained": {
+      "count": 3,
+      "description": "includes chained dynamic imports"
+    },
+    "dynamic-import-chunking": {
+      "count": 3,
+      "description": "Code splitting with dynamic import"
+    },
+    "dynamic-import-comments": {
+      "count": 1,
+      "description": "does not remove inline comments inside dynamic imports"
+    },
+    "dynamic-import-dynamic": {
+      "count": 1,
+      "description": "Code splitting with dynamic import"
+    },
+    "dynamic-import-external": {
+      "count": 1,
+      "description": "marks dynamic imports as external when resolveDynamicImport returns false"
+    },
+    "dynamic-import-facade": {
+      "count": 3,
+      "description": "makes sure dynamic chunks are not tainted"
+    },
+    "dynamic-import-from-manual-chunk": {
+      "count": 3,
+      "description": "handles dynamic imports in manual chunks"
+    },
+    "dynamic-import-inline-colouring": {
+      "count": 3,
+      "description": "Handle dynamic imports that are part of a static graph"
+    },
+    "dynamic-import-inlining-object": {
+      "count": 1,
+      "description": "supports an object with a single entry when inlining dynamic imports"
+    },
+    "dynamic-import-object-property-tree-shaking-await": {
+      "count": 2,
+      "description": "Supports tree-shaking for dynamic import object properties when using \"await\""
+    },
+    "dynamic-import-object-property-tree-shaking-then": {
+      "count": 2,
+      "description": "Supports tree-shaking for dynamic import object properties when using \"then\""
+    },
+    "dynamic-import-only-default": {
+      "count": 3,
+      "description": "correctly imports dynamic namespaces with only a default export from entry- and non-entry-point chunks"
+    },
+    "dynamic-import-only-reexports": {
+      "count": 2,
+      "description": "handles dynamic imports when the imported module only reexports from other modules"
+    },
+    "dynamic-import-statically-imported": {
+      "count": 1,
+      "description": "handles dynamic imports of previously statically imported chunks"
+    },
+    "dynamic-import-statically-imported-2": {
+      "count": 3,
+      "description": "handles dynamic imports of previously statically imported chunks that are also dynamically imported by other chunks"
+    },
+    "dynamic-import-synthetic-exports-preserve-modules": {
+      "count": 2,
+      "description": "handle dynamically importing a module with synthetic named exports when preserving modules"
+    },
+    "dynamic-import-tree-shaking-1": {
+      "count": 2,
+      "description": "uses tree-shaking information to improve chunking"
+    },
+    "dynamic-import-tree-shaking-2": {
+      "count": 2,
+      "description": "does not expose exports of chunks which were used by tree-shaken dynamic imports"
+    },
+    "dynamic-import-with-namespace": {
+      "count": 11,
+      "description": "The all cases of tree-shaking for dynamic import with namespace"
+    },
+    "dynamically-import-facaded-entry": {
+      "count": 4,
+      "description": "uses existing entry facades for dynamic imports if present"
+    },
+    "dynamically-import-non-preserved-entry": {
+      "count": 3,
+      "description": "supports dynamically importing entries with additional exports"
+    },
+    "dynamically-import-tainted-entry": {
+      "count": 3,
+      "description": "supports dynamically importing entries with additional exports"
+    },
+    "dynamically-import-untainted-entry": {
+      "count": 2,
+      "description": "makes existing entries a proper facade if possible when importing dynamically"
+    },
+    "emit-file/asset-file-names": {
+      "count": 1,
+      "description": "supports custom asset file names"
+    },
+    "emit-file/deconflict-against-named-files": {
+      "count": 4,
+      "description": "deconflicts files against named files"
+    },
+    "emit-file/deduplicate-assets": {
+      "count": 1,
+      "description": "deduplicates asset that have the same source"
+    },
+    "emit-file/emit-asset-without-name": {
+      "count": 1,
+      "description": "supports emitting an asset without a name"
+    },
+    "emit-file/emit-chunk": {
+      "count": 3,
+      "description": "allows adding additional chunks and retrieving their file name"
+    },
+    "emit-file/emit-chunk-facade": {
+      "count": 3,
+      "description": "retrieves the correct name of an emitted chunk in case a facade is created"
+    },
+    "emit-file/emit-chunk-filename": {
+      "count": 3,
+      "description": "supports specifying a file name when emitting a chunk"
+    },
+    "emit-file/emit-chunk-name-conflict": {
+      "count": 5,
+      "description": "deduplicates named chunks emitted more than once"
+    },
+    "emit-file/emit-chunk-named": {
+      "count": 3,
+      "description": "allows naming emitted chunks"
+    },
+    "emit-file/emit-chunk-order1": {
+      "count": 3,
+      "description": "creates a consistent chunking order (needs to be consistent with the other test of this kind)"
+    },
+    "emit-file/emit-chunk-order2": {
+      "count": 3,
+      "description": "creates a consistent chunking order (needs to be consistent with the other test of this kind)"
+    },
+    "emit-file/emit-chunk-with-importer": {
+      "count": 3,
+      "description": "allows specifying an importer when resolving ids"
+    },
+    "emit-file/emit-chunk-worker": {
+      "count": 5,
+      "description": "allows adding additional chunks to be used in workers"
+    },
+    "emit-file/emit-chunk-worklet": {
+      "count": 3,
+      "description": "allows adding additional chunks to be used in worklets"
+    },
+    "emit-file/emits-existing-chunk": {
+      "count": 3,
+      "description": "allows adding modules already in the graph as entry points"
+    },
+    "emit-file/emits-files-from-various-hooks": {
+      "count": 1,
+      "description": "supports emitting assets from plugin hooks"
+    },
+    "emit-file/filenames-function-patterns": {
+      "count": 2,
+      "description": "supports using a function that returns a pattern for FileNames"
+    },
+    "emit-file/filenames-function-patterns-preserve-modules": {
+      "count": 2,
+      "description": "supports using a function that returns a pattern for entryFileNames, with output.preserveModules option"
+    },
+    "emit-file/generate-emission-names": {
+      "count": 1,
+      "description": "updates asset names when emitting in generate phase"
+    },
+    "emit-file/named-user-chunks": {
+      "count": 4,
+      "description": "deduplicates with named chunks defined by the user"
+    },
+    "emit-file/reference-files": {
+      "count": 2,
+      "description": "allows referencing emitted files"
+    },
+    "emit-file/sanitize-file-name": {
+      "count": 2,
+      "description": "allows adding additional chunks and retrieving their file name"
+    },
+    "emit-file/set-asset-source": {
+      "count": 1,
+      "description": "supports setting the asset source during generate"
+    },
+    "empty-chunks": {
+      "count": 2,
+      "description": "empty chunk pruning"
+    },
+    "empty-module-no-treeshake": {
+      "count": 3,
+      "description": "associates empty modules with chunks if tree-shaking is disabled for them"
+    },
+    "entry-aliases": {
+      "count": 3,
+      "description": "alias module dependency inlining"
+    },
+    "entry-chunk-export-mode": {
+      "count": 2,
+      "description": "entry chunk export mode checks"
+    },
+    "entry-point-without-own-code": {
+      "count": 4,
+      "description": "Handles entry points that contain no own code except imports and exports"
+    },
+    "entry-without-code": {
+      "count": 2,
+      "description": "optimizes chunks when an entry point without own code is imported from another entry"
+    },
+    "entry-without-code-dynamic": {
+      "count": 3,
+      "description": "optimizes chunks when a dynamic entry point without own code is imported from another entry"
+    },
+    "entrypoint-aliasing": {
+      "count": 3,
+      "description": "entry point facade creation"
+    },
+    "entrypoint-facade": {
+      "count": 3,
+      "description": "entry point facade creation"
+    },
+    "export-default-from-entry": {
+      "count": 2,
+      "description": "correctly imports the default from an entry point"
+    },
+    "external-imports": {
+      "count": 3,
+      "description": "uses correct interop per chunk when importing from external modules"
+    },
+    "external-reexports": {
+      "count": 3,
+      "description": "uses correct interop per chunk when reexporting from external modules"
+    },
+    "facades-with-external-reexports": {
+      "count": 2,
+      "description": "ignores external reexports of other entries when finding facades"
+    },
+    "facades-with-reexports": {
+      "count": 3,
+      "description": "ignores reexports of other entries when finding facades"
+    },
+    "filenames-patterns": {
+      "count": 3,
+      "description": "filenames custom pattern"
+    },
+    "generated-code/arrow-functions-false": {
+      "count": 3,
+      "description": "does not use arrow functions"
+    },
+    "generated-code/arrow-functions-true": {
+      "count": 3,
+      "description": "uses arrow functions"
+    },
+    "generated-code/reserved-names-as-props-false": {
+      "count": 2,
+      "description": "escapes reserved names used as props"
+    },
+    "generated-code/reserved-names-as-props-true": {
+      "count": 2,
+      "description": "escapes reserved names used as props"
+    },
+    "hashing/base-16": {
+      "count": 3,
+      "description": "supports hex hashes"
+    },
+    "hashing/base-36": {
+      "count": 3,
+      "description": "supports base-36 hashes"
+    },
+    "hashing/base-64": {
+      "count": 3,
+      "description": "supports base-64 hashes"
+    },
+    "hashing/deconflict-hashes": {
+      "count": 2,
+      "description": "deduplicates hashes for identical files"
+    },
+    "hashing/double-hash": {
+      "count": 1,
+      "description": "supports double hashes in patterns"
+    },
+    "hashing/hash-size": {
+      "count": 3,
+      "description": "allows configurable hash size"
+    },
+    "hashing/random-match": {
+      "count": 1,
+      "description": "leaves random hash matches untransformed"
+    },
+    "hashing/tree-shaken-dynamic-hash": {
+      "count": 1,
+      "description": "Does not fail when calculating the hash of a file containing a tree-shaken dynamic import"
+    },
+    "ignore-chunk-name-query": {
+      "count": 2,
+      "description": "ignores queries and hashes for chunk names when preserving modules"
+    },
+    "implicit-dependencies/dependant-entry-no-effects": {
+      "count": 2,
+      "description": "properly emits a chunk when it is implicitly loaded after an empty entry module"
+    },
+    "implicit-dependencies/implicitly-dependent-emitted-entry": {
+      "count": 3,
+      "description": "makes sure emitted entry points are never implicit dependencies"
+    },
+    "implicit-dependencies/implicitly-dependent-emitted-entry2": {
+      "count": 3,
+      "description": "makes sure emitted entry points are never implicit dependencies"
+    },
+    "implicit-dependencies/implicitly-dependent-entry": {
+      "count": 3,
+      "description": "makes sure actual entry points are never implicit dependencies"
+    },
+    "implicit-dependencies/multiple-dependencies": {
+      "count": 6,
+      "description": "supports emitting the same chunk with different and multiple dependencies"
+    },
+    "implicit-dependencies/preserve-signature-allow-extension": {
+      "count": 3,
+      "description": "supports implicit dependencies when emitting files"
+    },
+    "implicit-dependencies/preserve-signature-false": {
+      "count": 3,
+      "description": "supports implicit dependencies when emitting files"
+    },
+    "implicit-dependencies/preserve-signature-strict": {
+      "count": 4,
+      "description": "supports implicit dependencies when emitting files"
+    },
+    "implicit-dependencies/same-chunk-dependency": {
+      "count": 3,
+      "description": "handles implicit dependencies where the dependent is inlined into the same chunk"
+    },
+    "implicit-dependencies/shared-dependency-no-side-effect": {
+      "count": 3,
+      "description": "handles shared dependencies between implicit chunks without side-effects"
+    },
+    "implicit-dependencies/shared-dependency-reexport": {
+      "count": 2,
+      "description": "handles shared dependencies when there are only reexports"
+    },
+    "implicit-dependencies/single-dependency": {
+      "count": 2,
+      "description": "supports implicit dependencies when emitting files"
+    },
+    "import-meta-numeric-paths": {
+      "count": 2,
+      "description": "supports nested numeric paths without issues on Windows"
+    },
+    "import-meta-url": {
+      "count": 2,
+      "description": "supports import.meta.url"
+    },
+    "import-variable-duplicates": {
+      "count": 4,
+      "description": "chunk duplicate import deshadowing"
+    },
+    "improved-dynamic-chunks/chained-dynamic-with-shared": {
+      "count": 2,
+      "description": "chained dynamic import that imports something already loaded"
+    },
+    "improved-dynamic-chunks/circular-dynamic-imports": {
+      "count": 3,
+      "description": "handles circular dynamic imports"
+    },
+    "improved-dynamic-chunks/cut-off": {
+      "count": 7,
+      "description": "does not avoid separate chunks if too many modules dynamically import the same chunk"
+    },
+    "improved-dynamic-chunks/dynamic-import-already-contained-1": {
+      "count": 1,
+      "description": "inlines dynamic imports that are already statically imported"
+    },
+    "improved-dynamic-chunks/dynamic-import-already-contained-2": {
+      "count": 1,
+      "description": "inlines dynamic imports that are already statically imported by their importers"
+    },
+    "improved-dynamic-chunks/dynamic-import-dynamic": {
+      "count": 3,
+      "description": "handles if a dynamically imported module imports another module dynamically"
+    },
+    "improved-dynamic-chunks/dynamic-import-dynamic-multi-stage": {
+      "count": 3,
+      "description": "handles if a dynamically imported module imports another module dynamically"
+    },
+    "improved-dynamic-chunks/dynamic-not-in-memory": {
+      "count": 6,
+      "description": "keeps chunks separate when not in memory for all dynamic imports"
+    },
+    "improved-dynamic-chunks/multi-entry-different-and-shared-dependencies": {
+      "count": 5,
+      "description": "avoids chunks for always loaded dependencies if multiple entry points with different dependencies have dynamic imports"
+    },
+    "improved-dynamic-chunks/multi-entry-different-dependencies": {
+      "count": 5,
+      "description": "avoids chunks for always loaded dependencies if multiple entry points with different dependencies have dynamic imports"
+    },
+    "improved-dynamic-chunks/multi-entry-partly-already-loaded-dynamic": {
+      "count": 5,
+      "description": "avoids chunks for always loaded dependencies if multiple entry points with different dependencies have dynamic imports"
+    },
+    "improved-dynamic-chunks/multi-entry-shared-static-with-dynamic-import": {
+      "count": 4,
+      "description": "avoids chunks for always loaded dependencies if multiple entry points with different dependencies have dynamic imports"
+    },
+    "improved-dynamic-chunks/single-dynamic": {
+      "count": 2,
+      "description": "does not create a separate chunk if a dynamically imported chunk shares a dependency with its importer"
+    },
+    "improved-dynamic-chunks/single-dynamic-multiple-imports": {
+      "count": 2,
+      "description": "does not create a separate chunk if a dynamically imported chunk shares a dependency with its importer, and dynamic chunk imported from multiple places"
+    },
+    "indirect-reexports-preserve-modules": {
+      "count": 3,
+      "description": "does not drop indirect reexports when preserving modules"
+    },
+    "interop-per-reexported-default-dependency": {
+      "count": 4,
+      "description": "allows to configure the interop type per reexported default from an external dependency"
+    },
+    "manual-chunk-avoid-facade": {
+      "count": 2,
+      "description": "avoid facades if possible when using manual chunks"
+    },
+    "manual-chunk-contains-entry-conflict": {
+      "count": 2,
+      "description": "Uses entry alias if manual chunks contain entry chunks with different alias"
+    },
+    "manual-chunk-contains-entry-match": {
+      "count": 1,
+      "description": "Identifies the entry chunk with the manual chunk that contains it if the aliases match"
+    },
+    "manual-chunk-is-entry-conflict": {
+      "count": 2,
+      "description": "Uses entry alias if manual chunks are entry chunks with different alias"
+    },
+    "manual-chunk-is-entry-match": {
+      "count": 1,
+      "description": "Identifies the entry chunk with the manual chunk that has the same entry if the aliases match"
+    },
+    "manual-chunk-not-included": {
+      "count": 2,
+      "description": "handles manual chunks where the root is not part of the module graph"
+    },
+    "manual-chunks": {
+      "count": 3,
+      "description": "manual chunks support"
+    },
+    "manual-chunks-different-nested": {
+      "count": 4,
+      "description": "manual chunks can have other manual chunks as dependencies"
+    },
+    "manual-chunks-dynamic": {
+      "count": 2,
+      "description": "supports dynamic manual chunks"
+    },
+    "manual-chunks-dynamic-facades": {
+      "count": 2,
+      "description": "creates facades for dynamic manual chunks if necessary"
+    },
+    "manual-chunks-dynamic-name-conflict": {
+      "count": 2,
+      "description": "handles name conflicts in manual chunks"
+    },
+    "manual-chunks-function": {
+      "count": 3,
+      "description": "allows to define manual chunks via a function"
+    },
+    "manual-chunks-nested": {
+      "count": 2,
+      "description": "manual chunks can contain nested modules"
+    },
+    "manual-chunks-only-explicit-dependencies/function-form": {
+      "count": 3,
+      "description": "manual chunks function form with onlyExplicitManualChunks does not merge non specified dependencies into the output chunk. Instead it lets Rollup normal chunking logic output them separately."
+    },
+    "manual-chunks-only-explicit-dependencies/object-form": {
+      "count": 2,
+      "description": "manual chunks object form merges the specified modules' dependencies into the output chunk"
+    },
+    "max-parallel-file-operations": {
+      "count": 6,
+      "description": "maxParallelFileOps limits write operations"
+    },
+    "min-chunk-size/avoid-circular-dependencies": {
+      "count": 5,
+      "description": "avoids circular dependencies when merging chunks"
+    },
+    "min-chunk-size/avoid-circular-dependencies2": {
+      "count": 3,
+      "description": "avoids circular dependencies when merging chunks"
+    },
+    "min-chunk-size/avoid-transitive-side-effects": {
+      "count": 7,
+      "description": "does not merge chunks if a dependency would introduce a new side effect"
+    },
+    "min-chunk-size/best-merge-target": {
+      "count": 11,
+      "description": "uses the merge target that is closest"
+    },
+    "min-chunk-size/ignore-correlated-side-effects": {
+      "count": 7,
+      "description": "ignores correlated side effects if they cannot be merged"
+    },
+    "min-chunk-size/merge-chunk-into-distant-shared": {
+      "count": 5,
+      "description": "merges small chunks into shared chunks that are loaded by a non-close super-set of entry points"
+    },
+    "min-chunk-size/merge-chunk-into-shared": {
+      "count": 4,
+      "description": "merges small chunks into shared chunks that are loaded by a super-set of entry points"
+    },
+    "min-chunk-size/merge-correlated-side-effects": {
+      "count": 5,
+      "description": "merges correlated side effects with pure chunks"
+    },
+    "min-chunk-size/merge-dependency-side-effects": {
+      "count": 4,
+      "description": "merges chunks if their dependency side effects are the same"
+    },
+    "min-chunk-size/merge-despite-correlated-side-effects": {
+      "count": 4,
+      "description": "merges chunks if their dependency side effects are a subset of the other's correlated side effects"
+    },
+    "min-chunk-size/merge-dynamic-imports": {
+      "count": 1,
+      "description": "merges small chunks without side effects into suitable chunks"
+    },
+    "min-chunk-size/merge-small-side-effect-chunks": {
+      "count": 2,
+      "description": "merges small chunks with side effects into suitable pure chunks"
+    },
+    "min-chunk-size/merge-unrelated": {
+      "count": 4,
+      "description": "merges unrelated small chunks if there is no better alternative"
+    },
+    "min-chunk-size/merge-with-entry-side-effect": {
+      "count": 1,
+      "description": "merges dynamic imports even when the entry has side effects"
+    },
+    "min-chunk-size/no-merge-for-big-chunks": {
+      "count": 5,
+      "description": "does not merge chunks if all chunks are below the size limit"
+    },
+    "min-chunk-size/no-merge-side-effects": {
+      "count": 5,
+      "description": "does not merge small chunks that have side effects"
+    },
+    "min-chunk-size/prefer-close-merge-target-a": {
+      "count": 6,
+      "description": "when there are two valid merge targets, the one that is loaded under more similar conditions is preferred"
+    },
+    "min-chunk-size/prefer-close-merge-target-b": {
+      "count": 6,
+      "description": "when there are two valid merge targets, the one that is loaded under more similar conditions is preferred"
+    },
+    "min-chunk-size/prefer-small-merge-target-a": {
+      "count": 6,
+      "description": "when there are two equally valid merge targets, the smaller is preferred"
+    },
+    "min-chunk-size/prefer-small-merge-target-b": {
+      "count": 6,
+      "description": "when there are two equally valid merge targets, the smaller is preferred"
+    },
+    "min-chunk-size/track-external-effects": {
+      "count": 3,
+      "description": "tracks external imports as side effects"
+    },
+    "min-chunk-size/track-external-effects2": {
+      "count": 2,
+      "description": "does not tracks external imports as side effects if they are marked as side effect free"
+    },
+    "min-chunk-size/tree-shaking": {
+      "count": 2,
+      "description": "takes tree-shaking into account and ignores top-level comments"
+    },
+    "minify-internal-exports": {
+      "count": 3,
+      "description": "allows to force the minification of internal exports"
+    },
+    "missing-export": {
+      "count": 2,
+      "description": "missing export"
+    },
+    "missing-export-compact": {
+      "count": 2,
+      "description": "missing export compact"
+    },
+    "missing-export-reused-deconflicting": {
+      "count": 3,
+      "description": "handles using dependencies with shimmed missing exports as "
+    },
+    "multi-chunking": {
+      "count": 6,
+      "description": "simple chunking"
+    },
+    "multiple-entry-points": {
+      "count": 2,
+      "description": "handles multiple entry points with a shared dependency"
+    },
+    "namespace-imports-from-chunks": {
+      "count": 2,
+      "description": "handle namespace imports from chunks"
+    },
+    "namespace-object-import": {
+      "count": 3,
+      "description": "namespace object import"
+    },
+    "namespace-reexport-name-conflict": {
+      "count": 5,
+      "description": "renders namespaces with reexports that conflict with existing imports"
+    },
+    "namespace-reexport-side-effect-cache": {
+      "count": 3,
+      "description": "correctly tracks side-effect dependencies for multiple importers through namespace reexport cache"
+    },
+    "namespace-reexports": {
+      "count": 4,
+      "description": "namespace rendering with reexports"
+    },
+    "namespace-retracing": {
+      "count": 3,
+      "description": "internal reexported namespaces over chunk boundaries"
+    },
+    "namespace-tostring/dynamic-import": {
+      "count": 2,
+      "description": "adds Symbol.toStringTag property to dynamic imports"
+    },
+    "namespace-tostring/dynamic-import-default-mode": {
+      "count": 2,
+      "description": "adds Symbol.toStringTag property to dynamic imports of entry chunks with default export mode"
+    },
+    "namespace-tracing": {
+      "count": 6,
+      "description": "Something"
+    },
+    "nested-chunks": {
+      "count": 4,
+      "description": "nested chunks"
+    },
+    "nested-dynamic-imports": {
+      "count": 6,
+      "description": "handles dynamic imports containing dynamic imports"
+    },
+    "no-minify-internal-exports": {
+      "count": 3,
+      "description": "allows to disable the minification of internal exports"
+    },
+    "no-treeshake-imports": {
+      "count": 3,
+      "description": "includes all imports when setting moduleSideEffects to \"no-treeshake\""
+    },
+    "option-virtual-dirname": {
+      "count": 3,
+      "description": "expect the directory name for \"virtual\" files to be rollup_virtual"
+    },
+    "preserve-entry-signatures/allow-extension": {
+      "count": 2,
+      "description": "Never creates facades for allow-extension"
+    },
+    "preserve-entry-signatures/exports-only": {
+      "count": 3,
+      "description": "Creates a facade if necessary for exports-only if there are exports"
+    },
+    "preserve-entry-signatures/exports-only-no-exports": {
+      "count": 2,
+      "description": "Does not create a facade for exports-only if there are no exports"
+    },
+    "preserve-entry-signatures/false": {
+      "count": 2,
+      "description": "Does not include entry exports and does not preserve the signature"
+    },
+    "preserve-entry-signatures/override-via-plugin": {
+      "count": 9,
+      "description": "Allows overriding behaviour for emitted chunks"
+    },
+    "preserve-entry-signatures/strict": {
+      "count": 3,
+      "description": "Creates a facade if necessary for strict entry signatures"
+    },
+    "preserve-modules": {
+      "count": 7,
+      "description": "Rewrite modules in-place"
+    },
+    "preserve-modules-auto-export-mode": {
+      "count": 3,
+      "description": "Uses entry point semantics for all files when preserving modules"
+    },
+    "preserve-modules-commonjs": {
+      "count": 6,
+      "description": "Handles output from @rollup/plugin-commonjs"
+    },
+    "preserve-modules-default-mode-namespace": {
+      "count": 2,
+      "description": "import namespace from chunks with default export mode when preserving modules"
+    },
+    "preserve-modules-default-mode-namespace2": {
+      "count": 2,
+      "description": "import namespace from chunks with default export mode when preserving modules"
+    },
+    "preserve-modules-dynamic-imports": {
+      "count": 2,
+      "description": "dynamic imports are handled correctly when preserving modules"
+    },
+    "preserve-modules-dynamic-namespace": {
+      "count": 4,
+      "description": "Preserve modules properly handles internal namespace imports (#2576)"
+    },
+    "preserve-modules-empty": {
+      "count": 2,
+      "description": "Preserve modules remove empty dependencies"
+    },
+    "preserve-modules-export-alias": {
+      "count": 3,
+      "description": "confirm export aliases are preserved in modules"
+    },
+    "preserve-modules-filename-pattern": {
+      "count": 10,
+      "description": "entryFileNames pattern supported in combination with preserveModules"
+    },
+    "preserve-modules-id-case-sensitive": {
+      "count": 4,
+      "description": "Preserve modules id case sensitive"
+    },
+    "preserve-modules-named-export-mode": {
+      "count": 3,
+      "description": "respects \"named\" export mode in all chunks when preserving modules"
+    },
+    "preserve-modules-namespace-reexport-reexport": {
+      "count": 3,
+      "description": "handles doing a namespace reexport of a reexport"
+    },
+    "preserve-modules-nested-barrel-es-export": {
+      "count": 3,
+      "description": "confirm exports are deconflicted when exporting nested index aliases"
+    },
+    "preserve-modules-nested-export": {
+      "count": 3,
+      "description": "confirm exports are preserved when exporting a module"
+    },
+    "preserve-modules-non-entry-imports": {
+      "count": 2,
+      "description": "imports and exports of non-entry points are tracked"
+    },
+    "preserve-modules-proxy-import": {
+      "count": 2,
+      "description": "correctly resolves imports via a proxy module as direct imports when preserving modules"
+    },
+    "preserve-modules-reaching-outside": {
+      "count": 2,
+      "description": "change the module destination"
+    },
+    "preserve-modules-root": {
+      "count": 7,
+      "description": "confirm preserveModulesRoot restructures src appropriately"
+    },
+    "preserve-modules-scriptified-assets": {
+      "count": 4,
+      "description": "scriptified assets have extension in preserveModules output filename"
+    },
+    "preserve-modules-single-entry": {
+      "count": 1,
+      "description": "single entry names file correctly"
+    },
+    "preserve-modules-special-chunk-names": {
+      "count": 3,
+      "description": "Supports chunk names from config when preserving modules"
+    },
+    "preserve-modules-virtual-modules": {
+      "count": 2,
+      "description": "Generates actual files for virtual modules when preserving modules"
+    },
+    "preserve-modules-virtual-modules-filename-pattern": {
+      "count": 4,
+      "description": "Generates actual files whose filename adheres to entryFileNames for virtual modules when preserving modules"
+    },
+    "reexport-from-entry": {
+      "count": 2,
+      "description": "allows reexporting from other entry points"
+    },
+    "reexport-shortpaths": {
+      "count": 3,
+      "description": "Tracing reexport shortpaths to entry points"
+    },
+    "relative-external-outside-output": {
+      "count": 2,
+      "description": "allows relative external dependencies outside of output dir"
+    },
+    "remove-attribute-declarations-for-internal-dynamic-imports": {
+      "count": 2,
+      "description": "Remove the attribute declarations for internal dynamic imports"
+    },
+    "render-chunk": {
+      "count": 3,
+      "description": "transforms chunks in the renderChunk hook, also transforming hashes added in the hook"
+    },
+    "render-chunk-transform": {
+      "count": 2,
+      "description": "replaces hashes when mutating chunk info in renderChunk"
+    },
+    "render-dynamic-import": {
+      "count": 2,
+      "description": "supports custom rendering for dynamic imports"
+    },
+    "render-dynamic-import-extended": {
+      "count": 5,
+      "description": "supports extended custom rendering for dynamic imports"
+    },
+    "resolve-dynamic-import": {
+      "count": 1,
+      "description": "Supports all resolution formats for dynamic imports"
+    },
+    "resolve-file-url": {
+      "count": 3,
+      "description": "allows to configure file urls"
+    },
+    "resolve-file-url-obj": {
+      "count": 1,
+      "description": "allows to use ROLLUP_FILE_URL_OBJ to get URL objects directly"
+    },
+    "sanitize-chunk-names": {
+      "count": 3,
+      "description": "sanitizes chunk names from virtual entry points"
+    },
+    "sanitize-internal-exports": {
+      "count": 2,
+      "description": "make sure internal exports are sanitized"
+    },
+    "sanitize-percent-encoding1": {
+      "count": 1,
+      "description": "make sure illegal percent encoding is sanitized"
+    },
+    "sanitize-percent-encoding2": {
+      "count": 5,
+      "description": "make sure illegal percent encoding is sanitized for dynamic imports"
+    },
+    "sanitize-percent-encoding3": {
+      "count": 4,
+      "description": "make sure illegal percent encoding is sanitized for virtual entry points"
+    },
+    "side-effect-free-dependencies/avoid-imports-preserve-modules": {
+      "count": 4,
+      "description": "avoids empty imports if they do not have side-effects when preserving modules (#3359)"
+    },
+    "side-effect-free-dependencies/avoid-side-effect-free-empty-imports": {
+      "count": 2,
+      "description": "avoids empty imports if they do not have side-effects"
+    },
+    "side-effect-free-dependencies/hoist-side-effect-modules": {
+      "count": 5,
+      "description": "hoist side-effect imports when avoiding empty imports"
+    },
+    "side-effect-free-dependencies/module-side-effects-empty-imports": {
+      "count": 2,
+      "description": "avoids empty imports if moduleSideEffects are false"
+    },
+    "side-effect-free-dependencies/module-side-effects-reexports-1": {
+      "count": 1,
+      "description": "handles re-exports in entry points if moduleSideEffects are false"
+    },
+    "side-effect-free-dependencies/module-side-effects-reexports-2": {
+      "count": 1,
+      "description": "handles re-exports in entry points if moduleSideEffects are false"
+    },
+    "side-effect-free-dependencies/module-side-effects-reexports-3": {
+      "count": 1,
+      "description": "handles re-exports in entry points if moduleSideEffects are false"
+    },
+    "single-file-manual-chunk": {
+      "count": 3,
+      "description": "chunk aliasing with extensions"
+    },
+    "sourcemap-file-names": {
+      "count": 1,
+      "description": "populates sourcemapFileName property of OutputChunk with final name when using sourcemapFileNames option"
+    },
+    "sourcemap-file-names-function": {
+      "count": 3,
+      "description": "observes sourcemapFileNames property when using a function"
+    },
+    "splitting-cycles-module-with-TLA-and-dynamic-importer": {
+      "count": 3,
+      "description": "splitting module in cycles that is dynamically imported by a module with TLA into a separate chunk"
+    },
+    "synthetic-named-exports/chained-default-reexport": {
+      "count": 3,
+      "description": "handles synthetic named exports that are reexported as a default export over several stages"
+    },
+    "synthetic-named-exports/deduplicate-synthetic-named-exports-and-default": {
+      "count": 3,
+      "description": "handles importing a synthetic named export together with the default export"
+    },
+    "synthetic-named-exports/default-reexport": {
+      "count": 2,
+      "description": "handles synthetic named exports that are reexported as a default export where both the default and a named export is used"
+    },
+    "synthetic-named-exports/dynamic-import": {
+      "count": 2,
+      "description": "synthetic named exports"
+    },
+    "synthetic-named-exports/entry": {
+      "count": 3,
+      "description": "does not expose the synthetic namespace if an entry point uses a string value"
+    },
+    "synthetic-named-exports/global-conflict": {
+      "count": 1,
+      "description": "avoids conflicts with global variables when re-exporting synthetic named exports"
+    },
+    "synthetic-named-exports/mixed-synthetic-named-exports": {
+      "count": 1,
+      "description": "mixed synthetic named exports"
+    },
+    "synthetic-named-exports/mixed-synthetic-named-exports-2": {
+      "count": 3,
+      "description": "mixed synthetic named exports 2"
+    },
+    "synthetic-named-exports/multi-level": {
+      "count": 5,
+      "description": "handles multiple levels of synthetic named exports"
+    },
+    "synthetic-named-exports/namespace": {
+      "count": 1,
+      "description": "supports re-exported synthetic exports in namespace objects"
+    },
+    "system-exports-wrap-pure-annotation": {
+      "count": 3,
+      "description": "system exports should wrap pure annotations"
+    },
+    "top-level-await-import": {
+      "count": 4,
+      "description": "avoiding top-level await critical path for chunks"
+    },
+    "top-level-await-import-2": {
+      "count": 3,
+      "description": "avoiding circular TLA dynamic imports between chunks even with TLA dynamic imports in non-entry modules"
+    },
+    "top-level-await-import-3": {
+      "count": 3,
+      "description": "avoids circular TLA dynamic imports between chunks even when import is wrapped in a function"
+    },
+    "top-level-await-import-mixed": {
+      "count": 4,
+      "description": "avoiding top-level await critical path for chunks"
+    },
+    "top-level-await-import-within-a-top-level-await-call-expression": {
+      "count": 4,
+      "description": "detected top-level await import within a top-level await call expression"
+    }
+  }
+}

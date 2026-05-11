@@ -72,6 +72,7 @@ ChunkGraph
 **Key files:**
 
 - `crates/rolldown/src/stages/generate_stage/code_splitting.rs` — pipeline orchestration, `generate_chunks()`, `ensure_lazy_module_initialization_order()`
+- `crates/rolldown/src/stages/generate_stage/dynamic_already_loaded.rs` — Rollup-style dynamic import already-loaded atom reduction
 - `crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs` — merge/optimization
 - `crates/rolldown/src/chunk_graph.rs` — output data structure
 - `crates/rolldown_utils/src/bitset.rs` — compact reachability representation
@@ -92,6 +93,16 @@ Dynamic imports are treated as entry points — they get bit positions and entry
 External modules are filtered out at the source — they never appear in `link_output.entries`. This is done in `module_loader.rs` where dynamic imports are collected as entry points: external modules are excluded from `dynamic_import_entry_ids`. User-defined and emitted entries are also safe because `load_entry_module()` rejects external resolutions with `entry_cannot_be_external`. This matches esbuild's approach where external modules never enter the entry list, and ensures that **bit positions directly equal chunk indices** — `ChunkIdx::from_raw(bit_position)` is always valid.
 
 See #8595 for the bug that motivated this filtering.
+
+### Dynamic Already-Loaded Analysis
+
+Before chunk materialization, Rolldown can reduce dynamic-entry bits for modules that are guaranteed to be loaded by every importer of that dynamic entry. This pass is controlled separately from common-chunk merging via `experimental.chunkOptimization: { mergeCommonChunks, avoidRedundantChunkLoads }`. The boolean form remains a compatibility alias for enabling or disabling both optimizers, while the object form allows each pass to be controlled independently. For example, when `main` statically imports `shared`, dynamically imports `route`, and `route` also imports `shared`, the `route` bit is removed from `shared` before modules are grouped into chunks.
+
+The pass groups modules into temporary atoms by their current dependent-entry bitset, computes the static atoms loaded by each entry, then runs a fixed-point propagation over dynamic imports. A dynamic entry's already-loaded atoms are the intersection of the static and already-loaded atoms of all entries that can reach its included dynamic importers. Any atom already loaded for a dynamic entry can drop that dynamic entry bit, and modules are then regrouped by the reduced bitsets during normal chunk creation.
+
+When the reduced bitset would put an atom into a single dynamic-entry chunk, the pass preserves that dynamic entry's observable namespace. The reduction is accepted only if the atom has no extra exports, its exports are already part of the dynamic entry's signature, it is runtime-only, or it is the removed dynamic-entry module itself. Otherwise the atom stays separate so `import("./entry.js")` does not expose helper exports needed only by other chunks.
+
+Top-level-await refinements are intentionally not modeled here yet. The existing chunk optimizer still bails out globally when any included module is TLA or contains a TLA dependency, so the awaited-dynamic-import safety path remains future work.
 
 ## Reachability Propagation
 

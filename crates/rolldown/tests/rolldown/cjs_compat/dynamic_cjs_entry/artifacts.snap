@@ -3,18 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## chunk.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __toESM as n, __commonJSMin as t };
-
-```
-
 ## cjs.js
 
 ```js
-import { t as __commonJSMin } from "./chunk.js";
+import { t as __commonJSMin } from "./main.js";
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "cjs";
@@ -27,10 +19,10 @@ export default require_cjs();
 ## main.js
 
 ```js
-import { n as __toESM } from "./chunk.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region main.js
 var main_default = import("./cjs.js").then((m) => /* @__PURE__ */ __toESM(m.default));
 //#endregion
-export { main_default as default };
+export { main_default as default, __commonJSMin as t };
 
 ```

@@ -245,6 +245,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &mut self,
     rec_idx: ImportRecordIdx,
   ) -> Option<Statement<'ast>> {
+    let rec = &self.ctx.module.import_records[rec_idx];
+    // If the non-wrapped forwarding module is emitted in this chunk, its own
+    // lowered statement already preserves the required init call in execution
+    // order. This fallback is only for barrels that do not execute here.
+    if rec.resolved_module.is_some_and(|importee_idx| {
+      let importee_linking_info = &self.ctx.linking_infos[importee_idx];
+      matches!(importee_linking_info.wrap_kind(), WrapKind::None)
+        && importee_linking_info.is_included
+        && self.ctx.chunk_graph.module_to_chunk[importee_idx] == Some(self.ctx.chunk_idx)
+    }) {
+      return None;
+    }
+
     let init_modules = self
       .collect_wrapped_esm_init_modules_for_import_record(rec_idx)
       .into_iter()

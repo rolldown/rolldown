@@ -21,6 +21,7 @@ import type {
 } from './log/logging';
 import type { ChecksOptions } from './options/generated/checks-options';
 import type {
+  ChunkOptimizationOptions,
   ExternalOptionFunction,
   ExternalOption,
   InputOption,
@@ -37,6 +38,7 @@ import type {
   NormalizedOutputOptions,
 } from './options/normalized-output-options';
 import type {
+  BuiltinModuleTag,
   CodeSplittingGroup,
   CodeSplittingOptions,
   AddonFunction,
@@ -130,9 +132,11 @@ export type {
   AdvancedChunksOptions,
   BufferEncoding,
   BuildOptions,
+  BuiltinModuleTag,
   ChecksOptions,
   ChunkFileNamesFunction,
   ChunkingContext,
+  ChunkOptimizationOptions,
   CodeSplittingNameFunction,
   CommentsOptions,
   ConfigExport,

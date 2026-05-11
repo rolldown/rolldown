@@ -1028,9 +1028,13 @@
           ]
         },
         "chunkOptimization": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChunkOptimizationOption"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "lazyBarrel": {
@@ -1111,6 +1115,30 @@
         "execOrder",
         "moduleId"
       ]
+    },
+    "ChunkOptimizationOption": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/ChunkOptimizationOptions"
+        }
+      ]
+    },
+    "ChunkOptimizationOptions": {
+      "type": "object",
+      "properties": {
+        "mergeCommonChunks": {
+          "type": "boolean",
+          "default": true
+        },
+        "avoidRedundantChunkLoads": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
     },
     "SimpleMinifyOptions": {
       "description": "A simple minify option that can be either a boolean or a string, used for rolldown rust testing.",
@@ -1906,9 +1934,13 @@
           ]
         },
         "chunkOptimization": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChunkOptimizationOption"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "_snapshot": {

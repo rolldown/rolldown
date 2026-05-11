@@ -630,7 +630,15 @@ const InputOptionsSchema = v.strictObject({
       onDemandWrapping: v.optional(v.boolean()),
       incrementalBuild: v.optional(v.boolean()),
       nativeMagicString: v.optional(v.boolean()),
-      chunkOptimization: v.optional(v.boolean()),
+      chunkOptimization: v.optional(
+        v.union([
+          v.boolean(),
+          v.strictObject({
+            mergeCommonChunks: v.optional(v.boolean()),
+            avoidRedundantChunkLoads: v.optional(v.boolean()),
+          }),
+        ]),
+      ),
       lazyBarrel: v.optional(v.boolean()),
     }),
   ),

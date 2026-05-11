@@ -1,7 +1,7 @@
 use rolldown_common::{
-  AddonOutputOption, BundlerOptions, CodeSplittingMode, CommentsOptions, ExperimentalOptions,
-  InlineConstOption, OptimizationOption, OutputExports, OutputFormat, PreserveEntrySignatures,
-  StrictMode, TreeshakeOptions, deserialize_inline_const,
+  AddonOutputOption, BundlerOptions, ChunkOptimizationOption, CodeSplittingMode, CommentsOptions,
+  ExperimentalOptions, InlineConstOption, OptimizationOption, OutputExports, OutputFormat,
+  PreserveEntrySignatures, StrictMode, TreeshakeOptions, deserialize_inline_const,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -36,7 +36,7 @@ pub struct ConfigVariant {
   pub intro: Option<String>,
   pub outro: Option<String>,
   pub comments: Option<CommentsOptions>,
-  pub chunk_optimization: Option<bool>,
+  pub chunk_optimization: Option<ChunkOptimizationOption>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]

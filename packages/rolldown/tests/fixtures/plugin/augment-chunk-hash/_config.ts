@@ -35,11 +35,11 @@ export default defineTest({
     for (const chunk of chunks) {
       switch (chunk.facadeModuleId) {
         case path.join(__dirname, 'main.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"main-V9juperl.js"`);
+          expect(chunk.fileName).toMatchInlineSnapshot(`"main-BjvhWV4N.js"`);
           break;
 
         case path.join(__dirname, 'entry.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-BxBpkCSX.js"`);
+          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-UvsVsNUD.js"`);
           break;
 
         default:

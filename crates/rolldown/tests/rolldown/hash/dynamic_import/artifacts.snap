@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## lazy-Bbonjr_2.js
+## lazy-AClzwoon.js
 
 ```js
 //#region lazy.js
@@ -13,11 +13,11 @@ export { value };
 
 ```
 
-## main-IElob51c.js
+## main-DNBmSudV.js
 
 ```js
 //#region main.js
-import("./lazy-Bbonjr_2.js").then((m) => console.log(m));
+import("./lazy-AClzwoon.js").then((m) => console.log(m));
 //#endregion
 
 ```

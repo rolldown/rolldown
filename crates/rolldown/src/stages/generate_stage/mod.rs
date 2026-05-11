@@ -52,6 +52,7 @@ mod chunk_optimizer;
 mod code_splitting;
 mod compute_cross_chunk_links;
 mod detect_ineffective_dynamic_imports;
+mod dynamic_already_loaded;
 mod finalize_modules;
 mod manual_code_splitting;
 mod minify_chunks;

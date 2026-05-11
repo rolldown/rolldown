@@ -1889,6 +1889,11 @@ export declare enum BindingChunkModuleOrderBy {
   ExecOrder = 1
 }
 
+export interface BindingChunkOptimizationOptions {
+  mergeCommonChunks?: boolean
+  avoidRedundantChunkLoads?: boolean
+}
+
 export interface BindingClientHmrUpdate {
   clientId: string
   update: BindingHmrUpdate
@@ -2131,7 +2136,7 @@ export interface BindingExperimentalOptions {
   onDemandWrapping?: boolean
   incrementalBuild?: boolean
   nativeMagicString?: boolean
-  chunkOptimization?: boolean
+  chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
 }
 

@@ -52,7 +52,7 @@ console.log("dyn-entry");
 ## shared.js
 
 ```js
-//! Common Chunk: [Shared-By: entry-a.js, entry-b.js, dyn-entry.js]
+//! Common Chunk: [Shared-By: entry-a.js, entry-b.js]
 //#region shared.js
 console.log("shared");
 //#endregion

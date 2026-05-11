@@ -43,7 +43,7 @@ pub struct BindingViteResolvePluginConfig {
     ts_type = "(id: string, importer: string, isRequire: boolean, scan: boolean) => VoidNullable<string>"
   )]
   pub resolve_subpath_imports:
-    JsCallback<FnArgs<(String, Option<String>, bool, bool)>, Option<String>>,
+    JsCallback<FnArgs<(String, Option<String>, bool, bool)>, Promise<Option<String>>>,
   #[debug("{}", if on_warn.is_some() { "Some(<on_warn>)" } else { "None" })]
   #[napi(ts_type = "(message: string) => void")]
   pub on_warn: Option<JsCallback<FnArgs<(String,)>, Promise<()>>>,
@@ -115,6 +115,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
           Box::pin(async move {
             resolve_fn
               .invoke_async((id, importer, is_require, scan).into())
+              .await?
               .await
               .map_err(anyhow::Error::from)
           })

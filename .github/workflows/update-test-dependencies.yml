@@ -106,7 +106,7 @@ jobs:
           save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+        uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -219,7 +219,7 @@ jobs:
           save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+        uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -333,7 +333,7 @@ jobs:
           grep "const ESBUILD_VERSION = " scripts/src/esbuild-tests/urls.ts
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+        uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 

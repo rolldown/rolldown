@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INEFFECTIVE_DYNAMIC_IMPORT
 
 ```text
-[INEFFECTIVE_DYNAMIC_IMPORT] Warning: node4.js is dynamically imported by node3.js but also statically imported by node3.js, dynamic import will not move module into another chunk.
+[INEFFECTIVE_DYNAMIC_IMPORT] node4.js is dynamically imported by node3.js but also statically imported by node3.js, dynamic import will not move module into another chunk.
 
 ```
 

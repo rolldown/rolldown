@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'test' in main.js
+[UNRESOLVED_IMPORT] Could not resolve 'test' in main.js
    ╭─[ main.js:2:18 ]
    │
  2 │ import test from 'test';

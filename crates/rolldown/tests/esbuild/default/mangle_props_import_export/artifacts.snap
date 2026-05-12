@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'xyz' in cjs.js
+[UNRESOLVED_IMPORT] Could not resolve 'xyz' in cjs.js
    ╭─[ cjs.js:2:20 ]
    │
  2 │ let bar_ = require('xyz').bar_
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'xyz' in esm.js
+[UNRESOLVED_IMPORT] Could not resolve 'xyz' in esm.js
    ╭─[ esm.js:2:22 ]
    │
  2 │ import { bar_ } from 'xyz'

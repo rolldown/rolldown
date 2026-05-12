@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: A class name is required.
+[PARSE_ERROR] A class name is required.
    ╭─[ main.js:1:8 ]
    │
  1 │ export class {}

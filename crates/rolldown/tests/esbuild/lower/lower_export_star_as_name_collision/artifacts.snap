@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'path1' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'path1' in entry.js
    ╭─[ entry.js:3:21 ]
    │
  3 │ export * as ns from 'path1'
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'path2' in nested.js
+[UNRESOLVED_IMPORT] Could not resolve 'path2' in nested.js
    ╭─[ nested.js:1:22 ]
    │
  1 │ export * as foo from 'path2'

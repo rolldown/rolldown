@@ -6,6 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INVALID_OPTION
 
 ```text
-[INVALID_OPTION] Error: Hashes cannot be longer than 21 characters, received 22. Check the `entryFileNames` option.
+[INVALID_OPTION] Hashes cannot be longer than 21 characters, received 22. Check the `entryFileNames` option.
 
 ```

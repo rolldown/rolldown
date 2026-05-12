@@ -17,10 +17,16 @@ export const CONFIG = {
     tmpLazyCompilationDir: nodePath.join(testsDir, 'tmp-playground/lazy-compilation'),
     lazyIssue9312Dir: nodePath.join(testsDir, 'playground/lazy-issue-9312'),
     tmpLazyIssue9312Dir: nodePath.join(testsDir, 'tmp-playground/lazy-issue-9312'),
+    lazyNestedDynamicImportDir: nodePath.join(testsDir, 'playground/lazy-nested-dynamic-import'),
+    tmpLazyNestedDynamicImportDir: nodePath.join(
+      testsDir,
+      'tmp-playground/lazy-nested-dynamic-import',
+    ),
   },
   ports: {
     hmrFullBundleMode: 3636,
     lazyCompilation: 3637,
     lazyIssue9312: 3638,
+    lazyNestedDynamicImport: 3639,
   },
 };

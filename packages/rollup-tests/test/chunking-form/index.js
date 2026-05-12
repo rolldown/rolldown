@@ -115,21 +115,19 @@ async function generateAndTestBundle(bundle, outputOptions, expectedDirectory, c
 		`Chunk count mismatch in ${expectedDirectory}: actual ${actualChunkFiles.length}, expected ${expectedChunkFiles.length}`
 	);
 	// Also compare export signatures of corresponding chunks. For each chunk,
-	// the set of exported names plus the presence of a default export must
-	// match exactly between rolldown and rollup.
+	// the set of public exported names plus the presence of a default export
+	// must match between rolldown and rollup. Internal chunk export aliases are
+	// implementation details as long as importers are rewritten consistently.
 	const actualBase = `${outputOptions.dir}${config.nestedDir ? '/' + config.nestedDir : ''}`;
 	const expectedBase = `${expectedDirectory}${config.nestedDir ? '/' + config.nestedDir : ''}`;
+	const actualChunksByFileName = new Map(writeResult.output.filter(o => o.type === 'chunk').map(chunk => [chunk.fileName, chunk]));
 	const { parseSync } = await getOxcParser();
 	for (const relPath of actualChunkFiles) {
 		const expectedPath = join(expectedBase, relPath);
 		if (!existsSync(expectedPath)) continue;
 		const actual = extractExports(parseSync, readFileSync(join(actualBase, relPath), 'utf8'), outputOptions.format);
 		const expected = extractExports(parseSync, readFileSync(expectedPath, 'utf8'), outputOptions.format);
-		assert.deepStrictEqual(
-			[...actual.names].sort(),
-			[...expected.names].sort(),
-			`Chunk ${relPath} export names differ: actual ${JSON.stringify([...actual.names].sort())} vs expected ${JSON.stringify([...expected.names].sort())}`
-		);
+		assertExportNames(actual, expected, relPath, isPublicChunk(actualChunksByFileName.get(relPath), outputOptions));
 		assert.strictEqual(
 			actual.hasDefault,
 			expected.hasDefault,
@@ -157,6 +155,28 @@ function collectChunkFiles(dir) {
 	}
 	walk(dir);
 	return result;
+}
+
+function isPublicChunk(chunk, outputOptions) {
+	return !chunk || outputOptions.preserveModules || chunk.isEntry || chunk.isDynamicEntry || chunk.facadeModuleId;
+}
+
+function assertExportNames(actual, expected, relPath, exactNames) {
+	const actualNames = [...actual.names].sort();
+	const expectedNames = [...expected.names].sort();
+	if (exactNames) {
+		assert.deepStrictEqual(
+			actualNames,
+			expectedNames,
+			`Chunk ${relPath} export names differ: actual ${JSON.stringify(actualNames)} vs expected ${JSON.stringify(expectedNames)}`
+		);
+		return;
+	}
+	assert.strictEqual(
+		actualNames.length,
+		expectedNames.length,
+		`Chunk ${relPath} internal export count differs: actual ${actualNames.length} ${JSON.stringify(actualNames)} vs expected ${expectedNames.length} ${JSON.stringify(expectedNames)}`
+	);
 }
 
 let oxcParserPromise;

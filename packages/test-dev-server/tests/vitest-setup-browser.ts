@@ -16,6 +16,7 @@ let browser: Browser | null = null;
 let hmrPage: Page | null = null;
 let lazyPage: Page | null = null;
 let issue9312Page: Page | null = null;
+let nestedLazyPage: Page | null = null;
 
 async function killPort(port: number): Promise<void> {
   try {
@@ -73,6 +74,7 @@ beforeAll(async () => {
     killPort(CONFIG.ports.hmrFullBundleMode),
     killPort(CONFIG.ports.lazyCompilation),
     killPort(CONFIG.ports.lazyIssue9312),
+    killPort(CONFIG.ports.lazyNestedDynamicImport),
   ]);
 
   // Always recreate tmp playground from source to pick up any fixture changes.
@@ -91,12 +93,14 @@ beforeAll(async () => {
   startDevServer(CONFIG.paths.tmpFullBundleModeDir);
   startDevServer(CONFIG.paths.tmpLazyCompilationDir);
   startDevServer(CONFIG.paths.tmpLazyIssue9312Dir);
+  startDevServer(CONFIG.paths.tmpLazyNestedDynamicImportDir);
 
   // Wait for servers to be ready
   await Promise.all([
     waitForDevServerReady(CONFIG.ports.hmrFullBundleMode),
     waitForDevServerReady(CONFIG.ports.lazyCompilation),
     waitForDevServerReady(CONFIG.ports.lazyIssue9312),
+    waitForDevServerReady(CONFIG.ports.lazyNestedDynamicImport),
   ]);
 
   // Launch browser and create pages
@@ -105,6 +109,7 @@ beforeAll(async () => {
   hmrPage = await browser.newPage();
   lazyPage = await browser.newPage();
   issue9312Page = await browser.newPage();
+  nestedLazyPage = await browser.newPage();
 
   // Only navigate the HMR page here. The lazy page is NOT navigated in setup
   // to avoid warming the lazy-compilation server (main.js triggers a dynamic
@@ -119,6 +124,7 @@ beforeAll(async () => {
   (global as any).__page = hmrPage;
   (global as any).__lazyPage = lazyPage;
   (global as any).__issue9312Page = issue9312Page;
+  (global as any).__nestedLazyPage = nestedLazyPage;
 });
 
 beforeEach(async (ctx) => {
@@ -147,6 +153,10 @@ afterAll(async () => {
     await issue9312Page.close().catch(() => {});
     issue9312Page = null;
   }
+  if (nestedLazyPage) {
+    await nestedLazyPage.close().catch(() => {});
+    nestedLazyPage = null;
+  }
   if (browser) {
     await browser.close().catch(() => {});
     browser = null;
@@ -158,5 +168,6 @@ afterAll(async () => {
     killPort(CONFIG.ports.hmrFullBundleMode),
     killPort(CONFIG.ports.lazyCompilation),
     killPort(CONFIG.ports.lazyIssue9312),
+    killPort(CONFIG.ports.lazyNestedDynamicImport),
   ]).catch(() => {});
 });

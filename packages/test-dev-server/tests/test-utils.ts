@@ -70,6 +70,19 @@ export function getIssue9312Page() {
   return page;
 }
 
+/**
+ * Get the Playwright page for the lazy-nested-dynamic-import regression test.
+ */
+export function getNestedLazyPage() {
+  const page = (global as any).__nestedLazyPage;
+  if (!page) {
+    throw new Error(
+      'lazy-nested-dynamic-import page not initialized. Check vitest-setup-browser.ts',
+    );
+  }
+  return page;
+}
+
 interface DevStatus {
   hasStaleOutput: boolean;
   lastFullBuildFailed: boolean;

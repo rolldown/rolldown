@@ -18,8 +18,6 @@
     },
     "docs": {
       "entry": [
-        ".vitepress/config.ts", // no Vitepress plugin yet
-        ".vitepress/theme/index.ts",
         ".vitepress/theme/Home.vue",
         ".vitepress/theme/components/api.index.md", // API reference index page
         ".vitepress/theme/components/ApiIndex.vue", // Used by api.index.md (with path relative to reference/index.md)
@@ -42,22 +40,14 @@
     "packages/rolldown": {
       "entry": [
         "src/browser.js",
-        "src/cli/setup-index.ts",
         "src/cli/index.ts",
         "src/log/locate-character/index.d.ts",
-        "src/parallel-plugin-worker.ts",
         "src/rolldown-binding.wasi-browser.js",
         "src/{wasi,webcontainer}-*.*",
         "src/api/experimental.ts",
       ],
-      "ignore": [
-        "src/binding.cjs",
-        "src/rolldown-binding.wasi.cjs",
-        "src/plugin/generated/hook-usage.ts",
-        "src/browser.js",
-      ],
-      "ignoreDependencies": ["@rollup/plugin-json", "buble", "emnapi", "pathe"],
-      "ignoreUnresolved": ["#parallel-plugin-worker"], // target file is unavailable before build
+      "ignore": ["src/binding.cjs", "src/rolldown-binding.wasi.cjs", "src/browser.js"],
+      "ignoreDependencies": ["@rollup/plugin-json", "buble", "pathe"],
     },
     "packages/rolldown/npm/wasm32-wasi": {
       "ignoreDependencies": ["@napi-rs/wasm-runtime"],
@@ -100,6 +90,12 @@
     },
     "packages/test-dev-server/tests/playground/lazy-compilation": {
       "entry": ["dev.config.mjs", "main.js", "lazy-module.js"], // Playwright test with dev config and source files
+    },
+    "packages/test-dev-server/tests/playground/lazy-issue-9312": {
+      "entry": ["dev.config.mjs", "app.js", "page-a.js", "page-b.js", "selectors.js"], // Playwright test with dev config and source files
+    },
+    "packages/test-dev-server/tests/playground/lazy-nested-dynamic-import": {
+      "entry": ["dev.config.mjs", "app.js", "outer.js", "inner.js"], // Playwright test with dev config and source files
     },
   },
 }

@@ -59,6 +59,30 @@ export function getLazyPage() {
   return page;
 }
 
+/**
+ * Get the Playwright page for the lazy-issue-9312 regression test.
+ */
+export function getIssue9312Page() {
+  const page = (global as any).__issue9312Page;
+  if (!page) {
+    throw new Error('issue-9312 page not initialized. Check vitest-setup-browser.ts');
+  }
+  return page;
+}
+
+/**
+ * Get the Playwright page for the lazy-nested-dynamic-import regression test.
+ */
+export function getNestedLazyPage() {
+  const page = (global as any).__nestedLazyPage;
+  if (!page) {
+    throw new Error(
+      'lazy-nested-dynamic-import page not initialized. Check vitest-setup-browser.ts',
+    );
+  }
+  return page;
+}
+
 interface DevStatus {
   hasStaleOutput: boolean;
   lastFullBuildFailed: boolean;

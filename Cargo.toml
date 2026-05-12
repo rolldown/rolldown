@@ -179,7 +179,7 @@ json-escape-simd = "3"
 json-strip-comments = "3"
 jsonschema = { version = "0.46.0", default-features = false }
 memchr = "2.7.4"
-mimalloc-safe = "0.1.52"
+mimalloc-safe = "=0.1.58"
 mime = "0.3.17"
 nodejs-built-in-modules = "1.0.0"
 nom = "8.0.0"
@@ -234,7 +234,7 @@ napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.129.0", features = [
+oxc = { version = "0.130.0", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -246,14 +246,14 @@ oxc = { version = "0.129.0", features = [
   "regular_expression",
   "cfg",
 ] }
-oxc_allocator = { version = "0.129.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.129.0" }
-oxc_napi = { version = "0.129.0" }
-oxc_str = { version = "0.129.0" }
-oxc_minify_napi = { version = "0.129.0" }
-oxc_parser_napi = { version = "0.129.0" }
-oxc_transform_napi = { version = "0.129.0" }
-oxc_traverse = { version = "0.129.0" }
+oxc_allocator = { version = "0.130.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.130.0" }
+oxc_napi = { version = "0.130.0" }
+oxc_str = { version = "0.130.0" }
+oxc_minify_napi = { version = "0.130.0" }
+oxc_parser_napi = { version = "0.130.0" }
+oxc_transform_napi = { version = "0.130.0" }
+oxc_traverse = { version = "0.130.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

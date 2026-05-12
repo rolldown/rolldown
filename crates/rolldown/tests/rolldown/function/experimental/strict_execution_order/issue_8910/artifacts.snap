@@ -3,24 +3,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## chunk.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __exportAll as r, __commonJSMin as t };
-
-```
-
 ## node0.js
 
 ```js
-import { n as __esmMin } from "./chunk.js";
+import { t as __esmMin } from "./node1.js";
 //#region node0.js
 var node_0;
 //#endregion
 __esmMin((() => {
 	globalThis.__acyclic_output_fuzz_0 = 0;
-	import("./node2.js").then((n) => (n.t(), n.n));
+	import("./node1.js");
 	node_0 = {};
 	node_0.value = 0;
 }))();
@@ -30,25 +22,8 @@ __esmMin((() => {
 ## node1.js
 
 ```js
-import { t as __commonJSMin } from "./chunk.js";
-import { t as init_node2 } from "./node2.js";
-//#region node1.cjs
-var require_node1 = /* @__PURE__ */ __commonJSMin(((exports) => {
-	globalThis.__acyclic_output_fuzz_1 = 1;
-	init_node2();
-	exports.node_1 = 1;
-}));
-//#endregion
-export default require_node1();
-
-```
-
-## node2.js
-
-```js
-import { n as __esmMin, r as __exportAll } from "./chunk.js";
-//#region node2.js
-var node2_exports = /* @__PURE__ */ __exportAll({ node_2: () => node_2 });
+var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
 var node_2;
 var init_node2 = __esmMin((() => {
 	globalThis.__acyclic_output_fuzz_2 = 2;
@@ -57,6 +32,14 @@ var init_node2 = __esmMin((() => {
 	node_2.value = 2;
 }));
 //#endregion
-export { node2_exports as n, init_node2 as t };
+//#region node1.cjs
+var require_node1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+	globalThis.__acyclic_output_fuzz_1 = 1;
+	init_node2();
+	exports.node_1 = 1;
+}));
+//#endregion
+export default require_node1();
+export { __esmMin as t };
 
 ```

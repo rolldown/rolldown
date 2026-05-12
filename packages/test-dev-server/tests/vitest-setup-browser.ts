@@ -15,6 +15,8 @@ import { CONFIG } from './src/config';
 let browser: Browser | null = null;
 let hmrPage: Page | null = null;
 let lazyPage: Page | null = null;
+let issue9312Page: Page | null = null;
+let nestedLazyPage: Page | null = null;
 
 async function killPort(port: number): Promise<void> {
   try {
@@ -71,6 +73,8 @@ beforeAll(async () => {
   await Promise.all([
     killPort(CONFIG.ports.hmrFullBundleMode),
     killPort(CONFIG.ports.lazyCompilation),
+    killPort(CONFIG.ports.lazyIssue9312),
+    killPort(CONFIG.ports.lazyNestedDynamicImport),
   ]);
 
   // Always recreate tmp playground from source to pick up any fixture changes.
@@ -83,14 +87,20 @@ beforeAll(async () => {
   // Reset HMR test files to original state
   await resetTestFiles();
 
-  // Start both dev servers (ports configured in each playground's dev.config.mjs)
+  // Start dev servers (ports configured in each playground's dev.config.mjs).
+  // lazy-issue-9312 is self-contained (not a pnpm workspace member), so it runs
+  // the CLI directly via `node <abs path>` instead of `pnpm serve`.
   startDevServer(CONFIG.paths.tmpFullBundleModeDir);
   startDevServer(CONFIG.paths.tmpLazyCompilationDir);
+  startDevServer(CONFIG.paths.tmpLazyIssue9312Dir);
+  startDevServer(CONFIG.paths.tmpLazyNestedDynamicImportDir);
 
   // Wait for servers to be ready
   await Promise.all([
     waitForDevServerReady(CONFIG.ports.hmrFullBundleMode),
     waitForDevServerReady(CONFIG.ports.lazyCompilation),
+    waitForDevServerReady(CONFIG.ports.lazyIssue9312),
+    waitForDevServerReady(CONFIG.ports.lazyNestedDynamicImport),
   ]);
 
   // Launch browser and create pages
@@ -98,16 +108,23 @@ beforeAll(async () => {
 
   hmrPage = await browser.newPage();
   lazyPage = await browser.newPage();
+  issue9312Page = await browser.newPage();
+  nestedLazyPage = await browser.newPage();
 
   // Only navigate the HMR page here. The lazy page is NOT navigated in setup
   // to avoid warming the lazy-compilation server (main.js triggers a dynamic
   // import after 1s, which would pre-compile the lazy module before the test).
+  // The issue-9312 page is also navigated by the test itself; it relies on a
+  // user click to fire the dynamic imports, so pre-navigating is harmless,
+  // but keeping symmetry with the lazy page makes intent clearer.
   await hmrPage.goto(`http://localhost:${CONFIG.ports.hmrFullBundleMode}`, {
     waitUntil: 'networkidle',
   });
 
   (global as any).__page = hmrPage;
   (global as any).__lazyPage = lazyPage;
+  (global as any).__issue9312Page = issue9312Page;
+  (global as any).__nestedLazyPage = nestedLazyPage;
 });
 
 beforeEach(async (ctx) => {
@@ -132,6 +149,14 @@ afterAll(async () => {
     await lazyPage.close().catch(() => {});
     lazyPage = null;
   }
+  if (issue9312Page) {
+    await issue9312Page.close().catch(() => {});
+    issue9312Page = null;
+  }
+  if (nestedLazyPage) {
+    await nestedLazyPage.close().catch(() => {});
+    nestedLazyPage = null;
+  }
   if (browser) {
     await browser.close().catch(() => {});
     browser = null;
@@ -142,5 +167,7 @@ afterAll(async () => {
   await Promise.all([
     killPort(CONFIG.ports.hmrFullBundleMode),
     killPort(CONFIG.ports.lazyCompilation),
+    killPort(CONFIG.ports.lazyIssue9312),
+    killPort(CONFIG.ports.lazyNestedDynamicImport),
   ]).catch(() => {});
 });

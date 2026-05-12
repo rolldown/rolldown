@@ -608,8 +608,25 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       return;
     };
 
-    // Handle lazy proxy modules - rewrite to lazy entry import pattern
-    // For dynamic imports to lazy proxies, we need to trigger lazy loading via /@vite/lazy endpoint
+    // Handle lazy proxy modules - rewrite to mirror the proxy module's runtime contract.
+    //
+    // In a regular full build, scope finalizer rewrites `import('./foo')` to point at the
+    // proxy module's chunk URL. That chunk's content is `proxy-module-template.js`, which
+    // exposes `'rolldown:exports'` at the top level so consumers can do
+    // `.then(__unwrap_lazy_compilation_entry).then(m => m.X)`.
+    //
+    // In HMR partial bundles there's no separately bundled proxy chunk - the proxy module's
+    // body gets wrapped inside a `createEsmInitializer` and its top-level `export` is lost.
+    // To keep the same surface as the full build, we rewrite the dynamic import to:
+    //
+    //   import(`/@vite/lazy?id=...&clientId=...`)
+    //     .then(() => __rolldown_runtime__.loadExports("<stable_proxy_id>"))
+    //
+    // After the partial bundle evaluates, the proxy module is registered under
+    // `<stable_proxy_id>` with a `'rolldown:exports'` getter (set up by `__exportAll` inside
+    // the init wrapper). Reading it back via `loadExports` yields the namespace object that
+    // the existing `__unwrap_lazy_compilation_entry` chain expects.
+    //
     // TODO: hyf0 should switch to a more robust way to identify lazy proxy modules
     if importee.id.contains("?rolldown-lazy=1") {
       // Build: encodeURIComponent(importee.id)
@@ -654,7 +671,60 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         self.builder.expression_template_literal(SPAN, quasis, expressions)
       };
 
-      *it = self.builder.expression_import(SPAN, url_expr, None, None);
+      // Build: import(`/@vite/lazy?id=...&clientId=...`)
+      let import_expr = self.builder.expression_import(SPAN, url_expr, None, None);
+
+      // Build: __rolldown_runtime__.loadExports("<stable_proxy_id>")
+      let load_exports_call = ast::Expression::CallExpression(self.builder.alloc_call_expression(
+        SPAN,
+        self.snippet.id_ref_expr("__rolldown_runtime__.loadExports", SPAN),
+        NONE,
+        self.builder.vec1(ast::Argument::StringLiteral(self.builder.alloc_string_literal(
+          SPAN,
+          self.builder.str(&importee.stable_id),
+          None,
+        ))),
+        false,
+      ));
+
+      // Build: () => __rolldown_runtime__.loadExports("<stable_proxy_id>")
+      let arrow_fn = self.builder.expression_arrow_function(
+        SPAN,
+        /* expression */ true,
+        /* async */ false,
+        NONE,
+        self.builder.formal_parameters(
+          SPAN,
+          ast::FormalParameterKind::ArrowFormalParameters,
+          self.builder.vec(),
+          NONE,
+        ),
+        NONE,
+        self.builder.function_body(
+          SPAN,
+          self.builder.vec(),
+          self.builder.vec1(ast::Statement::ExpressionStatement(
+            self.builder.alloc_expression_statement(SPAN, load_exports_call),
+          )),
+        ),
+      );
+
+      // Build: import(...).then(() => __rolldown_runtime__.loadExports("..."))
+      let then_callee =
+        Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
+          SPAN,
+          import_expr,
+          self.builder.identifier_name(SPAN, "then"),
+          false,
+        ));
+
+      *it = self.builder.expression_call(
+        SPAN,
+        then_callee,
+        NONE,
+        self.builder.vec1(ast::Argument::from(arrow_fn)),
+        false,
+      );
       return;
     }
 

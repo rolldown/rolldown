@@ -42,7 +42,7 @@ console.log(a, b);
 
 ```
 
-# Variant: [chunk_optimization: false]
+# Variant: [chunk_optimization: Bool(false)]
 
 ## Assets
 

@@ -153,12 +153,18 @@ jobs:
 
       - name: Create GitHub Release
         id: github_release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
-        with:
-          draft: false
-          tag_name: v${{ needs.check.outputs.version }} # tags the current commit
-          target_commitish: ${{ github.sha }}
-          body: ${{ steps.changelog.outputs.CHANGELOG }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: v${{ needs.check.outputs.version }} # tags the current commit
+          TARGET: ${{ github.sha }}
+          NOTES: ${{ steps.changelog.outputs.CHANGELOG }}
+        run: |
+          url=$(gh release create "$TAG_NAME" \
+            --target "$TARGET" \
+            --title "$TAG_NAME" \
+            --notes "$NOTES")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Notify Discord
         uses: tsickert/discord-webhook@b217a69502f52803de774ded2b1ab7c282e99645 # v7.0.0

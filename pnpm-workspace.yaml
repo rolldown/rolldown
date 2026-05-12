@@ -24,6 +24,7 @@ catalog:
   '@oxc-project/runtime': '=0.130.0'
   '@oxc-project/types': '=0.130.0'
   '@pnpm/find-workspace-packages': ^6.0.9
+  '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
   '@rollup/plugin-json': ^6.1.0
   '@rollup/plugin-node-resolve': ^16.0.0

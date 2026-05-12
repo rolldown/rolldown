@@ -36,6 +36,9 @@ catalogs:
     '@pnpm/find-workspace-packages':
       specifier: ^6.0.9
       version: 6.0.9
+    '@rolldown/pluginutils':
+      specifier: ^1.0.0
+      version: 1.0.0
     '@rollup/plugin-commonjs':
       specifier: ^29.0.0
       version: 29.0.2
@@ -537,7 +540,7 @@ importers:
         specifier: 'catalog:'
         version: 0.130.0
       '@rolldown/pluginutils':
-        specifier: 1.0.0
+        specifier: 'catalog:'
         version: 1.0.0
     devDependencies:
       '@napi-rs/cli':

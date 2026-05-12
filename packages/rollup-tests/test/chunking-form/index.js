@@ -23,45 +23,55 @@ runTestSuiteWithSamples('chunking form', resolve(__dirname, '../../../../rollup/
 		() => {
 			let bundle;
 
-			if (config.before) {
-				before(config.before);
-			}
-			if (config.after) {
-				after(config.after);
-			}
 			const logs = [];
-			after(() => config.logs && compareLogs(logs, config.logs));
+			const completedFormats = new Set();
+			after(() => {
+				if (config.logs && completedFormats.size === FORMATS.length) {
+					compareLogs(logs, config.logs);
+				}
+			});
 
 			for (const format of FORMATS) {
 				it('generates ' + format, async () => {
-					process.chdir(directory);
 					const warnings = [];
-					bundle =
-						bundle ||
-						(await rollup({
-							input: [directory + '/main.js'],
-							onLog: (level, log) => {
-								logs.push({ level, ...log });
-								if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
-									warnings.push(log);
-								}
+					let completed = false;
+					try {
+						if (config.before) {
+							await config.before();
+						}
+						process.chdir(directory);
+						bundle =
+							bundle ||
+							(await rollup({
+								input: [directory + '/main.js'],
+								onLog: (level, log) => {
+									logs.push({ level, ...log });
+									if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
+										warnings.push(log);
+									}
+								},
+								strictDeprecations: true,
+								...config.options
+							}));
+						await generateAndTestBundle(
+							bundle,
+							{
+								dir: `${directory}/_actual/${format}`,
+								exports: 'auto',
+								format,
+								chunkFileNames: 'generated-[name].js',
+								validate: true,
+								...(config.options || {}).output
 							},
-							strictDeprecations: true,
-							...config.options
-						}));
-					await generateAndTestBundle(
-						bundle,
-						{
-							dir: `${directory}/_actual/${format}`,
-							exports: 'auto',
-							format,
-							chunkFileNames: 'generated-[name].js',
-							validate: true,
-							...(config.options || {}).output
-						},
-						`${directory}/_expected/${format}`,
-						config
-					);
+							`${directory}/_expected/${format}`,
+							config
+						);
+						completed = true;
+					} finally {
+						if (config.after) {
+							await config.after();
+						}
+					}
 					if (warnings.length > 0) {
 						const codes = new Set();
 						for (const { code } of warnings) {
@@ -72,6 +82,9 @@ runTestSuiteWithSamples('chunking form', resolve(__dirname, '../../../../rollup/
 								.map(({ message }) => `${message}\n\n`)
 								.join('')}` + 'If you expect warnings, list their codes in config.expectedWarnings'
 						);
+					}
+					if (completed) {
+						completedFormats.add(format);
 					}
 				});
 			}
@@ -124,7 +137,10 @@ async function generateAndTestBundle(bundle, outputOptions, expectedDirectory, c
 	const { parseSync } = await getOxcParser();
 	for (const relPath of actualChunkFiles) {
 		const expectedPath = join(expectedBase, relPath);
-		if (!existsSync(expectedPath)) continue;
+		assert.ok(
+			existsSync(expectedPath),
+			`Unexpected actual chunk ${relPath}; no matching expected chunk in ${expectedBase}`
+		);
 		const actual = extractExports(parseSync, readFileSync(join(actualBase, relPath), 'utf8'), outputOptions.format);
 		const expected = extractExports(parseSync, readFileSync(expectedPath, 'utf8'), outputOptions.format);
 		assertExportNames(actual, expected, relPath, isPublicChunk(actualChunksByFileName.get(relPath), outputOptions));

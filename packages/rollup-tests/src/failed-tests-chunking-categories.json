@@ -3,6 +3,7 @@
     "category": "dynamic imports / dynamic entry chunking",
     "failed-test": [
       "deoptimized-module-with-dynamic-import",
+      "dynamic-import",
       "dynamic-import-*",
       "dynamically-import-*",
       "entry-without-code-*",
@@ -10,7 +11,7 @@
       "splitting-cycles-module-with-TLA-and-dynamic-importer",
       "top-level-await-import*"
     ],
-    "count": 59
+    "count": 61
   },
   {
     "category": "emitFile / assets / render hooks / file naming",
@@ -18,11 +19,14 @@
       "asset-needs-code-reference*",
       "deprecated/emit-file/*",
       "emit-file/*",
+      "filenames-patterns",
+      "hashing/*",
+      "max-parallel-file-operations",
       "render-chunk*",
       "render-dynamic-import-extended",
-      "sourcemap-file-names"
+      "sourcemap-file-names*"
     ],
-    "count": 49
+    "count": 71
   },
   {
     "category": "preserveModules / preserveEntrySignatures / facades",
@@ -34,7 +38,7 @@
       "preserve-modules-*",
       "single-file-manual-chunk"
     ],
-    "count": 41
+    "count": 50
   },
   {
     "category": "core chunk export naming / deconflict / execution",
@@ -51,14 +55,14 @@
       "resolve-dynamic-import",
       "side-effect-free-dependencies/*"
     ],
-    "count": 38
+    "count": 48
   },
   {
     "category": "minChunkSize / chunk merging",
     "failed-test": [
       "min-chunk-size/*"
     ],
-    "count": 38
+    "count": 44
   },
   {
     "category": "synthetic exports / namespaces / reexports / interop",
@@ -72,7 +76,7 @@
       "reexport-*",
       "synthetic-named-exports/*"
     ],
-    "count": 33
+    "count": 37
   },
   {
     "category": "manual chunks",

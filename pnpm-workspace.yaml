@@ -24,6 +24,7 @@ catalog:
   '@oxc-project/runtime': '=0.130.0'
   '@oxc-project/types': '=0.130.0'
   '@pnpm/find-workspace-packages': ^6.0.9
+  '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
   '@rollup/plugin-json': ^6.1.0
   '@rollup/plugin-node-resolve': ^16.0.0
@@ -33,7 +34,6 @@ catalog:
   '@types/lodash-es': ^4.17.12
   '@types/mocha': 10.0.10
   '@types/node': 24.10.3
-  '@types/picomatch': ^4.0.0
   '@types/semver': ^7.5.8
   '@types/serve-static': ^2.0.0
   '@types/strip-comments': ^2.0.4
@@ -64,7 +64,6 @@ catalog:
   oxc-parser: '=0.130.0'
   oxc-transform: '=0.130.0'
   pathe: ^2.0.3
-  picomatch: ^4.0.2
   react: ^19.0.0
   react-dom: ^19.0.0
   remark-parse: ^11.0.0

@@ -120,7 +120,7 @@
   },
   "dependencies": {
     "@oxc-project/types": "catalog:",
-    "@rolldown/pluginutils": "workspace:*"
+    "@rolldown/pluginutils": "catalog:"
   },
   "devDependencies": {
     "@napi-rs/cli": "catalog:",

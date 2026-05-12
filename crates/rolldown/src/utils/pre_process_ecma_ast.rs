@@ -4,7 +4,7 @@ use oxc::ast::ast::Program;
 use oxc::ast_visit::VisitMut;
 use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
-use oxc::semantic::{Scoping, SemanticBuilder, Stats};
+use oxc::semantic::{Scoping, Stats};
 use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
@@ -13,7 +13,7 @@ use oxc::transformer_plugins::{
 use oxc_str::CompactStr;
 
 use rolldown_common::{ConstExportMeta, ConstantValue, NormalizedBundlerOptions};
-use rolldown_ecmascript::{EcmaAst, WithMutFields};
+use rolldown_ecmascript::{EcmaAst, WithMutFields, semantic_builder_for_transform};
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
 use rustc_hash::FxHashMap;
@@ -63,7 +63,7 @@ impl PreProcessEcmaAst {
 
     // Step 1: Build initial semantic data and check for semantic errors.
     let semantic_ret = ast.program.with_dependent(|_owner, dep| {
-      SemanticBuilder::new().with_check_syntax_error(true).with_enum_eval(true).build(&dep.program)
+      semantic_builder_for_transform().with_check_syntax_error(true).build(&dep.program)
     });
 
     let (errors, warnings): (Vec<_>, Vec<_>) =
@@ -239,14 +239,9 @@ impl PreProcessEcmaAst {
     if let Some(scoping) = scoping.take() {
       return scoping;
     }
-    // Preserve enum_eval here so the transformer can resolve enum-member aliases
-    // when define has consumed the original scoping. After the transformer lowers
-    // enums to IIFEs, later callers of this fallback (inject / DCE / PreProcessor)
-    // no longer encounter TSEnumDeclaration nodes, so the eval pass is a no-op.
-    let ret = SemanticBuilder::new()
+    let ret = semantic_builder_for_transform()
       // Preallocate memory for the underlying data structures.
       .with_stats(self.stats)
-      .with_enum_eval(true)
       .build(program)
       .semantic;
     self.stats = ret.stats();

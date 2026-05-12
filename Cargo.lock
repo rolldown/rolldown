@@ -1482,9 +1482,9 @@ checksum = "c2a86d3146ed3995b5913c414f6664344b9617457320782e64f0bb44afd49d74"
 
 [[package]]
 name = "mimalloc-safe"
-version = "0.1.59"
+version = "0.1.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9098e05eb52f2e4e14969b26608ccf7704bc8891dcc27a25e5d2d2cf782bed99"
+checksum = "a8bf95a709c09e85ae74e77b2413cbb11a1b8f2f3d11e23b3751382467c9c15c"
 dependencies = [
  "libmimalloc-sys2",
 ]

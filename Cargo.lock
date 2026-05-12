@@ -1408,8 +1408,7 @@ dependencies = [
 [[package]]
 name = "libmimalloc-sys2"
 version = "0.1.55"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a59567f2add52cb5a14b97e11ba4a20239fb93402fa99173347cbb689cd5330"
+source = "git+https://github.com/shulaoda/mimalloc-safe.git?branch=05-12-fix_sys_compile_mimalloc_as_c_on_windows-msvc_targets#a155cf09911506fe899b0abea4aa86b0883d983d"
 dependencies = [
  "cc",
  "cmake",
@@ -1482,9 +1481,8 @@ checksum = "c2a86d3146ed3995b5913c414f6664344b9617457320782e64f0bb44afd49d74"
 
 [[package]]
 name = "mimalloc-safe"
-version = "0.1.58"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8bf95a709c09e85ae74e77b2413cbb11a1b8f2f3d11e23b3751382467c9c15c"
+version = "0.1.59"
+source = "git+https://github.com/shulaoda/mimalloc-safe.git?branch=05-12-fix_sys_compile_mimalloc_as_c_on_windows-msvc_targets#a155cf09911506fe899b0abea4aa86b0883d983d"
 dependencies = [
  "libmimalloc-sys2",
 ]

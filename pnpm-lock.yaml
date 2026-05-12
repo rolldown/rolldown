@@ -531,28 +531,13 @@ importers:
         specifier: 'catalog:'
         version: 0.1.0
 
-  packages/pluginutils:
-    devDependencies:
-      '@types/picomatch':
-        specifier: 'catalog:'
-        version: 4.0.3
-      picomatch:
-        specifier: 'catalog:'
-        version: 4.0.4
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.5(@opentelemetry/api@1.9.0)(@types/node@24.10.3)(vite@8.0.11(@types/node@24.10.3)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
-
   packages/rolldown:
     dependencies:
       '@oxc-project/types':
         specifier: 'catalog:'
         version: 0.130.0
       '@rolldown/pluginutils':
-        specifier: ^1.0.0
+        specifier: 1.0.0
         version: 1.0.0
     devDependencies:
       '@napi-rs/cli':
@@ -4377,9 +4362,6 @@ packages:
 
   '@types/node@24.10.3':
     resolution: {integrity: sha512-gqkrWUsS8hcm0r44yn7/xZeV1ERva/nLgrLxFRUGb7aoNMIJfZJ3AC261zDQuOAKC7MiXai1WCpYc48jAHoShQ==}
-
-  '@types/picomatch@4.0.3':
-    resolution: {integrity: sha512-iG0T6+nYJ9FAPmx9SsUlnwcq1ZVRuCXcVEvWnntoPlrOpwtSTKNDC9uVAxTsC3PUvJ+99n4RpAcNgBbHX3JSnQ==}
 
   '@types/resolve@1.20.2':
     resolution: {integrity: sha512-60BCwRFOZCQhDncwQdxxeOEEkbc5dIMccYLwbxsS4TUNeVECQ/pBJ0j09mrHOl/JJvpRPGwO9SvE4nR2Nb/a4Q==}
@@ -10090,8 +10072,6 @@ snapshots:
   '@types/node@24.10.3':
     dependencies:
       undici-types: 7.16.0
-
-  '@types/picomatch@4.0.3': {}
 
   '@types/resolve@1.20.2': {}
 

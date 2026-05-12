@@ -2883,7 +2883,6 @@ dependencies = [
  "futures",
  "indexmap",
  "itertools",
- "libmimalloc-sys2",
  "mimalloc-safe",
  "napi",
  "napi-build",

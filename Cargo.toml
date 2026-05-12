@@ -178,11 +178,6 @@ itoa = "1.0.15"
 json-escape-simd = "3"
 json-strip-comments = "3"
 jsonschema = { version = "0.46.0", default-features = false }
-# Pinned transitively via `mimalloc-safe` — 0.1.55 fails to build for
-# aarch64-pc-windows-msvc (see #9361, #9372, napi-rs/mimalloc-safe#64). Declared
-# as a direct workspace dep + referenced from `rolldown_binding` so the `=`
-# constraint is enforced by the resolver, not just by hand-edited Cargo.lock.
-libmimalloc-sys2 = "=0.1.54"
 memchr = "2.7.4"
 mimalloc-safe = "=0.1.58"
 mime = "0.3.17"

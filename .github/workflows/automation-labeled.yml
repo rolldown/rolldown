@@ -3,7 +3,7 @@ name: 'Automation Labeled'
 permissions: {}
 
 on:
-  pull_request_target: # zizmor: ignore[dangerous-triggers]
+  pull_request:
     types: [labeled]
   issues:
     types: [labeled]
@@ -13,23 +13,9 @@ concurrency:
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  convert_stale_PR_to_draft:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request_target' && github.event.label.name == 'stale'
-    permissions:
-      pull-requests: write
-      contents: write
-    steps:
-      - name: Authenticate GitHub CLI
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-
-      - name: Convert Stale PR to Draft
-        run: |
-          gh pr ready ${{ github.event.pull_request.number }} --undo
-
   needs-reproduction:
     runs-on: ubuntu-latest
-    if: github.event.label.name == 'needs-reproduction'
+    if: github.event_name == 'issues' && github.event.label.name == 'needs-reproduction'
     permissions:
       issues: write
     steps:
@@ -67,7 +53,7 @@ jobs:
           edit-mode: replace
 
   create_issue_if_doc_labeled_on_pr:
-    if: github.event_name == 'pull_request_target' && github.event.label.name == 'documentation'
+    if: github.event_name == 'pull_request' && github.event.label.name == 'documentation' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       issues: write

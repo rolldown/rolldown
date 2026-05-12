@@ -3,7 +3,7 @@ name: Lint Pr Title
 permissions: {}
 
 on:
-  pull_request_target: # zizmor: ignore[dangerous-triggers]
+  pull_request:
     types:
       - opened
       - edited

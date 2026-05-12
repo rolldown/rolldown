@@ -500,6 +500,40 @@ describe('enhanced transform', () => {
     });
   });
 
+  describe('enum', () => {
+    // Regression for https://github.com/rolldown/rolldown/issues/9312
+    // String-enum alias members must produce forward-only `X["Default"] = "Light"`
+    // assignment, not the buggy reverse-mapping form
+    // `X[X["Default"] = X.Light] = "Default"` which overwrites the original
+    // member's reverse mapping.
+    it('emits forward-only assignment for string-enum alias members', () => {
+      const code = `
+export enum Theme {
+  Light = "Light",
+  Dark = "Dark",
+  Default = Theme.Light,
+}
+`;
+      const result = transformSync('test.ts', code);
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toContain('Theme["Default"] = "Light";');
+      expect(result.code).not.toContain('Theme[Theme["Default"]');
+    });
+
+    it('keeps reverse mapping for numeric-enum alias members', () => {
+      const code = `
+export enum Num {
+  A = 1,
+  B = 2,
+  C = A,
+}
+`;
+      const result = transformSync('test.ts', code);
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toContain('Num[Num["C"] = 1] = "C";');
+    });
+  });
+
   describe('inputMap', () => {
     // Use TypeScript code so the transformation actually produces meaningful sourcemaps.
     // This simulates: original.ts (TS) -> intermediate.js (via previous tool) -> final.js (via transform)

@@ -72,7 +72,8 @@ impl Plugin for ViteTransformPlugin {
     }
 
     let mut program = ret.program;
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping =
+      SemanticBuilder::new().with_enum_eval(true).build(&program).semantic.into_scoping();
     let transformer = Transformer::new(&allocator, Path::new(args.id), &transform_options);
     let transformer_return = transformer.build_with_scoping(scoping, &mut program);
     if !transformer_return.errors.is_empty() {

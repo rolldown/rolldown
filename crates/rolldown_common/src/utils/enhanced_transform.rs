@@ -332,7 +332,10 @@ pub fn enhanced_transform(
 
   let mut program = parse_ret.program;
 
-  let semantic_ret = SemanticBuilder::new().build(&program);
+  // Pre-evaluate enum member values so the TS transformer can emit the correct
+  // forward-only assignment for string-enum aliases (e.g. `Default = Theme.Light`)
+  // instead of the wrong reverse-mapping form.
+  let semantic_ret = SemanticBuilder::new().with_enum_eval(true).build(&program);
   let mut scoping = Some(semantic_ret.semantic.into_scoping());
   if !semantic_ret.errors.is_empty() {
     append_oxc_diagnostics(semantic_ret.errors, &source, filename, &mut warnings, &mut errors);
@@ -385,9 +388,9 @@ pub fn enhanced_transform(
     }
   }
 
-  let scoping = scoping
-    .take()
-    .unwrap_or_else(|| SemanticBuilder::new().build(&program).semantic.into_scoping());
+  let scoping = scoping.take().unwrap_or_else(|| {
+    SemanticBuilder::new().with_enum_eval(true).build(&program).semantic.into_scoping()
+  });
 
   let transform_ret = Transformer::new(&allocator, Path::new(filename), &oxc_transform_options)
     .build_with_scoping(scoping, &mut program);

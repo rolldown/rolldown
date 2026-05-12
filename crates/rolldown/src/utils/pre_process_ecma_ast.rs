@@ -239,9 +239,14 @@ impl PreProcessEcmaAst {
     if let Some(scoping) = scoping.take() {
       return scoping;
     }
+    // Preserve enum_eval here so the transformer can resolve enum-member aliases
+    // when define has consumed the original scoping. After the transformer lowers
+    // enums to IIFEs, later callers of this fallback (inject / DCE / PreProcessor)
+    // no longer encounter TSEnumDeclaration nodes, so the eval pass is a no-op.
     let ret = SemanticBuilder::new()
       // Preallocate memory for the underlying data structures.
       .with_stats(self.stats)
+      .with_enum_eval(true)
       .build(program)
       .semantic;
     self.stats = ret.stats();

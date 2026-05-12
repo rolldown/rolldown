@@ -18,6 +18,6 @@ console.log("production");
 - ../input.js
 (5:2) "console." --> (0:0) "console."
 (5:10) "log(" --> (0:8) "log("
-(5:14) "'production')" --> (0:12) "\"production\")"
-(5:27) ";\n" --> (0:25) ";\n"
+(5:14) "'production'" --> (0:12) "\"production\""
+(5:26) ");\n" --> (0:24) ");\n"
 ```

@@ -119,11 +119,12 @@ async function generateAndTestBundle(bundle, outputOptions, expectedDirectory, c
 	// match exactly between rolldown and rollup.
 	const actualBase = `${outputOptions.dir}${config.nestedDir ? '/' + config.nestedDir : ''}`;
 	const expectedBase = `${expectedDirectory}${config.nestedDir ? '/' + config.nestedDir : ''}`;
+	const { parseSync } = await getOxcParser();
 	for (const relPath of actualChunkFiles) {
 		const expectedPath = join(expectedBase, relPath);
 		if (!existsSync(expectedPath)) continue;
-		const actual = extractExports(readFileSync(join(actualBase, relPath), 'utf8'), outputOptions.format);
-		const expected = extractExports(readFileSync(expectedPath, 'utf8'), outputOptions.format);
+		const actual = extractExports(parseSync, readFileSync(join(actualBase, relPath), 'utf8'), outputOptions.format);
+		const expected = extractExports(parseSync, readFileSync(expectedPath, 'utf8'), outputOptions.format);
 		assert.deepStrictEqual(
 			[...actual.names].sort(),
 			[...expected.names].sort(),
@@ -158,57 +159,41 @@ function collectChunkFiles(dir) {
 	return result;
 }
 
-function stripComments(code) {
-	return code
-		.replace(/\/\*[\s\S]*?\*\//g, '')
-		.replace(/\/\/[^\n]*/g, '');
+let oxcParserPromise;
+function getOxcParser() {
+	return oxcParserPromise ??= import('oxc-parser');
 }
 
-function extractExports(code, format) {
-	const stripped = stripComments(code);
-	return format === 'cjs' ? extractCjsExports(stripped) : extractEsmExports(stripped);
+function extractExports(parseSync, code, format) {
+	return format === 'cjs'
+		? extractCjsExports(parseSync, code)
+		: extractEsmExports(parseSync, code);
 }
 
-function extractEsmExports(code) {
+function extractEsmExports(parseSync, code) {
+	const result = parseSync('chunk.js', code, { sourceType: 'module' });
 	const names = new Set();
 	let hasDefault = false;
-	const addName = name => {
-		if (!name) return;
-		if (name === 'default') hasDefault = true;
-		else names.add(name);
-	};
-	// export { a, b as c, d as default }
-	const reBlock = /export\s*\{([\s\S]*?)\}/g;
-	let m;
-	while ((m = reBlock.exec(code))) {
-		for (const spec of m[1].split(',')) {
-			const s = spec.trim();
-			if (!s) continue;
-			const parts = s.split(/\s+as\s+/);
-			const exported = (parts[1] || parts[0]).trim();
-			// strip optional quotes for string-literal exports (e.g., `export { x as "default" }`)
-			const unquoted = exported.replace(/^["']|["']$/g, '');
-			addName(unquoted);
+	for (const staticExport of result.module.staticExports) {
+		for (const entry of staticExport.entries) {
+			const { exportName } = entry;
+			if (exportName.kind === 'Default') {
+				hasDefault = true;
+			} else if (exportName.kind === 'Name' && exportName.name) {
+				if (exportName.name === 'default') hasDefault = true;
+				else names.add(exportName.name);
+			} else if (exportName.kind === 'None') {
+				// `export * from "mod"` — no concrete name visible; use sentinel
+				// so rolldown/rollup outputs can be compared symmetrically.
+				names.add('*');
+			}
 		}
 	}
-	// export default ...
-	if (/\bexport\s+default\b/.test(code)) hasDefault = true;
-	// export const|let|var X = ...
-	const reVar = /\bexport\s+(?:const|let|var)\s+(\w+)/g;
-	while ((m = reVar.exec(code))) addName(m[1]);
-	// export function|class|async function X
-	const reFn = /\bexport\s+(?:async\s+)?(?:function\*?|class)\s+(\w+)/g;
-	while ((m = reFn.exec(code))) addName(m[1]);
-	// export * as ns from '...'
-	const reNs = /\bexport\s+\*\s+as\s+(\w+)\s+from\b/g;
-	while ((m = reNs.exec(code))) addName(m[1]);
-	// export * from '...' (no name visible) → sentinel for symmetric comparison
-	const reStar = /\bexport\s+\*\s+from\b/g;
-	while ((m = reStar.exec(code))) names.add('*');
 	return { names, hasDefault };
 }
 
-function extractCjsExports(code) {
+function extractCjsExports(parseSync, code) {
+	const result = parseSync('chunk.js', code, { sourceType: 'script' });
 	const names = new Set();
 	let hasDefault = false;
 	const addName = name => {
@@ -216,24 +201,62 @@ function extractCjsExports(code) {
 		if (name === 'default') hasDefault = true;
 		else names.add(name);
 	};
-	// module.exports = ...
-	if (/(?:^|[^.\w$])module\.exports\s*=/.test(code)) hasDefault = true;
-	// exports.X = ...
-	const reDot = /(?:^|[^.\w$])exports\.(\w+)\s*=/g;
-	let m;
-	while ((m = reDot.exec(code))) addName(m[1]);
-	// exports["X"] = ...
-	const reBracket = /(?:^|[^.\w$])exports\[\s*(['"])([^'"]+)\1\s*\]\s*=/g;
-	while ((m = reBracket.exec(code))) addName(m[2]);
-	// Object.defineProperty(exports, "X", ...)
-	const reDefine = /Object\.defineProperty\s*\(\s*exports\s*,\s*(['"])([^'"]+)\1/g;
-	while ((m = reDefine.exec(code))) addName(m[2]);
-	// Object.defineProperties(exports, { X: ..., Y: ... })
-	const reDefineMulti = /Object\.defineProperties\s*\(\s*exports\s*,\s*\{([\s\S]*?)\}\s*\)/g;
-	while ((m = reDefineMulti.exec(code))) {
-		const propRe = /(?:^|[,{\s])(['"]?)(\w+)\1\s*:/g;
-		let pm;
-		while ((pm = propRe.exec(m[1]))) addName(pm[2]);
+	const isExportsId = n => n && n.type === 'Identifier' && n.name === 'exports';
+	const isModuleDotExports = n =>
+		n && n.type === 'MemberExpression' && !n.computed &&
+		n.object.type === 'Identifier' && n.object.name === 'module' &&
+		n.property.type === 'Identifier' && n.property.name === 'exports';
+	const stringValue = n => (n && n.type === 'Literal' && typeof n.value === 'string') ? n.value : null;
+
+	function visit(node) {
+		if (!node || typeof node !== 'object') return;
+		if (Array.isArray(node)) {
+			for (const child of node) visit(child);
+			return;
+		}
+		if (node.type === 'AssignmentExpression' && node.operator === '=') {
+			const left = node.left;
+			if (left && left.type === 'MemberExpression') {
+				if (isModuleDotExports(left)) {
+					hasDefault = true;
+				} else if (isExportsId(left.object)) {
+					if (!left.computed && left.property.type === 'Identifier') {
+						addName(left.property.name);
+					} else {
+						const name = stringValue(left.property);
+						if (name) addName(name);
+					}
+				}
+			}
+		} else if (node.type === 'CallExpression') {
+			const callee = node.callee;
+			if (callee && callee.type === 'MemberExpression' && !callee.computed &&
+				callee.object.type === 'Identifier' && callee.object.name === 'Object' &&
+				callee.property.type === 'Identifier') {
+				const fn = callee.property.name;
+				if (fn === 'defineProperty' && node.arguments.length >= 2 && isExportsId(node.arguments[0])) {
+					const name = stringValue(node.arguments[1]);
+					if (name) addName(name);
+				} else if (fn === 'defineProperties' && node.arguments.length >= 2 &&
+					isExportsId(node.arguments[0]) && node.arguments[1].type === 'ObjectExpression') {
+					for (const prop of node.arguments[1].properties) {
+						if (prop.type !== 'Property') continue;
+						if (!prop.computed && prop.key.type === 'Identifier') addName(prop.key.name);
+						else {
+							const name = stringValue(prop.key);
+							if (name) addName(name);
+						}
+					}
+				}
+			}
+		}
+		for (const key in node) {
+			if (key === 'type' || key === 'start' || key === 'end' || key === 'range' || key === 'loc') continue;
+			const val = node[key];
+			if (val && typeof val === 'object') visit(val);
+		}
 	}
+
+	visit(result.program);
 	return { names, hasDefault };
 }

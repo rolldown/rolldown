@@ -34,7 +34,6 @@ catalog:
   '@types/lodash-es': ^4.17.12
   '@types/mocha': 10.0.10
   '@types/node': 24.10.3
-  '@types/picomatch': ^4.0.0
   '@types/semver': ^7.5.8
   '@types/serve-static': ^2.0.0
   '@types/strip-comments': ^2.0.4
@@ -65,7 +64,6 @@ catalog:
   oxc-parser: '=0.130.0'
   oxc-transform: '=0.130.0'
   pathe: ^2.0.3
-  picomatch: ^4.0.2
   react: ^19.0.0
   react-dom: ^19.0.0
   remark-parse: ^11.0.0

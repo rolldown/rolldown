@@ -93,24 +93,20 @@ impl PreProcessEcmaAst {
     // `CommentContent::PureNotApplied` when their position prevents the parser
     // from applying them (expression-level, statement-level, or variable declarator).
     // Aligns with Rollup's `INVALID_ANNOTATION` log code.
-    let invalid_pure_spans: Vec<oxc::span::Span> = ast.program.with_dependent(|_owner, dep| {
-      dep
-        .program
-        .comments
-        .iter()
-        .filter(|c| c.content == CommentContent::PureNotApplied)
-        .map(|c| c.span)
-        .collect()
+    ast.program.with_dependent(|_owner, dep| {
+      for comment in
+        dep.program.comments.iter().filter(|c| c.content == CommentContent::PureNotApplied)
+      {
+        let span = comment.span;
+        let annotation = source[span.start as usize..span.end as usize].to_string();
+        warnings.push(BuildDiagnostic::invalid_annotation(
+          resolved_id.to_string(),
+          annotation,
+          source.clone(),
+          span,
+        ));
+      }
     });
-    for span in invalid_pure_spans {
-      let annotation = source[span.start as usize..span.end as usize].to_string();
-      warnings.push(BuildDiagnostic::invalid_annotation(
-        resolved_id.to_string(),
-        annotation,
-        source.clone(),
-        span,
-      ));
-    }
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());

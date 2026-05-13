@@ -1,6 +1,34 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/*#__PURE__*/" in "main.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    ╭─[ main.js:12:1 ]
+    │
+ 12 │ /*#__PURE__*/ test().a.b.c; // Should be tree-shaken when propertyReadSideEffects: false
+    │ ──────┬──────  
+    │       ╰──────── comment ignored due to position
+────╯
+
+```
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/*#__PURE__*/" in "main.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    ╭─[ main.js:15:1 ]
+    │
+ 15 │ /*#__PURE__*/ test()?.a?.b.c; // Should be tree-shaken when propertyReadSideEffects: false
+    │ ──────┬──────  
+    │       ╰──────── comment ignored due to position
+────╯
+
+```
+
 # Assets
 
 ## main.js

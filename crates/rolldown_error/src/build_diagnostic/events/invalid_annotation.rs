@@ -43,5 +43,7 @@ impl BuildEvent for InvalidAnnotation {
       self.span.start..self.span.end,
       String::from("comment ignored due to position"),
     );
+
+    diagnostic.add_help(String::from("For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure"));
   }
 }

@@ -12,6 +12,8 @@ source: crates/rolldown_testing/src/integration_test.rs
  4 │ /* #__PURE__ */ globalThis.foo;
    │ ───────┬───────  
    │        ╰───────── comment ignored due to position
+   │ 
+   │ Help: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
 ───╯
 
 ```

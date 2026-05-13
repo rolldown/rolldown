@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
 use oxc::ast_visit::VisitMut;
 use oxc::diagnostics::Severity as OxcSeverity;
@@ -86,6 +87,30 @@ impl PreProcessEcmaAst {
         EventKind::ParseError,
       ))?;
     };
+
+    // Surface invalid pure annotations flagged by oxc (issue #8898).
+    // oxc marks `/* #__PURE__ */` / `/* @__PURE__ */` comments with
+    // `CommentContent::PureNotApplied` when their position prevents the parser
+    // from applying them (expression-level, statement-level, or variable declarator).
+    // Aligns with Rollup's `INVALID_ANNOTATION` log code.
+    let invalid_pure_spans: Vec<oxc::span::Span> = ast.program.with_dependent(|_owner, dep| {
+      dep
+        .program
+        .comments
+        .iter()
+        .filter(|c| c.content == CommentContent::PureNotApplied)
+        .map(|c| c.span)
+        .collect()
+    });
+    for span in invalid_pure_spans {
+      let annotation = source[span.start as usize..span.end as usize].to_string();
+      warnings.push(BuildDiagnostic::invalid_annotation(
+        resolved_id.to_string(),
+        annotation,
+        source.clone(),
+        span,
+      ));
+    }
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());

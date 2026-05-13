@@ -37,7 +37,9 @@ jobs:
           cache: true
 
       - name: Set version
-        run: echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "VERSION=$INPUT_VERSION" >> "$GITHUB_ENV"
 
       - run: just bump-packages ${VERSION}
 

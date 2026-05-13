@@ -144,9 +144,10 @@ fn generate_check_inner_options_and_binding(
   variant_and_number_pairs: &Vec<EventKindInfo>,
   generator: &CheckOptionsGenerator,
 ) -> (TokenStream, TokenStream) {
-  let mut struct_fields = vec![];
+  let mut binding_struct_fields = vec![];
+  let mut inner_struct_fields = vec![];
   let mut field_initializer_list = vec![];
-  let mut event_kind_switcher_initializer = vec![];
+  let mut match_arms = vec![];
   for EventKindInfo { variant, .. } in variant_and_number_pairs {
     if variant.ends_with("Error") {
       continue;
@@ -154,21 +155,54 @@ fn generate_check_inner_options_and_binding(
     let snake_case = quote::format_ident!("{}", variant.to_snake_case());
     let ident = quote::format_ident!("{}", variant);
     let default_status = !generator.disabled_event.contains(&variant.as_str());
-    struct_fields.push(quote! {
-      pub #snake_case: Option<bool>,
+    binding_struct_fields.push(quote! {
+      #[napi(ts_type = "false | 'warn' | 'error'")]
+      pub #snake_case: Option<napi::Either<bool, String>>,
+    });
+    inner_struct_fields.push(quote! {
+      pub #snake_case: Option<crate::CheckSetting>,
     });
     field_initializer_list.push(quote! {
-      #snake_case: value.#snake_case,
+      #snake_case: value.#snake_case.map(crate::utils::checks_severity::either_to_check_setting),
     });
-    event_kind_switcher_initializer.push(quote! {
-        flag.set(rolldown_error::EventKindSwitcher::#ident, value.#snake_case.unwrap_or(#default_status));
+    // When the user didn't set a value, use the check's built-in default. For
+    // most checks this means "emit a warning" (the bit is already set in `warn_checks`
+    // from `all()`); a few (e.g. `circularDependency`) default to off and behave
+    // identically to `Some(Off)`, so we merge the patterns.
+    let none_and_off_arm = if default_status {
+      quote! {
+        None => {}
+        Some(crate::CheckSetting::Off) => {
+          warn_checks.remove(rolldown_error::EventKindSwitcher::#ident);
+        }
+      }
+    } else {
+      quote! {
+        None | Some(crate::CheckSetting::Off) => {
+          warn_checks.remove(rolldown_error::EventKindSwitcher::#ident);
+        }
+      }
+    };
+    match_arms.push(quote! {
+      match value.#snake_case {
+        #none_and_off_arm
+        Some(crate::CheckSetting::Warn) => {
+          warn_checks.insert(rolldown_error::EventKindSwitcher::#ident);
+        }
+        Some(crate::CheckSetting::Error) => {
+          // Disjoint flags: an Error check fires only at error level, so clear
+          // its warn bit and set its error bit.
+          warn_checks.remove(rolldown_error::EventKindSwitcher::#ident);
+          error_checks.insert(rolldown_error::EventKindSwitcher::#ident);
+        }
+      }
     });
   }
   let check_options_struct = quote! {
     #[napi_derive::napi(object, object_to_js = false)]
     #[derive(Debug, Default)]
     pub struct BindingChecksOptions {
-      #(#struct_fields)*
+      #(#binding_struct_fields)*
     }
   };
   let check_options_impl = quote! {
@@ -198,13 +232,24 @@ fn generate_check_inner_options_and_binding(
       serde(rename_all = "camelCase", deny_unknown_fields)
     )]
     pub struct ChecksOptions {
-      #(#struct_fields)*
+      #(#inner_struct_fields)*
     }
-    impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
+    /// Resolves the configured checks into two disjoint bitflags:
+    /// - `warn_checks`: kinds whose emissions fire at warning severity.
+    /// - `error_checks`: kinds whose emissions fire at hard-error severity.
+    ///
+    /// Per kind, at most one flag is set (a check is either off, warn, or error).
+    /// `warn_checks` starts as `all()` so non-user-controllable kinds (errors, plugin
+    /// warnings) remain visible to `filter_out_disabled_diagnostics`. User-controllable
+    /// kinds are then explicitly placed in the right flag per the user's setting
+    /// (or the check's built-in default).
+    impl From<ChecksOptions> for (rolldown_error::EventKindSwitcher, rolldown_error::EventKindSwitcher) {
+      #[expect(clippy::too_many_lines)]
       fn from(value: ChecksOptions) -> Self {
-        let mut flag = rolldown_error::EventKindSwitcher::all();
-        #(#event_kind_switcher_initializer)*
-        flag
+        let mut warn_checks = rolldown_error::EventKindSwitcher::all();
+        let mut error_checks = rolldown_error::EventKindSwitcher::empty();
+        #(#match_arms)*
+        (warn_checks, error_checks)
       }
     }
   };
@@ -229,14 +274,19 @@ fn generate_check_options(
         variant.to_title_case().to_lowercase()
       ))
       .replace('\n', "\n     *");
-    let default_value = !generator.disabled_event.contains(&variant.as_str());
+    let default_value =
+      if generator.disabled_event.contains(&variant.as_str()) { "false" } else { "'warn'" };
     fields.push(format!(
       r"
     /**
      * {related_comments}
+     *
+     * - `false` disables the check.
+     * - `'warn'` emits a warning (default when the check is enabled).
+     * - `'error'` promotes the emission to a hard build error.
      * @default {default_value}
      * */
-    {camel_case}?: boolean",
+    {camel_case}?: false | 'warn' | 'error'",
     ));
   }
   format!(
@@ -273,7 +323,7 @@ fn generate_validate_check_options(
     let quote_kind = '"';
     fields.push(format!(
       r"{camel_case}: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description(
       {quote_kind}{related_comments}{quote_kind},
     ),

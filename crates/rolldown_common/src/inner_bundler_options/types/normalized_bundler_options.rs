@@ -91,7 +91,13 @@ pub struct NormalizedBundlerOptions {
   pub code_splitting: CodeSplittingMode,
   pub dynamic_import_in_cjs: bool,
   pub manual_code_splitting: Option<ManualCodeSplittingOptions>,
-  pub checks: EventKindSwitcher,
+  /// Kinds whose emissions fire at warning severity. Disjoint from `error_checks`.
+  /// Also has bits set for non-user-controllable kinds so that
+  /// `filter_out_disabled_diagnostics` lets them through.
+  pub warn_checks: EventKindSwitcher,
+  /// Kinds whose emissions are promoted to hard build errors. Disjoint from
+  /// `warn_checks`.
+  pub error_checks: EventKindSwitcher,
   pub profiler_names: bool,
   pub watch: WatchOption,
   pub legal_comments: LegalComments,
@@ -168,7 +174,8 @@ impl Default for NormalizedBundlerOptions {
       code_splitting: CodeSplittingMode::default(),
       dynamic_import_in_cjs: true,
       manual_code_splitting: Default::default(),
-      checks: Default::default(),
+      warn_checks: EventKindSwitcher::all(),
+      error_checks: Default::default(),
       profiler_names: Default::default(),
       watch: Default::default(),
       legal_comments: LegalComments::None,
@@ -202,6 +209,11 @@ pub type SharedNormalizedBundlerOptions = Arc<NormalizedBundlerOptions>;
 impl NormalizedBundlerOptions {
   pub fn is_sourcemap_enabled(&self) -> bool {
     self.sourcemap.is_some()
+  }
+
+  /// Whether the given check is enabled at either warn or error severity.
+  pub fn is_check_enabled(&self, kind: EventKindSwitcher) -> bool {
+    self.warn_checks.contains(kind) || self.error_checks.contains(kind)
   }
 
   pub fn is_esm_format_with_node_platform(&self) -> bool {

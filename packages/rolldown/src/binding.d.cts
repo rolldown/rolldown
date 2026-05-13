@@ -1857,28 +1857,28 @@ export interface BindingBundleState {
 }
 
 export interface BindingChecksOptions {
-  circularDependency?: boolean
-  eval?: boolean
-  missingGlobalName?: boolean
-  missingNameOptionForIifeExport?: boolean
-  invalidAnnotation?: boolean
-  mixedExports?: boolean
-  unresolvedEntry?: boolean
-  unresolvedImport?: boolean
-  filenameConflict?: boolean
-  commonJsVariableInEsm?: boolean
-  importIsUndefined?: boolean
-  emptyImportMeta?: boolean
-  toleratedTransform?: boolean
-  cannotCallNamespace?: boolean
-  configurationFieldConflict?: boolean
-  preferBuiltinFeature?: boolean
-  couldNotCleanDirectory?: boolean
-  pluginTimings?: boolean
-  duplicateShebang?: boolean
-  unsupportedTsconfigOption?: boolean
-  ineffectiveDynamicImport?: boolean
-  largeBarrelModules?: boolean
+  circularDependency?: false | 'warn' | 'error'
+  eval?: false | 'warn' | 'error'
+  missingGlobalName?: false | 'warn' | 'error'
+  missingNameOptionForIifeExport?: false | 'warn' | 'error'
+  invalidAnnotation?: false | 'warn' | 'error'
+  mixedExports?: false | 'warn' | 'error'
+  unresolvedEntry?: false | 'warn' | 'error'
+  unresolvedImport?: false | 'warn' | 'error'
+  filenameConflict?: false | 'warn' | 'error'
+  commonJsVariableInEsm?: false | 'warn' | 'error'
+  importIsUndefined?: false | 'warn' | 'error'
+  emptyImportMeta?: false | 'warn' | 'error'
+  toleratedTransform?: false | 'warn' | 'error'
+  cannotCallNamespace?: false | 'warn' | 'error'
+  configurationFieldConflict?: false | 'warn' | 'error'
+  preferBuiltinFeature?: false | 'warn' | 'error'
+  couldNotCleanDirectory?: false | 'warn' | 'error'
+  pluginTimings?: false | 'warn' | 'error'
+  duplicateShebang?: false | 'warn' | 'error'
+  unsupportedTsconfigOption?: false | 'warn' | 'error'
+  ineffectiveDynamicImport?: false | 'warn' | 'error'
+  largeBarrelModules?: false | 'warn' | 'error'
 }
 
 export interface BindingChunkImportMap {

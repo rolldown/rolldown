@@ -9,7 +9,7 @@ use super::GenerateStage;
 impl GenerateStage<'_> {
   pub fn detect_ineffective_dynamic_imports(&mut self, chunk_graph: &ChunkGraph) {
     if self.options.code_splitting.is_disabled()
-      || !self.options.checks.contains(EventKindSwitcher::IneffectiveDynamicImport)
+      || !self.options.is_check_enabled(EventKindSwitcher::IneffectiveDynamicImport)
     {
       return;
     }

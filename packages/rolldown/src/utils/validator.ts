@@ -315,109 +315,109 @@ isTypeTrue<IsSchemaSubType<typeof WatcherOptionsSchema, WatcherOptions>>();
 
 const ChecksOptionsSchema = v.strictObject({
   circularDependency: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description('Whether to emit warnings when detecting circular dependency'),
   ),
   eval: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description('Whether to emit warnings when detecting uses of direct `eval`s'),
   ),
   missingGlobalName: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description(
       'Whether to emit warnings when the `output.globals` option is missing when needed',
     ),
   ),
   missingNameOptionForIifeExport: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description('Whether to emit warnings when the `output.name` option is missing when needed'),
   ),
   invalidAnnotation: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description(
       'Whether to emit warnings when a `#__PURE__` / `@__PURE__` annotation has no effect due to its position',
     ),
   ),
   mixedExports: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description('Whether to emit warnings when the way to export values is ambiguous'),
   ),
   unresolvedEntry: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description('Whether to emit warnings when an entrypoint cannot be resolved'),
   ),
   unresolvedImport: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description('Whether to emit warnings when an import cannot be resolved'),
   ),
   filenameConflict: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description(
       'Whether to emit warnings when files generated have the same name with different contents',
     ),
   ),
   commonJsVariableInEsm: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description('Whether to emit warnings when a CommonJS variable is used in an ES module'),
   ),
   importIsUndefined: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description('Whether to emit warnings when an imported variable is not exported'),
   ),
   emptyImportMeta: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description(
       'Whether to emit warnings when `import.meta` is not supported with the output format and is replaced with an empty object (`{}`)',
     ),
   ),
   toleratedTransform: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description('Whether to emit warnings when detecting tolerated transform'),
   ),
   cannotCallNamespace: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description('Whether to emit warnings when a namespace is called as a function'),
   ),
   configurationFieldConflict: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description(
       'Whether to emit warnings when a config value is overridden by another config value with a higher priority',
     ),
   ),
   preferBuiltinFeature: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description(
       'Whether to emit warnings when a plugin that is covered by a built-in feature is used',
     ),
   ),
   couldNotCleanDirectory: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description('Whether to emit warnings when Rolldown could not clean the output directory'),
   ),
   pluginTimings: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description(
       'Whether to emit warnings when plugins take significant time during the build process',
     ),
   ),
   duplicateShebang: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description('Whether to emit warnings when both the code and postBanner contain shebang'),
   ),
   unsupportedTsconfigOption: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description(
       'Whether to emit warnings when a tsconfig option or combination of options is not supported',
     ),
   ),
   ineffectiveDynamicImport: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description(
       'Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting',
     ),
   ),
   largeBarrelModules: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.literal(false), v.picklist(['warn', 'error'])])),
     v.description(
       'Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000)',
     ),

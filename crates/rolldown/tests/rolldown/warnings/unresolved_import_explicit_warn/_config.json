@@ -1,0 +1,8 @@
+{
+  "config": {
+    "checks": {
+      "unresolvedImport": "warn"
+    }
+  },
+  "expectExecuted": false
+}

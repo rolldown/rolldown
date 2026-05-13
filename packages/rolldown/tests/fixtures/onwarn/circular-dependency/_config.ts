@@ -11,7 +11,7 @@ export default defineTest({
       expect(warning.code).toBe('CIRCULAR_DEPENDENCY');
     },
     checks: {
-      circularDependency: true,
+      circularDependency: 'warn',
     },
   },
   afterTest: () => {

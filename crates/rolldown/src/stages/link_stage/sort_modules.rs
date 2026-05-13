@@ -52,7 +52,7 @@ impl LinkStage<'_> {
       match status {
         Status::ToBeExecuted(id) => {
           if executed_ids.contains(&id) {
-            if self.options.checks.contains(EventKindSwitcher::CircularDependency) {
+            if self.options.is_check_enabled(EventKindSwitcher::CircularDependency) {
               // Try to check if there is a circular dependency
               if let Some(index) = stack_indexes_of_executing_id.get(&id).copied() {
                 // Executing

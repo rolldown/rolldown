@@ -73,6 +73,11 @@ impl BuildDiagnostic {
     self
   }
 
+  #[inline]
+  pub fn set_severity(&mut self, severity: Severity) {
+    self.severity = severity;
+  }
+
   pub fn to_diagnostic(&self) -> Diagnostic {
     self.to_diagnostic_with(&DiagnosticOptions::default())
   }

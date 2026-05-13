@@ -8,7 +8,7 @@ use rolldown_common::{
   NormalizedBundlerOptions, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
 };
 use rolldown_error::{
-  BuildDiagnostic, BuildResult, DiagnosableArcstr, DiagnosticOptions, EventKind,
+  BuildDiagnostic, BuildResult, DiagnosableArcstr, DiagnosticOptions, EventKind, EventKindSwitcher,
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
@@ -120,24 +120,34 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
                   None,
                 ));
               } else {
+                let escalate_to_error =
+                  options.error_checks.contains(EventKindSwitcher::UnresolvedImport);
                 let help = matches!(options.platform, rolldown_common::Platform::Neutral).then(|| {
                   r#"The "main" field here was ignored. Main fields must be configured explicitly when using the "neutral" platform."#.to_string()
                 });
-                warnings.push(
-                  BuildDiagnostic::resolve_error(
-                    source.clone(),
-                    self_resolved_id.id.as_arc_str().clone(),
-                    if dep.is_unspanned() || is_css_module {
-                      DiagnosableArcstr::String(specifier.as_str().into())
-                    } else {
-                      DiagnosableArcstr::Span(dep.state.span)
-                    },
-                    "Module not found, treating it as an external dependency".into(),
-                    EventKind::UnresolvedImport,
-                    help,
-                  )
-                  .with_severity_warning(),
+                let span = if dep.is_unspanned() || is_css_module {
+                  DiagnosableArcstr::String(specifier.as_str().into())
+                } else {
+                  DiagnosableArcstr::Span(dep.state.span)
+                };
+                let message = if escalate_to_error {
+                  "Module not found.".into()
+                } else {
+                  "Module not found, treating it as an external dependency".into()
+                };
+                let diag = BuildDiagnostic::resolve_error(
+                  source.clone(),
+                  self_resolved_id.id.as_arc_str().clone(),
+                  span,
+                  message,
+                  EventKind::UnresolvedImport,
+                  help,
                 );
+                if escalate_to_error {
+                  build_errors.push(diag);
+                } else {
+                  warnings.push(diag.with_severity_warning());
+                }
               }
             }
             ret.push(ResolvedId {

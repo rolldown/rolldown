@@ -8,33 +8,49 @@ export interface ChecksOptions {
    * Circular dependencies lead to a bigger bundle size and sometimes cause execution order issues and are better to avoid.
    *
    * {@include ../docs/checks-circular-dependency.md}
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
    * @default false
    * */
-  circularDependency?: boolean;
+  circularDependency?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when detecting uses of direct `eval`s.
    *
    * See [Avoiding Direct `eval` in Troubleshooting page](https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval) for more details.
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  eval?: boolean;
+  eval?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when the `output.globals` option is missing when needed.
    *
    * See [`output.globals`](https://rolldown.rs/reference/OutputOptions.globals).
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  missingGlobalName?: boolean;
+  missingGlobalName?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when the `output.name` option is missing when needed.
    *
    * See [`output.name`](https://rolldown.rs/reference/OutputOptions.name).
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  missingNameOptionForIifeExport?: boolean;
+  missingNameOptionForIifeExport?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when a `#__PURE__` / `@__PURE__` annotation has no effect due to its position.
@@ -42,37 +58,57 @@ export interface ChecksOptions {
    * Annotations placed where they cannot annotate a call expression (e.g. before a non-call expression,
    * before a statement declaration, or between an identifier and `=` in a variable declarator) are
    * ignored by the parser. Matches Rollup's `INVALID_ANNOTATION` log code.
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  invalidAnnotation?: boolean;
+  invalidAnnotation?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when the way to export values is ambiguous.
    *
    * See [`output.exports`](https://rolldown.rs/reference/OutputOptions.exports).
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  mixedExports?: boolean;
+  mixedExports?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when an entrypoint cannot be resolved.
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  unresolvedEntry?: boolean;
+  unresolvedEntry?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when an import cannot be resolved.
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  unresolvedImport?: boolean;
+  unresolvedImport?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when files generated have the same name with different contents.
    *
    * {@include ../docs/checks-filename-conflict.md}
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  filenameConflict?: boolean;
+  filenameConflict?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when a CommonJS variable is used in an ES module.
@@ -80,9 +116,13 @@ export interface ChecksOptions {
    * CommonJS variables like `module` and `exports` are treated as global variables in ES modules and may not work as expected.
    *
    * {@include ../docs/checks-commonjs-variable-in-esm.md}
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  commonJsVariableInEsm?: boolean;
+  commonJsVariableInEsm?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when an imported variable is not exported.
@@ -90,23 +130,35 @@ export interface ChecksOptions {
    * If the code is importing a variable that is not exported by the imported module, the value will always be `undefined`. This might be a mistake in the code.
    *
    * {@include ../docs/checks-import-is-undefined.md}
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  importIsUndefined?: boolean;
+  importIsUndefined?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when `import.meta` is not supported with the output format and is replaced with an empty object (`{}`).
    *
    * See [`import.meta` in Non-ESM Output Formats page](https://rolldown.rs/in-depth/non-esm-output-formats#import-meta) for more details.
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  emptyImportMeta?: boolean;
+  emptyImportMeta?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when detecting tolerated transform.
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  toleratedTransform?: boolean;
+  toleratedTransform?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when a namespace is called as a function.
@@ -114,61 +166,93 @@ export interface ChecksOptions {
    * A module namespace object is an object and not a function. Calling it as a function will cause a runtime error.
    *
    * {@include ../docs/checks-cannot-call-namespace.md}
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  cannotCallNamespace?: boolean;
+  cannotCallNamespace?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when a config value is overridden by another config value with a higher priority.
    *
    * {@include ../docs/checks-configuration-field-conflict.md}
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  configurationFieldConflict?: boolean;
+  configurationFieldConflict?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when a plugin that is covered by a built-in feature is used.
    *
    * Using built-in features is generally more performant than using plugins.
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  preferBuiltinFeature?: boolean;
+  preferBuiltinFeature?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when Rolldown could not clean the output directory.
    *
    * See [`output.cleanDir`](https://rolldown.rs/reference/OutputOptions.cleanDir).
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  couldNotCleanDirectory?: boolean;
+  couldNotCleanDirectory?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when plugins take significant time during the build process.
    *
    * {@include ../docs/checks-plugin-timings.md}
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  pluginTimings?: boolean;
+  pluginTimings?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when both the code and postBanner contain shebang
    *
    * Having multiple shebangs in a file is a syntax error.
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  duplicateShebang?: boolean;
+  duplicateShebang?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when a tsconfig option or combination of options is not supported.
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  unsupportedTsconfigOption?: boolean;
+  unsupportedTsconfigOption?: false | 'warn' | 'error';
 
   /**
    * Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting.
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  ineffectiveDynamicImport?: boolean;
+  ineffectiveDynamicImport?: false | 'warn' | 'error';
 
   /**
    * Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
@@ -176,7 +260,11 @@ export interface ChecksOptions {
    * Such modules can significantly slow down module resolution. Consider using
    * [`@rolldown/plugin-transform-imports`](https://github.com/rolldown/plugins/tree/main/packages/transform-imports)
    * to rewrite barrel imports at the source level so the barrel file is never loaded.
-   * @default true
+   *
+   * - `false` disables the check.
+   * - `'warn'` emits a warning (default when the check is enabled).
+   * - `'error'` promotes the emission to a hard build error.
+   * @default 'warn'
    * */
-  largeBarrelModules?: boolean;
+  largeBarrelModules?: false | 'warn' | 'error';
 }

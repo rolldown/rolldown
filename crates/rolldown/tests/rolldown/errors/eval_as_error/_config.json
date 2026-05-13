@@ -1,0 +1,8 @@
+{
+  "config": {
+    "checks": {
+      "eval": "error"
+    }
+  },
+  "expectError": true
+}

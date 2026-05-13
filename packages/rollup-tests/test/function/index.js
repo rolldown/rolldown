@@ -117,7 +117,7 @@ runTestSuiteWithSamples(
 				if (!directory.includes('options-async-hook')) {
 					config.options ??= {};
 					config.options.checks ??= {};
-					config.options.checks.circularDependency ??= true;
+					config.options.checks.circularDependency ??= 'warn';
 					// Disable inlineConst for rollup tests, see https://github.com/rolldown/rolldown/issues/8100
 					config.options.optimization ??= {};
 					config.options.optimization.inlineConst ??= false;

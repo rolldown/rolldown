@@ -1208,7 +1208,7 @@ test.concurrent(
     const watcher = watch({
       input: path.join(dir, 'main.js'),
       output: { dir: path.join(dir, 'dist') },
-      checks: { circularDependency: true },
+      checks: { circularDependency: 'warn' },
       plugins: [
         {
           name: 'test-circular-warning',
@@ -1253,7 +1253,7 @@ test.concurrent(
     const watcher = watch({
       input: path.join(dir, 'main.js'),
       output: { dir: path.join(dir, 'dist') },
-      checks: { circularDependency: true },
+      checks: { circularDependency: 'warn' },
       plugins: [
         {
           name: 'reject-circular-warning',

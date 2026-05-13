@@ -1,0 +1,8 @@
+{
+  "config": {
+    "checks": {
+      "unresolvedImport": "error"
+    }
+  },
+  "expectError": true
+}

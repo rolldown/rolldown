@@ -4,8 +4,11 @@ permissions: {}
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * 3' # Every Wednesday at 8am Shanghai time (UTC+8 = 00:00 UTC)
+    inputs:
+      version:
+        description: 'New version (e.g. 1.0.1)'
+        required: true
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
@@ -33,14 +36,10 @@ jobs:
         with:
           cache: true
 
-      - name: Get and bump version
-        run: |
-          VERSION=$(node -e "
-            const pkg = require('./packages/rolldown/package.json');
-            const [, base, rc] = pkg.version.match(/^(\d+\.\d+\.\d+)-rc\.(\d+)$/);
-            console.log(\`\${base}-rc.\${parseInt(rc) + 1}\`);
-          ")
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Set version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "VERSION=$INPUT_VERSION" >> "$GITHUB_ENV"
 
       - run: just bump-packages ${VERSION}
 

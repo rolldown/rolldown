@@ -2,14 +2,14 @@ use super::BuildEvent;
 use crate::{types::diagnostic_options::DiagnosticOptions, types::event_kind::EventKind};
 
 #[derive(Debug)]
-pub struct LazyBarrelLargeReexports {
+pub struct LargeBarrelModules {
   pub module_id: String,
   pub reexport_count: usize,
 }
 
-impl BuildEvent for LazyBarrelLargeReexports {
+impl BuildEvent for LargeBarrelModules {
   fn kind(&self) -> EventKind {
-    EventKind::LazyBarrelLargeReexports
+    EventKind::LargeBarrelModules
   }
 
   fn message(&self, opts: &DiagnosticOptions) -> String {

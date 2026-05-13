@@ -49,6 +49,6 @@ bitflags! {
     const RuntimeModuleSymbolNotFoundError = 1 << 42;
     const IneffectiveDynamicImport = 1 << 44;
     const RequireTlaError = 1 << 45;
-    const LazyBarrelLargeReexports = 1 << 46;
+    const LargeBarrelModules = 1 << 46;
   }
 }

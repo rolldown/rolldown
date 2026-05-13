@@ -434,8 +434,8 @@ impl BuildDiagnostic {
     })
   }
 
-  pub fn lazy_barrel_large_reexports(module_id: String, reexport_count: usize) -> Self {
-    Self::new_inner(super::events::lazy_barrel_large_reexports::LazyBarrelLargeReexports {
+  pub fn large_barrel_modules(module_id: String, reexport_count: usize) -> Self {
+    Self::new_inner(super::events::large_barrel_modules::LargeBarrelModules {
       module_id,
       reexport_count,
     })

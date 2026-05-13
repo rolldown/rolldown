@@ -1486,7 +1486,7 @@
             "null"
           ]
         },
-        "lazyBarrelLargeReexports": {
+        "largeBarrelModules": {
           "type": [
             "boolean",
             "null"

@@ -963,7 +963,6 @@ pub fn include_statement(
             // like `E.member.something` which wouldn't be inlined.
             if !member_expr_ref.is_write
               && let [prop] = member_expr_ref.prop_and_span_list.as_slice()
-              && !prop.optional
               && members.contains_key(prop.name.as_str())
             {
               // This member access will be inlined — don't include the enum declaration.

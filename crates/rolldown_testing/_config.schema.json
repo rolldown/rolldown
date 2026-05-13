@@ -1390,6 +1390,12 @@
             "null"
           ]
         },
+        "invalidAnnotation": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "mixedExports": {
           "type": [
             "boolean",

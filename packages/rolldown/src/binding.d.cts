@@ -1861,6 +1861,7 @@ export interface BindingChecksOptions {
   eval?: boolean
   missingGlobalName?: boolean
   missingNameOptionForIifeExport?: boolean
+  invalidAnnotation?: boolean
   mixedExports?: boolean
   unresolvedEntry?: boolean
   unresolvedImport?: boolean

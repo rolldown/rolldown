@@ -117,6 +117,7 @@ impl Diagnostic {
     let mut message = self.title.clone();
     let mut builder = AriadneReport::build(
       match self.severity {
+        Severity::Info => ReportKind::Advice,
         Severity::Error => ReportKind::Error,
         Severity::Warning => ReportKind::Warning,
       },
@@ -207,6 +208,10 @@ impl Diagnostic {
 
     let file = span.source().to_string();
     Some((file, line, column, utf16_pos))
+  }
+
+  pub fn kind(&self) -> String {
+    self.kind.clone()
   }
 }
 

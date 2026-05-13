@@ -1485,6 +1485,12 @@
             "boolean",
             "null"
           ]
+        },
+        "largeBarrelModules": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

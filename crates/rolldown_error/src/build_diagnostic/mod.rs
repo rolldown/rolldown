@@ -17,6 +17,7 @@ use self::{diagnostic::Diagnostic, events::BuildEvent, events::tsconfig_error::T
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
+  Info,
   Error,
   Warning,
 }
@@ -58,6 +59,12 @@ impl BuildDiagnostic {
 
   pub fn severity(&self) -> Severity {
     self.severity
+  }
+
+  #[must_use]
+  pub fn with_severity(mut self, severity: Severity) -> Self {
+    self.severity = severity;
+    self
   }
 
   #[must_use]

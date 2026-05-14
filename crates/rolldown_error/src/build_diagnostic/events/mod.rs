@@ -31,6 +31,7 @@ pub mod forbid_const_assign;
 pub mod illegal_identifier_as_name;
 pub mod import_is_undefined;
 pub mod ineffective_dynamic_import;
+pub mod invalid_annotation;
 pub mod invalid_define_config;
 pub mod invalid_export_option;
 pub mod invalid_option;

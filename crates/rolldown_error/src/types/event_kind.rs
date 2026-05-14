@@ -29,6 +29,12 @@ pub enum EventKind {
   ///
   /// See [`output.name`](https://rolldown.rs/reference/OutputOptions.name).
   MissingNameOptionForIifeExport = 9,
+  /// Whether to emit warnings when a `#__PURE__` / `@__PURE__` annotation has no effect due to its position.
+  ///
+  /// Annotations placed where they cannot annotate a call expression (e.g. before a non-call expression,
+  /// before a statement declaration, or between an identifier and `=` in a variable declarator) are
+  /// ignored by the parser. Matches Rollup's `INVALID_ANNOTATION` log code.
+  InvalidAnnotation = 10,
   /// Whether to emit warnings when the way to export values is ambiguous.
   ///
   /// See [`output.exports`](https://rolldown.rs/reference/OutputOptions.exports).
@@ -134,6 +140,7 @@ impl Display for EventKind {
       EventKind::MixedExports => write!(f, "MIXED_EXPORTS"),
       EventKind::MissingGlobalName => write!(f, "MISSING_GLOBAL_NAME"),
       EventKind::MissingNameOptionForIifeExport => write!(f, "MISSING_NAME_OPTION_FOR_IIFE_EXPORT"),
+      EventKind::InvalidAnnotation => write!(f, "INVALID_ANNOTATION"),
       EventKind::MissingExportError => write!(f, "MISSING_EXPORT"),
       EventKind::ParseError => write!(f, "PARSE_ERROR"),
       EventKind::UnresolvedEntry => write!(f, "UNRESOLVED_ENTRY"),

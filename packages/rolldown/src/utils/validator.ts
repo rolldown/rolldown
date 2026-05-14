@@ -332,6 +332,12 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when the `output.name` option is missing when needed'),
   ),
+  invalidAnnotation: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a `#__PURE__` / `@__PURE__` annotation has no effect due to its position',
+    ),
+  ),
   mixedExports: v.pipe(
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when the way to export values is ambiguous'),

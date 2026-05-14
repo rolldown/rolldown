@@ -31,20 +31,23 @@ jobs:
       - name: Build `@rolldown/test-dev-server`
         run: vp run --filter '@rolldown/test-dev-server' build
 
+      # Note: these steps use `pnpm` rather than `vp` because `vp` itself is a napi-rs binary
+      # and its loader respects NAPI_RS_FORCE_WASI — setting it at the step level would break
+      # vp at startup before it could spawn the test runner.
       - name: Node Test
         run: |
-          vp run --filter rolldown-tests test:main && vp run --filter rolldown-tests test:watcher && vp run --filter rolldown-tests test:stability
+          pnpm --filter rolldown-tests run test:main && pnpm --filter rolldown-tests run test:watcher && pnpm --filter rolldown-tests run test:stability
         env:
           NAPI_RS_FORCE_WASI: error
           RD_LOG: trace
 
       - name: Rollup Test
-        run: vp run --filter rollup-tests test
+        run: pnpm --filter rollup-tests run test
         env:
           NAPI_RS_FORCE_WASI: error
           RD_LOG: trace
 
       - name: Build Examples
-        run: vp run --filter '@example/**' --filter '!@example/native-magic-string' build
+        run: pnpm --filter '@example/*' --filter '!@example/native-magic-string' --sequential run build
         env:
           NAPI_RS_FORCE_WASI: error

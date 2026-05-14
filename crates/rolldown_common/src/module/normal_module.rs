@@ -264,19 +264,15 @@ impl NormalModule {
       return false;
     }
 
-     // Check if there are any statements that are neither re-exports nor plain imports nor export-only
-    if self
-      .stmt_infos
-      .iter_enumerated_without_namespace_stmt()
-      .any(|(_, stmt_info)| {
-        !self.is_reexport_statement(stmt_info) 
-          && !self.is_plain_import_statement(stmt_info) 
-          && !self.is_export_only_statement(stmt_info)
-      }) {
+    // Check if there are any statements that are neither re-exports nor plain imports nor export-only
+    if self.stmt_infos.iter_enumerated_without_namespace_stmt().any(|(_, stmt_info)| {
+      !self.is_reexport_statement(stmt_info)
+        && !self.is_plain_import_statement(stmt_info)
+        && !self.is_export_only_statement(stmt_info)
+    }) {
       return false;
     }
 
-    
     // Extract symbols from is_export_only and is_plain_import_statement, compare them
     let export_only_symbols: HashSet<SymbolRef> = self
       .stmt_infos
@@ -301,7 +297,6 @@ impl NormalModule {
 
   // Helper function to determine if a statement is a re-export statement
   fn is_reexport_statement(&self, stmt_info: &StmtInfo) -> bool {
-   
     stmt_info.import_records.iter().any(|&record_idx| {
       self
         .named_imports
@@ -313,8 +308,6 @@ impl NormalModule {
   ///  Helper function to determine if a statement is a plain import statement
   /// (imports only, no re-export)
   fn is_plain_import_statement(&self, stmt_info: &StmtInfo) -> bool {
-   
-
     if !(import_str.starts_with("import") && import_str.contains("from")) {
       return false;
     }
@@ -330,8 +323,6 @@ impl NormalModule {
   /// Helper function to determine if a statement is an export-only statement
   /// (export { A } but not export { A } from ...)
   fn is_export_only_statement(&self, stmt_info: &StmtInfo) -> bool {
-
-
     // Check if this statement references symbols that are also in named_imports
     stmt_info.referenced_symbols.iter().any(|symbol_or_member_ref| {
       match symbol_or_member_ref {

@@ -18,7 +18,8 @@ use crate::{
     IncludeContext, SymbolIncludeReason, include_runtime_symbol, include_symbol,
   },
   types::linking_metadata::{
-    LinkingMetadata, included_info_to_linking_metadata_vec, linking_metadata_vec_to_included_info,
+    LinkingMetadata, LinkingMetadataVec, included_info_to_linking_metadata_vec,
+    linking_metadata_vec_to_included_info,
   },
 };
 
@@ -402,6 +403,7 @@ impl GenerateStage<'_> {
           &static_entry_chunk_reference,
           chunk_graph,
           &self.link_output.module_table,
+          &self.link_output.metas,
           &dynamic_entry_to_dynamic_importers,
           temp_chunk,
           temp_chunk_graph,
@@ -562,6 +564,7 @@ impl GenerateStage<'_> {
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
     chunk_graph: &ChunkGraph,
     module_table: &ModuleTable,
+    linking_infos: &LinkingMetadataVec,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
     info: &ChunkCandidate,
     temp_chunk_graph: &ChunkOptimizationGraph,
@@ -597,11 +600,12 @@ impl GenerateStage<'_> {
       // simultaneously — picking one is arbitrary and leaks the other entry's
       // module into the chosen target's chunk file. That file is what
       // `import('./<target>.js')` resolves to at runtime, so the merged-in
-      // entry's named exports pollute the dynamic-import namespace observed
+      // entry's exports pollute the dynamic-import namespace observed
       // by callers (issue #9320).
       //
       // Detect the cyclic shape by counting how many of the candidate
-      // chunks' own entry modules with named exports sit in `info.modules`.
+      // chunks' own entry modules with observable exports sit in `info.modules`.
+      // See meta/design/code-splitting.md for the merge-safety invariant.
       // 0–1 collisions means the merge target is the rightful owner of every
       // pending entry module — the optimization fires as before. >=2 means
       // the cycle is real; refuse and let `assign_modules_to_chunk` create a
@@ -619,14 +623,12 @@ impl GenerateStage<'_> {
       // module per chunk in `chunk_idxs`); a linear `contains` over it beats
       // building a HashSet for the typical handful of entries. The scan over
       // `info.modules` stops the moment a second collision is found — the
-      // worst case (no second hit) only happens for non-cyclic candidates
-      // where the named-exports check filters most modules out before the
-      // membership test even runs.
+      // worst case (no second hit) only happens for non-cyclic candidates.
       if dynamic_chunk_entry_modules.len() >= 2 {
         let mut collisions = 0u32;
         for &m in &info.modules {
           if dynamic_chunk_entry_modules.contains(&m)
-            && module_table[m].as_normal().is_some_and(|n| !n.named_exports.is_empty())
+            && Self::module_has_observable_exports(m, module_table, linking_infos)
           {
             collisions += 1;
             if collisions >= 2 {
@@ -641,6 +643,7 @@ impl GenerateStage<'_> {
             &dynamic_entry,
             &dynamic_chunk_entry_modules,
             module_table,
+            linking_infos,
             dynamic_entry_to_dynamic_importers,
             entry_chunk_reference,
             &info.modules,
@@ -784,6 +787,22 @@ impl GenerateStage<'_> {
     })
   }
 
+  /// Returns true when a module can contribute keys to a dynamic-import namespace.
+  ///
+  /// This intentionally uses linked export metadata instead of
+  /// `NormalModule::named_exports`, because re-export-only modules can have no
+  /// direct named exports while still exposing resolved exports through
+  /// `export * from ...`.
+  fn module_has_observable_exports(
+    module_idx: ModuleIdx,
+    module_table: &ModuleTable,
+    linking_infos: &LinkingMetadataVec,
+  ) -> bool {
+    module_table[module_idx].as_normal().is_some()
+      && (linking_infos[module_idx].has_dynamic_exports
+        || linking_infos[module_idx].canonical_exports(false).next().is_some())
+  }
+
   /// Fallback merge-target search for the case where every chunk in `chunk_idxs`
   /// is a dynamic entry (`find_merge_target` only inspects static
   /// `importers_idx`, so it always fails here).
@@ -798,9 +817,9 @@ impl GenerateStage<'_> {
   ///
   /// Two extra guards:
   /// - **Export-pollution guard:** rejects the merge when any pending module
-  ///   has named exports. Those exports would still be needed cross-chunk by
-  ///   the other dynamic entries, forcing `D`'s chunk file to expose them at
-  ///   the file level — which is what `import('./D.js')` resolves to at
+  ///   has observable exports. Those exports would still be needed cross-chunk
+  ///   by the other dynamic entries, forcing `D`'s chunk file to expose them
+  ///   at the file level — which is what `import('./D.js')` resolves to at
   ///   runtime, polluting the dynamic-entry namespace observed by callers.
   ///   (The cyclic variant of this collision is caught earlier at the call
   ///   site, before `find_merge_target` runs.)
@@ -813,6 +832,7 @@ impl GenerateStage<'_> {
     dynamic_entry: &[ChunkIdx],
     dynamic_entry_modules: &[ModuleIdx],
     module_table: &ModuleTable,
+    linking_infos: &LinkingMetadataVec,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
     pending_modules: &[ModuleIdx],
@@ -820,7 +840,7 @@ impl GenerateStage<'_> {
     if dynamic_entry.len() < 2 {
       return None;
     }
-    // Refuse the merge whenever any pending module exposes named exports. The
+    // Refuse the merge whenever any pending module exposes exports. The
     // other dynamic-entry chunks in `chunk_idxs` still need those exports
     // cross-chunk, so after the merge the dominator's chunk would have to add
     // them to its file-level export list — and that list is what
@@ -828,7 +848,7 @@ impl GenerateStage<'_> {
     // dynamic-entry namespace observed by callers.
     let exposes_exports = pending_modules
       .iter()
-      .any(|m| module_table[*m].as_normal().is_some_and(|n| !n.named_exports.is_empty()));
+      .any(|&m| Self::module_has_observable_exports(m, module_table, linking_infos));
     if exposes_exports {
       return None;
     }

@@ -141,6 +141,7 @@ For each common chunk, translates its `bits` to chunk indices (bit positions dir
 
 - **Create a circular dependency between chunks** — checked via BFS in `would_create_circular_dependency()`. This is stricter than Rollup (which warns but allows cycles) and matches esbuild's enforcement of acyclic static chunk graphs.
 - **Change an entry's export signature** — when `preserveEntrySignatures: 'strict'`, adding modules to an entry chunk would expose symbols that the original entry didn't export.
+- **Pollute dynamic-import namespaces** — dynamic entries that form static cycles are not merged asymmetrically when multiple pending entry modules have observable exports. The check uses linked export metadata, so re-export-only entries (`export * from ...`) are treated the same as direct named exports.
 
 The trade-off of merging: entry chunks may include modules that not all consumers of that entry need. This adds a small amount of unnecessary code loading but significantly reduces chunk count and HTTP requests.
 

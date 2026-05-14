@@ -118,7 +118,7 @@ where
   napi::Either<Ret, InvalidReturnValue>: FromNapiValue,
 {
   async fn invoke_async(&self, args: Args) -> Result<Ret, napi::Error> {
-    match self.call_async(args).await? {
+    match self.call_async_catch(args).await? {
       Either::A(ret) => Ok(ret),
       Either::B(invalid) => Err(create_invalid_return_error(
         invalid.value_type,
@@ -171,7 +171,7 @@ where
   napi::Either<napi::Either<Promise<Ret>, Ret>, InvalidReturnValue>: FromNapiValue,
 {
   async fn await_call(&self, args: Args) -> Result<Ret, napi::Error> {
-    match self.call_async(args).await? {
+    match self.call_async_catch(args).await? {
       Either::A(Either::A(promise)) => promise.await,
       Either::A(Either::B(ret)) => Ok(ret),
       Either::B(invalid) => Err(create_invalid_return_error(

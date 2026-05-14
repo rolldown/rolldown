@@ -14,7 +14,7 @@ use binding_make_absolute_externals_relative::BindingMakeAbsoluteExternalsRelati
 use binding_optimization::BindingOptimization;
 use derive_more::Debug;
 use napi::Either;
-use napi::bindgen_prelude::{FnArgs, Promise};
+use napi::bindgen_prelude::FnArgs;
 use rustc_hash::FxBuildHasher;
 use std::collections::HashMap;
 
@@ -32,7 +32,7 @@ use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
 };
 
-pub type BindingOnLog = Option<JsCallback<FnArgs<(String, BindingLog)>, Promise<()>>>;
+pub type BindingOnLog = Option<JsCallback<FnArgs<(String, BindingLog)>, ()>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
@@ -76,7 +76,7 @@ pub struct BindingInputOptions<'env> {
   pub platform: Option<String>,
   pub log_level: BindingLogLevel,
   #[debug(skip)]
-  #[napi(ts_type = "(logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => Promise<void>")]
+  #[napi(ts_type = "(logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void")]
   pub on_log: BindingOnLog,
   // extra
   pub cwd: String,

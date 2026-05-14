@@ -1,5 +1,5 @@
 {
-  "name": "@rolldown/test-lazy-issue-9312",
+  "name": "@rolldown/test-lazy-shared-module",
   "version": "0.0.0",
   "private": true,
   "type": "module",

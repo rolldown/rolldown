@@ -26,7 +26,25 @@ export async function editFile(
   filename: string,
   replacer: (content: string) => string,
 ): Promise<void> {
-  const filePath = resolve(testDir, filename);
+  await editFileInDir(testDir, filename, replacer);
+}
+
+/**
+ * Edit a file in the lazy-shared-module tmp playground.
+ */
+export async function editLazySharedModuleFile(
+  filename: string,
+  replacer: (content: string) => string,
+): Promise<void> {
+  await editFileInDir(CONFIG.paths.tmpLazySharedModuleDir, filename, replacer);
+}
+
+async function editFileInDir(
+  dir: string,
+  filename: string,
+  replacer: (content: string) => string,
+): Promise<void> {
+  const filePath = resolve(dir, filename);
   const content = nodeFs.readFileSync(filePath, 'utf-8');
   const newContent = replacer(content);
   if (content === newContent) {
@@ -60,12 +78,12 @@ export function getLazyPage() {
 }
 
 /**
- * Get the Playwright page for the lazy-issue-9312 regression test.
+ * Get the Playwright page for the lazy-shared-module playground.
  */
-export function getIssue9312Page() {
-  const page = (global as any).__issue9312Page;
+export function getLazySharedModulePage() {
+  const page = (global as any).__lazySharedModulePage;
   if (!page) {
-    throw new Error('issue-9312 page not initialized. Check vitest-setup-browser.ts');
+    throw new Error('lazy-shared-module page not initialized. Check vitest-setup-browser.ts');
   }
   return page;
 }

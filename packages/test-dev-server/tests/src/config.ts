@@ -15,8 +15,8 @@ export const CONFIG = {
     tmpFullBundleModeDir: nodePath.join(testsDir, 'tmp-playground/hmr-full-bundle-mode'),
     lazyCompilationDir: nodePath.join(testsDir, 'playground/lazy-compilation'),
     tmpLazyCompilationDir: nodePath.join(testsDir, 'tmp-playground/lazy-compilation'),
-    lazyIssue9312Dir: nodePath.join(testsDir, 'playground/lazy-issue-9312'),
-    tmpLazyIssue9312Dir: nodePath.join(testsDir, 'tmp-playground/lazy-issue-9312'),
+    lazySharedModuleDir: nodePath.join(testsDir, 'playground/lazy-shared-module'),
+    tmpLazySharedModuleDir: nodePath.join(testsDir, 'tmp-playground/lazy-shared-module'),
     lazyNestedDynamicImportDir: nodePath.join(testsDir, 'playground/lazy-nested-dynamic-import'),
     tmpLazyNestedDynamicImportDir: nodePath.join(
       testsDir,
@@ -26,7 +26,7 @@ export const CONFIG = {
   ports: {
     hmrFullBundleMode: 3636,
     lazyCompilation: 3637,
-    lazyIssue9312: 3638,
+    lazySharedModule: 3638,
     lazyNestedDynamicImport: 3639,
   },
 };

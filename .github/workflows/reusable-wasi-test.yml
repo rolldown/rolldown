@@ -29,6 +29,12 @@ jobs:
       - name: Enable corepack
         run: sudo corepack enable
 
+      # NAPI_RS_FORCE_WASI is process-wide, so transitive rolldown (pulled in by vitest/vite-plus)
+      # also tries to load its WASI binding. Its @rolldown/binding-wasm32-wasi optional dep is
+      # filtered out of pnpm installs on linux-x64 hosts by default; force-include it.
+      - name: Install transitive WASI optional dependencies
+        run: pnpm install --frozen-lockfile --config.supported-architectures.cpu='current,wasm32' --config.supported-architectures.os='current,wasi'
+
       - name: Download Rolldown with WASI Binding
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:

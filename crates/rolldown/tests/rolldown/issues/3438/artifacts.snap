@@ -6,21 +6,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INEFFECTIVE_DYNAMIC_IMPORT
 
 ```text
-[INEFFECTIVE_DYNAMIC_IMPORT] Warning: repro1.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+[INEFFECTIVE_DYNAMIC_IMPORT] repro1.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
 
 ```
 
 ## INEFFECTIVE_DYNAMIC_IMPORT
 
 ```text
-[INEFFECTIVE_DYNAMIC_IMPORT] Warning: repro2.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+[INEFFECTIVE_DYNAMIC_IMPORT] repro2.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
 
 ```
 
 ## INEFFECTIVE_DYNAMIC_IMPORT
 
 ```text
-[INEFFECTIVE_DYNAMIC_IMPORT] Warning: repro3.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+[INEFFECTIVE_DYNAMIC_IMPORT] repro3.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
 
 ```
 

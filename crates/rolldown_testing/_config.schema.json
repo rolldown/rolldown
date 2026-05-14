@@ -1390,6 +1390,12 @@
             "null"
           ]
         },
+        "invalidAnnotation": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "mixedExports": {
           "type": [
             "boolean",
@@ -1481,6 +1487,12 @@
           ]
         },
         "ineffectiveDynamicImport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "largeBarrelModules": {
           "type": [
             "boolean",
             "null"

@@ -4,8 +4,11 @@ permissions: {}
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * 3' # Every Wednesday at 8am Shanghai time (UTC+8 = 00:00 UTC)
+    inputs:
+      version:
+        description: 'New version (e.g. 1.0.1)'
+        required: true
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
@@ -25,22 +28,18 @@ jobs:
           fetch-depth: 0 # for changelog
           persist-credentials: true # for create-pull-request
 
-      - uses: taiki-e/install-action@1329c298aa20c3257846c9b2e0e55967df3e3c37 # v2.75.25
+      - uses: taiki-e/install-action@cca35edeb1d01366c2843b68fc3ca441446d73d3 # v2.77.1
         with:
           tool: just
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
-      - name: Get and bump version
-        run: |
-          VERSION=$(node -e "
-            const pkg = require('./packages/rolldown/package.json');
-            const [, base, rc] = pkg.version.match(/^(\d+\.\d+\.\d+)-rc\.(\d+)$/);
-            console.log(\`\${base}-rc.\${parseInt(rc) + 1}\`);
-          ")
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Set version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "VERSION=$INPUT_VERSION" >> "$GITHUB_ENV"
 
       - run: just bump-packages ${VERSION}
 

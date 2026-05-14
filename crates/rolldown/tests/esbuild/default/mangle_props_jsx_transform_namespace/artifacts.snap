@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespace tags are not supported by default. React's JSX doesn't support namespace tags. You can set `throwIfNamespace: false` to bypass this warning.
+[TOLERATED_TRANSFORM] Namespace tags are not supported by default. React's JSX doesn't support namespace tags. You can set `throwIfNamespace: false` to bypass this warning.
    ╭─[ entry.jsx:3:3 ]
    │
  3 │     <KEEP:THIS_ />,

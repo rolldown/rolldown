@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INVALID_OPTION
 
 ```text
-[INVALID_OPTION] Error: Invalid option combination detected:
+[INVALID_OPTION] Invalid option combination detected:
 
 - codeSplitting.includeDependenciesRecursively = false
 - preserveEntrySignatures = "strict"

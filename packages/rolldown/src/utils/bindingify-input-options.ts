@@ -81,8 +81,7 @@ export function bindingifyInputOptions(
     platform: inputOptions.platform,
     shimMissingExports: inputOptions.shimMissingExports,
     logLevel: bindingifyLogLevel(logLevel),
-    // convert to async function to handle errors thrown in onLog
-    onLog: async (level, log) => onLog(level, log),
+    onLog,
     // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
     // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
     // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in Rust side), to represent `false | NormalizedTreeshakingOptions`

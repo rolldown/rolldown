@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "def3" is not exported by "foo.json".
+[MISSING_EXPORT] "def3" is not exported by "foo.json".
    ╭─[ js-entry.js:9:10 ]
    │
  9 │ export { def3 as default } from './foo.json' assert { type: 'json' }
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "def3" is not exported by "foo.json".
+[MISSING_EXPORT] "def3" is not exported by "foo.json".
    ╭─[ ts-entry.ts:9:10 ]
    │
  9 │ export { def3 as default } from './foo.json' assert { type: 'json' }
@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "default" is not exported by "foo.copy".
+[MISSING_EXPORT] "default" is not exported by "foo.copy".
     ╭─[ js-entry.js:12:8 ]
     │
  12 │ import copy from './foo.copy' assert { type: 'json' }
@@ -45,7 +45,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "default" is not exported by "foo.file".
+[MISSING_EXPORT] "default" is not exported by "foo.file".
     ╭─[ js-entry.js:11:8 ]
     │
  11 │ import file from './foo.file' assert { type: 'json' }
@@ -58,7 +58,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "default" is not exported by "foo.text".
+[MISSING_EXPORT] "default" is not exported by "foo.text".
     ╭─[ js-entry.js:10:8 ]
     │
  10 │ import text from './foo.text' assert { type: 'json' }
@@ -71,7 +71,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "exported" is not exported by "foo.json".
+[MISSING_EXPORT] "exported" is not exported by "foo.json".
    ╭─[ js-entry.js:7:10 ]
    │
  7 │ export { exported } from './foo.json' assert { type: 'json' }
@@ -84,7 +84,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "exported" is not exported by "foo.json".
+[MISSING_EXPORT] "exported" is not exported by "foo.json".
    ╭─[ ts-entry.ts:7:10 ]
    │
  7 │ export { exported } from './foo.json' assert { type: 'json' }
@@ -97,7 +97,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "unused" is not exported by "foo.json".
+[MISSING_EXPORT] "unused" is not exported by "foo.json".
    ╭─[ js-entry.js:3:10 ]
    │
  3 │ import { unused } from './foo.json' assert { type: 'json' }
@@ -110,7 +110,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "used" is not exported by "foo.json".
+[MISSING_EXPORT] "used" is not exported by "foo.json".
    ╭─[ js-entry.js:4:10 ]
    │
  4 │ import { used } from './foo.json' assert { type: 'json' }
@@ -123,7 +123,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "used" is not exported by "foo.json".
+[MISSING_EXPORT] "used" is not exported by "foo.json".
    ╭─[ ts-entry.ts:4:10 ]
    │
  4 │ import { used } from './foo.json' assert { type: 'json' }

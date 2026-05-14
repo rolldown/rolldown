@@ -6,6 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INVALID_OPTION
 
 ```text
-[INVALID_OPTION] Error: To generate hashes for this number of chunks (currently 1), you need a minimum hash size of 6, received 2. Check the `entryFileNames` option.
+[INVALID_OPTION] To generate hashes for this number of chunks (currently 1), you need a minimum hash size of 6, received 2. Check the `entryFileNames` option.
 
 ```

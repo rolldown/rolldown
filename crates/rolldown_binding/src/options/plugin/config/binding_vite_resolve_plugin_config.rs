@@ -1,7 +1,7 @@
 use derive_more::Debug;
 use std::sync::Arc;
 
-use napi::bindgen_prelude::{FnArgs, Promise};
+use napi::bindgen_prelude::FnArgs;
 use rolldown_plugin_vite_resolve::{
   FinalizeBareSpecifierCallback, FinalizeOtherSpecifiersCallback, OnLogCallback,
   ViteResolveOptions, ViteResolveResolveOptions,
@@ -11,7 +11,7 @@ use crate::{
   options::plugin::types::binding_limited_boolean::BindingTrueValue,
   types::{
     binding_string_or_regex::{BindingStringOrRegex, bindingify_string_or_regex_array},
-    js_callback::{JsCallback, JsCallbackExt as _},
+    js_callback::{JsCallback, JsCallbackExt as _, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt},
   },
 };
 
@@ -43,13 +43,13 @@ pub struct BindingViteResolvePluginConfig {
     ts_type = "(id: string, importer: string, isRequire: boolean, scan: boolean) => VoidNullable<string>"
   )]
   pub resolve_subpath_imports:
-    JsCallback<FnArgs<(String, Option<String>, bool, bool)>, Promise<Option<String>>>,
+    JsCallback<FnArgs<(String, Option<String>, bool, bool)>, Option<String>>,
   #[debug("{}", if on_warn.is_some() { "Some(<on_warn>)" } else { "None" })]
   #[napi(ts_type = "(message: string) => void")]
-  pub on_warn: Option<JsCallback<FnArgs<(String,)>, Promise<()>>>,
+  pub on_warn: Option<MaybeAsyncJsCallback<FnArgs<(String,)>, ()>>,
   #[debug("{}", if on_debug.is_some() { "Some(<on_debug>)" } else { "None" })]
   #[napi(ts_type = "(message: string) => void")]
-  pub on_debug: Option<JsCallback<FnArgs<(String,)>, Promise<()>>>,
+  pub on_debug: Option<MaybeAsyncJsCallback<FnArgs<(String,)>, ()>>,
   pub yarn_pnp: bool,
 }
 
@@ -115,7 +115,6 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
           Box::pin(async move {
             resolve_fn
               .invoke_async((id, importer, is_require, scan).into())
-              .await?
               .await
               .map_err(anyhow::Error::from)
           })
@@ -125,7 +124,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
         Arc::new(move |message: String| {
           let on_warn = Arc::clone(&on_warn);
           Box::pin(async move {
-            on_warn.invoke_async((message,).into()).await?.await.map_err(anyhow::Error::from)
+            on_warn.await_call((message,).into()).await.map_err(anyhow::Error::from)
           })
         })
       }),
@@ -133,7 +132,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
         Arc::new(move |message: String| {
           let on_debug = Arc::clone(&on_debug);
           Box::pin(async move {
-            on_debug.invoke_async((message,).into()).await?.await.map_err(anyhow::Error::from)
+            on_debug.await_call((message,).into()).await.map_err(anyhow::Error::from)
           })
         })
       }),

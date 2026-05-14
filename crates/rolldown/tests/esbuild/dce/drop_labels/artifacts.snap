@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'bar1' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'bar1' in entry.js
    ╭─[ entry.js:2:17 ]
    │
  2 │ DROP_1: require('bar1')
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'bar2' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'bar2' in entry.js
    ╭─[ entry.js:5:25 ]
    │
  5 │     if (y) keep_2: require('bar2')
@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo1' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo1' in entry.js
    ╭─[ entry.js:1:17 ]
    │
  1 │ keep_1: require('foo1')
@@ -45,7 +45,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo2' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo2' in entry.js
    ╭─[ entry.js:4:25 ]
    │
  4 │     if (x) DROP_2: require('foo2')

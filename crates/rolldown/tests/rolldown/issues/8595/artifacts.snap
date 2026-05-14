@@ -6,14 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INEFFECTIVE_DYNAMIC_IMPORT
 
 ```text
-[INEFFECTIVE_DYNAMIC_IMPORT] Warning: plugins/babel.mjs is dynamically imported by tt.mjs but also statically imported by tt.mjs, dynamic import will not move module into another chunk.
+[INEFFECTIVE_DYNAMIC_IMPORT] plugins/babel.mjs is dynamically imported by tt.mjs but also statically imported by tt.mjs, dynamic import will not move module into another chunk.
 
 ```
 
 ## INEFFECTIVE_DYNAMIC_IMPORT
 
 ```text
-[INEFFECTIVE_DYNAMIC_IMPORT] Warning: plugins/postcss.mjs is dynamically imported by tt.mjs but also statically imported by tt.mjs, dynamic import will not move module into another chunk.
+[INEFFECTIVE_DYNAMIC_IMPORT] plugins/postcss.mjs is dynamically imported by tt.mjs but also statically imported by tt.mjs, dynamic import will not move module into another chunk.
 
 ```
 

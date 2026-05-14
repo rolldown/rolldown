@@ -1861,6 +1861,7 @@ export interface BindingChecksOptions {
   eval?: boolean
   missingGlobalName?: boolean
   missingNameOptionForIifeExport?: boolean
+  invalidAnnotation?: boolean
   mixedExports?: boolean
   unresolvedEntry?: boolean
   unresolvedImport?: boolean
@@ -1877,6 +1878,7 @@ export interface BindingChecksOptions {
   duplicateShebang?: boolean
   unsupportedTsconfigOption?: boolean
   ineffectiveDynamicImport?: boolean
+  largeBarrelModules?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -2270,7 +2272,7 @@ export interface BindingInputOptions {
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
   logLevel: BindingLogLevel
-  onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => Promise<void>
+  onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
   cwd: string
   treeshake?: BindingTreeshake
   moduleTypes?: Record<string, string>

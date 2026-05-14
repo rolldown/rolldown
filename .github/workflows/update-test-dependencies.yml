@@ -106,7 +106,7 @@ jobs:
           save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+        uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -120,11 +120,17 @@ jobs:
           vp install
           vp run --filter rollup-tests test --update
 
+      - uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        id: app-token
+        with:
+          client-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
+          token: ${{ steps.app-token.outputs.token }}
           commit-message: 'chore(deps): update rollup submodule for tests to ${{ steps.get-latest-tag.outputs.LATEST_TAG }}'
           branch: update-rollup-submodule
           branch-suffix: timestamp
@@ -219,7 +225,7 @@ jobs:
           save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+        uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -230,11 +236,17 @@ jobs:
           # Update snapshots https://insta.rs/docs/advanced/#controlling-snapshot-updating
           INSTA_UPDATE: always
 
+      - uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        id: app-token
+        with:
+          client-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
+          token: ${{ steps.app-token.outputs.token }}
           commit-message: 'chore(deps): update test262 submodule for tests'
           branch: update-test262-submodule
           branch-suffix: timestamp
@@ -333,7 +345,7 @@ jobs:
           grep "const ESBUILD_VERSION = " scripts/src/esbuild-tests/urls.ts
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+        uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -343,11 +355,17 @@ jobs:
           vp install
           vp run --filter scripts gen-esbuild-tests all
 
+      - uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        id: app-token
+        with:
+          client-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
+          token: ${{ steps.app-token.outputs.token }}
           commit-message: 'chore(deps): update esbuild for tests to ${{ steps.get-latest-version.outputs.LATEST_VERSION }}'
           branch: update-esbuild-version
           branch-suffix: timestamp

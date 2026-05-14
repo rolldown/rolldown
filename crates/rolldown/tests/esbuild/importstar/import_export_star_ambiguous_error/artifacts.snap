@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## AMBIGUOUS_EXTERNAL_NAMESPACES
 
 ```text
-[AMBIGUOUS_EXTERNAL_NAMESPACES] Error: Found ambiguous export.
+[AMBIGUOUS_EXTERNAL_NAMESPACES] Found ambiguous export.
    ╭─[ entry.js:1:12 ]
    │
  1 │ import {x, y, z} from './common'

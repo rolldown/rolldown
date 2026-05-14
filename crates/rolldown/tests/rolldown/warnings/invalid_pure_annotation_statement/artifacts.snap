@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* #__PURE__ */" in "main.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+   ╭─[ main.js:2:1 ]
+   │
+ 2 │ /* #__PURE__ */ function foo() {}
+   │ ───────┬───────  
+   │        ╰───────── comment ignored due to position
+   │ 
+   │ Help: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+
+```

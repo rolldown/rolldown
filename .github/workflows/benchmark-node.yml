@@ -45,7 +45,7 @@ jobs:
       - name: List Files
         run: find -maxdepth 2 -ls
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -66,7 +66,7 @@ jobs:
         run: vp run --filter bench bench-ci
 
       - name: Show/Update benchmark result
-        uses: benchmark-action/github-action-benchmark@a60cea5bc7b49e15c1f58f411161f99e0df48372 # v1.22.0
+        uses: benchmark-action/github-action-benchmark@52576c92bccf6ac60c8223ec7eb2565637cae9ba # v1.22.1
         with:
           name: 'Node Benchmark'
           # What benchmark tool the output.txt came from

@@ -69,9 +69,6 @@ export function viteResolvePlugin(
 ): BuiltinPlugin {
   const builtinPlugin = new BuiltinPlugin('builtin:vite-resolve', {
     ...config,
-    async resolveSubpathImports(id: string, importer: string, isRequire: boolean, scan: boolean) {
-      return config.resolveSubpathImports(id, importer, isRequire, scan);
-    },
     // process is undefined for browser build
     yarnPnp: typeof process === 'object' && !!process.versions?.pnp,
   });

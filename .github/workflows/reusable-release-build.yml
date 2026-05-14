@@ -98,7 +98,7 @@ jobs:
         if: ${{ contains(matrix.target, 'ohos') }}
         uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
 
-      - uses: taiki-e/install-action@1329c298aa20c3257846c9b2e0e55967df3e3c37 # v2.75.25
+      - uses: taiki-e/install-action@cca35edeb1d01366c2843b68fc3ca441446d73d3 # v2.77.1
         if: ${{ contains(matrix.target, 'musl') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -110,7 +110,7 @@ jobs:
         run: pip install setuptools
         if: ${{ matrix.os == 'macos-latest' }}
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -136,7 +136,7 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
       - name: Build
         id: build
-        uses: cross-platform-actions/action@492b0c80085400348c599edace11141a4ee73524 # v0.32.0
+        uses: cross-platform-actions/action@233156312992f3f169d8d0c633c21d12a5d30455 # v1.0.0
         env:
           DEBUG: napi:*
           RUSTUP_IO_THREADS: 1
@@ -174,31 +174,7 @@ jobs:
           path: ./packages/rolldown/src/rolldown-binding.*.node
           if-no-files-found: error
 
-  build-rolldown-pluginutils:
-    strategy:
-      fail-fast: false
-    name: Build `@rolldown/pluginutils` Package
-    runs-on: namespace-profile-linux-x64-default
-    steps:
-      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
-        with:
-          cache: true
-
-      - name: Build `@rolldown/pluginutils`
-        run: vp run --filter '@rolldown/pluginutils' build
-
-      - name: Upload `@rolldown/pluginutils` Artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          if-no-files-found: error
-          name: pluginutils-artifact
-          path: |
-            packages/pluginutils/dist/**
-
   build-node-packages:
-    needs: build-rolldown-pluginutils
     strategy:
       fail-fast: false
     name: Build Node Package
@@ -208,7 +184,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -221,12 +197,6 @@ jobs:
         run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
         env:
           ROLLDOWN_VERSION: ${{ inputs.version }}
-
-      - name: Download Pluginutils Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          path: packages/pluginutils/dist
-          name: pluginutils-artifact
 
       - name: Build Node Packages
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
@@ -249,7 +219,6 @@ jobs:
             rolldown-version.txt
 
   build-rolldown-browser:
-    needs: build-rolldown-pluginutils
     strategy:
       fail-fast: false
     name: Build `@rolldown/browser` Package
@@ -267,7 +236,7 @@ jobs:
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -280,12 +249,6 @@ jobs:
         run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
         env:
           ROLLDOWN_VERSION: ${{ inputs.version }}
-
-      - name: Download Pluginutils Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          path: packages/pluginutils/dist
-          name: pluginutils-artifact
 
       - name: Build `@rolldown/browser`
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
@@ -314,7 +277,7 @@ jobs:
           restore-cache: false
           save-cache: false
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 

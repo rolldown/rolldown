@@ -122,6 +122,13 @@ impl BundleCoordinator {
         }
         CoordinatorMsg::ModuleChanged { module_id } => {
           // Handle programmatic module change (e.g., lazy compilation executed)
+
+          // `plugin_driver.watch_files` added in `bundler.compile_lazy_entry`
+          // will be removed when task rebuild starts,
+          // so we need to update watch paths here to make sure
+          // the changed module is watched and trigger rebuild by file change if needed.
+          let _ = self.update_watch_paths().await;
+
           let mut changed_files = FxIndexMap::default();
           changed_files.insert(PathBuf::from(&module_id), WatcherChangeKind::Update);
 
@@ -273,9 +280,8 @@ impl BundleCoordinator {
         // Clear current build
         self.current_bundling_future = None;
 
-        // Update watch paths so files pulled in by this rebuild,
-        // this can happen for lazy-compilation,
-        // because new files are pulled into `watch_files` only after browser hits the lazy proxy module.
+        // Register any new files this rebuild pulled into `watch_files`
+        // (e.g. an edit that introduced a new transitive import).
         let _ = self.update_watch_paths().await;
 
         if has_encountered_error {

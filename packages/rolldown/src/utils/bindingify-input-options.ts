@@ -37,7 +37,7 @@ export function bindingifyInputOptions(
   onLog: LogHandler,
   logLevel: LogLevelOption,
   watchMode: boolean,
-): BindingInputOptions {
+): { options: BindingInputOptions; pluginContextData: PluginContextData } {
   const pluginContextData = new PluginContextData(
     onLog,
     outputOptions,
@@ -73,53 +73,56 @@ export function bindingifyInputOptions(
   const normalizedTransform = normalizeTransformOptions(inputOptions);
 
   return {
-    input: bindingifyInput(inputOptions.input),
-    plugins,
-    cwd: inputOptions.cwd ?? process.cwd(),
-    external: bindingifyExternal(inputOptions.external),
-    resolve: bindingifyResolve(inputOptions.resolve),
-    platform: inputOptions.platform,
-    shimMissingExports: inputOptions.shimMissingExports,
-    logLevel: bindingifyLogLevel(logLevel),
-    // convert to async function to handle errors thrown in onLog
-    onLog: async (level, log) => onLog(level, log),
-    // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
-    // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
-    // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in Rust side), to represent `false | NormalizedTreeshakingOptions`
-    treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake),
-    moduleTypes: inputOptions.moduleTypes,
-    define: normalizedTransform.define,
-    inject: bindingifyInject(normalizedTransform.inject),
-    experimental: bindingifyExperimental(inputOptions.experimental),
-    profilerNames: outputOptions.generatedCode?.profilerNames,
-    transform: normalizedTransform.oxcTransformOptions,
-    watch: bindingifyWatch(inputOptions.watch),
-    dropLabels: normalizedTransform.dropLabels,
-    keepNames: outputOptions.keepNames,
-    checks: inputOptions.checks,
-    deferSyncScanData: () => {
-      let ret: BindingDeferSyncScanData[] = [];
-      pluginContextData.moduleOptionMap.forEach((value, key) => {
-        if (value.invalidate) {
-          ret.push({
-            id: key,
-            sideEffects: value.moduleSideEffects ?? undefined,
-          });
-        }
-      });
-      return ret;
+    pluginContextData,
+    options: {
+      input: bindingifyInput(inputOptions.input),
+      plugins,
+      cwd: inputOptions.cwd ?? process.cwd(),
+      external: bindingifyExternal(inputOptions.external),
+      resolve: bindingifyResolve(inputOptions.resolve),
+      platform: inputOptions.platform,
+      shimMissingExports: inputOptions.shimMissingExports,
+      logLevel: bindingifyLogLevel(logLevel),
+      // convert to async function to handle errors thrown in onLog
+      onLog: async (level, log) => onLog(level, log),
+      // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
+      // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
+      // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in Rust side), to represent `false | NormalizedTreeshakingOptions`
+      treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake),
+      moduleTypes: inputOptions.moduleTypes,
+      define: normalizedTransform.define,
+      inject: bindingifyInject(normalizedTransform.inject),
+      experimental: bindingifyExperimental(inputOptions.experimental),
+      profilerNames: outputOptions.generatedCode?.profilerNames,
+      transform: normalizedTransform.oxcTransformOptions,
+      watch: bindingifyWatch(inputOptions.watch),
+      dropLabels: normalizedTransform.dropLabels,
+      keepNames: outputOptions.keepNames,
+      checks: inputOptions.checks,
+      deferSyncScanData: () => {
+        let ret: BindingDeferSyncScanData[] = [];
+        pluginContextData.moduleOptionMap.forEach((value, key) => {
+          if (value.invalidate) {
+            ret.push({
+              id: key,
+              sideEffects: value.moduleSideEffects ?? undefined,
+            });
+          }
+        });
+        return ret;
+      },
+      makeAbsoluteExternalsRelative: bindingifyMakeAbsoluteExternalsRelative(
+        inputOptions.makeAbsoluteExternalsRelative,
+      ),
+      devtools: inputOptions.devtools,
+      invalidateJsSideCache: pluginContextData.clear.bind(pluginContextData),
+      preserveEntrySignatures: bindingifyPreserveEntrySignatures(
+        inputOptions.preserveEntrySignatures,
+      ),
+      optimization: inputOptions.optimization,
+      context: inputOptions.context,
+      tsconfig: inputOptions.resolve?.tsconfigFilename ?? inputOptions.tsconfig,
     },
-    makeAbsoluteExternalsRelative: bindingifyMakeAbsoluteExternalsRelative(
-      inputOptions.makeAbsoluteExternalsRelative,
-    ),
-    devtools: inputOptions.devtools,
-    invalidateJsSideCache: pluginContextData.clear.bind(pluginContextData),
-    preserveEntrySignatures: bindingifyPreserveEntrySignatures(
-      inputOptions.preserveEntrySignatures,
-    ),
-    optimization: inputOptions.optimization,
-    context: inputOptions.context,
-    tsconfig: inputOptions.resolve?.tsconfigFilename ?? inputOptions.tsconfig,
   };
 }
 

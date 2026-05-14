@@ -105,11 +105,6 @@ jobs:
         with:
           tool: cargo-zigbuild
 
-      # https://github.com/nodejs/node-gyp/issues/2869
-      - name: Setup python
-        run: pip install setuptools
-        if: ${{ matrix.os == 'macos-latest' }}
-
       - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true

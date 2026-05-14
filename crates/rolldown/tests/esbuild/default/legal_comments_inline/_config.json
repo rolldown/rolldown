@@ -4,10 +4,6 @@
       {
         "name": "entry",
         "import": "entry.js"
-      },
-      {
-        "name": "entry",
-        "import": "entry.css"
       }
     ]
   },

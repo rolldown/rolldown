@@ -8,30 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region a.js
 console.log("in a");
-
+//! Copyright notice 1
 //#endregion
 //#region b.js
 console.log("in b");
-
+//! Copyright notice 1
 //#endregion
 //#region c.js
 console.log("in c");
-
+//! Copyright notice 2
 //#endregion
-```
-
-## entry2.css
-
-```css
-a { zoom: 2 } /*! Copyright notice 1 */
-b { zoom: 2 } /*! Copyright notice 1 */
-c { zoom: 2 } /*! Copyright notice 2 */
-
-
-```
-
-## entry2.js
-
-```js
 
 ```

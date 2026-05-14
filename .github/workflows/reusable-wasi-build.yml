@@ -1,0 +1,43 @@
+name: Build Rolldown with WASI Binding
+
+permissions: {}
+
+on:
+  workflow_call:
+    inputs:
+      changed:
+        required: true
+        type: boolean
+
+jobs:
+  run:
+    name: Build Rolldown with WASI Binding
+    if: ${{ inputs.changed }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        with:
+          tools: just
+          cache-key: debug-build-wasi
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
+        with:
+          cache: true
+
+      - name: Add WASI target
+        run: rustup target add wasm32-wasip1-threads
+
+      - name: Build Rolldown with WASI Binding
+        run: just build-rolldown-wasi
+
+      - name: Upload Rolldown with WASI Binding
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rolldown-wasi
+          path: packages/rolldown/dist
+          if-no-files-found: error

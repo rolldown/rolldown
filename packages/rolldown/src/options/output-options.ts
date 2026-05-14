@@ -629,8 +629,6 @@ export interface OutputOptions {
    *
    * When both `legalComments` and `comments.legal` are set, `comments.legal` takes priority.
    *
-   * {@include ./docs/output-comments.md}
-   *
    * @default true
    */
   comments?: boolean | CommentsOptions;

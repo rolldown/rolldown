@@ -398,12 +398,10 @@ impl GenerateStage<'_> {
         }
         let chunk_idxs: Vec<_> = bits.index_of_one().map(ChunkIdx::from_raw).collect();
 
-        let merge_target = Self::try_insert_into_existing_chunk(
+        let merge_target = self.try_insert_into_existing_chunk(
           &chunk_idxs,
           &static_entry_chunk_reference,
           chunk_graph,
-          &self.link_output.module_table,
-          &self.link_output.metas,
           &dynamic_entry_to_dynamic_importers,
           temp_chunk,
           temp_chunk_graph,
@@ -560,15 +558,16 @@ impl GenerateStage<'_> {
   ///
   /// Returns `Some(ChunkIdx)` if a suitable merge target is found, `None` otherwise.
   fn try_insert_into_existing_chunk(
+    &self,
     chunk_idxs: &[ChunkIdx],
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
     chunk_graph: &ChunkGraph,
-    module_table: &ModuleTable,
-    linking_infos: &LinkingMetadataVec,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
     info: &ChunkCandidate,
     temp_chunk_graph: &ChunkOptimizationGraph,
   ) -> Option<ChunkIdx> {
+    let module_table = &self.link_output.module_table;
+    let linking_infos = &self.link_output.metas;
     let mut user_defined_entry = vec![];
     let mut dynamic_entry = vec![];
     for &idx in chunk_idxs {

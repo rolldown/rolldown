@@ -1425,6 +1425,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
                   let is_json_module = rec.meta.contains(ImportRecordMeta::JsonModule);
 
+                  // oxc-runtime helpers are default-only ESM modules. When a CJS-classified
+                  // caller `require()`s one (e.g. class-field lowering → `_defineProperty`),
+                  // the namespace round-trip binds the local to `{ default: <fn> }` instead
+                  // of the callable, throwing at init. Match the JSON path: append `.default`.
+                  // The `RuntimeHelper` meta is set in the module loader (mirroring `JsonModule`).
+                  // Fixes #9263.
+                  let is_runtime_helper = rec.meta.contains(ImportRecordMeta::RuntimeHelper);
+
                   // `__toCommonJS`
                   let to_commonjs_expr = self.finalized_expr_for_runtime_symbol("__toCommonJS");
                   // `__toCommonJS(xxx_exports)`
@@ -1437,7 +1445,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       false,
                     ));
 
-                  let final_expr = if is_json_module {
+                  let final_expr = if is_json_module || is_runtime_helper {
                     // `__toCommonJS(xxx_exports).default`
                     Expression::from(self.snippet.builder.member_expression_static(
                       SPAN,

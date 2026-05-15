@@ -108,6 +108,12 @@ impl Module {
     }
   }
 
+  pub fn is_pure_reexport(&self) -> bool {
+    match self {
+      Module::Normal(v) => v.is_pure_reexport_module(),
+      Module::External(_) => false,
+    }
+  }
   /// Returns the namespace object ref if this is a normal module.
   pub fn namespace_object_ref(&self) -> Option<SymbolRef> {
     self.as_normal().map(|m| m.namespace_object_ref)

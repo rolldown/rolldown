@@ -2997,6 +2997,7 @@ dependencies = [
  "derive_more",
  "rolldown_common",
  "rolldown_error",
+ "rolldown_utils",
  "schemars",
  "serde",
 ]

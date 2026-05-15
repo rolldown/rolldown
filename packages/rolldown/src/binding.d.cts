@@ -1952,6 +1952,8 @@ export interface BindingDevWatchOptions {
   debounceDuration?: number
   compareContentsForPolling?: boolean
   debounceTickRate?: number
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
 }
 
 export interface BindingEmittedAsset {

@@ -25,5 +25,6 @@ deserialize_dev_options = ["dep:schemars", "dep:serde"]
 derive_more = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_error = { workspace = true }
+rolldown_utils = { workspace = true }
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }

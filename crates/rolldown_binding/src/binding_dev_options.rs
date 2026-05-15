@@ -1,6 +1,7 @@
 use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
 use crate::types::binding_outputs::BindingOutputs;
 use crate::types::binding_rebuild_strategy::BindingRebuildStrategy;
+use crate::types::binding_string_or_regex::BindingStringOrRegex;
 use crate::types::error::BindingResult;
 use crate::types::js_callback::JsCallback;
 use napi::bindgen_prelude::FnArgs;
@@ -14,6 +15,8 @@ pub struct BindingDevWatchOptions {
   pub debounce_duration: Option<u32>,
   pub compare_contents_for_polling: Option<bool>,
   pub debounce_tick_rate: Option<u32>,
+  pub include: Option<Vec<BindingStringOrRegex>>,
+  pub exclude: Option<Vec<BindingStringOrRegex>>,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]

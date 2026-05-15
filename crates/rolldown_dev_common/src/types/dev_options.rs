@@ -1,6 +1,7 @@
 use derive_more::Debug;
 use rolldown_common::ClientHmrUpdate;
 use rolldown_error::BuildResult;
+use rolldown_utils::pattern_filter::StringOrRegex;
 use std::sync::Arc;
 
 #[cfg(feature = "deserialize_dev_options")]
@@ -51,6 +52,8 @@ pub struct NormalizedDevOptions {
   pub debounce_duration: u64,
   pub compare_contents_for_polling: bool,
   pub debounce_tick_rate: Option<u64>,
+  pub watch_include: Option<Vec<StringOrRegex>>,
+  pub watch_exclude: Option<Vec<StringOrRegex>>,
 }
 
 pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
@@ -67,5 +70,7 @@ pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
     debounce_duration: watch_options.debounce_duration.unwrap_or(10),
     compare_contents_for_polling: watch_options.compare_contents_for_polling.unwrap_or(false),
     debounce_tick_rate: watch_options.debounce_tick_rate,
+    watch_include: watch_options.include,
+    watch_exclude: watch_options.exclude,
   }
 }

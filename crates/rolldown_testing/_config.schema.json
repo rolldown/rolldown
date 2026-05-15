@@ -2135,6 +2135,26 @@
           ],
           "format": "uint64",
           "minimum": 0
+        },
+        "include": {
+          "description": "Filter to limit which discovered files are registered with the file watcher.\nStrings are treated as glob patterns.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "description": "Filter to prevent discovered files from being registered with the file watcher.\nStrings are treated as glob patterns.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false

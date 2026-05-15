@@ -30,6 +30,6 @@ impl Deref for PreliminaryFilename {
 }
 impl PartialEq for PreliminaryFilename {
   fn eq(&self, other: &Self) -> bool {
-    return self.filename == other.filename;
+    self.filename == other.filename
   }
 }

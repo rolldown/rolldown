@@ -58,7 +58,7 @@ pub enum PostChunkOptimizationOperation {
   RemovedWithPreservedExports,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub enum PreliminarySourcemapFilename {
   #[default]
   Uninstantiated,
@@ -72,17 +72,6 @@ impl From<PreliminarySourcemapFilename> for Option<PreliminaryFilename> {
       PreliminarySourcemapFilename::Uninstantiated | PreliminarySourcemapFilename::Empty => None,
       PreliminarySourcemapFilename::Template(preliminary_filename) => Some(preliminary_filename),
     }
-  }
-}
-
-impl PartialEq for PreliminarySourcemapFilename {
-  fn eq(&self, other: &Self) -> bool {
-    matches!(
-      (self, other),
-      (Self::Template(_), Self::Template(_))
-        | (Self::Uninstantiated, Self::Uninstantiated)
-        | (Self::Empty, Self::Empty)
-    )
   }
 }
 

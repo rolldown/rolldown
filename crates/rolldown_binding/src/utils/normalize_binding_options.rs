@@ -271,7 +271,6 @@ pub fn normalize_binding_options(
       Box::pin(async move {
         ts_fn
           .invoke_async((level.to_string(), log.into()).into())
-          .await?
           .await
           .map_err(anyhow::Error::from)
       })

@@ -16,6 +16,7 @@ pub struct ChecksOptions {
   pub eval: Option<bool>,
   pub missing_global_name: Option<bool>,
   pub missing_name_option_for_iife_export: Option<bool>,
+  pub invalid_annotation: Option<bool>,
   pub mixed_exports: Option<bool>,
   pub unresolved_entry: Option<bool>,
   pub unresolved_import: Option<bool>,
@@ -32,6 +33,7 @@ pub struct ChecksOptions {
   pub duplicate_shebang: Option<bool>,
   pub unsupported_tsconfig_option: Option<bool>,
   pub ineffective_dynamic_import: Option<bool>,
+  pub large_barrel_modules: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -48,6 +50,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::MissingNameOptionForIifeExport,
       value.missing_name_option_for_iife_export.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::InvalidAnnotation,
+      value.invalid_annotation.unwrap_or(true),
     );
     flag.set(rolldown_error::EventKindSwitcher::MixedExports, value.mixed_exports.unwrap_or(true));
     flag.set(
@@ -107,6 +113,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::IneffectiveDynamicImport,
       value.ineffective_dynamic_import.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::LargeBarrelModules,
+      value.large_barrel_modules.unwrap_or(true),
     );
     flag
   }

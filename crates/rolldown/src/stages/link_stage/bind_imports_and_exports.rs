@@ -12,6 +12,8 @@ use rolldown_common::{
   SymbolRefFlags,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
+#[cfg(not(target_family = "wasm"))]
+use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
   index_vec_ext::{IndexVecExt, IndexVecRefExt},
@@ -403,12 +405,13 @@ impl LinkStage<'_> {
       .module_table
       .modules
       .par_iter()
-      .map(|module| match module {
+      .zip(self.stmt_infos.par_iter())
+      .map(|(module, stmt_infos)| match module {
         Module::Normal(module) => {
           let mut resolved_map = FxHashMap::default();
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
-          module.stmt_infos.iter().for_each(|stmt_info| {
+          stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
               let mut depended_refs: Vec<SymbolRef> = vec![];

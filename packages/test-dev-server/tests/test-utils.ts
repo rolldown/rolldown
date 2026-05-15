@@ -26,7 +26,25 @@ export async function editFile(
   filename: string,
   replacer: (content: string) => string,
 ): Promise<void> {
-  const filePath = resolve(testDir, filename);
+  await editFileInDir(testDir, filename, replacer);
+}
+
+/**
+ * Edit a file in the lazy-shared-module tmp playground.
+ */
+export async function editLazySharedModuleFile(
+  filename: string,
+  replacer: (content: string) => string,
+): Promise<void> {
+  await editFileInDir(CONFIG.paths.tmpLazySharedModuleDir, filename, replacer);
+}
+
+async function editFileInDir(
+  dir: string,
+  filename: string,
+  replacer: (content: string) => string,
+): Promise<void> {
+  const filePath = resolve(dir, filename);
   const content = nodeFs.readFileSync(filePath, 'utf-8');
   const newContent = replacer(content);
   if (content === newContent) {
@@ -55,6 +73,30 @@ export function getLazyPage() {
   const page = (global as any).__lazyPage;
   if (!page) {
     throw new Error('Lazy page not initialized. Check vitest-setup-browser.ts');
+  }
+  return page;
+}
+
+/**
+ * Get the Playwright page for the lazy-shared-module playground.
+ */
+export function getLazySharedModulePage() {
+  const page = (global as any).__lazySharedModulePage;
+  if (!page) {
+    throw new Error('lazy-shared-module page not initialized. Check vitest-setup-browser.ts');
+  }
+  return page;
+}
+
+/**
+ * Get the Playwright page for the lazy-nested-dynamic-import regression test.
+ */
+export function getNestedLazyPage() {
+  const page = (global as any).__nestedLazyPage;
+  if (!page) {
+    throw new Error(
+      'lazy-nested-dynamic-import page not initialized. Check vitest-setup-browser.ts',
+    );
   }
   return page;
 }

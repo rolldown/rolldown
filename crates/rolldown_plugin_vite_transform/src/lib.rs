@@ -6,9 +6,9 @@ use std::path::{Path, PathBuf};
 use arcstr::ArcStr;
 use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions};
 use oxc::parser::Parser;
-use oxc::semantic::SemanticBuilder;
 use oxc::transformer::Transformer;
 use rolldown_common::{BundlerTransformOptions, ModuleType};
+use rolldown_ecmascript::semantic_builder_for_transform;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
 use rolldown_plugin::{HookUsage, Plugin, SharedTransformPluginContext};
 use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, url::clean_url};
@@ -72,7 +72,7 @@ impl Plugin for ViteTransformPlugin {
     }
 
     let mut program = ret.program;
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping = semantic_builder_for_transform().build(&program).semantic.into_scoping();
     let transformer = Transformer::new(&allocator, Path::new(args.id), &transform_options);
     let transformer_return = transformer.build_with_scoping(scoping, &mut program);
     if !transformer_return.errors.is_empty() {

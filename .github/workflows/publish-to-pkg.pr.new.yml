@@ -68,7 +68,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -105,12 +105,6 @@ jobs:
           path: packages/browser/dist
           name: browser-artifact
 
-      - name: Download Pluginutils Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          path: packages/pluginutils/dist
-          name: pluginutils-artifact
-
       - name: Download `@rolldown/debug` Artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -122,18 +116,11 @@ jobs:
         with:
           name: rolldown-version
 
-      - name: Read `rolldown-version.txt`
-        id: rolldown-version
-        uses: igorskyflyer/action-readfile@d38a0aef4a6ba5245f2a127705a8cdc8d5d5e702 # v1.0.0
-        with:
-          path: rolldown-version.txt
-
       - name: Canary/Nightly Versioning
         run: |
+          ROLLDOWN_VERSION=$(cat rolldown-version.txt)
           node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
           vp run --filter rolldown prepublishOnly --skip-optional-publish
-        env:
-          ROLLDOWN_VERSION: ${{ steps.rolldown-version.outputs.content }}
 
       - name: Copy Licenses
         run: |
@@ -141,4 +128,4 @@ jobs:
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
 
       - name: Release
-        run: vpx pkg-pr-new publish --compact --pnpm './packages/rolldown/npm/*' './packages/rolldown' './packages/browser' './packages/debug' './packages/pluginutils'
+        run: vpx pkg-pr-new publish --compact --pnpm './packages/rolldown/npm/*' './packages/rolldown' './packages/browser' './packages/debug'

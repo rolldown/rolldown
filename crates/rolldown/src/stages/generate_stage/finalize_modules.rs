@@ -39,6 +39,7 @@ impl GenerateStage<'_> {
             symbol_db: &self.link_output.symbol_db,
             linking_info,
             module,
+            stmt_infos: &self.link_output.stmt_infos[idx],
             modules: &self.link_output.module_table.modules,
             linking_infos: &self.link_output.metas,
             runtime: &self.link_output.runtime,

@@ -131,6 +131,20 @@ impl Plugin for ParallelJsPlugin {
     }
   }
 
+  async fn module_parsed(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    module_info: Arc<rolldown_common::ModuleInfo>,
+    normal_module: &rolldown_common::NormalModule,
+  ) -> rolldown_plugin::HookNoopReturn {
+    if self.first_plugin().module_parsed.is_some() {
+      self
+        .run_all(|plugin| plugin.call_module_parsed(ctx, Arc::clone(&module_info), normal_module))
+        .await?;
+    }
+    Ok(())
+  }
+
   async fn build_end(
     &self,
     ctx: &rolldown_plugin::PluginContext,

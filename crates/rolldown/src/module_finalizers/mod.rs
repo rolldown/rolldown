@@ -538,22 +538,29 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// - `Direction.Up` (static member with identifier object)
   /// - `ns.Direction.Up` (chained static member via namespace import)
   /// - `Direction["Up"]` (computed member with string literal key)
+  /// - `Direction?.Up` / `Direction?.["Up"]` (optional chain — enum bindings
+  ///   are always defined, so `?.` is equivalent to `.`)
   fn try_inline_enum_access(&self, expr: &ast::Expression<'_>) -> Option<ast::Expression<'ast>> {
-    match expr {
-      ast::Expression::StaticMemberExpression(member_expr) => {
-        if let ast::Expression::Identifier(ident) = &member_expr.object {
-          self.try_inline_enum_member(ident, &member_expr.property.name)
-        } else {
-          self.try_inline_chained_enum_member(member_expr)
-        }
+    let member = expr.get_member_expr()?;
+    let (object, property_name) = match member {
+      ast::MemberExpression::StaticMemberExpression(m) => (&m.object, m.property.name.as_str()),
+      ast::MemberExpression::ComputedMemberExpression(m) => {
+        let ast::Expression::StringLiteral(prop) = &m.expression else { return None };
+        (&m.object, prop.value.as_str())
       }
-      ast::Expression::ComputedMemberExpression(member_expr) => {
-        let ast::Expression::Identifier(ident) = &member_expr.object else { return None };
-        let ast::Expression::StringLiteral(prop) = &member_expr.expression else { return None };
-        self.try_inline_enum_member(ident, prop.value.as_str())
-      }
-      _ => None,
+      ast::MemberExpression::PrivateFieldExpression(_) => return None,
+    };
+    if let ast::Expression::Identifier(ident) = object {
+      return self.try_inline_enum_member(ident, property_name);
     }
+    // `ns.Direction.Up` — namespace-import resolution. Only for direct (non-chain)
+    // static access; the chained-namespace optional case isn't handled.
+    if !matches!(expr, ast::Expression::ChainExpression(_))
+      && let ast::MemberExpression::StaticMemberExpression(sm) = member
+    {
+      return self.try_inline_chained_enum_member(sm);
+    }
+    None
   }
 
   /// Try to inline an enum member access like `Direction.Up` → `0`.
@@ -1423,11 +1430,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let old_body = program.body.take_in(self.alloc);
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
-    old_body
-      .into_iter()
-      .enumerate()
-      .zip(self.ctx.module.stmt_infos.iter_enumerated().skip(1))
-      .for_each(|((_top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
+    old_body.into_iter().enumerate().zip(self.ctx.stmt_infos.iter_enumerated().skip(1)).for_each(
+      |((_top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
         let is_stmt_included = self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx);
 
         if !is_stmt_included {
@@ -1754,7 +1758,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if is_module_decl {
           last_import_stmt_idx = Some(program.body.len());
         }
-      });
+      },
+    );
     last_import_stmt_idx.unwrap_or(0)
   }
 

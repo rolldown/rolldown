@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.js
     ╭─[ entry.js:10:29 ]
     │
  10 │     function() { return import('foo') },
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.js
    ╭─[ entry.js:1:8 ]
    │
  1 │ import 'foo'
@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.js
    ╭─[ entry.js:2:16 ]
    │
  2 │ import {} from 'foo'
@@ -45,7 +45,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.js
    ╭─[ entry.js:3:21 ]
    │
  3 │ import * as ns from 'foo'
@@ -58,7 +58,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.js
    ╭─[ entry.js:4:25 ]
    │
  4 │ import {a, b as c} from 'foo'
@@ -71,7 +71,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.js
    ╭─[ entry.js:5:17 ]
    │
  5 │ import def from 'foo'
@@ -84,7 +84,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.js
    ╭─[ entry.js:6:28 ]
    │
  6 │ import def2, * as ns2 from 'foo'
@@ -97,7 +97,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.js
    ╭─[ entry.js:7:33 ]
    │
  7 │ import def3, {a2, b as c3} from 'foo'
@@ -110,7 +110,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.js
    ╭─[ entry.js:9:9 ]
    │
  9 │     import('foo'),

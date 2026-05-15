@@ -3,7 +3,7 @@ name: 'Automation Labeled'
 permissions: {}
 
 on:
-  pull_request_target: # zizmor: ignore[dangerous-triggers]
+  pull_request:
     types: [labeled]
   issues:
     types: [labeled]
@@ -13,61 +13,49 @@ concurrency:
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  convert_stale_PR_to_draft:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request_target' && github.event.label.name == 'stale'
-    permissions:
-      pull-requests: write
-      contents: write
-    steps:
-      - name: Authenticate GitHub CLI
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-
-      - name: Convert Stale PR to Draft
-        run: |
-          gh pr ready ${{ github.event.pull_request.number }} --undo
-
   needs-reproduction:
     runs-on: ubuntu-latest
-    if: github.event.label.name == 'needs-reproduction'
+    if: github.event_name == 'issues' && github.event.label.name == 'needs-reproduction'
     permissions:
       issues: write
     steps:
-      - name: Find Comment
-        uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad # v4.0.0
-        id: find-comment
-        with:
-          issue-number: ${{ github.event.issue.number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: 'Issues marked with `needs-reproduction`'
-
-      - name: Write a new comment
-        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
+      - name: Create or update comment
         continue-on-error: true
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          comment-id: ${{ steps.find-comment.outputs.comment-id }}
-          issue-number: ${{ github.event.issue.number }}
-          body: |
-            Hello @${{ github.event.issue.user.login }} 👋
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+        run: |
+          body=$(cat <<EOF
+          Hello @$ISSUE_USER 👋
 
-            Please provide a [minimal reproduction](https://stackoverflow.com/help/minimal-reproducible-example) using a GitHub repository or [StackBlitz](https://stackblitz.com/fork/github/rolldown/rolldown-starter-stackblitz?file=README.md). This helps us understand and resolve your issue much faster.
+          Please provide a [minimal reproduction](https://stackoverflow.com/help/minimal-reproducible-example) using a GitHub repository or [StackBlitz](https://stackblitz.com/fork/github/rolldown/rolldown-starter-stackblitz?file=README.md). This helps us understand and resolve your issue much faster.
 
-            **A good reproduction should be:**
-            - **Minimal** – include only the code necessary to demonstrate the issue
-            - **Complete** – contain everything needed to run and observe the problem
-            - **Reproducible** – consistently show the issue with clear steps
+          **A good reproduction should be:**
+          - **Minimal** – include only the code necessary to demonstrate the issue
+          - **Complete** – contain everything needed to run and observe the problem
+          - **Reproducible** – consistently show the issue with clear steps
 
-            Issues marked with `needs-reproduction` will be closed if there is no activity within 14 days.
+          Issues marked with \`needs-reproduction\` will be closed if there is no activity within 14 days.
 
-            For more context on why this is required, please read: https://antfu.me/posts/why-reproductions-are-required
+          For more context on why this is required, please read: https://antfu.me/posts/why-reproductions-are-required
 
-            Thanks!
-          reactions-edit-mode: 'replace'
-          edit-mode: replace
+          Thanks!
+          EOF
+          )
+
+          comment_id=$(gh api "repos/$GH_REPO/issues/$ISSUE_NUMBER/comments" \
+            --jq '[.[] | select(.user.login == "github-actions[bot]") | select(.body | contains("Issues marked with `needs-reproduction`")) | .id] | first // empty')
+
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/$GH_REPO/issues/comments/$comment_id" -f body="$body"
+          else
+            gh api --method POST "repos/$GH_REPO/issues/$ISSUE_NUMBER/comments" -f body="$body"
+          fi
 
   create_issue_if_doc_labeled_on_pr:
-    if: github.event_name == 'pull_request_target' && github.event.label.name == 'documentation'
+    if: github.event_name == 'pull_request' && github.event.label.name == 'documentation' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -75,16 +63,26 @@ jobs:
 
     steps:
       - name: Create Issue from PR
-        uses: dacbd/create-issue-action@fec641442c0897e734fad173cfe83ae21a2284a3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: 'Update doc for : ${{ github.event.pull_request.title }} #${{github.event.pull_request.number}}'
-          body: |
-            This issue is to track documentation tasks related to Pull Request #${{ github.event.pull_request.number }}.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_USER: ${{ github.event.pull_request.user.login }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          body=$(cat <<EOF
+          This issue is to track documentation tasks related to Pull Request #$PR_NUMBER.
 
-            **PR Title:** ${{ github.event.pull_request.title }}
-            **PR Author:** @${{ github.event.pull_request.user.login }}
-            **PR Link:** ${{ github.event.pull_request.html_url }}
+          **PR Title:** $PR_TITLE
+          **PR Author:** @$PR_USER
+          **PR Link:** $PR_URL
 
-            Please ensure all necessary documentation updates are completed.
-          assignees: ${{ github.event.pull_request.user.login }}
+          Please ensure all necessary documentation updates are completed.
+          EOF
+          )
+
+          gh issue create \
+            --title "Update doc for : $PR_TITLE #$PR_NUMBER" \
+            --body "$body" \
+            --assignee "$PR_USER"

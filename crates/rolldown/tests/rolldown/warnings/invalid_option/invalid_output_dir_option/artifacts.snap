@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INVALID_OPTION
 
 ```text
-[INVALID_OPTION] Warning: Invalid value for option "output.dir" - you must set either "output.file" for a single-file build or "output.dir" when generating multiple chunks.
+[INVALID_OPTION] Invalid value for option "output.dir" - you must set either "output.file" for a single-file build or "output.dir" when generating multiple chunks.
 
 ```
 

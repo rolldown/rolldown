@@ -1,4 +1,116 @@
 
+## [1.0.1] - 2026-05-13
+
+### 🚀 Features
+
+- experimental/lazy-barrel: advice on oversized barrel modules (#9236) by @shulaoda
+- rolldown: inline optional-chain enum access (#9379) by @Dunqing
+- chunk-optimization: dedupe already-loaded dynamic deps (#9305) by @IWANABETHATGUY
+- binding: call moduleParsed hook in ParallelJsPlugin (#9318) by @jaehafe
+
+### 🐛 Bug Fixes
+
+- transform: enable `enum_eval` for `transformSync` and vite TS transform (#9325) by @Dunqing
+- error: remove severity prefix from diagnostic messages (#9262) by @Kyujenius
+- deps: pin pnpm to 10.23.0 to work around catalog mismatch on Netlify (#9364) by @shulaoda
+- ci: pin mimalloc-safe to 0.1.58 (#9361) by @shulaoda
+- dev/lazy: fix exports of lazy requests in lazy chunks (#9249) by @h-a-n-a
+- rolldown_plugin_vite_resolve: handle errors in `resolveSubpathImports` callback (#9355) by @sapphi-red
+- rolldown_plugin_lazy_compilation: use loadExports for fetched proxy to preserve original export names (#9132) by @h-a-n-a
+- common: include offending index in HybridIndexVec panic message (#9296) by @SAY-5
+
+### 🚜 Refactor
+
+- ecmascript: extract semantic_builder_for_transform helper (#9326) by @Dunqing
+- test: extract reusable static-import-cycle helper (#9332) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- clarify scope of `topLevelVar` (#9380) by @IWANABETHATGUY
+- meta/design: add ast-mutation design doc (#9338) by @hyf0
+- feat: add ai policy in contribution guide (#9315) by @mdong1909
+
+### ⚡ Performance
+
+- binding: enable mimalloc v3 to reduce idle memory (#9349) by @shulaoda
+
+### 🧪 Testing
+
+- mcs: cover require() in `$initial` group (#9376) by @hyf0
+- add regression for CJS facade chunk merge into entry (#9351) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- switch prepare-release to manual dispatch with version input (#9383) by @shulaoda
+- migrate `@rolldown/pluginutils` to `rolldown/plugins` (#9317) by @shulaoda
+- deps: pin libmimalloc-sys2 to 0.1.54 (#9372) by @shulaoda
+- replace `igorskyflyer/action-readfile` with `cat` (#9369) by @sapphi-red
+- deps: update test262 submodule for tests (#9371) by @rolldown-guard[bot]
+- use app token for test dep update PRs (#9368) by @sapphi-red
+- replace some actions with gh commands (#9367) by @sapphi-red
+- replace action-semantic-pull-request with inline regex (#9366) by @sapphi-red
+- remove pull_request_target workflows (#9188) by @Boshen
+- deps: upgrade oxc to 0.130.0 (#9360) by @shulaoda
+- deps: update github actions (major) (#9348) by @renovate[bot]
+- deps: update github actions (#9341) by @renovate[bot]
+- deps: update rust crates (#9344) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.46.1 (#9357) by @renovate[bot]
+- deps: update npm packages (#9343) by @renovate[bot]
+- deps: update pnpm to v10.33.4 (#9347) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to ^0.25.0 (#9346) by @renovate[bot]
+- .claude: add rolldown-repl encoder, rename decode skill (#9352) by @IWANABETHATGUY
+- deps: update crate-ci/typos action to v1.46.0 (#9345) by @renovate[bot]
+- deps: update napi to v3.8.6 (#9342) by @renovate[bot]
+- deps: update dependency vite-plus to v0.1.20 (#9340) by @renovate[bot]
+- enable rollup chunking-form test (#9335) by @IWANABETHATGUY
+- typo: fix typo in watcher options comment (#9324) by @thescripted
+
+### ❤️ New Contributors
+
+* @Kyujenius made their first contribution in [#9262](https://github.com/rolldown/rolldown/pull/9262)
+* @SAY-5 made their first contribution in [#9296](https://github.com/rolldown/rolldown/pull/9296)
+* @thescripted made their first contribution in [#9324](https://github.com/rolldown/rolldown/pull/9324)
+
+
+## [1.0.0] - 2026-05-07
+
+### 🐛 Bug Fixes
+
+- dev/lazy: lazily compiled modules should be watched (#9301) by @h-a-n-a
+- implement dynamic dominator merge logic (#9270) by @TheAlexLichter
+- dev: apply __toCommonJS interop when CJS requires ESM in HMR finalizer (#9261) by @h-a-n-a
+
+### 🚜 Refactor
+
+- ecma_ast: tighten allocator access to enforce Sync invariant (#9278) by @IWANABETHATGUY
+- scan_stage: remove stmt_infos field from EcmaView (#9276) by @IWANABETHATGUY
+- link_stage: detach stmt_infos from EcmaView (#9274) by @IWANABETHATGUY
+- link_stage: detach depended_runtime_helper from EcmaView to remove unsafe (#9265) by @IWANABETHATGUY
+- link_stage: remove unsafe in determine_module_exports_kind (#9253) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- getting-started: remove RC warning for 1.0.0 release (#9310) by @shulaoda
+- getting-started: update version references for 1.0.0 release (#9309) by @shulaoda
+- add Vite+ tab to getting-started snippets (#9285) by @shulaoda
+- lazy-barrel: clarify own-exports behavior for import-then-export records (#9298) by @shulaoda
+- restructure top navigation around Learn vs Reference (#9284) by @shulaoda
+- builtin-plugins: add bundle analyzer plugin docs (#9292) by @shulaoda
+- design doc for reference_needed_symbols (#9264) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- devtools: write logs on a background thread (#9219) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- mark esbuild/ts/parameter_props_use_define_for_class_fields_true as passed (#9308) by @sapphi-red
+- deps: upgrade oxc to 0.129.0 (#9297) by @shulaoda
+- deps: update rollup submodule for tests to v4.60.3 (#9294) by @sapphi-red
+- deps: update test262 submodule for tests (#9295) by @sapphi-red
+- ai: add rolldown REPL decode skill (#9245) by @Dunqing
+
+
 ## [1.0.0-rc.18] - 2026-04-29
 
 ### 💥 BREAKING CHANGES

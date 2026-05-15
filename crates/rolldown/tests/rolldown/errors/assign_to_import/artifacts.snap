@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'b'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'b'
    ╭─[ main.js:6:1 ]
    │
  1 │ import { importedA, importedB as b } from "./foo"
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'importedA'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'importedA'
    ╭─[ main.js:4:1 ]
    │
  1 │ import { importedA, importedB as b } from "./foo"
@@ -40,7 +40,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'test'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'test'
    ╭─[ main.js:8:4 ]
    │
  2 │ import * as ns from './foo'
@@ -57,7 +57,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'test'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'test'
    ╭─[ main.js:9:11 ]
    │
  2 │ import * as ns from './foo'

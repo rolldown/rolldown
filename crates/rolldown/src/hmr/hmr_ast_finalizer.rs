@@ -10,7 +10,7 @@ use oxc::{
 };
 
 use rolldown_common::{
-  ExternalModule, ImportRecordIdx, IndexModules, Module, ModuleIdx, NormalModule,
+  ExternalModule, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, NormalModule,
 };
 use rolldown_ecmascript::CJS_REQUIRE_REF_STR;
 use rolldown_ecmascript_utils::{AstSnippet, ExpressionExt};
@@ -608,8 +608,25 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       return;
     };
 
-    // Handle lazy proxy modules - rewrite to lazy entry import pattern
-    // For dynamic imports to lazy proxies, we need to trigger lazy loading via /@vite/lazy endpoint
+    // Handle lazy proxy modules - rewrite to mirror the proxy module's runtime contract.
+    //
+    // In a regular full build, scope finalizer rewrites `import('./foo')` to point at the
+    // proxy module's chunk URL. That chunk's content is `proxy-module-template.js`, which
+    // exposes `'rolldown:exports'` at the top level so consumers can do
+    // `.then(__unwrap_lazy_compilation_entry).then(m => m.X)`.
+    //
+    // In HMR partial bundles there's no separately bundled proxy chunk - the proxy module's
+    // body gets wrapped inside a `createEsmInitializer` and its top-level `export` is lost.
+    // To keep the same surface as the full build, we rewrite the dynamic import to:
+    //
+    //   import(`/@vite/lazy?id=...&clientId=...`)
+    //     .then(() => __rolldown_runtime__.loadExports("<stable_proxy_id>"))
+    //
+    // After the partial bundle evaluates, the proxy module is registered under
+    // `<stable_proxy_id>` with a `'rolldown:exports'` getter (set up by `__exportAll` inside
+    // the init wrapper). Reading it back via `loadExports` yields the namespace object that
+    // the existing `__unwrap_lazy_compilation_entry` chain expects.
+    //
     // TODO: hyf0 should switch to a more robust way to identify lazy proxy modules
     if importee.id.contains("?rolldown-lazy=1") {
       // Build: encodeURIComponent(importee.id)
@@ -654,7 +671,60 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         self.builder.expression_template_literal(SPAN, quasis, expressions)
       };
 
-      *it = self.builder.expression_import(SPAN, url_expr, None, None);
+      // Build: import(`/@vite/lazy?id=...&clientId=...`)
+      let import_expr = self.builder.expression_import(SPAN, url_expr, None, None);
+
+      // Build: __rolldown_runtime__.loadExports("<stable_proxy_id>")
+      let load_exports_call = ast::Expression::CallExpression(self.builder.alloc_call_expression(
+        SPAN,
+        self.snippet.id_ref_expr("__rolldown_runtime__.loadExports", SPAN),
+        NONE,
+        self.builder.vec1(ast::Argument::StringLiteral(self.builder.alloc_string_literal(
+          SPAN,
+          self.builder.str(&importee.stable_id),
+          None,
+        ))),
+        false,
+      ));
+
+      // Build: () => __rolldown_runtime__.loadExports("<stable_proxy_id>")
+      let arrow_fn = self.builder.expression_arrow_function(
+        SPAN,
+        /* expression */ true,
+        /* async */ false,
+        NONE,
+        self.builder.formal_parameters(
+          SPAN,
+          ast::FormalParameterKind::ArrowFormalParameters,
+          self.builder.vec(),
+          NONE,
+        ),
+        NONE,
+        self.builder.function_body(
+          SPAN,
+          self.builder.vec(),
+          self.builder.vec1(ast::Statement::ExpressionStatement(
+            self.builder.alloc_expression_statement(SPAN, load_exports_call),
+          )),
+        ),
+      );
+
+      // Build: import(...).then(() => __rolldown_runtime__.loadExports("..."))
+      let then_callee =
+        Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
+          SPAN,
+          import_expr,
+          self.builder.identifier_name(SPAN, "then"),
+          false,
+        ));
+
+      *it = self.builder.expression_call(
+        SPAN,
+        then_callee,
+        NONE,
+        self.builder.vec1(ast::Argument::from(arrow_fn)),
+        false,
+      );
       return;
     }
 
@@ -770,7 +840,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       return;
     };
 
-    let Some(importee_idx) = self.module.import_records[*rec_idx].resolved_module else {
+    let rec = &self.module.import_records[*rec_idx];
+    let Some(importee_idx) = rec.resolved_module else {
       return;
     };
 
@@ -788,23 +859,62 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       false,
     );
 
+    let load_exports_expr = if importee.meta.has_lazy_export() || is_importee_cjs {
+      // Note that HMR finalizer is only able to see scanner-level exports_kind, this means that the result
+      // from `determine_module_exports_kind` is not available here. So we have to use some heuristics to determine
+      // whether the importee is CommonJS or has lazy export, and handle them in a special way.
+      //
+      // 1. For the case of `is_importee_cjs`,
+      // the runtime will always have `module.exports`. This is determined in `determine_module_exports_kind`.
+      //
+      // 2. For the case of `has_lazy_export`,
+      // here we're inside `try_rewrite_require`, which means the original code is `require(...)`.
+      //
+      // Modules that have lazy export is of these `ModuleType`: `Json`, `Text`, `Base64`, `Dataurl`.
+      // These data type does not have `export`, `module.exports` or any export keyword at runtime,
+      // so they're `ExportsKind::None` by default.
+      //
+      // For those lazy export modules, if `ImportKind` is `Require`, which is the case here,
+      // and the importee has `ExportsKind::None`, then the importee's `WrapKind` is set to `WrapKind::Cjs`.
+      // So here we know for sure that the importee is using `module.exports` at runtime.
+      // So `loadExports(id)` returns the value directly.
+      //
+      // This is a way to mimic the same mechanism of `determine_module_exports_kind`.
+      //
+      // TODO(hana): we should think about a more robust way to track the consolidated export type of a module in the future.
+      // Listing all the special cases like this is error-prone.
+      load_exports_call
+    } else if rec.meta.contains(ImportRecordMeta::JsonModule) {
+      // Vite-mode JSON: ESM-wrapped at runtime, unwrap to the JSON value.
+      let to_commonjs_call = self.snippet.call_expr_with_arg_expr(
+        self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "__toCommonJS"),
+        load_exports_call,
+        false,
+      );
+      Expression::from(self.snippet.builder.member_expression_static(
+        SPAN,
+        to_commonjs_call,
+        self.snippet.id_name("default", SPAN),
+        false,
+      ))
+    } else {
+      self.snippet.call_expr_with_arg_expr(
+        self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "__toCommonJS"),
+        load_exports_call,
+        false,
+      )
+    };
+
     if let Some(init_fn_name) = self.affected_module_idx_to_init_fn_name.get(&importee_idx) {
       // If the importee is in the current patch, call init before loading exports
       // Turn `require('./foo.js')` into `(init_foo(), __rolldown_runtime__.loadExports('./foo.js'))`
-      if is_importee_cjs {
-        *it = self
-          .snippet
-          .seq2_in_paren_expr(self.snippet.call_expr_expr(init_fn_name), load_exports_call);
-      } else {
-        // hyf0 TODO: handle esm importee
-        *it = self
-          .snippet
-          .seq2_in_paren_expr(self.snippet.call_expr_expr(init_fn_name), load_exports_call);
-      }
+      *it = self
+        .snippet
+        .seq2_in_paren_expr(self.snippet.call_expr_expr(init_fn_name), load_exports_expr);
     } else {
       // Importee is not in current patch (already executed by client), just load its exports
       // Turn `require('./foo.js')` into `__rolldown_runtime__.loadExports('./foo.js')`
-      *it = load_exports_call;
+      *it = load_exports_expr;
     }
   }
 }

@@ -1,5 +1,6 @@
 import type { BindingClientHmrUpdate } from '../../binding.cjs';
 import type { RolldownOutput } from '../../types/rolldown-output';
+import type { StringOrRegExp } from '../../types/utils';
 
 type DevOnHmrUpdates = (
   result:
@@ -51,6 +52,22 @@ export interface DevWatchOptions {
    * @default undefined (auto-select)
    */
   debounceTickRate?: number;
+  /**
+   * Filter to limit which discovered files are registered with the file watcher.
+   *
+   * Strings are treated as glob patterns.
+   *
+   * @default []
+   */
+  include?: StringOrRegExp | StringOrRegExp[];
+  /**
+   * Filter to prevent discovered files from being registered with the file watcher.
+   *
+   * Strings are treated as glob patterns.
+   *
+   * @default []
+   */
+  exclude?: StringOrRegExp | StringOrRegExp[];
 }
 
 export interface DevOptions {

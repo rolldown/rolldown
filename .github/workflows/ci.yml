@@ -28,7 +28,6 @@ jobs:
     outputs:
       rust-changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}
       node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}
-      pluginutils-changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}
       docs-changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}
       # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
       run-windows: "${{ (github.event_name == 'pull_request') && contains(github.event.pull_request.labels.*.name, 'ci: windows') }}"
@@ -61,21 +60,16 @@ jobs:
               - 'examples/**'
               - 'scripts/**'
               - 'rollup'
-            pluginutils-changes:
-              - *infra-changes
-              - 'packages/pluginutils/**'
             docs-changes:
               - *infra-changes
               - 'docs/**'
               - 'packages/rolldown/src/**'
               - 'packages/rolldown/package.json'
               - 'packages/rolldown/tsconfig*.json'
-              - 'packages/pluginutils/**'
       - name: Show outputs
         run: |
           echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}"
           echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}"
-          echo "PluginUtils changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}"
           echo "Docs changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}"
 
   rust-validation:
@@ -206,7 +200,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -215,7 +209,7 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: rolldown-native-ubuntu-latest
-          path: ./packages
+          path: packages/rolldown/dist
 
       - name: Configure Git
         run: |
@@ -245,7 +239,7 @@ jobs:
           env-mapping: |
             PNPM_HOME,{{ DEV_DRIVE }}/.pnpm
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -253,7 +247,7 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: rolldown-native-windows-latest
-          path: ./packages
+          path: packages/rolldown/dist
 
       - name: Configure Git
         run: |
@@ -287,21 +281,6 @@ jobs:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
       os: ubuntu-latest
 
-  pluginutils-test:
-    name: Pluginutils Test
-    needs: changes
-    if: ${{ needs.changes.outputs.pluginutils-changes == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
-        with:
-          cache: true
-
-      - name: Test `@rolldown/pluginutils`
-        run: vp run --filter '@rolldown/pluginutils' test
-
   node-validation:
     name: Node Validation
     needs: [changes, build-rolldown-ubuntu]
@@ -317,7 +296,7 @@ jobs:
           cache-key: native-build
           save-cache: false
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -325,7 +304,7 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: rolldown-native-ubuntu-latest
-          path: ./packages
+          path: packages/rolldown/dist
 
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
@@ -341,9 +320,6 @@ jobs:
 
       - name: Make sure generated code of `@rolldown/debug` is up-to-date
         run: git diff --exit-code
-
-      - name: Build @rolldown/pluginutils
-        run: just build-pluginutils
 
       - name: Lint Code
         run: vp lint
@@ -373,7 +349,7 @@ jobs:
           save-cache: ${{ github.ref_name == 'main' }}
           components: rustfmt
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -390,7 +366,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: crate-ci/typos@cf5f1c29a8ac336af8568821ec41919923b05a83 # v1.45.1
+      - uses: crate-ci/typos@5374cbf686e897b15713110e233094e2874de7ef # v1.46.1
         with:
           files: .
 
@@ -402,12 +378,9 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
-
-      - name: Build @rolldown/pluginutils
-        run: vp run --filter '@rolldown/pluginutils' build
 
       - name: Build Docs
         run: vp run docs:build

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'demo-pkg' in src/entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'demo-pkg' in src/entry.js
    ╭─[ src/entry.js:1:16 ]
    │
  1 │ import fn from 'demo-pkg'

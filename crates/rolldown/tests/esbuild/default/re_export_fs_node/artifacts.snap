@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in foo.js
+[UNRESOLVED_IMPORT] Could not resolve 'fs' in foo.js
    ╭─[ foo.js:1:21 ]
    │
  1 │ export * as fs from 'fs'
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in foo.js
+[UNRESOLVED_IMPORT] Could not resolve 'fs' in foo.js
    ╭─[ foo.js:2:28 ]
    │
  2 │ export {readFileSync} from 'fs'

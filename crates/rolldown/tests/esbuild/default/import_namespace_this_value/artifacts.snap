@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in a.js
+[UNRESOLVED_IMPORT] Could not resolve 'external' in a.js
    ╭─[ a.js:1:26 ]
    │
  1 │ import def, * as ns from 'external'
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in b.js
+[UNRESOLVED_IMPORT] Could not resolve 'external' in b.js
    ╭─[ b.js:1:26 ]
    │
  1 │ import def, * as ns from 'external'
@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in c.js
+[UNRESOLVED_IMPORT] Could not resolve 'external' in c.js
    ╭─[ c.js:1:24 ]
    │
  1 │ import def, {foo} from 'external'

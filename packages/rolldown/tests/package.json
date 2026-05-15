@@ -15,8 +15,8 @@
     }
   },
   "scripts": {
-    "test:main": "RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run --exclude '**/watch.test.ts' --reporter verbose --hideSkippedTests",
-    "test:watcher": "RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run watch.test.ts --reporter verbose --hideSkippedTests",
+    "test:main": "RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run --exclude '**/watch.test.ts' --exclude '**/dev-watch.test.ts' --reporter verbose --hideSkippedTests",
+    "test:watcher": "RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run watch.test.ts dev-watch.test.ts --reporter verbose --hideSkippedTests",
     "test:cli": "RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run cli-e2e.test.ts --reporter verbose --hideSkippedTests",
     "test:stability": "node ./stability/issue-3453/src/build.mjs && node ./stability/issue-3453/verify.mjs",
     "test:types": "vitest run --typecheck.only --reporter verbose --hideSkippedTests"
@@ -27,6 +27,7 @@
     "vitest": "catalog:"
   },
   "devDependencies": {
+    "@rolldown/test-dev-server": "workspace:*",
     "@rolldown/test-side-effects-field": "link:./package-fixtures/test-side-effects-field",
     "@rolldown/test-side-effects-field-glob": "file:./package-fixtures/test-side-effects-field-glob",
     "@types/node": "catalog:",

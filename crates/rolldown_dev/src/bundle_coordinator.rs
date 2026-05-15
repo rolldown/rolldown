@@ -11,7 +11,7 @@ use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
-use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap};
+use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap, pattern_filter};
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
@@ -122,6 +122,13 @@ impl BundleCoordinator {
         }
         CoordinatorMsg::ModuleChanged { module_id } => {
           // Handle programmatic module change (e.g., lazy compilation executed)
+
+          // `plugin_driver.watch_files` added in `bundler.compile_lazy_entry`
+          // will be removed when task rebuild starts,
+          // so we need to update watch paths here to make sure
+          // the changed module is watched and trigger rebuild by file change if needed.
+          let _ = self.update_watch_paths().await;
+
           let mut changed_files = FxIndexMap::default();
           changed_files.insert(PathBuf::from(&module_id), WatcherChangeKind::Update);
 
@@ -272,6 +279,10 @@ impl BundleCoordinator {
       CoordinatorState::InProgress => {
         // Clear current build
         self.current_bundling_future = None;
+
+        // Register any new files this rebuild pulled into `watch_files`
+        // (e.g. an edit that introduced a new transitive import).
+        let _ = self.update_watch_paths().await;
 
         if has_encountered_error {
           self.set_initial_build_state(CoordinatorState::Failed);
@@ -439,12 +450,18 @@ impl BundleCoordinator {
   async fn update_watch_paths(&self) -> BuildResult<()> {
     let bundler = self.bundler.lock().await;
     let watch_files = bundler.watch_files();
+    let cwd = bundler.options().cwd.to_string_lossy().to_string();
+
+    let include = self.ctx.options.watch_include.as_deref();
+    let exclude = self.ctx.options.watch_exclude.as_deref();
 
     let mut watcher = self.watcher.lock().ok().context("Failed to acquire watcher lock")?;
     let mut paths_mut = watcher.paths_mut();
     for watch_file in watch_files.iter() {
       let watch_file = &**watch_file;
-      if !self.watched_files.contains(watch_file) {
+      if !self.watched_files.contains(watch_file)
+        && pattern_filter::filter(exclude, include, watch_file, &cwd).inner()
+      {
         self.watched_files.insert(watch_file.to_string().into());
         paths_mut.add(watch_file.as_path(), RecursiveMode::NonRecursive)?;
       }

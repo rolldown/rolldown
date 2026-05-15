@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+var __expose__ = (function(pinia) {
+	// HIDDEN [\0rolldown/runtime.js]
+	return (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+		var freeModule = freeExports && typeof module == "object" && module && !module.nodeType && module;
+		var pinia$1 = (0, pinia.createPinia)();
+		console.log([pinia$1, freeModule]);
+	})))();
+})(Pinia);
+
+```
+
+# Variant: [format: Umd]
+
+## Assets
+
+### index.js
+
+```js
+(function(global, factory) {
+	typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("pinia")) : typeof define === "function" && define.amd ? define(["pinia"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, global.__expose__ = factory(global.Pinia));
+})(this, function(pinia) {
+	// HIDDEN [\0rolldown/runtime.js]
+	return (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+		var freeModule = freeExports && typeof module == "object" && module && !module.nodeType && module;
+		var pinia$1 = (0, pinia.createPinia)();
+		console.log([pinia$1, freeModule]);
+	})))();
+});
+
+```

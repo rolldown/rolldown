@@ -467,13 +467,13 @@ impl GenerateStage<'_> {
         .iter()
         .filter_map(|ns| {
           // We must check statement inclusion here (not in linking stage) because
-          // `include_statements` runs after `reference_needed_symbols` where the
-          // `safely_merge_cjs_ns_map` is populated. At that point, we don't yet
-          // know which statements will be tree-shaken.
+          // `include_statements` runs after the pass that populates
+          // `safely_merge_cjs_ns_map` (`determine_safely_merge_cjs_ns`) and after
+          // `reference_needed_symbols`, which is the last point the map is read.
+          // At that point, we don't yet know which statements will be tree-shaken.
           // related context: https://github.com/rolldown/rolldown/blob/dbd0f6de5d44be2327e7532bb6f0a38bc04a1047/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs#L187-L194
           let importer = self.link_output.module_table[ns.owner].as_normal()?;
-          let is_stmt_included = importer
-            .stmt_infos
+          let is_stmt_included = self.link_output.stmt_infos[importer.idx]
             .declared_stmts_by_symbol(ns)
             .iter()
             .all(|item| self.link_output.metas[importer.idx].stmt_info_included.has_bit(*item));
@@ -845,6 +845,26 @@ impl GenerateStage<'_> {
       );
     }
 
+    let has_tla_or_tla_dependency =
+      self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
+    let allow_merge_common_chunks =
+      self.options.experimental.is_merge_common_chunks_enabled() && !has_tla_or_tla_dependency;
+    let allow_avoid_redundant_chunk_loads =
+      self.options.experimental.is_avoid_redundant_chunk_loads_enabled()
+        && !has_tla_or_tla_dependency;
+    // See meta/design/code-splitting.md#dynamic-already-loaded-analysis.
+    if allow_avoid_redundant_chunk_loads {
+      let entries_len: u32 = self
+        .link_output
+        .entries
+        .values()
+        .map(Vec::len)
+        .sum::<usize>()
+        .try_into()
+        .expect("Too many entries, u32 overflowed.");
+      self.optimize_dynamic_entry_bits(index_splitting_info, chunk_graph, entries_len);
+    }
+
     let mut module_is_assigned: IndexBitSet<ModuleIdx> =
       IndexBitSet::new(self.link_output.module_table.modules.len());
 
@@ -861,10 +881,8 @@ impl GenerateStage<'_> {
     // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
     // This is used to generate less chunks when possible.
     // TODO: maybe we could bailout peer chunk?
-    let allow_chunk_optimization = self.options.experimental.is_chunk_optimization_enabled()
-      && !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
     let mut temp_chunk_graph = ChunkOptimizationGraph::new(
-      allow_chunk_optimization,
+      allow_merge_common_chunks,
       chunk_graph,
       bits_to_chunk,
       &self.link_output.module_table,
@@ -898,14 +916,14 @@ impl GenerateStage<'_> {
           chunk_id,
           self.link_output.metas[normal_module.idx].depended_runtime_helper,
         );
-        if allow_chunk_optimization {
+        if allow_merge_common_chunks {
           temp_chunk_graph.add_module_to_chunk(
             normal_module.idx,
             chunk_id,
             &self.link_output.module_table,
           );
         }
-      } else if allow_chunk_optimization {
+      } else if allow_merge_common_chunks {
         temp_chunk_graph.init_module_assignment(
           normal_module.idx,
           bits,
@@ -928,7 +946,7 @@ impl GenerateStage<'_> {
       }
     }
 
-    if allow_chunk_optimization {
+    if allow_merge_common_chunks {
       temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,

@@ -13,7 +13,7 @@ use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTag,
   ModuleTagBitSet, ModuleTagRegistry, PostChunkOptimizationOperation, PreserveEntrySignatures,
-  SymbolRef, WrapKind,
+  RuntimeHelper, StmtInfoMeta, StmtInfos, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
@@ -654,21 +654,32 @@ impl GenerateStage<'_> {
       vec.sort_by_key(|idx| self.link_output.module_table[*idx].exec_order());
       chunk_graph.chunk_table[chunk_idx].entry_level_external_module_idx = vec;
     }
-    // re propagate `meta.has_dynamic_exports` for affect modules
+    // Extend `invalidated_modules` with every transitive importer of the
+    // directly-affected modules: a module's `has_dynamic_exports` is derived
+    // from its importees' values, so importers must be revisited too.
     let mut q = invalidated_modules.iter().copied().collect::<VecDeque<_>>();
+    let mut walk_visited = FxHashSet::default();
     while let Some(idx) = q.pop_front() {
-      if !invalidated_modules.insert(idx) {
+      if !walk_visited.insert(idx) {
         continue;
       }
       let Module::Normal(module) = &self.link_output.module_table[idx] else {
         continue;
       };
-      q.extend(module.importers_idx.iter());
+      for &importer_idx in &module.importers_idx {
+        if invalidated_modules.insert(importer_idx) {
+          q.push_back(importer_idx);
+        }
+      }
     }
 
     if invalidated_modules.is_empty() {
       return;
     }
+
+    // Snapshot the set before `propagate_has_dynamic_exports` drains it, so
+    // the cleanup pass below knows which modules to revisit.
+    let modules_to_revisit: Vec<ModuleIdx> = invalidated_modules.iter().copied().collect();
 
     let mut visited = FxHashSet::with_capacity(invalidated_modules.len());
     for module_idx in invalidated_modules.clone() {
@@ -679,6 +690,78 @@ impl GenerateStage<'_> {
         &mut visited,
         &mut invalidated_modules,
       );
+    }
+
+    self.prune_stale_dynamic_reexport_refs(&modules_to_revisit, chunk_graph);
+  }
+
+  /// Drop the namespace stmt, `export * from './foo'` stmts, and runtime
+  /// helper bits that `reference_needed_symbols` eagerly wired up to support
+  /// `__reExport(my_ns, importee_ns)` propagation, for modules whose
+  /// `has_dynamic_exports` was just flipped to `false` by
+  /// `find_entry_level_external_module`.
+  ///
+  /// Without this, the namespace stmt stays "included" and keeps `__exportAll`
+  /// / `__reExport` in `used_symbol_refs` even though the finalizer no longer
+  /// emits the call (it gates on `has_dynamic_exports`). The dead helpers then
+  /// leak into the runtime chunk and get re-exported across chunks.
+  fn prune_stale_dynamic_reexport_refs(
+    &mut self,
+    modules_to_revisit: &[ModuleIdx],
+    chunk_graph: &mut ChunkGraph,
+  ) {
+    let mut chunks_to_recompute_helpers: FxHashSet<ChunkIdx> = FxHashSet::default();
+    for &module_idx in modules_to_revisit {
+      let meta = &self.link_output.metas[module_idx];
+      if meta.has_dynamic_exports {
+        continue;
+      }
+      // The namespace is still needed for its own sake (e.g. `import * as ns`),
+      // so we mustn't touch any of the refs that support it.
+      if meta.module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown) {
+        continue;
+      }
+      let only_ns_for_reexport = meta
+        .module_namespace_included_reason
+        .contains(ModuleNamespaceIncludedReason::ReExportDynamicExports);
+
+      // Stmts flagged with `ReExportDynamicExports` were marked side-effectful
+      // in `reference_needed_symbols` purely to wire `__reExport(my_ns, importee_ns)`
+      // and are the only contributors of `ReExport` to this module's helper bit.
+      let reexport_dyn_stmt_idxs: Vec<_> = self.link_output.stmt_infos[module_idx]
+        .iter_enumerated()
+        .filter(|(_, info)| info.meta.contains(StmtInfoMeta::ReExportDynamicExports))
+        .map(|(idx, _)| idx)
+        .collect();
+
+      let meta_mut = &mut self.link_output.metas[module_idx];
+      if only_ns_for_reexport {
+        meta_mut.stmt_info_included.clear_bit(StmtInfos::NAMESPACE_STMT_IDX);
+      }
+      let cleared_any_reexport_dyn = !reexport_dyn_stmt_idxs.is_empty();
+      for stmt_idx in reexport_dyn_stmt_idxs {
+        meta_mut.stmt_info_included.clear_bit(stmt_idx);
+      }
+      if cleared_any_reexport_dyn {
+        meta_mut.depended_runtime_helper.remove(RuntimeHelper::ReExport);
+      }
+
+      if let Some(chunk_idx) = chunk_graph.module_to_chunk[module_idx] {
+        chunks_to_recompute_helpers.insert(chunk_idx);
+      }
+    }
+
+    // Per-module helper bits drive `chunk.depended_runtime_helper` via
+    // `add_module_to_chunk`, which has already run. Re-aggregate from the
+    // updated per-module sets so `compute_cross_chunk_links` doesn't keep
+    // pulling `__reExport` into other chunks.
+    for chunk_idx in chunks_to_recompute_helpers {
+      let new_helper = chunk_graph.chunk_table[chunk_idx]
+        .modules
+        .iter()
+        .map(|m| self.link_output.metas[*m].depended_runtime_helper)
+        .fold(RuntimeHelper::default(), |acc, h| acc | h);
+      chunk_graph.chunk_table[chunk_idx].depended_runtime_helper = new_helper;
     }
   }
 

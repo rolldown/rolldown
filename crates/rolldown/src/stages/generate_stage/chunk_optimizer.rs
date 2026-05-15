@@ -18,7 +18,8 @@ use crate::{
     IncludeContext, SymbolIncludeReason, include_runtime_symbol, include_symbol,
   },
   types::linking_metadata::{
-    LinkingMetadata, included_info_to_linking_metadata_vec, linking_metadata_vec_to_included_info,
+    LinkingMetadata, LinkingMetadataVec, included_info_to_linking_metadata_vec,
+    linking_metadata_vec_to_included_info,
   },
 };
 
@@ -397,11 +398,10 @@ impl GenerateStage<'_> {
         }
         let chunk_idxs: Vec<_> = bits.index_of_one().map(ChunkIdx::from_raw).collect();
 
-        let merge_target = Self::try_insert_into_existing_chunk(
+        let merge_target = self.try_insert_into_existing_chunk(
           &chunk_idxs,
           &static_entry_chunk_reference,
           chunk_graph,
-          &self.link_output.module_table,
           &dynamic_entry_to_dynamic_importers,
           temp_chunk,
           temp_chunk_graph,
@@ -558,14 +558,16 @@ impl GenerateStage<'_> {
   ///
   /// Returns `Some(ChunkIdx)` if a suitable merge target is found, `None` otherwise.
   fn try_insert_into_existing_chunk(
+    &self,
     chunk_idxs: &[ChunkIdx],
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
     chunk_graph: &ChunkGraph,
-    module_table: &ModuleTable,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
     info: &ChunkCandidate,
     temp_chunk_graph: &ChunkOptimizationGraph,
   ) -> Option<ChunkIdx> {
+    let module_table = &self.link_output.module_table;
+    let linking_infos = &self.link_output.metas;
     let mut user_defined_entry = vec![];
     let mut dynamic_entry = vec![];
     for &idx in chunk_idxs {
@@ -589,12 +591,58 @@ impl GenerateStage<'_> {
       Self::find_merge_target(&user_defined_entry, &user_defined_entry_modules, module_table);
     if user_defined_entry.is_empty() {
       let dynamic_chunk_entry_modules = Self::collect_entry_modules(&dynamic_entry, chunk_graph)?;
+      // Cyclic-merge export-pollution guard for `find_merge_target`.
+      //
+      // `find_merge_target` accepts any candidate whose entry module is
+      // statically imported by every other entry module. When two or more
+      // dynamic entries form a static cycle, multiple candidates qualify
+      // simultaneously — picking one is arbitrary and leaks the other entry's
+      // module into the chosen target's chunk file. That file is what
+      // `import('./<target>.js')` resolves to at runtime, so the merged-in
+      // entry's exports pollute the dynamic-import namespace observed
+      // by callers (issue #9320).
+      //
+      // Detect the cyclic shape by counting how many of the candidate
+      // chunks' own entry modules with observable exports sit in `info.modules`.
+      // See meta/design/code-splitting.md for the merge-safety invariant.
+      // 0–1 collisions means the merge target is the rightful owner of every
+      // pending entry module — the optimization fires as before. >=2 means
+      // the cycle is real; refuse and let `assign_modules_to_chunk` create a
+      // separate common chunk so each dynamic entry stays a facade exposing
+      // only its own module's exports.
+      //
+      // The companion guard inside `find_dynamic_dominator` covers the
+      // shared-module case (pending modules that aren't themselves entry
+      // modules but still have exports needed cross-chunk).
+      //
+      // Perf: the guard runs on every common-chunk candidate, so it short-
+      // circuits aggressively. The cycle requires >=2 dynamic-entry
+      // candidates, so single-entry chunks (the common case) bail out with a
+      // length check. `dynamic_chunk_entry_modules` is a small Vec (one
+      // module per chunk in `chunk_idxs`); a linear `contains` over it beats
+      // building a HashSet for the typical handful of entries. The scan over
+      // `info.modules` stops the moment a second collision is found — the
+      // worst case (no second hit) only happens for non-cyclic candidates.
+      if dynamic_chunk_entry_modules.len() >= 2 {
+        let mut collisions = 0u32;
+        for &m in &info.modules {
+          if dynamic_chunk_entry_modules.contains(&m)
+            && Self::module_has_observable_exports(m, module_table, linking_infos)
+          {
+            collisions += 1;
+            if collisions >= 2 {
+              return None;
+            }
+          }
+        }
+      }
       Self::find_merge_target(&dynamic_entry, &dynamic_chunk_entry_modules, module_table).or_else(
         || {
           Self::find_dynamic_dominator(
             &dynamic_entry,
             &dynamic_chunk_entry_modules,
             module_table,
+            linking_infos,
             dynamic_entry_to_dynamic_importers,
             entry_chunk_reference,
             &info.modules,
@@ -738,6 +786,22 @@ impl GenerateStage<'_> {
     })
   }
 
+  /// Returns true when a module can contribute keys to a dynamic-import namespace.
+  ///
+  /// This intentionally uses linked export metadata instead of
+  /// `NormalModule::named_exports`, because re-export-only modules can have no
+  /// direct named exports while still exposing resolved exports through
+  /// `export * from ...`.
+  fn module_has_observable_exports(
+    module_idx: ModuleIdx,
+    module_table: &ModuleTable,
+    linking_infos: &LinkingMetadataVec,
+  ) -> bool {
+    module_table[module_idx].as_normal().is_some()
+      && (linking_infos[module_idx].has_dynamic_exports
+        || linking_infos[module_idx].canonical_exports(false).next().is_some())
+  }
+
   /// Fallback merge-target search for the case where every chunk in `chunk_idxs`
   /// is a dynamic entry (`find_merge_target` only inspects static
   /// `importers_idx`, so it always fails here).
@@ -752,10 +816,12 @@ impl GenerateStage<'_> {
   ///
   /// Two extra guards:
   /// - **Export-pollution guard:** rejects the merge when any pending module
-  ///   has named exports. Those exports would still be needed cross-chunk by
-  ///   the other dynamic entries, forcing `D`'s chunk file to expose them at
-  ///   the file level — which is what `import('./D.js')` resolves to at
+  ///   has observable exports. Those exports would still be needed cross-chunk
+  ///   by the other dynamic entries, forcing `D`'s chunk file to expose them
+  ///   at the file level — which is what `import('./D.js')` resolves to at
   ///   runtime, polluting the dynamic-entry namespace observed by callers.
+  ///   (The cyclic variant of this collision is caught earlier at the call
+  ///   site, before `find_merge_target` runs.)
   /// - **Side-effect leak guard:** rejects `D` when any user-defined entry
   ///   reaches one of the covered dynamic entries without also reaching `D` —
   ///   after the merge that other path would pull `D`'s chunk in as a static
@@ -765,6 +831,7 @@ impl GenerateStage<'_> {
     dynamic_entry: &[ChunkIdx],
     dynamic_entry_modules: &[ModuleIdx],
     module_table: &ModuleTable,
+    linking_infos: &LinkingMetadataVec,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
     pending_modules: &[ModuleIdx],
@@ -772,7 +839,7 @@ impl GenerateStage<'_> {
     if dynamic_entry.len() < 2 {
       return None;
     }
-    // Refuse the merge whenever any pending module exposes named exports. The
+    // Refuse the merge whenever any pending module exposes exports. The
     // other dynamic-entry chunks in `chunk_idxs` still need those exports
     // cross-chunk, so after the merge the dominator's chunk would have to add
     // them to its file-level export list — and that list is what
@@ -780,7 +847,7 @@ impl GenerateStage<'_> {
     // dynamic-entry namespace observed by callers.
     let exposes_exports = pending_modules
       .iter()
-      .any(|m| module_table[*m].as_normal().is_some_and(|n| !n.named_exports.is_empty()));
+      .any(|&m| Self::module_has_observable_exports(m, module_table, linking_infos));
     if exposes_exports {
       return None;
     }

@@ -6,25 +6,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## _virtual/_rolldown/runtime.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll, __reExport };
+//#endregion
 
 ```
 
 ## main.js
 
 ```js
-import "./_virtual/_rolldown/runtime.js";
 import "./server/index.js";
 export * from "@sentry/node";
-//#endregion
 
 ```
 
 ## server/index.js
 
 ```js
-import "../_virtual/_rolldown/runtime.js";
 export * from "@sentry/node";
 
 ```

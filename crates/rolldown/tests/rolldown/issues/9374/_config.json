@@ -1,0 +1,11 @@
+{
+  "expectExecuted": false,
+  "hiddenRuntimeModule": false,
+  "config": {
+    "input": [
+      { "name": "entry_a", "import": "./entry_a.js" },
+      { "name": "entry_b", "import": "./entry_b.js" }
+    ],
+    "external": ["external"]
+  }
+}

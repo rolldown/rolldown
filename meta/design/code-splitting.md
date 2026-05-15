@@ -144,6 +144,8 @@ For each common chunk, translates its `bits` to chunk indices (bit positions dir
 
 The trade-off of merging: entry chunks may include modules that not all consumers of that entry need. This adds a small amount of unnecessary code loading but significantly reduces chunk count and HTTP requests.
 
+For chunks shared only by dynamic entries, the optimizer does not infer a merge target from dynamic-import reachability alone. Sibling dynamic imports from the same loaded entry can be requested independently, so "the entry can reach both chunks" does not prove either dynamic chunk is already loaded before the other. In that case, Rolldown keeps a separate common chunk unless the existing static-import merge-target check proves a safe target.
+
 ### Facade Elimination (`optimize_facade_entry_chunks`)
 
 Dynamic/emitted entries can become empty facades when all their modules are pulled into other chunks by the optimizer. The optimizer identifies these and either:

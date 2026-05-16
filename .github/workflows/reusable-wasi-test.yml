@@ -16,18 +16,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true # rollup-tests needs the rollup submodule
+          persist-credentials: false
 
       - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
-
-      # setup-vp bundles pnpm internally but does not expose it on PATH;
-      # corepack activates the version declared in package.json's `packageManager` field.
-      # `sudo` is required to write shims into /usr/local/bin (same pattern as
-      # reusable-release-build.yml:164).
-      - name: Enable corepack
-        run: sudo corepack enable
 
       - name: Download Rolldown with WASI Binding
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -38,32 +34,21 @@ jobs:
       - name: Build `@rolldown/test-dev-server`
         run: vp run --filter '@rolldown/test-dev-server' build
 
-      # The three steps below run with NAPI_RS_FORCE_WASI=error to load the workspace's WASI
-      # binding instead of the native .node binding. They use `pnpm` rather than `vp` because
-      # vp itself is a napi-rs binary that would also try to load WASI at startup and crash.
-      #
-      # `continue-on-error: true` is set because the transitive `rolldown@1.0.0-rc.18` (pulled
-      # in by vitest/vite-plus) inherits the same env and tries to load *its* WASI binding —
-      # `@rolldown/binding-wasm32-wasi@1.0.0-rc.18` (a published optional dep). pnpm filters
-      # wasm32/wasi optional deps from linux-x64 installs and setup-vp's cached install layout
-      # is restored without it. Tracking as a follow-up to issue #8579.
+      # NAPI_RS_FORCE_WASI is intentionally NOT set: the workspace's WASI build of rolldown
+      # has no native fallback (its `dist/index.mjs` imports `rolldown-binding.wasi.cjs`
+      # directly — see `resolveWasiBinding` in `packages/rolldown/build.ts`), so tests against
+      # the workspace rolldown always exercise WASI. Setting `NAPI_RS_FORCE_WASI` would force
+      # the transitive `rolldown@<rc>` (pulled in by vitest/vite-plus) to also load WASI, which
+      # fails because its WASI binding (`@rolldown/binding-wasm32-wasi`) is filtered by pnpm
+      # on linux-x64 hosts.
       - name: Node Test
-        continue-on-error: true
-        run: |
-          pnpm --filter rolldown-tests run test:main && pnpm --filter rolldown-tests run test:watcher && pnpm --filter rolldown-tests run test:stability
-        env:
-          NAPI_RS_FORCE_WASI: error
-          RD_LOG: trace
+        run: vp run --filter rolldown-tests test:main && vp run --filter rolldown-tests test:watcher && vp run --filter rolldown-tests test:stability
 
       - name: Rollup Test
-        continue-on-error: true
-        run: pnpm --filter rollup-tests run test
-        env:
-          NAPI_RS_FORCE_WASI: error
-          RD_LOG: trace
+        run: vp run --filter rollup-tests test
 
+      # `@example/typescript` is excluded because its config enables `devtools`, which
+      # currently panics under WASI when the writer tries to open its log file (see
+      # `crates/rolldown_devtools/src/writer.rs`). Tracked as a follow-up to issue #8579.
       - name: Build Examples
-        continue-on-error: true
-        run: pnpm --filter '@example/*' --filter '!@example/native-magic-string' --sequential run build
-        env:
-          NAPI_RS_FORCE_WASI: error
+        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' --filter '!@example/typescript' build

@@ -64,9 +64,9 @@ test(`emit data for devtool`, async () => {
     }),
   );
   expect(metaInfoPackage.package_id).toBe(metaInfoPackage.package_root);
-  expect(metaInfoPackage.package_root).toMatch(/fixture-packages\/meta-info-lib$/);
+  expect(metaInfoPackage.package_root).toMatch(/node_modules\/meta-info-lib$/);
   expect(metaInfoPackage.package_json_path).toMatch(
-    /fixture-packages\/meta-info-lib\/package\.json$/,
+    /node_modules\/meta-info-lib\/package\.json$/,
   );
 
   const metaContent = readFileSync(join(dotRolldownFileName, dotRolldownDir[0], 'meta.json'));
@@ -84,7 +84,6 @@ test(`emit data for devtool`, async () => {
         // assume default exports conditions. Rolldown will ship with a default that
         // aligns with Vite in the future.
         conditionNames: ['import'],
-        modules: [join(import.meta.dirname, 'fixture-packages')],
       },
       plugins: [
         {

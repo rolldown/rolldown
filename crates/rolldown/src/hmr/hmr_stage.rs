@@ -447,8 +447,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .into_par_iter()
       .enumerate()
       .flat_map(|(index, render_input)| {
-        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast, stats } =
-          render_input;
+        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast, stats } = render_input;
 
         let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
@@ -689,8 +688,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .into_par_iter()
       .enumerate()
       .flat_map(|(index, render_input)| {
-        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast, stats } =
-          render_input;
+        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast, stats } = render_input;
 
         let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
@@ -883,8 +881,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .into_par_iter()
       .enumerate()
       .flat_map(|(index, render_input)| {
-        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast, stats } =
-          render_input;
+        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast, stats } = render_input;
 
         let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {

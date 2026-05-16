@@ -1,4 +1,6 @@
-use oxc::semantic::{NodeId, Reference, ReferenceId, ScopeId, Scoping, Stats, SymbolFlags, SymbolId};
+use oxc::semantic::{
+  NodeId, Reference, ReferenceId, ScopeId, Scoping, Stats, SymbolFlags, SymbolId,
+};
 use oxc::span::SPAN;
 use oxc_str::Ident;
 

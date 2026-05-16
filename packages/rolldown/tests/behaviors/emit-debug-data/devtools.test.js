@@ -98,8 +98,8 @@ test(`emit data for devtool`, async () => {
       version: '1.0.0',
     }),
   );
-  expect(unusedPackage.package_root).toMatch(/node_modules\/unused-lib$/);
-  expect(unusedPackage.package_json_path).toMatch(/node_modules\/unused-lib\/package\.json$/);
+  expectPathToEndWith(unusedPackage.package_root, 'node_modules/unused-lib');
+  expectPathToEndWith(unusedPackage.package_json_path, 'node_modules/unused-lib/package.json');
 
   const metaContent = readFileSync(join(dotRolldownFileName, dotRolldownDir[0], 'meta.json'));
   for (const variable of variables) {

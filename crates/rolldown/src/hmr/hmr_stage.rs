@@ -9,8 +9,8 @@ use std::{
 use arcstr::ArcStr;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
-  ClientHmrInput, ClientHmrUpdate, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, ImportKind,
-  Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
+  ClientHmrInput, ClientHmrUpdate, GetLocalDb, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate,
+  ImportKind, Module, ModuleIdx, ModuleTable, ScanMode, SymbolRefDb, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_ecmascript_utils::AstSnippet;
@@ -50,6 +50,10 @@ impl<Fs: FileSystem + Clone + 'static> HmrStageInput<'_, Fs> {
 
   pub fn index_ecma_ast(&self) -> &IndexEcmaAst {
     &self.cache.get_snapshot().index_ecma_ast
+  }
+
+  pub fn symbol_ref_db(&self) -> &SymbolRefDb {
+    &self.cache.get_snapshot().symbol_ref_db
   }
 }
 
@@ -432,6 +436,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         ModuleRenderInput {
           idx: affected_module.idx,
           ecma_ast: ecma_ast.clone_with_another_arena(),
+          stats: self.symbol_ref_db().local_db(affected_module.idx).ast_scopes.stats(),
         }
       })
       .collect::<Vec<_>>();
@@ -442,7 +447,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .into_par_iter()
       .enumerate()
       .flat_map(|(index, render_input)| {
-        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast } = render_input;
+        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast, stats } =
+          render_input;
 
         let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
@@ -455,7 +461,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         let modules = &self.module_table().modules;
 
         ast.program.with_mut(|fields| {
-          let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
+          let scoping = EcmaAst::make_scoping_using_stats(fields.program, stats);
 
           let mut finalizer = HmrAstFinalizer {
             modules,
@@ -673,6 +679,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         ModuleRenderInput {
           idx: affected_module.idx,
           ecma_ast: ecma_ast.clone_with_another_arena(),
+          stats: self.symbol_ref_db().local_db(affected_module.idx).ast_scopes.stats(),
         }
       })
       .collect::<Vec<_>>();
@@ -682,7 +689,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .into_par_iter()
       .enumerate()
       .flat_map(|(index, render_input)| {
-        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast } = render_input;
+        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast, stats } =
+          render_input;
 
         let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
@@ -695,7 +703,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         let modules = &self.module_table().modules;
 
         ast.program.with_mut(|fields| {
-          let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
+          let scoping = EcmaAst::make_scoping_using_stats(fields.program, stats);
 
           let mut finalizer = HmrAstFinalizer {
             modules,
@@ -865,6 +873,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         ModuleRenderInput {
           idx: affected_module.idx,
           ecma_ast: ecma_ast.clone_with_another_arena(),
+          stats: self.symbol_ref_db().local_db(affected_module.idx).ast_scopes.stats(),
         }
       })
       .collect::<Vec<_>>();
@@ -874,7 +883,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .into_par_iter()
       .enumerate()
       .flat_map(|(index, render_input)| {
-        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast } = render_input;
+        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast, stats } =
+          render_input;
 
         let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
@@ -887,7 +897,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         let modules = &self.module_table().modules;
 
         ast.program.with_mut(|fields| {
-          let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
+          let scoping = EcmaAst::make_scoping_using_stats(fields.program, stats);
 
           let mut finalizer = HmrAstFinalizer {
             modules,
@@ -1237,6 +1247,9 @@ impl PropagateUpdateStatus {
 struct ModuleRenderInput {
   pub idx: ModuleIdx,
   pub ecma_ast: EcmaAst,
+  /// Cached semantic stats from link-time scoping for this module, used to
+  /// pre-allocate when rebuilding scoping for the cloned AST in HMR.
+  pub stats: oxc::semantic::Stats,
 }
 
 impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {

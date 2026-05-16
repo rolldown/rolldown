@@ -581,8 +581,9 @@ mod test {
     let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let semantic = EcmaAst::make_semantic(ast.program(), false);
+    let stats = semantic.stats();
     let scoping = semantic.into_scoping();
-    let ast_scopes = AstScopes::new(scoping);
+    let ast_scopes = AstScopes::new(scoping, stats);
 
     let options = Arc::new(NormalizedBundlerOptions::default());
     let flags = FlatOptions::from_shared_options(&options);
@@ -597,8 +598,9 @@ mod test {
     let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let semantic = EcmaAst::make_semantic(ast.program(), false);
+    let stats = semantic.stats();
     let scoping = semantic.into_scoping();
-    let ast_scopes = AstScopes::new(scoping);
+    let ast_scopes = AstScopes::new(scoping, stats);
 
     let options = Arc::new(NormalizedBundlerOptions::default());
     let flags = FlatOptions::from_shared_options(&options);

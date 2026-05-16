@@ -12,7 +12,7 @@ use const_eval::{ConstEvalCtx, try_extract_const_literal};
 use oxc::ast::ast::{BindingPattern, Expression, ImportExpression};
 use oxc::ast::{AstKind, ast};
 use oxc::ast_visit::walk;
-use oxc::semantic::{Reference, ReferenceId, ScopeFlags, Scoping};
+use oxc::semantic::{Reference, ReferenceId, ScopeFlags, Scoping, Stats};
 use oxc::span::SPAN;
 use oxc::{
   ast::{
@@ -177,6 +177,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn new(
     idx: ModuleIdx,
     scoping: Scoping,
+    stats: Stats,
     repr_name: &'me str,
     module_type: ModuleDefFormat,
     source: &'me ArcStr,
@@ -187,7 +188,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     flat_options: FlatOptions,
   ) -> Self {
     let root_scope_id = scoping.root_scope_id();
-    let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, idx, root_scope_id);
+    let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, idx, root_scope_id, stats);
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let legitimized_repr_name = legitimize_identifier_name(repr_name);
     let default_export_ref = symbol_ref_db

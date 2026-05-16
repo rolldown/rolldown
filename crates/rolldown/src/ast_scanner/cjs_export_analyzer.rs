@@ -261,7 +261,8 @@ mod tests {
     let ret = Parser::new(allocator, source, source_type).parse();
     let program = ret.program;
     let semantic_ret = SemanticBuilder::new().build(&program);
-    (AstScopes::new(semantic_ret.semantic.into_scoping()), program)
+    let stats = semantic_ret.semantic.stats();
+    (AstScopes::new(semantic_ret.semantic.into_scoping(), stats), program)
   }
 
   fn extract_call_expr<'a>(

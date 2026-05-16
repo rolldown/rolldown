@@ -1,6 +1,6 @@
 use oxc::{
   ast::ast::Program,
-  semantic::{Scoping, Semantic, SemanticBuilder},
+  semantic::{Scoping, Semantic, SemanticBuilder, Stats},
 };
 
 use crate::EcmaAst;
@@ -29,9 +29,24 @@ impl EcmaAst {
   }
 
   pub fn make_scoping(&self) -> Scoping {
+    self.make_scoping_with_stats().0
+  }
+
+  /// Build `Scoping` along with the `Stats` captured from the same `Semantic`,
+  /// so consumers that may later rebuild scoping for the same AST can re-use
+  /// the stats via `SemanticBuilder::with_stats` and skip `Stats::count`.
+  pub fn make_scoping_with_stats(&self) -> (Scoping, Stats) {
     self.program.with_dependent(|_owner, dep| {
-      Self::make_semantic(&dep.program, /*with_cfg*/ false).into_scoping()
+      let semantic = Self::make_semantic(&dep.program, /*with_cfg*/ false);
+      let stats = semantic.stats();
+      (semantic.into_scoping(), stats)
     })
+  }
+
+  /// Build `Scoping` re-using cached `Stats` from a previous build to skip
+  /// the `Stats::count` AST traversal that pre-allocates buffers.
+  pub fn make_scoping_using_stats(program: &Program<'_>, stats: Stats) -> Scoping {
+    SemanticBuilder::new().with_stats(stats).build(program).semantic.into_scoping()
   }
 
   pub fn make_symbol_table_and_scope_tree_with_semantic_builder<'a>(

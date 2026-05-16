@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use oxc::semantic::{ScopeId, Scoping, SymbolId};
+use oxc::semantic::{ScopeId, Scoping, Stats, SymbolId};
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_std_utils::OptionExt;
@@ -78,7 +78,7 @@ impl Default for SymbolRefDbForModule {
     Self {
       owner_idx: ModuleIdx::new(0),
       root_scope_id: ScopeId::new(0),
-      ast_scopes: AstScopes::new(Scoping::default()),
+      ast_scopes: AstScopes::new(Scoping::default(), Stats::default()),
       flags: FxHashMap::default(),
       classic_data: IndexVec::default(),
       #[cfg(debug_assertions)]
@@ -88,7 +88,12 @@ impl Default for SymbolRefDbForModule {
 }
 
 impl SymbolRefDbForModule {
-  pub fn new(scoping: Scoping, owner_idx: ModuleIdx, top_level_scope_id: ScopeId) -> Self {
+  pub fn new(
+    scoping: Scoping,
+    owner_idx: ModuleIdx,
+    top_level_scope_id: ScopeId,
+    stats: Stats,
+  ) -> Self {
     Self {
       owner_idx,
       root_scope_id: top_level_scope_id,
@@ -96,7 +101,7 @@ impl SymbolRefDbForModule {
         SymbolRefDataClassic::default();
         scoping.symbols_len()
       ]),
-      ast_scopes: AstScopes::new(scoping),
+      ast_scopes: AstScopes::new(scoping, stats),
       flags: FxHashMap::default(),
       #[cfg(debug_assertions)]
       create_reason: FxHashMap::default(),
@@ -149,8 +154,9 @@ impl SymbolRefDbForModule {
       }
     }
 
+    let stats = build_db.ast_scopes.stats();
     let scoping = build_db.ast_scopes.into_scoping();
-    self.ast_scopes.set_scoping(scoping);
+    self.ast_scopes.set_scoping(scoping, stats);
   }
 
   pub fn get_classic_data(&self, symbol_id: SymbolId) -> &SymbolRefDataClassic {
@@ -216,7 +222,7 @@ impl SymbolRefDb {
       vec.push(inner.as_ref().map(|inner| SymbolRefDbForModule {
         owner_idx: inner.owner_idx,
         root_scope_id: inner.root_scope_id,
-        ast_scopes: AstScopes::new(Scoping::default()),
+        ast_scopes: AstScopes::new(Scoping::default(), Stats::default()),
         flags: inner.flags.clone(),
         classic_data: inner.classic_data.clone(),
         #[cfg(debug_assertions)]

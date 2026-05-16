@@ -1,15 +1,28 @@
-use oxc::semantic::{NodeId, Reference, ReferenceId, ScopeId, Scoping, SymbolFlags, SymbolId};
+use oxc::semantic::{NodeId, Reference, ReferenceId, ScopeId, Scoping, Stats, SymbolFlags, SymbolId};
 use oxc::span::SPAN;
 use oxc_str::Ident;
 
 #[derive(Debug)]
 pub struct AstScopes {
   scoping: Scoping,
+  /// Cached semantic stats from the last `SemanticBuilder::build` that produced
+  /// the current `scoping`. Used to pre-allocate when rebuilding scoping for
+  /// the same AST (e.g. HMR re-finalization) so `Stats::count` can be skipped.
+  stats: Stats,
 }
 
 impl AstScopes {
-  pub fn new(inner: Scoping) -> Self {
-    Self { scoping: inner }
+  pub fn new(inner: Scoping, stats: Stats) -> Self {
+    Self { scoping: inner, stats }
+  }
+
+  /// Stats captured when `scoping` was last built. Intended as a pre-allocation
+  /// hint for rebuilds via `SemanticBuilder::with_stats` — slightly stale is
+  /// fine (e.g. link-time facade symbols added via `create_facade_root_symbol_ref`
+  /// are not reflected here, so the count under-counts by the facade delta).
+  #[inline]
+  pub fn stats(&self) -> Stats {
+    self.stats
   }
 
   #[inline]
@@ -21,8 +34,9 @@ impl AstScopes {
     self.scoping
   }
 
-  pub fn set_scoping(&mut self, scoping: Scoping) {
+  pub fn set_scoping(&mut self, scoping: Scoping, stats: Stats) {
     self.scoping = scoping;
+    self.stats = stats;
   }
 
   pub fn is_unresolved(&self, reference_id: ReferenceId) -> bool {

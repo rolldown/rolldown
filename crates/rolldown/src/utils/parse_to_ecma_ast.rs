@@ -1,7 +1,10 @@
 use std::{borrow::Cow, path::Path};
 
 use json_escape_simd::escape;
-use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
+use oxc::{
+  semantic::{Scoping, Stats},
+  span::SourceType as OxcSourceType,
+};
 use oxc_str::CompactStr;
 use rolldown_common::{
   ConstExportMeta, ModuleDefFormat, ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY,
@@ -38,6 +41,12 @@ fn pure_esm_js_oxc_source_type(module_def_format: ModuleDefFormat) -> OxcSourceT
 pub struct ParseToEcmaAstResult {
   pub ast: EcmaAst,
   pub scoping: Scoping,
+  /// Semantic stats captured at the final `recreate_scoping` rebuild in
+  /// `PreProcessEcmaAst::build`. Forwarded to `AstScopes` so later consumers
+  /// that need to rebuild scoping for the same AST (e.g. HMR finalization)
+  /// can pre-allocate via `SemanticBuilder::with_stats` instead of running a
+  /// full `Stats::count` traversal.
+  pub stats: Stats,
   pub has_lazy_export: bool,
   pub warnings: Vec<BuildDiagnostic>,
   /// Whether JSX syntax should be preserved in the output, determined per-module

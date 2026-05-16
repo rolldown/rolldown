@@ -249,6 +249,7 @@ impl PreProcessEcmaAst {
     Ok(ParseToEcmaAstResult {
       ast,
       scoping,
+      stats: self.stats,
       has_lazy_export,
       warnings,
       preserve_jsx,

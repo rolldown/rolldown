@@ -5,7 +5,7 @@ use std::sync::Arc;
 use arcstr::ArcStr;
 use futures::future::join_all;
 use itertools::Itertools;
-use oxc::semantic::{ScopeId, Scoping};
+use oxc::semantic::{ScopeId, Scoping, Stats};
 use oxc::span::Span;
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
 use oxc_allocator::Address;
@@ -558,7 +558,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
           self.symbol_ref_db.store_local_db(
             idx,
-            SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)),
+            SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0), Stats::default()),
           );
           let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(idx, &identifier_name);
           let external_module = Module::External(Box::new(ExternalModule::new(

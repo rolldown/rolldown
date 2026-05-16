@@ -14,7 +14,6 @@ use oxc::transformer::{Helper, HelperLoaderOptions};
 use oxc::{
   codegen::{Codegen, CodegenOptions, CodegenReturn},
   isolated_declarations::{IsolatedDeclarations, IsolatedDeclarationsOptions},
-  semantic::SemanticBuilder,
   span::SourceType,
   transformer::Transformer,
   transformer_plugins::{
@@ -334,6 +333,7 @@ pub fn enhanced_transform(
   let mut program = parse_ret.program;
 
   let semantic_ret = semantic_builder_for_transform().build(&program);
+  let mut stats = semantic_ret.semantic.stats();
   let mut scoping = Some(semantic_ret.semantic.into_scoping());
   if !semantic_ret.errors.is_empty() {
     append_oxc_diagnostics(semantic_ret.errors, &source, filename, &mut warnings, &mut errors);
@@ -386,9 +386,11 @@ pub fn enhanced_transform(
     }
   }
 
-  let scoping = scoping
-    .take()
-    .unwrap_or_else(|| semantic_builder_for_transform().build(&program).semantic.into_scoping());
+  let scoping = scoping.take().unwrap_or_else(|| {
+    let ret = semantic_builder_for_transform().with_stats(stats).build(&program).semantic;
+    stats = ret.stats();
+    ret.into_scoping()
+  });
 
   let transform_ret = Transformer::new(&allocator, Path::new(filename), &oxc_transform_options)
     .build_with_scoping(scoping, &mut program);
@@ -403,7 +405,8 @@ pub fn enhanced_transform(
     && !inject.is_empty()
   {
     let config = build_inject_config(inject);
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping =
+      semantic_builder_for_transform().with_stats(stats).build(&program).semantic.into_scoping();
     let _ = InjectGlobalVariables::new(&allocator, config).build(scoping, &mut program);
   }
 

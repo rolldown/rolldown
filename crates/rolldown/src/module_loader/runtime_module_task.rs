@@ -229,7 +229,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       pre_processor.visit_program(fields.program);
     });
 
-    let scoping = ast.make_scoping();
+    let (scoping, stats) = ast.make_scoping_with_stats();
     let facade_path = RUNTIME_MODULE_ID;
     // Always respect annotations in the runtime module, regardless of user config.
     // The runtime is trusted internal code.
@@ -239,6 +239,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       let scanner = AstScanner::new(
         self.module_idx,
         scoping,
+        stats,
         "rolldown_runtime",
         ModuleDefFormat::EsmMjs,
         source,

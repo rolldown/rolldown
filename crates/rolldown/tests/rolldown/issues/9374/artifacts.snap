@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_a.js
+
+```js
+import { t as b } from "./entry_b2.js";
+export * from "external";
+//#region entry_a.js
+const a = "a";
+//#endregion
+export { a, b };
+
+```
+
+## entry_b.js
+
+```js
+import { t as b } from "./entry_b2.js";
+export * from "external";
+export { b };
+
+```
+
+## entry_b2.js
+
+```js
+//#endregion
+//#region entry_b.js
+const b = "b";
+//#endregion
+export { b as t };
+
+```

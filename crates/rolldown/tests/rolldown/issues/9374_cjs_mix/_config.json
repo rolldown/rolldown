@@ -1,0 +1,9 @@
+{
+  "expectExecuted": false,
+  "hiddenRuntimeModule": false,
+  "config": {
+    "platform": "node",
+    "input": [{ "name": "entry", "import": "./entry.js" }],
+    "external": ["external"]
+  }
+}

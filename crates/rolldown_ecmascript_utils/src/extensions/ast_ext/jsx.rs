@@ -53,7 +53,7 @@ impl<'ast> JsxExt<'ast> for JSXMemberExpressionObject<'ast> {
 impl<'ast> JsxExt<'ast> for JSXMemberExpression<'ast> {
   type AstKind = StaticMemberExpression<'ast>;
   fn rewrite_ident_reference(&mut self, _ident_ref: JSXMemberExpressionObject<'ast>) {
-    todo!()
+    panic!("`JSXMemberExpression::rewrite_ident_reference` is not implemented yet")
   }
 
   fn from_ast(

@@ -1,3 +1,5 @@
+#![expect(clippy::print_stderr)]
+
 use arcstr::ArcStr;
 use ariadne::{Label, Span};
 use rustc_hash::FxHashMap;

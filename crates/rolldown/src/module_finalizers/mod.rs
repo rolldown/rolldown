@@ -369,16 +369,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     } else {
       match self.ctx.options.format {
         rolldown_common::OutputFormat::Cjs => {
-          let chunk_idx_of_canonical_symbol =
-            canonical_symbol.chunk_idx.unwrap_or_else(|| {
-              // Scoped symbols don't get assigned a `ChunkIdx`. There are skipped for performance reason, because they are surely
-              // belong to the chunk they are declared in and won't link to other chunks.
-              let symbol_name = canonical_ref.name(self.ctx.symbol_db);
-              eprintln!(
-                "{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected",
-              );
-              panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
-            });
+          let chunk_idx_of_canonical_symbol = canonical_symbol.chunk_idx.unwrap_or_else(|| {
+            // Scoped symbols don't get assigned a `ChunkIdx`. There are skipped for performance reason, because they are surely
+            // belong to the chunk they are declared in and won't link to other chunks.
+            let symbol_name = canonical_ref.name(self.ctx.symbol_db);
+            panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
+          });
           let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.idx]
             .expect("This module should be in a chunk");
           let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;

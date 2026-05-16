@@ -188,7 +188,7 @@ impl BundleCoordinator {
         self.handle_file_changes(changed_files).await;
       }
       Err(e) => {
-        eprintln!("notify error: {e:?}");
+        tracing::error!("notify error: {e:?}");
       }
     }
   }

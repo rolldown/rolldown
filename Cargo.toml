@@ -15,9 +15,12 @@ repository = "https://github.com/rolldown/rolldown"
 #   - https://doc.rust-lang.org/stable/cargo/reference/manifest.html#the-lints-section
 
 # --- restriction https://doc.rust-lang.org/clippy/usage.html#clippyrestriction
-allow_attributes = "deny"
 dbg_macro = "deny"
-print_stdout = "deny"
+todo = "deny"
+unimplemented = "deny"
+print_stdout = "deny" # Must be opt-in
+print_stderr = "deny" # Must be opt-in
+allow_attributes = "deny"
 
 # I like the explicitness of this rule as it removes confusion around `clone`.
 # This increases readability, avoids `clone` mindlessly and heap allocating on accident.

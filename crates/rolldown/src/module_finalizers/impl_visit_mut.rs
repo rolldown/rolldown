@@ -16,7 +16,7 @@ use oxc::{
 use oxc_str::CompactStr;
 use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript::ToSourceString;
-use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
+use rolldown_ecmascript_utils::{ExpressionExt, JsxExt, JsxMemberExpressionObjectExt};
 
 use crate::hmr::utils::HmrAstBuilder;
 use crate::module_finalizers::{KeepNameId, TraverseState};

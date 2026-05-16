@@ -6,7 +6,8 @@ mod source_utils;
 pub use crate::{
   ast_snippet::AstSnippet,
   extensions::ast_ext::{
-    binding_pattern_ext::BindingPatternExt, call_expression_ext::CallExpressionExt,
+    binding_pattern_ext::BindingPatternExt,
+    call_expression_ext::CallExpressionExt,
     expression_ext::ExpressionExt,
     function::FunctionExt,
     jsx::{JsxExt, JsxMemberExpressionObjectExt},

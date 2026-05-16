@@ -182,7 +182,7 @@ json-escape-simd = "3"
 json-strip-comments = "3"
 jsonschema = { version = "0.46.0", default-features = false }
 memchr = "2.7.4"
-mimalloc-safe = "0.1.60"
+mimalloc-safe = "0.1.61"
 mime = "0.3.17"
 nodejs-built-in-modules = "1.0.0"
 nom = "8.0.0"

@@ -12,6 +12,7 @@ import type { HookResolveIdCallStart } from "./HookResolveIdCallStart";
 import type { HookTransformCallEnd } from "./HookTransformCallEnd";
 import type { HookTransformCallStart } from "./HookTransformCallStart";
 import type { ModuleGraphReady } from "./ModuleGraphReady";
+import type { PackageGraphReady } from "./PackageGraphReady";
 import type { SessionMeta } from "./SessionMeta";
 
-export type Meta = HookTransformCallStart | HookTransformCallEnd | HookLoadCallStart | HookLoadCallEnd | BuildStart | BuildEnd | HookResolveIdCallStart | HookResolveIdCallEnd | ModuleGraphReady | SessionMeta | ChunkGraphReady | HookRenderChunkStart | HookRenderChunkEnd | AssetsReady;
+export type Meta = HookTransformCallStart | HookTransformCallEnd | HookLoadCallStart | HookLoadCallEnd | BuildStart | BuildEnd | HookResolveIdCallStart | HookResolveIdCallEnd | ModuleGraphReady | SessionMeta | ChunkGraphReady | PackageGraphReady | HookRenderChunkStart | HookRenderChunkEnd | AssetsReady;

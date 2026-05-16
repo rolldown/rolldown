@@ -17,6 +17,7 @@ pub use {
     hook_transform_call_end::HookTransformCallEnd,
     hook_transform_call_start::HookTransformCallStart,
     module_graph_ready::{Module, ModuleGraphReady, ModuleImport},
+    package_graph_ready::{PackageGraphReady, PackageInfo},
     session_meta::SessionMeta,
   },
   types::{InputItem, PluginItem},

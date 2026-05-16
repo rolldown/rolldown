@@ -98,7 +98,9 @@ impl<'a> GenerateStage<'a> {
 
     self.merge_cjs_namespace(&mut chunk_graph);
 
+    // See meta/design/devtools.md for devtools action lifecycle.
     self.trace_action_chunks_infos(&chunk_graph);
+    self.trace_action_package_graph_ready(&chunk_graph);
 
     let mut warnings = vec![];
     self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings)?;
@@ -398,6 +400,42 @@ impl<'a> GenerateStage<'a> {
         });
       }
       trace_action!(action::ChunkGraphReady { action: "ChunkGraphReady", chunks: chunk_infos });
+    }
+  }
+
+  fn trace_action_package_graph_ready(&self, chunk_graph: &ChunkGraph) {
+    if trace_action_enabled!() {
+      let mut package_infos = FxHashMap::default();
+
+      for chunk in chunk_graph.chunk_table.iter() {
+        for module_idx in &chunk.modules {
+          let Some(module) = self.link_output.module_table[*module_idx].as_normal() else {
+            continue;
+          };
+          let Some(package_json) = module.originative_resolved_id.package_json.as_ref() else {
+            continue;
+          };
+          let Some(package_root) = package_json.realpath().parent() else {
+            continue;
+          };
+
+          let package_root = package_root.to_slash_lossy().into_owned();
+          let package_json_path = package_json.realpath().to_slash_lossy().into_owned();
+
+          package_infos.entry(package_root.clone()).or_insert_with(|| action::PackageInfo {
+            package_id: package_root.clone(),
+            name: package_json.name().map(str::to_string),
+            version: package_json.version().map(str::to_string),
+            package_json_path,
+            package_root,
+          });
+        }
+      }
+
+      let mut packages = package_infos.into_values().collect::<Vec<_>>();
+      packages.sort_unstable_by(|a, b| a.package_id.cmp(&b.package_id));
+
+      trace_action!(action::PackageGraphReady { action: "PackageGraphReady", packages });
     }
   }
 }

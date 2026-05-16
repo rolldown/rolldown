@@ -75,7 +75,9 @@ test(`emit data for devtool`, async () => {
   expectPathToEndWith(metaInfoPackage.package_root, 'node_modules/meta-info-lib');
   expectPathToEndWith(metaInfoPackage.package_json_path, 'node_modules/meta-info-lib/package.json');
 
-  const duplicatePackages = packageGraphReady.packages.filter((pkg) => pkg.name === 'duplicate-lib');
+  const duplicatePackages = packageGraphReady.packages.filter(
+    (pkg) => pkg.name === 'duplicate-lib',
+  );
   expect(duplicatePackages).toHaveLength(2);
   expect(duplicatePackages.map((pkg) => pkg.version)).toEqual(['1.0.0', '2.0.0']);
   expect(new Set(duplicatePackages.map((pkg) => pkg.package_root)).size).toBe(2);

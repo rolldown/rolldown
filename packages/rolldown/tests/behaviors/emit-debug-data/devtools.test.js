@@ -81,8 +81,8 @@ test(`emit data for devtool`, async () => {
   expect(duplicatePackages).toHaveLength(2);
   expect(duplicatePackages.map((pkg) => pkg.version)).toEqual(['1.0.0', '2.0.0']);
   expect(new Set(duplicatePackages.map((pkg) => pkg.package_root)).size).toBe(2);
-  expect(duplicatePackages[0].package_root).toMatch(/node_modules\/duplicate-a$/);
-  expect(duplicatePackages[1].package_root).toMatch(/node_modules\/duplicate-b$/);
+  expectPathToEndWith(duplicatePackages[0].package_root, 'node_modules/duplicate-a');
+  expectPathToEndWith(duplicatePackages[1].package_root, 'node_modules/duplicate-b');
 
   const duplicatePackageIndices = packageGraphReady.packages.flatMap((pkg, index) =>
     pkg.name === 'duplicate-lib' ? [index] : [],

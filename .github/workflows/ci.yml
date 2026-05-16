@@ -146,6 +146,12 @@ jobs:
       node-version: ${{ matrix.node-version }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
+  build-rolldown-wasi:
+    needs: changes
+    uses: ./.github/workflows/reusable-wasi-build.yml
+    with:
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
   wasi-test:
     needs: [changes, build-rolldown-wasi]
     # Run even if `build-rolldown-wasi` is skipped (when `node-changes` is false), so the
@@ -291,12 +297,6 @@ jobs:
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
       os: ubuntu-latest
-
-  build-rolldown-wasi:
-    needs: changes
-    uses: ./.github/workflows/reusable-wasi-build.yml
-    with:
-      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-validation:
     name: Node Validation

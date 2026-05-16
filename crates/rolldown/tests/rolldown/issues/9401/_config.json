@@ -1,0 +1,18 @@
+{
+  "snapshot": false,
+  "config": {
+    "input": [
+      {
+        "name": "entry-0",
+        "import": "./node0.cjs"
+      }
+    ],
+    "preserveEntrySignatures": "allow-extension",
+    "experimental": {
+      "chunkOptimization": {
+        "mergeCommonChunks": false,
+        "avoidRedundantChunkLoads": true
+      }
+    }
+  }
+}

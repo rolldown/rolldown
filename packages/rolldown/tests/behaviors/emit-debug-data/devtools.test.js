@@ -65,9 +65,7 @@ test(`emit data for devtool`, async () => {
   );
   expect(metaInfoPackage.package_id).toBe(metaInfoPackage.package_root);
   expect(metaInfoPackage.package_root).toMatch(/node_modules\/meta-info-lib$/);
-  expect(metaInfoPackage.package_json_path).toMatch(
-    /node_modules\/meta-info-lib\/package\.json$/,
-  );
+  expect(metaInfoPackage.package_json_path).toMatch(/node_modules\/meta-info-lib\/package\.json$/);
 
   const metaContent = readFileSync(join(dotRolldownFileName, dotRolldownDir[0], 'meta.json'));
   for (const variable of variables) {

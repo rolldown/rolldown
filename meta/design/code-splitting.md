@@ -102,6 +102,8 @@ The pass groups modules into temporary atoms by their current dependent-entry bi
 
 When the reduced bitset would put an atom into a single dynamic-entry chunk, the pass preserves that dynamic entry's observable namespace. The reduction is accepted only if the atom has no extra exports, its exports are already part of the dynamic entry's signature, it is runtime-only, or it is the removed dynamic-entry module itself. Otherwise the atom stays separate so `import("./entry.js")` does not expose helper exports needed only by other chunks.
 
+Runtime-helper atoms get an extra static-cycle check before accepting a reduction that would host the runtime in a user-defined entry chunk. Helper consumers import symbols such as `__exportAll` from the runtime host with normal static imports, so moving the runtime into an entry can create a cycle even when entry signatures are allowed to extend. The same check runs when a non-runtime atom would merge into the current runtime host bitset.
+
 Top-level-await refinements are intentionally not modeled here yet. The existing chunk optimizer still bails out globally when any included module is TLA or contains a TLA dependency, so the awaited-dynamic-import safety path remains future work.
 
 ## Reachability Propagation

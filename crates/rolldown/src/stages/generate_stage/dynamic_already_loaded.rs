@@ -46,6 +46,7 @@ impl GenerateStage<'_> {
       return;
     }
     let module_to_atom_idx = self.compute_module_to_atom_idx(&atoms);
+    let runtime_atom_idx = module_to_atom_idx[self.link_output.runtime.id()];
     let atom_dependencies = self.compute_atom_dependencies(&atoms, &module_to_atom_idx);
 
     let static_dependency_atoms_by_entry =
@@ -68,6 +69,16 @@ impl GenerateStage<'_> {
           atoms[atom_idx].dependent_entries.clear_bit(entry_idx);
         }
       }
+      let should_check_static_cycle = self.should_check_reduced_atom_static_cycle(
+        &original_dependent_entries,
+        &atoms[atom_idx].dependent_entries,
+        chunk_graph,
+      ) || Self::reduction_touches_user_entry_runtime_host(
+        atom_idx,
+        &atoms,
+        runtime_atom_idx,
+        chunk_graph,
+      );
       if atoms[atom_idx].dependent_entries != original_dependent_entries
         && self.can_use_reduced_dependent_entries(
           &atoms[atom_idx],
@@ -76,11 +87,8 @@ impl GenerateStage<'_> {
           chunk_graph,
           &dynamic_entry_modules_by_entry,
         )
-        && (!self.should_check_reduced_atom_static_cycle(
-          &original_dependent_entries,
-          &atoms[atom_idx].dependent_entries,
-          chunk_graph,
-        ) || !Self::reduced_atom_graph_has_static_cycle(&atoms, &atom_dependencies))
+        && (!should_check_static_cycle
+          || !Self::reduced_atom_graph_has_static_cycle(&atoms, &atom_dependencies))
       {
         changed = true;
       } else {
@@ -99,6 +107,26 @@ impl GenerateStage<'_> {
         index_splitting_info[module_idx].share_count = share_count;
       }
     }
+  }
+
+  fn reduction_touches_user_entry_runtime_host(
+    atom_idx: usize,
+    atoms: &[ChunkAtom],
+    runtime_atom_idx: Option<usize>,
+    chunk_graph: &ChunkGraph,
+  ) -> bool {
+    // See meta/design/code-splitting.md#dynamic-already-loaded-analysis.
+    let Some(runtime_atom_idx) = runtime_atom_idx else {
+      return false;
+    };
+    (atom_idx == runtime_atom_idx
+      || atoms[atom_idx].dependent_entries == atoms[runtime_atom_idx].dependent_entries)
+      && atoms[runtime_atom_idx].dependent_entries.index_of_one().any(|entry_bit| {
+        chunk_graph
+          .chunk_table
+          .get(ChunkIdx::from_raw(entry_bit))
+          .is_some_and(rolldown_common::Chunk::is_user_defined_entry)
+      })
   }
 
   fn can_use_reduced_dependent_entries(

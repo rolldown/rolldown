@@ -102,7 +102,7 @@ The pass groups modules into temporary atoms by their current dependent-entry bi
 
 When the reduced bitset would put an atom into a single dynamic-entry chunk, the pass preserves that dynamic entry's observable namespace. The reduction is accepted only if the atom has no extra exports, its exports are already part of the dynamic entry's signature, it is runtime-only, or it is the removed dynamic-entry module itself. Otherwise the atom stays separate so `import("./entry.js")` does not expose helper exports needed only by other chunks.
 
-Runtime-helper atoms get an extra static-cycle check before accepting a reduction that would host the runtime in a user-defined entry chunk. Helper consumers import symbols such as `__exportAll` from the runtime host with normal static imports, so moving the runtime into an entry can create a cycle even when entry signatures are allowed to extend. The same check runs when a non-runtime atom would merge into the current runtime host bitset.
+Runtime may participate in this bit reduction, but only as placement metadata. It is extracted into a standalone runtime chunk before manual and normal chunk materialization, so this pass does not assign runtime code to user chunks and does not need runtime-specific cycle handling.
 
 Top-level-await refinements are intentionally not modeled here yet. The existing chunk optimizer still bails out globally when any included module is TLA or contains a TLA dependency, so the awaited-dynamic-import safety path remains future work.
 
@@ -157,14 +157,11 @@ Dynamic/emitted entries can become empty facades when all their modules are pull
 
 ### Runtime Module Placement
 
-Facade elimination can introduce **new runtime-helper consumers** after the merge phase has already placed the runtime module. Eliminating a dynamic-import facade runs two independent `wrap_kind`-gated branches on the target chunk, and either branch adds the chunk to `runtime_dependent_chunks`:
+When code splitting is enabled, the runtime module is assigned before manual and normal module chunking into a dedicated common chunk. This chunk uses normal chunk naming and is not registered in `bits_to_chunk`, so other modules with the same reachability bits cannot be grouped into it. Manual chunking also treats the runtime as already assigned, including during recursive dependency collection. The normal chunking and common-chunk merging passes therefore operate on user modules without carrying runtime-specific exceptions.
 
-- `WrapKind::Esm | WrapKind::None` — `include_symbol(module.namespace_object_ref)` materializes the simulated namespace and explicitly inserts `RuntimeHelper::ExportAll` into the target chunk's `depended_runtime_helper` (emitted JS symbol: `__exportAll`).
-- `WrapKind::Cjs | WrapKind::Esm` — `include_symbol(wrapper_ref)` pulls in the `require_xxx` symbol, which transitively drags whatever helpers the wrapper depends on (`RuntimeHelper::ToEsm`, `RuntimeHelper::CommonJsMin`, etc., emitted as `__toESM`, `__commonJSMin`, …) via the existing inclusion-propagation machinery.
+When code splitting is disabled, Rolldown does not extract a standalone runtime chunk. The runtime remains in the single output chunk, which preserves the single-file formats such as IIFE and UMD.
 
-`WrapKind::Esm` hits both branches, so ESM facades can add `ExportAll` _and_ wrapper-driven helpers to the same chunk.
-
-The danger is that the runtime module may already be **co-located** with other modules in some host chunk from the merge phase (the chunker placed it there because the host's bitset matched the runtime's bitset). If the new helper-import edge points from a facade-elim consumer back to that host, and the host has any forward path back to the consumer, the dependency graph closes a cycle. See [#8989](https://github.com/rolldown/rolldown/issues/8989) for the canonical reproduction:
+This standalone-first placement is the correctness baseline. Runtime helper consumers import helper symbols such as `__exportAll` from whichever chunk contains the runtime. If the runtime is co-located with a chunk that already has a forward static path to one of those consumers, the helper import can close a static cycle. See [#8989](https://github.com/rolldown/rolldown/issues/8989) for the canonical shape:
 
 ```
 chunk(node2) ──forward──> chunk(node3) ──forward──> chunk(node4)
@@ -172,43 +169,34 @@ chunk(node2) ──forward──> chunk(node3) ──forward──> chunk(node4)
      └──────── helper edge after facade elim ────────────┘
 ```
 
-The placement logic lives in `rehome_runtime_module`, called from `optimize_facade_entry_chunks` whenever `runtime_dependent_chunks` is non-empty. It is a **two-step decision** driven by static-import reachability between chunks:
-
-**Step 1 — Peel decision (cycle risk only)**
-
-Peel the runtime out of its current host chunk only when the host has a **static forward path** to some facade-elim consumer that is not the host. That is the precondition for a back-edge cycle: without such a path, the new helper import cannot close a cycle no matter where we place the runtime, so the most compact layout is to leave it where the merge phase already put it. Reachability is computed by `chunk_reaches_via_static_import`, a BFS that follows only `ImportKind::Import` edges through still-live target chunks.
-
-When cycle risk is present and the host has other modules, the implementation removes `runtime_module_idx` from the host's `modules` vec via `swap_remove` (ordering doesn't matter — `sort_chunk_modules` re-establishes it later) and sets `module_to_chunk[runtime_module_idx] = None`. If runtime is alone in its host chunk, it stays there — that chunk is already a leaf and cannot participate in a cycle, and peeling would leave an empty chunk that downstream code expecting `chunk.modules[0]` would choke on.
-
-**Step 2 — Placement decision (dominator search)**
-
-When the runtime is unplaced (either because Step 1 peeled it, or because the merge phase never placed it), compute the full consumer set:
+After chunk optimization, `try_merge_runtime_chunk()` can fold the standalone runtime chunk into an existing live chunk when that is proven safe. It computes the runtime consumer set from:
 
 ```
 consumer_chunks = (non-removed chunks with non-empty depended_runtime_helper)
-                ∪ runtime_dependent_chunks
-                ∪ ({original_host} if original_host is not marked Removed)
+                ∪ chunks whose included statements reference runtime-owned symbols
+                ∪ chunks containing modules that depend on the runtime module
+                ∪ chunks containing wrapped modules or side-effectful runtime dependencies
+                ∪ facade-elimination consumers added during the current pass
 ```
 
-The first term picks up chunks that already required helpers from the linking stage; the second term picks up chunks that facade elimination just announced; the third term re-adds the original host — the merge phase placed the runtime there because its bitset required it, making it an implicit consumer. The "not Removed" gate is defensive: `apply_common_chunk_merges` already retargets `module_to_chunk` when a host is merged into another chunk, so in practice `original_host` resolves to a still-live chunk. Deduplication is automatic via `FxHashSet`.
+Facade elimination can introduce the first runtime-helper consumer after early chunking. In that case it restores inclusion metadata, materializes the standalone runtime chunk, and then runs the same merge check.
 
-Then find a **dominator** — a member C such that every other consumer statically reaches C via forward edges. `find_consumer_dominator` checks each candidate with `chunk_reaches_via_static_import`. A dominator, if any, is a downstream sink of the consumer set: placing the runtime there means every other consumer's helper import rides an existing forward edge, so no back-edge is added and no cycle can form.
+The merge target must not create a static cycle or force unrelated entry chunks to execute just to access helpers. Candidate targets are tried in compactness-preserving order: a sole runtime consumer, a sole live chunk with the runtime bitset, a live common chunk with the same runtime bitset, then a consumer-set dominator. Manual code splitting / advanced chunk group chunks may host runtime only when that chunk is the sole runtime consumer; otherwise their contents are user-directed grouping output, and absorbing the runtime would make unrelated chunks load the group for helpers. Safety is checked by following static chunk-loading edges through still-live chunks. Dynamic imports are not followed; static imports and `require()` records are both considered because either can become a static chunk import in generated output. Chunks containing top-level await, or a dependency on top-level await, are runtime hosts only when they are the sole runtime consumer; otherwise a dynamically imported chunk that statically imports its awaiting importer for helpers can produce an unsettled async module cycle.
 
-- **Dominator found** → runtime moves into that chunk. No extra chunk is created.
-- **No dominator** (consumers sit in parallel sub-graphs or form a more complex shape) → runtime is placed in a fresh `rolldown-runtime.js` chunk created with the runtime's bitset. Every consumer imports from it. This chunk is structurally a leaf — not because being freshly created prevents outgoing edges, but because the runtime module itself contains no `import` statements, so the only module assigned to the chunk has no dependencies for the cross-chunk linker to translate into outgoing imports. Cycles are therefore impossible.
+- **Safe target found** → runtime moves into that chunk, and the empty standalone runtime chunk is marked removed.
+- **No safe target** → keep the standalone runtime chunk. Runtime imports that resolve only to externals are ignored for chunk-cycle checks; live internal runtime imports keep the runtime standalone instead.
 
 **Why this shape**
 
-Relying on `runtime_dependent_chunks.len()` alone undercounts — it ignores chunks that already required helpers from the linking stage and the original host. Relying on consumer count alone (splitting the "single consumer" case from the "many consumers" case) over-triggers and under-triggers both: a sole consumer can still sit in the middle of the graph and create a cycle via back-edges from other implicit consumers (fuzz-discovered case in [#8920](https://github.com/rolldown/rolldown/issues/8920)), and a set of multiple consumers may have a natural downstream sink that hosts the runtime at zero extra cost ([#8989](https://github.com/rolldown/rolldown/issues/8989)).
-
-The dominator search unifies both by asking the right question directly: "is there a chunk every consumer already reaches forward?". If yes, reuse it; if no, add a leaf.
+Runtime used to be placed by normal bitset grouping and later peeled out when a cycle was detected. That made every optimizer responsible for understanding runtime-host edge cases. Standalone-first flips the default: the initial layout is always cycle-safe, and the only runtime-specific optimization is a final, optional merge into a proven dominator.
 
 **Regression coverage**
 
-- `crates/rolldown/tests/rolldown/issues/8989/` — original cycle. Four entries with `node3` dynamically importing `node4` and `node1` namespace-importing `node2`. The merge phase drops the runtime into `entry2` (which already forward-reaches `node4` via `entry3`). Cycle risk → peel. Dominator search picks `node4` (leaf, all consumers reach it). Assertions cover the leaf invariant, the `entry2 → node4` direction, and that `node4` hosts the runtime.
-- `crates/rolldown/tests/rolldown/issues/8920_2/` — fuzz-discovered shape where the previous single-consumer rule silently produced a cycle. Two entries with only a dynamic edge between them; `node1` is the shared common chunk. The merge phase places the runtime in `entry-2`, but `entry-2` has no static outbound edges — no cycle risk. Runtime stays in `entry-2`, the dominator of `{entry-2, node1}` by virtue of `node1 → entry-2` already being a forward static edge. Three chunks, no `rolldown-runtime.js` emitted.
+- `crates/rolldown/tests/rolldown/issues/9401/` — `avoidRedundantChunkLoads` must not move the runtime into a user entry and create a helper cycle.
+- `crates/rolldown/tests/rolldown/issues/8989/` — facade elimination introduces helper consumers; runtime may merge only into a downstream dominator.
+- `crates/rolldown/tests/rolldown/issues/8920_2/` — fuzz-discovered shape where consumer-count heuristics produced a cycle.
 
-Both fixtures assert structural invariants in `_test.mjs`, so any regression (e.g. reverting to the single-consumer-picks-itself rule, or over-peeling when no cycle risk exists) fails immediately rather than only showing up as a snapshot diff.
+These fixtures assert structural invariants in `_test.mjs`, so runtime-placement regressions fail immediately rather than only showing up as snapshot drift.
 
 ## Lazy Module Initialization Order
 

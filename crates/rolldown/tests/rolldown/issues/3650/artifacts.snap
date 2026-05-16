@@ -18,10 +18,18 @@ To fix:
 
 # Assets
 
+## chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
 ## first.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { n as __exportAll, t as __esmMin } from "./chunk.js";
 import { r as value$1, t as init_second } from "./second.js";
 //#region first.js
 var first_exports = /* @__PURE__ */ __exportAll({ value: () => value });
@@ -38,7 +46,7 @@ export { init_first as n, value as r, first_exports as t };
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as __esmMin } from "./chunk.js";
 import { n as second_exports, t as init_second } from "./second.js";
 import { n as init_first, t as first_exports } from "./first.js";
 //#endregion
@@ -50,18 +58,10 @@ __esmMin((() => {
 
 ```
 
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
-
-```
-
 ## second.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { n as __exportAll, t as __esmMin } from "./chunk.js";
 import { n as init_first, r as value$1 } from "./first.js";
 //#region second.js
 var second_exports = /* @__PURE__ */ __exportAll({ value: () => value });

@@ -92,7 +92,7 @@ struct ManualSplitter<'a> {
 
 impl ManualSplitter<'_> {
   async fn split(&mut self) -> BuildResult<()> {
-    let (mut module_groups, mut entries_aware_groups) = self.build_module_groups().await?;
+    let (mut module_groups, entries_aware_groups) = self.build_module_groups().await?;
 
     if module_groups.iter().all(|group| group.modules.is_empty())
       && entries_aware_groups.iter().all(|group| group.modules.is_empty())
@@ -100,7 +100,6 @@ impl ManualSplitter<'_> {
       return Ok(());
     }
 
-    self.extract_runtime_chunk(&mut module_groups, &mut entries_aware_groups);
     self.process_entries_aware_groups(entries_aware_groups, &mut module_groups);
 
     let module_groups = self.into_priority_sorted_groups(module_groups);
@@ -230,6 +229,7 @@ impl ManualSplitter<'_> {
           normal_module.idx,
           &self.link_output.metas,
           &self.link_output.module_table,
+          self.module_to_assigned,
           &mut FxHashSet::default(),
           include_dependencies_recursively,
         );
@@ -311,48 +311,6 @@ impl ManualSplitter<'_> {
           entries_aware_bits: Some(subgroup.bits),
         });
       }
-    }
-  }
-
-  fn extract_runtime_chunk(
-    &mut self,
-    module_groups: &mut IndexVec<ModuleGroupIdx, ModuleGroup>,
-    entries_aware_groups: &mut [ModuleGroup],
-  ) {
-    // Manually pull out the runtime module into a standalone chunk.
-    let metas = &self.link_output.metas;
-    let runtime_module_idx = self.link_output.runtime.id();
-    assert!(
-      matches!(&self.link_output.module_table[runtime_module_idx], Module::Normal(_)),
-      "rolldown runtime is always a normal module"
-    );
-
-    if metas[runtime_module_idx].is_included {
-      let runtime_chunk = Chunk::new(
-        Some("rolldown-runtime".into()),
-        None,
-        self.index_splitting_info[runtime_module_idx].bits.clone(),
-        vec![],
-        ChunkKind::Common,
-        self.input_base.clone(),
-        None,
-      );
-      let chunk_idx = self.chunk_graph.add_chunk(runtime_chunk);
-      module_groups.iter_mut().for_each(|group| {
-        group.remove_module(runtime_module_idx, &self.link_output.module_table);
-      });
-      entries_aware_groups.iter_mut().for_each(|group| {
-        group.remove_module(runtime_module_idx, &self.link_output.module_table);
-      });
-      self.chunk_graph.chunk_table[chunk_idx]
-        .bits
-        .union(&self.index_splitting_info[runtime_module_idx].bits);
-      self.chunk_graph.add_module_to_chunk(
-        runtime_module_idx,
-        chunk_idx,
-        self.link_output.metas[runtime_module_idx].depended_runtime_helper,
-      );
-      self.module_to_assigned.set_bit(runtime_module_idx);
     }
   }
 
@@ -863,6 +821,7 @@ fn add_module_and_dependencies_to_group_recursively(
   module_idx: ModuleIdx,
   module_metas: &LinkingMetadataVec,
   module_table: &ModuleTable,
+  module_to_assigned: &IndexBitSet<ModuleIdx>,
   visited: &mut FxHashSet<ModuleIdx>,
   recursively: bool,
 ) {
@@ -873,6 +832,10 @@ fn add_module_and_dependencies_to_group_recursively(
   }
 
   if !module_table[module_idx].is_normal() {
+    return;
+  }
+
+  if module_to_assigned.has_bit(module_idx) {
     return;
   }
 
@@ -890,6 +853,7 @@ fn add_module_and_dependencies_to_group_recursively(
         *dep,
         module_metas,
         module_table,
+        module_to_assigned,
         visited,
         recursively,
       );

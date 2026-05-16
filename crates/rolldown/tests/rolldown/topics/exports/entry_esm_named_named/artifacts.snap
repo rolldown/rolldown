@@ -7,16 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_lib = require("./lib2.js");
-require_lib.init_lib();
-exports.bar = require_lib.bar;
-exports.foo = require_lib.foo;
-
-```
-
-## lib2.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var foo, bar;
@@ -25,30 +15,11 @@ var init_lib = __esmMin((() => {
 	bar = 42;
 }));
 //#endregion
-Object.defineProperty(exports, "__esmMin", {
-	enumerable: true,
-	get: function() {
-		return __esmMin;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
-Object.defineProperty(exports, "bar", {
-	enumerable: true,
-	get: function() {
-		return bar;
-	}
-});
-Object.defineProperty(exports, "foo", {
-	enumerable: true,
-	get: function() {
-		return foo;
-	}
-});
+init_lib();
+exports.__esmMin = __esmMin;
+exports.__toESM = __toESM;
+exports.bar = bar;
+exports.foo = foo;
 Object.defineProperty(exports, "init_lib", {
 	enumerable: true,
 	get: function() {
@@ -62,7 +33,7 @@ Object.defineProperty(exports, "init_lib", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_lib = require("./lib2.js");
+const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
 node_assert = require_lib.__toESM(node_assert);
 //#endregion

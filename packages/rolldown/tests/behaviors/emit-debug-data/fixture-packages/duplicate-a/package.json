@@ -1,0 +1,8 @@
+{
+  "name": "duplicate-lib",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    "import": "./index.js"
+  }
+}

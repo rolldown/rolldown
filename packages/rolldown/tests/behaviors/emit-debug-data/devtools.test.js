@@ -75,6 +75,18 @@ test(`emit data for devtool`, async () => {
   expectPathToEndWith(metaInfoPackage.package_root, 'node_modules/meta-info-lib');
   expectPathToEndWith(metaInfoPackage.package_json_path, 'node_modules/meta-info-lib/package.json');
 
+  const duplicatePackages = packageGraphReady.packages.filter((pkg) => pkg.name === 'duplicate-lib');
+  expect(duplicatePackages).toHaveLength(2);
+  expect(duplicatePackages.map((pkg) => pkg.version)).toEqual(['1.0.0', '2.0.0']);
+  expect(new Set(duplicatePackages.map((pkg) => pkg.package_root)).size).toBe(2);
+  expect(duplicatePackages[0].package_root).toMatch(/fixture-packages\/duplicate-a$/);
+  expect(duplicatePackages[1].package_root).toMatch(/fixture-packages\/duplicate-b$/);
+
+  const duplicatePackageIndices = packageGraphReady.packages.flatMap((pkg, index) =>
+    pkg.name === 'duplicate-lib' ? [index] : [],
+  );
+  expect(duplicatePackageIndices[1]).toBe(duplicatePackageIndices[0] + 1);
+
   const metaContent = readFileSync(join(dotRolldownFileName, dotRolldownDir[0], 'meta.json'));
   for (const variable of variables) {
     expect(metaContent.includes(variable)).toBe(false);

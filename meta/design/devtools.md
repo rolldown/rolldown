@@ -147,6 +147,8 @@ Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 
 All actions except `StringRef` carry injected `session_id`, `build_id`, and `timestamp` fields. `StringRef` entries contain only `action`, `id`, and `content`.
 
+`PackageGraphReady.packages` is sorted by package name, version, package root, and package id. Rolldown does not emit a duplicate flag; consumers can identify duplicate packages by grouping non-null package names and checking whether a group contains multiple versions or package roots.
+
 ## TypeScript Codegen
 
 Action types are defined as Rust structs with `#[derive(ts_rs::TS, serde::Serialize)]`. The codegen pipeline:

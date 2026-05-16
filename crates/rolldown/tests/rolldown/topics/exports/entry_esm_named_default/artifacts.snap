@@ -10,16 +10,6 @@ Object.defineProperties(exports, {
 	__esModule: { value: true },
 	[Symbol.toStringTag]: { value: "Module" }
 });
-const require_lib = require("./lib2.js");
-require_lib.init_lib();
-exports.default = require_lib.lib_default;
-exports.named = require_lib.named;
-
-```
-
-## lib2.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var lib_default, named;
@@ -28,36 +18,17 @@ var init_lib = __esmMin((() => {
 	named = "named_value";
 }));
 //#endregion
-Object.defineProperty(exports, "__esmMin", {
-	enumerable: true,
-	get: function() {
-		return __esmMin;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
+init_lib();
+exports.__esmMin = __esmMin;
+exports.__toESM = __toESM;
+exports.default = lib_default;
 Object.defineProperty(exports, "init_lib", {
 	enumerable: true,
 	get: function() {
 		return init_lib;
 	}
 });
-Object.defineProperty(exports, "lib_default", {
-	enumerable: true,
-	get: function() {
-		return lib_default;
-	}
-});
-Object.defineProperty(exports, "named", {
-	enumerable: true,
-	get: function() {
-		return named;
-	}
-});
+exports.named = named;
 
 ```
 
@@ -65,14 +36,14 @@ Object.defineProperty(exports, "named", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_lib = require("./lib2.js");
+const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
 node_assert = require_lib.__toESM(node_assert);
 //#endregion
 require_lib.__esmMin((() => {
 	require_lib.init_lib();
-	node_assert.default.strictEqual(require_lib.lib_default.value, 42);
+	node_assert.default.strictEqual(require_lib.default.value, 42);
 }))();
-exports.lib = require_lib.lib_default;
+exports.lib = require_lib.default;
 
 ```

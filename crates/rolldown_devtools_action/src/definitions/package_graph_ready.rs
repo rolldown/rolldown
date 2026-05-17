@@ -15,6 +15,8 @@ pub struct PackageInfo {
   pub package_json_path: String,
   pub package_root: String,
   pub is_used: bool,
+  #[ts(type = "'direct' | 'transitive'")]
+  pub dependency_type: &'static str,
   pub modules: Vec<String>,
   pub chunk_ids: Vec<u32>,
 }

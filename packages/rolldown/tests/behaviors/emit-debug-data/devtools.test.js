@@ -68,6 +68,7 @@ test(`emit data for devtool`, async () => {
   expect(packageGraphReady).toBeDefined();
 
   function expectPackageChunkLinks(pkg) {
+    expect(['direct', 'transitive']).toContain(pkg.dependency_type);
     expect(pkg.modules).toEqual([...new Set(pkg.modules)]);
     expect(pkg.chunk_ids).toEqual([...new Set(pkg.chunk_ids)]);
 
@@ -90,6 +91,7 @@ test(`emit data for devtool`, async () => {
   const metaInfoPackage = packageGraphReady.packages.find((pkg) => pkg.name === 'meta-info-lib');
   expect(metaInfoPackage).toEqual(
     expect.objectContaining({
+      dependency_type: 'direct',
       is_used: true,
       version: '1.2.3',
     }),
@@ -105,6 +107,7 @@ test(`emit data for devtool`, async () => {
   );
   expect(duplicatePackages).toHaveLength(2);
   expect(duplicatePackages.map((pkg) => pkg.version)).toEqual(['1.0.0', '2.0.0']);
+  expect(duplicatePackages.every((pkg) => pkg.dependency_type === 'direct')).toBe(true);
   expect(duplicatePackages.every((pkg) => pkg.is_used)).toBe(true);
   expect(new Set(duplicatePackages.map((pkg) => pkg.package_root)).size).toBe(2);
   expectPathToEndWith(duplicatePackages[0].package_root, 'node_modules/duplicate-a');
@@ -119,9 +122,41 @@ test(`emit data for devtool`, async () => {
   );
   expect(duplicatePackageIndices[1]).toBe(duplicatePackageIndices[0] + 1);
 
+  const directGraphPackage = packageGraphReady.packages.find(
+    (pkg) => pkg.name === 'direct-graph-lib',
+  );
+  expect(directGraphPackage).toEqual(
+    expect.objectContaining({
+      dependency_type: 'direct',
+      is_used: true,
+      version: '1.0.0',
+    }),
+  );
+  expectPathToEndWith(directGraphPackage.package_root, 'node_modules/direct-graph-lib');
+  expect(directGraphPackage.modules).toHaveLength(1);
+  expectPathToEndWith(directGraphPackage.modules[0], 'node_modules/direct-graph-lib/index.js');
+
+  const transitiveGraphPackage = packageGraphReady.packages.find(
+    (pkg) => pkg.name === 'transitive-graph-lib',
+  );
+  expect(transitiveGraphPackage).toEqual(
+    expect.objectContaining({
+      dependency_type: 'transitive',
+      is_used: true,
+      version: '1.0.0',
+    }),
+  );
+  expectPathToEndWith(transitiveGraphPackage.package_root, 'node_modules/transitive-graph-lib');
+  expect(transitiveGraphPackage.modules).toHaveLength(1);
+  expectPathToEndWith(
+    transitiveGraphPackage.modules[0],
+    'node_modules/transitive-graph-lib/index.js',
+  );
+
   const unusedPackage = packageGraphReady.packages.find((pkg) => pkg.name === 'unused-lib');
   expect(unusedPackage).toEqual(
     expect.objectContaining({
+      dependency_type: 'direct',
       is_used: false,
       version: '1.0.0',
     }),

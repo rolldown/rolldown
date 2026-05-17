@@ -117,7 +117,8 @@ impl WatchTask {
 
           let scan_output = scan_result?;
 
-          if closed.load(Ordering::SeqCst) {
+          // Watcher closed mid-build: signal cancellation to the caller via `None`.
+          if closed.load(Ordering::Relaxed) {
             return Ok(None);
           }
 

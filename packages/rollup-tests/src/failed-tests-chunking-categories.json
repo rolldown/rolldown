@@ -1,0 +1,126 @@
+[
+  {
+    "category": "dynamic imports / dynamic entry chunking",
+    "failed-test": [
+      "deoptimized-module-with-dynamic-import",
+      "dynamic-import",
+      "dynamic-import-*",
+      "dynamically-import-*",
+      "entry-without-code-*",
+      "improved-dynamic-chunks/*",
+      "splitting-cycles-module-with-TLA-and-dynamic-importer",
+      "top-level-await-import*"
+    ],
+    "count": 61
+  },
+  {
+    "category": "emitFile / assets / render hooks / file naming",
+    "failed-test": [
+      "asset-needs-code-reference*",
+      "deprecated/emit-file/*",
+      "emit-file/*",
+      "filenames-patterns",
+      "hashing/*",
+      "max-parallel-file-operations",
+      "render-chunk*",
+      "render-dynamic-import-extended",
+      "sourcemap-file-names*"
+    ],
+    "count": 71
+  },
+  {
+    "category": "preserveModules / preserveEntrySignatures / facades",
+    "failed-test": [
+      "allow-extension-*",
+      "facades-*",
+      "indirect-reexports-preserve-modules",
+      "preserve-entry-signatures/*",
+      "preserve-modules-*",
+      "single-file-manual-chunk"
+    ],
+    "count": 50
+  },
+  {
+    "category": "core chunk export naming / deconflict / execution",
+    "failed-test": [
+      "chunk-*",
+      "deconflict-*",
+      "empty-*",
+      "multi-chunking",
+      "multiple-entry-points",
+      "nested-chunks",
+      "no-treeshake-imports",
+      "option-virtual-dirname",
+      "remove-attribute-declarations-for-internal-dynamic-imports",
+      "resolve-dynamic-import",
+      "side-effect-free-dependencies/*"
+    ],
+    "count": 48
+  },
+  {
+    "category": "minChunkSize / chunk merging",
+    "failed-test": [
+      "min-chunk-size/*"
+    ],
+    "count": 44
+  },
+  {
+    "category": "synthetic exports / namespaces / reexports / interop",
+    "failed-test": [
+      "chunking-reexport",
+      "chunking-star-external",
+      "combined-namespace-reexport",
+      "external-*",
+      "interop-*",
+      "namespace-*",
+      "reexport-*",
+      "synthetic-named-exports/*"
+    ],
+    "count": 37
+  },
+  {
+    "category": "manual chunks",
+    "failed-test": [
+      "manual-chunk-*",
+      "manual-chunks-*",
+      "manual-chunks-only-explicit-dependencies/*"
+    ],
+    "count": 30
+  },
+  {
+    "category": "implicit dependencies",
+    "failed-test": [
+      "implicit-dependencies/*"
+    ],
+    "count": 20
+  },
+  {
+    "category": "circular chunks",
+    "failed-test": [
+      "circular-*"
+    ],
+    "count": 12
+  },
+  {
+    "category": "generated-code options",
+    "failed-test": [
+      "generated-code/*"
+    ],
+    "count": 4
+  },
+  {
+    "category": "missing exports",
+    "failed-test": [
+      "missing-export*",
+      "missing-export-reused-deconflicting"
+    ],
+    "count": 4
+  },
+  {
+    "category": "import.meta",
+    "failed-test": [
+      "import-meta-url"
+    ],
+    "count": 1
+  }
+]

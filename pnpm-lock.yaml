@@ -661,6 +661,9 @@ importers:
       mocha:
         specifier: 'catalog:'
         version: 11.7.5
+      oxc-parser:
+        specifier: 'catalog:'
+        version: 0.130.0
       oxc-transform:
         specifier: 'catalog:'
         version: 0.130.0

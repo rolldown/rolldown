@@ -4,6 +4,7 @@ use std::cmp::Reverse;
 use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
 use crate::utils::chunk::normalize_preserve_entry_signature;
+use crate::utils::external_import_interop::external_import_needs_interop;
 use itertools::{Itertools, multizip};
 use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
@@ -57,6 +58,7 @@ impl GenerateStage<'_> {
     self.compute_chunk_imports(
       chunk_graph,
       &index_chunk_depended_symbols,
+      &index_chunk_direct_imports_from_external_modules,
       &mut index_chunk_exported_symbols,
       &mut index_cross_chunk_imports,
       &mut index_imports_from_other_chunks,
@@ -323,10 +325,12 @@ impl GenerateStage<'_> {
 
   /// - Filter out depended symbols to come from other chunks
   /// - Mark exports of importee chunks
+  #[expect(clippy::too_many_arguments, clippy::too_many_lines)]
   fn compute_chunk_imports(
     &self,
     chunk_graph: &ChunkGraph,
     index_chunk_depended_symbols: &IndexChunkDependedSymbols,
+    index_chunk_direct_imports_from_external_modules: &IndexChunkImportsFromExternalModules,
     index_chunk_exported_symbols: &mut IndexChunkExportedSymbols,
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
@@ -443,17 +447,23 @@ impl GenerateStage<'_> {
               continue;
             }
 
-            // Note: the `__toESM` might have been referenced during `collect_depended_symbols` phase
-            // for namespace or default imports from external modules.
-            // For named-only imports, we don't use __toESM, so we should not try to resolve it.
-            // Check if __toESM is actually used before trying to resolve it.
+            if !index_chunk_direct_imports_from_external_modules[chunk_id]
+              .get(&import_ref.owner)
+              .is_some_and(|imports| external_import_needs_interop(imports))
+            {
+              continue;
+            }
+
+            // Note: `__toESM` might have been referenced during `collect_depended_symbols` for
+            // namespace or default imports from external modules. Named-only imports render as
+            // direct `require()` bindings and must not inherit another chunk's `__toESM`.
             let to_esm_ref = self.link_output.runtime.resolve_symbol("__toESM");
             if self.link_output.symbol_db.get(to_esm_ref).chunk_idx.is_some() {
               // __toESM is in a chunk, so it's being used
               to_esm_ref
             } else {
               // __toESM is not being used, so skip this import
-              // This happens for named-only imports from external modules where we don't need interop
+              // This happens when the interop helper was optimized away.
               continue;
             }
           } else {

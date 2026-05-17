@@ -8,6 +8,14 @@ import { expect, test } from 'vitest';
 // For now, we just live with it.
 const dotRolldownFileName = join(process.cwd(), 'node_modules/.rolldown');
 
+function normalizePath(path) {
+  return path.replaceAll('\\', '/');
+}
+
+function expectPathToEndWith(path, suffix) {
+  expect(normalizePath(path).endsWith(suffix)).toBe(true);
+}
+
 test(`emit data for devtool`, async () => {
   // Clean up previous test data if exists
   if (existsSync(dotRolldownFileName)) {
@@ -54,6 +62,18 @@ test(`emit data for devtool`, async () => {
       chunk.imports.some((item) => item.kind === 'dynamic-import'),
     ),
   ).toBe(true);
+
+  const packageGraphReady = logs.find((event) => event.action === 'PackageGraphReady');
+  expect(packageGraphReady).toBeDefined();
+  const metaInfoPackage = packageGraphReady.packages.find((pkg) => pkg.name === 'meta-info-lib');
+  expect(metaInfoPackage).toEqual(
+    expect.objectContaining({
+      version: '1.2.3',
+    }),
+  );
+  expect(metaInfoPackage.package_id).toBe(metaInfoPackage.package_root);
+  expectPathToEndWith(metaInfoPackage.package_root, 'node_modules/meta-info-lib');
+  expectPathToEndWith(metaInfoPackage.package_json_path, 'node_modules/meta-info-lib/package.json');
 
   const metaContent = readFileSync(join(dotRolldownFileName, dotRolldownDir[0], 'meta.json'));
   for (const variable of variables) {

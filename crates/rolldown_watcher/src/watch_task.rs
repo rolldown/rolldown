@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use rolldown::{BundleOutput, Bundler, BundlerBuilder, BundlerConfig};
+use rolldown::{Bundler, BundlerBuilder, BundlerConfig};
 use rolldown_common::{
   BundleMode, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
 };
@@ -118,7 +118,7 @@ impl WatchTask {
           let scan_output = scan_result?;
 
           if closed.load(Ordering::SeqCst) {
-            return Ok(BuildOrClosed::Closed);
+            return Ok(None);
           }
 
           let output = if skip_write {
@@ -126,7 +126,7 @@ impl WatchTask {
           } else {
             bundle.bundle_write(scan_output).await?
           };
-          Ok(BuildOrClosed::Built(output))
+          Ok(Some(output))
         })
         .await;
 
@@ -144,18 +144,14 @@ impl WatchTask {
     // Also register any files discovered during render/write phase
     self.update_watch_files(&new_watch_files)?;
 
-    if self.closed.load(Ordering::SeqCst) {
-      return Ok(BuildOutcome::Closed);
-    }
-
     #[expect(clippy::cast_possible_truncation)]
     let duration = start_time.elapsed().as_millis() as u32;
 
     self.needs_rebuild = false;
 
     match result {
-      Ok(BuildOrClosed::Closed) => return Ok(BuildOutcome::Closed),
-      Ok(BuildOrClosed::Built(output)) => {
+      Ok(None) => Ok(BuildOutcome::Closed),
+      Ok(Some(output)) => {
         // Emit build warnings (e.g. CIRCULAR_DEPENDENCY) via the on_log callback,
         // matching the behavior of the non-watch build path.
         if let Err(err) = Self::emit_warnings(&self.options, output.warnings).await {
@@ -352,11 +348,6 @@ impl WatchTask {
 
     false
   }
-}
-
-enum BuildOrClosed {
-  Built(BundleOutput),
-  Closed,
 }
 
 /// Outcome of a build attempt

@@ -62,9 +62,31 @@ test(`emit data for devtool`, async () => {
       chunk.imports.some((item) => item.kind === 'dynamic-import'),
     ),
   ).toBe(true);
+  const chunkById = new Map(chunkGraphReady.chunks.map((chunk) => [chunk.chunk_id, chunk]));
 
   const packageGraphReady = logs.find((event) => event.action === 'PackageGraphReady');
   expect(packageGraphReady).toBeDefined();
+
+  function expectPackageChunkLinks(pkg) {
+    expect(pkg.modules).toEqual([...new Set(pkg.modules)]);
+    expect(pkg.chunk_ids).toEqual([...new Set(pkg.chunk_ids)]);
+
+    if (pkg.is_used) {
+      expect(pkg.modules.length).toBeGreaterThan(0);
+      expect(pkg.chunk_ids.length).toBeGreaterThan(0);
+    }
+
+    for (const chunkId of pkg.chunk_ids) {
+      const chunk = chunkById.get(chunkId);
+      expect(chunk).toBeDefined();
+      expect(pkg.modules.some((moduleId) => chunk.modules.includes(moduleId))).toBe(true);
+    }
+  }
+
+  for (const pkg of packageGraphReady.packages) {
+    expectPackageChunkLinks(pkg);
+  }
+
   const metaInfoPackage = packageGraphReady.packages.find((pkg) => pkg.name === 'meta-info-lib');
   expect(metaInfoPackage).toEqual(
     expect.objectContaining({
@@ -75,6 +97,8 @@ test(`emit data for devtool`, async () => {
   expect(metaInfoPackage.package_id).toBe(metaInfoPackage.package_root);
   expectPathToEndWith(metaInfoPackage.package_root, 'node_modules/meta-info-lib');
   expectPathToEndWith(metaInfoPackage.package_json_path, 'node_modules/meta-info-lib/package.json');
+  expect(metaInfoPackage.modules).toHaveLength(1);
+  expectPathToEndWith(metaInfoPackage.modules[0], 'node_modules/meta-info-lib/index.js');
 
   const duplicatePackages = packageGraphReady.packages.filter(
     (pkg) => pkg.name === 'duplicate-lib',
@@ -85,6 +109,10 @@ test(`emit data for devtool`, async () => {
   expect(new Set(duplicatePackages.map((pkg) => pkg.package_root)).size).toBe(2);
   expectPathToEndWith(duplicatePackages[0].package_root, 'node_modules/duplicate-a');
   expectPathToEndWith(duplicatePackages[1].package_root, 'node_modules/duplicate-b');
+  expect(duplicatePackages[0].modules).toHaveLength(1);
+  expectPathToEndWith(duplicatePackages[0].modules[0], 'node_modules/duplicate-a/index.js');
+  expect(duplicatePackages[1].modules).toHaveLength(1);
+  expectPathToEndWith(duplicatePackages[1].modules[0], 'node_modules/duplicate-b/index.js');
 
   const duplicatePackageIndices = packageGraphReady.packages.flatMap((pkg, index) =>
     pkg.name === 'duplicate-lib' ? [index] : [],
@@ -100,6 +128,8 @@ test(`emit data for devtool`, async () => {
   );
   expectPathToEndWith(unusedPackage.package_root, 'node_modules/unused-lib');
   expectPathToEndWith(unusedPackage.package_json_path, 'node_modules/unused-lib/package.json');
+  expect(unusedPackage.modules).toEqual([]);
+  expect(unusedPackage.chunk_ids).toEqual([]);
 
   const metaContent = readFileSync(join(dotRolldownFileName, dotRolldownDir[0], 'meta.json'));
   for (const variable of variables) {

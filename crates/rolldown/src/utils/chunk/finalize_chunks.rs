@@ -77,7 +77,15 @@ pub async fn finalize_assets(
   let index_standalone_content_hashes: IndexVec<InsChunkIdx, String> = index_instantiated_chunks
     .par_iter()
     .map(|chunk| {
-      let mut hash = xxhash_base64_url(chunk.content.as_bytes());
+      // Hash placeholders are temporary ids assigned while rendering. Normalize them for regular
+      // content hashes so adding an unrelated chunk does not perturb another chunk's hash.
+      let mut hash = if options.sourcemap_debug_ids {
+        xxhash_base64_url(chunk.content.as_bytes())
+      } else if let StrOrBytes::Str(content) = &chunk.content {
+        xxhash_base64_url(stable_content_hash_input(content).as_bytes())
+      } else {
+        xxhash_base64_url(chunk.content.as_bytes())
+      };
       // Hash content that provided by users if it's exist
       if let Some(augment_chunk_hash) = &chunk.augment_chunk_hash {
         hash.push_str(augment_chunk_hash);
@@ -97,8 +105,10 @@ pub async fn finalize_assets(
       // Start to calculate hash, first we hash itself
       index_standalone_content_hashes[asset_idx].hash(&mut hasher);
 
-      // hash itself's preliminary filename to prevent different chunks that have the same content from having the same hash
-      index_instantiated_chunks[asset_idx].preliminary_filename.hash(&mut hasher);
+      if options.sourcemap_debug_ids {
+        // Debug IDs identify generated files, so keep the filename-sensitive hash in that mode.
+        index_instantiated_chunks[asset_idx].preliminary_filename.hash(&mut hasher);
+      }
 
       let dependencies = &index_transitive_dependencies[asset_idx];
       dependencies.iter().copied().for_each(|dep_id| {
@@ -233,6 +243,27 @@ pub async fn finalize_assets(
   assets.extend(derived_assets.into_iter().flatten());
 
   Ok(assets)
+}
+
+fn stable_content_hash_input(content: &str) -> Cow<'_, str> {
+  let mut placeholders = rolldown_utils::hash_placeholder::find_hash_placeholders(
+    content,
+    &HASH_PLACEHOLDER_LEFT_FINDER,
+  )
+  .peekable();
+  if placeholders.peek().is_none() {
+    return Cow::Borrowed(content);
+  }
+
+  let mut stable_content = String::with_capacity(content.len());
+  let mut last_end = 0;
+  for (start, end, placeholder) in placeholders {
+    stable_content.push_str(&content[last_end..start]);
+    stable_content.extend(std::iter::repeat_n('0', placeholder.len()));
+    last_end = end;
+  }
+  stable_content.push_str(&content[last_end..]);
+  Cow::Owned(stable_content)
 }
 
 fn collect_transitive_dependencies(

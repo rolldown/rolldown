@@ -140,14 +140,14 @@ Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 | `ModuleGraphReady`           | After scan + normalize                    | modules[]{id, is_external, imports[]{module_id, kind, module_request}, importers[]}                         |
 | `BuildEnd`                   | After scan stage + after write/generate   | —                                                                                                           |
 | `ChunkGraphReady`            | After chunk graph construction            | chunks[]{chunk_id, name, reason, modules[], imports[], is_user_defined_entry, is_async_entry, entry_module} |
-| `PackageGraphReady`          | After chunk graph construction            | packages[]{package_id, name, version, package_json_path, package_root}                                      |
+| `PackageGraphReady`          | After chunk graph construction            | packages[]{package_id, name, version, package_json_path, package_root, is_used}                             |
 | `HookRenderChunkStart/End`   | Per plugin per renderChunk call           | chunk_id, plugin_name, plugin_id, call_id, content                                                          |
 | `AssetsReady`                | After final asset generation              | assets[]{chunk_id, content, size, filename}                                                                 |
 | `StringRef`                  | Before any action with large strings      | id (blake3 hash), content                                                                                   |
 
 All actions except `StringRef` carry injected `session_id`, `build_id`, and `timestamp` fields. `StringRef` entries contain only `action`, `id`, and `content`.
 
-`PackageGraphReady.packages` is sorted by package name, version, package root, and package id. Rolldown does not emit a duplicate flag; consumers can identify duplicate packages by grouping non-null package names and checking whether a group contains multiple versions or package roots.
+`PackageGraphReady.packages` contains packages discovered from resolved module `package.json` files. `is_used` is true when at least one resolved module for that package is included after tree shaking, and false when all resolved modules for that package are tree-shaken. The packages are sorted by package name, version, package root, and package id. Rolldown does not emit a duplicate flag; consumers can identify duplicate packages by grouping non-null package names and checking whether a group contains multiple versions or package roots.
 
 ## TypeScript Codegen
 

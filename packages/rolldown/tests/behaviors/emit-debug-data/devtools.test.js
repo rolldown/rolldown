@@ -68,6 +68,7 @@ test(`emit data for devtool`, async () => {
   const metaInfoPackage = packageGraphReady.packages.find((pkg) => pkg.name === 'meta-info-lib');
   expect(metaInfoPackage).toEqual(
     expect.objectContaining({
+      is_used: true,
       version: '1.2.3',
     }),
   );
@@ -80,6 +81,7 @@ test(`emit data for devtool`, async () => {
   );
   expect(duplicatePackages).toHaveLength(2);
   expect(duplicatePackages.map((pkg) => pkg.version)).toEqual(['1.0.0', '2.0.0']);
+  expect(duplicatePackages.every((pkg) => pkg.is_used)).toBe(true);
   expect(new Set(duplicatePackages.map((pkg) => pkg.package_root)).size).toBe(2);
   expectPathToEndWith(duplicatePackages[0].package_root, 'node_modules/duplicate-a');
   expectPathToEndWith(duplicatePackages[1].package_root, 'node_modules/duplicate-b');
@@ -88,6 +90,16 @@ test(`emit data for devtool`, async () => {
     pkg.name === 'duplicate-lib' ? [index] : [],
   );
   expect(duplicatePackageIndices[1]).toBe(duplicatePackageIndices[0] + 1);
+
+  const unusedPackage = packageGraphReady.packages.find((pkg) => pkg.name === 'unused-lib');
+  expect(unusedPackage).toEqual(
+    expect.objectContaining({
+      is_used: false,
+      version: '1.0.0',
+    }),
+  );
+  expectPathToEndWith(unusedPackage.package_root, 'node_modules/unused-lib');
+  expectPathToEndWith(unusedPackage.package_json_path, 'node_modules/unused-lib/package.json');
 
   const metaContent = readFileSync(join(dotRolldownFileName, dotRolldownDir[0], 'meta.json'));
   for (const variable of variables) {

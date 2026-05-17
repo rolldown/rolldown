@@ -112,7 +112,7 @@ jobs:
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
       os: windows-latest
-      node-version: 24
+      node-version: 26
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-test-macos:
@@ -124,7 +124,7 @@ jobs:
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
       os: macos-latest
-      node-version: 24
+      node-version: 26
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-test-ubuntu:
@@ -136,7 +136,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [20, 22, 24]
+        node-version: [20, 26]
     uses: ./.github/workflows/reusable-node-test.yml
     if: |
       always() &&
@@ -155,7 +155,7 @@ jobs:
       (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
       os: windows-latest
-      node-version: 24
+      node-version: 26
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-dev-server-test-macos:
@@ -167,7 +167,7 @@ jobs:
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
       os: macos-latest
-      node-version: 24
+      node-version: 26
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-dev-server-test-ubuntu:
@@ -179,7 +179,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [20, 22, 24]
+        node-version: [20, 26]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
     if: |
       always() &&

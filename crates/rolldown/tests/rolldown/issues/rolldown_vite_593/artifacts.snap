@@ -6,30 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## component.js
 
 ```js
-import { n as setInnerHtml, t as htmlEscape } from "./shared.js";
-//#region component.js
-var Component = class {
-	constructor(name) {
-		this.name = name;
-	}
-	render(el) {
-		setInnerHtml(el, htmlEscape(this.name));
-	}
-};
-//#endregion
+import { t as Component } from "./safehtml.js";
 export { Component };
 
 ```
 
 ## safehtml.js
-
-```js
-import { r as SafeHtml } from "./shared.js";
-export { SafeHtml };
-
-```
-
-## shared.js
 
 ```js
 //#region browser.js
@@ -61,6 +43,16 @@ function htmlEscape(str) {
 	return str.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 }
 //#endregion
-export { setInnerHtml as n, SafeHtml as r, htmlEscape as t };
+//#region component.js
+var Component = class {
+	constructor(name) {
+		this.name = name;
+	}
+	render(el) {
+		setInnerHtml(el, htmlEscape(this.name));
+	}
+};
+//#endregion
+export { SafeHtml, Component as t };
 
 ```

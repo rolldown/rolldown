@@ -1,16 +1,21 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: daemon.js is dynamically imported by completion.js but also statically imported by gateway.js, dynamic import will not move module into another chunk.
+
+```
+
 # Assets
 
 ## completion.js
 
 ```js
-//#region completion.js
-async function complete() {
-	return (await import("./daemon2.js")).start();
-}
-//#endregion
+import { t as complete } from "./entry.js";
 export { complete };
 
 ```
@@ -18,22 +23,7 @@ export { complete };
 ## daemon.js
 
 ```js
-//#region daemon-impl.js
-function start() {
-	return "start";
-}
-function stop() {
-	return "stop";
-}
-//#endregion
-export { stop as n, start as t };
-
-```
-
-## daemon2.js
-
-```js
-import { t as start } from "./daemon.js";
+import { n as start } from "./entry.js";
 export { start };
 
 ```
@@ -41,14 +31,21 @@ export { start };
 ## entry.js
 
 ```js
-import { n as stop, t as start } from "./daemon.js";
 // HIDDEN [\0rolldown/runtime.js]
-//#region gateway.js
+//#region daemon-impl.js
 var import_cjs_dep = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.helper = function() {
 		return "cjs-helper";
 	};
 })))();
+function start() {
+	return "start";
+}
+function stop() {
+	return "stop";
+}
+//#endregion
+//#region gateway.js
 function gateway() {
 	return start() + stop();
 }
@@ -58,6 +55,11 @@ function main() {
 	return (0, import_cjs_dep.helper)() + gateway();
 }
 //#endregion
-export { main };
+//#region completion.js
+async function complete() {
+	return (await import("./daemon.js")).start();
+}
+//#endregion
+export { main, start as n, stop as r, complete as t };
 
 ```

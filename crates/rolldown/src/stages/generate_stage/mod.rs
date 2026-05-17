@@ -37,6 +37,22 @@ struct PreGeneratedChunkName {
 
 type DevtoolsPackageInfoEntry = (action::PackageInfo, FxIndexSet<String>, FxIndexSet<u32>);
 
+fn is_devtools_source_importer(module_id: &str, cwd: &str, cwd_slash: &str) -> bool {
+  fn is_path_inside(path: &str, parent: &str) -> bool {
+    let parent = parent.trim_end_matches(['/', '\\']);
+    path == parent
+      || path
+        .strip_prefix(parent)
+        .is_some_and(|rest| rest.starts_with('/') || rest.starts_with('\\'))
+  }
+
+  let is_inside_cwd = is_path_inside(module_id, cwd) || is_path_inside(module_id, cwd_slash);
+  let is_node_module =
+    module_id.contains("/node_modules/") || module_id.contains("\\node_modules\\");
+
+  is_inside_cwd && !is_node_module
+}
+
 fn ensure_devtools_package_info<'a>(
   package_infos: &'a mut FxHashMap<String, DevtoolsPackageInfoEntry>,
   package_json: &PackageJson,
@@ -53,6 +69,7 @@ fn ensure_devtools_package_info<'a>(
         package_json_path,
         package_root,
         is_used: false,
+        dependency_type: "transitive",
         modules: Vec::new(),
         chunk_ids: Vec::new(),
       },
@@ -434,13 +451,26 @@ impl<'a> GenerateStage<'a> {
   fn trace_action_package_graph_ready(&self, chunk_graph: &ChunkGraph) {
     if trace_action_enabled!() {
       let mut package_infos: FxHashMap<String, DevtoolsPackageInfoEntry> = FxHashMap::default();
+      let cwd = self.options.cwd.to_string_lossy();
+      let cwd_slash = self.options.cwd.to_slash_lossy();
 
       for module in self.link_output.module_table.modules.iter().filter_map(|m| m.as_normal()) {
         let Some(package_json) = module.originative_resolved_id.package_json.as_ref() else {
           continue;
         };
 
-        let _ = ensure_devtools_package_info(&mut package_infos, package_json);
+        let Some((package_info, _, _)) =
+          ensure_devtools_package_info(&mut package_infos, package_json)
+        else {
+          continue;
+        };
+
+        if module.importers_idx.iter().any(|importer_idx| {
+          let importer_id = self.link_output.module_table[*importer_idx].id().as_str();
+          is_devtools_source_importer(importer_id, cwd.as_ref(), cwd_slash.as_ref())
+        }) {
+          package_info.dependency_type = "direct";
+        }
       }
 
       for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {

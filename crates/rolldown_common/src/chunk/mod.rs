@@ -1,3 +1,4 @@
+use core::cmp::PartialEq;
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
@@ -57,6 +58,23 @@ pub enum PostChunkOptimizationOperation {
   RemovedWithPreservedExports,
 }
 
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub enum PreliminarySourcemapFilename {
+  #[default]
+  Uninstantiated,
+  Empty,
+  Template(PreliminaryFilename),
+}
+
+impl From<PreliminarySourcemapFilename> for Option<PreliminaryFilename> {
+  fn from(value: PreliminarySourcemapFilename) -> Self {
+    match value {
+      PreliminarySourcemapFilename::Uninstantiated | PreliminarySourcemapFilename::Empty => None,
+      PreliminarySourcemapFilename::Template(preliminary_filename) => Some(preliminary_filename),
+    }
+  }
+}
+
 impl ChunkMeta {
   #[inline]
   pub fn is_pure_user_defined_entry(&self) -> bool {
@@ -75,6 +93,7 @@ pub struct Chunk {
   // emitted chunk corresponding reference_id, used to `PluginContext#getFileName` to search the emitted chunk name
   pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
+  pub preliminary_sourcemap_filename: PreliminarySourcemapFilename,
   pub absolute_preliminary_filename: Option<String>,
   pub canonical_names: FxHashMap<SymbolRef, CompactStr>,
   /// For mixed-mode externals: maps external `namespace_ref` to the node-mode binding name.
@@ -219,12 +238,58 @@ impl Chunk {
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
     let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, None, hash_replacer)?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);
 
     Ok(PreliminaryFilename::new(name, hash_placeholder))
+  }
+  pub async fn generate_preliminary_sourcemap_filename(
+    &self,
+    options: &NormalizedBundlerOptions,
+    rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
+    chunk_name: &ArcStr,
+    hash_placeholder_generator: &mut HashPlaceholderGenerator,
+    used_name_counts: &FxDashMap<ArcStr, u32>,
+  ) -> anyhow::Result<PreliminarySourcemapFilename> {
+    let Some(sourcemap_filename) = &options.sourcemap_filenames else {
+      return Ok(PreliminarySourcemapFilename::Empty);
+    };
+
+    let filename_template = FilenameTemplate::new(
+      sourcemap_filename.call(rollup_pre_rendered_chunk).await?,
+      "sourcemap_filename",
+    );
+    let has_hash_pattern = filename_template.has_hash_pattern();
+
+    let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
+    let hash_replacer = has_hash_pattern.then(|| {
+      let pattern_name = filename_template.pattern_name();
+      |len: Option<usize>| {
+        let hash = hash_placeholder_generator.generate(len, pattern_name)?;
+        if let Some(hash_placeholder) = hash_placeholder.as_mut() {
+          hash_placeholder.push(hash.clone());
+        }
+        Ok(hash)
+      }
+    });
+    let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
+    let chunkhash = self
+      .preliminary_filename
+      .as_ref()
+      .and_then(|filename| filename.hash_placeholder())
+      .and_then(|s| s.first())
+      .map(String::as_str)
+      .unwrap_or("")
+      .into();
+    let filename = filename_template
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, chunkhash, hash_replacer)?
+      .into();
+
+    let name = make_unique_name(&filename, used_name_counts);
+
+    Ok(PreliminarySourcemapFilename::Template(PreliminaryFilename::new(name, hash_placeholder)))
   }
 
   fn get_preserve_modules_chunk_name<'a, 'b: 'a>(

@@ -280,6 +280,7 @@ impl FileEmitter {
           name.as_deref(),
           None,
           Some(extension.unwrap_or_default()),
+          None,
           Some(|len: Option<usize>| Ok(&hash[..len.map_or(8, |len| len.clamp(1, 21))])),
         )?
         .into();

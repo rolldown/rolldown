@@ -4,7 +4,9 @@ use arcstr::ArcStr;
 use futures::future::try_join_all;
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
-use rolldown_common::{ChunkIdx, ChunkKind, OutputExports, PathsOutputOption};
+use rolldown_common::{
+  ChunkIdx, ChunkKind, OutputExports, PathsOutputOption, PreliminarySourcemapFilename,
+};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
@@ -278,7 +280,9 @@ impl<'a> GenerateStage<'a> {
 
     for chunk_id in &chunk_graph.sorted_chunk_idx_vec {
       let chunk = &mut chunk_graph.chunk_table[*chunk_id];
-      if chunk.preliminary_filename.is_some() {
+      if chunk.preliminary_filename.is_some()
+        && chunk.preliminary_sourcemap_filename != PreliminarySourcemapFilename::Uninstantiated
+      {
         // Already generated
         continue;
       }
@@ -289,30 +293,41 @@ impl<'a> GenerateStage<'a> {
         .insert(*chunk_id, pre_generated_chunk_name.representative_chunk_name.clone());
       let pre_rendered_chunk =
         generate_pre_rendered_chunk(chunk, &pre_generated_chunk_name.chunk_name, self.link_output);
+      if chunk.preliminary_filename.is_none() {
+        let preliminary_filename = chunk
+          .generate_preliminary_filename(
+            self.options,
+            &pre_rendered_chunk,
+            &pre_generated_chunk_name.chunk_filename,
+            &mut hash_placeholder_generator,
+            &used_name_counts,
+          )
+          .await?;
+        // Defer chunk name assignment to make sure at this point only entry chunk have a name
+        // if user provided one.
+        chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
 
-      let preliminary_filename = chunk
-        .generate_preliminary_filename(
-          self.options,
-          &pre_rendered_chunk,
-          &pre_generated_chunk_name.chunk_filename,
-          &mut hash_placeholder_generator,
-          &used_name_counts,
-        )
-        .await?;
-
-      // Defer chunk name assignment to make sure at this point only entry chunk have a name
-      // if user provided one.
-      chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
-
+        chunk.absolute_preliminary_filename = Some(
+          preliminary_filename
+            .absolutize_with(self.options.cwd.join(&self.options.out_dir))
+            .into_owned()
+            .expect_into_string(),
+        );
+        chunk.preliminary_filename = Some(preliminary_filename);
+      }
+      if chunk.preliminary_sourcemap_filename == PreliminarySourcemapFilename::Uninstantiated {
+        let preliminary_sourcemap_filename = chunk
+          .generate_preliminary_sourcemap_filename(
+            self.options,
+            &pre_rendered_chunk,
+            &pre_generated_chunk_name.chunk_filename,
+            &mut hash_placeholder_generator,
+            &used_name_counts,
+          )
+          .await?;
+        chunk.preliminary_sourcemap_filename = preliminary_sourcemap_filename;
+      }
       chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
-
-      chunk.absolute_preliminary_filename = Some(
-        preliminary_filename
-          .absolutize_with(self.options.cwd.join(&self.options.out_dir))
-          .into_owned()
-          .expect_into_string(),
-      );
-      chunk.preliminary_filename = Some(preliminary_filename);
     }
     Ok(index_chunk_id_to_representative_name)
   }

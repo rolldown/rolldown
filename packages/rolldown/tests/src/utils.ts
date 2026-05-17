@@ -37,6 +37,14 @@ export function getOutputFileNames(output: RollupOutput) {
   return output.output.map((chunk) => chunk.fileName).sort();
 }
 
+export function getOutputSourcemapFilenames(output: RollupOutput) {
+  return output.output
+    .filter((chunk) => chunk.type === 'chunk')
+    .map((chunk) => chunk.sourcemapFileName)
+    .filter((filename) => filename !== null)
+    .sort((a, b) => a.localeCompare(b));
+}
+
 export function getOutputAssetNames(output: RollupOutput) {
   return output.output
     .filter((chunk) => chunk.type === 'asset')

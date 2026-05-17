@@ -150,6 +150,12 @@ pub struct BundlerOptions {
   pub sourcemap_base_url: Option<String>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_chunk_filenames"),
+    schemars(with = "Option<String>")
+  )]
+  pub sourcemap_filenames: Option<ChunkFilenamesOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
     serde(default, skip_deserializing),
     schemars(skip)
   )]

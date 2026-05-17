@@ -876,6 +876,10 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.string()),
     v.description('Base URL used to prefix sourcemap paths'),
   ),
+  sourcemapFileNames: v.pipe(
+    v.optional(ChunkFileNamesSchema),
+    v.description('Name pattern for emitted sourcemaps'),
+  ),
   sourcemapDebugIds: v.pipe(v.optional(v.boolean()), v.description('Inject sourcemap debug IDs')),
   sourcemapExcludeSources: v.pipe(
     v.optional(v.boolean()),

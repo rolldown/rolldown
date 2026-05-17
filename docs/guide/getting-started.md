@@ -1,9 +1,5 @@
 # Getting Started
 
-:::warning 🚧 Release Candidate
-Rolldown is currently in RC status. While it can already handle most production use cases, there may still be bugs and rough edges. Most notably, the built-in minification feature is still in early work-in-progress status.
-:::
-
 :::tip Looking for specific use cases?
 For most applications, using [Rolldown through Vite](https://vite.dev/guide/rolldown.html#how-to-try-rolldown) is the recommended approach, as it provides a complete development experience with dev server, HMR, and optimized production builds.
 
@@ -86,7 +82,7 @@ If you are using a platform that a prebuilt binary is not distributed, you have 
 
 ### Release Channels
 
-- [latest](https://npmx.dev/package/rolldown#versions): currently `1.0.0-rc.*`.
+- [latest](https://npmx.dev/package/rolldown#versions): currently `1.x.x`.
 - [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown): continuously released from the `main` branch. Install with `npm i https://pkg.pr.new/rolldown@sha` where `sha` is a successful build listed on [pkg.pr.new](https://pkg.pr.new/~/rolldown/rolldown).
 
 ## Using the CLI
@@ -145,7 +141,7 @@ To avoid typing the long command, we can move it inside a `package.json` script:
     "build": "rolldown src/main.js --file bundle.js"
   },
   "devDependencies": {
-    "rolldown": "^1.0.0-rc.1"
+    "rolldown": "^1.0.0"
   }
 }
 ```
@@ -205,7 +201,7 @@ Next, in the npm script, we can instruct Rolldown to use the config file with th
     "build": "rolldown -c"
   },
   "devDependencies": {
-    "rolldown": "^1.0.0-rc.1"
+    "rolldown": "^1.0.0"
   }
 }
 ```
@@ -293,7 +289,7 @@ import { watch } from 'rolldown';
 
 const watcher = watch({
   /* option */
-}); // or watch([/* multiply option */] )
+}); // or watch([/* multiple option */] )
 
 watcher.on('event', () => {});
 

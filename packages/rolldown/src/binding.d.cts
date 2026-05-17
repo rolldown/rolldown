@@ -1861,6 +1861,7 @@ export interface BindingChecksOptions {
   eval?: boolean
   missingGlobalName?: boolean
   missingNameOptionForIifeExport?: boolean
+  invalidAnnotation?: boolean
   mixedExports?: boolean
   unresolvedEntry?: boolean
   unresolvedImport?: boolean
@@ -1877,6 +1878,7 @@ export interface BindingChecksOptions {
   duplicateShebang?: boolean
   unsupportedTsconfigOption?: boolean
   ineffectiveDynamicImport?: boolean
+  largeBarrelModules?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -1887,6 +1889,11 @@ export interface BindingChunkImportMap {
 export declare enum BindingChunkModuleOrderBy {
   ModuleId = 0,
   ExecOrder = 1
+}
+
+export interface BindingChunkOptimizationOptions {
+  mergeCommonChunks?: boolean
+  avoidRedundantChunkLoads?: boolean
 }
 
 export interface BindingClientHmrUpdate {
@@ -1945,6 +1952,8 @@ export interface BindingDevWatchOptions {
   debounceDuration?: number
   compareContentsForPolling?: boolean
   debounceTickRate?: number
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
 }
 
 export interface BindingEmittedAsset {
@@ -2131,7 +2140,7 @@ export interface BindingExperimentalOptions {
   onDemandWrapping?: boolean
   incrementalBuild?: boolean
   nativeMagicString?: boolean
-  chunkOptimization?: boolean
+  chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
 }
 
@@ -2265,7 +2274,7 @@ export interface BindingInputOptions {
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
   logLevel: BindingLogLevel
-  onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => Promise<void>
+  onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
   cwd: string
   treeshake?: BindingTreeshake
   moduleTypes?: Record<string, string>

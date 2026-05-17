@@ -19,8 +19,6 @@ export const failedReasons: Record<string, string> = {
   'default/external_es6_converted_to_common_js': 'sub optimal: redundant `import` statements',
   'default/false_require': 'should rename `require` when it is appear in param position',
   'default/jsx_dev_self_edge_cases': 'https://github.com/oxc-project/oxc/issues/16654',
-  'default/legal_comments_inline':
-    'legal comments are not kept properly (https://github.com/rolldown/rolldown/issues/7387)',
   'default/mangle_props_import_export':
     "sub optimal: for `__require` diff, we don't have ModePassThrough",
   'default/no_warn_common_js_exports_in_esm_pass_through':
@@ -39,8 +37,6 @@ export const failedReasons: Record<string, string> = {
   'packagejson/package_json_browser_issue2002_b': '`sub` is not resolved',
   'packagejson/package_json_disabled_type_module_issue3367':
     'ignored module debug name seems not correct',
-  'ts/parameter_props_use_define_for_class_fields_true':
-    'https://github.com/oxc-project/oxc/issues/21600',
   'ts/ts_export_default_type_issue316':
     'related to https://github.com/rolldown/rolldown/issues/3048, export pointing to a value declared by `declare var` should be kept',
   'ts/ts_print_non_finite_number_inside_with':

@@ -629,8 +629,6 @@ export interface OutputOptions {
    *
    * When both `legalComments` and `comments.legal` are set, `comments.legal` takes priority.
    *
-   * {@include ./docs/output-comments.md}
-   *
    * @default true
    */
   comments?: boolean | CommentsOptions;
@@ -674,9 +672,18 @@ export interface OutputOptions {
    */
   preserveModulesRoot?: string;
   /**
-   * Whether to use `var` declarations at the top level scope instead of function / class / let / const expressions.
+   * Whether to convert top-level `let` and `const` declarations into `var` declarations.
    *
-   * Enabling this option can improve runtime performance of the generated code in certain environments.
+   * Enabling this option can improve runtime performance of the generated code in
+   * certain environments by avoiding Temporal Dead Zone (TDZ) checks. Only declarations
+   * in the module's top-level scope are rewritten — declarations inside nested scopes
+   * (functions, blocks, etc.) are left as-is.
+   *
+   * Note:
+   * - Top-level `class X {}` declarations are always emitted as `var X = class {}` so
+   *   rolldown can hoist them alongside other top-level bindings; this transform is
+   *   independent of `topLevelVar`.
+   * - Top-level `function` declarations are never rewritten.
    *
    * @default false
    *

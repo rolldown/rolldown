@@ -1028,9 +1028,13 @@
           ]
         },
         "chunkOptimization": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChunkOptimizationOption"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "lazyBarrel": {
@@ -1111,6 +1115,30 @@
         "execOrder",
         "moduleId"
       ]
+    },
+    "ChunkOptimizationOption": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/ChunkOptimizationOptions"
+        }
+      ]
+    },
+    "ChunkOptimizationOptions": {
+      "type": "object",
+      "properties": {
+        "mergeCommonChunks": {
+          "type": "boolean",
+          "default": true
+        },
+        "avoidRedundantChunkLoads": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
     },
     "SimpleMinifyOptions": {
       "description": "A simple minify option that can be either a boolean or a string, used for rolldown rust testing.",
@@ -1362,6 +1390,12 @@
             "null"
           ]
         },
+        "invalidAnnotation": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "mixedExports": {
           "type": [
             "boolean",
@@ -1453,6 +1487,12 @@
           ]
         },
         "ineffectiveDynamicImport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "largeBarrelModules": {
           "type": [
             "boolean",
             "null"
@@ -1906,9 +1946,13 @@
           ]
         },
         "chunkOptimization": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChunkOptimizationOption"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "_snapshot": {
@@ -2091,6 +2135,26 @@
           ],
           "format": "uint64",
           "minimum": 0
+        },
+        "include": {
+          "description": "Filter to limit which discovered files are registered with the file watcher.\nStrings are treated as glob patterns.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "description": "Filter to prevent discovered files from being registered with the file watcher.\nStrings are treated as glob patterns.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false

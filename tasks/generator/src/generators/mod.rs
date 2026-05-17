@@ -15,7 +15,7 @@ pub use runtime_helper::RuntimeHelperGenerator;
 /// Trait to define a generator.
 pub trait Generator: Runner {
   fn generate(&self, _ctx: &Context) -> Output {
-    unimplemented!()
+    panic!("`generate` must be implemented")
   }
 
   fn generate_many(&self, ctx: &Context) -> Result<Vec<Output>> {

@@ -193,7 +193,7 @@ impl DevEngine {
             "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something is definitely wrong",
           );
         } else {
-          eprintln!(
+          tracing::warn!(
             "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something might be wrong",
           );
         }

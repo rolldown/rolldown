@@ -8,6 +8,60 @@ use super::chunk_import_map::ChunkImportMap;
 use super::chunk_modules_order::ChunkModulesOrderBy;
 use super::dev_mode_options::DevModeOptions;
 
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
+  serde(rename_all = "camelCase", deny_unknown_fields, default)
+)]
+pub struct ChunkOptimizationOptions {
+  pub merge_common_chunks: bool,
+  pub avoid_redundant_chunk_loads: bool,
+}
+
+impl Default for ChunkOptimizationOptions {
+  fn default() -> Self {
+    Self { merge_common_chunks: true, avoid_redundant_chunk_loads: true }
+  }
+}
+
+impl ChunkOptimizationOptions {
+  pub fn is_merge_common_chunks_enabled(&self) -> bool {
+    self.merge_common_chunks
+  }
+
+  pub fn is_avoid_redundant_chunk_loads_enabled(&self) -> bool {
+    self.avoid_redundant_chunk_loads
+  }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
+  serde(untagged)
+)]
+pub enum ChunkOptimizationOption {
+  Bool(bool),
+  Options(ChunkOptimizationOptions),
+}
+
+impl ChunkOptimizationOption {
+  pub fn is_merge_common_chunks_enabled(&self) -> bool {
+    match self {
+      Self::Bool(enabled) => *enabled,
+      Self::Options(options) => options.is_merge_common_chunks_enabled(),
+    }
+  }
+
+  pub fn is_avoid_redundant_chunk_loads_enabled(&self) -> bool {
+    match self {
+      Self::Bool(enabled) => *enabled,
+      Self::Options(options) => options.is_avoid_redundant_chunk_loads_enabled(),
+    }
+  }
+}
+
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(
   feature = "deserialize_bundler_options",
@@ -24,7 +78,7 @@ pub struct ExperimentalOptions {
   pub chunk_modules_order: Option<ChunkModulesOrderBy>,
   pub on_demand_wrapping: Option<bool>,
   pub native_magic_string: Option<bool>,
-  pub chunk_optimization: Option<bool>,
+  pub chunk_optimization: Option<ChunkOptimizationOption>,
   pub lazy_barrel: Option<bool>,
 }
 
@@ -54,8 +108,18 @@ impl ExperimentalOptions {
     self.native_magic_string.unwrap_or(false)
   }
 
-  pub fn is_chunk_optimization_enabled(&self) -> bool {
-    self.chunk_optimization.unwrap_or(true)
+  pub fn is_merge_common_chunks_enabled(&self) -> bool {
+    self
+      .chunk_optimization
+      .as_ref()
+      .is_none_or(ChunkOptimizationOption::is_merge_common_chunks_enabled)
+  }
+
+  pub fn is_avoid_redundant_chunk_loads_enabled(&self) -> bool {
+    self
+      .chunk_optimization
+      .as_ref()
+      .is_none_or(ChunkOptimizationOption::is_avoid_redundant_chunk_loads_enabled)
   }
 
   pub fn is_lazy_barrel_enabled(&self) -> bool {

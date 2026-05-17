@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'sub' in src/node_modules/pkg/sub/foo.js
+[UNRESOLVED_IMPORT] Could not resolve 'sub' in src/node_modules/pkg/sub/foo.js
    ╭─[ src/node_modules/pkg/sub/foo.js:1:9 ]
    │
  1 │ require('sub')

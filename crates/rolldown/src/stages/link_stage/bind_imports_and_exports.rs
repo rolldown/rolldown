@@ -1062,8 +1062,12 @@ impl BindImportsAndExportsContext<'_> {
 
           break MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports });
         }
-        ImportStatus::_CommonJSWithoutExports => todo!(),
-        ImportStatus::_Disabled => todo!(),
+        ImportStatus::_CommonJSWithoutExports => {
+          panic!("`ImportStatus::_CommonJSWithoutExports` is not implemented yet")
+        }
+        ImportStatus::_Disabled => {
+          panic!("`ImportStatus::_Disabled` is not implemented yet")
+        }
         ImportStatus::External(symbol_ref) => {
           if self.options.format.keep_esm_import_export_syntax() {
             // Imports from external modules should not be converted to CommonJS

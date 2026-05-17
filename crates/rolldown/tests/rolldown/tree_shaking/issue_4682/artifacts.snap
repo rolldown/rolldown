@@ -11,7 +11,7 @@ console.log("dynamic no-treeshake");
 //#endregion
 //#region dynamic.js
 const lazyLoad = async () => {
-	await import("./static.js").then((n) => n.t);
+	await import("./main.js");
 	document.body.classList.add("loaded");
 };
 //#endregion
@@ -22,25 +22,14 @@ export { lazyLoad };
 ## main.js
 
 ```js
-import "./static.js";
+//#endregion
+//#region static.no-treeshake.js
+console.log("static no-treeshake");
+//#endregion
 //#region main.js
 import("./dynamic.js").then(async ({ lazyLoad }) => {
 	await lazyLoad();
 });
 //#endregion
-
-```
-
-## static.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region static.no-treeshake.js
-console.log("static no-treeshake");
-//#endregion
-//#region static.js
-var static_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
-//#endregion
-export { static_exports as t };
 
 ```

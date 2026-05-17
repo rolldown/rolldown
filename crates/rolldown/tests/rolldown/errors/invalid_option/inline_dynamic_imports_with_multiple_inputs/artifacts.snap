@@ -6,6 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INVALID_OPTION
 
 ```text
-[INVALID_OPTION] Error: Invalid value "false" for option "output.codeSplitting" - multiple inputs are not supported when "output.codeSplitting" is false.
+[INVALID_OPTION] Invalid value "false" for option "output.codeSplitting" - multiple inputs are not supported when "output.codeSplitting" is false.
 
 ```

@@ -69,7 +69,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -112,12 +112,6 @@ jobs:
           path: packages/debug/dist
           name: debug-artifact
 
-      - name: Download Pluginutils Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          path: packages/pluginutils/dist
-          name: pluginutils-artifact
-
       - name: Copy Licenses
         run: |
           find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;
@@ -153,12 +147,18 @@ jobs:
 
       - name: Create GitHub Release
         id: github_release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
-        with:
-          draft: false
-          tag_name: v${{ needs.check.outputs.version }} # tags the current commit
-          target_commitish: ${{ github.sha }}
-          body: ${{ steps.changelog.outputs.CHANGELOG }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: v${{ needs.check.outputs.version }} # tags the current commit
+          TARGET: ${{ github.sha }}
+          NOTES: ${{ steps.changelog.outputs.CHANGELOG }}
+        run: |
+          url=$(gh release create "$TAG_NAME" \
+            --target "$TARGET" \
+            --title "$TAG_NAME" \
+            --notes "$NOTES")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Notify Discord
         uses: tsickert/discord-webhook@b217a69502f52803de774ded2b1ab7c282e99645 # v7.0.0

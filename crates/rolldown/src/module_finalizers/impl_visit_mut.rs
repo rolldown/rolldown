@@ -16,7 +16,7 @@ use oxc::{
 use oxc_str::CompactStr;
 use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript::ToSourceString;
-use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
+use rolldown_ecmascript_utils::{ExpressionExt, JsxExt, JsxMemberExpressionObjectExt};
 
 use crate::hmr::utils::HmrAstBuilder;
 use crate::module_finalizers::{KeepNameId, TraverseState};
@@ -482,7 +482,20 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           *expr = self.snippet.builder.expression_object(SPAN, self.snippet.builder.vec());
         }
       }
-      ast::Expression::ChainExpression(chain_expr) => {
+      ast::Expression::ChainExpression(_) => {
+        // Try inline as enum access first (`E?.x` → literal). Enum bindings are
+        // always defined (the IIFE produces `{}`, never null/undefined), so `?.`
+        // is equivalent to `.` here.
+        if self.ctx.has_enum_inlining
+          && let Some(new_expr) = self.try_inline_enum_access(expr)
+        {
+          *expr = new_expr;
+          self.rewrite_import_meta_hot(expr);
+          walk_mut::walk_expression(self, expr);
+          return;
+        }
+
+        let ast::Expression::ChainExpression(chain_expr) = expr else { unreachable!() };
         let chain_span = chain_expr.span;
         if let Some(new_expr) = chain_expr
           .expression

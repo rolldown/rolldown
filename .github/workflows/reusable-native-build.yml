@@ -39,7 +39,7 @@ jobs:
           save-cache: ${{ github.ref_name == 'main' }}
           target-dir: ${{ runner.os == 'Windows' && format('{0}/target', env.DEV_DRIVE) || '' }}
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
         with:
           cache: true
 
@@ -53,7 +53,5 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: rolldown-native-${{ inputs.os }}
-          path: |
-            packages/rolldown/dist
-            packages/pluginutils/dist
+          path: packages/rolldown/dist
           if-no-files-found: error

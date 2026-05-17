@@ -12,7 +12,7 @@ use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, GetLocalDb, NormalModule, OutputFormat, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::ecmascript::legitimize_identifier_name;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn deconflict_chunk_symbols(
@@ -90,6 +90,38 @@ pub fn deconflict_chunk_symbols(
     });
   }
 
+  // Collect the canonical names of things that are emitted at the chunk's root scope and thus
+  // captured by every CJS-wrapped module's `__commonJS((exports, module) => { ... })` closure.
+  // A real-AST root-scope binding inside the closure whose name matches one of these would
+  // shadow the captured value at runtime (issues #9055, #9375). We track only rolldown-emitted
+  // names — iife/umd factory params and `require_xxx` wrapper facades — and intentionally
+  // exclude the names of import bindings that get rewritten away at codegen time. We use the
+  // symbols' *original* names here: wrapper symbols haven't been renamed yet at this point, and
+  // if any of them ends up renamed in the loop below, the conflict that triggered the rename
+  // would have been the user-source local — which is exactly the case we want to catch.
+  let mut chunk_scope_captured_names: FxHashSet<CompactStr> = FxHashSet::default();
+  if matches!(format, OutputFormat::Iife | OutputFormat::Umd) {
+    // Mirror the set rendered as factory params by `render_chunk_external_imports` +
+    // `render_factory_parameters`.
+    for (external_idx, _) in &chunk.direct_imports_from_external_modules {
+      let Some(external) = link_output.module_table[*external_idx].as_external() else {
+        continue;
+      };
+      if let Some(name) = renamer.get_canonical_name(external.namespace_ref) {
+        chunk_scope_captured_names.insert(name.clone());
+      }
+    }
+  }
+  // CJS wrapper facades (e.g. `require_foo`) are rendered at chunk scope and captured by every
+  // CJS-wrapped module's closure in this chunk.
+  for module_idx in chunk.modules.iter().copied() {
+    if let Some(wrapper_ref) = link_output.metas[module_idx].wrapper_ref {
+      let canonical_ref = link_output.symbol_db.canonical_ref_for(wrapper_ref);
+      chunk_scope_captured_names
+        .insert(CompactStr::new(canonical_ref.name(&link_output.symbol_db)));
+    }
+  }
+
   chunk
     .modules
     .iter()
@@ -130,12 +162,17 @@ pub fn deconflict_chunk_symbols(
               // Note:
               // 1. Some facade symbols may originate from external modules (e.g., namespace objects for external imports).
               // 2. Since we merge external module symbols, external symbol declared in a cjs module also needs to be deconflicted
-              link_output.symbol_db.is_facade_symbol(canonical_ref)
+              let is_facade_or_external = link_output.symbol_db.is_facade_symbol(canonical_ref)
                 || stmt_info.import_records.iter().any(|import_rec_idx| {
                   module.import_records[*import_rec_idx]
                     .resolved_module
                     .is_some_and(|module_idx| link_output.module_table[module_idx].is_external())
-                })
+                });
+              // Deconflict bindings that would shadow a name captured by the enclosing
+              // `__commonJS` closure (issues #9055, #9375).
+              let shadows_chunk_scope_name =
+                chunk_scope_captured_names.contains(canonical_ref.name(&link_output.symbol_db));
+              is_facade_or_external || shadows_chunk_scope_name
             } else {
               true
             };

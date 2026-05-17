@@ -1,0 +1,47 @@
+name: WASI Test
+
+permissions: {}
+
+on:
+  workflow_call:
+    inputs:
+      changed:
+        required: true
+        type: boolean
+
+jobs:
+  run:
+    name: WASI Test
+    if: ${{ inputs.changed }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
+        with:
+          cache: true
+
+      - name: Download Rolldown with WASI Binding
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rolldown-wasi
+          path: packages/rolldown/dist
+
+      # Smoke-only scope: the WASI binding intentionally drops JS Error references when
+      # crossing the WASM worker boundary (see crates/rolldown_binding/src/types/binding_outputs.rs
+      # and rolldown/rolldown#8579), which causes ~130 fixture-based regression tests to fail
+      # on stack-trace and custom-property assertions. test:stability is a build/diff smoke test
+      # that does not depend on Error fidelity. Re-enabling the full rolldown-tests + rollup-tests
+      # suites is gated on the BindingError refactor tracked in #8579.
+      - name: Stability Test
+        run: vp run --filter rolldown-tests test:stability
+
+      # `@example/typescript` is excluded because its config enables `devtools`, which currently
+      # panics under WASI when the writer tries to open its log file (crates/rolldown_devtools/src/writer.rs).
+      # `@example/native-magic-string` is excluded because it depends on a native-only addon.
+      # Both tracked as follow-ups to #8579.
+      - name: Build Examples
+        run: vp run --filter '@example/*' --filter '!@example/native-magic-string' --filter '!@example/typescript' build

@@ -235,14 +235,20 @@ impl GenerateStage<'_> {
               stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
                 match reference_ref {
                   rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
-                    depended_symbols.insert(symbols.canonical_ref_resolving_namespace(*referenced));
+                    self.add_depended_symbol_with_wrapped_esm_init(
+                      depended_symbols,
+                      symbols.canonical_ref_resolving_namespace(*referenced),
+                    );
                   }
                   rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
                     match member_expr.represent_symbol_ref(
                       &self.link_output.metas[module.idx].resolved_member_expr_refs,
                     ) {
                       Some(sym_ref) => {
-                        depended_symbols.insert(symbols.canonical_ref_resolving_namespace(sym_ref));
+                        self.add_depended_symbol_with_wrapped_esm_init(
+                          depended_symbols,
+                          symbols.canonical_ref_resolving_namespace(sym_ref),
+                        );
                       }
                       _ => {
                         // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
@@ -270,8 +276,10 @@ impl GenerateStage<'_> {
               // out a exported symbol that came from a cjs module.
               .filter(|resolved_export| !resolved_export.came_from_commonjs)
             {
-              depended_symbols
-                .insert(symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref));
+              self.add_depended_symbol_with_wrapped_esm_init(
+                depended_symbols,
+                symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref),
+              );
             }
           }
 
@@ -318,6 +326,22 @@ impl GenerateStage<'_> {
         let symbol_data = symbols.get_mut(declared);
         symbol_data.chunk_idx = Some(chunk_idx);
       }
+    }
+  }
+
+  fn add_depended_symbol_with_wrapped_esm_init(
+    &self,
+    depended_symbols: &mut FxIndexSet<SymbolRef>,
+    symbol_ref: SymbolRef,
+  ) {
+    depended_symbols.insert(symbol_ref);
+
+    let meta = &self.link_output.metas[symbol_ref.owner];
+    if matches!(meta.wrap_kind(), WrapKind::Esm)
+      && let Some(wrapper_ref) = meta.wrapper_ref
+      && wrapper_ref != symbol_ref
+    {
+      depended_symbols.insert(wrapper_ref);
     }
   }
 

@@ -187,7 +187,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     // The threshold targets only the real outliers (large icon packs); normal
     // component and utility barrels stay well below it.
     if barrel_info.is_some()
-      && self.ctx.options.checks.contains(EventKindSwitcher::LargeBarrelModules)
+      && self.ctx.options.is_check_enabled(EventKindSwitcher::LargeBarrelModules)
     {
       const LARGE_BARREL_IMPORT_THRESHOLD: usize = 5000;
       let import_record_count = raw_import_records.len();

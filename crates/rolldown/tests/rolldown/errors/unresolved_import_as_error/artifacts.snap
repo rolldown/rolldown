@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in main.js
+   ╭─[ main.js:1:8 ]
+   │
+ 1 │ import 'foo';
+   │        ──┬──  
+   │          ╰──── Module not found.
+───╯
+
+```

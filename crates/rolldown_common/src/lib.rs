@@ -151,6 +151,7 @@ pub use crate::{
   types::ast_scope_idx::AstScopeIdx,
   types::ast_scopes::AstScopes,
   types::bundle_mode::BundleMode,
+  types::check_setting::CheckSetting,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
   types::concatenate_wrapped_module::{

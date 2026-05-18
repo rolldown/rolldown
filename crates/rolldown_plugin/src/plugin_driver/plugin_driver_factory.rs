@@ -54,7 +54,7 @@ impl PluginDriverFactory {
     ));
 
     // Create timing collector only if checks.pluginTimings is enabled
-    let hook_timing_collector = if options.checks.contains(EventKindSwitcher::PluginTimings) {
+    let hook_timing_collector = if options.is_check_enabled(EventKindSwitcher::PluginTimings) {
       Some(Arc::new(HookTimingCollector::default()))
     } else {
       None

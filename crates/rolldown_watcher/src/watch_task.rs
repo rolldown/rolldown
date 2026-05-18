@@ -122,11 +122,15 @@ impl WatchTask {
             return Ok(None);
           }
 
-          let output = if skip_write {
-            bundle.bundle_generate(scan_output).await?
+          let build_result = if skip_write {
+            bundle.bundle_generate(scan_output).await
           } else {
-            bundle.bundle_write(scan_output).await?
+            bundle.bundle_write(scan_output).await
           };
+          // Mirror the non-watch path: any warning whose kind is in
+          // `error_checks` must fail the rebuild instead of being passed to
+          // `emit_warnings` (where the `warn_checks` filter would drop it).
+          let output = bundle.promote_error_checks(build_result)?;
           Ok(Some(output))
         })
         .await;
@@ -190,7 +194,7 @@ impl WatchTask {
       return Ok(());
     }
     if let Some(on_log) = options.on_log.as_ref() {
-      for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
+      for warning in filter_out_disabled_diagnostics(warnings, &options.warn_checks) {
         let diag = warning.to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() });
         let code = warning.kind().to_string();
         #[expect(

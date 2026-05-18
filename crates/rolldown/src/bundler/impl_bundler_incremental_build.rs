@@ -55,11 +55,12 @@ impl Bundler {
     self
       .with_cached_bundle(bundle_mode, async |bundle| {
         let middle_output = bundle.scan_modules(scan_mode).await?;
-        if is_write {
+        let result = if is_write {
           bundle.bundle_write(middle_output).await
         } else {
           bundle.bundle_generate(middle_output).await
-        }
+        };
+        bundle.promote_error_checks(result)
       })
       .await
   }

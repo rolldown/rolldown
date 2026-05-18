@@ -366,6 +366,7 @@ pub fn prepare_build_context(
     }
   };
 
+  let (warn_checks, error_checks) = raw_options.checks.unwrap_or_default().into();
   let mut normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
     external: raw_options.external.unwrap_or_default(),
@@ -416,7 +417,8 @@ pub fn prepare_build_context(
     code_splitting,
     dynamic_import_in_cjs: raw_options.dynamic_import_in_cjs.unwrap_or(true),
     manual_code_splitting: raw_options.manual_code_splitting,
-    checks: raw_options.checks.unwrap_or_default().into(),
+    warn_checks,
+    error_checks,
     watch: raw_options.watch.unwrap_or_default(),
     legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Inline),
     comments: {

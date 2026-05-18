@@ -1367,139 +1367,235 @@
       "type": "object",
       "properties": {
         "circularDependency": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "eval": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "missingGlobalName": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "missingNameOptionForIifeExport": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "invalidAnnotation": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "mixedExports": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "unresolvedEntry": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "unresolvedImport": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "filenameConflict": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "commonJsVariableInEsm": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "importIsUndefined": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "emptyImportMeta": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "toleratedTransform": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "cannotCallNamespace": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "configurationFieldConflict": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "preferBuiltinFeature": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "couldNotCleanDirectory": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "pluginTimings": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "duplicateShebang": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "unsupportedTsconfigOption": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "ineffectiveDynamicImport": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "largeBarrelModules": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckSetting"
+            },
+            {
+              "type": "null"
+            }
           ]
         }
       },
       "additionalProperties": false
+    },
+    "CheckSetting": {
+      "description": "Per-check configuration. `false` disables the check, 'warn' emits a warning, 'error' fails the build.",
+      "enum": [
+        false,
+        "warn",
+        "error"
+      ]
     },
     "WatchOption": {
       "type": "object",

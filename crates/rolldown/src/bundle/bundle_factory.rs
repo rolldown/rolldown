@@ -183,7 +183,7 @@ impl BundleFactory {
     options: &NormalizedBundlerOptions,
     warning: &mut Vec<BuildDiagnostic>,
   ) {
-    if !options.checks.contains(EventKindSwitcher::PreferBuiltinFeature) {
+    if !options.is_check_enabled(EventKindSwitcher::PreferBuiltinFeature) {
       return;
     }
     let map = FxHashMap::from_iter([

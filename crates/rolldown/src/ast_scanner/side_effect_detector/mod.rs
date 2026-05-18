@@ -306,8 +306,13 @@ impl<'a> SideEffectDetector<'a> {
   /// whether the whole expression has any side effect (fast path, covers
   /// computed keys / spread reads / etc.), and if not, fold metadata flags
   /// (`PureAnnotation`, `GlobalVarAccess`) from the child expressions.
-  /// Strips `Unknown` from the fold result because oxc already certified the
-  /// parent has no side effect — only metadata bits should propagate.
+  ///
+  /// The trailing `- Unknown` is load-bearing: rolldown's detector can be
+  /// more conservative than oxc for some sub-expressions (e.g. CJS-export
+  /// assignments via [`check_pure_cjs_export`], or future bundler-specific
+  /// overrides). Once oxc has certified the parent side-effect-free at the
+  /// gate, we trust that judgment for the parent and strip any `Unknown`
+  /// that a child contributed — only metadata bits should propagate.
   fn fold_compound<'e>(
     &self,
     expr: &Expression,
@@ -1289,6 +1294,16 @@ mod test {
     );
     assert_eq!(
       get_statements_side_effect_details("export default /* @__PURE__ */ (() => globalValue)()!"),
+      vec![SideEffectDetail::PureAnnotation]
+    );
+    // TSInstantiationExpression `f<T>` — must be peeled like the other TS
+    // wrappers. (`<T>x` TSTypeAssertion is ambiguous with JSX under tsx()
+    // and can't be expressed in this harness; `get_inner_expression()`
+    // peels it identically in non-tsx contexts.)
+    assert_eq!(
+      get_statements_side_effect_details(
+        "export default /* @__PURE__ */ ((() => globalValue) as any)<string>()"
+      ),
       vec![SideEffectDetail::PureAnnotation]
     );
   }

@@ -17,13 +17,13 @@ const prefix = "prefix:";
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 __rolldown_runtime__.createModuleHotContext("foo.js");
 __rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
-const foo = prefix + "foo";
+const foo = "prefix:foo";
 //#endregion
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
 __rolldown_runtime__.createModuleHotContext("bar.js");
 __rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
-const bar = prefix + "bar";
+const bar = "prefix:bar";
 //#endregion
 //#region messenger.js
 var messenger_exports = /* @__PURE__ */ __exportAll({

@@ -80,6 +80,7 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
     </HookResolveIdCallSpan>
     {trace_action!(ModuleGraphReady { ... })}
     {trace_action!(ChunkGraphReady { ... })}
+    {trace_action!(PackageGraphReady { ... })}
     {trace_action!(BuildEnd { action: "BuildEnd" })}
   </BuildSpan>
 </SessionSpan>
@@ -116,6 +117,7 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
 2. `BuildStart` / `BuildEnd` — emitted both around the outer `write()`/`generate()` call and inside `scan_modules()`, so consumers may see nested pairs per build
 3. `trace_action_module_graph_ready()` — emits after scan stage with all modules and their import relationships
 4. `trace_action_chunks_infos()` — emits after chunk graph construction in the generate stage
+5. `trace_action_package_graph_ready()` — emits after chunk graph construction with package metadata discovered from resolved package.json files
 
 **`PluginDriver`** (plugin hooks):
 
@@ -138,6 +140,7 @@ Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 | `ModuleGraphReady`           | After scan + normalize                    | modules[]{id, is_external, imports[]{module_id, kind, module_request}, importers[]}                         |
 | `BuildEnd`                   | After scan stage + after write/generate   | —                                                                                                           |
 | `ChunkGraphReady`            | After chunk graph construction            | chunks[]{chunk_id, name, reason, modules[], imports[], is_user_defined_entry, is_async_entry, entry_module} |
+| `PackageGraphReady`          | After chunk graph construction            | packages[]{package_id, name, version, package_json_path, package_root}                                      |
 | `HookRenderChunkStart/End`   | Per plugin per renderChunk call           | chunk_id, plugin_name, plugin_id, call_id, content                                                          |
 | `AssetsReady`                | After final asset generation              | assets[]{chunk_id, content, size, filename}                                                                 |
 | `StringRef`                  | Before any action with large strings      | id (blake3 hash), content                                                                                   |
@@ -173,7 +176,7 @@ import { parseToEvents, type Event, type StringRef } from '@rolldown/debug';
 
 const data = fs.readFileSync('node_modules/.rolldown/<sid>/logs.json', 'utf8');
 const events = parseToEvents(data.trim());
-// events: Array<StringRef | { timestamp, session_id, action: "BuildStart" | "ModuleGraphReady" | ... }>
+// events: Array<StringRef | { timestamp, session_id, action: "BuildStart" | "ModuleGraphReady" | "PackageGraphReady" | ... }>
 ```
 
 Consumers (like Vite devtools) read the JSON-lines files, resolve `$ref:<hash>` placeholders against `StringRef` entries, and reconstruct the full build timeline.

@@ -176,6 +176,21 @@ impl<'a> SideEffectDetector<'a> {
             self.detect_side_effect_of_expr(arg.to_expression()) - SideEffectDetail::Unknown;
         }
       }
+
+      // For pure-annotated IIFEs, the body still runs at module init. The
+      // annotation suppresses our boolean side-effect analysis of the call,
+      // but the body may read unresolved globals — those reads are an
+      // execution-order dependence (sibling modules may set the global),
+      // not a side effect. Propagate just `GlobalVarAccess`; we don't merge
+      // `Unknown` since the annotation already certified no side effect at
+      // the call level. See rolldown/rolldown#9425. Note: defaults on
+      // parameters can also evaluate globals (`((x = globalValue) => 1)()`)
+      // — not yet covered.
+      if is_pure_annotated && let Some(body) = iife_body(&expr.callee) {
+        for stmt in &body.statements {
+          detail |= self.detect_side_effect_of_stmt(stmt) & SideEffectDetail::GlobalVarAccess;
+        }
+      }
     }
     detail
   }
@@ -541,6 +556,17 @@ impl<'a> SideEffectDetector<'a> {
       }
     }
     detail
+  }
+}
+
+/// If `callee` is a function literal (an IIFE shape: `(() => ...)`,
+/// `(function() { ... })`), return its body. Transparent wrappers
+/// (`(callee)`, `callee as T`, etc.) are peeled first.
+fn iife_body<'a>(callee: &'a Expression<'a>) -> Option<&'a ast::FunctionBody<'a>> {
+  match callee.get_inner_expression() {
+    Expression::ArrowFunctionExpression(arrow) => Some(&arrow.body),
+    Expression::FunctionExpression(func) => func.body.as_deref(),
+    _ => None,
   }
 }
 
@@ -1212,33 +1238,38 @@ mod test {
   // in DCE mode).
   #[test]
   fn test_pure_annotation_propagates_through_compound_expr() {
+    // Pure-annotated IIFE reading an unresolved global now flags both
+    // `PureAnnotation` (annotation present) and `GlobalVarAccess` (the body
+    // scan picked up the `globalValue` read) — see `iife_body` scan in
+    // `detect_side_effect_of_call_expr`.
+    let pure_and_global = SideEffectDetail::PureAnnotation | SideEffectDetail::GlobalVarAccess;
     assert_eq!(
       get_statements_side_effect_details(
         "export default { foo: /* @__PURE__ */ (() => globalValue)() }"
       ),
-      vec![SideEffectDetail::PureAnnotation]
+      vec![pure_and_global]
     );
     assert_eq!(
       get_statements_side_effect_details("export default [/* @__PURE__ */ (() => globalValue)()]"),
-      vec![SideEffectDetail::PureAnnotation]
+      vec![pure_and_global]
     );
     assert_eq!(
       get_statements_side_effect_details(
         "export default (0, /* @__PURE__ */ (() => globalValue)())"
       ),
-      vec![SideEffectDetail::PureAnnotation]
+      vec![pure_and_global]
     );
     assert_eq!(
       get_statements_side_effect_details(
         "export default true ? /* @__PURE__ */ (() => globalValue)() : null"
       ),
-      vec![SideEffectDetail::PureAnnotation]
+      vec![pure_and_global]
     );
     assert_eq!(
       get_statements_side_effect_details(
         "export default true && /* @__PURE__ */ (() => globalValue)()"
       ),
-      vec![SideEffectDetail::PureAnnotation]
+      vec![pure_and_global]
     );
     // BinaryExpression `===` does not ToPrimitive-coerce, so oxc returns
     // no own side effect and the metadata harvest can propagate.
@@ -1272,24 +1303,67 @@ mod test {
       get_statements_side_effect_details(
         "export default { a: { b: [/* @__PURE__ */ (() => globalValue)()] } }"
       ),
-      vec![SideEffectDetail::PureAnnotation]
+      vec![pure_and_global]
     );
     // TS wrapper passthroughs (`SourceType::tsx()` in test helper).
     assert_eq!(
       get_statements_side_effect_details(
         "export default (/* @__PURE__ */ (() => globalValue)() as string)"
       ),
-      vec![SideEffectDetail::PureAnnotation]
+      vec![pure_and_global]
     );
     assert_eq!(
       get_statements_side_effect_details(
         "export default (/* @__PURE__ */ (() => globalValue)() satisfies string)"
       ),
-      vec![SideEffectDetail::PureAnnotation]
+      vec![pure_and_global]
     );
     assert_eq!(
       get_statements_side_effect_details("export default /* @__PURE__ */ (() => globalValue)()!"),
+      vec![pure_and_global]
+    );
+  }
+
+  // Phase 1 IIFE body scan: a pure-annotated IIFE whose body reads an
+  // unresolved global must surface `GlobalVarAccess` so the module gets
+  // wrapped via the actual semantic (global read = execution-order
+  // dependence), not just via `PureAnnotation`. See discussion in
+  // rolldown/rolldown#9425.
+  #[test]
+  fn test_pure_iife_body_global_propagates_global_var_access() {
+    let pure_and_global = SideEffectDetail::PureAnnotation | SideEffectDetail::GlobalVarAccess;
+    // Arrow IIFE with expression body — the bare `globalValue` is wrapped in
+    // an ExpressionStatement by oxc's parser.
+    assert_eq!(
+      get_statements_side_effect_details("export default /* @__PURE__ */ (() => globalValue)()"),
+      vec![pure_and_global]
+    );
+    // Arrow IIFE with block body + explicit return.
+    assert_eq!(
+      get_statements_side_effect_details(
+        "export default /* @__PURE__ */ (() => { return globalValue })()"
+      ),
+      vec![pure_and_global]
+    );
+    // Function expression IIFE.
+    assert_eq!(
+      get_statements_side_effect_details(
+        "export default /* @__PURE__ */ (function() { return globalValue })()"
+      ),
+      vec![pure_and_global]
+    );
+    // Pure-annotated IIFE with body that does *not* read globals — should
+    // NOT gain `GlobalVarAccess`.
+    assert_eq!(
+      get_statements_side_effect_details("export default /* @__PURE__ */ (() => 1)()"),
       vec![SideEffectDetail::PureAnnotation]
+    );
+    // Member expression rooted at an unresolved global inside the body.
+    assert_eq!(
+      get_statements_side_effect_details(
+        "export default /* @__PURE__ */ (() => Reflect.something)()"
+      ),
+      vec![pure_and_global]
     );
   }
 

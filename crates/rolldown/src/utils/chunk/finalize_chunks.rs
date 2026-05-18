@@ -84,14 +84,20 @@ pub async fn finalize_assets(
       // whenever an unrelated chunk is added or removed. Stream the content through a hasher
       // with each placeholder normalized to a zero-filled placeholder of the same shape, so the
       // resulting hash depends only on the actual chunk content — not on the transient indices.
-      // Cross-chunk dependency identities are still captured via the transitive dependency walk
-      // below. Streaming avoids materializing a chunk-sized normalized copy per chunk.
+      // Only placeholders rolldown itself generated are normalized; literals in user source code
+      // that happen to match the placeholder shape are hashed verbatim so changes to them still
+      // flow into the hash. Cross-chunk dependency identities are still captured via the
+      // transitive dependency walk below. Streaming avoids materializing a chunk-sized
+      // normalized copy per chunk.
       let mut hash = match &chunk.content {
         StrOrBytes::Str(content) => {
           let mut hasher = Xxh3::default();
-          visit_with_placeholders_defaulted(content, &HASH_PLACEHOLDER_LEFT_FINDER, |bytes| {
-            hasher.update(bytes)
-          });
+          visit_with_placeholders_defaulted(
+            content,
+            &HASH_PLACEHOLDER_LEFT_FINDER,
+            |placeholder| ins_chunk_idx_by_placeholder.contains_key(placeholder),
+            |bytes| hasher.update(bytes),
+          );
           to_url_safe_base64(hasher.digest128().to_le_bytes())
         }
         StrOrBytes::Bytes(_) => xxhash_base64_url(chunk.content.as_bytes()),

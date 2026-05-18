@@ -44,13 +44,16 @@ The index is replaced with the real hash at the very end of `finalize_assets`, a
 
 ```rust
 let mut hasher = Xxh3::default();
-visit_with_placeholders_defaulted(content, &HASH_PLACEHOLDER_LEFT_FINDER, |bytes| {
-  hasher.update(bytes);
-});
+visit_with_placeholders_defaulted(
+  content,
+  &HASH_PLACEHOLDER_LEFT_FINDER,
+  |placeholder| ins_chunk_idx_by_placeholder.contains_key(placeholder),
+  |bytes| hasher.update(bytes),
+);
 let standalone = to_url_safe_base64(hasher.digest128().to_le_bytes());
 ```
 
-`visit_with_placeholders_defaulted` (in `rolldown_utils::hash_placeholder`) walks `content` and feeds bytes through `hasher.update` in order, but every `!~{xxx}~` is normalized to `!~{000...}~` (same shape, all-zero index) before being fed in. The hasher sees a content-stable byte sequence regardless of which numeric index any particular placeholder happens to have in this build.
+`visit_with_placeholders_defaulted` (in `rolldown_utils::hash_placeholder`) walks `content` and feeds bytes through `hasher.update` in order. Each `!~{xxx}~` that rolldown itself generated (the predicate looks it up in `ins_chunk_idx_by_placeholder`) is normalized to `!~{000...}~` (same shape, all-zero index) before being fed in; literals in user source code that just happen to match the placeholder shape are hashed verbatim so changes to their bytes still flow into the hash. This matches Rollup's `replacePlaceholdersWithDefaultAndGetContainedPlaceholders`, which performs the same `placeholders.has(placeholder)` check.
 
 This is invariant #1 (stability): the chunk's own hash now depends only on its real bytes and the _shape_ of its cross-chunk references, not the transient index values.
 
@@ -107,6 +110,10 @@ It almost works, but fails the `deconflict-hashes` case: when two chunks have th
 ## debug_id
 
 `ecma_meta.debug_id` (used to emit `//# debugId=...` in source maps for Sentry/etc.) is set to the same `u128` digest produced in Phase 2. This means debug IDs share the hash's stability properties — same content → same debug ID across builds, useful for sourcemap correlation. Collision-rehashed chunks naturally get a distinct debug ID too.
+
+## Known Limitations
+
+**Phase 3 rehashes are not propagated back into importers.** Phase 2 accumulates each transitive dep's *standalone* hash (pre-deconflict) into an importer's final hash. If Phase 3 rehashes a dep `B` to avoid a file-name collision, an importer `A` of `B` will end up emitting `B`'s post-rehash file name in its import specifier — but `A`'s own final hash was computed against `B`'s pre-rehash standalone hash, so `A`'s `[hash]` does not reflect the change. Same input + same config produces the same deconflict ordering and therefore the same emitted bytes (deterministic within a config), but two builds that differ only in something which shifts `InsChunkIdx` ordering of byte-identical chunks (e.g. user reorders entries in `input`) can produce different emitted bytes for `A` while keeping `A`'s `[hash]` unchanged. Rollup's `generateFinalHashes` exhibits the same behavior (its `contentToHash` accumulates the pre-deconflict `contentHash`, not the deconflicted final hash), so fixing this would require diverging from the reference implementation and processing chunks in topological order with importers depending on importees' post-deconflict hashes. Triggering it requires byte-identical chunks importable by something (rare) with a `[hash]`-only template (also rare).
 
 ## Files
 

@@ -13,7 +13,7 @@ keepMe();
 var someVar;
 (([y]) => {})(someVar);
 (({ z }) => {})(someVar);
-stuff()();
+(/* @__PURE__ */ (() => stuff())())();
 ((_ = keepMe()) => {})();
 var isPure = ((x, y) => 123)();
 use(isPure);
@@ -38,7 +38,6 @@ use(isNotPure);
 (() => {})(keepThisButRemoveTheIIFE);
 var someVar;
 ((x) => {})(someVar);
-stuff();
 //#endregion
 
 ```

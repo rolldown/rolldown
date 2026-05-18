@@ -12,10 +12,11 @@ use rolldown_error::BuildResult;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
+  base64::to_url_safe_base64,
   concat_string,
   hash_placeholder::{
     HASH_PLACEHOLDER_LEFT_FINDER, extract_hash_placeholders, replace_placeholder_with_hash,
-    replace_placeholders_with_default,
+    visit_with_placeholders_defaulted,
   },
   indexmap::FxIndexSet,
   rayon::{
@@ -80,15 +81,20 @@ pub async fn finalize_assets(
     .par_iter()
     .map(|chunk| {
       // Hash placeholders are temporary ids assigned during rendering, and their values shift
-      // whenever an unrelated chunk is added or removed. Normalize them to a zero-filled
-      // placeholder of the same shape so the content hash depends only on the actual chunk
-      // content (and any cross-chunk dependency identities, captured separately via the
-      // transitive dependency walk below).
+      // whenever an unrelated chunk is added or removed. Stream the content through a hasher
+      // with each placeholder normalized to a zero-filled placeholder of the same shape, so the
+      // resulting hash depends only on the actual chunk content — not on the transient indices.
+      // Cross-chunk dependency identities are still captured via the transitive dependency walk
+      // below. Streaming avoids materializing a chunk-sized normalized copy per chunk.
       let mut hash = match &chunk.content {
         StrOrBytes::Str(content) => {
-          let normalized =
-            replace_placeholders_with_default(content, &HASH_PLACEHOLDER_LEFT_FINDER);
-          xxhash_base64_url(normalized.as_bytes())
+          let mut hasher = Xxh3::default();
+          visit_with_placeholders_defaulted(
+            content,
+            &HASH_PLACEHOLDER_LEFT_FINDER,
+            |bytes| hasher.update(bytes),
+          );
+          to_url_safe_base64(hasher.digest128().to_le_bytes())
         }
         StrOrBytes::Bytes(_) => xxhash_base64_url(chunk.content.as_bytes()),
       };

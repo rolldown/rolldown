@@ -199,30 +199,29 @@ pub fn extract_hash_placeholders<'a>(
   find_hash_placeholders(source, finder).map(|(_, _, placeholder)| placeholder).collect()
 }
 
-/// Replaces every hash placeholder in `source` with a zero-filled placeholder of the same shape
-/// (`!~{000...}~`). Produces a content-stable representation suitable for content hashing, so the
-/// resulting hash does not depend on the transient placeholder indices assigned during rendering.
-pub fn replace_placeholders_with_default<'a>(
-  source: &'a str,
-  finder: &'a Finder<'static>,
-) -> Cow<'a, str> {
-  let mut placeholders = find_hash_placeholders(source, finder).peekable();
-  if placeholders.peek().is_none() {
-    return Cow::Borrowed(source);
-  }
+const NORMALIZED_PLACEHOLDER_INNER: [u8; MAX_HASH_SIZE] = [b'0'; MAX_HASH_SIZE];
 
-  let mut result = String::with_capacity(source.len());
+/// Walks `source` and feeds it through `visit` byte-slice by byte-slice, replacing each hash
+/// placeholder with a zero-filled placeholder of the same shape (`!~{000...}~`). Lets a caller
+/// stream a content-stable representation into a hasher (or any other sink) without materializing
+/// the normalized string in memory — important for chunk content, which can be megabytes.
+pub fn visit_with_placeholders_defaulted<F>(
+  source: &str,
+  finder: &Finder<'static>,
+  mut visit: F,
+) where
+  F: FnMut(&[u8]),
+{
+  let bytes = source.as_bytes();
   let mut last_end = 0;
-  for (start, end, placeholder) in placeholders {
-    result.push_str(&source[last_end..start]);
-    result.push_str(HASH_PLACEHOLDER_LEFT);
-    let inner_len = placeholder.len() - HASH_PLACEHOLDER_OVERHEAD;
-    result.extend(std::iter::repeat_n('0', inner_len));
-    result.push_str(HASH_PLACEHOLDER_RIGHT);
+  for (start, end, placeholder) in find_hash_placeholders(source, finder) {
+    visit(&bytes[last_end..start]);
+    visit(HASH_PLACEHOLDER_LEFT.as_bytes());
+    visit(&NORMALIZED_PLACEHOLDER_INNER[..placeholder.len() - HASH_PLACEHOLDER_OVERHEAD]);
+    visit(HASH_PLACEHOLDER_RIGHT.as_bytes());
     last_end = end;
   }
-  result.push_str(&source[last_end..]);
-  Cow::Owned(result)
+  visit(&bytes[last_end..]);
 }
 
 #[test]
@@ -287,13 +286,19 @@ fn test_find_hash_placeholders_multi_byte_chars() {
 }
 
 #[test]
-fn test_replace_placeholders_with_default() {
-  let s = "prefix!~{000}~middle!~{abc12}~suffix";
-  let replaced = replace_placeholders_with_default(s, &HASH_PLACEHOLDER_LEFT_FINDER);
-  assert_eq!(replaced.as_ref(), "prefix!~{000}~middle!~{00000}~suffix");
+fn test_visit_with_placeholders_defaulted() {
+  fn collect(source: &str) -> Vec<u8> {
+    let mut buf = Vec::new();
+    visit_with_placeholders_defaulted(source, &HASH_PLACEHOLDER_LEFT_FINDER, |bytes| {
+      buf.extend_from_slice(bytes);
+    });
+    buf
+  }
 
-  let s = "no placeholders here";
-  let replaced = replace_placeholders_with_default(s, &HASH_PLACEHOLDER_LEFT_FINDER);
-  assert!(matches!(replaced, Cow::Borrowed(_)));
-  assert_eq!(replaced.as_ref(), s);
+  assert_eq!(
+    collect("prefix!~{000}~middle!~{abc12}~suffix"),
+    b"prefix!~{000}~middle!~{00000}~suffix",
+  );
+  assert_eq!(collect("no placeholders here"), b"no placeholders here");
+  assert_eq!(collect(""), b"");
 }

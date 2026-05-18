@@ -266,12 +266,16 @@ impl<'a> SideEffectDetector<'a> {
         expr,
         // `p.computed == true` => `p.key` is always an Expression variant
         // (oxc's parser only emits Static/PrivateIdentifier for `key:` syntax).
-        obj.properties.iter().flat_map(|prop| match prop {
-          ast::ObjectPropertyKind::ObjectProperty(p) => {
-            [p.computed.then(|| p.key.to_expression()), Some(&p.value)]
-          }
-          ast::ObjectPropertyKind::SpreadProperty(s) => [Some(&s.argument), None],
-        }).flatten(),
+        obj
+          .properties
+          .iter()
+          .flat_map(|prop| match prop {
+            ast::ObjectPropertyKind::ObjectProperty(p) => {
+              [p.computed.then(|| p.key.to_expression()), Some(&p.value)]
+            }
+            ast::ObjectPropertyKind::SpreadProperty(s) => [Some(&s.argument), None],
+          })
+          .flatten(),
       ),
       Expression::ArrayExpression(arr) => self.fold_compound(
         expr,

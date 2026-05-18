@@ -10,7 +10,7 @@ use rolldown_common::{
   ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
   RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, SideEffectDetail,
   StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  UsedSymbolRefs, dynamic_import_usage::DynamicImportExportsUsage,
+  UsedSymbolRefs, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
   side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
@@ -804,6 +804,17 @@ pub fn include_symbol(
 
   ctx.used_symbol_refs.insert(canonical_ref);
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
+    let wrapper_ref = {
+      let meta = &ctx.metas[canonical_ref.owner];
+      matches!(meta.wrap_kind(), WrapKind::Esm)
+        .then_some(meta.wrapper_ref)
+        .flatten()
+        .filter(|wrapper_ref| *wrapper_ref != canonical_ref)
+    };
+    if let Some(wrapper_ref) = wrapper_ref {
+      include_symbol(ctx, wrapper_ref, SymbolIncludeReason::Normal);
+    }
+
     if !include_reason.contains(SymbolIncludeReason::JsonDefaultExportSelfReference)
       && module.module_type == ModuleType::Json
     {

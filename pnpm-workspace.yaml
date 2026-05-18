@@ -67,10 +67,10 @@ catalog:
   react: ^19.0.0
   react-dom: ^19.0.0
   remark-parse: ^11.0.0
-  remeda: ^2.10.0
+  remeda: ^2.34.1
   rolldown-plugin-dts: ^0.25.1
-  rollup: ^4.18.0
-  semver: ^7.6.2
+  rollup: ^4.60.4
+  semver: ^7.8.0
   serve-static: ^2.0.0
   signal-exit: 4.1.0
   source-map: 0.7.6
@@ -79,7 +79,7 @@ catalog:
   terser: ^5.44.1
   tinybench: ^6.0.0
   tinyexec: ^1.0.1
-  tsx: ^4.20.6
+  tsx: ^4.22.0
   typescript: ^6.0.0
   unified: ^11.0.5
   valibot: 1.4.0
@@ -89,10 +89,10 @@ catalog:
   vitepress-plugin-llms: ^1.1.0
   vitepress-plugin-og: ^0.0.5
   vitepress-plugin-graphviz: ^0.1.0
-  vitest: ^4.0.15
+  vitest: ^4.1.6
   vue: ^3.5.13
   web-tree-sitter: ^0.26.0
-  ws: ^8.18.1
+  ws: ^8.20.1
   zx: ^8.1.2
 
 shellEmulator: true

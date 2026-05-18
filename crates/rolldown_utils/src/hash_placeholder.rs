@@ -205,11 +205,8 @@ const NORMALIZED_PLACEHOLDER_INNER: [u8; MAX_HASH_SIZE] = [b'0'; MAX_HASH_SIZE];
 /// placeholder with a zero-filled placeholder of the same shape (`!~{000...}~`). Lets a caller
 /// stream a content-stable representation into a hasher (or any other sink) without materializing
 /// the normalized string in memory — important for chunk content, which can be megabytes.
-pub fn visit_with_placeholders_defaulted<F>(
-  source: &str,
-  finder: &Finder<'static>,
-  mut visit: F,
-) where
+pub fn visit_with_placeholders_defaulted<F>(source: &str, finder: &Finder<'static>, mut visit: F)
+where
   F: FnMut(&[u8]),
 {
   let bytes = source.as_bytes();

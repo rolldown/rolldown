@@ -89,11 +89,9 @@ pub async fn finalize_assets(
       let mut hash = match &chunk.content {
         StrOrBytes::Str(content) => {
           let mut hasher = Xxh3::default();
-          visit_with_placeholders_defaulted(
-            content,
-            &HASH_PLACEHOLDER_LEFT_FINDER,
-            |bytes| hasher.update(bytes),
-          );
+          visit_with_placeholders_defaulted(content, &HASH_PLACEHOLDER_LEFT_FINDER, |bytes| {
+            hasher.update(bytes)
+          });
           to_url_safe_base64(hasher.digest128().to_le_bytes())
         }
         StrOrBytes::Bytes(_) => xxhash_base64_url(chunk.content.as_bytes()),

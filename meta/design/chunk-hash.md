@@ -33,7 +33,7 @@ A hash placeholder is a fixed-shape string `!~{<index>}~` injected by `HashPlace
 - **Inside `preliminary_filename`.** A template like `entries/[name]-[hash].js` becomes `entries/main-!~{001}~.js` once the placeholder is allocated.
 - **Inside chunk content.** Anywhere an emitter writes a cross-chunk import path — `import_path_for(importee_chunk)` in `crates/rolldown_common/src/chunk/mod.rs` — the importee's `absolute_preliminary_filename` (which contains its own placeholder) is concatenated into the emitted code:
   ```js
-  import { x } from "./chunk-shared-!~{002}~.js";
+  import { x } from './chunk-shared-!~{002}~.js';
   ```
 
 Placeholder **shape is stable** (same length, same `!~{` / `}~` delimiters, ASCII-only). Placeholder **index is not** — it depends on the order chunks are rendered, which depends on the chunk graph, which changes when entries are added/removed.
@@ -52,7 +52,7 @@ let standalone = to_url_safe_base64(hasher.digest128().to_le_bytes());
 
 `visit_with_placeholders_defaulted` (in `rolldown_utils::hash_placeholder`) walks `content` and feeds bytes through `hasher.update` in order, but every `!~{xxx}~` is normalized to `!~{000...}~` (same shape, all-zero index) before being fed in. The hasher sees a content-stable byte sequence regardless of which numeric index any particular placeholder happens to have in this build.
 
-This is invariant #1 (stability): the chunk's own hash now depends only on its real bytes and the *shape* of its cross-chunk references, not the transient index values.
+This is invariant #1 (stability): the chunk's own hash now depends only on its real bytes and the _shape_ of its cross-chunk references, not the transient index values.
 
 **Streaming, not materializing.** Chunks can be megabytes. Materializing a normalized `String` per chunk would allocate roughly the bundle size's worth of throwaway buffers per build. `visit_with_placeholders_defaulted` is a visitor over `&[u8]` slices; the hasher consumes them directly. Rollup's equivalent (`replacePlaceholdersWithDefaultAndGetContainedPlaceholders`) materializes the string before hashing — rolldown deliberately doesn't.
 
@@ -69,7 +69,7 @@ for dep_idx in transitive_dependencies[chunk_idx] {
 let final_hash = encode_hash_with_base(hasher.digest128().to_le_bytes(), hash_base);
 ```
 
-`transitive_dependencies` is computed by extracting the placeholders from each chunk's content (placeholders point to other chunks), then taking the transitive closure. Hashing every transitive dep's *standalone* hash means:
+`transitive_dependencies` is computed by extracting the placeholders from each chunk's content (placeholders point to other chunks), then taking the transitive closure. Hashing every transitive dep's _standalone_ hash means:
 
 - If chunk `B` changes, every chunk transitively depending on `B` gets a new final hash — invariant #2.
 - If only an unrelated chunk's index shifts, no transitively reached chunk sees a different input — invariant #1 still holds.
@@ -100,7 +100,7 @@ In practice the collision case is rare because `experimental.attachDebugInfo` (d
 
 ## Why Not Hash the Preliminary Filename Directly
 
-Tempting alternative: mix the preliminary filename into the final hash *after normalizing its placeholder* — this would satisfy uniqueness for chunks with different chunk names without any rehash loop.
+Tempting alternative: mix the preliminary filename into the final hash _after normalizing its placeholder_ — this would satisfy uniqueness for chunks with different chunk names without any rehash loop.
 
 It almost works, but fails the `deconflict-hashes` case: when two chunks have the **same chunk name** and the template is `[hash].js` (no `[name]`), their normalized preliminary filenames are byte-identical (`!~{000}~.js`), and the hash collides anyway. The rehash loop is the proper fix because it acts on the resolved file name, not on the template.
 

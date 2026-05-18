@@ -16,6 +16,7 @@ var init_lib = __esmMin((() => {}));
 init_lib();
 //#endregion
 //#region log.js
+init_lib();
 assert.strictEqual(1, 1);
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = (init_lib(), __toCommonJS(lib_exports));

@@ -179,6 +179,125 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  fn collect_wrapped_esm_init_modules_for_import_record(
+    &self,
+    rec_idx: ImportRecordIdx,
+  ) -> FxIndexSet<ModuleIdx> {
+    // See meta/design/linking/reference-needed-symbols.md for why this follows
+    // canonical owners through non-wrapped barrel modules.
+    let mut init_modules = FxIndexSet::default();
+    let rec = &self.ctx.module.import_records[rec_idx];
+    let Some(importee_idx) = rec.resolved_module else { return init_modules };
+    let importee_linking_info = &self.ctx.linking_infos[importee_idx];
+
+    if rec.meta.contains(ImportRecordMeta::IsExportStar) {
+      for resolved_export in importee_linking_info.resolved_exports.values() {
+        self.add_wrapped_esm_init_module_for_symbol(resolved_export.symbol_ref, &mut init_modules);
+      }
+      return init_modules;
+    }
+
+    for named_import in
+      self.ctx.module.named_imports.values().filter(|item| item.record_idx == rec_idx)
+    {
+      match &named_import.imported {
+        Specifier::Star => {
+          for resolved_export in importee_linking_info.resolved_exports.values() {
+            self.add_wrapped_esm_init_module_for_symbol(
+              resolved_export.symbol_ref,
+              &mut init_modules,
+            );
+          }
+        }
+        Specifier::Literal(name) => {
+          if let Some(resolved_export) = importee_linking_info.resolved_exports.get(name) {
+            self.add_wrapped_esm_init_module_for_symbol(
+              resolved_export.symbol_ref,
+              &mut init_modules,
+            );
+          } else {
+            self
+              .add_wrapped_esm_init_module_for_symbol(named_import.imported_as, &mut init_modules);
+          }
+        }
+      }
+    }
+
+    init_modules
+  }
+
+  fn add_wrapped_esm_init_module_for_symbol(
+    &self,
+    symbol_ref: SymbolRef,
+    init_modules: &mut FxIndexSet<ModuleIdx>,
+  ) {
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_resolving_namespace(symbol_ref);
+    let meta = &self.ctx.linking_infos[canonical_ref.owner];
+    if matches!(meta.wrap_kind(), WrapKind::Esm)
+      && meta.wrapper_ref.is_some()
+      && !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner)
+    {
+      init_modules.insert(canonical_ref.owner);
+    }
+  }
+
+  fn wrapped_esm_init_stmt_for_import_record(
+    &mut self,
+    rec_idx: ImportRecordIdx,
+  ) -> Option<Statement<'ast>> {
+    let init_modules = self
+      .collect_wrapped_esm_init_modules_for_import_record(rec_idx)
+      .into_iter()
+      .collect::<Vec<_>>();
+    if init_modules.is_empty() {
+      return None;
+    }
+
+    let init_exprs = init_modules.into_iter().filter_map(|module_idx| {
+      if !self.generated_init_esm_importee_ids.insert(module_idx) {
+        return None;
+      }
+
+      let importee_linking_info = &self.ctx.linking_infos[module_idx];
+      let wrapper_ref = importee_linking_info.wrapper_ref?;
+      let is_tla_or_contains_tla_dependency =
+        importee_linking_info.is_tla_or_contains_tla_dependency;
+      let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(wrapper_ref, false, false);
+
+      let init_call = ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+        SPAN,
+        wrapper_ref_expr,
+        NONE,
+        self.snippet.builder.vec(),
+        false,
+      ));
+
+      Some(if is_tla_or_contains_tla_dependency {
+        ast::Expression::AwaitExpression(
+          self.snippet.builder.alloc_await_expression(SPAN, init_call),
+        )
+      } else {
+        init_call
+      })
+    });
+
+    let init_exprs = init_exprs.collect::<Vec<_>>();
+    match init_exprs.len() {
+      0 => None,
+      1 => init_exprs
+        .into_iter()
+        .next()
+        .map(|init_expr| self.snippet.builder.statement_expression(SPAN, init_expr)),
+      _ => {
+        let builder = self.builder();
+        Some(builder.statement_expression(
+          SPAN,
+          builder.expression_sequence(SPAN, builder.vec_from_iter(init_exprs)),
+        ))
+      }
+    }
+  }
+
   /// If return true the import stmt should be removed,
   /// or transform the import stmt to target form.
   fn transform_or_remove_import_export_stmt(
@@ -194,6 +313,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let importee_linking_info = &self.ctx.linking_infos[importee.idx];
     match importee_linking_info.wrap_kind() {
       WrapKind::None => {
+        if let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx) {
+          *stmt = init_stmt;
+          return false;
+        }
         // Remove this statement by ignoring it
       }
       WrapKind::Cjs => {
@@ -1480,6 +1603,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             match &self.ctx.modules[module_idx] {
               Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
+                if matches!(importee_linking_info.wrap_kind(), WrapKind::None)
+                  && let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx)
+                {
+                  program.body.push(init_stmt);
+                }
+
                 if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm)
                 // If it is a inner concatenated module, we should not call its wrapper here
                   && !matches!(

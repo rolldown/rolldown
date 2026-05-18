@@ -169,7 +169,7 @@ catalogs:
       specifier: ^2.10.0
       version: 2.34.0
     rolldown-plugin-dts:
-      specifier: ^0.25.0
+      specifier: ^0.25.1
       version: 0.25.1
     rollup:
       specifier: ^4.18.0

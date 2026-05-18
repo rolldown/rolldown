@@ -58,6 +58,7 @@
       "ignoreUnresolved": ["./world"],
       "ignoreDependencies": [
         "@rolldown/test-side-effects-field", // used in packages/rolldown/tests/fixtures/plugin/context/resolve-side-effects
+        "meta-info-lib", // fixture dependency in packages/rolldown/tests/behaviors/emit-debug-data
       ],
     },
     "packages/rollup-tests": {

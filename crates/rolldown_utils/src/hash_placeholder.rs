@@ -199,6 +199,32 @@ pub fn extract_hash_placeholders<'a>(
   find_hash_placeholders(source, finder).map(|(_, _, placeholder)| placeholder).collect()
 }
 
+/// Replaces every hash placeholder in `source` with a zero-filled placeholder of the same shape
+/// (`!~{000...}~`). Produces a content-stable representation suitable for content hashing, so the
+/// resulting hash does not depend on the transient placeholder indices assigned during rendering.
+pub fn replace_placeholders_with_default<'a>(
+  source: &'a str,
+  finder: &'a Finder<'static>,
+) -> Cow<'a, str> {
+  let mut placeholders = find_hash_placeholders(source, finder).peekable();
+  if placeholders.peek().is_none() {
+    return Cow::Borrowed(source);
+  }
+
+  let mut result = String::with_capacity(source.len());
+  let mut last_end = 0;
+  for (start, end, placeholder) in placeholders {
+    result.push_str(&source[last_end..start]);
+    result.push_str(HASH_PLACEHOLDER_LEFT);
+    let inner_len = placeholder.len() - HASH_PLACEHOLDER_OVERHEAD;
+    result.extend(std::iter::repeat_n('0', inner_len));
+    result.push_str(HASH_PLACEHOLDER_RIGHT);
+    last_end = end;
+  }
+  result.push_str(&source[last_end..]);
+  Cow::Owned(result)
+}
+
 #[test]
 fn test_facade_hash_generator() {
   let mut r#gen = HashPlaceholderGenerator::default();
@@ -258,4 +284,16 @@ fn test_find_hash_placeholders_multi_byte_chars() {
   let placeholders: Vec<_> = find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER).collect();
   assert_eq!(placeholders.len(), 1);
   assert_eq!(placeholders[0].2, "!~{001}~");
+}
+
+#[test]
+fn test_replace_placeholders_with_default() {
+  let s = "prefix!~{000}~middle!~{abc12}~suffix";
+  let replaced = replace_placeholders_with_default(s, &HASH_PLACEHOLDER_LEFT_FINDER);
+  assert_eq!(replaced.as_ref(), "prefix!~{000}~middle!~{00000}~suffix");
+
+  let s = "no placeholders here";
+  let replaced = replace_placeholders_with_default(s, &HASH_PLACEHOLDER_LEFT_FINDER);
+  assert!(matches!(replaced, Cow::Borrowed(_)));
+  assert_eq!(replaced.as_ref(), s);
 }

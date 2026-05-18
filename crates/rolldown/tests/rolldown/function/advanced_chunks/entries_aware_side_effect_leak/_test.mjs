@@ -12,14 +12,8 @@ const files = fs
 const entryA = fs.readFileSync(path.join(dist, 'entry-a.js'), 'utf-8');
 const entryB = fs.readFileSync(path.join(dist, 'entry-b.js'), 'utf-8');
 
-assert.ok(
-  entryA.includes('side-effect-a'),
-  'entry-a.js should contain side-effect-a',
-);
-assert.ok(
-  entryB.includes('side-effect-b'),
-  'entry-b.js should contain side-effect-b',
-);
+assert.ok(entryA.includes('side-effect-a'), 'entry-a.js should contain side-effect-a');
+assert.ok(entryB.includes('side-effect-b'), 'entry-b.js should contain side-effect-b');
 
 // No single chunk should contain both entries' side effects
 for (const file of files) {

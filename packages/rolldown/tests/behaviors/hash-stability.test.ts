@@ -33,9 +33,7 @@ test('hash is stable when an unrelated isolated entry is added', async () => {
     });
     await bundle.close();
     return new Map(
-      out.output
-        .filter((c): c is OutputChunk => c.type === 'chunk')
-        .map((c) => [c.name, c]),
+      out.output.filter((c): c is OutputChunk => c.type === 'chunk').map((c) => [c.name, c]),
     );
   }
 

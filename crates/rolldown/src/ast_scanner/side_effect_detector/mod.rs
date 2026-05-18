@@ -190,6 +190,9 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_expr(&self, expr: &Expression) -> SideEffectDetail {
+    // Peel transparent wrappers (`(x)`, `x as T`, `x satisfies T`, `x!`, `<T>x`, `x<T>`)
+    // — they add no runtime semantics, so we recurse into the inner expression.
+    let expr = expr.get_inner_expression();
     match expr {
       // --- Bundler-specific overrides (metadata or custom logic) ---
       oxc::ast::match_member_expression!(Expression) => {
@@ -251,12 +254,76 @@ impl<'a> SideEffectDetector<'a> {
         detail
       }
       Expression::CallExpression(expr) => self.detect_side_effect_of_call_expr(expr),
+
+      // Transparent wrappers: oxc validates the boolean side-effect status,
+      // we then recurse children to harvest metadata flags
+      // (`PureAnnotation`, `GlobalVarAccess`). Without this, a pure-annotated
+      // call buried inside `export default { foo: /* @__PURE__ */ ... }`
+      // loses its annotation at the catch-all and the bundler emits the
+      // module's var-init at top level rather than wrapping it.
+      // See rolldown/rolldown#9425.
+      Expression::ObjectExpression(obj) => self.fold_compound(
+        expr,
+        // `p.computed == true` => `p.key` is always an Expression variant
+        // (oxc's parser only emits Static/PrivateIdentifier for `key:` syntax).
+        obj
+          .properties
+          .iter()
+          .flat_map(|prop| match prop {
+            ast::ObjectPropertyKind::ObjectProperty(p) => {
+              [p.computed.then(|| p.key.to_expression()), Some(&p.value)]
+            }
+            ast::ObjectPropertyKind::SpreadProperty(s) => [Some(&s.argument), None],
+          })
+          .flatten(),
+      ),
+      Expression::ArrayExpression(arr) => self.fold_compound(
+        expr,
+        arr.elements.iter().filter_map(|elem| match elem {
+          ast::ArrayExpressionElement::SpreadElement(s) => Some(&s.argument),
+          ast::ArrayExpressionElement::Elision(_) => None,
+          e => Some(e.to_expression()),
+        }),
+      ),
+      Expression::SequenceExpression(s) => self.fold_compound(expr, &s.expressions),
+      Expression::TemplateLiteral(t) => self.fold_compound(expr, &t.expressions),
+      Expression::ConditionalExpression(c) => {
+        self.fold_compound(expr, [&c.test, &c.consequent, &c.alternate])
+      }
+      Expression::LogicalExpression(e) => self.fold_compound(expr, [&e.left, &e.right]),
+      Expression::BinaryExpression(e) => self.fold_compound(expr, [&e.left, &e.right]),
+      Expression::UnaryExpression(e) => self.fold_compound(expr, [&e.argument]),
+
       // Everything else: delegate entirely to Oxc.
-      // This covers literals, object/array/class expressions, unary/binary/logical/
-      // conditional/sequence/template/tagged-template/parenthesized expressions,
-      // TS/JSX syntax, await/import/yield, and any future expression types.
+      // Covers literals, function/arrow/class expressions (bodies not evaluated
+      // here), await/import/yield (inherently side-effectful), tagged-template
+      // (handled like a call by oxc; no `pure` flag), JSX, V8 intrinsics, etc.
       _ => expr.may_have_side_effects(self).into(),
     }
+  }
+
+  /// Gate-then-fold helper for transparent compound expressions: ask oxc
+  /// whether the whole expression has any side effect (fast path, covers
+  /// computed keys / spread reads / etc.), and if not, fold metadata flags
+  /// (`PureAnnotation`, `GlobalVarAccess`) from the child expressions.
+  /// Strips `Unknown` from the fold result because oxc already certified the
+  /// parent has no side effect — only metadata bits should propagate.
+  fn fold_compound<'e>(
+    &self,
+    expr: &Expression,
+    children: impl IntoIterator<Item = &'e Expression<'e>>,
+  ) -> SideEffectDetail {
+    if expr.may_have_side_effects(self) {
+      return true.into();
+    }
+    let mut detail = SideEffectDetail::empty();
+    for child in children {
+      detail |= self.detect_side_effect_of_expr(child);
+      if detail.has_side_effect() {
+        break;
+      }
+    }
+    detail - SideEffectDetail::Unknown
   }
 
   fn detect_side_effect_of_var_decl(
@@ -1132,6 +1199,124 @@ mod test {
     // Oxc is more permissive about computed property keys (ignores ToPrimitive side effects).
     // `{}` has a known toString(), so Oxc considers this side-effect-free.
     assert!(!get_statements_side_effect("const of = { [{}]: 'hi'}"));
+  }
+
+  // https://github.com/rolldown/rolldown/issues/9425
+  // PureAnnotation / GlobalVarAccess on a nested call must propagate up through
+  // transparent compound expressions (Object, Array, Sequence, Conditional,
+  // Logical, Binary, Unary, Template, TaggedTemplate, TS wrappers). Otherwise
+  // a module whose only "side effect" is a pure-annotated IIFE buried inside
+  // `export default { ... }` is never marked ExecutionOrderSensitive and the
+  // bundler emits its var-init at top level, before sibling modules that the
+  // IIFE depends on (regression after oxc 0.131 stopped inlining pure IIFEs
+  // in DCE mode).
+  #[test]
+  fn test_pure_annotation_propagates_through_compound_expr() {
+    assert_eq!(
+      get_statements_side_effect_details(
+        "export default { foo: /* @__PURE__ */ (() => globalValue)() }"
+      ),
+      vec![SideEffectDetail::PureAnnotation]
+    );
+    assert_eq!(
+      get_statements_side_effect_details("export default [/* @__PURE__ */ (() => globalValue)()]"),
+      vec![SideEffectDetail::PureAnnotation]
+    );
+    assert_eq!(
+      get_statements_side_effect_details(
+        "export default (0, /* @__PURE__ */ (() => globalValue)())"
+      ),
+      vec![SideEffectDetail::PureAnnotation]
+    );
+    assert_eq!(
+      get_statements_side_effect_details(
+        "export default true ? /* @__PURE__ */ (() => globalValue)() : null"
+      ),
+      vec![SideEffectDetail::PureAnnotation]
+    );
+    assert_eq!(
+      get_statements_side_effect_details(
+        "export default true && /* @__PURE__ */ (() => globalValue)()"
+      ),
+      vec![SideEffectDetail::PureAnnotation]
+    );
+    // BinaryExpression `===` does not ToPrimitive-coerce, so oxc returns
+    // no own side effect and the metadata harvest can propagate.
+    assert_eq!(
+      get_statements_side_effect_details("export default /* @__PURE__ */ (() => 2)() === 1"),
+      vec![SideEffectDetail::PureAnnotation]
+    );
+    // `typeof` never has side effects per spec.
+    assert_eq!(
+      get_statements_side_effect_details("export default typeof /* @__PURE__ */ (() => true)()"),
+      vec![SideEffectDetail::PureAnnotation]
+    );
+    // Computed key with a pure-annotated call must propagate too.
+    assert_eq!(
+      get_statements_side_effect_details("export default { [/* @__PURE__ */ (() => 'k')()]: 1 }"),
+      vec![SideEffectDetail::PureAnnotation]
+    );
+    // GlobalVarAccess on a bare member-expr buried in a compound wrapper
+    // must also propagate (same mechanism, different flag).
+    assert_eq!(
+      get_statements_side_effect_details("let a = { x: Proxy }"),
+      vec![SideEffectDetail::GlobalVarAccess]
+    );
+    assert_eq!(
+      get_statements_side_effect_details("let a = [JSON.stringify]"),
+      vec![SideEffectDetail::GlobalVarAccess]
+    );
+    // Nested compound: array inside object inside object — propagation must
+    // walk through every layer.
+    assert_eq!(
+      get_statements_side_effect_details(
+        "export default { a: { b: [/* @__PURE__ */ (() => globalValue)()] } }"
+      ),
+      vec![SideEffectDetail::PureAnnotation]
+    );
+    // TS wrapper passthroughs (`SourceType::tsx()` in test helper).
+    assert_eq!(
+      get_statements_side_effect_details(
+        "export default (/* @__PURE__ */ (() => globalValue)() as string)"
+      ),
+      vec![SideEffectDetail::PureAnnotation]
+    );
+    assert_eq!(
+      get_statements_side_effect_details(
+        "export default (/* @__PURE__ */ (() => globalValue)() satisfies string)"
+      ),
+      vec![SideEffectDetail::PureAnnotation]
+    );
+    assert_eq!(
+      get_statements_side_effect_details("export default /* @__PURE__ */ (() => globalValue)()!"),
+      vec![SideEffectDetail::PureAnnotation]
+    );
+  }
+
+  // Function bodies are not evaluated at the statement level — a pure
+  // annotation inside an arrow/function body must NOT propagate up.
+  #[test]
+  fn test_pure_annotation_not_propagated_through_function_body() {
+    assert_eq!(
+      get_statements_side_effect_details("export default () => /* @__PURE__ */ pureCall()"),
+      vec![SideEffectDetail::empty()]
+    );
+    assert_eq!(
+      get_statements_side_effect_details(
+        "export default { foo: () => /* @__PURE__ */ pureCall() }"
+      ),
+      vec![SideEffectDetail::empty()]
+    );
+  }
+
+  // A real side effect anywhere in a compound expression must surface as
+  // Unknown — the new metadata-propagation arms must not weaken this.
+  #[test]
+  fn test_compound_expr_side_effectful_operand_still_unknown() {
+    assert!(get_statements_side_effect("let a = { foo: globalCall() }"));
+    assert!(get_statements_side_effect("let a = [globalCall()]"));
+    assert!(get_statements_side_effect("let a = (globalCall(), 1)"));
+    assert!(get_statements_side_effect("let a = true ? globalCall() : null"));
   }
 
   #[test]

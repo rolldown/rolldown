@@ -1,0 +1,20 @@
+{
+  "_comment": "When a test filter already excludes entry modules, the fix is a no-op. Shared code should still be grouped correctly by entry reachability.",
+  "config": {
+    "input": [
+      { "name": "entry-a", "import": "./entry-a.js" },
+      { "name": "entry-b", "import": "./entry-b.js" }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "vendor",
+          "test": "shared",
+          "entriesAware": true,
+          "entriesAwareMergeThreshold": 10000
+        }
+      ]
+    }
+  },
+  "hiddenRuntimeModule": true
+}

@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## common~entry-a~shared.js
+
+```js
+//#region shared.js
+function foo() {
+	console.log("shared");
+}
+//#endregion
+export { foo as t };
+
+```
+
+## entry-a.js
+
+```js
+import { t as foo } from "./common~entry-a~shared.js";
+//#region entry-a.js
+foo();
+console.log("side-effect-a");
+//#endregion
+
+```
+
+## entry-b.js
+
+```js
+//#region entry-b.js
+(await import("./shared.js")).foo();
+console.log("side-effect-b");
+//#endregion
+
+```
+
+## shared.js
+
+```js
+import { t as foo } from "./common~entry-a~shared.js";
+export { foo };
+
+```

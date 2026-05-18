@@ -1,0 +1,19 @@
+{
+  "_comment": "User-defined entry modules must not be merged into the same chunk via entriesAware subgroup merging. Without the fix, high entriesAwareMergeThreshold merges entry subgroups into one Common chunk, leaking side effects across entries.",
+  "config": {
+    "input": [
+      { "name": "entry-a", "import": "./entry-a.js" },
+      { "name": "entry-b", "import": "./entry-b.js" }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "common",
+          "entriesAware": true,
+          "entriesAwareMergeThreshold": 10000
+        }
+      ]
+    }
+  },
+  "hiddenRuntimeModule": true
+}

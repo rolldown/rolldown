@@ -1,0 +1,20 @@
+{
+  "_comment": "With 3 entries and entriesAware merging, entry modules must stay in their own chunks. Shared code should be grouped by entry reachability without mixing entry side effects.",
+  "config": {
+    "input": [
+      { "name": "entry-a", "import": "./entry-a.js" },
+      { "name": "entry-b", "import": "./entry-b.js" },
+      { "name": "entry-c", "import": "./entry-c.js" }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "vendor",
+          "entriesAware": true,
+          "entriesAwareMergeThreshold": 10000
+        }
+      ]
+    }
+  },
+  "hiddenRuntimeModule": true
+}

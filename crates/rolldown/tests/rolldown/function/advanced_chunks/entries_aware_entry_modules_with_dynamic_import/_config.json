@@ -1,0 +1,19 @@
+{
+  "_comment": "Same as entries_aware_side_effect_leak but entry-b uses a dynamic import for the shared module. This matches the original bug report where one entry statically imports and another dynamically imports the shared code.",
+  "config": {
+    "input": [
+      { "name": "entry-a", "import": "./entry-a.js" },
+      { "name": "entry-b", "import": "./entry-b.js" }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "common",
+          "entriesAware": true,
+          "entriesAwareMergeThreshold": 10000
+        }
+      ]
+    }
+  },
+  "hiddenRuntimeModule": true
+}

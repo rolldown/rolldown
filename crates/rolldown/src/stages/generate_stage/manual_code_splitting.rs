@@ -247,7 +247,18 @@ impl ManualSplitter<'_> {
     entries_aware_groups: Vec<ModuleGroup>,
     module_groups: &mut IndexVec<ModuleGroupIdx, ModuleGroup>,
   ) {
-    for group in entries_aware_groups {
+    for mut group in entries_aware_groups {
+      if group.modules.is_empty() {
+        continue;
+      }
+
+      // User-defined entry modules have a fixed destination (their entry chunk).
+      // Remove them so subgroup merging cannot combine entries with different
+      // bits into a single Common chunk, which would leak side effects across
+      // entry boundaries. Same pattern as `extract_runtime_chunk`.
+      for &entry_idx in &self.link_output.user_defined_entry_modules {
+        group.remove_module(entry_idx, &self.link_output.module_table);
+      }
       if group.modules.is_empty() {
         continue;
       }

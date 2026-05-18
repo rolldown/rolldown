@@ -1,0 +1,56 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-a.js
+
+```js
+import { n as shared_ab, t as shared_abc } from "./vendor~entry-a~entry-b~entry-c.js";
+//#region entry-a.js
+shared_ab();
+shared_abc();
+console.log("side-effect-a");
+//#endregion
+
+```
+
+## entry-b.js
+
+```js
+import { n as shared_ab, t as shared_abc } from "./vendor~entry-a~entry-b~entry-c.js";
+//#region entry-b.js
+shared_ab();
+shared_abc();
+console.log("side-effect-b");
+//#endregion
+
+```
+
+## entry-c.js
+
+```js
+import { t as shared_abc } from "./vendor~entry-a~entry-b~entry-c.js";
+//#region entry-c.js
+shared_abc();
+console.log("side-effect-c");
+//#endregion
+
+```
+
+## vendor~entry-a~entry-b~entry-c.js
+
+```js
+//#region shared-ab.js
+function shared_ab() {
+	console.log("shared-ab");
+}
+//#endregion
+//#region shared-abc.js
+function shared_abc() {
+	console.log("shared-abc");
+}
+//#endregion
+export { shared_ab as n, shared_abc as t };
+
+```

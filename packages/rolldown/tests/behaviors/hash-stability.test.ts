@@ -2,6 +2,7 @@ import type { OutputChunk, Plugin } from 'rolldown';
 import { rolldown } from 'rolldown';
 import { expect, test } from 'vitest';
 
+// https://github.com/rolldown/rolldown/issues/9339
 test('hash is stable when an unrelated isolated entry is added', async () => {
   const modules: Record<string, string> = {
     '/node_modules/react/index.js': 'exports.useState = function useState() {};',

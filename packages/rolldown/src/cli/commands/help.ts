@@ -80,7 +80,6 @@ export function generateHelpText(): string {
         }
         return (
           styleText('cyan', optionStr.padEnd(30)) +
-          (optionStr.length >= 30 ? ' ' : '') +
           description +
           (description && description?.endsWith('.') ? '' : '.')
         );

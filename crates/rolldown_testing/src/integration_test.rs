@@ -579,12 +579,9 @@ impl IntegrationTest {
 
     // Disable plugin timings in tests to reduce snapshot noise
     if let Some(checks) = &mut options.checks {
-      checks.plugin_timings = Some(rolldown_common::CheckSetting::Off);
+      checks.plugin_timings = Some(false);
     } else {
-      options.checks = Some(ChecksOptions {
-        plugin_timings: Some(rolldown_common::CheckSetting::Off),
-        ..Default::default()
-      });
+      options.checks = Some(ChecksOptions { plugin_timings: Some(false), ..Default::default() });
     }
   }
 

@@ -1,6 +1,5 @@
 mod normalize_binding_transform_options;
 
-pub mod checks_severity;
 pub mod collapse_sourcemaps;
 pub mod create_bundler_config_from_binding_options;
 pub mod minify_options_conversion;
@@ -51,7 +50,7 @@ pub async fn handle_warnings(
     return Ok(());
   }
   if let Some(on_log) = options.on_log.as_ref() {
-    for warning in filter_out_disabled_diagnostics(warnings, &options.warn_checks) {
+    for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
       let diag = warning.to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() });
       let code = warning.kind().to_string();
 

@@ -55,8 +55,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
     .await;
     self.plugin_driver.set_total_build_time(start);
-    let result = self.append_plugin_timings_warning(result);
-    self.promote_error_checks(result)
+    self.append_plugin_timings_warning(result)
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
@@ -77,8 +76,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
     .await;
     self.plugin_driver.set_total_build_time(start);
-    let result = self.append_plugin_timings_warning(result);
-    self.promote_error_checks(result)
+    self.append_plugin_timings_warning(result)
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
@@ -394,23 +392,6 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       }
       output
     })
-  }
-
-  /// Promote warnings whose kind is in `options.error_checks` to hard errors, failing
-  /// the build. This is the single point of escalation for `checks.<x>: 'error'`:
-  /// emission sites keep pushing warnings as-is, and this pass moves the configured
-  /// ones into the error channel right before the build returns.
-  pub fn promote_error_checks(
-    &self,
-    result: BuildResult<BundleOutput>,
-  ) -> BuildResult<BundleOutput> {
-    let mut output = result?;
-    let (remaining, promoted) = rolldown_error::promote_warnings_to_errors(
-      std::mem::take(&mut output.warnings),
-      &self.options.error_checks,
-    );
-    output.warnings = remaining;
-    if promoted.is_empty() { Ok(output) } else { Err(promoted.into()) }
   }
 }
 

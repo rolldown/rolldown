@@ -42,9 +42,8 @@ export const options: {
       if (config?.abbreviation) {
         result.short = config.abbreviation;
       }
-      const hint = config?.hint ?? defaultHintFor(key);
-      if (hint) {
-        result.hint = hint;
+      if (config?.hint) {
+        result.hint = config.hint;
       }
 
       const kebabKey = camelCaseToKebabCase(key);
@@ -88,11 +87,10 @@ export function parseCliArguments(): NormalizedCliOptions & {
     }
 
     if (info.type !== 'boolean' && !config?.reverse) {
-      const hint = config?.hint ?? defaultHintFor(key) ?? key;
       if (config?.requireValue) {
-        rawName += ` <${hint}>`;
+        rawName += ` <${config?.hint ?? key}>`;
       } else {
-        rawName += ` [${hint}]`;
+        rawName += ` [${config?.hint ?? key}]`;
       }
     }
 
@@ -242,9 +240,4 @@ export function parseCliArguments(): NormalizedCliOptions & {
 
   const normalizedOptions = normalizeCliOptions(parsedOptions as CliOptions, parsedInput);
   return { ...normalizedOptions, rawArgs };
-}
-
-function defaultHintFor(key: string): string | undefined {
-  if (key.startsWith('checks.')) return 'false|warn|error';
-  return undefined;
 }

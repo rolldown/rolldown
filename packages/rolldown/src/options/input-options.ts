@@ -746,11 +746,7 @@ export interface InputOptions {
    */
   watch?: WatcherOptions | false;
   /**
-   * Controls which warnings are emitted during the build process. Each option accepts:
-   *
-   * - `false` — suppress the check.
-   * - `'warn'` — emit a warning (the default for most checks).
-   * - `'error'` — promote the emission to a hard build error that fails the build.
+   * Controls which warnings are emitted during the build process. Each option can be set to `true` (emit warning) or `false` (suppress warning).
    */
   checks?: ChecksOptions;
   /**

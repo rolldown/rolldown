@@ -433,7 +433,13 @@ impl<'a> GenerateStage<'a> {
       }
 
       let mut packages = package_infos.into_values().collect::<Vec<_>>();
-      packages.sort_unstable_by(|a, b| a.package_id.cmp(&b.package_id));
+      packages.sort_unstable_by(|a, b| {
+        a.name
+          .cmp(&b.name)
+          .then_with(|| a.version.cmp(&b.version))
+          .then_with(|| a.package_root.cmp(&b.package_root))
+          .then_with(|| a.package_id.cmp(&b.package_id))
+      });
 
       trace_action!(action::PackageGraphReady { action: "PackageGraphReady", packages });
     }

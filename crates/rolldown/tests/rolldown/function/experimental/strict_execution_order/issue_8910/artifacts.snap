@@ -6,13 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## node0.js
 
 ```js
-import { t as __esmMin } from "./node1.js";
+import { r as __esmMin } from "./node1.js";
 //#region node0.js
 var node_0;
 //#endregion
 __esmMin((() => {
 	globalThis.__acyclic_output_fuzz_0 = 0;
-	import("./node1.js");
+	import("./node1.js").then((n) => (n.t(), n.n));
 	node_0 = {};
 	node_0.value = 0;
 }))();
@@ -22,8 +22,9 @@ __esmMin((() => {
 ## node1.js
 
 ```js
-var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
-var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+// HIDDEN [\0rolldown/runtime.js]
+//#region node2.js
+var node2_exports = /* @__PURE__ */ __exportAll({ node_2: () => node_2 });
 var node_2;
 var init_node2 = __esmMin((() => {
 	globalThis.__acyclic_output_fuzz_2 = 2;
@@ -40,6 +41,6 @@ var require_node1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 }));
 //#endregion
 export default require_node1();
-export { __esmMin as t };
+export { node2_exports as n, __esmMin as r, init_node2 as t };
 
 ```

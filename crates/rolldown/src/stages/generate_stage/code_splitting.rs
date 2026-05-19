@@ -953,6 +953,7 @@ impl GenerateStage<'_> {
         bits_to_chunk,
         input_base,
         &mut temp_chunk_graph,
+        index_splitting_info,
       );
 
       self.optimize_facade_entry_chunks(

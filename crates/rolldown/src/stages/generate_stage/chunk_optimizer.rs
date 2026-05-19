@@ -356,6 +356,7 @@ impl GenerateStage<'_> {
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
     temp_chunk_graph: &mut ChunkOptimizationGraph,
+    index_splitting_info: &IndexSplittingInfo,
   ) {
     let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
@@ -397,14 +398,14 @@ impl GenerateStage<'_> {
         }
         let chunk_idxs: Vec<_> = bits.index_of_one().map(ChunkIdx::from_raw).collect();
 
-        let merge_target = Self::try_insert_into_existing_chunk(
+        let merge_target = self.try_insert_into_existing_chunk(
           &chunk_idxs,
           &static_entry_chunk_reference,
           chunk_graph,
-          &self.link_output.module_table,
           &dynamic_entry_to_dynamic_importers,
           temp_chunk,
           temp_chunk_graph,
+          index_splitting_info,
         );
 
         Some((bits.clone(), *temp_chunk_idx, chunk_idxs, merge_target))
@@ -557,15 +558,18 @@ impl GenerateStage<'_> {
   /// entry chunk when possible, rather than creating a separate common chunk.
   ///
   /// Returns `Some(ChunkIdx)` if a suitable merge target is found, `None` otherwise.
+  #[expect(clippy::too_many_arguments)]
   fn try_insert_into_existing_chunk(
+    &self,
     chunk_idxs: &[ChunkIdx],
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
     chunk_graph: &ChunkGraph,
-    module_table: &ModuleTable,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
     info: &ChunkCandidate,
     temp_chunk_graph: &ChunkOptimizationGraph,
+    index_splitting_info: &IndexSplittingInfo,
   ) -> Option<ChunkIdx> {
+    let module_table = &self.link_output.module_table;
     let mut user_defined_entry = vec![];
     let mut dynamic_entry = vec![];
     for &idx in chunk_idxs {
@@ -582,6 +586,26 @@ impl GenerateStage<'_> {
         }
         ChunkKind::Common => return None,
       }
+    }
+    // rolldown#9441: don't hoist a wrapped atom into the parent entry when an
+    // *effective* dynamic-entry sibling depends on it (mirrors the predicate
+    // in dynamic_already_loaded::can_use_reduced_dependent_entries).
+    if info
+      .modules
+      .iter()
+      .any(|module_idx| !matches!(self.link_output.metas[*module_idx].wrap_kind(), WrapKind::None))
+      && dynamic_entry.iter().any(|dyn_chunk_idx| {
+        let Some(dyn_chunk) = chunk_graph.chunk_table.get(*dyn_chunk_idx) else {
+          return true;
+        };
+        let ChunkKind::EntryPoint { module: dyn_module_idx, .. } = dyn_chunk.kind else {
+          return true;
+        };
+        let d_bits = &index_splitting_info[dyn_module_idx].bits;
+        d_bits.bit_count() == 1 && d_bits.has_bit(dyn_chunk_idx.raw())
+      })
+    {
+      return None;
     }
     let user_defined_entry_modules = Self::collect_entry_modules(&user_defined_entry, chunk_graph)?;
 

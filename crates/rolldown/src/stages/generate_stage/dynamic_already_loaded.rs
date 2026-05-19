@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx, PreserveEntrySignatures,
-  StmtInfoIdx,
+  StmtInfoIdx, WrapKind,
 };
 use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -75,6 +75,7 @@ impl GenerateStage<'_> {
           &atoms[atom_idx].dependent_entries,
           chunk_graph,
           &dynamic_entry_modules_by_entry,
+          index_splitting_info,
         )
         && (!self.should_check_reduced_atom_static_cycle(
           &original_dependent_entries,
@@ -108,7 +109,31 @@ impl GenerateStage<'_> {
     dependent_entries: &BitSet,
     chunk_graph: &ChunkGraph,
     dynamic_entry_modules_by_entry: &[Option<ModuleIdx>],
+    index_splitting_info: &IndexSplittingInfo,
   ) -> bool {
+    // rolldown#9441: a wrapped atom shared with an effective dynamic entry
+    // cannot be hoisted — the sibling chunk would back-import the wrapper.
+    let atom_is_wrapped = atom
+      .modules
+      .iter()
+      .any(|module_idx| !matches!(self.link_output.metas[*module_idx].wrap_kind(), WrapKind::None));
+    if atom_is_wrapped {
+      for removed_entry_idx in
+        original_dependent_entries.index_of_one().filter(|idx| !dependent_entries.has_bit(*idx))
+      {
+        let Some(dynamic_entry_module_idx) =
+          dynamic_entry_modules_by_entry.get(removed_entry_idx as usize).copied().flatten()
+        else {
+          return false;
+        };
+        let d_bits = &index_splitting_info[dynamic_entry_module_idx].bits;
+        let is_effective = d_bits.bit_count() == 1 && d_bits.has_bit(removed_entry_idx);
+        if is_effective {
+          return false;
+        }
+      }
+    }
+
     let bit_count = dependent_entries.bit_count();
     if bit_count != 1 {
       return bit_count > 1;

@@ -305,13 +305,13 @@ fn deconflict_filenames(
   for (asset_idx, chunk) in index_instantiated_chunks.iter_enumerated() {
     let preliminary_filename = chunk.preliminary_filename.as_str();
     let Some(placeholders) = chunk.preliminary_filename.hash_placeholder() else {
-      taken.insert(preliminary_filename.to_ascii_lowercase());
+      taken.insert(preliminary_filename.to_lowercase());
       continue;
     };
     loop {
       let candidate =
         resolve_filename(preliminary_filename, placeholders, &index_final_hashes[asset_idx].0);
-      if taken.insert(candidate.to_ascii_lowercase()) {
+      if taken.insert(candidate.to_lowercase()) {
         break;
       }
       index_final_hashes[asset_idx] = rehash(&index_final_hashes[asset_idx].0, hash_base);

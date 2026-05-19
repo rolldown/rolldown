@@ -86,7 +86,7 @@ impl Plugin for ChunkImportMapPlugin {
       return Ok(None);
     }
 
-    let mut code = args.code.clone();
+    let mut code = args.code.as_ref().clone();
     for (start, end, placeholder) in placeholders {
       let hash = self.chunk_import_map.get(placeholder).expect("hash placeholder must exist");
       debug_assert_eq!(hash.len(), end - start, "hash length doesn't match placeholder size");

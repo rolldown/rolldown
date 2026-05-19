@@ -20,6 +20,7 @@ use crate::options::plugin::types::{
   binding_hook_side_effects::BindingHookSideEffects,
   binding_hook_transform_output::BindingHookTransformOutput,
   binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
+  binding_shared_string::BindingSharedString,
 };
 
 use super::{
@@ -150,10 +151,11 @@ impl BindingCallableBuiltinPlugin {
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
+      let code_arc = ArcStr::from(code.as_str());
       plugin
         .call_transform(
           context,
-          &HookTransformArgs { id: &id, code: &code, module_type: &module_type },
+          &HookTransformArgs { id: &id, code: &code_arc, module_type: &module_type },
         )
         .await
         .map_err(AnyHowMaybeNapiError::into_napi_error)
@@ -236,7 +238,8 @@ impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
 
 #[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingHookJsLoadOutput {
-  pub code: String,
+  #[napi(ts_type = "string")]
+  pub code: BindingSharedString,
   pub map: Option<String>,
   #[napi(ts_type = "boolean | 'no-treeshake'")]
   pub module_side_effects: Option<BindingHookSideEffects>,
@@ -245,7 +248,7 @@ pub struct BindingHookJsLoadOutput {
 impl From<HookLoadOutput> for BindingHookJsLoadOutput {
   fn from(value: HookLoadOutput) -> Self {
     Self {
-      code: value.code.to_string(),
+      code: BindingSharedString::from(value.code),
       map: value.map.map(|map| map.to_json_string()),
       module_side_effects: value.side_effects.map(Into::into),
     }

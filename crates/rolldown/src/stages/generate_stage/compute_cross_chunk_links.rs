@@ -360,6 +360,36 @@ impl GenerateStage<'_> {
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
     index_chunk_indirect_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
   ) {
+    // For each module that has been absorbed as a facade namespace, we need to know
+    // which other modules dynamically import it so we can tell whether the absorbed
+    // namespace must be published cross-chunk. `EntryPoint::related_stmt_infos` only
+    // covers `DynamicImport`-kind entries; emitted entries that are also dynamically
+    // imported (e.g. via `this.emitFile` + `import()` in the same build) wouldn't be
+    // found that way. Walking import_records directly catches both.
+    let dynamic_importers_by_target: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>> = {
+      let mut map: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>> = FxHashMap::default();
+      let absorbed_targets: FxHashSet<ModuleIdx> = chunk_graph
+        .common_chunk_exported_facade_chunk_namespace
+        .values()
+        .flatten()
+        .copied()
+        .collect();
+      if !absorbed_targets.is_empty() {
+        for (importer_idx, module) in self.link_output.module_table.iter_enumerated() {
+          let Some(module) = module.as_normal() else { continue };
+          for rec in &module.import_records {
+            if rec.kind == ImportKind::DynamicImport
+              && let Some(resolved) = rec.resolved_module
+              && absorbed_targets.contains(&resolved)
+            {
+              map.entry(resolved).or_default().insert(importer_idx);
+            }
+          }
+        }
+      }
+      map
+    };
+
     chunk_graph
       .chunk_table
       .iter_enumerated()
@@ -374,84 +404,98 @@ impl GenerateStage<'_> {
           .unwrap_or(false)
       })
       .for_each(|(chunk_id, chunk)| {
-        match chunk.kind {
-          ChunkKind::EntryPoint { module: module_idx, meta, .. } => {
-            let is_dynamic_imported = meta.contains(ChunkMeta::DynamicImported);
-            let is_user_defined =
-              meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk);
+        if let ChunkKind::EntryPoint { module: module_idx, meta, .. } = chunk.kind {
+          let is_dynamic_imported = meta.contains(ChunkMeta::DynamicImported);
+          let is_user_defined =
+            meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk);
 
-            let normalized_entry_signatures = normalize_preserve_entry_signature(
-              &self.link_output.overrode_preserve_entry_signature_map,
-              self.options,
-              module_idx,
-            );
-            let needs_export_entry_signatures = if self.options.preserve_modules {
-              if is_user_defined {
-                !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
-              } else {
-                is_dynamic_imported
-              }
+          let normalized_entry_signatures = normalize_preserve_entry_signature(
+            &self.link_output.overrode_preserve_entry_signature_map,
+            self.options,
+            module_idx,
+          );
+          let needs_export_entry_signatures = if self.options.preserve_modules {
+            if is_user_defined {
+              !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
             } else {
               is_dynamic_imported
-                || !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
-            };
-            if needs_export_entry_signatures {
-              // If the entry point is external, we don't need to compute exports.
-              let meta = &self.link_output.metas[module_idx];
-              for (name, symbol) in meta
-                .referenced_canonical_exports_symbols(
-                  module_idx,
-                  if is_user_defined {
-                    EntryPointKind::UserDefined
-                  } else {
-                    EntryPointKind::DynamicImport
-                  },
-                  &self.link_output.dynamic_import_exports_usage_map,
-                  false,
-                )
-                .map(|(name, export)| (name, export.symbol_ref))
-              {
-                index_chunk_exported_symbols[chunk_id]
-                  .entry(symbol)
-                  .or_default()
-                  .push(name.clone());
-              }
+            }
+          } else {
+            is_dynamic_imported
+              || !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
+          };
+          if needs_export_entry_signatures {
+            // If the entry point is external, we don't need to compute exports.
+            let meta = &self.link_output.metas[module_idx];
+            for (name, symbol) in meta
+              .referenced_canonical_exports_symbols(
+                module_idx,
+                if is_user_defined {
+                  EntryPointKind::UserDefined
+                } else {
+                  EntryPointKind::DynamicImport
+                },
+                &self.link_output.dynamic_import_exports_usage_map,
+                false,
+              )
+              .map(|(name, export)| (name, export.symbol_ref))
+            {
+              index_chunk_exported_symbols[chunk_id].entry(symbol).or_default().push(name.clone());
             }
           }
-          ChunkKind::Common => {
-            if let Some(set) =
-              chunk_graph.common_chunk_exported_facade_chunk_namespace.get(&chunk_id)
-            {
-              for dynamic_entry_module in set {
-                let meta = &self.link_output.metas[*dynamic_entry_module];
-                match meta.wrap_kind() {
-                  WrapKind::Cjs => {
-                    // For CJS modules, export only wrapper_ref (require_xxx)
-                    // Generated code: `import('./chunk.js').then((n) => __toESM(n.require_xxx()))`
-                    if let Some(wrapper_ref) = meta.wrapper_ref {
-                      index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
-                    }
-                  }
-                  WrapKind::Esm => {
-                    // For ESM modules, export both wrapper_ref (init_xxx) and namespace
-                    // Generated code: `import('./chunk.js').then((n) => (n.init_xxx(), n.namespace))`
-                    if let Some(wrapper_ref) = meta.wrapper_ref {
-                      index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
-                    }
-                    let ns_ref = self.link_output.module_table[*dynamic_entry_module]
-                      .namespace_object_ref()
-                      .expect("dynamic entry should be normal module");
-                    index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
-                  }
-                  WrapKind::None => {
-                    // For non-wrapped modules, export only namespace
-                    // Generated code: `import('./chunk.js').then((n) => n.namespace)`
-                    let ns_ref = self.link_output.module_table[*dynamic_entry_module]
-                      .namespace_object_ref()
-                      .expect("dynamic entry should be normal module");
-                    index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
-                  }
+        }
+
+        // A chunk that absorbed a dynamic-entry facade must publish that absorbed
+        // entry's namespace/wrapper so the importer's rewritten dynamic import can
+        // extract it via `.then(n => n.<ns>)`. Applies regardless of chunk kind:
+        // a `DynamicEntryMergedIntoUserDefinedEntry` elimination puts the entry
+        // into a `ChunkKind::EntryPoint`, while a `DynamicEntryMergedIntoCommonChunk`
+        // elimination puts it into a `ChunkKind::Common`.
+        //
+        // We only publish the export when at least one dynamic importer lives in
+        // a different chunk. Same-chunk dynamic imports take the
+        // `Promise.resolve().then(() => (init_xxx(), namespace))` path in
+        // `rewrite_dynamic_import_for_merged_entry` and never read from the
+        // surrounding chunk's exports, so the export would otherwise be dead.
+        if let Some(set) = chunk_graph.common_chunk_exported_facade_chunk_namespace.get(&chunk_id) {
+          for dynamic_entry_module in set {
+            let has_external_dynamic_importer =
+              dynamic_importers_by_target.get(dynamic_entry_module).is_some_and(|importers| {
+                importers.iter().any(|importer_idx| {
+                  chunk_graph.module_to_chunk[*importer_idx]
+                    .is_some_and(|importer_chunk_idx| importer_chunk_idx != chunk_id)
+                })
+              });
+            if !has_external_dynamic_importer {
+              continue;
+            }
+            let meta = &self.link_output.metas[*dynamic_entry_module];
+            match meta.wrap_kind() {
+              WrapKind::Cjs => {
+                // For CJS modules, export only wrapper_ref (require_xxx)
+                // Generated code: `import('./chunk.js').then((n) => __toESM(n.require_xxx()))`
+                if let Some(wrapper_ref) = meta.wrapper_ref {
+                  index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
                 }
+              }
+              WrapKind::Esm => {
+                // For ESM modules, export both wrapper_ref (init_xxx) and namespace
+                // Generated code: `import('./chunk.js').then((n) => (n.init_xxx(), n.namespace))`
+                if let Some(wrapper_ref) = meta.wrapper_ref {
+                  index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
+                }
+                let ns_ref = self.link_output.module_table[*dynamic_entry_module]
+                  .namespace_object_ref()
+                  .expect("dynamic entry should be normal module");
+                index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
+              }
+              WrapKind::None => {
+                // For non-wrapped modules, export only namespace
+                // Generated code: `import('./chunk.js').then((n) => n.namespace)`
+                let ns_ref = self.link_output.module_table[*dynamic_entry_module]
+                  .namespace_object_ref()
+                  .expect("dynamic entry should be normal module");
+                index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
               }
             }
           }

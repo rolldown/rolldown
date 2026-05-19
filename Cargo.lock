@@ -3557,7 +3557,6 @@ name = "rolldown_plugin_vite_transform"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "arcstr",
  "itertools",
  "memchr",
  "oxc",

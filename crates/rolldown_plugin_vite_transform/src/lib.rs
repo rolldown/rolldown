@@ -3,7 +3,6 @@ mod utils;
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
-use arcstr::ArcStr;
 use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions};
 use oxc::parser::Parser;
 use oxc::transformer::Transformer;
@@ -64,7 +63,7 @@ impl Plugin for ViteTransformPlugin {
     if ret.panicked || !ret.errors.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         ret.errors,
-        &ArcStr::from(args.code.as_str()),
+        args.code,
         args.id,
         Severity::Error,
         EventKind::ParseError,
@@ -78,7 +77,7 @@ impl Plugin for ViteTransformPlugin {
     if !transformer_return.errors.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         transformer_return.errors,
-        &ArcStr::from(args.code.as_str()),
+        args.code,
         args.id,
         Severity::Error,
         EventKind::ParseError,

@@ -192,13 +192,15 @@ export interface OutputOptions {
    *
    * Patterns support the following placeholders:
    * - `[format]`: The rendering format defined in the output options. The value is any of {@linkcode InternalModuleFormat}.
-   * - `[hash]`: A hash based only on the content of the final generated chunk, including transformations in `renderChunk` and any referenced file hashes. You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see {@linkcode hashCharacters | output.hashCharacters}.
+   * - `[hash]`: A hash based only on the content of the final generated sourcemap.  You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see {@linkcode hashCharacters | output.hashCharacters}.
    * - `[chunkhash]`: The same hash as the one used for the corresponding generated chunk (if any).
-   * - `[name]`: The file name (without extension) of the entry point, unless the object form of input was used to define a different name.
+   * - `[name]`: The name of the corresponding chunk.
    *
    * Forward slashes (`/`) can be used to place files in sub-directories. This pattern will also be used for every file when setting the {@linkcode preserveModules | output.preserveModules} option.
    *
    * See also {@linkcode assetFileNames | output.assetFileNames}, {@linkcode chunkFileNames | output.chunkFileNames}.
+   *
+   * @default the corresponding chunk filename with `.map` appended
    */
   sourcemapFileNames?: string | ChunkFileNamesFunction;
   /**

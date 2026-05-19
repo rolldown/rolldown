@@ -21,6 +21,7 @@ use super::{
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
     binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
+    binding_shared_string::BindingSharedString,
   },
 };
 
@@ -213,7 +214,7 @@ impl Plugin for JsPlugin {
       if !filter_exprs_interpreter(
         v,
         Some(args.id),
-        Some(args.code),
+        Some(args.code.as_str()),
         Some(args.module_type.to_string().as_ref()),
         None,
         ctx.cwd().to_string_lossy().as_ref(),
@@ -227,7 +228,7 @@ impl Plugin for JsPlugin {
     cb.await_call(
       (
         BindingTransformPluginContext::new(Arc::clone(&ctx)),
-        args.code.clone(),
+        BindingSharedString::from(args.code.clone()),
         args.id.to_string(),
         extra_args,
       )
@@ -424,7 +425,7 @@ impl Plugin for JsPlugin {
       if !filter_exprs_interpreter(
         v,
         None,
-        Some(&args.code),
+        Some(args.code.as_str()),
         None,
         None,
         ctx.cwd().to_string_lossy().as_ref(),
@@ -436,7 +437,7 @@ impl Plugin for JsPlugin {
     cb.await_call(
       (
         ctx.clone().into(),
-        args.code.clone(),
+        BindingSharedString::from(Arc::clone(&args.code)),
         BindingRenderedChunk::new(Arc::clone(&args.chunk)),
         BindingNormalizedOptions::new(Arc::clone(args.options)),
         BindingRenderedChunkMeta::new(Arc::clone(&args.chunks)),

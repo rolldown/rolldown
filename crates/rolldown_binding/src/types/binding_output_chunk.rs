@@ -155,15 +155,36 @@ pub fn update_output_chunk(
   chunk: &mut Arc<rolldown_common::OutputChunk>,
   js_chunk: JsOutputChunk,
 ) -> anyhow::Result<()> {
-  let old_chunk = (**chunk).clone();
-  *chunk = Arc::new(rolldown_common::OutputChunk {
-    code: js_chunk.code,
-    map: js_chunk.map.map(TryInto::try_into).transpose()?,
-    imports: js_chunk.imports.into_iter().map(Into::into).collect(),
-    dynamic_imports: js_chunk.dynamic_imports.into_iter().map(Into::into).collect(),
-    is_entry: js_chunk.is_entry, // used by nuxt
-    filename: js_chunk.filename.into(),
-    ..old_chunk
-  });
+  let map = js_chunk.map.map(TryInto::try_into).transpose()?;
+  let imports = js_chunk.imports.into_iter().map(Into::into).collect();
+  let dynamic_imports = js_chunk.dynamic_imports.into_iter().map(Into::into).collect();
+  let filename = js_chunk.filename.into();
+
+  if let Some(chunk) = Arc::get_mut(chunk) {
+    chunk.code = js_chunk.code;
+    chunk.map = map;
+    chunk.imports = imports;
+    chunk.dynamic_imports = dynamic_imports;
+    chunk.is_entry = js_chunk.is_entry; // used by nuxt
+    chunk.filename = filename;
+  } else {
+    let old_chunk = Arc::as_ref(chunk);
+    *chunk = Arc::new(rolldown_common::OutputChunk {
+      name: old_chunk.name.clone(),
+      is_entry: js_chunk.is_entry, // used by nuxt
+      is_dynamic_entry: old_chunk.is_dynamic_entry,
+      facade_module_id: old_chunk.facade_module_id.clone(),
+      module_ids: old_chunk.module_ids.clone(),
+      exports: old_chunk.exports.clone(),
+      filename,
+      modules: old_chunk.modules.clone(),
+      imports,
+      dynamic_imports,
+      code: js_chunk.code,
+      map,
+      sourcemap_filename: old_chunk.sourcemap_filename.clone(),
+      preliminary_filename: old_chunk.preliminary_filename.clone(),
+    });
+  }
   Ok(())
 }

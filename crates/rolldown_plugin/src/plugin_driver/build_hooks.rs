@@ -10,6 +10,7 @@ use crate::{
   },
 };
 use anyhow::{Context, Result};
+use arcstr::ArcStr;
 use rolldown_common::{
   ModuleInfo, ModuleType, NormalModule, PluginIdx, SharedNormalizedBundlerOptions,
   SourcemapChainElement, side_effects::HookSideEffects,
@@ -267,6 +268,7 @@ impl PluginDriver {
       self.iter_plugin_with_context_by_order(&self.order_by_transform_meta)
     {
       let call_id = tracing::enabled!(tracing::Level::TRACE).then(rolldown_utils::uuid::uuid_v4);
+      let code_arc = ArcStr::from(code.as_str());
 
       trace_action!(action::HookTransformCallStart {
         action: "HookTransformCallStart",
@@ -282,13 +284,13 @@ impl PluginDriver {
           Arc::new(TransformPluginContext::new(
             ctx.clone(),
             plugin_sourcemap_chain.weak_ref(),
-            code.as_str().into(),
+            code_arc.clone(),
             id.into(),
             module_idx,
             plugin_idx,
             magic_string_tx.clone(),
           )),
-          &HookTransformArgs { id, code: &code, module_type: &*module_type },
+          &HookTransformArgs { id, code: &code_arc, module_type: &*module_type },
         )
         .await;
       self.record_timing(plugin_idx, start);

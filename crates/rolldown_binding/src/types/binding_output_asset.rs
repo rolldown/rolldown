@@ -1,5 +1,9 @@
 use std::sync::Arc;
 
+use napi::{
+  Env,
+  bindgen_prelude::{BufferSlice, JsObjectValue, Object},
+};
 use napi_derive::napi;
 
 use crate::{
@@ -69,9 +73,18 @@ impl BindingOutputAsset {
     Ok(self.try_get_inner()?.original_file_names.iter().map(AsRef::as_ref).collect())
   }
 
-  #[napi]
-  pub fn get_source(&self) -> napi::Result<BindingAssetSource> {
-    Ok(self.try_get_inner()?.source.clone().into())
+  #[napi(ts_return_type = "BindingAssetSource")]
+  pub fn get_source<'env>(&self, env: &'env Env) -> napi::Result<Object<'env>> {
+    let mut source = Object::new(env)?;
+    match &self.try_get_inner()?.source {
+      rolldown_common::StrOrBytes::Str(value) => {
+        source.set_named_property("inner", env.create_string(value)?)?;
+      }
+      rolldown_common::StrOrBytes::Bytes(value) => {
+        source.set_named_property("inner", BufferSlice::copy_from(env, value)?)?;
+      }
+    }
+    Ok(source)
   }
 
   #[napi]

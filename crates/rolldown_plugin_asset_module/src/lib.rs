@@ -144,8 +144,7 @@ impl AssetModulePlugin {
     let path = Path::new(clean_id);
 
     // Read file as binary (use cleaned path for filesystem access)
-    let bytes = tokio::fs::read(clean_id)
-      .await
+    let bytes = std::fs::read(clean_id)
       .map_err(|e| anyhow::anyhow!("Failed to read asset module {clean_id}: {e}"))?;
 
     // Derive name from the cleaned file path

@@ -19,4 +19,3 @@ rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true, features = ["fs"] }

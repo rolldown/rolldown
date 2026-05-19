@@ -3132,7 +3132,6 @@ dependencies = [
  "rustc-hash",
  "string_wizard",
  "sugar_path",
- "tokio",
 ]
 
 [[package]]
@@ -3175,7 +3174,6 @@ dependencies = [
  "rustc-hash",
  "string_wizard",
  "sugar_path",
- "tokio",
 ]
 
 [[package]]

@@ -98,9 +98,7 @@ impl Plugin for CopyModulePlugin {
       return Ok(None);
     }
 
-    // Read the file bytes asynchronously to avoid blocking the tokio worker thread
-    let bytes = tokio::fs::read(clean_id)
-      .await
+    let bytes = std::fs::read(clean_id)
       .map_err(|e| anyhow::anyhow!("Failed to read copy module {}: {e}", resolved_id.id))?;
 
     // Derive a name from the file path

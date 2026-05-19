@@ -2826,18 +2826,18 @@ dependencies = [
 
 [[package]]
 name = "rolldown-file-id"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a90bdae27c1b0b097fdb7d5e7a9b2c27e2eb0169e931021369ece5d10bc6de31"
+checksum = "30c2b9e1a332d7c2f9783cb04178afffba89c77a7234ce6b0a6c2c12168e844f"
 dependencies = [
  "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "rolldown-notify"
-version = "10.3.0"
+version = "10.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5511f4e26ef1a0ecf2216dce3551f0386f1d83f9ef64c754cb7a2e3e041528c"
+checksum = "63868ac37e0a2ad93cb16463a1a9f12e2f00ba7b6b9090915a23c6d07f990426"
 dependencies = [
  "bitflags 2.11.1",
  "inotify",
@@ -2847,6 +2847,7 @@ dependencies = [
  "objc2-core-foundation",
  "objc2-core-services",
  "rolldown-notify-types",
+ "rustc-hash",
  "tracing",
  "walkdir",
  "windows-sys 0.61.2",
@@ -2854,13 +2855,14 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify-debouncer-full"
-version = "0.7.6"
+version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c358b002faa5b927f58901907a9fd909deb55312b282600813a346966062a86"
+checksum = "213b33298cb47932296228e33b6793b5b251a1fa51b3228402ca0c272c0b36d2"
 dependencies = [
  "rolldown-file-id",
  "rolldown-notify",
  "rolldown-notify-types",
+ "rustc-hash",
  "tracing",
  "walkdir",
 ]

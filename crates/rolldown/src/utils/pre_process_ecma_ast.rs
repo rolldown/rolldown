@@ -110,6 +110,7 @@ impl PreProcessEcmaAst {
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
+    let mut recycled_scoping = None;
 
     // Extract enum member values before the transformer converts enums.
     // This runs before Step 3 (transformer) because `optimize_const_enums` / `optimize_enums`
@@ -159,7 +160,9 @@ impl PreProcessEcmaAst {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())
           .build(scoping.take().unwrap(), program);
-        if !ret.changed {
+        if ret.changed {
+          recycled_scoping = Some(ret.scoping);
+        } else {
           scoping = Some(ret.scoping);
         }
       });
@@ -184,7 +187,7 @@ impl PreProcessEcmaAst {
           preserve_jsx = true;
         }
 
-        let scoping = self.recreate_scoping(&mut scoping, program);
+        let scoping = self.recreate_scoping(&mut scoping, &mut recycled_scoping, program);
         let ret = Transformer::new(allocator, Path::new(stable_id), &transform_options)
           .build_with_scoping(scoping, program);
 
@@ -206,6 +209,7 @@ impl PreProcessEcmaAst {
           Severity::Warning,
           EventKind::ToleratedTransform,
         ));
+        recycled_scoping = Some(ret.scoping);
         Ok(())
       })?;
     }
@@ -213,10 +217,12 @@ impl PreProcessEcmaAst {
     // Step 4: Run inject plugin.
     if !bundle_options.inject.is_empty() {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
-        let new_scoping = self.recreate_scoping(&mut scoping, program);
+        let new_scoping = self.recreate_scoping(&mut scoping, &mut recycled_scoping, program);
         let inject_config = bundle_options.oxc_inject_global_variables_config.clone();
         let ret = InjectGlobalVariables::new(allocator, inject_config).build(new_scoping, program);
-        if !ret.changed {
+        if ret.changed {
+          recycled_scoping = Some(ret.scoping);
+        } else {
           scoping = Some(ret.scoping);
         }
       });
@@ -226,7 +232,7 @@ impl PreProcessEcmaAst {
     // Avoid DCE for lazy export.
     if bundle_options.treeshake.is_some() && !has_lazy_export {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
-        let scoping = self.recreate_scoping(&mut scoping, program);
+        let scoping = self.recreate_scoping(&mut scoping, &mut recycled_scoping, program);
         let mut treeshake = TreeShakeOptions::from(&bundle_options.treeshake);
         treeshake.invalid_import_side_effects = true;
         // NOTE: `CompressOptions::dead_code_elimination` will remove `ParenthesizedExpression`s from the AST.
@@ -235,7 +241,9 @@ impl PreProcessEcmaAst {
           treeshake,
           ..CompressOptions::dce()
         };
-        Compressor::new(allocator).dead_code_elimination_with_scoping(program, scoping, options);
+        let (_, stale_scoping) = Compressor::new(allocator)
+          .dead_code_elimination_with_scoping_returning_scoping(program, scoping, options);
+        recycled_scoping = Some(stale_scoping);
       });
     }
 
@@ -243,7 +251,10 @@ impl PreProcessEcmaAst {
     let scoping = ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
       let mut pre_processor = PreProcessor::new(allocator, bundle_options.keep_names);
       pre_processor.visit_program(program);
-      self.recreate_scoping(&mut None, program)
+      if let Some(stale_scoping) = scoping.take() {
+        recycled_scoping = Some(stale_scoping);
+      }
+      self.recreate_scoping(&mut scoping, &mut recycled_scoping, program)
     });
 
     Ok(ParseToEcmaAstResult {
@@ -256,15 +267,23 @@ impl PreProcessEcmaAst {
     })
   }
 
-  fn recreate_scoping(&mut self, scoping: &mut Option<Scoping>, program: &Program<'_>) -> Scoping {
+  fn recreate_scoping(
+    &mut self,
+    scoping: &mut Option<Scoping>,
+    recycled_scoping: &mut Option<Scoping>,
+    program: &Program<'_>,
+  ) -> Scoping {
     if let Some(scoping) = scoping.take() {
       return scoping;
     }
-    let ret = semantic_builder_for_transform()
+    let mut builder = semantic_builder_for_transform()
       // Preallocate memory for the underlying data structures.
-      .with_stats(self.stats)
-      .build(program)
-      .semantic;
+      .with_stats(self.stats);
+    if let Some(mut stale) = recycled_scoping.take() {
+      stale.reset();
+      builder = builder.with_scoping(stale);
+    }
+    let ret = builder.build(program).semantic;
     self.stats = ret.stats();
     ret.into_scoping()
   }

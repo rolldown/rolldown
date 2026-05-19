@@ -271,6 +271,33 @@ oxc_resolver = { version = "11.19.1", features = [
 oxc_resolver_napi = { version = "11.19.1", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "6" } # https://github.com/oxc-project/oxc-sourcemap
 
+[patch.crates-io]
+oxc = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_ast = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_ast_macros = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_ast_visit = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_cfg = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_codegen = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_compat = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_data_structures = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_diagnostics = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_estree = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_isolated_declarations = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_mangler = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_minifier = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_parser = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_regular_expression = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_semantic = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_span = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_str = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_syntax = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_transformer = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_transformer_plugins = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+oxc_napi = { git = "https://github.com/oxc-project/oxc.git", branch = "claude/semantic-faster-rebuild" }
+
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.
 debug = "line-tables-only"

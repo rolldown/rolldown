@@ -16,6 +16,6 @@ pub struct HookRenderChunkArgs<'a> {
 
 impl HookRenderChunkArgs<'_> {
   pub fn into_code(self) -> String {
-    Arc::try_unwrap(self.code).unwrap_or_else(|code| code.as_ref().clone())
+    Arc::unwrap_or_clone(self.code)
   }
 }

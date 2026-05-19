@@ -262,13 +262,14 @@ impl PluginDriver {
     code_changed_by_plugins: &mut Option<Vec<String>>,
   ) -> Result<String> {
     let mut code = original_code;
+    let mut code_arc: Option<ArcStr> = None;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
     let mut plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_meta)
     {
       let call_id = tracing::enabled!(tracing::Level::TRACE).then(rolldown_utils::uuid::uuid_v4);
-      let code_arc = ArcStr::from(code.as_str());
+      let code_arc_ref = code_arc.get_or_insert_with(|| ArcStr::from(code.as_str()));
 
       trace_action!(action::HookTransformCallStart {
         action: "HookTransformCallStart",
@@ -284,13 +285,13 @@ impl PluginDriver {
           Arc::new(TransformPluginContext::new(
             ctx.clone(),
             plugin_sourcemap_chain.weak_ref(),
-            code_arc.clone(),
+            code_arc_ref.clone(),
             id.into(),
             module_idx,
             plugin_idx,
             magic_string_tx.clone(),
           )),
-          &HookTransformArgs { id, code: &code_arc, module_type: &*module_type },
+          &HookTransformArgs { id, code: code_arc_ref, module_type: &*module_type },
         )
         .await;
       self.record_timing(plugin_idx, start);
@@ -310,6 +311,7 @@ impl PluginDriver {
             }
           }
           code = v;
+          code_arc = None;
           trace_action!(action::HookTransformCallEnd {
             action: "HookTransformCallEnd",
             module_id: id.to_string(),

@@ -35,6 +35,11 @@ jobs:
           env-mapping: |
             PNPM_HOME,{{ DEV_DRIVE }}/.pnpm
 
+      # pnpm v11 requires Node >=22.13, so fall back to pnpm 10 when testing on Node 20.
+      - name: Pin pnpm 10 for Node 20
+        if: ${{ inputs.node-version == 20 }}
+        run: npm pkg set packageManager=pnpm@10.33.4
+
       - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
         with:
           node-version: ${{ inputs.node-version }}

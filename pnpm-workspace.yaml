@@ -13,6 +13,23 @@ packages:
   - crates/rolldown/tests/rolldown/warnings/eval2
   - '!examples/yarn-pnp'
 
+allowBuilds:
+  esbuild: true
+  playwright-chromium: true
+  sharp: true
+  vue-demi: true
+
+# Kept for pnpm 10 (used on Node 20 in CI). pnpm 11 reads `allowBuilds` instead.
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - esbuild
+  - oxc-resolver
+  - sharp
+  - tree-sitter
+
+overrides:
+  vitepress>vite: npm:rolldown-vite@latest
+
 catalog:
   '@babel/core': ^7.24.7
   '@babel/preset-env': ^7.24.7

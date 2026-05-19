@@ -4,7 +4,9 @@ use arcstr::ArcStr;
 use futures::future::try_join_all;
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
-use rolldown_common::{ChunkIdx, ChunkKind, OutputExports, PackageJson, PathsOutputOption};
+use rolldown_common::{
+  ChunkIdx, ChunkKind, InstantiationKind, OutputExports, PackageJson, PathsOutputOption,
+};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
@@ -70,6 +72,7 @@ fn ensure_devtools_package_info<'a>(
         package_root,
         is_used: false,
         dependency_type: "transitive",
+        size: 0,
         modules: Vec::new(),
         chunk_ids: Vec::new(),
       },
@@ -145,7 +148,6 @@ impl<'a> GenerateStage<'a> {
 
     // See meta/design/devtools.md for devtools action lifecycle.
     self.trace_action_chunks_infos(&chunk_graph);
-    self.trace_action_package_graph_ready(&chunk_graph);
 
     let mut warnings = vec![];
     self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings)?;
@@ -448,9 +450,14 @@ impl<'a> GenerateStage<'a> {
     }
   }
 
-  fn trace_action_package_graph_ready(&self, chunk_graph: &ChunkGraph) {
+  fn trace_action_package_graph_ready(
+    &self,
+    chunk_graph: &ChunkGraph,
+    instantiated_chunks: &crate::type_alias::IndexInstantiatedChunks,
+  ) {
     if trace_action_enabled!() {
       let mut package_infos: FxHashMap<String, DevtoolsPackageInfoEntry> = FxHashMap::default();
+      let mut module_id_to_package_id: FxHashMap<String, String> = FxHashMap::default();
       let cwd = self.options.cwd.to_string_lossy();
       let cwd_slash = self.options.cwd.to_slash_lossy();
 
@@ -490,12 +497,38 @@ impl<'a> GenerateStage<'a> {
           package_info.is_used = true;
 
           let module_id = module.id.to_string();
+          module_id_to_package_id.insert(module_id.clone(), package_info.package_id.clone());
           if modules.insert(module_id.clone()) {
             package_info.modules.push(module_id);
           }
           if chunk_ids.insert(chunk_idx.raw()) {
             package_info.chunk_ids.push(chunk_idx.raw());
           }
+        }
+      }
+
+      for chunk in instantiated_chunks {
+        let InstantiationKind::Ecma(ecma_meta) = &chunk.kind else {
+          continue;
+        };
+
+        for (module_id, rendered_module) in ecma_meta
+          .rendered_chunk
+          .modules
+          .keys
+          .iter()
+          .zip(ecma_meta.rendered_chunk.modules.values.iter())
+        {
+          let Some(package_id) = module_id_to_package_id.get(module_id.as_str()) else {
+            continue;
+          };
+          let Some((package_info, _, _)) = package_infos.get_mut(package_id) else {
+            continue;
+          };
+
+          let rendered_length =
+            u32::try_from(rendered_module.rendered_length()).unwrap_or(u32::MAX);
+          package_info.size = package_info.size.saturating_add(rendered_length);
         }
       }
 

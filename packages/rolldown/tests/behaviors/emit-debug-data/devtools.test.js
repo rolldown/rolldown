@@ -22,7 +22,7 @@ test(`emit data for devtool`, async () => {
     rmSync(dotRolldownFileName, { recursive: true, force: true });
   }
 
-  await runBundle();
+  const renderedModuleSizes = await runBundle();
 
   const dotRolldownDir = readdirSync(dotRolldownFileName);
   expect(dotRolldownDir.length).toBe(1);
@@ -67,6 +67,19 @@ test(`emit data for devtool`, async () => {
   const packageGraphReady = logs.find((event) => event.action === 'PackageGraphReady');
   expect(packageGraphReady).toBeDefined();
 
+  function expectPackageSize(pkg) {
+    expect(Number.isInteger(pkg.size)).toBe(true);
+    expect(pkg.size).toBeGreaterThanOrEqual(0);
+
+    let expectedSize = 0;
+    for (const moduleId of pkg.modules) {
+      const moduleSize = renderedModuleSizes.get(moduleId);
+      expect(moduleSize).toBeDefined();
+      expectedSize += moduleSize;
+    }
+    expect(pkg.size).toBe(expectedSize);
+  }
+
   function expectPackageChunkLinks(pkg) {
     expect(['direct', 'transitive']).toContain(pkg.dependency_type);
     expect(pkg.modules).toEqual([...new Set(pkg.modules)]);
@@ -86,6 +99,7 @@ test(`emit data for devtool`, async () => {
 
   for (const pkg of packageGraphReady.packages) {
     expectPackageChunkLinks(pkg);
+    expectPackageSize(pkg);
   }
 
   const metaInfoPackage = packageGraphReady.packages.find((pkg) => pkg.name === 'meta-info-lib');
@@ -99,6 +113,7 @@ test(`emit data for devtool`, async () => {
   expect(metaInfoPackage.package_id).toBe(metaInfoPackage.package_root);
   expectPathToEndWith(metaInfoPackage.package_root, 'node_modules/meta-info-lib');
   expectPathToEndWith(metaInfoPackage.package_json_path, 'node_modules/meta-info-lib/package.json');
+  expect(metaInfoPackage.size).toBeGreaterThan(0);
   expect(metaInfoPackage.modules).toHaveLength(1);
   expectPathToEndWith(metaInfoPackage.modules[0], 'node_modules/meta-info-lib/index.js');
 
@@ -109,6 +124,7 @@ test(`emit data for devtool`, async () => {
   expect(duplicatePackages.map((pkg) => pkg.version)).toEqual(['1.0.0', '2.0.0']);
   expect(duplicatePackages.every((pkg) => pkg.dependency_type === 'direct')).toBe(true);
   expect(duplicatePackages.every((pkg) => pkg.is_used)).toBe(true);
+  expect(duplicatePackages.every((pkg) => pkg.size > 0)).toBe(true);
   expect(new Set(duplicatePackages.map((pkg) => pkg.package_root)).size).toBe(2);
   expectPathToEndWith(duplicatePackages[0].package_root, 'node_modules/duplicate-a');
   expectPathToEndWith(duplicatePackages[1].package_root, 'node_modules/duplicate-b');
@@ -133,6 +149,7 @@ test(`emit data for devtool`, async () => {
     }),
   );
   expectPathToEndWith(directGraphPackage.package_root, 'node_modules/direct-graph-lib');
+  expect(directGraphPackage.size).toBeGreaterThan(0);
   expect(directGraphPackage.modules).toHaveLength(1);
   expectPathToEndWith(directGraphPackage.modules[0], 'node_modules/direct-graph-lib/index.js');
 
@@ -147,6 +164,7 @@ test(`emit data for devtool`, async () => {
     }),
   );
   expectPathToEndWith(transitiveGraphPackage.package_root, 'node_modules/transitive-graph-lib');
+  expect(transitiveGraphPackage.size).toBeGreaterThan(0);
   expect(transitiveGraphPackage.modules).toHaveLength(1);
   expectPathToEndWith(
     transitiveGraphPackage.modules[0],
@@ -163,6 +181,7 @@ test(`emit data for devtool`, async () => {
   );
   expectPathToEndWith(unusedPackage.package_root, 'node_modules/unused-lib');
   expectPathToEndWith(unusedPackage.package_json_path, 'node_modules/unused-lib/package.json');
+  expect(unusedPackage.size).toBe(0);
   expect(unusedPackage.modules).toEqual([]);
   expect(unusedPackage.chunk_ids).toEqual([]);
 
@@ -213,9 +232,23 @@ test(`emit data for devtool`, async () => {
         },
       ],
     });
-    await bundle.generate();
+    const { output } = await bundle.generate();
+    const renderedModuleSizes = new Map();
+    for (const item of output) {
+      if (item.type !== 'chunk') {
+        continue;
+      }
+
+      for (const [moduleId, module] of Object.entries(item.modules)) {
+        renderedModuleSizes.set(
+          moduleId,
+          (renderedModuleSizes.get(moduleId) ?? 0) + Buffer.byteLength(module.code ?? ''),
+        );
+      }
+    }
     // Devtools log files are only guaranteed complete after `close()` — the
     // writer thread drains and flushes on the CloseSession ack.
     await bundle.close();
+    return renderedModuleSizes;
   }
 });

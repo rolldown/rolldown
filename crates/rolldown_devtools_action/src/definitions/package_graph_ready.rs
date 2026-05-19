@@ -17,6 +17,8 @@ pub struct PackageInfo {
   pub is_used: bool,
   #[ts(type = "'direct' | 'transitive'")]
   pub dependency_type: &'static str,
+  // The package's rendered module code size in bytes.
+  pub size: u32,
   pub modules: Vec<String>,
   pub chunk_ids: Vec<u32>,
 }

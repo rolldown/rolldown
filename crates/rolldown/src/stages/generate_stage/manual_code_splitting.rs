@@ -6,6 +6,7 @@ use std::{
 };
 
 use arcstr::ArcStr;
+use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, EntryPoint, ManualCodeSplittingOptions, MatchGroup,
@@ -122,8 +123,20 @@ impl ManualSplitter<'_> {
     let mut entries_aware_groups: Vec<ModuleGroup> = Vec::new();
     let mut entries_aware_idx_by_id: FxHashMap<ModuleGroupId, usize> = FxHashMap::default();
 
-    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
-    {
+    // Sort modules by `stable_id` before iterating so that user-supplied
+    // `output.codeSplitting.groups[].name` functions are invoked in a deterministic order.
+    // Without this, a stateful function would produce different chunk assignments across runs
+    // because `ModuleIdx` is assigned in module-load completion order, which varies with
+    // parallel `resolveId`/`load`.
+    let sorted_normal_modules = self
+      .link_output
+      .module_table
+      .modules
+      .iter()
+      .filter_map(Module::as_normal)
+      .sorted_by(|a, b| a.stable_id.cmp(&b.stable_id));
+
+    for normal_module in sorted_normal_modules {
       if !metas[normal_module.idx].is_included {
         continue;
       }

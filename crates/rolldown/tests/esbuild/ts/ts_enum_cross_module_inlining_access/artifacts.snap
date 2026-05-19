@@ -21,16 +21,13 @@ inlined = [
 	123,
 	123,
 	"abc",
+	"abc",
+	123,
+	123,
+	"abc",
 	"abc"
 ];
-not_inlined = [
-	c_num?.x,
-	d_num?.["x"],
-	e_num,
-	c_str?.x,
-	d_str?.["x"],
-	e_str
-];
+not_inlined = [e_num, e_str];
 //#endregion
 
 ```

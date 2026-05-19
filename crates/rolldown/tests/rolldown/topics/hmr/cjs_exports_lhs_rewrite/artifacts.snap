@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region a.js
+var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
+	__rolldown_runtime__.registerModule("a.js", module);
+	exports = module.exports = {};
+	exports.value = "v1";
+	module.exports.other = "o1";
+	console.log(exports.value, exports.other);
+	a_hot.accept();
+}));
+//#endregion
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+require_a();
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+//#endregion
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+//#region a.js
+var require_a_0 = __rolldown_runtime__.createCjsInitializer("a.js", (function(__rolldown_exports__, __rolldown_module__, __rolldown_module_id__) {
+	try {
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
+		const hot_a = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		__rolldown_exports__ = __rolldown_module__.exports = {};
+		__rolldown_exports__.value = "v2";
+		__rolldown_module__.exports.other = "o2";
+		console.log(__rolldown_exports__.value, __rolldown_exports__.other);
+		hot_a.accept();
+	} finally {}
+}));
+
+//#endregion
+require_a_0()
+__rolldown_runtime__.applyUpdates([['a.js', 'a.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: a.js, accepted_via: a.js

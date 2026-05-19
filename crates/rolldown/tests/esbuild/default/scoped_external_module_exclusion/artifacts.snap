@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve '@scope/foo' in index.js
+[UNRESOLVED_IMPORT] Could not resolve '@scope/foo' in index.js
    ╭─[ index.js:1:21 ]
    │
  1 │ import { Foo } from '@scope/foo';
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve '@scope/foo/bar' in index.js
+[UNRESOLVED_IMPORT] Could not resolve '@scope/foo/bar' in index.js
    ╭─[ index.js:2:21 ]
    │
  2 │ import { Bar } from '@scope/foo/bar';

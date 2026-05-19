@@ -122,10 +122,16 @@ runTestSuiteWithSamples(
 					config.options.optimization ??= {};
 					config.options.optimization.inlineConst ??= false;
 				}
-        if (directory.includes('nested-inlined-dynamic-import-2')) {
-          config.options ??= {};
-          config.options.checks ??= {};
-          config.options.checks.ineffectiveDynamicImport ??= false;
+				if (
+					[
+						'nested-inlined-dynamic-import-2',
+						'dynamic-import-mutate-namespace-await',
+						'dynamic-import-mutate-namespace-then'
+					].some(name => directory.includes(name))
+				) {
+					config.options ??= {};
+					config.options.checks ??= {};
+					config.options.checks.ineffectiveDynamicImport ??= false;
 				}
 
 				return rollup

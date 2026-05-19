@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_path = require("node:path");
+node_path = __toESM(node_path);
+//#region main.js
+console.log(node_path.default.sep);
+//#endregion
+
+```
+
+## worker.js
+
+```js
+//#region worker.js
+require("node:worker_threads").parentPort?.postMessage("hi");
+//#endregion
+
+```

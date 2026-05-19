@@ -37,6 +37,29 @@ export type ExternalOptionFunction = (
 /** @inline */
 export type ExternalOption = StringOrRegExp | StringOrRegExp[] | ExternalOptionFunction;
 
+export interface ChunkOptimizationOptions {
+  /**
+   * Merge common chunks into existing entry chunks when it is safe.
+   *
+   * This can reduce the number of emitted chunks by moving shared/common modules
+   * into an entry chunk that already depends on them. Rolldown only applies the
+   * merge when it does not create a circular chunk dependency or change strict
+   * entry export signatures. This pass also covers safe empty-facade cleanup.
+   *
+   * @default true
+   */
+  mergeCommonChunks?: boolean;
+  /**
+   * Avoid emitting redundant chunk loads for dynamic entries.
+   *
+   * This pass can reduce dynamic-entry dependent chunks when the shared modules
+   * are guaranteed to be loaded by every importer of that dynamic entry.
+   *
+   * @default true
+   */
+  avoidRedundantChunkLoads?: boolean;
+}
+
 export type ModuleTypes = Record<
   string,
   | 'js'
@@ -670,18 +693,18 @@ export interface InputOptions {
      */
     nativeMagicString?: boolean;
     /**
-     * Control whether to optimize chunks by allowing entry chunks to have different exports than the underlying entry module.
-     * This optimization can reduce the number of generated chunks.
+     * Control chunk optimizations.
      *
-     * When enabled, rolldown will try to insert common modules directly into existing chunks rather than creating
-     * separate chunks for them, which can result in fewer output files and better performance.
+     * `true` enables both common-chunk merging and redundant dynamic chunk-load avoidance.
+     * `false` disables all chunk optimizations. Use the object form to control
+     * `mergeCommonChunks` and `avoidRedundantChunkLoads` separately.
      *
-     * This optimization is automatically disabled when any module uses top-level await (TLA) or contains TLA dependencies,
-     * as it could affect execution order guarantees.
+     * These optimizations are automatically disabled when any module uses top-level await (TLA) or contains TLA dependencies,
+     * as they could affect execution order guarantees.
      *
      * @default true
      */
-    chunkOptimization?: boolean;
+    chunkOptimization?: boolean | ChunkOptimizationOptions;
     /**
      * Control whether to enable lazy barrel optimization.
      *

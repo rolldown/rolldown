@@ -467,6 +467,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
             exports: oxc::allocator::Vec::new_in(fields.allocator),
             affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
             use_pife_for_module_wrappers,
+            // Lazy chunk: opt the runtime into deduping the module body so two
+            // concurrent lazy bundles for the same module don't double-execute it.
+            dedup_module_initializer: true,
             dependencies: FxIndexSet::default(),
             imports: FxHashSet::default(),
             generated_static_import_infos: FxHashMap::default(),
@@ -704,6 +707,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
             exports: oxc::allocator::Vec::new_in(fields.allocator),
             affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
             use_pife_for_module_wrappers,
+            dedup_module_initializer: false,
             dependencies: FxIndexSet::default(),
             imports: FxHashSet::default(),
             generated_static_import_infos: FxHashMap::default(),
@@ -895,6 +899,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
             exports: oxc::allocator::Vec::new_in(fields.allocator),
             affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
             use_pife_for_module_wrappers,
+            dedup_module_initializer: false,
             dependencies: FxIndexSet::default(),
             imports: FxHashSet::default(),
             generated_static_import_infos: FxHashMap::default(),

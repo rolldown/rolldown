@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'a_nowrap' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'a_nowrap' in entry.js
    ╭─[ entry.js:1:8 ]
    │
  1 │ import 'a_nowrap'
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'b_nowrap' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'b_nowrap' in entry.js
    ╭─[ entry.js:3:19 ]
    │
  3 │ import { b } from 'b_nowrap'
@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'c_nowrap' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'c_nowrap' in entry.js
    ╭─[ entry.js:6:15 ]
    │
  6 │ export * from 'c_nowrap'
@@ -45,7 +45,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'd_WRAP' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'd_WRAP' in entry.js
    ╭─[ entry.js:8:20 ]
    │
  8 │ import * as d from 'd_WRAP'
@@ -58,7 +58,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'e_WRAP' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'e_WRAP' in entry.js
     ╭─[ entry.js:11:15 ]
     │
  11 │ import e from 'e_WRAP'
@@ -71,7 +71,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'f_WRAP' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'f_WRAP' in entry.js
     ╭─[ entry.js:14:30 ]
     │
  14 │ import { default as f } from 'f_WRAP'
@@ -84,7 +84,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'g_nowrap' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'g_nowrap' in entry.js
     ╭─[ entry.js:17:33 ]
     │
  17 │ import { __esModule as g } from 'g_nowrap'
@@ -97,7 +97,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'h_WRAP' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'h_WRAP' in entry.js
     ╭─[ entry.js:20:20 ]
     │
  20 │ import * as h from 'h_WRAP'
@@ -110,7 +110,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'i_WRAP' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'i_WRAP' in entry.js
     ╭─[ entry.js:23:20 ]
     │
  23 │ import * as i from 'i_WRAP'
@@ -123,7 +123,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'j_WRAP' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'j_WRAP' in entry.js
     ╭─[ entry.js:26:20 ]
     │
  26 │ import * as j from 'j_WRAP'
@@ -136,7 +136,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'k_WRAP' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'k_WRAP' in entry.js
     ╭─[ entry.js:29:12 ]
     │
  29 │ x = import("k_WRAP")

@@ -6,13 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_ENTRY
 
 ```text
-[UNRESOLVED_ENTRY] Error: Cannot resolve entry module .htaccess.
+[UNRESOLVED_ENTRY] Cannot resolve entry module .htaccess.
 
 ```
 
 ## UNRESOLVED_ENTRY
 
 ```text
-[UNRESOLVED_ENTRY] Error: Cannot resolve entry module .ts.
+[UNRESOLVED_ENTRY] Cannot resolve entry module .ts.
 
 ```

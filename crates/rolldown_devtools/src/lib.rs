@@ -35,10 +35,12 @@ mod trace_action_macro;
 mod type_alias;
 mod types;
 mod utils;
+mod writer;
 
 pub use rolldown_devtools_action as action;
 
 pub use {
   init_tracing::{DebugTracer, Session},
   utils::{generate_build_id, generate_session_id},
+  writer::flush_session,
 };

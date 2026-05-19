@@ -39,7 +39,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 ```js
 //#region hmr.js
-var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_hmr_0 = __rolldown_runtime__.createEsmInitializer("hmr.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			aliasA: () => aliasA,
@@ -47,8 +47,8 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 			aliasC: () => aliasC,
 			plain: () => plain
 		});
-		__rolldown_runtime__.registerModule("hmr.js", { exports: __rolldown_exports__ });
-		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const feature = {
 			selectA: "a",
 			selectB: "b",

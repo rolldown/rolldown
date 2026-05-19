@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.js
    ╭─[ entry.js:1:15 ]
    │
  1 │ export * from "foo"

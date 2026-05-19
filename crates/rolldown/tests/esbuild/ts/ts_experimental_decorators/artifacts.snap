@@ -226,13 +226,12 @@ var _default = class {
 __decorate([__decorateParam(0, x(() => 0)), __decorateParam(0, y(() => 1))], _default.prototype, "foo", null);
 //#endregion
 //#region arguments.ts
-function dec(x) {}
 function fn(x) {
 	var _arguments$;
 	class Foo {
 		[_arguments$ = arguments[0]]() {}
 	}
-	__decorate([dec(arguments[0])], Foo.prototype, _arguments$, null);
+	__decorate([(arguments[0], void 0)], Foo.prototype, _arguments$, null);
 	return Foo;
 }
 //#endregion

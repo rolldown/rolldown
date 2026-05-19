@@ -37,6 +37,16 @@ export interface ChecksOptions {
   missingNameOptionForIifeExport?: boolean;
 
   /**
+   * Whether to emit warnings when a `#__PURE__` / `@__PURE__` annotation has no effect due to its position.
+   *
+   * Annotations placed where they cannot annotate a call expression (e.g. before a non-call expression,
+   * before a statement declaration, or between an identifier and `=` in a variable declarator) are
+   * ignored by the parser. Matches Rollup's `INVALID_ANNOTATION` log code.
+   * @default true
+   * */
+  invalidAnnotation?: boolean;
+
+  /**
    * Whether to emit warnings when the way to export values is ambiguous.
    *
    * See [`output.exports`](https://rolldown.rs/reference/OutputOptions.exports).
@@ -159,4 +169,14 @@ export interface ChecksOptions {
    * @default true
    * */
   ineffectiveDynamicImport?: boolean;
+
+  /**
+   * Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000).
+   *
+   * Such modules can significantly slow down module resolution. Consider using
+   * [`@rolldown/plugin-transform-imports`](https://github.com/rolldown/plugins/tree/main/packages/transform-imports)
+   * to rewrite barrel imports at the source level so the barrel file is never loaded.
+   * @default true
+   * */
+  largeBarrelModules?: boolean;
 }

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "Bar" is not exported by "bar.ts".
+[MISSING_EXPORT] "Bar" is not exported by "bar.ts".
    ╭─[ main.ts:3:10 ]
    │
  3 │ import { Bar } from './bar.ts'
@@ -21,7 +21,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "Foo" is not exported by "foo.ts".
+[MISSING_EXPORT] "Foo" is not exported by "foo.ts".
    ╭─[ main.ts:1:10 ]
    │
  1 │ export { Foo } from './foo.ts'

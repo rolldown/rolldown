@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'assert' in main.js
+[UNRESOLVED_IMPORT] Could not resolve 'assert' in main.js
    ╭─[ main.js:1:20 ]
    │
  1 │ import assert from 'assert';
@@ -72,14 +72,14 @@ assert.default.equal(String(lib_exports), "[object Module]");
 ### MISSING_GLOBAL_NAME
 
 ```text
-[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "assert" in "output.globals" – guessing "assert".
+[MISSING_GLOBAL_NAME] No name was provided for external module "assert" in "output.globals" – guessing "assert".
 
 ```
 
 ### UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'assert' in main.js
+[UNRESOLVED_IMPORT] Could not resolve 'assert' in main.js
    ╭─[ main.js:1:20 ]
    │
  1 │ import assert from 'assert';

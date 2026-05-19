@@ -1,6 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] node4.js is dynamically imported by node3.js but also statically imported by node3.js, dynamic import will not move module into another chunk.
+
+```
+
 # Assets
 
 ## entry0.js
@@ -35,8 +44,7 @@ export { node_1, node_3 as reexport_1_3, use_1_2 };
 ## entry2.js
 
 ```js
-import { r as __exportAll } from "./node4.js";
-import { node_3 } from "./entry3.js";
+import { node_3, t as __exportAll } from "./entry3.js";
 
 //#region node2.js
 var node2_exports = /* @__PURE__ */ __exportAll({
@@ -54,21 +62,6 @@ export { node_2, node_3 as reexport_2_3, node2_exports as t };
 ## entry3.js
 
 ```js
-import { n as node_4 } from "./node4.js";
-
-//#region node3.js
-globalThis.__acyclic_output_fuzz_3 = 3;
-import("./node4.js").then((n) => n.t);
-var node_3 = {};
-node_3.value = 3;
-
-//#endregion
-export { node_3, node_4 as reexport_3_4 };
-```
-
-## node4.js
-
-```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region node4.js
 var node4_exports = /* @__PURE__ */ __exportAll({ node_4: () => node_4 });
@@ -77,5 +70,12 @@ var node_4 = {};
 node_4.value = 4;
 
 //#endregion
-export { node_4 as n, __exportAll as r, node4_exports as t };
+//#region node3.js
+globalThis.__acyclic_output_fuzz_3 = 3;
+Promise.resolve().then(() => node4_exports);
+var node_3 = {};
+node_3.value = 3;
+
+//#endregion
+export { node_3, node_4 as reexport_3_4, __exportAll as t };
 ```

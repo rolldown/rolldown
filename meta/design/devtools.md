@@ -34,6 +34,10 @@ When devtools is enabled, rolldown writes JSON-lines files to:
 
 Each line is a self-contained JSON object with an `action` discriminator field. Action events also carry `timestamp`, `session_id`, and `build_id` fields. `StringRef` entries contain only `action`, `id`, and `content` (no timestamp). The consumer reads the file and splits on newlines.
 
+### Read-after-close contract
+
+`meta.json` and `logs.json` are only guaranteed to be complete and readable **after `await bundle.close()` resolves**. Internally, events flow through a channel to a background writer thread and are buffered via `BufWriter`, so reading the files immediately after `generate()`/`write()` may return empty or truncated content. `bundle.close()` sends a `CloseSession` command with an ack channel and awaits the writer thread's signal, establishing the happens-before edge consumers depend on.
+
 ### Large String Deduplication
 
 Top-level string fields larger than 5 KB are cached by blake3 hash. A `StringRef` record is emitted before the action that references it:
@@ -56,7 +60,7 @@ Top-level string fields larger than 10 KB are additionally replaced with a `$ref
 
 ### Key Types
 
-- **`DebugTracer`** — Initializes a `tracing_subscriber` registry with the devtools-specific layer and formatter. Singleton init via `AtomicBool`. On drop, cleans up file handles and hash caches for its session.
+- **`DebugTracer`** — Initializes a `tracing_subscriber` registry with the devtools-specific layer and formatter. Singleton init via `AtomicBool`. On drop, sends a best-effort (no-ack) `CloseSession` to the writer thread as a cleanup fallback; the authoritative flush path is `ClassicBundler::close()`, which uses `rolldown_devtools::flush_session(session_id)` and awaits an ack before resolving.
 - **`Session`** — Holds a session `id` (e.g. `sid_0_1710000000000`) and a parent `tracing::Span`. All build spans are children of the session span. A `Session::dummy()` is used when devtools is disabled (no-op span).
 - **`DevtoolsLayer`** — A `tracing_subscriber::Layer` that extracts `CONTEXT_*` prefixed fields from spans and stores them as `ContextData` in span extensions.
 - **`DevtoolsFormatter`** — A `FormatEvent` impl that serializes `devtoolsAction`-tagged events to JSON lines, injects context variables, and writes to the appropriate file.
@@ -76,6 +80,7 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
     </HookResolveIdCallSpan>
     {trace_action!(ModuleGraphReady { ... })}
     {trace_action!(ChunkGraphReady { ... })}
+    {trace_action!(PackageGraphReady { ... })}
     {trace_action!(BuildEnd { action: "BuildEnd" })}
   </BuildSpan>
 </SessionSpan>
@@ -112,6 +117,7 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
 2. `BuildStart` / `BuildEnd` — emitted both around the outer `write()`/`generate()` call and inside `scan_modules()`, so consumers may see nested pairs per build
 3. `trace_action_module_graph_ready()` — emits after scan stage with all modules and their import relationships
 4. `trace_action_chunks_infos()` — emits after chunk graph construction in the generate stage
+5. `trace_action_package_graph_ready()` — emits after chunk graph construction with package metadata discovered from resolved package.json files
 
 **`PluginDriver`** (plugin hooks):
 
@@ -134,11 +140,14 @@ Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 | `ModuleGraphReady`           | After scan + normalize                    | modules[]{id, is_external, imports[]{module_id, kind, module_request}, importers[]}                         |
 | `BuildEnd`                   | After scan stage + after write/generate   | —                                                                                                           |
 | `ChunkGraphReady`            | After chunk graph construction            | chunks[]{chunk_id, name, reason, modules[], imports[], is_user_defined_entry, is_async_entry, entry_module} |
+| `PackageGraphReady`          | After chunk graph construction            | packages[]{package_id, name, version, package_json_path, package_root, is_used, modules[], chunk_ids[]}     |
 | `HookRenderChunkStart/End`   | Per plugin per renderChunk call           | chunk_id, plugin_name, plugin_id, call_id, content                                                          |
 | `AssetsReady`                | After final asset generation              | assets[]{chunk_id, content, size, filename}                                                                 |
 | `StringRef`                  | Before any action with large strings      | id (blake3 hash), content                                                                                   |
 
 All actions except `StringRef` carry injected `session_id`, `build_id`, and `timestamp` fields. `StringRef` entries contain only `action`, `id`, and `content`.
+
+`PackageGraphReady.packages` contains packages discovered from resolved module `package.json` files. `is_used` is true when at least one module for that package appears in a generated chunk, and false when all resolved modules for that package are tree-shaken. `modules` contains the package's generated chunk module IDs, and `chunk_ids` contains the matching `ChunkGraphReady` chunk IDs; both arrays are empty for unused packages. The packages are sorted by package name, version, package root, and package id. Rolldown does not emit a duplicate flag; consumers can identify duplicate packages by grouping non-null package names and checking whether a group contains multiple versions or package roots.
 
 ## TypeScript Codegen
 
@@ -158,7 +167,7 @@ File handles and hash caches are stored in process-global `LazyLock<DashMap>` st
 - `OPENED_FILES_BY_SESSION` — tracks which files belong to which session (for cleanup)
 - `EXIST_HASH_BY_SESSION` — tracks already-emitted `StringRef` hashes per session (for dedup)
 
-These are cleaned up when `DebugTracer` is dropped.
+These are cleaned up when the background writer thread processes a `CloseSession` command — either sent synchronously via `flush_session(...)` from `ClassicBundler::close()` (ack-based, happens-before `close()` resolving) or best-effort from `DebugTracer::drop`.
 
 ## Consumer Side
 
@@ -169,7 +178,7 @@ import { parseToEvents, type Event, type StringRef } from '@rolldown/debug';
 
 const data = fs.readFileSync('node_modules/.rolldown/<sid>/logs.json', 'utf8');
 const events = parseToEvents(data.trim());
-// events: Array<StringRef | { timestamp, session_id, action: "BuildStart" | "ModuleGraphReady" | ... }>
+// events: Array<StringRef | { timestamp, session_id, action: "BuildStart" | "ModuleGraphReady" | "PackageGraphReady" | ... }>
 ```
 
 Consumers (like Vite devtools) read the JSON-lines files, resolve `$ref:<hash>` placeholders against `StringRef` entries, and reconstruct the full build timeline.

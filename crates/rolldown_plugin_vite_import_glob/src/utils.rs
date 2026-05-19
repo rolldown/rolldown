@@ -22,6 +22,7 @@ pub struct GlobImportVisit<'a> {
   pub code: &'a str,
   pub magic_string: Option<MagicString<'a>>,
   pub import_decls: Vec<String>,
+  pub errors: Vec<anyhow::Error>,
 }
 
 impl<'ast> Visit<'ast> for GlobImportVisit<'_> {
@@ -383,7 +384,7 @@ impl GlobImportVisit<'_> {
   }
 
   fn eval_glob_expr(
-    &self,
+    &mut self,
     arg: &Argument,
     files: &mut Vec<ImportGlobFileData>,
     options: &ImportGlobOptions,
@@ -454,10 +455,10 @@ impl GlobImportVisit<'_> {
       return Some(());
     }
 
-    assert!(
-      !(is_virtual_module && is_relative && options.base.as_ref().is_none()),
-      "In virtual modules, all globs must start with '/'"
-    );
+    if is_virtual_module && is_relative && options.base.as_ref().is_none() {
+      self.errors.push(anyhow::anyhow!("In virtual modules, all globs must start with '/'"));
+      return None;
+    }
 
     let common = self.get_common_base(&positive_globs);
     let entries = walkdir::WalkDir::new(common.as_ref())

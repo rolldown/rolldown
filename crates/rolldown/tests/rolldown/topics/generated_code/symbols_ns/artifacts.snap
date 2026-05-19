@@ -45,7 +45,7 @@ assert.default.equal(String(import_exports), "[object Module]");
 ### MISSING_GLOBAL_NAME
 
 ```text
-[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "assert" in "output.globals" – guessing "assert".
+[MISSING_GLOBAL_NAME] No name was provided for external module "assert" in "output.globals" – guessing "assert".
 
 ```
 

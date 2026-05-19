@@ -3,6 +3,7 @@
     "minify": "dceOnly",
     "optimization": {
       "inlineConst": {
+        "mode": "all",
         "pass": 3
       }
     }

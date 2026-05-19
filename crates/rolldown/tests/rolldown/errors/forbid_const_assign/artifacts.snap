@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ILLEGAL_REASSIGNMENT
 
 ```text
-[ILLEGAL_REASSIGNMENT] Error: Unexpected re-assignment of const variable `a`
+[ILLEGAL_REASSIGNMENT] Unexpected re-assignment of const variable `a`
    ╭─[ main.js:3:1 ]
    │
  1 │ const a = 10;
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ILLEGAL_REASSIGNMENT
 
 ```text
-[ILLEGAL_REASSIGNMENT] Error: Unexpected re-assignment of const variable `a`
+[ILLEGAL_REASSIGNMENT] Unexpected re-assignment of const variable `a`
    ╭─[ main.js:5:1 ]
    │
  1 │ const a = 10;
@@ -40,7 +40,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ILLEGAL_REASSIGNMENT
 
 ```text
-[ILLEGAL_REASSIGNMENT] Error: Unexpected re-assignment of const variable `a`
+[ILLEGAL_REASSIGNMENT] Unexpected re-assignment of const variable `a`
    ╭─[ main.js:7:1 ]
    │
  1 │ const a = 10;

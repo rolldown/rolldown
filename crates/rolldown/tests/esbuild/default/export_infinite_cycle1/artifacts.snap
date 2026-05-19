@@ -6,27 +6,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## CIRCULAR_REEXPORT
 
 ```text
-[CIRCULAR_REEXPORT] Error: 'a' cannot be exported from 'entry.js' as it is a reexport that references itself.
+[CIRCULAR_REEXPORT] 'a' cannot be exported from 'entry.js' as it is a reexport that references itself.
 
 ```
 
 ## CIRCULAR_REEXPORT
 
 ```text
-[CIRCULAR_REEXPORT] Error: 'b' cannot be exported from 'entry.js' as it is a reexport that references itself.
+[CIRCULAR_REEXPORT] 'b' cannot be exported from 'entry.js' as it is a reexport that references itself.
 
 ```
 
 ## CIRCULAR_REEXPORT
 
 ```text
-[CIRCULAR_REEXPORT] Error: 'c' cannot be exported from 'entry.js' as it is a reexport that references itself.
+[CIRCULAR_REEXPORT] 'c' cannot be exported from 'entry.js' as it is a reexport that references itself.
 
 ```
 
 ## CIRCULAR_REEXPORT
 
 ```text
-[CIRCULAR_REEXPORT] Error: 'd' cannot be exported from 'entry.js' as it is a reexport that references itself.
+[CIRCULAR_REEXPORT] 'd' cannot be exported from 'entry.js' as it is a reexport that references itself.
 
 ```

@@ -8,6 +8,8 @@ pub use crate::{
     CJS_REQUIRE_REF_STR, CJS_ROLLDOWN_EXPORTS_REF, CJS_ROLLDOWN_EXPORTS_REF_IDENT,
     CJS_ROLLDOWN_MODULE_REF, CJS_ROLLDOWN_MODULE_REF_IDENT,
   },
-  ecma_ast::{EcmaAst, ToSourceString, program_cell::WithMutFields},
+  ecma_ast::{
+    EcmaAst, ToSourceString, program_cell::WithMutFields, semantic_builder_for_transform,
+  },
   ecma_compiler::{EcmaCompiler, PrintCommentsOptions, PrintOptions},
 };

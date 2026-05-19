@@ -4,6 +4,7 @@ use std::cmp::Reverse;
 use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
 use crate::utils::chunk::normalize_preserve_entry_signature;
+use crate::utils::external_import_interop::external_import_needs_interop;
 use itertools::{Itertools, multizip};
 use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
@@ -57,6 +58,7 @@ impl GenerateStage<'_> {
     self.compute_chunk_imports(
       chunk_graph,
       &index_chunk_depended_symbols,
+      &index_chunk_direct_imports_from_external_modules,
       &mut index_chunk_exported_symbols,
       &mut index_cross_chunk_imports,
       &mut index_imports_from_other_chunks,
@@ -223,35 +225,43 @@ impl GenerateStage<'_> {
                   .push((module.idx, import.clone()));
               }
             });
-          module.stmt_infos.iter_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
-            if !self.link_output.metas[module.idx].stmt_info_included.has_bit(stmt_info_idx) {
-              return;
-            }
-            stmt_info.declared_symbols.iter().for_each(|declared| {
-              symbol_needs_to_assign.push(*declared);
-            });
+          self.link_output.stmt_infos[module.idx].iter_enumerated().for_each(
+            |(stmt_info_idx, stmt_info)| {
+              if !self.link_output.metas[module.idx].stmt_info_included.has_bit(stmt_info_idx) {
+                return;
+              }
+              stmt_info.declared_symbols.iter().for_each(|declared| {
+                symbol_needs_to_assign.push(*declared);
+              });
 
-            stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
-              match reference_ref {
-                rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
-                  depended_symbols.insert(symbols.canonical_ref_resolving_namespace(*referenced));
-                }
-                rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-                  match member_expr.represent_symbol_ref(
-                    &self.link_output.metas[module.idx].resolved_member_expr_refs,
-                  ) {
-                    Some(sym_ref) => {
-                      depended_symbols.insert(symbols.canonical_ref_resolving_namespace(sym_ref));
-                    }
-                    _ => {
-                      // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
-                      // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
+              stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+                match reference_ref {
+                  rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
+                    self.add_depended_symbol_with_wrapped_esm_init(
+                      depended_symbols,
+                      symbols.canonical_ref_resolving_namespace(*referenced),
+                    );
+                  }
+                  rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+                    match member_expr.represent_symbol_ref(
+                      &self.link_output.metas[module.idx].resolved_member_expr_refs,
+                    ) {
+                      Some(sym_ref) => {
+                        self.add_depended_symbol_with_wrapped_esm_init(
+                          depended_symbols,
+                          symbols.canonical_ref_resolving_namespace(sym_ref),
+                        );
+                      }
+                      _ => {
+                        // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
+                        // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
+                      }
                     }
                   }
                 }
-              }
-            });
-          });
+              });
+            },
+          );
         });
 
         if let Some(entry_id) = &chunk.entry_module_idx() {
@@ -268,8 +278,10 @@ impl GenerateStage<'_> {
               // out a exported symbol that came from a cjs module.
               .filter(|resolved_export| !resolved_export.came_from_commonjs)
             {
-              depended_symbols
-                .insert(symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref));
+              self.add_depended_symbol_with_wrapped_esm_init(
+                depended_symbols,
+                symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref),
+              );
             }
           }
 
@@ -319,17 +331,65 @@ impl GenerateStage<'_> {
     }
   }
 
+  fn add_depended_symbol_with_wrapped_esm_init(
+    &self,
+    depended_symbols: &mut FxIndexSet<SymbolRef>,
+    symbol_ref: SymbolRef,
+  ) {
+    depended_symbols.insert(symbol_ref);
+
+    let meta = &self.link_output.metas[symbol_ref.owner];
+    if matches!(meta.wrap_kind(), WrapKind::Esm)
+      && let Some(wrapper_ref) = meta.wrapper_ref
+      && wrapper_ref != symbol_ref
+    {
+      depended_symbols.insert(wrapper_ref);
+    }
+  }
+
   /// - Filter out depended symbols to come from other chunks
   /// - Mark exports of importee chunks
+  #[expect(clippy::too_many_arguments, clippy::too_many_lines)]
   fn compute_chunk_imports(
     &self,
     chunk_graph: &ChunkGraph,
     index_chunk_depended_symbols: &IndexChunkDependedSymbols,
+    index_chunk_direct_imports_from_external_modules: &IndexChunkImportsFromExternalModules,
     index_chunk_exported_symbols: &mut IndexChunkExportedSymbols,
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
     index_chunk_indirect_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
   ) {
+    // For each module that has been absorbed as a facade namespace, we need to know
+    // which other modules dynamically import it so we can tell whether the absorbed
+    // namespace must be published cross-chunk. `EntryPoint::related_stmt_infos` only
+    // covers `DynamicImport`-kind entries; emitted entries that are also dynamically
+    // imported (e.g. via `this.emitFile` + `import()` in the same build) wouldn't be
+    // found that way. Walking import_records directly catches both.
+    let dynamic_importers_by_target: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>> = {
+      let mut map: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>> = FxHashMap::default();
+      let absorbed_targets: FxHashSet<ModuleIdx> = chunk_graph
+        .common_chunk_exported_facade_chunk_namespace
+        .values()
+        .flatten()
+        .copied()
+        .collect();
+      if !absorbed_targets.is_empty() {
+        for (importer_idx, module) in self.link_output.module_table.iter_enumerated() {
+          let Some(module) = module.as_normal() else { continue };
+          for rec in &module.import_records {
+            if rec.kind == ImportKind::DynamicImport
+              && let Some(resolved) = rec.resolved_module
+              && absorbed_targets.contains(&resolved)
+            {
+              map.entry(resolved).or_default().insert(importer_idx);
+            }
+          }
+        }
+      }
+      map
+    };
+
     chunk_graph
       .chunk_table
       .iter_enumerated()
@@ -344,84 +404,98 @@ impl GenerateStage<'_> {
           .unwrap_or(false)
       })
       .for_each(|(chunk_id, chunk)| {
-        match chunk.kind {
-          ChunkKind::EntryPoint { module: module_idx, meta, .. } => {
-            let is_dynamic_imported = meta.contains(ChunkMeta::DynamicImported);
-            let is_user_defined =
-              meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk);
+        if let ChunkKind::EntryPoint { module: module_idx, meta, .. } = chunk.kind {
+          let is_dynamic_imported = meta.contains(ChunkMeta::DynamicImported);
+          let is_user_defined =
+            meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk);
 
-            let normalized_entry_signatures = normalize_preserve_entry_signature(
-              &self.link_output.overrode_preserve_entry_signature_map,
-              self.options,
-              module_idx,
-            );
-            let needs_export_entry_signatures = if self.options.preserve_modules {
-              if is_user_defined {
-                !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
-              } else {
-                is_dynamic_imported
-              }
+          let normalized_entry_signatures = normalize_preserve_entry_signature(
+            &self.link_output.overrode_preserve_entry_signature_map,
+            self.options,
+            module_idx,
+          );
+          let needs_export_entry_signatures = if self.options.preserve_modules {
+            if is_user_defined {
+              !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
             } else {
               is_dynamic_imported
-                || !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
-            };
-            if needs_export_entry_signatures {
-              // If the entry point is external, we don't need to compute exports.
-              let meta = &self.link_output.metas[module_idx];
-              for (name, symbol) in meta
-                .referenced_canonical_exports_symbols(
-                  module_idx,
-                  if is_user_defined {
-                    EntryPointKind::UserDefined
-                  } else {
-                    EntryPointKind::DynamicImport
-                  },
-                  &self.link_output.dynamic_import_exports_usage_map,
-                  false,
-                )
-                .map(|(name, export)| (name, export.symbol_ref))
-              {
-                index_chunk_exported_symbols[chunk_id]
-                  .entry(symbol)
-                  .or_default()
-                  .push(name.clone());
-              }
+            }
+          } else {
+            is_dynamic_imported
+              || !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
+          };
+          if needs_export_entry_signatures {
+            // If the entry point is external, we don't need to compute exports.
+            let meta = &self.link_output.metas[module_idx];
+            for (name, symbol) in meta
+              .referenced_canonical_exports_symbols(
+                module_idx,
+                if is_user_defined {
+                  EntryPointKind::UserDefined
+                } else {
+                  EntryPointKind::DynamicImport
+                },
+                &self.link_output.dynamic_import_exports_usage_map,
+                false,
+              )
+              .map(|(name, export)| (name, export.symbol_ref))
+            {
+              index_chunk_exported_symbols[chunk_id].entry(symbol).or_default().push(name.clone());
             }
           }
-          ChunkKind::Common => {
-            if let Some(set) =
-              chunk_graph.common_chunk_exported_facade_chunk_namespace.get(&chunk_id)
-            {
-              for dynamic_entry_module in set {
-                let meta = &self.link_output.metas[*dynamic_entry_module];
-                match meta.wrap_kind() {
-                  WrapKind::Cjs => {
-                    // For CJS modules, export only wrapper_ref (require_xxx)
-                    // Generated code: `import('./chunk.js').then((n) => __toESM(n.require_xxx()))`
-                    if let Some(wrapper_ref) = meta.wrapper_ref {
-                      index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
-                    }
-                  }
-                  WrapKind::Esm => {
-                    // For ESM modules, export both wrapper_ref (init_xxx) and namespace
-                    // Generated code: `import('./chunk.js').then((n) => (n.init_xxx(), n.namespace))`
-                    if let Some(wrapper_ref) = meta.wrapper_ref {
-                      index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
-                    }
-                    let ns_ref = self.link_output.module_table[*dynamic_entry_module]
-                      .namespace_object_ref()
-                      .expect("dynamic entry should be normal module");
-                    index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
-                  }
-                  WrapKind::None => {
-                    // For non-wrapped modules, export only namespace
-                    // Generated code: `import('./chunk.js').then((n) => n.namespace)`
-                    let ns_ref = self.link_output.module_table[*dynamic_entry_module]
-                      .namespace_object_ref()
-                      .expect("dynamic entry should be normal module");
-                    index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
-                  }
+        }
+
+        // A chunk that absorbed a dynamic-entry facade must publish that absorbed
+        // entry's namespace/wrapper so the importer's rewritten dynamic import can
+        // extract it via `.then(n => n.<ns>)`. Applies regardless of chunk kind:
+        // a `DynamicEntryMergedIntoUserDefinedEntry` elimination puts the entry
+        // into a `ChunkKind::EntryPoint`, while a `DynamicEntryMergedIntoCommonChunk`
+        // elimination puts it into a `ChunkKind::Common`.
+        //
+        // We only publish the export when at least one dynamic importer lives in
+        // a different chunk. Same-chunk dynamic imports take the
+        // `Promise.resolve().then(() => (init_xxx(), namespace))` path in
+        // `rewrite_dynamic_import_for_merged_entry` and never read from the
+        // surrounding chunk's exports, so the export would otherwise be dead.
+        if let Some(set) = chunk_graph.common_chunk_exported_facade_chunk_namespace.get(&chunk_id) {
+          for dynamic_entry_module in set {
+            let has_external_dynamic_importer =
+              dynamic_importers_by_target.get(dynamic_entry_module).is_some_and(|importers| {
+                importers.iter().any(|importer_idx| {
+                  chunk_graph.module_to_chunk[*importer_idx]
+                    .is_some_and(|importer_chunk_idx| importer_chunk_idx != chunk_id)
+                })
+              });
+            if !has_external_dynamic_importer {
+              continue;
+            }
+            let meta = &self.link_output.metas[*dynamic_entry_module];
+            match meta.wrap_kind() {
+              WrapKind::Cjs => {
+                // For CJS modules, export only wrapper_ref (require_xxx)
+                // Generated code: `import('./chunk.js').then((n) => __toESM(n.require_xxx()))`
+                if let Some(wrapper_ref) = meta.wrapper_ref {
+                  index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
                 }
+              }
+              WrapKind::Esm => {
+                // For ESM modules, export both wrapper_ref (init_xxx) and namespace
+                // Generated code: `import('./chunk.js').then((n) => (n.init_xxx(), n.namespace))`
+                if let Some(wrapper_ref) = meta.wrapper_ref {
+                  index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
+                }
+                let ns_ref = self.link_output.module_table[*dynamic_entry_module]
+                  .namespace_object_ref()
+                  .expect("dynamic entry should be normal module");
+                index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
+              }
+              WrapKind::None => {
+                // For non-wrapped modules, export only namespace
+                // Generated code: `import('./chunk.js').then((n) => n.namespace)`
+                let ns_ref = self.link_output.module_table[*dynamic_entry_module]
+                  .namespace_object_ref()
+                  .expect("dynamic entry should be normal module");
+                index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
               }
             }
           }
@@ -441,17 +515,23 @@ impl GenerateStage<'_> {
               continue;
             }
 
-            // Note: the `__toESM` might have been referenced during `collect_depended_symbols` phase
-            // for namespace or default imports from external modules.
-            // For named-only imports, we don't use __toESM, so we should not try to resolve it.
-            // Check if __toESM is actually used before trying to resolve it.
+            if !index_chunk_direct_imports_from_external_modules[chunk_id]
+              .get(&import_ref.owner)
+              .is_some_and(|imports| external_import_needs_interop(imports))
+            {
+              continue;
+            }
+
+            // Note: `__toESM` might have been referenced during `collect_depended_symbols` for
+            // namespace or default imports from external modules. Named-only imports render as
+            // direct `require()` bindings and must not inherit another chunk's `__toESM`.
             let to_esm_ref = self.link_output.runtime.resolve_symbol("__toESM");
             if self.link_output.symbol_db.get(to_esm_ref).chunk_idx.is_some() {
               // __toESM is in a chunk, so it's being used
               to_esm_ref
             } else {
               // __toESM is not being used, so skip this import
-              // This happens for named-only imports from external modules where we don't need interop
+              // This happens when the interop helper was optimized away.
               continue;
             }
           } else {

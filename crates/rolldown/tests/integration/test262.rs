@@ -1,3 +1,5 @@
+#![expect(clippy::print_stderr)]
+
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};

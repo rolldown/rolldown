@@ -6,66 +6,44 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INEFFECTIVE_DYNAMIC_IMPORT
 
 ```text
-[INEFFECTIVE_DYNAMIC_IMPORT] Warning: b.js is dynamically imported by b.js but also statically imported by a.js, dynamic import will not move module into another chunk.
+[INEFFECTIVE_DYNAMIC_IMPORT] a.js is dynamically imported by b.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] b.js is dynamically imported by b.js but also statically imported by a.js, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] cjs.js is dynamically imported by b.js but also statically imported by a.js, dynamic import will not move module into another chunk.
 
 ```
 
 # Assets
 
-## a.js
-
-```js
-import { n as __exportAll } from "./chunk.js";
-import { t as require_cjs } from "./cjs.js";
-import "./b.js";
-//#region a.js
-var a_exports = /* @__PURE__ */ __exportAll({});
-require_cjs();
-//#endregion
-export { a_exports as t };
-
-```
-
-## b.js
-
-```js
-import { n as __exportAll, r as __toESM } from "./chunk.js";
-//#region b.js
-var b_exports = /* @__PURE__ */ __exportAll({ foo2: () => foo2 });
-function foo2() {
-	import("./a.js").then((n) => n.t);
-	Promise.resolve().then(() => b_exports);
-}
-import("./cjs.js").then((n) => /* @__PURE__ */ __toESM(n.t()));
-//#endregion
-export { b_exports as t };
-
-```
-
-## chunk.js
+## main.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __toESM as r, __commonJSMin as t };
-
-```
-
-## cjs.js
-
-```js
-import { t as __commonJSMin } from "./chunk.js";
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 42;
 }));
+require_cjs();
+var b_exports = /* @__PURE__ */ __exportAll({ foo2: () => foo2 });
+function foo2() {
+	Promise.resolve().then(() => a_exports);
+	Promise.resolve().then(() => b_exports);
+}
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));
 //#endregion
-export { require_cjs as t };
-
-```
-
-## main.js
-
-```js
-import "./a.js";
+//#region a.js
+var a_exports = /* @__PURE__ */ __exportAll({});
+//#endregion
 
 ```

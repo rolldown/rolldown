@@ -32,7 +32,7 @@ pub async fn create_ecma_view(
 ) -> BuildResult<CreateEcmaViewReturn> {
   let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects } = args;
   let ParseToEcmaAstResult {
-    ast,
+    mut ast,
     scoping,
     has_lazy_export,
     warnings,
@@ -47,18 +47,22 @@ pub async fn create_ecma_view(
   let repr_name = module_id.as_path().representative_file_name();
   let repr_name = legitimize_identifier_name(&repr_name);
 
-  let scanner = AstScanner::new(
-    ctx.module_idx,
-    scoping,
-    &repr_name,
-    ctx.resolved_id.module_def_format,
-    ast.source(),
-    &module_id,
-    ast.comments(),
-    ctx.options,
-    ast.allocator(),
-    ctx.flat_options,
-  );
+  let scan_result = ast.program.with_mut(|fields| {
+    let program = &*fields.program;
+    let scanner = AstScanner::new(
+      ctx.module_idx,
+      scoping,
+      &repr_name,
+      ctx.resolved_id.module_def_format,
+      fields.source,
+      &module_id,
+      &program.comments,
+      ctx.options,
+      fields.allocator,
+      ctx.flat_options,
+    );
+    scanner.scan(program)
+  })?;
 
   let ScanResult {
     commonjs_exports,
@@ -89,7 +93,7 @@ pub async fn create_ecma_view(
     import_attribute_map,
     cjs_reexport_require_spans: _,
     cjs_reexport_import_record_ids,
-  } = scanner.scan(ast.program())?;
+  } = scan_result;
   // If a export symbol in commonjs defined in multiple time, we just bailout treeshake it.
   for (k, v) in commonjs_exports {
     if v.len() == 1 {
@@ -112,7 +116,6 @@ pub async fn create_ecma_view(
     source: ast.source().clone(),
     named_imports,
     named_exports,
-    stmt_infos,
     imports,
     default_export_ref,
     exports_kind,
@@ -148,13 +151,13 @@ pub async fn create_ecma_view(
     dummy_record_set,
     constant_export_map,
     enum_member_value_map,
-    depended_runtime_helper: Box::default(),
     import_attribute_map,
     json_module_none_self_reference_included_symbol: None,
     cjs_reexport_import_record_ids,
   };
 
-  let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage, preserve_jsx };
+  let ecma_related =
+    EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage, preserve_jsx, stmt_infos };
   Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records, tla_keyword_span })
 }
 

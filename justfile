@@ -97,7 +97,7 @@ test-node-hmr *args: build build-test-dev-server
   just test-node-hmr-only {{ args }}
 
 test-node-hmr-only *args:
-  vp run --filter @rolldown/test-dev-server-tests test -- {{ args }}
+  vp run --filter @rolldown/test-dev-server-tests test {{ args }}
 
 # Run Vite's test suite to check Rolldown's behaviors.
 test-vite: # We don't use `test-node-vite` because it's not expected to run in `just test-node`.
@@ -110,12 +110,12 @@ t-node: t-node-rolldown t-node-rollup
 
 # Run Rolldown's tests without building Rolldown.
 t-node-rolldown *args="":
-  vp run --filter rolldown-tests test:main -- {{ args }}
-  vp run --filter rolldown-tests test:watcher -- {{ args }}
+  vp run --filter rolldown-tests test:main {{ args }}
+  vp run --filter rolldown-tests test:watcher {{ args }}
 
 # Run Rollup's test suite without building Rolldown.
 t-node-rollup *args="":
-  vp run --filter rollup-tests test -- {{ args }}
+  vp run --filter rollup-tests test {{ args }}
 
 # Run specific rust test without enabling extended tests.
 [unix]
@@ -171,8 +171,8 @@ lint-repo:
 
 # --- `build` series commands aim to provide a easy way to build the project.
 
-# Build both `@rolldown/pluginutils` and rolldown
-build: build-pluginutils build-rolldown
+# Build rolldown
+build: build-rolldown
 
 # Build `@rolldown/debug` located in `packages/debug`.
 build-rolldown-debug:
@@ -187,15 +187,15 @@ build-rolldown-binding:
   vp run --filter rolldown build-binding
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding.
-build-rolldown: build-pluginutils
+build-rolldown:
   vp run --filter rolldown build-native:debug
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.wasm` binding for WASI.
-build-rolldown-wasi: build-pluginutils
+build-rolldown-wasi:
   vp run --filter rolldown build-wasi:debug
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in release mode.
-build-rolldown-release: build-pluginutils
+build-rolldown-release:
   vp run --filter rolldown build-native:release
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in profile mode.
@@ -206,16 +206,12 @@ build-rolldown-memory-profile:
   vp run --filter rolldown build-native:memory-profile
 
 # Build `@rolldown/browser` located in `packages/browser` itself and its `.wasm` binding.
-build-browser: build-pluginutils
+build-browser:
   vp run --filter "@rolldown/browser" build:debug
 
 # Build `@rolldown/browser` located in `packages/browser` itself and its `.wasm` binding in release mode.
-build-browser-release: build-pluginutils
+build-browser-release:
   vp run --filter "@rolldown/browser" build:release
-
-# Build `@rolldown/pluginutils` located in `packages/pluginutils`.
-build-pluginutils:
-  vp run --filter "@rolldown/pluginutils" build
 
 # Build `@rolldown/test-dev-server` located in `packages/test-dev-server`.
 build-test-dev-server:

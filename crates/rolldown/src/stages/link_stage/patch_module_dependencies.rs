@@ -23,12 +23,11 @@ impl LinkStage<'_> {
           },
         );
 
-        let Module::Normal(module) = &self.module_table[module_idx] else {
+        let Module::Normal(_) = &self.module_table[module_idx] else {
           return (module_idx, extended_dependencies, RuntimeHelper::default());
         };
 
-        module
-          .stmt_infos
+        self.stmt_infos[module_idx]
           .iter_enumerated()
           .filter(|(idx, _)| meta.stmt_info_included.has_bit(*idx))
           .for_each(|(_, stmt_info)| {

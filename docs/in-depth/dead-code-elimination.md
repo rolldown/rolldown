@@ -67,13 +67,31 @@ You can use annotation comments to tell Rolldown that a piece of code is side-ef
 
 ### `@__PURE__`
 
-The `@__PURE__` annotation tells the bundler that a function call has no side effects. If the result is unused, the entire call can be removed.
+The `@__PURE__` annotation tells the bundler that a function call or `new` expression has no side effects. If the result is unused, the entire call can be removed.
 
 ```js
 const button = /* @__PURE__ */ createButton();
+const widget = /* @__PURE__ */ new Widget();
 ```
 
-If `button` is never used, Rolldown removes the `createButton()` call entirely. Without the annotation, Rolldown would keep the call because it can't be certain `createButton()` has no side effects.
+If `button` and `widget` are never used, Rolldown removes both calls entirely. Without the annotations, Rolldown would keep them because it can't be certain `createButton()` and `new Widget()` have no side effects.
+
+The annotation must appear **immediately before** the call or `new` expression for it to apply. If it is placed elsewhere, Rolldown emits an `INVALID_ANNOTATION` warning.
+
+::: warning Common invalid positions
+
+```js
+// Before a non-call expression
+/* @__PURE__ */ globalThis.createElement;
+
+// Before a declaration
+/* @__PURE__ */ function foo() {}
+
+// Between an identifier and `=` in a variable declarator
+const foo /* @__PURE__ */ = bar();
+```
+
+:::
 
 ::: tip
 The annotation can also be written as `/* #__PURE__ */` (with `#` instead of `@`) for compatibility with other tools.

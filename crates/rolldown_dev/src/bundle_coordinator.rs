@@ -1,16 +1,17 @@
 use std::{
   collections::VecDeque,
   path::PathBuf,
-  sync::{Arc, atomic::AtomicU32},
+  sync::{Arc, Mutex as StdMutex, atomic::AtomicU32},
 };
 
+use anyhow::Context;
 use arcstr::ArcStr;
 use futures::FutureExt;
 use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
-use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap};
+use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap, pattern_filter};
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
@@ -35,7 +36,7 @@ pub struct BundleCoordinator {
   ctx: SharedDevContext,
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
-  watcher: Mutex<DynFsWatcher>,
+  watcher: StdMutex<DynFsWatcher>,
   watched_files: FxDashSet<ArcStr>,
   /// Tracks the state of the initial build
   state: CoordinatorState,
@@ -59,7 +60,7 @@ impl BundleCoordinator {
       ctx,
       next_hmr_patch_id: Arc::new(AtomicU32::new(0)),
       rx,
-      watcher: Mutex::new(watcher),
+      watcher: StdMutex::new(watcher),
       watched_files: FxDashSet::default(),
       state: CoordinatorState::Initialized,
       queued_file_changes_waited_for_full_build: FxIndexMap::default(),
@@ -121,6 +122,13 @@ impl BundleCoordinator {
         }
         CoordinatorMsg::ModuleChanged { module_id } => {
           // Handle programmatic module change (e.g., lazy compilation executed)
+
+          // `plugin_driver.watch_files` added in `bundler.compile_lazy_entry`
+          // will be removed when task rebuild starts,
+          // so we need to update watch paths here to make sure
+          // the changed module is watched and trigger rebuild by file change if needed.
+          let _ = self.update_watch_paths().await;
+
           let mut changed_files = FxIndexMap::default();
           changed_files.insert(PathBuf::from(&module_id), WatcherChangeKind::Update);
 
@@ -180,7 +188,7 @@ impl BundleCoordinator {
         self.handle_file_changes(changed_files).await;
       }
       Err(e) => {
-        eprintln!("notify error: {e:?}");
+        tracing::error!("notify error: {e:?}");
       }
     }
   }
@@ -271,6 +279,10 @@ impl BundleCoordinator {
       CoordinatorState::InProgress => {
         // Clear current build
         self.current_bundling_future = None;
+
+        // Register any new files this rebuild pulled into `watch_files`
+        // (e.g. an edit that introduced a new transitive import).
+        let _ = self.update_watch_paths().await;
 
         if has_encountered_error {
           self.set_initial_build_state(CoordinatorState::Failed);
@@ -438,12 +450,18 @@ impl BundleCoordinator {
   async fn update_watch_paths(&self) -> BuildResult<()> {
     let bundler = self.bundler.lock().await;
     let watch_files = bundler.watch_files();
+    let cwd = bundler.options().cwd.to_string_lossy().to_string();
 
-    let mut watcher = self.watcher.lock().await;
+    let include = self.ctx.options.watch_include.as_deref();
+    let exclude = self.ctx.options.watch_exclude.as_deref();
+
+    let mut watcher = self.watcher.lock().ok().context("Failed to acquire watcher lock")?;
     let mut paths_mut = watcher.paths_mut();
     for watch_file in watch_files.iter() {
       let watch_file = &**watch_file;
-      if !self.watched_files.contains(watch_file) {
+      if !self.watched_files.contains(watch_file)
+        && pattern_filter::filter(exclude, include, watch_file, &cwd).inner()
+      {
         self.watched_files.insert(watch_file.to_string().into());
         paths_mut.add(watch_file.as_path(), RecursiveMode::NonRecursive)?;
       }

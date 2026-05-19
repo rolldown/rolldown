@@ -8,6 +8,14 @@ import { expect, test } from 'vitest';
 // For now, we just live with it.
 const dotRolldownFileName = join(process.cwd(), 'node_modules/.rolldown');
 
+function normalizePath(path) {
+  return path.replaceAll('\\', '/');
+}
+
+function expectPathToEndWith(path, suffix) {
+  expect(normalizePath(path).endsWith(suffix)).toBe(true);
+}
+
 test(`emit data for devtool`, async () => {
   // Clean up previous test data if exists
   if (existsSync(dotRolldownFileName)) {
@@ -54,6 +62,74 @@ test(`emit data for devtool`, async () => {
       chunk.imports.some((item) => item.kind === 'dynamic-import'),
     ),
   ).toBe(true);
+  const chunkById = new Map(chunkGraphReady.chunks.map((chunk) => [chunk.chunk_id, chunk]));
+
+  const packageGraphReady = logs.find((event) => event.action === 'PackageGraphReady');
+  expect(packageGraphReady).toBeDefined();
+
+  function expectPackageChunkLinks(pkg) {
+    expect(pkg.modules).toEqual([...new Set(pkg.modules)]);
+    expect(pkg.chunk_ids).toEqual([...new Set(pkg.chunk_ids)]);
+
+    if (pkg.is_used) {
+      expect(pkg.modules.length).toBeGreaterThan(0);
+      expect(pkg.chunk_ids.length).toBeGreaterThan(0);
+    }
+
+    for (const chunkId of pkg.chunk_ids) {
+      const chunk = chunkById.get(chunkId);
+      expect(chunk).toBeDefined();
+      expect(pkg.modules.some((moduleId) => chunk.modules.includes(moduleId))).toBe(true);
+    }
+  }
+
+  for (const pkg of packageGraphReady.packages) {
+    expectPackageChunkLinks(pkg);
+  }
+
+  const metaInfoPackage = packageGraphReady.packages.find((pkg) => pkg.name === 'meta-info-lib');
+  expect(metaInfoPackage).toEqual(
+    expect.objectContaining({
+      is_used: true,
+      version: '1.2.3',
+    }),
+  );
+  expect(metaInfoPackage.package_id).toBe(metaInfoPackage.package_root);
+  expectPathToEndWith(metaInfoPackage.package_root, 'node_modules/meta-info-lib');
+  expectPathToEndWith(metaInfoPackage.package_json_path, 'node_modules/meta-info-lib/package.json');
+  expect(metaInfoPackage.modules).toHaveLength(1);
+  expectPathToEndWith(metaInfoPackage.modules[0], 'node_modules/meta-info-lib/index.js');
+
+  const duplicatePackages = packageGraphReady.packages.filter(
+    (pkg) => pkg.name === 'duplicate-lib',
+  );
+  expect(duplicatePackages).toHaveLength(2);
+  expect(duplicatePackages.map((pkg) => pkg.version)).toEqual(['1.0.0', '2.0.0']);
+  expect(duplicatePackages.every((pkg) => pkg.is_used)).toBe(true);
+  expect(new Set(duplicatePackages.map((pkg) => pkg.package_root)).size).toBe(2);
+  expectPathToEndWith(duplicatePackages[0].package_root, 'node_modules/duplicate-a');
+  expectPathToEndWith(duplicatePackages[1].package_root, 'node_modules/duplicate-b');
+  expect(duplicatePackages[0].modules).toHaveLength(1);
+  expectPathToEndWith(duplicatePackages[0].modules[0], 'node_modules/duplicate-a/index.js');
+  expect(duplicatePackages[1].modules).toHaveLength(1);
+  expectPathToEndWith(duplicatePackages[1].modules[0], 'node_modules/duplicate-b/index.js');
+
+  const duplicatePackageIndices = packageGraphReady.packages.flatMap((pkg, index) =>
+    pkg.name === 'duplicate-lib' ? [index] : [],
+  );
+  expect(duplicatePackageIndices[1]).toBe(duplicatePackageIndices[0] + 1);
+
+  const unusedPackage = packageGraphReady.packages.find((pkg) => pkg.name === 'unused-lib');
+  expect(unusedPackage).toEqual(
+    expect.objectContaining({
+      is_used: false,
+      version: '1.0.0',
+    }),
+  );
+  expectPathToEndWith(unusedPackage.package_root, 'node_modules/unused-lib');
+  expectPathToEndWith(unusedPackage.package_json_path, 'node_modules/unused-lib/package.json');
+  expect(unusedPackage.modules).toEqual([]);
+  expect(unusedPackage.chunk_ids).toEqual([]);
 
   const metaContent = readFileSync(join(dotRolldownFileName, dotRolldownDir[0], 'meta.json'));
   for (const variable of variables) {
@@ -103,5 +179,8 @@ test(`emit data for devtool`, async () => {
       ],
     });
     await bundle.generate();
+    // Devtools log files are only guaranteed complete after `close()` — the
+    // writer thread drains and flushes on the CloseSession ack.
+    await bundle.close();
   }
 });

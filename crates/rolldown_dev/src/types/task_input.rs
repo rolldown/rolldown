@@ -92,7 +92,7 @@ impl TaskInput {
       }
       // All other combinations should have been filtered by is_mergeable_with
       _ => {
-        eprintln!("Debug: Attempted to merge incompatible tasks. This should be unreachable.");
+        tracing::debug!("Attempted to merge incompatible tasks. This should be unreachable.");
       }
     }
   }

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INEFFECTIVE_DYNAMIC_IMPORT
 
 ```text
-[INEFFECTIVE_DYNAMIC_IMPORT] Warning: lib.js is dynamically imported by entry.js but also statically imported by entry.js, dynamic import will not move module into another chunk.
+[INEFFECTIVE_DYNAMIC_IMPORT] lib.js is dynamically imported by entry.js but also statically imported by entry.js, dynamic import will not move module into another chunk.
 
 ```
 
@@ -38,7 +38,7 @@ __esmMin((() => {
 ### INEFFECTIVE_DYNAMIC_IMPORT
 
 ```text
-[INEFFECTIVE_DYNAMIC_IMPORT] Warning: lib.js is dynamically imported by entry.js but also statically imported by entry.js, dynamic import will not move module into another chunk.
+[INEFFECTIVE_DYNAMIC_IMPORT] lib.js is dynamically imported by entry.js but also statically imported by entry.js, dynamic import will not move module into another chunk.
 
 ```
 

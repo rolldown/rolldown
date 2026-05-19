@@ -31,12 +31,12 @@ console.log(data, data2);
 - ../main.js
 (1:6) "data2 = require(" --> (3:6) "data2 = ("
 (1:6) "data2 = require(" --> (3:15) "/* @__PURE__ */ ((x) => typeof require !== \"undefined\" ? require : typeof Proxy !== \"undefined\" ? new Proxy(x, { get: (a, b) => (typeof require !== \"undefined\" ? require : a)[b] }) : x)(function(x) {\n"
-(1:6) "data2 = require(" --> (6:2) ")("
-(1:22) "'./hello.txt')" --> (6:4) "\"./assets/hello-CUbDYdKJ.txt\")"
-(1:36) ";\n" --> (6:34) ";\n"
+(1:6) "data2 = require(" --> (6:1) "))("
+(1:22) "'./hello.txt'" --> (6:4) "\"./assets/hello-CUbDYdKJ.txt\""
+(1:35) ");\n" --> (6:33) ");\n"
 (2:0) "console." --> (7:0) "console."
 (2:8) "log(" --> (7:8) "log("
 (2:12) "data, " --> (7:12) "data, "
-(2:18) "data2)" --> (7:18) "data2)"
-(2:24) ";\n" --> (7:24) ";\n"
+(2:18) "data2" --> (7:18) "data2"
+(2:23) ");\n" --> (7:23) ");\n"
 ```

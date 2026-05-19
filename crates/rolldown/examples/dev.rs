@@ -1,3 +1,5 @@
+#![expect(clippy::print_stdout, clippy::print_stderr)]
+
 use std::sync::Arc;
 
 use rolldown::{BundlerOptions, ExperimentalOptions};
@@ -6,7 +8,6 @@ use sugar_path::SugarPath;
 
 // RD_LOG=rolldown::dev=trace cargo run --example dev
 
-#[expect(clippy::print_stdout)]
 #[tokio::main]
 async fn main() {
   let bundler_config = BundlerConfig::new(

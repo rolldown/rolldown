@@ -69,7 +69,7 @@ impl Plugin for AssetModulePlugin {
     }
 
     let chunk_filename = &args.chunk.filename;
-    let code = &args.code;
+    let code = args.code.as_str();
     let mut magic_string = MagicString::new(code);
     let mut changed = false;
 

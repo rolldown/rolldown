@@ -1,3 +1,5 @@
+#![expect(clippy::print_stderr)]
+
 use std::sync::Arc;
 use std::time::Duration;
 

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## CANNOT_CALL_NAMESPACE
 
 ```text
-[CANNOT_CALL_NAMESPACE] Warning: Cannot call a namespace ("a").
+[CANNOT_CALL_NAMESPACE] Cannot call a namespace ("a").
    ╭─[ js.js:4:1 ]
    │
  1 │ import * as a from "a"
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## CANNOT_CALL_NAMESPACE
 
 ```text
-[CANNOT_CALL_NAMESPACE] Warning: Cannot call a namespace ("a").
+[CANNOT_CALL_NAMESPACE] Cannot call a namespace ("a").
    ╭─[ ts.ts:4:1 ]
    │
  1 │ import * as a from "a"
@@ -40,7 +40,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'a' in js.js
+[UNRESOLVED_IMPORT] Could not resolve 'a' in js.js
    ╭─[ js.js:1:20 ]
    │
  1 │ import * as a from "a"
@@ -53,7 +53,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'a' in jsx-a.jsx
+[UNRESOLVED_IMPORT] Could not resolve 'a' in jsx-a.jsx
    ╭─[ jsx-a.jsx:2:20 ]
    │
  2 │ import * as a from "a"
@@ -66,7 +66,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'a' in jsx-components.jsx
+[UNRESOLVED_IMPORT] Could not resolve 'a' in jsx-components.jsx
    ╭─[ jsx-components.jsx:1:20 ]
    │
  1 │ import * as A from "a"
@@ -79,7 +79,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'a' in ts.ts
+[UNRESOLVED_IMPORT] Could not resolve 'a' in ts.ts
    ╭─[ ts.ts:1:20 ]
    │
  1 │ import * as a from "a"
@@ -92,7 +92,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'b' in js.js
+[UNRESOLVED_IMPORT] Could not resolve 'b' in js.js
    ╭─[ js.js:2:17 ]
    │
  2 │ import {b} from "b"
@@ -105,7 +105,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'b' in jsx-b.jsx
+[UNRESOLVED_IMPORT] Could not resolve 'b' in jsx-b.jsx
    ╭─[ jsx-b.jsx:2:17 ]
    │
  2 │ import {b} from "b"
@@ -118,7 +118,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'b' in jsx-components.jsx
+[UNRESOLVED_IMPORT] Could not resolve 'b' in jsx-components.jsx
    ╭─[ jsx-components.jsx:2:17 ]
    │
  2 │ import {B} from "b"
@@ -131,7 +131,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'b' in ts.ts
+[UNRESOLVED_IMPORT] Could not resolve 'b' in ts.ts
    ╭─[ ts.ts:2:17 ]
    │
  2 │ import {b} from "b"
@@ -144,7 +144,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'c' in js.js
+[UNRESOLVED_IMPORT] Could not resolve 'c' in js.js
    ╭─[ js.js:3:15 ]
    │
  3 │ import c from "c"
@@ -157,7 +157,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'c' in jsx-c.jsx
+[UNRESOLVED_IMPORT] Could not resolve 'c' in jsx-c.jsx
    ╭─[ jsx-c.jsx:2:15 ]
    │
  2 │ import c from "c"
@@ -170,7 +170,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'c' in jsx-components.jsx
+[UNRESOLVED_IMPORT] Could not resolve 'c' in jsx-components.jsx
    ╭─[ jsx-components.jsx:3:15 ]
    │
  3 │ import C from "c"
@@ -183,7 +183,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'c' in ts.ts
+[UNRESOLVED_IMPORT] Could not resolve 'c' in ts.ts
    ╭─[ ts.ts:3:15 ]
    │
  3 │ import c from "c"

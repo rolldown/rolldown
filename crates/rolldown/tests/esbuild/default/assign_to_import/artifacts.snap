@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'x'
    ╭─[ bad0.js:1:22 ]
    │
  1 │ import x from "foo"; x = 1
@@ -21,7 +21,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'x'
    ╭─[ bad1.js:1:22 ]
    │
  1 │ import x from "foo"; x++
@@ -36,7 +36,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'x'
    ╭─[ bad2.js:1:24 ]
    │
  1 │ import x from "foo"; ([x] = 1)
@@ -51,7 +51,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'x'
    ╭─[ bad3.js:1:24 ]
    │
  1 │ import x from "foo"; ({x} = 1)
@@ -66,7 +66,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'x'
    ╭─[ bad4.js:1:27 ]
    │
  1 │ import x from "foo"; ({y: x} = 1)
@@ -81,7 +81,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'x'
    ╭─[ bad5.js:1:24 ]
    │
  1 │ import {x} from "foo"; x++
@@ -96,7 +96,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'x'
    ╭─[ bad6.js:1:27 ]
    │
  1 │ import * as x from "foo"; x++
@@ -111,7 +111,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y z'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'y z'
    ╭─[ bad10.js:1:29 ]
    │
  1 │ import * as x from "foo"; x['y z'] = 1
@@ -126,7 +126,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'y'
    ╭─[ bad13.js:1:36 ]
    │
  1 │ import * as x from "foo"; delete x.y
@@ -141,7 +141,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'y'
    ╭─[ bad14.js:1:36 ]
    │
  1 │ import * as x from "foo"; delete x['y']
@@ -156,7 +156,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'y'
    ╭─[ bad7.js:1:29 ]
    │
  1 │ import * as x from "foo"; x.y = 1
@@ -171,7 +171,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ASSIGN_TO_IMPORT
 
 ```text
-[ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
+[ASSIGN_TO_IMPORT] Cannot assign to import 'y'
    ╭─[ bad9.js:1:29 ]
    │
  1 │ import * as x from "foo"; x['y'] = 1
@@ -186,7 +186,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Delete of an unqualified identifier in strict mode.
+[PARSE_ERROR] Delete of an unqualified identifier in strict mode.
    ╭─[ bad11.js:1:29 ]
    │
  1 │ import x from "foo"; delete x
@@ -199,7 +199,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Delete of an unqualified identifier in strict mode.
+[PARSE_ERROR] Delete of an unqualified identifier in strict mode.
    ╭─[ bad12.js:1:31 ]
    │
  1 │ import {x} from "foo"; delete x

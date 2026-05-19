@@ -55,9 +55,7 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
       Some(Box::new(guard))
     }
     "json" => {
-      // We gonna use this feature to implement something like https://github.com/antfu-collective/vite-plugin-inspect
-      // See `crates/rolldown_devtools`
-      unimplemented!()
+      panic!("`json` output mode is not implemented yet");
     }
     "readable" => {
       tracing_subscriber::registry()

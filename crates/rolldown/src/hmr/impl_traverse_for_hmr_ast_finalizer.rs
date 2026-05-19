@@ -8,9 +8,11 @@ use rolldown_ecmascript::{
   CJS_EXPORTS_REF_STR, CJS_MODULE_REF_STR, CJS_ROLLDOWN_EXPORTS_REF,
   CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF_IDENT,
 };
-use rolldown_ecmascript_utils::ExpressionExt;
 
-use crate::hmr::{hmr_ast_finalizer::HmrAstFinalizer, utils::HmrAstBuilder};
+use crate::hmr::{
+  hmr_ast_finalizer::HmrAstFinalizer,
+  utils::{HmrAstBuilder, MODULE_ID_PARAM_FOR_HMR},
+};
 
 impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
   fn enter_program(
@@ -64,46 +66,63 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
 
     let init_fn_name = &self.affected_module_idx_to_init_fn_name[&self.module.idx];
 
-    let mut params = self.snippet.builder.formal_parameters(
+    // The runtime wrappers (createEsmInitializer / createCjsInitializer) call the body
+    // with the module's stable id as an extra argument, so it's available inside the body
+    // as `__rolldown_module_id__`. This lets registerModule / createModuleHotContext reference
+    // the id by identifier instead of duplicating the string literal.
+    let module_id_param = self.snippet.builder.formal_parameter(
+      SPAN,
+      self.builder.vec(),
+      self.snippet.builder.binding_pattern_binding_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR),
+      NONE,
+      NONE,
+      false,
+      None,
+      false,
+      false,
+    );
+    let params = self.snippet.builder.formal_parameters(
       SPAN,
       ast::FormalParameterKind::Signature,
-      self.snippet.builder.vec_with_capacity(2),
+      {
+        if self.module.exports_kind.is_commonjs() {
+          self.snippet.builder.vec_from_array([
+            self.snippet.builder.formal_parameter(
+              SPAN,
+              self.builder.vec(),
+              self
+                .snippet
+                .builder
+                .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_REF_IDENT),
+              NONE,
+              NONE,
+              false,
+              None,
+              false,
+              false,
+            ),
+            self.snippet.builder.formal_parameter(
+              SPAN,
+              self.builder.vec(),
+              self
+                .snippet
+                .builder
+                .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_REF_IDENT),
+              NONE,
+              NONE,
+              false,
+              None,
+              false,
+              false,
+            ),
+            module_id_param,
+          ])
+        } else {
+          self.snippet.builder.vec1(module_id_param)
+        }
+      },
       NONE,
     );
-    if self.module.exports_kind.is_commonjs() {
-      params.items.push(
-        self.snippet.builder.formal_parameter(
-          SPAN,
-          self.builder.vec(),
-          self
-            .snippet
-            .builder
-            .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_REF_IDENT),
-          NONE,
-          NONE,
-          false,
-          None,
-          false,
-          false,
-        ),
-      );
-      params.items.push(
-        self.snippet.builder.formal_parameter(
-          SPAN,
-          self.builder.vec(),
-          self
-            .snippet
-            .builder
-            .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_REF_IDENT),
-          NONE,
-          NONE,
-          false,
-          None,
-          false,
-          false,
-        ),
-      );
-    }
     // function () { [user code] }
     let mut user_code_wrapper = self.snippet.builder.alloc_function(
       SPAN,
@@ -125,31 +144,41 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // mark the callback as PIFE because the callback is executed when this chunk is loaded
     user_code_wrapper.pife = self.use_pife_for_module_wrappers;
 
-    let initializer_call = if self.module.exports_kind.is_commonjs() {
-      // __rolldown__runtime.createCjsInitializer((function (exports, module) { [user code] }))
-      self.snippet.builder.alloc_call_expression(
+    // Initializer call arguments: always (stable_id, factory). For lazy-compilation
+    // chunks we append a truthy dedup flag so the runtime short-circuits re-execution
+    // when another lazy blob has already registered this module. HMR patches omit the
+    // flag so the runtime always re-executes the body to publish new exports.
+    let mut initializer_args = self.snippet.builder.vec_with_capacity(3);
+    initializer_args.push(ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
+      SPAN,
+      self.snippet.builder.str(&self.module.stable_id),
+      None,
+    )));
+    initializer_args
+      .push(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper)));
+    if self.dedup_module_initializer {
+      initializer_args.push(ast::Argument::from(self.snippet.builder.expression_numeric_literal(
         SPAN,
-        self.snippet.id_ref_expr("__rolldown_runtime__.createCjsInitializer", SPAN),
-        NONE,
-        self
-          .snippet
-          .builder
-          .vec1(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper))),
-        false,
-      )
+        1.0,
+        None,
+        ast::NumberBase::Decimal,
+      )));
+    }
+
+    let initializer_callee = if self.module.exports_kind.is_commonjs() {
+      // __rolldown__runtime.createCjsInitializer(stable_id, (function (exports, module) { [user code] })[, 1])
+      "__rolldown_runtime__.createCjsInitializer"
     } else {
-      // __rolldown__runtime.createEsmInitializer((function () { [user code] }))
-      self.snippet.builder.alloc_call_expression(
-        SPAN,
-        self.snippet.id_ref_expr("__rolldown_runtime__.createEsmInitializer", SPAN),
-        NONE,
-        self
-          .snippet
-          .builder
-          .vec1(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper))),
-        false,
-      )
+      // __rolldown__runtime.createEsmInitializer(stable_id, (function () { [user code] })[, 1])
+      "__rolldown_runtime__.createEsmInitializer"
     };
+    let initializer_call = self.snippet.builder.alloc_call_expression(
+      SPAN,
+      self.snippet.id_ref_expr(initializer_callee, SPAN),
+      NONE,
+      initializer_args,
+      false,
+    );
 
     // var init_foo = __rolldown__runtime.createEsmInitializer((function () { [user code] }))
     let var_decl = self.snippet.builder.alloc_variable_declaration(
@@ -198,26 +227,41 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       }
     }
 
-    if let Some(ident) = node.as_identifier_mut() {
-      if let Some(reference_id) = ident.reference_id.get() {
-        let reference = ctx.scoping().get_reference(reference_id);
-        if let Some(symbol_id) = reference.symbol_id() {
-          if let Some(binding_name) = self.import_bindings.get(&symbol_id) {
-            *node = self.snippet.id_ref_expr(binding_name.as_str(), ident.span);
-            return;
-          }
-        } else if ident.name == CJS_EXPORTS_REF_STR {
-          // Rewrite `exports` to `__rolldown_exports__`
-          ident.name = CJS_ROLLDOWN_EXPORTS_REF_IDENT;
-        } else if ident.name == CJS_MODULE_REF_STR {
-          // Rewrite `module` to `__rolldown_module__`
-          ident.name = CJS_ROLLDOWN_MODULE_REF_IDENT;
-        }
-      }
-    }
-
     self.try_rewrite_dynamic_import(node);
     self.try_rewrite_require(node, ctx);
     self.rewrite_import_meta_hot(node);
+  }
+
+  fn exit_identifier_reference(
+    &mut self,
+    node: &mut ast::IdentifierReference<'ast>,
+    ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    self.rewrite_identifier_reference(node, ctx);
+  }
+}
+
+impl<'ast> HmrAstFinalizer<'_, 'ast> {
+  /// Rewrite a bare `exports` / `module` identifier to the wrapper-parameter
+  /// name (`__rolldown_exports__` / `__rolldown_module__`), or an import-binding
+  /// identifier to its generated binding name.
+  fn rewrite_identifier_reference(
+    &self,
+    ident: &mut ast::IdentifierReference<'ast>,
+    ctx: &oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    let Some(reference_id) = ident.reference_id.get() else {
+      return;
+    };
+    let reference = ctx.scoping().get_reference(reference_id);
+    if let Some(symbol_id) = reference.symbol_id() {
+      if let Some(binding_name) = self.import_bindings.get(&symbol_id) {
+        ident.name = self.snippet.atom(binding_name.as_str()).into();
+      }
+    } else if ident.name == CJS_EXPORTS_REF_STR {
+      ident.name = CJS_ROLLDOWN_EXPORTS_REF_IDENT;
+    } else if ident.name == CJS_MODULE_REF_STR {
+      ident.name = CJS_ROLLDOWN_MODULE_REF_IDENT;
+    }
   }
 }

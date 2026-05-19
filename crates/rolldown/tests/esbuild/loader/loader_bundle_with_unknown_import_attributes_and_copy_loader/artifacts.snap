@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Unexpected token
+[PARSE_ERROR] Unexpected token
    ╭─[ bar.thing:1:1 ]
    │
  1 │ ,,,
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Unexpected token
+[PARSE_ERROR] Unexpected token
    ╭─[ foo.thing:1:1 ]
    │
  1 │ ...

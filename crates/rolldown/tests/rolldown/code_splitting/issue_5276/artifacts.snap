@@ -50,7 +50,7 @@ load();
 
 ```
 
-# Variant: disableChunkOptimization: [chunk_optimization: false]
+# Variant: disableChunkOptimization: [chunk_optimization: Bool(false)]
 
 ## Assets
 

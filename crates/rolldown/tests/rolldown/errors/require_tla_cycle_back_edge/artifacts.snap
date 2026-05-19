@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## REQUIRE_TLA
 
 ```text
-[REQUIRE_TLA] Error: This require call is not allowed because the transitive dependency "c.js" contains a top-level await
+[REQUIRE_TLA] This require call is not allowed because the transitive dependency "c.js" contains a top-level await
    ╭─[ main.js:1:1 ]
    │
  1 │ require('./a.js');

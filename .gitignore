@@ -177,7 +177,8 @@ crates/rolldown/tests/rolldown/warnings/eval2/node_modules
 crates/rolldown_devtools_action/bindings/**
 
 # AI config
-.claude
+.claude/*
+!.claude/skills
 CLAUDE.local.md
 .sisyphus
 

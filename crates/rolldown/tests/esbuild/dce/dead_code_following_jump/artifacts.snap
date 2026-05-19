@@ -41,25 +41,10 @@ function testContinue() {
 		var y;
 	}
 }
-function testStmts() {
-	return [
-		a,
-		b,
-		c,
-		d,
-		e,
-		f,
-		g,
-		h,
-		i
-	];
-	var a, b, c, d, e, f, g, h, i;
-}
 testReturn();
 testThrow();
 testBreak();
 testContinue();
-testStmts();
 //#endregion
 
 ```

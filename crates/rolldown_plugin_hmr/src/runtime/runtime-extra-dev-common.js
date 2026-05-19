@@ -85,18 +85,35 @@ export class DevRuntime {
   /**
    * __esmMin
    *
-   * @type {<T>(fn: any, res: T) => () => T}
+   * When `dedup` is truthy and `id` is already registered on the runtime,
+   * skip the factory: another lazy blob got there first. HMR patches pass
+   * no `dedup` so they always re-run the factory and replace the registered
+   * exports.
+   *
+   * @type {<T>(id: string, fn: any, dedup: any, res: T) => () => T}
    * @internal
    */
-  createEsmInitializer = (fn, res) => () => (fn && (res = fn((fn = 0))), res);
+  createEsmInitializer = (id, fn, dedup, res) => () => (
+    fn && (dedup && this.modules[id] ? (fn = 0) : (res = fn((fn = 0, id)))),
+    res
+  );
   /**
    * __commonJSMin
    *
-   * @type {<T extends { exports: any }>(cb: any, mod: { exports: any }) => () => T}
+   * Same dedup gate as createEsmInitializer. With `dedup` truthy and `id`
+   * registered, reuse the registered exports object; otherwise run the
+   * factory.
+   *
+   * @type {<T extends { exports: any }>(id: string, cb: any, dedup: any, mod: { exports: any }, registered: any) => () => T}
    * @internal
    */
-  createCjsInitializer = (cb, mod) => () => (
-    mod || cb((mod = { exports: {} }).exports, mod), mod.exports
+  createCjsInitializer = (id, cb, dedup, mod, registered) => () => (
+    mod || (
+      dedup && (registered = this.modules[id])
+        ? (mod = { exports: registered.exports })
+        : cb((mod = { exports: {} }).exports, mod, id)
+    ),
+    mod.exports
   );
   /** @internal */
   // @ts-expect-error The variable will be injected at build time.

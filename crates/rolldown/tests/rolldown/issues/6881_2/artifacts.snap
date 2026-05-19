@@ -3,18 +3,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## lib.js
-
-```js
-//#endregion
-
-```
-
 ## main.js
 
 ```js
 //#region main.js
-import("./lib.js");
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 //#endregion
 
 ```

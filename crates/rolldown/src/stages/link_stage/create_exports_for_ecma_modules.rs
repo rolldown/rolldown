@@ -53,87 +53,86 @@ fn init_entry_point_stmt_info(
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn create_exports_for_ecma_modules(&mut self) {
-    self.module_table.modules.iter_mut().filter_map(|m| m.as_normal_mut()).for_each(
-      |ecma_module| {
-        let linking_info = &mut self.metas[ecma_module.idx];
+    for m in &mut self.module_table.modules {
+      let Some(ecma_module) = m.as_normal_mut() else { continue };
+      let idx = ecma_module.idx;
+      let linking_info = &mut self.metas[idx];
+      let stmt_infos = &mut self.stmt_infos[idx];
 
-        if let Some(entry) = self.entries.get(&ecma_module.idx).and_then(|entries| entries.first())
-        {
-          init_entry_point_stmt_info(
-            linking_info,
-            entry,
-            &self.dynamic_import_exports_usage_map,
-            self.options,
-            &self.overrode_preserve_entry_signature_map,
-            !ecma_module.dynamic_importers.is_empty(),
-          );
+      if let Some(entry) = self.entries.get(&idx).and_then(|entries| entries.first()) {
+        init_entry_point_stmt_info(
+          linking_info,
+          entry,
+          &self.dynamic_import_exports_usage_map,
+          self.options,
+          &self.overrode_preserve_entry_signature_map,
+          !ecma_module.dynamic_importers.is_empty(),
+        );
+      }
+
+      // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and
+      // tree-shaking process.
+      linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
+        let stmt_info = StmtInfo {
+          declared_symbols: vec![TaggedSymbolRef::Normal(*symbol_ref)],
+          referenced_symbols: vec![],
+          side_effect: false.into(),
+          import_records: Vec::new(),
+          #[cfg(debug_assertions)]
+          debug_label: None,
+          meta: StmtInfoMeta::default(),
+          ..Default::default()
+        };
+        stmt_infos.add_stmt_info(stmt_info);
+      });
+
+      // Generate export of Module Namespace Object for Namespace Import
+      // - Namespace import: https://tc39.es/ecma262/#prod-NameSpaceImport
+      // - Module Namespace Object: https://tc39.es/ecma262/#sec-module-namespace-exotic-objects
+      // Though Module Namespace Object is created in runtime, as a bundler, we have stimulus the behavior in compile-time and generate a
+      // real statement to construct the Module Namespace Object and assign it to a variable.
+      // This is only a concept of esm, so no need to care about this in commonjs.
+      if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
+        let meta = &mut self.metas[ecma_module.idx];
+        let mut referenced_symbols = vec![];
+        let mut declared_symbols = vec![];
+        if !meta.is_canonical_exports_empty() || self.options.generated_code.symbols {
+          referenced_symbols.push(self.runtime.resolve_symbol("__exportAll").into());
+          referenced_symbols
+            .extend(meta.canonical_exports(false).map(|(_, export)| export.symbol_ref.into()));
         }
-
-        // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and
-        // tree-shaking process.
-        linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
-          let stmt_info = StmtInfo {
-            declared_symbols: vec![TaggedSymbolRef::Normal(*symbol_ref)],
-            referenced_symbols: vec![],
-            side_effect: false.into(),
-            import_records: Vec::new(),
-            #[cfg(debug_assertions)]
-            debug_label: None,
-            meta: StmtInfoMeta::default(),
-            ..Default::default()
-          };
-          ecma_module.stmt_infos.add_stmt_info(stmt_info);
-        });
-
-        // Generate export of Module Namespace Object for Namespace Import
-        // - Namespace import: https://tc39.es/ecma262/#prod-NameSpaceImport
-        // - Module Namespace Object: https://tc39.es/ecma262/#sec-module-namespace-exotic-objects
-        // Though Module Namespace Object is created in runtime, as a bundler, we have stimulus the behavior in compile-time and generate a
-        // real statement to construct the Module Namespace Object and assign it to a variable.
-        // This is only a concept of esm, so no need to care about this in commonjs.
-        if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
-          let meta = &mut self.metas[ecma_module.idx];
-          let mut referenced_symbols = vec![];
-          let mut declared_symbols = vec![];
-          if !meta.is_canonical_exports_empty() || self.options.generated_code.symbols {
-            referenced_symbols.push(self.runtime.resolve_symbol("__exportAll").into());
-            referenced_symbols
-              .extend(meta.canonical_exports(false).map(|(_, export)| export.symbol_ref.into()));
-          }
-          if !meta.star_exports_from_external_modules.is_empty() {
-            referenced_symbols.push(self.runtime.resolve_symbol("__reExport").into());
-            match self.options.format {
-              OutputFormat::Esm => {
-                meta.star_exports_from_external_modules.iter().copied().for_each(|rec_idx| {
-                  let rec = &ecma_module.import_records[rec_idx];
-                  if rec.meta.contains(ImportRecordMeta::EntryLevelExternal) {
-                    return;
-                  }
-                  referenced_symbols.push(rec.namespace_ref.into());
-                  declared_symbols.push(TaggedSymbolRef::Normal(
-                    ecma_module.import_records[rec_idx].namespace_ref,
-                  ));
-                });
-              }
-              OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {}
+        if !meta.star_exports_from_external_modules.is_empty() {
+          referenced_symbols.push(self.runtime.resolve_symbol("__reExport").into());
+          match self.options.format {
+            OutputFormat::Esm => {
+              meta.star_exports_from_external_modules.iter().copied().for_each(|rec_idx| {
+                let rec = &ecma_module.import_records[rec_idx];
+                if rec.meta.contains(ImportRecordMeta::EntryLevelExternal) {
+                  return;
+                }
+                referenced_symbols.push(rec.namespace_ref.into());
+                declared_symbols
+                  .push(TaggedSymbolRef::Normal(ecma_module.import_records[rec_idx].namespace_ref));
+              });
             }
+            OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {}
           }
-          // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
-          // Corresponding AST for this statement will be created by the finalizer.
-          declared_symbols.push(TaggedSymbolRef::Normal(ecma_module.namespace_object_ref));
-          let namespace_stmt_info = StmtInfo {
-            declared_symbols,
-            referenced_symbols,
-            side_effect: false.into(),
-            import_records: Vec::new(),
-            #[cfg(debug_assertions)]
-            debug_label: None,
-            meta: StmtInfoMeta::default(),
-            ..Default::default()
-          };
-          ecma_module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
         }
-      },
-    );
+        // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
+        // Corresponding AST for this statement will be created by the finalizer.
+        declared_symbols.push(TaggedSymbolRef::Normal(ecma_module.namespace_object_ref));
+        let namespace_stmt_info = StmtInfo {
+          declared_symbols,
+          referenced_symbols,
+          side_effect: false.into(),
+          import_records: Vec::new(),
+          #[cfg(debug_assertions)]
+          debug_label: None,
+          meta: StmtInfoMeta::default(),
+          ..Default::default()
+        };
+        stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
+      }
+    }
   }
 }

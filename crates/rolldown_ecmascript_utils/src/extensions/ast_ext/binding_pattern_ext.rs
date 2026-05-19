@@ -129,7 +129,7 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
         let mut elements = snippet.builder.vec_with_capacity(capacity);
         arg_pat.elements.take_in(snippet.alloc()).into_iter().for_each(|binding_pat| {
           elements.push(binding_pat.map_or(
-            ArrayExpressionElement::Elision(snippet.builder.elision(SPAN)),
+            ArrayExpressionElement::Elision(snippet.builder.alloc_elision(SPAN)),
             |binding_pat| ArrayExpressionElement::from(binding_pat.into_expression(snippet)),
           ));
         });

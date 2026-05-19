@@ -20,7 +20,7 @@ pub struct InlineConstConfig {
 
 impl Default for InlineConstConfig {
   fn default() -> Self {
-    Self { mode: Some(InlineConstMode::All), pass: 1 }
+    Self { mode: Some(InlineConstMode::Smart), pass: 1 }
   }
 }
 
@@ -110,7 +110,9 @@ pub fn normalize_optimization_option(
     }
     Some(InlineConstOption::Bool(false)) => None,
     Some(InlineConstOption::Config(config)) => {
-      let mode = config.mode.unwrap_or(InlineConstMode::All);
+      // When `mode` is unspecified, default to `Smart` to match the omitted-option
+      // default. See https://github.com/rolldown/rolldown/issues/9244.
+      let mode = config.mode.unwrap_or(InlineConstMode::Smart);
       let pass = config.pass;
       Some(NormalizedInlineConstConfig { mode, pass })
     }

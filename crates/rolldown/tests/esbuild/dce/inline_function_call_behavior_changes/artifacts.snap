@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
-function empty() {}
 function id(x) {
 	return x;
 }
@@ -16,41 +15,41 @@ let shouldBeWrapped = [
 	id(foo[bar])(),
 	id(foo?.bar)(),
 	id(foo?.[bar])(),
-	(empty(), foo.bar)(),
-	(empty(), foo[bar])(),
-	(empty(), foo?.bar)(),
-	(empty(), foo?.[bar])(),
+	(0, foo.bar)(),
+	(0, foo[bar])(),
+	(foo?.bar)(),
+	(foo?.[bar])(),
 	id(eval)(),
 	id(eval)?.(),
-	(empty(), eval)(),
-	(empty(), eval)?.(),
+	(0, eval)(),
+	(0, eval)?.(),
 	id(foo.bar)` + "``" + `,
 	id(foo[bar])` + "``" + `,
 	id(foo?.bar)` + "``" + `,
 	id(foo?.[bar])` + "``" + `,
-	(empty(), foo.bar)` + "``" + `,
-	(empty(), foo[bar])` + "``" + `,
-	(empty(), foo?.bar)` + "``" + `,
-	(empty(), foo?.[bar])` + "``" + `,
+	(0, foo.bar)` + "``" + `,
+	(0, foo[bar])` + "``" + `,
+	(foo?.bar)` + "``" + `,
+	(foo?.[bar])` + "``" + `,
 	delete id(foo),
 	delete id(foo.bar),
 	delete id(foo[bar]),
 	delete id(foo?.bar),
 	delete id(foo?.[bar]),
-	delete (empty(), foo),
-	delete (empty(), foo.bar),
-	delete (empty(), foo[bar]),
-	delete (empty(), foo?.bar),
-	delete (empty(), foo?.[bar]),
-	delete empty()
+	delete (0, foo),
+	delete (0, foo.bar),
+	delete (0, foo[bar]),
+	delete (0, foo?.bar),
+	delete (0, foo?.[bar]),
+	delete void 0
 ];
 let shouldNotBeWrapped = [
 	id(foo)(),
-	(empty(), foo)(),
+	foo(),
 	id(foo)` + "``" + `,
-	(empty(), foo)` + "``" + `
+	foo` + "``" + `
 ];
-let shouldNotBeDoubleWrapped = [delete (empty(), foo(), bar()), delete id((foo(), bar()))];
+let shouldNotBeDoubleWrapped = [delete (foo(), bar()), delete id((foo(), bar()))];
 //#endregion
 export { shouldBeWrapped, shouldNotBeDoubleWrapped, shouldNotBeWrapped };
 

@@ -5,9 +5,9 @@ use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  ConstExportMeta, EntryPoint, EntryPointKind, FlatOptions, ImportKind, ModuleIdx, ModuleTable,
-  PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb, UsedSymbolRefs,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, EntryPointKind, FlatOptions, ImportKind,
+  ModuleIdx, ModuleTable, PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
+  UsedSymbolRefs, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 #[cfg(target_family = "wasm")]
@@ -21,7 +21,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   SharedOptions,
-  type_alias::IndexEcmaAst,
+  type_alias::{IndexEcmaAst, IndexStmtInfos},
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
@@ -63,6 +63,8 @@ pub struct LinkStageOutput {
   pub sorted_modules: Vec<ModuleIdx>,
   pub metas: LinkingMetadataVec,
   pub symbol_db: SymbolRefDb,
+  /// Per-module statement-info table; see `LinkStage.stmt_infos`.
+  pub stmt_infos: IndexStmtInfos,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
@@ -87,6 +89,17 @@ pub struct LinkStage<'a> {
   pub module_table: ModuleTable,
   pub entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>>,
   pub symbols: SymbolRefDb,
+  /// Per-module runtime-helper-dependency map. Detached from `EcmaView` so the
+  /// parallel walk in `reference_needed_symbols` can mutate it through `&mut`
+  /// from a zipped iterator without aliasing tricks.
+  pub depended_runtime_helper: IndexVec<ModuleIdx, Box<DependedRuntimeHelperMap>>,
+  /// Per-module statement-info table. Detached from `EcmaView` at `LinkStage::new`
+  /// (the field on `EcmaView` is left as an empty placeholder) so the parallel
+  /// walk in `reference_needed_symbols` can mutate it through `&mut` from a
+  /// zipped iterator without aliasing tricks. Threaded through `LinkStageOutput`
+  /// to the generate stage and module finalizers, which used to read
+  /// `module.stmt_infos` directly.
+  pub stmt_infos: IndexStmtInfos,
   pub runtime: RuntimeModuleBrief,
   pub sorted_modules: Vec<ModuleIdx>,
   pub metas: LinkingMetadataVec,
@@ -148,6 +161,16 @@ impl<'a> LinkStage<'a> {
     Self {
       sorted_modules: Vec::new(),
       global_constant_symbol_map: constant_symbol_map,
+      depended_runtime_helper: scan_stage_output
+        .module_table
+        .modules
+        .iter()
+        .map(|_| Box::default())
+        .collect::<IndexVec<ModuleIdx, _>>(),
+      // `stmt_infos` is produced by the scan stage on the side (in
+      // `NormalizedScanStageOutput.stmt_infos`) rather than living on each
+      // `EcmaView`, so we can move it directly here.
+      stmt_infos: std::mem::take(&mut scan_stage_output.stmt_infos),
       metas: scan_stage_output
         .module_table
         .modules
@@ -226,6 +249,7 @@ impl<'a> LinkStage<'a> {
       sorted_modules: self.sorted_modules,
       metas: self.metas,
       symbol_db: self.symbols,
+      stmt_infos: self.stmt_infos,
       runtime: self.runtime,
       warnings: self.warnings,
       errors: self.errors,

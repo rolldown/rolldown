@@ -117,6 +117,7 @@ impl Diagnostic {
     let mut message = self.title.clone();
     let mut builder = AriadneReport::build(
       match self.severity {
+        Severity::Info => ReportKind::Advice,
         Severity::Error => ReportKind::Error,
         Severity::Warning => ReportKind::Warning,
       },
@@ -155,7 +156,12 @@ impl Diagnostic {
     let builder = self.init_report_builder();
     let mut output = Vec::new();
     let result = builder
-      .with_config(Config::default().with_color(color).with_index_type(ariadne::IndexType::Byte))
+      .with_config(
+        Config::default()
+          .with_color(color)
+          .with_index_type(ariadne::IndexType::Byte)
+          .with_severity_prefix(false),
+      )
       .finish()
       .write_for_stdout(sources(self.files.clone()), &mut output);
     match result {
@@ -202,6 +208,10 @@ impl Diagnostic {
 
     let file = span.source().to_string();
     Some((file, line, column, utf16_pos))
+  }
+
+  pub fn kind(&self) -> String {
+    self.kind.clone()
   }
 }
 

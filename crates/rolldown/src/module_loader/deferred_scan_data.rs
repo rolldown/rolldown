@@ -39,7 +39,7 @@ pub async fn defer_sync_scan_data(
         normalize_side_effects(
           options,
           &normal.originative_resolved_id,
-          Some(&normal.stmt_infos),
+          Some(&scan_stage_output.stmt_infos[module_idx]),
           data.side_effects,
         )
         .await?

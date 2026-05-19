@@ -1,6 +1,22 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] plugins/babel.mjs is dynamically imported by tt.mjs but also statically imported by tt.mjs, dynamic import will not move module into another chunk.
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] plugins/postcss.mjs is dynamically imported by tt.mjs but also statically imported by tt.mjs, dynamic import will not move module into another chunk.
+
+```
+
 # Assets
 
 ## acorn.js
@@ -16,25 +32,7 @@ export { acorn_default as default };
 ## babel.js
 
 ```js
-import { t as __exportAll } from "./chunk.js";
-//#region plugins/babel.mjs
-var babel_exports = /* @__PURE__ */ __exportAll({
-	default: () => Ks,
-	parsers: () => ra
-});
-var Ks = {};
-var ra = {};
-Ks.parsers = ra;
-//#endregion
-export { babel_exports as t };
-
-```
-
-## chunk.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as t };
+import "./tt.js";
 
 ```
 
@@ -101,21 +99,28 @@ export { meriyah_default as default };
 ## postcss.js
 
 ```js
-import { t as __exportAll } from "./chunk.js";
-//#region plugins/postcss.mjs
-var postcss_exports = /* @__PURE__ */ __exportAll({ default: () => _l });
-var _l = {};
-_l.parsers = {};
-//#endregion
-export { postcss_exports as t };
+import "./tt.js";
 
 ```
 
 ## tt.js
 
 ```js
-import { t as babel_exports } from "./babel.js";
-import { t as postcss_exports } from "./postcss.js";
+// HIDDEN [\0rolldown/runtime.js]
+//#region plugins/babel.mjs
+var babel_exports = /* @__PURE__ */ __exportAll({
+	default: () => Ks,
+	parsers: () => ra
+});
+var Ks = {};
+var ra = {};
+Ks.parsers = ra;
+//#endregion
+//#region plugins/postcss.mjs
+var postcss_exports = /* @__PURE__ */ __exportAll({ default: () => _l });
+var _l = {};
+_l.parsers = {};
+//#endregion
 //#region tt.mjs
 import("./babel.js");
 import("./flow.js");
@@ -135,6 +140,6 @@ import("prettier-plugin-astro");
 import("prettier-plugin-marko");
 const options = [postcss_exports, babel_exports];
 //#endregion
-export { a, options };
+export { a, Ks as n, options, ra as r, _l as t };
 
 ```

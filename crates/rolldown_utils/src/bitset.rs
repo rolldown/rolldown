@@ -10,6 +10,16 @@ impl BitSet {
     Self { entries: vec![0; max_bit_count.div_ceil(8) as usize] }
   }
 
+  pub fn all(max_bit_count: u32) -> Self {
+    let mut entries = vec![u8::MAX; max_bit_count.div_ceil(8) as usize];
+    if let Some(last) = entries.last_mut()
+      && !max_bit_count.is_multiple_of(8)
+    {
+      *last = (1_u8 << (max_bit_count % 8)) - 1;
+    }
+    Self { entries }
+  }
+
   pub fn has_bit(&self, bit: u32) -> bool {
     let idx = bit as usize / 8;
     if idx >= self.entries.len() {
@@ -41,6 +51,15 @@ impl BitSet {
   pub fn union(&mut self, other: &Self) {
     for (i, &e) in other.entries.iter().enumerate() {
       self.entries[i] |= e;
+    }
+  }
+
+  pub fn intersect(&mut self, other: &Self) {
+    for (left, right) in self.entries.iter_mut().zip(&other.entries) {
+      *left &= right;
+    }
+    if self.entries.len() > other.entries.len() {
+      self.entries[other.entries.len()..].fill(0);
     }
   }
 
@@ -144,6 +163,25 @@ mod tests {
     //
     bs.union(&bs2);
     assert_eq!(bs.to_string(), "10000001_10000011");
+  }
+
+  #[test]
+  fn all() {
+    assert_eq!(BitSet::all(0).to_string(), "");
+    assert_eq!(BitSet::all(1).to_string(), "00000001");
+    assert_eq!(BitSet::all(8).to_string(), "11111111");
+    assert_eq!(BitSet::all(9).to_string(), "00000001_11111111");
+  }
+
+  #[test]
+  fn intersect() {
+    let mut bs = BitSet::all(16);
+    let mut bs2 = BitSet::new(16);
+    bs2.set_bit(1);
+    bs2.set_bit(8);
+    bs2.set_bit(15);
+    bs.intersect(&bs2);
+    assert_eq!(bs.index_of_one().collect::<Vec<_>>(), vec![1, 8, 15]);
   }
 
   #[test]

@@ -20,19 +20,6 @@ export { main };
 
 ```
 
-## resolve.js
-
-```js
-//#region resolve.js
-const counter = new SomethingNew();
-function resolveJsFrom(base, id) {
-	return counter;
-}
-//#endregion
-export { resolveJsFrom as t };
-
-```
-
 ## sorter.js
 
 ```js
@@ -44,7 +31,12 @@ export { createSorter };
 ## sorter2.js
 
 ```js
-import { t as resolveJsFrom } from "./resolve.js";
+//#region resolve.js
+const counter = new SomethingNew();
+function resolveJsFrom(base, id) {
+	return counter;
+}
+//#endregion
 //#region sorting.js
 function sort(input) {
 	return resolveJsFrom(input, "some-pkg");
@@ -58,14 +50,14 @@ function createSorter() {
 	};
 }
 //#endregion
-export { createSorter as t };
+export { resolveJsFrom as n, createSorter as t };
 
 ```
 
 ## v3.js
 
 ```js
-import { t as resolveJsFrom } from "./resolve.js";
+import { n as resolveJsFrom } from "./sorter2.js";
 //#region v3.js
 function loadV3() {
 	return resolveJsFrom("v3-dir", "v3-config");

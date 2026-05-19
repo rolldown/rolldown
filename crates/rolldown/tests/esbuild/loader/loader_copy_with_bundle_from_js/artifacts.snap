@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_EXPORT
 
 ```text
-[MISSING_EXPORT] Error: "default" is not exported by "assets/some.file".
+[MISSING_EXPORT] "default" is not exported by "assets/some.file".
    ╭─[ src/entry.js:1:8 ]
    │
  1 │ import x from "../assets/some.file"

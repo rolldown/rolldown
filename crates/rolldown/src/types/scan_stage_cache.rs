@@ -115,6 +115,10 @@ impl ScanStageCache {
         );
         cache.module_table.modules.push(new_module);
         cache.index_ecma_ast.push(scan_stage_output.index_ecma_ast.get_mut(new_idx).take());
+        cache.stmt_infos.push(std::mem::replace(
+          scan_stage_output.stmt_infos.get_mut(new_idx),
+          rolldown_common::StmtInfos::new(),
+        ));
         continue;
       }
       let old_has_tla = module_has_tla(&cache.module_table[idx]);
@@ -138,6 +142,10 @@ impl ScanStageCache {
       }
       cache.module_table[idx] = new_module;
       cache.index_ecma_ast[idx] = scan_stage_output.index_ecma_ast.get_mut(new_idx).take();
+      cache.stmt_infos[idx] = std::mem::replace(
+        scan_stage_output.stmt_infos.get_mut(new_idx),
+        rolldown_common::StmtInfos::new(),
+      );
       std::mem::swap(
         cache.symbol_ref_db.local_db_mut(idx),
         scan_stage_output.symbol_ref_db.local_db_mut(new_idx),
@@ -231,6 +239,7 @@ impl ScanStageCache {
           .collect::<Vec<_>>();
         IndexVec::from_vec(item)
       },
+      stmt_infos: cache.stmt_infos.clone(),
 
       // Since `AstScope` is immutable in following phase, move it to avoid clone
       entry_points: cache.entry_points.clone(),

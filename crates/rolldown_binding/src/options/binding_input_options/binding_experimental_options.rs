@@ -12,7 +12,7 @@ pub struct BindingExperimentalOptions {
   pub on_demand_wrapping: Option<bool>,
   pub incremental_build: Option<bool>,
   pub native_magic_string: Option<bool>,
-  pub chunk_optimization: Option<bool>,
+  pub chunk_optimization: Option<Either<bool, BindingChunkOptimizationOptions>>,
   pub lazy_barrel: Option<bool>,
 }
 
@@ -33,9 +33,28 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
       }),
       on_demand_wrapping: value.on_demand_wrapping,
       native_magic_string: value.native_magic_string,
-      chunk_optimization: value.chunk_optimization,
+      chunk_optimization: value.chunk_optimization.map(|v| match v {
+        Either::A(v) => rolldown_common::ChunkOptimizationOption::Bool(v),
+        Either::B(v) => rolldown_common::ChunkOptimizationOption::Options(v.into()),
+      }),
       lazy_barrel: value.lazy_barrel,
     })
+  }
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug, Default)]
+pub struct BindingChunkOptimizationOptions {
+  pub merge_common_chunks: Option<bool>,
+  pub avoid_redundant_chunk_loads: Option<bool>,
+}
+
+impl From<BindingChunkOptimizationOptions> for rolldown_common::ChunkOptimizationOptions {
+  fn from(value: BindingChunkOptimizationOptions) -> Self {
+    Self {
+      merge_common_chunks: value.merge_common_chunks.unwrap_or(true),
+      avoid_redundant_chunk_loads: value.avoid_redundant_chunk_loads.unwrap_or(true),
+    }
   }
 }
 

@@ -211,8 +211,9 @@ impl Plugin for ReplacePlugin {
     _ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
-    let mut magic_string = MagicString::new(&args.code);
-    if self.try_replace(&args.code, &mut magic_string) {
+    let code = args.code.as_str();
+    let mut magic_string = MagicString::new(code);
+    if self.try_replace(code, &mut magic_string) {
       return Ok(Some(HookRenderChunkOutput {
         code: magic_string.to_string(),
         map: self.sourcemap.then(|| {

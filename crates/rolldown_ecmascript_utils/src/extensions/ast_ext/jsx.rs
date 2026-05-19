@@ -5,7 +5,6 @@ use oxc::ast::ast::{
 
 pub trait JsxExt<'ast> {
   type AstKind;
-  fn rewrite_ident_reference(&mut self, ident_ref: JSXMemberExpressionObject<'ast>);
   fn from_ast(
     member_expr: Self::AstKind,
     allocator: &'ast oxc::allocator::Allocator,
@@ -14,8 +13,11 @@ pub trait JsxExt<'ast> {
     Self: Sized;
 }
 
-impl<'ast> JsxExt<'ast> for JSXMemberExpressionObject<'ast> {
-  type AstKind = Expression<'ast>;
+pub trait JsxMemberExpressionObjectExt<'ast> {
+  fn rewrite_ident_reference(&mut self, ident_ref: JSXMemberExpressionObject<'ast>);
+}
+
+impl<'ast> JsxMemberExpressionObjectExt<'ast> for JSXMemberExpressionObject<'ast> {
   fn rewrite_ident_reference(&mut self, ident_ref: JSXMemberExpressionObject<'ast>) {
     let mut object = self;
     loop {
@@ -31,6 +33,10 @@ impl<'ast> JsxExt<'ast> for JSXMemberExpressionObject<'ast> {
       }
     }
   }
+}
+
+impl<'ast> JsxExt<'ast> for JSXMemberExpressionObject<'ast> {
+  type AstKind = Expression<'ast>;
 
   fn from_ast(
     member_expr: Expression<'ast>,
@@ -52,9 +58,6 @@ impl<'ast> JsxExt<'ast> for JSXMemberExpressionObject<'ast> {
 
 impl<'ast> JsxExt<'ast> for JSXMemberExpression<'ast> {
   type AstKind = StaticMemberExpression<'ast>;
-  fn rewrite_ident_reference(&mut self, _ident_ref: JSXMemberExpressionObject<'ast>) {
-    todo!()
-  }
 
   fn from_ast(
     member_expr: StaticMemberExpression<'ast>,

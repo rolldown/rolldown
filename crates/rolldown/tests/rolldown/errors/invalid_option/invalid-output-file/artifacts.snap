@@ -6,6 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INVALID_OPTION
 
 ```text
-[INVALID_OPTION] Error: Invalid value for option "output.file" - When building multiple chunks, the "output.dir" option must be used, not "output.file". You may set `output.codeSplitting` to `false` when using dynamic imports.
+[INVALID_OPTION] Invalid value for option "output.file" - When building multiple chunks, the "output.dir" option must be used, not "output.file". You may set `output.codeSplitting` to `false` when using dynamic imports.
 
 ```

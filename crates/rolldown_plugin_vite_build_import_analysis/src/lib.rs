@@ -119,7 +119,7 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
       let is_modern = args.options.format.is_esm();
       let replacement = if is_modern { "true" } else { "false" };
 
-      let mut code = args.code.clone();
+      let mut code = args.code.as_ref().clone();
       for (index, _) in args.code.match_indices(IS_MODERN_FLAG) {
         let bytes = unsafe { code.as_bytes_mut() };
         let replacement_bytes = replacement.as_bytes();

@@ -100,7 +100,7 @@ impl<'a> GenerateStage<'a> {
 
     // See meta/design/devtools.md for devtools action lifecycle.
     self.trace_action_chunks_infos(&chunk_graph);
-    self.trace_action_package_graph_ready(&chunk_graph);
+    self.trace_action_package_graph_ready();
 
     let mut warnings = vec![];
     self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings)?;
@@ -403,33 +403,32 @@ impl<'a> GenerateStage<'a> {
     }
   }
 
-  fn trace_action_package_graph_ready(&self, chunk_graph: &ChunkGraph) {
+  fn trace_action_package_graph_ready(&self) {
     if trace_action_enabled!() {
       let mut package_infos = FxHashMap::default();
 
-      for chunk in chunk_graph.chunk_table.iter() {
-        for module_idx in &chunk.modules {
-          let Some(module) = self.link_output.module_table[*module_idx].as_normal() else {
-            continue;
-          };
-          let Some(package_json) = module.originative_resolved_id.package_json.as_ref() else {
-            continue;
-          };
-          let Some(package_root) = package_json.realpath().parent() else {
-            continue;
-          };
+      for module in self.link_output.module_table.modules.iter().filter_map(|m| m.as_normal()) {
+        let Some(package_json) = module.originative_resolved_id.package_json.as_ref() else {
+          continue;
+        };
+        let Some(package_root) = package_json.realpath().parent() else {
+          continue;
+        };
 
-          let package_root = package_root.to_slash_lossy().into_owned();
-          let package_json_path = package_json.realpath().to_slash_lossy().into_owned();
+        let package_root = package_root.to_slash_lossy().into_owned();
+        let package_json_path = package_json.realpath().to_slash_lossy().into_owned();
+        let is_used = self.link_output.metas[module.idx].is_included;
 
+        let package_info =
           package_infos.entry(package_root.clone()).or_insert_with(|| action::PackageInfo {
             package_id: package_root.clone(),
             name: package_json.name().map(str::to_string),
             version: package_json.version().map(str::to_string),
             package_json_path,
             package_root,
+            is_used: false,
           });
-        }
+        package_info.is_used |= is_used;
       }
 
       let mut packages = package_infos.into_values().collect::<Vec<_>>();

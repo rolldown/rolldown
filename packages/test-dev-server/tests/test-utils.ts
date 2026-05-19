@@ -101,6 +101,17 @@ export function getNestedLazyPage() {
   return page;
 }
 
+/**
+ * Get the Playwright page for the lazy-aliased-import regression test (vitejs/vite#22454).
+ */
+export function getLazyAliasedImportPage() {
+  const page = (global as any).__lazyAliasedImportPage;
+  if (!page) {
+    throw new Error('lazy-aliased-import page not initialized. Check vitest-setup-browser.ts');
+  }
+  return page;
+}
+
 interface DevStatus {
   hasStaleOutput: boolean;
   lastFullBuildFailed: boolean;

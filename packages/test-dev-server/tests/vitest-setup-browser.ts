@@ -17,6 +17,7 @@ let hmrPage: Page | null = null;
 let lazyPage: Page | null = null;
 let lazySharedModulePage: Page | null = null;
 let nestedLazyPage: Page | null = null;
+let lazyAliasedImportPage: Page | null = null;
 
 async function killPort(port: number): Promise<void> {
   try {
@@ -75,6 +76,7 @@ beforeAll(async () => {
     killPort(CONFIG.ports.lazyCompilation),
     killPort(CONFIG.ports.lazySharedModule),
     killPort(CONFIG.ports.lazyNestedDynamicImport),
+    killPort(CONFIG.ports.lazyAliasedImport),
   ]);
 
   // Always recreate tmp playground from source to pick up any fixture changes.
@@ -94,6 +96,7 @@ beforeAll(async () => {
   startDevServer(CONFIG.paths.tmpLazyCompilationDir);
   startDevServer(CONFIG.paths.tmpLazySharedModuleDir);
   startDevServer(CONFIG.paths.tmpLazyNestedDynamicImportDir);
+  startDevServer(CONFIG.paths.tmpLazyAliasedImportDir);
 
   // Wait for servers to be ready
   await Promise.all([
@@ -101,6 +104,7 @@ beforeAll(async () => {
     waitForDevServerReady(CONFIG.ports.lazyCompilation),
     waitForDevServerReady(CONFIG.ports.lazySharedModule),
     waitForDevServerReady(CONFIG.ports.lazyNestedDynamicImport),
+    waitForDevServerReady(CONFIG.ports.lazyAliasedImport),
   ]);
 
   // Launch browser and create pages
@@ -110,6 +114,7 @@ beforeAll(async () => {
   lazyPage = await browser.newPage();
   lazySharedModulePage = await browser.newPage();
   nestedLazyPage = await browser.newPage();
+  lazyAliasedImportPage = await browser.newPage();
 
   // Only navigate the HMR page here. The lazy page is NOT navigated in setup
   // to avoid warming the lazy-compilation server (main.js triggers a dynamic
@@ -125,6 +130,7 @@ beforeAll(async () => {
   (global as any).__lazyPage = lazyPage;
   (global as any).__lazySharedModulePage = lazySharedModulePage;
   (global as any).__nestedLazyPage = nestedLazyPage;
+  (global as any).__lazyAliasedImportPage = lazyAliasedImportPage;
 });
 
 beforeEach(async (ctx) => {
@@ -157,6 +163,10 @@ afterAll(async () => {
     await nestedLazyPage.close().catch(() => {});
     nestedLazyPage = null;
   }
+  if (lazyAliasedImportPage) {
+    await lazyAliasedImportPage.close().catch(() => {});
+    lazyAliasedImportPage = null;
+  }
   if (browser) {
     await browser.close().catch(() => {});
     browser = null;
@@ -169,5 +179,6 @@ afterAll(async () => {
     killPort(CONFIG.ports.lazyCompilation),
     killPort(CONFIG.ports.lazySharedModule),
     killPort(CONFIG.ports.lazyNestedDynamicImport),
+    killPort(CONFIG.ports.lazyAliasedImport),
   ]).catch(() => {});
 });

@@ -62,7 +62,8 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
   pub async fn run(self) {
     if let Err(errs) = self.run_inner().await {
       // If the main thread is dead, nothing we can do to handle these send failures.
-      let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
+      let _ =
+        self.ctx.tx.send_blocking(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
   }
 
@@ -214,7 +215,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     }));
 
     // If the main thread is dead, nothing we can do to handle these send failures.
-    let _ = self.ctx.tx.send(result);
+    let _ = self.ctx.tx.send_blocking(result);
 
     Ok(())
   }

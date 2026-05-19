@@ -40,7 +40,7 @@ pub struct NativePluginContextImpl {
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<FxDashSet<ArcStr>>,
   pub(crate) module_infos: SharedModuleInfoDashMap,
-  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
+  pub(crate) tx: Arc<Mutex<Option<async_channel::Sender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_devtools::Session,
   pub(crate) bundle_span: Arc<tracing::Span>,
   // `resolve_id` hook not only will be triggered by the rolldown's resolve process, but also could be triggered
@@ -62,7 +62,7 @@ impl NativePluginContextImpl {
       guard.context("The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.")?
     };
     sender
-      .send(ModuleLoaderMsg::FetchModule(Box::new(ResolvedId {
+      .send_blocking(ModuleLoaderMsg::FetchModule(Box::new(ResolvedId {
         id: ModuleId::new(specifier),
         side_effects,
         module_def_format,

@@ -15,6 +15,7 @@ workspace = true
 [dependencies]
 anyhow = { workspace = true }
 arcstr = { workspace = true }
+async-channel = { workspace = true }
 bitflags = { workspace = true }
 dashmap = { workspace = true }
 derive_more = { workspace = true }

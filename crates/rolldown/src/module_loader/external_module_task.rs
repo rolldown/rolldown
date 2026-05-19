@@ -41,7 +41,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
       self
         .ctx
         .tx
-        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
+        .send_blocking(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
         .expect("ModuleLoader: failed to send external module build errors - main thread terminated while processing errors");
     }
   }
@@ -100,7 +100,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
       side_effects: external_module_side_effects,
       need_renormalize_render_path,
     }));
-    self.ctx.tx.send(msg).expect(
+    self.ctx.tx.send_blocking(msg).expect(
       "ModuleLoader channel closed while sending external module completion - main thread terminated unexpectedly"
     );
     Ok(())

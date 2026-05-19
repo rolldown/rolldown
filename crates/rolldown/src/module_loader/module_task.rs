@@ -85,7 +85,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       self
         .ctx
         .tx
-        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
+        .send_blocking(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
         .expect("ModuleLoader: failed to send build errors - main thread terminated while processing module errors");
     }
   }
@@ -239,7 +239,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       tla_keyword_span,
     }));
 
-    self.ctx.tx.send(result).expect(
+    self.ctx.tx.send_blocking(result).expect(
       "ModuleLoader channel closed while sending module completion - main thread terminated unexpectedly"
     );
 

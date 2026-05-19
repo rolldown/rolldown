@@ -2757,6 +2757,7 @@ dependencies = [
  "anyhow",
  "append-only-vec",
  "arcstr",
+ "async-channel",
  "bitflags 2.11.1",
  "commondir",
  "cow-utils",
@@ -2944,6 +2945,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
+ "async-channel",
  "bitflags 2.11.1",
  "dashmap",
  "derive_more",
@@ -3096,6 +3098,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
+ "async-channel",
  "async-trait",
  "bitflags 2.11.1",
  "dashmap",

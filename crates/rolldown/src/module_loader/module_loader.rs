@@ -108,7 +108,7 @@ impl VisitState {
 
 pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   pub shared_context: Arc<TaskContext<Fs>>,
-  rx: tokio::sync::mpsc::UnboundedReceiver<ModuleLoaderMsg>,
+  rx: async_channel::Receiver<ModuleLoaderMsg>,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
@@ -195,7 +195,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // send future would wait on capacity that only the consumer can free, but
     // the consumer may need the JS thread — pinned by `block_on` — to run
     // plugin hooks first. Keeping the channel unbounded removes that edge.
-    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+    let (tx, rx) = async_channel::unbounded();
     let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta });
 
     let importers = std::mem::take(&mut cache.importers);
@@ -379,7 +379,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut overrode_preserve_entry_signature_map = FxHashMap::default();
 
     while self.remaining > 0 {
-      let Some(msg) = self.rx.recv().await else {
+      let Ok(msg) = self.rx.recv().await else {
         break;
       };
       match msg {

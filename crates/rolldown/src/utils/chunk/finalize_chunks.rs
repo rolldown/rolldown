@@ -80,15 +80,8 @@ pub async fn finalize_assets(
   let index_standalone_content_hashes: IndexVec<InsChunkIdx, String> = index_instantiated_chunks
     .par_iter()
     .map(|chunk| {
-      // Hash placeholders are temporary ids assigned during rendering, and their values shift
-      // whenever an unrelated chunk is added or removed. Stream the content through a hasher
-      // with each placeholder normalized to a zero-filled placeholder of the same shape, so the
-      // resulting hash depends only on the actual chunk content — not on the transient indices.
-      // Only placeholders rolldown itself generated are normalized; literals in user source code
-      // that happen to match the placeholder shape are hashed verbatim so changes to them still
-      // flow into the hash. Cross-chunk dependency identities are still captured via the
-      // transitive dependency walk below. Streaming avoids materializing a chunk-sized
-      // normalized copy per chunk.
+      // Normalize rolldown-generated placeholders before hashing so the hash is stable across
+      // their (transient) index drift. See `meta/design/chunk-hash.md` for the full reasoning.
       let mut hash = match &chunk.content {
         StrOrBytes::Str(content) => {
           let mut hasher = Xxh3::default();
@@ -130,9 +123,6 @@ pub async fn finalize_assets(
     .collect::<Vec<_>>()
     .into();
 
-  // Two chunks whose final hashes would resolve to the same file name (case-insensitively, to be
-  // safe on case-insensitive filesystems) get deconflicted here by rehashing the second one until
-  // its file name is unique. Mirrors Rollup's `generateFinalHashes` collision-resolution loop.
   deconflict_filenames(&index_instantiated_chunks, &mut index_final_hashes, hash_base);
 
   let final_hashes_by_placeholder = index_final_hashes

@@ -12,7 +12,7 @@ The mechanism has to satisfy three invariants at once:
 
 These three pull in opposite directions, and the design described here is essentially the same as Rollup's. The non-obvious bits are: how to satisfy #1 when chunk contents quote each other by name, and how to resolve the rare conflict between #2 and #3.
 
-## The Two-Phase Pipeline
+## The Pipeline
 
 Hash computation lives in `crates/rolldown/src/utils/chunk/finalize_chunks.rs::finalize_assets`. By the time it runs, every chunk has already been rendered into a string, and every chunk has been assigned a **preliminary filename** like `entries/main-!~{001}~.js` — the `!~{001}~` is a hash placeholder, see below.
 
@@ -89,7 +89,7 @@ After Phase 2, two chunks with byte-identical content and identical transitive d
 for chunk in chunks_in_order {
   loop {
     let candidate = resolve_filename(chunk.preliminary_filename, chunk_hash);
-    if taken.insert(candidate.to_ascii_lowercase()) { break; }
+    if taken.insert(candidate.to_lowercase()) { break; }
     chunk_hash = rehash(chunk_hash);  // hash-of-hash
   }
 }

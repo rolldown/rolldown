@@ -319,7 +319,7 @@ fn test_visit_with_placeholders_defaulted() {
 
   // An unknown placeholder (e.g. a literal in user source) is emitted verbatim so the hash
   // still reflects changes to its bytes. Only the known one is normalized.
-  let only_known: FxHashSet<&str> = ["!~{000}~"].into_iter().collect();
+  let only_known: FxHashSet<&str> = std::iter::once("!~{000}~").collect();
   assert_eq!(
     collect("prefix!~{000}~middle!~{user}~suffix", &only_known),
     b"prefix!~{000}~middle!~{user}~suffix",

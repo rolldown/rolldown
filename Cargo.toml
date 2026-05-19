@@ -271,6 +271,36 @@ oxc_resolver = { version = "11.19.1", features = [
 oxc_resolver_napi = { version = "11.19.1", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "6" } # https://github.com/oxc-project/oxc-sourcemap
 
+[patch.crates-io]
+oxc = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_ast = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_ast_macros = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_ast_visit = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_cfg = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_codegen = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_compat = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_data_structures = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_diagnostics = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_estree = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_isolated_declarations = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_mangler = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_minifier = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_napi = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_parser = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_regular_expression = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_semantic = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_span = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_str = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_syntax = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_transformer = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_transformer_plugins = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc.git", branch = "codex/fast-scoping-rebuilds" }
+
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.
 debug = "line-tables-only"

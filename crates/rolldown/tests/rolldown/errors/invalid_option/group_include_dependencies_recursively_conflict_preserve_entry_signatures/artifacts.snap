@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```text
 [INVALID_OPTION] Invalid option combination detected:
 
-- codeSplitting.includeDependenciesRecursively = false
+- recursive dependency inclusion is disabled by codeSplitting.includeDependenciesRecursively or a group override
 - preserveEntrySignatures = "strict"
 
 To fix:

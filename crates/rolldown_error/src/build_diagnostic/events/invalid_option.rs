@@ -55,7 +55,7 @@ impl BuildEvent for InvalidOption {
           [
             "Invalid option combination detected:",
             "",
-            "- codeSplitting.includeDependenciesRecursively = false",
+            "- recursive dependency inclusion is disabled by codeSplitting.includeDependenciesRecursively or a group override",
             &format!("- preserveEntrySignatures = \"{value}\""),
             "",
             "To fix:",
@@ -67,7 +67,8 @@ impl BuildEvent for InvalidOption {
           [
             "`preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown",
             "",
-            "- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'",
+            "- disabling recursive dependency inclusion requires `preserveEntrySignatures` to be either `false` or 'allow-extension'",
+            "- recursive dependency inclusion can be disabled by `codeSplitting.includeDependenciesRecursively` or a group override",
             "",
             "To fix:",
             "",

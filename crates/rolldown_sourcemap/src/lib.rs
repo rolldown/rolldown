@@ -56,40 +56,62 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
   let first_map = sourcemap_chain.first().expect("sourcemap_chain should not be empty");
   let chain_without_last = &sourcemap_chain[..sourcemap_chain.len() - 1];
 
-  // Pre-compute lookup tables in reverse order so we avoid reversing on every token lookup.
-  let sourcemap_and_lookup_table: Vec<_> = chain_without_last
+  // Concatenate each map's names into one pool and record the starting index of each map's
+  // names. A token's merged name_id is then `local_id + offset_for_that_map`.
+  let mut merged_names: Vec<Arc<str>> = Vec::new();
+  let mut offsets: Vec<u32> = Vec::with_capacity(sourcemap_chain.len());
+  for map in sourcemap_chain {
+    #[expect(clippy::cast_possible_truncation)]
+    let offset = merged_names.len() as u32;
+    offsets.push(offset);
+    merged_names.extend(map.get_names().cloned());
+  }
+  let last_offset = *offsets.last().expect("sourcemap_chain should not be empty");
+
+  // Pre-compute lookup tables paired with their offsets in reverse order so we avoid reversing
+  // on every token lookup.
+  let chain_with_offsets: Vec<_> = chain_without_last
     .iter()
+    .zip(&offsets[..offsets.len() - 1])
     .rev()
-    .map(|sourcemap| (*sourcemap, sourcemap.generate_lookup_table()))
+    .map(|(sourcemap, offset)| (*sourcemap, sourcemap.generate_lookup_table(), *offset))
     .collect();
 
   let tokens: Box<[Token]> = last_map
     .get_source_view_tokens()
     .filter_map(|token| {
-      let original_token =
-        sourcemap_and_lookup_table.iter().try_fold(token, |token, (sourcemap, lookup_table)| {
-          sourcemap.lookup_source_view_token(
-            lookup_table,
-            token.get_src_line(),
-            token.get_src_col(),
-          )
-        });
-      original_token.map(|original_token| {
-        Token::new(
-          token.get_dst_line(),
-          token.get_dst_col(),
-          original_token.get_src_line(),
-          original_token.get_src_col(),
-          original_token.get_source_id(),
-          original_token.get_name_id(),
+      let initial_name_id = token.get_name_id().map(|id| id + last_offset);
+      chain_with_offsets
+        .iter()
+        .try_fold(
+          (token, initial_name_id),
+          |(token, name_id), (sourcemap, lookup_table, offset)| {
+            let next = sourcemap.lookup_source_view_token(
+              lookup_table,
+              token.get_src_line(),
+              token.get_src_col(),
+            )?;
+            // Prefer the name from this (earlier) map; otherwise carry forward the downstream one.
+            let new_name_id = next.get_name_id().map(|id| id + offset).or(name_id);
+            Some((next, new_name_id))
+          },
         )
-      })
+        .map(|(original_token, name_id)| {
+          Token::new(
+            token.get_dst_line(),
+            token.get_dst_col(),
+            original_token.get_src_line(),
+            original_token.get_src_col(),
+            original_token.get_source_id(),
+            name_id,
+          )
+        })
     })
     .collect();
 
   SourceMap::new(
     None,
-    first_map.get_names().cloned().collect(),
+    merged_names,
     None,
     first_map.get_sources().cloned().collect(),
     first_map.get_source_contents().map(|x| x.map(Arc::clone)).collect(),
@@ -239,4 +261,86 @@ export function App() {
     Some(get_loc(original_code.find("return").unwrap(), original_code)),
     "collapsed sourcemap should map 'return' in transformed code back to original source"
   );
+}
+
+/// Names introduced only by the last map in the chain must survive collapsing.
+#[test]
+fn test_collapse_sourcemaps_preserves_last_map_names() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut first_builder = SourceMapBuilder::default();
+  let first_source_id =
+    first_builder.set_source_and_content("source.ts", "function topLevelDemo() {}");
+  first_builder.add_token(0, 0, 0, 0, Some(first_source_id), None);
+  first_builder.add_token(0, 9, 0, 9, Some(first_source_id), None);
+  let first_map = first_builder.into_sourcemap();
+
+  let mut last_builder = SourceMapBuilder::default();
+  let last_source_id =
+    last_builder.set_source_and_content("bundle.js", "function topLevelDemo() {}");
+  let top_level_demo = last_builder.add_name("topLevelDemo");
+  last_builder.add_token(0, 0, 0, 0, Some(last_source_id), None);
+  last_builder.add_token(0, 9, 0, 9, Some(last_source_id), Some(top_level_demo));
+  let last_map = last_builder.into_sourcemap();
+
+  let collapsed = collapse_sourcemaps(&[&first_map, &last_map]);
+  let lookup = collapsed.generate_lookup_table();
+  let token =
+    collapsed.lookup_source_view_token(&lookup, 0, 9).expect("token at generated position (0:9)");
+  assert_eq!(token.get_name().map(AsRef::as_ref), Some("topLevelDemo"));
+}
+
+/// In a 3-map chain, a name from a middle map (e.g. an intermediate transform) must survive
+/// when neither the first nor the last map names the corresponding position.
+#[test]
+fn test_collapse_sourcemaps_preserves_middle_map_names() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut first_builder = SourceMapBuilder::default();
+  let first_source_id = first_builder.set_source_and_content("source.ts", "const foo = 1");
+  first_builder.add_token(0, 6, 0, 6, Some(first_source_id), None);
+  let first_map = first_builder.into_sourcemap();
+
+  let mut middle_builder = SourceMapBuilder::default();
+  let middle_source_id = middle_builder.set_source_and_content("first.js", "const foo = 1");
+  let foo = middle_builder.add_name("foo");
+  middle_builder.add_token(0, 6, 0, 6, Some(middle_source_id), Some(foo));
+  let middle_map = middle_builder.into_sourcemap();
+
+  let mut last_builder = SourceMapBuilder::default();
+  let last_source_id = last_builder.set_source_and_content("middle.js", "const foo = 1");
+  last_builder.add_token(0, 6, 0, 6, Some(last_source_id), None);
+  let last_map = last_builder.into_sourcemap();
+
+  let collapsed = collapse_sourcemaps(&[&first_map, &middle_map, &last_map]);
+  let lookup = collapsed.generate_lookup_table();
+  let token =
+    collapsed.lookup_source_view_token(&lookup, 0, 6).expect("token at generated position (0:6)");
+  assert_eq!(token.get_name().map(AsRef::as_ref), Some("foo"));
+}
+
+/// When both maps name a position, prefer the first map's (the earlier original).
+#[test]
+fn test_collapse_sourcemaps_prefers_first_map_name() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut first_builder = SourceMapBuilder::default();
+  let first_source_id =
+    first_builder.set_source_and_content("source.ts", "const DEBUG_BUILD = true");
+  let debug_build = first_builder.add_name("DEBUG_BUILD");
+  first_builder.add_token(0, 6, 0, 6, Some(first_source_id), Some(debug_build));
+  let first_map = first_builder.into_sourcemap();
+
+  let mut last_builder = SourceMapBuilder::default();
+  let last_source_id =
+    last_builder.set_source_and_content("bundle.js", "const DEBUG_BUILD$1 = true");
+  let intermediate = last_builder.add_name("DEBUG_BUILD$1");
+  last_builder.add_token(0, 6, 0, 6, Some(last_source_id), Some(intermediate));
+  let last_map = last_builder.into_sourcemap();
+
+  let collapsed = collapse_sourcemaps(&[&first_map, &last_map]);
+  let lookup = collapsed.generate_lookup_table();
+  let token =
+    collapsed.lookup_source_view_token(&lookup, 0, 6).expect("token at generated position (0:6)");
+  assert_eq!(token.get_name().map(AsRef::as_ref), Some("DEBUG_BUILD"));
 }

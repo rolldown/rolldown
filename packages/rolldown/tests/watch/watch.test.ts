@@ -177,6 +177,69 @@ test.concurrent(
 );
 
 test.concurrent(
+  'watcher.close() can be awaited inside an event callback',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-close-inside-event', retryCount);
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const closeWatcherFn = vi.fn();
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'test closeWatcher',
+          closeWatcher() {
+            closeWatcherFn();
+          },
+        },
+      ],
+    });
+
+    const closeFn = vi.fn();
+    watcher.on('close', closeFn);
+
+    let closing = false;
+    const closeFromEvent = new Promise<void>((resolve, reject) => {
+      watcher.on('event', async (event) => {
+        if (event.code !== 'BUNDLE_END' || closing) return;
+        closing = true;
+        let timer: NodeJS.Timeout | undefined;
+        try {
+          await Promise.race([
+            watcher.close(),
+            new Promise<never>((_, rejectTimeout) => {
+              timer = setTimeout(
+                () =>
+                  rejectTimeout(
+                    new Error('Timed out waiting for watcher.close() inside BUNDLE_END'),
+                  ),
+                5000,
+              );
+            }),
+          ]);
+          resolve();
+        } catch (error) {
+          reject(error);
+        } finally {
+          clearTimeout(timer);
+        }
+      });
+    });
+
+    await closeFromEvent;
+    await expect.poll(() => closeFn).toBeCalledTimes(1);
+    expect(closeWatcherFn).toBeCalledTimes(1);
+  },
+);
+
+test.concurrent(
   'watch event',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {

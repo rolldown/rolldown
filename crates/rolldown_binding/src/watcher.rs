@@ -109,6 +109,12 @@ impl BindingWatcher {
 
   #[tracing::instrument(level = "debug", skip_all)]
   #[napi]
+  pub fn request_close(&self) {
+    self.inner.request_close();
+  }
+
+  #[tracing::instrument(level = "debug", skip_all)]
+  #[napi]
   pub async fn close(&self) -> napi::Result<()> {
     self
       .inner

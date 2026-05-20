@@ -265,6 +265,12 @@ watcher.close() sends WatcherMsg::Close (fire-and-forget)
       6. coordinator future completes → all wait_for_close() callers resolve
 ```
 
+When `watcher.close()` is called from inside a JS watcher event listener, the TypeScript layer uses
+the non-blocking `requestClose()` binding instead of awaiting the coordinator future directly. This
+avoids a self-deadlock: the coordinator is waiting for the JS listener to return, while the listener
+would otherwise be waiting for the same coordinator to finish closing. The queued close message is
+processed as soon as the current event dispatch returns.
+
 ### Error Recovery
 
 Build errors do **not** stop the watcher. On error, `event('ERROR')` is emitted with the error details and a `result` handle. The watcher continues watching — when the user fixes the error and saves, a rebuild triggers.
@@ -390,6 +396,10 @@ close() → inner.close()         // sends Close msg, awaits shared future
 ### Binding as Thin Wrapper
 
 `BindingWatcher` is intentionally a thin wrapper — it holds a `rolldown_watcher::Watcher` and delegates directly. No state machine, no locking, no logic beyond type conversion. All lifecycle management lives in the Rust core. The constructor takes both `options` and `listener`, creates the `NapiWatcherEventHandler`, and passes it to `Watcher::new()`. Each NAPI method (`run`, `waitForClose`, `close`) is a direct delegation to the inner watcher.
+
+`requestClose()` is the one non-awaiting lifecycle method. It only enqueues `WatcherMsg::Close` and
+marks the watcher as closing, which lets the JS layer break re-entrant close cycles from event
+listeners while keeping the actual close hooks and close event in the coordinator.
 
 ### Event Emitter
 

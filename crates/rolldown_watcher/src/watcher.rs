@@ -125,10 +125,15 @@ impl Watcher {
   /// Close the watcher and wait for the coordinator to finish.
   /// Must be called after `run()` — calling before `run()` will skip cleanup hooks.
   pub async fn close(&self) -> Result<()> {
-    self.closed.store(true, std::sync::atomic::Ordering::Relaxed);
-    let _ = self.tx.send(WatcherMsg::Close);
+    self.request_close();
     self.wait_for_close().await;
     Ok(())
+  }
+
+  /// Request watcher close without waiting for the coordinator to finish.
+  pub fn request_close(&self) {
+    self.closed.store(true, std::sync::atomic::Ordering::Relaxed);
+    let _ = self.tx.send(WatcherMsg::Close);
   }
 
   fn create_tasks(

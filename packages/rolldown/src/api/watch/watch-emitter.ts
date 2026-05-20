@@ -89,6 +89,11 @@ export interface RolldownWatcher {
 
 export class WatcherEmitter implements RolldownWatcher {
   private listeners = new Map<WatcherEvent, Array<(...parameters: any[]) => MaybePromise<void>>>();
+  private emittingDepth = 0;
+
+  get isEmitting(): boolean {
+    return this.emittingDepth > 0;
+  }
 
   on(event: WatcherEvent, listener: (...parameters: any[]) => MaybePromise<void>): this {
     const listeners = this.listeners.get(event);
@@ -117,10 +122,16 @@ export class WatcherEmitter implements RolldownWatcher {
    *  (e.g. `event.result.close()` triggering `closeBundle`) are visible to later handlers. */
   async emit(event: WatcherEvent, ...args: any[]): Promise<void> {
     const handlers = this.listeners.get(event);
-    if (handlers?.length) {
-      for (const h of handlers) {
-        await h(...args);
+    if (!handlers?.length) {
+      return;
+    }
+    this.emittingDepth++;
+    try {
+      for (const handler of handlers) {
+        await handler(...args);
       }
+    } finally {
+      this.emittingDepth--;
     }
   }
 

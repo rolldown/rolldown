@@ -333,7 +333,9 @@ pub fn enhanced_transform(
 
   let mut program = parse_ret.program;
 
-  let semantic_ret = semantic_builder_for_transform().build(&program);
+  // Reserve headroom: the scoping flows into `Transformer::build_with_scoping` below and is
+  // mutated in place (TS enums, decorators, JSX, ES lowering all add symbols/refs/scopes).
+  let semantic_ret = semantic_builder_for_transform().with_excess_capacity(0.5).build(&program);
   let mut scoping = Some(semantic_ret.semantic.into_scoping());
   if !semantic_ret.errors.is_empty() {
     append_oxc_diagnostics(semantic_ret.errors, &source, filename, &mut warnings, &mut errors);
@@ -386,9 +388,13 @@ pub fn enhanced_transform(
     }
   }
 
-  let scoping = scoping
-    .take()
-    .unwrap_or_else(|| semantic_builder_for_transform().build(&program).semantic.into_scoping());
+  let scoping = scoping.take().unwrap_or_else(|| {
+    semantic_builder_for_transform()
+      .with_excess_capacity(0.5)
+      .build(&program)
+      .semantic
+      .into_scoping()
+  });
 
   let transform_ret = Transformer::new(&allocator, Path::new(filename), &oxc_transform_options)
     .build_with_scoping(scoping, &mut program);

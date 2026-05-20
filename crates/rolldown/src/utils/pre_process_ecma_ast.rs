@@ -62,9 +62,20 @@ impl PreProcessEcmaAst {
       });
     }
 
+    // Reserve headroom on the first build so Step 3's transformer doesn't realloc
+    // the scoping Vecs mid-traversal as it adds symbols/refs/scopes for TS enums,
+    // decorator helpers, JSX temps, etc.
+    let is_not_js = !matches!(parsed_type, OxcParseType::Js);
+    let will_run_transformer = is_not_js
+      || bundle_options.transform_options.should_transform_js()
+      || contains_script_closing_tag(ast.source().as_bytes());
+
     // Step 1: Build initial semantic data and check for semantic errors.
     let semantic_ret = ast.program.with_dependent(|_owner, dep| {
-      semantic_builder_for_transform().with_check_syntax_error(true).build(&dep.program)
+      semantic_builder_for_transform()
+        .with_check_syntax_error(true)
+        .with_excess_capacity(if will_run_transformer { 0.5 } else { 0.0 })
+        .build(&dep.program)
     });
 
     let (errors, warnings): (Vec<_>, Vec<_>) =
@@ -167,13 +178,8 @@ impl PreProcessEcmaAst {
 
     // Step 3: Transform TypeScript and jsx.
     // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
-    let is_not_js = !matches!(parsed_type, OxcParseType::Js);
     let mut preserve_jsx = false;
-    if is_not_js
-      || bundle_options.transform_options.should_transform_js()
-      // Run transformer on JS files containing `</script` to handle tagged template literals.
-      || contains_script_closing_tag(ast.source().as_bytes())
-    {
+    if will_run_transformer {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         // Pass file path only for non-JS modules (TS/TSX/JSX) to enable tsconfig discovery.
         // For plain JS files, we skip tsconfig lookup since they don't need TS-specific transformations.

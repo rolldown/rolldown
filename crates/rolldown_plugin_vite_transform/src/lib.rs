@@ -71,7 +71,12 @@ impl Plugin for ViteTransformPlugin {
     }
 
     let mut program = ret.program;
-    let scoping = semantic_builder_for_transform().build(&program).semantic.into_scoping();
+    // Reserve headroom: the scoping is mutated in place by the transformer.
+    let scoping = semantic_builder_for_transform()
+      .with_excess_capacity(0.5)
+      .build(&program)
+      .semantic
+      .into_scoping();
     let transformer = Transformer::new(&allocator, Path::new(args.id), &transform_options);
     let transformer_return = transformer.build_with_scoping(scoping, &mut program);
     if !transformer_return.errors.is_empty() {

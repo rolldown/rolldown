@@ -1,0 +1,15 @@
+{
+  "config": {
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "allow-extension",
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "test": "foo\\.js",
+          "name": "vendor",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    }
+  }
+}

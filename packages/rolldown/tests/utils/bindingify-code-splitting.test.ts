@@ -134,6 +134,29 @@ test('advancedChunks without codeSplitting shows deprecation warning', async () 
   );
 });
 
+test('advancedChunks supports group-local includeDependenciesRecursively', async () => {
+  const bundle = await rolldown({
+    input: './fixtures/tree-shake/inline-dynamic-imports/main.js',
+    cwd: import.meta.dirname + '/..',
+    preserveEntrySignatures: 'allow-extension',
+  });
+  const result = await bundle.generate({
+    advancedChunks: {
+      groups: [
+        {
+          name: 'main-group',
+          test: /main/,
+          includeDependenciesRecursively: false,
+        },
+      ],
+    },
+  });
+  expect(result.output.length).toBeGreaterThan(0);
+  expect(consoleSpy).toHaveBeenCalledWith(
+    '`advancedChunks` option is deprecated, please use `codeSplitting` instead.',
+  );
+});
+
 test('manualChunks without codeSplitting works', async () => {
   const bundle = await rolldown({
     input: './fixtures/tree-shake/inline-dynamic-imports/main.js',

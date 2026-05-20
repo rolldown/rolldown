@@ -1,0 +1,15 @@
+{
+  "config": {
+    "strictExecutionOrder": true,
+    "manualCodeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "test": "foo\\.js",
+          "name": "vendor",
+          "includeDependenciesRecursively": true
+        }
+      ]
+    }
+  }
+}

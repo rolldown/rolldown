@@ -1,0 +1,21 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "main.js"
+      }
+    ],
+    "preserveEntrySignatures": "strict",
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "vendor",
+          "test": "lib",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    }
+  },
+  "expectError": true
+}

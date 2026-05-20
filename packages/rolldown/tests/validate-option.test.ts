@@ -42,6 +42,29 @@ test('validate output option', async () => {
   );
 });
 
+test('allows group-local includeDependenciesRecursively', async () => {
+  const consoleSpy = vi.spyOn(console, 'warn');
+  const bundle = await rolldown({
+    input: './build-api/main.js',
+    cwd: import.meta.dirname,
+    preserveEntrySignatures: 'allow-extension',
+  });
+  await bundle.write({
+    codeSplitting: {
+      groups: [
+        {
+          name: 'main-group',
+          test: /main/,
+          includeDependenciesRecursively: false,
+        },
+      ],
+    },
+  });
+  expect(consoleSpy).not.toHaveBeenCalledWith(
+    expect.stringContaining('includeDependenciesRecursively'),
+  );
+});
+
 test('give a warning for hoistTransitiveImports: true', async () => {
   const consoleSpy = vi.spyOn(console, 'warn');
   const bundle = await rolldown({

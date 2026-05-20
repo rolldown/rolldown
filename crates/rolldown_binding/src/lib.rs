@@ -46,7 +46,7 @@ use napi_derive::napi;
   not(target_env = "ohos")
 ))]
 mod diag_alloc {
-  use core::ffi::{CStr, c_int, c_void};
+  use core::ffi::{CStr, c_void};
   use core::fmt::Write as _;
   use std::alloc::{GlobalAlloc, Layout};
   use std::sync::atomic::{AtomicBool, Ordering};
@@ -55,11 +55,60 @@ mod diag_alloc {
 
   static IN_DIAG: AtomicBool = AtomicBool::new(false);
 
-  // execinfo.h: present on macOS (libSystem) and glibc/musl Linux. Returns
-  // up to `size` return-address frames into `buffer`. Does not allocate.
-  #[cfg(any(target_os = "macos", target_os = "linux"))]
-  unsafe extern "C" {
-    fn backtrace(buffer: *mut *mut c_void, size: c_int) -> c_int;
+  // Manual frame-pointer chain walker. Apple Silicon AAPCS64 *requires* FP
+  // preservation; SysV AMD64 typically has it under default Rust release
+  // profile. Pure asm + load — no libraries, no allocations, signal-safe.
+  // Preferred over libSystem's `backtrace()`, which has been observed to
+  // return zero frames on certain napi/libuv-spawned threads on macOS
+  // (presumably because libunwind cannot locate the stack base for threads
+  // started outside the standard pthread path).
+  // Frame layout for both arches:
+  //   [fp+0]              = saved previous frame pointer
+  //   [fp+size_of::<usize>] = saved return address
+  #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+  fn capture_stack(buf: &mut [*mut c_void]) -> usize {
+    let mut fp: *const usize;
+    #[cfg(target_arch = "aarch64")]
+    unsafe {
+      core::arch::asm!("mov {}, x29", out(reg) fp, options(nomem, nostack, preserves_flags));
+    }
+    #[cfg(target_arch = "x86_64")]
+    unsafe {
+      core::arch::asm!("mov {}, rbp", out(reg) fp, options(nomem, nostack, preserves_flags));
+    }
+
+    let mut n = 0usize;
+    while !fp.is_null() && n < buf.len() {
+      if (fp.addr()) & (core::mem::align_of::<usize>() - 1) != 0 {
+        break; // misaligned, stop rather than fault
+      }
+      let prev_fp = unsafe { fp.read_volatile() };
+      let return_addr = unsafe { fp.add(1).read_volatile() };
+      if return_addr == 0 {
+        break;
+      }
+      buf[n] = core::ptr::without_provenance_mut::<c_void>(return_addr);
+      n += 1;
+      if prev_fp == 0 || prev_fp <= fp.addr() {
+        break; // end of stack or invalid back-pointer
+      }
+      fp = core::ptr::without_provenance::<usize>(prev_fp);
+    }
+    n
+  }
+
+  // Fallback for other arches: libSystem/glibc execinfo backtrace.
+  #[cfg(all(
+    any(target_os = "macos", target_os = "linux"),
+    not(any(target_arch = "aarch64", target_arch = "x86_64"))
+  ))]
+  fn capture_stack(buf: &mut [*mut c_void]) -> usize {
+    use core::ffi::c_int;
+    unsafe extern "C" {
+      fn backtrace(buffer: *mut *mut c_void, size: c_int) -> c_int;
+    }
+    let n = unsafe { backtrace(buf.as_mut_ptr(), c_int::try_from(buf.len()).unwrap_or(0)) };
+    usize::try_from(n).unwrap_or(0)
   }
 
   // Allocation-free fmt sink that fills a fixed-size stack buffer and
@@ -168,16 +217,20 @@ mod diag_alloc {
     let len = bw.pos;
     write_stderr(&buf[..len]);
 
-    // 2. Symbolicated frames via execinfo + dladdr + rustc-demangle. Allocation-free.
+    // 2. Symbolicated frames via FP-chain walk + dladdr + rustc-demangle.
+    //    Print the count alongside the header so if zero frames come back
+    //    we at least know capture failed (vs. write_frame failing silently).
     #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
       let mut frames: [*mut c_void; 64] = [core::ptr::null_mut(); 64];
-      // SAFETY: `frames` is a valid mutable slice of 64 elements; `backtrace`
-      // writes at most that many entries and reports the count via its return.
-      let n = unsafe { backtrace(frames.as_mut_ptr(), 64) };
-      let n = usize::try_from(n).unwrap_or(0);
+      let n = capture_stack(&mut frames);
 
-      write_stderr(b"[alloc-diag] backtrace:\n");
+      let mut hdr = [0u8; 96];
+      let mut hbw = StackBuf { buf: &mut hdr, pos: 0 };
+      let _ = writeln!(hbw, "[alloc-diag] backtrace ({n} frames):");
+      let hlen = hbw.pos;
+      write_stderr(&hdr[..hlen]);
+
       for ip in &frames[..n] {
         write_frame(*ip);
       }

@@ -3,15 +3,21 @@
 # COMMIT_REF and CACHED_COMMIT_REF are the same for build runs without cache
 ignore = "if [ \"${COMMIT_REF}\" = \"${CACHED_COMMIT_REF}\" ] ; then false ; else git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./docs ./packages/rolldown ; fi"
 
-# Netlify's build sandbox makes pnpm 11 fail to discover this repo's workspace root,
-# so `pnpm-workspace.yaml` (and thus the catalog: definitions) never reach pnpm's
-# config. That surfaces as either ERR_PNPM_LOCKFILE_CONFIG_MISMATCH (frozen mode)
-# or ERR_PNPM_CATALOG_ENTRY_NOT_FOUND_FOR_SPEC (during resolution).
-# Pointing pnpm at the workspace root explicitly bypasses the broken discovery —
-# this env var is the one piece of pnpm config still read under the NPM_CONFIG_* prefix
-# (see pnpm/workspace/root-finder: WORKSPACE_DIR_ENV_VAR = 'NPM_CONFIG_WORKSPACE_DIR').
+# Workaround for pnpm 11 misbehaving in Netlify's build sandbox: the workspace
+# root isn't auto-discovered, so `pnpm-workspace.yaml` (and the catalog: block)
+# never reach pnpm's config. The symptom is either ERR_PNPM_LOCKFILE_CONFIG_MISMATCH
+# (frozen mode) or ERR_PNPM_CATALOG_ENTRY_NOT_FOUND_FOR_SPEC (during resolution).
+#
+# Two-pronged fix:
+#  1. NPM_CONFIG_WORKSPACE_DIR pins the workspace root explicitly. This env var
+#     keeps the NPM_CONFIG_* prefix even in pnpm v11 (see
+#     pnpm/workspace/root-finder: WORKSPACE_DIR_ENV_VAR).
+#  2. PNPM_CONFIG_FROZEN_LOCKFILE=false also disables the buggy catalog-mismatch
+#     check from https://github.com/pnpm/pnpm/issues/10258 so that if (1) doesn't
+#     fully take, we at least skip the false-positive guard.
 [build.environment]
 NPM_CONFIG_WORKSPACE_DIR = "/opt/build/repo"
+PNPM_CONFIG_FROZEN_LOCKFILE = "false"
 
 [[redirects]]
 from = "/about/"

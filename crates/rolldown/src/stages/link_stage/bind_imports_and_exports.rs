@@ -424,9 +424,13 @@ impl LinkStage<'_> {
                     Module::Normal(module) => module,
                     Module::External(_) => return,
                   };
-                let is_json_import_ns =
-                  (matches!(canonical_ref_owner.module_type, ModuleType::Json)
-                    && member_expr_ref.object_ref_type == MemberExprObjectReferencedType::Default);
+                // Treat `import data from './x.json'; data.foo` as a namespace access so
+                // it can be optimized to the underlying `foo` export. Skip this for writes
+                // (`data.foo = ...`) since rewriting the write target to a bare identifier
+                // (or worse, an inlined constant) is unsound and would crash the finalizer.
+                let is_json_import_ns = matches!(canonical_ref_owner.module_type, ModuleType::Json)
+                  && member_expr_ref.object_ref_type == MemberExprObjectReferencedType::Default
+                  && !member_expr_ref.is_write;
                 let mut is_namespace_ref =
                   canonical_ref_owner.namespace_object_ref == canonical_ref || is_json_import_ns;
                 let mut cursor = 0;

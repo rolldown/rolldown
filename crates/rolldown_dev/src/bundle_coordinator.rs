@@ -6,6 +6,7 @@ use std::{
 
 use anyhow::Context;
 use arcstr::ArcStr;
+use async_lock::Mutex;
 use futures::FutureExt;
 use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
@@ -13,7 +14,6 @@ use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap, pattern_filter};
 use sugar_path::SugarPath;
-use tokio::sync::Mutex;
 
 use rolldown::Bundler;
 

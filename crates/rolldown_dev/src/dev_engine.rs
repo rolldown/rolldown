@@ -4,6 +4,7 @@ use std::sync::{
 };
 
 use anyhow::Context;
+use async_lock::Mutex;
 use futures::{FutureExt, future::Shared};
 use rolldown_common::ClientHmrUpdate;
 #[cfg(feature = "testing")]
@@ -12,7 +13,6 @@ use rolldown_error::{BuildResult, ResultExt};
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
-use tokio::sync::Mutex;
 
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig, NormalizedBundlerOptions};
 

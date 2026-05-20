@@ -17,6 +17,7 @@ workspace = true
 anyhow = { workspace = true }
 arcstr = { workspace = true }
 async-channel = { workspace = true }
+async-lock = { workspace = true }
 futures = { workspace = true }
 futures-timer = { workspace = true }
 pollster = { workspace = true }
@@ -27,7 +28,6 @@ rolldown_error = { workspace = true }
 rolldown_fs_watcher = { workspace = true }
 rolldown-notify = { workspace = true }
 rolldown_utils = { workspace = true }
-tokio = { workspace = true, features = ["sync"] }
 tracing = { workspace = true }
 
 [dev-dependencies]

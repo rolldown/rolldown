@@ -3,10 +3,10 @@ use std::{
   sync::{Arc, atomic::AtomicU32},
 };
 
+use async_lock::Mutex;
 use rolldown_common::{ClientHmrInput, ScanMode};
 use rolldown_error::BuildResult;
 use rolldown_utils::indexmap::FxIndexMap;
-use tokio::sync::Mutex;
 
 use rolldown::Bundler;
 

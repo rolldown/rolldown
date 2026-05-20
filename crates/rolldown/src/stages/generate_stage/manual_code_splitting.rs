@@ -200,8 +200,8 @@ impl ManualSplitter<'_> {
         let entries_aware = match_group.entries_aware.unwrap_or(false);
         let module_group_id = ModuleGroupId { match_group_index, name: group_name.clone() };
 
-        let include_dependencies_recursively =
-          self.chunking_options.include_dependencies_recursively.unwrap_or(true);
+        let effective_include_dependencies_recursively = match_group
+          .include_dependencies_recursively(self.chunking_options.include_dependencies_recursively);
 
         let group: &mut ModuleGroup = if entries_aware {
           let idx = match entries_aware_idx_by_id.entry(module_group_id) {
@@ -244,7 +244,7 @@ impl ManualSplitter<'_> {
           &self.link_output.metas,
           &self.link_output.module_table,
           &mut FxHashSet::default(),
-          include_dependencies_recursively,
+          effective_include_dependencies_recursively,
         );
       }
     }

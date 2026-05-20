@@ -2375,6 +2375,7 @@ export interface BindingMatchGroup {
   minModuleSize?: number
   maxModuleSize?: number
   maxSize?: number
+  includeDependenciesRecursively?: boolean
   entriesAware?: boolean
   entriesAwareMergeThreshold?: number
   tags?: Array<string>

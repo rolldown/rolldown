@@ -5,9 +5,9 @@ use itertools::Either;
 use oxc::{transformer::EngineTargets, transformer_plugins::InjectGlobalVariablesConfig};
 use rolldown_common::{
   AttachDebugInfo, CodeSplittingMode, GlobalsOutputOption, InjectImport, JsxOptions, JsxPreset,
-  LegalComments, MinifyOptions, ModuleType, NormalizedBundlerOptions, OutputFormat, Platform,
-  PreserveEntrySignatures, RawTransformOptions, TransformOptions, TreeshakeOptions, TsConfig,
-  merge_transform_options_with_tsconfig, normalize_optimization_option,
+  LegalComments, ManualCodeSplittingOptions, MinifyOptions, ModuleType, NormalizedBundlerOptions,
+  OutputFormat, Platform, PreserveEntrySignatures, RawTransformOptions, TransformOptions,
+  TreeshakeOptions, TsConfig, merge_transform_options_with_tsconfig, normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
@@ -23,6 +23,19 @@ pub struct PrepareBuildContext {
   pub resolver: SharedResolver<OsFileSystem>,
   pub options: Arc<NormalizedBundlerOptions>,
   pub warnings: Vec<BuildDiagnostic>,
+}
+
+fn has_effective_include_dependencies_recursively_false(
+  manual_code_splitting: &ManualCodeSplittingOptions,
+) -> bool {
+  let Some(groups) = manual_code_splitting.groups.as_deref().filter(|groups| !groups.is_empty())
+  else {
+    return matches!(manual_code_splitting.include_dependencies_recursively, Some(false));
+  };
+
+  groups.iter().any(|group| {
+    !group.include_dependencies_recursively(manual_code_splitting.include_dependencies_recursively)
+  })
 }
 
 fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<BuildDiagnostic>> {
@@ -111,7 +124,7 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     }
 
     // Check if `codeSplitting.include_dependencies_recursively` conflict with `preserveEntrySignatures`
-    if matches!(manual_code_splitting.include_dependencies_recursively, Some(false)) {
+    if has_effective_include_dependencies_recursively_false(manual_code_splitting) {
       if let Some(preserve_signatures) = &raw_options.preserve_entry_signatures {
         if matches!(
           preserve_signatures,
@@ -140,7 +153,7 @@ pub fn prepare_build_context(
 
   let preserve_entry_signatures = if let Some(manual_code_splitting) =
     &raw_options.manual_code_splitting
-    && matches!(manual_code_splitting.include_dependencies_recursively, Some(false))
+    && has_effective_include_dependencies_recursively_false(manual_code_splitting)
     && raw_options.preserve_entry_signatures.is_none()
   {
     warnings.push(

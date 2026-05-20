@@ -884,6 +884,15 @@ export type CodeSplittingGroup = {
    */
   minModuleSize?: number;
   /**
+   * Whether this group also captures dependencies of matched modules recursively.
+   *
+   * By default, this inherits from {@linkcode CodeSplittingOptions.includeDependenciesRecursively | codeSplitting.includeDependenciesRecursively}, which defaults to `true`.
+   * Set this to `false` to make only this group capture explicitly matched modules while other groups keep their inherited behavior.
+   *
+   * Disabling this option has the same safety caveats as disabling {@linkcode CodeSplittingOptions.includeDependenciesRecursively | codeSplitting.includeDependenciesRecursively} globally.
+   */
+  includeDependenciesRecursively?: boolean;
+  /**
    * When `false` (default), all matching modules are merged into a single chunk.
    * Every entry that uses any of these modules must load the entire chunk — even
    * modules it doesn't need.
@@ -942,9 +951,11 @@ export type AdvancedChunksGroup = CodeSplittingGroup;
  */
 export type CodeSplittingOptions = {
   /**
+   * Global fallback of {@linkcode CodeSplittingGroup.includeDependenciesRecursively | group.includeDependenciesRecursively}, if it's not specified in the group.
+   *
    * By default, each group will also include captured modules' dependencies. This reduces the chance of generating circular chunks.
    *
-   * If you want to disable this behavior, it's recommended to both set
+   * If you want to disable this behavior for any group, it's recommended to both set
    * - {@linkcode InputOptions.preserveEntrySignatures | preserveEntrySignatures}: `false | 'allow-extension'`
    * - {@linkcode OutputOptions.strictExecutionOrder | strictExecutionOrder}: `true`
    *

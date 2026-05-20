@@ -64,6 +64,7 @@ pub struct MatchGroup {
   pub min_share_count: Option<u32>,
   pub min_module_size: Option<f64>,
   pub max_module_size: Option<f64>,
+  pub include_dependencies_recursively: Option<bool>,
   pub entries_aware: Option<bool>,
   /// Only effective when `entriesAware` is set to `true`.
   pub entries_aware_merge_threshold: Option<f64>,
@@ -74,6 +75,12 @@ pub struct MatchGroup {
     schemars(with = "Option<Vec<BuiltinModuleTag>>")
   )]
   pub tags: Option<Vec<ModuleTag>>,
+}
+
+impl MatchGroup {
+  pub fn include_dependencies_recursively(&self, global_fallback: Option<bool>) -> bool {
+    self.include_dependencies_recursively.or(global_fallback).unwrap_or(true)
+  }
 }
 
 type MatchGroupTestFn = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static>>

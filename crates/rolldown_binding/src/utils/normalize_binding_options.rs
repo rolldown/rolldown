@@ -515,6 +515,7 @@ pub fn normalize_binding_options(
             max_module_size: item.max_module_size,
             min_module_size: item.min_module_size,
             max_size: item.max_size,
+            include_dependencies_recursively: item.include_dependencies_recursively,
             entries_aware: item.entries_aware,
             entries_aware_merge_threshold: item.entries_aware_merge_threshold,
             tags: item.tags.map(|tags| tags.into_iter().map(ModuleTag::from).collect()),

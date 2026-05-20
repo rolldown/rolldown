@@ -1,8 +1,6 @@
+use futures::channel::oneshot;
 use rustc_hash::FxHashSet;
-use tokio::sync::{
-  mpsc::{UnboundedReceiver, UnboundedSender},
-  oneshot,
-};
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 use super::types::{
   coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,

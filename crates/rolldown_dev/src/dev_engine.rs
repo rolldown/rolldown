@@ -142,7 +142,7 @@ impl DevEngine {
   pub async fn wait_for_ongoing_bundle(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
 
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender
       .send(CoordinatorMsg::GetState { reply: reply_sender })
@@ -164,7 +164,7 @@ impl DevEngine {
   pub async fn get_bundle_state(&self) -> BuildResult<BundleState> {
     self.create_error_if_closed()?;
 
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender
       .send(CoordinatorMsg::GetState { reply: reply_sender })
@@ -199,7 +199,7 @@ impl DevEngine {
         }
         break;
       }
-      let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+      let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
       self
         .coordinator_sender
         .send(CoordinatorMsg::EnsureLatestBundleOutput { reply: reply_sender })
@@ -384,7 +384,7 @@ impl DevEngine {
 
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
     // and get the build future to wait on
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+    let (reply_tx, reply_rx) = futures::channel::oneshot::channel();
     let _ = self.coordinator_sender.send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
 
     // Wait for the build that was triggered by the file change
@@ -397,7 +397,7 @@ impl DevEngine {
   pub async fn get_watched_files(&self) -> BuildResult<FxHashSet<String>> {
     self.create_error_if_closed()?;
 
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender
       .send(CoordinatorMsg::GetWatchedFiles { reply: reply_sender })

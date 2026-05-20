@@ -6,8 +6,9 @@ ignore = "if [ \"${COMMIT_REF}\" = \"${CACHED_COMMIT_REF}\" ] ; then false ; els
 # Workaround for https://github.com/pnpm/pnpm/issues/10258 — pnpm >=10.24 (incl. 11.x)
 # spuriously throws ERR_PNPM_LOCKFILE_CONFIG_MISMATCH on Netlify under --frozen-lockfile.
 # Drop frozen mode here so the buggy catalog comparison is skipped; CI elsewhere keeps it.
+# Note: pnpm 11 only honors PNPM_CONFIG_* env vars (NPM_CONFIG_* is no longer read).
 [build.environment]
-NPM_CONFIG_FROZEN_LOCKFILE = "false"
+PNPM_CONFIG_FROZEN_LOCKFILE = "false"
 
 [[redirects]]
 from = "/about/"

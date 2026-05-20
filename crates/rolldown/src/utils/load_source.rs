@@ -100,7 +100,7 @@ pub async fn load_source<Fs: FileSystem + 'static>(
     }
     (None, Some(ty)) => {
       assert!(asserted_module_type.is_some(), "Invalid state");
-      Ok((read_file_by_module_type(resolved_id.id.as_path(), &ty, fs).await?, ty))
+      Ok((read_file_by_module_type(resolved_id.id.as_path(), &ty, &fs)?, ty))
     }
   }
 }
@@ -119,10 +119,10 @@ fn get_module_loader_from_file_extension<S: AsRef<str>>(
   None
 }
 
-async fn read_file_by_module_type<Fs: FileSystem + 'static>(
+fn read_file_by_module_type<Fs: FileSystem + 'static>(
   path: impl AsRef<Path>,
   ty: &ModuleType,
-  fs: Fs,
+  fs: &Fs,
 ) -> anyhow::Result<StrOrBytes> {
   let path = path.as_ref();
   match ty {

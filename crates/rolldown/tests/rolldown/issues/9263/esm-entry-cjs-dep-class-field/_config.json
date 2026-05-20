@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.mjs" }],
+    "transform": {
+      "target": "es2021"
+    }
+  },
+  "expectExecuted": true
+}

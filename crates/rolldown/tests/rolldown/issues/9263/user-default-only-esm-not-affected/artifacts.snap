@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dep.mjs
+var dep_exports = /* @__PURE__ */ __exportAll({ default: () => dep_default });
+function dep_default() {
+	return 42;
+}
+var init_dep = __esmMin((() => {}));
+//#endregion
+//#region main.cjs
+var require_main = /* @__PURE__ */ __commonJSMin((() => {
+	const dep = (init_dep(), __toCommonJS(dep_exports));
+	if (typeof dep === "function") throw new Error("regression: user-authored default-only ESM was unwrapped to .default");
+	if (typeof dep.default !== "function" || dep.default() !== 42) throw new Error("expected dep.default to be a callable returning 42");
+}));
+//#endregion
+export default require_main();
+
+```

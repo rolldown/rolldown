@@ -2970,7 +2970,6 @@ dependencies = [
  "simdutf8",
  "string_wizard",
  "sugar_path",
- "tokio",
 ]
 
 [[package]]

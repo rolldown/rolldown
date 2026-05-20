@@ -1,37 +1,35 @@
 use futures::Future;
 
+/// Fire-and-forget spawn for a `'static` future on a dedicated OS thread.
+///
+/// Runtime-agnostic: `std::thread::spawn` + `pollster::block_on`. Suitable
+/// for low-frequency, fire-and-forget work (e.g. invoking a logging
+/// callback) — do NOT use for hot-path parallelism.
 #[inline]
-pub fn spawn<F>(future: F) -> tokio::task::JoinHandle<F::Output>
+pub fn spawn<F>(future: F) -> std::thread::JoinHandle<F::Output>
 where
   F: Future + Send + 'static,
   F::Output: Send + 'static,
 {
-  tokio::spawn(future)
+  std::thread::spawn(move || pollster::block_on(future))
 }
 
-/// `async` here is only used to satisfy the wasm shim version of `block_on_spawn_all`.
-/// This function allow you to spawn non-static futures in parallel and wait for all of them to finish.
-#[expect(clippy::unused_async)]
+/// Drive many non-`'static` futures concurrently on the awaiter's task and
+/// collect their outputs.
+///
+/// Runtime-agnostic: backed by `futures::future::join_all`, which polls every
+/// future cooperatively without spawning. The previous implementation used
+/// `async_scoped::TokioScope`, which spawned each future on a tokio worker
+/// for cross-thread parallelism. Call sites are small per-item futures (a few
+/// specifier resolves at most) and the surrounding work is already on a
+/// rayon worker, so single-task concurrency is sufficient.
 pub async fn block_on_spawn_all<Iter, Out>(iter: Iter) -> Vec<Out>
 where
   Iter: Iterator,
   Out: Send + 'static,
   Iter::Item: Future<Output = Out> + Send,
 {
-  #[cfg(target_arch = "wasm32")]
-  {
-    use futures::future::join_all;
-    join_all(iter).await
-  }
-  #[cfg(not(target_arch = "wasm32"))]
-  {
-    use async_scoped::TokioScope;
-    let (_ret, collections) =
-      async_scoped::Scope::scope_and_block(|scope: &mut TokioScope<'_, _>| {
-        iter.into_iter().for_each(|fut| scope.spawn(fut));
-      });
-    collections.into_iter().map(Result::unwrap).collect()
-  }
+  futures::future::join_all(iter).await
 }
 
 #[expect(clippy::collection_is_never_read)]

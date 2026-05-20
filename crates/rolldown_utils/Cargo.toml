@@ -49,12 +49,10 @@ serde_json = { workspace = true }
 simdutf8 = { workspace = true }
 pollster = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-async-scoped = { workspace = true, features = ["use-tokio"] }
 rayon = { workspace = true }
 
 [dev-dependencies]

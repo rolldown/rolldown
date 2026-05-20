@@ -64,7 +64,6 @@ serde = { workspace = true, optional = true }
 serde_json = { workspace = true, features = ["preserve_order"] }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
 tracing = { workspace = true }
 url = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }

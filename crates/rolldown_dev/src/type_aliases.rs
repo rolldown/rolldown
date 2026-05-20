@@ -1,6 +1,5 @@
 use futures::channel::oneshot;
 use rustc_hash::FxHashSet;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 use super::types::{
   coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
@@ -15,8 +14,8 @@ pub type GetStateSender = oneshot::Sender<CoordinatorStateSnapshot>;
 pub type ScheduleBuildIfStaleSender = oneshot::Sender<Option<ScheduleBuildReturn>>;
 
 // Coordinator channel
-pub type CoordinatorSender = UnboundedSender<CoordinatorMsg>;
-pub type CoordinatorReceiver = UnboundedReceiver<CoordinatorMsg>;
+pub type CoordinatorSender = async_channel::Sender<CoordinatorMsg>;
+pub type CoordinatorReceiver = async_channel::Receiver<CoordinatorMsg>;
 
 pub type EnsureLatestBundleOutputSender = oneshot::Sender<Option<EnsureLatestBundleOutputReturn>>;
 

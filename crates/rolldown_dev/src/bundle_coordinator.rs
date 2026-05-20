@@ -95,7 +95,7 @@ impl BundleCoordinator {
       }
     }
     tracing::trace!("[BundleCoordinator] starts running\n - state: {:?}", self.state);
-    while let Some(msg) = self.rx.recv().await {
+    while let Ok(msg) = self.rx.recv().await {
       tracing::trace!("[BundleCoordinator] received message\n - message: {msg:#?}");
       match msg {
         CoordinatorMsg::WatchEvent(watch_event) => {

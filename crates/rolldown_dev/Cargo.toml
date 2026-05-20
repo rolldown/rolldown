@@ -23,6 +23,7 @@ testing = []
 [dependencies]
 anyhow = { workspace = true }
 arcstr = { workspace = true }
+async-channel = { workspace = true }
 futures = { workspace = true }
 rolldown = { workspace = true, features = ["experimental"] }
 rolldown-notify = { workspace = true }

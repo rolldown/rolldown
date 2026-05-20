@@ -2,6 +2,7 @@
 # only build on netlify if there are any change in docs
 # COMMIT_REF and CACHED_COMMIT_REF are the same for build runs without cache
 ignore = "if [ \"${COMMIT_REF}\" = \"${CACHED_COMMIT_REF}\" ] ; then false ; else git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./docs ./packages/rolldown ; fi"
+command = "pnpm install --no-frozen-lockfile && pnpm run docs:build"
 
 # Workaround for pnpm 11 misbehaving in Netlify's build sandbox: the workspace
 # root isn't auto-discovered, so `pnpm-workspace.yaml` (and the catalog: block)

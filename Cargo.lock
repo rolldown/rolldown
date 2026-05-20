@@ -3077,6 +3077,7 @@ dependencies = [
  "bitflags 2.11.1",
  "dashmap",
  "derive_more",
+ "event-listener",
  "nodejs-built-in-modules",
  "oxc_index",
  "rolldown_common",
@@ -3092,7 +3093,6 @@ dependencies = [
  "serde_json",
  "string_wizard",
  "sugar_path",
- "tokio",
  "tracing",
  "typedmap",
 ]

@@ -20,7 +20,7 @@ use rolldown_common::{
 };
 use rolldown_utils::dashmap::FxDashSet;
 use sugar_path::SugarPath;
-use tokio::sync::broadcast;
+use event_listener::Event;
 
 use crate::{
   __inner::SharedPluginable,
@@ -187,20 +187,23 @@ struct ContextLoadCompletionManager {
 }
 
 enum ContextLoadCompletionState {
-  Pending(broadcast::Sender<()>),
+  // `Arc<Event>` so each subscriber can grab a listener and drop the dashmap
+  // guard before awaiting — no need to hold the map locked across the await.
+  Pending(Arc<Event>),
   Completed,
 }
 
 impl ContextLoadCompletionManager {
   pub async fn wait_for_completion(&self, module_id: ModuleId) {
-    let mut rx = match self.notifiers.entry(module_id) {
+    let listener = match self.notifiers.entry(module_id) {
       dashmap::Entry::Vacant(guard) => {
-        let (tx, rx) = broadcast::channel(1);
-        guard.insert(ContextLoadCompletionState::Pending(tx));
-        rx
+        let event = Arc::new(Event::new());
+        let listener = event.listen();
+        guard.insert(ContextLoadCompletionState::Pending(event));
+        listener
       }
-      dashmap::Entry::Occupied(mut guard) => match guard.get_mut() {
-        ContextLoadCompletionState::Pending(sender) => sender.subscribe(),
+      dashmap::Entry::Occupied(guard) => match guard.get() {
+        ContextLoadCompletionState::Pending(event) => event.listen(),
         ContextLoadCompletionState::Completed => {
           /* no need to wait */
           return;
@@ -208,14 +211,7 @@ impl ContextLoadCompletionManager {
       },
     };
 
-    if let Err(err) = rx.recv().await {
-      // This happens when `.invalidate` is called before `.mark_completion` is called, which is not expected
-      debug_assert!(
-        false,
-        "The sender was dropped while waiting for module load completion: {err}"
-      );
-      tracing::warn!("The sender was dropped while waiting for module load completion");
-    }
+    listener.await;
   }
 
   pub fn mark_completion(&self, module_id: ModuleId) {
@@ -224,10 +220,8 @@ impl ContextLoadCompletionManager {
         guard.insert(ContextLoadCompletionState::Completed);
       }
       dashmap::Entry::Occupied(mut guard) => match guard.get_mut() {
-        ContextLoadCompletionState::Pending(sender) => {
-          sender.send(()).expect(
-            "PluginDriver: failed to send completion notification - receiver was dropped before wait_for_completion was called, indicating a race condition in module loading"
-          );
+        ContextLoadCompletionState::Pending(event) => {
+          event.notify(usize::MAX);
           *guard.get_mut() = ContextLoadCompletionState::Completed;
         }
         ContextLoadCompletionState::Completed => {

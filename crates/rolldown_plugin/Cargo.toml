@@ -28,6 +28,7 @@ async-trait = { workspace = true }
 bitflags = { workspace = true }
 dashmap = { workspace = true }
 derive_more = { workspace = true, features = ["display"] }
+event-listener = { workspace = true }
 nodejs-built-in-modules = { workspace = true }
 oxc_index = { workspace = true }
 rolldown_common = { workspace = true }
@@ -43,7 +44,6 @@ serde = { workspace = true, optional = true }
 serde_json = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true, features = ["sync"] }
 tracing = { workspace = true, features = ["valuable"] }
 typedmap = { workspace = true }
 

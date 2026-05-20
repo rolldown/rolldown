@@ -962,7 +962,7 @@ impl BindImportsAndExportsContext<'_> {
         if prev_tracker.importer == tracker.importer
           && prev_tracker.imported_as == tracker.imported_as
         {
-          let importer_module = &index_modules[tracker.importer];
+          let importer_module = &index_modules[tracker.importee];
           let importer_id = importer_module.id().to_string();
           let imported_specifier = tracker.imported.to_string();
           self.errors.push(BuildDiagnostic::circular_reexport(importer_id, imported_specifier));

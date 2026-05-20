@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## CIRCULAR_REEXPORT
+
+```text
+[CIRCULAR_REEXPORT] Error: 'foo' cannot be exported from 'a.js' as it is a reexport that references itself.
+
+```
+
+## CIRCULAR_REEXPORT
+
+```text
+[CIRCULAR_REEXPORT] Error: 'foo' cannot be exported from 'a.js' as it is a reexport that references itself.
+
+```

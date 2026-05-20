@@ -110,11 +110,19 @@ impl DevEngine {
       return Ok(());
     }
 
-    // Spawn the coordinator
+    // Spawn the coordinator on a dedicated OS thread driven by pollster.
+    // One coordinator per DevEngine, so the per-thread overhead is fine and
+    // we don't need a tokio runtime just to drive a single root future. A
+    // futures::channel::oneshot bridges thread completion back into the
+    // async surface so wait_for_close()-style callers can still .await it.
     if let Some(coordinator) = coordinator_state.coordinator.take() {
-      let join_handle = tokio::spawn(coordinator.run());
+      let (done_tx, done_rx) = futures::channel::oneshot::channel();
+      std::thread::spawn(move || {
+        pollster::block_on(coordinator.run());
+        let _ = done_tx.send(());
+      });
       let coordinator_handle = Box::pin(async move {
-        join_handle.await.unwrap();
+        let _ = done_rx.await;
       }) as PinBoxSendStaticFuture;
       coordinator_state.handle = Some(coordinator_handle.shared());
     }

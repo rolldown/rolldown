@@ -25,6 +25,7 @@ anyhow = { workspace = true }
 arcstr = { workspace = true }
 async-channel = { workspace = true }
 futures = { workspace = true }
+pollster = { workspace = true }
 rolldown = { workspace = true, features = ["experimental"] }
 rolldown-notify = { workspace = true }
 rolldown_common = { workspace = true }
@@ -34,7 +35,7 @@ rolldown_fs_watcher = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
+tokio = { workspace = true, features = ["sync"] }
 tracing = { workspace = true }
 
 [dev-dependencies]

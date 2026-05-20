@@ -101,13 +101,24 @@ impl Watcher {
     })
   }
 
-  /// Spawn the coordinator. Can only be called once.
+  /// Spawn the coordinator on a dedicated OS thread. Can only be called once.
+  ///
+  /// We use `std::thread::spawn + pollster::block_on` instead of a tokio
+  /// executor: the coordinator future is long-lived and there's exactly one
+  /// of it, so the per-coordinator thread overhead is negligible and we
+  /// avoid pulling tokio in just to drive a single root future. A oneshot
+  /// channel bridges thread completion back into the async world so
+  /// `wait_for_close()` callers can still `.await` shutdown.
   pub fn run(&self) {
     let mut state = self.coordinator_state.lock().unwrap();
     if let Some(coordinator) = state.coordinator.take() {
-      let join_handle = tokio::spawn(coordinator);
+      let (done_tx, done_rx) = futures::channel::oneshot::channel();
+      std::thread::spawn(move || {
+        pollster::block_on(coordinator);
+        let _ = done_tx.send(());
+      });
       let handle: Pin<Box<dyn Future<Output = ()> + Send>> = Box::pin(async move {
-        let _ = join_handle.await;
+        let _ = done_rx.await;
       });
       state.handle = Some(handle.shared());
     }

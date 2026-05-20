@@ -355,7 +355,12 @@ impl BundleCoordinator {
             self.set_initial_build_state(CoordinatorState::InProgress);
           }
           let bundling_future = (Box::pin(bundling_task.run()) as PinBoxSendStaticFuture).shared();
-          tokio::spawn(bundling_future.clone());
+          // Drive the shared future eagerly on a dedicated thread so progress
+          // happens even when no awaiter has polled yet. Other holders
+          // (current_bundling_future, ScheduleBuildReturn) see the same Shared
+          // state and are notified via wakers when it completes.
+          let bg = bundling_future.clone();
+          std::thread::spawn(move || pollster::block_on(bg));
 
           self.current_bundling_future = Some(bundling_future.clone());
 

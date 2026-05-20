@@ -19,6 +19,7 @@ arcstr = { workspace = true }
 async-channel = { workspace = true }
 futures = { workspace = true }
 futures-timer = { workspace = true }
+pollster = { workspace = true }
 oxc_index = { workspace = true }
 rolldown = { path = "../rolldown", features = ["experimental"] }
 rolldown_common = { workspace = true }
@@ -26,7 +27,7 @@ rolldown_error = { workspace = true }
 rolldown_fs_watcher = { workspace = true }
 rolldown-notify = { workspace = true }
 rolldown_utils = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
+tokio = { workspace = true, features = ["sync"] }
 tracing = { workspace = true }
 
 [dev-dependencies]

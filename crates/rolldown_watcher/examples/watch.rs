@@ -50,9 +50,9 @@ async fn main() {
 
   println!("Watching for changes... Press Ctrl+C to stop.");
 
-  // Keep the watcher alive; in real usage you'd use tokio::signal::ctrl_c()
-  // but that requires the "signal" tokio feature which isn't enabled for tests.
-  tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+  // Keep the watcher alive; in real usage you'd handle Ctrl+C via a signal
+  // crate (e.g. ctrlc) — for this demo we just wait a fixed window.
+  futures_timer::Delay::new(std::time::Duration::from_secs(10)).await;
 
   println!("\nClosing watcher...");
   watcher.close().await.expect("Failed to close watcher");

@@ -94,10 +94,8 @@ jobs:
     needs: changes
     strategy:
       matrix:
-        target: >-
-          ${{ (github.ref_name == 'main') && fromJSON('["ubuntu-latest","macos-latest","windows-latest"]')
-              || (needs.changes.outputs.run-windows == 'true') && fromJSON('["ubuntu-latest","windows-latest"]')
-              || fromJSON('["ubuntu-latest"]') }}
+        # TEMP DEBUG: macOS only for mimalloc-safe TLS investigation
+        target: ['macos-latest']
     uses: ./.github/workflows/reusable-cargo-test.yml
     with:
       os: ${{ matrix.target }}
@@ -118,8 +116,8 @@ jobs:
   node-test-macos:
     needs: [changes, build-rolldown-macos]
     uses: ./.github/workflows/reusable-node-test.yml
+    # TEMP DEBUG: removed `github.ref_name == 'main' &&` so macOS runs on PR
     if: |
-      github.ref_name == 'main' &&
       always() &&
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
@@ -138,7 +136,9 @@ jobs:
       matrix:
         node-version: [20, 22, 24]
     uses: ./.github/workflows/reusable-node-test.yml
+    # TEMP DEBUG: skip ubuntu while we focus on the macOS reproduction
     if: |
+      false &&
       always() &&
       (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
     with:
@@ -161,8 +161,8 @@ jobs:
   node-dev-server-test-macos:
     needs: [changes, build-rolldown-macos]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
+    # TEMP DEBUG: removed `github.ref_name == 'main' &&` so macOS runs on PR
     if: |
-      github.ref_name == 'main' &&
       always() &&
       (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
     with:
@@ -181,7 +181,9 @@ jobs:
       matrix:
         node-version: [20, 22, 24]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml
+    # TEMP DEBUG: skip ubuntu while we focus on the macOS reproduction
     if: |
+      false &&
       always() &&
       (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
     with:
@@ -192,7 +194,9 @@ jobs:
   vite-test-ubuntu:
     name: Vite Test Ubuntu
     needs: [changes, build-rolldown-ubuntu]
+    # TEMP DEBUG: skip ubuntu while we focus on the macOS reproduction
     if: |
+      false &&
       always() &&
       (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
     runs-on: namespace-profile-linux-x64-default
@@ -268,7 +272,7 @@ jobs:
 
   build-rolldown-macos:
     needs: changes
-    if: github.ref_name == 'main'
+    # TEMP DEBUG: removed `if: github.ref_name == 'main'` so macOS runs on PR
     uses: ./.github/workflows/reusable-native-build.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
@@ -276,6 +280,8 @@ jobs:
 
   build-rolldown-ubuntu:
     needs: changes
+    # TEMP DEBUG: skip ubuntu native build while we focus on the macOS reproduction
+    if: false
     uses: ./.github/workflows/reusable-native-build.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
@@ -284,7 +290,8 @@ jobs:
   node-validation:
     name: Node Validation
     needs: [changes, build-rolldown-ubuntu]
-    if: ${{ needs.changes.outputs.node-changes == 'true' }}
+    # TEMP DEBUG: skip ubuntu-dependent node validation while we focus on the macOS reproduction
+    if: ${{ false && needs.changes.outputs.node-changes == 'true' }}
     runs-on: namespace-profile-linux-x64-default
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2

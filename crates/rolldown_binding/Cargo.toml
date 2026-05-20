@@ -75,6 +75,10 @@ sugar_path = { workspace = true }
 tracing = { workspace = true }
 url = { workspace = true }
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+rustc-demangle = "0.1"
+
 [target.'cfg(all(not(target_os = "linux"), not(target_os = "freebsd"), not(target_family = "wasm")))'.dependencies]
 mimalloc-safe = { workspace = true, features = ["skip_collect_on_exit", "v3"] }
 

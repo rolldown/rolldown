@@ -3,6 +3,12 @@
 # COMMIT_REF and CACHED_COMMIT_REF are the same for build runs without cache
 ignore = "if [ \"${COMMIT_REF}\" = \"${CACHED_COMMIT_REF}\" ] ; then false ; else git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./docs ./packages/rolldown ; fi"
 
+[build.environment]
+# Workaround for pnpm/pnpm#10258: pnpm 11.1.2 frozen install spuriously fails
+# with ERR_PNPM_LOCKFILE_CONFIG_MISMATCH on this workspace's catalogs config.
+# Netlify forwards NPM_FLAGS to the underlying pnpm install invocation.
+NPM_FLAGS = "--no-frozen-lockfile"
+
 [[redirects]]
 from = "/about/"
 to = "/guide/"

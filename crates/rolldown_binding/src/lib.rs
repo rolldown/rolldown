@@ -81,8 +81,26 @@ pub fn start_async_runtime() {
   }
 }
 
+#[cfg(all(
+  not(target_family = "wasm"),
+  not(feature = "default_global_allocator"),
+  not(target_env = "ohos")
+))]
+unsafe extern "C" {
+  fn mi_option_set(option: std::ffi::c_int, value: std::ffi::c_long);
+}
+
 #[napi_derive::module_init]
 fn init() {
+  #[cfg(all(
+    not(target_family = "wasm"),
+    not(feature = "default_global_allocator"),
+    not(target_env = "ohos")
+  ))]
+  {
+    unsafe { crate::mi_option_set(26, 1) };
+  }
+
   #[cfg(not(target_family = "wasm"))]
   {
     use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};

@@ -1,4 +1,82 @@
 
+## [1.0.2] - 2026-05-20
+
+### 🚀 Features
+
+- devtools: emit package size in PackageGraphReady (#9434) by @IWANABETHATGUY
+- devtools: classify package dependency types (#9427) by @IWANABETHATGUY
+- devtools: map packages to modules and chunks (#9426) by @IWANABETHATGUY
+- devtools: mark used packages (#9423) by @IWANABETHATGUY
+- devtools: make duplicate packages discoverable (#9422) by @IWANABETHATGUY
+- devtools: emit package metadata (#9421) by @IWANABETHATGUY
+- update oxc to 0.132.0 (#9449) by @shulaoda
+- update oxc to 0.131.0 (#9424) by @shulaoda
+- allow checks.* to escalate emissions to hard errors (#9388) by @IWANABETHATGUY
+- dev: support watcher options `include` and `exclude` (#9395) by @h-a-n-a
+- emit warnings for invalid pure annotations (#9381) by @Kyujenius
+
+### 🐛 Bug Fixes
+
+- hash: keep chunk file names stable when an unrelated entry is added (#9444) by @hyf0
+- call `codeSplitting.groups[].name` in deterministic order (#9457) by @sapphi-red
+- dev/lazy: make `resolve_id` idempotent when the resolved id is already a lazy entry (#9439) by @h-a-n-a
+- chunk-optimization: publish absorbed dynamic-entry namespace cross-chunk (#9448) by @IWANABETHATGUY
+- treeshake: propagate pure annotation through compound exprs (#9431) by @Dunqing
+- finalizer: skip redundant init call when barrel executes in same chunk (#9354) by @IWANABETHATGUY
+- linking: initialize wrapped ESM re-export owners (#9353) by @IWANABETHATGUY
+- do not inherit __toESM across chunks for named-only external imports (#9333) (#9415) by @IWANABETHATGUY
+- watcher: don't write output or emit events after close() (#9328) by @situ2001
+- chunk-optimization: avoid unsafe dynamic-only merges (#9398) by @IWANABETHATGUY
+- cjs: rename CJS-wrapped locals that would shadow chunk-scope names (#9392) by @hyf0
+- dev/lazy: watch lazy modules added in rebuilds (#9391) by @h-a-n-a
+
+### 🚜 Refactor
+
+- rolldown_dev: move dev example to break publish cycle (#9465) by @Boshen
+- binding: drop unsafe napi string helper, hoist transform ArcStr (#9456) by @hyf0
+- ecmascript_utils: split rewrite_ident_reference off JsxExt trait (#9417) by @IWANABETHATGUY
+- use `ThreadsafeFunction::call_async_catch` (#9390) by @sapphi-red
+
+### 📚 Documentation
+
+- devtools: document @rolldown/debug usage and package graph consumption (#9435) by @IWANABETHATGUY
+- replace `Inter` with system font stack in OG template SVG (#9240) by @yvbopeng
+- remove `output.comments` warning as all issues have been resolved (#9393) by @sapphi-red
+- in-depth: clarify @__PURE__ scope and document positions (#9389) by @Kyujenius
+- readme: remove release candidate notice (#9387) by @shulaoda
+
+### ⚡ Performance
+
+- vite-resolve: cache importer existence checks (#9443) by @Brooooooklyn
+- binding: reduce plugin string clones (#9436) by @Brooooooklyn
+
+### 🧪 Testing
+
+- enable `legal_comments_inline` test (#9394) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- bump pnpm to v11.1.2 (#9447) by @Boshen
+- deps: update rust crates (#9461) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.60.4 (#9453) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#9454) by @rolldown-guard[bot]
+- deps: update npm packages (#9430) by @renovate[bot]
+- deps: update github actions (#9429) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.25.1 (#9452) by @renovate[bot]
+- deps: update rust crates (#9428) by @renovate[bot]
+- revert allow checks.* to escalate emissions to hard errors (#9388) (#9438) by @IWANABETHATGUY
+- update mimalloc-safe to 0.1.61 (#9413) by @shulaoda
+- deny `todo`, `unimplemented`, and `print_stderr` clippy lints (#9412) by @Boshen
+- deps: update mimalloc-safe to 0.1.60 (#9410) by @shulaoda
+- remove `pip install setuptools` workaround for node-gyp on macOS (#9370) by @sapphi-red
+- renovate: disable automerge to require manual approval (#9386) by @shulaoda
+- deps: update napi (#9385) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @yvbopeng made their first contribution in [#9240](https://github.com/rolldown/rolldown/pull/9240)
+
+
 ## [1.0.1] - 2026-05-13
 
 ### 🚀 Features

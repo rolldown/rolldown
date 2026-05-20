@@ -5,16 +5,17 @@ use crate::watch_task::{BuildOutcome, WatchTask, WatchTaskIdx};
 use crate::watcher::WatcherConfig;
 use crate::watcher_msg::WatcherMsg;
 use crate::watcher_state::WatcherState;
+use futures::{FutureExt, future::Either};
+use futures_timer::Delay;
 use oxc_index::IndexVec;
 use rolldown_common::WatcherChangeKind;
 use rolldown_utils::indexmap::FxIndexMap;
 use std::mem;
-use std::time::Duration;
-use tokio::sync::mpsc;
+use std::time::{Duration, Instant};
 
 /// The coordinator actor that owns all state and runs the event loop.
 pub struct WatchCoordinator<H: WatcherEventHandler> {
-  rx: mpsc::UnboundedReceiver<WatcherMsg>,
+  rx: async_channel::Receiver<WatcherMsg>,
   handler: H,
   state: WatcherState,
   debounce_duration: Duration,
@@ -23,7 +24,7 @@ pub struct WatchCoordinator<H: WatcherEventHandler> {
 
 impl<H: WatcherEventHandler> WatchCoordinator<H> {
   pub(crate) fn new(
-    rx: mpsc::UnboundedReceiver<WatcherMsg>,
+    rx: async_channel::Receiver<WatcherMsg>,
     handler: H,
     tasks: IndexVec<WatchTaskIdx, WatchTask>,
     config: &WatcherConfig,
@@ -44,24 +45,23 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
 
     loop {
       match &self.state {
-        WatcherState::Idle => {
-          let msg = self.rx.recv().await;
-          match msg {
-            Some(WatcherMsg::FileChanges { task_index, changes }) => {
-              self.process_file_changes(task_index, changes).await;
-            }
-            Some(WatcherMsg::Close) => {
-              self.handle_close().await;
-              break;
-            }
-            None => break,
+        WatcherState::Idle => match self.rx.recv().await {
+          Ok(WatcherMsg::FileChanges { task_index, changes }) => {
+            self.process_file_changes(task_index, changes).await;
           }
-        }
+          Ok(WatcherMsg::Close) => {
+            self.handle_close().await;
+            break;
+          }
+          Err(_) => break,
+        },
         WatcherState::Debouncing { deadline, .. } => {
-          let timeout = tokio::time::sleep_until((*deadline).into());
+          let remaining = deadline.saturating_duration_since(Instant::now());
+          let timeout = Delay::new(remaining).fuse();
+          let recv = Box::pin(self.rx.recv());
 
-          tokio::select! {
-            () = timeout => {
+          match futures::future::select(Box::pin(timeout), recv).await {
+            Either::Left(((), _)) => {
               let (new_state, changes) = mem::take(&mut self.state).on_debounce_timeout();
               self.state = new_state;
 
@@ -69,18 +69,16 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
                 self.run_build_sequence(changes).await;
               }
             }
-            msg = self.rx.recv() => {
-              match msg {
-                Some(WatcherMsg::FileChanges { task_index, changes }) => {
-                  self.process_file_changes(task_index, changes).await;
-                }
-                Some(WatcherMsg::Close) => {
-                  self.handle_close().await;
-                  break;
-                }
-                None => break,
+            Either::Right((msg, _)) => match msg {
+              Ok(WatcherMsg::FileChanges { task_index, changes }) => {
+                self.process_file_changes(task_index, changes).await;
               }
-            }
+              Ok(WatcherMsg::Close) => {
+                self.handle_close().await;
+                break;
+              }
+              Err(_) => break,
+            },
           }
         }
         WatcherState::Closing | WatcherState::Closed => {

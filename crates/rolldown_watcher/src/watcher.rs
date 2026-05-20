@@ -14,7 +14,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use tokio::sync::mpsc;
 
 /// Default debounce duration in milliseconds.
 /// Matches Rollup's default buildDelay of 0ms.
@@ -74,7 +73,7 @@ struct CoordinatorState {
 /// Usage: `Watcher::new(configs, handler, &config)` → `watcher.run()` → `watcher.close()`.
 pub struct Watcher {
   coordinator_state: std::sync::Mutex<CoordinatorState>,
-  tx: mpsc::UnboundedSender<WatcherMsg>,
+  tx: async_channel::Sender<WatcherMsg>,
   closed: Arc<AtomicBool>,
 }
 
@@ -86,7 +85,7 @@ impl Watcher {
     handler: H,
     watcher_config: &WatcherConfig,
   ) -> BuildResult<Self> {
-    let (tx, rx) = mpsc::unbounded_channel();
+    let (tx, rx) = async_channel::unbounded();
     let closed = Arc::new(AtomicBool::new(false));
     let tasks = Self::create_tasks(configs, watcher_config, &tx, &closed)?;
     let coordinator = WatchCoordinator::new(rx, handler, tasks, watcher_config);
@@ -126,7 +125,7 @@ impl Watcher {
   /// Must be called after `run()` — calling before `run()` will skip cleanup hooks.
   pub async fn close(&self) -> Result<()> {
     self.closed.store(true, std::sync::atomic::Ordering::Relaxed);
-    let _ = self.tx.send(WatcherMsg::Close);
+    let _ = self.tx.send_blocking(WatcherMsg::Close);
     self.wait_for_close().await;
     Ok(())
   }
@@ -134,7 +133,7 @@ impl Watcher {
   fn create_tasks(
     configs: Vec<BundlerConfig>,
     watcher_config: &WatcherConfig,
-    tx: &mpsc::UnboundedSender<WatcherMsg>,
+    tx: &async_channel::Sender<WatcherMsg>,
     closed: &Arc<AtomicBool>,
   ) -> BuildResult<IndexVec<WatchTaskIdx, WatchTask>> {
     let fs_watcher_config = watcher_config.to_fs_watcher_config();

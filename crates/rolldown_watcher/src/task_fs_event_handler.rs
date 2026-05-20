@@ -5,13 +5,12 @@ use crate::watch_task::WatchTaskIdx;
 use crate::watcher_msg::WatcherMsg;
 use rolldown_common::WatcherChangeKind;
 use rolldown_fs_watcher::{FsEventHandler, FsEventResult};
-use tokio::sync::mpsc;
 
 /// Bridge that maps raw notify events to `FileChangeEvent`s and forwards them
 /// to the coordinator via the shared mpsc channel.
 pub struct TaskFsEventHandler {
   pub task_index: WatchTaskIdx,
-  pub tx: mpsc::UnboundedSender<WatcherMsg>,
+  pub tx: async_channel::Sender<WatcherMsg>,
 }
 
 impl TaskFsEventHandler {
@@ -89,7 +88,8 @@ impl FsEventHandler for TaskFsEventHandler {
           .collect();
 
         if !changes.is_empty() {
-          let _ = self.tx.send(WatcherMsg::FileChanges { task_index: self.task_index, changes });
+          let _ =
+            self.tx.send_blocking(WatcherMsg::FileChanges { task_index: self.task_index, changes });
         }
       }
       Err(errors) => {

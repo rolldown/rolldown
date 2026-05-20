@@ -16,7 +16,9 @@ workspace = true
 [dependencies]
 anyhow = { workspace = true }
 arcstr = { workspace = true }
+async-channel = { workspace = true }
 futures = { workspace = true }
+futures-timer = { workspace = true }
 oxc_index = { workspace = true }
 rolldown = { path = "../rolldown", features = ["experimental"] }
 rolldown_common = { workspace = true }

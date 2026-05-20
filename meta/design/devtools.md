@@ -117,7 +117,7 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
 2. `BuildStart` / `BuildEnd` — emitted both around the outer `write()`/`generate()` call and inside `scan_modules()`, so consumers may see nested pairs per build
 3. `trace_action_module_graph_ready()` — emits after scan stage with all modules and their import relationships
 4. `trace_action_chunks_infos()` — emits after chunk graph construction in the generate stage
-5. `trace_action_package_graph_ready()` — emits after chunk graph construction with package metadata discovered from resolved package.json files
+5. `trace_action_package_graph_ready()` — emits after chunk instantiation with package metadata discovered from resolved package.json files
 
 **`PluginDriver`** (plugin hooks):
 

@@ -14,13 +14,13 @@ use std::{
 use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::DashMap;
+use event_listener::Event;
 use rolldown_common::{
   ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, PluginIdx, SharedFileEmitter,
   SharedModuleInfoDashMap,
 };
 use rolldown_utils::dashmap::FxDashSet;
 use sugar_path::SugarPath;
-use event_listener::Event;
 
 use crate::{
   __inner::SharedPluginable,

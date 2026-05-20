@@ -195,19 +195,37 @@ describe('cli options for bundling', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
+  // TEMP DEBUG: loop the rolldown subprocess spawn up to 100 times to surface
+  // the macOS mimalloc TLS flake (SIGABRT + [alloc-diag] from the wrapper in
+  // rolldown_binding/src/lib.rs). Each iteration spawns a fresh process so a
+  // crash on iteration N does not corrupt iteration N+1. The for-loop bails
+  // on first failure via expect(...), keeping CI fast on a hit and bounded
+  // on a miss (100 × ~100ms ≈ 10s). Timeout bumped accordingly.
   it('should handle multiple define arguments with comma-separated syntax', async () => {
     const cwd = cliFixturesDir('cli-option-multiple-define');
-    const status = await $({
-      cwd,
-    })`rolldown index.js --transform.define __A__:A,__B__:B,__C__:C -d dist`;
-    expect(status.exitCode).toBe(0);
-    expect(cleanStdout(status.stdout)).toMatchSnapshot();
-    const file = path.resolve(cwd, 'dist/index.js');
-    const content = fs.readFileSync(file, 'utf-8');
-    expect(content).toContain('console.log("A:", A)');
-    expect(content).toContain('console.log("B:", B)');
-    expect(content).toContain('console.log("C:", C)');
-  });
+    const ITERATIONS = 100;
+    for (let i = 0; i < ITERATIONS; i++) {
+      const status = await $({
+        cwd,
+        reject: false,
+      })`rolldown index.js --transform.define __A__:A,__B__:B,__C__:C -d dist`;
+      if (status.exitCode !== 0) {
+        throw new Error(
+          `iteration ${i + 1}/${ITERATIONS} failed: exitCode=${status.exitCode} signal=${status.signal}\n--- stdout ---\n${status.stdout}\n--- stderr ---\n${status.stderr}`,
+        );
+      }
+      if (i === ITERATIONS - 1) {
+        // Only validate snapshot/contents on the final clean iteration so
+        // we don't waste IO on every spin.
+        expect(cleanStdout(status.stdout)).toMatchSnapshot();
+        const file = path.resolve(cwd, 'dist/index.js');
+        const content = fs.readFileSync(file, 'utf-8');
+        expect(content).toContain('console.log("A:", A)');
+        expect(content).toContain('console.log("B:", B)');
+        expect(content).toContain('console.log("C:", C)');
+      }
+    }
+  }, 60_000);
 
   it('cli default options', async () => {
     const cwd = cliFixturesDir('cli-default-option');

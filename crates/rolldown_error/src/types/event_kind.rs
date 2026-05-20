@@ -123,6 +123,8 @@ pub enum EventKind {
   /// Such modules can significantly slow down module resolution. Consider using
   /// [`@rolldown/plugin-transform-imports`](https://github.com/rolldown/plugins/tree/main/packages/transform-imports)
   /// to rewrite barrel imports at the source level so the barrel file is never loaded.
+  ///
+  /// See [Large barrel modules](https://rolldown.rs/in-depth/lazy-barrel-optimization#large-barrel-modules) for more details.
   LargeBarrelModules = 46,
 }
 

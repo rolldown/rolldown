@@ -132,17 +132,19 @@ impl ClassicBundler {
         plugin_driver.close_bundle(None).await?;
       }
       if let Some(rx) = devtools_flush_rx {
-        // Block on the writer-thread ack in a blocking task so we don't stall
-        // a tokio worker. Bounded wait so a hung writer thread (e.g. stalled
-        // fs I/O on an NFS disconnect) can't wedge `bundle.close()` forever.
-        // All three failure modes (timeout, writer disconnected, blocking task
-        // panicked) are surfaced as errors so the documented "logs readable
-        // after close()" contract does not silently break.
-        let join_result = napi::tokio::task::spawn_blocking(move || {
-          rx.recv_timeout(std::time::Duration::from_secs(30))
-        })
-        .await
-        .map_err(|err| anyhow::anyhow!("devtools flush task failed to join: {err}"))?;
+        // Wait for the writer-thread ack on a dedicated thread so the calling
+        // future (and napi's tokio worker driving it) isn't blocked for the
+        // full 30 s. A futures::channel::oneshot bridges the recv result
+        // back into the async surface. Both timeout and channel-disconnect
+        // surface as errors so the documented "logs readable after close()"
+        // contract does not silently break.
+        let (done_tx, done_rx) = futures::channel::oneshot::channel();
+        std::thread::spawn(move || {
+          let _ = done_tx.send(rx.recv_timeout(std::time::Duration::from_secs(30)));
+        });
+        let join_result = done_rx
+          .await
+          .map_err(|err| anyhow::anyhow!("devtools flush task failed to join: {err}"))?;
         match join_result {
           Ok(()) => {}
           Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {

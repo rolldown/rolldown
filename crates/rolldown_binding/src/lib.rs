@@ -85,31 +85,31 @@ pub fn start_async_runtime() {
 fn init() {
   #[cfg(not(target_family = "wasm"))]
   {
-    use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
-    let max_blocking_threads = std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
-      .ok()
-      .and_then(|v| v.parse::<usize>().ok())
-      // default value in tokio implementation is **512**
-      // it's too high for us
-      // we don't have that many `blocking` tasks to run at this moment
-      .unwrap_or(4);
+    // Bundling parallelism now runs on rayon (module tasks, scope, codegen,
+    // minification all use rayon::par_iter / rayon::spawn). Honour
+    // ROLLDOWN_WORKER_THREADS here by sizing rayon's global pool — that's
+    // the threadpool that actually does the work. Default keeps the
+    // previous tuning (1.5x physical cores, biased high because rolldown
+    // does a lot of mostly-CPU work with short awaits).
     let worker_threads = std::env::var("ROLLDOWN_WORKER_THREADS")
       .ok()
       .and_then(|v| v.parse::<usize>().ok())
-      // unlike the web server scenario
-      // rolldown puts a lot of blocking tasks in the worker threads rather than blocking_threads
-      // so we need to increase the worker threads rather than the blocking_threads
       .unwrap_or(num_cpus::get_physical() * 3 / 2);
-    let mut builder = tokio::runtime::Builder::new_multi_thread();
+    // build_global() returns Err if the global pool was already initialised
+    // (e.g. the host process configured it before loading rolldown). That
+    // case is fine — we leave the existing pool alone instead of panicking.
+    let _ = rayon::ThreadPoolBuilder::new()
+      .num_threads(worker_threads)
+      .thread_name(|i| format!("rolldown-worker-{i}"))
+      .build_global();
 
-    let rt = builder
-      .max_blocking_threads(max_blocking_threads)
-      .worker_threads(worker_threads)
-      .thread_name("rolldown-worker")
-      .enable_all()
-      .build()
-      .expect("Failed to create tokio runtime");
-    create_custom_tokio_runtime(rt);
+    // napi-rs still backs `#[napi] async fn` Promises with its own tokio
+    // runtime; we no longer need to customise its worker-thread count
+    // because the Promise futures themselves don't do heavy work — they
+    // just await calls into rolldown which runs on rayon.
+    // ROLLDOWN_MAX_BLOCKING_THREADS used to size tokio's blocking pool;
+    // after the Phase 3 refactor nothing in the build path calls
+    // tokio::task::spawn_blocking, so it's no longer wired up.
   }
 
   #[cfg(not(feature = "disable_panic_hook"))]

@@ -35,6 +35,7 @@ oxc_resolver = { workspace = true }
 oxc_resolver_napi = { workspace = true }
 oxc_sourcemap = { workspace = true }
 oxc_transform_napi = { workspace = true }
+rayon = { workspace = true }
 rolldown = { workspace = true, features = ["experimental"] }
 rolldown_common = { workspace = true }
 rolldown_dev = { workspace = true }

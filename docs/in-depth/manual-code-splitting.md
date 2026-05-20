@@ -401,11 +401,13 @@ export const value = 'a' + value;
 
 You could see, to make `a.js` work, we have to change the export signature of the entry chunk `entry.js` and add an additional export `value`. This totally violates the original intention of the code, which is to only export `foo` from `entry.js`.
 
-If you don't want this behavior, you could use [`codeSplitting.includeDependenciesRecursively: false`](/reference/OutputOptions.codeSplitting#includedependenciesrecursively) to disable it.
+If you don't want this behavior, you could use [`codeSplitting.includeDependenciesRecursively: false`](/reference/OutputOptions.codeSplitting#includedependenciesrecursively) to disable it for all groups, or set `codeSplitting.groups[].includeDependenciesRecursively: false` to disable it for a specific group.
+
+When both are set, the group value wins. Groups without a local value inherit `codeSplitting.includeDependenciesRecursively`, which defaults to `true`.
 
 :::warning Caveats
 
-With `includeDependenciesRecursively: false`, depended modules of a group might be left in the entry chunks. It's invalid to export non-entry module from an entry chunk. To avoid this, Rolldown will implicitly set `preserveEntrySignatures: 'allow-extension'` if you didn't set it explicitly.
+With `includeDependenciesRecursively: false`, depended modules of a group might be left in the entry chunks. Another group may still capture those dependencies according to group priority and assignment order. It's invalid to export non-entry module from an entry chunk. To avoid this, Rolldown will implicitly set `preserveEntrySignatures: 'allow-extension'` if you didn't set it explicitly.
 
 - [`InputOptions.preserveEntrySignatures: false | 'allow-extension'`](/reference/InputOptions.preserveEntrySignatures)
 

@@ -2,7 +2,7 @@
 
 ## Summary
 
-Manual code splitting lets users define chunk boundaries via `manualCodeSplitting.groups`. Each group has a `name`, a `test` pattern to match modules, and optional size/priority controls. Matched modules (and optionally their dependencies) are pulled into dedicated chunks instead of being split by the automatic algorithm.
+Manual code splitting lets users define chunk boundaries via `manualCodeSplitting.groups`. Each group has a `name`, a `test` pattern to match modules, and optional size/priority controls. Matched modules (and optionally their dependencies) are pulled into dedicated chunks instead of being split by the automatic algorithm. Dependency capture can be configured globally with `codeSplitting.includeDependenciesRecursively` or per group with `groups[].includeDependenciesRecursively`; the group value wins, otherwise the global value is used, otherwise the default is `true`.
 
 ## Important features
 
@@ -47,7 +47,7 @@ Entry A loads all three vendor chunks. Entry B loads the first two. Entry C load
 
 #### Why flat-then-split matters
 
-The split must happen **after** collecting all modules into a flat group. If subgroups are created during the build phase (per module's own bits), `includeDependenciesRecursively` adds shared dependencies to each subgroup independently:
+The split must happen **after** collecting all modules into a flat group. Group-local `includeDependenciesRecursively` is still resolved while building that flat group; the `entriesAware` split happens afterward. If subgroups are created during the build phase (per module's own bits), `includeDependenciesRecursively` adds shared dependencies to each subgroup independently:
 
 ```
 BAD: subgroups during build (dependencies duplicated)

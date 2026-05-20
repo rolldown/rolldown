@@ -1326,6 +1326,12 @@
           ],
           "format": "double"
         },
+        "includeDependenciesRecursively": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "entriesAware": {
           "type": [
             "boolean",

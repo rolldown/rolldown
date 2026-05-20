@@ -43,13 +43,12 @@ async fn _test_block_on_spawn_all_non_static_future() {
   let _ = block_on_spawn_all(std::iter::once(non_static_future)).await;
 }
 
+/// Synchronously drive a future to completion on the current thread.
+///
+/// Backed by `pollster`, a tiny single-thread parker. Runtime-agnostic — no
+/// tokio runtime is required in scope — and reentrant, so call sites inside
+/// sync fns can `block_on` a future even if the calling thread is already
+/// inside another `block_on`.
 pub fn block_on<F: Future>(f: F) -> F::Output {
-  #[cfg(target_family = "wasm")]
-  {
-    futures::executor::block_on(f)
-  }
-  #[cfg(not(target_family = "wasm"))]
-  {
-    tokio::task::block_in_place(move || tokio::runtime::Handle::current().block_on(f))
-  }
+  pollster::block_on(f)
 }

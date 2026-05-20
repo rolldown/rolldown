@@ -47,6 +47,7 @@ rolldown_std_utils = { workspace = true }
 rustc-hash = { workspace = true }
 serde_json = { workspace = true }
 simdutf8 = { workspace = true }
+pollster = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }

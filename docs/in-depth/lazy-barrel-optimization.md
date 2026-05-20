@@ -323,7 +323,7 @@ Lazy barrel skips loading, parsing, and transforming unused re-exports, but the 
 
 A typical example is `@mui/icons-material/esm/index.js`, which contains more than 10,000 re-export entries. When such a file is loaded, Rolldown still issues a resolve for every one of them, even though lazy barrel ensures only the requested icons are loaded and transformed afterwards.
 
-When the experimental `lazyBarrel` flag is on and a barrel has more than 5,000 re-exports, Rolldown emits an info-level advice with the code `LARGE_BARREL_MODULES`:
+When `experimental.lazyBarrel` is enabled and a barrel module contains more than 5,000 re-exports, Rolldown emits an info-level advice with the code `LARGE_BARREL_MODULES`:
 
 ```
 advice[LARGE_BARREL_MODULES]: node_modules/@mui/icons-material/esm/index.js has 10611 re-exports. Eagerly resolving every entry can significantly slow down the build. Consider using `@rolldown/plugin-transform-imports` to rewrite imports at the source level so the barrel file is never loaded.

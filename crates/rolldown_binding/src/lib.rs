@@ -163,34 +163,56 @@ mod diag_alloc {
   // string pointers returned by `dladdr` live in the loaded image's symbol
   // table, so we read them in-place without copying. `rustc_demangle`
   // streams demangled output through fmt::Write (no heap alloc).
+  //
+  // The IP line is flushed FIRST as a standalone line before any dladdr
+  // call so that, even if dladdr (or symbol resolution) crashes on a bogus
+  // address, we still get the raw IP recorded in stderr.
   #[cfg(unix)]
   fn write_frame(ip: *mut c_void) {
-    let mut info: libc::Dl_info = unsafe { core::mem::zeroed() };
-    let mut fbuf = [0u8; 1024];
-    let mut bw = StackBuf { buf: &mut fbuf, pos: 0 };
-    write_timestamp(&mut bw);
-    let _ = write!(bw, "  0x{:x}", ip.addr());
+    // 1. Always-flushed IP line.
+    {
+      let mut ip_buf = [0u8; 64];
+      let mut ip_bw = StackBuf { buf: &mut ip_buf, pos: 0 };
+      write_timestamp(&mut ip_bw);
+      let _ = writeln!(ip_bw, "  0x{:x}", ip.addr());
+      let ip_len = ip_bw.pos;
+      write_stderr(&ip_buf[..ip_len]);
+    }
 
+    // 2. Best-effort symbol + binary on a follow-up indented line.
+    let mut info: libc::Dl_info = unsafe { core::mem::zeroed() };
     let ok = unsafe { libc::dladdr(ip.cast_const(), &raw mut info) };
-    if ok != 0 {
-      if !info.dli_sname.is_null() {
-        if let Ok(sym) = unsafe { CStr::from_ptr(info.dli_sname) }.to_str() {
-          let saddr = info.dli_saddr as usize;
-          let off = ip.addr().saturating_sub(saddr);
-          let _ = write!(bw, "  {}+0x{:x}", rustc_demangle::demangle(sym), off);
-        }
+    if ok == 0 {
+      return;
+    }
+
+    let mut sym_buf = [0u8; 1024];
+    let mut sw = StackBuf { buf: &mut sym_buf, pos: 0 };
+    let mut any = false;
+
+    if !info.dli_sname.is_null() {
+      if let Ok(sym) = unsafe { CStr::from_ptr(info.dli_sname) }.to_str() {
+        let off = ip.addr().saturating_sub(info.dli_saddr.addr());
+        let _ = write!(sw, "      {}+0x{:x}", rustc_demangle::demangle(sym), off);
+        any = true;
       }
-      if !info.dli_fname.is_null() {
-        if let Ok(fpath) = unsafe { CStr::from_ptr(info.dli_fname) }.to_str() {
-          let base = fpath.rsplit('/').next().unwrap_or(fpath);
-          let _ = write!(bw, "  ({base})");
+    }
+    if !info.dli_fname.is_null() {
+      if let Ok(fpath) = unsafe { CStr::from_ptr(info.dli_fname) }.to_str() {
+        let base = fpath.rsplit('/').next().unwrap_or(fpath);
+        if any {
+          let _ = write!(sw, " ({base})");
+        } else {
+          let _ = write!(sw, "      ({base})");
+          any = true;
         }
       }
     }
-
-    let _ = writeln!(bw);
-    let len = bw.pos;
-    write_stderr(&fbuf[..len]);
+    if any {
+      let _ = writeln!(sw);
+      let len = sw.pos;
+      write_stderr(&sym_buf[..len]);
+    }
   }
 
   #[cold]

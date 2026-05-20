@@ -210,8 +210,19 @@ describe('cli options for bundling', () => {
         reject: false,
       })`rolldown index.js --transform.define __A__:A,__B__:B,__C__:C -d dist`;
       if (status.exitCode !== 0) {
+        // Bypass vitest's Error.message truncation (~1000 chars) which would
+        // hide everything past the [alloc-diag] header. process.stderr.write
+        // goes straight to the underlying stream.
+        process.stderr.write(
+          `\n=== ITER ${i + 1}/${ITERATIONS} FAILED signal=${status.signal} exitCode=${status.exitCode} ===\n`,
+        );
+        process.stderr.write('=== child stdout ===\n');
+        process.stderr.write(String(status.stdout));
+        process.stderr.write('\n=== child stderr ===\n');
+        process.stderr.write(String(status.stderr));
+        process.stderr.write('\n=== end ===\n');
         throw new Error(
-          `iteration ${i + 1}/${ITERATIONS} failed: exitCode=${status.exitCode} signal=${status.signal}\n--- stdout ---\n${status.stdout}\n--- stderr ---\n${status.stderr}`,
+          `iteration ${i + 1}/${ITERATIONS} failed (see process.stderr above for full child output)`,
         );
       }
       if (i === ITERATIONS - 1) {

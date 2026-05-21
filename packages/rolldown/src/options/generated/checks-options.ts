@@ -181,4 +181,10 @@ export interface ChecksOptions {
    * @default true
    * */
   largeBarrelModules?: boolean;
+
+  /**
+   * Whether to emit warnings when a plugin transforms code without generating a sourcemap.
+   * @default true
+   * */
+  sourcemapBroken?: boolean;
 }

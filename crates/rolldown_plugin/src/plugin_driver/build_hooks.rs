@@ -19,7 +19,6 @@ use rolldown_devtools::{action, trace_action};
 use rolldown_error::CausedPlugin;
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::{IndexBitSet, unique_arc::UniqueArc};
-use string_wizard::{MagicString, SourceMapOptions};
 use tracing::{Instrument, debug_span};
 
 impl PluginDriver {
@@ -297,10 +296,25 @@ impl PluginDriver {
       self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
+        let map_was_omitted = matches!(r.map, crate::HookTransformOutputMap::Omitted);
+        let has_code = r.code.is_some();
         if let Some(map) =
           self.normalize_transform_sourcemap(r.map.into_sourcemap(), id, &code, r.code.as_ref())
         {
           original_sourcemap_chain.push(SourcemapChainElement::Transform((plugin_idx, map)));
+        } else if map_was_omitted && has_code {
+          // The plugin returned a transform result without setting `map`
+          // (JS `undefined`). Mirror Rollup's `{ missing: true, plugin }`
+          // chain entry: push a sentinel so that, at chunk-render time,
+          // sourcemap collapse can emit `SOURCEMAP_BROKEN` only if this
+          // module's transformed code actually contributes to a chunk.
+          // Eagerly warning here flagged transforms (e.g. `vite:build-html`)
+          // whose output never reaches a chunk, which Rollup does not warn
+          // about.
+          original_sourcemap_chain.push(SourcemapChainElement::Omitted {
+            plugin_idx,
+            plugin_name: plugin.call_name().as_ref().into(),
+          });
         }
         plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
         if let Some(v) = r.side_effects {
@@ -347,36 +361,21 @@ impl PluginDriver {
     map: Option<SourceMap>,
     id: &str,
     original_code: &str,
-    code: Option<&String>,
+    _code: Option<&String>,
   ) -> Option<SourceMap> {
-    if let Some(mut map) = map {
-      // If sourcemap  hasn't `sources`, using original id to fill it.
-      let source = map.get_source(0);
-      if source.is_none_or(|s| s.is_empty())
-        || (map.get_sources().count() == 1 && (source.map(AsRef::as_ref) != Some(id)))
-      {
-        map.set_sources(vec![id]);
-      }
-      // If sourcemap hasn't `sourcesContent`, using original code to fill it.
-      if map.get_source_content(0).is_none_or(|s| s.is_empty()) {
-        map.set_source_contents(vec![Some(original_code)]);
-      }
-      Some(map)
-    } else if let Some(code) = code {
-      if original_code == code {
-        None
-      } else {
-        // If sourcemap is empty and code has changed, need to create one remapping original code.
-        let magic_string = MagicString::new(original_code);
-        Some(magic_string.source_map(SourceMapOptions {
-          hires: string_wizard::Hires::Boundary,
-          include_content: true,
-          source: id.into(),
-        }))
-      }
-    } else {
-      None
+    let mut map = map?;
+    // If sourcemap hasn't `sources`, using original id to fill it.
+    let source = map.get_source(0);
+    if source.is_none_or(|s| s.is_empty())
+      || (map.get_sources().count() == 1 && (source.map(AsRef::as_ref) != Some(id)))
+    {
+      map.set_sources(vec![id]);
     }
+    // If sourcemap hasn't `sourcesContent`, using original code to fill it.
+    if map.get_source_content(0).is_none_or(|s| s.is_empty()) {
+      map.set_source_contents(vec![Some(original_code)]);
+    }
+    Some(map)
   }
 
   #[tracing::instrument(

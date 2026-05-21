@@ -44,6 +44,16 @@ pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, lines: u32) -> SourceMap
   )
 }
 
+/// Builds an empty sourcemap with no tokens, sources, names, or contents.
+///
+/// Used as a sentinel in `collapse_sourcemaps` for an `Omitted` chain element
+/// (a transform hook that changed code but returned no map). Token lookups
+/// through this map always fail, so the collapsed result loses all mappings
+/// up to that point — mirroring Rollup's empty-mappings `Link`.
+pub fn empty_sourcemap() -> SourceMap {
+  SourceMap::new(None, vec![], None, vec![], vec![], Box::new([]), None)
+}
+
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
 pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
   debug_assert!(sourcemap_chain.len() > 1);

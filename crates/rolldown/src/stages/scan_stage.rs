@@ -265,24 +265,28 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
         for element in module.sourcemap_chain.drain(..) {
           match element {
             SourcemapChainElement::Load(_) => load_elements.push(element),
-            SourcemapChainElement::Transform(_) => transform_elements.push(element),
+            SourcemapChainElement::Transform(_) | SourcemapChainElement::Omitted { .. } => {
+              transform_elements.push(element);
+            }
           }
         }
 
         // Sort only Transform elements by plugin order
         transform_elements.sort_by(|a, b| {
-          if let (
-            SourcemapChainElement::Transform((a_plugin_idx, _)),
-            SourcemapChainElement::Transform((b_plugin_idx, _)),
-          ) = (a, b)
-          {
-            let a_order =
-              transform_plugin_order_map.get(a_plugin_idx).copied().unwrap_or(usize::MAX);
-            let b_order =
-              transform_plugin_order_map.get(b_plugin_idx).copied().unwrap_or(usize::MAX);
-            a_order.cmp(&b_order)
-          } else {
-            std::cmp::Ordering::Equal
+          let plugin_idx_of = |el: &SourcemapChainElement| match el {
+            SourcemapChainElement::Transform((plugin_idx, _))
+            | SourcemapChainElement::Omitted { plugin_idx, .. } => Some(*plugin_idx),
+            SourcemapChainElement::Load(_) => None,
+          };
+          match (plugin_idx_of(a), plugin_idx_of(b)) {
+            (Some(a_plugin_idx), Some(b_plugin_idx)) => {
+              let a_order =
+                transform_plugin_order_map.get(&a_plugin_idx).copied().unwrap_or(usize::MAX);
+              let b_order =
+                transform_plugin_order_map.get(&b_plugin_idx).copied().unwrap_or(usize::MAX);
+              a_order.cmp(&b_order)
+            }
+            _ => std::cmp::Ordering::Equal,
           }
         });
 

@@ -3,7 +3,7 @@ use std::{ops::Deref, sync::Arc};
 use crate::PluginContext;
 use arcstr::ArcStr;
 use rolldown_common::{ModuleIdx, PluginIdx, SourceMapGenMsg, SourcemapChainElement};
-use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
+use rolldown_sourcemap::{SourceMap, collapse_sourcemaps, empty_sourcemap};
 use rolldown_utils::unique_arc::WeakRef;
 use std::sync::mpsc;
 use string_wizard::{MagicString, SourceMapOptions};
@@ -34,23 +34,28 @@ impl TransformPluginContext {
 
   pub fn get_combined_sourcemap(&self) -> SourceMap {
     self.sourcemap_chain.with_inner(|sourcemap_chain| {
+      // Materialize a sentinel for any `Omitted` chain entry so we can pass
+      // `&SourceMap` references to `collapse_sourcemaps`. Mirrors Rollup's
+      // empty-mappings Link: tokens looked up through this map drop out,
+      // producing a "broken" combined sourcemap — the right signal for a
+      // plugin whose upstream transform threw away its sourcemap.
+      let empty_map = empty_sourcemap();
+      let resolve = |element: &SourcemapChainElement| -> SourceMap {
+        match element {
+          SourcemapChainElement::Transform((_, sourcemap))
+          | SourcemapChainElement::Load(sourcemap) => sourcemap.clone(),
+          SourcemapChainElement::Omitted { .. } => empty_map.clone(),
+        }
+      };
       if sourcemap_chain.is_empty() {
         self.create_sourcemap()
       } else if sourcemap_chain.len() == 1 {
-        match sourcemap_chain.first().expect("should have one sourcemap") {
-          SourcemapChainElement::Transform((_, sourcemap))
-          | SourcemapChainElement::Load(sourcemap) => sourcemap.clone(),
-        }
+        resolve(sourcemap_chain.first().expect("should have one sourcemap"))
       } else {
-        let sourcemap_chain = sourcemap_chain
-          .iter()
-          .map(|element| match element {
-            SourcemapChainElement::Transform((_, sourcemap))
-            | SourcemapChainElement::Load(sourcemap) => sourcemap,
-          })
-          .collect::<Vec<_>>();
+        let owned: Vec<SourceMap> = sourcemap_chain.iter().map(resolve).collect();
+        let refs: Vec<&SourceMap> = owned.iter().collect();
         // TODO Here could be cache result for pervious sourcemap_chain, only remapping new sourcemap chain
-        collapse_sourcemaps(&sourcemap_chain)
+        collapse_sourcemaps(&refs)
       }
     })
   }

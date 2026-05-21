@@ -110,6 +110,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
+    let mut warnings = vec![];
     let (source, module_type) = self
       .load_source(&mut sourcemap_chain, &mut hook_side_effects, self.magic_string_tx.clone())
       .await?;
@@ -124,8 +125,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         "Bundling CSS is no longer supported (experimental support has been removed). See https://github.com/rolldown/rolldown/issues/4271 for details.".to_string())
       )?;
     }
-
-    let mut warnings = vec![];
 
     let CreateEcmaViewReturn { mut ecma_view, ecma_related, raw_import_records, tla_keyword_span } =
       create_ecma_view(

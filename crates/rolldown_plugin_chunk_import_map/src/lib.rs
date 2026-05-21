@@ -6,7 +6,7 @@ use std::{
 
 use arcstr::ArcStr;
 use rolldown_common::{EmittedAsset, Output};
-use rolldown_plugin::{HookRenderChunkOutput, HookUsage, Plugin};
+use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutputMap, HookUsage, Plugin};
 use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::{HASH_PLACEHOLDER_LEFT_FINDER, find_hash_placeholders},
@@ -94,7 +94,7 @@ impl Plugin for ChunkImportMapPlugin {
         code.as_bytes_mut()[start..end].copy_from_slice(hash.as_bytes());
       }
     }
-    Ok(Some(HookRenderChunkOutput { code, map: None }))
+    Ok(Some(HookRenderChunkOutput { code, map: HookTransformOutputMap::Null }))
   }
 
   fn render_chunk_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {

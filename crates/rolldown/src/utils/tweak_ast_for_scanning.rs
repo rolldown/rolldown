@@ -7,7 +7,7 @@ use oxc::span::{GetSpanMut, SPAN, Span};
 use rolldown_ecmascript_utils::{AstSnippet, StatementExt};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-pub fn drop_import_defer_phase<'ast>(program: &mut ast::Program<'ast>) {
+pub fn drop_import_defer_phase(program: &mut ast::Program<'_>) {
   ImportDeferPhaseDropper.visit_program(program);
 }
 

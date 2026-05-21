@@ -210,20 +210,21 @@ describe('cli options for bundling', () => {
         reject: false,
       })`rolldown index.js --transform.define __A__:A,__B__:B,__C__:C -d dist`;
       if (status.exitCode !== 0) {
-        // Bypass vitest's Error.message truncation (~1000 chars) which would
-        // hide everything past the [alloc-diag] header. process.stderr.write
-        // goes straight to the underlying stream.
-        process.stderr.write(
-          `\n=== ITER ${i + 1}/${ITERATIONS} FAILED signal=${status.signal} exitCode=${status.exitCode} ===\n`,
-        );
-        process.stderr.write('=== child stdout ===\n');
-        process.stderr.write(String(status.stdout));
-        process.stderr.write('\n=== child stderr ===\n');
-        process.stderr.write(String(status.stderr));
-        process.stderr.write('\n=== end ===\n');
-        throw new Error(
-          `iteration ${i + 1}/${ITERATIONS} failed (see process.stderr above for full child output)`,
-        );
+        // Bypass vitest's stream capture entirely: fs.writeSync(2, ...) is a
+        // raw write(2) syscall — neither vitest nor Node stream wrappers can
+        // intercept, buffer, or truncate it. Big sentinels make the section
+        // greppable in CI logs even when surrounded by hundreds of MB of
+        // other output. Search CI log for `ALLOC-DIAG` to locate.
+        const banner =
+          `\n########## ALLOC-DIAG iter ${i + 1}/${ITERATIONS} BEGIN ##########\n` +
+          `signal=${status.signal} exitCode=${status.exitCode}\n` +
+          `--- child stdout ---\n` +
+          String(status.stdout ?? '') +
+          `\n--- child stderr ---\n` +
+          String(status.stderr ?? '') +
+          `\n########## ALLOC-DIAG iter ${i + 1}/${ITERATIONS} END ##########\n`;
+        fs.writeSync(2, banner);
+        throw new Error(`iteration ${i + 1}/${ITERATIONS} failed (grep CI log for "ALLOC-DIAG")`);
       }
       if (i === ITERATIONS - 1) {
         // Only validate snapshot/contents on the final clean iteration so

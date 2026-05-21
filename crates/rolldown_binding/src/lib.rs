@@ -159,27 +159,25 @@ mod diag_alloc {
   #[cfg(not(unix))]
   fn write_timestamp(_bw: &mut StackBuf<'_>) {}
 
-  // Resolve a return-address frame via `dladdr` + `rustc-demangle`. All
-  // string pointers returned by `dladdr` live in the loaded image's symbol
-  // table, so we read them in-place without copying. `rustc_demangle`
-  // streams demangled output through fmt::Write (no heap alloc).
-  //
-  // The IP line is flushed FIRST as a standalone line before any dladdr
-  // call so that, even if dladdr (or symbol resolution) crashes on a bogus
-  // address, we still get the raw IP recorded in stderr.
+  // Print a single raw return-address line. No dladdr, no string deref.
+  // Cannot crash beyond what `libc::write` / `clock_gettime` could.
   #[cfg(unix)]
-  fn write_frame(ip: *mut c_void) {
-    // 1. Always-flushed IP line.
-    {
-      let mut ip_buf = [0u8; 64];
-      let mut ip_bw = StackBuf { buf: &mut ip_buf, pos: 0 };
-      write_timestamp(&mut ip_bw);
-      let _ = writeln!(ip_bw, "  0x{:x}", ip.addr());
-      let ip_len = ip_bw.pos;
-      write_stderr(&ip_buf[..ip_len]);
-    }
+  fn write_raw_ip(ip: *mut c_void) {
+    let mut ip_buf = [0u8; 64];
+    let mut ip_bw = StackBuf { buf: &mut ip_buf, pos: 0 };
+    write_timestamp(&mut ip_bw);
+    let _ = writeln!(ip_bw, "  0x{:x}", ip.addr());
+    let ip_len = ip_bw.pos;
+    write_stderr(&ip_buf[..ip_len]);
+  }
 
-    // 2. Best-effort symbol + binary on a follow-up indented line.
+  // Best-effort symbolication for a single frame. Calls `dladdr` and
+  // dereferences its returned C strings. Has been observed to abort the
+  // process on certain frames (likely a libdyld lock contention or assert
+  // when called from a wedged-allocator state), which is why this is run
+  // as a *second pass* after every raw IP has already been flushed.
+  #[cfg(unix)]
+  fn write_symbol_for(ip: *mut c_void) {
     let mut info: libc::Dl_info = unsafe { core::mem::zeroed() };
     let ok = unsafe { libc::dladdr(ip.cast_const(), &raw mut info) };
     if ok == 0 {
@@ -188,24 +186,22 @@ mod diag_alloc {
 
     let mut sym_buf = [0u8; 1024];
     let mut sw = StackBuf { buf: &mut sym_buf, pos: 0 };
+    write_timestamp(&mut sw);
+    let _ = write!(sw, "  sym 0x{:x}", ip.addr());
     let mut any = false;
 
     if !info.dli_sname.is_null() {
       if let Ok(sym) = unsafe { CStr::from_ptr(info.dli_sname) }.to_str() {
         let off = ip.addr().saturating_sub(info.dli_saddr.addr());
-        let _ = write!(sw, "      {}+0x{:x}", rustc_demangle::demangle(sym), off);
+        let _ = write!(sw, "  {}+0x{:x}", rustc_demangle::demangle(sym), off);
         any = true;
       }
     }
     if !info.dli_fname.is_null() {
       if let Ok(fpath) = unsafe { CStr::from_ptr(info.dli_fname) }.to_str() {
         let base = fpath.rsplit('/').next().unwrap_or(fpath);
-        if any {
-          let _ = write!(sw, " ({base})");
-        } else {
-          let _ = write!(sw, "      ({base})");
-          any = true;
-        }
+        let _ = write!(sw, "  ({base})");
+        any = true;
       }
     }
     if any {
@@ -239,9 +235,10 @@ mod diag_alloc {
     let len = bw.pos;
     write_stderr(&buf[..len]);
 
-    // 2. Symbolicated frames via FP-chain walk + dladdr + rustc-demangle.
-    //    Print the count alongside the header so if zero frames come back
-    //    we at least know capture failed (vs. write_frame failing silently).
+    // 2. Two-pass backtrace: first flush every raw IP so a later dladdr
+    //    crash cannot destroy the address list, then attempt symbolication
+    //    in a second pass. Symbol lookup can crash on certain frames when
+    //    libdyld is in a fragile state; raw IPs survive that.
     #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
       let mut frames: [*mut c_void; 64] = [core::ptr::null_mut(); 64];
@@ -249,12 +246,17 @@ mod diag_alloc {
 
       let mut hdr = [0u8; 96];
       let mut hbw = StackBuf { buf: &mut hdr, pos: 0 };
-      let _ = writeln!(hbw, "[alloc-diag] backtrace ({n} frames):");
+      let _ = writeln!(hbw, "[alloc-diag] backtrace ({n} frames) raw IPs:");
       let hlen = hbw.pos;
       write_stderr(&hdr[..hlen]);
 
       for ip in &frames[..n] {
-        write_frame(*ip);
+        write_raw_ip(*ip);
+      }
+
+      write_stderr(b"[alloc-diag] symbolicating (may abort partway):\n");
+      for ip in &frames[..n] {
+        write_symbol_for(*ip);
       }
     }
 

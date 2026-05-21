@@ -30,19 +30,24 @@ use napi_derive::napi;
 // SIGABRT" spiral, which hides the information needed to root-cause
 // allocator failures (e.g. the macOS FIXED_SLOT/DYNAMIC_PTHREADS issue).
 //
-// Output strategy (every step is allocation-free):
+// Output strategy (the abort path is allocation-free and dyld-free):
 //   - Each line is prefixed with `[t=SEC.MICROSEC]` from CLOCK_MONOTONIC, so
 //     cross-thread chronology can be reconstructed even when execa/vitest
 //     prints stderr and stdout in separate blocks.
 //   - Basic line (size/align/thread) goes out first via raw libc::write so
 //     it always reaches stderr.
 //   - Backtrace via a manual FP-chain walk (alloc-free, signal-safe).
-//     Each frame is resolved through dyld's image-list APIs
-//     (`_dyld_image_count` / `_dyld_get_image_header` / `_dyld_get_image_name`)
-//     to produce `IP  image+0xOFFSET  base=0xBASE` lines. Offline
-//     symbolication: `atos -arch arm64 -o <image-path> -l 0x<base> 0x<ip>`.
-//     `dladdr` is intentionally avoided — observed to SIGABRT from a
-//     wedged-allocator state on macOS.
+//     Each frame prints two independent writes:
+//       1. `  0x<ip>` — guaranteed flush, no library calls
+//       2. `      -> <image>+0x<offset>  base=0x<base>` — best-effort,
+//          uses a *cached* image table populated once at module load
+//          (see `init_image_cache`).
+//   - `dladdr` and live `_dyld_image_count` calls are INTENTIONALLY avoided
+//     — both have been observed to SIGABRT the process when called from
+//     a wedged-allocator state on macOS. The cache snapshots the image
+//     list while dyld is still healthy.
+//   - Offline symbolication of a raw IP:
+//     `atos -arch arm64 -o <image-path> -l 0x<base> 0x<ip>`
 #[cfg(all(
   not(target_family = "wasm"),
   not(feature = "default_global_allocator"),
@@ -162,10 +167,11 @@ mod diag_alloc {
   #[cfg(not(unix))]
   fn write_timestamp(_bw: &mut StackBuf<'_>) {}
 
-  // dyld image-list APIs (mach-o.dylib). Read-only access to dyld's
-  // gAllImages vector — no locks, no allocations. Unlike `dladdr`, these
-  // are safe to call from a wedged-allocator state because they don't
-  // walk symbol tables or take internal mutexes that dladdr asserts on.
+  // dyld image-list APIs (libSystem). Called *only* from
+  // `init_image_cache()` at module load time, never from the abort path.
+  // Empirically `_dyld_image_count` and friends will SIGABRT the process
+  // when called from a wedged-allocator state on macOS (same failure mode
+  // as `dladdr`), so we cache results once when dyld is healthy.
   #[cfg(target_os = "macos")]
   unsafe extern "C" {
     fn _dyld_image_count() -> u32;
@@ -173,60 +179,108 @@ mod diag_alloc {
     fn _dyld_get_image_name(image_index: u32) -> *const core::ffi::c_char;
   }
 
-  // Find which loaded image contains `addr` via linear scan of the dyld
-  // image list. Returns (base, name) for the image with the greatest base
-  // <= addr. Bounded by image count (~200 on a typical Node process),
-  // microseconds total. Allocation-free.
+  #[derive(Copy, Clone)]
+  struct ImageEntry {
+    base: usize,
+    // dyld's image-name strings live for the lifetime of the process;
+    // safe to borrow as &'static.
+    name: &'static str,
+  }
+
+  /// Cached image table populated once at module load. After init, lookups
+  /// in the abort path are pure slice reads — no library calls, no locks,
+  /// no allocations, no dyld touch.
   #[cfg(target_os = "macos")]
-  fn find_image_for(addr: usize) -> Option<(usize, &'static str)> {
-    let count = unsafe { _dyld_image_count() };
+  static IMAGE_TABLE: std::sync::OnceLock<Vec<ImageEntry>> = std::sync::OnceLock::new();
+
+  /// Populate `IMAGE_TABLE` from the current dyld image list. MUST be
+  /// invoked from `module_init` (or any other early, healthy context)
+  /// before the first DiagAlloc::alloc failure. Safe to call multiple
+  /// times — OnceLock ensures only the first call runs.
+  #[cfg(target_os = "macos")]
+  pub fn init_image_cache() {
+    IMAGE_TABLE.get_or_init(|| {
+      let count = unsafe { _dyld_image_count() };
+      let mut entries: Vec<ImageEntry> = Vec::with_capacity(count as usize);
+      for i in 0..count {
+        let header = unsafe { _dyld_get_image_header(i) };
+        if header.is_null() {
+          continue;
+        }
+        let name_ptr = unsafe { _dyld_get_image_name(i) };
+        if name_ptr.is_null() {
+          continue;
+        }
+        let cstr = unsafe { CStr::from_ptr(name_ptr) };
+        let Ok(name) = cstr.to_str() else { continue };
+        // SAFETY: dyld retains the name string for process lifetime; we
+        // only extend the borrow lifetime, not the underlying memory.
+        let name_static: &'static str = unsafe { core::mem::transmute::<&str, &'static str>(name) };
+        entries.push(ImageEntry { base: header.addr(), name: name_static });
+      }
+      entries
+    });
+  }
+
+  /// No-op stub on non-macOS so callers can be unconditional.
+  #[cfg(not(target_os = "macos"))]
+  pub fn init_image_cache() {}
+
+  /// Lookup `addr`'s containing image in the cached table. Pure memory
+  /// reads — no library calls, signal-safe, abort-path-safe. Returns
+  /// `None` if the cache was never initialized or no image contains addr.
+  #[cfg(target_os = "macos")]
+  fn lookup_cached_image(addr: usize) -> Option<(usize, &'static str)> {
+    let table = IMAGE_TABLE.get()?;
     let mut best: Option<(usize, &'static str)> = None;
-    for i in 0..count {
-      let header = unsafe { _dyld_get_image_header(i) };
-      if header.is_null() {
+    for e in table {
+      if e.base > addr {
         continue;
       }
-      let base = header.addr();
-      if base > addr {
-        continue;
-      }
-      let name_ptr = unsafe { _dyld_get_image_name(i) };
-      if name_ptr.is_null() {
-        continue;
-      }
-      let Ok(name) = (unsafe { CStr::from_ptr(name_ptr) }).to_str() else {
-        continue;
-      };
       match best {
-        None => best = Some((base, name)),
-        Some((prev_base, _)) if prev_base < base => best = Some((base, name)),
+        None => best = Some((e.base, e.name)),
+        Some((prev, _)) if prev < e.base => best = Some((e.base, e.name)),
         _ => {}
       }
     }
     best
   }
 
-  // Print a single frame line: raw IP, plus image basename + offset + base
-  // address if we can locate the image. Format optimized for paste into
-  // `atos -o <image> -l <base> <ip>` for offline symbolication.
+  /// Print one frame as TWO independent `libc::write` calls:
+  ///   1. Always: timestamp + `  0x<ip>\n` — guaranteed to land
+  ///   2. Best-effort: `      -> <image>+0x<offset>  base=0x<base>\n`
+  ///      iff the cached lookup succeeds. Cache lookup is pure memory
+  ///      reads so cannot crash; the worst case is no image cache (lookup
+  ///      returns None) and we just skip the second line.
+  ///
+  /// Splitting the writes guarantees that even if pass 2 crashed (it
+  /// can't, but defense-in-depth), the raw IP from pass 1 is already on
+  /// the wire — so we never lose the IP regardless.
   #[cfg(unix)]
   fn write_frame_line(ip: *mut c_void) {
     let addr = ip.addr();
-    let mut buf = [0u8; 512];
-    let mut bw = StackBuf { buf: &mut buf, pos: 0 };
-    write_timestamp(&mut bw);
-    let _ = write!(bw, "  0x{addr:x}");
 
-    #[cfg(target_os = "macos")]
-    if let Some((base, name)) = find_image_for(addr) {
-      let basename = name.rsplit('/').next().unwrap_or(name);
-      let offset = addr.saturating_sub(base);
-      let _ = write!(bw, "  {basename}+0x{offset:x}  base=0x{base:x}");
+    // Pass 1: raw IP — flushed immediately.
+    {
+      let mut buf = [0u8; 64];
+      let mut bw = StackBuf { buf: &mut buf, pos: 0 };
+      write_timestamp(&mut bw);
+      let _ = writeln!(bw, "  0x{addr:x}");
+      let len = bw.pos;
+      write_stderr(&buf[..len]);
     }
 
-    let _ = writeln!(bw);
-    let len = bw.pos;
-    write_stderr(&buf[..len]);
+    // Pass 2: image + offset from cached table (no live dyld calls).
+    #[cfg(target_os = "macos")]
+    if let Some((base, name)) = lookup_cached_image(addr) {
+      let basename = name.rsplit('/').next().unwrap_or(name);
+      let offset = addr.saturating_sub(base);
+      let mut sbuf = [0u8; 256];
+      let mut sw = StackBuf { buf: &mut sbuf, pos: 0 };
+      let _ = writeln!(sw, "      -> {basename}+0x{offset:x}  base=0x{base:x}");
+      let len = sw.pos;
+      write_stderr(&sbuf[..len]);
+    }
   }
 
   #[cold]
@@ -370,6 +424,17 @@ pub fn start_async_runtime() {
 
 #[napi_derive::module_init]
 fn init() {
+  // Snapshot dyld's image list while it is still healthy. The abort path
+  // (DiagAlloc::report_and_abort) reads from this static cache so it never
+  // has to touch dyld in a wedged-allocator state — both `dladdr` and
+  // `_dyld_image_count` have been observed to SIGABRT in that state.
+  #[cfg(all(
+    not(target_family = "wasm"),
+    not(feature = "default_global_allocator"),
+    not(target_env = "ohos")
+  ))]
+  diag_alloc::init_image_cache();
+
   #[cfg(not(target_family = "wasm"))]
   {
     use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};

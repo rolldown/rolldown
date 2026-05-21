@@ -44,6 +44,52 @@ pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, lines: u32) -> SourceMap
   )
 }
 
+/// Re-anchors `sourcemap` to a single original source.
+///
+/// Used when a transform hook changed the code without supplying a sourcemap:
+/// the collapsed map's tokens come from the remaining real maps, but its
+/// `sources` / `sourcesContent` must still point at the original module source.
+///
+/// - `sources` becomes `[source]`, `sourcesContent` becomes `[source_content]`.
+/// - Every token's source index is reset to `0` (or left unset).
+/// - Tokens that point past `source_content`'s last line are dropped — they
+///   describe positions the original source never had (e.g. code appended by
+///   the unmapped transform), mirroring the bounded lookup of the hires
+///   identity map this replaces.
+pub fn anchor_sourcemap_to_source(
+  sourcemap: &SourceMap,
+  source: &str,
+  source_content: &str,
+) -> SourceMap {
+  #[expect(clippy::cast_possible_truncation)]
+  let line_count = source_content.lines().count() as u32;
+
+  let tokens: Box<[Token]> = sourcemap
+    .get_tokens()
+    .filter(|token| token.get_src_line() < line_count)
+    .map(|token| {
+      Token::new(
+        token.get_dst_line(),
+        token.get_dst_col(),
+        token.get_src_line(),
+        token.get_src_col(),
+        token.get_source_id().map(|_| 0),
+        token.get_name_id(),
+      )
+    })
+    .collect();
+
+  SourceMap::new(
+    sourcemap.get_file().cloned(),
+    sourcemap.get_names().cloned().collect(),
+    None,
+    vec![source.into()],
+    vec![Some(source_content.into())],
+    tokens,
+    None,
+  )
+}
+
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
 pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
   debug_assert!(sourcemap_chain.len() > 1);

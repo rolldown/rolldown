@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
-use rolldown_common::{ModuleRenderOutput, NormalModule, NormalizedBundlerOptions};
-use rolldown_sourcemap::{Source, SourceMapSource, collapse_sourcemaps};
+use rolldown_common::{
+  ModuleRenderOutput, NormalModule, NormalizedBundlerOptions, SourcemapChainElement,
+};
+use rolldown_sourcemap::{
+  Source, SourceMapSource, anchor_sourcemap_to_source, collapse_sourcemaps,
+};
 use rolldown_utils::concat_string;
 
 pub fn render_ecma_module(
@@ -27,18 +31,34 @@ pub fn render_ecma_module(
       let sourcemap = if module.sourcemap_chain.is_empty() {
         render_output.map
       } else {
+        // `Identity` elements (transforms that changed code without a sourcemap)
+        // carry no map; collapse only the real maps that surround them.
         let mut sourcemap_chain = module
           .sourcemap_chain
           .iter()
-          .map(|element| match element {
-            rolldown_common::SourcemapChainElement::Transform((_, sourcemap))
-            | rolldown_common::SourcemapChainElement::Load(sourcemap) => sourcemap,
+          .filter_map(|element| match element {
+            SourcemapChainElement::Transform((_, sourcemap))
+            | SourcemapChainElement::Load(sourcemap) => Some(sourcemap),
+            SourcemapChainElement::Identity { .. } => None,
           })
           .collect::<Vec<_>>();
         if let Some(sourcemap) = render_output.map.as_ref() {
           sourcemap_chain.push(sourcemap);
         }
-        Some(collapse_sourcemaps(&sourcemap_chain))
+        let collapsed = match sourcemap_chain.len() {
+          0 => None,
+          1 => Some(sourcemap_chain[0].clone()),
+          _ => Some(collapse_sourcemaps(&sourcemap_chain)),
+        };
+        // When the chain starts with an `Identity` layer, the collapsed map was
+        // traced through the real maps only and lost the original source. Re-anchor
+        // it to the original module source (content + original line bounds).
+        match (collapsed, module.sourcemap_chain.first()) {
+          (Some(map), Some(SourcemapChainElement::Identity { original_code, .. })) => {
+            Some(anchor_sourcemap_to_source(&map, module.id.as_str(), original_code))
+          }
+          (collapsed, _) => collapsed,
+        }
       };
 
       if let Some(sourcemap) = sourcemap {

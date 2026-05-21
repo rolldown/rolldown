@@ -265,26 +265,22 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
         for element in module.sourcemap_chain.drain(..) {
           match element {
             SourcemapChainElement::Load(_) => load_elements.push(element),
-            SourcemapChainElement::Transform(_) => transform_elements.push(element),
+            SourcemapChainElement::Transform(_) | SourcemapChainElement::Identity { .. } => {
+              transform_elements.push(element);
+            }
           }
         }
 
-        // Sort only Transform elements by plugin order
-        transform_elements.sort_by(|a, b| {
-          if let (
-            SourcemapChainElement::Transform((a_plugin_idx, _)),
-            SourcemapChainElement::Transform((b_plugin_idx, _)),
-          ) = (a, b)
-          {
-            let a_order =
-              transform_plugin_order_map.get(a_plugin_idx).copied().unwrap_or(usize::MAX);
-            let b_order =
-              transform_plugin_order_map.get(b_plugin_idx).copied().unwrap_or(usize::MAX);
-            a_order.cmp(&b_order)
-          } else {
-            std::cmp::Ordering::Equal
+        // Sort `Transform` and `Identity` elements by plugin order (stable, so
+        // same-plugin elements keep insertion order).
+        let order_of = |element: &SourcemapChainElement| match element {
+          SourcemapChainElement::Transform((plugin_idx, _))
+          | SourcemapChainElement::Identity { plugin_idx, .. } => {
+            transform_plugin_order_map.get(plugin_idx).copied().unwrap_or(usize::MAX)
           }
-        });
+          SourcemapChainElement::Load(_) => usize::MAX,
+        };
+        transform_elements.sort_by_key(|element| order_of(element));
 
         // Reconstruct: Load elements first, then sorted Transform elements
         module.sourcemap_chain = load_elements;

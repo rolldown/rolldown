@@ -19,7 +19,6 @@ use rolldown_devtools::{action, trace_action};
 use rolldown_error::{BuildDiagnostic, CausedPlugin};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::{IndexBitSet, unique_arc::UniqueArc};
-use string_wizard::{MagicString, SourceMapOptions};
 use tracing::{Instrument, debug_span};
 
 impl PluginDriver {
@@ -262,6 +261,7 @@ impl PluginDriver {
     code_changed_by_plugins: &mut Option<Vec<String>>,
     warnings: &mut Vec<BuildDiagnostic>,
   ) -> Result<String> {
+    let truly_original_code = ArcStr::from(original_code.as_str());
     let mut code = original_code;
     let mut code_arc: Option<ArcStr> = None;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
@@ -308,9 +308,18 @@ impl PluginDriver {
           );
         }
         if let Some(map) =
-          self.normalize_transform_sourcemap(r.map.into_sourcemap(), id, &code, r.code.as_ref())
+          Self::normalize_transform_sourcemap(r.map.into_sourcemap(), id, &truly_original_code)
         {
           original_sourcemap_chain.push(SourcemapChainElement::Transform((plugin_idx, map)));
+        } else if r.code.as_ref().is_some_and(|c| c != &code) {
+          // The transform changed the code but returned no sourcemap. Record an
+          // identity layer instead of fabricating a hires identity sourcemap of
+          // the original code: it keeps `collapse_sourcemaps` anchored to the
+          // original source (content + line bounds) at no token-allocation cost.
+          original_sourcemap_chain.push(SourcemapChainElement::Identity {
+            plugin_idx,
+            original_code: ArcStr::from(code.as_str()),
+          });
         }
         plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
         if let Some(v) = r.side_effects {
@@ -353,40 +362,21 @@ impl PluginDriver {
 
   #[inline]
   fn normalize_transform_sourcemap(
-    &self,
     map: Option<SourceMap>,
     id: &str,
-    original_code: &str,
-    code: Option<&String>,
+    truly_original_code: &str,
   ) -> Option<SourceMap> {
-    if let Some(mut map) = map {
-      // If sourcemap  hasn't `sources`, using original id to fill it.
-      let source = map.get_source(0);
-      if source.is_none_or(|s| s.is_empty())
-        || (map.get_sources().count() == 1 && (source.map(AsRef::as_ref) != Some(id)))
-      {
-        map.set_sources(vec![id]);
-      }
-      // If sourcemap hasn't `sourcesContent`, using original code to fill it.
-      if map.get_source_content(0).is_none_or(|s| s.is_empty()) {
-        map.set_source_contents(vec![Some(original_code)]);
-      }
-      Some(map)
-    } else if let Some(code) = code {
-      if original_code == code {
-        None
-      } else {
-        // If sourcemap is empty and code has changed, need to create one remapping original code.
-        let magic_string = MagicString::new(original_code);
-        Some(magic_string.source_map(SourceMapOptions {
-          hires: string_wizard::Hires::Boundary,
-          include_content: true,
-          source: id.into(),
-        }))
-      }
-    } else {
-      None
+    let mut map = map?;
+    let source = map.get_source(0);
+    if source.is_none_or(|s| s.is_empty())
+      || (map.get_sources().count() == 1 && (source.map(AsRef::as_ref) != Some(id)))
+    {
+      map.set_sources(vec![id]);
     }
+    if map.get_source_content(0).is_none_or(|s| s.is_empty()) {
+      map.set_source_contents(vec![Some(truly_original_code)]);
+    }
+    Some(map)
   }
 
   #[tracing::instrument(

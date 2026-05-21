@@ -23,6 +23,12 @@ describe('enhanced transform', () => {
       expect(result.code).toBe('const x = 1;\n');
       expect(result.map).toBeDefined();
     });
+
+    it('should drop import defer syntax', async () => {
+      const result = await transform('test.js', 'import defer * as ns from "./dep.js"; ns.value;');
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toBe('import * as ns from "./dep.js";\nns.value;\n');
+    });
   });
 
   describe('tsconfig - raw options', () => {

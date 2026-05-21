@@ -149,3 +149,9 @@ The reason for this behavior is because preserving the value of `this` limits th
 Similar to the issue described above, Rolldown does not necessarily preserve the value of `this` of exported functions when outputting your code as CJS. In this case, `this` that should be `undefined` may be bound to the `module.exports` object instead.
 
 :::
+
+## Warning: "Sourcemap is likely to be incorrect"
+
+You'll see this warning if you generate a sourcemap with your bundle ([`sourcemap: true`](/reference/OutputOptions.sourcemap) or `sourcemap: 'inline'`) but you're using one or more plugins that transformed code without generating a sourcemap for the transformation.
+
+Usually, a plugin will only omit the sourcemap if it (the plugin, not the bundle) was configured with `sourcemap: false` - so all you need to do is change that. If the plugin doesn't generate a sourcemap, consider raising an issue with the plugin author.

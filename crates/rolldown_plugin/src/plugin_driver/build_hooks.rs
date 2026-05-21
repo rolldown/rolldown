@@ -16,7 +16,7 @@ use rolldown_common::{
   SourcemapChainElement, side_effects::HookSideEffects,
 };
 use rolldown_devtools::{action, trace_action};
-use rolldown_error::CausedPlugin;
+use rolldown_error::{BuildDiagnostic, CausedPlugin};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::{IndexBitSet, unique_arc::UniqueArc};
 use string_wizard::{MagicString, SourceMapOptions};
@@ -260,6 +260,7 @@ impl PluginDriver {
     module_type: &mut ModuleType,
     magic_string_tx: Option<Arc<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>>,
     code_changed_by_plugins: &mut Option<Vec<String>>,
+    warnings: &mut Vec<BuildDiagnostic>,
   ) -> Result<String> {
     let mut code = original_code;
     let mut code_arc: Option<ArcStr> = None;
@@ -297,6 +298,15 @@ impl PluginDriver {
       self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
+        if matches!(r.map, crate::HookTransformOutputMap::Omitted)
+          && r.code.is_some()
+          && ctx.options().is_sourcemap_enabled()
+        {
+          warnings.push(
+            BuildDiagnostic::sourcemap_broken(plugin.call_name().to_string(), id.to_string())
+              .with_severity_warning(),
+          );
+        }
         if let Some(map) =
           self.normalize_transform_sourcemap(r.map.into_sourcemap(), id, &code, r.code.as_ref())
         {

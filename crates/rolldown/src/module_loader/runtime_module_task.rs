@@ -80,6 +80,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     let mut side_effects: Option<HookSideEffects> = None;
     let mut module_type = ModuleType::Js;
     let mut code_changed_by_plugins: Option<Vec<String>> = Some(vec![]);
+    let mut warnings = vec![];
 
     let source: ArcStr = self
       .ctx
@@ -93,6 +94,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         &mut module_type,
         None,
         &mut code_changed_by_plugins,
+        &mut warnings,
       )
       .await?
       .into();
@@ -211,6 +213,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       resolved_deps,
       raw_import_records,
       local_symbol_ref_db: symbol_ref_db,
+      warnings,
     }));
 
     // If the main thread is dead, nothing we can do to handle these send failures.

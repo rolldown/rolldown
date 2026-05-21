@@ -1497,6 +1497,12 @@
             "boolean",
             "null"
           ]
+        },
+        "sourcemapBroken": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

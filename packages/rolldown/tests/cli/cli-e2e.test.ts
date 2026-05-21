@@ -210,21 +210,32 @@ describe('cli options for bundling', () => {
         reject: false,
       })`rolldown index.js --transform.define __A__:A,__B__:B,__C__:C -d dist`;
       if (status.exitCode !== 0) {
-        // Bypass vitest's stream capture entirely: fs.writeSync(2, ...) is a
-        // raw write(2) syscall — neither vitest nor Node stream wrappers can
-        // intercept, buffer, or truncate it. Big sentinels make the section
-        // greppable in CI logs even when surrounded by hundreds of MB of
-        // other output. Search CI log for `ALLOC-DIAG` to locate.
+        // Dump rich execa result so we can tell which failure mode this is:
+        //   - signal=SIGABRT + stderr contains "[alloc-diag]"
+        //     → our DiagAlloc::alloc wrapper triggered (mimalloc returned NULL)
+        //   - signal=SIGABRT + stderr empty
+        //     → process aborted via a different path (libsystem heap-corruption
+        //       check, C assert, etc.) bypassing our wrapper
+        //   - signal=SIGSEGV → segfault (pointer corruption)
+        // fs.writeSync(2, ...) is a raw write(2) syscall — vitest cannot
+        // intercept, buffer, or truncate it. Search CI log for `ALLOC-DIAG`.
+        const stderrStr = String(status.stderr ?? '');
+        const hitWrapper = stderrStr.includes('[alloc-diag]');
         const banner =
           `\n########## ALLOC-DIAG iter ${i + 1}/${ITERATIONS} BEGIN ##########\n` +
-          `signal=${status.signal} exitCode=${status.exitCode}\n` +
-          `--- child stdout ---\n` +
+          `signal=${status.signal} signalDescription=${status.signalDescription}\n` +
+          `exitCode=${status.exitCode} failed=${status.failed} isTerminated=${status.isTerminated} timedOut=${status.timedOut}\n` +
+          `shortMessage=${status.shortMessage}\n` +
+          `>>> wrapper triggered: ${hitWrapper}\n` +
+          `--- child stdout (${String(status.stdout ?? '').length} bytes) ---\n` +
           String(status.stdout ?? '') +
-          `\n--- child stderr ---\n` +
-          String(status.stderr ?? '') +
+          `\n--- child stderr (${stderrStr.length} bytes) ---\n` +
+          stderrStr +
           `\n########## ALLOC-DIAG iter ${i + 1}/${ITERATIONS} END ##########\n`;
         fs.writeSync(2, banner);
-        throw new Error(`iteration ${i + 1}/${ITERATIONS} failed (grep CI log for "ALLOC-DIAG")`);
+        throw new Error(
+          `iteration ${i + 1}/${ITERATIONS} failed signal=${status.signal} wrapperTriggered=${hitWrapper} (grep CI log for "ALLOC-DIAG")`,
+        );
       }
       if (i === ITERATIONS - 1) {
         // Only validate snapshot/contents on the final clean iteration so

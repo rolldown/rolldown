@@ -1,5 +1,6 @@
 import assert from 'node:assert';
 import data from './data.json';
 
-data.search = 'overridden';
+const key = 'search';
+data[key] = 'overridden';
 assert.strictEqual(data.search, 'overridden');

@@ -11,7 +11,8 @@ import assert from "node:assert";
 var data_default = { search: "hello" };
 //#endregion
 //#region main.js
-data_default.search = "overridden";
+const key = "search";
+data_default[key] = "overridden";
 assert.strictEqual(data_default.search, "overridden");
 //#endregion
 

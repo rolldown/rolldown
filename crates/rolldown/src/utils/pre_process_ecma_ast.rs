@@ -22,7 +22,7 @@ use rustc_hash::FxHashMap;
 use crate::types::oxc_parse_type::OxcParseType;
 
 use super::parse_to_ecma_ast::ParseToEcmaAstResult;
-use super::tweak_ast_for_scanning::PreProcessor;
+use super::tweak_ast_for_scanning::{PreProcessor, drop_import_defer_phase};
 
 #[derive(Default)]
 pub struct PreProcessEcmaAst {
@@ -43,6 +43,10 @@ impl PreProcessEcmaAst {
     has_lazy_export: bool,
   ) -> BuildResult<ParseToEcmaAstResult> {
     let source = ast.source().clone();
+
+    ast.program.with_mut(|WithMutFields { program, .. }| {
+      drop_import_defer_phase(program);
+    });
 
     // Step 0: Move directive comments attached to 0 so that it's not removed when the directives are removed
     if !ast.program().directives.is_empty() && !ast.program().comments.is_empty() {

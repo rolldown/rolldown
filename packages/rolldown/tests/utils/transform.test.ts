@@ -25,9 +25,20 @@ describe('enhanced transform', () => {
     });
 
     it('should drop import defer syntax', async () => {
-      const result = await transform('test.js', 'import defer * as ns from "./dep.js"; ns.value;');
+      const result = await transform(
+        'test.js',
+        'import defer * as ns from "./dep.js"; ns.value; import.defer("./lazy.js");',
+      );
       expect(result.errors).toHaveLength(0);
-      expect(result.code).toBe('import * as ns from "./dep.js";\nns.value;\n');
+      expect(result.code).toBe(
+        'import * as ns from "./dep.js";\nns.value;\nimport("./lazy.js");\n',
+      );
+    });
+
+    it('should preserve import source syntax', async () => {
+      const result = await transform('test.js', 'import source wasm from "./dep.wasm"; wasm;');
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toBe('import source wasm from "./dep.wasm";\nwasm;\n');
     });
   });
 

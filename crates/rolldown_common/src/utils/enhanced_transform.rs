@@ -8,6 +8,8 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use oxc::allocator::Allocator;
+use oxc::ast::ast::{self, ImportPhase};
+use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::diagnostics::{OxcDiagnostic, Severity as OxcSeverity};
 use oxc::parser::{ParseOptions, Parser};
 use oxc::transformer::{Helper, HelperLoaderOptions};
@@ -36,6 +38,28 @@ use crate::inner_bundler_options::types::transform_option::{
 use crate::inner_bundler_options::types::tsconfig_merge::merge_transform_options_with_tsconfig;
 
 pub type InjectOptions = Vec<(String, Either<String, Vec<String>>)>;
+
+struct DropImportDeferPhase;
+
+impl<'a> VisitMut<'a> for DropImportDeferPhase {
+  fn visit_import_declaration(&mut self, it: &mut ast::ImportDeclaration<'a>) {
+    if matches!(it.phase, Some(ImportPhase::Defer)) {
+      it.phase = None;
+    }
+    walk_mut::walk_import_declaration(self, it);
+  }
+
+  fn visit_import_expression(&mut self, it: &mut ast::ImportExpression<'a>) {
+    if matches!(it.phase, Some(ImportPhase::Defer)) {
+      it.phase = None;
+    }
+    walk_mut::walk_import_expression(self, it);
+  }
+}
+
+fn drop_import_defer_phase(program: &mut ast::Program<'_>) {
+  DropImportDeferPhase.visit_program(program);
+}
 
 /// Tsconfig option for enhanced transform.
 #[derive(Debug, Clone)]
@@ -332,6 +356,7 @@ pub fn enhanced_transform(
   }
 
   let mut program = parse_ret.program;
+  drop_import_defer_phase(&mut program);
 
   let semantic_ret = semantic_builder_for_transform().build(&program);
   let mut scoping = Some(semantic_ret.semantic.into_scoping());

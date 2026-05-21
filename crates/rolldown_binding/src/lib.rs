@@ -23,8 +23,8 @@ use std::sync::{
 use napi_derive::napi;
 
 // Diagnostic global allocator: wraps mimalloc-safe so we can intercept NULL
-// returns and print thread, layout, monotonic timestamp, and a fully
-// symbolicated backtrace before aborting. Avoids Rust's default
+// returns and print thread, layout, monotonic timestamp, and a backtrace
+// with image-relative offsets before aborting. Avoids Rust's default
 // "memory allocation of N bytes failed → panic → format panic message
 // (allocates) → fails again → skipping backtrace to avoid recursion →
 // SIGABRT" spiral, which hides the information needed to root-cause
@@ -36,10 +36,13 @@ use napi_derive::napi;
 //     prints stderr and stdout in separate blocks.
 //   - Basic line (size/align/thread) goes out first via raw libc::write so
 //     it always reaches stderr.
-//   - Backtrace via `execinfo.h::backtrace()` (return-address walk into a
-//     stack buffer), then each frame resolved with `dladdr` + streamed
-//     through `rustc_demangle::demangle` into another stack buffer. No heap
-//     allocation; survives mimalloc being completely wedged.
+//   - Backtrace via a manual FP-chain walk (alloc-free, signal-safe).
+//     Each frame is resolved through dyld's image-list APIs
+//     (`_dyld_image_count` / `_dyld_get_image_header` / `_dyld_get_image_name`)
+//     to produce `IP  image+0xOFFSET  base=0xBASE` lines. Offline
+//     symbolication: `atos -arch arm64 -o <image-path> -l 0x<base> 0x<ip>`.
+//     `dladdr` is intentionally avoided — observed to SIGABRT from a
+//     wedged-allocator state on macOS.
 #[cfg(all(
   not(target_family = "wasm"),
   not(feature = "default_global_allocator"),
@@ -159,56 +162,71 @@ mod diag_alloc {
   #[cfg(not(unix))]
   fn write_timestamp(_bw: &mut StackBuf<'_>) {}
 
-  // Print a single raw return-address line. No dladdr, no string deref.
-  // Cannot crash beyond what `libc::write` / `clock_gettime` could.
-  #[cfg(unix)]
-  fn write_raw_ip(ip: *mut c_void) {
-    let mut ip_buf = [0u8; 64];
-    let mut ip_bw = StackBuf { buf: &mut ip_buf, pos: 0 };
-    write_timestamp(&mut ip_bw);
-    let _ = writeln!(ip_bw, "  0x{:x}", ip.addr());
-    let ip_len = ip_bw.pos;
-    write_stderr(&ip_buf[..ip_len]);
+  // dyld image-list APIs (mach-o.dylib). Read-only access to dyld's
+  // gAllImages vector — no locks, no allocations. Unlike `dladdr`, these
+  // are safe to call from a wedged-allocator state because they don't
+  // walk symbol tables or take internal mutexes that dladdr asserts on.
+  #[cfg(target_os = "macos")]
+  unsafe extern "C" {
+    fn _dyld_image_count() -> u32;
+    fn _dyld_get_image_header(image_index: u32) -> *const c_void;
+    fn _dyld_get_image_name(image_index: u32) -> *const core::ffi::c_char;
   }
 
-  // Best-effort symbolication for a single frame. Calls `dladdr` and
-  // dereferences its returned C strings. Has been observed to abort the
-  // process on certain frames (likely a libdyld lock contention or assert
-  // when called from a wedged-allocator state), which is why this is run
-  // as a *second pass* after every raw IP has already been flushed.
+  // Find which loaded image contains `addr` via linear scan of the dyld
+  // image list. Returns (base, name) for the image with the greatest base
+  // <= addr. Bounded by image count (~200 on a typical Node process),
+  // microseconds total. Allocation-free.
+  #[cfg(target_os = "macos")]
+  fn find_image_for(addr: usize) -> Option<(usize, &'static str)> {
+    let count = unsafe { _dyld_image_count() };
+    let mut best: Option<(usize, &'static str)> = None;
+    for i in 0..count {
+      let header = unsafe { _dyld_get_image_header(i) };
+      if header.is_null() {
+        continue;
+      }
+      let base = header.addr();
+      if base > addr {
+        continue;
+      }
+      let name_ptr = unsafe { _dyld_get_image_name(i) };
+      if name_ptr.is_null() {
+        continue;
+      }
+      let Ok(name) = (unsafe { CStr::from_ptr(name_ptr) }).to_str() else {
+        continue;
+      };
+      match best {
+        None => best = Some((base, name)),
+        Some((prev_base, _)) if prev_base < base => best = Some((base, name)),
+        _ => {}
+      }
+    }
+    best
+  }
+
+  // Print a single frame line: raw IP, plus image basename + offset + base
+  // address if we can locate the image. Format optimized for paste into
+  // `atos -o <image> -l <base> <ip>` for offline symbolication.
   #[cfg(unix)]
-  fn write_symbol_for(ip: *mut c_void) {
-    let mut info: libc::Dl_info = unsafe { core::mem::zeroed() };
-    let ok = unsafe { libc::dladdr(ip.cast_const(), &raw mut info) };
-    if ok == 0 {
-      return;
+  fn write_frame_line(ip: *mut c_void) {
+    let addr = ip.addr();
+    let mut buf = [0u8; 512];
+    let mut bw = StackBuf { buf: &mut buf, pos: 0 };
+    write_timestamp(&mut bw);
+    let _ = write!(bw, "  0x{addr:x}");
+
+    #[cfg(target_os = "macos")]
+    if let Some((base, name)) = find_image_for(addr) {
+      let basename = name.rsplit('/').next().unwrap_or(name);
+      let offset = addr.saturating_sub(base);
+      let _ = write!(bw, "  {basename}+0x{offset:x}  base=0x{base:x}");
     }
 
-    let mut sym_buf = [0u8; 1024];
-    let mut sw = StackBuf { buf: &mut sym_buf, pos: 0 };
-    write_timestamp(&mut sw);
-    let _ = write!(sw, "  sym 0x{:x}", ip.addr());
-    let mut any = false;
-
-    if !info.dli_sname.is_null() {
-      if let Ok(sym) = unsafe { CStr::from_ptr(info.dli_sname) }.to_str() {
-        let off = ip.addr().saturating_sub(info.dli_saddr.addr());
-        let _ = write!(sw, "  {}+0x{:x}", rustc_demangle::demangle(sym), off);
-        any = true;
-      }
-    }
-    if !info.dli_fname.is_null() {
-      if let Ok(fpath) = unsafe { CStr::from_ptr(info.dli_fname) }.to_str() {
-        let base = fpath.rsplit('/').next().unwrap_or(fpath);
-        let _ = write!(sw, "  ({base})");
-        any = true;
-      }
-    }
-    if any {
-      let _ = writeln!(sw);
-      let len = sw.pos;
-      write_stderr(&sym_buf[..len]);
-    }
+    let _ = writeln!(bw);
+    let len = bw.pos;
+    write_stderr(&buf[..len]);
   }
 
   #[cold]
@@ -235,10 +253,11 @@ mod diag_alloc {
     let len = bw.pos;
     write_stderr(&buf[..len]);
 
-    // 2. Two-pass backtrace: first flush every raw IP so a later dladdr
-    //    crash cannot destroy the address list, then attempt symbolication
-    //    in a second pass. Symbol lookup can crash on certain frames when
-    //    libdyld is in a fragile state; raw IPs survive that.
+    // 2. Backtrace. Each line: raw IP + image basename + offset + image
+    //    base, formatted for offline `atos -o <image> -l <base> <ip>`.
+    //    Uses dyld's image-list APIs instead of `dladdr` because the
+    //    latter has been observed to SIGABRT on the first call when run
+    //    from a wedged-allocator state (libdyld internal assert).
     #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
       let mut frames: [*mut c_void; 64] = [core::ptr::null_mut(); 64];
@@ -246,17 +265,12 @@ mod diag_alloc {
 
       let mut hdr = [0u8; 96];
       let mut hbw = StackBuf { buf: &mut hdr, pos: 0 };
-      let _ = writeln!(hbw, "[alloc-diag] backtrace ({n} frames) raw IPs:");
+      let _ = writeln!(hbw, "[alloc-diag] backtrace ({n} frames):");
       let hlen = hbw.pos;
       write_stderr(&hdr[..hlen]);
 
       for ip in &frames[..n] {
-        write_raw_ip(*ip);
-      }
-
-      write_stderr(b"[alloc-diag] symbolicating (may abort partway):\n");
-      for ip in &frames[..n] {
-        write_symbol_for(*ip);
+        write_frame_line(*ip);
       }
     }
 

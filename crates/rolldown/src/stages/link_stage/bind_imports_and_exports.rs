@@ -412,7 +412,7 @@ impl LinkStage<'_> {
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
           let json_default_imports_with_member_write =
-            self.collect_json_default_imports_with_member_write(stmt_infos);
+            self.collect_json_default_imports_with_member_write(module, stmt_infos);
           stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
@@ -714,8 +714,21 @@ impl LinkStage<'_> {
 
   fn collect_json_default_imports_with_member_write(
     &self,
+    module: &NormalModule,
     stmt_infos: &StmtInfos,
   ) -> FxHashSet<SymbolRef> {
+    // Skip the per-stmt scan for modules that can't possibly import JSON.
+    let has_json_importee = module.ecma_view.import_records.iter().any(|rec| {
+      rec.resolved_module.is_some_and(|idx| {
+        self.module_table[idx]
+          .as_normal()
+          .is_some_and(|m| matches!(m.module_type, ModuleType::Json))
+      })
+    });
+    if !has_json_importee {
+      return FxHashSet::default();
+    }
+
     let mut written_json_defaults = FxHashSet::default();
     for stmt_info in stmt_infos.iter() {
       for symbol_ref in &stmt_info.referenced_symbols {

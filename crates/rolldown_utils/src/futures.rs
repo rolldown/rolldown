@@ -1,4 +1,36 @@
-use futures::Future;
+use std::sync::OnceLock;
+
+use futures::{Future, executor::ThreadPool};
+
+/// Process-wide thread pool for fire-and-forget async tasks that need
+/// multi-task scheduling on a bounded set of threads.
+///
+/// Why a dedicated pool: the module loader fans out a future per source file.
+/// Driving these via `rayon::spawn { pollster::block_on(fut) }` parks each
+/// rayon worker on a `block_on`, so inner `rayon::par_iter` calls (used in
+/// codegen / link / minify passes triggered from inside a task) starve and the
+/// build deadlocks under low core counts. A `futures::executor::ThreadPool`
+/// gives us multi-task scheduling on its own threads, independent of rayon.
+fn task_pool() -> &'static ThreadPool {
+  static POOL: OnceLock<ThreadPool> = OnceLock::new();
+  POOL.get_or_init(|| {
+    ThreadPool::builder()
+      .name_prefix("rolldown-task-")
+      .create()
+      .expect("failed to create rolldown task pool")
+  })
+}
+
+/// Spawn a `'static` future on the shared task pool. Fire-and-forget — there
+/// is no `JoinHandle`; the caller is expected to coordinate completion via a
+/// channel (which is what the module loader does).
+#[inline]
+pub fn spawn_task<F>(future: F)
+where
+  F: Future<Output = ()> + Send + 'static,
+{
+  task_pool().spawn_ok(future);
+}
 
 /// Fire-and-forget spawn for a `'static` future on a dedicated OS thread.
 ///

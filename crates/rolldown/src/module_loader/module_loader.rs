@@ -267,9 +267,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     if resolved_id.external.is_external() {
       let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
       let fut = task.run().instrument(tracing::info_span!("external_module_task"));
-      rayon::spawn(move || {
-        rolldown_utils::futures::block_on(fut);
-      });
+      rolldown_utils::futures::spawn_task(fut);
     } else {
       let task = ModuleTask::new(
         ctx,
@@ -282,9 +280,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         self.magic_string_tx.clone(),
       );
       let fut = task.run().instrument(tracing::info_span!("normal_module_task"));
-      rayon::spawn(move || {
-        rolldown_utils::futures::block_on(fut);
-      });
+      rolldown_utils::futures::spawn_task(fut);
     }
     self.remaining += 1;
     idx

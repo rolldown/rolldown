@@ -888,8 +888,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let mut re_export_external_stmts: Option<_> = None;
     if !export_all_externals_rec_ids.is_empty() {
-      // construct `__reExport(importer_exports, importee_exports)`
-      let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
       match self.ctx.options.format {
         OutputFormat::Esm => {
           let stmts = export_all_externals_rec_ids.iter().copied().flat_map(|idx| {
@@ -912,7 +910,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             };
             let importee_name = &module.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
             let call_expr = self.snippet.re_export_call_expr(
-              re_export_fn_ref.clone_in(self.alloc),
+              // construct `__reExport(importer_exports, importee_exports)`
+              self.finalized_expr_for_runtime_symbol("__reExport"),
               self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
               self.snippet.id_ref_expr(importee_namespace_name, SPAN),
             );
@@ -930,8 +929,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
           let stmts = export_all_externals_rec_ids.iter().copied().filter_map(|idx| {
-            // Insert `__reExport(importer_exports, require('ext'))`
-            let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
             // importer_exports
             let (importer_namespace_ref_expr, _) = self.finalized_expr_for_symbol_ref(
               self.ctx.module.namespace_object_ref,
@@ -942,7 +939,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let importee = rec.resolved_module.map(|module_idx| &self.ctx.modules[module_idx])?;
 
             let re_export_call_expr = self.snippet.re_export_call_expr(
-              re_export_fn_ref.clone_in(self.alloc),
+              // Insert `__reExport(importer_exports, require('ext'))`
+              self.finalized_expr_for_runtime_symbol("__reExport"),
               importer_namespace_ref_expr,
               self.snippet.call_expr_with_arg_expr_expr(
                 "require",
@@ -1643,7 +1641,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 match importee.exports_kind {
                   ExportsKind::Esm => {
                     if importee_linking_info.has_dynamic_exports {
-                      let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
                       // exports
                       let (importer_namespace_ref, _) = self.finalized_expr_for_symbol_ref(
                         self.ctx.module.namespace_object_ref,
@@ -1658,7 +1655,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       );
 
                       let call_expr = self.snippet.re_export_call_expr(
-                        re_export_fn_ref,
+                        self.finalized_expr_for_runtime_symbol("__reExport"),
                         importer_namespace_ref,
                         importee_namespace_ref,
                       );

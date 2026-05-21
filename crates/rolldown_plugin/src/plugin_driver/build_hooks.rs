@@ -303,7 +303,7 @@ impl PluginDriver {
           && ctx.options().is_sourcemap_enabled()
         {
           warnings.push(
-            BuildDiagnostic::sourcemap_broken(plugin.call_name().to_string(), id.to_string())
+            BuildDiagnostic::sourcemap_broken(plugin.call_name().to_string(), Some(id.to_string()))
               .with_severity_warning(),
           );
         }

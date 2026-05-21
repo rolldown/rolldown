@@ -50,7 +50,8 @@ impl GenerateStage<'_> {
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
 
-    render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?;
+    warnings
+      .extend(render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?);
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 

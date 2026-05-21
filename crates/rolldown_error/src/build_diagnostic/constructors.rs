@@ -413,7 +413,7 @@ impl BuildDiagnostic {
     Self::new_inner(DuplicateShebang { filename, source: source.to_string() })
   }
 
-  pub fn sourcemap_broken(plugin_name: String, id: String) -> Self {
+  pub fn sourcemap_broken(plugin_name: String, id: Option<String>) -> Self {
     Self::new_inner(SourcemapBroken { plugin_name, id })
   }
 

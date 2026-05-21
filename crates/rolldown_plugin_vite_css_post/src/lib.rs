@@ -14,7 +14,9 @@ use cow_utils::CowUtils;
 use rolldown_common::{
   ModuleType, NormalizedBundlerOptions, Output, StrOrBytes, side_effects::HookSideEffects,
 };
-use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
+use rolldown_plugin::{
+  HookRenderChunkOutput, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
+};
 use rolldown_plugin_utils::{
   RenderBuiltUrl, ToOutputFilePathEnv,
   constants::{
@@ -251,7 +253,7 @@ impl Plugin for ViteCSSPostPlugin {
 
     Ok(magic_string.map(|magic_string| HookRenderChunkOutput {
       code: magic_string.to_string(),
-      map: self.sourcemap.then(|| {
+      map: HookTransformOutputMap::from_if_enabled(self.sourcemap, || {
         magic_string.source_map(SourceMapOptions {
           hires: string_wizard::Hires::Boundary,
           ..Default::default()

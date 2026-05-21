@@ -47,17 +47,44 @@ impl Plugin for NoMapTransformPlugin {
   }
 }
 
+/// A plugin whose `renderChunk` hook returns code without providing a sourcemap.
+/// `output_map` controls the result's `map` field the same way as
+/// [`NoMapTransformPlugin`].
+#[derive(Debug)]
+struct NoMapRenderChunkPlugin {
+  output_map: fn() -> HookTransformOutputMap,
+}
+
+impl Plugin for NoMapRenderChunkPlugin {
+  fn name(&self) -> Cow<'static, str> {
+    "no-map-render-chunk".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::RenderChunk
+  }
+
+  async fn render_chunk(
+    &self,
+    _ctx: &rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookRenderChunkArgs<'_>,
+  ) -> rolldown_plugin::HookRenderChunkReturn {
+    Ok(Some(rolldown_plugin::HookRenderChunkOutput {
+      code: format!("{}\n// rendered by plugin", args.code),
+      map: (self.output_map)(),
+    }))
+  }
+}
+
 /// A captured `SOURCEMAP_BROKEN` warning: `(plugin, message, id)`.
 type CapturedWarning = (Option<String>, String, Option<String>);
 
-/// Builds `entry.js` with `NoMapTransformPlugin` and returns the `SOURCEMAP_BROKEN`
-/// warnings collected into `BundleOutput::warnings`. `sourcemap` controls whether
-/// sourcemap output is enabled; `mutate` controls whether the plugin's returned
-/// code differs from the input.
+/// Builds `entry.js` with `plugin` and returns the `SOURCEMAP_BROKEN` warnings
+/// collected into `BundleOutput::warnings`. `sourcemap` controls whether
+/// sourcemap output is enabled.
 async fn run(
-  output_map: fn() -> HookTransformOutputMap,
   sourcemap: Option<SourceMapType>,
-  mutate: bool,
+  plugin: impl Plugin + 'static,
 ) -> Vec<CapturedWarning> {
   let mut bundler = Bundler::with_plugins(
     BundlerOptions {
@@ -68,14 +95,14 @@ async fn run(
       cwd: Some(
         concat!(
           env!("CARGO_MANIFEST_DIR"),
-          "/tests/rolldown/plugin/plugin_context/transform_hook_sourcemap_broken_warning"
+          "/tests/rolldown/plugin/plugin_context/sourcemap_broken_warning"
         )
         .into(),
       ),
       sourcemap,
       ..Default::default()
     },
-    vec![Arc::new(NoMapTransformPlugin { output_map, mutate })],
+    vec![Arc::new(plugin)],
   )
   .expect("failed to create bundler");
 
@@ -90,8 +117,11 @@ async fn run(
 
 #[tokio::test(flavor = "multi_thread")]
 async fn omitted_map_emits_sourcemap_broken_warning() {
-  let warnings =
-    Box::pin(run(|| HookTransformOutputMap::Omitted, Some(SourceMapType::File), true)).await;
+  let warnings = Box::pin(run(
+    Some(SourceMapType::File),
+    NoMapTransformPlugin { output_map: || HookTransformOutputMap::Omitted, mutate: true },
+  ))
+  .await;
   assert_eq!(warnings.len(), 1, "exactly one SOURCEMAP_BROKEN warning must be emitted");
   let (plugin, message, id) = &warnings[0];
   assert_eq!(plugin.as_deref(), Some("no-map-transform"));
@@ -99,10 +129,10 @@ async fn omitted_map_emits_sourcemap_broken_warning() {
     message.contains("didn't generate a sourcemap"),
     "warning message should mention the missing sourcemap, got: {message}"
   );
-  // The warning carries the id of the transformed module.
+  // The transform warning carries the id of the transformed module.
   assert!(
     id.as_deref().is_some_and(|id| id.ends_with("entry.js")),
-    "SOURCEMAP_BROKEN warning should carry the module id, got: {id:?}"
+    "transform SOURCEMAP_BROKEN warning should carry the module id, got: {id:?}"
   );
 }
 
@@ -111,8 +141,11 @@ async fn omitted_map_emits_warning_even_when_code_unchanged() {
   // Rollup emits `SOURCEMAP_BROKEN` whenever a transform hook returns code without
   // a sourcemap, even if the returned code is identical to the input (see Rollup's
   // `transform-without-sourcemap-render-chunk` fixture).
-  let warnings =
-    Box::pin(run(|| HookTransformOutputMap::Omitted, Some(SourceMapType::File), false)).await;
+  let warnings = Box::pin(run(
+    Some(SourceMapType::File),
+    NoMapTransformPlugin { output_map: || HookTransformOutputMap::Omitted, mutate: false },
+  ))
+  .await;
   assert_eq!(
     warnings.len(),
     1,
@@ -123,17 +156,63 @@ async fn omitted_map_emits_warning_even_when_code_unchanged() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn null_map_suppresses_sourcemap_broken_warning() {
-  let warnings =
-    Box::pin(run(|| HookTransformOutputMap::Null, Some(SourceMapType::File), true)).await;
+  let warnings = Box::pin(run(
+    Some(SourceMapType::File),
+    NoMapTransformPlugin { output_map: || HookTransformOutputMap::Null, mutate: true },
+  ))
+  .await;
   assert!(warnings.is_empty(), "SOURCEMAP_BROKEN warning must not be emitted when map is Null");
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn omitted_map_without_sourcemap_suppresses_warning() {
-  let warnings = Box::pin(run(|| HookTransformOutputMap::Omitted, None, true)).await;
+  let warnings = Box::pin(run(
+    None,
+    NoMapTransformPlugin { output_map: || HookTransformOutputMap::Omitted, mutate: true },
+  ))
+  .await;
   assert!(
     warnings.is_empty(),
     "SOURCEMAP_BROKEN warning must not be emitted when sourcemap output is disabled, \
      mirroring Rollup which only inspects the sourcemap chain while collapsing sourcemaps"
+  );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn render_chunk_omitted_map_emits_sourcemap_broken_warning() {
+  let warnings = Box::pin(run(
+    Some(SourceMapType::File),
+    NoMapRenderChunkPlugin { output_map: || HookTransformOutputMap::Omitted },
+  ))
+  .await;
+  assert_eq!(warnings.len(), 1, "exactly one SOURCEMAP_BROKEN warning must be emitted");
+  let (plugin, message, id) = &warnings[0];
+  assert_eq!(plugin.as_deref(), Some("no-map-render-chunk"));
+  assert!(
+    message.contains("didn't generate a sourcemap"),
+    "warning message should mention the missing sourcemap, got: {message}"
+  );
+  // `renderChunk` operates on a chunk, not a module, so it carries no id.
+  assert_eq!(*id, None, "renderChunk SOURCEMAP_BROKEN warning must not carry an `id`");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn render_chunk_null_map_suppresses_sourcemap_broken_warning() {
+  let warnings = Box::pin(run(
+    Some(SourceMapType::File),
+    NoMapRenderChunkPlugin { output_map: || HookTransformOutputMap::Null },
+  ))
+  .await;
+  assert!(warnings.is_empty(), "renderChunk returning `map: null` must suppress SOURCEMAP_BROKEN");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn render_chunk_omitted_map_without_sourcemap_suppresses_warning() {
+  let warnings =
+    Box::pin(run(None, NoMapRenderChunkPlugin { output_map: || HookTransformOutputMap::Omitted }))
+      .await;
+  assert!(
+    warnings.is_empty(),
+    "renderChunk SOURCEMAP_BROKEN must not be emitted when sourcemap output is disabled"
   );
 }

@@ -8,8 +8,11 @@ use sugar_path::SugarPath;
 
 // RD_LOG=rolldown::dev=trace cargo run -p rolldown_dev --example dev
 
-#[tokio::main]
-async fn main() {
+fn main() {
+  pollster::block_on(run());
+}
+
+async fn run() {
   let bundler_config = BundlerConfig::new(
     BundlerOptions {
       input: Some(vec!["./entry.js".to_string().into()]),

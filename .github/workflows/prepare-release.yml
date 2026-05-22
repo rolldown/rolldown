@@ -52,7 +52,7 @@ jobs:
         run: cargo release-oxc update --release crates --version ${VERSION}
 
       - name: Update Cargo.lock after crate bump
-        run: cargo check --workspace
+        run: cargo check
 
       - name: Regenerate binding.js after version bump
         run: vp run --filter rolldown build-binding

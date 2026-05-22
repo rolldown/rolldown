@@ -4,8 +4,11 @@ permissions: {}
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * 3' # Every Wednesday at 8am Shanghai time (UTC+8 = 00:00 UTC)
+    inputs:
+      version:
+        description: 'New version (e.g. 1.0.1)'
+        required: true
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
@@ -25,24 +28,31 @@ jobs:
           fetch-depth: 0 # for changelog
           persist-credentials: true # for create-pull-request
 
-      - uses: taiki-e/install-action@1329c298aa20c3257846c9b2e0e55967df3e3c37 # v2.75.25
+      - uses: taiki-e/install-action@e1c4cd42111751368541a7cb5db3522bd1f846a4 # v2.78.0
         with:
           tool: just
 
-      - uses: voidzero-dev/setup-vp@4f5aa3e38c781f1b01e78fb9255527cee8a6efa6 # v1.8.0
+      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
         with:
           cache: true
 
-      - name: Get and bump version
-        run: |
-          VERSION=$(node -e "
-            const pkg = require('./packages/rolldown/package.json');
-            const [, base, rc] = pkg.version.match(/^(\d+\.\d+\.\d+)-rc\.(\d+)$/);
-            console.log(\`\${base}-rc.\${parseInt(rc) + 1}\`);
-          ")
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        with:
+          cache-key: warm
+          tools: cargo-release-oxc
+
+      - name: Set version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "VERSION=$INPUT_VERSION" >> "$GITHUB_ENV"
 
       - run: just bump-packages ${VERSION}
+
+      - name: Bump crate versions
+        run: cargo release-oxc update --release crates --version ${VERSION}
+
+      - name: Update Cargo.lock after crate bump
+        run: cargo check
 
       - name: Regenerate binding.js after version bump
         run: vp run --filter rolldown build-binding
@@ -59,7 +69,7 @@ jobs:
           config: cliff.toml
           args: --unreleased --prepend CHANGELOG.md --tag ${{ env.VERSION }}
 
-      - uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
           client-id: ${{ secrets.APP_ID }}
@@ -73,6 +83,9 @@ jobs:
             CHANGELOG.md
             packages/**/package.json
             packages/rolldown/src/binding.cjs
+            Cargo.toml
+            Cargo.lock
+            crates/**/Cargo.toml
           commit-message: 'release: v${{ env.VERSION }}'
           body: ${{ steps.changelog.outputs.content }}
           branch: release-v${{ env.VERSION }}

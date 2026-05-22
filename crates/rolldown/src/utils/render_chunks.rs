@@ -37,7 +37,7 @@ pub async fn render_chunks(
       if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
         let render_chunk_ret = plugin_driver
           .render_chunk(HookRenderChunkArgs {
-            code: std::mem::take(&mut asset.content).try_into_inner_string()?,
+            code: Arc::new(std::mem::take(&mut asset.content).try_into_inner_string()?),
             chunk: Arc::clone(
               chunks.get(&ecma_meta.rendered_chunk.filename).expect("should have chunk"),
             ),

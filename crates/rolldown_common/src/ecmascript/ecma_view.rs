@@ -9,7 +9,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   ExportsKind, HmrInfo, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, ModuleIdx,
-  NamedImport, ResolvedImportRecord, SourceMutation, StmtInfos, SymbolRef,
+  NamedImport, ResolvedImportRecord, SourceMutation, SymbolRef,
   side_effects::DeterminedSideEffects, types::source_mutation::ArcSourceMutation,
 };
 
@@ -68,8 +68,6 @@ pub struct EcmaView {
   pub namespace_object_ref: SymbolRef,
   pub named_imports: FxIndexMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<CompactStr, LocalExport>,
-  /// `stmt_infos[0]` represents the namespace binding statement
-  pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
   /// The key is the `Span` of `ImportDeclaration`, `ImportExpression`, `ExportNamedDeclaration`, `ExportAllDeclaration`
   /// and `CallExpression`(only when the callee is `require`).

@@ -1,3 +1,4 @@
 import { shared } from './shared.js';
-export { shared };
+const required = require('./required.js');
+export { shared, required };
 export const lazy = import('./lazy.js');

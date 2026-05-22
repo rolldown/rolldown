@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_GLOBAL_NAME
 
 ```text
-[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "es-toolkit" in "output.globals" – guessing "es_toolkit".
+[MISSING_GLOBAL_NAME] No name was provided for external module "es-toolkit" in "output.globals" – guessing "es_toolkit".
 
 ```
 

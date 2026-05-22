@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## DUPLICATE_SHEBANG
 
 ```text
-[DUPLICATE_SHEBANG] Warning: Both the code and banner contain shebang in "entry.js". This will cause a syntax error.
+[DUPLICATE_SHEBANG] Both the code and banner contain shebang in "entry.js". This will cause a syntax error.
 
 ```
 

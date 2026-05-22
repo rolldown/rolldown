@@ -29,7 +29,7 @@ console.log("dep");
 ### PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
+[PARSE_ERROR] Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[ dep.js:1:8 ]
    │
  1 │ invalid syntax
@@ -48,7 +48,7 @@ console.log("dep");
 #### PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
+[PARSE_ERROR] Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[ dep.js:1:8 ]
    │
  1 │ invalid syntax

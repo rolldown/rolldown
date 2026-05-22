@@ -1,7 +1,7 @@
 use crate::{
-  ImportRecordIdx, Module, ModuleId, ModuleIdx, RawImportRecord, ResolvedId, SymbolRefDbForModule,
-  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
-  types::lazy_barrel::BarrelInfo,
+  ImportRecordIdx, Module, ModuleId, ModuleIdx, RawImportRecord, ResolvedId, StmtInfos,
+  SymbolRefDbForModule, dynamic_import_usage::DynamicImportExportsUsage,
+  side_effects::DeterminedSideEffects, types::lazy_barrel::BarrelInfo,
 };
 use arcstr::ArcStr;
 use oxc::span::Span;
@@ -39,4 +39,9 @@ pub struct EcmaRelated {
   /// Whether JSX syntax is preserved for this module, determined per-module
   /// during transformation based on the resolved tsconfig.
   pub preserve_jsx: bool,
+  /// Per-module statement-info table. Held alongside `EcmaView` rather than on
+  /// it so the link stage can collect them into a side `IndexVec` without
+  /// `mem::replace` and so reads/writes during link/generate can split-borrow
+  /// from `metas`.
+  pub stmt_infos: StmtInfos,
 }

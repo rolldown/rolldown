@@ -8,6 +8,7 @@ pub struct BindingChecksOptions {
   pub eval: Option<bool>,
   pub missing_global_name: Option<bool>,
   pub missing_name_option_for_iife_export: Option<bool>,
+  pub invalid_annotation: Option<bool>,
   pub mixed_exports: Option<bool>,
   pub unresolved_entry: Option<bool>,
   pub unresolved_import: Option<bool>,
@@ -24,6 +25,7 @@ pub struct BindingChecksOptions {
   pub duplicate_shebang: Option<bool>,
   pub unsupported_tsconfig_option: Option<bool>,
   pub ineffective_dynamic_import: Option<bool>,
+  pub large_barrel_modules: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -32,6 +34,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       eval: value.eval,
       missing_global_name: value.missing_global_name,
       missing_name_option_for_iife_export: value.missing_name_option_for_iife_export,
+      invalid_annotation: value.invalid_annotation,
       mixed_exports: value.mixed_exports,
       unresolved_entry: value.unresolved_entry,
       unresolved_import: value.unresolved_import,
@@ -48,6 +51,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       duplicate_shebang: value.duplicate_shebang,
       unsupported_tsconfig_option: value.unsupported_tsconfig_option,
       ineffective_dynamic_import: value.ineffective_dynamic_import,
+      large_barrel_modules: value.large_barrel_modules,
     }
   }
 }

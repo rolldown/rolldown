@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: 'with' statements are not allowed
+[PARSE_ERROR] 'with' statements are not allowed
    ╭─[ with.js:1:1 ]
    │
  1 │ with (x) y
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Delete of an unqualified identifier in strict mode.
+[PARSE_ERROR] Delete of an unqualified identifier in strict mode.
    ╭─[ delete-1.js:1:8 ]
    │
  1 │ delete x
@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Delete of an unqualified identifier in strict mode.
+[PARSE_ERROR] Delete of an unqualified identifier in strict mode.
    ╭─[ delete-2.js:1:9 ]
    │
  1 │ delete (y)

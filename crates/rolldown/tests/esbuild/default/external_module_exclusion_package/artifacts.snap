@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'aws-sdk/clients/dynamodb' in index.js
+[UNRESOLVED_IMPORT] Could not resolve 'aws-sdk/clients/dynamodb' in index.js
    ╭─[ index.js:2:32 ]
    │
  2 │ import { DocumentClient } from 'aws-sdk/clients/dynamodb';

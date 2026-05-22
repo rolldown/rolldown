@@ -1,6 +1,8 @@
 // Auto-generated code, DO NOT EDIT DIRECTLY!
 // To edit this generated file you have to edit `tasks/generator/src/generators/runtime_helper.rs`
 
+#![expect(clippy::print_stderr)]
+
 use bitflags::bitflags;
 bitflags! {
   #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

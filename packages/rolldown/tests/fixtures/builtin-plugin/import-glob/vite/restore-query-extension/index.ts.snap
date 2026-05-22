@@ -1,13 +1,29 @@
-import { t as a_exports } from "./a.js";
-import { t as b_exports } from "./b.js";
-import { n as name$2, t as modules_exports } from "./modules.js";
-import { t as a_default } from "./a2.js";
-import { t as b_default } from "./b2.js";
+import { t as __exportAll } from "./chunk.js";
+import { t as a_exports$1 } from "./a.js";
+import { t as b_exports$1 } from "./b.js";
+//#region ../fixtures/a/modules/index.ts
+var modules_exports = /* @__PURE__ */ __exportAll({
+	a: () => "a",
+	b: () => "b",
+	default: () => modules_default,
+	name: () => name
+});
+const name = "index";
+var modules_default = "indexDefault";
+//#endregion
+//#region ../fixtures/a/modules/a.ts?raw
+var a_exports = /* @__PURE__ */ __exportAll({ default: () => a_default });
+var a_default = "export const name = 'a';\n";
+//#endregion
+//#region ../fixtures/a/modules/b.ts?raw
+var b_exports = /* @__PURE__ */ __exportAll({ default: () => b_default });
+var b_default = "export const name = 'b';\n";
+//#endregion
 //#region ../fixtures/a/index.ts
 const basic = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": () => import("./a.js").then((n) => n.t),
 	"./modules/b.ts": () => import("./b.js").then((n) => n.t),
-	"./modules/index.ts": () => import("./modules.js").then((n) => n.t)
+	"./modules/index.ts": () => Promise.resolve().then(() => modules_exports)
 });
 const basicWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
@@ -17,11 +33,11 @@ const basicWithObjectKeys = Object.keys({
 const basicWithObjectValues = Object.values([
 	() => import("./a.js").then((n) => n.t),
 	() => import("./b.js").then((n) => n.t),
-	() => import("./modules.js").then((n) => n.t)
+	() => Promise.resolve().then(() => modules_exports)
 ]);
 const basicEager = /* @__PURE__ */ Object.assign({
-	"./modules/a.ts": a_exports,
-	"./modules/b.ts": b_exports,
+	"./modules/a.ts": a_exports$1,
+	"./modules/b.ts": b_exports$1,
 	"./modules/index.ts": modules_exports
 });
 const basicEagerWithObjectKeys = Object.keys({
@@ -30,8 +46,8 @@ const basicEagerWithObjectKeys = Object.keys({
 	"./modules/index.ts": 0
 });
 const basicEagerWithObjectValues = Object.values([
-	a_exports,
-	b_exports,
+	a_exports$1,
+	b_exports$1,
 	modules_exports
 ]);
 const ignore = /* @__PURE__ */ Object.assign({
@@ -46,7 +62,7 @@ const ignoreWithObjectValues = Object.values([() => import("./a.js").then((n) =>
 const namedEager = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": "a",
 	"./modules/b.ts": "b",
-	"./modules/index.ts": name$2
+	"./modules/index.ts": name
 });
 const namedEagerWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
@@ -56,12 +72,12 @@ const namedEagerWithObjectKeys = Object.keys({
 const namedEagerWithObjectValues = Object.values([
 	"a",
 	"b",
-	name$2
+	name
 ]);
 const namedDefault = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": () => import("./a.js").then((n) => n.t).then((m) => m["default"]),
 	"./modules/b.ts": () => import("./b.js").then((n) => n.t).then((m) => m["default"]),
-	"./modules/index.ts": () => import("./modules.js").then((n) => n.t).then((m) => m["default"])
+	"./modules/index.ts": () => Promise.resolve().then(() => modules_exports).then((m) => m["default"])
 });
 const namedDefaultWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
@@ -71,15 +87,15 @@ const namedDefaultWithObjectKeys = Object.keys({
 const namedDefaultWithObjectValues = Object.values([
 	() => import("./a.js").then((n) => n.t).then((m) => m["default"]),
 	() => import("./b.js").then((n) => n.t).then((m) => m["default"]),
-	() => import("./modules.js").then((n) => n.t).then((m) => m["default"])
+	() => Promise.resolve().then(() => modules_exports).then((m) => m["default"])
 ]);
 const eagerAs = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": a_default,
 	"./modules/b.ts": b_default
 });
 const rawImportModule = /* @__PURE__ */ Object.assign({
-	"./modules/a.ts": () => import("./a2.js").then((n) => n.n),
-	"./modules/b.ts": () => import("./b2.js").then((n) => n.n)
+	"./modules/a.ts": () => Promise.resolve().then(() => a_exports),
+	"./modules/b.ts": () => Promise.resolve().then(() => b_exports)
 });
 const excludeSelf = /* @__PURE__ */ Object.assign({ "./sibling.ts": () => import("./sibling.js") });
 const excludeSelfRaw = /* @__PURE__ */ Object.assign({ "./sibling.ts": () => import("./sibling2.js") });
@@ -94,24 +110,24 @@ const cleverCwd1 = /* @__PURE__ */ Object.assign({ "./node_modules/framework/pag
 const cleverCwd2 = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": () => import("./a.js").then((n) => n.t),
 	"./modules/b.ts": () => import("./b.js").then((n) => n.t),
-	"../b/a.ts": () => import("./a3.js"),
-	"../b/b.ts": () => import("./b3.js")
+	"../b/a.ts": () => import("./a2.js"),
+	"../b/b.ts": () => import("./b2.js")
 });
 const customBase = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": () => import("./a.js").then((n) => n.t),
 	"./modules/b.ts": () => import("./b.js").then((n) => n.t),
-	"./modules/index.ts": () => import("./modules.js").then((n) => n.t),
+	"./modules/index.ts": () => Promise.resolve().then(() => modules_exports),
 	"./sibling.ts": () => import("./sibling.js")
 });
 const customRootBase = /* @__PURE__ */ Object.assign({
-	"./a.ts": () => import("./a3.js"),
-	"./b.ts": () => import("./b3.js"),
-	"./index.ts": () => import("./b4.js")
+	"./a.ts": () => import("./a2.js"),
+	"./b.ts": () => import("./b2.js"),
+	"./index.ts": () => import("./b3.js")
 });
 const customBaseParent = /* @__PURE__ */ Object.assign({
-	"../b/a.ts": () => import("./a3.js"),
-	"../b/b.ts": () => import("./b3.js"),
-	"../b/index.ts": () => import("./b4.js")
+	"../b/a.ts": () => import("./a2.js"),
+	"../b/b.ts": () => import("./b2.js"),
+	"../b/index.ts": () => import("./b3.js")
 });
 //#endregion
 export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, customBase, customBaseParent, customQueryString, customRootBase, eagerAs, excludeSelf, excludeSelfRaw, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule, rootMixedRelative };

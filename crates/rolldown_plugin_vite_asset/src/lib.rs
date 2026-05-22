@@ -135,7 +135,7 @@ impl Plugin for ViteAssetPlugin {
   ) -> rolldown_plugin::HookRenderChunkReturn {
     let env = RenderAssetUrlInJsEnv {
       ctx,
-      code: &args.code,
+      code: args.code.as_str(),
       is_worker: self.is_worker,
       env: &ToOutputFilePathEnv {
         is_ssr: self.is_ssr,

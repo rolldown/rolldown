@@ -11,6 +11,7 @@ use rolldown_fs_watcher::{DynFsWatcher, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 use tokio::sync::Mutex as TokioMutex;
 
@@ -27,10 +28,15 @@ pub struct WatchTask {
   fs_watcher: std::sync::Mutex<DynFsWatcher>,
   watched_files: FxDashSet<ArcStr>,
   pub(crate) needs_rebuild: bool,
+  closed: Arc<AtomicBool>,
 }
 
 impl WatchTask {
-  pub(crate) fn new(config: BundlerConfig, fs_watcher: DynFsWatcher) -> BuildResult<Self> {
+  pub(crate) fn new(
+    config: BundlerConfig,
+    fs_watcher: DynFsWatcher,
+    closed: &Arc<AtomicBool>,
+  ) -> BuildResult<Self> {
     // Validation: dev_mode not allowed with watch
     if config.options.experimental.as_ref().and_then(|e| e.dev_mode.as_ref()).is_some() {
       return Err(
@@ -57,6 +63,7 @@ impl WatchTask {
       fs_watcher: std::sync::Mutex::new(fs_watcher),
       watched_files: FxDashSet::default(),
       needs_rebuild: true,
+      closed: Arc::clone(closed),
     })
   }
 
@@ -77,6 +84,7 @@ impl WatchTask {
     let options_ref = &*self.options;
 
     // Scope the bundler lock to minimize lock duration
+    let closed = Arc::clone(&self.closed);
     let (result, new_watch_files, bundle_handle) = {
       let mut bundler = self.bundler.lock().await;
 
@@ -109,11 +117,17 @@ impl WatchTask {
 
           let scan_output = scan_result?;
 
-          if skip_write {
-            bundle.bundle_generate(scan_output).await
-          } else {
-            bundle.bundle_write(scan_output).await
+          // Watcher closed mid-build: signal cancellation to the caller via `None`.
+          if closed.load(Ordering::Relaxed) {
+            return Ok(None);
           }
+
+          let output = if skip_write {
+            bundle.bundle_generate(scan_output).await?
+          } else {
+            bundle.bundle_write(scan_output).await?
+          };
+          Ok(Some(output))
         })
         .await;
 
@@ -137,7 +151,8 @@ impl WatchTask {
     self.needs_rebuild = false;
 
     match result {
-      Ok(output) => {
+      Ok(None) => Ok(BuildOutcome::Closed),
+      Ok(Some(output)) => {
         // Emit build warnings (e.g. CIRCULAR_DEPENDENCY) via the on_log callback,
         // matching the behavior of the non-watch build path.
         if let Err(err) = Self::emit_warnings(&self.options, output.warnings).await {
@@ -344,4 +359,6 @@ pub enum BuildOutcome {
   Success(BundleEndEventData),
   /// Build had errors (but didn't fail fatally)
   Error(WatchErrorEventData),
+  /// `watcher.close()` was called during the build; output was discarded.
+  Closed,
 }

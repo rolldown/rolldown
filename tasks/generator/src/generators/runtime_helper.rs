@@ -50,6 +50,8 @@ fn generate_hook_usage_rs() -> String {
   }
   let runtime_helper_flag = format!(
     r"
+  #![expect(clippy::print_stderr)]
+
   use bitflags::bitflags;
   bitflags! {{
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

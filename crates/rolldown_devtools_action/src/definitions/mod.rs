@@ -11,6 +11,7 @@ pub mod hook_resolve_id_call_start;
 pub mod hook_transform_call_end;
 pub mod hook_transform_call_start;
 pub mod module_graph_ready;
+pub mod package_graph_ready;
 pub mod session_meta;
 
 #[derive(ts_rs::TS, serde::Serialize)]
@@ -28,6 +29,7 @@ pub enum Meta {
   ModuleGraphReady(module_graph_ready::ModuleGraphReady),
   SessionMeta(session_meta::SessionMeta),
   ChunksInfos(chunk_graph_ready::ChunkGraphReady),
+  PackageGraphReady(package_graph_ready::PackageGraphReady),
   HookRenderChunkStart(hook_render_chunk_start::HookRenderChunkStart),
   HookRenderChunkEnd(hook_render_chunk_end::HookRenderChunkEnd),
   AssetsReady(assets_ready::AssetsReady),

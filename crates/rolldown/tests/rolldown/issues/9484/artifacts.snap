@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+//#region data.json
+var data_default = { search: "hello" };
+//#endregion
+//#region main.js
+data_default.search = "overridden";
+assert.strictEqual(data_default.search, "overridden");
+//#endregion
+
+```

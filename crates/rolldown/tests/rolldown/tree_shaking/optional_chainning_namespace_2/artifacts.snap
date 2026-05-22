@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 //#endregion
 //#region main.js
-assert.strictEqual({ value: "used" }?.something?.foo, void 0);
+assert.strictEqual({ value: "used" }.something?.foo, void 0);
 //#endregion
 
 ```

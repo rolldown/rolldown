@@ -22,7 +22,7 @@ impl Plugin for TransformWithoutRuntimeUsagePlugin {
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     if args.id == RUNTIME_MODULE_KEY {
-      let mut code = args.code.clone();
+      let mut code = args.code.to_string();
       code.push_str("\nconsole.log(\"transform-without-usage\");\n");
       return Ok(Some(rolldown_plugin::HookTransformOutput {
         code: Some(code),

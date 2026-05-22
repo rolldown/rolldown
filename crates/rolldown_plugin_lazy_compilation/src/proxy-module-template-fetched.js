@@ -1,6 +1,6 @@
 const lazyExports = (async () => {
-  const mod = await import($MODULE_ID);
-  return mod;
+  await import($MODULE_ID);
+  return __rolldown_runtime__.loadExports($STABLE_MODULE_ID);
 })();
 
 export { lazyExports as 'rolldown:exports' };

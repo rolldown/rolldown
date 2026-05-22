@@ -1,0 +1,48 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## createIcon.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region createIcon.js
+var createIcon_exports = /* @__PURE__ */ __exportAll({
+	SvgIcon: () => SvgIcon,
+	createIcon: () => createIcon
+});
+function createIcon(name) {
+	return SvgIcon.muiName + "-" + name;
+}
+var SvgIcon;
+var init_createIcon = __esmMin((() => {
+	SvgIcon = { muiName: "SvgIcon" };
+}));
+
+//#endregion
+export { createIcon_exports as n, init_createIcon as r, createIcon as t };
+```
+
+## entry1.js
+
+```js
+import { r as init_createIcon, t as createIcon } from "./createIcon.js";
+
+//#region entry1.js
+init_createIcon();
+console.log(createIcon("Arrow"));
+
+//#endregion
+```
+
+## entry2.js
+
+```js
+import { n as createIcon_exports, r as init_createIcon } from "./createIcon.js";
+
+//#region entry2.js
+init_createIcon();
+
+//#endregion
+```

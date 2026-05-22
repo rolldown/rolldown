@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## RESOLVE_ERROR
 
 ```text
-[RESOLVE_ERROR] Error: Could not resolve '@missing/something' in lib.js
+[RESOLVE_ERROR] Could not resolve '@missing/something' in lib.js
    ╭─[ lib.js:1:19 ]
    │
  1 │ import { a } from "@missing/something";

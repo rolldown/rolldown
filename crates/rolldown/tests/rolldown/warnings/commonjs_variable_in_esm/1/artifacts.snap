@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## COMMONJS_VARIABLE_IN_ESM
 
 ```text
-[COMMONJS_VARIABLE_IN_ESM] Warning: The CommonJS `exports` variable is treated as a global variable in an ECMAScript module and may not work as expected
+[COMMONJS_VARIABLE_IN_ESM] The CommonJS `exports` variable is treated as a global variable in an ECMAScript module and may not work as expected
    ╭─[ main.js:2:1 ]
    │
  2 │ exports.a = 1000;
@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## COMMONJS_VARIABLE_IN_ESM
 
 ```text
-[COMMONJS_VARIABLE_IN_ESM] Warning: The CommonJS `module` variable is treated as a global variable in an ECMAScript module and may not work as expected
+[COMMONJS_VARIABLE_IN_ESM] The CommonJS `module` variable is treated as a global variable in an ECMAScript module and may not work as expected
    ╭─[ main.js:4:1 ]
    │
  4 │ module.exports = {};

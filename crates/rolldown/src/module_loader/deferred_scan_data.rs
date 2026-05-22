@@ -1,6 +1,6 @@
 use rolldown_common::ModuleId;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rustc_hash::FxHashMap;
 
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
@@ -16,7 +16,10 @@ pub async fn defer_sync_scan_data(
     return Ok(());
   };
 
-  for data in func.exec().await? {
+  let result = func.exec().await?;
+
+  let mut errors: Vec<BuildDiagnostic> = vec![];
+  for data in result {
     let source_id = ModuleId::new(data.id.as_str());
     let Some(state) = module_id_to_idx.get(&source_id) else {
       continue;
@@ -30,21 +33,29 @@ pub async fn defer_sync_scan_data(
     };
     // TODO: Document this and recommend user to return `moduleSideEffects` in hook return
     // value rather than mutate the `ModuleInfo`
-    normal.ecma_view.side_effects = match data.side_effects {
+    let side_effects = match data.side_effects {
       Some(HookSideEffects::False) => DeterminedSideEffects::UserDefined(false),
       Some(HookSideEffects::NoTreeshake) => DeterminedSideEffects::NoTreeshake,
       _ => {
         // for Some(HookSideEffects::True) and None,
         // we need to re analyze the side effects
-        normalize_side_effects(
+        match normalize_side_effects(
           options,
           &normal.originative_resolved_id,
-          Some(&normal.stmt_infos),
+          Some(&scan_stage_output.stmt_infos[module_idx]),
           data.side_effects,
         )
-        .await?
+        .await
+        {
+          Ok(side_effects) => side_effects,
+          Err(error) => {
+            errors.extend(error.into_vec());
+            continue;
+          }
+        }
       }
     };
+    normal.ecma_view.side_effects = side_effects;
   }
-  Ok(())
+  if errors.is_empty() { Ok(()) } else { Err(errors.into()) }
 }

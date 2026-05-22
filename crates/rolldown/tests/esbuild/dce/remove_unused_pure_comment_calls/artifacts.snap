@@ -1,6 +1,38 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* @__PURE__ */" in "entry.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    ╭─[ entry.js:55:18 ]
+    │
+ 55 │ let parens_no = (/* @__PURE__ */ foo)(bar);
+    │                  ───────┬───────  
+    │                         ╰───────── comment ignored due to position
+    │ 
+    │ Help: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+────╯
+
+```
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* @__PURE__ */" in "entry.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    ╭─[ entry.js:56:26 ]
+    │
+ 56 │ let new_parens_no = new (/* @__PURE__ */ foo)(bar);
+    │                          ───────┬───────  
+    │                                 ╰───────── comment ignored due to position
+    │ 
+    │ Help: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+────╯
+
+```
+
 # Assets
 
 ## entry.js

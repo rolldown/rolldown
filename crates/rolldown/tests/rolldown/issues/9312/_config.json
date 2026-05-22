@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.ts" }],
+    "define": {
+      "process.env.NODE_ENV": "\"production\""
+    }
+  },
+  "expectExecuted": false
+}

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: 'with' statements are not allowed
+[PARSE_ERROR] 'with' statements are not allowed
     ╭─[ entry.ts:21:1 ]
     │
  21 │ with (x) {

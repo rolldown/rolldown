@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## EMPTY_IMPORT_META
 
 ```text
-[EMPTY_IMPORT_META] Warning: `import.meta` may not be a valid syntax with the `cjs` output format.
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `cjs` output format.
    ╭─[ main.js:1:13 ]
    │
  1 │ console.log(import.meta.hello);
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## EMPTY_IMPORT_META
 
 ```text
-[EMPTY_IMPORT_META] Warning: `import.meta` may not be a valid syntax with the `cjs` output format.
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `cjs` output format.
    ╭─[ main.js:5:13 ]
    │
  5 │ console.log(import.meta);
@@ -51,7 +51,7 @@ console.log({});
 ### EMPTY_IMPORT_META
 
 ```text
-[EMPTY_IMPORT_META] Warning: `import.meta` may not be a valid syntax with the `iife` output format.
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `iife` output format.
    ╭─[ main.js:1:13 ]
    │
  1 │ console.log(import.meta.hello);
@@ -64,7 +64,7 @@ console.log({});
 ### EMPTY_IMPORT_META
 
 ```text
-[EMPTY_IMPORT_META] Warning: `import.meta` may not be a valid syntax with the `iife` output format.
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `iife` output format.
    ╭─[ main.js:2:13 ]
    │
  2 │ console.log(import.meta.dirname);
@@ -77,7 +77,7 @@ console.log({});
 ### EMPTY_IMPORT_META
 
 ```text
-[EMPTY_IMPORT_META] Warning: `import.meta` may not be a valid syntax with the `iife` output format.
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `iife` output format.
    ╭─[ main.js:3:13 ]
    │
  3 │ console.log(import.meta.filename);
@@ -90,7 +90,7 @@ console.log({});
 ### EMPTY_IMPORT_META
 
 ```text
-[EMPTY_IMPORT_META] Warning: `import.meta` may not be a valid syntax with the `iife` output format.
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `iife` output format.
    ╭─[ main.js:4:13 ]
    │
  4 │ console.log(import.meta.url);
@@ -105,7 +105,7 @@ console.log({});
 ### EMPTY_IMPORT_META
 
 ```text
-[EMPTY_IMPORT_META] Warning: `import.meta` may not be a valid syntax with the `iife` output format.
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `iife` output format.
    ╭─[ main.js:5:13 ]
    │
  5 │ console.log(import.meta);
@@ -139,7 +139,7 @@ console.log({});
 ### EMPTY_IMPORT_META
 
 ```text
-[EMPTY_IMPORT_META] Warning: `import.meta` may not be a valid syntax with the `umd` output format.
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `umd` output format.
    ╭─[ main.js:1:13 ]
    │
  1 │ console.log(import.meta.hello);
@@ -152,7 +152,7 @@ console.log({});
 ### EMPTY_IMPORT_META
 
 ```text
-[EMPTY_IMPORT_META] Warning: `import.meta` may not be a valid syntax with the `umd` output format.
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `umd` output format.
    ╭─[ main.js:2:13 ]
    │
  2 │ console.log(import.meta.dirname);
@@ -165,7 +165,7 @@ console.log({});
 ### EMPTY_IMPORT_META
 
 ```text
-[EMPTY_IMPORT_META] Warning: `import.meta` may not be a valid syntax with the `umd` output format.
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `umd` output format.
    ╭─[ main.js:3:13 ]
    │
  3 │ console.log(import.meta.filename);
@@ -178,7 +178,7 @@ console.log({});
 ### EMPTY_IMPORT_META
 
 ```text
-[EMPTY_IMPORT_META] Warning: `import.meta` may not be a valid syntax with the `umd` output format.
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `umd` output format.
    ╭─[ main.js:4:13 ]
    │
  4 │ console.log(import.meta.url);
@@ -193,7 +193,7 @@ console.log({});
 ### EMPTY_IMPORT_META
 
 ```text
-[EMPTY_IMPORT_META] Warning: `import.meta` may not be a valid syntax with the `umd` output format.
+[EMPTY_IMPORT_META] `import.meta` may not be a valid syntax with the `umd` output format.
    ╭─[ main.js:5:13 ]
    │
  5 │ console.log(import.meta);

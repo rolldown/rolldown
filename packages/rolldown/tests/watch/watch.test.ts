@@ -1366,3 +1366,49 @@ async function waitBuildFinished(watcher: RolldownWatcher, updateFn?: () => void
     updateFn && updateFn();
   });
 }
+
+// https://github.com/rolldown/rolldown/issues/8937
+test.concurrent(
+  'watcher.close() should cancel an in-progress build',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-close-cancel-build', retryCount);
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const delayPlugin = {
+      name: 'delay-plugin',
+      async buildStart() {
+        await sleep(2000);
+      },
+    };
+
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [delayPlugin],
+    });
+
+    const events: string[] = [];
+    watcher.on('event', (event) => {
+      events.push(event.code);
+    });
+
+    const closeFn = vi.fn();
+    watcher.on('close', closeFn);
+
+    await sleep(500);
+    await watcher.close();
+
+    expect(closeFn).toHaveBeenCalled();
+
+    expect(events).not.toContain('BUNDLE_END');
+    expect(events).not.toContain('END');
+
+    expect(fs.existsSync(output)).toBe(false);
+  },
+);

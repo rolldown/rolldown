@@ -15,6 +15,7 @@ bitflags! {
     const MissingExportError = 1 << 7;
     const MissingGlobalName = 1 << 8;
     const MissingNameOptionForIifeExport = 1 << 9;
+    const InvalidAnnotation = 1 << 10;
     const MixedExports = 1 << 11;
     const ParseError = 1 << 12;
     const UnresolvedEntry = 1 << 13;
@@ -49,5 +50,6 @@ bitflags! {
     const RuntimeModuleSymbolNotFoundError = 1 << 42;
     const IneffectiveDynamicImport = 1 << 44;
     const RequireTlaError = 1 << 45;
+    const LargeBarrelModules = 1 << 46;
   }
 }

@@ -73,7 +73,6 @@ cow-utils = { workspace = true }
 insta = { workspace = true }
 regex = { workspace = true }
 rolldown_common = { workspace = true }
-rolldown_dev = { path = "../rolldown_dev" }
 rolldown_testing = { path = "../rolldown_testing" }
 rolldown_workspace = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

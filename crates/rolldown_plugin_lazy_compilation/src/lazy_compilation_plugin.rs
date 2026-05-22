@@ -107,7 +107,19 @@ impl Plugin for LazyCompilationPlugin {
         )
         .await??;
 
-      let lazy_id: ArcStr = format!("{}?rolldown-lazy=1", original_id.id).into();
+      // Idempotent: Calling `ctx.resolve` may trigger other plugins' resolve_id hooks,
+      // and these hooks may also call `ctx.resolve`,
+      // so it may cause `LazyCompilationPlugin::resolve_id` to be called multiple times for the same module
+      // so that the `original_id` may be marked as `rolldown-lazy=1` already.
+      //
+      // Here we check if the module has already been marked as a lazy entry.
+      // Otherwise, `delete modules[$STABLE_PROXY_MODULE_ID]` may not be aligned with the module ID,
+      // causing the bundler failing to invalidation downstream.
+      let lazy_id: ArcStr = if original_id.id.as_str().ends_with("?rolldown-lazy=1") {
+        original_id.id.as_str().into()
+      } else {
+        format!("{}?rolldown-lazy=1", original_id.id).into()
+      };
       self.lazy_entries.insert(lazy_id.clone());
 
       return Ok(Some(HookResolveIdOutput {

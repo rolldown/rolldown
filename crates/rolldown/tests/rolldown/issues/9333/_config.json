@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "import": "./main.js"
+      },
+      {
+        "import": "./worker.js"
+      }
+    ],
+    "external": ["node:path", "node:worker_threads"],
+    "format": "cjs"
+  },
+  "expectExecuted": false
+}

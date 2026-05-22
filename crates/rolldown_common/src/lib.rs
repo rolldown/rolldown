@@ -34,7 +34,9 @@ pub mod bundler_options {
       dev_mode_options::DevModeOptions,
       devtools_options::DevtoolsOptions,
       es_module_flag::EsModuleFlag,
-      experimental_options::ExperimentalOptions,
+      experimental_options::{
+        ChunkOptimizationOption, ChunkOptimizationOptions, ExperimentalOptions,
+      },
       filename_template::{FilenameTemplate, is_path_fragment},
       generated_code_options::GeneratedCodeOptions,
       hash_characters::HashCharacters,

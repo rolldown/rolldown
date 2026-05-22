@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.jsx
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.jsx
    ╭─[ entry.jsx:1:8 ]
    │
  1 │ import 'foo' /* before */ assert { type: 'json' }
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.jsx
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.jsx
    ╭─[ entry.jsx:2:8 ]
    │
  2 │ import 'foo' assert /* before */ { type: 'json' }
@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.jsx
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.jsx
    ╭─[ entry.jsx:3:8 ]
    │
  3 │ import 'foo' assert { /* before */ type: 'json' }
@@ -45,7 +45,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.jsx
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.jsx
    ╭─[ entry.jsx:4:8 ]
    │
  4 │ import 'foo' assert { type: /* before */ 'json' }
@@ -58,7 +58,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.jsx
+[UNRESOLVED_IMPORT] Could not resolve 'foo' in entry.jsx
    ╭─[ entry.jsx:5:8 ]
    │
  5 │ import 'foo' assert { type: 'json' /* before */ }

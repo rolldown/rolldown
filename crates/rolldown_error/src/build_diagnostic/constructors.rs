@@ -25,6 +25,7 @@ use super::events::filename_conflict::FilenameConflict;
 use super::events::filename_outside_output_directory::FilenameOutsideOutputDirectory;
 use super::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use super::events::import_is_undefined::ImportIsUndefined;
+use super::events::invalid_annotation::InvalidAnnotation;
 use super::events::invalid_define_config::InvalidDefineConfig;
 use super::events::invalid_option::{InvalidOption, InvalidOptionType};
 use super::events::json_parse::JsonParse;
@@ -85,6 +86,15 @@ impl BuildDiagnostic {
       unresolved_id: unresolved_id.as_ref().to_path_buf(),
       resolve_error,
     })
+  }
+
+  pub fn invalid_annotation(
+    module_id: String,
+    annotation: String,
+    source: ArcStr,
+    span: oxc::span::Span,
+  ) -> Self {
+    Self::new_inner(InvalidAnnotation { module_id, annotation, source, span })
   }
 
   pub fn resolve_error(
@@ -431,6 +441,13 @@ impl BuildDiagnostic {
       module_id,
       static_importers,
       dynamic_importers,
+    })
+  }
+
+  pub fn large_barrel_modules(module_id: String, reexport_count: usize) -> Self {
+    Self::new_inner(super::events::large_barrel_modules::LargeBarrelModules {
+      module_id,
+      reexport_count,
     })
   }
 }

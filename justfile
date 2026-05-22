@@ -171,8 +171,8 @@ lint-repo:
 
 # --- `build` series commands aim to provide a easy way to build the project.
 
-# Build both `@rolldown/pluginutils` and rolldown
-build: build-pluginutils build-rolldown
+# Build rolldown
+build: build-rolldown
 
 # Build `@rolldown/debug` located in `packages/debug`.
 build-rolldown-debug:
@@ -187,15 +187,15 @@ build-rolldown-binding:
   vp run --filter rolldown build-binding
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding.
-build-rolldown: build-pluginutils
+build-rolldown:
   vp run --filter rolldown build-native:debug
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.wasm` binding for WASI.
-build-rolldown-wasi: build-pluginutils
+build-rolldown-wasi:
   vp run --filter rolldown build-wasi:debug
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in release mode.
-build-rolldown-release: build-pluginutils
+build-rolldown-release:
   vp run --filter rolldown build-native:release
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in profile mode.
@@ -206,16 +206,12 @@ build-rolldown-memory-profile:
   vp run --filter rolldown build-native:memory-profile
 
 # Build `@rolldown/browser` located in `packages/browser` itself and its `.wasm` binding.
-build-browser: build-pluginutils
+build-browser:
   vp run --filter "@rolldown/browser" build:debug
 
 # Build `@rolldown/browser` located in `packages/browser` itself and its `.wasm` binding in release mode.
-build-browser-release: build-pluginutils
+build-browser-release:
   vp run --filter "@rolldown/browser" build:release
-
-# Build `@rolldown/pluginutils` located in `packages/pluginutils`.
-build-pluginutils:
-  vp run --filter "@rolldown/pluginutils" build
 
 # Build `@rolldown/test-dev-server` located in `packages/test-dev-server`.
 build-test-dev-server:

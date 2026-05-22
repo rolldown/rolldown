@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic1.js
+
+```js
+import "./sharedDynamic.js";
+//#region dynamic1.js
+console.log(true);
+const promise = import("./dynamic2.js");
+//#endregion
+export { promise };
+
+```
+
+## dynamic2.js
+
+```js
+import { t as sharedDynamic } from "./sharedDynamic.js";
+export { sharedDynamic };
+
+```
+
+## main.js
+
+```js
+//#region main.js
+import("./dynamic1.js").then(({ promise, ...ns }) => ns);
+//#endregion
+
+```
+
+## sharedDynamic.js
+
+```js
+//#region sharedDynamic.js
+const sharedDynamic = true;
+//#endregion
+export { sharedDynamic as t };
+
+```

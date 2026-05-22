@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 foo
 ```
 
-## chunks/dep-DUl6diVE.js
+## chunks/dep-BUzgE9pt.js
 
 ```js
 //#region dep.js
@@ -24,7 +24,7 @@ export { url };
 ```js
 //#region main.js
 const url = new URL("assets/foo-CKfX4HZF.txt", import.meta.url);
-const dep = import("./chunks/dep-DUl6diVE.js");
+const dep = import("./chunks/dep-BUzgE9pt.js");
 //#endregion
 export { dep, url };
 

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Unexpected JSX expression
+[PARSE_ERROR] Unexpected JSX expression
    ╭─[ entry.js:1:13 ]
    │
  1 │ console.log(<div/>)

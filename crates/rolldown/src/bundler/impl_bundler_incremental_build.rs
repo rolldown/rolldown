@@ -13,9 +13,14 @@ impl Bundler {
   ) -> BuildResult<T> {
     let cache = mem::take(&mut self.cache);
     let mut bundle = self.bundle_factory.create_bundle(bundle_mode, Some(cache))?;
-    let ret = with_fn(&mut bundle).await?;
+    // Do NOT `?` the build result here. The cache must be moved back into the
+    // `Bundler` on every outcome; bailing on `Err` would drop `bundle` and leave
+    // `Bundler::cache` at the `default()` (snapshot = None) that `mem::take`
+    // installed above, making the next HMR cycle panic in `get_snapshot()`.
+    // See meta/design/bundler-data-lifecycle.md ("Cache integrity on a failed build").
+    let ret = with_fn(&mut bundle).await;
     self.cache = bundle.cache;
-    Ok(ret)
+    ret
   }
 
   #[cfg(feature = "experimental")]

@@ -5,6 +5,20 @@ use oxc::{
 
 use crate::EcmaAst;
 
+/// Returns a [`SemanticBuilder`] pre-configured for any `Scoping` that will be
+/// passed to `Transformer::build_with_scoping`.
+///
+/// The TS transformer's enum lowering reads each member's constant value via
+/// `Scoping::get_enum_member_value`. That table is only populated when the
+/// builder has `enum_eval` enabled — without it, member aliases like
+/// `Default = Theme.Light` fall through to the buggy reverse-mapping form for
+/// string enums (`Foo[Foo["x"] = init] = "x"`), which corrupts the original
+/// member's reverse mapping. Callers may chain additional options (e.g.
+/// `with_check_syntax_error`, `with_stats`) on top.
+pub fn semantic_builder_for_transform<'a>() -> SemanticBuilder<'a> {
+  SemanticBuilder::new().with_enum_eval(true)
+}
+
 impl EcmaAst {
   pub fn is_body_empty(&self) -> bool {
     self.program().is_empty()

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Identifier `DROP` has already been declared
+[PARSE_ERROR] Identifier `DROP` has already been declared
    ╭─[ empty-last.js:1:10 ]
    │
  1 │ function DROP() { return x }
@@ -22,7 +22,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Identifier `keep` has already been declared
+[PARSE_ERROR] Identifier `keep` has already been declared
    ╭─[ empty-first.js:1:10 ]
    │
  1 │ function keep() { return }

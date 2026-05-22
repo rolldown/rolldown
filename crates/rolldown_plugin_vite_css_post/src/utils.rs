@@ -90,7 +90,7 @@ impl ViteCSSPostPlugin {
     if css_url_iter.peek().is_some() {
       let indices = css_url_iter.map(|(index, _)| index).collect::<Vec<_>>();
       let magic_string =
-        magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&ctx.args.code));
+        magic_string.get_or_insert_with(|| string_wizard::MagicString::new(ctx.args.code.as_str()));
 
       let url_cache = ctx.meta().get_or_insert_default::<CSSUrlCache>();
       for index in indices {
@@ -289,7 +289,7 @@ impl ViteCSSPostPlugin {
 
         #[expect(clippy::cast_possible_truncation)]
         magic_string
-          .get_or_insert_with(|| string_wizard::MagicString::new(&ctx.args.code))
+          .get_or_insert_with(|| string_wizard::MagicString::new(ctx.args.code.as_str()))
           .append_right(injection_point as u32, inject_code);
       }
     } else {

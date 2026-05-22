@@ -6,8 +6,8 @@ use oxc_index::IndexVec;
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
   ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, EntryPointKind, FlatOptions, ImportKind,
-  Module, ModuleIdx, ModuleTable, PreserveEntrySignatures, RuntimeModuleBrief, StmtInfos,
-  SymbolRef, SymbolRefDb, UsedSymbolRefs, dynamic_import_usage::DynamicImportExportsUsage,
+  ModuleIdx, ModuleTable, PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
+  UsedSymbolRefs, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 #[cfg(target_family = "wasm")]
@@ -21,7 +21,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   SharedOptions,
-  type_alias::IndexEcmaAst,
+  type_alias::{IndexEcmaAst, IndexStmtInfos},
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
@@ -64,7 +64,7 @@ pub struct LinkStageOutput {
   pub metas: LinkingMetadataVec,
   pub symbol_db: SymbolRefDb,
   /// Per-module statement-info table; see `LinkStage.stmt_infos`.
-  pub stmt_infos: IndexVec<ModuleIdx, StmtInfos>,
+  pub stmt_infos: IndexStmtInfos,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
@@ -99,7 +99,7 @@ pub struct LinkStage<'a> {
   /// zipped iterator without aliasing tricks. Threaded through `LinkStageOutput`
   /// to the generate stage and module finalizers, which used to read
   /// `module.stmt_infos` directly.
-  pub stmt_infos: IndexVec<ModuleIdx, StmtInfos>,
+  pub stmt_infos: IndexStmtInfos,
   pub runtime: RuntimeModuleBrief,
   pub sorted_modules: Vec<ModuleIdx>,
   pub metas: LinkingMetadataVec,
@@ -167,21 +167,10 @@ impl<'a> LinkStage<'a> {
         .iter()
         .map(|_| Box::default())
         .collect::<IndexVec<ModuleIdx, _>>(),
-      // Detach `stmt_infos` from each `EcmaView`. The vestigial field is left
-      // as an empty placeholder; every link/generate/finalize reader now goes
-      // through `link_stage.stmt_infos[idx]` (or `link_output.stmt_infos[idx]`)
-      // instead of `module.stmt_infos`. Removing the placeholder field from
-      // `EcmaView` is a follow-up cleanup that requires re-routing the scan
-      // stage to produce it on the side rather than via the factory.
-      stmt_infos: scan_stage_output
-        .module_table
-        .modules
-        .iter_mut()
-        .map(|m| match m {
-          Module::Normal(n) => std::mem::replace(&mut n.stmt_infos, StmtInfos::new()),
-          Module::External(_) => StmtInfos::new(),
-        })
-        .collect::<IndexVec<ModuleIdx, _>>(),
+      // `stmt_infos` is produced by the scan stage on the side (in
+      // `NormalizedScanStageOutput.stmt_infos`) rather than living on each
+      // `EcmaView`, so we can move it directly here.
+      stmt_infos: std::mem::take(&mut scan_stage_output.stmt_infos),
       metas: scan_stage_output
         .module_table
         .modules

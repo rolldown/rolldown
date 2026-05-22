@@ -213,8 +213,10 @@ When a barrel module has its own exports (not just re-exports), all its import r
 // barrel/index.js
 import './a';
 import { b } from './b';
+import { e } from './e';
 export { c } from './c';
 export { d } from './d';
+export { e };
 
 console.log(b);
 
@@ -226,12 +228,15 @@ import { index, c } from './barrel';
 // or import b, { c } from './barrel';
 ```
 
-In this case, when `index` is imported: `a.js`, `b.js`, `c.js`, and `d.js` are all loaded:
+In this case, when `index` is imported: `a.js`, `b.js`, `c.js`, `d.js`, and `e.js` are all loaded:
 
 - `import './a'` - `a.js` is loaded with no specifier requested
-- `import { b } from './b'` - `b.js` is loaded with `b` requested
-- `export { c } from './c'` - `c.js` is loaded with `c` requested (because main.js imports `c`)
-- `export { d } from './d'` - `d.js` is loaded with no specifier requested (like `import './d'`, since `d` is not imported in main.js)
+- `import { b } from './b'` - `b.js` is loaded with `b` requested (used by the barrel's own code)
+- `import { e } from './e'; export { e }` (import-then-export) - `e.js` is loaded with `e` requested, because Rolldown cannot statically determine whether the barrel's own code also uses `e`
+- `export { c } from './c'` (dedicated re-export) - `c.js` is loaded with `c` requested (because main.js imports `c`)
+- `export { d } from './d'` (dedicated re-export) - `d.js` is loaded with no specifier requested (like `import './d'`, since `d` is not imported in main.js)
+
+Note the distinction between a dedicated re-export record (`export { .. } from '..'`, `export * as ns from '..'`) and a shared import record produced by the import-then-export pattern. When the barrel's own exports are loaded by main.js and the barrel must execute, dedicated re-export records can still fall back to an empty specifier set if their binding is not requested by main.js. Shared import records, by contrast, always keep their full specifiers, since their bindings may be referenced by the barrel's own code.
 
 This happens because `moduleSideEffects` can only be determined after the transform hook, but lazy barrel decisions are made at the load stage. When the barrel must execute (due to own exports being used), all its imports must be loaded to ensure correct behavior.
 
@@ -311,6 +316,35 @@ Lazy barrel optimization is particularly beneficial when:
 
 - Your codebase has many barrel modules (common in component libraries)
 - Barrel modules re-export many modules but consumers typically use only a few
+
+## Large barrel modules
+
+Lazy barrel skips loading, parsing, and transforming unused re-exports, but the **resolve** step still runs for every entry. The resolver invokes `resolveId` plugin hooks for each import record, so a barrel with thousands of re-exports can dominate build time even when only a handful of them are actually used.
+
+A typical example is `@mui/icons-material/esm/index.js`, which contains more than 10,000 re-export entries. When such a file is loaded, Rolldown still issues a resolve for every one of them, even though lazy barrel ensures only the requested icons are loaded and transformed afterwards.
+
+When `experimental.lazyBarrel` is enabled and a barrel module contains more than 5,000 re-exports, Rolldown emits an info-level advice with the code `LARGE_BARREL_MODULES`:
+
+```
+advice[LARGE_BARREL_MODULES]: node_modules/@mui/icons-material/esm/index.js has 10611 re-exports. Eagerly resolving every entry can significantly slow down the build. Consider using `@rolldown/plugin-transform-imports` to rewrite imports at the source level so the barrel file is never loaded.
+```
+
+[`@rolldown/plugin-transform-imports`](https://github.com/rolldown/plugins/tree/main/packages/transform-imports) sidesteps the resolve cost by rewriting the imports at the source level so the barrel file is never loaded:
+
+```js
+// Before
+import { Home, Search } from '@mui/icons-material';
+
+// After (rewritten by the plugin)
+import Home from '@mui/icons-material/esm/Home';
+import Search from '@mui/icons-material/esm/Search';
+```
+
+To silence the advice, set `checks.largeBarrelModules` to `false` or pass `--no-checks.large-barrel-modules` on the CLI.
+
+::: info Why is this a plugin instead of built-in behavior?
+Deferring the resolve step inside Rolldown would change when `moduleParsed` fires and when `ModuleInfo` is fully populated — a visible departure from Rollup-compatible plugin semantics. To keep the plugin contract stable through Rolldown's 1.0 release, we prefer to solve this at the source level for the cases where it actually matters. Outside of outliers like icon packs, the resolve cost on typical barrels (tens to low hundreds of re-exports) is negligible.
+:::
 
 ## Limitations
 

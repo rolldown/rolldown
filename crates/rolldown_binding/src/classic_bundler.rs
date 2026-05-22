@@ -116,6 +116,13 @@ impl ClassicBundler {
     if !is_closed {
       self.closed = true;
     }
+    // When devtools is active, ask the writer thread to drain this session and
+    // receive an ack. Consumers rely on "files are readable after
+    // `bundle.close()` resolves" — see `meta/design/devtools.md`.
+    let devtools_flush_rx = self
+      .debug_tracer
+      .as_ref()
+      .map(|_| rolldown_devtools::flush_session(self.session_id.as_ref().to_string()));
     // - The code is written in a non-intuitive way to satisfy the rustc and the upper usage of `BindingBundler#close`.
     // - We need the future to be `Send + 'static` for napi-rs, so we can't use `async fn` directly here.
     // - Read `BindingBundler#close` in `crates/rolldown_binding/src/binding_bundler.rs` for more details.
@@ -123,6 +130,34 @@ impl ClassicBundler {
       if let Some(handle) = last_bundle_handle {
         let plugin_driver = handle.plugin_driver();
         plugin_driver.close_bundle(None).await?;
+      }
+      if let Some(rx) = devtools_flush_rx {
+        // Block on the writer-thread ack in a blocking task so we don't stall
+        // a tokio worker. Bounded wait so a hung writer thread (e.g. stalled
+        // fs I/O on an NFS disconnect) can't wedge `bundle.close()` forever.
+        // All three failure modes (timeout, writer disconnected, blocking task
+        // panicked) are surfaced as errors so the documented "logs readable
+        // after close()" contract does not silently break.
+        let join_result = napi::tokio::task::spawn_blocking(move || {
+          rx.recv_timeout(std::time::Duration::from_secs(30))
+        })
+        .await
+        .map_err(|err| anyhow::anyhow!("devtools flush task failed to join: {err}"))?;
+        match join_result {
+          Ok(()) => {}
+          Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+            return Err(anyhow::anyhow!(
+              "devtools writer did not acknowledge session flush within 30s; \
+               node_modules/.rolldown log files may be truncated"
+            ));
+          }
+          Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+            return Err(anyhow::anyhow!(
+              "devtools writer thread disconnected before acknowledging flush; \
+               node_modules/.rolldown log files may be truncated"
+            ));
+          }
+        }
       }
       Ok(())
     }

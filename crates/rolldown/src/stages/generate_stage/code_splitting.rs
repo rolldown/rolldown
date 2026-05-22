@@ -849,6 +849,10 @@ impl GenerateStage<'_> {
       self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
     let allow_merge_common_chunks =
       self.options.experimental.is_merge_common_chunks_enabled() && !has_tla_or_tla_dependency;
+    let min_chunk_size = self.options.experimental.min_chunk_size();
+    let allow_min_size_common_chunk_merge = min_chunk_size > 0
+      && allow_merge_common_chunks
+      && self.options.manual_code_splitting.is_none();
     let allow_avoid_redundant_chunk_loads =
       self.options.experimental.is_avoid_redundant_chunk_loads_enabled()
         && !has_tla_or_tla_dependency;
@@ -948,6 +952,9 @@ impl GenerateStage<'_> {
 
     if allow_merge_common_chunks {
       temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
+      if allow_min_size_common_chunk_merge {
+        temp_chunk_graph.merge_side_effect_free_common_chunks(min_chunk_size);
+      }
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,

@@ -43,14 +43,23 @@ struct CommonChunkMerge {
 /// A lightweight representation of a chunk used during optimization passes.
 struct ChunkCandidate {
   modules: Vec<ModuleIdx>,
+  bits: BitSet,
+  approx_size: u32,
   /// Whether this chunk needs to be created in the final chunk graph.
   needs_creation: bool,
+  /// Redirect target when this temporary chunk was merged into another
+  /// temporary chunk before materialization.
+  merged_into: Option<ChunkIdx>,
   dependencies: FxHashSet<ChunkIdx>,
   /// Whether any module in this chunk has side effects.
   has_side_effects: bool,
 }
 
 type TempIndexChunks = IndexVec<ChunkIdx, ChunkCandidate>;
+
+fn module_size(module_table: &ModuleTable, module_idx: ModuleIdx) -> u32 {
+  u32::try_from(module_table[module_idx].size()).unwrap_or(u32::MAX)
+}
 
 /// A temporary structure for managing chunk graph optimizations.
 /// Only store simplified information needed during optimization passes.
@@ -95,8 +104,13 @@ impl ChunkOptimizationGraph {
           .iter()
           .any(|&module_idx| module_table[module_idx].side_effects().has_side_effects());
         ChunkCandidate {
+          approx_size: item.modules.iter().fold(0, |size, &module_idx| {
+            size.saturating_add(module_size(module_table, module_idx))
+          }),
           modules: item.modules.clone(),
+          bits: item.bits.clone(),
           needs_creation: false,
+          merged_into: None,
           dependencies: FxHashSet::default(),
           has_side_effects,
         }
@@ -124,12 +138,17 @@ impl ChunkOptimizationGraph {
     let module_has_side_effects = module_table[module_idx].side_effects().has_side_effects();
     if let Some(&chunk_idx) = self.bits_to_chunk_idx.get(bits) {
       self.chunks[chunk_idx].modules.push(module_idx);
+      self.chunks[chunk_idx].approx_size =
+        self.chunks[chunk_idx].approx_size.saturating_add(module_size(module_table, module_idx));
       self.chunks[chunk_idx].has_side_effects |= module_has_side_effects;
       self.module_to_chunk[module_idx] = Some(chunk_idx);
     } else {
       let temp_chunk = ChunkCandidate {
         modules: vec![module_idx],
+        bits: bits.clone(),
+        approx_size: module_size(module_table, module_idx),
         needs_creation: true,
+        merged_into: None,
         dependencies: FxHashSet::default(),
         has_side_effects: module_has_side_effects,
       };
@@ -146,6 +165,8 @@ impl ChunkOptimizationGraph {
     module_table: &ModuleTable,
   ) {
     self.chunks[chunk_idx].modules.push(module_idx);
+    self.chunks[chunk_idx].approx_size =
+      self.chunks[chunk_idx].approx_size.saturating_add(module_size(module_table, module_idx));
     self.chunks[chunk_idx].has_side_effects |=
       module_table[module_idx].side_effects().has_side_effects();
     self.module_to_chunk[module_idx] = Some(chunk_idx);
@@ -282,6 +303,180 @@ impl ChunkOptimizationGraph {
     self.chunks[target_chunk_idx].dependencies.remove(&target_chunk_idx);
     self.chunks[target_chunk_idx].has_side_effects |= source_has_side_effects;
   }
+
+  pub fn merge_side_effect_free_common_chunks(&mut self, min_chunk_size: u32) {
+    if min_chunk_size == 0 {
+      return;
+    }
+
+    let closure_has_side_effects = self.compute_closure_side_effects();
+    let mut small_sources: Vec<_> = self
+      .chunks
+      .indices()
+      .filter(|&idx| {
+        self.is_live_auto_common(idx)
+          && self.chunks[idx].approx_size < min_chunk_size
+          && !closure_has_side_effects[idx]
+      })
+      .collect();
+    small_sources.sort_by_key(|&idx| (self.chunks[idx].approx_size, idx.raw()));
+
+    for source_chunk_idx in small_sources {
+      if !self.is_live_auto_common(source_chunk_idx)
+        || self.chunks[source_chunk_idx].approx_size >= min_chunk_size
+        || closure_has_side_effects[source_chunk_idx]
+      {
+        continue;
+      }
+
+      let mut best_target = None;
+      let mut best_key = (u64::MAX, u32::MAX, u32::MAX);
+      for target_chunk_idx in self.chunks.indices() {
+        if source_chunk_idx == target_chunk_idx
+          || !self.is_live_auto_common(target_chunk_idx)
+          || closure_has_side_effects[target_chunk_idx]
+          || !Self::bits_intersect(
+            &self.chunks[source_chunk_idx].bits,
+            &self.chunks[target_chunk_idx].bits,
+          )
+          || self.merged_bits_would_collide(source_chunk_idx, target_chunk_idx)
+        {
+          continue;
+        }
+
+        let added_bytes = Self::estimate_added_bytes(
+          &self.chunks[source_chunk_idx],
+          &self.chunks[target_chunk_idx],
+        );
+        let target_key =
+          (added_bytes, self.chunks[target_chunk_idx].approx_size, target_chunk_idx.raw());
+        if target_key >= best_key
+          || self.would_create_circular_dependency(source_chunk_idx, target_chunk_idx)
+        {
+          continue;
+        }
+        best_key = target_key;
+        best_target = Some(target_chunk_idx);
+      }
+
+      if let Some(target_chunk_idx) = best_target {
+        self.merge_temp_chunks(source_chunk_idx, target_chunk_idx);
+      }
+    }
+  }
+
+  fn is_live_auto_common(&self, chunk_idx: ChunkIdx) -> bool {
+    let chunk = &self.chunks[chunk_idx];
+    chunk.needs_creation && chunk.merged_into.is_none() && !chunk.modules.is_empty()
+  }
+
+  fn compute_closure_side_effects(&self) -> IndexVec<ChunkIdx, bool> {
+    self
+      .chunks
+      .indices()
+      .map(|chunk_idx| self.chunk_dependency_closure_has_side_effects(chunk_idx))
+      .collect()
+  }
+
+  fn chunk_dependency_closure_has_side_effects(&self, chunk_idx: ChunkIdx) -> bool {
+    let mut queue: VecDeque<ChunkIdx> = VecDeque::from_iter([chunk_idx]);
+    let mut visited = FxHashSet::default();
+
+    while let Some(current_idx) = queue.pop_front() {
+      if !visited.insert(current_idx) {
+        continue;
+      }
+      let chunk = &self.chunks[current_idx];
+      if chunk.has_side_effects {
+        return true;
+      }
+      queue.extend(chunk.dependencies.iter().copied());
+    }
+
+    false
+  }
+
+  fn merged_bits_would_collide(
+    &self,
+    source_chunk_idx: ChunkIdx,
+    target_chunk_idx: ChunkIdx,
+  ) -> bool {
+    let mut merged_bits = self.chunks[target_chunk_idx].bits.clone();
+    merged_bits.union(&self.chunks[source_chunk_idx].bits);
+    self.bits_to_chunk_idx.get(&merged_bits).is_some_and(|&existing_chunk_idx| {
+      existing_chunk_idx != source_chunk_idx
+        && existing_chunk_idx != target_chunk_idx
+        && self.chunks[existing_chunk_idx].merged_into.is_none()
+    })
+  }
+
+  fn bits_intersect(left: &BitSet, right: &BitSet) -> bool {
+    left.index_of_one().any(|bit| right.has_bit(bit))
+  }
+
+  fn estimate_added_bytes(source: &ChunkCandidate, target: &ChunkCandidate) -> u64 {
+    let source_only_entries = source.bits.index_of_one().filter(|bit| !target.bits.has_bit(*bit));
+    let target_only_entries = target.bits.index_of_one().filter(|bit| !source.bits.has_bit(*bit));
+    u64::from(source.approx_size) * target_only_entries.count() as u64
+      + u64::from(target.approx_size) * source_only_entries.count() as u64
+  }
+
+  fn merge_temp_chunks(&mut self, source_chunk_idx: ChunkIdx, target_chunk_idx: ChunkIdx) {
+    debug_assert_ne!(source_chunk_idx, target_chunk_idx);
+    debug_assert!(self.is_live_auto_common(source_chunk_idx));
+    debug_assert!(self.is_live_auto_common(target_chunk_idx));
+
+    let source_bits = self.chunks[source_chunk_idx].bits.clone();
+    let target_bits = self.chunks[target_chunk_idx].bits.clone();
+    let mut merged_bits = target_bits.clone();
+    merged_bits.union(&source_bits);
+
+    let source_modules = std::mem::take(&mut self.chunks[source_chunk_idx].modules);
+    let source_dependencies = std::mem::take(&mut self.chunks[source_chunk_idx].dependencies);
+    let source_approx_size = self.chunks[source_chunk_idx].approx_size;
+    let source_has_side_effects = self.chunks[source_chunk_idx].has_side_effects;
+
+    for &module_idx in &source_modules {
+      self.module_to_chunk[module_idx] = Some(target_chunk_idx);
+    }
+    self.chunks[target_chunk_idx].modules.extend(source_modules);
+    self.chunks[target_chunk_idx].approx_size =
+      self.chunks[target_chunk_idx].approx_size.saturating_add(source_approx_size);
+    self.chunks[target_chunk_idx].bits = merged_bits.clone();
+    self.chunks[target_chunk_idx].has_side_effects |= source_has_side_effects;
+
+    for dep_chunk_idx in source_dependencies {
+      if dep_chunk_idx != source_chunk_idx && dep_chunk_idx != target_chunk_idx {
+        self.chunks[target_chunk_idx].dependencies.insert(dep_chunk_idx);
+      }
+    }
+
+    for chunk_idx in self.chunks.indices().collect::<Vec<_>>() {
+      if chunk_idx == source_chunk_idx {
+        continue;
+      }
+      if self.chunks[chunk_idx].dependencies.remove(&source_chunk_idx)
+        && chunk_idx != target_chunk_idx
+      {
+        self.chunks[chunk_idx].dependencies.insert(target_chunk_idx);
+      }
+    }
+    self.chunks[target_chunk_idx].dependencies.remove(&source_chunk_idx);
+    self.chunks[target_chunk_idx].dependencies.remove(&target_chunk_idx);
+    self.chunks[source_chunk_idx].merged_into = Some(target_chunk_idx);
+    self.chunks[source_chunk_idx].approx_size = 0;
+
+    self.bits_to_chunk_idx.shift_remove(&source_bits);
+    self.bits_to_chunk_idx.shift_remove(&target_bits);
+    self.bits_to_chunk_idx.insert(merged_bits, target_chunk_idx);
+    self.bits_to_chunk_idx.sort_unstable_keys();
+
+    debug_assert!(self.chunks.indices().all(|idx| {
+      idx == source_chunk_idx
+        || self.chunks[idx].merged_into.is_some()
+        || !self.chunks[idx].dependencies.contains(&source_chunk_idx)
+    }));
+  }
 }
 
 /// Result of assigning modules during chunk optimization.
@@ -391,8 +586,12 @@ impl GenerateStage<'_> {
       .iter()
       .filter_map(|(bits, temp_chunk_idx)| {
         let temp_chunk = &temp_chunk_graph.chunks[*temp_chunk_idx];
-        // Skip those chunks that are already created in chunk graph
-        if !temp_chunk.needs_creation {
+        // Skip chunks that are already created in chunk graph or were merged away before
+        // materialization.
+        if !temp_chunk.needs_creation
+          || temp_chunk.merged_into.is_some()
+          || temp_chunk.modules.is_empty()
+        {
           return None;
         }
         let chunk_idxs: Vec<_> = bits.index_of_one().map(ChunkIdx::from_raw).collect();
@@ -1300,5 +1499,127 @@ impl GenerateStage<'_> {
         runtime_dependent_chunks.insert(merge.to_chunk_idx);
       }
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn bits(entries: &[u32]) -> BitSet {
+    let mut bits = BitSet::new(8);
+    for &entry in entries {
+      bits.set_bit(entry);
+    }
+    bits
+  }
+
+  fn candidate(
+    module_idx: ModuleIdx,
+    bits: BitSet,
+    approx_size: u32,
+    dependencies: &[ChunkIdx],
+  ) -> ChunkCandidate {
+    ChunkCandidate {
+      modules: vec![module_idx],
+      bits,
+      approx_size,
+      needs_creation: true,
+      merged_into: None,
+      dependencies: dependencies.iter().copied().collect(),
+      has_side_effects: false,
+    }
+  }
+
+  #[test]
+  fn min_size_common_merge_retargets_incoming_edges_and_unions_outgoing_dependencies() {
+    let source_idx = ChunkIdx::from_raw(0);
+    let target_idx = ChunkIdx::from_raw(1);
+    let dependency_idx = ChunkIdx::from_raw(2);
+    let incoming_idx = ChunkIdx::from_raw(3);
+    let source_module_idx = ModuleIdx::from_usize(0);
+    let target_module_idx = ModuleIdx::from_usize(1);
+    let dependency_module_idx = ModuleIdx::from_usize(2);
+    let incoming_module_idx = ModuleIdx::from_usize(3);
+    let source_bits = bits(&[0, 1]);
+    let target_bits = bits(&[1, 2]);
+    let dependency_bits = bits(&[0, 1, 3]);
+
+    let mut graph = ChunkOptimizationGraph {
+      chunks: index_vec![
+        candidate(source_module_idx, source_bits.clone(), 1, &[dependency_idx]),
+        candidate(target_module_idx, target_bits.clone(), 10, &[]),
+        candidate(dependency_module_idx, dependency_bits.clone(), 100, &[]),
+        ChunkCandidate {
+          modules: vec![incoming_module_idx],
+          bits: bits(&[0]),
+          approx_size: 100,
+          needs_creation: false,
+          merged_into: None,
+          dependencies: std::iter::once(source_idx).collect(),
+          has_side_effects: false,
+        },
+      ],
+      bits_to_chunk_idx: FxIndexMap::from_iter([
+        (source_bits.clone(), source_idx),
+        (target_bits.clone(), target_idx),
+        (dependency_bits, dependency_idx),
+      ]),
+      module_to_chunk: index_vec![
+        Some(source_idx),
+        Some(target_idx),
+        Some(dependency_idx),
+        Some(incoming_idx),
+      ],
+      chunk_idx_to_temp_chunk_idx: FxHashMap::default(),
+    };
+
+    graph.merge_side_effect_free_common_chunks(50);
+
+    let mut expected_merged_bits = target_bits.clone();
+    expected_merged_bits.union(&source_bits);
+    assert_eq!(graph.chunks[source_idx].merged_into, Some(target_idx));
+    assert_eq!(graph.module_to_chunk[source_module_idx], Some(target_idx));
+    assert_eq!(graph.chunks[target_idx].bits, expected_merged_bits);
+    assert!(graph.chunks[target_idx].dependencies.contains(&dependency_idx));
+    assert!(!graph.chunks[target_idx].dependencies.contains(&source_idx));
+    assert!(!graph.chunks[target_idx].dependencies.contains(&target_idx));
+    assert!(!graph.chunks[incoming_idx].dependencies.contains(&source_idx));
+    assert!(graph.chunks[incoming_idx].dependencies.contains(&target_idx));
+    assert_eq!(graph.bits_to_chunk_idx.get(&expected_merged_bits), Some(&target_idx));
+    assert!(!graph.bits_to_chunk_idx.contains_key(&source_bits));
+    assert!(!graph.bits_to_chunk_idx.contains_key(&target_bits));
+  }
+
+  #[test]
+  fn min_size_common_merge_keeps_chunks_separate_when_merge_would_create_cycle() {
+    let source_idx = ChunkIdx::from_raw(0);
+    let target_idx = ChunkIdx::from_raw(1);
+    let source_module_idx = ModuleIdx::from_usize(0);
+    let target_module_idx = ModuleIdx::from_usize(1);
+    let source_bits = bits(&[0, 1]);
+    let target_bits = bits(&[1, 2]);
+
+    let mut graph = ChunkOptimizationGraph {
+      chunks: index_vec![
+        candidate(source_module_idx, source_bits.clone(), 1, &[target_idx]),
+        candidate(target_module_idx, target_bits.clone(), 100, &[]),
+      ],
+      bits_to_chunk_idx: FxIndexMap::from_iter([
+        (source_bits.clone(), source_idx),
+        (target_bits.clone(), target_idx),
+      ]),
+      module_to_chunk: index_vec![Some(source_idx), Some(target_idx)],
+      chunk_idx_to_temp_chunk_idx: FxHashMap::default(),
+    };
+
+    graph.merge_side_effect_free_common_chunks(50);
+
+    assert_eq!(graph.chunks[source_idx].merged_into, None);
+    assert_eq!(graph.chunks[target_idx].merged_into, None);
+    assert_eq!(graph.module_to_chunk[source_module_idx], Some(source_idx));
+    assert_eq!(graph.module_to_chunk[target_module_idx], Some(target_idx));
+    assert_eq!(graph.bits_to_chunk_idx.get(&source_bits), Some(&source_idx));
+    assert_eq!(graph.bits_to_chunk_idx.get(&target_bits), Some(&target_idx));
   }
 }

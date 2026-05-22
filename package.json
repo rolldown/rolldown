@@ -14,6 +14,7 @@
     "ci:build-release-binding": "pnpm --filter rolldown run build-binding:release",
     "docs": "pnpm --filter rolldown-docs run dev",
     "docs:build": "pnpm --filter rolldown-docs run generate && pnpm --filter rolldown-docs run build",
+    "docs:void": "pnpm --filter rolldown-docs run generate && pnpm --filter rolldown-docs run void deploy",
     "docs:preview": "pnpm --filter rolldown-docs run preview"
   },
   "devDependencies": {

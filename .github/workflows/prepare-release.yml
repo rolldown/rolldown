@@ -49,7 +49,7 @@ jobs:
       - run: just bump-packages ${VERSION}
 
       - name: Bump crate versions
-        run: cargo release-oxc update --release crates
+        run: cargo release-oxc update --release crates --version ${VERSION}
 
       - name: Update Cargo.lock after crate bump
         run: cargo check --workspace

@@ -10,7 +10,7 @@ use arcstr::ArcStr;
 use oxc::allocator::Allocator;
 use oxc::ast::ast::{self, ImportPhase};
 use oxc::ast_visit::{VisitMut, walk_mut};
-use oxc::diagnostics::{OxcDiagnostic, Severity as OxcSeverity};
+use oxc::diagnostics::{LabeledSpan, OxcDiagnostic, Severity as OxcSeverity};
 use oxc::parser::{ParseOptions, Parser};
 use oxc::transformer::{Helper, HelperLoaderOptions};
 use oxc::{
@@ -39,11 +39,14 @@ use crate::inner_bundler_options::types::tsconfig_merge::merge_transform_options
 
 pub type InjectOptions = Vec<(String, Either<String, Vec<String>>)>;
 
-struct DropImportDeferPhase;
+struct DropImportDeferPhase {
+  spans: Vec<oxc::span::Span>,
+}
 
 impl<'a> VisitMut<'a> for DropImportDeferPhase {
   fn visit_import_declaration(&mut self, it: &mut ast::ImportDeclaration<'a>) {
     if matches!(it.phase, Some(ImportPhase::Defer)) {
+      self.spans.push(it.span);
       it.phase = None;
     }
     walk_mut::walk_import_declaration(self, it);
@@ -51,14 +54,17 @@ impl<'a> VisitMut<'a> for DropImportDeferPhase {
 
   fn visit_import_expression(&mut self, it: &mut ast::ImportExpression<'a>) {
     if matches!(it.phase, Some(ImportPhase::Defer)) {
+      self.spans.push(it.span);
       it.phase = None;
     }
     walk_mut::walk_import_expression(self, it);
   }
 }
 
-fn drop_import_defer_phase(program: &mut ast::Program<'_>) {
-  DropImportDeferPhase.visit_program(program);
+fn drop_import_defer_phase(program: &mut ast::Program<'_>) -> Vec<oxc::span::Span> {
+  let mut dropper = DropImportDeferPhase { spans: vec![] };
+  dropper.visit_program(program);
+  dropper.spans
 }
 
 /// Tsconfig option for enhanced transform.
@@ -356,7 +362,21 @@ pub fn enhanced_transform(
   }
 
   let mut program = parse_ret.program;
-  drop_import_defer_phase(&mut program);
+  let import_defer_spans = drop_import_defer_phase(&mut program);
+  warnings.extend(import_defer_spans.into_iter().map(|span| {
+    BuildDiagnostic::oxc_error(
+      source.clone(),
+      filename.to_string(),
+      String::new(),
+      "`import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used.".to_string(),
+      vec![LabeledSpan::at(
+        span.start as usize..span.end as usize,
+        "The deferred phase is removed here.",
+      )],
+      EventKind::ToleratedTransform,
+    )
+    .with_severity_warning()
+  }));
 
   let semantic_ret = semantic_builder_for_transform().build(&program);
   let mut scoping = Some(semantic_ret.semantic.into_scoping());

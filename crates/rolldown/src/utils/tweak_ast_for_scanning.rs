@@ -7,15 +7,20 @@ use oxc::span::{GetSpanMut, SPAN, Span};
 use rolldown_ecmascript_utils::{AstSnippet, StatementExt};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-pub fn drop_import_defer_phase(program: &mut ast::Program<'_>) {
-  ImportDeferPhaseDropper.visit_program(program);
+pub fn drop_import_defer_phase(program: &mut ast::Program<'_>) -> Vec<Span> {
+  let mut dropper = ImportDeferPhaseDropper { spans: vec![] };
+  dropper.visit_program(program);
+  dropper.spans
 }
 
-struct ImportDeferPhaseDropper;
+struct ImportDeferPhaseDropper {
+  spans: Vec<Span>,
+}
 
 impl<'ast> VisitMut<'ast> for ImportDeferPhaseDropper {
   fn visit_import_declaration(&mut self, it: &mut ast::ImportDeclaration<'ast>) {
     if matches!(it.phase, Some(ast::ImportPhase::Defer)) {
+      self.spans.push(it.span);
       it.phase = None;
     }
     walk_mut::walk_import_declaration(self, it);
@@ -23,6 +28,7 @@ impl<'ast> VisitMut<'ast> for ImportDeferPhaseDropper {
 
   fn visit_import_expression(&mut self, it: &mut ast::ImportExpression<'ast>) {
     if matches!(it.phase, Some(ast::ImportPhase::Defer)) {
+      self.spans.push(it.span);
       it.phase = None;
     }
     walk_mut::walk_import_expression(self, it);

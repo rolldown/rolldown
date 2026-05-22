@@ -30,6 +30,10 @@ describe('enhanced transform', () => {
         'import defer * as ns from "./dep.js"; ns.value; import.defer("./lazy.js");',
       );
       expect(result.errors).toHaveLength(0);
+      expect(result.warnings.map((warning) => warning.code)).toEqual([
+        'TOLERATED_TRANSFORM',
+        'TOLERATED_TRANSFORM',
+      ]);
       expect(result.code).toBe(
         'import * as ns from "./dep.js";\nns.value;\nimport("./lazy.js");\n',
       );

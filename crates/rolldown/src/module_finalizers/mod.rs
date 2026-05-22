@@ -241,20 +241,34 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  fn non_wrapped_forwarder_executes_for_import_record(&self, rec_idx: ImportRecordIdx) -> bool {
+    let rec = &self.ctx.module.import_records[rec_idx];
+    let Some(importee_idx) = rec.resolved_module else { return false };
+    let Module::Normal(_) = &self.ctx.modules[importee_idx] else { return false };
+
+    let importee_linking_info = &self.ctx.linking_infos[importee_idx];
+    if !matches!(importee_linking_info.wrap_kind(), WrapKind::None)
+      || !importee_linking_info.is_included
+    {
+      return false;
+    }
+
+    let Some(importee_chunk_idx) = self.ctx.chunk_graph.module_to_chunk[importee_idx] else {
+      return false;
+    };
+
+    importee_chunk_idx == self.ctx.chunk_idx
+      || self.ctx.chunk.imports_from_other_chunks.contains_key(&importee_chunk_idx)
+  }
+
   fn wrapped_esm_init_stmt_for_import_record(
     &mut self,
     rec_idx: ImportRecordIdx,
   ) -> Option<Statement<'ast>> {
-    let rec = &self.ctx.module.import_records[rec_idx];
-    // If the non-wrapped forwarding module is emitted in this chunk, its own
+    // If the non-wrapped forwarding module executes before this module, its own
     // lowered statement already preserves the required init call in execution
     // order. This fallback is only for barrels that do not execute here.
-    if rec.resolved_module.is_some_and(|importee_idx| {
-      let importee_linking_info = &self.ctx.linking_infos[importee_idx];
-      matches!(importee_linking_info.wrap_kind(), WrapKind::None)
-        && importee_linking_info.is_included
-        && self.ctx.chunk_graph.module_to_chunk[importee_idx] == Some(self.ctx.chunk_idx)
-    }) {
+    if self.non_wrapped_forwarder_executes_for_import_record(rec_idx) {
       return None;
     }
 

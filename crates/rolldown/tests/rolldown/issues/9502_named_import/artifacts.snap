@@ -1,0 +1,52 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```
+
+## shared.js
+
+```js
+import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
+//#region shared.js
+var shared_exports = /* @__PURE__ */ __exportAll({ extend: () => extend });
+var extend;
+var init_shared = __esmMin((() => {
+	extend = Object.assign;
+}));
+//#endregion
+export { init_shared as n, shared_exports as r, extend as t };
+
+```
+
+## tu.js
+
+```js
+import { t as extend } from "./shared.js";
+import "./vue.js";
+//#region test-utils.js
+const merge = (a, b) => extend(a, b);
+//#endregion
+export { merge };
+
+```
+
+## vue.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+import { n as init_shared } from "./shared.js";
+(/* @__PURE__ */ __commonJSMin((() => {
+	init_shared();
+})))();
+init_shared();
+//#endregion
+
+```

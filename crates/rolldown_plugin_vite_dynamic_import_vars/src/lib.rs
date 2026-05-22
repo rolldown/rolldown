@@ -8,8 +8,8 @@ use oxc::ast_visit::Visit;
 use rolldown_common::ModuleType;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookTransformOutput, HookUsage, Plugin, PluginContext,
-  SharedLoadPluginContext,
+  HookResolveIdReturn, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
+  PluginContext, SharedLoadPluginContext,
 };
 use rolldown_utils::{
   futures::{block_on, block_on_spawn_all},
@@ -141,7 +141,7 @@ impl Plugin for ViteDynamicImportVarsPlugin {
         }
         return Ok(Some(HookTransformOutput {
           code: Some(magic_string.to_string()),
-          map: self.sourcemap.then(|| {
+          map: HookTransformOutputMap::from_if_enabled(self.sourcemap, || {
             magic_string.source_map(string_wizard::SourceMapOptions {
               hires: string_wizard::Hires::Boundary,
               source: args.id.into(),

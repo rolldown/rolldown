@@ -297,7 +297,9 @@ impl PluginDriver {
       self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
-        if let Some(map) = self.normalize_transform_sourcemap(r.map, id, &code, r.code.as_ref()) {
+        if let Some(map) =
+          self.normalize_transform_sourcemap(r.map.into_sourcemap(), id, &code, r.code.as_ref())
+        {
           original_sourcemap_chain.push(SourcemapChainElement::Transform((plugin_idx, map)));
         }
         plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);

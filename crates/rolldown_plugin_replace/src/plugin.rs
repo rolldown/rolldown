@@ -3,7 +3,9 @@ use std::ops::Range;
 use std::{cmp::Reverse, sync::Arc};
 
 use anyhow::Result;
-use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
+use rolldown_plugin::{
+  HookRenderChunkOutput, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
+};
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, SourceMapOptions};
 
@@ -193,7 +195,7 @@ impl Plugin for ReplacePlugin {
     if self.try_replace(args.code, &mut magic_string) {
       return Ok(Some(HookTransformOutput {
         code: Some(magic_string.to_string()),
-        map: self.sourcemap.then(|| {
+        map: HookTransformOutputMap::from_if_enabled(self.sourcemap, || {
           magic_string.source_map(SourceMapOptions {
             hires: string_wizard::Hires::True,
             include_content: false,

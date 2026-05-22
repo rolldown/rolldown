@@ -1,1 +1,1 @@
-require("./shared.js");
+require('./shared.js');

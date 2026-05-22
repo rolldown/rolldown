@@ -1,2 +1,2 @@
-import "./compiler-core.cjs";
-export { extend } from "./shared.js";
+import './compiler-core.cjs';
+export { extend } from './shared.js';

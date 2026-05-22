@@ -1,1 +1,1 @@
-export { extend } from "./runtime.js";
+export { extend } from './runtime.js';

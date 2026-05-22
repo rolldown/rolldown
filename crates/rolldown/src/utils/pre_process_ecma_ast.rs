@@ -2,10 +2,12 @@ use std::path::Path;
 
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
+use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
 use oxc::ast_visit::VisitMut;
 use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, Stats};
+use oxc::span::GetSpan;
 use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
@@ -99,11 +101,21 @@ impl PreProcessEcmaAst {
       {
         let span = comment.span;
         let annotation = source[span.start as usize..span.end as usize].to_string();
+        // Use `comment.attached_to` — the span.start of the AST node this leading comment
+        // is attached to — to binary-search the top-level statement list. This avoids
+        // re-scanning the source string and correctly handles all function-declaration shapes
+        // (plain, async, export, export default).
+        let is_before_function_declaration = dep
+          .program
+          .body
+          .binary_search_by_key(&comment.attached_to, |s| s.span().start)
+          .is_ok_and(|idx| is_function_declaration_stmt(&dep.program.body[idx]));
         warnings.push(BuildDiagnostic::invalid_annotation(
           resolved_id.to_string(),
           annotation,
           source.clone(),
           span,
+          is_before_function_declaration,
         ));
       }
     });
@@ -267,5 +279,21 @@ impl PreProcessEcmaAst {
       .semantic;
     self.stats = ret.stats();
     ret.into_scoping()
+  }
+}
+
+/// Returns `true` when the statement is a function declaration (plain, async, export, or
+/// export-default). Used to decide whether to suggest `@__NO_SIDE_EFFECTS__` when an invalid
+/// `@__PURE__` annotation is detected before the statement.
+fn is_function_declaration_stmt(stmt: &Statement<'_>) -> bool {
+  match stmt {
+    Statement::FunctionDeclaration(_) => true,
+    Statement::ExportNamedDeclaration(e) => {
+      matches!(&e.declaration, Some(Declaration::FunctionDeclaration(_)))
+    }
+    Statement::ExportDefaultDeclaration(e) => {
+      matches!(&e.declaration, ExportDefaultDeclarationKind::FunctionDeclaration(_))
+    }
+    _ => false,
   }
 }

@@ -100,7 +100,7 @@ impl PreProcessEcmaAst {
           span.start as usize..span.end as usize,
           "The deferred phase is removed here.",
         )],
-        EventKind::ToleratedTransform,
+        EventKind::UnsupportedFeatureError,
       )
       .with_severity_warning()
     }));

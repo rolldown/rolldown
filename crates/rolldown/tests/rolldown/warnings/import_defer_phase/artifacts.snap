@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
-## TOLERATED_TRANSFORM
+## UNSUPPORTED_FEATURE
 
 ```text
-[TOLERATED_TRANSFORM] `import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used.
+[UNSUPPORTED_FEATURE] `import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used.
    ╭─[ main.js:1:1 ]
    │
  1 │ import defer * as dep from './dep.js';

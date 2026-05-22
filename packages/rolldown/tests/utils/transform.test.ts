@@ -31,8 +31,8 @@ describe('enhanced transform', () => {
       );
       expect(result.errors).toHaveLength(0);
       expect(result.warnings.map((warning) => warning.code)).toEqual([
-        'TOLERATED_TRANSFORM',
-        'TOLERATED_TRANSFORM',
+        'UNSUPPORTED_FEATURE',
+        'UNSUPPORTED_FEATURE',
       ]);
       expect(result.code).toBe(
         'import * as ns from "./dep.js";\nns.value;\nimport("./lazy.js");\n',

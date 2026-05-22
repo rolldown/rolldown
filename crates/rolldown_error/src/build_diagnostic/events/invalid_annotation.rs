@@ -56,13 +56,14 @@ impl BuildEvent for InvalidAnnotation {
 
 impl InvalidAnnotation {
   fn is_before_function_declaration(&self) -> bool {
-    fn is_ident_continue(c: char) -> bool {
+    fn is_identifier_continuation_char(c: char) -> bool {
       c == '_' || c == '$' || c.is_ascii_alphanumeric()
     }
 
     fn consume_keyword<'a>(mut text: &'a str, keyword: &str) -> Option<&'a str> {
       text = text.strip_prefix(keyword)?;
-      if text.chars().next().is_none_or(|c| !is_ident_continue(c)) { Some(text) } else { None }
+      let is_boundary = text.chars().next().is_none_or(|c| !is_identifier_continuation_char(c));
+      is_boundary.then_some(text)
     }
 
     let mut rest = self.source[self.span.end as usize..].trim_start();

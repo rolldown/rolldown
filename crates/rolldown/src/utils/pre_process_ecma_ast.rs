@@ -3,11 +3,10 @@ use std::path::Path;
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
 use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
-use oxc::ast_visit::VisitMut;
+use oxc::ast_visit::{Visit, VisitMut, walk};
 use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, Stats};
-use oxc::span::GetSpan;
 use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
@@ -19,7 +18,7 @@ use rolldown_common::{ConstExportMeta, ConstantValue, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields, semantic_builder_for_transform};
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -96,20 +95,15 @@ impl PreProcessEcmaAst {
     // from applying them (expression-level, statement-level, or variable declarator).
     // Aligns with Rollup's `INVALID_ANNOTATION` log code.
     ast.program.with_dependent(|_owner, dep| {
+      let mut function_declaration_collector = FunctionDeclarationStartCollector::default();
+      function_declaration_collector.visit_program(&dep.program);
       for comment in
         dep.program.comments.iter().filter(|c| c.content == CommentContent::PureNotApplied)
       {
         let span = comment.span;
         let annotation = source[span.start as usize..span.end as usize].to_string();
-        // Use `comment.attached_to` — the span.start of the AST node this leading comment
-        // is attached to — to binary-search the top-level statement list. This avoids
-        // re-scanning the source string and correctly handles all function-declaration shapes
-        // (plain, async, export, export default).
-        let is_before_function_declaration = dep
-          .program
-          .body
-          .binary_search_by_key(&comment.attached_to, |s| s.span().start)
-          .is_ok_and(|idx| is_function_declaration_stmt(&dep.program.body[idx]));
+        let is_before_function_declaration =
+          function_declaration_collector.function_declaration_starts.contains(&comment.attached_to);
         warnings.push(BuildDiagnostic::invalid_annotation(
           resolved_id.to_string(),
           annotation,
@@ -282,18 +276,31 @@ impl PreProcessEcmaAst {
   }
 }
 
-/// Returns `true` when the statement is a function declaration (plain, async, export, or
-/// export-default). Used to decide whether to suggest `@__NO_SIDE_EFFECTS__` when an invalid
-/// `@__PURE__` annotation is detected before the statement.
-fn is_function_declaration_stmt(stmt: &Statement<'_>) -> bool {
+fn function_declaration_stmt_start(stmt: &Statement<'_>) -> Option<u32> {
   match stmt {
-    Statement::FunctionDeclaration(_) => true,
-    Statement::ExportNamedDeclaration(e) => {
-      matches!(&e.declaration, Some(Declaration::FunctionDeclaration(_)))
+    Statement::FunctionDeclaration(decl) => Some(decl.span.start),
+    Statement::ExportNamedDeclaration(e) => match &e.declaration {
+      Some(Declaration::FunctionDeclaration(decl)) => Some(decl.span.start),
+      _ => None,
+    },
+    Statement::ExportDefaultDeclaration(e) => match &e.declaration {
+      ExportDefaultDeclarationKind::FunctionDeclaration(decl) => Some(decl.span.start),
+      _ => None,
+    },
+    _ => None,
+  }
+}
+
+#[derive(Default)]
+struct FunctionDeclarationStartCollector {
+  function_declaration_starts: FxHashSet<u32>,
+}
+
+impl<'ast> Visit<'ast> for FunctionDeclarationStartCollector {
+  fn visit_statement(&mut self, stmt: &Statement<'ast>) {
+    if let Some(start) = function_declaration_stmt_start(stmt) {
+      self.function_declaration_starts.insert(start);
     }
-    Statement::ExportDefaultDeclaration(e) => {
-      matches!(&e.declaration, ExportDefaultDeclarationKind::FunctionDeclaration(_))
-    }
-    _ => false,
+    walk::walk_statement(self, stmt);
   }
 }

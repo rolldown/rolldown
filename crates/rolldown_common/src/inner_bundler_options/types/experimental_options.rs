@@ -17,11 +17,14 @@ use super::dev_mode_options::DevModeOptions;
 pub struct ChunkOptimizationOptions {
   pub merge_common_chunks: bool,
   pub avoid_redundant_chunk_loads: bool,
+  /// Approximate source-byte threshold for opt-in side-effect-free common chunk coalescing.
+  /// `0` disables the pass.
+  pub min_chunk_size: u32,
 }
 
 impl Default for ChunkOptimizationOptions {
   fn default() -> Self {
-    Self { merge_common_chunks: true, avoid_redundant_chunk_loads: true }
+    Self { merge_common_chunks: true, avoid_redundant_chunk_loads: true, min_chunk_size: 0 }
   }
 }
 
@@ -32,6 +35,10 @@ impl ChunkOptimizationOptions {
 
   pub fn is_avoid_redundant_chunk_loads_enabled(&self) -> bool {
     self.avoid_redundant_chunk_loads
+  }
+
+  pub fn min_chunk_size(&self) -> u32 {
+    self.min_chunk_size
   }
 }
 
@@ -58,6 +65,13 @@ impl ChunkOptimizationOption {
     match self {
       Self::Bool(enabled) => *enabled,
       Self::Options(options) => options.is_avoid_redundant_chunk_loads_enabled(),
+    }
+  }
+
+  pub fn min_chunk_size(&self) -> u32 {
+    match self {
+      Self::Bool(_) => 0,
+      Self::Options(options) => options.min_chunk_size(),
     }
   }
 }
@@ -120,6 +134,10 @@ impl ExperimentalOptions {
       .chunk_optimization
       .as_ref()
       .is_none_or(ChunkOptimizationOption::is_avoid_redundant_chunk_loads_enabled)
+  }
+
+  pub fn min_chunk_size(&self) -> u32 {
+    self.chunk_optimization.as_ref().map_or(0, ChunkOptimizationOption::min_chunk_size)
   }
 
   pub fn is_lazy_barrel_enabled(&self) -> bool {

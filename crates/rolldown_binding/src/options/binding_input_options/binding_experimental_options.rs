@@ -47,6 +47,7 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
 pub struct BindingChunkOptimizationOptions {
   pub merge_common_chunks: Option<bool>,
   pub avoid_redundant_chunk_loads: Option<bool>,
+  pub min_chunk_size: Option<u32>,
 }
 
 impl From<BindingChunkOptimizationOptions> for rolldown_common::ChunkOptimizationOptions {
@@ -54,6 +55,7 @@ impl From<BindingChunkOptimizationOptions> for rolldown_common::ChunkOptimizatio
     Self {
       merge_common_chunks: value.merge_common_chunks.unwrap_or(true),
       avoid_redundant_chunk_loads: value.avoid_redundant_chunk_loads.unwrap_or(true),
+      min_chunk_size: value.min_chunk_size.unwrap_or(0),
     }
   }
 }

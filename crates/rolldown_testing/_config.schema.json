@@ -1136,6 +1136,13 @@
         "avoidRedundantChunkLoads": {
           "type": "boolean",
           "default": true
+        },
+        "minChunkSize": {
+          "description": "Approximate source-byte threshold for opt-in side-effect-free common chunk coalescing.\n`0` disables the pass.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 0
         }
       },
       "additionalProperties": false

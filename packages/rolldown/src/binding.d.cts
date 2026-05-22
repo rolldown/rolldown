@@ -1894,6 +1894,7 @@ export declare enum BindingChunkModuleOrderBy {
 export interface BindingChunkOptimizationOptions {
   mergeCommonChunks?: boolean
   avoidRedundantChunkLoads?: boolean
+  minChunkSize?: number
 }
 
 export interface BindingClientHmrUpdate {

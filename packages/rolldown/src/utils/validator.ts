@@ -648,6 +648,7 @@ const InputOptionsSchema = v.strictObject({
           v.strictObject({
             mergeCommonChunks: v.optional(v.boolean()),
             avoidRedundantChunkLoads: v.optional(v.boolean()),
+            minChunkSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
           }),
         ]),
       ),

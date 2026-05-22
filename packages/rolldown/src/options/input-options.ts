@@ -58,6 +58,18 @@ export interface ChunkOptimizationOptions {
    * @default true
    */
   avoidRedundantChunkLoads?: boolean;
+  /**
+   * Merge side-effect-free automatically generated common chunks smaller than
+   * this approximate source-byte threshold. `0` disables this pass.
+   *
+   * The threshold is based on module source sizes available during chunk
+   * optimization, not final rendered/minified/compressed output size.
+   *
+   * This pass is opt-in and does not run when manual/advanced chunking is configured.
+   *
+   * @default 0
+   */
+  minChunkSize?: number;
 }
 
 export type ModuleTypes = Record<
@@ -697,7 +709,8 @@ export interface InputOptions {
      *
      * `true` enables both common-chunk merging and redundant dynamic chunk-load avoidance.
      * `false` disables all chunk optimizations. Use the object form to control
-     * `mergeCommonChunks` and `avoidRedundantChunkLoads` separately.
+     * `mergeCommonChunks`, `avoidRedundantChunkLoads`, and opt-in `minChunkSize`
+     * coalescing separately.
      *
      * These optimizations are automatically disabled when any module uses top-level await (TLA) or contains TLA dependencies,
      * as they could affect execution order guarantees.

@@ -1,1 +1,5 @@
-module.exports = 1;
+import lodash from './lodash.js';
+
+lodash();
+
+export const value = 1;

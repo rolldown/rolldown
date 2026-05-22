@@ -1,9 +1,19 @@
-import { readFileSync } from 'node:fs';
+let rejection;
 
-const staticChunk = readFileSync(new URL('./dist/static.js', import.meta.url), 'utf8');
+const onUnhandledRejection = (error) => {
+  rejection = error;
+};
 
-if (staticChunk.includes('"./supported.js"')) {
-  throw new Error(
-    'static chunks must not import CommonJS wrappers back from their importing entry',
-  );
+process.on('unhandledRejection', onUnhandledRejection);
+
+try {
+  const main = await import('./dist/main.js');
+  await main.loadSupported();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+} finally {
+  process.off('unhandledRejection', onUnhandledRejection);
+}
+
+if (rejection) {
+  throw rejection;
 }

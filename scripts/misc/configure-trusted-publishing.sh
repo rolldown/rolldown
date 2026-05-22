@@ -33,7 +33,10 @@ CRATES_IO_URL="https://crates.io/api/v1/trusted_publishing/github_configs"
 
 cd "$(dirname "$0")/../.."
 
-mapfile -t crates < <(
+crates=()
+while IFS= read -r line; do
+  crates+=("$line")
+done < <(
   cargo metadata --no-deps --format-version=1 \
     | jq -r '.packages[] | select(.publish == null) | .name' \
     | sort

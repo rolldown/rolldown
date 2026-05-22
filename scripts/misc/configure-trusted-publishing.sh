@@ -57,6 +57,7 @@ if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
 fi
 
 ok=0
+already=0
 failed=0
 for crate in "${crates[@]}"; do
   body=$(jq --null-input \
@@ -75,7 +76,12 @@ for crate in "${crates[@]}"; do
   status=$(printf '%s' "$response" | tail -n1)
   payload=$(printf '%s' "$response" | sed '$d')
 
-  if [[ "$status" =~ ^2 ]]; then
+  # crates.io rejects duplicate configs with a 4xx whose message mentions
+  # "already exists". Treat that as a no-op so re-runs are safe.
+  if echo "$payload" | grep -qiE 'already.*exist|already.*configured|duplicate'; then
+    echo "  · $crate (already configured, skipping)"
+    already=$((already + 1))
+  elif [[ "$status" =~ ^2 ]]; then
     echo "  ✓ $crate"
     ok=$((ok + 1))
   else
@@ -85,5 +91,5 @@ for crate in "${crates[@]}"; do
 done
 
 echo
-echo "Done. $ok succeeded, $failed failed."
+echo "Done. $ok newly configured, $already already configured, $failed failed."
 [[ $failed -eq 0 ]]

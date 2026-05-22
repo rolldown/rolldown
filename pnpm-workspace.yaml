@@ -14,10 +14,12 @@ packages:
   - '!examples/yarn-pnp'
 
 allowBuilds:
+  better-sqlite3: true
   esbuild: true
   playwright-chromium: true
   sharp: true
   vue-demi: true
+  workerd: true
 
 # Kept for pnpm 10 (used on Node 20 in CI). pnpm 11 reads `allowBuilds` instead.
 onlyBuiltDependencies:

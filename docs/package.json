@@ -6,7 +6,8 @@
     "dev": "vitepress dev",
     "build": "vitepress build",
     "preview": "vitepress preview",
-    "generate": "node .vitepress/scripts/generate-reference.ts"
+    "generate": "node .vitepress/scripts/generate-reference.ts",
+    "void": "void"
   },
   "dependencies": {
     "vue": "catalog:"
@@ -22,6 +23,7 @@
     "vitepress-plugin-graphviz": "catalog:",
     "vitepress-plugin-group-icons": "catalog:",
     "vitepress-plugin-llms": "catalog:",
-    "vitepress-plugin-og": "catalog:"
+    "vitepress-plugin-og": "catalog:",
+    "void": "^0.7.11"
   }
 }

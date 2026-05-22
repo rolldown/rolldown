@@ -144,6 +144,18 @@ For each common chunk, translates its `bits` to chunk indices (bit positions dir
 
 The trade-off of merging: entry chunks may include modules that not all consumers of that entry need. This adds a small amount of unnecessary code loading but significantly reduces chunk count and HTTP requests.
 
+### Minimum Common Chunk Size (`experimental.chunkOptimization.minChunkSize`)
+
+When `experimental.chunkOptimization.minChunkSize` is positive, the optimizer can also coalesce automatically generated common chunks into other common chunks before materialization. This is an opt-in exception to the initial "identical BitSet means one chunk" grouping: modules are still emitted once, but the merged common chunk's reachability BitSet becomes the union of the source and target common chunks.
+
+The pass is intentionally conservative:
+
+- It only considers automatically generated common temporary chunks (`needs_creation == true`), never entry chunks or user-created/manual chunks.
+- It is disabled when manual/advanced chunking is configured, when `mergeCommonChunks` is disabled, or when the existing top-level-await global bailout applies.
+- The threshold uses approximate source bytes from `Module::size()`, not rendered/minified/compressed output bytes.
+- Source and target chunks must have no side effects in their static dependency closure, using the same static chunk dependencies computed for common-chunk merging. Dynamic imports stay loading boundaries.
+- Each merge is checked with `would_create_circular_dependency()`, and deterministic source/target tie-breakers keep output stable.
+
 For chunks shared only by dynamic entries, the optimizer does not infer a merge target from dynamic-import reachability alone. Sibling dynamic imports from the same loaded entry can be requested independently, so "the entry can reach both chunks" does not prove either dynamic chunk is already loaded before the other. In that case, Rolldown keeps a separate common chunk unless the existing static-import merge-target check proves a safe target.
 
 ### Facade Elimination (`optimize_facade_entry_chunks`)

@@ -274,6 +274,8 @@ For this output, executing each entry will output `['ab', 'bc', 'abc']`. However
 - `entry-b.js`: `['ab', 'bc', 'abc']`
 - `entry-c.js`: `['bc', 'abc']`
 
+If the shared modules have no side effects, you can opt into coalescing small common chunks with `experimental.chunkOptimization.minChunkSize`. The threshold is based on approximate source bytes, and Rolldown only merges automatically generated common chunks whose static dependency closure is side-effect-free. The pass is disabled by default (`0`), and it does not run when manual chunking is configured.
+
 ## Module Placing Order
 
 Rolldown tries to place your modules in the order declared in the original code.

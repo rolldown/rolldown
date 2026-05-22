@@ -19,6 +19,7 @@ jobs:
     if: github.repository == 'rolldown/rolldown'
     name: Release crates
     runs-on: ubuntu-latest
+    environment: crates
     permissions:
       id-token: write # Required for OIDC token exchange (trusted publishing)
     steps:

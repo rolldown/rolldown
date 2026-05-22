@@ -72,7 +72,7 @@ impl BundlingTask {
       "[BundlingTask] completed\n - has_generated_bundle_output: {has_generated_bundle_output:?}",
     );
 
-    self.dev_context.coordinator_tx.send_blocking(CoordinatorMsg::BundleCompleted {
+    self.dev_context.coordinator_tx.try_send(CoordinatorMsg::BundleCompleted {
       has_encountered_error,
       has_generated_bundle_output,
     }).expect(

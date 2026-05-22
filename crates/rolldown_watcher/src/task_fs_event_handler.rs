@@ -89,7 +89,7 @@ impl FsEventHandler for TaskFsEventHandler {
 
         if !changes.is_empty() {
           let _ =
-            self.tx.send_blocking(WatcherMsg::FileChanges { task_index: self.task_index, changes });
+            self.tx.try_send(WatcherMsg::FileChanges { task_index: self.task_index, changes });
         }
       }
       Err(errors) => {

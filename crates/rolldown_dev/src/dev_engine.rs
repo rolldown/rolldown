@@ -153,7 +153,7 @@ impl DevEngine {
     let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender
-      .send_blocking(CoordinatorMsg::GetState { reply: reply_sender })
+      .try_send(CoordinatorMsg::GetState { reply: reply_sender })
       .map_err_to_unhandleable()
       .context("DevEngine: failed to send GetState to coordinator")?;
 
@@ -175,7 +175,7 @@ impl DevEngine {
     let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender
-      .send_blocking(CoordinatorMsg::GetState { reply: reply_sender })
+      .try_send(CoordinatorMsg::GetState { reply: reply_sender })
       .map_err_to_unhandleable()
       .context(
         "DevEngine: failed to send GetState to coordinator within has_latest_bundle_output",
@@ -210,7 +210,7 @@ impl DevEngine {
       let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
       self
         .coordinator_sender
-        .send_blocking(CoordinatorMsg::EnsureLatestBundleOutput { reply: reply_sender })
+        .try_send(CoordinatorMsg::EnsureLatestBundleOutput { reply: reply_sender })
         .map_err_to_unhandleable()
         .context("DevEngine: failed to send EnsureLatestBundleOutput to coordinator")?;
 
@@ -326,7 +326,7 @@ impl DevEngine {
   /// Notify the coordinator that a module has changed programmatically.
   /// This triggers a rebuild to update the build output.
   fn notify_module_changed(&self, module_id: String) {
-    let _ = self.coordinator_sender.send_blocking(CoordinatorMsg::ModuleChanged { module_id });
+    let _ = self.coordinator_sender.try_send(CoordinatorMsg::ModuleChanged { module_id });
   }
 
   pub async fn close(&self) -> BuildResult<()> {
@@ -335,7 +335,7 @@ impl DevEngine {
     }
 
     // Send close message to coordinator
-    self.coordinator_sender.send_blocking(CoordinatorMsg::Close)
+    self.coordinator_sender.try_send(CoordinatorMsg::Close)
       .map_err_to_unhandleable()
       .context("DevEngine: failed to send Close message to coordinator - coordinator may have already terminated")?;
 
@@ -387,15 +387,14 @@ impl DevEngine {
 
       // Send WatchEvent message to coordinator (simulates real file change)
       // The coordinator will automatically schedule a build via handle_file_changes
-      let _ = self.coordinator_sender.send_blocking(CoordinatorMsg::WatchEvent(Ok(vec![event])));
+      let _ = self.coordinator_sender.try_send(CoordinatorMsg::WatchEvent(Ok(vec![event])));
     }
 
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
     // and get the build future to wait on
     let (reply_tx, reply_rx) = futures::channel::oneshot::channel();
-    let _ = self
-      .coordinator_sender
-      .send_blocking(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
+    let _ =
+      self.coordinator_sender.try_send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
 
     // Wait for the build that was triggered by the file change
     if let Ok(Some(ret)) = reply_rx.await {
@@ -410,7 +409,7 @@ impl DevEngine {
     let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender
-      .send_blocking(CoordinatorMsg::GetWatchedFiles { reply: reply_sender })
+      .try_send(CoordinatorMsg::GetWatchedFiles { reply: reply_sender })
       .map_err_to_unhandleable()
       .context(
         "DevEngine: failed to send GetWatchedFiles to coordinator within get_watched_files",

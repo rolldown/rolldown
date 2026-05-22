@@ -134,7 +134,7 @@ impl FileEmitter {
     // `emit_chunk` side-effect-free on the error path.
     let reference_id = self.assign_reference_id(chunk.name.clone());
     sender
-      .send_blocking(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg {
+      .try_send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg {
         chunk: Arc::clone(&chunk),
         reference_id: reference_id.clone(),
       })))

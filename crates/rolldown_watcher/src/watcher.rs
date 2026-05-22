@@ -136,7 +136,7 @@ impl Watcher {
   /// Must be called after `run()` — calling before `run()` will skip cleanup hooks.
   pub async fn close(&self) -> Result<()> {
     self.closed.store(true, std::sync::atomic::Ordering::Relaxed);
-    let _ = self.tx.send_blocking(WatcherMsg::Close);
+    let _ = self.tx.try_send(WatcherMsg::Close);
     self.wait_for_close().await;
     Ok(())
   }

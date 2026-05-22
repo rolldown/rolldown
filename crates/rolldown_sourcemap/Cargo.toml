@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_sourcemap"
-version = "1.0.0"
+version = "0.1.1"
 publish = true
 description = "Source map generation and manipulation for Rolldown"
 

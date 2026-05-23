@@ -241,7 +241,11 @@ impl PreProcessEcmaAst {
 
     // Step 6: Modify AST for Rolldown.
     let scoping = ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
-      let mut pre_processor = PreProcessor::new(allocator, bundle_options.keep_names);
+      let mut pre_processor = PreProcessor::new(
+        allocator,
+        bundle_options.keep_names,
+        Some(&bundle_options.drop_labels),
+      );
       pre_processor.visit_program(program);
       self.recreate_scoping(&mut None, program)
     });

@@ -556,9 +556,9 @@ fn check_pure_cjs_export(scope: &AstScopes, target: &AssignmentTarget) -> Option
     AssignmentTarget::ComputedMemberExpression(_) | AssignmentTarget::StaticMemberExpression(_) => {
       let member_expr = target.to_member_expression();
       if let Expression::Identifier(ident) = member_expr.object() {
-        if ident.reference_id.get().is_some_and(|ref_id| scope.is_unresolved(ref_id))
-          && ident.name == "exports"
+        if ident.name == "exports"
           && member_expr.static_property_name().is_some()
+          && ident.reference_id.get().is_some_and(|ref_id| scope.is_unresolved(ref_id))
         {
           return Some(SideEffectDetail::PureCjs);
         }

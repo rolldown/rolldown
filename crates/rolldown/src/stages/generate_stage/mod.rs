@@ -220,12 +220,11 @@ impl<'a> GenerateStage<'a> {
               let (representative_chunk_name, absolute_chunk_file_name, ext) =
                 representative_file_name_for_preserve_modules(module_id.as_path());
 
-              let sanitized_absolute_filename =
-                sanitize_filename.call(absolute_chunk_file_name.as_str()).await?;
-
-              // Apply the same logic as get_preserve_modules_chunk_name to include directory structure
+              // Apply the same logic as get_preserve_modules_chunk_name to include directory
+              // structure. Do the path transform on raw ids first, then sanitize the final
+              // relative name so sanitized path collisions do not affect preserveModulesRoot.
               let raw_chunk_name = {
-                let p = PathBuf::from(sanitized_absolute_filename.as_str());
+                let p = PathBuf::from(absolute_chunk_file_name.as_str());
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
                     if absolute_chunk_file_name.starts_with(preserve_modules_root.as_str()) {
@@ -257,7 +256,7 @@ impl<'a> GenerateStage<'a> {
               PreGeneratedChunkName {
                 representative_chunk_name: sanitized_representative_chunk_name,
                 chunk_name,
-                chunk_filename: sanitized_absolute_filename,
+                chunk_filename: absolute_chunk_file_name.into(),
               }
             } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {
               // try extract meaningful input name from path

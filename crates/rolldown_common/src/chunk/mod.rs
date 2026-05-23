@@ -216,10 +216,16 @@ impl Chunk {
         Ok(hash)
       }
     });
-    let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
+    let chunk_name_storage;
+    let chunk_name = if options.preserve_modules {
+      rollup_pre_rendered_chunk.name.as_str()
+    } else {
+      chunk_name_storage = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
+      chunk_name_storage.as_ref()
+    };
 
     let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
+      .render(Some(chunk_name), Some(options.format.as_str()), None, hash_replacer)?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);

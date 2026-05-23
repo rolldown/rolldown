@@ -169,10 +169,10 @@ impl<'name> Renamer<'name> {
     let canonical_name = canonical_ref.name(self.symbol_db);
 
     let original_name = if self.symbol_db.has_module_preserve_jsx()
+      && canonical_name.as_bytes()[0].is_ascii_lowercase()
       && canonical_ref
         .flags(self.symbol_db)
         .is_some_and(|flags| flags.contains(SymbolRefFlags::MustStartWithCapitalLetterForJSX))
-      && canonical_name.as_bytes()[0].is_ascii_lowercase()
     {
       let mut s = String::with_capacity(canonical_name.len());
       s.push(canonical_name.as_bytes()[0].to_ascii_uppercase() as char);

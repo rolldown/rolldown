@@ -74,19 +74,19 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
   /// Check if the expression is `import.meta.url`
   fn is_import_meta_url(&self) -> bool {
     matches!(self, ast::Expression::StaticMemberExpression(member_expr)
-    if member_expr.object.is_import_meta() && member_expr.property.name == "url")
+    if member_expr.property.name == "url" && member_expr.object.is_import_meta())
   }
 
   /// Check if the expression is `import.meta.hot`
   fn is_import_meta_hot(&self) -> bool {
     matches!(self, ast::Expression::StaticMemberExpression(member_expr)
-    if member_expr.object.is_import_meta() && member_expr.property.name == "hot")
+    if member_expr.property.name == "hot" && member_expr.object.is_import_meta())
   }
 
   /// Check if the expression is `import.meta.hot.accept`
   fn is_import_meta_hot_accept(&self) -> bool {
     matches!(self, ast::Expression::StaticMemberExpression(member_expr)
-    if member_expr.object.is_import_meta_hot() && member_expr.property.name == "accept")
+    if member_expr.property.name == "accept" && member_expr.object.is_import_meta_hot())
   }
 
   fn as_static_member_expr_mut(&mut self) -> Option<&mut ast::StaticMemberExpression<'ast>> {

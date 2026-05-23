@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 543 passed, 53 failed, 596 total
+Summary: 542 passed, 50 failed, 592 total
 
 ---
 
@@ -796,17 +796,17 @@ Cannot assign to import 'B'
 Result: PASS
 Expected: error (type: SyntaxError, phase: resolution)
 Actual:
-'x' cannot be exported from 'instn-iee-err-circular.js' as it is a reexport that references itself.
-'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is a reexport that references itself.
-'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is a reexport that references itself.
+Error: 'x' cannot be exported from 'instn-iee-err-circular.js' as it is a reexport that references itself.
+Error: 'x' cannot be exported from 'instn-iee-err-circular.js' as it is a reexport that references itself.
+Error: 'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is a reexport that references itself.
 ---
 
 # language/module-code/instn-iee-err-circular.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: resolution)
 Actual:
-'x' cannot be exported from 'instn-iee-err-circular.js' as it is a reexport that references itself.
-'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is a reexport that references itself.
+Error: 'x' cannot be exported from 'instn-iee-err-circular.js' as it is a reexport that references itself.
+Error: 'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is a reexport that references itself.
 ---
 
 # language/module-code/instn-iee-err-dflt-thru-star-as.js
@@ -1247,32 +1247,6 @@ Expected: success
 Actual: Runtime execution succeeded
 ---
 
-# language/module-code/instn-star-iee-multi-cycle-same-name.js
-Result: FAIL
-Expected: success
-Actual:
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-d_FIXTURE.js' as it is a reexport that references itself.
----
-
-# language/module-code/instn-star-iee-single-cycle-same-name.js
-Result: FAIL
-Expected: success
-Actual:
-'foo' cannot be exported from 'instn-star-iee-single-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
-'foo' cannot be exported from 'instn-star-iee-single-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
----
-
 # language/module-code/instn-star-props-circular.js
 Result: PASS
 Expected: success
@@ -1623,21 +1597,6 @@ Cannot assign to import 'indirect'
 Cannot assign to import 'local1'
 Cannot assign to import 'local2'
 Cannot assign to import 'renamed'
----
-
-# language/module-code/namespace/internals/super-access-to-tdz-binding.js
-Result: FAIL
-Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error {
-  message: 'Expected a ReferenceError but got a TypeError'
-}
----
-
-# language/module-code/namespace/internals/super-set-to-tdz-binding-with-accessor.js
-Result: PASS
-Expected: success
-Actual: Runtime execution succeeded
 ---
 
 # language/module-code/parse-err-decl-pos-export-arrow-function.js

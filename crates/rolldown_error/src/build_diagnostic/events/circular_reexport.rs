@@ -14,7 +14,7 @@ impl BuildEvent for CircularReexport {
 
   fn message(&self, opts: &DiagnosticOptions) -> String {
     format!(
-      "'{}' cannot be exported from '{}' as it is a reexport that references itself.",
+      "Error: '{}' cannot be exported from '{}' as it is a reexport that references itself.",
       self.imported_specifier,
       opts.stabilize_path(&self.importer_id)
     )

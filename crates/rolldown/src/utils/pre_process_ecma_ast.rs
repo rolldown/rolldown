@@ -3,7 +3,7 @@ use std::path::Path;
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
 use oxc::ast_visit::VisitMut;
-use oxc::diagnostics::Severity as OxcSeverity;
+use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, Stats};
 use oxc::syntax::symbol::SymbolFlags;
@@ -22,7 +22,7 @@ use rustc_hash::FxHashMap;
 use crate::types::oxc_parse_type::OxcParseType;
 
 use super::parse_to_ecma_ast::ParseToEcmaAstResult;
-use super::tweak_ast_for_scanning::PreProcessor;
+use super::tweak_ast_for_scanning::{PreProcessor, drop_import_defer_phase};
 
 #[derive(Default)]
 pub struct PreProcessEcmaAst {
@@ -43,6 +43,9 @@ impl PreProcessEcmaAst {
     has_lazy_export: bool,
   ) -> BuildResult<ParseToEcmaAstResult> {
     let source = ast.source().clone();
+
+    let import_defer_spans =
+      ast.program.with_mut(|WithMutFields { program, .. }| drop_import_defer_phase(program));
 
     // Step 0: Move directive comments attached to 0 so that it's not removed when the directives are removed
     if !ast.program().directives.is_empty() && !ast.program().comments.is_empty() {
@@ -87,6 +90,20 @@ impl PreProcessEcmaAst {
         EventKind::ParseError,
       ))?;
     };
+    warnings.extend(import_defer_spans.into_iter().map(|span| {
+      BuildDiagnostic::oxc_error(
+        source.clone(),
+        resolved_id.to_string(),
+        String::new(),
+        "`import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used.".to_string(),
+        vec![LabeledSpan::at(
+          span.start as usize..span.end as usize,
+          "The deferred phase is removed here.",
+        )],
+        EventKind::UnsupportedFeatureError,
+      )
+      .with_severity_warning()
+    }));
 
     // Surface invalid pure annotations flagged by oxc (issue #8898).
     // oxc marks `/* #__PURE__ */` / `/* @__PURE__ */` comments with

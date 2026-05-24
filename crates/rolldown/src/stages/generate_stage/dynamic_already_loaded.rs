@@ -76,11 +76,7 @@ impl GenerateStage<'_> {
           chunk_graph,
           &dynamic_entry_modules_by_entry,
         )
-        && (!self.should_check_reduced_atom_static_cycle(
-          &original_dependent_entries,
-          &atoms[atom_idx].dependent_entries,
-          chunk_graph,
-        ) || !Self::reduced_atom_graph_has_static_cycle(&atoms, &atom_dependencies))
+        && !Self::reduced_atom_graph_has_static_cycle(&atoms, &atom_dependencies)
       {
         changed = true;
       } else {
@@ -168,22 +164,6 @@ impl GenerateStage<'_> {
       }
     }
     has_removed_dynamic_entry
-  }
-
-  fn should_check_reduced_atom_static_cycle(
-    &self,
-    original_dependent_entries: &BitSet,
-    dependent_entries: &BitSet,
-    chunk_graph: &ChunkGraph,
-  ) -> bool {
-    self.options.manual_code_splitting.is_some()
-      || original_dependent_entries.index_of_one().chain(dependent_entries.index_of_one()).any(
-        |entry_bit| {
-          chunk_graph.chunk_table.get(ChunkIdx::from_raw(entry_bit)).is_some_and(|chunk| {
-            matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict))
-          })
-        },
-      )
   }
 
   fn compute_module_to_atom_idx(&self, atoms: &[ChunkAtom]) -> IndexVec<ModuleIdx, Option<usize>> {

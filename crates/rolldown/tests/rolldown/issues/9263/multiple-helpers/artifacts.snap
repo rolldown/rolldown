@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+//#region main.cjs
+var require_main = /* @__PURE__ */ __commonJSMin((() => {
+	var _defineProperty = (init_defineProperty(), __toCommonJS(defineProperty_exports).default);
+	var _classPrivateFieldInitSpec = (init_classPrivateFieldInitSpec(), __toCommonJS(classPrivateFieldInitSpec_exports).default);
+	var _classPrivateFieldGet = (init_classPrivateFieldGet2(), __toCommonJS(classPrivateFieldGet2_exports).default);
+	var _priv = /* @__PURE__ */ new WeakMap();
+	var Counter = class {
+		constructor() {
+			_defineProperty(this, "count", 0);
+			_classPrivateFieldInitSpec(this, _priv, 1);
+		}
+		bump() {
+			this.count += 1;
+		}
+		getPriv() {
+			return _classPrivateFieldGet(_priv, this);
+		}
+	};
+	const c = new Counter();
+	c.bump();
+	if (c.count !== 1) throw new Error("class field path failed");
+	if (c.getPriv() !== 1) throw new Error("private field path failed");
+}));
+//#endregion
+export default require_main();
+
+```

@@ -73,6 +73,10 @@ bitflags::bitflags! {
     /// The import record is solely for re-export purposes, created by
     /// `export { .. } from '..'` or `export * as ns from '..'`
     const IsReExportOnly = 1 << 10;
+    /// `require()` resolves to an oxc-runtime virtual helper (`\0@oxc-project+runtime@…/helpers/…`).
+    /// Helpers are default-only ESM modules whose synthesized require sites expect the callable,
+    /// not the namespace — set by the module loader, consumed by the finalizer to append `.default`.
+    const RuntimeHelper = 1 << 11;
 
     const TopLevelPureDynamicImport = Self::IsTopLevel.bits() | Self::PureDynamicImport.bits();
   }

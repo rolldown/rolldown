@@ -25,6 +25,7 @@ use rolldown_error::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_plugin_oxc_runtime::is_virtual_runtime_helper;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
@@ -443,6 +444,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
               && resolved_id.id.as_str().ends_with(".json")
             {
               raw_rec.meta.insert(ImportRecordMeta::JsonModule);
+            }
+            // oxc-runtime virtual helpers are default-only ESM modules. Mark them so the
+            // finalizer's CJS wrap path appends `.default` (the synthesized require site
+            // expects the callable, not the namespace). Mirrors the JSON path above.
+            // Fixes #9263.
+            if resolved_id.id.as_str().strip_prefix('\0').is_some_and(is_virtual_runtime_helper) {
+              raw_rec.meta.insert(ImportRecordMeta::RuntimeHelper);
             }
 
             // Lazy barrel optimization: skip loading modules that are not needed yet.

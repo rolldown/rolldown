@@ -2832,9 +2832,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify"
-version = "10.3.1"
+version = "10.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63868ac37e0a2ad93cb16463a1a9f12e2f00ba7b6b9090915a23c6d07f990426"
+checksum = "eea69b44c6dd54d44707348cee957ca060b4b112e4dfea03bb6400cb1201eace"
 dependencies = [
  "bitflags 2.11.1",
  "inotify",
@@ -2852,9 +2852,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify-debouncer-full"
-version = "0.7.7"
+version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "213b33298cb47932296228e33b6793b5b251a1fa51b3228402ca0c272c0b36d2"
+checksum = "a45c562d5494c346f1d66e8efbdd72afb04184ffc8968158b52fc8be731229b6"
 dependencies = [
  "rolldown-file-id",
  "rolldown-notify",
@@ -3887,9 +3887,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.149"
+version = "1.0.150"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
+checksum = "e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9"
 dependencies = [
  "indexmap",
  "itoa",

@@ -153,15 +153,10 @@ jobs:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   wasi-test:
-    needs: [changes, build-rolldown-wasi]
-    # Run even if `build-rolldown-wasi` is skipped (when `node-changes` is false), so the
-    # required status check still appears. The reusable workflow itself guards on `inputs.changed`.
-    if: |
-      always() &&
-      (needs.build-rolldown-wasi.result == 'success' || needs.build-rolldown-wasi.result == 'skipped')
+    needs: build-rolldown-wasi
     uses: ./.github/workflows/reusable-wasi-test.yml
     with:
-      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+      changed: true
 
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]

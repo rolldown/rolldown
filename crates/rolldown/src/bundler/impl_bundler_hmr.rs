@@ -1,14 +1,22 @@
+#[cfg(feature = "experimental")]
 use super::Bundler;
+#[cfg(feature = "experimental")]
 use crate::hmr::hmr_stage::{HmrStage, HmrStageInput};
+#[cfg(feature = "experimental")]
 use rolldown_common::WatcherChangeKind;
+#[cfg(feature = "experimental")]
 use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate};
+#[cfg(feature = "experimental")]
 use rolldown_error::BuildResult;
+#[cfg(feature = "experimental")]
 use rolldown_utils::indexmap::FxIndexMap;
+#[cfg(feature = "experimental")]
 use rustc_hash::FxHashSet;
+#[cfg(feature = "experimental")]
 use std::sync::{Arc, atomic::AtomicU32};
 
+#[cfg(feature = "experimental")]
 impl Bundler {
-  #[cfg(feature = "experimental")]
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
@@ -32,7 +40,6 @@ impl Bundler {
     hmr_stage.compute_hmr_update_for_file_changes(changed_file_paths, clients).await
   }
 
-  #[cfg(feature = "experimental")]
   pub async fn compute_update_for_calling_invalidate(
     &mut self,
     invalidate_caller: String,
@@ -69,7 +76,6 @@ impl Bundler {
   /// This is called when a dynamically imported module is first requested at runtime.
   /// The module was previously stubbed with a proxy, and now we need to compile the
   /// actual module and its dependencies.
-  #[cfg(feature = "experimental")]
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: String,

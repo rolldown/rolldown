@@ -15,6 +15,7 @@ impl Deref for Bundler {
 pub struct Bundler {
   pub(super) session: rolldown_devtools::Session,
   pub(super) bundle_factory: BundleFactory,
+  #[cfg_attr(not(feature = "experimental"), allow(dead_code))]
   pub(super) cache: ScanStageCache,
   pub(super) closed: bool,
 }

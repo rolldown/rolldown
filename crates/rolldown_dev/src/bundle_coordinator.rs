@@ -104,6 +104,7 @@ impl BundleCoordinator {
         CoordinatorMsg::BundleCompleted { has_encountered_error, has_generated_bundle_output } => {
           self.handle_bundle_completed(has_encountered_error, has_generated_bundle_output).await;
         }
+        #[cfg(feature = "testing")]
         CoordinatorMsg::ScheduleBuildIfStale { reply } => {
           let result = self.schedule_build_if_stale().await;
           let _ = reply.send(result);
@@ -116,6 +117,7 @@ impl BundleCoordinator {
           let result = self.ensure_latest_bundle_output().await;
           let _ = reply.send(result);
         }
+        #[cfg(feature = "testing")]
         CoordinatorMsg::GetWatchedFiles { reply } => {
           let result = self.watched_files.iter().map(|s| s.to_string()).collect();
           let _ = reply.send(result);

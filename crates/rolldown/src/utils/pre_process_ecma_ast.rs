@@ -22,7 +22,7 @@ use rustc_hash::FxHashMap;
 use crate::types::oxc_parse_type::OxcParseType;
 
 use super::parse_to_ecma_ast::ParseToEcmaAstResult;
-use super::tweak_ast_for_scanning::{PreProcessor, drop_import_defer_phase};
+use super::tweak_ast_for_scanning::PreProcessor;
 
 #[derive(Default)]
 pub struct PreProcessEcmaAst {
@@ -43,9 +43,6 @@ impl PreProcessEcmaAst {
     has_lazy_export: bool,
   ) -> BuildResult<ParseToEcmaAstResult> {
     let source = ast.source().clone();
-
-    let import_defer_spans =
-      ast.program.with_mut(|WithMutFields { program, .. }| drop_import_defer_phase(program));
 
     // Step 0: Move directive comments attached to 0 so that it's not removed when the directives are removed
     if !ast.program().directives.is_empty() && !ast.program().comments.is_empty() {
@@ -90,21 +87,6 @@ impl PreProcessEcmaAst {
         EventKind::ParseError,
       ))?;
     };
-    warnings.extend(import_defer_spans.into_iter().map(|span| {
-      BuildDiagnostic::oxc_error(
-        source.clone(),
-        resolved_id.to_string(),
-        String::new(),
-        "`import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used.".to_string(),
-        vec![LabeledSpan::at(
-          span.start as usize..span.end as usize,
-          "The deferred phase is removed here.",
-        )],
-        EventKind::UnsupportedFeatureError,
-      )
-      .with_severity_warning()
-    }));
-
     // Surface invalid pure annotations flagged by oxc (issue #8898).
     // oxc marks `/* #__PURE__ */` / `/* @__PURE__ */` comments with
     // `CommentContent::PureNotApplied` when their position prevents the parser
@@ -257,12 +239,32 @@ impl PreProcessEcmaAst {
     }
 
     // Step 6: Modify AST for Rolldown.
-    let scoping = ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
-      let mut pre_processor =
-        PreProcessor::new(allocator, bundle_options.keep_names, Some(&bundle_options.drop_labels));
-      pre_processor.visit_program(program);
-      self.recreate_scoping(&mut None, program)
-    });
+    let (scoping, import_defer_spans) =
+      ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
+        let mut pre_processor = PreProcessor::new(
+          allocator,
+          bundle_options.keep_names,
+          Some(&bundle_options.drop_labels),
+        );
+        pre_processor.visit_program(program);
+        let defer_spans = pre_processor.take_defer_spans();
+        (self.recreate_scoping(&mut None, program), defer_spans)
+      });
+
+    warnings.extend(import_defer_spans.into_iter().map(|span| {
+      BuildDiagnostic::oxc_error(
+        source.clone(),
+        resolved_id.to_string(),
+        String::new(),
+        "`import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used.".to_string(),
+        vec![LabeledSpan::at(
+          span.start as usize..span.end as usize,
+          "The deferred phase is removed here.",
+        )],
+        EventKind::UnsupportedFeatureError,
+      )
+      .with_severity_warning()
+    }));
 
     Ok(ParseToEcmaAstResult {
       ast,

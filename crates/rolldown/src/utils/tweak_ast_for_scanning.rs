@@ -7,34 +7,6 @@ use oxc::span::{GetSpanMut, SPAN, Span};
 use rolldown_ecmascript_utils::{AstSnippet, StatementExt};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-pub fn drop_import_defer_phase(program: &mut ast::Program<'_>) -> Vec<Span> {
-  let mut dropper = ImportDeferPhaseDropper { spans: vec![] };
-  dropper.visit_program(program);
-  dropper.spans
-}
-
-struct ImportDeferPhaseDropper {
-  spans: Vec<Span>,
-}
-
-impl<'ast> VisitMut<'ast> for ImportDeferPhaseDropper {
-  fn visit_import_declaration(&mut self, it: &mut ast::ImportDeclaration<'ast>) {
-    if matches!(it.phase, Some(ast::ImportPhase::Defer)) {
-      self.spans.push(it.span);
-      it.phase = None;
-    }
-    walk_mut::walk_import_declaration(self, it);
-  }
-
-  fn visit_import_expression(&mut self, it: &mut ast::ImportExpression<'ast>) {
-    if matches!(it.phase, Some(ast::ImportPhase::Defer)) {
-      self.spans.push(it.span);
-      it.phase = None;
-    }
-    walk_mut::walk_import_expression(self, it);
-  }
-}
-
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
 /// This also ensures span uniqueness in the AST.
 pub struct PreProcessor<'ast, 'a> {
@@ -52,6 +24,10 @@ pub struct PreProcessor<'ast, 'a> {
   // Fields for span uniqueness
   visited_spans: FxHashSet<Span>,
   next_unique_span_start: u32,
+  /// Spans of `import defer ...` statements / expressions whose `defer` phase
+  /// was lowered to a regular import. Read after `visit_program` to emit the
+  /// `UNSUPPORTED_FEATURE` warning.
+  defer_spans: Vec<Span>,
 }
 
 impl<'ast, 'a> PreProcessor<'ast, 'a> {
@@ -69,7 +45,12 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
       statement_replace_map: FxHashMap::default(),
       visited_spans: FxHashSet::from_iter([SPAN]),
       next_unique_span_start: 1,
+      defer_spans: vec![],
     }
+  }
+
+  pub fn take_defer_spans(&mut self) -> Vec<Span> {
+    std::mem::take(&mut self.defer_spans)
   }
 
   /// Replace `it` with an empty statement when it is a `LabeledStatement`
@@ -142,6 +123,7 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
 impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
   fn visit_import_declaration(&mut self, it: &mut ast::ImportDeclaration<'ast>) {
     if matches!(it.phase, Some(ast::ImportPhase::Defer)) {
+      self.defer_spans.push(it.span);
       it.phase = None;
     }
     walk_mut::walk_import_declaration(self, it);
@@ -283,6 +265,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
 
   fn visit_import_expression(&mut self, it: &mut ast::ImportExpression<'ast>) {
     if matches!(it.phase, Some(ast::ImportPhase::Defer)) {
+      self.defer_spans.push(it.span);
       it.phase = None;
     }
     self.ensure_uniqueness(it.span_mut());

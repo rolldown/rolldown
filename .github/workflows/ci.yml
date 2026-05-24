@@ -146,17 +146,11 @@ jobs:
       node-version: ${{ matrix.node-version }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
-  build-rolldown-wasi:
+  wasi:
     needs: changes
-    uses: ./.github/workflows/reusable-wasi-build.yml
+    uses: ./.github/workflows/reusable-wasi.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
-
-  wasi-test:
-    needs: build-rolldown-wasi
-    uses: ./.github/workflows/reusable-wasi-test.yml
-    with:
-      changed: true
 
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]

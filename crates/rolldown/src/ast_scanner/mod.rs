@@ -1120,7 +1120,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &self,
     expr: Option<&Expression<'ast>>,
   ) -> Option<ConstantValue> {
-    if !self.immutable_ctx.options.optimization.is_inline_const_enabled() {
+    if !self.immutable_ctx.flat_options.inline_const_enabled() {
       return None;
     }
     expr.and_then(|expr| try_extract_const_literal(&self.create_constant_eval_ctx(), expr))

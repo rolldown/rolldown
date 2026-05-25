@@ -4,6 +4,7 @@ import { CONFIG } from './src/config';
 import {
   editFile,
   editLazySharedModuleFile,
+  getLazyAliasedImportPage,
   getLazyPage,
   getLazySharedModulePage,
   getNestedLazyPage,
@@ -14,6 +15,7 @@ import {
 const LAZY_URL = `http://localhost:${CONFIG.ports.lazyCompilation}`;
 const LAZY_SHARED_MODULE_URL = `http://localhost:${CONFIG.ports.lazySharedModule}`;
 const NESTED_LAZY_URL = `http://localhost:${CONFIG.ports.lazyNestedDynamicImport}`;
+const LAZY_ALIASED_IMPORT_URL = `http://localhost:${CONFIG.ports.lazyAliasedImport}`;
 
 describe('hmr-full-bundle-mode', () => {
   test.sequential('should render initial content', async () => {
@@ -228,6 +230,34 @@ describe('lazy-nested-dynamic-import', () => {
       expect(log).toContain('outer.outerName = outer');
       expect(log).toContain('inner.foo = inner_foo');
       expect(log).toContain('inner.bar = inner_bar');
+      expect(log).not.toContain('UNDEFINED');
+    },
+  );
+});
+
+// Regression for vitejs/vite#22454. With `experimental.devMode.lazy: true` and
+// `viteAliasPlugin`, `import('@lazy')` used to produce a proxy module whose id
+// carried `?rolldown-lazy=1?rolldown-lazy=1` (suffix appended twice). The
+// doubled key broke `delete __rolldown_runtime__.modules[$STABLE_PROXY_MODULE_ID]`
+// in the proxy template (the template emits a SINGLE-suffix key), the dedup
+// gate skipped the fetched-template re-execution, the real module never
+// registered its named exports, and `mod.foo` / `mod.bar` came back undefined.
+// The fix in `crates/rolldown_plugin_lazy_compilation/src/lazy_compilation_plugin.rs::resolve_id`
+// makes the marker append idempotent.
+describe('lazy-aliased-import', () => {
+  test.sequential(
+    'aliased dynamic import resolves named exports (#vite-22454)',
+    { retry: 0 },
+    async () => {
+      const page = getLazyAliasedImportPage();
+
+      await page.goto(LAZY_ALIASED_IMPORT_URL, { waitUntil: 'domcontentloaded' });
+      await page.click('#btn');
+      await expect.poll(() => page.textContent('#status')).toBe('done');
+
+      const log = (await page.textContent('#log')) ?? '';
+      expect(log).toContain('mod.foo = lazy_foo');
+      expect(log).toContain('mod.bar = lazy_bar');
       expect(log).not.toContain('UNDEFINED');
     },
   );

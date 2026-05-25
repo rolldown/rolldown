@@ -23,6 +23,24 @@ describe('enhanced transform', () => {
       expect(result.code).toBe('const x = 1;\n');
       expect(result.map).toBeDefined();
     });
+
+    it('should preserve import defer syntax', async () => {
+      const result = await transform(
+        'test.js',
+        'import defer * as ns from "./dep.js"; ns.value; import.defer("./lazy.js");',
+      );
+      expect(result.errors).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
+      expect(result.code).toBe(
+        'import defer * as ns from "./dep.js";\nns.value;\nimport.defer("./lazy.js");\n',
+      );
+    });
+
+    it('should preserve import source syntax', async () => {
+      const result = await transform('test.js', 'import source wasm from "./dep.wasm"; wasm;');
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toBe('import source wasm from "./dep.wasm";\nwasm;\n');
+    });
   });
 
   describe('tsconfig - raw options', () => {

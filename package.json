@@ -14,6 +14,7 @@
     "ci:build-release-binding": "pnpm --filter rolldown run build-binding:release",
     "docs": "pnpm --filter rolldown-docs run dev",
     "docs:build": "pnpm --filter rolldown-docs run generate && pnpm --filter rolldown-docs run build",
+    "docs:void": "pnpm --filter rolldown-docs run generate && pnpm --filter rolldown-docs run void deploy",
     "docs:preview": "pnpm --filter rolldown-docs run preview"
   },
   "devDependencies": {
@@ -21,9 +22,9 @@
     "@oxc-project/runtime": "catalog:",
     "@types/node": "catalog:",
     "cjs-module-lexer": "^2.1.0",
-    "knip": "^6.0.0",
-    "playwright-chromium": "^1.56.1",
-    "publint": "^0.3.16",
+    "knip": "^6.13.1",
+    "playwright-chromium": "^1.60.0",
+    "publint": "^0.3.21",
     "remove-unused-vars": "^0.0.12",
     "rolldown": "workspace:*",
     "typescript": "catalog:",
@@ -32,17 +33,5 @@
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
-  "packageManager": "pnpm@10.23.0",
-  "pnpm": {
-    "overrides": {
-      "vitepress>vite": "npm:rolldown-vite@latest"
-    },
-    "onlyBuiltDependencies": [
-      "@parcel/watcher",
-      "esbuild",
-      "oxc-resolver",
-      "sharp",
-      "tree-sitter"
-    ]
-  }
+  "packageManager": "pnpm@11.1.2"
 }

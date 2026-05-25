@@ -16,7 +16,7 @@ use oxc::{
 use oxc_str::CompactStr;
 use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript::ToSourceString;
-use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
+use rolldown_ecmascript_utils::{ExpressionExt, JsxExt, JsxMemberExpressionObjectExt};
 
 use crate::hmr::utils::HmrAstBuilder;
 use crate::module_finalizers::{KeepNameId, TraverseState};
@@ -317,13 +317,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn visit_statement(&mut self, it: &mut ast::Statement<'ast>) {
     _ = self.try_inline_json_module_prop(it);
 
-    if !self.ctx.options.drop_labels.is_empty() {
-      if let ast::Statement::LabeledStatement(stmt) = it {
-        if self.ctx.options.drop_labels.contains(stmt.label.name.as_str()) {
-          *it = self.snippet.builder.statement_empty(stmt.span);
-        }
-      }
-    }
     walk_mut::walk_statement(self, it);
 
     // transform top level `var a = 1, b = 1;` to `a = 1, b = 1`

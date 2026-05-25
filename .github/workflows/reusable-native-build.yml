@@ -39,7 +39,7 @@ jobs:
           save-cache: ${{ github.ref_name == 'main' }}
           target-dir: ${{ runner.os == 'Windows' && format('{0}/target', env.DEV_DRIVE) || '' }}
 
-      - uses: voidzero-dev/setup-vp@56918a6d0c629c55ae8b88826a7d47fda85769ee # v1.9.0
+      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
         with:
           cache: true
 

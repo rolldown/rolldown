@@ -199,6 +199,42 @@ pub fn extract_hash_placeholders<'a>(
   find_hash_placeholders(source, finder).map(|(_, _, placeholder)| placeholder).collect()
 }
 
+const NORMALIZED_PLACEHOLDER_INNER: [u8; MAX_HASH_SIZE] = [b'0'; MAX_HASH_SIZE];
+
+/// Walks `source` and feeds it through `visit` byte-slice by byte-slice, replacing each hash
+/// placeholder accepted by `is_known_placeholder` with a zero-filled placeholder of the same
+/// shape (`!~{000...}~`). Lets a caller stream a content-stable representation into a hasher
+/// (or any other sink) without materializing the normalized string in memory — important for
+/// chunk content, which can be megabytes.
+///
+/// Placeholders not recognized by `is_known_placeholder` (typically user source code that just
+/// happens to contain a syntactically valid placeholder literal) are emitted verbatim, so a
+/// change in their bytes still flows into the hash. Matches Rollup's
+/// `replacePlaceholdersWithDefaultAndGetContainedPlaceholders`.
+pub fn visit_with_placeholders_defaulted<F, P>(
+  source: &str,
+  finder: &Finder<'static>,
+  is_known_placeholder: P,
+  mut visit: F,
+) where
+  F: FnMut(&[u8]),
+  P: Fn(&str) -> bool,
+{
+  let bytes = source.as_bytes();
+  let mut last_end = 0;
+  for (start, end, placeholder) in find_hash_placeholders(source, finder) {
+    if !is_known_placeholder(placeholder) {
+      continue;
+    }
+    visit(&bytes[last_end..start]);
+    visit(HASH_PLACEHOLDER_LEFT.as_bytes());
+    visit(&NORMALIZED_PLACEHOLDER_INNER[..placeholder.len() - HASH_PLACEHOLDER_OVERHEAD]);
+    visit(HASH_PLACEHOLDER_RIGHT.as_bytes());
+    last_end = end;
+  }
+  visit(&bytes[last_end..]);
+}
+
 #[test]
 fn test_facade_hash_generator() {
   let mut r#gen = HashPlaceholderGenerator::default();
@@ -258,4 +294,38 @@ fn test_find_hash_placeholders_multi_byte_chars() {
   let placeholders: Vec<_> = find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER).collect();
   assert_eq!(placeholders.len(), 1);
   assert_eq!(placeholders[0].2, "!~{001}~");
+}
+
+#[test]
+fn test_visit_with_placeholders_defaulted() {
+  use rustc_hash::FxHashSet;
+  fn collect(source: &str, known: &FxHashSet<&str>) -> Vec<u8> {
+    let mut buf = Vec::new();
+    visit_with_placeholders_defaulted(
+      source,
+      &HASH_PLACEHOLDER_LEFT_FINDER,
+      |p| known.contains(p),
+      |bytes| buf.extend_from_slice(bytes),
+    );
+    buf
+  }
+
+  // All placeholders are known and get normalized to their zero-filled shape.
+  let all_known: FxHashSet<&str> = ["!~{000}~", "!~{abc12}~"].into_iter().collect();
+  assert_eq!(
+    collect("prefix!~{000}~middle!~{abc12}~suffix", &all_known),
+    b"prefix!~{000}~middle!~{00000}~suffix",
+  );
+
+  // An unknown placeholder (e.g. a literal in user source) is emitted verbatim so the hash
+  // still reflects changes to its bytes. Only the known one is normalized.
+  let only_known: FxHashSet<&str> = std::iter::once("!~{000}~").collect();
+  assert_eq!(
+    collect("prefix!~{000}~middle!~{user}~suffix", &only_known),
+    b"prefix!~{000}~middle!~{user}~suffix",
+  );
+
+  let empty: FxHashSet<&str> = FxHashSet::default();
+  assert_eq!(collect("no placeholders here", &empty), b"no placeholders here");
+  assert_eq!(collect("", &empty), b"");
 }

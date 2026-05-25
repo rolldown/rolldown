@@ -9,7 +9,6 @@ keepThisButRemoveTheIIFE;
 (() => {})(keepThisButRemoveTheIIFE);
 var someVar;
 ((x) => {})(someVar);
-stuff();
 //#endregion
 
 ```
@@ -18,12 +17,11 @@ stuff();
 ===================================================================
 --- esbuild	/out/remove-these.js
 +++ rolldown	remove-these.js
-@@ -1,1 +1,4 @@
+@@ -1,1 +1,3 @@
 -keepThisButRemoveTheIIFE;
 +(() => {})(keepThisButRemoveTheIIFE);
 +var someVar;
 +(x => {})(someVar);
-+stuff();
 
 ```
 ## /out/keep-these.js
@@ -64,7 +62,7 @@ keepMe();
 var someVar;
 (([y]) => {})(someVar);
 (({ z }) => {})(someVar);
-stuff()();
+(/* @__PURE__ */ (() => stuff())())();
 ((_ = keepMe()) => {})();
 var isPure = ((x, y) => 123)();
 use(isPure);
@@ -93,7 +91,7 @@ use(isNotPure);
  (({z}) => {})(someVar);
 -var keepThis = stuff();
 -keepThis();
-+stuff()();
++(() => stuff())()();
  ((_ = keepMe()) => {})();
  var isPure = ((x, y) => 123)();
  use(isPure);

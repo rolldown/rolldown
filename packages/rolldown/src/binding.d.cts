@@ -2236,7 +2236,11 @@ export type BindingHookSideEffects =
 export interface BindingHookTransformOutput {
   code?: string
   moduleSideEffects?: BindingHookSideEffects
-  map?: BindingSourcemap
+  /**
+   * A sourcemap, or `null` to explicitly signal "no sourcemap" (distinct from
+   * omitting the field, which mirrors Rollup's "possibly broken" semantics).
+   */
+  map?: BindingSourcemap | null
   moduleType?: string
 }
 

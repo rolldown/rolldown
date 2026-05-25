@@ -6,7 +6,7 @@ use crate::{HookAddonArgs, PluginDriver};
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
 use anyhow::{Context, Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOptions};
-use rolldown_devtools::{action, trace_action};
+use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, CausedPlugin};
 use rolldown_sourcemap::SourceMap;
 use tracing::Instrument;
@@ -136,29 +136,33 @@ impl PluginDriver {
       self.iter_plugin_with_context_by_order(&self.order_by_render_chunk_meta)
     {
       async {
-        trace_action!(action::HookRenderChunkStart {
-          action: "HookRenderChunkStart",
-          plugin_name: plugin.call_name().to_string(),
-          plugin_id: plugin_idx.raw(),
-          call_id: "${call_id}",
-          content: args.code.clone(),
-        });
+        if trace_action_enabled!() {
+          trace_action!(action::HookRenderChunkStart {
+            action: "HookRenderChunkStart",
+            plugin_name: plugin.call_name().to_string(),
+            plugin_id: plugin_idx.raw(),
+            call_id: "${call_id}",
+            content: args.code.as_str().to_string(),
+          });
+        }
         let start = self.start_timing();
         let result = plugin.call_render_chunk(ctx, &args).await;
         self.record_timing(plugin_idx, start);
         if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
-          args.code = r.code;
+          args.code = Arc::new(r.code);
           if let Some(map) = r.map {
             sourcemap_chain.push(map);
           }
-          trace_action!(action::HookRenderChunkEnd {
-            action: "HookRenderChunkEnd",
-            plugin_name: plugin.call_name().to_string(),
-            plugin_id: plugin_idx.raw(),
-            call_id: "${call_id}",
-            content: Some(args.code.clone()),
-          });
-        } else {
+          if trace_action_enabled!() {
+            trace_action!(action::HookRenderChunkEnd {
+              action: "HookRenderChunkEnd",
+              plugin_name: plugin.call_name().to_string(),
+              plugin_id: plugin_idx.raw(),
+              call_id: "${call_id}",
+              content: Some(args.code.as_str().to_string()),
+            });
+          }
+        } else if trace_action_enabled!() {
           trace_action!(action::HookRenderChunkEnd {
             action: "HookRenderChunkEnd",
             plugin_name: plugin.call_name().to_string(),
@@ -176,7 +180,7 @@ impl PluginDriver {
       ))
       .await?;
     }
-    Ok((args.code, sourcemap_chain))
+    Ok((args.into_code(), sourcemap_chain))
   }
 
   #[tracing::instrument(

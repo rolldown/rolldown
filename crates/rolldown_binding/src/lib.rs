@@ -1,3 +1,4 @@
+#![expect(clippy::print_stderr)]
 // Allow type complexity rule, because NAPI-RS requires the direct types to generate the TypeScript definitions.
 #![allow(clippy::type_complexity)]
 // Due to the bound of NAPI-RS, we need to use `String` though we only need `&str`.

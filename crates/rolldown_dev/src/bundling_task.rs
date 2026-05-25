@@ -62,7 +62,7 @@ impl BundlingTask {
     if let Err(err) = &task_run_result {
       tracing::error!("[BundlingTask] fails to run");
       // FIXME: Should handle the error properly.
-      eprintln!("Bundling task run with error: {err}"); // FIXME: handle this error
+      tracing::error!("Bundling task run with error: {err}"); // FIXME: handle this error
     }
 
     let has_generated_bundle_output = self.has_rebuild_happen;

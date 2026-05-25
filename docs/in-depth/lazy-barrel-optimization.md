@@ -317,6 +317,35 @@ Lazy barrel optimization is particularly beneficial when:
 - Your codebase has many barrel modules (common in component libraries)
 - Barrel modules re-export many modules but consumers typically use only a few
 
+## Large barrel modules
+
+Lazy barrel skips loading, parsing, and transforming unused re-exports, but the **resolve** step still runs for every entry. The resolver invokes `resolveId` plugin hooks for each import record, so a barrel with thousands of re-exports can dominate build time even when only a handful of them are actually used.
+
+A typical example is `@mui/icons-material/esm/index.js`, which contains more than 10,000 re-export entries. When such a file is loaded, Rolldown still issues a resolve for every one of them, even though lazy barrel ensures only the requested icons are loaded and transformed afterwards.
+
+When `experimental.lazyBarrel` is enabled and a barrel module contains more than 5,000 re-exports, Rolldown emits an info-level advice with the code `LARGE_BARREL_MODULES`:
+
+```
+advice[LARGE_BARREL_MODULES]: node_modules/@mui/icons-material/esm/index.js has 10611 re-exports. Eagerly resolving every entry can significantly slow down the build. Consider using `@rolldown/plugin-transform-imports` to rewrite imports at the source level so the barrel file is never loaded.
+```
+
+[`@rolldown/plugin-transform-imports`](https://github.com/rolldown/plugins/tree/main/packages/transform-imports) sidesteps the resolve cost by rewriting the imports at the source level so the barrel file is never loaded:
+
+```js
+// Before
+import { Home, Search } from '@mui/icons-material';
+
+// After (rewritten by the plugin)
+import Home from '@mui/icons-material/esm/Home';
+import Search from '@mui/icons-material/esm/Search';
+```
+
+To silence the advice, set `checks.largeBarrelModules` to `false` or pass `--no-checks.large-barrel-modules` on the CLI.
+
+::: info Why is this a plugin instead of built-in behavior?
+Deferring the resolve step inside Rolldown would change when `moduleParsed` fires and when `ModuleInfo` is fully populated — a visible departure from Rollup-compatible plugin semantics. To keep the plugin contract stable through Rolldown's 1.0 release, we prefer to solve this at the source level for the cases where it actually matters. Outside of outliers like icon packs, the resolve cost on typical barrels (tens to low hundreds of re-exports) is negligible.
+:::
+
 ## Limitations
 
 - Barrel modules with side effects cannot be optimized

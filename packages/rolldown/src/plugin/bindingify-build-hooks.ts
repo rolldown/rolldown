@@ -287,7 +287,10 @@ export function bindingifyTransform(
 
       return {
         code: normalizedCode,
-        map: bindingifySourcemap(normalizeTransformHookSourcemap(id, code, map)),
+        // Preserve the `map: null` (intentional opt-out) vs `map: undefined`
+        map:
+          bindingifySourcemap(normalizeTransformHookSourcemap(id, code, map)) ??
+          (ret.map === null ? null : undefined),
         moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
         moduleType: ret.moduleType,
       };

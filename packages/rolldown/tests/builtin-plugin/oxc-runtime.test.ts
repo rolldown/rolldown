@@ -8,8 +8,9 @@ const plugin = oxcRuntimePlugin() as unknown as {
 
 test('resolveId resolves oxc runtime helper to virtual module', async () => {
   const result = await plugin.resolveId.handler('@oxc-project/runtime/helpers/objectSpread2.js');
+  // Non-`require` callers get routed to the ESM variant under `helpers/esm/`.
   // oxlint-disable-next-line no-control-regex
-  expect(result.id).toMatch(/^\0@oxc-project\+runtime@[\d.]+\/helpers\/objectSpread2\.js$/);
+  expect(result.id).toMatch(/^\0@oxc-project\+runtime@[\d.]+\/helpers\/esm\/objectSpread2\.js$/);
 });
 
 test('resolveId returns null for non-matching specifier', async () => {

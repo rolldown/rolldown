@@ -8,7 +8,7 @@ use std::{
 use oxc_resolver::{PackageJson, ResolveOptions, TsconfigDiscovery};
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
-use rolldown_utils::url::clean_url;
+use rolldown_utils::{dashmap::FxDashSet, url::clean_url};
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
@@ -73,10 +73,17 @@ impl From<u8> for AdditionalOptions {
   }
 }
 
+#[derive(Debug, Default)]
+struct ResolverCaches {
+  package_json: PackageJsonCache,
+  importer_exists: FxDashSet<String>,
+}
+
 #[derive(Debug)]
 pub struct Resolvers {
   resolvers: [Resolver; RESOLVER_COUNT as usize],
   external_resolver: Arc<Resolver>,
+  resolver_caches: Arc<ResolverCaches>,
   lock: Arc<ResolverLock>,
 }
 
@@ -86,7 +93,7 @@ impl Resolvers {
     external_conditions: &Vec<String>,
     builtin_checker: Arc<BuiltinChecker>,
   ) -> Self {
-    let package_json_cache = Arc::new(PackageJsonCache::default());
+    let resolver_caches = Arc::new(ResolverCaches::default());
 
     let resolver_lock = Arc::new(ResolverLock::new());
 
@@ -105,7 +112,7 @@ impl Resolvers {
           external_conditions,
           Arc::clone(&resolver_lock),
           Arc::clone(&builtin_checker),
-          Arc::clone(&package_json_cache),
+          Arc::clone(&resolver_caches),
         )
       })
       .collect::<Vec<_>>()
@@ -123,10 +130,15 @@ impl Resolvers {
       external_conditions,
       Arc::clone(&resolver_lock),
       Arc::clone(&builtin_checker),
-      Arc::clone(&package_json_cache),
+      Arc::clone(&resolver_caches),
     );
 
-    Self { resolvers, external_resolver: Arc::new(external_resolver), lock: resolver_lock }
+    Self {
+      resolvers,
+      external_resolver: Arc::new(external_resolver),
+      resolver_caches,
+      lock: resolver_lock,
+    }
   }
 
   pub fn get(&self, additional_options: AdditionalOptions) -> &Resolver {
@@ -145,6 +157,7 @@ impl Resolvers {
     let _guard = self.lock.lock_for_clear();
     self.resolvers.iter().for_each(|v| v.clear_cache());
     self.external_resolver.clear_cache();
+    self.resolver_caches.importer_exists.clear();
   }
 }
 
@@ -238,20 +251,20 @@ pub struct Resolver {
   inner_for_external: oxc_resolver::Resolver,
   lock: Arc<ResolverLock>,
   built_in_checker: Arc<BuiltinChecker>,
-  package_json_cache: Arc<PackageJsonCache>,
+  resolver_caches: Arc<ResolverCaches>,
   root: PathBuf,
   try_prefix: Option<String>,
 }
 
 impl Resolver {
-  pub fn new(
+  fn new(
     base_resolver: &oxc_resolver::Resolver,
     base_options: &BaseOptions,
     additional_options: AdditionalOptions,
     external_conditions: &[String],
     resolver_lock: Arc<ResolverLock>,
     built_in_checker: Arc<BuiltinChecker>,
-    package_json_cache: Arc<PackageJsonCache>,
+    resolver_caches: Arc<ResolverCaches>,
   ) -> Self {
     let external_condition_names =
       get_conditions(external_conditions, base_options.is_production, &additional_options);
@@ -266,7 +279,7 @@ impl Resolver {
       inner_for_external,
       lock: resolver_lock,
       built_in_checker,
-      package_json_cache,
+      resolver_caches,
       root: base_options.root.clone(),
       try_prefix: base_options.try_prefix.clone(),
     }
@@ -359,7 +372,8 @@ impl Resolver {
             let module_path_relative_to_package =
               raw_path.as_path().relative(pkg_json.realpath.parent()?);
             self
-              .package_json_cache
+              .resolver_caches
+              .package_json
               .cached_package_json_side_effects(pkg_json)
               .check_side_effects_for(module_path_relative_to_package.to_str()?)
           })
@@ -393,7 +407,8 @@ impl Resolver {
           && !id.contains('\0')
           && let Some(pkg_name) = get_npm_package_name(id)
         {
-          let resolved_importer_dir = should_use_importer(id, importer, dedupe)
+          let resolved_importer_dir = self
+            .should_use_importer(id, importer, dedupe)
             .then(|| {
               importer.map(|importer| {
                 Path::new(importer).parent().map(|i| i.to_str().unwrap()).unwrap_or(importer)
@@ -441,7 +456,7 @@ impl Resolver {
     p: &str,
   ) -> Option<Arc<PackageJsonWithOptionalPeerDependencies>> {
     let pj = self.get_nearest_package_json(p)?;
-    Some(self.package_json_cache.cached_package_json_optional_peer_dep(&pj))
+    Some(self.resolver_caches.package_json.cached_package_json_optional_peer_dep(&pj))
   }
 
   pub fn resolve_bare_import(
@@ -454,7 +469,7 @@ impl Resolver {
   ) -> HookResolveIdReturn {
     let oxc_resolved_result = self.resolve_raw(
       specifier,
-      if should_use_importer(specifier, importer, dedupe) { importer } else { None },
+      if self.should_use_importer(specifier, importer, dedupe) { importer } else { None },
       external,
     );
     let resolved = self.normalize_oxc_resolver_result(
@@ -495,29 +510,39 @@ impl Resolver {
   pub fn clear_cache(&self) {
     self.inner.clear_cache();
   }
-}
 
-fn should_use_importer(
-  specifier: &'_ str,
-  importer: Option<&'_ str>,
-  dedupe: &FxHashSet<String>,
-) -> bool {
-  if should_dedupe(specifier, dedupe) {
-    return false;
-  }
-
-  if let Some(importer) = importer {
-    let imp = Path::new(importer);
-    if imp.is_absolute()
-      && (
-        // css processing appends `*` for importer
-        importer.ends_with('*') || fs::exists(clean_url(importer)).unwrap_or(false)
-      )
-    {
-      return true;
+  fn should_use_importer(
+    &self,
+    specifier: &'_ str,
+    importer: Option<&'_ str>,
+    dedupe: &FxHashSet<String>,
+  ) -> bool {
+    if should_dedupe(specifier, dedupe) {
+      return false;
     }
+
+    if let Some(importer) = importer {
+      let imp = Path::new(importer);
+      if imp.is_absolute() {
+        // css processing appends `*` for importer
+        if importer.ends_with('*') {
+          return true;
+        }
+
+        let importer = clean_url(importer);
+        if self.resolver_caches.importer_exists.contains(importer) {
+          return true;
+        }
+
+        let exists = fs::exists(importer).unwrap_or(false);
+        if exists {
+          self.resolver_caches.importer_exists.insert(importer.to_string());
+        }
+        return exists;
+      }
+    }
+    false
   }
-  false
 }
 
 fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {

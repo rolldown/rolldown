@@ -3,6 +3,14 @@
 # COMMIT_REF and CACHED_COMMIT_REF are the same for build runs without cache
 ignore = "if [ \"${COMMIT_REF}\" = \"${CACHED_COMMIT_REF}\" ] ; then false ; else git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./docs ./packages/rolldown ; fi"
 
+# Netlify's pre-install stage runs `pnpm install` with `--frozen-lockfile` and
+# trips https://github.com/pnpm/pnpm/issues/10258 (a false-positive catalog
+# mismatch). PNPM_FLAGS is forwarded to that pre-install invocation, so passing
+# `--no-frozen-lockfile` here bypasses the buggy guard before our build command
+# even runs.
+[build.environment]
+PNPM_FLAGS = "--no-frozen-lockfile"
+
 [[redirects]]
 from = "/about/"
 to = "/guide/"

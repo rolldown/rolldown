@@ -7,15 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 console.log("element 1");
-//#endregion
-//#region dep2.js
-const element$1 = "element 2";
-console.log(element$1);
+console.log("element 2");
 console.log("element 3");
 //#endregion
 //#region main.js
 const Foo = () => {};
-const result = <Foo>{"test" + element$1}</Foo>;
+const result = <Foo>{"testelement 2"}</Foo>;
 //#endregion
 export { result };
 

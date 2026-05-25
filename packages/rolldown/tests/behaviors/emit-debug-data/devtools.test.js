@@ -8,13 +8,21 @@ import { expect, test } from 'vitest';
 // For now, we just live with it.
 const dotRolldownFileName = join(process.cwd(), 'node_modules/.rolldown');
 
+function normalizePath(path) {
+  return path.replaceAll('\\', '/');
+}
+
+function expectPathToEndWith(path, suffix) {
+  expect(normalizePath(path).endsWith(suffix)).toBe(true);
+}
+
 test(`emit data for devtool`, async () => {
   // Clean up previous test data if exists
   if (existsSync(dotRolldownFileName)) {
     rmSync(dotRolldownFileName, { recursive: true, force: true });
   }
 
-  await runBundle();
+  const renderedModuleSizes = await runBundle();
 
   const dotRolldownDir = readdirSync(dotRolldownFileName);
   expect(dotRolldownDir.length).toBe(1);
@@ -54,6 +62,128 @@ test(`emit data for devtool`, async () => {
       chunk.imports.some((item) => item.kind === 'dynamic-import'),
     ),
   ).toBe(true);
+  const chunkById = new Map(chunkGraphReady.chunks.map((chunk) => [chunk.chunk_id, chunk]));
+
+  const packageGraphReady = logs.find((event) => event.action === 'PackageGraphReady');
+  expect(packageGraphReady).toBeDefined();
+
+  function expectPackageSize(pkg) {
+    expect(Number.isInteger(pkg.size)).toBe(true);
+    expect(pkg.size).toBeGreaterThanOrEqual(0);
+
+    let expectedSize = 0;
+    for (const moduleId of pkg.modules) {
+      const moduleSize = renderedModuleSizes.get(moduleId);
+      expect(moduleSize).toBeDefined();
+      expectedSize += moduleSize;
+    }
+    expect(pkg.size).toBe(expectedSize);
+  }
+
+  function expectPackageChunkLinks(pkg) {
+    expect(['direct', 'transitive']).toContain(pkg.dependency_type);
+    expect(pkg.modules).toEqual([...new Set(pkg.modules)]);
+    expect(pkg.chunk_ids).toEqual([...new Set(pkg.chunk_ids)]);
+
+    if (pkg.is_used) {
+      expect(pkg.modules.length).toBeGreaterThan(0);
+      expect(pkg.chunk_ids.length).toBeGreaterThan(0);
+    }
+
+    for (const chunkId of pkg.chunk_ids) {
+      const chunk = chunkById.get(chunkId);
+      expect(chunk).toBeDefined();
+      expect(pkg.modules.some((moduleId) => chunk.modules.includes(moduleId))).toBe(true);
+    }
+  }
+
+  for (const pkg of packageGraphReady.packages) {
+    expectPackageChunkLinks(pkg);
+    expectPackageSize(pkg);
+  }
+
+  const metaInfoPackage = packageGraphReady.packages.find((pkg) => pkg.name === 'meta-info-lib');
+  expect(metaInfoPackage).toEqual(
+    expect.objectContaining({
+      dependency_type: 'direct',
+      is_used: true,
+      version: '1.2.3',
+    }),
+  );
+  expect(metaInfoPackage.package_id).toBe(metaInfoPackage.package_root);
+  expectPathToEndWith(metaInfoPackage.package_root, 'node_modules/meta-info-lib');
+  expectPathToEndWith(metaInfoPackage.package_json_path, 'node_modules/meta-info-lib/package.json');
+  expect(metaInfoPackage.size).toBeGreaterThan(0);
+  expect(metaInfoPackage.modules).toHaveLength(1);
+  expectPathToEndWith(metaInfoPackage.modules[0], 'node_modules/meta-info-lib/index.js');
+
+  const duplicatePackages = packageGraphReady.packages.filter(
+    (pkg) => pkg.name === 'duplicate-lib',
+  );
+  expect(duplicatePackages).toHaveLength(2);
+  expect(duplicatePackages.map((pkg) => pkg.version)).toEqual(['1.0.0', '2.0.0']);
+  expect(duplicatePackages.every((pkg) => pkg.dependency_type === 'direct')).toBe(true);
+  expect(duplicatePackages.every((pkg) => pkg.is_used)).toBe(true);
+  expect(duplicatePackages.every((pkg) => pkg.size > 0)).toBe(true);
+  expect(new Set(duplicatePackages.map((pkg) => pkg.package_root)).size).toBe(2);
+  expectPathToEndWith(duplicatePackages[0].package_root, 'node_modules/duplicate-a');
+  expectPathToEndWith(duplicatePackages[1].package_root, 'node_modules/duplicate-b');
+  expect(duplicatePackages[0].modules).toHaveLength(1);
+  expectPathToEndWith(duplicatePackages[0].modules[0], 'node_modules/duplicate-a/index.js');
+  expect(duplicatePackages[1].modules).toHaveLength(1);
+  expectPathToEndWith(duplicatePackages[1].modules[0], 'node_modules/duplicate-b/index.js');
+
+  const duplicatePackageIndices = packageGraphReady.packages.flatMap((pkg, index) =>
+    pkg.name === 'duplicate-lib' ? [index] : [],
+  );
+  expect(duplicatePackageIndices[1]).toBe(duplicatePackageIndices[0] + 1);
+
+  const directGraphPackage = packageGraphReady.packages.find(
+    (pkg) => pkg.name === 'direct-graph-lib',
+  );
+  expect(directGraphPackage).toEqual(
+    expect.objectContaining({
+      dependency_type: 'direct',
+      is_used: true,
+      version: '1.0.0',
+    }),
+  );
+  expectPathToEndWith(directGraphPackage.package_root, 'node_modules/direct-graph-lib');
+  expect(directGraphPackage.size).toBeGreaterThan(0);
+  expect(directGraphPackage.modules).toHaveLength(1);
+  expectPathToEndWith(directGraphPackage.modules[0], 'node_modules/direct-graph-lib/index.js');
+
+  const transitiveGraphPackage = packageGraphReady.packages.find(
+    (pkg) => pkg.name === 'transitive-graph-lib',
+  );
+  expect(transitiveGraphPackage).toEqual(
+    expect.objectContaining({
+      dependency_type: 'transitive',
+      is_used: true,
+      version: '1.0.0',
+    }),
+  );
+  expectPathToEndWith(transitiveGraphPackage.package_root, 'node_modules/transitive-graph-lib');
+  expect(transitiveGraphPackage.size).toBeGreaterThan(0);
+  expect(transitiveGraphPackage.modules).toHaveLength(1);
+  expectPathToEndWith(
+    transitiveGraphPackage.modules[0],
+    'node_modules/transitive-graph-lib/index.js',
+  );
+
+  const unusedPackage = packageGraphReady.packages.find((pkg) => pkg.name === 'unused-lib');
+  expect(unusedPackage).toEqual(
+    expect.objectContaining({
+      dependency_type: 'direct',
+      is_used: false,
+      version: '1.0.0',
+    }),
+  );
+  expectPathToEndWith(unusedPackage.package_root, 'node_modules/unused-lib');
+  expectPathToEndWith(unusedPackage.package_json_path, 'node_modules/unused-lib/package.json');
+  expect(unusedPackage.size).toBe(0);
+  expect(unusedPackage.modules).toEqual([]);
+  expect(unusedPackage.chunk_ids).toEqual([]);
 
   const metaContent = readFileSync(join(dotRolldownFileName, dotRolldownDir[0], 'meta.json'));
   for (const variable of variables) {
@@ -102,9 +232,23 @@ test(`emit data for devtool`, async () => {
         },
       ],
     });
-    await bundle.generate();
+    const { output } = await bundle.generate();
+    const renderedModuleSizes = new Map();
+    for (const item of output) {
+      if (item.type !== 'chunk') {
+        continue;
+      }
+
+      for (const [moduleId, module] of Object.entries(item.modules)) {
+        renderedModuleSizes.set(
+          moduleId,
+          (renderedModuleSizes.get(moduleId) ?? 0) + Buffer.byteLength(module.code ?? ''),
+        );
+      }
+    }
     // Devtools log files are only guaranteed complete after `close()` — the
     // writer thread drains and flushes on the CloseSession ack.
     await bundle.close();
+    return renderedModuleSizes;
   }
 });

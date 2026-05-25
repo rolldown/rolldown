@@ -6,10 +6,10 @@ use oxc_str::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprObjectReferencedType,
+  EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprObjectReferencedType, MemberExprRef,
   MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  SymbolRefFlags,
+  OutputFormat, ResolvedExport, Specifier, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 #[cfg(not(target_family = "wasm"))]
@@ -339,7 +339,7 @@ impl LinkStage<'_> {
 
       for (exported_name, named_export) in &dep_module.named_exports {
         // ES6 export star statements ignore exports named "default"
-        if !named_export.came_from_commonjs && exported_name.as_str() == "default" {
+        if exported_name.as_str() == "default" && !named_export.came_from_commonjs {
           continue;
         }
         // This export star is shadowed if any file in the stack has a matching real named export
@@ -411,6 +411,8 @@ impl LinkStage<'_> {
           let mut resolved_map = FxHashMap::default();
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
+          let json_default_imports_with_member_write =
+            self.collect_json_default_imports_with_member_write(module, stmt_infos);
           stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
@@ -424,9 +426,16 @@ impl LinkStage<'_> {
                     Module::Normal(module) => module,
                     Module::External(_) => return,
                   };
-                let is_json_import_ns =
-                  (matches!(canonical_ref_owner.module_type, ModuleType::Json)
-                    && member_expr_ref.object_ref_type == MemberExprObjectReferencedType::Default);
+                // Treat `import data from './x.json'; data.foo` as a namespace access so
+                // it can be optimized to the underlying `foo` export. Skip this for writes
+                // (`data.foo = ...`) since rewriting the write target to a bare identifier
+                // (or worse, an inlined constant) is unsound and would crash the finalizer.
+                // Also skip all reads from a JSON default object that has any member write,
+                // because the split `foo` export no longer reflects `data.foo` after mutation.
+                let is_json_import_ns = matches!(canonical_ref_owner.module_type, ModuleType::Json)
+                  && member_expr_ref.object_ref_type == MemberExprObjectReferencedType::Default
+                  && !member_expr_ref.is_write
+                  && !json_default_imports_with_member_write.contains(&canonical_ref);
                 let mut is_namespace_ref =
                   canonical_ref_owner.namespace_object_ref == canonical_ref || is_json_import_ns;
                 let mut cursor = 0;
@@ -701,6 +710,94 @@ impl LinkStage<'_> {
         meta.dependencies.extend(side_effects_dependency);
       },
     );
+  }
+
+  fn collect_json_default_imports_with_member_write(
+    &self,
+    module: &NormalModule,
+    stmt_infos: &StmtInfos,
+  ) -> FxHashSet<SymbolRef> {
+    // Skip the per-stmt scan for modules that can't possibly import JSON.
+    let has_json_importee = module.ecma_view.import_records.iter().any(|rec| {
+      rec.resolved_module.is_some_and(|idx| {
+        self.module_table[idx]
+          .as_normal()
+          .is_some_and(|m| matches!(m.module_type, ModuleType::Json))
+      })
+    });
+    if !has_json_importee {
+      return FxHashSet::default();
+    }
+
+    let mut written_json_defaults = FxHashSet::default();
+    for stmt_info in stmt_infos.iter() {
+      for symbol_ref in &stmt_info.referenced_symbols {
+        let written_default = match symbol_ref {
+          SymbolOrMemberExprRef::MemberExpr(member_expr_ref) => {
+            self.json_default_ref_for_member_write(member_expr_ref)
+          }
+          SymbolOrMemberExprRef::Symbol(symbol_ref) => {
+            self.json_default_ref_for_computed_member_write(*symbol_ref)
+          }
+        };
+        if let Some(written_default) = written_default {
+          written_json_defaults.insert(written_default);
+        }
+      }
+    }
+    written_json_defaults
+  }
+
+  fn json_default_ref_for_member_write(
+    &self,
+    member_expr_ref: &MemberExprRef,
+  ) -> Option<SymbolRef> {
+    if !member_expr_ref.is_write {
+      return None;
+    }
+
+    match member_expr_ref.object_ref_type {
+      MemberExprObjectReferencedType::Default => {
+        let canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
+        self.module_table[canonical_ref.owner]
+          .as_normal()
+          .is_some_and(|module| matches!(module.module_type, ModuleType::Json))
+          .then_some(canonical_ref)
+      }
+      MemberExprObjectReferencedType::Namespace
+        if member_expr_ref
+          .prop_and_span_list
+          .first()
+          .is_some_and(|prop| prop.name.as_str() == "default") =>
+      {
+        let canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
+        let is_json_namespace =
+          self.module_table[canonical_ref.owner].as_normal().is_some_and(|module| {
+            matches!(module.module_type, ModuleType::Json)
+              && module.namespace_object_ref == canonical_ref
+          });
+        if !is_json_namespace {
+          return None;
+        }
+        self.metas[canonical_ref.owner].resolved_exports.get("default").map(|e| e.symbol_ref)
+      }
+      _ => None,
+    }
+  }
+
+  fn json_default_ref_for_computed_member_write(&self, symbol_ref: SymbolRef) -> Option<SymbolRef> {
+    if !symbol_ref
+      .flags(&self.symbols)
+      .is_some_and(|flags| flags.contains(SymbolRefFlags::HasComputedMemberWrite))
+    {
+      return None;
+    }
+
+    let canonical_ref = self.symbols.canonical_ref_for(symbol_ref);
+    self.module_table[canonical_ref.owner]
+      .as_normal()
+      .is_some_and(|module| matches!(module.module_type, ModuleType::Json))
+      .then_some(canonical_ref)
   }
 }
 
@@ -1062,8 +1159,12 @@ impl BindImportsAndExportsContext<'_> {
 
           break MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports });
         }
-        ImportStatus::_CommonJSWithoutExports => todo!(),
-        ImportStatus::_Disabled => todo!(),
+        ImportStatus::_CommonJSWithoutExports => {
+          panic!("`ImportStatus::_CommonJSWithoutExports` is not implemented yet")
+        }
+        ImportStatus::_Disabled => {
+          panic!("`ImportStatus::_Disabled` is not implemented yet")
+        }
         ImportStatus::External(symbol_ref) => {
           if self.options.format.keep_esm_import_export_syntax() {
             // Imports from external modules should not be converted to CommonJS

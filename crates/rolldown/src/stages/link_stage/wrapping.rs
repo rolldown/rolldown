@@ -130,7 +130,7 @@ impl LinkStage<'_> {
             linking_infos: &mut self.metas,
             modules: &self.module_table.modules,
             runtime_idx: self.runtime.id(),
-            on_demand_wrapping: self.options.experimental.is_on_demand_wrapping_enabled(),
+            on_demand_wrapping,
           },
           module_id,
         );
@@ -152,7 +152,7 @@ impl LinkStage<'_> {
                 linking_infos: &mut self.metas,
                 modules: &self.module_table.modules,
                 runtime_idx: self.runtime.id(),
-                on_demand_wrapping: self.options.experimental.is_on_demand_wrapping_enabled(),
+                on_demand_wrapping,
               },
               importee.idx,
             );

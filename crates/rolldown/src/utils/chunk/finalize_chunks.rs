@@ -12,16 +12,19 @@ use rolldown_error::BuildResult;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
+  base64::to_url_safe_base64,
   hash_placeholder::{
     HASH_PLACEHOLDER_LEFT_FINDER, extract_hash_placeholders, replace_placeholder_with_hash,
+    visit_with_placeholders_defaulted,
   },
   indexmap::FxIndexSet,
   rayon::{
     IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
   },
+  rustc_hash::FxHashSetExt,
   xxhash::{encode_hash_with_base, xxhash_base64_url},
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use xxhash_rust::xxh3::Xxh3;
 
 use crate::{
@@ -76,8 +79,21 @@ pub async fn finalize_assets(
   let index_standalone_content_hashes: IndexVec<InsChunkIdx, String> = index_instantiated_chunks
     .par_iter()
     .map(|chunk| {
-      let mut hash = xxhash_base64_url(chunk.content.as_bytes());
-      // Hash content that provided by users if it's exist
+      // Normalize rolldown-generated placeholders before hashing so the hash is stable across
+      // their (transient) index drift. See `meta/design/chunk-hash.md` for the full reasoning.
+      let mut hash = match &chunk.content {
+        StrOrBytes::Str(content) => {
+          let mut hasher = Xxh3::default();
+          visit_with_placeholders_defaulted(
+            content,
+            &HASH_PLACEHOLDER_LEFT_FINDER,
+            |placeholder| ins_chunk_idx_by_placeholder.contains_key(placeholder),
+            |bytes| hasher.update(bytes),
+          );
+          to_url_safe_base64(hasher.digest128().to_le_bytes())
+        }
+        StrOrBytes::Bytes(_) => xxhash_base64_url(chunk.content.as_bytes()),
+      };
       if let Some(augment_chunk_hash) = &chunk.augment_chunk_hash {
         hash.push_str(augment_chunk_hash);
         hash = xxhash_base64_url(hash.as_bytes());
@@ -87,17 +103,13 @@ pub async fn finalize_assets(
     .collect::<Vec<_>>()
     .into();
 
-  let index_final_hashes: IndexVec<InsChunkIdx, (String, u128)> = (0..index_instantiated_chunks
-    .len())
+  let mut index_final_hashes: IndexVec<InsChunkIdx, (String, u128)> = (0
+    ..index_instantiated_chunks.len())
     .into_par_iter()
     .map(|asset_idx| {
       let mut hasher = Xxh3::default();
       let asset_idx = InsChunkIdx::from(asset_idx);
-      // Start to calculate hash, first we hash itself
       index_standalone_content_hashes[asset_idx].hash(&mut hasher);
-
-      // hash itself's preliminary filename to prevent different chunks that have the same content from having the same hash
-      index_instantiated_chunks[asset_idx].preliminary_filename.hash(&mut hasher);
 
       let dependencies = &index_transitive_dependencies[asset_idx];
       dependencies.iter().copied().for_each(|dep_id| {
@@ -114,6 +126,8 @@ pub async fn finalize_assets(
   } else {
     generate_sourcemap_hashes_by_idx(&index_instantiated_chunks, hash_base)
   };
+
+  deconflict_filenames(&index_instantiated_chunks, &mut index_final_hashes, hash_base);
 
   let final_hashes_by_placeholder = index_final_hashes
     .iter_enumerated()
@@ -322,4 +336,47 @@ fn collect_transitive_dependencies(
       .into();
 
   index_transitive_dependencies
+}
+
+/// Walks chunks in a deterministic order and rehashes any chunk whose resolved file name would
+/// collide with a previously assigned one. Comparison is case-insensitive so the output is safe
+/// to write on case-insensitive filesystems (macOS HFS+, Windows NTFS).
+///
+/// Mirrors Rollup's `generateFinalHashes` rehash loop.
+fn deconflict_filenames(
+  index_instantiated_chunks: &IndexInstantiatedChunks,
+  index_final_hashes: &mut IndexVec<InsChunkIdx, (String, u128)>,
+  hash_base: u8,
+) {
+  let mut taken: FxHashSet<String> = FxHashSet::with_capacity(index_instantiated_chunks.len());
+  for (asset_idx, chunk) in index_instantiated_chunks.iter_enumerated() {
+    let preliminary_filename = chunk.preliminary_filename.as_str();
+    let Some(placeholders) = chunk.preliminary_filename.hash_placeholder() else {
+      taken.insert(preliminary_filename.to_lowercase());
+      continue;
+    };
+    loop {
+      let candidate =
+        resolve_filename(preliminary_filename, placeholders, &index_final_hashes[asset_idx].0);
+      if taken.insert(candidate.to_lowercase()) {
+        break;
+      }
+      index_final_hashes[asset_idx] = rehash(&index_final_hashes[asset_idx].0, hash_base);
+    }
+  }
+}
+
+fn resolve_filename(preliminary_filename: &str, placeholders: &[String], hash_str: &str) -> String {
+  let mut result = preliminary_filename.to_string();
+  for placeholder in placeholders {
+    result = result.replace(placeholder.as_str(), &hash_str[..placeholder.len()]);
+  }
+  result
+}
+
+fn rehash(prev_hash_str: &str, hash_base: u8) -> (String, u128) {
+  let mut hasher = Xxh3::default();
+  hasher.update(prev_hash_str.as_bytes());
+  let digest = hasher.digest128();
+  (encode_hash_with_base(&digest.to_le_bytes(), hash_base), digest)
 }

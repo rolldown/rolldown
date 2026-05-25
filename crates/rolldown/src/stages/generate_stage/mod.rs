@@ -5,7 +5,8 @@ use futures::future::try_join_all;
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
-  ChunkIdx, ChunkKind, OutputExports, PathsOutputOption, PreliminarySourcemapFilename,
+  ChunkIdx, ChunkKind, InstantiationKind, OutputExports, PackageJson, PathsOutputOption,
+  PreliminarySourcemapFilename,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -16,6 +17,7 @@ use rolldown_std_utils::{
 use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::HashPlaceholderGenerator,
+  indexmap::FxIndexSet,
   rayon::{IntoParallelRefMutIterator as _, ParallelIterator as _},
 };
 use rustc_hash::FxHashMap;
@@ -34,6 +36,51 @@ struct PreGeneratedChunkName {
   /// The base filename for generating preliminary filenames.
   /// Absolute path without extension, used as input to filename templates.
   chunk_filename: ArcStr,
+}
+
+type DevtoolsPackageInfoEntry = (action::PackageInfo, FxIndexSet<String>, FxIndexSet<u32>);
+
+fn is_devtools_source_importer(module_id: &str, cwd: &str, cwd_slash: &str) -> bool {
+  fn is_path_inside(path: &str, parent: &str) -> bool {
+    let parent = parent.trim_end_matches(['/', '\\']);
+    path == parent
+      || path
+        .strip_prefix(parent)
+        .is_some_and(|rest| rest.starts_with('/') || rest.starts_with('\\'))
+  }
+
+  let is_inside_cwd = is_path_inside(module_id, cwd) || is_path_inside(module_id, cwd_slash);
+  let is_node_module =
+    module_id.contains("/node_modules/") || module_id.contains("\\node_modules\\");
+
+  is_inside_cwd && !is_node_module
+}
+
+fn ensure_devtools_package_info<'a>(
+  package_infos: &'a mut FxHashMap<String, DevtoolsPackageInfoEntry>,
+  package_json: &PackageJson,
+) -> Option<&'a mut DevtoolsPackageInfoEntry> {
+  let package_root = package_json.realpath().parent()?.to_slash_lossy().into_owned();
+  let package_json_path = package_json.realpath().to_slash_lossy().into_owned();
+
+  Some(package_infos.entry(package_root.clone()).or_insert_with(|| {
+    (
+      action::PackageInfo {
+        package_id: package_root.clone(),
+        name: package_json.name().map(str::to_string),
+        version: package_json.version().map(str::to_string),
+        package_json_path,
+        package_root,
+        is_used: false,
+        dependency_type: "transitive",
+        size: 0,
+        modules: Vec::new(),
+        chunk_ids: Vec::new(),
+      },
+      FxIndexSet::default(),
+      FxIndexSet::default(),
+    )
+  }))
 }
 
 use crate::{
@@ -100,6 +147,7 @@ impl<'a> GenerateStage<'a> {
 
     self.merge_cjs_namespace(&mut chunk_graph);
 
+    // See meta/design/devtools.md for devtools action lifecycle.
     self.trace_action_chunks_infos(&chunk_graph);
 
     let mut warnings = vec![];
@@ -413,6 +461,101 @@ impl<'a> GenerateStage<'a> {
         });
       }
       trace_action!(action::ChunkGraphReady { action: "ChunkGraphReady", chunks: chunk_infos });
+    }
+  }
+
+  fn trace_action_package_graph_ready(
+    &self,
+    chunk_graph: &ChunkGraph,
+    instantiated_chunks: &crate::type_alias::IndexInstantiatedChunks,
+  ) {
+    if trace_action_enabled!() {
+      let mut package_infos: FxHashMap<String, DevtoolsPackageInfoEntry> = FxHashMap::default();
+      let mut module_id_to_package_id: FxHashMap<String, String> = FxHashMap::default();
+      let cwd = self.options.cwd.to_string_lossy();
+      let cwd_slash = self.options.cwd.to_slash_lossy();
+
+      for module in self.link_output.module_table.modules.iter().filter_map(|m| m.as_normal()) {
+        let Some(package_json) = module.originative_resolved_id.package_json.as_ref() else {
+          continue;
+        };
+
+        let Some((package_info, _, _)) =
+          ensure_devtools_package_info(&mut package_infos, package_json)
+        else {
+          continue;
+        };
+
+        if module.importers_idx.iter().any(|importer_idx| {
+          let importer_id = self.link_output.module_table[*importer_idx].id().as_str();
+          is_devtools_source_importer(importer_id, cwd.as_ref(), cwd_slash.as_ref())
+        }) {
+          package_info.dependency_type = "direct";
+        }
+      }
+
+      for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+        for module_idx in &chunk.modules {
+          let Some(module) = self.link_output.module_table[*module_idx].as_normal() else {
+            continue;
+          };
+          let Some(package_json) = module.originative_resolved_id.package_json.as_ref() else {
+            continue;
+          };
+          let Some((package_info, modules, chunk_ids)) =
+            ensure_devtools_package_info(&mut package_infos, package_json)
+          else {
+            continue;
+          };
+
+          package_info.is_used = true;
+
+          let module_id = module.id.to_string();
+          module_id_to_package_id.insert(module_id.clone(), package_info.package_id.clone());
+          if modules.insert(module_id.clone()) {
+            package_info.modules.push(module_id);
+          }
+          if chunk_ids.insert(chunk_idx.raw()) {
+            package_info.chunk_ids.push(chunk_idx.raw());
+          }
+        }
+      }
+
+      for chunk in instantiated_chunks {
+        let InstantiationKind::Ecma(ecma_meta) = &chunk.kind else {
+          continue;
+        };
+
+        for (module_id, rendered_module) in ecma_meta
+          .rendered_chunk
+          .modules
+          .keys
+          .iter()
+          .zip(ecma_meta.rendered_chunk.modules.values.iter())
+        {
+          let Some(package_id) = module_id_to_package_id.get(module_id.as_str()) else {
+            continue;
+          };
+          let Some((package_info, _, _)) = package_infos.get_mut(package_id) else {
+            continue;
+          };
+
+          let rendered_length =
+            u32::try_from(rendered_module.rendered_length()).unwrap_or(u32::MAX);
+          package_info.size = package_info.size.saturating_add(rendered_length);
+        }
+      }
+
+      let mut packages = package_infos.into_values().map(|(info, _, _)| info).collect::<Vec<_>>();
+      packages.sort_unstable_by(|a, b| {
+        a.name
+          .cmp(&b.name)
+          .then_with(|| a.version.cmp(&b.version))
+          .then_with(|| a.package_root.cmp(&b.package_root))
+          .then_with(|| a.package_id.cmp(&b.package_id))
+      });
+
+      trace_action!(action::PackageGraphReady { action: "PackageGraphReady", packages });
     }
   }
 }

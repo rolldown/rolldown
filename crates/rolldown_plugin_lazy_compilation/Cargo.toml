@@ -5,6 +5,8 @@ edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Lazy-compilation plugin for Rolldown"
+publish = true
 
 [dependencies]
 arcstr = { workspace = true }

@@ -102,6 +102,8 @@ The pass groups modules into temporary atoms by their current dependent-entry bi
 
 When the reduced bitset would put an atom into a single dynamic-entry chunk, the pass preserves that dynamic entry's observable namespace. The reduction is accepted only if the atom has no extra exports, its exports are already part of the dynamic entry's signature, it is runtime-only, or it is the removed dynamic-entry module itself. Otherwise the atom stays separate so `import("./entry.js")` does not expose helper exports needed only by other chunks.
 
+Every accepted reduction must also keep the regrouped static atom graph acyclic. "Already loaded" does not always mean "already initialized": if a reduced atom is moved into a chunk that statically imports one of its consumers, an ES module cycle can expose uninitialized bindings, including CJS wrapper functions.
+
 Top-level-await refinements are intentionally not modeled here yet. The existing chunk optimizer still bails out globally when any included module is TLA or contains a TLA dependency, so the awaited-dynamic-import safety path remains future work.
 
 ## Reachability Propagation
@@ -143,6 +145,8 @@ For each common chunk, translates its `bits` to chunk indices (bit positions dir
 - **Change an entry's export signature** — when `preserveEntrySignatures: 'strict'`, adding modules to an entry chunk would expose symbols that the original entry didn't export.
 
 The trade-off of merging: entry chunks may include modules that not all consumers of that entry need. This adds a small amount of unnecessary code loading but significantly reduces chunk count and HTTP requests.
+
+For chunks shared only by dynamic entries, the optimizer does not infer a merge target from dynamic-import reachability alone. Sibling dynamic imports from the same loaded entry can be requested independently, so "the entry can reach both chunks" does not prove either dynamic chunk is already loaded before the other. In that case, Rolldown keeps a separate common chunk unless the existing static-import merge-target check proves a safe target.
 
 ### Facade Elimination (`optimize_facade_entry_chunks`)
 

@@ -85,6 +85,53 @@ Bundler.cache (ScanStageCache) ──(move)──> Bundle.cache (temporary holde
 | `module_idx_by_abs_path`  | Path-based lookup for watcher                       |
 | `module_idx_by_stable_id` | Stable ID lookup for HMR                            |
 
+### Cache integrity on a failed build
+
+`ScanStageCache` must survive a _failed_ build whole, not just a successful one
+— otherwise the next HMR/incremental build reads a broken cache and panics. The
+invariant is: **between builds, `Bundler::cache` is always whole** — `snapshot`
+is `Some` and its `symbol_ref_db` carries real scoping.
+
+A build mutates the cache through several non-atomic "tear → repair" steps. An
+early `?` return landing between a tear and its repair used to leave the cache
+permanently broken:
+
+| Step       | Tear                                                                                        | Repair                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Ownership  | `with_cached_bundle` `mem::take`s `Bundler::cache`, leaving `default()` (`snapshot: None`)  | moves `Bundle::cache` back into `Bundler`                                 |
+| Scoping    | `create_output` / `make_copy` clone `symbol_ref_db` _without_ scoping (a perf optimization) | `merge_immutable_fields_for_cache` reinstates scoping from the link stage |
+| Defer-sync | `ScanStageCache::update_defer_sync_data` `take`s the snapshot out                           | `set_snapshot` puts it back                                               |
+
+Each repair therefore runs **unconditionally**:
+
+- `with_cached_bundle` moves the cache back on every outcome — it never `?`-bails.
+- `bundle_up` runs `merge_immutable_fields_for_cache` right after the link
+  stage, _before_ the fallible `generate_bundle` / filename-check /
+  `invalidate_js_side_cache` steps.
+- `update_defer_sync_data` restores the snapshot before propagating an error.
+
+A build that fails _before_ touching the cache (e.g. a scan-stage parse error)
+needs no repair — `scan_modules` returns early and the cache is untouched.
+
+**Why keep a cache from a failed build at all?** Committing a _torn_ cache is
+worse than dropping it: an empty snapshot panics the next `get_snapshot()`, and
+torn scoping makes `oxc_semantic` index out of bounds during the next link. A
+whole-but-slightly-stale cache is recoverable; a broken one is not. The recovery
+`BundleMode` is `IncrementalFullBuild` (see the table below) — it re-scans
+everything, but still relies on the cache being structurally valid to merge into.
+
+**Presence is not freshness.** Restoring the snapshot guarantees it is _present_
+and _structurally valid_ — not that every field is current. `defer_sync_scan_data`
+(per-module side-effect re-analysis) is deliberately **best-effort**: a module
+that fails to re-analyze is skipped — it keeps its prior `side_effects` — its
+error is collected, and the remaining modules are still synced. So a failed
+build can leave a module with stale `side_effects`. That is safe _only_ because
+`side_effects` is an independent per-module field with no cross-module invariant:
+a stale value is still a valid value, and the next successful build re-syncs it.
+The general rule for a torn-window repair: restore a _structurally consistent_
+cache; where content freshness can't be guaranteed under partial failure,
+confine the staleness to fields that are safe to be stale.
+
 ## BundleMode
 
 `BundleMode` makes the three incremental states explicit. Before this enum, the code used `ScanMode` + `is_incremental_build_enabled` combinations that were ambiguous and bug-prone.

@@ -4,7 +4,7 @@ use std::sync::LazyLock;
 
 use jsonschema::{Draft, Validator};
 
-pub use rolldown_testing_config::{TestConfig, TestMeta};
+pub use rolldown_testing_config::{DevTestMeta, TestConfig, TestMeta};
 
 use rolldown_workspace::crate_dir;
 

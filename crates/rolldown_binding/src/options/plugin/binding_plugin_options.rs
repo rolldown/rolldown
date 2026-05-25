@@ -26,6 +26,7 @@ use super::{
     binding_hook_transform_output::BindingHookTransformOutput,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
     binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
+    binding_shared_string::BindingSharedString,
   },
 };
 
@@ -82,7 +83,12 @@ pub struct BindingPluginOptions {
   )]
   pub transform: Option<
     MaybeAsyncJsCallback<
-      FnArgs<(BindingTransformPluginContext, String, String, BindingTransformHookExtraArgs)>,
+      FnArgs<(
+        BindingTransformPluginContext,
+        BindingSharedString,
+        String,
+        BindingTransformHookExtraArgs,
+      )>,
       Option<BindingHookTransformOutput>,
     >,
   >,
@@ -110,7 +116,7 @@ pub struct BindingPluginOptions {
     MaybeAsyncJsCallback<
       FnArgs<(
         BindingPluginContext,
-        String,
+        BindingSharedString,
         BindingRenderedChunk,
         BindingNormalizedOptions,
         BindingRenderedChunkMeta,

@@ -18,7 +18,7 @@ use rolldown_common::{ConstExportMeta, ConstantValue, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields, semantic_builder_for_transform};
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -95,15 +95,15 @@ impl PreProcessEcmaAst {
     // from applying them (expression-level, statement-level, or variable declarator).
     // Aligns with Rollup's `INVALID_ANNOTATION` log code.
     ast.program.with_dependent(|_owner, dep| {
-      let mut function_declaration_collector = FunctionDeclarationStartCollector::default();
-      function_declaration_collector.visit_program(&dep.program);
       for comment in
         dep.program.comments.iter().filter(|c| c.content == CommentContent::PureNotApplied)
       {
         let span = comment.span;
         let annotation = source[span.start as usize..span.end as usize].to_string();
-        let is_before_function_declaration =
-          function_declaration_collector.function_declaration_starts.contains(&comment.attached_to);
+        let mut function_declaration_matcher =
+          FunctionDeclarationStartCollector::new(comment.attached_to);
+        function_declaration_matcher.visit_program(&dep.program);
+        let is_before_function_declaration = function_declaration_matcher.is_match;
         warnings.push(BuildDiagnostic::invalid_annotation(
           resolved_id.to_string(),
           annotation,
@@ -291,16 +291,27 @@ fn function_declaration_stmt_start(stmt: &Statement<'_>) -> Option<u32> {
   }
 }
 
-#[derive(Default)]
 struct FunctionDeclarationStartCollector {
-  function_declaration_starts: FxHashSet<u32>,
+  target_statement_start: u32,
+  is_match: bool,
+}
+
+impl FunctionDeclarationStartCollector {
+  fn new(target_statement_start: u32) -> Self {
+    Self { target_statement_start, is_match: false }
+  }
 }
 
 impl<'ast> Visit<'ast> for FunctionDeclarationStartCollector {
   fn visit_statement(&mut self, stmt: &Statement<'ast>) {
-    if let Some(start) = function_declaration_stmt_start(stmt) {
-      self.function_declaration_starts.insert(start);
+    if self.is_match {
+      return;
     }
-    walk::walk_statement(self, stmt);
+    if let Some(start) = function_declaration_stmt_start(stmt) {
+      self.is_match = start == self.target_statement_start;
+    }
+    if !self.is_match {
+      walk::walk_statement(self, stmt);
+    }
   }
 }

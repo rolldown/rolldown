@@ -34,6 +34,8 @@ export interface NormalizedOutputOptions {
   dir: string | undefined;
   /** @see {@linkcode OutputOptions.entryFileNames | entryFileNames} */
   entryFileNames: string | ChunkFileNamesFunction;
+  /** @see {@linkcode OutputOptions.sourcemapFileNames | sourcemapFileNames} */
+  sourcemapFileNames: string | ChunkFileNamesFunction | undefined;
   /** @see {@linkcode OutputOptions.chunkFileNames | chunkFileNames} */
   chunkFileNames: string | ChunkFileNamesFunction;
   /** @see {@linkcode OutputOptions.assetFileNames | assetFileNames} */
@@ -156,6 +158,10 @@ export class NormalizedOutputOptionsImpl
     return this.inner.sourcemap;
   }
 
+  @lazyProp
+  get sourcemapFileNames(): string | ChunkFileNamesFunction | undefined {
+    return this.inner.sourcemapFilenames || this.outputOptions.sourcemapFileNames;
+  }
   @lazyProp
   get sourcemapBaseUrl(): string | undefined {
     return this.inner.sourcemapBaseUrl ?? undefined;

@@ -307,6 +307,12 @@
             "null"
           ]
         },
+        "sourcemapFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "sourcemapDebugIds": {
           "type": [
             "boolean",

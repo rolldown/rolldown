@@ -10,6 +10,7 @@ use url::Url;
 
 use super::uuid::uuid_v4_string_from_u128;
 
+#[expect(clippy::too_many_arguments)]
 pub async fn process_code_and_sourcemap(
   options: &NormalizedBundlerOptions,
   code: &mut String,
@@ -18,6 +19,7 @@ pub async fn process_code_and_sourcemap(
   filename: &str,
   debug_id: u128,
   is_css: bool,
+  sourcemap_filename: Option<String>,
 ) -> BuildResult<Option<OutputAsset>> {
   let source_map_link_comment_kind =
     if is_css { CommentKind::SingleLineBlock } else { CommentKind::Line };
@@ -28,7 +30,7 @@ pub async fn process_code_and_sourcemap(
     map.set_source_contents(vec![]);
   }
 
-  let map_filename = format!("{filename}.map");
+  let map_filename = sourcemap_filename.unwrap_or_else(|| format!("{filename}.map"));
   let map_path = file_dir.join(&map_filename);
 
   if let Some(source_map_ignore_list) = &options.sourcemap_ignore_list {

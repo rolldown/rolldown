@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use arcstr::ArcStr;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq)]
 /// Represents a filename that might contains hash placeholder.
 pub struct PreliminaryFilename {
   /// Might contains preliminary hash
@@ -26,5 +26,10 @@ impl Deref for PreliminaryFilename {
 
   fn deref(&self) -> &Self::Target {
     &self.filename
+  }
+}
+impl PartialEq for PreliminaryFilename {
+  fn eq(&self, other: &Self) -> bool {
+    self.filename == other.filename
   }
 }

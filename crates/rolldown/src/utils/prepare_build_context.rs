@@ -402,6 +402,7 @@ pub fn prepare_build_context(
     sourcemap_path_transform: raw_options.sourcemap_path_transform,
     sourcemap_debug_ids: raw_options.sourcemap_debug_ids.unwrap_or(false),
     sourcemap_exclude_sources: raw_options.sourcemap_exclude_sources.unwrap_or(false),
+    sourcemap_filenames: raw_options.sourcemap_filenames,
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
     module_types,
     experimental,

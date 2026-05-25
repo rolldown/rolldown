@@ -13,6 +13,7 @@ pub struct InstantiatedChunk {
   pub kind: InstantiationKind,
   pub augment_chunk_hash: Option<String>,
   pub preliminary_filename: PreliminaryFilename,
+  pub preliminary_sourcemap_filename: Option<PreliminaryFilename>,
 
   pub post_banner: Option<String>,
   pub post_footer: Option<String>,

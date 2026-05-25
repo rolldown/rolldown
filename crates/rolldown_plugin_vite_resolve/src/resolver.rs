@@ -319,21 +319,9 @@ impl Resolver {
     }
 
     // try with prefix if exists
-    let Some(path_with_prefix) = self.try_prefix.as_ref().and_then(|try_prefix| {
-      let mut path = Path::new(specifier).components();
-      let filename = path.next_back()?;
-      let path::Component::Normal(filename) = filename else {
-        return None;
-      };
-      let mut filename_with_prefix = OsString::with_capacity(try_prefix.len() + filename.len());
-      filename_with_prefix.push(try_prefix);
-      filename_with_prefix.push(filename);
-
-      Some(path.as_path().join(filename_with_prefix))
-    }) else {
-      return result;
-    };
-    let Some(path_with_prefix) = path_with_prefix.to_str() else {
+    let Some(path_with_prefix) =
+      self.try_prefix.as_ref().and_then(|try_prefix| get_path_with_prefix(specifier, try_prefix))
+    else {
       return result;
     };
 
@@ -342,12 +330,12 @@ impl Resolver {
     if let Some(importer) = importer {
       // check if `is_absolute` to avoid extra `join` overhead
       if Path::new(importer).is_absolute() {
-        inner_resolver.resolve_file(importer, path_with_prefix)
+        inner_resolver.resolve_file(importer, &path_with_prefix)
       } else {
-        inner_resolver.resolve_file(self.root.join(importer), path_with_prefix)
+        inner_resolver.resolve_file(self.root.join(importer), &path_with_prefix)
       }
     } else {
-      inner_resolver.resolve(&self.root, path_with_prefix)
+      inner_resolver.resolve(&self.root, &path_with_prefix)
     }
   }
 
@@ -554,6 +542,28 @@ fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {
   dedupe.contains(pkg_id)
 }
 
+fn get_path_with_prefix(specifier: &str, try_prefix: &str) -> Option<String> {
+  if is_bare_import(specifier)
+    && is_deep_import(specifier)
+    && let Some((path, filename)) = specifier.rsplit_once('/')
+  {
+    if !filename.is_empty() {
+      return Some(format!("{path}/{try_prefix}{filename}"));
+    }
+  }
+
+  let mut path = Path::new(specifier).components();
+  let filename = path.next_back()?;
+  let path::Component::Normal(filename) = filename else {
+    return None;
+  };
+  let mut filename_with_prefix = OsString::with_capacity(try_prefix.len() + filename.len());
+  filename_with_prefix.push(try_prefix);
+  filename_with_prefix.push(filename);
+
+  path.as_path().join(filename_with_prefix).to_str().map(|p| normalize_path(p).into_owned())
+}
+
 #[derive(Debug)]
 pub struct ResolverLock(
   // we should use parking_lot instead of std::sync to avoid write starvation
@@ -571,5 +581,28 @@ impl ResolverLock {
 
   pub fn lock_for_clear(&self) -> parking_lot::RwLockWriteGuard<'_, ()> {
     self.0.write()
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::get_path_with_prefix;
+
+  #[test]
+  fn prefixes_bare_deep_imports_with_posix_separators() {
+    assert_eq!(
+      get_path_with_prefix("@scope/pkg/styles/mixins", "_").as_deref(),
+      Some("@scope/pkg/styles/_mixins"),
+    );
+    assert_eq!(
+      get_path_with_prefix("pkg/styles/mixins", "_").as_deref(),
+      Some("pkg/styles/_mixins"),
+    );
+  }
+
+  #[test]
+  fn preserves_existing_package_root_prefix_behavior() {
+    assert_eq!(get_path_with_prefix("pkg", "_").as_deref(), Some("_pkg"));
+    assert_eq!(get_path_with_prefix("@scope/pkg", "_").as_deref(), Some("@scope/_pkg"));
   }
 }

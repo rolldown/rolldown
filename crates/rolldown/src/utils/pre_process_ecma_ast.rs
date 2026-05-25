@@ -314,6 +314,15 @@ impl FunctionDeclarationStartMatcher {
 }
 
 impl<'ast> Visit<'ast> for FunctionDeclarationStartMatcher {
+  fn visit_program(&mut self, program: &Program<'ast>) {
+    for stmt in &program.body {
+      if self.remaining_target_count == 0 {
+        break;
+      }
+      self.visit_statement(stmt);
+    }
+  }
+
   fn visit_statement(&mut self, stmt: &Statement<'ast>) {
     if self.remaining_target_count == 0 {
       return;

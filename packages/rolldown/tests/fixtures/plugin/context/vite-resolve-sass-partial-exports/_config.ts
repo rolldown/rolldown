@@ -15,10 +15,7 @@ export default defineTest({
         name: 'test-plugin-context',
         async buildStart(this) {
           const importer = nodePath.join(import.meta.dirname, 'entry.scss');
-          const ret = await this.resolve(
-            'sass-pkg-with-wildcard-partial/styles/mixins',
-            importer,
-          );
+          const ret = await this.resolve('sass-pkg-with-wildcard-partial/styles/mixins', importer);
           if (!ret) {
             throw new Error('resolve failed');
           }

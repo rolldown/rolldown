@@ -1,0 +1,77 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bundle-a.js
+
+```js
+//#region a.js
+const A = "runtime-a";
+//#endregion
+export { A as t };
+
+```
+
+## bundle-b.js
+
+```js
+//#region b.js
+const B = "runtime-b";
+//#endregion
+export { B as t };
+
+```
+
+## components.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+import { t as A } from "./bundle-a.js";
+import { t as B } from "./bundle-b.js";
+//#region components.js
+var components_exports = /* @__PURE__ */ __exportAll({
+	A: () => A,
+	B: () => B
+});
+//#endregion
+export { components_exports as t };
+
+```
+
+## index-1.js
+
+```js
+import { t as components_exports } from "./components.js";
+//#region index-1.js
+console.log(components_exports);
+//#endregion
+
+```
+
+## index.js
+
+```js
+import { t as components_exports } from "./components.js";
+//#region index.js
+console.log(components_exports);
+//#endregion
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```
+
+# Output Stats
+
+- bundle-a.js, is_entry false, is_dynamic_entry false, exports ["t"]
+- bundle-b.js, is_entry false, is_dynamic_entry false, exports ["t"]
+- components.js, is_entry false, is_dynamic_entry false, exports ["t"]
+- index-1.js, is_entry true, is_dynamic_entry false, exports []
+- index.js, is_entry true, is_dynamic_entry false, exports []
+- rolldown-runtime.js, is_entry false, is_dynamic_entry false, exports ["t"]

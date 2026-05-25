@@ -1,0 +1,72 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bundle-a.js
+
+```js
+//#region c.js
+const C = "ccccc";
+//#endregion
+//#region a.js
+const A = "aaaaa";
+console.log(C);
+//#endregion
+export { C as n, A as t };
+
+```
+
+## bundle-b.js
+
+```js
+//#region b.js
+const B = "bbbbb";
+//#endregion
+export { B as t };
+
+```
+
+## bundle-side.js
+
+```js
+//#region side.js
+globalThis.__rolldownIssue6677SideEffects ??= [];
+globalThis.__rolldownIssue6677SideEffects.push("side");
+//#endregion
+
+```
+
+## index-1.js
+
+```js
+import { n as C, t as A } from "./bundle-a.js";
+import { t as B } from "./bundle-b.js";
+import "./bundle-side.js";
+//#region index-1.ts
+console.log(B);
+console.log(A);
+console.log(C);
+//#endregion
+
+```
+
+## index.js
+
+```js
+import { n as C, t as A } from "./bundle-a.js";
+import "./bundle-side.js";
+//#region index.ts
+console.log(A);
+console.log(C, 111);
+//#endregion
+
+```
+
+# Output Stats
+
+- bundle-a.js, is_entry false, is_dynamic_entry false, exports ["n", "t"]
+- bundle-b.js, is_entry false, is_dynamic_entry false, exports ["t"]
+- bundle-side.js, is_entry false, is_dynamic_entry false, exports []
+- index-1.js, is_entry true, is_dynamic_entry false, exports []
+- index.js, is_entry true, is_dynamic_entry false, exports []

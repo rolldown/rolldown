@@ -1,0 +1,61 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bundle-a.js
+
+```js
+//#region a.js
+const A = "external-a";
+//#endregion
+export { A as t };
+
+```
+
+## bundle-b.js
+
+```js
+//#region b.js
+const B = "external-b";
+//#endregion
+export { B as t };
+
+```
+
+## components.js
+
+```js
+import "node:fs";
+
+```
+
+## index-1.js
+
+```js
+import { t as B } from "./bundle-b.js";
+import "./components.js";
+//#region index-1.js
+console.log(B);
+//#endregion
+
+```
+
+## index.js
+
+```js
+import { t as A } from "./bundle-a.js";
+import "./components.js";
+//#region index.js
+console.log(A);
+//#endregion
+
+```
+
+# Output Stats
+
+- bundle-a.js, is_entry false, is_dynamic_entry false, exports ["t"]
+- bundle-b.js, is_entry false, is_dynamic_entry false, exports ["t"]
+- components.js, is_entry false, is_dynamic_entry false, exports []
+- index-1.js, is_entry true, is_dynamic_entry false, exports []
+- index.js, is_entry true, is_dynamic_entry false, exports []

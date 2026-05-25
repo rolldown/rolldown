@@ -546,10 +546,9 @@ fn get_path_with_prefix(specifier: &str, try_prefix: &str) -> Option<String> {
   if is_bare_import(specifier)
     && is_deep_import(specifier)
     && let Some((path, filename)) = specifier.rsplit_once('/')
+    && !filename.is_empty()
   {
-    if !filename.is_empty() {
-      return Some(format!("{path}/{try_prefix}{filename}"));
-    }
+    return Some(format!("{path}/{try_prefix}{filename}"));
   }
 
   let mut path = Path::new(specifier).components();

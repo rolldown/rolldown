@@ -226,7 +226,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     let mut ast = EcmaCompiler::parse(filename, source.clone(), source_type)?;
 
     ast.program.with_mut(|fields| {
-      let mut pre_processor = PreProcessor::new(fields.allocator, false);
+      let mut pre_processor = PreProcessor::new(fields.allocator, false, None);
       pre_processor.visit_program(fields.program);
     });
 

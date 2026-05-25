@@ -1,0 +1,17 @@
+{
+  "snapshot": false,
+  "config": {
+    "experimental": {
+      "chunkOptimization": {
+        "mergeCommonChunks": false,
+        "avoidRedundantChunkLoads": true
+      }
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "combinedOptimizers",
+      "chunkOptimization": true
+    }
+  ]
+}

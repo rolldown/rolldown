@@ -104,6 +104,7 @@ export default defineConfig({
       'crates/rolldown/tests/rolldown/topics/hmr/generate_patch_error/**/*.js',
       'crates/rolldown/tests/rolldown/topics/hmr/error_recovery/**/*.js',
       'crates/rolldown/tests/rolldown/topics/deconflict/.reserved_names/*.js',
+      'crates/rolldown/tests/rolldown/warnings/import_defer_phase/main.js',
       'crates/rolldown_plugin_hmr/src/runtime',
       'crates/rolldown_testing/_config.schema.json',
       'packages/rolldown/src/binding.cjs',

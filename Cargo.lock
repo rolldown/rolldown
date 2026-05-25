@@ -1414,8 +1414,7 @@ dependencies = [
 [[package]]
 name = "libmimalloc-sys2"
 version = "0.1.57"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c601df46d9245293af01d2e82529bef06fd46d7428cd079ba2ab73fe452e9fb"
+source = "git+https://github.com/shulaoda/mimalloc-safe?branch=fix%2Fapple-thread-local-recurse-guard#cdec41d4459bb6c9f6c3a091b62aed58e0c77e73"
 dependencies = [
  "cc",
  "cmake",
@@ -1489,8 +1488,7 @@ checksum = "c2a86d3146ed3995b5913c414f6664344b9617457320782e64f0bb44afd49d74"
 [[package]]
 name = "mimalloc-safe"
 version = "0.1.61"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "339faed83010f7e29846491de7db305c2624384271776cb27e08c9e44ee692c0"
+source = "git+https://github.com/shulaoda/mimalloc-safe?branch=fix%2Fapple-thread-local-recurse-guard#cdec41d4459bb6c9f6c3a091b62aed58e0c77e73"
 dependencies = [
  "libmimalloc-sys2",
 ]
@@ -2827,9 +2825,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify"
-version = "10.3.1"
+version = "10.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63868ac37e0a2ad93cb16463a1a9f12e2f00ba7b6b9090915a23c6d07f990426"
+checksum = "eea69b44c6dd54d44707348cee957ca060b4b112e4dfea03bb6400cb1201eace"
 dependencies = [
  "bitflags 2.11.1",
  "inotify",
@@ -2847,9 +2845,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify-debouncer-full"
-version = "0.7.7"
+version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "213b33298cb47932296228e33b6793b5b251a1fa51b3228402ca0c272c0b36d2"
+checksum = "a45c562d5494c346f1d66e8efbdd72afb04184ffc8968158b52fc8be731229b6"
 dependencies = [
  "rolldown-file-id",
  "rolldown-notify",
@@ -3237,6 +3235,7 @@ version = "0.1.0"
 dependencies = [
  "arcstr",
  "phf",
+ "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",
 ]
@@ -3886,9 +3885,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.149"
+version = "1.0.150"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
+checksum = "e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9"
 dependencies = [
  "indexmap",
  "itoa",

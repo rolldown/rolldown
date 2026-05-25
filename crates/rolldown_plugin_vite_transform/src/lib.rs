@@ -9,7 +9,7 @@ use oxc::transformer::Transformer;
 use rolldown_common::{BundlerTransformOptions, ModuleType};
 use rolldown_ecmascript::semantic_builder_for_transform;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
-use rolldown_plugin::{HookUsage, Plugin, SharedTransformPluginContext};
+use rolldown_plugin::{HookTransformOutputMap, HookUsage, Plugin, SharedTransformPluginContext};
 use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, url::clean_url};
 
 #[derive(Debug, Default)]
@@ -97,7 +97,7 @@ impl Plugin for ViteTransformPlugin {
     }
 
     Ok(Some(rolldown_plugin::HookTransformOutput {
-      map,
+      map: if let Some(map) = map { map.into() } else { HookTransformOutputMap::Omitted },
       code: Some(code),
       module_type: Some(ModuleType::Js),
       ..Default::default()

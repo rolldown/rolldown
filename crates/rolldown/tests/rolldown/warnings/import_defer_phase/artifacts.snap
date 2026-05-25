@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used.
+   ╭─[ main.js:1:1 ]
+   │
+ 1 │ import defer * as dep from './dep.js';
+   │ ───────────────────┬──────────────────  
+   │                    ╰──────────────────── The deferred phase is removed here.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+//#region dep.js
+console.log("side effect");
+//#endregion
+//#region main.js
+console.log(1);
+//#endregion
+
+```

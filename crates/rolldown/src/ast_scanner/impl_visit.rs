@@ -217,8 +217,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       match member_expr.object() {
         Expression::Identifier(id) => {
           if id.name == "module"
-            && self.is_global_identifier_reference(id)
             && member_expr.static_property_name() == Some("exports")
+            && self.is_global_identifier_reference(id)
           {
             self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
             // `module.exports = <value>` replaces the entire exports object,
@@ -251,8 +251,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         Expression::StaticMemberExpression(member_expr) => {
           if let Expression::Identifier(ref id) = member_expr.object {
             if id.name == "module"
-              && self.is_global_identifier_reference(id)
               && member_expr.property.name == "exports"
+              && self.is_global_identifier_reference(id)
             {
               self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
             }

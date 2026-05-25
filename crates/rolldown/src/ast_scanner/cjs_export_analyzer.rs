@@ -170,8 +170,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let callee = call_expr.callee.as_identifier()?;
 
     if !(callee.name == "require"
-      && matches!(self.resolve_identifier_reference(callee), IdentifierReferenceKind::Global,)
-      && call_expr.arguments.len() == 1)
+      && call_expr.arguments.len() == 1
+      && matches!(self.resolve_identifier_reference(callee), IdentifierReferenceKind::Global,))
     {
       return None;
     }
@@ -198,18 +198,18 @@ pub fn is_object_define_property_es_module(
 ) -> Option<CommonJsAstType> {
   let callee = call_expr.callee.as_member_expression()?;
   let callee_object = callee.object().as_identifier()?;
-  // Check if it is global variable `Object`.
+  if callee_object.name != "Object" {
+    return Some(CommonJsAstType::ExportsRead);
+  }
+  if callee.static_property_name()? != "defineProperty" {
+    return Some(CommonJsAstType::ExportsRead);
+  }
   if !scope.is_unresolved(callee_object.reference_id()) {
     return None;
   }
-  let key_eq_object = callee_object.name == "Object";
-  let property_eq_define_property = callee.static_property_name()? == "defineProperty";
-  if !(key_eq_object && property_eq_define_property) {
-    return Some(CommonJsAstType::ExportsRead);
-  }
   let first = call_expr.arguments.first()?.as_expression()?.as_identifier()?;
 
-  if !scope.is_unresolved(first.reference_id()) || first.name != "exports" {
+  if first.name != "exports" || !scope.is_unresolved(first.reference_id()) {
     return None;
   }
 

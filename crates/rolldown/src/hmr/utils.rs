@@ -3,11 +3,17 @@ use oxc::{
   span::SPAN,
 };
 use rolldown_common::NormalModule;
-use rolldown_ecmascript::{CJS_MODULE_REF, CJS_ROLLDOWN_MODULE_REF};
+use rolldown_ecmascript::CJS_MODULE_REF;
+#[cfg(feature = "experimental")]
+use rolldown_ecmascript::CJS_ROLLDOWN_MODULE_REF;
 
-use crate::{hmr::hmr_ast_finalizer::HmrAstFinalizer, module_finalizers::ScopeHoistingFinalizer};
+#[cfg(feature = "experimental")]
+use crate::hmr::hmr_ast_finalizer::HmrAstFinalizer;
+use crate::module_finalizers::ScopeHoistingFinalizer;
 
+#[cfg(feature = "experimental")]
 pub static MODULE_EXPORTS_NAME_FOR_ESM: &str = "__rolldown_exports__";
+#[cfg(feature = "experimental")]
 pub static MODULE_ID_PARAM_FOR_HMR: &str = "__rolldown_module_id__";
 
 pub trait HmrAstBuilder<'any, 'ast> {
@@ -141,6 +147,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
   }
 }
 
+#[cfg(feature = "experimental")]
 impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
   fn builder(&self) -> &oxc::ast::AstBuilder<'ast> {
     self.builder

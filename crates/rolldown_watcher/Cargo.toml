@@ -22,7 +22,7 @@ futures = { workspace = true }
 futures-timer = { workspace = true }
 pollster = { workspace = true }
 oxc_index = { workspace = true }
-rolldown = { path = "../rolldown", features = ["experimental"] }
+rolldown = { workspace = true, features = ["experimental"] }
 rolldown_common = { workspace = true }
 rolldown_error = { workspace = true }
 rolldown_fs_watcher = { workspace = true }

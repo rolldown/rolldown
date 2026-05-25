@@ -50,7 +50,7 @@ pub use crate::{
   types::hook_timing::HookTimingCollector,
   types::hook_transform_args::HookTransformArgs,
   types::hook_transform_ast_args::HookTransformAstArgs,
-  types::hook_transform_output::HookTransformOutput,
+  types::hook_transform_output::{HookTransformOutput, HookTransformOutputMap},
   types::hook_write_bundle_args::HookWriteBundleArgs,
   types::plugin_context_resolve_options::PluginContextResolveOptions,
   types::plugin_hook_meta::{PluginHookMeta, PluginOrder},

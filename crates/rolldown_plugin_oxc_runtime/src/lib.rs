@@ -38,25 +38,21 @@ impl Plugin for OxcRuntimePlugin {
       // The portion after `@oxc-project/runtime/helpers/` — e.g. `defineProperty` or
       // `esm/defineProperty` (the latter when the user opts into the ESM path explicitly).
       let rest = &args.specifier[RUNTIME_HELPER_UNVERSIONED_PREFIX.len()..];
-      let with_ext_owned;
-      let path_in_helpers = if rest.ends_with(".js") {
-        rest
+      let path_in_helpers: Cow<'_, str> = if rest.ends_with(".js") {
+        Cow::Borrowed(rest)
       } else {
-        with_ext_owned = rolldown_utils::concat_string!(rest, ".js");
-        &with_ext_owned
+        Cow::Owned(rolldown_utils::concat_string!(rest, ".js"))
       };
 
       // If the caller wrote `helpers/esm/X` we honor that; otherwise pick CJS for `require()`
       // and ESM for everything else. Picking CJS for `require()` is critical: oxc emits
       // `var X = require("@oxc-project/runtime/helpers/X")` and uses `X` as a function, which
       // only works when the resolved module sets `module.exports = X` (the CJS variant does).
-      let prefixed_owned;
-      let final_path =
+      let final_path: Cow<'_, str> =
         if path_in_helpers.starts_with("esm/") || matches!(args.kind, ImportKind::Require) {
           path_in_helpers
         } else {
-          prefixed_owned = rolldown_utils::concat_string!("esm/", path_in_helpers);
-          &prefixed_owned
+          Cow::Owned(rolldown_utils::concat_string!("esm/", path_in_helpers))
         };
 
       let virtual_id = rolldown_utils::concat_string!("\0", RUNTIME_HELPER_PREFIX, final_path);

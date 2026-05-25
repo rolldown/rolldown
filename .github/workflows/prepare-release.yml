@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0 # for changelog
           persist-credentials: true # for create-pull-request
 
-      - uses: taiki-e/install-action@e1c4cd42111751368541a7cb5db3522bd1f846a4 # v2.78.0
+      - uses: taiki-e/install-action@e0eafa9a0d485c37f97c0f7beb930a58a2facbac # v2.79.4
         with:
           tool: just
 
@@ -36,12 +36,23 @@ jobs:
         with:
           cache: true
 
+      - uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        with:
+          cache-key: warm
+          tools: cargo-release-oxc
+
       - name: Set version
         env:
           INPUT_VERSION: ${{ inputs.version }}
         run: echo "VERSION=$INPUT_VERSION" >> "$GITHUB_ENV"
 
       - run: just bump-packages ${VERSION}
+
+      - name: Bump crate versions
+        run: cargo release-oxc update --release crates --version ${VERSION}
+
+      - name: Update Cargo.lock after crate bump
+        run: cargo check
 
       - name: Regenerate binding.js after version bump
         run: vp run --filter rolldown build-binding
@@ -72,6 +83,9 @@ jobs:
             CHANGELOG.md
             packages/**/package.json
             packages/rolldown/src/binding.cjs
+            Cargo.toml
+            Cargo.lock
+            crates/**/Cargo.toml
           commit-message: 'release: v${{ env.VERSION }}'
           body: ${{ steps.changelog.outputs.content }}
           branch: release-v${{ env.VERSION }}

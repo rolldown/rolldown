@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+//#region index.cjs
+var require__9263 = /* @__PURE__ */ __commonJSMin((() => {
+	var _defineProperty = require_defineProperty();
+	var Foo = class {
+		constructor() {
+			_defineProperty(this, "foo", 1);
+		}
+	};
+	new Foo();
+}));
+
+//#endregion
+export default require__9263();
+
+```

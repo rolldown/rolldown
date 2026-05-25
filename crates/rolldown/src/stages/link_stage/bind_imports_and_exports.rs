@@ -339,7 +339,7 @@ impl LinkStage<'_> {
 
       for (exported_name, named_export) in &dep_module.named_exports {
         // ES6 export star statements ignore exports named "default"
-        if !named_export.came_from_commonjs && exported_name.as_str() == "default" {
+        if exported_name.as_str() == "default" && !named_export.came_from_commonjs {
           continue;
         }
         // This export star is shadowed if any file in the stack has a matching real named export

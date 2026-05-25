@@ -102,6 +102,8 @@ The pass groups modules into temporary atoms by their current dependent-entry bi
 
 When the reduced bitset would put an atom into a single dynamic-entry chunk, the pass preserves that dynamic entry's observable namespace. The reduction is accepted only if the atom has no extra exports, its exports are already part of the dynamic entry's signature, it is runtime-only, or it is the removed dynamic-entry module itself. Otherwise the atom stays separate so `import("./entry.js")` does not expose helper exports needed only by other chunks.
 
+Every accepted reduction must also keep the regrouped static atom graph acyclic. "Already loaded" does not always mean "already initialized": if a reduced atom is moved into a chunk that statically imports one of its consumers, an ES module cycle can expose uninitialized bindings, including CJS wrapper functions.
+
 Top-level-await refinements are intentionally not modeled here yet. The existing chunk optimizer still bails out globally when any included module is TLA or contains a TLA dependency, so the awaited-dynamic-import safety path remains future work.
 
 ## Reachability Propagation

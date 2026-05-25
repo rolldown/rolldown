@@ -218,13 +218,12 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
   ) {
     // Rewrite top-level `this` to `exports` for CommonJS modules
     // Use `this_expr_replace_map` from scanning to avoid rewriting `this` inside classes
-    if let ast::Expression::ThisExpression(this_expr) = node {
-      if self.module.ecma_view.this_expr_replace_map.contains_key(&this_expr.span) {
-        if self.module.exports_kind.is_commonjs() {
-          *node = self.snippet.id_ref_expr(CJS_ROLLDOWN_EXPORTS_REF, SPAN);
-          return;
-        }
-      }
+    if let ast::Expression::ThisExpression(this_expr) = node
+      && self.module.exports_kind.is_commonjs()
+      && self.module.ecma_view.this_expr_replace_map.contains_key(&this_expr.span)
+    {
+      *node = self.snippet.id_ref_expr(CJS_ROLLDOWN_EXPORTS_REF, SPAN);
+      return;
     }
 
     self.try_rewrite_dynamic_import(node);

@@ -5,4 +5,7 @@ mod test_config;
 mod test_meta;
 mod utils;
 
-pub use crate::{config_variant::ConfigVariant, test_config::TestConfig, test_meta::TestMeta};
+pub use crate::{
+  config_variant::ConfigVariant, dev_test_meta::DevTestMeta, test_config::TestConfig,
+  test_meta::TestMeta,
+};

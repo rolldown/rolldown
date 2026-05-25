@@ -33,6 +33,20 @@ export type {
   BindingTsconfigCompilerOptions as TsconfigCompilerOptions,
 } from '../binding.cjs';
 
+function normalizeBindingWarning(warning: BindingEnhancedTransformResult['warnings'][number]) {
+  if (warning.type === 'JsError') {
+    return warning.field0 as RolldownLog;
+  }
+  return {
+    code: warning.field0.kind,
+    message: warning.field0.message,
+    id: warning.field0.id,
+    exporter: warning.field0.exporter,
+    loc: warning.field0.loc,
+    pos: warning.field0.pos,
+  } satisfies RolldownLog;
+}
+
 /**
  * Transpile a JavaScript or TypeScript into a target ECMAScript version, asynchronously.
  *
@@ -61,7 +75,7 @@ export async function transform(
   return {
     ...result,
     errors: result.errors.map(normalizeBindingError),
-    warnings: result.warnings.map((w) => w.field0 as RolldownLog),
+    warnings: result.warnings.map(normalizeBindingWarning),
   };
 }
 
@@ -91,6 +105,6 @@ export function transformSync(
   return {
     ...result,
     errors: result.errors.map(normalizeBindingError),
-    warnings: result.warnings.map((w) => w.field0 as RolldownLog),
+    warnings: result.warnings.map(normalizeBindingWarning),
   };
 }

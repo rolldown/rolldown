@@ -1,6 +1,8 @@
 use std::{future::Future, path::PathBuf, pin::Pin, sync::Arc};
 
-use rolldown_plugin::{HookLoadOutput, HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
+use rolldown_plugin::{
+  HookLoadOutput, HookTransformOutput, HookTransformOutputMap, HookUsage, LogWithoutPlugin, Plugin,
+};
 use rolldown_plugin_utils::{
   FileToUrlEnv, PublicFileToBuiltUrlEnv, UsizeOrFunction, check_public_file,
   constants::CSSModuleCache, css::is_css_request, find_special_query, inject_query,
@@ -126,7 +128,11 @@ impl Plugin for ViteCSSPlugin {
       }
     }
 
-    Ok(Some(HookTransformOutput { code: Some(code), map, ..Default::default() }))
+    Ok(Some(HookTransformOutput {
+      code: Some(code),
+      map: if let Some(map) = map { map.into() } else { HookTransformOutputMap::Omitted },
+      ..Default::default()
+    }))
   }
 }
 

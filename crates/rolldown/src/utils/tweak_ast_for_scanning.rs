@@ -9,29 +9,62 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
 /// This also ensures span uniqueness in the AST.
-pub struct PreProcessor<'ast> {
+pub struct PreProcessor<'ast, 'a> {
   snippet: AstSnippet<'ast>,
   /// used to store none_hoisted statements.
   top_level_stmt_temp_storage: Vec<Statement<'ast>>,
   keep_names: bool,
+  /// Labels listed in `transform.dropLabels`. When non-empty, any matching
+  /// `LabeledStatement` is replaced with an empty statement before scanning,
+  /// so dynamic imports nested inside the dropped block never enter the
+  /// module graph.
+  drop_labels: Option<&'a FxHashSet<String>>,
   statement_stack: Vec<Address>,
   statement_replace_map: FxHashMap<Address, Vec<Statement<'ast>>>,
   // Fields for span uniqueness
   visited_spans: FxHashSet<Span>,
   next_unique_span_start: u32,
+  /// Spans of `import defer ...` statements / expressions whose `defer` phase
+  /// was lowered to a regular import. Read after `visit_program` to emit the
+  /// `UNSUPPORTED_FEATURE` warning.
+  defer_spans: Vec<Span>,
 }
 
-impl<'ast> PreProcessor<'ast> {
-  pub fn new(alloc: &'ast Allocator, keep_names: bool) -> Self {
+impl<'ast, 'a> PreProcessor<'ast, 'a> {
+  pub fn new(
+    alloc: &'ast Allocator,
+    keep_names: bool,
+    drop_labels: Option<&'a FxHashSet<String>>,
+  ) -> Self {
     Self {
       snippet: AstSnippet::new(alloc),
       top_level_stmt_temp_storage: vec![],
       keep_names,
+      drop_labels: drop_labels.filter(|set| !set.is_empty()),
       statement_stack: vec![],
       statement_replace_map: FxHashMap::default(),
       visited_spans: FxHashSet::from_iter([SPAN]),
       next_unique_span_start: 1,
+      defer_spans: vec![],
     }
+  }
+
+  pub fn take_defer_spans(&mut self) -> Vec<Span> {
+    std::mem::take(&mut self.defer_spans)
+  }
+
+  /// Replace `it` with an empty statement when it is a `LabeledStatement`
+  /// whose label name appears in `drop_labels`. Returns true if a replacement
+  /// was performed, so callers can skip walking into the dropped subtree.
+  fn try_drop_labeled(&self, it: &mut Statement<'ast>) -> bool {
+    let Some(labels) = self.drop_labels else { return false };
+    if let Statement::LabeledStatement(stmt) = it
+      && labels.contains(stmt.label.name.as_str())
+    {
+      *it = self.snippet.builder.statement_empty(stmt.span);
+      return true;
+    }
+    false
   }
 
   fn ensure_uniqueness(&mut self, span: &mut Span) {
@@ -87,7 +120,15 @@ impl<'ast> PreProcessor<'ast> {
   }
 }
 
-impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
+impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
+  fn visit_import_declaration(&mut self, it: &mut ast::ImportDeclaration<'ast>) {
+    if matches!(it.phase, Some(ast::ImportPhase::Defer)) {
+      self.defer_spans.push(it.span);
+      it.phase = None;
+    }
+    walk_mut::walk_import_declaration(self, it);
+  }
+
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     // Initialize next_unique_span_start for span uniqueness
     self.next_unique_span_start = program.span.end + 1;
@@ -99,6 +140,10 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
     );
 
     for mut stmt in original_body {
+      if self.try_drop_labeled(&mut stmt) {
+        self.top_level_stmt_temp_storage.push(stmt);
+        continue;
+      }
       let stmt_addr = stmt.address();
       self.statement_stack.push(stmt_addr);
       walk_mut::walk_statement(self, &mut stmt);
@@ -124,6 +169,9 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
   /// Will not reach `visit_statements`, so we need to handle it separately.
   /// Since we already intercept `visit_statements`, these two visitor now are mutually exclusive.
   fn visit_statement(&mut self, it: &mut Statement<'ast>) {
+    if self.try_drop_labeled(it) {
+      return;
+    }
     if self.keep_names {
       let stmt_addr = it.address();
       self.statement_stack.push(stmt_addr);
@@ -148,6 +196,10 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
     if self.keep_names {
       let stmts = it.take_in(self.snippet.alloc());
       for mut stmt in stmts {
+        if self.try_drop_labeled(&mut stmt) {
+          it.push(stmt);
+          continue;
+        }
         let stmt_addr = stmt.address();
         self.statement_stack.push(stmt_addr);
         walk_mut::walk_statement(self, &mut stmt);
@@ -212,6 +264,10 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
   }
 
   fn visit_import_expression(&mut self, it: &mut ast::ImportExpression<'ast>) {
+    if matches!(it.phase, Some(ast::ImportPhase::Defer)) {
+      self.defer_spans.push(it.span);
+      it.phase = None;
+    }
     self.ensure_uniqueness(it.span_mut());
     walk_mut::walk_import_expression(self, it);
   }

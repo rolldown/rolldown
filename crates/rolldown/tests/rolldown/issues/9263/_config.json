@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "index.cjs"
+      }
+    ],
+    "transform": {
+      "target": "es2021"
+    },
+    "minify": false
+  }
+}

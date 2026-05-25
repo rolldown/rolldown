@@ -155,6 +155,12 @@ Dynamic/emitted entries can become empty facades when all their modules are pull
 - Merges the facade into its target chunk
 - Marks it as `Removed` in `post_chunk_optimization_operations`
 
+### Empty Common Chunk Elimination (`optimize_empty_common_chunks`)
+
+Manual/advanced chunking can also leave a non-entry common chunk whose modules render no statements of their own, such as a barrel module whose re-export declarations canonicalize to symbols in other chunks. These chunks are removed only when every module is a JS/TS module, is still ESM-unwrapped, has no dynamic importers, has no side-effectful runtime dependency, has no static CSS import, and its included statements are side-effect-free re-export facades rather than declarations owned by the module itself. This guard relies on import-record metadata for re-export-only statements, not rendered source strings. Non-JS modules such as CSS can render empty JavaScript while still owning emitted assets, so they are not eligible.
+
+Before marking the chunk `Removed`, the optimizer preserves load-order side effects by retargeting static importers to the live chunks of any side-effectful dependencies forwarded by the removed chunk. If no side-effectful replacements exist, the removed modules intentionally remain unassigned in `module_to_chunk`; downstream finalization/rendering skips them because they have no emitted code. This keeps the removal graph-based and avoids source-string checks for pure re-exports.
+
 ### Runtime Module Placement
 
 Facade elimination can introduce **new runtime-helper consumers** after the merge phase has already placed the runtime module. Eliminating a dynamic-import facade runs two independent `wrap_kind`-gated branches on the target chunk, and either branch adds the chunk to `runtime_dependent_chunks`:
@@ -338,7 +344,7 @@ pub struct ChunkGraph {
 ```
 
 - `chunk_table` — All chunks, indexed by `ChunkIdx`. May contain removed chunks (marked in `post_chunk_optimization_operations`) since re-indexing would be expensive.
-- `module_to_chunk` — Which chunk each module belongs to. O(1) lookup.
+- `module_to_chunk` — Which chunk each module belongs to. O(1) lookup. `None` can mean not yet assigned, temporarily peeled for rehoming, or included but renderless after an optimized-away common chunk has no emitted replacement.
 
 ## Related
 

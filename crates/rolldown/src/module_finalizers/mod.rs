@@ -890,6 +890,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !export_all_externals_rec_ids.is_empty() {
       match self.ctx.options.format {
         OutputFormat::Esm => {
+          let re_export_name = self.canonical_name_for_runtime("__reExport");
           let stmts = export_all_externals_rec_ids.iter().copied().flat_map(|idx| {
             let rec = &self.ctx.module.import_records[idx];
             if rec.meta.contains(ImportRecordMeta::EntryLevelExternal)
@@ -909,9 +910,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               return vec![];
             };
             let importee_name = &module.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
+            // construct `__reExport(importer_exports, importee_exports)`
             let call_expr = self.snippet.re_export_call_expr(
-              // construct `__reExport(importer_exports, importee_exports)`
-              self.finalized_expr_for_runtime_symbol("__reExport"),
+              self.snippet.id_ref_expr(re_export_name, SPAN),
               self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
               self.snippet.id_ref_expr(importee_namespace_name, SPAN),
             );

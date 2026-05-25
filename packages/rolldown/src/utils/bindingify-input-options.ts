@@ -21,7 +21,7 @@ import type { OutputOptions } from '../options/output-options';
 import type { RolldownPlugin } from '../plugin';
 import { bindingifyPlugin } from '../plugin/bindingify-plugin';
 import { PluginContextData } from '../plugin/plugin-context-data';
-import { arraify } from './misc';
+import { arraify, assertCallbackReturn } from './misc';
 import { normalizedStringOrRegex } from './normalize-string-or-regex';
 import {
   type NormalizedTransformOptions,
@@ -151,7 +151,9 @@ function bindingifyExternal(external: InputOptions['external']): BindingInputOpt
     if (typeof external === 'function') {
       return (id, importer, isResolved) => {
         if (id.startsWith('\0')) return false;
-        return external(id, importer, isResolved) ?? false;
+        const result = external(id, importer, isResolved);
+        assertCallbackReturn('external', result, 'boolean');
+        return result ?? false;
       };
     }
     return arraify(external);

@@ -100,10 +100,10 @@ impl PreProcessEcmaAst {
       {
         let span = comment.span;
         let annotation = source[span.start as usize..span.end as usize].to_string();
-        let mut function_declaration_matcher =
-          FunctionDeclarationStartCollector::new(comment.attached_to);
-        function_declaration_matcher.visit_program(&dep.program);
-        let is_before_function_declaration = function_declaration_matcher.is_match;
+        let mut function_declaration_start_matcher =
+          FunctionDeclarationStartMatcher::new(comment.attached_to);
+        function_declaration_start_matcher.visit_program(&dep.program);
+        let is_before_function_declaration = function_declaration_start_matcher.is_match;
         warnings.push(BuildDiagnostic::invalid_annotation(
           resolved_id.to_string(),
           annotation,
@@ -291,18 +291,18 @@ fn function_declaration_stmt_start(stmt: &Statement<'_>) -> Option<u32> {
   }
 }
 
-struct FunctionDeclarationStartCollector {
+struct FunctionDeclarationStartMatcher {
   target_statement_start: u32,
   is_match: bool,
 }
 
-impl FunctionDeclarationStartCollector {
+impl FunctionDeclarationStartMatcher {
   fn new(target_statement_start: u32) -> Self {
     Self { target_statement_start, is_match: false }
   }
 }
 
-impl<'ast> Visit<'ast> for FunctionDeclarationStartCollector {
+impl<'ast> Visit<'ast> for FunctionDeclarationStartMatcher {
   fn visit_statement(&mut self, stmt: &Statement<'ast>) {
     if self.is_match {
       return;

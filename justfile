@@ -12,7 +12,7 @@ setup:
   just setup-vite-plus
   vp install
   cargo install cargo-binstall
-  cargo binstall cargo-insta cargo-deny cargo-shear@1.11.2 typos-cli -y
+  cargo binstall cargo-insta cargo-deny cargo-shear@1.12.4 typos-cli -y
   just setup-submodule
   just setup-bench
   @echo "✅✅✅ Setup complete!"
@@ -134,7 +134,7 @@ fix: fix-rust fix-node fix-repo
 # Fix formatting, linting and code fixing issues for Rust files.
 fix-rust:
   cargo fmt --all -- --emit=files
-  -cargo shear --fix # omit exit status with `-`
+  -cargo shear --fix --check-test-targets # omit exit status with `-`
   cargo fix --allow-dirty --allow-staged
 
 # Fix linting issues for Node.js files.

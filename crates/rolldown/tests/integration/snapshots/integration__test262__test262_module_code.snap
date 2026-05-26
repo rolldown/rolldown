@@ -54,6 +54,7 @@ Actual: Runtime execution succeeded
 
 # language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-source-and-export.js
 Result: FAIL
+Reason: Incorrect ambiguous export detection in Rolldown
 Expected: success
 Actual:
 "namespace-import-source-and-export-reexport_FIXTURE.js" re-exports "mod" from one of the modules "namespace-import-source-and-export-1_FIXTURE.js" and "namespace-import-source-and-export-2_FIXTURE.js" (will be ignored).
@@ -1016,6 +1017,7 @@ Runtime error: Failed to import test module: Test262Error {
 
 # language/module-code/instn-named-bndng-dflt-fun-anon.js
 Result: FAIL
+Reason: keepNames feature in Rolldown does not work for accesses requiring the function to be hoisted
 Expected: success
 Actual:
 Runtime error: Failed to import test module: Test262Error {
@@ -1031,6 +1033,7 @@ Actual: Runtime execution succeeded
 
 # language/module-code/instn-named-bndng-dflt-gen-anon.js
 Result: FAIL
+Reason: keepNames feature in Rolldown does not work for accesses requiring the function to be hoisted
 Expected: success
 Actual:
 Runtime error: Failed to import test module: Test262Error {
@@ -1256,6 +1259,7 @@ Actual: Runtime execution succeeded
 
 # language/module-code/instn-star-iee-multi-cycle-same-name.js
 Result: FAIL
+Reason: Incorrect ambiguous export detection in Rolldown
 Expected: success
 Actual:
 'foo' cannot be exported from 'instn-star-iee-multi-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
@@ -1274,6 +1278,7 @@ Actual:
 
 # language/module-code/instn-star-iee-single-cycle-same-name.js
 Result: FAIL
+Reason: Incorrect ambiguous export detection in Rolldown
 Expected: success
 Actual:
 'foo' cannot be exported from 'instn-star-iee-single-cycle-same-name-b_FIXTURE.js' as it is a reexport that references itself.
@@ -1634,6 +1639,7 @@ Cannot assign to import 'renamed'
 
 # language/module-code/namespace/internals/super-access-to-tdz-binding.js
 Result: FAIL
+Reason: Rolldown does not preserve TDZ semantics
 Expected: success
 Actual:
 Runtime error: Failed to import test module: Test262Error {
@@ -2451,6 +2457,7 @@ Actual: Async test completed successfully
 
 # language/module-code/source-phase-import/reexport-source-binding-named-import.js
 Result: FAIL
+Reason: source phase imports are not supported in Rolldown
 Expected: success
 Actual:
 Runtime error: Failed to import test module: Error [ERR_MODULE_NOT_FOUND]: Cannot find package '<module source>' imported from <temp>/main.js
@@ -2460,6 +2467,7 @@ Runtime error: Failed to import test module: Error [ERR_MODULE_NOT_FOUND]: Canno
 
 # language/module-code/source-phase-import/reexport-source-binding-namespace-get.js
 Result: FAIL
+Reason: source phase imports are not supported in Rolldown
 Expected: success
 Actual:
 Runtime error: Failed to import test module: Error [ERR_MODULE_NOT_FOUND]: Cannot find package '<module source>' imported from <temp>/main.js

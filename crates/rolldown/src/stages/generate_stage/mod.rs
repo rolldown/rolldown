@@ -86,6 +86,7 @@ use crate::{
   BundleOutput, SharedOptions,
   chunk_graph::ChunkGraph,
   stages::link_stage::LinkStageOutput,
+  type_alias::IndexEcmaAst,
   types::generator::GenerateContext,
   utils::chunk::{
     deconflict_chunk_symbols::deconflict_chunk_symbols,
@@ -110,6 +111,10 @@ mod render_chunk_to_assets;
 
 pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
+  /// Per-module AST table threaded by value from `LinkStage::link()`. Moved out
+  /// of `self` into `render_chunk_to_assets` so it falls out of scope (and is
+  /// dropped) at the consumer's exit, before post-codegen stages run.
+  ast_table: IndexEcmaAst,
   options: &'a SharedOptions,
   plugin_driver: &'a SharedPluginDriver,
   /// Pre-resolved paths for external modules. When the user provides a JS function for the
@@ -121,10 +126,11 @@ pub struct GenerateStage<'a> {
 impl<'a> GenerateStage<'a> {
   pub fn new(
     link_output: &'a mut LinkStageOutput,
+    ast_table: IndexEcmaAst,
     options: &'a SharedOptions,
     plugin_driver: &'a SharedPluginDriver,
   ) -> Self {
-    Self { link_output, options, plugin_driver, resolved_paths: None }
+    Self { link_output, ast_table, options, plugin_driver, resolved_paths: None }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -182,9 +188,10 @@ impl<'a> GenerateStage<'a> {
       self.resolved_paths = Some(paths.resolve_all(ids).await);
     }
 
-    self.finalize_modules(&mut chunk_graph);
+    let mut ast_table = std::mem::take(&mut self.ast_table);
+    self.finalize_modules(&mut chunk_graph, &mut ast_table);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
-    self.render_chunk_to_assets(&chunk_graph).await
+    self.render_chunk_to_assets(&chunk_graph, ast_table).await
   }
 
   /// Notices:

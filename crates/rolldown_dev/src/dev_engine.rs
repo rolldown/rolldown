@@ -236,6 +236,18 @@ impl DevEngine {
     Ok(())
   }
 
+  pub fn trigger_full_build(&self) -> BuildResult<()> {
+    self.create_error_if_closed()?;
+
+    self
+      .coordinator_sender
+      .send(CoordinatorMsg::TriggerFullBuild)
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to send TriggerFullBuild to coordinator")?;
+
+    Ok(())
+  }
+
   pub async fn invalidate(
     &self,
     caller: String,

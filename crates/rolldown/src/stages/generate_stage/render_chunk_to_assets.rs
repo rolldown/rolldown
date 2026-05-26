@@ -48,6 +48,12 @@ impl GenerateStage<'_> {
     let (mut instantiated_chunks, index_chunk_to_instances) =
       self.instantiate_chunks(chunk_graph, &mut errors, &mut warnings).await?;
 
+    // `instantiate_chunks` is the last reader of `ast_table`. Release the
+    // per-module bumpalo arenas now so the heap dip is in place before
+    // `minify_chunks` re-parses chunk output into fresh arenas (~30 MiB peak
+    // heap reduction on rome).
+    drop(std::mem::take(&mut self.link_output.ast_table));
+
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
 
     render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?;

@@ -5,6 +5,7 @@ edition.workspace = true
 license = "MIT"
 publish = true
 description = "Rolldown builtin plugin implementing esbuild copy loader semantics"
+readme = "../../README.md"
 
 [lib]
 doctest = false

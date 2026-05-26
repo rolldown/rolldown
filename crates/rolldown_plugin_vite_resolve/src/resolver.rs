@@ -187,10 +187,12 @@ fn get_resolve_options(
     tsconfig: match &base_options.tsconfig_paths {
       TsconfigPathsOption::Disabled => None,
       TsconfigPathsOption::Auto => Some(TsconfigDiscovery::Auto),
-      TsconfigPathsOption::Manual(config_file) => Some(TsconfigDiscovery::Manual(TsconfigOptions {
-        config_file: config_file.clone(),
-        references: oxc_resolver::TsconfigReferences::Auto,
-      })),
+      TsconfigPathsOption::Manual(config_file) => {
+        Some(TsconfigDiscovery::Manual(TsconfigOptions {
+          config_file: config_file.clone(),
+          references: oxc_resolver::TsconfigReferences::Auto,
+        }))
+      }
     },
     alias_fields: if base_options.main_fields.iter().any(|field| field == "browser") {
       vec![vec!["browser".to_string()]]

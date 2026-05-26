@@ -5,6 +5,7 @@ edition.workspace = true
 license = "MIT"
 publish = true
 description = "Rolldown plugin for Vite module resolution"
+readme = "../../README.md"
 
 [lib]
 doctest = false

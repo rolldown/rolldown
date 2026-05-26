@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 543 passed, 53 failed, 596 total
+Summary: 543 passed, 56 failed, 599 total
 
 ---
 
@@ -50,6 +50,13 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: success
 Actual: Runtime execution succeeded
+---
+
+# language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-source-and-export.js
+Result: FAIL
+Expected: success
+Actual:
+"namespace-import-source-and-export-reexport_FIXTURE.js" re-exports "mod" from one of the modules "namespace-import-source-and-export-1_FIXTURE.js" and "namespace-import-source-and-export-2_FIXTURE.js" (will be ignored).
 ---
 
 # language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-star-as-and-export.js
@@ -2440,6 +2447,24 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: success
 Actual: Async test completed successfully
+---
+
+# language/module-code/source-phase-import/reexport-source-binding-named-import.js
+Result: FAIL
+Expected: success
+Actual:
+Runtime error: Failed to import test module: Error [ERR_MODULE_NOT_FOUND]: Cannot find package '<module source>' imported from <temp>/main.js
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+---
+
+# language/module-code/source-phase-import/reexport-source-binding-namespace-get.js
+Result: FAIL
+Expected: success
+Actual:
+Runtime error: Failed to import test module: Error [ERR_MODULE_NOT_FOUND]: Cannot find package '<module source>' imported from <temp>/main.js
+  code: 'ERR_MODULE_NOT_FOUND'
+}
 ---
 
 # language/module-code/top-level-await/async-module-does-not-block-sibling-modules.js

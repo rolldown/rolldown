@@ -18,6 +18,7 @@ The spec evaluates modules via a DFS traversal (`InnerModuleEvaluation`) with th
 **Module states**: `linked` → `evaluating` → `evaluating-async` → `evaluated`
 
 **Key fields per module**:
+
 - `[[HasTLA]]`: whether the module's own source contains `await` (static, set at parse time)
 - `[[AsyncEvaluationOrder]]`: `~unset~` initially; set to an incrementing integer when the module is on the async path (has TLA or has async deps)
 - `[[PendingAsyncDependencies]]`: counter of async deps that haven't completed yet
@@ -49,6 +50,7 @@ InnerModuleEvaluation(module):
 **When an async module completes** (`AsyncModuleExecutionFulfilled`): decrements `pendingAsyncDeps` of each parent in `asyncParentModules`. Parents whose counter hits 0 are collected into `execList`, sorted by `asyncEvaluationOrder`, and executed in that order. Non-TLA parents execute synchronously; TLA parents start via `ExecuteAsyncModule`.
 
 **Key properties**:
+
 - Independent async deps run concurrently (both started during DFS, both suspended at `await`, resolved independently)
 - A module doesn't execute until ALL its async deps complete (implicit `Promise.all` via the counter)
 - Within-SCC cycle back-edges are no-ops (no deadlock)
@@ -67,10 +69,10 @@ Two states: `fn` is the function (not called) or `0` (called). On re-entry, retu
 For TLA-affected modules (`is_tla_or_contains_tla_dependency = true`), the wrapper is made `async` and call sites use `await`:
 
 ```js
-var init_foo = __esmMin((async () => {
+var init_foo = __esmMin(async () => {
   await init_bar();
   // module body
-}));
+});
 ```
 
 ### Bug 1: deadlock in cycles
@@ -84,8 +86,8 @@ The spec avoids this at step 3: when a module is re-entered during evaluation (`
 ### Bug 2: sequential loading
 
 ```js
-await init_A();  // A starts, A completes
-await init_B();  // THEN B starts, B completes
+await init_A(); // A starts, A completes
+await init_B(); // THEN B starts, B completes
 ```
 
 B doesn't start until A finishes. If A and B have independent async deps (e.g., both `await fetch(...)`), native ESM would run them concurrently. Rolldown forces them to be sequential.
@@ -93,6 +95,7 @@ B doesn't start until A finishes. If A and B have independent async deps (e.g., 
 ### Additional issue: `is_tla_or_contains_tla_dependency` is too coarse
 
 This flag conflates two spec concepts:
+
 - `[[HasTLA]]`: the module's own source contains `await`
 - "has async dependency": the module transitively depends on a TLA module
 
@@ -103,6 +106,7 @@ Rolldown uses one flag for both, making ALL modules in the chain get `async` wra
 Webpack uses a fundamentally different runtime: a queue-based pub/sub system (`__webpack_require__.a`, ~70 lines).
 
 **How it works**:
+
 - Each async module's `module.exports` is replaced with a Promise before the body executes
 - Real exports are stashed on the Promise via a Symbol (`webpackExports`)
 - A queue (array with `.d` state flag: `-1` not started, `0` in progress, `1` resolved) tracks completion
@@ -112,14 +116,14 @@ Webpack uses a fundamentally different runtime: a queue-based pub/sub system (`_
 
 **Key differences from rolldown**:
 
-| Aspect | Webpack | Rolldown |
-|---|---|---|
-| Module model | Isolated scope per module, `__webpack_require__` mediates access | Scope hoisting, shared scope, direct variable references |
-| Async waiting | Queue + reference counting (synchronous callbacks) | `await init_X()` (Promise chain) |
-| Cycle handling | Promise cached before body executes; queue unblocks on completion | `__esmMin` idempotent return; function declarations hoisted |
-| Concurrent deps | `__webpack_handle_async_dependencies__` starts all, waits for all | Sequential `await` (currently) |
-| HasTLA distinction | `hasAwait` parameter controls queue creation | `is_tla_or_contains_tla_dependency` conflates both |
-| Runtime size | ~70 lines | ~3 lines |
+| Aspect             | Webpack                                                           | Rolldown                                                    |
+| ------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------- |
+| Module model       | Isolated scope per module, `__webpack_require__` mediates access  | Scope hoisting, shared scope, direct variable references    |
+| Async waiting      | Queue + reference counting (synchronous callbacks)                | `await init_X()` (Promise chain)                            |
+| Cycle handling     | Promise cached before body executes; queue unblocks on completion | `__esmMin` idempotent return; function declarations hoisted |
+| Concurrent deps    | `__webpack_handle_async_dependencies__` starts all, waits for all | Sequential `await` (currently)                              |
+| HasTLA distinction | `hasAwait` parameter controls queue creation                      | `is_tla_or_contains_tla_dependency` conflates both          |
+| Runtime size       | ~70 lines                                                         | ~3 lines                                                    |
 
 **Ordering correctness**: webpack's queue uses synchronous callbacks, so when multiple modules become ready from the same async completion, they execute in registration order (= DFS order = spec's `asyncEvaluationOrder`). This matches native ESM.
 
@@ -127,21 +131,20 @@ Webpack uses a fundamentally different runtime: a queue-based pub/sub system (`_
 
 The core insight: the two-state model (`fn` truthy vs `0`) conflates three distinct spec states. A four-state model correctly maps to the spec:
 
-| `fn` value | Meaning | Spec equivalent | Re-entry behavior |
-|---|---|---|---|
-| function (truthy) | Not started | `linked` | Execute |
-| `false` | Synchronous execution in progress (before first `await`) | `evaluating` | → `void 0` (cycle, don't block) |
-| `0` | Async execution in progress (after function returned Promise) | `evaluating-async` | → return `res` (concurrent access, wait) |
-| `0` + Promise resolved | Completed | `evaluated` | → return `res` (resolved, instant) |
+| `fn` value             | Meaning                                                       | Spec equivalent    | Re-entry behavior                        |
+| ---------------------- | ------------------------------------------------------------- | ------------------ | ---------------------------------------- |
+| function (truthy)      | Not started                                                   | `linked`           | Execute                                  |
+| `false`                | Synchronous execution in progress (before first `await`)      | `evaluating`       | → `void 0` (cycle, don't block)          |
+| `0`                    | Async execution in progress (after function returned Promise) | `evaluating-async` | → return `res` (concurrent access, wait) |
+| `0` + Promise resolved | Completed                                                     | `evaluated`        | → return `res` (resolved, instant)       |
 
 ```js
 var __esmMinAsync = (fn, res) => () =>
-  fn
-    ? (fn = (res = fn((fn = false)), 0), res)
-    : fn === false ? void 0 : res;
+  fn ? ((fn = ((res = fn((fn = false))), 0)), res) : fn === false ? void 0 : res;
 ```
 
 **Execution trace**:
+
 1. First call: `fn` is the function (truthy). Save `fn`, set `fn = false` (cycle guard). Call the function — during this synchronous execution, any re-entry sees `fn === false` → returns `void 0`. The function returns a Promise. Set `fn = 0` (transition to async-in-progress). Return the Promise.
 2. Cycle re-entry during synchronous execution: `fn === false` → `void 0`. Matches spec step 3.
 3. Concurrent access from a different branch: `fn === 0` → return `res` (the pending Promise). Caller awaits it, correctly waiting for completion.
@@ -155,8 +158,10 @@ The profiler-names variant:
 var __esmAsync = (fn, res) =>
   function () {
     return fn
-      ? (fn = (res = (0, fn[__getOwnPropNames(fn)[0]])((fn = false)), 0), res)
-      : fn === false ? void 0 : res;
+      ? ((fn = ((res = (0, fn[__getOwnPropNames(fn)[0]])((fn = false))), 0)), res)
+      : fn === false
+        ? void 0
+        : res;
   };
 ```
 
@@ -183,10 +188,10 @@ When generating concurrent init calls, always wrap in `Promise.all([...])` — d
 
 **Tested scenario**: A depends on C(TLA) and D(TLA). B depends on D only. Both C and D use `await Promise.resolve()`.
 
-| B's codegen | Native ESM | Webpack | Four-state |
-|---|---|---|---|
-| `await Promise.all([init_D()])` | [A, B] | [A, B] | [A, B] ✓ |
-| `await init_D()` (optimized) | [A, B] | [A, B] | [B, A] ✗ |
+| B's codegen                     | Native ESM | Webpack | Four-state |
+| ------------------------------- | ---------- | ------- | ---------- |
+| `await Promise.all([init_D()])` | [A, B]     | [A, B]  | [A, B] ✓   |
+| `await init_D()` (optimized)    | [A, B]     | [A, B]  | [B, A] ✗   |
 
 **Cause of divergence with direct `await`**: `Promise.all` adds one microtask hop (internal promise resolution). When B uses `await init_D()` directly, B's `.then` handler is registered directly on D's Promise (one hop). A's handler goes through `Promise.all` (two hops). D resolves → B's handler fires first → B runs before A.
 
@@ -195,6 +200,7 @@ When both use `Promise.all`, both handlers go through the same number of hops, s
 **When different-timing deps are used** (e.g., C=100ms, D=50ms), all approaches produce the same order [B, A] — determined by which dep completes first, not by microtask ordering.
 
 **Remaining known deviations** (shared with webpack, inherent to user-space simulation):
+
 - Extra microtask ticks from `async`/`await` compared to native ESM
 - No `[[CycleRoot]]` concept — each wrapper holds its own Promise independently
 
@@ -208,13 +214,13 @@ Add two new helpers:
 export var __esmAsync = (fn, res) =>
   function () {
     return fn
-      ? (fn = (res = (0, fn[__getOwnPropNames(fn)[0]])((fn = false)), 0), res)
-      : fn === false ? void 0 : res;
+      ? ((fn = ((res = (0, fn[__getOwnPropNames(fn)[0]])((fn = false))), 0)), res)
+      : fn === false
+        ? void 0
+        : res;
   };
 export var __esmMinAsync = (fn, res) => () =>
-  fn
-    ? (fn = (res = fn((fn = false)), 0), res)
-    : fn === false ? void 0 : res;
+  fn ? ((fn = ((res = fn((fn = false))), 0)), res) : fn === false ? void 0 : res;
 ```
 
 **Constraint**: the callback passed to `__esmMinAsync`/`__esmAsync` MUST be an `async` function. If a non-async function throws synchronously, `fn((fn = false))` sets `fn` to `false` before the throw propagates, and the outer assignment `fn = (..., 0)` never executes — `fn` is stuck at `false` permanently (every subsequent call returns `void 0`). This cannot happen with `async` functions, which always return a Promise (synchronous throws become rejections). Rolldown already generates `async` wrappers for all TLA-affected modules, so this constraint is satisfied.
@@ -382,15 +388,15 @@ The `ConcatenateWrappedModuleKind::Inner` (line 251-256) and `::Root` (line 267-
 
 ### Files not changed
 
-| File | Why |
-|---|---|
-| `compute_tla.rs` | `is_tla_or_contains_tla_dependency` already correct |
-| `wrapping.rs` | `WrapKind::Esm` already correctly assigned |
-| `linking_metadata.rs` | flag exists, no new fields needed |
-| `ast_snippet.rs:esm_wrapper_stmt` | already supports `is_async` parameter |
-| `render_chunk_exports.rs` | entry chunk `await` already handled |
-| `compute_cross_chunk_links.rs` | cross-chunk links unaffected |
-| `code_splitting.rs` | TLA chunk-merge prevention already in place |
+| File                              | Why                                                 |
+| --------------------------------- | --------------------------------------------------- |
+| `compute_tla.rs`                  | `is_tla_or_contains_tla_dependency` already correct |
+| `wrapping.rs`                     | `WrapKind::Esm` already correctly assigned          |
+| `linking_metadata.rs`             | flag exists, no new fields needed                   |
+| `ast_snippet.rs:esm_wrapper_stmt` | already supports `is_async` parameter               |
+| `render_chunk_exports.rs`         | entry chunk `await` already handled                 |
+| `compute_cross_chunk_links.rs`    | cross-chunk links unaffected                        |
+| `code_splitting.rs`               | TLA chunk-merge prevention already in place         |
 
 ### Tests
 
@@ -404,10 +410,12 @@ The `ConcatenateWrappedModuleKind::Inner` (line 251-256) and `::Root` (line 267-
 ## Scope and limitations
 
 ### What this fixes
+
 - Deadlock in async init cycles (#9548)
 - Sequential loading of independent async deps
 
 ### What this does not change
+
 - `WrapKind::None` modules with TLA deps — in `strictExecutionOrder`, nearly all modules get `WrapKind::Esm`. The rare exception is on-demand wrapping optimization for pure ESM modules without side effects and no dependencies (`wrapping.rs:177-180`). These modules have no import statements to transform, so the sequential loading issue does not apply. If a `WrapKind::None` module somehow has multiple TLA deps with inline `await` init calls, those remain sequential — this is a pre-existing behavior unchanged by this design.
 - `is_tla_or_contains_tla_dependency` flag granularity — could be refined to distinguish `[[HasTLA]]` from "has async dep" for more precise wrapper async-ness, but this is an optimization, not a correctness issue
 - CJS wrapper + TLA — `__commonJSMin` ignores async return values from its callback; this is a separate pre-existing bug
@@ -415,6 +423,7 @@ The `ConcatenateWrappedModuleKind::Inner` (line 251-256) and `::Root` (line 267-
 - Cross-chunk async init calls — need separate analysis for chunk-loading interaction
 
 ### Known deviations from spec
+
 - Extra microtask ticks from `async`/`await` compared to native ESM
 - No `[[CycleRoot]]` concept — each wrapper holds its own Promise independently
 

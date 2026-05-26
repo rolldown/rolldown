@@ -8,6 +8,7 @@ mod utils_filter;
 mod vite_resolve_plugin;
 
 pub use external::{ResolveOptionsExternal, ResolveOptionsNoExternal};
+pub use resolver::TsconfigPathsOption;
 pub use vite_resolve_plugin::{
   FinalizeBareSpecifierCallback, FinalizeOtherSpecifiersCallback, OnLogCallback,
   ResolveIdOptionsScan, ViteResolveOptions, ViteResolvePlugin, ViteResolveResolveOptions,

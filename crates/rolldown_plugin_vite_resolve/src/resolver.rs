@@ -5,7 +5,7 @@ use std::{
   sync::Arc,
 };
 
-use oxc_resolver::{PackageJson, ResolveOptions, TsconfigDiscovery};
+use oxc_resolver::{PackageJson, ResolveOptions, TsconfigDiscovery, TsconfigOptions};
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
 use rolldown_utils::{dashmap::FxDashSet, url::clean_url};
@@ -21,6 +21,19 @@ use crate::{
   },
 };
 
+/// Controls how `tsconfig.json` is loaded for path-mapping resolution.
+#[derive(Debug, Clone, Default)]
+pub enum TsconfigPathsOption {
+  /// `tsconfig.json` resolution is disabled.
+  #[default]
+  Disabled,
+  /// Walk up parent directories from each resolved file to find the nearest
+  /// `tsconfig.json`.
+  Auto,
+  /// Load the specified `tsconfig.json` file. The path must be absolute.
+  Manual(PathBuf),
+}
+
 #[derive(Debug, Clone)]
 pub struct BaseOptions<'a> {
   pub main_fields: &'a Vec<String>,
@@ -32,7 +45,7 @@ pub struct BaseOptions<'a> {
   pub as_src: bool,
   pub root: PathBuf,
   pub preserve_symlinks: bool,
-  pub tsconfig_paths: bool,
+  pub tsconfig_paths: TsconfigPathsOption,
   pub yarn_pnp: bool,
 }
 
@@ -171,7 +184,14 @@ fn get_resolve_options(
   let main_fields = base_options.main_fields.clone();
 
   oxc_resolver::ResolveOptions {
-    tsconfig: base_options.tsconfig_paths.then_some(TsconfigDiscovery::Auto),
+    tsconfig: match &base_options.tsconfig_paths {
+      TsconfigPathsOption::Disabled => None,
+      TsconfigPathsOption::Auto => Some(TsconfigDiscovery::Auto),
+      TsconfigPathsOption::Manual(config_file) => Some(TsconfigDiscovery::Manual(TsconfigOptions {
+        config_file: config_file.clone(),
+        references: oxc_resolver::TsconfigReferences::Auto,
+      })),
+    },
     alias_fields: if base_options.main_fields.iter().any(|field| field == "browser") {
       vec![vec!["browser".to_string()]]
     } else {

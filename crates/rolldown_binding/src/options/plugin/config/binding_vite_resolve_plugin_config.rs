@@ -1,10 +1,10 @@
 use derive_more::Debug;
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use napi::bindgen_prelude::FnArgs;
 use rolldown_plugin_vite_resolve::{
   FinalizeBareSpecifierCallback, FinalizeOtherSpecifiersCallback, OnLogCallback,
-  ViteResolveOptions, ViteResolveResolveOptions,
+  TsconfigPathsOption, ViteResolveOptions, ViteResolveResolveOptions,
 };
 
 use crate::{
@@ -143,6 +143,12 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
+pub struct BindingTsconfigPathsOptions {
+  pub config_file: String,
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug)]
 #[expect(clippy::struct_excessive_bools)]
 pub struct BindingViteResolvePluginResolveOptions {
   pub is_build: bool,
@@ -160,11 +166,17 @@ pub struct BindingViteResolvePluginResolveOptions {
   pub try_index: bool,
   pub try_prefix: Option<String>,
   pub preserve_symlinks: bool,
-  pub tsconfig_paths: bool,
+  #[napi(ts_type = "boolean | BindingTsconfigPathsOptions")]
+  pub tsconfig_paths: napi::Either<bool, BindingTsconfigPathsOptions>,
 }
 
 impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions {
   fn from(value: BindingViteResolvePluginResolveOptions) -> Self {
+    let tsconfig_paths = match value.tsconfig_paths {
+      napi::Either::A(false) => TsconfigPathsOption::Disabled,
+      napi::Either::A(true) => TsconfigPathsOption::Auto,
+      napi::Either::B(opts) => TsconfigPathsOption::Manual(PathBuf::from(opts.config_file)),
+    };
     Self {
       is_build: value.is_build,
       is_production: value.is_production,
@@ -181,7 +193,7 @@ impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions 
       try_index: value.try_index,
       try_prefix: value.try_prefix,
       preserve_symlinks: value.preserve_symlinks,
-      tsconfig_paths: value.tsconfig_paths,
+      tsconfig_paths,
     }
   }
 }

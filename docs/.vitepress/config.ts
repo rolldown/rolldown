@@ -78,6 +78,7 @@ const sidebarForApi: DefaultTheme.SidebarItem[] = [
         ],
       },
       { text: 'Command Line Interface', link: '/apis/cli.md' },
+      { text: 'Rust Crates', link: '/apis/rust-crates.md' },
     ],
   },
 ];

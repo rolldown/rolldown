@@ -138,21 +138,31 @@ impl DevEngine {
     Ok(())
   }
 
-  // Wait for ongoing bundle to finish if there is one
+  /// Wait for ongoing bundle to finish if there is one.
+  ///
+  /// If the `DevEngine` is closed while waiting, this method will return early without error.
   pub async fn wait_for_ongoing_bundle(&self) -> BuildResult<()> {
-    self.create_error_if_closed()?;
+    if self.is_closed() {
+      return Ok(());
+    }
 
     let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
-    self
-      .coordinator_sender
-      .send(CoordinatorMsg::GetState { reply: reply_sender })
-      .map_err_to_unhandleable()
-      .context("DevEngine: failed to send GetState to coordinator")?;
+    if let Err(err) = self.coordinator_sender.send(CoordinatorMsg::GetState { reply: reply_sender })
+    {
+      if self.is_closed() {
+        return Ok(());
+      }
+      return (Err(err))
+        .map_err_to_unhandleable()
+        .context("DevEngine: failed to send GetState to coordinator")?;
+    }
 
-    let status = reply_receiver
-      .await
-      .map_err_to_unhandleable()
-      .context("DevEngine: coordinator closed before responding to GetStatus")?;
+    let Ok(status) = reply_receiver.await else {
+      if self.is_closed() {
+        return Ok(());
+      }
+      return Err(anyhow::anyhow!("DevEngine: coordinator closed before responding to GetState"))?;
+    };
 
     if let Some(bundling_future) = status.running_future {
       bundling_future.await;

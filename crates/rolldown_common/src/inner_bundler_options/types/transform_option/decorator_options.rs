@@ -24,6 +24,7 @@ impl From<DecoratorOptions> for oxc::transformer::DecoratorOptions {
     Self {
       legacy: options.legacy.unwrap_or_default(),
       emit_decorator_metadata: options.emit_decorator_metadata.unwrap_or_default(),
+      strict_null_checks: true,
     }
   }
 }

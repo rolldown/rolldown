@@ -576,6 +576,7 @@ if (!nativeBinding) {
 }
 
 module.exports = nativeBinding
+module.exports.LegalCommentsMode = nativeBinding.LegalCommentsMode
 module.exports.minify = nativeBinding.minify
 module.exports.minifySync = nativeBinding.minifySync
 module.exports.Severity = nativeBinding.Severity

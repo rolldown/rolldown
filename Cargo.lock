@@ -1408,7 +1408,7 @@ dependencies = [
 [[package]]
 name = "libmimalloc-sys2"
 version = "0.1.57"
-source = "git+https://github.com/shulaoda/mimalloc-safe?branch=fix%2Fapple-thread-local-recurse-guard#cdec41d4459bb6c9f6c3a091b62aed58e0c77e73"
+source = "git+https://github.com/shulaoda/mimalloc-safe?branch=fix%2Fapple-thread-local-recurse-guard#155d823e9c818d59b33dfad2b5aad59bc4ddc0fb"
 dependencies = [
  "cc",
  "cmake",
@@ -1482,7 +1482,7 @@ checksum = "c2a86d3146ed3995b5913c414f6664344b9617457320782e64f0bb44afd49d74"
 [[package]]
 name = "mimalloc-safe"
 version = "0.1.61"
-source = "git+https://github.com/shulaoda/mimalloc-safe?branch=fix%2Fapple-thread-local-recurse-guard#cdec41d4459bb6c9f6c3a091b62aed58e0c77e73"
+source = "git+https://github.com/shulaoda/mimalloc-safe?branch=fix%2Fapple-thread-local-recurse-guard#155d823e9c818d59b33dfad2b5aad59bc4ddc0fb"
 dependencies = [
  "libmimalloc-sys2",
 ]

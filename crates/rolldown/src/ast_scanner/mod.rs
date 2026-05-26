@@ -833,6 +833,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
     use oxc::ast::ast::ExportDefaultDeclarationKind;
+    // Overrides `LocalExport["default"].referenced` without altering which symbol this
+    // `export default` statement declares. Used when the default expression is an
+    // `import * as ns` namespace local — see the Identifier arm below.
+    let mut local_export_referenced_override: Option<(SymbolId, Span)> = None;
     let local_binding_for_default_export = match &decl.declaration {
       ast::ExportDefaultDeclarationKind::Identifier(id) => {
         if let Some(symbol_id) = self.resolve_symbol_from_reference(id) {
@@ -853,6 +857,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             || scoping.get_resolved_references(symbol_id).any(Reference::is_write);
           if !cannot_reuse_symbol {
             self.result.default_export_ref.symbol = symbol_id;
+          } else if self.namespace_object_symbol_ids.contains(&symbol_id) {
+            // `export default <ns>` where `ns` is `import * as ns from '...'` is observationally
+            // equivalent to `export { ns as default }`: the Module Namespace Object identity is
+            // fixed at link time and the binding is not reassignable. Rewire
+            // `LocalExport["default"].referenced` to the namespace local so the re-export chain
+            // in bind_imports_and_exports propagates to the underlying module, enabling
+            // member-expression tree-shaking through default imports. Keep
+            // `default_export_ref.symbol` as the synthetic for codegen when the default is
+            // consumed opaquely (e.g. this module is itself an entry chunk).
+            // Relies on `import * as ns` being visited before `export default ns`; the reverse
+            // order misses the optimization but does not affect correctness.
+            local_export_referenced_override = Some((symbol_id, id.span));
           }
         }
         None
@@ -899,7 +915,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
 
     self.declare_normal_symbol_ref(reference);
-    self.add_local_default_export(reference, span);
+    let (export_local, export_span) = local_export_referenced_override.unwrap_or((reference, span));
+    self.add_local_default_export(export_local, export_span);
   }
 
   fn scan_import_decl(&mut self, decl: &ImportDeclaration) {

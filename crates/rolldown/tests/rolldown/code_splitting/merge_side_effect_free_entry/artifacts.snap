@@ -1,0 +1,48 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry1.js
+
+```js
+//#region common1.js
+const common1 = "common1";
+//#endregion
+//#region entry1.js
+function render() {
+	console.log(common1);
+}
+//#endregion
+//#region common2.js
+const common2 = "common2";
+//#endregion
+//#region entry2.js
+function render$2() {
+	console.log(common1, common2);
+}
+//#endregion
+//#region entry3.js
+function render$1() {
+	console.log(common2);
+}
+//#endregion
+export { render$2 as n, render, render$1 as t };
+
+```
+
+## entry2.js
+
+```js
+import { n as render } from "./entry1.js";
+export { render };
+
+```
+
+## entry3.js
+
+```js
+import { t as render } from "./entry1.js";
+export { render };
+
+```

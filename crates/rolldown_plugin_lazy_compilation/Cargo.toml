@@ -6,6 +6,7 @@ homepage.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Lazy-compilation plugin for Rolldown"
+readme = "../../README.md"
 publish = true
 
 [dependencies]

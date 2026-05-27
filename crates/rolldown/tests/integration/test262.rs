@@ -349,6 +349,7 @@ globalThis.$DONE = function(error) {
     if let Err(e) = std::fs::create_dir_all(&temp_dir) {
       return TestOutcome::RuntimeError(format!("Failed to create temp dir: {e}"));
     }
+    let temp_dir = temp_dir.canonicalize().unwrap_or(temp_dir);
     if let Err(e) = std::fs::write(temp_dir.join("package.json"), r#"{"type":"module"}"#) {
       return TestOutcome::RuntimeError(format!("Failed to write package.json: {e}"));
     }
@@ -406,7 +407,6 @@ globalThis.$DONE = function(error) {
   /// - Replaces temp directory paths with `<temp>/`
   /// - Removes stack trace lines (lines starting with "at ")
   fn normalize_output(output: &str, temp_dir: &Path) -> String {
-    // Replace temp directory path with <temp>/
     let pattern = format!("{}/", temp_dir.to_string_lossy());
     let output = output.replace(&pattern, "<temp>/");
 

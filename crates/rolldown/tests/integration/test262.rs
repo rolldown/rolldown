@@ -349,6 +349,9 @@ globalThis.$DONE = function(error) {
     if let Err(e) = std::fs::create_dir_all(&temp_dir) {
       return TestOutcome::RuntimeError(format!("Failed to create temp dir: {e}"));
     }
+    // Canonicalize early so Node.js receives the resolved path and its error output
+    // matches the pattern we use for normalization (e.g. Windows 8.3 short names).
+    let temp_dir = dunce::canonicalize(&temp_dir).unwrap_or(temp_dir);
     if let Err(e) = std::fs::write(temp_dir.join("package.json"), r#"{"type":"module"}"#) {
       return TestOutcome::RuntimeError(format!("Failed to write package.json: {e}"));
     }
@@ -377,9 +380,8 @@ globalThis.$DONE = function(error) {
 
     match std::process::Command::new("node").arg(&wrapper_file).output() {
       Ok(node_output) => {
-        let canonical_temp_dir = dunce::canonicalize(&temp_dir).unwrap_or(temp_dir);
-        let result = self.process_node_output(&node_output, &canonical_temp_dir);
-        _ = std::fs::remove_dir_all(&canonical_temp_dir);
+        let result = self.process_node_output(&node_output, &temp_dir);
+        _ = std::fs::remove_dir_all(&temp_dir);
         result
       }
       Err(e) => TestOutcome::RuntimeError(format!("Failed to execute Node.js: {e}")),

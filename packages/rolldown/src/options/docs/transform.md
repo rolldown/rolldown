@@ -6,14 +6,25 @@ While Oxc does not support lowering the latest decorators proposal yet, Rolldown
 
 ##### Legacy decorator metadata
 
-When `transform.decorator.emitDecoratorMetadata` is enabled, the emitted `design:type` metadata for a nullable
-union such as `string | null` defaults to `Object`, matching `tsc` with `strictNullChecks` turned on.
+When `transform.decorator.emitDecoratorMetadata` is enabled, the `design:type` metadata emitted for a nullable union such as `string | null` defaults to `Object`, matching `tsc` with `strictNullChecks` enabled.
 
-Set `transform.decorator.strictNullChecks` to `false` to elide `null` and `undefined` from the union and emit the
-underlying constructor instead (for example `string | null` becomes `String`). This matches
-`tsc --strictNullChecks false` and `babel-plugin-transform-typescript-metadata`, which some libraries (NestJS,
-class-validator, TypeORM) rely on. It defaults to `true`.
+Set `transform.decorator.strictNullChecks` to `false` to elide `null` and `undefined` from the union and emit the underlying primitive constructor instead. This matches `tsc --strictNullChecks false` and `babel-plugin-transform-typescript-metadata`, which libraries such as NestJS, class-validator, and TypeORM rely on. It defaults to `true`.
 
-> Note: `strictNullChecks` is **not** inferred from `tsconfig.json`; set it explicitly on `transform.decorator`.
+```ts
+class User {
+  @Column()
+  name: string | null;
+}
+```
+
+```js
+// `design:type` recorded for `name`:
+//   strictNullChecks: true  (default)  ->  Object
+//   strictNullChecks: false            ->  String
+```
+
+:::tip
+`strictNullChecks` is **not** inferred from `tsconfig.json` — unlike `experimentalDecorators` and `emitDecoratorMetadata`, it must be set explicitly on `transform.decorator`.
+:::
 
 See [Oxc Transformer's document](https://oxc.rs/docs/guide/usage/transformer) for more details.

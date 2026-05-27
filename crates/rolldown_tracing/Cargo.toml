@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_tracing"
-version = "0.1.0"
+version = "1.0.3"
 publish = true
 description = "rolldown_tracing"
 readme = "../../README.md"

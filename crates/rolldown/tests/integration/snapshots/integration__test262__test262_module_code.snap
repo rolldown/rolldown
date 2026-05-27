@@ -2460,7 +2460,7 @@ Result: FAIL
 Reason: source phase imports are not supported in Rolldown
 Expected: success
 Actual:
-Runtime error: Failed to import test module: Error [ERR_MODULE_NOT_FOUND]: Cannot find package '<module source>' imported from <temp>/main.js
+Runtime error: Failed to import test module: Error [ERR_MODULE_NOT_FOUND]: Cannot find package '<module source>' imported from /private<temp>/main.js
   code: 'ERR_MODULE_NOT_FOUND'
 }
 ---
@@ -2470,7 +2470,7 @@ Result: FAIL
 Reason: source phase imports are not supported in Rolldown
 Expected: success
 Actual:
-Runtime error: Failed to import test module: Error [ERR_MODULE_NOT_FOUND]: Cannot find package '<module source>' imported from <temp>/main.js
+Runtime error: Failed to import test module: Error [ERR_MODULE_NOT_FOUND]: Cannot find package '<module source>' imported from /private<temp>/main.js
   code: 'ERR_MODULE_NOT_FOUND'
 }
 ---

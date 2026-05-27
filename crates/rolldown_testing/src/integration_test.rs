@@ -260,15 +260,9 @@ impl IntegrationTest {
           )
           .await;
 
-        // Optionally wait for async builds to complete and force a rebuild
-        // to capture build output (ensure alone returns None in failed states).
+        // Optionally wait for async builds to complete
         if self.test_meta.dev.ensure_latest_build_output_for_each_step {
           dev_engine.ensure_latest_bundle_output().await.unwrap();
-          let state = dev_engine.get_bundle_state().await.unwrap();
-          if state.has_stale_output {
-            dev_engine.trigger_full_build().unwrap();
-            dev_engine.ensure_latest_bundle_output().await.unwrap();
-          }
         }
       }
 

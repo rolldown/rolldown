@@ -349,7 +349,7 @@ globalThis.$DONE = function(error) {
     if let Err(e) = std::fs::create_dir_all(&temp_dir) {
       return TestOutcome::RuntimeError(format!("Failed to create temp dir: {e}"));
     }
-    let temp_dir = temp_dir.canonicalize().unwrap_or_else(|_| temp_dir);
+    let temp_dir = temp_dir.canonicalize().unwrap_or(temp_dir);
     if let Err(e) = std::fs::write(temp_dir.join("package.json"), r#"{"type":"module"}"#) {
       return TestOutcome::RuntimeError(format!("Failed to write package.json: {e}"));
     }

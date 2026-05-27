@@ -43,6 +43,33 @@ describe('enhanced transform', () => {
     });
   });
 
+  describe('decorator metadata (strictNullChecks)', () => {
+    const code = `
+      function dec(_target: any, _key: string) {}
+      class MyClass {
+        @dec
+        field: string | null = null;
+      }
+    `;
+
+    it('emits Object for a nullable union by default (strict)', () => {
+      const result = transformSync('test.ts', code, {
+        decorator: { legacy: true, emitDecoratorMetadata: true },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*Object/);
+    });
+
+    it('emits the underlying primitive when strictNullChecks is false', () => {
+      const result = transformSync('test.ts', code, {
+        decorator: { legacy: true, emitDecoratorMetadata: true, strictNullChecks: false },
+      });
+      expect(result.errors).toHaveLength(0);
+      expect(result.code).toMatch(/design:type",\s*String/);
+      expect(result.code).not.toMatch(/design:type",\s*Object/);
+    });
+  });
+
   describe('tsconfig - raw options', () => {
     it('should use raw tsconfig JSX options', async () => {
       const result = await transform('test.tsx', '<div />', {

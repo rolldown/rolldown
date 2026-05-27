@@ -170,6 +170,7 @@ const HelperModeSchema = v.union([v.literal('Runtime'), v.literal('External')]);
 const DecoratorOptionSchema = v.object({
   legacy: v.optional(v.boolean()),
   emitDecoratorMetadata: v.optional(v.boolean()),
+  strictNullChecks: v.optional(v.boolean()),
 });
 isTypeTrue<
   IsSchemaSubType<typeof DecoratorOptionSchema, Exclude<TransformOptions['decorator'], undefined>>
@@ -475,6 +476,15 @@ isTypeTrue<IsSchemaSubType<typeof MangleOptionsSchema, MangleOptions>>();
 
 const CodegenOptionsSchema = v.strictObject({
   removeWhitespace: v.optional(v.boolean()),
+  legalComments: v.optional(
+    v.union([
+      v.literal('none'),
+      v.literal('inline'),
+      v.literal('eof'),
+      v.literal('external'),
+      v.strictObject({ linked: v.string() }),
+    ]),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof CodegenOptionsSchema, CodegenOptions>>();
 

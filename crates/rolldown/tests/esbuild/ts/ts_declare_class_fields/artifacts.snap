@@ -12,7 +12,7 @@ var Foo = class {
 		c, d, C, D;
 	}
 };
-new Foo();
+(() => new Foo())();
 //#endregion
 //#region define-true/index.ts
 var Bar = class {
@@ -21,7 +21,7 @@ var Bar = class {
 	static A;
 	static [C];
 };
-new Bar();
+(() => new Bar())();
 //#endregion
 
 ```

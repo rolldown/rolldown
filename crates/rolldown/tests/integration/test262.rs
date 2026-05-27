@@ -410,10 +410,12 @@ globalThis.$DONE = function(error) {
   /// - Replaces temp directory paths with `<temp>/`
   /// - Removes stack trace lines (lines starting with "at ")
   fn normalize_output(output: &str, temp_dir: &Path) -> String {
-    let pattern = format!("{}/", temp_dir.to_string_lossy());
-    let output = output.replace(&pattern, "<temp>/");
+    let temp_dir_str = temp_dir.to_string_lossy();
+    #[cfg(not(windows))]
+    let output = output.replace(&format!("{temp_dir_str}/"), "<temp>/");
+    #[cfg(windows)]
+    let output = output.replace(&format!("{temp_dir_str}\\"), "<temp>/");
 
-    // Remove stack trace lines (lines starting with whitespace followed by "at ")
     output
       .lines()
       .filter(|line| !line.trim_start().starts_with("at "))

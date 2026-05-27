@@ -1,6 +1,6 @@
 [package]
 name = "string_wizard"
-version = "0.0.27"
+version = "1.0.3"
 edition.workspace = true
 license = "MIT"
 publish = true

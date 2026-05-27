@@ -5,6 +5,7 @@ edition.workspace = true
 license = "MIT"
 publish = true
 description = "Rolldown builtin plugin for handling asset modules"
+readme = "../../README.md"
 
 [lib]
 doctest = false

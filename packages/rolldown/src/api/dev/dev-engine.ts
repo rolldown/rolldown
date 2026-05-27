@@ -110,6 +110,10 @@ export class DevEngine {
     await this.#inner.ensureLatestBuildOutput();
   }
 
+  triggerFullBuild(): void {
+    this.#inner.triggerFullBuild();
+  }
+
   async invalidate(file: string, firstInvalidatedBy?: string): Promise<BindingClientHmrUpdate[]> {
     return this.#inner.invalidate(file, firstInvalidatedBy);
   }

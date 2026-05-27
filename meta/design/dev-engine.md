@@ -108,6 +108,7 @@ pub enum CoordinatorMsg {
   ScheduleBuildIfStale { reply: … },         // ask coordinator to drain its queue
   GetState { reply: … },                     // snapshot of coordinator state
   EnsureLatestBundleOutput { reply: … },     // "I need a fresh full bundle"
+  TriggerFullBuild,                           // unconditional full build (fire-and-forget)
   GetWatchedFiles { reply: … },              // list of watched paths
   ModuleChanged { module_id: String },       // programmatic module change
   Close,                                     // shut the coordinator down
@@ -123,6 +124,7 @@ Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
 | `ScheduleBuildIfStale`     | `schedule_build_if_stale`, reply with result |
 | `GetState`                 | `create_state_snapshot`, reply               |
 | `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply         |
+| `TriggerFullBuild`         | `trigger_full_build` (no reply)              |
 | `GetWatchedFiles`          | reply with the `watched_files` set           |
 | `ModuleChanged`            | queue a `Rebuild`, schedule                  |
 | `Close`                    | await running task, then `break` the loop    |
@@ -586,14 +588,14 @@ loop {
 
 Returns `Option<EnsureLatestBundleOutputReturn>` per state:
 
-| State                                | Action                                              | `future`      | `is_ensure_latest_bundle_output_future` |
-| ------------------------------------ | --------------------------------------------------- | ------------- | --------------------------------------- |
-| `Initialized`                        | warn, return `None`                                 | —             | —                                       |
-| `Idle`, queue empty, **stale**       | queue an empty-files `Rebuild`, schedule            | the new build | `true`                                  |
-| `Idle`, queue empty, **fresh**       | return `None`                                       | —             | —                                       |
-| `Idle`, queue non-empty              | schedule the queued task                            | that build    | `false`                                 |
-| `FullBuildInProgress` / `InProgress` | return the running future                           | running build | `false`                                 |
-| `Failed` / `FullBuildFailed`         | `queued_tasks.clear()`, queue `FullBuild`, schedule | the new build | `true`                                  |
+| State                                | Action                                   | `future`      | `is_ensure_latest_bundle_output_future` |
+| ------------------------------------ | ---------------------------------------- | ------------- | --------------------------------------- |
+| `Initialized`                        | warn, return `None`                      | —             | —                                       |
+| `Idle`, queue empty, **stale**       | queue an empty-files `Rebuild`, schedule | the new build | `true`                                  |
+| `Idle`, queue empty, **fresh**       | return `None`                            | —             | —                                       |
+| `Idle`, queue non-empty              | schedule the queued task                 | that build    | `false`                                 |
+| `FullBuildInProgress` / `InProgress` | return the running future                | running build | `false`                                 |
+| `Failed` / `FullBuildFailed`         | return `None`                            | —             | —                                       |
 
 ### 13c. The `is_ensure_latest_bundle_output_future` flag
 
@@ -601,8 +603,7 @@ The flag tells the `DevEngine` loop whether the awaited future is _the_
 build that definitively produces fresh output:
 
 - `true` — a build was scheduled specifically to refresh output (a
-  `Rebuild` for stale `Idle`, or a recovery `FullBuild` for
-  `Failed`/`FullBuildFailed`). When it resolves, output is fresh — the
+  `Rebuild` for stale `Idle`). When it resolves, output is fresh — the
   loop breaks.
 - `false` — the awaited future is some other build (a pre-existing
   queued task, or an already-running build). When it resolves the output
@@ -632,6 +633,60 @@ false` → `has_generated_bundle_output == false` →
    → `has_stale_bundle_output = false`, state `Idle`.
 7. `DevEngine`'s awaited future resolves; flag was `true` → loop breaks.
    The middleware serves the now-fresh bundle.
+
+### 13e. Scenarios
+
+The semantics of `ensure_latest_bundle_output` is: **make sure the
+caller gets the latest output**. If the output is stale, it schedules
+a build to produce fresh output. If a build is already running, it
+waits. If the build has failed and no files have changed, the failure
+is the latest state — there is nothing it can do.
+
+**Browser refresh — output is stale after Hmr-only task.** The most
+common case. The coordinator is `Idle`, `has_stale_bundle_output` is
+true, no tasks queued. `ensure_latest_bundle_output` schedules a
+`Rebuild` and waits — see §13d for the full walkthrough.
+
+**Browser refresh — build is running.** A file change triggered a
+rebuild that hasn't finished yet. The coordinator returns the running
+future. The loop waits, then re-checks in case more work queued up
+during the build.
+
+**Browser refresh — build previously failed.** The coordinator is in
+`FullBuildFailed` or `Failed`. The failure _is_ the latest output —
+there is nothing fresher to serve without new file changes.
+`ensure_latest_bundle_output` returns `None`.
+
+**Recovery from a failed build.** The user fixes their code. The
+watcher detects the change and triggers `handle_file_changes` (§7),
+which queues a new build. By the time the user refreshes the browser,
+the coordinator is either `InProgress` (build still running —
+`ensure_latest_bundle_output` waits for it) or `Idle` (build finished —
+output is fresh). This works because `update_watch_paths()` runs even
+after a failed build (`handle_bundle_completed`, §11), so files that
+were already parsed are watched.
+
+**Edge case: recovery from a missing-import failure.** If the initial
+build failed because of a missing import, the missing file was never
+parsed and is not in `watch_paths`. The watcher cannot detect its
+creation, so editing or creating it does not trigger a rebuild. In this
+case, `triggerFullBuild` (below) is needed to force a rebuild.
+
+**`DevEngine::run()` — waiting for the initial build.** `run()` calls
+`ensure_latest_bundle_output` to wait for the first `FullBuild`. The
+coordinator is in `FullBuildInProgress` and returns the running future.
+When the build finishes — success or failure — the output is as
+current as it can be. The loop breaks, `run()` returns.
+
+**Manual retry via `triggerFullBuild`.** A separate, fire-and-forget
+operation for callers that explicitly want to force a new build
+regardless of state (e.g., a dev server reload command).
+`DevEngine::trigger_full_build` sends `TriggerFullBuild` to the
+coordinator, which unconditionally clears `queued_tasks`, pushes a
+`FullBuild`, and schedules it. The call returns immediately without
+waiting for the build. Callers that need to wait compose it with
+`ensure_latest_bundle_output` — FIFO channel ordering guarantees the
+`FullBuild` is scheduled before the ensure message is processed.
 
 ---
 
@@ -720,17 +775,18 @@ barrel state. Relevant methods:
 Beyond `ensure_latest_bundle_output`, the public methods on `DevEngine`
 (`dev_engine.rs`):
 
-| Method                                           | Purpose                                                                                 |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `new(config, options)`                           | builds the `Bundler`, normalizes options, creates the watcher and coordinator           |
-| `run()`                                          | spawns the coordinator task, awaits the initial build via `ensure_latest_bundle_output` |
-| `wait_for_close()`                               | awaits the coordinator's join handle                                                    |
-| `wait_for_ongoing_bundle()`                      | `GetState`, awaits any running future                                                   |
-| `get_bundle_state()`                             | `GetState` → `BundleState { last_full_build_failed, has_stale_output }`                 |
-| `invalidate(caller, first_invalidated_by)`       | locks the bundler, calls `compute_update_for_calling_invalidate` per client             |
-| `compile_lazy_entry(proxy_module_id, client_id)` | compiles a lazy entry; on success sends `ModuleChanged`                                 |
-| `close()`                                        | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                          |
-| `is_closed()` / `bundler_options()`              | accessors                                                                               |
+| Method                                           | Purpose                                                                                        |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `new(config, options)`                           | builds the `Bundler`, normalizes options, creates the watcher and coordinator                  |
+| `run()`                                          | spawns the coordinator task, awaits the initial build via `ensure_latest_bundle_output`        |
+| `trigger_full_build()`                           | sends `TriggerFullBuild` (fire-and-forget, compose with `ensure_latest_bundle_output` to wait) |
+| `wait_for_close()`                               | awaits the coordinator's join handle                                                           |
+| `wait_for_ongoing_bundle()`                      | `GetState`, awaits any running future                                                          |
+| `get_bundle_state()`                             | `GetState` → `BundleState { last_full_build_failed, has_stale_output }`                        |
+| `invalidate(caller, first_invalidated_by)`       | locks the bundler, calls `compute_update_for_calling_invalidate` per client                    |
+| `compile_lazy_entry(proxy_module_id, client_id)` | compiles a lazy entry; on success sends `ModuleChanged`                                        |
+| `close()`                                        | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                                 |
+| `is_closed()` / `bundler_options()`              | accessors                                                                                      |
 
 `ModuleChanged` handling (`bundle_coordinator.rs:123-140`): updates watch
 paths, queues a `TaskInput::Rebuild` for the changed module, sets
@@ -758,6 +814,21 @@ synthetic file changes and inspect coordinator state.
 | Incremental entry points, `with_cached_bundle` | `crates/rolldown/src/bundler/impl_bundler_incremental_build.rs` |
 | HMR entry points                               | `crates/rolldown/src/bundler/impl_bundler_hmr.rs`               |
 | `ScanStageCache`                               | `crates/rolldown/src/types/scan_stage_cache.rs`                 |
+
+---
+
+## Unresolved Questions
+
+- **Auto-recovery from missing-import failures.** When a build fails
+  because of an unresolved import, the missing file was never parsed and
+  is not in `watch_paths`. Creating it does not trigger a rebuild — the
+  user must either touch a watched file or use `triggerFullBuild`. A
+  fix: during resolution, when a file is not found, record its path and
+  add its parent directory to the watcher. A directory-level create event
+  matching a previously-missing path would then trigger a rebuild
+  automatically. The existing watcher tests acknowledge this gap
+  (`watch.test.ts`: "the missing file's directory is not auto-watched,
+  so we need to touch a watched file").
 
 ---
 

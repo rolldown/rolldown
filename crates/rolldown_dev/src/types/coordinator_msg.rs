@@ -22,6 +22,7 @@ pub enum CoordinatorMsg {
   EnsureLatestBundleOutput {
     reply: EnsureLatestBundleOutputSender,
   },
+  TriggerFullBuild,
   #[cfg(feature = "testing")]
   GetWatchedFiles {
     reply: GetWatchedFilesSender,

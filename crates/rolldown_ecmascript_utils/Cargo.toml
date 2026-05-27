@@ -7,6 +7,7 @@ license.workspace = true
 publish = true
 repository.workspace = true
 description = "Helper utilities for ECMAScript processing"
+readme = "../../README.md"
 
 [lints]
 workspace = true

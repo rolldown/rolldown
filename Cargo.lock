@@ -1391,8 +1391,9 @@ dependencies = [
 
 [[package]]
 name = "libmimalloc-sys2"
-version = "0.1.57"
-source = "git+https://github.com/shulaoda/mimalloc-safe?branch=fix%2Fapple-thread-local-recurse-guard#cdec41d4459bb6c9f6c3a091b62aed58e0c77e73"
+version = "0.1.58"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52406d0c46b81d2f65422a6d6086172f4e6b2753414cbee48be53850f90b804e"
 dependencies = [
  "cc",
  "cmake",
@@ -1453,8 +1454,9 @@ checksum = "c2a86d3146ed3995b5913c414f6664344b9617457320782e64f0bb44afd49d74"
 
 [[package]]
 name = "mimalloc-safe"
-version = "0.1.61"
-source = "git+https://github.com/shulaoda/mimalloc-safe?branch=fix%2Fapple-thread-local-recurse-guard#cdec41d4459bb6c9f6c3a091b62aed58e0c77e73"
+version = "0.1.62"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e8b607e1874a1962cca1b926ffcf66c62aeda8cb62634acd904ee39582ed323"
 dependencies = [
  "libmimalloc-sys2",
 ]

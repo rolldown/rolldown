@@ -6,6 +6,7 @@ homepage.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Watcher for rolldown with state machine-based implementation"
+readme = "../../README.md"
 
 [lib]
 doctest = false

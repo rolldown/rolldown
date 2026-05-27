@@ -117,6 +117,9 @@ impl BundleCoordinator {
           let result = self.ensure_latest_bundle_output().await;
           let _ = reply.send(result);
         }
+        CoordinatorMsg::TriggerFullBuild => {
+          self.trigger_full_build().await;
+        }
         #[cfg(feature = "testing")]
         CoordinatorMsg::GetWatchedFiles { reply } => {
           let result = self.watched_files.iter().map(|s| s.to_string()).collect();
@@ -422,16 +425,19 @@ impl BundleCoordinator {
         })
       }
       CoordinatorState::FullBuildFailed | CoordinatorState::Failed => {
-        // Clear all queued tasks and schedule a new full build
-        self.queued_tasks.clear();
-        self.queued_tasks.push_back(TaskInput::FullBuild);
-        let schedule_result = self.schedule_build_if_stale().await;
-        schedule_result.map(|ret| EnsureLatestBundleOutputReturn {
-          future: ret.future,
-          is_ensure_latest_bundle_output_future: true,
-        })
+        // Don't auto-retry — without file changes the same error would recur.
+        // Recovery is driven by file change events from the watcher (see handle_file_changes).
+        None
       }
     }
+  }
+
+  /// Unconditionally schedule a full build, regardless of current state.
+  /// Used for explicit manual retry (e.g., dev server `r` signal).
+  async fn trigger_full_build(&mut self) {
+    self.queued_tasks.clear();
+    self.queued_tasks.push_back(TaskInput::FullBuild);
+    self.schedule_build_if_stale().await;
   }
 
   /// Get current build status - atomic operation that doesn't block

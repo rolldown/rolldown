@@ -3,6 +3,7 @@ name = "rolldown_dev_common"
 version = "0.1.0"
 publish = true
 description = "Common types for rolldown dev mode"
+readme = "../../README.md"
 
 edition.workspace = true
 homepage.workspace = true

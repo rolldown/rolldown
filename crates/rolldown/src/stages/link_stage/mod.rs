@@ -59,7 +59,6 @@ pub struct SafelyMergeCjsNsInfo {
 pub struct LinkStageOutput {
   pub module_table: ModuleTable,
   pub entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>>,
-  pub ast_table: IndexEcmaAst,
   pub sorted_modules: Vec<ModuleIdx>,
   pub metas: LinkingMetadataVec,
   pub symbol_db: SymbolRefDb,
@@ -226,7 +225,7 @@ impl<'a> LinkStage<'a> {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn link(mut self) -> LinkStageOutput {
+  pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst) {
     self.sort_modules();
     self.compute_tla();
     self.determine_module_exports_kind();
@@ -243,28 +242,30 @@ impl<'a> LinkStage<'a> {
 
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 
-    LinkStageOutput {
-      module_table: self.module_table,
-      entries: self.entries,
-      sorted_modules: self.sorted_modules,
-      metas: self.metas,
-      symbol_db: self.symbols,
-      stmt_infos: self.stmt_infos,
-      runtime: self.runtime,
-      warnings: self.warnings,
-      errors: self.errors,
-      ast_table: self.ast_table,
-      used_symbol_refs: self.used_symbol_refs,
-      dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
-      safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
-      external_import_namespace_merger: self.external_import_namespace_merger,
-      overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
-      entry_point_to_reference_ids: self.entry_point_to_reference_ids,
-      global_constant_symbol_map: self.global_constant_symbol_map,
-      normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
-      user_defined_entry_modules: self.user_defined_entry_modules,
-      has_enum_inlining: self.has_enum_inlining,
-    }
+    (
+      LinkStageOutput {
+        module_table: self.module_table,
+        entries: self.entries,
+        sorted_modules: self.sorted_modules,
+        metas: self.metas,
+        symbol_db: self.symbols,
+        stmt_infos: self.stmt_infos,
+        runtime: self.runtime,
+        warnings: self.warnings,
+        errors: self.errors,
+        used_symbol_refs: self.used_symbol_refs,
+        dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
+        safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
+        external_import_namespace_merger: self.external_import_namespace_merger,
+        overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
+        entry_point_to_reference_ids: self.entry_point_to_reference_ids,
+        global_constant_symbol_map: self.global_constant_symbol_map,
+        normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
+        user_defined_entry_modules: self.user_defined_entry_modules,
+        has_enum_inlining: self.has_enum_inlining,
+      },
+      self.ast_table,
+    )
   }
 
   /// A helper function used to debug symbol in link process

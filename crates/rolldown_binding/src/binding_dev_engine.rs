@@ -181,6 +181,11 @@ impl BindingDevEngine {
   }
 
   #[napi]
+  pub fn trigger_full_build(&self) {
+    self.inner.trigger_full_build().expect("Should handle this error");
+  }
+
+  #[napi]
   pub async fn invalidate(
     &self,
     caller: String,

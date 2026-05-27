@@ -21,7 +21,7 @@ export {
 import { jsxDEV } from "react/jsx-dev-runtime";
 //#region class-this.jsx
 var _jsxFileName = "class-this.jsx";
-var Foo = class {
+let Foo = class {
 	foo() {
 		return /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
 			fileName: _jsxFileName,
@@ -76,7 +76,7 @@ export {
 import { jsxDEV } from "react/jsx-dev-runtime";
 //#region derived-constructor-arg.jsx
 var _jsxFileName = "derived-constructor-arg.jsx";
-var Foo = class extends Object {
+let Foo = class extends Object {
 	constructor(foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
 		fileName: _jsxFileName,
 		lineNumber: 1,
@@ -131,7 +131,7 @@ export {
 import { jsxDEV } from "react/jsx-dev-runtime";
 //#region derived-constructor-field.tsx
 var _jsxFileName = "derived-constructor-field.tsx";
-var Foo = class extends Object {
+let Foo = class extends Object {
 	constructor(..._args) {
 		super(..._args);
 		this.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
@@ -198,7 +198,7 @@ export {
 import { jsxDEV } from "react/jsx-dev-runtime";
 //#region derived-constructor.jsx
 var _jsxFileName = "derived-constructor.jsx";
-var Foo = class extends Object {
+let Foo = class extends Object {
 	constructor() {
 		super(/* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
 			fileName: _jsxFileName,
@@ -313,7 +313,7 @@ export {
 import { jsxDEV } from "react/jsx-dev-runtime";
 //#region normal-constructor-arg.jsx
 var _jsxFileName = "normal-constructor-arg.jsx";
-var Foo = class {
+let Foo = class {
 	constructor(foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
 		fileName: _jsxFileName,
 		lineNumber: 1,
@@ -365,7 +365,7 @@ export {
 import { jsxDEV } from "react/jsx-dev-runtime";
 //#region normal-constructor-field.tsx
 var _jsxFileName = "normal-constructor-field.tsx";
-var Foo = class {
+let Foo = class {
 	constructor() {
 		this.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
 			fileName: _jsxFileName,
@@ -420,7 +420,7 @@ export {
 import { jsxDEV } from "react/jsx-dev-runtime";
 //#region normal-constructor.jsx
 var _jsxFileName = "normal-constructor.jsx";
-var Foo = class {
+let Foo = class {
 	constructor() {
 		this.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
 			fileName: _jsxFileName,
@@ -475,7 +475,7 @@ import { jsxDEV } from "react/jsx-dev-runtime";
 //#region static-field.jsx
 var _jsxFileName = "static-field.jsx";
 var _Foo;
-var Foo = class {};
+let Foo = class {};
 _Foo = Foo;
 Foo.foo = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
 	fileName: _jsxFileName,

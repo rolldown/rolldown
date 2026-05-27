@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import "reflect-metadata";
+import _decorateMetadata from "@oxc-project/runtime/helpers/decorateMetadata";
+import _decorate from "@oxc-project/runtime/helpers/decorate";
+//#region main.ts
+function D() {
+	return () => {};
+}
+let Source = class {
+	laterRef;
+};
+_decorate([D(), _decorateMetadata("design:type", typeof LaterClass === "undefined" ? Object : LaterClass)], Source.prototype, "laterRef", void 0);
+let LaterClass = class {
+	tag = "later";
+};
+//#endregion
+
+```

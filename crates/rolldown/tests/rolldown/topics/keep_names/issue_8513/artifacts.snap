@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region url.js
-var URL = class {};
+let URL = class {};
 //#endregion
 //#region main.js
 function createURL() {

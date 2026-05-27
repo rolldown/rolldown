@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region define-false/index.ts
-var Foo = class {
+let Foo = class {
 	static {
 		c, d, C, D;
 	}
@@ -15,7 +15,7 @@ var Foo = class {
 (() => new Foo())();
 //#endregion
 //#region define-true/index.ts
-var Bar = class {
+let Bar = class {
 	a;
 	[c];
 	static A;

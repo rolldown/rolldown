@@ -11,15 +11,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region entry.js
-var REMOVE_ME = class {};
+let REMOVE_ME = class {};
 _defineProperty(REMOVE_ME, "x", "x");
 _defineProperty(REMOVE_ME, "y", "y");
 _defineProperty(REMOVE_ME, "z", "z");
-var KeepMe1 = class {};
+let KeepMe1 = class {};
 _defineProperty(KeepMe1, "x", "x");
 _defineProperty(KeepMe1, "y", sideEffects());
 _defineProperty(KeepMe1, "z", "z");
-var KeepMe2 = class {};
+let KeepMe2 = class {};
 _defineProperty(KeepMe2, "x", "x");
 _defineProperty(KeepMe2, "y", "y");
 _defineProperty(KeepMe2, "z", "z");

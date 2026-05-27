@@ -11,7 +11,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const short1 = "";
 let short2 = "";
 function short3() {}
-var short4 = class {};
+let short4 = class {};
 let nonShort1 = "";
 nonShort1 = "";
 function nonShort2() {}

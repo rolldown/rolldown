@@ -16,13 +16,13 @@ const fn = () => {
 //#region keep-these.ts
 let Class = class Class {};
 Class = __decorate([fn], Class);
-var Field = class {};
+let Field = class {};
 __decorate([fn], Field.prototype, "field", void 0);
-var Method = class {
+let Method = class {
 	method() {}
 };
 __decorate([fn], Method.prototype, "method", null);
-var Accessor = class {
+let Accessor = class {
 	#_accessor_accessor_storage;
 	get accessor() {
 		return this.#_accessor_accessor_storage;
@@ -32,13 +32,13 @@ var Accessor = class {
 	}
 };
 __decorate([fn], Accessor.prototype, "accessor", null);
-var Parameter = class {
+let Parameter = class {
 	foo(bar) {}
 };
 __decorate([__decorateParam(0, fn)], Parameter.prototype, "foo", null);
-var StaticField = class {};
+let StaticField = class {};
 __decorate([fn], StaticField, "field", void 0);
-var StaticMethod = class {
+let StaticMethod = class {
 	static method() {}
 };
 __decorate([fn], StaticMethod, "method", null);
@@ -51,7 +51,7 @@ __decorate([fn], class StaticAccessor {
 		StaticAccessor.#_accessor_accessor_storage = value;
 	}
 }, "accessor", null);
-var StaticParameter = class {
+let StaticParameter = class {
 	static foo(bar) {}
 };
 __decorate([__decorateParam(0, fn)], StaticParameter, "foo", null);

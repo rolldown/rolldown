@@ -1284,7 +1284,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     (original_name != canonical_name).then_some((original_name, canonical_name))
   }
 
-  /// rewrite toplevel `class ClassName {}` to `var ClassName = class {}`
+  /// rewrite toplevel `class ClassName {}` to `let ClassName = class {}`.
+  /// `let` preserves the lexical-binding / TDZ semantics of the original
+  /// `class` declaration; `var` would hoist the binding as `undefined` and
+  /// silence forward-reference errors.
   fn get_transformed_class_decl(
     &self,
     class: &mut allocator::Box<'ast, ast::Class<'ast>>,
@@ -1310,10 +1313,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     Some(self.snippet.builder.declaration_variable(
       class.span,
-      VariableDeclarationKind::Var,
+      VariableDeclarationKind::Let,
       self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
         SPAN,
-        VariableDeclarationKind::Var,
+        VariableDeclarationKind::Let,
         ast::BindingPattern::BindingIdentifier(self.snippet.builder.alloc(id)),
         NONE,
         Some(Expression::ClassExpression(ArenaBox::new_in(

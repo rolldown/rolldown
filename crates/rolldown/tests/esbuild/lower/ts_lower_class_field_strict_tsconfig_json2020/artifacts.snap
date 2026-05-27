@@ -7,14 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region loose/index.ts
-var loose_default = class {};
+let loose_default = class {};
 //#endregion
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region strict/index.ts
-var strict_default = class {
+let strict_default = class {
 	constructor() {
 		_defineProperty(this, "foo", void 0);
 	}

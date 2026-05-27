@@ -11,7 +11,7 @@ function a(x = foo) {
 	var foo;
 	return x;
 }
-var b = class {
+let b = class {
 	fn(x = foo) {
 		var foo;
 		return x;

@@ -16,7 +16,7 @@ export declare class A {
 
 ```js
 //#region main.ts
-var A = class {
+let A = class {
 	foo = 1;
 	/** @internal */
 	bar = 2;

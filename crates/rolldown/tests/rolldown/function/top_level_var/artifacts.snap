@@ -10,11 +10,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 let firstLevelLet = "let";
 var firstLevelVar = "var";
 const firstLevelConst = "const";
-var FirstLevelClass = class {};
+let FirstLevelClass = class {};
 console.log(firstLevelLet, firstLevelVar, firstLevelConst, new FirstLevelClass());
 const exportedConst = "exported_const";
 let exportedLet = "exported_let";
-var ExportedClass = class {};
+let ExportedClass = class {};
 function exportedFunction() {}
 console.log("let");
 function second_level() {
@@ -41,11 +41,11 @@ export { ExportedClass, exportedConst, exportedFunction, exportedLet };
 var firstLevelLet = "let";
 var firstLevelVar = "var";
 var firstLevelConst = "const";
-var FirstLevelClass = class {};
+let FirstLevelClass = class {};
 console.log(firstLevelLet, firstLevelVar, firstLevelConst, new FirstLevelClass());
 var exportedConst = "exported_const";
 var exportedLet = "exported_let";
-var ExportedClass = class {};
+let ExportedClass = class {};
 function exportedFunction() {}
 console.log("let");
 function second_level() {

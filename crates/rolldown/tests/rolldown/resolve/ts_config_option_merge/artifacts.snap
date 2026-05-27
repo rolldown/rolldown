@@ -18,7 +18,7 @@ function add(a, b) {
 function first() {
 	return function(...args) {};
 }
-var Foo = class {
+let Foo = class {
 	method(test) {
 		return test;
 	}

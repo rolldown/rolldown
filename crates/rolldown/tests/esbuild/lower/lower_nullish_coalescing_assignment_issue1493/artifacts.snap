@@ -13,7 +13,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region entry.js
 var _a = /* @__PURE__ */ new WeakMap();
-var A = class {
+let A = class {
 	constructor() {
 		_classPrivateFieldInitSpec(this, _a, void 0);
 	}

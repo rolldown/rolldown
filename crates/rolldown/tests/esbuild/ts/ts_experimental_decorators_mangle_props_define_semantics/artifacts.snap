@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region entry.ts
-var Foo = class {
+let Foo = class {
 	prop1 = null;
 	prop2_ = null;
 	["prop3"] = null;

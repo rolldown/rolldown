@@ -11,7 +11,7 @@ import assert from "node:assert";
 //#region a.js
 function test$1() {}
 __name(test$1, "test");
-var Foo$1 = class {
+let Foo$1 = class {
 	static {
 		__name(this, "Foo");
 	}
@@ -19,7 +19,7 @@ var Foo$1 = class {
 //#endregion
 //#region main.js
 const test = 10;
-var Foo = class extends Foo$1 {};
+let Foo = class extends Foo$1 {};
 console.log(`test: `, test);
 assert.strictEqual(Foo.name, "Foo");
 assert.strictEqual(Foo$1.name, "Foo");

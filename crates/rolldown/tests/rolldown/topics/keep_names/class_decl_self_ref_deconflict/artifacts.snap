@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region a.js
-var Foo$1 = class Foo$1 {
+let Foo$1 = class Foo$1 {
 	static {
 		__name(this, "Foo");
 	}
@@ -17,7 +17,7 @@ var Foo$1 = class Foo$1 {
 };
 //#endregion
 //#region main.js
-var Foo = class Foo {
+let Foo = class Foo {
 	static self = Foo;
 };
 assert.strictEqual(Foo$1.name, "Foo");

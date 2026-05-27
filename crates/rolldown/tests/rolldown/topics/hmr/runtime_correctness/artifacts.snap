@@ -34,7 +34,7 @@ var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module);
 	exports.foo = "foo";
 	exports.bar = "bar";
-	var Noop = class {
+	let Noop = class {
 		static baz2 = this.baz3 = "wrong";
 		static {
 			this.baz = "bar";

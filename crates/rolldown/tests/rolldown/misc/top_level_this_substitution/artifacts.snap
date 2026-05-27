@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region main.js
-var BaseNode = class extends Callable {
+let BaseNode = class extends Callable {
 	referencesById = children.reduce((result, child) => Object.assign(result, child.referencesById), { [this.id]: this });
 	[(void 0).id] = this;
 };

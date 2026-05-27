@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { n as setInnerHtml, t as htmlEscape } from "./shared.js";
 //#region component.js
-var Component = class {
+let Component = class {
 	constructor(name) {
 		this.name = name;
 	}
@@ -38,7 +38,7 @@ function isIE() {
 }
 //#endregion
 //#region safehtml.js
-var SafeHtml = class {
+let SafeHtml = class {
 	constructor(html) {
 		this.html = html;
 		this.isIE = isIE();

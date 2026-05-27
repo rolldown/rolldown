@@ -61,7 +61,7 @@ var all_default = Foo$1;
 //#region all_computed.ts
 var _ref, _ref2;
 let _mDef, _xDef, _yDef, _sDef;
-var Foo = class Foo {
+let Foo = class Foo {
 	constructor() {
 		this[_mDef] = 1;
 		this[_xDef] = 2;
@@ -209,18 +209,18 @@ h = _h = __decorate([x(() => 0), y(() => 1)], h);
 var h_default = h;
 //#endregion
 //#region i.ts
-var i_class = class {};
+let i_class = class {};
 __decorate([x(() => 0), y(() => 1)], i_class.prototype, "foo", void 0);
 let i = i_class;
 //#endregion
 //#region j.ts
-var j = class {
+let j = class {
 	foo() {}
 };
 __decorate([x(() => 0), y(() => 1)], j.prototype, "foo", null);
 //#endregion
 //#region k.ts
-var _default = class {
+let _default = class {
 	foo(x) {}
 };
 __decorate([__decorateParam(0, x(() => 0)), __decorateParam(0, y(() => 1))], _default.prototype, "foo", null);

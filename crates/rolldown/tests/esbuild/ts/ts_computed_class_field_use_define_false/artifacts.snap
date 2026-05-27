@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region entry.ts
 let _r, _y;
-var Foo = class {
+let Foo = class {
 	constructor() {
 		this[_r] = s;
 		this[_y] = z;

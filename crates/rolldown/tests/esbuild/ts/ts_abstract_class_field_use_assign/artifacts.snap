@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-var Foo = class {};
+let Foo = class {};
 (() => new Foo())();
 //#endregion
 

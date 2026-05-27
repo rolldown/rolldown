@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 	static y = sideEffects();
 	static z = "z";
 });
-var KeepMe2 = class {
+let KeepMe2 = class {
 	static x = "x";
 	static y = "y";
 	static z = "z";

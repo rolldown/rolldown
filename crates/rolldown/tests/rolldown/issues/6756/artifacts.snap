@@ -19,7 +19,7 @@ new utilityClass(helper());
 function helper() {
 	return "help";
 }
-var utilityClass = class {
+let utilityClass = class {
 	constructor(value) {
 		this.value = value;
 	}

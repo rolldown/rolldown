@@ -7,10 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region b.js
-var Base = class {};
+let Base = class {};
 //#endregion
 //#region a.js
-var Keep = class extends Base {};
+let Keep = class extends Base {};
 //#endregion
 //#region entry.js
 new Keep();

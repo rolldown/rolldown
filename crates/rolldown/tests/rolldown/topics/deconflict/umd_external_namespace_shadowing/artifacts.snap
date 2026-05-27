@@ -33,7 +33,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 	// HIDDEN [\0rolldown/runtime.js]
 	quill = __toESM(quill);
 	//#region test.js
-	var Editor = class {
+	let Editor = class {
 		constructor(quill$1) {
 			if (typeof quill.default != "undefined") throw new Error("Quill should not be shadowed by local quill");
 			console.log(quill.default, quill$1);

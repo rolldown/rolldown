@@ -13,7 +13,7 @@ assert(class Foo {
 		return 123;
 	}
 }.bar === 123);
-var FooThis = class {
+let FooThis = class {
 	static bar = this.#foo();
 	static #foo() {
 		return 123;

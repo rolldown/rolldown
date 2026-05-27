@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region entry.js
 new ((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var Foo = class {};
+	let Foo = class {};
 	module.exports = { Foo };
 })))()).Foo();
 //#endregion

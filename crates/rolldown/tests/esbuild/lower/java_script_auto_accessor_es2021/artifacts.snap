@@ -17,11 +17,11 @@ three(), six();
 ```js
 //#region ts-assign/ts-assign.ts
 three(), six();
-var StaticNormal = class {
+let StaticNormal = class {
 	static accessor a = b;
 };
 StaticNormal.c = d;
-var StaticPrivate = class {
+let StaticPrivate = class {
 	static accessor #a = b;
 };
 StaticPrivate.c = d;
@@ -38,11 +38,11 @@ StaticPrivate.c = d;
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region ts-define/ts-define.ts
 three(), six();
-var StaticNormal = class {
+let StaticNormal = class {
 	static accessor a = b;
 };
 _defineProperty(StaticNormal, "c", d);
-var StaticPrivate = class {
+let StaticPrivate = class {
 	static accessor #a = b;
 };
 _defineProperty(StaticPrivate, "c", d);

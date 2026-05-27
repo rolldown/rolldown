@@ -118,7 +118,7 @@ console.log({
 
 ```js
 //#region parameter-properties.ts
-var Foo = class {
+let Foo = class {
 	constructor(KEEP_FIELD, MANGLE_FIELD_) {
 		this.KEEP_FIELD = KEEP_FIELD;
 		this.MANGLE_FIELD_ = MANGLE_FIELD_;

@@ -34,7 +34,7 @@ assert.strictEqual(_Fn$1(), 1);
 assert.strictEqual(_ArrowFn$1(), 2);
 //#endregion
 //#region lib.js
-var _Test = class {};
+let _Test = class {};
 let _Fn = function() {};
 let _ArrowFn = () => {};
 assert.strictEqual(_Test.name, "_Test");

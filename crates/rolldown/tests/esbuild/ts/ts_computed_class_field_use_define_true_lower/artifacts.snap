@@ -18,7 +18,7 @@ _q = q;
 _r = r;
 _x2 = _x = x;
 _y2 = _y = y;
-var Foo = class {
+let Foo = class {
 	constructor() {
 		_defineProperty(this, _q, void 0);
 		_defineProperty(this, _r, s);

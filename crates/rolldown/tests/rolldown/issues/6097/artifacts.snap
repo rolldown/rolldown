@@ -11,7 +11,7 @@ import assert from "node:assert";
 var Message$1 = 1;
 //#endregion
 //#region main.js
-var Message = class {
+let Message = class {
 	id;
 	constructor(id) {
 		this.id = id;

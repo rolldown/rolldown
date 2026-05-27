@@ -23,7 +23,7 @@ function dep_default() {
 __name(dep_default, "default");
 //#endregion
 //#region dep-class.js
-var dep_class_default = class {
+let dep_class_default = class {
 	static {
 		__name(this, "default");
 	}
@@ -36,7 +36,7 @@ var dep_class_default = class {
 var count = 100;
 assert.strictEqual(dep_default.name, "default", "Anonymous default export function name should be \"default\"");
 assert.strictEqual(dep_class_default.name, "default", "Anonymous default export class name should be \"default\"");
-var main_default = class {
+let main_default = class {
 	static {
 		__name(this, "default");
 	}

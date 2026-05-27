@@ -25,7 +25,7 @@ Object.defineProperties(exports, {
 	[Symbol.toStringTag]: { value: "Module" }
 });
 //#region main.js
-var Main = class {};
+let Main = class {};
 //#endregion
 exports.default = Main;
 

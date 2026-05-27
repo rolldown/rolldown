@@ -16,7 +16,7 @@ function a() {}
 /**
 * default export class
 */
-var b = class {};
+let b = class {};
 //#endregion
 //#region main.js
 /**
@@ -28,7 +28,7 @@ function foo() {
 /**
 * named export class
 */
-var Bar = class {};
+let Bar = class {};
 /**
 * named export const decl
 */

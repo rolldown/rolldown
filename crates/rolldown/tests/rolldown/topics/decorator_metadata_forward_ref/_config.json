@@ -1,0 +1,11 @@
+{
+  "config": {
+    "tsconfig": "tsconfig.json",
+    "external": [
+      "reflect-metadata",
+      "@oxc-project/runtime/helpers/decorate",
+      "@oxc-project/runtime/helpers/decorateMetadata"
+    ]
+  },
+  "expectExecuted": false
+}

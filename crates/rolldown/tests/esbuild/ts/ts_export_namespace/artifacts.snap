@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region b.ts
-var Foo = class {};
+let Foo = class {};
 (function(_Foo) {
 	_Foo.foo = 1;
 })(Foo || (Foo = {}));

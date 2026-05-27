@@ -8,14 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 //#region entry.js
-var Foo = class Foo {
+let Foo = class Foo {
 	static bar = Foo.#foo;
 	static get #foo() {
 		return 123;
 	}
 };
 assert.equal(Foo.bar, 123);
-var FooThis = class {
+let FooThis = class {
 	static bar = this.#foo;
 	static get #foo() {
 		return 123;

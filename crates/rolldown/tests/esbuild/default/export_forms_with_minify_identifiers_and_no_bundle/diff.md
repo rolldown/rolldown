@@ -26,9 +26,9 @@ var varName = 234;
 let letName = 234;
 const constName = 234;
 function Func2() {}
-var Class2 = class {};
+let Class2 = class {};
 function Func() {}
-var Class = class {};
+let Class = class {};
 //#endregion
 export { Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_default as default, b_exports as fromB, letName, varName };
 
@@ -119,7 +119,7 @@ export default class {
 ### rolldown
 ```js
 //#region d.js
-var d_default = class {};
+let d_default = class {};
 //#endregion
 export { d_default as default };
 
@@ -144,7 +144,7 @@ export default class o {
 ### rolldown
 ```js
 //#region e.js
-var Foo = class {};
+let Foo = class {};
 //#endregion
 export { Foo as default };
 

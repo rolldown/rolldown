@@ -11,7 +11,7 @@ async function foo(bar) {
 	await bar;
 	return [this, arguments];
 }
-var Foo = class {
+let Foo = class {
 	async foo() {}
 };
 var entry_default = [

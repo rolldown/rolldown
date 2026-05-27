@@ -7,15 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.ts
-var KeepMe1 = class {};
+let KeepMe1 = class {};
 KeepMe1.x = "x";
 KeepMe1.y = "y";
 KeepMe1.z = "z";
-var KeepMe2 = class {};
+let KeepMe2 = class {};
 KeepMe2.x = "x";
 KeepMe2.y = sideEffects();
 KeepMe2.z = "z";
-var KeepMe3 = class {};
+let KeepMe3 = class {};
 KeepMe3.x = "x";
 KeepMe3.y = "y";
 KeepMe3.z = "z";

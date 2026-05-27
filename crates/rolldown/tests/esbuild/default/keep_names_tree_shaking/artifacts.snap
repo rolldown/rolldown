@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 function fnStmtKeep() {}
 x = fnStmtKeep;
 x = function keep() {};
-var clsStmtKeep = class {};
+let clsStmtKeep = class {};
 new clsStmtKeep();
 new class keep {}();
 //#endregion

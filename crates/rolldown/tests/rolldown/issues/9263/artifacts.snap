@@ -14,7 +14,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region index.cjs
 var require__9263 = /* @__PURE__ */ __commonJSMin((() => {
 	var _defineProperty = require_defineProperty();
-	var Foo = class {
+	let Foo = class {
 		constructor() {
 			_defineProperty(this, "foo", 1);
 		}

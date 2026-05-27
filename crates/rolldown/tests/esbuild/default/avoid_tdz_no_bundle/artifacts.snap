@@ -10,7 +10,7 @@ let foo = class Foo {
 	static foo = new Foo();
 }.foo;
 console.log(foo);
-var Bar = class {};
+let Bar = class {};
 let bar = 123;
 //#endregion
 export { Bar, bar };

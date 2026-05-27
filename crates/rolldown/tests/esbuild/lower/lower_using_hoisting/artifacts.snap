@@ -18,10 +18,10 @@ using a = b;
 ```js
 //#region hoist-export-class-direct.js
 using a = b;
-var Foo1 = class {
+let Foo1 = class {
 	ac = [a, c];
 };
-var Bar1 = class Bar1 {
+let Bar1 = class Bar1 {
 	ac = [
 		a,
 		c,
@@ -39,10 +39,10 @@ export { Bar1, Foo1 };
 ```js
 //#region hoist-export-class-indirect.js
 using a = b;
-var Foo1 = class {
+let Foo1 = class {
 	ac = [a, c];
 };
-var Bar1 = class Bar1 {
+let Bar1 = class Bar1 {
 	ac = [
 		a,
 		c,
@@ -71,7 +71,7 @@ export { a, c as "c!" };
 ```js
 //#region hoist-export-default-class-anonymous.js
 using a = b;
-var hoist_export_default_class_anonymous_default = class {
+let hoist_export_default_class_anonymous_default = class {
 	ac = [a, c];
 };
 using c = d;
@@ -85,7 +85,7 @@ export { hoist_export_default_class_anonymous_default as default };
 ```js
 //#region hoist-export-default-class-name-unused.js
 using a = b;
-var Foo = class {
+let Foo = class {
 	ac = [a, c];
 };
 using c = d;
@@ -99,7 +99,7 @@ export { Foo as default };
 ```js
 //#region hoist-export-default-class-name-used.js
 using a = b;
-var Foo = class Foo {
+let Foo = class Foo {
 	ac = [
 		a,
 		c,

@@ -2724,6 +2724,13 @@ export interface BindingTsconfigCompilerOptions {
   experimentalDecorators?: boolean
   /** Enables decorator metadata emission. */
   emitDecoratorMetadata?: boolean
+  /** Enables all strict type-checking options. Used as the fallback for `strictNullChecks`. */
+  strict?: boolean
+  /**
+   * Enables strict null checks. Controls whether `null`/`undefined` are elided from
+   * nullable-union `design:type` decorator metadata.
+   */
+  strictNullChecks?: boolean
   /** Preserves module structure of imports/exports. */
   verbatimModuleSyntax?: boolean
   /** Configures how class fields are emitted. */

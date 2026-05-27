@@ -151,6 +151,29 @@ pub fn merge_transform_options_with_tsconfig(
     }
   }
 
+  // `strictNullChecks` (falling back to `strict`, mirroring tsc's `strictNullChecks ?? strict`)
+  // controls whether `null`/`undefined` are elided from union `design:type` metadata under
+  // `emitDecoratorMetadata`. The explicit `transform.decorator.strictNullChecks` option wins; when
+  // tsconfig sets neither flag, rolldown keeps the transformer default (`true`).
+  let tsconfig_strict_null_checks = compiler_options.strict_null_checks.or(compiler_options.strict);
+  if let Some(strict_null_checks) = tsconfig_strict_null_checks {
+    if transform_options.decorator.as_ref().is_none_or(|d| d.strict_null_checks.is_none()) {
+      let mut decorator = transform_options.decorator.unwrap_or_default();
+      decorator.strict_null_checks = Some(strict_null_checks);
+      transform_options.decorator = Some(decorator);
+    } else if warn_on_conflict {
+      warnings.push(
+        BuildDiagnostic::configuration_field_conflict(
+          "transform.decorator",
+          "strictNullChecks",
+          "tsconfig.json",
+          "compilerOptions.strictNullChecks",
+        )
+        .with_severity_warning(),
+      );
+    }
+  }
+
   // | preserveValueImports | importsNotUsedAsValues | verbatimModuleSyntax | onlyRemoveTypeImports |
   // | -------------------- | ---------------------- | -------------------- |---------------------- |
   // | false                | remove                 | false                | false                 |

@@ -51,6 +51,11 @@ pub struct BindingTsconfigCompilerOptions {
   pub experimental_decorators: Option<bool>,
   /// Enables decorator metadata emission.
   pub emit_decorator_metadata: Option<bool>,
+  /// Enables all strict type-checking options. Used as the fallback for `strictNullChecks`.
+  pub strict: Option<bool>,
+  /// Enables strict null checks. Controls whether `null`/`undefined` are elided from
+  /// nullable-union `design:type` decorator metadata.
+  pub strict_null_checks: Option<bool>,
   /// Preserves module structure of imports/exports.
   pub verbatim_module_syntax: Option<bool>,
   /// Configures how class fields are emitted.
@@ -88,6 +93,8 @@ impl From<&BindingTsconfigRawOptions> for oxc_resolver::TsConfig {
       tsconfig.compiler_options.jsx_import_source.clone_from(&compiler_options.jsx_import_source);
       tsconfig.compiler_options.experimental_decorators = compiler_options.experimental_decorators;
       tsconfig.compiler_options.emit_decorator_metadata = compiler_options.emit_decorator_metadata;
+      tsconfig.compiler_options.strict = compiler_options.strict;
+      tsconfig.compiler_options.strict_null_checks = compiler_options.strict_null_checks;
       tsconfig.compiler_options.verbatim_module_syntax = compiler_options.verbatim_module_syntax;
       tsconfig.compiler_options.use_define_for_class_fields =
         compiler_options.use_define_for_class_fields;

@@ -52,6 +52,7 @@ Uses select compiler options including:
 - `jsx`: JSX transformation mode
 - `experimentalDecorators`: Enable decorator support
 - `emitDecoratorMetadata`: Emit decorator metadata
+- `strictNullChecks` (or `strict`): Controls whether `null`/`undefined` are elided from nullable-union `design:type` decorator metadata
 - `verbatimModuleSyntax`: Module syntax preservation
 - `useDefineForClassFields`: Class field semantics
 - And other TypeScript-specific options

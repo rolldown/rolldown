@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "alias",
+        "import": "./main_alias.js"
+      },
+      {
+        "name": "reassigned",
+        "import": "./main_reassigned.js"
+      }
+    ]
+  }
+}

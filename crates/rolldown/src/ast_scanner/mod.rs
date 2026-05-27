@@ -38,7 +38,7 @@ use rolldown_common::{
   StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
   TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
-use rolldown_ecmascript_utils::FunctionExt;
+use rolldown_ecmascript_utils::{ExpressionExt, FunctionExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
@@ -757,8 +757,38 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         match decl {
           ast::Declaration::VariableDeclaration(var_decl) => {
             var_decl.declarations.iter().for_each(|decl| {
+              // Detect `export <kind> res = ns;` where `ns` is `import * as ns from '...'`.
+              // When `res` is provably non-reassignable, the binding is observationally
+              // `export { ns as res }`: the Module Namespace Object's identity is fixed at
+              // link time and `res` permanently aliases it. Rewire `LocalExport[name].referenced`
+              // to the namespace local so the re-export chain in `bind_imports_and_exports`
+              // propagates to the underlying module, enabling member-expression tree-shaking
+              // through `res`. The reassignment guard is the `IsNotReassigned` flag set by
+              // `add_local_export` below, so `let`/`var` qualify too when they have no write
+              // references. Same ordering caveat as the `export default ns` arm: requires
+              // `import * as ns` to be visited before this declaration; reverse order misses
+              // the optimization but does not affect correctness.
+              let namespace_referenced_override: Option<SymbolId> =
+                matches!(decl.id, BindingPattern::BindingIdentifier(_))
+                  .then(|| decl.init.as_ref())
+                  .and_then(|init| {
+                    let id = init.and_then(|init| init.as_identifier())?;
+                    self.resolve_symbol_from_reference(id)
+                  })
+                  .filter(|sym| self.namespace_object_symbol_ids.contains(sym));
               decl.id.get_binding_identifiers().into_iter().for_each(|id| {
                 self.add_local_export(&id.name, id.symbol_id(), id.span);
+                if let Some(ns_local) = namespace_referenced_override
+                  && self
+                    .result
+                    .symbol_ref_db
+                    .flags
+                    .get(&id.symbol_id())
+                    .is_some_and(|f| f.contains(SymbolRefFlags::IsNotReassigned))
+                  && let Some(local_export) = self.result.named_exports.get_mut(id.name.as_str())
+                {
+                  local_export.referenced = (self.immutable_ctx.idx, ns_local).into();
+                }
               });
               if let BindingPattern::BindingIdentifier(ref binding) = decl.id {
                 let symbol_id = binding.symbol_id();

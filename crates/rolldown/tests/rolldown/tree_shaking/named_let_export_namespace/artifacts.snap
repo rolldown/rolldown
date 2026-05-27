@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## alias.js
+
+```js
+import assert from "node:assert";
+//#endregion
+//#region main_alias.js
+assert.strictEqual("used", "used");
+//#endregion
+
+```
+
+## reassigned.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region api_reassigned.js
+var api_reassigned_exports = /* @__PURE__ */ __exportAll({
+	unused: () => unused,
+	used: () => used
+});
+const unused = "unused";
+const used = "used";
+//#endregion
+//#region middle_reassigned.js
+let res = api_reassigned_exports;
+res = { used: "overridden" };
+//#endregion
+//#region main_reassigned.js
+assert.strictEqual(res.used, "overridden");
+//#endregion
+
+```

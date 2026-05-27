@@ -22,7 +22,7 @@ function foo() {
 var common, _;
 var init_common = __esmMin((() => {
 	common = "common";
-	_ = /* @__PURE__ */ foo();
+	_ = /*#__PURE__*/ foo();
 }));
 //#endregion
 export { common as n, init_common as r, _ as t };

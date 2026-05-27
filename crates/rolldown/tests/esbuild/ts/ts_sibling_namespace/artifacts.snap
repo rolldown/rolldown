@@ -158,7 +158,7 @@ export { x };
 let x;
 (function(_x) {
 	let y;
-	(function(_y) {})(y || (y = _x.y || (_x.y = {})));
+	y || (y = _x.y || (_x.y = {}));
 })(x || (x = {}));
 (function(_x2) {
 	_x2.z = y;

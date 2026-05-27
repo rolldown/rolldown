@@ -416,6 +416,7 @@ globalThis.$DONE = function(error) {
     #[cfg(windows)]
     let output = output.replace(&format!("{temp_dir_str}\\"), "<temp>/");
 
+    // Remove stack trace lines (lines starting with whitespace followed by "at ")
     output
       .lines()
       .filter(|line| !line.trim_start().starts_with("at "))

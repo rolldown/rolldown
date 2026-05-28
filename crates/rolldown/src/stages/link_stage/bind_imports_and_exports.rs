@@ -432,10 +432,20 @@ impl LinkStage<'_> {
                 // (or worse, an inlined constant) is unsound and would crash the finalizer.
                 // Also skip all reads from a JSON default object that has any member write,
                 // because the split `foo` export no longer reflects `data.foo` after mutation.
+                // Finally, skip when the first prop is `"default"`: `data` is already the
+                // default export value, and the JSON module's `"default"` named export points
+                // to that same symbol, so the optimization would resolve `.default` to `data`
+                // itself and silently drop the access. Since JSON resolution is single-level,
+                // gating at setup is sufficient — the loop never re-enters for a JSON module
+                // after the first iteration.
                 let is_json_import_ns = matches!(canonical_ref_owner.module_type, ModuleType::Json)
                   && member_expr_ref.object_ref_type == MemberExprObjectReferencedType::Default
                   && !member_expr_ref.is_write
-                  && !json_default_imports_with_member_write.contains(&canonical_ref);
+                  && !json_default_imports_with_member_write.contains(&canonical_ref)
+                  && member_expr_ref
+                    .prop_and_span_list
+                    .first()
+                    .is_none_or(|prop| prop.name.as_str() != "default");
                 let mut is_namespace_ref =
                   canonical_ref_owner.namespace_object_ref == canonical_ref || is_json_import_ns;
                 let mut cursor = 0;

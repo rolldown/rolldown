@@ -50,6 +50,7 @@ pub struct ImportGlobOptions {
   base: Option<String>,
   query: Option<String>,
   import: Option<String>,
+  case_sensitive: Option<bool>,
 }
 
 struct ImportGlobFileData {
@@ -455,6 +456,28 @@ impl GlobImportVisit<'_> {
       return Some(());
     }
 
+    let case_sensitive = options.case_sensitive.unwrap_or(true);
+    let negated_globs_insensitive = if case_sensitive {
+      None
+    } else {
+      Some(
+        negated_globs
+          .iter()
+          .map(|glob| (glob.path.to_lowercase(), glob.glob.to_lowercase()))
+          .collect::<Vec<_>>(),
+      )
+    };
+    let positive_globs_insensitive = if case_sensitive {
+      None
+    } else {
+      Some(
+        positive_globs
+          .iter()
+          .map(|glob| (glob.path.to_lowercase(), glob.glob.to_lowercase()))
+          .collect::<Vec<_>>(),
+      )
+    };
+
     if is_virtual_module && is_relative && options.base.as_ref().is_none() {
       self.errors.push(anyhow::anyhow!("In virtual modules, all globs must start with '/'"));
       return None;
@@ -486,10 +509,36 @@ impl GlobImportVisit<'_> {
         continue;
       }
 
-      let matches_rule = |v: &PathWithGlob| -> bool {
-        path.strip_prefix(&v.path).map(|path| fast_glob::glob_match(v.glob, path)).unwrap_or(false)
+      let matches = if case_sensitive {
+        let matches_rule = |v: &PathWithGlob| -> bool {
+          path
+            .strip_prefix(&v.path)
+            .map(|path| fast_glob::glob_match(v.glob, path))
+            .unwrap_or(false)
+        };
+        !negated_globs.iter().any(matches_rule) && positive_globs.iter().any(matches_rule)
+      } else {
+        let path_insensitive = path.to_lowercase();
+        let negated_match = negated_globs_insensitive.as_ref().is_some_and(|globs| {
+          globs.iter().any(|(base, glob)| {
+            path_insensitive
+              .strip_prefix(base)
+              .map(|path| fast_glob::glob_match(glob.as_str(), path))
+              .unwrap_or(false)
+          })
+        });
+        let positive_match = positive_globs_insensitive.as_ref().is_some_and(|globs| {
+          globs.iter().any(|(base, glob)| {
+            path_insensitive
+              .strip_prefix(base)
+              .map(|path| fast_glob::glob_match(glob.as_str(), path))
+              .unwrap_or(false)
+          })
+        });
+        !negated_match && positive_match
       };
-      if negated_globs.iter().any(matches_rule) || !positive_globs.iter().any(matches_rule) {
+
+      if !matches {
         continue;
       }
 
@@ -568,6 +617,11 @@ impl GlobImportVisit<'_> {
         "exhaustive" => {
           if let Expression::BooleanLiteral(bool) = &p.value {
             options.exhaustive = bool.value;
+          }
+        }
+        "caseSensitive" => {
+          if let Expression::BooleanLiteral(bool) = &p.value {
+            options.case_sensitive = Some(bool.value);
           }
         }
         "query" => match &p.value {

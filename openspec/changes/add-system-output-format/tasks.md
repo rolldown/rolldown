@@ -356,7 +356,7 @@ above.
 - [ ] 8.6 Implement `_mergeNamespaces` inline helper emission in
       `render_system()` for `export * from 'external'` where multiple external
       namespaces must be merged — emit only when needed, directly into the chunk
-- [ ] 8.7 Add `OutputFormat::System` arm to `render_wrapped_entry_chunk` in
+- [x] 8.7 Add `OutputFormat::System` arm to `render_wrapped_entry_chunk` in
       `render_chunk_exports.rs` — handle CJS-wrapped entry modules bundled into
       a SystemJS chunk
 - [x] 8.8 **Fixture (red → green)**: Create
@@ -388,7 +388,7 @@ above.
       `status.json`
 - [x] 10.3 Run full rolldown test suite: `just test-rust` — confirm no
       regressions in existing formats
-- [ ] 10.4 Run `just roll` (build + lint + test everything) — confirm clean
+- [x] 10.4 Run `just roll` (build + lint + test everything) — confirm clean
 - [x] 10.5 Update `packages/rolldown/src/options/output-options.ts` JSDoc for
       `format` to mention `"system"`
 - [x] 10.6 Update rolldown docs (`docs/`) to list SystemJS as a supported format

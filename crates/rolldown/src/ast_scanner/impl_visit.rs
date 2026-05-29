@@ -503,7 +503,14 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn handle_top_level_await(&mut self, span: Span) {
-    if !self.immutable_ctx.flat_options.keep_esm_import_export_syntax() {
+    // SystemJS supports TLA natively via `async execute`. ESM also supports TLA natively.
+    // Other formats (CJS, IIFE, UMD) do not.
+    let format_supports_tla = self.immutable_ctx.flat_options.keep_esm_import_export_syntax()
+      || matches!(
+        self.immutable_ctx.options.format,
+        rolldown_common::OutputFormat::System
+      );
+    if !format_supports_tla {
       self.result.errors.push(BuildDiagnostic::unsupported_feature(
         self.immutable_ctx.id.as_arc_str().clone(),
         self.immutable_ctx.source.clone(),

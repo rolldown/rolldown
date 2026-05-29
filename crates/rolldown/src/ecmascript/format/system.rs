@@ -65,6 +65,16 @@ fn chunk_uses_module_context(ctx: &GenerateContext<'_>) -> bool {
   })
 }
 
+/// Returns `true` if any module in the chunk has top-level await (TLA),
+/// which requires the execute function to be `async function () { ... }`.
+fn chunk_has_top_level_await(ctx: &GenerateContext<'_>) -> bool {
+  ctx
+    .chunk
+    .modules
+    .iter()
+    .any(|&module_idx| ctx.link_output.metas[module_idx].is_tla_or_contains_tla_dependency)
+}
+
 /// One dependency entry — its import path and the bindings imported from it.
 struct DepEntry<'a> {
   /// The import path string (e.g. `"./chunk.js"` or `"lodash"`)
@@ -291,6 +301,10 @@ pub fn render_system<'code>(
   }
 
   // Task 2.5: open the return object and execute function
+  // Task 9.2: emit `async execute` when any module in the chunk uses top-level await
+  let has_tla = chunk_has_top_level_await(ctx);
+  let execute_fn = if has_tla { "async function" } else { "function" };
+
   let setters_str =
     if setters.is_empty() { String::new() } else { concat_string!("\n    ", setters, "\n  ") };
   source_joiner.append_source(concat_string!(
@@ -298,7 +312,9 @@ pub fn render_system<'code>(
     "    setters: [",
     setters_str,
     "],\n",
-    "    execute: (function () {\n"
+    "    execute: (",
+    execute_fn,
+    " () {\n"
   ));
 
   // Module sources go INSIDE the execute function body

@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+System.register([], (function(exports) {
+	return {
+		setters: [],
+		execute: (async function() {
+			exports("data", await Promise.resolve(42));
+			//#endregion
+		})
+	};
+}));
+
+```

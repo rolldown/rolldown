@@ -359,19 +359,19 @@ above.
 - [ ] 8.7 Add `OutputFormat::System` arm to `render_wrapped_entry_chunk` in
       `render_chunk_exports.rs` — handle CJS-wrapped entry modules bundled into
       a SystemJS chunk
-- [ ] 8.8 **Fixture (red → green)**: Create
+- [x] 8.8 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/star_export_external/`
       with `export * from 'external-lib'` (external). Verify `_starExcludes`,
       setter loop, and `_mergeNamespaces` helper are all emitted correctly.
-- [ ] 8.9 **Fixture (red → green)**: Create
+- [x] 8.9 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/tla/` with a module
       using top-level await. Verify `execute: (async function () {` is emitted.
 
 ## 9. TLA (Top-Level Await)
 
-- [ ] 9.1 Trace the TLA path for ESM format in rolldown (how does `execute`
+- [x] 9.1 Trace the TLA path for ESM format in rolldown (how does `execute`
       become `async function` currently) — identify where the TLA flag lives
-- [ ] 9.2 Implement `async execute` emission in `render_system()` gated on the
+- [x] 9.2 Implement `async execute` emission in `render_system()` gated on the
       TLA flag from task 9.1
 - [ ] 9.3 **Rollup fixture (red → green)**: The
       `rollup@form@top-level-await@generates system` test is currently in
@@ -380,18 +380,18 @@ above.
 
 ## 10. Final Sweep and Cleanup
 
-- [ ] 10.1 Replace all `todo!()` stubs introduced in task 1.7 with correct
+- [x] 10.1 Replace all `todo!()` stubs introduced in task 1.7 with correct
       implementations
 - [ ] 10.2 Run full Rollup form+chunking-form test suite:
       `just test-node-rollup` — confirm all 16 previously-skipped SystemJS
       fixtures now pass; update `packages/rollup-tests/src/status.md` and
       `status.json`
-- [ ] 10.3 Run full rolldown test suite: `just test-rust` — confirm no
+- [x] 10.3 Run full rolldown test suite: `just test-rust` — confirm no
       regressions in existing formats
 - [ ] 10.4 Run `just roll` (build + lint + test everything) — confirm clean
-- [ ] 10.5 Update `packages/rolldown/src/options/output-options.ts` JSDoc for
+- [x] 10.5 Update `packages/rolldown/src/options/output-options.ts` JSDoc for
       `format` to mention `"system"`
 - [ ] 10.6 Update rolldown docs (`docs/`) to list SystemJS as a supported format
-- [ ] 10.7 Add `"system"` to `OutputFormat` enum in
+- [x] 10.7 Add `"system"` to `OutputFormat` enum in
       `crates/rolldown_testing/_config.schema.json` so fixtures using
       `"format": "system"` pass JSON schema validation

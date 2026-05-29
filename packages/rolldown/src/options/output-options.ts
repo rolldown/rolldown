@@ -180,6 +180,7 @@ export interface OutputOptions {
    * - `'cjs'` and `'commonjs'` are the same format, all stand for CommonJS module.
    * - `'iife'` stands for [Immediately Invoked Function Expression](https://developer.mozilla.org/en-US/docs/Glossary/IIFE).
    * - `'umd'` stands for [Universal Module Definition](https://github.com/umdjs/umd).
+   * - `'system'` stands for [SystemJS](https://github.com/systemjs/systemjs) module format.
    *
    * @default 'es'
    *

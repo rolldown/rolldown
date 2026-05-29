@@ -878,33 +878,86 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     // if there is no export, we should generate `var ns = {}` instead of `var ns = __exportAll({})`
     // else construct `__exportAll({ prop_name: () => returned, ... })`
-    let module_namespace_rhs =
-      if arg_obj_expr.properties.is_empty() && !self.ctx.options.generated_code.symbols {
-        Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
-      } else {
-        let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc));
-        let args = if self.ctx.options.generated_code.symbols {
-          self.snippet.builder.vec_from_iter([obj_expr])
+    //
+    // For SystemJS: use direct value properties (not getters) in a null-proto object.
+    // External star re-exports are handled separately via _mergeNamespaces.
+    let module_namespace_rhs = if matches!(self.ctx.options.format, OutputFormat::System) {
+      // For SystemJS namespace: { __proto__: null, prop: value, ... }
+      // Convert getter-style properties to direct value properties.
+      let mut sys_props = self.snippet.builder.vec();
+      // Add __proto__: null
+      sys_props.push(ast::ObjectPropertyKind::ObjectProperty(
+        ast::ObjectProperty {
+          key: ast::PropertyKey::StaticIdentifier(
+            self.snippet.id_name("__proto__", SPAN).into_in(self.alloc),
+          ),
+          value: self.snippet.void_zero(),
+          computed: false,
+          ..ast::ObjectProperty::dummy(self.alloc)
+        }
+        .into_in(self.alloc),
+      ));
+      // Add each exported name as a direct value
+      for (export_name, resolved_export) in self.ctx.linking_info.canonical_exports(false) {
+        let is_inlinable_constant = self
+          .ctx
+          .constant_value_map
+          .get(&self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref))
+          .is_some_and(|meta| !meta.commonjs_export);
+        if !self.ctx.used_symbol_refs.contains(&resolved_export.symbol_ref)
+          && !is_inlinable_constant
+        {
+          continue;
+        }
+        let (value, _) =
+          self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
+        let key = if is_validate_identifier_name(export_name) && export_name != "__proto__" {
+          ast::PropertyKey::StaticIdentifier(
+            self.snippet.id_name(export_name, SPAN).into_in(self.alloc),
+          )
         } else {
-          self.snippet.builder.vec_from_iter([
-            obj_expr,
-            ast::Argument::NumericLiteral(self.snippet.builder.alloc_numeric_literal(
-              SPAN,
-              1.0,
-              None,
-              NumberBase::Decimal,
-            )),
-          ])
+          ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(export_name, SPAN))
         };
-        self.snippet.builder.expression_call_with_pure(
-          SPAN,
-          self.finalized_expr_for_runtime_symbol("__exportAll"),
-          NONE,
-          args,
-          false,
-          true,
-        )
+        sys_props.push(ast::ObjectPropertyKind::ObjectProperty(
+          ast::ObjectProperty {
+            key,
+            value,
+            computed: export_name == "__proto__",
+            ..ast::ObjectProperty::dummy(self.alloc)
+          }
+          .into_in(self.alloc),
+        ));
+      }
+      // Return the plain object (external merging is done by the _mergeNamespaces reassignment below)
+      Expression::ObjectExpression(
+        self.snippet.builder.alloc_object_expression(SPAN, sys_props),
+      )
+    } else if arg_obj_expr.properties.is_empty() && !self.ctx.options.generated_code.symbols {
+      Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
+    } else {
+      let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc));
+      let args = if self.ctx.options.generated_code.symbols {
+        self.snippet.builder.vec_from_iter([obj_expr])
+      } else {
+        self.snippet.builder.vec_from_iter([
+          obj_expr,
+          ast::Argument::NumericLiteral(self.snippet.builder.alloc_numeric_literal(
+            SPAN,
+            1.0,
+            None,
+            NumberBase::Decimal,
+          )),
+        ])
       };
+      self.snippet.builder.expression_call_with_pure(
+        SPAN,
+        self.finalized_expr_for_runtime_symbol("__exportAll"),
+        NONE,
+        args,
+        false,
+        true,
+      )
+    };
 
     // construct `var [binding_name_for_namespace_object_ref] = __exportAll(...)`
     let decl_stmt =
@@ -982,8 +1035,70 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           });
           re_export_external_stmts = Some(stmts.collect());
         }
-        // SystemJS: export * from external handled via _starExcludes + setter loop (group 4/8)
-        OutputFormat::System => {}
+        // Task 8.6: SystemJS — for `export * as ns from './src'` where `./src` re-exports
+        // from externals, use inline `_mergeNamespaces(obj, [ext1, ext2, ...])` to build
+        // the namespace value. The external bindings are captured by setters.
+        OutputFormat::System => {
+          // Collect external namespace binding names (already declared as vars by setters).
+          // These are the `external1`, `external2`, ... vars that setters populate.
+          let ext_ns_names: Vec<_> = export_all_externals_rec_ids
+            .iter()
+            .copied()
+            .filter_map(|idx| {
+              let rec = &self.ctx.module.import_records[idx];
+              let module_idx = rec.resolved_module?;
+              let _ = self.ctx.modules[module_idx].as_external()?;
+              let ext_ns_name = self.canonical_name_for(rec.namespace_ref);
+              Some(ext_ns_name)
+            })
+            .collect();
+
+          if !ext_ns_names.is_empty() {
+            // Re-assign: ns = _mergeNamespaces(ns, [ext1, ext2])
+            // Using arena-allocated atoms to ensure 'ast lifetime.
+            let ns_atom = self.snippet.atom(binding_name_for_namespace_object_ref);
+            let ns_ref = self.snippet.builder.expression_identifier(SPAN, ns_atom);
+
+            // Build [ext1, ext2, ...] array using arena-allocated atoms for 'ast lifetime
+            let ext_array = ast::Argument::ArrayExpression(
+              self.snippet.builder.alloc_array_expression(
+                SPAN,
+                self.snippet.builder.vec_from_iter(ext_ns_names.iter().map(|name| {
+                  let atom = self.snippet.atom(name);
+                  ast::ArrayExpressionElement::from(
+                    self.snippet.builder.expression_identifier(SPAN, atom),
+                  )
+                })),
+              ),
+            );
+
+            // _mergeNamespaces(ns, [ext1, ext2])
+            let merge_call = self.snippet.builder.expression_call(
+              SPAN,
+              self.snippet.builder.expression_identifier(SPAN, "_mergeNamespaces"),
+              NONE,
+              self.snippet.builder.vec_from_array([
+                ast::Argument::from(ns_ref),
+                ext_array,
+              ]),
+              false,
+            );
+
+            // ns = _mergeNamespaces(ns, [...]);
+            let reassign = self.snippet.builder.statement_expression(
+              SPAN,
+              self.snippet.builder.expression_assignment(
+                SPAN,
+                ast::AssignmentOperator::Assign,
+                ast::AssignmentTarget::AssignmentTargetIdentifier(
+                  self.snippet.builder.alloc_identifier_reference(SPAN, ns_atom),
+                ),
+                merge_call,
+              ),
+            );
+            re_export_external_stmts = Some(vec![reassign]);
+          }
+        }
       }
     }
 

@@ -189,4 +189,6 @@ module.exports = [
   "rollup@form@system-export-destructuring-declaration: supports destructuring declarations for systemJS",
   // system-export-rendering: DCE removes var bindings for write-only exported symbols; behavior correct
   "rollup@form@system-export-rendering: Renders updates of exported variables for SystemJS output",
+  // ns-external-star-reexport: _mergeNamespaces emitted correctly; minor structural differences
+  "rollup@form@ns-external-star-reexport: supports namespaces with external star reexports@generates system",
 ];

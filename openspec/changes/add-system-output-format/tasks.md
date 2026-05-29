@@ -353,7 +353,7 @@ above.
       `rollup@form@modify-export-semi` from
       `ignored-by-unsupported-features.md`. Run and confirm semicolon insertion
       at export modification sites is correct.
-- [ ] 8.6 Implement `_mergeNamespaces` inline helper emission in
+- [x] 8.6 Implement `_mergeNamespaces` inline helper emission in
       `render_system()` for `export * from 'external'` where multiple external
       namespaces must be merged — emit only when needed, directly into the chunk
 - [x] 8.7 Add `OutputFormat::System` arm to `render_wrapped_entry_chunk` in

@@ -65,6 +65,22 @@ fn chunk_uses_module_context(ctx: &GenerateContext<'_>) -> bool {
   })
 }
 
+/// Returns `true` if any module in the chunk has star re-exports from external modules
+/// where the namespace object is included (requiring `_mergeNamespaces` in SystemJS).
+fn chunk_needs_merge_namespaces(ctx: &GenerateContext<'_>) -> bool {
+  ctx.chunk.modules.iter().any(|&module_idx| {
+    let Some(normal_module) = ctx.link_output.module_table[module_idx].as_normal() else {
+      return false;
+    };
+    let meta = &ctx.link_output.metas[module_idx];
+    // Module has star exports from externals AND its namespace object is used
+    if meta.star_exports_from_external_modules.is_empty() {
+      return false;
+    }
+    ctx.link_output.used_symbol_refs.contains(&normal_module.namespace_object_ref)
+  })
+}
+
 /// Returns `true` if any module in the chunk has top-level await (TLA),
 /// which requires the execute function to be `async function () { ... }`.
 fn chunk_has_top_level_await(ctx: &GenerateContext<'_>) -> bool {
@@ -377,6 +393,25 @@ pub fn render_system<'code>(
     )
   };
   source_joiner.append_source(return_open);
+
+  // Task 8.6: emit inline `_mergeNamespaces` helper when any module needs it.
+  // This is needed when `export * as ns from './module'` and `./module` star-re-exports
+  // from external modules — the namespace object must be merged with those externals.
+  if chunk_needs_merge_namespaces(ctx) {
+    source_joiner.append_source(
+      "    function _mergeNamespaces(n, m) {\n\
+       \t\t\tm.forEach(function (e) {\n\
+       \t\t\t\te && typeof e !== \"string\" && !Array.isArray(e) && Object.keys(e).forEach(function (k) {\n\
+       \t\t\t\t\tif (k !== \"default\" && !(k in n)) {\n\
+       \t\t\t\t\t\tvar d = Object.getOwnPropertyDescriptor(e, k);\n\
+       \t\t\t\t\t\tObject.defineProperty(n, k, d.get ? d : { enumerable: true, get: function () { return e[k]; } });\n\
+       \t\t\t\t\t}\n\
+       \t\t\t\t});\n\
+       \t\t\t});\n\
+       \t\t\treturn Object.freeze(n);\n\
+       \t\t}\n",
+    );
+  }
 
   // Module sources go INSIDE the execute function body
   for RenderedModuleSource { sources, .. } in module_sources {

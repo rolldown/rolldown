@@ -757,6 +757,13 @@ export interface OutputOptions {
    * @default 'auto'
    */
   strict?: boolean | "auto";
+  /**
+   * When `true` (default), side-effect-only imports in SystemJS output use `null` setters
+   * instead of empty `function(){}` setters, saving bytes. Only affects `format: 'system'`.
+   *
+   * @default true
+   */
+  systemNullSetters?: boolean;
 }
 
 /**

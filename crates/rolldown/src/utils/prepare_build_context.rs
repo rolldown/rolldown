@@ -463,6 +463,7 @@ pub fn prepare_build_context(
     context: raw_options.context.unwrap_or_default(),
     strict_execution_order: raw_options.strict_execution_order.unwrap_or(false),
     strict: raw_options.strict.unwrap_or_default(),
+    system_null_setters: raw_options.system_null_setters.unwrap_or(true),
   };
 
   normalized.minify = raw_minify.normalize(&normalized);

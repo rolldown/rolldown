@@ -593,6 +593,12 @@
               "type": "null"
             }
           ]
+        },
+        "systemNullSetters": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

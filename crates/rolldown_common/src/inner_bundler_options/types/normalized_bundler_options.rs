@@ -116,6 +116,9 @@ pub struct NormalizedBundlerOptions {
   pub context: String,
   pub strict_execution_order: bool,
   pub strict: StrictMode,
+  /// When `true` (default), side-effect-only deps in SystemJS output use `null` setters
+  /// instead of `function(){}`. Matches Rollup v4 default.
+  pub system_null_setters: bool,
 }
 
 // This is only used for testing
@@ -193,6 +196,7 @@ impl Default for NormalizedBundlerOptions {
       context: Default::default(),
       strict_execution_order: false,
       strict: StrictMode::default(),
+      system_null_setters: true,
     }
   }
 }

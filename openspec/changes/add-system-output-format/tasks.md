@@ -128,23 +128,23 @@ exports yet.
 Ensure SystemJS is treated correctly during the link and symbol-resolution
 stages.
 
-- [ ] 3.1 Add `OutputFormat::System` arm to
+- [x] 3.1 Add `OutputFormat::System` arm to
       `crates/rolldown/src/stages/link_stage/determine_module_exports_kind.rs` —
       System behaves like ESM (no forced CJS wrapping of imported modules)
-- [ ] 3.2 Add `OutputFormat::System` handling in
+- [x] 3.2 Add `OutputFormat::System` handling in
       `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs` — do
       NOT inject `__toESM`, `__require`, or `__commonJS` helpers
-- [ ] 3.3 Add `OutputFormat::System` arm to
+- [x] 3.3 Add `OutputFormat::System` arm to
       `crates/rolldown/src/stages/link_stage/create_exports_for_ecma_modules.rs`
       — System needs namespace symbols for inter-chunk exports similarly to ESM
-- [ ] 3.4 Add `"module"` and `"exports"` to the SystemJS reserved name set in
+- [x] 3.4 Add `"module"` and `"exports"` to the SystemJS reserved name set in
       `crates/rolldown/src/utils/renamer.rs` and
       `crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs`
-- [ ] 3.5 Un-comment and implement `systemNullSetters: bool` in
+- [x] 3.5 Un-comment and implement `systemNullSetters: bool` in
       `crates/rolldown_binding/src/options/binding_output_options/mod.rs`;
       thread through to `NormalizedBundlerOptions` with default `true`; expose
       in TypeScript `OutputOptions` and `bindingify-output-options.ts`
-- [ ] 3.6 **Fixture (red → green)**: Create
+- [x] 3.6 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/deconflict_module_name/`
       with `main.js` containing `const module = 1; export { module as val }` and
       a dynamic import. Run `just t-run`. Verify snapshot renames the user's

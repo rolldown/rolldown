@@ -48,6 +48,7 @@ export function bindingifyOutputOptions(
     topLevelVar,
     cleanDir,
     strictExecutionOrder,
+    systemNullSetters,
   } = outputOptions;
 
   if (legalComments != null) {
@@ -111,6 +112,7 @@ export function bindingifyOutputOptions(
     cleanDir,
     strictExecutionOrder,
     strict: outputOptions.strict,
+    systemNullSetters,
   };
 }
 

@@ -98,7 +98,9 @@ impl LinkStage<'_> {
       let is_entry = self.entries.contains_key(&importer.idx);
       if matches!(importer.exports_kind, ExportsKind::CommonJs)
         && (!is_entry
-          || matches!(self.options.format, OutputFormat::Esm)
+          // ESM and System both treat imported CJS modules as needing a wrapper regardless of
+          // whether they use module/exports in the importer (System has no CJS globals in scope).
+          || matches!(self.options.format, OutputFormat::Esm | OutputFormat::System)
           || (matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd)
             && importer.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports)))
       {

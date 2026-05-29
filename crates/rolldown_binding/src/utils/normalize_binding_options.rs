@@ -581,6 +581,7 @@ pub fn normalize_binding_options(
       })
       .transpose()?,
     context: input_options.context,
+    system_null_setters: output_options.system_null_setters,
     tsconfig: input_options.tsconfig.map(|v| match v {
       Either::A(v) => TsConfig::Auto(v),
       Either::B(s) => TsConfig::Manual(s.into()),

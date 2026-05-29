@@ -136,7 +136,7 @@ pub struct BindingOutputOptions<'env> {
   // sourcemapFile: string | undefined;
   #[napi(ts_type = "boolean | 'auto'")]
   pub strict: Option<Either<bool, String>>,
-  // systemNullSetters: boolean;
+  pub system_null_setters: Option<bool>,
   // validate: boolean;
 
   // --- Enhanced options

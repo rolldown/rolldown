@@ -104,7 +104,9 @@ impl LinkStage<'_> {
         if !meta.star_exports_from_external_modules.is_empty() {
           referenced_symbols.push(self.runtime.resolve_symbol("__reExport").into());
           match self.options.format {
-            OutputFormat::Esm => {
+            // ESM and System both need namespace refs for `export * from external`
+            // so that the namespace object can be used in re-export setters.
+            OutputFormat::Esm | OutputFormat::System => {
               meta.star_exports_from_external_modules.iter().copied().for_each(|rec_idx| {
                 let rec = &ecma_module.import_records[rec_idx];
                 if rec.meta.contains(ImportRecordMeta::EntryLevelExternal) {
@@ -115,7 +117,7 @@ impl LinkStage<'_> {
                   .push(TaggedSymbolRef::Normal(ecma_module.import_records[rec_idx].namespace_ref));
               });
             }
-            OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd | OutputFormat::System => {}
+            OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {}
           }
         }
         // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.

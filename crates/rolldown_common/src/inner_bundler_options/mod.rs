@@ -236,6 +236,7 @@ pub struct BundlerOptions {
   pub tsconfig: Option<TsConfig>,
   pub strict_execution_order: Option<bool>,
   pub strict: Option<StrictMode>,
+  pub system_null_setters: Option<bool>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

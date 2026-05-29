@@ -1231,6 +1231,12 @@ const OutputOptionsSchema = v.strictObject({
       'Whether to always output `"use strict"` directive in non-ES module outputs.',
     ),
   ),
+  systemNullSetters: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      "When true (default), side-effect-only deps in SystemJS use null setters instead of function(){}.",
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof OutputOptionsSchema, OutputOptions>>();
 

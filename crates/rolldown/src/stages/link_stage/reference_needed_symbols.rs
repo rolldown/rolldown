@@ -238,7 +238,10 @@ impl LinkStage<'_> {
                         ExportsKind::CommonJs => {
                           // `import('./some-cjs-module.js')` would be converted to
                           // `import('./some-cjs-module.js').then((m) => __toESM(m.default, isNodeMode))`
-                          depended_runtime_helper_map.push(RuntimeHelper::ToEsm, stmt_info_idx);
+                          // SystemJS handles dynamic imports via module.import() — no __toESM needed.
+                          if !matches!(self.options.format, OutputFormat::System) {
+                            depended_runtime_helper_map.push(RuntimeHelper::ToEsm, stmt_info_idx);
+                          }
                         }
                         ExportsKind::Esm | ExportsKind::None => {}
                       }

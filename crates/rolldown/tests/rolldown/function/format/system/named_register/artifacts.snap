@@ -10,6 +10,7 @@ System.register("my-lib", [], (function(exports) {
 	return {
 		setters: [],
 		execute: (function() {
+			exports("x", 1);
 			//#endregion
 		})
 	};

@@ -10,6 +10,7 @@ System.register([], (function(exports) {
 	return {
 		setters: [],
 		execute: (function() {
+			exports("value", 42);
 			//#endregion
 		})
 	};

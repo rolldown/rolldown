@@ -1,0 +1,8 @@
+{
+  "config": {
+    "format": "system",
+    "external": ["./side-effect.js"],
+    "systemNullSetters": false
+  },
+  "expectExecuted": false
+}

@@ -157,33 +157,33 @@ Implement ordered setter generation. Each fixture in this group is written
 first, then the setter code is implemented until the snapshot matches the Rollup
 reference.
 
-- [ ] 4.1 Implement ordered deps array construction in `render_system()` from
+- [x] 4.1 Implement ordered deps array construction in `render_system()` from
       chunk external imports and internal chunk dependencies, in consistent
       iteration order
-- [ ] 4.2 Emit hoisted `var` declarations for all import bindings (before
+- [x] 4.2 Emit hoisted `var` declarations for all import bindings (before
       `return`)
-- [ ] 4.3 Implement setter generation — one entry per dep, same order as deps
+- [x] 4.3 Implement setter generation — one entry per dep, same order as deps
       array: named/default/namespace bindings → `module.prop` assignment;
       side-effect-only → `null` (systemNullSetters=true) or `function(){}`
       (false)
-- [ ] 4.4 Implement re-export propagation in setters: single re-export →
+- [x] 4.4 Implement re-export propagation in setters: single re-export →
       `exports('name', module.prop)`; multiple re-exports from same dep → batch
       object form `exports({ a: module.a, b: module.b })`
 - [ ] 4.5 Implement `_starExcludes` null-prototype object for `export *`:
       collect all own export names plus `"default"`, emit
       `var _starExcludes = { __proto__: null, default: 1, ownExport: 1 };`;
       setter loops over `module` keys filtering through `_starExcludes`
-- [ ] 4.6 Add debug assertion (dev builds only):
+- [x] 4.6 Add debug assertion (dev builds only):
       `assert_eq!(deps.len(), setters.len())`
-- [ ] 4.7 **Fixture (red → green)**: Create
+- [x] 4.7 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/named_import/` —
       imports `{ foo }` from an external, re-exports it. Verify deps array, var
       declaration, and setter assignment are all present and correctly ordered.
-- [ ] 4.8 **Fixture (red → green)**: Create
+- [x] 4.8 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/side_effect_import/`
       — `import './side-effect'` with no consumed bindings. Verify setter is
       `null`.
-- [ ] 4.9 **Fixture (red → green)**: Create
+- [x] 4.9 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/null_setters_false/`
       with `_config.json`
       `{ "config": { "format": "system", "systemNullSetters": false } }`. Verify

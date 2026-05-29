@@ -235,33 +235,33 @@ This is the hardest group. Write each fixture first, run it to see wrong output,
 then implement the specific transformation. Use the Rollup reference fixtures as
 the correctness oracle wherever they exist.
 
-- [ ] 6.1 **Inspect Rollup fixture**: Before writing any code, inspect the
+- [x] 6.1 **Inspect Rollup fixture**: Before writing any code, inspect the
       `system-export-rendering` Rollup fixture output (in the initialized
       submodule at
       `rollup/test/form/samples/system-export-rendering/_expected/system.js`) to
       pin down the exact form for postfix `x++`/`x--` and destructuring exports.
       Record findings as comments in `format/system.rs`.
-- [ ] 6.2 Add a pre-pass or extend link-stage metadata to identify, per module,
+- [x] 6.2 Add a pre-pass or extend link-stage metadata to identify, per module,
       the set of exported mutable bindings requiring live `exports()` wrapping —
       reuse `must_keep_live_binding` from `render_chunk_exports.rs`; `const` and
       provably-non-reassigned bindings are excluded
-- [ ] 6.3 **Fixture (red → green)**: Create
+- [x] 6.3 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/export_let_init/` —
       `export let x = 10`. Expected: `let x = exports('x', 10)`. Implement
       `exports()` wrapping for variable initializers in the finalizer.
-- [ ] 6.4 **Fixture (red → green)**: Create
+- [x] 6.4 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/export_reassign/` —
       `export let x = 1; x = 2`. Expected: `exports('x', x = 2)`. Implement
       wrapping for simple assignment expressions.
-- [ ] 6.5 **Fixture (red → green)**: Create
+- [x] 6.5 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/export_compound_assign/`
       — `export let n = 0; n += 1`. Expected: `exports('n', n += 1)`. Implement
       wrapping for compound assignment operators.
-- [ ] 6.6 **Fixture (red → green)**: Create
+- [x] 6.6 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/export_prefix_inc/`
       — `export let n = 0; ++n`. Expected: `exports('n', ++n)`. Implement prefix
       increment/decrement wrapping.
-- [ ] 6.7 **Fixture (red → green)**: Create
+- [x] 6.7 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/export_postfix_inc/`
       — `export let n = 0; n++`. Implement postfix wrapping using the exact form
       determined in task 6.1.
@@ -279,14 +279,14 @@ the correctness oracle wherever they exist.
       `crates/rolldown/tests/rolldown/function/format/system/export_class/` —
       `export class Foo {}`. Expected: `class Foo {} exports('Foo', Foo);`
       inside execute. Implement class-declaration export.
-- [ ] 6.11 **Fixture (red → green)**: Create
+- [x] 6.11 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/export_const/` —
       `export const PI = 3.14`. Verify no per-assignment wrapping is emitted;
       only a single `exports('PI', 3.14)` at initializer.
 - [ ] 6.12 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/export_default_expr/`
       — `export default 42`. Expected: `exports('default', 42)` inline.
-- [ ] 6.13 **Fixture (red → green)**: Create
+- [x] 6.13 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/export_uninitialized/`
       — `export let x`. Verify correct handling of uninitialized exports.
 - [ ] 6.14 **Rollup fixture (red → green)**: Remove

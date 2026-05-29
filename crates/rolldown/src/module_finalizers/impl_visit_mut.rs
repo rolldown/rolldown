@@ -360,6 +360,16 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
+    // SystemJS live export instrumentation (tasks 6.4-6.7):
+    // Capture export names for assignment/update targets BEFORE the walk clears reference_ids,
+    // then wrap after the walk.
+    let system_export_wrap: Option<Vec<oxc_str::CompactStr>> =
+      if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
+        self.pre_walk_capture_system_export_names(expr)
+      } else {
+        None
+      };
+
     // Handle keep_names for named class/function expressions in any expression context
     // (return statements, function args, array elements, etc.)
     if self.ctx.options.keep_names && self.ctx.runtime.id() != self.ctx.idx {
@@ -472,7 +482,19 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           && meta.meta.name == "import"
           && meta.property.name == "meta"
         {
-          *expr = self.snippet.builder.expression_object(SPAN, self.snippet.builder.vec());
+          // Task 5.3: For SystemJS, bare `import.meta` → `module.meta`
+          if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
+            *expr = ast::Expression::StaticMemberExpression(
+              self.snippet.builder.alloc_static_member_expression(
+                meta.span,
+                self.snippet.builder.expression_identifier(SPAN, "module"),
+                self.snippet.builder.identifier_name(SPAN, "meta"),
+                false,
+              ),
+            );
+          } else {
+            *expr = self.snippet.builder.expression_object(SPAN, self.snippet.builder.vec());
+          }
         }
       }
       ast::Expression::ChainExpression(_) => {
@@ -547,6 +569,13 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.rewrite_import_meta_hot(expr);
 
     walk_mut::walk_expression(self, expr);
+
+    // Apply SystemJS live export wrapping (post-walk, using pre-captured names)
+    if let Some(export_names) = system_export_wrap {
+      if let Some(wrapped) = self.post_walk_wrap_system_export(expr, &export_names) {
+        *expr = wrapped;
+      }
+    }
   }
 
   fn visit_jsx_element_name(&mut self, it: &mut ast::JSXElementName<'ast>) {
@@ -744,6 +773,19 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             continue;
           };
           self.process_keep_name_for_expression(id.symbol_id.get().map(KeepNameId::SymbolId), init);
+
+          // Task 6.3: For SystemJS, wrap the initializer of exported vars with exports("name", init)
+          // `export let x = 10` → (after export removal) `let x = exports("x", 10)`
+          // This must run before walk so the wrapped expr is what the inner walk sees.
+          if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
+            if let Some(symbol_id) = id.symbol_id.get() {
+              let export_names = self.system_export_names_for_symbol(symbol_id);
+              if !export_names.is_empty() {
+                let current_init = init.take_in(self.alloc);
+                *init = self.build_exports_call(&export_names, current_init);
+              }
+            }
+          }
         }
       }
       ast::Declaration::FunctionDeclaration(decl) => {

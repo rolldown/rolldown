@@ -2530,6 +2530,232 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     Some(())
   }
 
+  // =====================================================================
+  // SystemJS live export instrumentation (Group 6 / tasks 6.2-6.13)
+  // =====================================================================
+
+  /// Get the SymbolId for the target of a SimpleAssignmentTarget (if it's a plain identifier).
+  fn assignment_target_symbol_id(
+    &self,
+    target: &ast::SimpleAssignmentTarget<'ast>,
+  ) -> Option<SymbolId> {
+    let ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(id_ref) = target else {
+      return None;
+    };
+    let ref_id = id_ref.reference_id.get()?;
+    self.scope.scoping().get_reference(ref_id).symbol_id()
+  }
+
+  /// Get the SymbolId for an identifier reference (if it refers to a local symbol).
+  fn identifier_ref_symbol_id(&self, id_ref: &ast::IdentifierReference) -> Option<SymbolId> {
+    let ref_id = id_ref.reference_id.get()?;
+    self.scope.scoping().get_reference(ref_id).symbol_id()
+  }
+
+  /// Pre-walk: capture export names for assignment/update targets BEFORE the walk
+  /// clears reference_ids. Called from `visit_expression` BEFORE the main match/walk.
+  ///
+  /// Returns the export names if this expression targets an exported symbol, `None` otherwise.
+  pub fn pre_walk_capture_system_export_names(
+    &self,
+    expr: &ast::Expression<'ast>,
+  ) -> Option<Vec<CompactStr>> {
+    match expr {
+      ast::Expression::AssignmentExpression(assign_expr) => {
+        let id_ref = match &assign_expr.left {
+          ast::AssignmentTarget::AssignmentTargetIdentifier(id_ref) => id_ref,
+          _ => return None,
+        };
+        let symbol_id = self.identifier_ref_symbol_id(id_ref)?;
+        let names = self.system_export_names_for_symbol(symbol_id);
+        if names.is_empty() { None } else { Some(names) }
+      }
+      ast::Expression::UpdateExpression(update_expr) => {
+        let id_ref = match &update_expr.argument {
+          ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(id_ref) => id_ref,
+          _ => return None,
+        };
+        let symbol_id = self.identifier_ref_symbol_id(id_ref)?;
+        let names = self.system_export_names_for_symbol(symbol_id);
+        if names.is_empty() { None } else { Some(names) }
+      }
+      _ => None,
+    }
+  }
+
+  /// Post-walk: given pre-captured export names, wrap the (already-walked) expression.
+  ///
+  /// Returns `Some(wrapped_expr)` if wrapping should happen.
+  pub fn post_walk_wrap_system_export(
+    &self,
+    expr: &ast::Expression<'ast>,
+    export_names: &[CompactStr],
+  ) -> Option<Expression<'ast>> {
+    match expr {
+      ast::Expression::AssignmentExpression(_) => {
+        // Wrap: `exports("name", assign_expr)` or batch form
+        Some(self.build_exports_call(export_names, expr.clone_in(self.alloc)))
+      }
+      ast::Expression::UpdateExpression(update_expr) => {
+        if update_expr.prefix {
+          // Prefix `++foo` or `--foo`: `exports("name", ++foo)`
+          Some(self.build_exports_call(export_names, expr.clone_in(self.alloc)))
+        } else {
+          // Postfix `foo++` or `foo--`: `exports("name", foo ± 1), foo++`
+          // Get the variable name from the (already-walked) update expression.
+          let var_name = match &update_expr.argument {
+            ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
+              id_ref.name.as_str()
+            }
+            _ => return None,
+          };
+
+          let is_increment = update_expr.operator == ast::UpdateOperator::Increment;
+          let op = if is_increment {
+            ast::BinaryOperator::Addition
+          } else {
+            ast::BinaryOperator::Subtraction
+          };
+
+          // `foo + 1` or `foo - 1`
+          let foo_expr =
+            Expression::Identifier(self.snippet.builder.alloc_identifier_reference(SPAN, var_name));
+          let one_expr = self
+            .snippet
+            .builder
+            .expression_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal);
+          let delta_expr = Expression::BinaryExpression(
+            self.snippet.builder.alloc_binary_expression(SPAN, foo_expr, op, one_expr),
+          );
+
+          let exports_call = self.build_exports_call(export_names, delta_expr);
+          let update_cloned = expr.clone_in(self.alloc);
+
+          // Sequence: `exports("name", foo ± 1), foo++`
+          Some(Expression::SequenceExpression(
+            self.snippet.builder.alloc_sequence_expression(
+              SPAN,
+              self.snippet.builder.vec_from_array([exports_call, update_cloned]),
+            ),
+          ))
+        }
+      }
+      _ => None,
+    }
+  }
+
+  /// For SystemJS format: returns the export name(s) that a local symbol is exported under.
+  ///
+  /// Returns an empty slice if the symbol is not exported or if the format is not System.
+  /// Uses `linking_info.resolved_exports` to find which chunk-level export names
+  /// correspond to this module's local symbol.
+  ///
+  /// Returns a sorted, deduplicated list of export names.
+  pub fn system_export_names_for_symbol(&self, symbol_id: SymbolId) -> Vec<CompactStr> {
+    if !matches!(self.ctx.options.format, OutputFormat::System) {
+      return vec![];
+    }
+
+    let local_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(local_ref);
+
+
+
+    // Walk all canonical_exports of this chunk (via linking_info.resolved_exports).
+    // These are the exports that will appear in the chunk's exports() calls.
+    let mut names: Vec<CompactStr> = self
+      .ctx
+      .linking_info
+      .resolved_exports
+      .iter()
+      .filter_map(|(export_name, resolved_export)| {
+        let resolved_canonical =
+          self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref);
+        if resolved_canonical == canonical_ref {
+          Some(export_name.clone())
+        } else {
+          None
+        }
+      })
+      .collect();
+
+    names.sort_unstable();
+    names.dedup();
+    names
+  }
+
+  /// Build a `exports("name", value)` or `exports({ a: va, b: vb })` call expression.
+  ///
+  /// - Single name: `exports("name", value_expr)`
+  /// - Multiple names: `exports({ name1: value_expr.clone(), name2: value_expr.clone() })`
+  ///
+  /// `value_expr` is consumed (taken from the caller). When multiple names are present,
+  /// `value_expr` is cloned for each additional name.
+  pub fn build_exports_call(
+    &self,
+    names: &[CompactStr],
+    value_expr: Expression<'ast>,
+  ) -> Expression<'ast> {
+    debug_assert!(!names.is_empty(), "build_exports_call called with empty names");
+
+    // `exports` identifier
+    let exports_id = self.snippet.builder.expression_identifier(SPAN, "exports");
+
+    if names.len() == 1 {
+      // Single: `exports("name", value)`
+      let name_atom = self.snippet.atom(names[0].as_str());
+      let name_lit = Expression::StringLiteral(
+        self.snippet.builder.alloc_string_literal(SPAN, name_atom, None),
+      );
+      let args = self.snippet.builder.vec_from_array([
+        ast::Argument::from(name_lit),
+        ast::Argument::from(value_expr),
+      ]);
+      Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+        SPAN,
+        exports_id,
+        NONE,
+        args,
+        false,
+      ))
+    } else {
+      // Batch: `exports({ name1: value, name2: value })`
+      // All names share the same value. For mutable bindings this means the value
+      // will be the identifier ref (not a cloned expression), since by the time
+      // the setter runs, all names read the same variable.
+      let props = self.snippet.builder.vec_from_iter(names.iter().map(|name| {
+        let name_atom = self.snippet.atom(name.as_str());
+        let key = ast::PropertyKey::StaticIdentifier(
+          self.snippet.builder.alloc_identifier_name(SPAN, name_atom),
+        );
+        let val = value_expr.clone_in(self.alloc);
+        ast::ObjectPropertyKind::ObjectProperty(
+          self.snippet.builder.alloc_object_property(
+            SPAN,
+            ast::PropertyKind::Init,
+            key,
+            val,
+            false,
+            false,
+            false,
+          ),
+        )
+      }));
+      let obj_expr = Expression::ObjectExpression(
+        self.snippet.builder.alloc_object_expression(SPAN, props),
+      );
+      let args =
+        self.snippet.builder.vec_from_array([ast::Argument::from(obj_expr)]);
+      Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+        SPAN,
+        exports_id,
+        NONE,
+        args,
+        false,
+      ))
+    }
+  }
+
   /// Build a `module.import(source)` call expression for SystemJS dynamic imports.
   ///
   /// SystemJS exposes a `module` factory parameter. Dynamic `import(source)` must be

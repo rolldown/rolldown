@@ -57,8 +57,11 @@ pub fn render_ecma_module(
             // output is enabled. Both are true here (`render_output.code` is
             // non-empty, `enable_sourcemap` is true).
             warnings.push(
-              BuildDiagnostic::sourcemap_broken(plugin_name.to_string(), Some(module.id.to_string()))
-                .with_severity_warning(),
+              BuildDiagnostic::sourcemap_broken(
+                plugin_name.to_string(),
+                Some(module.id.to_string()),
+              )
+              .with_severity_warning(),
             );
           }
         }

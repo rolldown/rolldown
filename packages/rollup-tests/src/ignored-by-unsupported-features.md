@@ -178,9 +178,6 @@
 ### The `output.format` systemjs is not fully supported
 - rollup@form@system-export-rendering-compact: Renders updates of exported variables for SystemJS output in compact mode
 - rollup@form@system-export-rendering: Renders updates of exported variables for SystemJS output
-- rollup@form@system-module-reserved: does not output reserved system format identifiers
-- rollup@form@system-module-reserved: does not output reserved system format identifiers@generates es
-- rollup@form@system-module-reserved: does not output reserved system format identifiers@generates system
 - rollup@form@system-reexports: merges reexports in systemjs
 - rollup@form@system-export-destructuring-declaration: supports destructuring declarations for systemJS
 

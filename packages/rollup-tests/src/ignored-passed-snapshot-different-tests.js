@@ -181,4 +181,7 @@ module.exports = [
   "rollup@form@system-multiple-export-bindings: supports multiple live bindings for the same symbol in systemJS",
   "rollup@form@system-semicolon: supports asi in system binding output",
   "rollup@form@modify-export-semi: inserts semicolons correctly when modifying SystemJS exports@generates system",
+  // system-module-reserved: separate var declarations instead of combined; ES format keeps original name
+  "rollup@form@system-module-reserved: does not output reserved system format identifiers@generates system",
+  "rollup@form@system-module-reserved: does not output reserved system format identifiers@generates es",
 ];

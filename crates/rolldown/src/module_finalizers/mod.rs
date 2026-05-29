@@ -479,12 +479,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let mut canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
     let mut canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
     let namespace_alias = canonical_symbol.namespace_alias.as_ref();
-    if let Some(ns_alias) = namespace_alias {
-      if let Some(expr) = self.try_inline_constant_from_namespace_alias(symbol_ref, ns_alias) {
-        return expr;
+
+    // For SystemJS: external named imports have a local var binding (added to canonical_names
+    // by deconflict_chunk_symbols). Use that directly instead of resolving through namespace alias,
+    // which would produce `ns.prop` instead of the local `var binding$1` assigned by the setter.
+    let skip_namespace_alias = matches!(self.ctx.options.format, OutputFormat::System)
+      && namespace_alias.is_some_and(|ns_alias| {
+        self.ctx.modules[ns_alias.namespace_ref.owner].is_external()
+      })
+      && self.ctx.chunk.canonical_names.contains_key(&canonical_ref);
+
+    if !skip_namespace_alias {
+      if let Some(ns_alias) = namespace_alias {
+        if let Some(expr) = self.try_inline_constant_from_namespace_alias(symbol_ref, ns_alias) {
+          return expr;
+        }
+        canonical_ref = ns_alias.namespace_ref;
+        canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
       }
-      canonical_ref = ns_alias.namespace_ref;
-      canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
     }
     if let Some(meta) = self.ctx.constant_value_map.get(&canonical_ref) {
       if !self.ctx.options.optimization.is_inline_const_smart_mode()
@@ -538,7 +550,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     };
 
     if let Some(ns_alias) = namespace_alias {
-      if !optimize_namespace_alias_transform {
+      // For SystemJS: skip the namespace alias member-expression wrap when the local binding
+      // has already been assigned through a setter (`module$1 = module.module`). The canonical
+      // name IS the local var, so just use it directly without `.property_name` suffix.
+      if !skip_namespace_alias && !optimize_namespace_alias_transform {
         expr = ast::Expression::StaticMemberExpression(
           self.snippet.builder.alloc_static_member_expression(
             SPAN,

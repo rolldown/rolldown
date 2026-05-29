@@ -93,6 +93,13 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
   pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
   pub json_module_inlined_prop: Option<Box<FxHashMap<SymbolId, ast::Expression<'ast>>>>,
+  /// For SystemJS: (export_names, local_canonical_name) pairs for HOISTED exports to prepend
+  /// at the TOP of the execute body. For function declarations — hoisted by JS, so the binding
+  /// is available even before its textual position.
+  pub system_hoisted_stmts: Vec<(Vec<CompactStr>, CompactStr)>,
+  /// For SystemJS: (insert_position, export_names, local_canonical_name) for inline exports
+  /// to inject AFTER their declaration (e.g., `exports("p", p)` after `var p;`).
+  pub system_inline_export_stmts: Vec<(usize, Vec<CompactStr>, CompactStr)>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -1901,6 +1908,31 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               // `export function foo() {}` => `function foo() {}`
               // `export class Foo {}` => `class Foo {}`
 
+              // For SystemJS: collect hoisted exports for function/class declarations.
+              // These are emitted as `exports("fn", fn)` BEFORE the execute body, taking
+              // advantage of JS function hoisting so the binding is defined at that point.
+              if matches!(self.ctx.options.format, OutputFormat::System) {
+                match decl {
+                  ast::Declaration::FunctionDeclaration(func) => {
+                    if let Some(func_id) = &func.id {
+                      if let Some(symbol_id) = func_id.symbol_id.get() {
+                        let export_names = self.system_export_names_for_symbol(symbol_id);
+                        if !export_names.is_empty() {
+                           let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+                           let canonical_name = self.canonical_name_for(symbol_ref);
+                           self.system_hoisted_stmts.push((export_names, canonical_name.into()));
+                         }
+                      }
+                    }
+                  }
+                  ast::Declaration::ClassDeclaration(_class) => {
+                    // Class exports go INSIDE execute (after the class decl), not hoisted.
+                    // Handled in the inline class export block below (after program.body.push).
+                  }
+                  _ => {}
+                }
+              }
+
               *decl.span_mut() = named_decl_span;
               top_stmt = ast::Statement::from(decl.take_in(self.alloc));
             } else {
@@ -1930,12 +1962,67 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
           }
         }
+        // For SystemJS: after a class declaration that's exported, emit `exports("Foo", Foo)`
+        // inline (right after the class — classes are NOT hoisted like functions).
+        let system_class_export: Option<(Vec<CompactStr>, CompactStr)> =
+          if matches!(self.ctx.options.format, OutputFormat::System) {
+            if let ast::Statement::ClassDeclaration(class_decl) = &top_stmt {
+              if let Some(class_id) = &class_decl.id {
+                if let Some(symbol_id) = class_id.symbol_id.get() {
+                  let export_names = self.system_export_names_for_symbol(symbol_id);
+                  if !export_names.is_empty() {
+                    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+                    let canonical_name = self.canonical_name_for(symbol_ref);
+                    Some((export_names, canonical_name.into()))
+                  } else {
+                    None
+                  }
+                } else {
+                  None
+                }
+              } else {
+                None
+              }
+            } else {
+              None
+            }
+          } else {
+            None
+          };
+
         program.body.push(top_stmt);
+        if let Some((export_names, canonical_name)) = system_class_export {
+          let class_ref = Expression::Identifier(
+            self.snippet.builder.alloc_identifier_reference(SPAN, self.snippet.atom(canonical_name.as_str())),
+          );
+          let exports_call = self.build_exports_call(&export_names, class_ref);
+          program.body.push(self.snippet.builder.statement_expression(SPAN, exports_call));
+        }
         if is_module_decl {
           last_import_stmt_idx = Some(program.body.len());
         }
       },
     );
+
+    // For SystemJS: prepend hoisted exports (e.g. `exports("fn", fn)`) to the top of the
+    // module body. These are collected while processing `export function` declarations above.
+    // Function hoisting means `fn` is available at the top of execute even before its declaration.
+    if !self.system_hoisted_stmts.is_empty() {
+      let hoisted = std::mem::take(&mut self.system_hoisted_stmts);
+      // Build statements and insert at front of program.body
+      let old_body: Vec<_> = program.body.drain(..).collect();
+      for (export_names, local_name) in hoisted {
+        let ref_expr = Expression::Identifier(
+          self.snippet.builder.alloc_identifier_reference(SPAN, self.snippet.atom(local_name.as_str())),
+        );
+        let exports_call = self.build_exports_call(&export_names, ref_expr);
+        program.body.push(self.snippet.builder.statement_expression(SPAN, exports_call));
+      }
+      for stmt in old_body {
+        program.body.push(stmt);
+      }
+    }
+
     last_import_stmt_idx.unwrap_or(0)
   }
 
@@ -2068,6 +2155,26 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.snippet.keep_name_call_expr(original_name, target, finalized_callee, false),
         ),
       );
+    }
+  }
+
+  /// Inserts SystemJS inline export statements (e.g. `exports("p", p)` after uninitialized
+  /// declarations) at their target positions in the program body.
+  fn insert_system_inline_export_stmts(
+    &mut self,
+    statements: &mut allocator::Vec<'ast, ast::Statement<'ast>>,
+  ) {
+    // Sort by position descending so earlier insertions don't shift later positions
+    let mut to_insert = std::mem::take(&mut self.system_inline_export_stmts);
+    to_insert.sort_by(|a, b| b.0.cmp(&a.0));
+    for (pos, export_names, local_name) in to_insert {
+      let ref_expr = Expression::Identifier(
+        self.snippet.builder.alloc_identifier_reference(SPAN, self.snippet.atom(local_name.as_str())),
+      );
+      let exports_call = self.build_exports_call(&export_names, ref_expr);
+      let stmt = self.snippet.builder.statement_expression(SPAN, exports_call);
+      let clamped = pos.min(statements.len());
+      statements.insert(clamped, stmt);
     }
   }
 

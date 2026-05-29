@@ -158,6 +158,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.insert_keep_name_statements(&mut program.body);
     self.keep_name_statement_to_insert.clear();
 
+    // For SystemJS: insert inline export statements (e.g. `exports("p", p)` after `var p;`)
+    if !self.system_inline_export_stmts.is_empty() {
+      self.insert_system_inline_export_stmts(&mut program.body);
+    }
+
     match included_wrap_kind {
       Some(WrapKind::Cjs) => {
         let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
@@ -768,21 +773,44 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     match it {
       ast::Declaration::VariableDeclaration(decl) => {
         for decl in &mut decl.declarations {
-          let (BindingPattern::BindingIdentifier(id), Some(init)) = (&decl.id, decl.init.as_mut())
-          else {
-            continue;
-          };
-          self.process_keep_name_for_expression(id.symbol_id.get().map(KeepNameId::SymbolId), init);
+          let BindingPattern::BindingIdentifier(id) = &decl.id else { continue };
 
-          // Task 6.3: For SystemJS, wrap the initializer of exported vars with exports("name", init)
-          // `export let x = 10` → (after export removal) `let x = exports("x", 10)`
-          // This must run before walk so the wrapped expr is what the inner walk sees.
-          if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
-            if let Some(symbol_id) = id.symbol_id.get() {
+          if let Some(init) = decl.init.as_mut() {
+            self.process_keep_name_for_expression(id.symbol_id.get().map(KeepNameId::SymbolId), init);
+
+            // Task 6.3: For SystemJS, wrap the initializer of exported vars with exports("name", init)
+            // `export let x = 10` → (after export removal) `let x = exports("x", 10)`
+            // This must run before walk so the wrapped expr is what the inner walk sees.
+            if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
+              if let Some(symbol_id) = id.symbol_id.get() {
+                let export_names = self.system_export_names_for_symbol(symbol_id);
+                if !export_names.is_empty() {
+                  let current_init = init.take_in(self.alloc);
+                  *init = self.build_exports_call(&export_names, current_init);
+                }
+              }
+            }
+          } else if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
+            // Task 6.13 / 6.18: Uninitialized export: `export var p;`
+            // Emit `exports("p", p)` after the declaration.
+            // The value is `undefined` (uninitialized), per Rollup: `var p; exports("p", p);`
+              if let Some(symbol_id) = id.symbol_id.get() {
               let export_names = self.system_export_names_for_symbol(symbol_id);
               if !export_names.is_empty() {
-                let current_init = init.take_in(self.alloc);
-                *init = self.build_exports_call(&export_names, current_init);
+                let symbol_ref: rolldown_common::SymbolRef = (self.ctx.idx, symbol_id).into();
+                let canonical_name = self.canonical_name_for(symbol_ref);
+                let p_ref = ast::Expression::Identifier(
+                  self.snippet.builder.alloc_identifier_reference(SPAN, canonical_name),
+                );
+                // Collect to be inserted after this declaration (not hoisted)
+                // Insert after the current declaration (cur_stmt_index + 1)
+                let _ = p_ref; // data stored by name, statement built lazily
+                let insert_pos = self.cur_stmt_index + 1;
+                self.system_inline_export_stmts.push((
+                  insert_pos,
+                  export_names,
+                  canonical_name.into(),
+                ));
               }
             }
           }

@@ -9,6 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 System.register([], (function(exports) {
 	"use strict";
 	return { execute: (function() {
+		//#region main.js
+		exports("greet", greet);
+		function greet() {
+			return "hello";
+		}
 		//#endregion
 	}) };
 }));

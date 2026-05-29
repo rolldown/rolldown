@@ -188,7 +188,7 @@ reference.
       with `_config.json`
       `{ "config": { "format": "system", "systemNullSetters": false } }`. Verify
       setter is `function () {}` not `null`.
-- [ ] 4.10 **Rollup fixture (red → green)**: Enable `system` in
+- [x] 4.10 **Rollup fixture (red → green)**: Enable `system` in
       `packages/rollup-tests/test/form/index.js` `FORMATS` array (add
       `'system'`). Remove `rollup@form@system-null-setters` from
       `ignored-by-unsupported-features.md`. Run
@@ -225,7 +225,7 @@ presence tracking.
       `crates/rolldown/tests/rolldown/function/format/system/import_meta_url/`
       with `main.js` that uses `import.meta.url`. Verify snapshot shows
       `module.meta.url` and factory includes `module` parameter.
-- [ ] 5.7 **Rollup fixture (red → green)**: Remove
+- [x] 5.7 **Rollup fixture (red → green)**: Remove
       `rollup@form@import-namespace-systemjs` from
       `ignored-by-unsupported-features.md`. Run and confirm it passes.
 
@@ -269,13 +269,13 @@ the correctness oracle wherever they exist.
       `crates/rolldown/tests/rolldown/function/format/system/export_destructuring/`
       — `export let a, b; [a, b] = fn()`. Implement destructuring assignment
       export wrapping.
-- [ ] 6.9 **Fixture (red → green)**: Create
+- [x] 6.9 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/export_function_hoisted/`
       — `export function greet() {}`. Expected: hoisted
       `exports('greet', greet)` block before execute body; function declaration
       unchanged inside execute. Implement hoisted function-declaration export
       block.
-- [ ] 6.10 **Fixture (red → green)**: Create
+- [x] 6.10 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/export_class/` —
       `export class Foo {}`. Expected: `class Foo {} exports('Foo', Foo);`
       inside execute. Implement class-declaration export.
@@ -283,7 +283,7 @@ the correctness oracle wherever they exist.
       `crates/rolldown/tests/rolldown/function/format/system/export_const/` —
       `export const PI = 3.14`. Verify no per-assignment wrapping is emitted;
       only a single `exports('PI', 3.14)` at initializer.
-- [ ] 6.12 **Fixture (red → green)**: Create
+- [x] 6.12 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/export_default_expr/`
       — `export default 42`. Expected: `exports('default', 42)` inline.
 - [x] 6.13 **Fixture (red → green)**: Create
@@ -302,7 +302,7 @@ the correctness oracle wherever they exist.
 - [ ] 6.17 **Rollup fixture (red → green)**: Remove
       `rollup@form@system-multiple-export-bindings` from
       `ignored-by-unsupported-features.md`. Run and confirm it passes.
-- [ ] 6.18 **Rollup fixture (red → green)**: Remove
+- [x] 6.18 **Rollup fixture (red → green)**: Remove
       `rollup@form@system-uninitialized` from
       `ignored-by-unsupported-features.md`. Run and confirm it passes.
 

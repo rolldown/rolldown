@@ -182,7 +182,6 @@
 - rollup@form@system-module-reserved: does not output reserved system format identifiers@generates es
 - rollup@form@system-module-reserved: does not output reserved system format identifiers@generates system
 - rollup@form@system-reexports: merges reexports in systemjs
-- rollup@form@system-uninitialized: supports uninitialized binding exports
 - rollup@form@system-export-destructuring-declaration: supports destructuring declarations for systemJS
 
 ### The `input.perf` and `bundle.getTimings()` is not supported

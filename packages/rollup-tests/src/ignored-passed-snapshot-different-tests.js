@@ -184,4 +184,6 @@ module.exports = [
   // system-module-reserved: separate var declarations instead of combined; ES format keeps original name
   "rollup@form@system-module-reserved: does not output reserved system format identifiers@generates system",
   "rollup@form@system-module-reserved: does not output reserved system format identifiers@generates es",
+  // system-reexports: dep order differs (star exports after named imports), separate var decls
+  "rollup@form@system-reexports: merges reexports in systemjs",
 ];

@@ -83,6 +83,8 @@ struct DepEntry<'a> {
   bindings: Vec<DepBinding<'a>>,
   /// Whether this dep is purely for side effects (no consumed bindings).
   is_side_effect_only: bool,
+  /// Whether this dep comes from `export * from 'ext'` — needs _starExcludes loop setter.
+  is_star_reexport: bool,
 }
 
 /// A single binding imported from a dep.
@@ -125,7 +127,7 @@ fn collect_deps<'a>(ctx: &'a GenerateContext<'_>) -> Vec<DepEntry<'a>> {
     }
 
     let is_side_effect_only = bindings.is_empty();
-    deps.push(DepEntry { path, bindings, is_side_effect_only });
+    deps.push(DepEntry { path, bindings, is_side_effect_only, is_star_reexport: false });
   }
 
   // --- External module deps ---
@@ -199,7 +201,39 @@ fn collect_deps<'a>(ctx: &'a GenerateContext<'_>) -> Vec<DepEntry<'a>> {
 
     let is_side_effect_only = !ns_used && importee.side_effects.has_side_effects();
     if ns_used || is_side_effect_only {
-      deps.push(DepEntry { path, bindings, is_side_effect_only });
+      deps.push(DepEntry { path, bindings, is_side_effect_only, is_star_reexport: false });
+    }
+  }
+
+  // --- Star re-export deps: `export * from 'external'` ---
+  // These are tracked in each module's star_exports_from_external_modules.
+  // Build a set of already-added external paths to avoid duplicates with named imports above.
+  let already_added: std::collections::HashSet<ArcStr> =
+    deps.iter().map(|d| d.path.clone()).collect();
+
+  for &module_idx in &ctx.chunk.modules {
+    let Some(normal_module) = ctx.link_output.module_table[module_idx].as_normal() else {
+      continue;
+    };
+    let meta = &ctx.link_output.metas[module_idx];
+    for &rec_idx in &meta.star_exports_from_external_modules {
+      let rec = &normal_module.import_records[rec_idx];
+      let Some(importee_idx) = rec.resolved_module else { continue };
+      let Some(importee) = ctx.link_output.module_table[importee_idx].as_external() else {
+        continue;
+      };
+      let path = importee.get_import_path(ctx.chunk, ctx.resolved_paths);
+      if already_added.contains(&path) {
+        // Already included as a named import dep — the star setter logic will be added there
+        // TODO: merge with existing dep entry
+        continue;
+      }
+      deps.push(DepEntry {
+        path,
+        bindings: vec![], // No named bindings — setter uses loop
+        is_side_effect_only: false,
+        is_star_reexport: true,
+      });
     }
   }
 
@@ -288,6 +322,21 @@ pub fn render_system<'code>(
     source_joiner.append_source(var_decls);
   }
 
+  // Task 4.5: _starExcludes object — emit before the return if any star re-export exists.
+  // Contains all own export names + "default" to prevent star re-exports from overriding them.
+  let has_star_reexport = deps.iter().any(|d| d.is_star_reexport);
+  if has_star_reexport {
+    let own_export_names = get_chunk_export_names_with_ctx(ctx);
+    let mut star_excludes = String::from("  var _starExcludes = { __proto__: null, default: 1");
+    for name in &own_export_names {
+      star_excludes.push_str(", ");
+      star_excludes.push_str(name);
+      star_excludes.push_str(": 1");
+    }
+    star_excludes.push_str(" };\n");
+    source_joiner.append_source(star_excludes);
+  }
+
   // Task 2.6: intro inside factory before module sources (after var decls)
   if let Some(intro) = intro {
     source_joiner.append_source(intro);
@@ -368,6 +417,27 @@ fn build_setters_str(ctx: &GenerateContext<'_>, deps: &[DepEntry<'_>]) -> String
   let mut setters: Vec<String> = Vec::with_capacity(deps.len());
 
   for dep in deps {
+    // Task 4.5: star re-export setter — loop over module keys filtering through _starExcludes
+    if dep.is_star_reexport {
+      // Generate: function(module) { var setter = {__proto__: null, ...named}; for (var name in module) { if (!_starExcludes[name]) setter[name] = module[name]; } exports(setter); }
+      let mut setter_body = String::new();
+      setter_body.push_str("      var setter = { __proto__: null");
+      for binding in &dep.bindings {
+        // Named bindings that are also in this dep (mixed dep)
+        setter_body.push_str(", ");
+        if let Some(re_export) = &binding.re_export_as {
+          setter_body.push_str(re_export);
+          setter_body.push_str(": module.");
+          setter_body.push_str(&binding.module_prop);
+        }
+      }
+      setter_body.push_str(" };\n");
+      setter_body.push_str("      for (var name in module) { if (!_starExcludes[name]) setter[name] = module[name]; }\n");
+      setter_body.push_str("      exports(setter);\n");
+      setters.push(concat_string!("function(module) {\n", setter_body, "    }"));
+      continue;
+    }
+
     if dep.is_side_effect_only || dep.bindings.is_empty() {
       // Task 4.3: null setter for side-effect-only dep
       if null_setters {

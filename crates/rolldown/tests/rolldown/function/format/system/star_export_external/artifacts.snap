@@ -6,9 +6,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-System.register([], (function() {
+System.register(["external-lib"], (function() {
 	"use strict";
-	return { execute: (function() {}) };
+	var _starExcludes = {
+		__proto__: null,
+		default: 1
+	};
+	return {
+		setters: [function(module) {
+			var setter = { __proto__: null };
+			for (var name in module) if (!_starExcludes[name]) setter[name] = module[name];
+			exports(setter);
+		}],
+		execute: (function() {})
+	};
 }));
 
 ```

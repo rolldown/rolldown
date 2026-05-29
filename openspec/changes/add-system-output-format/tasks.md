@@ -169,7 +169,7 @@ reference.
 - [x] 4.4 Implement re-export propagation in setters: single re-export →
       `exports('name', module.prop)`; multiple re-exports from same dep → batch
       object form `exports({ a: module.a, b: module.b })`
-- [ ] 4.5 Implement `_starExcludes` null-prototype object for `export *`:
+- [x] 4.5 Implement `_starExcludes` null-prototype object for `export *`:
       collect all own export names plus `"default"`, emit
       `var _starExcludes = { __proto__: null, default: 1, ownExport: 1 };`;
       setter loops over `module` keys filtering through `_starExcludes`
@@ -194,7 +194,7 @@ reference.
       `ignored-by-unsupported-features.md`. Run
       `pnpm --filter rollup-tests test -- --grep "system-null-setters"` and
       confirm it passes.
-- [ ] 4.11 **Rollup fixture (red → green)**: Remove
+- [x] 4.11 **Rollup fixture (red → green)**: Remove
       `rollup@form@system-reexports` from `ignored-by-unsupported-features.md`.
       Run that fixture and confirm it passes (validates re-export setter batch
       form and `_starExcludes`).

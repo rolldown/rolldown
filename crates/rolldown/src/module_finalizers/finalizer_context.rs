@@ -91,7 +91,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
         json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
         system_hoisted_stmts: vec![],
-        system_inline_export_stmts: vec![],
+        system_inline_export_stmts: vec![], // Vec<(pos, Vec<(export_names, local_name)>)>
       };
       finalizer.visit_program(oxc_program);
       (finalizer.transferred_import_record, finalizer.rendered_concatenated_wrapped_module_parts)

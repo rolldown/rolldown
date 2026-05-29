@@ -120,7 +120,7 @@ fn collect_deps<'a>(ctx: &'a GenerateContext<'_>) -> Vec<DepEntry<'a>> {
       let module_prop = ctx.render_export_items_index_vec[*exporter_chunk_idx]
         .get(&item.import_ref)
         .and_then(|names| names.first())
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .unwrap_or_else(|| local_name.to_string());
 
       bindings.push(DepBinding { local_name, module_prop, re_export_as: None });
@@ -177,7 +177,7 @@ fn collect_deps<'a>(ctx: &'a GenerateContext<'_>) -> Vec<DepEntry<'a>> {
           let re_export_as = ctx.render_export_items_index_vec[ctx.chunk_idx]
             .get(&named_import.imported_as)
             .and_then(|names| names.first())
-            .map(|s| s.to_string());
+            .map(std::string::ToString::to_string);
 
           bindings.push(DepBinding { local_name, module_prop, re_export_as });
         } else {
@@ -379,7 +379,7 @@ pub fn render_system<'code>(
   source_joiner.append_source(return_open);
 
   // Module sources go INSIDE the execute function body
-  for RenderedModuleSource { sources, .. } in module_sources.iter() {
+  for RenderedModuleSource { sources, .. } in module_sources {
     if let Some(emitted_sources) = sources {
       for source in emitted_sources.iter() {
         source_joiner.append_source(source);

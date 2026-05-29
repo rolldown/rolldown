@@ -177,8 +177,6 @@
 
 ### The `output.format` systemjs is not fully supported
 - rollup@form@system-export-rendering-compact: Renders updates of exported variables for SystemJS output in compact mode
-- rollup@form@system-export-rendering: Renders updates of exported variables for SystemJS output
-- rollup@form@system-export-destructuring-declaration: supports destructuring declarations for systemJS
 
 ### The `input.perf` and `bundle.getTimings()` is not supported
 

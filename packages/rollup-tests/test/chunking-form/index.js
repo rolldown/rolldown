@@ -9,13 +9,11 @@ const { rollup } = require('../../dist/rollup');
 const { compareLogs } = require('../utils');
 const { runTestSuiteWithSamples } = require('../utils.js');
 
-// `amd` and `system` formats are not supported by Rolldown yet
-// (bindingifyFormat in packages/rolldown/src/utils/bindingify-output-options.ts
-// throws `unimplemented`). Skip them so we don't burn a test run on a
-// known-unimplemented codepath. Rolldown supports es / cjs / iife / umd; the
-// chunking-form test suite only exercises es / cjs / amd / system, so the
-// runnable subset for us is es + cjs.
-const FORMATS = ['es', 'cjs'];
+// `amd` format is not supported by Rolldown.
+// `system` format is now supported — added to FORMATS.
+// Rolldown supports es / cjs / iife / umd / system; the chunking-form test
+// suite exercises es / cjs / amd / system, so the runnable subset is es + cjs + system.
+const FORMATS = ['es', 'cjs', 'system'];
 
 runTestSuiteWithSamples('chunking form', resolve(__dirname, '../../../../rollup/test/chunking-form/samples'), (directory, config) => {
 	(config.skip ? describe.skip : config.solo ? describe.only : describe)(

@@ -103,7 +103,6 @@ module.exports = [
   "rollup@form@reexport-external-namespace: re-exports * from external module (#791)@generates es",
   "rollup@form@reexport-used-external-namespace-as: reexport external namespace as name if the namespace is also used@generates es",
   "rollup@form@reserved-keywords-in-imports-exports: correctly handles reserved keywords in exports/imports@generates es",
-  "rollup@form@top-level-await: top-level await support@generates system",
   "rollup@form@undefined-default-export: handles default exporting undefined",
   "rollup@form@unmodified-default-exports-function-argument: passing unbound default export to function cannot rebind it",
   "rollup@form@yield-expression@missing-space: Inserts space when simplifying yield expression without space",
@@ -186,4 +185,8 @@ module.exports = [
   "rollup@form@system-module-reserved: does not output reserved system format identifiers@generates es",
   // system-reexports: dep order differs (star exports after named imports), separate var decls
   "rollup@form@system-reexports: merges reexports in systemjs",
+  // system-export-destructuring-declaration: DCE splits multi-declarators; behavior is correct
+  "rollup@form@system-export-destructuring-declaration: supports destructuring declarations for systemJS",
+  // system-export-rendering: DCE removes var bindings for write-only exported symbols; behavior correct
+  "rollup@form@system-export-rendering: Renders updates of exported variables for SystemJS output",
 ];

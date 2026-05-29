@@ -213,7 +213,7 @@ presence tracking.
       expressions to `module.import()`
 - [x] 5.3 Add `OutputFormat::System` branches for `import.meta` → `module.meta`
       and `import.meta.url` → `module.meta.url`
-- [ ] 5.4 Add `OutputFormat::System` branch for
+- [x] 5.4 Add `OutputFormat::System` branch for
       `import.meta.ROLLUP_FILE_URL_<refId>` →
       `new URL('<path>', module.meta.url).href`
 - [x] 5.5 **Fixture (red → green)**: Create
@@ -265,7 +265,7 @@ the correctness oracle wherever they exist.
       `crates/rolldown/tests/rolldown/function/format/system/export_postfix_inc/`
       — `export let n = 0; n++`. Implement postfix wrapping using the exact form
       determined in task 6.1.
-- [ ] 6.8 **Fixture (red → green)**: Create
+- [x] 6.8 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/export_destructuring/`
       — `export let a, b; [a, b] = fn()`. Implement destructuring assignment
       export wrapping.
@@ -289,17 +289,17 @@ the correctness oracle wherever they exist.
 - [x] 6.13 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/export_uninitialized/`
       — `export let x`. Verify correct handling of uninitialized exports.
-- [ ] 6.14 **Rollup fixture (red → green)**: Remove
+- [x] 6.14 **Rollup fixture (red → green)**: Remove
       `rollup@form@system-export-rendering` from
       `ignored-by-unsupported-features.md`. Run it and confirm it passes — this
       is the comprehensive live export correctness test.
-- [ ] 6.15 **Rollup fixture (red → green)**: Remove
+- [x] 6.15 **Rollup fixture (red → green)**: Remove
       `rollup@form@system-export-declarations` from
       `ignored-by-unsupported-features.md`. Run and confirm it passes.
-- [ ] 6.16 **Rollup fixture (red → green)**: Remove
+- [x] 6.16 **Rollup fixture (red → green)**: Remove
       `rollup@form@system-export-destructuring-declaration` from
       `ignored-by-unsupported-features.md`. Run and confirm it passes.
-- [ ] 6.17 **Rollup fixture (red → green)**: Remove
+- [x] 6.17 **Rollup fixture (red → green)**: Remove
       `rollup@form@system-multiple-export-bindings` from
       `ignored-by-unsupported-features.md`. Run and confirm it passes.
 - [x] 6.18 **Rollup fixture (red → green)**: Remove
@@ -326,7 +326,7 @@ imports as separate split points).
       with two chunks that circularly import from each other. Verify both chunks
       list each other in their deps arrays and setters capture the live
       bindings.
-- [ ] 7.4 **Rollup fixture (red → green)**: Add `'system'` to the formats list
+- [x] 7.4 **Rollup fixture (red → green)**: Add `'system'` to the formats list
       in `packages/rollup-tests/test/chunking-form/index.js`. Run chunking-form
       tests for system format and confirm they pass.
 
@@ -335,21 +335,21 @@ imports as separate split points).
 Handle the remaining rollup compatibility fixtures and edge cases not covered
 above.
 
-- [ ] 8.1 **Rollup fixture (red → green)**: Remove `rollup@form@system-comments`
+- [x] 8.1 **Rollup fixture (red → green)**: Remove `rollup@form@system-comments`
       from `ignored-by-unsupported-features.md`. Run and confirm leading comment
       placement is correct.
-- [ ] 8.2 **Rollup fixture (red → green)**: Remove
+- [x] 8.2 **Rollup fixture (red → green)**: Remove
       `rollup@form@system-default-comments` from
       `ignored-by-unsupported-features.md`. Run and confirm default export
       comment placement is correct.
-- [ ] 8.3 **Rollup fixture (red → green)**: Remove
+- [x] 8.3 **Rollup fixture (red → green)**: Remove
       `rollup@form@system-module-reserved` from
       `ignored-by-unsupported-features.md`. Run and confirm reserved identifier
       deconfliction is correct (also removes the `@generates es` variant).
-- [ ] 8.4 **Rollup fixture (red → green)**: Remove
+- [x] 8.4 **Rollup fixture (red → green)**: Remove
       `rollup@form@system-semicolon` from `ignored-by-unsupported-features.md`.
       Run and confirm ASI handling in SystemJS output is correct.
-- [ ] 8.5 **Rollup fixture (red → green)**: Remove
+- [x] 8.5 **Rollup fixture (red → green)**: Remove
       `rollup@form@modify-export-semi` from
       `ignored-by-unsupported-features.md`. Run and confirm semicolon insertion
       at export modification sites is correct.
@@ -373,7 +373,7 @@ above.
       become `async function` currently) — identify where the TLA flag lives
 - [x] 9.2 Implement `async execute` emission in `render_system()` gated on the
       TLA flag from task 9.1
-- [ ] 9.3 **Rollup fixture (red → green)**: The
+- [x] 9.3 **Rollup fixture (red → green)**: The
       `rollup@form@top-level-await@generates system` test is currently in
       `ignored-passed-snapshot-different-tests.js`. After implementing TLA,
       remove it from there if the snapshot now matches.
@@ -382,7 +382,7 @@ above.
 
 - [x] 10.1 Replace all `todo!()` stubs introduced in task 1.7 with correct
       implementations
-- [ ] 10.2 Run full Rollup form+chunking-form test suite:
+- [x] 10.2 Run full Rollup form+chunking-form test suite:
       `just test-node-rollup` — confirm all 16 previously-skipped SystemJS
       fixtures now pass; update `packages/rollup-tests/src/status.md` and
       `status.json`
@@ -391,7 +391,7 @@ above.
 - [ ] 10.4 Run `just roll` (build + lint + test everything) — confirm clean
 - [x] 10.5 Update `packages/rolldown/src/options/output-options.ts` JSDoc for
       `format` to mention `"system"`
-- [ ] 10.6 Update rolldown docs (`docs/`) to list SystemJS as a supported format
+- [x] 10.6 Update rolldown docs (`docs/`) to list SystemJS as a supported format
 - [x] 10.7 Add `"system"` to `OutputFormat` enum in
       `crates/rolldown_testing/_config.schema.json` so fixtures using
       `"format": "system"` pass JSON schema validation

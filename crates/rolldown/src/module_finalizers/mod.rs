@@ -35,6 +35,10 @@ use sugar_path::SugarPath;
 use crate::hmr::utils::HmrAstBuilder;
 use crate::utils::external_import_interop::import_record_needs_interop;
 
+/// One entry in `system_inline_export_stmts`: (insert_position, pairs).
+/// Each pair is (export_names_for_this_binding, local_canonical_name).
+type SystemInlineExportStmt = (usize, Vec<(Vec<CompactStr>, CompactStr)>);
+
 mod hmr;
 mod rename;
 
@@ -97,9 +101,9 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   /// at the TOP of the execute body. For function declarations — hoisted by JS, so the binding
   /// is available even before its textual position.
   pub system_hoisted_stmts: Vec<(Vec<CompactStr>, CompactStr)>,
-  /// For SystemJS: (insert_position, export_names, local_canonical_name) for inline exports
-  /// to inject AFTER their declaration (e.g., `exports("p", p)` after `var p;`).
-  pub system_inline_export_stmts: Vec<(usize, Vec<CompactStr>, CompactStr)>,
+  /// For SystemJS: (insert_position, pairs) where pairs is a vec of (export_names, local_name).
+  /// For single bindings: pairs has one entry. For destructuring batch: pairs has multiple entries.
+  pub system_inline_export_stmts: Vec<SystemInlineExportStmt>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -1003,8 +1007,59 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
       let property_name = member_expr.property.name.as_str();
 
-      // Task 5.3: For SystemJS, rewrite `import.meta.xxx` → `module.meta.xxx`
+      // Task 5.3 + 5.4: For SystemJS, rewrite `import.meta.xxx` → `module.meta.xxx`
+      // Exception: ROLLUP_FILE_URL_<refId> uses `new URL(path, module.meta.url).href`
       if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
+        // Task 5.4: `import.meta.ROLLUP_FILE_URL_<refId>` → `new URL('<path>', module.meta.url).href`
+        if property_name.starts_with("ROLLUP_FILE_URL_") {
+          if let Some(reference_id) = property_name.strip_prefix("ROLLUP_FILE_URL_") {
+            let Ok(asset_file_name) = self.ctx.file_emitter.get_file_name(reference_id) else {
+              return None;
+            };
+            let absolute_asset_file_name = asset_file_name
+              .absolutize_with(self.ctx.options.cwd.as_path().join(&self.ctx.options.out_dir));
+            let relative_asset_path = &self.ctx.chunk.relative_path_for(&absolute_asset_file_name);
+            // `module.meta.url`
+            let module_meta_url = ast::Expression::StaticMemberExpression(
+              self.snippet.builder.alloc_static_member_expression(
+                SPAN,
+                ast::Expression::StaticMemberExpression(
+                  self.snippet.builder.alloc_static_member_expression(
+                    SPAN,
+                    self.snippet.builder.expression_identifier(SPAN, "module"),
+                    self.snippet.builder.identifier_name(SPAN, "meta"),
+                    false,
+                  ),
+                ),
+                self.snippet.builder.identifier_name(SPAN, "url"),
+                false,
+              ),
+            );
+            // `new URL(path, module.meta.url).href`
+            let new_url_href = ast::Expression::StaticMemberExpression(
+              self.snippet.builder.alloc_static_member_expression(
+                SPAN,
+                self.snippet.builder.expression_new(
+                  SPAN,
+                  self.snippet.builder.expression_identifier(SPAN, "URL"),
+                  NONE,
+                  self.snippet.builder.vec_from_array([
+                    ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
+                      SPAN,
+                      self.snippet.builder.str(relative_asset_path),
+                      None,
+                    )),
+                    ast::Argument::from(module_meta_url),
+                  ]),
+                ),
+                self.snippet.builder.identifier_name(SPAN, "href"),
+                false,
+              ),
+            );
+            return Some(new_url_href);
+          }
+        }
+
         // `module.meta`
         let module_meta = ast::Expression::StaticMemberExpression(
           self.snippet.builder.alloc_static_member_expression(
@@ -1850,10 +1905,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               let final_init = if matches!(self.ctx.options.format, OutputFormat::System) {
                 let default_export_names =
                   self.system_export_names_for_symbol(self.ctx.module.default_export_ref.symbol);
-                if !default_export_names.is_empty() {
-                  self.build_exports_call(&default_export_names, init_expr)
-                } else {
+                if default_export_names.is_empty() {
                   init_expr
+                } else {
+                  self.build_exports_call(&default_export_names, init_expr)
                 }
               } else {
                 init_expr
@@ -1985,12 +2040,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               if let Some(class_id) = &class_decl.id {
                 if let Some(symbol_id) = class_id.symbol_id.get() {
                   let export_names = self.system_export_names_for_symbol(symbol_id);
-                  if !export_names.is_empty() {
+                  if export_names.is_empty() {
+                    None
+                  } else {
                     let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
                     let canonical_name = self.canonical_name_for(symbol_ref);
                     Some((export_names, canonical_name.into()))
-                  } else {
-                    None
                   }
                 } else {
                   None
@@ -2173,6 +2228,49 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  /// Recursively collect all exported bindings from a destructuring pattern.
+  /// Each entry is (export_name, canonical_local_name).
+  /// Used for `const {a, b} = obj` where `a`, `b` are exported → `exports({a: a, b: b})`.
+  pub fn collect_destructuring_system_exports(
+    &self,
+    pattern: &ast::BindingPattern<'ast>,
+    out: &mut Vec<(CompactStr, CompactStr)>,
+  ) {
+    match pattern {
+      ast::BindingPattern::BindingIdentifier(id) => {
+        if let Some(symbol_id) = id.symbol_id.get() {
+          let export_names = self.system_export_names_for_symbol(symbol_id);
+          if !export_names.is_empty() {
+            let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+            let canonical_name = self.canonical_name_for(symbol_ref);
+            for export_name in export_names {
+              out.push((export_name, canonical_name.into()));
+            }
+          }
+        }
+      }
+      ast::BindingPattern::ObjectPattern(obj) => {
+        for prop in &obj.properties {
+          self.collect_destructuring_system_exports(&prop.value, out);
+        }
+        if let Some(rest) = &obj.rest {
+          self.collect_destructuring_system_exports(&rest.argument, out);
+        }
+      }
+      ast::BindingPattern::ArrayPattern(arr) => {
+        for elem in arr.elements.iter().flatten() {
+          self.collect_destructuring_system_exports(elem, out);
+        }
+        if let Some(rest) = &arr.rest {
+          self.collect_destructuring_system_exports(&rest.argument, out);
+        }
+      }
+      ast::BindingPattern::AssignmentPattern(assign) => {
+        self.collect_destructuring_system_exports(&assign.left, out);
+      }
+    }
+  }
+
   /// Inserts SystemJS inline export statements (e.g. `exports("p", p)` after uninitialized
   /// declarations) at their target positions in the program body.
   fn insert_system_inline_export_stmts(
@@ -2181,13 +2279,48 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) {
     // Sort by position descending so earlier insertions don't shift later positions
     let mut to_insert = std::mem::take(&mut self.system_inline_export_stmts);
-    to_insert.sort_by(|a, b| b.0.cmp(&a.0));
-    for (pos, export_names, local_name) in to_insert {
-      let ref_expr = Expression::Identifier(
-        self.snippet.builder.alloc_identifier_reference(SPAN, self.snippet.atom(local_name.as_str())),
-      );
-      let exports_call = self.build_exports_call(&export_names, ref_expr);
-      let stmt = self.snippet.builder.statement_expression(SPAN, exports_call);
+    to_insert.sort_by_key(|entry: &SystemInlineExportStmt| std::cmp::Reverse(entry.0));
+    for (pos, pairs) in to_insert {
+      // Build the export call(s). For a single pair: exports("name", val).
+      // For multiple pairs: exports({ name1: val1, name2: val2 }).
+      let stmt = if pairs.len() == 1 {
+        let (export_names, local_name) = &pairs[0];
+        let ref_expr = Expression::Identifier(
+          self.snippet.builder.alloc_identifier_reference(SPAN, self.snippet.atom(local_name.as_str())),
+        );
+        let exports_call = self.build_exports_call(export_names, ref_expr);
+        self.snippet.builder.statement_expression(SPAN, exports_call)
+      } else {
+        // Batch form: exports({ name1: local1, name2: local2 })
+        let props = self.snippet.builder.vec_from_iter(pairs.iter().map(|(export_names, local_name)| {
+          // Use the first export name (typically there's only one)
+          let key_atom = self.snippet.atom(export_names[0].as_str());
+          let key = ast::PropertyKey::StaticIdentifier(
+            self.snippet.builder.alloc_identifier_name(SPAN, key_atom),
+          );
+          let val = Expression::Identifier(
+            self.snippet.builder.alloc_identifier_reference(SPAN, self.snippet.atom(local_name.as_str())),
+          );
+          ast::ObjectPropertyKind::ObjectProperty(
+            self.snippet.builder.alloc_object_property(
+              SPAN,
+              ast::PropertyKind::Init,
+              key,
+              val,
+              false,
+              false,
+              false,
+            ),
+          )
+        }));
+        let obj = Expression::ObjectExpression(
+          self.snippet.builder.alloc_object_expression(SPAN, props),
+        );
+        let exports_id = self.snippet.builder.expression_identifier(SPAN, "exports");
+        let args = self.snippet.builder.vec_from_array([ast::Argument::from(obj)]);
+        let call = self.snippet.builder.alloc_call_expression(SPAN, exports_id, NONE, args, false);
+        self.snippet.builder.statement_expression(SPAN, Expression::CallExpression(call))
+      };
       let clamped = pos.min(statements.len());
       statements.insert(clamped, stmt);
     }
@@ -2670,7 +2803,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   // =====================================================================
 
   /// Get the SymbolId for the target of a SimpleAssignmentTarget (if it's a plain identifier).
-  #[allow(dead_code)]
+  #[expect(dead_code)]
   fn assignment_target_symbol_id(
     &self,
     target: &ast::SimpleAssignmentTarget<'ast>,
@@ -2698,18 +2831,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<Vec<CompactStr>> {
     match expr {
       ast::Expression::AssignmentExpression(assign_expr) => {
-        let id_ref = match &assign_expr.left {
-          ast::AssignmentTarget::AssignmentTargetIdentifier(id_ref) => id_ref,
-          _ => return None,
+        let ast::AssignmentTarget::AssignmentTargetIdentifier(id_ref) = &assign_expr.left else {
+          return None;
         };
         let symbol_id = self.identifier_ref_symbol_id(id_ref)?;
         let names = self.system_export_names_for_symbol(symbol_id);
         if names.is_empty() { None } else { Some(names) }
       }
       ast::Expression::UpdateExpression(update_expr) => {
-        let id_ref = match &update_expr.argument {
-          ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(id_ref) => id_ref,
-          _ => return None,
+        let ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(id_ref) =
+          &update_expr.argument
+        else {
+          return None;
         };
         let symbol_id = self.identifier_ref_symbol_id(id_ref)?;
         let names = self.system_export_names_for_symbol(symbol_id);

@@ -772,6 +772,26 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // keep_name transformation
     match it {
       ast::Declaration::VariableDeclaration(decl) => {
+        // Task 6.8: For SystemJS destructuring declarations, collect exported bindings
+        // and emit a batch exports({a: a, b: b}) after the entire declaration.
+        if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
+          let mut batch_exports: Vec<(CompactStr, CompactStr)> = vec![]; // (export_name, local_name)
+          for d in &decl.declarations {
+            // Only collect from ObjectPattern/ArrayPattern — BindingIdentifier is handled individually
+            if !matches!(d.id, ast::BindingPattern::BindingIdentifier(_)) {
+              self.collect_destructuring_system_exports(&d.id, &mut batch_exports);
+            }
+          }
+          let insert_pos = self.cur_stmt_index + 1;
+          if !batch_exports.is_empty() {
+            let pairs: Vec<(Vec<CompactStr>, CompactStr)> = batch_exports
+              .into_iter()
+              .map(|(export_name, local_name)| (vec![export_name], local_name))
+              .collect();
+            self.system_inline_export_stmts.push((insert_pos, pairs));
+          }
+        }
+
         for decl in &mut decl.declarations {
           let BindingPattern::BindingIdentifier(id) = &decl.id else { continue };
 
@@ -808,8 +828,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                 let insert_pos = self.cur_stmt_index + 1;
                 self.system_inline_export_stmts.push((
                   insert_pos,
-                  export_names,
-                  canonical_name.into(),
+                  vec![(export_names, canonical_name.into())],
                 ));
               }
             }

@@ -1,14 +1,31 @@
 # Non ESM Output Formats
 
-Rolldown supports non-ESM output formats. Some features in ESM are not supported in non-ESM formats and Rolldown will emit messages or provide polyfills for them.
+Rolldown supports non-ESM output formats: `cjs`, `iife`, `umd`, and `system`
+(SystemJS). Some features in ESM are not supported in non-ESM formats and
+Rolldown will emit messages or provide polyfills for them.
+
+## SystemJS (`system`)
+
+Rolldown supports [SystemJS](https://github.com/systemjs/systemjs) output format
+(`format: 'system'`). This is the only non-ESM format that supports native code
+splitting. Key features:
+
+- `import()` is rewritten to `module.import()`
+- `import.meta` is rewritten to `module.meta`
+- Top-level await is supported (emits `async function` execute)
+- Live export bindings via `exports()` calls
+- Ordered setters array for dependency bindings
 
 ## Top Level Await
 
-Top level await is not supported in non-ESM formats. Rolldown outputs an error if it encounters top level await when the output format is not ESM.
+Top level await is not supported in CJS, IIFE, or UMD formats. Rolldown outputs
+an error if it encounters top level await when the output format is not ESM or
+SystemJS.
 
 ## `import.meta`
 
-`import.meta` is a syntax error in non-ESM formats. To avoid that from happening, Rolldown replaces `import.meta` with other values.
+`import.meta` is a syntax error in non-ESM formats. To avoid that from
+happening, Rolldown replaces `import.meta` with other values.
 
 ### Well-known `import.meta` properties
 
@@ -18,11 +35,16 @@ Rolldown supports the following well-known `import.meta` properties:
 - `import.meta.dirname`
 - `import.meta.filename`
 
-These properties are polyfilled when the output format is CJS. In other formats, it will be handled as same as the other properties.
+These properties are polyfilled when the output format is CJS. For SystemJS,
+`import.meta` is rewritten to `module.meta` and `import.meta.url` becomes
+`module.meta.url`. In other formats, it will be handled as same as the other
+properties.
 
 :::: tip Polyfilling `import.meta.url` in IIFE and UMD
 
-Rollup supports polyfilling `import.meta.url` in IIFE and UMD formats. However, Rolldown does not support this feature. If you need to polyfill it, you can use the following config:
+Rollup supports polyfilling `import.meta.url` in IIFE and UMD formats. However,
+Rolldown does not support this feature. If you need to polyfill it, you can use
+the following config:
 
 ::: code-group
 
@@ -72,4 +94,5 @@ export default defineConfig({
 
 ### Other properties and `import.meta` object itself
 
-Other properties and `import.meta` object itself are replaced with `{}`. Since this does not keep the original value, Rolldown emits a warning in this case.
+Other properties and `import.meta` object itself are replaced with `{}`. Since
+this does not keep the original value, Rolldown emits a warning in this case.

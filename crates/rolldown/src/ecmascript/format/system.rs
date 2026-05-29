@@ -34,13 +34,35 @@ use crate::{
   utils::chunk::render_chunk_exports::get_chunk_export_names_with_ctx,
 };
 
-/// Returns `true` if the chunk uses any dynamic import or `import.meta` — meaning
-/// the SystemJS `module` parameter must be included in the factory signature.
+/// Returns `true` if any module in this chunk uses dynamic import or `import.meta`,
+/// meaning the SystemJS `module` factory parameter must be included in the signature.
 ///
-/// This is a stub that always returns `false` until group 5 implements proper tracking.
-fn chunk_uses_module_context(_ctx: &GenerateContext<'_>) -> bool {
-  // TODO (task 5.1): inspect chunk modules for dynamic imports / import.meta usage
-  false
+/// Dynamic import presence → the finalizer rewrites `import()` → `module.import()`.
+/// import.meta presence → the finalizer rewrites `import.meta` → `module.meta`.
+/// Either requires the `module` parameter to be in scope.
+fn chunk_uses_module_context(ctx: &GenerateContext<'_>) -> bool {
+  use rolldown_common::{ImportKind, ImportRecordMeta};
+
+  ctx.chunk.modules.iter().any(|&module_idx| {
+    let Some(normal_module) = ctx.link_output.module_table[module_idx].as_normal() else {
+      return false;
+    };
+
+    // Check for live dynamic imports (not dead, not in code-split-disabled context)
+    let has_dynamic_import = normal_module.import_records.iter().any(|rec| {
+      matches!(rec.kind, ImportKind::DynamicImport)
+        && !rec.meta.contains(ImportRecordMeta::DeadDynamicImport)
+    });
+
+    if has_dynamic_import {
+      return true;
+    }
+
+    // Check for import.meta usage: scan the source for "import.meta" substring.
+    // This is a conservative heuristic — the actual rewrite happens in the finalizer.
+    // A proper solution would add a pre-computed flag during AST scanning (task 5.1 future work).
+    normal_module.source.contains("import.meta")
+  })
 }
 
 /// One dependency entry — its import path and the bindings imported from it.

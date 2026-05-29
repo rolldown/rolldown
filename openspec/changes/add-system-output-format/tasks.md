@@ -204,24 +204,24 @@ reference.
 Implement dynamic import and import.meta rewriting, and the `module` parameter
 presence tracking.
 
-- [ ] 5.1 Add logic to track whether a chunk uses dynamic import or
+- [x] 5.1 Add logic to track whether a chunk uses dynamic import or
       `import.meta` (store as a flag on `GenerateContext` or compute from the
       module table); use this flag in group 2 task 2.3 for factory parameter
       emission
-- [ ] 5.2 Add `OutputFormat::System` branch in the module finalizer
+- [x] 5.2 Add `OutputFormat::System` branch in the module finalizer
       (`crates/rolldown/src/module_finalizers/mod.rs`) to rewrite `import()`
       expressions to `module.import()`
-- [ ] 5.3 Add `OutputFormat::System` branches for `import.meta` → `module.meta`
+- [x] 5.3 Add `OutputFormat::System` branches for `import.meta` → `module.meta`
       and `import.meta.url` → `module.meta.url`
 - [ ] 5.4 Add `OutputFormat::System` branch for
       `import.meta.ROLLUP_FILE_URL_<refId>` →
       `new URL('<path>', module.meta.url).href`
-- [ ] 5.5 **Fixture (red → green)**: Create
+- [x] 5.5 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/dynamic_import/`
       with `main.js` that does `const m = await import('./lazy.js')` and a
       `lazy.js`. Verify snapshot shows `module.import('./lazy.js')` and factory
       signature includes `module` parameter.
-- [ ] 5.6 **Fixture (red → green)**: Create
+- [x] 5.6 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/import_meta_url/`
       with `main.js` that uses `import.meta.url`. Verify snapshot shows
       `module.meta.url` and factory includes `module` parameter.

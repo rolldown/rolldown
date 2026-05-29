@@ -980,6 +980,30 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       );
 
       let property_name = member_expr.property.name.as_str();
+
+      // Task 5.3: For SystemJS, rewrite `import.meta.xxx` → `module.meta.xxx`
+      if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
+        // `module.meta`
+        let module_meta = ast::Expression::StaticMemberExpression(
+          self.snippet.builder.alloc_static_member_expression(
+            SPAN,
+            self.snippet.builder.expression_identifier(SPAN, "module"),
+            self.snippet.builder.identifier_name(SPAN, "meta"),
+            false,
+          ),
+        );
+        // `module.meta.<property>`
+        let rewritten = ast::Expression::StaticMemberExpression(
+          self.snippet.builder.alloc_static_member_expression(
+            original_expr_span,
+            module_meta,
+            self.snippet.builder.identifier_name(SPAN, property_name),
+            false,
+          ),
+        );
+        return Some(rewritten);
+      }
+
       match property_name {
         // Try to polyfill `import.meta.url`
         "url" => {
@@ -2319,6 +2343,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           return true;
         }
 
+        // Task 5.2: For SystemJS, rewrite `import('./chunk.js')` → `module.import('./chunk.js')`
+        if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
+          let source = expr.source.take_in(self.alloc);
+          *node = self.build_module_import_call(source, expr.span);
+          return true;
+        }
+
         needs_to_esm_helper = importee.exports_kind.is_commonjs();
       }
       Module::External(importee) => {
@@ -2327,6 +2358,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           expr.source = Expression::StringLiteral(
             self.snippet.alloc_string_literal(&import_path, expr.source.span()),
           );
+        }
+        // Task 5.2: For SystemJS, rewrite `import("external")` → `module.import("external")`
+        if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
+          let source = expr.source.take_in(self.alloc);
+          *node = self.build_module_import_call(source, expr.span);
+          return true;
         }
         // Convert `import("external")` to `Promise.resolve().then(() => __toESM(require("external")))`
         // when format is CJS and dynamicImportInCjs is false
@@ -2491,5 +2528,33 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
 
     Some(())
+  }
+
+  /// Build a `module.import(source)` call expression for SystemJS dynamic imports.
+  ///
+  /// SystemJS exposes a `module` factory parameter. Dynamic `import(source)` must be
+  /// rewritten to `module.import(source)` so the SystemJS runtime handles the load.
+  fn build_module_import_call(
+    &self,
+    source: Expression<'ast>,
+    span: oxc::span::Span,
+  ) -> Expression<'ast> {
+    // `module.import`
+    let callee = ast::Expression::StaticMemberExpression(
+      self.snippet.builder.alloc_static_member_expression(
+        SPAN,
+        self.snippet.builder.expression_identifier(SPAN, "module"),
+        self.snippet.builder.identifier_name(SPAN, "import"),
+        false,
+      ),
+    );
+    // `module.import(source)`
+    ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+      span,
+      callee,
+      oxc::ast::NONE,
+      self.snippet.builder.vec1(ast::Argument::from(source)),
+      false,
+    ))
   }
 }

@@ -78,7 +78,9 @@ pub fn deconflict_chunk_symbols(
     }
     ChunkKind::Common => {}
   }
-  if matches!(format, OutputFormat::Esm) {
+  // ESM and System: add external import symbols to canonical_names so they can be
+  // referenced in the module body (and in System setters/var declarations).
+  if matches!(format, OutputFormat::Esm | OutputFormat::System) {
     chunk.direct_imports_from_external_modules.iter().for_each(|(module, _)| {
       let db = link_output.symbol_db.local_db(*module);
       db.classic_data.iter_enumerated().for_each(|(symbol, _)| {

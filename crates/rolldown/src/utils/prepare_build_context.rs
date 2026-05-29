@@ -462,7 +462,15 @@ pub fn prepare_build_context(
     clean_dir: raw_options.clean_dir.unwrap_or(false),
     context: raw_options.context.unwrap_or_default(),
     strict_execution_order: raw_options.strict_execution_order.unwrap_or(false),
-    strict: raw_options.strict.unwrap_or_default(),
+    // Rollup defaults strict to `true` for SystemJS format (always emit 'use strict').
+    // For all other formats, keep the existing default (Auto).
+    strict: raw_options.strict.unwrap_or_else(|| {
+      if matches!(format, OutputFormat::System) {
+        rolldown_common::StrictMode::Always
+      } else {
+        rolldown_common::StrictMode::default()
+      }
+    }),
     system_null_setters: raw_options.system_null_setters.unwrap_or(true),
   };
 

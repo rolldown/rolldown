@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 System.register(["dep"], (function(exports) {
+	"use strict";
 	var foo;
 	return {
 		setters: [function(module) {

@@ -7,12 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 System.register([], (function(exports) {
-	return {
-		setters: [],
-		execute: (function() {
-			//#endregion
-		})
-	};
+	"use strict";
+	return { execute: (function() {
+		//#endregion
+	}) };
 }));
 
 ```

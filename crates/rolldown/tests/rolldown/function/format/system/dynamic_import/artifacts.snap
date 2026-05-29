@@ -7,13 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 System.register([], (function(exports) {
-	return {
-		setters: [],
-		execute: (function() {
-			exports("value", 42);
-			//#endregion
-		})
-	};
+	"use strict";
+	return { execute: (function() {
+		exports("value", 42);
+		//#endregion
+	}) };
 }));
 
 ```
@@ -22,18 +20,16 @@ System.register([], (function(exports) {
 
 ```js
 System.register([], (function(module) {
-	return {
-		setters: [],
-		execute: (function() {
-			//#region main.js
-			async function run() {
-				const m = await module.import("./lazy.js");
-				console.log(m.value);
-			}
-			run();
-			//#endregion
-		})
-	};
+	"use strict";
+	return { execute: (function() {
+		//#region main.js
+		async function run() {
+			const m = await module.import("./lazy.js");
+			console.log(m.value);
+		}
+		run();
+		//#endregion
+	}) };
 }));
 
 ```

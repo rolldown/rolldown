@@ -7,13 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 System.register([], (function(exports) {
-	return {
-		setters: [],
-		execute: (async function() {
-			exports("data", await Promise.resolve(42));
-			//#endregion
-		})
-	};
+	"use strict";
+	return { execute: (async function() {
+		exports("data", await Promise.resolve(42));
+		//#endregion
+	}) };
 }));
 
 ```

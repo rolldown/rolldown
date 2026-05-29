@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 System.register(["./shared.js"], (function() {
+	"use strict";
 	var shared;
 	return {
 		setters: [function(module) {
@@ -26,6 +27,7 @@ System.register(["./shared.js"], (function() {
 
 ```js
 System.register(["./shared.js"], (function() {
+	"use strict";
 	var shared;
 	return {
 		setters: [function(module) {
@@ -45,13 +47,11 @@ System.register(["./shared.js"], (function() {
 
 ```js
 System.register([], (function(exports) {
-	return {
-		setters: [],
-		execute: (function() {
-			exports("shared", "shared value");
-			//#endregion
-		})
-	};
+	"use strict";
+	return { execute: (function() {
+		exports("shared", "shared value");
+		//#endregion
+	}) };
 }));
 
 ```

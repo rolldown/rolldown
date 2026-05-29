@@ -1823,8 +1823,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 }
               }
 
+              // For SystemJS: wrap the init with exports("default", init) so the runtime
+              // is notified of the default export value.
+              let final_init = if matches!(self.ctx.options.format, OutputFormat::System) {
+                let default_export_names =
+                  self.system_export_names_for_symbol(self.ctx.module.default_export_ref.symbol);
+                if !default_export_names.is_empty() {
+                  self.build_exports_call(&default_export_names, init_expr)
+                } else {
+                  init_expr
+                }
+              } else {
+                init_expr
+              };
               top_stmt =
-                self.snippet.var_decl_stmt(canonical_name_for_default_export_ref, init_expr);
+                self.snippet.var_decl_stmt(canonical_name_for_default_export_ref, final_init);
             }
             ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
               // "export default function() {}" => "function default() {}"
@@ -2535,6 +2548,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   // =====================================================================
 
   /// Get the SymbolId for the target of a SimpleAssignmentTarget (if it's a plain identifier).
+  #[allow(dead_code)]
   fn assignment_target_symbol_id(
     &self,
     target: &ast::SimpleAssignmentTarget<'ast>,

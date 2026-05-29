@@ -136,8 +136,13 @@ fn collect_deps<'a>(ctx: &'a GenerateContext<'_>) -> Vec<DepEntry<'a>> {
 
     let path = importee.get_import_path(ctx.chunk, ctx.resolved_paths);
 
-    // Check if this external's namespace is used (i.e. not just side effects)
-    let ns_used = ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref);
+    // Check if any binding from this external is used (named imports OR namespace).
+    // ESM checks canonical_ref of imported_as, not the namespace_ref.
+    let ns_used = ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref)
+      || named_imports.iter().any(|(_, ni)| {
+        let cr = ctx.link_output.symbol_db.canonical_ref_for(ni.imported_as);
+        ctx.link_output.used_symbol_refs.contains(&cr)
+      });
 
     let mut bindings: Vec<DepBinding<'a>> = Vec::new();
     if ns_used {
@@ -305,17 +310,24 @@ pub fn render_system<'code>(
   let has_tla = chunk_has_top_level_await(ctx);
   let execute_fn = if has_tla { "async function" } else { "function" };
 
-  let setters_str =
-    if setters.is_empty() { String::new() } else { concat_string!("\n    ", setters, "\n  ") };
-  source_joiner.append_source(concat_string!(
-    "  return {\n",
-    "    setters: [",
-    setters_str,
-    "],\n",
-    "    execute: (",
-    execute_fn,
-    " () {\n"
-  ));
+  // Rollup omits `setters: []` entirely when the deps array is empty.
+  // Only emit setters when there are actual dependencies.
+  let return_open = if deps.is_empty() {
+    // No deps: compact form `return { execute: (function () {`
+    concat_string!("  return { execute: (", execute_fn, " () {\n")
+  } else {
+    let setters_str = concat_string!("\n    ", setters, "\n  ");
+    concat_string!(
+      "  return {\n",
+      "    setters: [",
+      setters_str,
+      "],\n",
+      "    execute: (",
+      execute_fn,
+      " () {\n"
+    )
+  };
+  source_joiner.append_source(return_open);
 
   // Module sources go INSIDE the execute function body
   for RenderedModuleSource { sources, .. } in module_sources.iter() {
@@ -332,7 +344,9 @@ pub fn render_system<'code>(
   }
 
   // Close execute function and return object, then factory and System.register
-  source_joiner.append_source("    })\n  };\n}));\n");
+  // Match the opening format: compact when no deps, multiline when there are deps.
+  let return_close = if deps.is_empty() { "  }) };\n}));\n" } else { "    })\n  };\n}));\n" };
+  source_joiner.append_source(return_close);
 
   // Task 2.6: footer after closing wrapper
   if let Some(footer) = footer {

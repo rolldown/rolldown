@@ -311,17 +311,17 @@ the correctness oracle wherever they exist.
 Verify that SystemJS correctly handles multiple chunks (static deps and dynamic
 imports as separate split points).
 
-- [ ] 7.1 **Fixture (red → green)**: Create
+- [x] 7.1 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/code_split_dynamic/`
       with `main.js` dynamically importing `./lazy.js` which exports a value.
       Verify: two chunks produced; main uses `module.import('./lazy.js')`; lazy
       chunk wraps its export in `System.register`.
-- [ ] 7.2 **Fixture (red → green)**: Create
+- [x] 7.2 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/code_split_static/`
       where a shared chunk is statically imported by two entry points. Verify
       the shared chunk appears in each entry's deps array with a corresponding
       setter.
-- [ ] 7.3 **Fixture (red → green)**: Create
+- [x] 7.3 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/circular_chunks/`
       with two chunks that circularly import from each other. Verify both chunks
       list each other in their deps arrays and setters capture the live

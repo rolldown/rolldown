@@ -1,0 +1,10 @@
+{
+  "config": {
+    "format": "system",
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "entry2", "import": "./entry2.js" }
+    ]
+  },
+  "expectExecuted": false
+}

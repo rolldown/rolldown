@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry2.js
+
+```js
+System.register(["./shared.js"], (function() {
+	var shared;
+	return {
+		setters: [function(module) {
+			shared = module.shared;
+		}],
+		execute: (function() {
+			//#region entry2.js
+			console.log(shared + 1);
+			//#endregion
+		})
+	};
+}));
+
+```
+
+## main.js
+
+```js
+System.register(["./shared.js"], (function() {
+	var shared;
+	return {
+		setters: [function(module) {
+			shared = module.shared;
+		}],
+		execute: (function() {
+			//#region main.js
+			console.log(shared);
+			//#endregion
+		})
+	};
+}));
+
+```
+
+## shared.js
+
+```js
+System.register([], (function(exports) {
+	return {
+		setters: [],
+		execute: (function() {
+			exports("shared", "shared value");
+			//#endregion
+		})
+	};
+}));
+
+```

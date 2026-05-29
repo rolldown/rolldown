@@ -1,8 +1,9 @@
 [package]
 name = "rolldown_sourcemap"
-version = "0.1.0"
+version = "1.0.3"
 publish = true
 description = "Source map generation and manipulation for Rolldown"
+readme = "../../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

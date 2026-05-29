@@ -17,6 +17,21 @@ pub struct DecoratorOptions {
   /// @see https://www.typescriptlang.org/tsconfig/#emitDecoratorMetadata
   /// @default false
   pub emit_decorator_metadata: Option<bool>,
+
+  /// Controls whether `null` and `undefined` are elided from union `design:type`
+  /// metadata emitted when `emit_decorator_metadata` is enabled.
+  ///
+  /// When `true` (the default), strict TypeScript semantics are preserved, e.g.
+  /// `string | null` emits `Object`. When `false`, it matches
+  /// `babel-plugin-transform-typescript-metadata` and `tsc` with `--strictNullChecks=false`,
+  /// emitting the underlying primitive constructor, e.g. `string | null` emits `String`.
+  ///
+  /// This option the same as [strictNullChecks](https://www.typescriptlang.org/tsconfig/#strictNullChecks)
+  /// in TypeScript, and it only has an effect when `emit_decorator_metadata` is true.
+  ///
+  /// @see https://www.typescriptlang.org/tsconfig/#strictNullChecks
+  /// @default true
+  pub strict_null_checks: Option<bool>,
 }
 
 impl From<DecoratorOptions> for oxc::transformer::DecoratorOptions {
@@ -24,6 +39,9 @@ impl From<DecoratorOptions> for oxc::transformer::DecoratorOptions {
     Self {
       legacy: options.legacy.unwrap_or_default(),
       emit_decorator_metadata: options.emit_decorator_metadata.unwrap_or_default(),
+      // Oxc defaults `strict_null_checks` to `true` (preserving strict tsc semantics),
+      // so mirror that default when the option is not explicitly set.
+      strict_null_checks: options.strict_null_checks.unwrap_or(true),
     }
   }
 }

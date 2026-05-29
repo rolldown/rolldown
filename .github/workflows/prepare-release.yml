@@ -46,13 +46,15 @@ jobs:
           INPUT_VERSION: ${{ inputs.version }}
         run: echo "VERSION=$INPUT_VERSION" >> "$GITHUB_ENV"
 
-      - run: just bump-packages ${VERSION}
-
       - name: Bump crate versions
-        run: cargo release-oxc update --release crates --version ${VERSION}
+        run: |
+          mkdir -p target
+          cargo release-oxc update --release crates --version ${VERSION}
 
       - name: Update Cargo.lock after crate bump
         run: cargo check
+
+      - run: just bump-packages ${VERSION}
 
       - name: Regenerate binding.js after version bump
         run: vp run --filter rolldown build-binding

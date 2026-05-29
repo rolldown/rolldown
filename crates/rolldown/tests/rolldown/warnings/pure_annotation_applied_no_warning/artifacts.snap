@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region main.js
-console.log(1);
+console.log(/* @__PURE__ */ (() => 1)());
 //#endregion
 
 ```

@@ -1,11 +1,12 @@
 [package]
 name = "rolldown_plugin_lazy_compilation"
-version = "0.1.0"
+version = "1.0.3"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Lazy-compilation plugin for Rolldown"
+readme = "../../README.md"
 publish = true
 
 [dependencies]

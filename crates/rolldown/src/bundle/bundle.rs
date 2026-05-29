@@ -264,11 +264,12 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
     let start = self.plugin_driver.start_timing();
-    let mut link_stage_output = LinkStage::new(scan_stage_output, &self.options).link();
+    let (mut link_stage_output, ast_table) =
+      LinkStage::new(scan_stage_output, &self.options).link();
     self.plugin_driver.set_link_stage_time(start);
 
     let bundle_output =
-      GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)
+      GenerateStage::new(&mut link_stage_output, ast_table, &self.options, &self.plugin_driver)
         .generate()
         .await; // Notice we don't use `?` to break the control flow here.
 

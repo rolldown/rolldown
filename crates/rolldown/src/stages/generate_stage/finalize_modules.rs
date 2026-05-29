@@ -5,19 +5,24 @@ use rolldown_utils::{index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as
 use rustc_hash::FxHashMap;
 use tracing::debug_span;
 
-use crate::{chunk_graph::ChunkGraph, module_finalizers::ScopeHoistingFinalizerContext};
+use crate::{
+  chunk_graph::ChunkGraph, module_finalizers::ScopeHoistingFinalizerContext,
+  type_alias::IndexEcmaAst,
+};
 
 use super::GenerateStage;
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub(super) fn finalize_modules(&mut self, chunk_graph: &mut ChunkGraph) {
+  pub(super) fn finalize_modules(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+    ast_table: &mut IndexEcmaAst,
+  ) {
     let has_enum_inlining = self.link_output.has_enum_inlining;
 
     let transfer_parts_rendered_maps = debug_span!("finalize_modules").in_scope(|| {
-      self
-        .link_output
-        .ast_table
+      ast_table
         .par_iter_mut_enumerated()
         .filter(|(idx, _ast)| {
           self.link_output.module_table[*idx]

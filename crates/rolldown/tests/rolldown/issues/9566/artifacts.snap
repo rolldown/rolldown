@@ -6,10 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+import assert from "node:assert";
+//#endregion
 //#region main.js
-(() => {
-	console.log(111);
-})();
+assert.strictEqual({ "default": { "value": 1 } }.default.value, 1);
 //#endregion
 
 ```

@@ -11,6 +11,18 @@ export interface CodegenOptions {
    * @default true
    */
   removeWhitespace?: boolean
+  /**
+   * How to handle legal comments (comments containing `@license`, `@preserve`, or starting with `//!`/`/*!`).
+   *
+   * * `"none"` - Do not preserve any legal comments.
+   * * `"inline"` - Preserve all legal comments inline.
+   * * `"eof"` - Move all legal comments to the end of the file.
+   * * `"external"` - Extract legal comments without linking.
+   * * `{ linked: "path/to/legal.txt" }` - Extract legal comments and add a link comment to the given path.
+   *
+   * @default "none" (when minifying)
+   */
+legalComments?: 'none' | 'inline' | 'eof' | 'external' | { linked: string }
 }
 
 export interface CompressOptions {
@@ -97,6 +109,23 @@ export interface CompressOptionsKeepNames {
   class: boolean
 }
 
+export interface LegalCommentsLinked {
+  /**
+   * Extract legal comments and write them to the given path, with a link
+   * comment appended to the generated code.
+   */
+  linked: string
+}
+
+export type LegalCommentsMode = /** Do not preserve any legal comments. */
+'none'|
+/** Preserve all legal comments inline. */
+'inline'|
+/** Move all legal comments to the end of the file. */
+'eof'|
+/** Extract legal comments without linking. */
+'external';
+
 export interface MangleOptions {
   /**
    * Pass `true` to mangle names declared in the top level scope.
@@ -149,6 +178,11 @@ export interface MinifyResult {
   code: string
   map?: SourceMap
   errors: Array<OxcError>
+  /**
+   * Legal comments extracted from the source code.
+   * Only populated when `codegen.legalComments` is `"linked"` or `"external"`.
+   */
+  legalComments: Array<string>
 }
 
 /** Minify synchronously. */
@@ -890,6 +924,18 @@ export interface DecoratorOptions {
    * @default false
    */
   emitDecoratorMetadata?: boolean
+  /**
+   * Aligns nullable-union `design:type` emission with `--strictNullChecks`.
+   *
+   * When `true` (default), `T | null` and `T | undefined` emit `Object`, matching tsc strict.
+   * When `false`, `null` and `undefined` are elided from the union so the underlying
+   * primitive constructor is emitted, matching tsc with `--strictNullChecks=false`
+   * and `babel-plugin-transform-typescript-metadata`.
+   *
+   * @see https://www.typescriptlang.org/tsconfig/#strictNullChecks
+   * @default true
+   */
+  strictNullChecks?: boolean
 }
 
 export interface Es2015Options {
@@ -1487,6 +1533,7 @@ export declare class BindingDevEngine {
   ensureCurrentBuildFinish(): Promise<void>
   getBundleState(): Promise<BindingBundleState>
   ensureLatestBuildOutput(): Promise<void>
+  triggerFullBuild(): void
   invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<Array<BindingClientHmrUpdate>>
   registerModules(clientId: string, modules: Array<string>): Promise<void>
   removeClient(clientId: string): Promise<void>

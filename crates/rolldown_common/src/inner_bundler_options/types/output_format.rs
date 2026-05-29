@@ -16,6 +16,7 @@ pub enum OutputFormat {
   Cjs,
   Iife,
   Umd,
+  System,
 }
 
 impl OutputFormat {
@@ -26,6 +27,7 @@ impl OutputFormat {
       Self::Cjs => "cjs",
       Self::Iife => "iife",
       Self::Umd => "umd",
+      Self::System => "system",
     }
   }
 
@@ -48,7 +50,7 @@ impl OutputFormat {
   /// https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/config/config.go#L664-L666
   /// Since we have different implementation for `IIFE` and extra implementation of `UMD` omit them as well
   pub fn should_call_runtime_require(&self) -> bool {
-    !matches!(self, Self::Cjs | Self::Umd | Self::Iife)
+    !matches!(self, Self::Cjs | Self::Umd | Self::Iife | Self::System)
   }
 
   #[inline]
@@ -57,7 +59,7 @@ impl OutputFormat {
       Self::Esm => SourceType::mjs(),
       // TODO: remove `.with_commonjs(true)` when https://github.com/oxc-project/oxc/pull/18276 is released
       Self::Cjs => SourceType::cjs().with_commonjs(true),
-      Self::Iife | Self::Umd => SourceType::cjs().with_script(true),
+      Self::Iife | Self::Umd | Self::System => SourceType::cjs().with_script(true),
     }
   }
 }

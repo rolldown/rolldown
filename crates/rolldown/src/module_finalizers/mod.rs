@@ -956,6 +956,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           });
           re_export_external_stmts = Some(stmts.collect());
         }
+        // SystemJS: export * from external handled via _starExcludes + setter loop (group 4/8)
+        OutputFormat::System => {}
       }
     }
 
@@ -1732,7 +1734,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   rolldown_common::OutputFormat::Esm
                   | rolldown_common::OutputFormat::Iife
                   | rolldown_common::OutputFormat::Umd
-                  | rolldown_common::OutputFormat::Cjs => {
+                  | rolldown_common::OutputFormat::Cjs
+                  | rolldown_common::OutputFormat::System => {
                     // Just remove the statement
                     return;
                   }

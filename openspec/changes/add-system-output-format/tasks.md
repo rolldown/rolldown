@@ -48,34 +48,34 @@ The goal of this group is to make `format: "system"` accepted without a runtime
 error, producing empty (but structurally valid) output. Every subsequent group
 adds correctness on top of this skeleton.
 
-- [ ] 1.1 Add `System` variant to `OutputFormat` enum in
+- [x] 1.1 Add `System` variant to `OutputFormat` enum in
       `crates/rolldown_common/src/inner_bundler_options/types/output_format.rs`
-- [ ] 1.2 Implement helper methods on `OutputFormat::System`: `as_str()` →
+- [x] 1.2 Implement helper methods on `OutputFormat::System`: `as_str()` →
       `"system"`, `source_type()`, `should_call_runtime_require()` → `false`,
       `keep_esm_import_export_syntax()` → `false`, `is_esm()` → `false`
-- [ ] 1.3 Add `"system"` mapping in the Rust binding layer
+- [x] 1.3 Add `"system"` mapping in the Rust binding layer
       (`crates/rolldown_binding/src/utils/normalize_binding_options.rs`) and
       update the error message to include `"system"` in the valid values list
-- [ ] 1.4 Add `'system'` to `ModuleFormat` union type in
+- [x] 1.4 Add `'system'` to `ModuleFormat` union type in
       `packages/rolldown/src/options/output-options.ts`, to
       `InternalModuleFormat` in `normalized-output-options.ts`, and add
       `case 'system': return 'system'` to `bindingifyFormat()` in
       `bindingify-output-options.ts`
-- [ ] 1.5 Create `crates/rolldown/src/ecmascript/format/system.rs` with a stub
+- [x] 1.5 Create `crates/rolldown/src/ecmascript/format/system.rs` with a stub
       `render_system()` function that returns an empty `SourceJoiner`; add
       `pub mod system;` to `format/mod.rs`
-- [ ] 1.6 Add `OutputFormat::System` arm to the dispatch in
+- [x] 1.6 Add `OutputFormat::System` arm to the dispatch in
       `crates/rolldown/src/ecmascript/ecma_generator.rs` calling
       `render_system()`
-- [ ] 1.7 Add exhaustive `OutputFormat::System` arms to every existing `match`
+- [x] 1.7 Add exhaustive `OutputFormat::System` arms to every existing `match`
       that does NOT have a wildcard (compiler will guide you — fix all
       `non-exhaustive patterns` errors); use `todo!()` stubs where behaviour is
       unclear — replace these in later groups
-- [ ] 1.8 Add `OutputFormat::System` to the `render_chunk_exports` and
+- [x] 1.8 Add `OutputFormat::System` to the `render_chunk_exports` and
       `render_wrapped_entry_chunk` match arms in
       `crates/rolldown/src/utils/chunk/render_chunk_exports.rs` returning `None`
       (export postamble is handled inline for SystemJS, not here)
-- [ ] 1.9 **Fixture (red → green)**: Create
+- [x] 1.9 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/empty_module/_config.json`
       with `{ "config": { "format": "system" } }` and a `main.js` with no
       imports/exports. Run `just t-run` — it should no longer throw
@@ -87,38 +87,38 @@ Implement the `System.register(deps, factory)` skeleton with correct factory
 parameters, strict mode, and the return object shape — no setters or live
 exports yet.
 
-- [ ] 2.1 Implement anonymous `System.register([], (function() {` wrapper open
+- [x] 2.1 Implement anonymous `System.register([], (function() {` wrapper open
       and `}));` close in `render_system()`
-- [ ] 2.2 Implement named registration: when `output.name` is set, emit
+- [x] 2.2 Implement named registration: when `output.name` is set, emit
       `System.register('name', [], (function() {` — name as plain string
       literal, no namespace decomposition (unlike IIFE/UMD)
-- [ ] 2.3 Implement factory parameter logic: compute `has_exports` and
+- [x] 2.3 Implement factory parameter logic: compute `has_exports` and
       `uses_module_context` (dynamic import or import.meta present); emit
       `(exports)`, `(exports, module)`, `(module)`, or `()` accordingly
-- [ ] 2.4 Implement `'use strict';` injection inside factory, controlled by
+- [x] 2.4 Implement `'use strict';` injection inside factory, controlled by
       `output.strict` (default `true`)
-- [ ] 2.5 Emit `return { setters: [], execute: (function () {` and closing
+- [x] 2.5 Emit `return { setters: [], execute: (function () {` and closing
       `}) };` as placeholders (setters populated in group 4)
-- [ ] 2.6 Apply banner/footer/intro/outro hooks in correct order: banner before
+- [x] 2.6 Apply banner/footer/intro/outro hooks in correct order: banner before
       `System.register`, intro inside factory before module sources, outro after
       module sources, footer after closing `});`
-- [ ] 2.7 Do NOT add `OutputFormat::System` to the forced-`codeSplitting: false`
+- [x] 2.7 Do NOT add `OutputFormat::System` to the forced-`codeSplitting: false`
       guard in `crates/rolldown/src/utils/prepare_build_context.rs`
-- [ ] 2.8 Do NOT add `OutputFormat::System` to the multi-chunk validation block
+- [x] 2.8 Do NOT add `OutputFormat::System` to the multi-chunk validation block
       in
       `crates/rolldown/src/utils/chunk/validate_options_for_multi_chunk_output.rs`
-- [ ] 2.9 **Fixture (red → green)**: Create
+- [x] 2.9 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/basic_wrapper/`
       with `main.js` containing `export const x = 1;` and `_config.json`
       `{ "config": { "format": "system" } }`. Run `just t-run`. Verify snapshot
       shows correct `System.register([],` outer shape and
       `(function (exports) {` factory parameter.
-- [ ] 2.10 **Fixture (red → green)**: Create
+- [x] 2.10 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/named_register/`
       with `_config.json`
       `{ "config": { "format": "system", "name": "my-lib" } }`. Verify snapshot
       shows `System.register('my-lib',`.
-- [ ] 2.11 **Fixture (red → green)**: Create
+- [x] 2.11 **Fixture (red → green)**: Create
       `crates/rolldown/tests/rolldown/function/format/system/no_strict/` with
       `_config.json` `{ "config": { "format": "system", "strict": false } }`.
       Verify snapshot does NOT contain `'use strict'`.

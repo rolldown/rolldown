@@ -143,9 +143,10 @@ pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
   let format = options.format.unwrap_or(rolldown::OutputFormat::Esm);
   let platform = options.platform.unwrap_or(match format {
     rolldown::OutputFormat::Cjs => Platform::Node,
-    rolldown::OutputFormat::Esm | rolldown::OutputFormat::Iife | rolldown::OutputFormat::Umd => {
-      Platform::Browser
-    }
+    rolldown::OutputFormat::Esm
+    | rolldown::OutputFormat::Iife
+    | rolldown::OutputFormat::Umd
+    | rolldown::OutputFormat::System => Platform::Browser,
   });
   let tsconfig = options.tsconfig.clone().map(|tc| tc.with_base(&cwd)).unwrap_or_default();
   let mut raw_resolve = options.resolve.clone().unwrap_or_default();

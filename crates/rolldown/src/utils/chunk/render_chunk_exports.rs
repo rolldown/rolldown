@@ -72,6 +72,8 @@ pub fn render_wrapped_entry_chunk(
               Some(concat_string!("return ", wrapper_ref_name, "();\n"))
             }
           }
+          // SystemJS handles exports inline via exports() calls — no postamble needed here
+          OutputFormat::System => None,
         }
       }
       WrapKind::None => None,
@@ -291,6 +293,8 @@ pub fn render_chunk_exports(
       }
       Some(s)
     }
+    // SystemJS handles all exports inline via exports() calls — no postamble needed
+    OutputFormat::System => None,
   }
 }
 

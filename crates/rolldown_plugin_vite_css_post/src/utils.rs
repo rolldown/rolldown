@@ -274,6 +274,14 @@ impl ViteCSSPostPlugin {
           OutputFormat::Cjs => {
             return Err(anyhow::anyhow!("CJS format is not supported for CSS injection"));
           }
+          OutputFormat::System => {
+            // SystemJS uses module.import() — treat like ESM for injection point
+            if ctx.args.code.starts_with("#!") {
+              ctx.args.code.find('\n').unwrap_or(0)
+            } else {
+              0
+            }
+          }
         };
 
         let content = serde_json::to_string(&self.finalize_css(css_chunk).await?)?;

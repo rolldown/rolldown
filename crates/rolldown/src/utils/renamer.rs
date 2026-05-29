@@ -50,6 +50,9 @@ impl<'name> Renamer<'name> {
       OutputFormat::Esm => vec![],
       OutputFormat::Cjs => vec!["module", "require", "__filename", "__dirname", "exports"],
       OutputFormat::Iife | OutputFormat::Umd => vec!["exports"], // Also for AMD, but we don't support it yet.
+      // SystemJS factory parameters — "module" and "exports" must be deconflicted
+      // (task 3.4 will add more names here)
+      OutputFormat::System => vec!["exports", "module"],
     };
     // https://github.com/rollup/rollup/blob/bfbea66569491f5466fbba99de2ba6a0225f851b/src/Chunk.ts#L1359
     manual_reserved.extend(["Object", "Promise"]);

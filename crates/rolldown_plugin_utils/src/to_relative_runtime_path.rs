@@ -13,7 +13,7 @@ pub fn create_to_import_meta_url_based_relative_runtime(
   is_worker: bool,
 ) -> impl Fn(&Path, &Path) -> AssetUrlResult {
   let to_relative_path = match format {
-    OutputFormat::Esm => es,
+    OutputFormat::Esm | OutputFormat::System => es,
     OutputFormat::Cjs => cjs,
     OutputFormat::Umd => umd,
     OutputFormat::Iife => {

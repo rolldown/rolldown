@@ -1,12 +1,17 @@
-import type { BindingChunkingContext, BindingOutputOptions } from '../binding.cjs';
-import type { OutputOptions } from '../options/output-options';
-import { ChunkingContextImpl } from '../types/chunking-context';
-import { transformAssetSource } from './asset-source';
-import { unimplemented } from './misc';
-import { transformRenderedChunk } from './transform-rendered-chunk';
-import { logger } from '../cli/logger';
+import type {
+  BindingChunkingContext,
+  BindingOutputOptions,
+} from "../binding.cjs";
+import type { OutputOptions } from "../options/output-options";
+import { ChunkingContextImpl } from "../types/chunking-context";
+import { transformAssetSource } from "./asset-source";
+import { unimplemented } from "./misc";
+import { transformRenderedChunk } from "./transform-rendered-chunk";
+import { logger } from "../cli/logger";
 
-export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOutputOptions {
+export function bindingifyOutputOptions(
+  outputOptions: OutputOptions,
+): BindingOutputOptions {
   const {
     dir,
     format,
@@ -46,7 +51,9 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
   } = outputOptions;
 
   if (legalComments != null) {
-    logger.warn('`legalComments` option is deprecated, please use `comments.legal` instead.');
+    logger.warn(
+      "`legalComments` option is deprecated, please use `comments.legal` instead.",
+    );
   }
 
   // Handle codeSplitting and inlineDynamicImports
@@ -107,35 +114,42 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
   };
 }
 
-type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro';
+type AddonKeys = "banner" | "footer" | "intro" | "outro";
 
-function bindingifyAddon(configAddon: OutputOptions[AddonKeys]): BindingOutputOptions[AddonKeys] {
-  if (configAddon == null || configAddon === '') {
+function bindingifyAddon(
+  configAddon: OutputOptions[AddonKeys],
+): BindingOutputOptions[AddonKeys] {
+  if (configAddon == null || configAddon === "") {
     return undefined;
   }
-  if (typeof configAddon === 'function') {
+  if (typeof configAddon === "function") {
     return async (chunk) => configAddon(transformRenderedChunk(chunk));
   }
   return configAddon;
 }
 
-function bindingifyFormat(format: OutputOptions['format']): BindingOutputOptions['format'] {
+function bindingifyFormat(
+  format: OutputOptions["format"],
+): BindingOutputOptions["format"] {
   switch (format) {
     case undefined:
-    case 'es':
-    case 'esm':
-    case 'module': {
-      return 'es';
+    case "es":
+    case "esm":
+    case "module": {
+      return "es";
     }
-    case 'cjs':
-    case 'commonjs': {
-      return 'cjs';
+    case "cjs":
+    case "commonjs": {
+      return "cjs";
     }
-    case 'iife': {
-      return 'iife';
+    case "iife": {
+      return "iife";
     }
-    case 'umd': {
-      return 'umd';
+    case "umd": {
+      return "umd";
+    }
+    case "system": {
+      return "system";
     }
     default:
       unimplemented(`output.format: ${format}`);
@@ -143,27 +157,27 @@ function bindingifyFormat(format: OutputOptions['format']): BindingOutputOptions
 }
 
 function bindingifySourcemap(
-  sourcemap: OutputOptions['sourcemap'],
-): BindingOutputOptions['sourcemap'] {
+  sourcemap: OutputOptions["sourcemap"],
+): BindingOutputOptions["sourcemap"] {
   switch (sourcemap) {
     case true:
-      return 'file';
-    case 'inline':
-      return 'inline';
+      return "file";
+    case "inline":
+      return "inline";
     case false:
     case undefined:
       return undefined;
-    case 'hidden':
-      return 'hidden';
+    case "hidden":
+      return "hidden";
     default:
       throw new Error(`unknown sourcemap: ${sourcemap}`);
   }
 }
 
 function bindingifyAssetFilenames(
-  assetFileNames: OutputOptions['assetFileNames'],
-): BindingOutputOptions['assetFileNames'] {
-  if (typeof assetFileNames === 'function') {
+  assetFileNames: OutputOptions["assetFileNames"],
+): BindingOutputOptions["assetFileNames"] {
+  if (typeof assetFileNames === "function") {
     return (asset) => {
       return assetFileNames({
         name: asset.name,
@@ -171,41 +185,45 @@ function bindingifyAssetFilenames(
         originalFileName: asset.originalFileName,
         originalFileNames: asset.originalFileNames,
         source: transformAssetSource(asset.source),
-        type: 'asset',
+        type: "asset",
       });
     };
   }
   return assetFileNames;
 }
 
-function bindingifyComments(comments: OutputOptions['comments']): BindingOutputOptions['comments'] {
+function bindingifyComments(
+  comments: OutputOptions["comments"],
+): BindingOutputOptions["comments"] {
   if (comments == null) {
     return undefined;
   }
-  if (typeof comments === 'boolean') {
+  if (typeof comments === "boolean") {
     return comments;
   }
   return comments;
 }
 
 function bindingifyCodeSplitting(
-  codeSplitting: OutputOptions['codeSplitting'],
-  inlineDynamicImportsOption: OutputOptions['inlineDynamicImports'],
-  advancedChunks: OutputOptions['advancedChunks'],
-  manualChunks: OutputOptions['manualChunks'],
+  codeSplitting: OutputOptions["codeSplitting"],
+  inlineDynamicImportsOption: OutputOptions["inlineDynamicImports"],
+  advancedChunks: OutputOptions["advancedChunks"],
+  manualChunks: OutputOptions["manualChunks"],
 ): {
-  inlineDynamicImports: BindingOutputOptions['inlineDynamicImports'];
-  advancedChunks: BindingOutputOptions['manualCodeSplitting'];
+  inlineDynamicImports: BindingOutputOptions["inlineDynamicImports"];
+  advancedChunks: BindingOutputOptions["manualCodeSplitting"];
 } {
   let inlineDynamicImports: boolean | undefined;
-  let effectiveChunksOption: Exclude<OutputOptions['codeSplitting'], boolean> | undefined;
+  let effectiveChunksOption:
+    | Exclude<OutputOptions["codeSplitting"], boolean>
+    | undefined;
 
   // Handle codeSplitting boolean values
   if (codeSplitting === false) {
     // Warn if inlineDynamicImports is also set
     if (inlineDynamicImportsOption != null) {
       logger.warn(
-        '`inlineDynamicImports` option is ignored because `codeSplitting: false` is set.',
+        "`inlineDynamicImports` option is ignored because `codeSplitting: false` is set.",
       );
     }
     // Validate that manualChunks is not set with code splitting disabled
@@ -216,7 +234,9 @@ function bindingifyCodeSplitting(
     }
     // When code splitting is disabled, ignore advancedChunks
     if (advancedChunks != null) {
-      logger.warn('`advancedChunks` option is ignored because `codeSplitting` is set to `false`.');
+      logger.warn(
+        "`advancedChunks` option is ignored because `codeSplitting` is set to `false`.",
+      );
     }
     // Return early - no advanced chunks when code splitting is disabled
     return {
@@ -226,14 +246,16 @@ function bindingifyCodeSplitting(
   } else if (codeSplitting === true) {
     // Explicit code splitting enabled - ignore deprecated inlineDynamicImports
     if (inlineDynamicImportsOption != null) {
-      logger.warn('`inlineDynamicImports` option is ignored because `codeSplitting: true` is set.');
+      logger.warn(
+        "`inlineDynamicImports` option is ignored because `codeSplitting: true` is set.",
+      );
     }
   } else if (codeSplitting == null) {
     // Default behavior: no inlining, automatic code splitting
     // Check if deprecated inlineDynamicImports is used
     if (inlineDynamicImportsOption != null) {
       logger.warn(
-        '`inlineDynamicImports` option is deprecated, please use `codeSplitting: false` instead.',
+        "`inlineDynamicImports` option is deprecated, please use `codeSplitting: false` instead.",
       );
       inlineDynamicImports = inlineDynamicImportsOption;
     }
@@ -243,7 +265,7 @@ function bindingifyCodeSplitting(
     // Ignore inlineDynamicImports if codeSplitting object is specified
     if (inlineDynamicImportsOption != null) {
       logger.warn(
-        '`inlineDynamicImports` option is ignored because the `codeSplitting` option is specified.',
+        "`inlineDynamicImports` option is ignored because the `codeSplitting` option is specified.",
       );
     }
   }
@@ -258,19 +280,21 @@ function bindingifyCodeSplitting(
   // Handle advancedChunks deprecation (only if codeSplitting is not set to object)
   if (effectiveChunksOption == null) {
     if (advancedChunks != null) {
-      logger.warn('`advancedChunks` option is deprecated, please use `codeSplitting` instead.');
+      logger.warn(
+        "`advancedChunks` option is deprecated, please use `codeSplitting` instead.",
+      );
       effectiveChunksOption = advancedChunks;
     }
   } else if (advancedChunks != null) {
     logger.warn(
-      '`advancedChunks` option is ignored because the `codeSplitting` option is specified.',
+      "`advancedChunks` option is ignored because the `codeSplitting` option is specified.",
     );
   }
 
   // Handle manualChunks migration
   if (manualChunks != null && effectiveChunksOption != null) {
     logger.warn(
-      '`manualChunks` option is ignored because the `codeSplitting` option is specified.',
+      "`manualChunks` option is ignored because the `codeSplitting` option is specified.",
     );
   } else if (manualChunks != null) {
     effectiveChunksOption = {
@@ -287,7 +311,7 @@ function bindingifyCodeSplitting(
   }
 
   // Transform effectiveChunksOption to binding format
-  let advancedChunksResult: BindingOutputOptions['manualCodeSplitting'];
+  let advancedChunksResult: BindingOutputOptions["manualCodeSplitting"];
   if (effectiveChunksOption != null) {
     const { groups, ...restOptions } = effectiveChunksOption;
     advancedChunksResult = {
@@ -296,10 +320,10 @@ function bindingifyCodeSplitting(
         const { name, ...restGroup } = group;
         return {
           ...restGroup,
-          name:
-            typeof name === 'function'
-              ? (id: string, ctx: BindingChunkingContext) => name(id, new ChunkingContextImpl(ctx))
-              : name,
+          name: typeof name === "function"
+            ? (id: string, ctx: BindingChunkingContext) =>
+              name(id, new ChunkingContextImpl(ctx))
+            : name,
         };
       }),
     };

@@ -636,7 +636,8 @@
         "esm",
         "cjs",
         "iife",
-        "umd"
+        "umd",
+        "system"
       ]
     },
     "OutputExports": {

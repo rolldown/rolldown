@@ -876,87 +876,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       },
     ));
 
-    // if there is no export, we should generate `var ns = {}` instead of `var ns = __exportAll({})`
-    // else construct `__exportAll({ prop_name: () => returned, ... })`
-    //
-    // For SystemJS: use direct value properties (not getters) in a null-proto object.
-    // External star re-exports are handled separately via _mergeNamespaces.
+    // For SystemJS: build a plain null-proto object with direct values.
+    // For other formats: use __exportAll({ prop: () => value, ... }).
     let module_namespace_rhs = if matches!(self.ctx.options.format, OutputFormat::System) {
-      // For SystemJS namespace: { __proto__: null, prop: value, ... }
-      // Convert getter-style properties to direct value properties.
-      let mut sys_props = self.snippet.builder.vec();
-      // Add __proto__: null
-      sys_props.push(ast::ObjectPropertyKind::ObjectProperty(
-        ast::ObjectProperty {
-          key: ast::PropertyKey::StaticIdentifier(
-            self.snippet.id_name("__proto__", SPAN).into_in(self.alloc),
-          ),
-          value: self.snippet.void_zero(),
-          computed: false,
-          ..ast::ObjectProperty::dummy(self.alloc)
-        }
-        .into_in(self.alloc),
-      ));
-      // Add each exported name as a direct value
-      for (export_name, resolved_export) in self.ctx.linking_info.canonical_exports(false) {
-        let is_inlinable_constant = self
-          .ctx
-          .constant_value_map
-          .get(&self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref))
-          .is_some_and(|meta| !meta.commonjs_export);
-        if !self.ctx.used_symbol_refs.contains(&resolved_export.symbol_ref)
-          && !is_inlinable_constant
-        {
-          continue;
-        }
-        let (value, _) =
-          self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
-        let key = if is_validate_identifier_name(export_name) && export_name != "__proto__" {
-          ast::PropertyKey::StaticIdentifier(
-            self.snippet.id_name(export_name, SPAN).into_in(self.alloc),
-          )
-        } else {
-          ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(export_name, SPAN))
-        };
-        sys_props.push(ast::ObjectPropertyKind::ObjectProperty(
-          ast::ObjectProperty {
-            key,
-            value,
-            computed: export_name == "__proto__",
-            ..ast::ObjectProperty::dummy(self.alloc)
-          }
-          .into_in(self.alloc),
-        ));
-      }
-      // Return the plain object (external merging is done by the _mergeNamespaces reassignment below)
-      Expression::ObjectExpression(
-        self.snippet.builder.alloc_object_expression(SPAN, sys_props),
-      )
+      self.build_system_namespace_object_expr()
     } else if arg_obj_expr.properties.is_empty() && !self.ctx.options.generated_code.symbols {
       Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
     } else {
-      let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc));
-      let args = if self.ctx.options.generated_code.symbols {
-        self.snippet.builder.vec_from_iter([obj_expr])
-      } else {
-        self.snippet.builder.vec_from_iter([
-          obj_expr,
-          ast::Argument::NumericLiteral(self.snippet.builder.alloc_numeric_literal(
-            SPAN,
-            1.0,
-            None,
-            NumberBase::Decimal,
-          )),
-        ])
-      };
-      self.snippet.builder.expression_call_with_pure(
-        SPAN,
-        self.finalized_expr_for_runtime_symbol("__exportAll"),
-        NONE,
-        args,
-        false,
-        true,
-      )
+      self.build_export_all_namespace_expr(arg_obj_expr)
     };
 
     // construct `var [binding_name_for_namespace_object_ref] = __exportAll(...)`
@@ -969,43 +896,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !export_all_externals_rec_ids.is_empty() {
       match self.ctx.options.format {
         OutputFormat::Esm => {
-          let re_export_name = self.canonical_name_for_runtime("__reExport");
-          let stmts = export_all_externals_rec_ids.iter().copied().flat_map(|idx| {
-            let rec = &self.ctx.module.import_records[idx];
-            if rec.meta.contains(ImportRecordMeta::EntryLevelExternal)
-              && !self
-                .ctx
-                .linking_info
-                .module_namespace_included_reason
-                .contains(ModuleNamespaceIncludedReason::Unknown)
-            {
-              return vec![];
-            }
-            // importee_exports
-            let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
-            let Some(Module::External(module)) =
-              rec.resolved_module.and_then(|module_idx| self.ctx.modules.get(module_idx))
-            else {
-              return vec![];
-            };
-            let importee_name = &module.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
-            // construct `__reExport(importer_exports, importee_exports)`
-            let call_expr = self.snippet.re_export_call_expr(
-              self.snippet.id_ref_expr(re_export_name, SPAN),
-              self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
-              self.snippet.id_ref_expr(importee_namespace_name, SPAN),
-            );
-            vec![
-              // Insert `import * as ns from 'ext'`external module in esm format
-              self.snippet.import_star_stmt(importee_name, importee_namespace_name),
-              // Insert `__reExport(foo_exports, ns)`
-              self.snippet.builder.statement_expression(
-                SPAN,
-                Expression::CallExpression(call_expr.into_in(self.alloc)),
-              ),
-            ]
-          });
-          re_export_external_stmts = Some(stmts.collect::<Vec<_>>());
+          re_export_external_stmts = Some(self.build_esm_re_export_external_stmts(
+            export_all_externals_rec_ids,
+            binding_name_for_namespace_object_ref,
+          ));
         }
         OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
           let stmts = export_all_externals_rec_ids.iter().copied().filter_map(|idx| {
@@ -1035,69 +929,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           });
           re_export_external_stmts = Some(stmts.collect());
         }
-        // Task 8.6: SystemJS — for `export * as ns from './src'` where `./src` re-exports
-        // from externals, use inline `_mergeNamespaces(obj, [ext1, ext2, ...])` to build
-        // the namespace value. The external bindings are captured by setters.
+        // Task 8.6: SystemJS — emit `ns = _mergeNamespaces(ns, [ext1, ext2, ...])`.
         OutputFormat::System => {
-          // Collect external namespace binding names (already declared as vars by setters).
-          // These are the `external1`, `external2`, ... vars that setters populate.
-          let ext_ns_names: Vec<_> = export_all_externals_rec_ids
-            .iter()
-            .copied()
-            .filter_map(|idx| {
-              let rec = &self.ctx.module.import_records[idx];
-              let module_idx = rec.resolved_module?;
-              let _ = self.ctx.modules[module_idx].as_external()?;
-              let ext_ns_name = self.canonical_name_for(rec.namespace_ref);
-              Some(ext_ns_name)
-            })
-            .collect();
-
-          if !ext_ns_names.is_empty() {
-            // Re-assign: ns = _mergeNamespaces(ns, [ext1, ext2])
-            // Using arena-allocated atoms to ensure 'ast lifetime.
-            let ns_atom = self.snippet.atom(binding_name_for_namespace_object_ref);
-            let ns_ref = self.snippet.builder.expression_identifier(SPAN, ns_atom);
-
-            // Build [ext1, ext2, ...] array using arena-allocated atoms for 'ast lifetime
-            let ext_array = ast::Argument::ArrayExpression(
-              self.snippet.builder.alloc_array_expression(
-                SPAN,
-                self.snippet.builder.vec_from_iter(ext_ns_names.iter().map(|name| {
-                  let atom = self.snippet.atom(name);
-                  ast::ArrayExpressionElement::from(
-                    self.snippet.builder.expression_identifier(SPAN, atom),
-                  )
-                })),
-              ),
-            );
-
-            // _mergeNamespaces(ns, [ext1, ext2])
-            let merge_call = self.snippet.builder.expression_call(
-              SPAN,
-              self.snippet.builder.expression_identifier(SPAN, "_mergeNamespaces"),
-              NONE,
-              self.snippet.builder.vec_from_array([
-                ast::Argument::from(ns_ref),
-                ext_array,
-              ]),
-              false,
-            );
-
-            // ns = _mergeNamespaces(ns, [...]);
-            let reassign = self.snippet.builder.statement_expression(
-              SPAN,
-              self.snippet.builder.expression_assignment(
-                SPAN,
-                ast::AssignmentOperator::Assign,
-                ast::AssignmentTarget::AssignmentTargetIdentifier(
-                  self.snippet.builder.alloc_identifier_reference(SPAN, ns_atom),
-                ),
-                merge_call,
-              ),
-            );
-            re_export_external_stmts = Some(vec![reassign]);
-          }
+          re_export_external_stmts = self.build_system_merge_namespaces_stmt(
+            export_all_externals_rec_ids,
+            binding_name_for_namespace_object_ref,
+          );
         }
       }
     }
@@ -1106,6 +943,180 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ret.extend(re_export_external_stmts.unwrap_or_default());
 
     ret
+  }
+
+  /// Build `{ __proto__: null, prop: value, ... }` for a SystemJS namespace object.
+  /// Uses direct values (not getters) so the object can be mutated by `_mergeNamespaces`.
+  fn build_system_namespace_object_expr(&self) -> Expression<'ast> {
+    let mut sys_props = self.snippet.builder.vec();
+    sys_props.push(ast::ObjectPropertyKind::ObjectProperty(
+      ast::ObjectProperty {
+        key: ast::PropertyKey::StaticIdentifier(
+          self.snippet.id_name("__proto__", SPAN).into_in(self.alloc),
+        ),
+        value: self.snippet.void_zero(),
+        computed: false,
+        ..ast::ObjectProperty::dummy(self.alloc)
+      }
+      .into_in(self.alloc),
+    ));
+    for (export_name, resolved_export) in self.ctx.linking_info.canonical_exports(false) {
+      let is_inlinable_constant = self
+        .ctx
+        .constant_value_map
+        .get(&self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref))
+        .is_some_and(|meta| !meta.commonjs_export);
+      if !self.ctx.used_symbol_refs.contains(&resolved_export.symbol_ref) && !is_inlinable_constant
+      {
+        continue;
+      }
+      let (value, _) =
+        self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
+      let key = if is_validate_identifier_name(export_name) && export_name != "__proto__" {
+        ast::PropertyKey::StaticIdentifier(
+          self.snippet.id_name(export_name, SPAN).into_in(self.alloc),
+        )
+      } else {
+        ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(export_name, SPAN))
+      };
+      sys_props.push(ast::ObjectPropertyKind::ObjectProperty(
+        ast::ObjectProperty {
+          key,
+          value,
+          computed: export_name == "__proto__",
+          ..ast::ObjectProperty::dummy(self.alloc)
+        }
+        .into_in(self.alloc),
+      ));
+    }
+    Expression::ObjectExpression(self.snippet.builder.alloc_object_expression(SPAN, sys_props))
+  }
+
+  /// Build `__exportAll({ prop: () => value, ... })` for non-SystemJS namespace objects.
+  fn build_export_all_namespace_expr(
+    &self,
+    arg_obj_expr: ast::ObjectExpression<'ast>,
+  ) -> Expression<'ast> {
+    let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc));
+    let args = if self.ctx.options.generated_code.symbols {
+      self.snippet.builder.vec_from_iter([obj_expr])
+    } else {
+      self.snippet.builder.vec_from_iter([
+        obj_expr,
+        ast::Argument::NumericLiteral(self.snippet.builder.alloc_numeric_literal(
+          SPAN,
+          1.0,
+          None,
+          NumberBase::Decimal,
+        )),
+      ])
+    };
+    self.snippet.builder.expression_call_with_pure(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__exportAll"),
+      NONE,
+      args,
+      false,
+      true,
+    )
+  }
+
+  /// Build ESM star re-export statements: `import * as ns from 'ext'; __reExport(ns_obj, ns)`.
+  fn build_esm_re_export_external_stmts(
+    &self,
+    export_all_externals_rec_ids: &[rolldown_common::ImportRecordIdx],
+    binding_name_for_namespace_object_ref: &str,
+  ) -> Vec<ast::Statement<'ast>> {
+    let re_export_name = self.canonical_name_for_runtime("__reExport");
+    export_all_externals_rec_ids
+      .iter()
+      .copied()
+      .flat_map(|idx| {
+        let rec = &self.ctx.module.import_records[idx];
+        if rec.meta.contains(ImportRecordMeta::EntryLevelExternal)
+          && !self
+            .ctx
+            .linking_info
+            .module_namespace_included_reason
+            .contains(ModuleNamespaceIncludedReason::Unknown)
+        {
+          return vec![];
+        }
+        let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
+        let Some(Module::External(module)) =
+          rec.resolved_module.and_then(|module_idx| self.ctx.modules.get(module_idx))
+        else {
+          return vec![];
+        };
+        let importee_name = &module.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
+        let call_expr = self.snippet.re_export_call_expr(
+          self.snippet.id_ref_expr(re_export_name, SPAN),
+          self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
+          self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+        );
+        vec![
+          self.snippet.import_star_stmt(importee_name, importee_namespace_name),
+          self.snippet.builder.statement_expression(
+            SPAN,
+            Expression::CallExpression(call_expr.into_in(self.alloc)),
+          ),
+        ]
+      })
+      .collect()
+  }
+
+  /// Build `ns = _mergeNamespaces(ns, [ext1, ext2, ...])` for SystemJS star re-exports.
+  /// Returns `None` when there are no external namespaces to merge.
+  fn build_system_merge_namespaces_stmt(
+    &self,
+    export_all_externals_rec_ids: &[rolldown_common::ImportRecordIdx],
+    binding_name_for_namespace_object_ref: &str,
+  ) -> Option<Vec<ast::Statement<'ast>>> {
+    let ext_ns_names: Vec<_> = export_all_externals_rec_ids
+      .iter()
+      .copied()
+      .filter_map(|idx| {
+        let rec = &self.ctx.module.import_records[idx];
+        let module_idx = rec.resolved_module?;
+        let _ = self.ctx.modules[module_idx].as_external()?;
+        Some(self.canonical_name_for(rec.namespace_ref))
+      })
+      .collect();
+    if ext_ns_names.is_empty() {
+      return None;
+    }
+    let ns_atom = self.snippet.atom(binding_name_for_namespace_object_ref);
+    let ns_ref = self.snippet.builder.expression_identifier(SPAN, ns_atom);
+    let ext_array = ast::Argument::ArrayExpression(
+      self.snippet.builder.alloc_array_expression(
+        SPAN,
+        self.snippet.builder.vec_from_iter(ext_ns_names.iter().map(|name| {
+          let atom = self.snippet.atom(name);
+          ast::ArrayExpressionElement::from(
+            self.snippet.builder.expression_identifier(SPAN, atom),
+          )
+        })),
+      ),
+    );
+    let merge_call = self.snippet.builder.expression_call(
+      SPAN,
+      self.snippet.builder.expression_identifier(SPAN, "_mergeNamespaces"),
+      NONE,
+      self.snippet.builder.vec_from_array([ast::Argument::from(ns_ref), ext_array]),
+      false,
+    );
+    let reassign = self.snippet.builder.statement_expression(
+      SPAN,
+      self.snippet.builder.expression_assignment(
+        SPAN,
+        ast::AssignmentOperator::Assign,
+        ast::AssignmentTarget::AssignmentTargetIdentifier(
+          self.snippet.builder.alloc_identifier_reference(SPAN, ns_atom),
+        ),
+        merge_call,
+      ),
+    );
+    Some(vec![reassign])
   }
 
   // Handle `import.meta.xxx` expression

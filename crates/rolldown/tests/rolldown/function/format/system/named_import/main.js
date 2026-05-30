@@ -1,1 +1,1 @@
-export { foo } from "dep";
+export { foo } from 'dep';

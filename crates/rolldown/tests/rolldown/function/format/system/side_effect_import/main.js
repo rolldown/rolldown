@@ -1,1 +1,1 @@
-import "./side-effect.js";
+import './side-effect.js';

@@ -215,7 +215,7 @@ skipped. This is acceptable — compact is a separate feature gap.
 
 3. **TLA (top-level await) and async execute**: SystemJS supports
    `execute: async
-   function() { ... }`. Rolldown has TLA support for ESM. The
+function() { ... }`. Rolldown has TLA support for ESM. The
    path to reuse/extend that for SystemJS needs to be traced during
    implementation.
 

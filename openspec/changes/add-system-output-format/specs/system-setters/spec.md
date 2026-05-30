@@ -86,14 +86,14 @@ update, so downstream modules observe live re-export changes.
 - **THEN** the setter uses the batch object form:
   `exports({ a: module.a, b: module.b })`
 
-### Requirement: export * handled via _starExcludes
+### Requirement: export \* handled via \_starExcludes
 
 When a chunk contains `export * from 'dep'`, the factory SHALL declare a
 `_starExcludes` null-prototype object containing all of the chunk's own export
 names plus `"default"`. The setter for that dependency SHALL iterate the module
 object and call `exports` for all keys not in `_starExcludes`.
 
-#### Scenario: _starExcludes object declared
+#### Scenario: \_starExcludes object declared
 
 - **WHEN** chunk contains `export * from 'dep'`
 - **THEN** factory body contains

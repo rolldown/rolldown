@@ -1,24 +1,18 @@
-import type {
-  MinifyOptions as BindingMinifyOptions,
-  PreRenderedChunk,
-} from "../binding.cjs";
-import type { RolldownOutputPluginOption } from "../plugin";
-import type {
-  SourcemapIgnoreListOption,
-  SourcemapPathTransformOption,
-} from "../types/misc";
-import type { ModuleInfo } from "../types/module-info";
-import type { RenderedChunk } from "../types/rolldown-output";
-import type { NullValue, StringOrRegExp } from "../types/utils";
-import type { AssetSource } from "../utils/asset-source";
+import type { MinifyOptions as BindingMinifyOptions, PreRenderedChunk } from '../binding.cjs';
+import type { RolldownOutputPluginOption } from '../plugin';
+import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
+import type { ModuleInfo } from '../types/module-info';
+import type { RenderedChunk } from '../types/rolldown-output';
+import type { NullValue, StringOrRegExp } from '../types/utils';
+import type { AssetSource } from '../utils/asset-source';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
-import type { InputOptions } from "./input-options";
+import type { InputOptions } from './input-options';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
-import type { InternalModuleFormat } from "./normalized-output-options";
+import type { InternalModuleFormat } from './normalized-output-options';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
-import type { Plugin } from "../plugin";
+import type { Plugin } from '../plugin';
 
-export type GeneratedCodePreset = "es5" | "es2015";
+export type GeneratedCodePreset = 'es5' | 'es2015';
 
 export interface GeneratedCodeOptions {
   /**
@@ -57,15 +51,7 @@ export interface GeneratedCodeOptions {
 }
 
 /** @inline */
-export type ModuleFormat =
-  | "es"
-  | "cjs"
-  | "esm"
-  | "module"
-  | "commonjs"
-  | "iife"
-  | "umd"
-  | "system";
+export type ModuleFormat = 'es' | 'cjs' | 'esm' | 'module' | 'commonjs' | 'iife' | 'umd' | 'system';
 
 /** @inline */
 export type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>;
@@ -78,7 +64,7 @@ export type SanitizeFileNameFunction = (name: string) => string;
 
 /** @category Plugin APIs */
 export interface PreRenderedAsset {
-  type: "asset";
+  type: 'asset';
   /** @deprecated Use {@linkcode names} instead. */
   name?: string;
   names: string[];
@@ -112,11 +98,9 @@ export type CodeSplittingNameFunction = (
 ) => string | NullValue;
 
 /** @inline */
-export type CodeSplittingTestFunction = (
-  id: string,
-) => boolean | undefined | void;
+export type CodeSplittingTestFunction = (id: string) => boolean | undefined | void;
 
-export type MinifyOptions = Omit<BindingMinifyOptions, "module" | "sourcemap">;
+export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
 
 export interface CommentsOptions {
   /**
@@ -162,7 +146,7 @@ export interface OutputOptions {
    *
    * @default 'auto'
    */
-  exports?: "auto" | "named" | "default" | "none";
+  exports?: 'auto' | 'named' | 'default' | 'none';
   /**
    * Specify the character set that Rolldown is allowed to use in file hashes.
    *
@@ -172,7 +156,7 @@ export interface OutputOptions {
    *
    * @default 'base64'
    */
-  hashCharacters?: "base64" | "base36" | "hex";
+  hashCharacters?: 'base64' | 'base36' | 'hex';
   /**
    * Expected format of generated code.
    *
@@ -197,7 +181,7 @@ export interface OutputOptions {
    *
    * @default false
    */
-  sourcemap?: boolean | "inline" | "hidden";
+  sourcemap?: boolean | 'inline' | 'hidden';
   /**
    * The base URL for the links to the sourcemap file in the output file.
    *
@@ -342,7 +326,7 @@ export interface OutputOptions {
    *
    * {@include ./docs/output-es-module.md}
    */
-  esModule?: boolean | "if-default-prop";
+  esModule?: boolean | 'if-default-prop';
   /**
    * The pattern to use for naming custom emitted assets to include in the build output, or a function that is called per asset with {@linkcode PreRenderedAsset} to return such a pattern.
    *
@@ -409,7 +393,7 @@ export interface OutputOptions {
    *
    * @default 'dce-only'
    */
-  minify?: boolean | "dce-only" | MinifyOptions;
+  minify?: boolean | 'dce-only' | MinifyOptions;
   /**
    * Specifies the global variable name that contains the exports of `umd` / `iife` {@link OutputOptions.format | formats}.
    *
@@ -633,7 +617,7 @@ export interface OutputOptions {
    *
    * @deprecated Use `comments.legal` instead. When both `legalComments` and `comments.legal` are set, `comments.legal` takes priority.
    */
-  legalComments?: "none" | "inline";
+  legalComments?: 'none' | 'inline';
   /**
    * Control which comments are preserved in the output.
    *
@@ -757,7 +741,7 @@ export interface OutputOptions {
    *
    * @default 'auto'
    */
-  strict?: boolean | "auto";
+  strict?: boolean | 'auto';
   /**
    * When `true` (default), side-effect-only imports in SystemJS output use `null` setters
    * instead of empty `function(){}` setters, saving bytes. Only affects `format: 'system'`.
@@ -772,7 +756,7 @@ export interface OutputOptions {
  *
  * - `'$initial'` — the module is statically imported by at least one user-defined entry point, or is part of its static dependency chain.
  */
-export type BuiltinModuleTag = "$initial";
+export type BuiltinModuleTag = '$initial';
 
 export type CodeSplittingGroup = {
   /**
@@ -1022,20 +1006,17 @@ interface OverwriteOutputOptionsForCli {
   codeSplitting?:
     | boolean
     | {
-      minSize?: number;
-      minShareCount?: number;
-    };
+        minSize?: number;
+        minShareCount?: number;
+      };
   advancedChunks?: {
     minSize?: number;
     minShareCount?: number;
   };
 }
 
-export type OutputCliOptions =
-  & Omit<
-    OutputOptions,
-    | keyof OverwriteOutputOptionsForCli
-    | "sourcemapIgnoreList"
-    | "sourcemapPathTransform"
-  >
-  & OverwriteOutputOptionsForCli;
+export type OutputCliOptions = Omit<
+  OutputOptions,
+  keyof OverwriteOutputOptionsForCli | 'sourcemapIgnoreList' | 'sourcemapPathTransform'
+> &
+  OverwriteOutputOptionsForCli;

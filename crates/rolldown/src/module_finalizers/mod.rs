@@ -2932,19 +2932,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   // SystemJS live export instrumentation
   // =====================================================================
 
-  /// Get the SymbolId for the target of a SimpleAssignmentTarget (if it's a plain identifier).
-  #[expect(dead_code)]
-  fn assignment_target_symbol_id(
-    &self,
-    target: &ast::SimpleAssignmentTarget<'ast>,
-  ) -> Option<SymbolId> {
-    let ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(id_ref) = target else {
-      return None;
-    };
-    let ref_id = id_ref.reference_id.get()?;
-    self.scope.scoping().get_reference(ref_id).symbol_id()
-  }
-
   /// Get the SymbolId for an identifier reference (if it refers to a local symbol).
   fn identifier_ref_symbol_id(&self, id_ref: &ast::IdentifierReference) -> Option<SymbolId> {
     let ref_id = id_ref.reference_id.get()?;

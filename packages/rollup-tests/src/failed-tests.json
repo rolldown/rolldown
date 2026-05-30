@@ -15,14 +15,40 @@
   "rollup@chunking form@chunk-deshadowing-reassignment: chunk reassignment import deshadowing@generates es",
   "rollup@chunking form@chunk-execution-order: maintains execution order @generates cjs",
   "rollup@chunking form@chunk-execution-order: maintains execution order @generates es",
+  "rollup@chunking form@chunk-export-renaming: chunk export renaming@generates cjs",
+  "rollup@chunking form@chunk-export-renaming: chunk export renaming@generates es",
+  {
+    "id": "rollup@chunking form@chunk-import-deshadowing: chunk import deshadowing@generates cjs",
+    "reason": "Internal generated-lib chunk has an extra exported binding: Rolldown exports another and emptyFunction, Rollup exports only emptyFunction."
+  },
+  {
+    "id": "rollup@chunking form@chunk-import-deshadowing: chunk import deshadowing@generates es",
+    "reason": "Internal generated-lib chunk has an extra exported binding: Rolldown exports two aliases, Rollup exports one."
+  },
   "rollup@chunking form@chunk-naming: simple chunking@generates cjs",
   "rollup@chunking form@chunk-naming: simple chunking@generates es",
   "rollup@chunking form@chunk-variable-name-conflict: chunk variable name conflict@generates cjs",
   "rollup@chunking form@chunk-variable-name-conflict: chunk variable name conflict@generates es",
   "rollup@chunking form@chunking-reexport: chunking star external@generates cjs",
   "rollup@chunking form@chunking-reexport: chunking star external@generates es",
+  {
+    "id": "rollup@chunking form@chunking-star-external: chunking star external@generates cjs",
+    "reason": "Internal generated-dep chunk exposes reexport helper bindings __exportAll and __reExport in addition to dep; Rollup exposes only dep."
+  },
+  {
+    "id": "rollup@chunking form@chunking-star-external: chunking star external@generates es",
+    "reason": "Internal generated-dep chunk has four exported aliases while Rollup has one, so this is more than alias spelling drift."
+  },
   "rollup@chunking form@circular-chunks-warning-caused-by-manual-chunks-conflict: Throw a warning for circular chunks caused by manual chunks conflict@generates cjs",
   "rollup@chunking form@circular-chunks-warning-caused-by-manual-chunks-conflict: Throw a warning for circular chunks caused by manual chunks conflict@generates es",
+  {
+    "id": "rollup@chunking form@circular-chunks-warning-caused-by-only-explicit-manual-chunks: Throw a warning for circular chunks caused by onlyExplicitManualChunks@generates cjs",
+    "reason": "Rolldown emits no bindings from generated-ac and also does not report the expected CIRCULAR_CHUNK warnings."
+  },
+  {
+    "id": "rollup@chunking form@circular-chunks-warning-caused-by-only-explicit-manual-chunks: Throw a warning for circular chunks caused by onlyExplicitManualChunks@generates es",
+    "reason": "Rolldown emits no bindings from generated-ac and also does not report the expected CIRCULAR_CHUNK warnings."
+  },
   "rollup@chunking form@circular-entry-points2: does not create a facade for one circular entry point if possible@generates cjs",
   "rollup@chunking form@circular-entry-points2: does not create a facade for one circular entry point if possible@generates es",
   "rollup@chunking form@circular-entry-points3: creates facades for all circular entry points if they become tainted by another entry@generates cjs",
@@ -31,14 +57,44 @@
   "rollup@chunking form@circular-entry-points: chunking circular entry points@generates es",
   "rollup@chunking form@circular-manual-chunks: handles manual chunks with circular dependencies@generates cjs",
   "rollup@chunking form@circular-manual-chunks: handles manual chunks with circular dependencies@generates es",
+  {
+    "id": "rollup@chunking form@combined-namespace-reexport: correctly handles combined namespace reexports@generates cjs",
+    "reason": "Internal generated-geometry chunk exports three bindings while Rollup exports four namespace/reexport bindings."
+  },
+  {
+    "id": "rollup@chunking form@combined-namespace-reexport: correctly handles combined namespace reexports@generates es",
+    "reason": "Internal generated-geometry chunk exports three bindings while Rollup exports four namespace/reexport bindings."
+  },
   "rollup@chunking form@deconflict-globals: does not deconflict due to global variables used in other chunks@generates cjs",
   "rollup@chunking form@deconflict-globals: does not deconflict due to global variables used in other chunks@generates es",
   "rollup@chunking form@deconflict-system-default-export-variable: deconflicts SystemJS default export variable with namespace imports@generates cjs",
   "rollup@chunking form@deconflict-system-default-export-variable: deconflicts SystemJS default export variable with namespace imports@generates es",
+  "rollup@chunking form@deduplicate-imports-referencing-originals-2: do not import variables that reference an original if another variable referencing it is already imported@generates cjs",
+  "rollup@chunking form@deduplicate-imports-referencing-originals-2: do not import variables that reference an original if another variable referencing it is already imported@generates es",
+  "rollup@chunking form@deduplicate-imports-referencing-originals: do not import variables that reference an original if the original is already imported@generates cjs",
+  "rollup@chunking form@deduplicate-imports-referencing-originals: do not import variables that reference an original if the original is already imported@generates es",
+  "rollup@chunking form@default-export-name-conflict: does not produce name conflicts when reexporting via default exports@generates cjs",
+  "rollup@chunking form@default-export-name-conflict: does not produce name conflicts when reexporting via default exports@generates es",
+  {
+    "id": "rollup@chunking form@deoptimized-module-with-dynamic-import: deoptimized module with dynamic import@generates cjs",
+    "reason": "Public main chunk is missing the cjs export expected by Rollup."
+  },
+  {
+    "id": "rollup@chunking form@deoptimized-module-with-dynamic-import: deoptimized module with dynamic import@generates es",
+    "reason": "Public main chunk is missing the c export expected by Rollup."
+  },
   "rollup@chunking form@deprecated@emit-file@filenames-function-patterns: supports using a function that returns a pattern for FileNames@generates cjs",
   "rollup@chunking form@deprecated@emit-file@filenames-function-patterns: supports using a function that returns a pattern for FileNames@generates es",
   "rollup@chunking form@dynamic-import-chunking: Code splitting with dynamic import@generates cjs",
   "rollup@chunking form@dynamic-import-chunking: Code splitting with dynamic import@generates es",
+  {
+    "id": "rollup@chunking form@dynamic-import-facade: makes sure dynamic chunks are not tainted@generates cjs",
+    "reason": "Internal generated-dynamic chunk exports two bindings while Rollup exports three facade/dependency bindings."
+  },
+  {
+    "id": "rollup@chunking form@dynamic-import-facade: makes sure dynamic chunks are not tainted@generates es",
+    "reason": "Internal generated-dynamic chunk exports two bindings while Rollup exports three facade/dependency bindings."
+  },
   "rollup@chunking form@dynamic-import-from-manual-chunk: handles dynamic imports in manual chunks@generates cjs",
   "rollup@chunking form@dynamic-import-from-manual-chunk: handles dynamic imports in manual chunks@generates es",
   "rollup@chunking form@dynamic-import-inline-colouring: Handle dynamic imports that are part of a static graph@generates cjs",
@@ -47,10 +103,36 @@
   "rollup@chunking form@dynamic-import-statically-imported-2: handles dynamic imports of previously statically imported chunks that are also dynamically imported by other chunks@generates es",
   "rollup@chunking form@dynamic-import-statically-imported: handles dynamic imports of previously statically imported chunks@generates cjs",
   "rollup@chunking form@dynamic-import-statically-imported: handles dynamic imports of previously statically imported chunks@generates es",
+  {
+    "id": "rollup@chunking form@dynamic-import-synthetic-exports-preserve-modules: handle dynamically importing a module with synthetic named exports when preserving modules@generates cjs",
+    "reason": "With preserveModules, public lib.js export name differs: Rolldown emits __moduleExports, Rollup emits lib."
+  },
+  {
+    "id": "rollup@chunking form@dynamic-import-synthetic-exports-preserve-modules: handle dynamically importing a module with synthetic named exports when preserving modules@generates es",
+    "reason": "With preserveModules, public lib.js export name differs: Rolldown emits __moduleExports, Rollup emits l."
+  },
   "rollup@chunking form@dynamic-import-with-namespace: The all cases of tree-shaking for dynamic import with namespace@generates cjs",
   "rollup@chunking form@dynamic-import-with-namespace: The all cases of tree-shaking for dynamic import with namespace@generates es",
+  "rollup@chunking form@dynamic-import: handles dynamic imports with a shared dependency@generates cjs",
+  "rollup@chunking form@dynamic-import: handles dynamic imports with a shared dependency@generates es",
   "rollup@chunking form@dynamically-import-facaded-entry: uses existing entry facades for dynamic imports if present@generates cjs",
   "rollup@chunking form@dynamically-import-facaded-entry: uses existing entry facades for dynamic imports if present@generates es",
+  {
+    "id": "rollup@chunking form@dynamically-import-non-preserved-entry: supports dynamically importing entries with additional exports@generates cjs",
+    "reason": "Public main chunk only exports promise; Rollup also exports main and value."
+  },
+  {
+    "id": "rollup@chunking form@dynamically-import-non-preserved-entry: supports dynamically importing entries with additional exports@generates es",
+    "reason": "Public main chunk only exports promise; Rollup exports main/value aliases as well."
+  },
+  {
+    "id": "rollup@chunking form@dynamically-import-tainted-entry: supports dynamically importing entries with additional exports@generates cjs",
+    "reason": "Public main chunk only exports promise; Rollup also exports main and value."
+  },
+  {
+    "id": "rollup@chunking form@dynamically-import-tainted-entry: supports dynamically importing entries with additional exports@generates es",
+    "reason": "Public main chunk only exports promise; Rollup also exports main/value aliases."
+  },
   "rollup@chunking form@emit-file@deconflict-against-named-files: deconflicts files against named files@generates cjs",
   "rollup@chunking form@emit-file@deconflict-against-named-files: deconflicts files against named files@generates es",
   "rollup@chunking form@emit-file@deduplicate-assets: deduplicates asset that have the same source@generates cjs",
@@ -68,6 +150,14 @@
   "rollup@chunking form@emit-file@emit-chunk-order2: creates a consistent chunking order (needs to be consistent with the other test of this kind)@generates cjs",
   "rollup@chunking form@emit-file@emit-chunk-order2: creates a consistent chunking order (needs to be consistent with the other test of this kind)@generates es",
   "rollup@chunking form@emit-file@emit-chunk-worker: allows adding additional chunks to be used in workers@generates cjs",
+  {
+    "id": "rollup@chunking form@emit-file@emit-chunk-worklet: allows adding additional chunks to be used in worklets@generates cjs",
+    "reason": "Generated worklet chunk still has an output/export signature mismatch when emitted through plugin emitFile."
+  },
+  {
+    "id": "rollup@chunking form@emit-file@emit-chunk-worklet: allows adding additional chunks to be used in worklets@generates es",
+    "reason": "Generated worklet chunk still has an output/export signature mismatch when emitted through plugin emitFile."
+  },
   "rollup@chunking form@emit-file@emit-chunk: allows adding additional chunks and retrieving their file name@generates cjs",
   "rollup@chunking form@emit-file@emit-chunk: allows adding additional chunks and retrieving their file name@generates es",
   "rollup@chunking form@emit-file@emits-existing-chunk: allows adding modules already in the graph as entry points@generates cjs",
@@ -80,6 +170,14 @@
   "rollup@chunking form@emit-file@generate-emission-names: updates asset names when emitting in generate phase@generates es",
   "rollup@chunking form@emit-file@named-user-chunks: deduplicates with named chunks defined by the user@generates cjs",
   "rollup@chunking form@emit-file@named-user-chunks: deduplicates with named chunks defined by the user@generates es",
+  {
+    "id": "rollup@chunking form@emit-file@reference-files: allows referencing emitted files@generates cjs",
+    "reason": "CJS output emits unexpected EMPTY_IMPORT_META warnings for emitted asset references that Rollup accepts."
+  },
+  {
+    "id": "rollup@chunking form@emit-file@reference-files: allows referencing emitted files@generates es",
+    "reason": "Emitted-file reference output still differs from Rollup for ES chunking output."
+  },
   "rollup@chunking form@emit-file@set-asset-source: supports setting the asset source during generate@generates cjs",
   "rollup@chunking form@emit-file@set-asset-source: supports setting the asset source during generate@generates es",
   "rollup@chunking form@empty-chunks: empty chunk pruning@generates cjs",
@@ -88,6 +186,14 @@
   "rollup@chunking form@empty-module-no-treeshake: associates empty modules with chunks if tree-shaking is disabled for them@generates es",
   "rollup@chunking form@entry-aliases: alias module dependency inlining@generates cjs",
   "rollup@chunking form@entry-aliases: alias module dependency inlining@generates es",
+  {
+    "id": "rollup@chunking form@entry-without-code-dynamic: optimizes chunks when a dynamic entry point without own code is imported from another entry@generates cjs",
+    "reason": "Internal generated-dynamic chunk has an extra namespace binding dynamic_exports; Rollup exposes only foo."
+  },
+  {
+    "id": "rollup@chunking form@entry-without-code-dynamic: optimizes chunks when a dynamic entry point without own code is imported from another entry@generates es",
+    "reason": "Internal generated-dynamic chunk exports two aliases while Rollup exports one foo binding."
+  },
   "rollup@chunking form@entry-without-code: optimizes chunks when an entry point without own code is imported from another entry@generates cjs",
   "rollup@chunking form@entry-without-code: optimizes chunks when an entry point without own code is imported from another entry@generates es",
   "rollup@chunking form@external-imports: uses correct interop per chunk when importing from external modules@generates cjs",
@@ -96,10 +202,28 @@
   "rollup@chunking form@facades-with-external-reexports: ignores external reexports of other entries when finding facades@generates es",
   "rollup@chunking form@facades-with-reexports: ignores reexports of other entries when finding facades@generates cjs",
   "rollup@chunking form@facades-with-reexports: ignores reexports of other entries when finding facades@generates es",
+  "rollup@chunking form@filenames-patterns: filenames custom pattern@generates cjs",
+  "rollup@chunking form@filenames-patterns: filenames custom pattern@generates es",
   "rollup@chunking form@generated-code@arrow-functions-false: does not use arrow functions@generates cjs",
   "rollup@chunking form@generated-code@arrow-functions-false: does not use arrow functions@generates es",
   "rollup@chunking form@generated-code@arrow-functions-true: uses arrow functions@generates cjs",
   "rollup@chunking form@generated-code@arrow-functions-true: uses arrow functions@generates es",
+  "rollup@chunking form@hashing@base-16: supports hex hashes@generates cjs",
+  "rollup@chunking form@hashing@base-16: supports hex hashes@generates es",
+  "rollup@chunking form@hashing@base-36: supports base-36 hashes@generates cjs",
+  "rollup@chunking form@hashing@base-36: supports base-36 hashes@generates es",
+  "rollup@chunking form@hashing@base-64: supports base-64 hashes@generates cjs",
+  "rollup@chunking form@hashing@base-64: supports base-64 hashes@generates es",
+  "rollup@chunking form@hashing@deconflict-hashes: deduplicates hashes for identical files@generates cjs",
+  "rollup@chunking form@hashing@deconflict-hashes: deduplicates hashes for identical files@generates es",
+  "rollup@chunking form@hashing@double-hash: supports double hashes in patterns@generates cjs",
+  "rollup@chunking form@hashing@double-hash: supports double hashes in patterns@generates es",
+  "rollup@chunking form@hashing@hash-size: allows configurable hash size@generates cjs",
+  "rollup@chunking form@hashing@hash-size: allows configurable hash size@generates es",
+  "rollup@chunking form@hashing@random-match: leaves random hash matches untransformed@generates cjs",
+  "rollup@chunking form@hashing@random-match: leaves random hash matches untransformed@generates es",
+  "rollup@chunking form@hashing@tree-shaken-dynamic-hash: Does not fail when calculating the hash of a file containing a tree-shaken dynamic import@generates cjs",
+  "rollup@chunking form@hashing@tree-shaken-dynamic-hash: Does not fail when calculating the hash of a file containing a tree-shaken dynamic import@generates es",
   "rollup@chunking form@implicit-dependencies@implicitly-dependent-emitted-entry2: makes sure emitted entry points are never implicit dependencies@generates cjs",
   "rollup@chunking form@implicit-dependencies@implicitly-dependent-emitted-entry2: makes sure emitted entry points are never implicit dependencies@generates es",
   "rollup@chunking form@implicit-dependencies@implicitly-dependent-emitted-entry: makes sure emitted entry points are never implicit dependencies@generates cjs",
@@ -108,6 +232,22 @@
   "rollup@chunking form@implicit-dependencies@implicitly-dependent-entry: makes sure actual entry points are never implicit dependencies@generates es",
   "rollup@chunking form@implicit-dependencies@multiple-dependencies: supports emitting the same chunk with different and multiple dependencies@generates cjs",
   "rollup@chunking form@implicit-dependencies@multiple-dependencies: supports emitting the same chunk with different and multiple dependencies@generates es",
+  {
+    "id": "rollup@chunking form@implicit-dependencies@preserve-signature-allow-extension: supports implicit dependencies when emitting files@generates cjs",
+    "reason": "Implicit dependency output differs when preserving an allow-extension entry signature."
+  },
+  {
+    "id": "rollup@chunking form@implicit-dependencies@preserve-signature-allow-extension: supports implicit dependencies when emitting files@generates es",
+    "reason": "Implicit dependency output differs when preserving an allow-extension entry signature."
+  },
+  {
+    "id": "rollup@chunking form@implicit-dependencies@preserve-signature-false: supports implicit dependencies when emitting files@generates cjs",
+    "reason": "Implicit dependency output differs when preserveEntrySignatures is false."
+  },
+  {
+    "id": "rollup@chunking form@implicit-dependencies@preserve-signature-false: supports implicit dependencies when emitting files@generates es",
+    "reason": "Implicit dependency output differs when preserveEntrySignatures is false."
+  },
   "rollup@chunking form@implicit-dependencies@preserve-signature-strict: supports implicit dependencies when emitting files@generates cjs",
   "rollup@chunking form@implicit-dependencies@preserve-signature-strict: supports implicit dependencies when emitting files@generates es",
   "rollup@chunking form@implicit-dependencies@shared-dependency-no-side-effect: handles shared dependencies between implicit chunks without side-effects@generates cjs",
@@ -116,6 +256,10 @@
   "rollup@chunking form@implicit-dependencies@shared-dependency-reexport: handles shared dependencies when there are only reexports@generates es",
   "rollup@chunking form@implicit-dependencies@single-dependency: supports implicit dependencies when emitting files@generates cjs",
   "rollup@chunking form@implicit-dependencies@single-dependency: supports implicit dependencies when emitting files@generates es",
+  {
+    "id": "rollup@chunking form@import-meta-url: supports import.meta.url@generates es",
+    "reason": "Public main chunk export alias differs: Rolldown emits t, Rollup emits l."
+  },
   "rollup@chunking form@improved-dynamic-chunks@dynamic-import-already-contained-1: inlines dynamic imports that are already statically imported@generates cjs",
   "rollup@chunking form@improved-dynamic-chunks@dynamic-import-already-contained-1: inlines dynamic imports that are already statically imported@generates es",
   "rollup@chunking form@improved-dynamic-chunks@dynamic-import-already-contained-2: inlines dynamic imports that are already statically imported by their importers@generates cjs",
@@ -128,12 +272,36 @@
   "rollup@chunking form@improved-dynamic-chunks@dynamic-not-in-memory: keeps chunks separate when not in memory for all dynamic imports@generates es",
   "rollup@chunking form@improved-dynamic-chunks@multi-entry-different-and-shared-dependencies: avoids chunks for always loaded dependencies if multiple entry points with different dependencies have dynamic imports@generates cjs",
   "rollup@chunking form@improved-dynamic-chunks@multi-entry-different-and-shared-dependencies: avoids chunks for always loaded dependencies if multiple entry points with different dependencies have dynamic imports@generates es",
+  {
+    "id": "rollup@chunking form@improved-dynamic-chunks@multi-entry-different-dependencies: avoids chunks for always loaded dependencies if multiple entry points with different dependencies have dynamic imports@generates cjs",
+    "reason": "Dynamic chunk is missing the value1/value2 exports expected by Rollup."
+  },
+  {
+    "id": "rollup@chunking form@improved-dynamic-chunks@multi-entry-different-dependencies: avoids chunks for always loaded dependencies if multiple entry points with different dependencies have dynamic imports@generates es",
+    "reason": "Dynamic chunk is missing the value1/value2 exports expected by Rollup."
+  },
   "rollup@chunking form@improved-dynamic-chunks@multi-entry-partly-already-loaded-dynamic: avoids chunks for always loaded dependencies if multiple entry points with different dependencies have dynamic imports@generates cjs",
   "rollup@chunking form@improved-dynamic-chunks@multi-entry-partly-already-loaded-dynamic: avoids chunks for always loaded dependencies if multiple entry points with different dependencies have dynamic imports@generates es",
+  {
+    "id": "rollup@chunking form@improved-dynamic-chunks@multi-entry-shared-static-with-dynamic-import: avoids chunks for always loaded dependencies if multiple entry points with different dependencies have dynamic imports@generates cjs",
+    "reason": "Shared generated chunk exports no binding, while Rollup keeps the shared value export."
+  },
+  {
+    "id": "rollup@chunking form@improved-dynamic-chunks@multi-entry-shared-static-with-dynamic-import: avoids chunks for always loaded dependencies if multiple entry points with different dependencies have dynamic imports@generates es",
+    "reason": "Shared generated chunk exports no binding, while Rollup keeps the shared value export."
+  },
   "rollup@chunking form@improved-dynamic-chunks@single-dynamic-multiple-imports: does not create a separate chunk if a dynamically imported chunk shares a dependency with its importer, and dynamic chunk imported from multiple places@generates cjs",
   "rollup@chunking form@improved-dynamic-chunks@single-dynamic-multiple-imports: does not create a separate chunk if a dynamically imported chunk shares a dependency with its importer, and dynamic chunk imported from multiple places@generates es",
   "rollup@chunking form@improved-dynamic-chunks@single-dynamic: does not create a separate chunk if a dynamically imported chunk shares a dependency with its importer@generates cjs",
   "rollup@chunking form@improved-dynamic-chunks@single-dynamic: does not create a separate chunk if a dynamically imported chunk shares a dependency with its importer@generates es",
+  {
+    "id": "rollup@chunking form@indirect-reexports-preserve-modules: does not drop indirect reexports when preserving modules@generates cjs",
+    "reason": "With preserveModules, components/index.js drops the indirect foo reexport and only exposes baz."
+  },
+  {
+    "id": "rollup@chunking form@indirect-reexports-preserve-modules: does not drop indirect reexports when preserving modules@generates es",
+    "reason": "With preserveModules, components/index.js drops the indirect foo reexport and only exposes baz."
+  },
   "rollup@chunking form@interop-per-reexported-default-dependency: allows to configure the interop type per reexported default from an external dependency@generates cjs",
   "rollup@chunking form@manual-chunk-avoid-facade: avoid facades if possible when using manual chunks@generates cjs",
   "rollup@chunking form@manual-chunk-avoid-facade: avoid facades if possible when using manual chunks@generates es",
@@ -165,6 +333,8 @@
   "rollup@chunking form@manual-chunks-only-explicit-dependencies@object-form: manual chunks object form merges the specified modules' dependencies into the output chunk@generates es",
   "rollup@chunking form@manual-chunks: manual chunks support@generates cjs",
   "rollup@chunking form@manual-chunks: manual chunks support@generates es",
+  "rollup@chunking form@max-parallel-file-operations: maxParallelFileOps limits write operations@generates cjs",
+  "rollup@chunking form@max-parallel-file-operations: maxParallelFileOps limits write operations@generates es",
   "rollup@chunking form@min-chunk-size@avoid-circular-dependencies2: avoids circular dependencies when merging chunks@generates cjs",
   "rollup@chunking form@min-chunk-size@avoid-circular-dependencies2: avoids circular dependencies when merging chunks@generates es",
   "rollup@chunking form@min-chunk-size@avoid-circular-dependencies: avoids circular dependencies when merging chunks@generates cjs",
@@ -173,6 +343,20 @@
   "rollup@chunking form@min-chunk-size@avoid-transitive-side-effects: does not merge chunks if a dependency would introduce a new side effect@generates es",
   "rollup@chunking form@min-chunk-size@best-merge-target: uses the merge target that is closest@generates cjs",
   "rollup@chunking form@min-chunk-size@best-merge-target: uses the merge target that is closest@generates es",
+  "rollup@chunking form@min-chunk-size@ignore-correlated-side-effects: ignores correlated side effects if they cannot be merged@generates cjs",
+  "rollup@chunking form@min-chunk-size@ignore-correlated-side-effects: ignores correlated side effects if they cannot be merged@generates es",
+  {
+    "id": "rollup@chunking form@min-chunk-size@merge-chunk-into-distant-shared: merges small chunks into shared chunks that are loaded by a non-close super-set of entry points@generates cjs",
+    "reason": "Merged generated-shared chunk loses the shared/small exports expected by Rollup."
+  },
+  {
+    "id": "rollup@chunking form@min-chunk-size@merge-chunk-into-distant-shared: merges small chunks into shared chunks that are loaded by a non-close super-set of entry points@generates es",
+    "reason": "Merged generated-shared chunk loses the expected exports after minChunkSize merging."
+  },
+  "rollup@chunking form@min-chunk-size@merge-chunk-into-shared: merges small chunks into shared chunks that are loaded by a super-set of entry points@generates cjs",
+  "rollup@chunking form@min-chunk-size@merge-chunk-into-shared: merges small chunks into shared chunks that are loaded by a super-set of entry points@generates es",
+  "rollup@chunking form@min-chunk-size@merge-correlated-side-effects: merges correlated side effects with pure chunks@generates cjs",
+  "rollup@chunking form@min-chunk-size@merge-correlated-side-effects: merges correlated side effects with pure chunks@generates es",
   "rollup@chunking form@min-chunk-size@merge-dependency-side-effects: merges chunks if their dependency side effects are the same@generates cjs",
   "rollup@chunking form@min-chunk-size@merge-dependency-side-effects: merges chunks if their dependency side effects are the same@generates es",
   "rollup@chunking form@min-chunk-size@merge-despite-correlated-side-effects: merges chunks if their dependency side effects are a subset of the other's correlated side effects@generates cjs",
@@ -187,22 +371,103 @@
   "rollup@chunking form@min-chunk-size@merge-with-entry-side-effect: merges dynamic imports even when the entry has side effects@generates es",
   "rollup@chunking form@min-chunk-size@no-merge-for-big-chunks: does not merge chunks if all chunks are below the size limit@generates cjs",
   "rollup@chunking form@min-chunk-size@no-merge-for-big-chunks: does not merge chunks if all chunks are below the size limit@generates es",
+  {
+    "id": "rollup@chunking form@min-chunk-size@no-merge-side-effects: does not merge small chunks that have side effects@generates cjs",
+    "reason": "Generated shared/small chunks lose exports that Rollup preserves when side effects prevent merging."
+  },
+  {
+    "id": "rollup@chunking form@min-chunk-size@no-merge-side-effects: does not merge small chunks that have side effects@generates es",
+    "reason": "Generated shared/small chunks lose exports that Rollup preserves when side effects prevent merging."
+  },
+  {
+    "id": "rollup@chunking form@min-chunk-size@prefer-close-merge-target-a: when there are two valid merge targets, the one that is loaded under more similar conditions is preferred@generates cjs",
+    "reason": "Selected merge target chunk has only one export while Rollup keeps both big and small exports."
+  },
+  {
+    "id": "rollup@chunking form@min-chunk-size@prefer-close-merge-target-a: when there are two valid merge targets, the one that is loaded under more similar conditions is preferred@generates es",
+    "reason": "Selected merge target chunk export signature differs after minChunkSize merge-target selection."
+  },
+  {
+    "id": "rollup@chunking form@min-chunk-size@prefer-close-merge-target-b: when there are two valid merge targets, the one that is loaded under more similar conditions is preferred@generates cjs",
+    "reason": "Selected merge target chunk has only one export while Rollup keeps both big and small exports."
+  },
+  {
+    "id": "rollup@chunking form@min-chunk-size@prefer-close-merge-target-b: when there are two valid merge targets, the one that is loaded under more similar conditions is preferred@generates es",
+    "reason": "Selected merge target chunk export signature differs after minChunkSize merge-target selection."
+  },
+  {
+    "id": "rollup@chunking form@min-chunk-size@prefer-small-merge-target-a: when there are two equally valid merge targets, the smaller is preferred@generates cjs",
+    "reason": "Selected smaller merge target chunk has only one export while Rollup keeps both big and small exports."
+  },
+  {
+    "id": "rollup@chunking form@min-chunk-size@prefer-small-merge-target-a: when there are two equally valid merge targets, the smaller is preferred@generates es",
+    "reason": "Selected smaller merge target chunk has only one export while Rollup keeps both aliases."
+  },
+  {
+    "id": "rollup@chunking form@min-chunk-size@prefer-small-merge-target-b: when there are two equally valid merge targets, the smaller is preferred@generates cjs",
+    "reason": "Selected smaller merge target chunk has only one export while Rollup keeps both big and small exports."
+  },
+  {
+    "id": "rollup@chunking form@min-chunk-size@prefer-small-merge-target-b: when there are two equally valid merge targets, the smaller is preferred@generates es",
+    "reason": "Selected smaller merge target chunk has only one export while Rollup keeps both aliases."
+  },
   "rollup@chunking form@min-chunk-size@track-external-effects2: does not tracks external imports as side effects if they are marked as side effect free@generates cjs",
   "rollup@chunking form@min-chunk-size@track-external-effects2: does not tracks external imports as side effects if they are marked as side effect free@generates es",
   "rollup@chunking form@min-chunk-size@tree-shaking: takes tree-shaking into account and ignores top-level comments@generates cjs",
   "rollup@chunking form@min-chunk-size@tree-shaking: takes tree-shaking into account and ignores top-level comments@generates es",
+  {
+    "id": "rollup@chunking form@missing-export-compact: missing export compact@generates es",
+    "reason": "Public dep.js uses generated missing-export aliases instead of Rollup-compatible missingExport and missingFn exports."
+  },
+  {
+    "id": "rollup@chunking form@missing-export-reused-deconflicting: handles using dependencies with shimmed missing exports as @generates cjs",
+    "reason": "dep2.js is missing the previousShimmedExport compatibility shim expected by Rollup."
+  },
+  {
+    "id": "rollup@chunking form@missing-export-reused-deconflicting: handles using dependencies with shimmed missing exports as @generates es",
+    "reason": "dep2.js is missing the previousShimmedExport compatibility shim expected by Rollup."
+  },
+  {
+    "id": "rollup@chunking form@missing-export: missing export@generates es",
+    "reason": "Public dep.js uses generated missing-export aliases instead of Rollup-compatible missingExport and missingFn exports."
+  },
   "rollup@chunking form@multi-chunking: simple chunking@generates cjs",
   "rollup@chunking form@multi-chunking: simple chunking@generates es",
   "rollup@chunking form@multiple-entry-points: handles multiple entry points with a shared dependency@generates cjs",
   "rollup@chunking form@multiple-entry-points: handles multiple entry points with a shared dependency@generates es",
   "rollup@chunking form@namespace-reexport-name-conflict: renders namespaces with reexports that conflict with existing imports@generates cjs",
   "rollup@chunking form@namespace-reexport-name-conflict: renders namespaces with reexports that conflict with existing imports@generates es",
+  "rollup@chunking form@namespace-reexport-side-effect-cache: correctly tracks side-effect dependencies for multiple importers through namespace reexport cache@generates cjs",
+  "rollup@chunking form@namespace-reexport-side-effect-cache: correctly tracks side-effect dependencies for multiple importers through namespace reexport cache@generates es",
+  "rollup@chunking form@namespace-reexports: namespace rendering with reexports@generates cjs",
+  "rollup@chunking form@namespace-reexports: namespace rendering with reexports@generates es",
   "rollup@chunking form@nested-chunks: nested chunks@generates cjs",
   "rollup@chunking form@nested-chunks: nested chunks@generates es",
   "rollup@chunking form@no-treeshake-imports: includes all imports when setting moduleSideEffects to \"no-treeshake\"@generates cjs",
   "rollup@chunking form@no-treeshake-imports: includes all imports when setting moduleSideEffects to \"no-treeshake\"@generates es",
   "rollup@chunking form@option-virtual-dirname: expect the directory name for \"virtual\" files to be rollup_virtual@generates cjs",
   "rollup@chunking form@option-virtual-dirname: expect the directory name for \"virtual\" files to be rollup_virtual@generates es",
+  {
+    "id": "rollup@chunking form@preserve-entry-signatures@allow-extension: Never creates facades for allow-extension@generates es",
+    "reason": "Public allow-extension entry export alias differs from Rollup for the preserved signature."
+  },
+  {
+    "id": "rollup@chunking form@preserve-entry-signatures@exports-only-no-exports: Does not create a facade for exports-only if there are no exports@generates es",
+    "reason": "Preserve-entry-signatures output still differs from Rollup for an exports-only entry with no exports."
+  },
+  "rollup@chunking form@preserve-entry-signatures@exports-only: Creates a facade if necessary for exports-only if there are exports@generates cjs",
+  "rollup@chunking form@preserve-entry-signatures@exports-only: Creates a facade if necessary for exports-only if there are exports@generates es",
+  {
+    "id": "rollup@chunking form@preserve-entry-signatures@false: Does not include entry exports and does not preserve the signature@generates es",
+    "reason": "Preserve-entry-signatures false output still differs from Rollup."
+  },
+  "rollup@chunking form@preserve-entry-signatures@override-via-plugin: Allows overriding behaviour for emitted chunks@generates cjs",
+  {
+    "id": "rollup@chunking form@preserve-entry-signatures@override-via-plugin: Allows overriding behaviour for emitted chunks@generates es",
+    "reason": "Plugin-overridden preserveEntrySignatures output has public export aliases that differ from Rollup."
+  },
+  "rollup@chunking form@preserve-entry-signatures@strict: Creates a facade if necessary for strict entry signatures@generates cjs",
+  "rollup@chunking form@preserve-entry-signatures@strict: Creates a facade if necessary for strict entry signatures@generates es",
   "rollup@chunking form@preserve-modules-commonjs: Handles output from @rollup/plugin-commonjs@generates cjs",
   "rollup@chunking form@preserve-modules-commonjs: Handles output from @rollup/plugin-commonjs@generates es",
   "rollup@chunking form@preserve-modules-default-mode-namespace2: import namespace from chunks with default export mode when preserving modules@generates cjs",
@@ -211,8 +476,18 @@
   "rollup@chunking form@preserve-modules-default-mode-namespace: import namespace from chunks with default export mode when preserving modules@generates es",
   "rollup@chunking form@preserve-modules-dynamic-namespace: Preserve modules properly handles internal namespace imports (#2576)@generates cjs",
   "rollup@chunking form@preserve-modules-dynamic-namespace: Preserve modules properly handles internal namespace imports (#2576)@generates es",
+  {
+    "id": "rollup@chunking form@preserve-modules-export-alias: confirm export aliases are preserved in modules@generates cjs",
+    "reason": "With preserveModules, dep.js drops the bar export alias and only exposes foo."
+  },
+  {
+    "id": "rollup@chunking form@preserve-modules-export-alias: confirm export aliases are preserved in modules@generates es",
+    "reason": "With preserveModules, dep.js drops the bar export alias and only exposes foo."
+  },
   "rollup@chunking form@preserve-modules-filename-pattern: entryFileNames pattern supported in combination with preserveModules@generates cjs",
   "rollup@chunking form@preserve-modules-filename-pattern: entryFileNames pattern supported in combination with preserveModules@generates es",
+  "rollup@chunking form@preserve-modules-namespace-reexport-reexport: handles doing a namespace reexport of a reexport@generates cjs",
+  "rollup@chunking form@preserve-modules-namespace-reexport-reexport: handles doing a namespace reexport of a reexport@generates es",
   "rollup@chunking form@preserve-modules-nested-barrel-es-export: confirm exports are deconflicted when exporting nested index aliases@generates cjs",
   "rollup@chunking form@preserve-modules-nested-barrel-es-export: confirm exports are deconflicted when exporting nested index aliases@generates es",
   "rollup@chunking form@preserve-modules-nested-export: confirm exports are preserved when exporting a module@generates cjs",
@@ -220,6 +495,8 @@
   "rollup@chunking form@preserve-modules-proxy-import: correctly resolves imports via a proxy module as direct imports when preserving modules@generates cjs",
   "rollup@chunking form@preserve-modules-root: confirm preserveModulesRoot restructures src appropriately@generates cjs",
   "rollup@chunking form@preserve-modules-root: confirm preserveModulesRoot restructures src appropriately@generates es",
+  "rollup@chunking form@preserve-modules-scriptified-assets: scriptified assets have extension in preserveModules output filename@generates cjs",
+  "rollup@chunking form@preserve-modules-scriptified-assets: scriptified assets have extension in preserveModules output filename@generates es",
   "rollup@chunking form@preserve-modules-virtual-modules-filename-pattern: Generates actual files whose filename adheres to entryFileNames for virtual modules when preserving modules@generates cjs",
   "rollup@chunking form@preserve-modules-virtual-modules-filename-pattern: Generates actual files whose filename adheres to entryFileNames for virtual modules when preserving modules@generates es",
   "rollup@chunking form@preserve-modules-virtual-modules: Generates actual files for virtual modules when preserving modules@generates cjs",
@@ -242,8 +519,12 @@
   "rollup@chunking form@side-effect-free-dependencies@avoid-imports-preserve-modules: avoids empty imports if they do not have side-effects when preserving modules (#3359)@generates es",
   "rollup@chunking form@side-effect-free-dependencies@avoid-side-effect-free-empty-imports: avoids empty imports if they do not have side-effects@generates cjs",
   "rollup@chunking form@side-effect-free-dependencies@avoid-side-effect-free-empty-imports: avoids empty imports if they do not have side-effects@generates es",
+  "rollup@chunking form@side-effect-free-dependencies@hoist-side-effect-modules: hoist side-effect imports when avoiding empty imports@generates cjs",
+  "rollup@chunking form@side-effect-free-dependencies@hoist-side-effect-modules: hoist side-effect imports when avoiding empty imports@generates es",
   "rollup@chunking form@single-file-manual-chunk: chunk aliasing with extensions@generates cjs",
   "rollup@chunking form@single-file-manual-chunk: chunk aliasing with extensions@generates es",
+  "rollup@chunking form@sourcemap-file-names-function: observes sourcemapFileNames property when using a function@generates cjs",
+  "rollup@chunking form@sourcemap-file-names-function: observes sourcemapFileNames property when using a function@generates es",
   "rollup@chunking form@sourcemap-file-names: populates sourcemapFileName property of OutputChunk with final name when using sourcemapFileNames option@generates cjs",
   "rollup@chunking form@sourcemap-file-names: populates sourcemapFileName property of OutputChunk with final name when using sourcemapFileNames option@generates es",
   "rollup@chunking form@splitting-cycles-module-with-TLA-and-dynamic-importer: splitting module in cycles that is dynamically imported by a module with TLA into a separate chunk@generates cjs",
@@ -254,6 +535,14 @@
   "rollup@chunking form@synthetic-named-exports@deduplicate-synthetic-named-exports-and-default: handles importing a synthetic named export together with the default export@generates es",
   "rollup@chunking form@synthetic-named-exports@default-reexport: handles synthetic named exports that are reexported as a default export where both the default and a named export is used@generates cjs",
   "rollup@chunking form@synthetic-named-exports@default-reexport: handles synthetic named exports that are reexported as a default export where both the default and a named export is used@generates es",
+  {
+    "id": "rollup@chunking form@synthetic-named-exports@dynamic-import: synthetic named exports@generates cjs",
+    "reason": "Dynamic synthetic-named-exports chunk public export differs from Rollup."
+  },
+  {
+    "id": "rollup@chunking form@synthetic-named-exports@dynamic-import: synthetic named exports@generates es",
+    "reason": "Dynamic synthetic-named-exports chunk public export differs from Rollup."
+  },
   "rollup@chunking form@synthetic-named-exports@entry: does not expose the synthetic namespace if an entry point uses a string value@generates cjs",
   "rollup@chunking form@synthetic-named-exports@entry: does not expose the synthetic namespace if an entry point uses a string value@generates es",
   "rollup@chunking form@synthetic-named-exports@global-conflict: avoids conflicts with global variables when re-exporting synthetic named exports@generates cjs",

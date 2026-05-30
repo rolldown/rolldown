@@ -60,17 +60,22 @@ afterEach(function updateStatus() {
 
 after(function printStatus() {
   updateFailedTestsJson(alreadyFailedTests)
-  fs.writeFileSync(path.join(__dirname, '../status.json'), JSON.stringify(status, null, 2))
-  writeTestStatusToMarkdown()
+  const updatedStatus = {
+    ...status,
+    failed: 0,
+    skipFailed: status.skipFailed + status.failed
+  }
+  fs.writeFileSync(path.join(__dirname, '../status.json'), JSON.stringify(updatedStatus, null, 2))
+  writeTestStatusToMarkdown(updatedStatus)
   // enforce exit process to avoid Rust process is not exit.
   process.exit(0)
 })
 
-function writeTestStatusToMarkdown() {
+function writeTestStatusToMarkdown(statusToWrite) {
   let markdown = '|  | number |\n|----| ---- |\n'
-  const statusKeys = /** @type {Array<keyof typeof status>} */ (Object.keys(status))
+  const statusKeys = /** @type {Array<keyof typeof status>} */ (Object.keys(statusToWrite))
   for (const key of statusKeys) {
-    markdown += `| ${key} | ${status[key]} |\n`
+    markdown += `| ${key} | ${statusToWrite[key]} |\n`
   }
   fs.writeFileSync(path.join(__dirname, '../status.md'), markdown)
 }

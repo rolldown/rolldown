@@ -14,6 +14,7 @@
     "fixturify": "catalog:",
     "fs-extra": "catalog:",
     "mocha": "catalog:",
+    "oxc-parser": "catalog:",
     "oxc-transform": "catalog:",
     "source-map-support": "catalog:"
   },

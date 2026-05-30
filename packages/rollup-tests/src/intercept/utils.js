@@ -18,7 +18,7 @@ const failedTestsPath = path.join(__dirname, '../failed-tests.json')
 function loadFailedTests() {
   if (fs.existsSync(failedTestsPath)) {
     const failedTests = JSON.parse(fs.readFileSync(failedTestsPath, 'utf-8'))
-    return failedTests
+    return failedTests.map(getFailedTestId)
   }
   return []
 }
@@ -27,9 +27,38 @@ function loadFailedTests() {
  * @param {Set<string>} failuresInThisRound
  */
 function updateFailedTestsJson(failuresInThisRound) {
+  const reasons = loadFailedTestReasons()
   const sorted = [...failuresInThisRound].sort()
-  const formatted = JSON.stringify(sorted, null, 2)
+  const formatted = JSON.stringify(
+    sorted.map(id => reasons.has(id) ? { id, reason: reasons.get(id) } : id),
+    null,
+    2
+  )
   fs.writeFileSync(path.join(__dirname, '../failed-tests.json'), formatted)
+}
+
+function getFailedTestId(entry) {
+  if (typeof entry === 'string') {
+    return entry
+  }
+  if (entry && typeof entry.id === 'string') {
+    return entry.id
+  }
+  throw new Error(`Invalid failed test entry: ${JSON.stringify(entry)}`)
+}
+
+function loadFailedTestReasons() {
+  const reasons = new Map()
+  if (!fs.existsSync(failedTestsPath)) {
+    return reasons
+  }
+  const failedTests = JSON.parse(fs.readFileSync(failedTestsPath, 'utf-8'))
+  for (const entry of failedTests) {
+    if (entry && typeof entry.id === 'string' && typeof entry.reason === 'string') {
+      reasons.set(entry.id, entry.reason)
+    }
+  }
+  return reasons
 }
 
 function loadUnsupportedFeaturesIgnoredTests() {

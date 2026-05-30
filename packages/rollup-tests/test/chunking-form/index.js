@@ -1,6 +1,6 @@
 const assert = require('node:assert');
-const { readdirSync } = require('node:fs');
-const { basename, join, resolve } = require('node:path');
+const { existsSync, readdirSync, readFileSync } = require('node:fs');
+const { basename, join, relative, resolve } = require('node:path');
 /**
  * @type {import('../../src/rollup/types')} Rollup
  */
@@ -23,45 +23,55 @@ runTestSuiteWithSamples('chunking form', resolve(__dirname, '../../../../rollup/
 		() => {
 			let bundle;
 
-			if (config.before) {
-				before(config.before);
-			}
-			if (config.after) {
-				after(config.after);
-			}
 			const logs = [];
-			after(() => config.logs && compareLogs(logs, config.logs));
+			const completedFormats = new Set();
+			after(() => {
+				if (config.logs && completedFormats.size === FORMATS.length) {
+					compareLogs(logs, config.logs);
+				}
+			});
 
 			for (const format of FORMATS) {
 				it('generates ' + format, async () => {
-					process.chdir(directory);
 					const warnings = [];
-					bundle =
-						bundle ||
-						(await rollup({
-							input: [directory + '/main.js'],
-							onLog: (level, log) => {
-								logs.push({ level, ...log });
-								if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
-									warnings.push(log);
-								}
+					let completed = false;
+					try {
+						if (config.before) {
+							await config.before();
+						}
+						process.chdir(directory);
+						bundle =
+							bundle ||
+							(await rollup({
+								input: [directory + '/main.js'],
+								onLog: (level, log) => {
+									logs.push({ level, ...log });
+									if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
+										warnings.push(log);
+									}
+								},
+								strictDeprecations: true,
+								...config.options
+							}));
+						await generateAndTestBundle(
+							bundle,
+							{
+								dir: `${directory}/_actual/${format}`,
+								exports: 'auto',
+								format,
+								chunkFileNames: 'generated-[name].js',
+								validate: true,
+								...(config.options || {}).output
 							},
-							strictDeprecations: true,
-							...config.options
-						}));
-					await generateAndTestBundle(
-						bundle,
-						{
-							dir: `${directory}/_actual/${format}`,
-							exports: 'auto',
-							format,
-							chunkFileNames: 'generated-[name].js',
-							validate: true,
-							...(config.options || {}).output
-						},
-						`${directory}/_expected/${format}`,
-						config
-					);
+							`${directory}/_expected/${format}`,
+							config
+						);
+						completed = true;
+					} finally {
+						if (config.after) {
+							await config.after();
+						}
+					}
 					if (warnings.length > 0) {
 						const codes = new Set();
 						for (const { code } of warnings) {
@@ -72,6 +82,9 @@ runTestSuiteWithSamples('chunking form', resolve(__dirname, '../../../../rollup/
 								.map(({ message }) => `${message}\n\n`)
 								.join('')}` + 'If you expect warnings, list their codes in config.expectedWarnings'
 						);
+					}
+					if (completed) {
+						completedFormats.add(format);
 					}
 				});
 			}
@@ -107,17 +120,40 @@ async function generateAndTestBundle(bundle, outputOptions, expectedDirectory, c
 	// Rolldown's output bytes diverge from Rollup's (region comments, quote style,
 	// identifier deconfliction, etc.), so byte-equal directory comparison is too
 	// strict. Compare chunk count first — a stable structural signal.
-	const actualChunkCount = writeResult.output.filter(o => o.type === 'chunk').length;
-	const expectedChunkCount = countChunkFiles(expectedDirectory);
+	const actualChunkFiles = collectChunkFiles(`${outputOptions.dir}${config.nestedDir ? '/' + config.nestedDir : ''}`);
+	const expectedChunkFiles = collectChunkFiles(`${expectedDirectory}${config.nestedDir ? '/' + config.nestedDir : ''}`);
 	assert.strictEqual(
-		actualChunkCount,
-		expectedChunkCount,
-		`Chunk count mismatch in ${expectedDirectory}: actual ${actualChunkCount}, expected ${expectedChunkCount}`
+		actualChunkFiles.length,
+		expectedChunkFiles.length,
+		`Chunk count mismatch in ${expectedDirectory}: actual ${actualChunkFiles.length}, expected ${expectedChunkFiles.length}`
 	);
+	// Also compare export signatures of corresponding chunks. For each chunk,
+	// the set of public exported names plus the presence of a default export
+	// must match between rolldown and rollup. Internal chunk export aliases are
+	// implementation details as long as importers are rewritten consistently.
+	const actualBase = `${outputOptions.dir}${config.nestedDir ? '/' + config.nestedDir : ''}`;
+	const expectedBase = `${expectedDirectory}${config.nestedDir ? '/' + config.nestedDir : ''}`;
+	const actualChunksByFileName = new Map(writeResult.output.filter(o => o.type === 'chunk').map(chunk => [chunk.fileName, chunk]));
+	const { parseSync } = await getOxcParser();
+	for (const relPath of actualChunkFiles) {
+		const expectedPath = join(expectedBase, relPath);
+		assert.ok(
+			existsSync(expectedPath),
+			`Unexpected actual chunk ${relPath}; no matching expected chunk in ${expectedBase}`
+		);
+		const actual = extractExports(parseSync, readFileSync(join(actualBase, relPath), 'utf8'), outputOptions.format);
+		const expected = extractExports(parseSync, readFileSync(expectedPath, 'utf8'), outputOptions.format);
+		assertExportNames(actual, expected, relPath, isPublicChunk(actualChunksByFileName.get(relPath), outputOptions));
+		assert.strictEqual(
+			actual.hasDefault,
+			expected.hasDefault,
+			`Chunk ${relPath} default-export presence differs: actual ${actual.hasDefault} vs expected ${expected.hasDefault}`
+		);
+	}
 }
 
-function countChunkFiles(dir) {
-	let count = 0;
+function collectChunkFiles(dir) {
+	const result = [];
 	function walk(d) {
 		let entries;
 		try {
@@ -126,10 +162,137 @@ function countChunkFiles(dir) {
 			return;
 		}
 		for (const e of entries) {
-			if (e.isDirectory()) walk(join(d, e.name));
-			else if (e.name.endsWith('.js') && !e.name.endsWith('.js.map')) count++;
+			const p = join(d, e.name);
+			if (e.isDirectory()) walk(p);
+			else if (e.name.endsWith('.js') && !e.name.endsWith('.js.map')) {
+				result.push(relative(dir, p).replace(/\\/g, '/'));
+			}
 		}
 	}
 	walk(dir);
-	return count;
+	return result;
+}
+
+function isPublicChunk(chunk, outputOptions) {
+	return !chunk || outputOptions.preserveModules || chunk.isEntry || chunk.isDynamicEntry || chunk.facadeModuleId;
+}
+
+function assertExportNames(actual, expected, relPath, exactNames) {
+	const actualNames = [...actual.names].sort();
+	const expectedNames = [...expected.names].sort();
+	if (exactNames) {
+		assert.deepStrictEqual(
+			actualNames,
+			expectedNames,
+			`Chunk ${relPath} export names differ: actual ${JSON.stringify(actualNames)} vs expected ${JSON.stringify(expectedNames)}`
+		);
+		return;
+	}
+	assert.strictEqual(
+		actualNames.length,
+		expectedNames.length,
+		`Chunk ${relPath} internal export count differs: actual ${actualNames.length} ${JSON.stringify(actualNames)} vs expected ${expectedNames.length} ${JSON.stringify(expectedNames)}`
+	);
+}
+
+let oxcParserPromise;
+function getOxcParser() {
+	return oxcParserPromise ??= import('oxc-parser');
+}
+
+function extractExports(parseSync, code, format) {
+	return format === 'cjs'
+		? extractCjsExports(parseSync, code)
+		: extractEsmExports(parseSync, code);
+}
+
+function extractEsmExports(parseSync, code) {
+	const result = parseSync('chunk.js', code, { sourceType: 'module' });
+	const names = new Set();
+	let hasDefault = false;
+	for (const staticExport of result.module.staticExports) {
+		for (const entry of staticExport.entries) {
+			const { exportName } = entry;
+			if (exportName.kind === 'Default') {
+				hasDefault = true;
+			} else if (exportName.kind === 'Name' && exportName.name) {
+				if (exportName.name === 'default') hasDefault = true;
+				else names.add(exportName.name);
+			} else if (exportName.kind === 'None') {
+				// `export * from "mod"` — no concrete name visible; use sentinel
+				// so rolldown/rollup outputs can be compared symmetrically.
+				names.add('*');
+			}
+		}
+	}
+	return { names, hasDefault };
+}
+
+function extractCjsExports(parseSync, code) {
+	const result = parseSync('chunk.js', code, { sourceType: 'script' });
+	const names = new Set();
+	let hasDefault = false;
+	const addName = name => {
+		if (!name || name === '__esModule') return;
+		if (name === 'default') hasDefault = true;
+		else names.add(name);
+	};
+	const isExportsId = n => n && n.type === 'Identifier' && n.name === 'exports';
+	const isModuleDotExports = n =>
+		n && n.type === 'MemberExpression' && !n.computed &&
+		n.object.type === 'Identifier' && n.object.name === 'module' &&
+		n.property.type === 'Identifier' && n.property.name === 'exports';
+	const stringValue = n => (n && n.type === 'Literal' && typeof n.value === 'string') ? n.value : null;
+
+	function visit(node) {
+		if (!node || typeof node !== 'object') return;
+		if (Array.isArray(node)) {
+			for (const child of node) visit(child);
+			return;
+		}
+		if (node.type === 'AssignmentExpression' && node.operator === '=') {
+			const left = node.left;
+			if (left && left.type === 'MemberExpression') {
+				if (isModuleDotExports(left)) {
+					hasDefault = true;
+				} else if (isExportsId(left.object)) {
+					if (!left.computed && left.property.type === 'Identifier') {
+						addName(left.property.name);
+					} else {
+						const name = stringValue(left.property);
+						if (name) addName(name);
+					}
+				}
+			}
+		} else if (node.type === 'CallExpression') {
+			const callee = node.callee;
+			if (callee && callee.type === 'MemberExpression' && !callee.computed &&
+				callee.object.type === 'Identifier' && callee.object.name === 'Object' &&
+				callee.property.type === 'Identifier') {
+				const fn = callee.property.name;
+				if (fn === 'defineProperty' && node.arguments.length >= 2 && isExportsId(node.arguments[0])) {
+					const name = stringValue(node.arguments[1]);
+					if (name) addName(name);
+				} else if (fn === 'defineProperties' && node.arguments.length >= 2 &&
+					isExportsId(node.arguments[0]) && node.arguments[1].type === 'ObjectExpression') {
+					for (const prop of node.arguments[1].properties) {
+						if (prop.type !== 'Property') continue;
+						if (!prop.computed && prop.key.type === 'Identifier') addName(prop.key.name);
+						else {
+							const name = stringValue(prop.key);
+							if (name) addName(name);
+						}
+					}
+				}
+			}
+		}
+		for (const key in node) {
+			if (key === 'type' || key === 'start' || key === 'end' || key === 'range' || key === 'loc') continue;
+			const val = node[key];
+			if (val && typeof val === 'object') visit(val);
+		}
+	}
+
+	visit(result.program);
+	return { names, hasDefault };
 }

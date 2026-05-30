@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+System.register(["external-lib"], (function() {
+	"use strict";
+	var x;
+	var _starExcludes = {
+		__proto__: null,
+		default: 1
+	};
+	return {
+		setters: [function(module) {
+			x = module.x;
+			var setter = { __proto__: null };
+			for (var name in module) if (!_starExcludes[name]) setter[name] = module[name];
+			exports(setter);
+		}],
+		execute: (function() {
+			//#region main.js
+			console.log(x);
+			//#endregion
+		})
+	};
+}));
+
+```

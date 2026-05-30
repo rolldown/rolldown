@@ -239,8 +239,10 @@ fn collect_deps<'a>(ctx: &'a GenerateContext<'_>) -> Vec<DepEntry<'a>> {
       };
       let path = importee.get_import_path(ctx.chunk, ctx.resolved_paths);
       if already_added.contains(&path) {
-        // Already included as a named import dep — the star setter logic will be added there
-        // TODO: merge with existing dep entry
+        // Already included as a named import dep — merge star-reexport info into it
+        if let Some(existing) = deps.iter_mut().find(|d| d.path == path) {
+          existing.is_star_reexport = true;
+        }
         continue;
       }
       deps.push(DepEntry {
@@ -452,19 +454,45 @@ fn build_setters_str(ctx: &GenerateContext<'_>, deps: &[DepEntry<'_>]) -> String
   for dep in deps {
     // Star re-export setter — loop over module keys filtering through _starExcludes
     if dep.is_star_reexport {
-      // Generate: function(module) { var setter = {__proto__: null, ...named}; for (var name in module) { if (!_starExcludes[name]) setter[name] = module[name]; } exports(setter); }
       let mut setter_body = String::new();
+
+      // Local var assignments for named bindings (e.g. `x = module.x;`)
+      for binding in &dep.bindings {
+        if !binding.local_name.is_empty() {
+          if binding.module_prop == "*" {
+            setter_body.push_str("      ");
+            setter_body.push_str(binding.local_name);
+            setter_body.push_str(" = module;\n");
+          } else {
+            setter_body.push_str("      ");
+            setter_body.push_str(binding.local_name);
+            setter_body.push_str(" = module.");
+            setter_body.push_str(&binding.module_prop);
+            setter_body.push_str(";\n");
+          }
+        }
+      }
+
+      // Build the setter object with re-exported named bindings
       setter_body.push_str("      var setter = { __proto__: null");
       for binding in &dep.bindings {
-        // Named bindings that are also in this dep (mixed dep)
-        setter_body.push_str(", ");
         if let Some(re_export) = &binding.re_export_as {
+          setter_body.push_str(", ");
           setter_body.push_str(re_export);
-          setter_body.push_str(": module.");
-          setter_body.push_str(&binding.module_prop);
+          setter_body.push_str(": ");
+          if binding.local_name.is_empty() {
+            // Pure re-export — read from module object directly
+            setter_body.push_str("module.");
+            setter_body.push_str(&binding.module_prop);
+          } else {
+            // Local binding also re-exported — use already-assigned local var
+            setter_body.push_str(binding.local_name);
+          }
         }
       }
       setter_body.push_str(" };\n");
+
+      // Star loop: iterate all keys from the dep module, filtered by _starExcludes
       setter_body.push_str("      for (var name in module) { if (!_starExcludes[name]) setter[name] = module[name]; }\n");
       setter_body.push_str("      exports(setter);\n");
       setters.push(concat_string!("function(module) {\n", setter_body, "    }"));

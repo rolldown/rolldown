@@ -9,10 +9,8 @@ const { rollup } = require('../../dist/rollup');
 const { compareLogs } = require('../utils');
 const { runTestSuiteWithSamples } = require('../utils.js');
 
-// `amd` format is not supported by Rolldown.
-// `system` format is now supported — added to FORMATS.
-// Rolldown supports es / cjs / iife / umd / system; the chunking-form test
-// suite exercises es / cjs / amd / system, so the runnable subset is es + cjs + system.
+// `amd` format is not supported by Rolldown. The chunking-form suite exercises
+// es / cjs / amd / system, so the runnable subset for Rolldown is es + cjs + system.
 const FORMATS = ['es', 'cjs', 'system'];
 
 runTestSuiteWithSamples('chunking form', resolve(__dirname, '../../../../rollup/test/chunking-form/samples'), (directory, config) => {

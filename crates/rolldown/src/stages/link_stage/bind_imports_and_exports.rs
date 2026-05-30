@@ -114,12 +114,6 @@ pub enum ImportStatus {
     commonjs_symbol: SymbolRef,
   },
 
-  /// The import was treated as a CommonJS import but the file is known to have no exports
-  _CommonJSWithoutExports,
-
-  /// The imported file was disabled by mapping it to false in the "browser" field of package.json
-  _Disabled,
-
   /// The imported file is external and has unknown exports
   External(SymbolRef),
 }
@@ -1168,12 +1162,6 @@ impl BindImportsAndExportsContext<'_> {
           }
 
           break MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports });
-        }
-        ImportStatus::_CommonJSWithoutExports => {
-          panic!("`ImportStatus::_CommonJSWithoutExports` is not implemented yet")
-        }
-        ImportStatus::_Disabled => {
-          panic!("`ImportStatus::_Disabled` is not implemented yet")
         }
         ImportStatus::External(symbol_ref) => {
           if self.options.format.keep_esm_import_export_syntax() {

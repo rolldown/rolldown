@@ -1,12 +1,9 @@
-import type { RolldownPlugin } from "..";
-import type { BindingNormalizedOptions } from "../binding.cjs";
-import { lazyProp } from "../decorators/lazy";
-import type {
-  SourcemapIgnoreListOption,
-  SourcemapPathTransformOption,
-} from "../types/misc";
-import { PlainObjectLike } from "../types/plain-object-like";
-import type { StringOrRegExp } from "../types/utils";
+import type { RolldownPlugin } from '..';
+import type { BindingNormalizedOptions } from '../binding.cjs';
+import { lazyProp } from '../decorators/lazy';
+import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
+import { PlainObjectLike } from '../types/plain-object-like';
+import type { StringOrRegExp } from '../types/utils';
 import type {
   AddonFunction,
   AssetFileNamesFunction,
@@ -15,9 +12,9 @@ import type {
   GlobalsFunction,
   MinifyOptions,
   OutputOptions,
-} from "./output-options";
+} from './output-options';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
-import type { ModuleFormat } from "./output-options";
+import type { ModuleFormat } from './output-options';
 
 type PathsFunction = (id: string) => string;
 
@@ -25,7 +22,7 @@ type PathsFunction = (id: string) => string;
  * A normalized version of {@linkcode ModuleFormat}.
  * @category Plugin APIs
  */
-export type InternalModuleFormat = "es" | "cjs" | "iife" | "umd" | "system";
+export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd' | 'system';
 
 /** @category Plugin APIs */
 export interface NormalizedOutputOptions {
@@ -44,9 +41,9 @@ export interface NormalizedOutputOptions {
   /** @see {@linkcode OutputOptions.format | format} */
   format: InternalModuleFormat;
   /** @see {@linkcode OutputOptions.exports | exports} */
-  exports: NonNullable<OutputOptions["exports"]>;
+  exports: NonNullable<OutputOptions['exports']>;
   /** @see {@linkcode OutputOptions.sourcemap | sourcemap} */
-  sourcemap: boolean | "inline" | "hidden";
+  sourcemap: boolean | 'inline' | 'hidden';
   /** @see {@linkcode OutputOptions.sourcemapBaseUrl | sourcemapBaseUrl} */
   sourcemapBaseUrl: string | undefined;
   /** @see {@linkcode OutputOptions.codeSplitting | codeSplitting} */
@@ -70,7 +67,7 @@ export interface NormalizedOutputOptions {
   /** @see {@linkcode OutputOptions.outro | outro} */
   outro: AddonFunction;
   /** @see {@linkcode OutputOptions.esModule | esModule} */
-  esModule: boolean | "if-default-prop";
+  esModule: boolean | 'if-default-prop';
   /** @see {@linkcode OutputOptions.extend | extend} */
   extend: boolean;
   /** @see {@linkcode OutputOptions.globals | globals} */
@@ -78,26 +75,22 @@ export interface NormalizedOutputOptions {
   /** @see {@linkcode OutputOptions.paths | paths} */
   paths: Record<string, string> | PathsFunction | undefined;
   /** @see {@linkcode OutputOptions.hashCharacters | hashCharacters} */
-  hashCharacters: "base64" | "base36" | "hex";
+  hashCharacters: 'base64' | 'base36' | 'hex';
   /** @see {@linkcode OutputOptions.sourcemapDebugIds | sourcemapDebugIds} */
   sourcemapDebugIds: boolean;
   /** @see {@linkcode OutputOptions.sourcemapExcludeSources | sourcemapExcludeSources} */
   sourcemapExcludeSources: boolean;
   /** @see {@linkcode OutputOptions.sourcemapIgnoreList | sourcemapIgnoreList} */
-  sourcemapIgnoreList:
-    | boolean
-    | SourcemapIgnoreListOption
-    | StringOrRegExp
-    | undefined;
+  sourcemapIgnoreList: boolean | SourcemapIgnoreListOption | StringOrRegExp | undefined;
   /** @see {@linkcode OutputOptions.sourcemapPathTransform | sourcemapPathTransform} */
   sourcemapPathTransform: SourcemapPathTransformOption | undefined;
   /** @see {@linkcode OutputOptions.minify | minify} */
-  minify: false | MinifyOptions | "dce-only";
+  minify: false | MinifyOptions | 'dce-only';
   /**
    * @deprecated Use `comments.legal` instead.
    * @see {@linkcode OutputOptions.legalComments | legalComments}
    */
-  legalComments: "none" | "inline";
+  legalComments: 'none' | 'inline';
   /** @see {@linkcode OutputOptions.comments | comments} */
   comments: Required<CommentsOptions>;
   /** @see {@linkcode OutputOptions.polyfillRequire | polyfillRequire} */
@@ -116,8 +109,10 @@ export interface NormalizedOutputOptions {
   minifyInternalExports?: boolean;
 }
 
-export class NormalizedOutputOptionsImpl extends PlainObjectLike
-  implements NormalizedOutputOptions {
+export class NormalizedOutputOptionsImpl
+  extends PlainObjectLike
+  implements NormalizedOutputOptions
+{
   constructor(
     private inner: BindingNormalizedOptions,
     private outputOptions: OutputOptions,
@@ -147,17 +142,17 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
   }
 
   @lazyProp
-  get format(): "es" | "cjs" | "iife" | "umd" {
+  get format(): 'es' | 'cjs' | 'iife' | 'umd' | 'system' {
     return this.inner.format;
   }
 
   @lazyProp
-  get exports(): "default" | "named" | "none" | "auto" {
+  get exports(): 'default' | 'named' | 'none' | 'auto' {
     return this.inner.exports;
   }
 
   @lazyProp
-  get sourcemap(): boolean | "inline" | "hidden" {
+  get sourcemap(): boolean | 'inline' | 'hidden' {
     return this.inner.sourcemap;
   }
 
@@ -235,7 +230,7 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
   }
 
   @lazyProp
-  get esModule(): boolean | "if-default-prop" {
+  get esModule(): boolean | 'if-default-prop' {
     return this.inner.esModule;
   }
 
@@ -255,7 +250,7 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
   }
 
   @lazyProp
-  get hashCharacters(): "base64" | "base36" | "hex" {
+  get hashCharacters(): 'base64' | 'base36' | 'hex' {
     return this.inner.hashCharacters;
   }
 
@@ -270,11 +265,7 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
   }
 
   @lazyProp
-  get sourcemapIgnoreList():
-    | boolean
-    | SourcemapIgnoreListOption
-    | StringOrRegExp
-    | undefined {
+  get sourcemapIgnoreList(): boolean | SourcemapIgnoreListOption | StringOrRegExp | undefined {
     return this.outputOptions.sourcemapIgnoreList;
   }
 
@@ -284,19 +275,19 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
   }
 
   @lazyProp
-  get minify(): false | MinifyOptions | "dce-only" {
+  get minify(): false | MinifyOptions | 'dce-only' {
     let ret = this.inner.minify;
-    if (typeof ret === "object" && ret !== null) {
+    if (typeof ret === 'object' && ret !== null) {
       // Omit some properties that are not needed in the output
-      delete ret["codegen"];
-      delete ret["module"];
-      delete ret["sourcemap"];
+      delete ret['codegen'];
+      delete ret['module'];
+      delete ret['sourcemap'];
     }
     return ret;
   }
 
   @lazyProp
-  get legalComments(): "none" | "inline" {
+  get legalComments(): 'none' | 'inline' {
     return this.inner.legalComments;
   }
 
@@ -347,8 +338,8 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
 }
 
 function normalizeAddon(value?: string | AddonFunction) {
-  if (typeof value === "function") {
+  if (typeof value === 'function') {
     return value;
   }
-  return () => value || "";
+  return () => value || '';
 }

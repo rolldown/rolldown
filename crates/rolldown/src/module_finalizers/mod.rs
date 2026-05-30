@@ -488,9 +488,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // by deconflict_chunk_symbols). Use that directly instead of resolving through namespace alias,
     // which would produce `ns.prop` instead of the local `var binding$1` assigned by the setter.
     let skip_namespace_alias = matches!(self.ctx.options.format, OutputFormat::System)
-      && namespace_alias.is_some_and(|ns_alias| {
-        self.ctx.modules[ns_alias.namespace_ref.owner].is_external()
-      })
+      && namespace_alias
+        .is_some_and(|ns_alias| self.ctx.modules[ns_alias.namespace_ref.owner].is_external())
       && self.ctx.chunk.canonical_names.contains_key(&canonical_ref);
 
     if !skip_namespace_alias {
@@ -970,8 +969,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       {
         continue;
       }
-      let (value, _) =
-        self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
+      let (value, _) = self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
       let key = if is_validate_identifier_name(export_name) && export_name != "__proto__" {
         ast::PropertyKey::StaticIdentifier(
           self.snippet.id_name(export_name, SPAN).into_in(self.alloc),
@@ -1056,10 +1054,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         );
         vec![
           self.snippet.import_star_stmt(importee_name, importee_namespace_name),
-          self.snippet.builder.statement_expression(
-            SPAN,
-            Expression::CallExpression(call_expr.into_in(self.alloc)),
-          ),
+          self
+            .snippet
+            .builder
+            .statement_expression(SPAN, Expression::CallExpression(call_expr.into_in(self.alloc))),
         ]
       })
       .collect()
@@ -1087,17 +1085,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     let ns_atom = self.snippet.atom(binding_name_for_namespace_object_ref);
     let ns_ref = self.snippet.builder.expression_identifier(SPAN, ns_atom);
-    let ext_array = ast::Argument::ArrayExpression(
-      self.snippet.builder.alloc_array_expression(
-        SPAN,
-        self.snippet.builder.vec_from_iter(ext_ns_names.iter().map(|name| {
-          let atom = self.snippet.atom(name);
-          ast::ArrayExpressionElement::from(
-            self.snippet.builder.expression_identifier(SPAN, atom),
-          )
-        })),
-      ),
-    );
+    let ext_array = ast::Argument::ArrayExpression(self.snippet.builder.alloc_array_expression(
+      SPAN,
+      self.snippet.builder.vec_from_iter(ext_ns_names.iter().map(|name| {
+        let atom = self.snippet.atom(name);
+        ast::ArrayExpressionElement::from(self.snippet.builder.expression_identifier(SPAN, atom))
+      })),
+    ));
     let merge_call = self.snippet.builder.expression_call(
       SPAN,
       self.snippet.builder.expression_identifier(SPAN, "_mergeNamespaces"),
@@ -2114,10 +2108,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       if let Some(symbol_id) = func_id.symbol_id.get() {
                         let export_names = self.system_export_names_for_symbol(symbol_id);
                         if !export_names.is_empty() {
-                           let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
-                           let canonical_name = self.canonical_name_for(symbol_ref);
-                           self.system_hoisted_stmts.push((export_names, canonical_name.into()));
-                         }
+                          let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+                          let canonical_name = self.canonical_name_for(symbol_ref);
+                          self.system_hoisted_stmts.push((export_names, canonical_name.into()));
+                        }
                       }
                     }
                   }
@@ -2189,7 +2183,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         program.body.push(top_stmt);
         if let Some((export_names, canonical_name)) = system_class_export {
           let class_ref = Expression::Identifier(
-            self.snippet.builder.alloc_identifier_reference(SPAN, self.snippet.atom(canonical_name.as_str())),
+            self
+              .snippet
+              .builder
+              .alloc_identifier_reference(SPAN, self.snippet.atom(canonical_name.as_str())),
           );
           let exports_call = self.build_exports_call(&export_names, class_ref);
           program.body.push(self.snippet.builder.statement_expression(SPAN, exports_call));
@@ -2209,7 +2206,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       let old_body: Vec<_> = program.body.drain(..).collect();
       for (export_names, local_name) in hoisted {
         let ref_expr = Expression::Identifier(
-          self.snippet.builder.alloc_identifier_reference(SPAN, self.snippet.atom(local_name.as_str())),
+          self
+            .snippet
+            .builder
+            .alloc_identifier_reference(SPAN, self.snippet.atom(local_name.as_str())),
         );
         let exports_call = self.build_exports_call(&export_names, ref_expr);
         program.body.push(self.snippet.builder.statement_expression(SPAN, exports_call));
@@ -2412,23 +2412,29 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       let stmt = if pairs.len() == 1 {
         let (export_names, local_name) = &pairs[0];
         let ref_expr = Expression::Identifier(
-          self.snippet.builder.alloc_identifier_reference(SPAN, self.snippet.atom(local_name.as_str())),
+          self
+            .snippet
+            .builder
+            .alloc_identifier_reference(SPAN, self.snippet.atom(local_name.as_str())),
         );
         let exports_call = self.build_exports_call(export_names, ref_expr);
         self.snippet.builder.statement_expression(SPAN, exports_call)
       } else {
         // Batch form: exports({ name1: local1, name2: local2 })
-        let props = self.snippet.builder.vec_from_iter(pairs.iter().map(|(export_names, local_name)| {
-          // Use the first export name (typically there's only one)
-          let key_atom = self.snippet.atom(export_names[0].as_str());
-          let key = ast::PropertyKey::StaticIdentifier(
-            self.snippet.builder.alloc_identifier_name(SPAN, key_atom),
-          );
-          let val = Expression::Identifier(
-            self.snippet.builder.alloc_identifier_reference(SPAN, self.snippet.atom(local_name.as_str())),
-          );
-          ast::ObjectPropertyKind::ObjectProperty(
-            self.snippet.builder.alloc_object_property(
+        let props =
+          self.snippet.builder.vec_from_iter(pairs.iter().map(|(export_names, local_name)| {
+            // Use the first export name (typically there's only one)
+            let key_atom = self.snippet.atom(export_names[0].as_str());
+            let key = ast::PropertyKey::StaticIdentifier(
+              self.snippet.builder.alloc_identifier_name(SPAN, key_atom),
+            );
+            let val = Expression::Identifier(
+              self
+                .snippet
+                .builder
+                .alloc_identifier_reference(SPAN, self.snippet.atom(local_name.as_str())),
+            );
+            ast::ObjectPropertyKind::ObjectProperty(self.snippet.builder.alloc_object_property(
               SPAN,
               ast::PropertyKind::Init,
               key,
@@ -2436,12 +2442,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               false,
               false,
               false,
-            ),
-          )
-        }));
-        let obj = Expression::ObjectExpression(
-          self.snippet.builder.alloc_object_expression(SPAN, props),
-        );
+            ))
+          }));
+        let obj =
+          Expression::ObjectExpression(self.snippet.builder.alloc_object_expression(SPAN, props));
         let exports_id = self.snippet.builder.expression_identifier(SPAN, "exports");
         let args = self.snippet.builder.vec_from_array([ast::Argument::from(obj)]);
         let call = self.snippet.builder.alloc_call_expression(SPAN, exports_id, NONE, args, false);
@@ -2965,8 +2969,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if names.is_empty() { None } else { Some(names) }
       }
       ast::Expression::UpdateExpression(update_expr) => {
-        let ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(id_ref) =
-          &update_expr.argument
+        let ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(id_ref) = &update_expr.argument
         else {
           return None;
         };
@@ -2999,9 +3002,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           // Postfix `foo++` or `foo--`: `exports("name", foo ± 1), foo++`
           // Get the variable name from the (already-walked) update expression.
           let var_name = match &update_expr.argument {
-            ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(id_ref) => {
-              id_ref.name.as_str()
-            }
+            ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(id_ref) => id_ref.name.as_str(),
             _ => return None,
           };
 
@@ -3015,10 +3016,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           // `foo + 1` or `foo - 1`
           let foo_expr =
             Expression::Identifier(self.snippet.builder.alloc_identifier_reference(SPAN, var_name));
-          let one_expr = self
-            .snippet
-            .builder
-            .expression_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal);
+          let one_expr =
+            self.snippet.builder.expression_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal);
           let delta_expr = Expression::BinaryExpression(
             self.snippet.builder.alloc_binary_expression(SPAN, foo_expr, op, one_expr),
           );
@@ -3027,12 +3026,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let update_cloned = expr.clone_in(self.alloc);
 
           // Sequence: `exports("name", foo ± 1), foo++`
-          Some(Expression::SequenceExpression(
-            self.snippet.builder.alloc_sequence_expression(
-              SPAN,
-              self.snippet.builder.vec_from_array([exports_call, update_cloned]),
-            ),
-          ))
+          Some(Expression::SequenceExpression(self.snippet.builder.alloc_sequence_expression(
+            SPAN,
+            self.snippet.builder.vec_from_array([exports_call, update_cloned]),
+          )))
         }
       }
       _ => None,
@@ -3054,8 +3051,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let local_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(local_ref);
 
-
-
     // Walk all canonical_exports of this chunk (via linking_info.resolved_exports).
     // These are the exports that will appear in the chunk's exports() calls.
     let mut names: Vec<CompactStr> = self
@@ -3064,13 +3059,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .resolved_exports
       .iter()
       .filter_map(|(export_name, resolved_export)| {
-        let resolved_canonical =
-          self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref);
-        if resolved_canonical == canonical_ref {
-          Some(export_name.clone())
-        } else {
-          None
-        }
+        let resolved_canonical = self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref);
+        if resolved_canonical == canonical_ref { Some(export_name.clone()) } else { None }
       })
       .collect();
 
@@ -3099,20 +3089,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if names.len() == 1 {
       // Single: `exports("name", value)`
       let name_atom = self.snippet.atom(names[0].as_str());
-      let name_lit = Expression::StringLiteral(
-        self.snippet.builder.alloc_string_literal(SPAN, name_atom, None),
-      );
-      let args = self.snippet.builder.vec_from_array([
-        ast::Argument::from(name_lit),
-        ast::Argument::from(value_expr),
-      ]);
-      Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-        SPAN,
-        exports_id,
-        NONE,
-        args,
-        false,
-      ))
+      let name_lit =
+        Expression::StringLiteral(self.snippet.builder.alloc_string_literal(SPAN, name_atom, None));
+      let args = self
+        .snippet
+        .builder
+        .vec_from_array([ast::Argument::from(name_lit), ast::Argument::from(value_expr)]);
+      Expression::CallExpression(
+        self.snippet.builder.alloc_call_expression(SPAN, exports_id, NONE, args, false),
+      )
     } else {
       // Batch: `exports({ name1: value, name2: value })`
       // All names share the same value. For mutable bindings this means the value
@@ -3124,30 +3109,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.snippet.builder.alloc_identifier_name(SPAN, name_atom),
         );
         let val = value_expr.clone_in(self.alloc);
-        ast::ObjectPropertyKind::ObjectProperty(
-          self.snippet.builder.alloc_object_property(
-            SPAN,
-            ast::PropertyKind::Init,
-            key,
-            val,
-            false,
-            false,
-            false,
-          ),
-        )
+        ast::ObjectPropertyKind::ObjectProperty(self.snippet.builder.alloc_object_property(
+          SPAN,
+          ast::PropertyKind::Init,
+          key,
+          val,
+          false,
+          false,
+          false,
+        ))
       }));
-      let obj_expr = Expression::ObjectExpression(
-        self.snippet.builder.alloc_object_expression(SPAN, props),
-      );
-      let args =
-        self.snippet.builder.vec_from_array([ast::Argument::from(obj_expr)]);
-      Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-        SPAN,
-        exports_id,
-        NONE,
-        args,
-        false,
-      ))
+      let obj_expr =
+        Expression::ObjectExpression(self.snippet.builder.alloc_object_expression(SPAN, props));
+      let args = self.snippet.builder.vec_from_array([ast::Argument::from(obj_expr)]);
+      Expression::CallExpression(
+        self.snippet.builder.alloc_call_expression(SPAN, exports_id, NONE, args, false),
+      )
     }
   }
 
@@ -3161,14 +3138,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     span: oxc::span::Span,
   ) -> Expression<'ast> {
     // `module.import`
-    let callee = ast::Expression::StaticMemberExpression(
-      self.snippet.builder.alloc_static_member_expression(
+    let callee =
+      ast::Expression::StaticMemberExpression(self.snippet.builder.alloc_static_member_expression(
         SPAN,
         self.snippet.builder.expression_identifier(SPAN, "module"),
         self.snippet.builder.identifier_name(SPAN, "import"),
         false,
-      ),
-    );
+      ));
     // `module.import(source)`
     ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
       span,

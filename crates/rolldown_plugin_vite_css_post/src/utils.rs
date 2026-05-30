@@ -276,11 +276,7 @@ impl ViteCSSPostPlugin {
           }
           OutputFormat::System => {
             // SystemJS uses module.import() — treat like ESM for injection point
-            if ctx.args.code.starts_with("#!") {
-              ctx.args.code.find('\n').unwrap_or(0)
-            } else {
-              0
-            }
+            if ctx.args.code.starts_with("#!") { ctx.args.code.find('\n').unwrap_or(0) } else { 0 }
           }
         };
 

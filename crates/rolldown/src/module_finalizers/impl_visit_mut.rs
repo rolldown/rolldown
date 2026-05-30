@@ -796,7 +796,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           let BindingPattern::BindingIdentifier(id) = &decl.id else { continue };
 
           if let Some(init) = decl.init.as_mut() {
-            self.process_keep_name_for_expression(id.symbol_id.get().map(KeepNameId::SymbolId), init);
+            self
+              .process_keep_name_for_expression(id.symbol_id.get().map(KeepNameId::SymbolId), init);
 
             // Task 6.3: For SystemJS, wrap the initializer of exported vars with exports("name", init)
             // `export let x = 10` → (after export removal) `let x = exports("x", 10)`
@@ -814,7 +815,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             // Task 6.13 / 6.18: Uninitialized export: `export var p;`
             // Emit `exports("p", p)` after the declaration.
             // The value is `undefined` (uninitialized), per Rollup: `var p; exports("p", p);`
-              if let Some(symbol_id) = id.symbol_id.get() {
+            if let Some(symbol_id) = id.symbol_id.get() {
               let export_names = self.system_export_names_for_symbol(symbol_id);
               if !export_names.is_empty() {
                 let symbol_ref: rolldown_common::SymbolRef = (self.ctx.idx, symbol_id).into();
@@ -826,10 +827,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                 // Insert after the current declaration (cur_stmt_index + 1)
                 let _ = p_ref; // data stored by name, statement built lazily
                 let insert_pos = self.cur_stmt_index + 1;
-                self.system_inline_export_stmts.push((
-                  insert_pos,
-                  vec![(export_names, canonical_name.into())],
-                ));
+                self
+                  .system_inline_export_stmts
+                  .push((insert_pos, vec![(export_names, canonical_name.into())]));
               }
             }
           }

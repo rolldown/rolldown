@@ -506,10 +506,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // SystemJS supports TLA natively via `async execute`. ESM also supports TLA natively.
     // Other formats (CJS, IIFE, UMD) do not.
     let format_supports_tla = self.immutable_ctx.flat_options.keep_esm_import_export_syntax()
-      || matches!(
-        self.immutable_ctx.options.format,
-        rolldown_common::OutputFormat::System
-      );
+      || matches!(self.immutable_ctx.options.format, rolldown_common::OutputFormat::System);
     if !format_supports_tla {
       self.result.errors.push(BuildDiagnostic::unsupported_feature(
         self.immutable_ctx.id.as_arc_str().clone(),

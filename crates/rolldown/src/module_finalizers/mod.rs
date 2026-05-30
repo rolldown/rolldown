@@ -928,7 +928,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           });
           re_export_external_stmts = Some(stmts.collect());
         }
-        // Task 8.6: SystemJS — emit `ns = _mergeNamespaces(ns, [ext1, ext2, ...])`.
+        // SystemJS — emit `ns = _mergeNamespaces(ns, [ext1, ext2, ...])`.
         OutputFormat::System => {
           re_export_external_stmts = self.build_system_merge_namespaces_stmt(
             export_all_externals_rec_ids,
@@ -1127,10 +1127,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
       let property_name = member_expr.property.name.as_str();
 
-      // Task 5.3 + 5.4: For SystemJS, rewrite `import.meta.xxx` → `module.meta.xxx`
+      // For SystemJS, rewrite `import.meta.xxx` → `module.meta.xxx`
       // Exception: ROLLUP_FILE_URL_<refId> uses `new URL(path, module.meta.url).href`
       if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
-        // Task 5.4: `import.meta.ROLLUP_FILE_URL_<refId>` → `new URL('<path>', module.meta.url).href`
+        // `import.meta.ROLLUP_FILE_URL_<refId>` → `new URL('<path>', module.meta.url).href`
         if property_name.starts_with("ROLLUP_FILE_URL_") {
           if let Some(reference_id) = property_name.strip_prefix("ROLLUP_FILE_URL_") {
             let Ok(asset_file_name) = self.ctx.file_emitter.get_file_name(reference_id) else {
@@ -2741,7 +2741,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           return true;
         }
 
-        // Task 5.2: For SystemJS, rewrite `import('./chunk.js')` → `module.import('./chunk.js')`
+        // For SystemJS, rewrite `import('./chunk.js')` → `module.import('./chunk.js')`
         if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
           let source = expr.source.take_in(self.alloc);
           *node = self.build_module_import_call(source, expr.span);
@@ -2757,7 +2757,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             self.snippet.alloc_string_literal(&import_path, expr.source.span()),
           );
         }
-        // Task 5.2: For SystemJS, rewrite `import("external")` → `module.import("external")`
+        // For SystemJS, rewrite `import("external")` → `module.import("external")`
         if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
           let source = expr.source.take_in(self.alloc);
           *node = self.build_module_import_call(source, expr.span);
@@ -2929,7 +2929,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   // =====================================================================
-  // SystemJS live export instrumentation (Group 6 / tasks 6.2-6.13)
+  // SystemJS live export instrumentation
   // =====================================================================
 
   /// Get the SymbolId for the target of a SimpleAssignmentTarget (if it's a plain identifier).

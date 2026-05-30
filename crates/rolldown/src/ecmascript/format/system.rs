@@ -1,4 +1,3 @@
-// See openspec change: add-system-output-format
 //!
 //! Renders a SystemJS `System.register(name?, deps, factory)` chunk.
 //!
@@ -60,7 +59,7 @@ fn chunk_uses_module_context(ctx: &GenerateContext<'_>) -> bool {
 
     // Check for import.meta usage: scan the source for "import.meta" substring.
     // This is a conservative heuristic — the actual rewrite happens in the finalizer.
-    // A proper solution would add a pre-computed flag during AST scanning (task 5.1 future work).
+    // A proper solution would add a pre-computed flag during AST scanning as a future improvement.
     normal_module.source.contains("import.meta")
   })
 }
@@ -269,12 +268,12 @@ pub fn render_system<'code>(
   let AddonRenderContext { hashbang: _, banner, intro, outro, footer, directives } =
     addon_render_context;
 
-  // Task 2.6: banner before System.register
+  // banner before System.register
   if let Some(banner) = banner {
     source_joiner.append_source(banner);
   }
 
-  // Task 2.3: compute factory parameters
+  // Compute factory parameters: `exports`, `module`, or both, based on what the chunk uses
   let export_names = get_chunk_export_names_with_ctx(ctx);
   let has_exports = !export_names.is_empty();
   let uses_module_context = chunk_uses_module_context(ctx);
@@ -286,14 +285,14 @@ pub fn render_system<'code>(
     (false, false) => "",
   };
 
-  // Task 4.1: collect deps (internal chunks + externals) in consistent order
+  // Collect deps (internal chunks + externals) in consistent order
   let deps = collect_deps(ctx);
 
   // Build the deps string array: ["./dep1.js", "lodash", ...]
   let deps_array_str =
     deps.iter().map(|d| concat_string!("\"", &d.path, "\"")).collect::<Vec<_>>().join(", ");
 
-  // Task 2.1 / 2.2: open System.register wrapper
+  // Open System.register wrapper.
   // Named registration: when output.name is set, emit it as first argument
   // Note: DCE (oxc minifier) always runs and normalizes single → double quotes.
   let name_arg = ctx
@@ -314,7 +313,7 @@ pub fn render_system<'code>(
     ") {\n"
   ));
 
-  // Task 2.4: 'use strict' inside factory
+  // 'use strict' directive inside factory
   if !directives.is_empty() {
     let rendered = render_chunk_directives(directives.iter());
     if !rendered.is_empty() {
@@ -322,7 +321,7 @@ pub fn render_system<'code>(
     }
   }
 
-  // Task 4.2: hoisted var declarations for all imported bindings (before return)
+  // Hoisted var declarations for all imported bindings (before return).
   // Only emit var decls for bindings that have a local name (not pure re-exports).
   let mut var_decls = String::new();
   for dep in &deps {
@@ -338,7 +337,7 @@ pub fn render_system<'code>(
     source_joiner.append_source(var_decls);
   }
 
-  // Task 4.5: _starExcludes object — emit before the return if any star re-export exists.
+  // `_starExcludes` object — emit before the return if any star re-export exists.
   // Contains all own export names + "default" to prevent star re-exports from overriding them.
   let has_star_reexport = deps.iter().any(|d| d.is_star_reexport);
   if has_star_reexport {
@@ -353,13 +352,12 @@ pub fn render_system<'code>(
     source_joiner.append_source(star_excludes);
   }
 
-  // Task 2.6: intro inside factory before module sources (after var decls)
+  // intro inside factory before module sources (after var decls)
   if let Some(intro) = intro {
     source_joiner.append_source(intro);
   }
 
-  // Task 4.3: build setters array
-  // Task 4.6: debug assertion that deps.len() == setters count
+  // Build setters array (one setter per dep, parallel to the deps array)
   let setters = build_setters_str(ctx, &deps);
 
   #[cfg(debug_assertions)]
@@ -370,8 +368,8 @@ pub fn render_system<'code>(
     let _ = setter_count; // suppress unused warning in release
   }
 
-  // Task 2.5: open the return object and execute function
-  // Task 9.2: emit `async execute` when any module in the chunk uses top-level await
+  // Open the return object and execute function.
+  // Emit `async execute` when any module in the chunk uses top-level await.
   let has_tla = chunk_has_top_level_await(ctx);
   let execute_fn = if has_tla { "async function" } else { "function" };
 
@@ -394,7 +392,7 @@ pub fn render_system<'code>(
   };
   source_joiner.append_source(return_open);
 
-  // Task 8.6: emit inline `_mergeNamespaces` helper when any module needs it.
+  // Emit inline `_mergeNamespaces` helper when any module needs it.
   // This is needed when `export * as ns from './module'` and `./module` star-re-exports
   // from external modules — the namespace object must be merged with those externals.
   if chunk_needs_merge_namespaces(ctx) {
@@ -422,7 +420,7 @@ pub fn render_system<'code>(
     }
   }
 
-  // Task 2.6: outro after module sources, inside execute
+  // outro after module sources, inside execute
   if let Some(outro) = outro {
     source_joiner.append_source(outro);
   }
@@ -432,7 +430,7 @@ pub fn render_system<'code>(
   let return_close = if deps.is_empty() { "  }) };\n}));\n" } else { "    })\n  };\n}));\n" };
   source_joiner.append_source(return_close);
 
-  // Task 2.6: footer after closing wrapper
+  // footer after closing wrapper
   if let Some(footer) = footer {
     source_joiner.append_source(footer);
   }
@@ -446,13 +444,13 @@ pub fn render_system<'code>(
 /// - Side-effect-only → `null` (when `systemNullSetters=true`) or `function() {}`
 /// - With bindings → `function(module) { foo = module.foo; bar = module.default; ... }`
 ///
-/// Re-export propagation (task 4.4): if a binding re-exports, also call `exports(...)`.
+/// Re-export propagation: if a binding re-exports, also call `exports(...)`.
 fn build_setters_str(ctx: &GenerateContext<'_>, deps: &[DepEntry<'_>]) -> String {
   let null_setters = ctx.options.system_null_setters;
   let mut setters: Vec<String> = Vec::with_capacity(deps.len());
 
   for dep in deps {
-    // Task 4.5: star re-export setter — loop over module keys filtering through _starExcludes
+    // Star re-export setter — loop over module keys filtering through _starExcludes
     if dep.is_star_reexport {
       // Generate: function(module) { var setter = {__proto__: null, ...named}; for (var name in module) { if (!_starExcludes[name]) setter[name] = module[name]; } exports(setter); }
       let mut setter_body = String::new();
@@ -474,7 +472,7 @@ fn build_setters_str(ctx: &GenerateContext<'_>, deps: &[DepEntry<'_>]) -> String
     }
 
     if dep.is_side_effect_only || dep.bindings.is_empty() {
-      // Task 4.3: null setter for side-effect-only dep
+      // Null setter for side-effect-only dep
       if null_setters {
         setters.push("null".to_string());
       } else {
@@ -487,7 +485,6 @@ fn build_setters_str(ctx: &GenerateContext<'_>, deps: &[DepEntry<'_>]) -> String
     for binding in &dep.bindings {
       if binding.local_name.is_empty() {
         // Pure re-export: no local binding, call exports() directly in the setter
-        // Task 4.4: `exports('exportedName', module.prop)`
         if let Some(export_name) = &binding.re_export_as {
           setter_body.push_str("      exports(\"");
           setter_body.push_str(export_name);
@@ -509,7 +506,7 @@ fn build_setters_str(ctx: &GenerateContext<'_>, deps: &[DepEntry<'_>]) -> String
         setter_body.push_str(";\n");
       }
 
-      // Task 4.4: re-export propagation for local bindings that are also exported
+      // Re-export propagation: for local bindings that are also exported, call exports()
       if !binding.local_name.is_empty() {
         if let Some(export_name) = &binding.re_export_as {
           setter_body.push_str("      exports(\"");

@@ -365,7 +365,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
-    // SystemJS live export instrumentation (tasks 6.4-6.7):
+    // SystemJS live export instrumentation:
     // Capture export names for assignment/update targets BEFORE the walk clears reference_ids,
     // then wrap after the walk.
     let system_export_wrap: Option<Vec<oxc_str::CompactStr>> =
@@ -487,7 +487,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           && meta.meta.name == "import"
           && meta.property.name == "meta"
         {
-          // Task 5.3: For SystemJS, bare `import.meta` → `module.meta`
+          // For SystemJS, bare `import.meta` → `module.meta`
           if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
             *expr = ast::Expression::StaticMemberExpression(
               self.snippet.builder.alloc_static_member_expression(
@@ -772,7 +772,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // keep_name transformation
     match it {
       ast::Declaration::VariableDeclaration(decl) => {
-        // Task 6.8: For SystemJS destructuring declarations, collect exported bindings
+        // For SystemJS destructuring declarations, collect exported bindings
         // and emit a batch exports({a: a, b: b}) after the entire declaration.
         if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
           let mut batch_exports: Vec<(CompactStr, CompactStr)> = vec![]; // (export_name, local_name)
@@ -799,7 +799,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             self
               .process_keep_name_for_expression(id.symbol_id.get().map(KeepNameId::SymbolId), init);
 
-            // Task 6.3: For SystemJS, wrap the initializer of exported vars with exports("name", init)
+            // For SystemJS, wrap the initializer of exported vars with exports("name", init)
             // `export let x = 10` → (after export removal) `let x = exports("x", 10)`
             // This must run before walk so the wrapped expr is what the inner walk sees.
             if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
@@ -812,7 +812,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               }
             }
           } else if matches!(self.ctx.options.format, rolldown_common::OutputFormat::System) {
-            // Task 6.13 / 6.18: Uninitialized export: `export var p;`
+            // Uninitialized export: `export var p;`
             // Emit `exports("p", p)` after the declaration.
             // The value is `undefined` (uninitialized), per Rollup: `var p; exports("p", p);`
             if let Some(symbol_id) = id.symbol_id.get() {

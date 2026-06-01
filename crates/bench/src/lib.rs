@@ -6,9 +6,64 @@ use rolldown::{
   BundleFactory, BundleFactoryOptions, BundlerOptions, InputItem, Platform, ResolveOptions,
   TsConfig,
 };
+use rolldown::plugin::__inner::SharedPluginable;
+use rolldown::plugin::{
+  HookTransformArgs, HookTransformOutput, HookTransformOutputMap, HookTransformReturn, HookUsage,
+  Plugin, SharedTransformPluginContext,
+};
 use rolldown_fs::MemoryFileSystem;
 use rolldown_resolver::Resolver;
 use rolldown_workspace::root_dir;
+
+/// How a transform hook reports "no sourcemap" for its changed code.
+///
+/// Both map to the code path that commit `f6653cb7b` ("avoid unnecessary
+/// intermediate sourcemaps") optimizes: previously each such transform forced
+/// a full hires intermediate sourcemap (with a copy of the source content) to
+/// be built and kept alive until the render stage.
+#[derive(Debug, Clone, Copy)]
+pub enum MapMode {
+  /// `map` field omitted entirely -> `SourcemapChainElement::Omitted`.
+  Omitted,
+  /// explicit `map: null` -> `SourcemapChainElement::Null`.
+  Null,
+}
+
+/// A minimal transform plugin that changes the code of every module but
+/// returns no sourcemap, exercising the intermediate-sourcemap path.
+#[derive(Debug)]
+pub struct OmitMapTransformPlugin {
+  pub mode: MapMode,
+}
+
+impl Plugin for OmitMapTransformPlugin {
+  fn name(&self) -> std::borrow::Cow<'static, str> {
+    std::borrow::Cow::Borrowed("bench:omit-map-transform")
+  }
+
+  fn transform(
+    &self,
+    _ctx: SharedTransformPluginContext,
+    args: &HookTransformArgs<'_>,
+  ) -> impl std::future::Future<Output = HookTransformReturn> + Send {
+    let map = match self.mode {
+      MapMode::Omitted => HookTransformOutputMap::Omitted,
+      MapMode::Null => HookTransformOutputMap::Null,
+    };
+    // The code MUST change, otherwise the driver records nothing for this hook.
+    let code = format!("/* bench-transform */\n{}", args.code);
+    async move { Ok(Some(HookTransformOutput { code: Some(code), map, ..Default::default() })) }
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::Transform
+  }
+}
+
+/// Build the omit-map transform plugin wrapped as a `SharedPluginable`.
+pub fn omit_map_plugin(mode: MapMode) -> SharedPluginable {
+  Arc::new(OmitMapTransformPlugin { mode })
+}
 
 pub fn bench_preset(name: &str, bench_dir: &str, entry: &str) -> BundlerOptions {
   let dir = root_dir().join(bench_dir);
@@ -32,6 +87,7 @@ pub fn rome_ts_preset() -> BundlerOptions {
 pub struct BenchItem {
   pub name: String,
   pub options: BundlerOptions,
+  pub plugins: Vec<SharedPluginable>,
 }
 
 pub struct DeriveOptions {
@@ -43,8 +99,10 @@ pub fn derive_benchmark_items(
   derive_options: &DeriveOptions,
   name: &str,
   options: BundlerOptions,
+  plugins: Vec<SharedPluginable>,
 ) -> Vec<BenchItem> {
-  let mut ret = vec![BenchItem { name: name.to_string(), options: options.clone() }];
+  let mut ret =
+    vec![BenchItem { name: name.to_string(), options: options.clone(), plugins: plugins.clone() }];
 
   if derive_options.sourcemap {
     ret.push(BenchItem {
@@ -54,6 +112,7 @@ pub fn derive_benchmark_items(
         options.sourcemap = Some(rolldown::SourceMapType::File);
         options
       },
+      plugins: plugins.clone(),
     });
   }
 
@@ -65,6 +124,7 @@ pub fn derive_benchmark_items(
         options.minify = Some(true.into());
         options
       },
+      plugins: plugins.clone(),
     });
   }
 
@@ -77,6 +137,7 @@ pub fn derive_benchmark_items(
         options.minify = Some(true.into());
         options
       },
+      plugins,
     });
   }
 
@@ -133,6 +194,15 @@ impl BenchContext {
 /// This performs all one-time setup (option normalization, FS preloading, resolver creation)
 /// so the timed loop only measures bundling work.
 pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
+  create_bench_context_with_plugins(options, vec![])
+}
+
+/// Like [`create_bench_context`] but registers `plugins` on the bundle factory,
+/// so benchmark items can exercise transform-hook code paths.
+pub fn create_bench_context_with_plugins(
+  options: &BundlerOptions,
+  plugins: Vec<SharedPluginable>,
+) -> BenchContext {
   let cwd = options
     .cwd
     .clone()
@@ -155,7 +225,7 @@ pub fn create_bench_context(options: &BundlerOptions) -> BenchContext {
   }
   let factory = BundleFactory::new(BundleFactoryOptions {
     bundler_options: options.clone(),
-    plugins: vec![],
+    plugins,
     session: None,
     disable_tracing_setup: true,
   })
@@ -174,7 +244,7 @@ pub fn run_bench_group(
   group_name: &str,
   mode: BenchMode,
   derive_options: &DeriveOptions,
-  items: Vec<(&str, BundlerOptions)>,
+  items: Vec<(&str, BundlerOptions, Vec<SharedPluginable>)>,
 ) {
   let mut group = c.benchmark_group(group_name);
   let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -184,9 +254,9 @@ pub fn run_bench_group(
     .build()
     .expect("Failed to build tokio runtime");
 
-  for (name, options) in items {
-    for item in derive_benchmark_items(derive_options, name, options) {
-      let mut ctx = create_bench_context(&item.options);
+  for (name, options, plugins) in items {
+    for item in derive_benchmark_items(derive_options, name, options, plugins) {
+      let mut ctx = create_bench_context_with_plugins(&item.options, item.plugins.clone());
       group.bench_function(format!("{group_name}@{}", item.name), |b| {
         b.to_async(&runtime).iter(|| {
           let bundle = ctx.factory.create_bundle_with_fs(ctx.mem_fs.clone(), ctx.create_resolver());

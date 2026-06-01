@@ -73,7 +73,7 @@ export class RolldownBuild {
    * Close the bundle and free resources.
    *
    * This method should be called even if the {@linkcode generate} method
-   * or the {@linkcode write} method throwed an error. It should be called
+   * or the {@linkcode write} method threw an error. It should be called
    * even if neither of the methods are called.
    *
    * This method is called automatically when using `using` syntax.

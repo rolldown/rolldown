@@ -81,7 +81,7 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           tools: just
           cache-key: lint
@@ -144,6 +144,12 @@ jobs:
     with:
       os: ubuntu-latest
       node-version: ${{ matrix.node-version }}
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  wasi:
+    needs: changes
+    uses: ./.github/workflows/reusable-wasi.yml
+    with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   node-dev-server-test-windows:
@@ -290,7 +296,7 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           tools: just
           cache-key: native-build
@@ -343,7 +349,7 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           cache-key: repo-validation
           save-cache: ${{ github.ref_name == 'main' }}
@@ -366,7 +372,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: crate-ci/typos@aca895bf05aec0cb7dffa6f94495e923224d9f17 # v1.46.2
+      - uses: crate-ci/typos@f8a58b6b53f2279f71eb605f03a4ae4d10608f45 # v1.47.0
         with:
           files: .
 

@@ -16,7 +16,7 @@ var init_setup = __esmMin((() => {
 //#region foo_inner.js
 var foo_inner_default;
 var init_foo_inner = __esmMin((() => {
-	foo_inner_default = { foo: /* @__PURE__ */ (() => globalValue)() };
+	foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
 }));
 //#endregion
 //#region foo.js
@@ -49,7 +49,7 @@ __esmMin((() => {
 	globalThis.globalValue = "foo";
 	//#endregion
 	//#region foo_inner.js
-	foo_inner_default = { foo: /* @__PURE__ */ (() => globalValue)() };
+	foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
 	//#endregion
 	//#region foo.js
 	assert.strictEqual(foo_inner_default.foo, "foo");

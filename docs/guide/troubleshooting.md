@@ -149,3 +149,48 @@ The reason for this behavior is because preserving the value of `this` limits th
 Similar to the issue described above, Rolldown does not necessarily preserve the value of `this` of exported functions when outputting your code as CJS. In this case, `this` that should be `undefined` may be bound to the `module.exports` object instead.
 
 :::
+
+## Avoid relying on Temporal Dead Zone (TDZ) errors
+
+In ECMAScript, `let`, `const`, and `class` declarations create a binding that exists from the start of its scope but is uninitialized until the declaration itself is evaluated. Reading the binding during this window, even via `typeof`, throws a `ReferenceError`. This window is known as the "Temporal Dead Zone (TDZ)".
+
+```js
+typeof x; // ReferenceError: Cannot access 'x' before initialization
+let x = 1;
+```
+
+However, **Rolldown does not necessarily preserve TDZ semantics**, for a mix of correctness and performance reasons. Code that relies on a TDZ access throwing may behave differently in the bundled output, and should be avoided.
+
+For example, Rolldown always rewrites a module top-level `class X {}` to `var X = class {}` so that the binding can be hoisted alongside other top-level declarations. As a result, the binding is observable as `undefined` (rather than throwing) before the declaration is reached. Setting [`output.topLevelVar`](/reference/OutputOptions.topLevelVar) to `true` extends the same rewriting to top-level `let` and `const`.
+
+```js
+// In ESM, this throws ReferenceError.
+// In Rolldown's bundled output, `typeof X` evaluates to `"undefined"`.
+console.log(typeof X);
+class X {}
+```
+
+As another example, Rolldown may inline exported `const` values at their use sites, even across an import cycle. When the cycle causes the constant to be read before its declaration runs, ESM would throw, but Rolldown returns the inlined value instead.
+
+::: code-group
+
+```js [entry.js]
+import './constants.js';
+```
+
+```js [constants.js]
+export const foo = 123;
+export function bar() {
+  return foo;
+}
+import './cycle.js';
+```
+
+```js [cycle.js]
+import { bar } from './constants.js';
+// In ESM, `bar()` throws ReferenceError because `foo` is in TDZ.
+// In Rolldown's bundled output, `bar()` returns `123`.
+console.log(bar());
+```
+
+:::

@@ -1,8 +1,9 @@
 [package]
 name = "rolldown_dev_common"
-version = "0.1.0"
+version = "1.0.3"
 publish = true
 description = "Common types for rolldown dev mode"
+readme = "../../README.md"
 
 edition.workspace = true
 homepage.workspace = true

@@ -142,5 +142,29 @@
   },
   "language/module-code/top-level-await/unobservable-global-async-evaluation-count-reset.js": {
     "reason": "Rolldown does not support preserving TLA semantics perfectly"
+  },
+  "language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-source-and-export.js": {
+    "reason": "Incorrect ambiguous export detection in Rolldown"
+  },
+  "language/module-code/instn-named-bndng-dflt-fun-anon.js": {
+    "reason": "keepNames feature in Rolldown does not work for accesses requiring the function to be hoisted"
+  },
+  "language/module-code/instn-named-bndng-dflt-gen-anon.js": {
+    "reason": "keepNames feature in Rolldown does not work for accesses requiring the function to be hoisted"
+  },
+  "language/module-code/instn-star-iee-multi-cycle-same-name.js": {
+    "reason": "Incorrect ambiguous export detection in Rolldown"
+  },
+  "language/module-code/instn-star-iee-single-cycle-same-name.js": {
+    "reason": "Incorrect ambiguous export detection in Rolldown"
+  },
+  "language/module-code/namespace/internals/super-access-to-tdz-binding.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/source-phase-import/reexport-source-binding-named-import.js": {
+    "reason": "source phase imports are not supported in Rolldown"
+  },
+  "language/module-code/source-phase-import/reexport-source-binding-namespace-get.js": {
+    "reason": "source phase imports are not supported in Rolldown"
   }
 }

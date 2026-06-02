@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 var Foo = class {};
-new Foo();
+(() => new Foo())();
 //#endregion
 
 ```

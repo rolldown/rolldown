@@ -175,6 +175,42 @@ test.concurrent(
   },
 );
 
+test.concurrent(
+  'onOutput should be called only once when initial build fails',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'dev-initial-build-error',
+      retryCount,
+    );
+
+    // Write a syntax error to the input file
+    fs.writeFileSync(input, 'const x = {;');
+
+    const onOutput = vi.fn();
+    const engine = await dev(
+      {
+        input,
+        experimental: { devMode: true },
+      },
+      { dir: outputDir },
+      { onOutput },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    expect(onOutput).toHaveBeenCalledTimes(1);
+    // The single call should be an error
+    expect(onOutput.mock.calls[0][0]).toBeInstanceOf(Error);
+  },
+);
+
 function createTestInputAndOutput(testLabel: string, retryCount: number) {
   const uniqueId = crypto.randomUUID().slice(0, 8);
   const dirname = `${testLabel}-${uniqueId}-retry${retryCount}`;

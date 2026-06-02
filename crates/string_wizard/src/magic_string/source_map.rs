@@ -24,7 +24,7 @@ impl Default for SourceMapOptions {
 }
 
 impl MagicString<'_> {
-  pub fn source_map(&self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap {
+  pub fn source_map(&self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap<'static> {
     let mut source_builder = SourcemapBuilder::new(opts.hires);
 
     source_builder.set_source_and_content(&opts.source, &self.source);

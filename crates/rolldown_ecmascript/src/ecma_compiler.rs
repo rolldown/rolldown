@@ -9,7 +9,7 @@ use oxc::{
   parser::{ParseOptions, Parser},
   span::{SPAN, SourceType},
 };
-use oxc_sourcemap::SourceMap;
+use oxc_sourcemap::{OwnedSourceMap, SourceMap};
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKind, Severity};
 
 use crate::ecma_ast::{
@@ -108,7 +108,7 @@ impl EcmaCompiler {
     compress: bool,
     minify_options: MinifierOptions,
     codegen_options: CodegenOptions,
-  ) -> (String, Option<SourceMap>) {
+  ) -> (String, Option<SourceMap<'static>>) {
     let mut program = Parser::new(allocator, source_text, source_type).parse().program;
     let minifier = Minifier::new(minify_options);
     let ret = if compress {
@@ -124,7 +124,7 @@ impl EcmaCompiler {
       .with_scoping(ret.scoping)
       .with_private_member_mappings(ret.class_private_mappings)
       .build(&program);
-    (ret.code, ret.map)
+    (ret.code, ret.map.map(OwnedSourceMap::into_inner))
   }
 }
 

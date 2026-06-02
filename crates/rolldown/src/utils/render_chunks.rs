@@ -6,6 +6,7 @@ use futures::future::try_join_all;
 use rolldown_common::{
   InsChunkIdx, InstantiationKind, RollupRenderedChunk, SharedNormalizedBundlerOptions,
 };
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 use rolldown_utils::indexmap::FxIndexMap;
@@ -17,7 +18,7 @@ pub async fn render_chunks(
   plugin_driver: &SharedPluginDriver,
   assets: &mut IndexInstantiatedChunks,
   options: &SharedNormalizedBundlerOptions,
-) -> Result<()> {
+) -> Result<Vec<BuildDiagnostic>> {
   let chunks = Arc::new(
     assets
       .iter()
@@ -48,12 +49,15 @@ pub async fn render_chunks(
         return Ok(Some((index.into(), render_chunk_ret)));
       }
 
-      Ok::<Option<(InsChunkIdx, (String, Vec<SourceMap>))>, anyhow::Error>(None)
+      Ok::<Option<(InsChunkIdx, (String, Vec<SourceMap>, Vec<BuildDiagnostic>))>, anyhow::Error>(
+        None,
+      )
     }
   }))
   .await?;
 
-  for (index, (code, sourcemaps)) in result.into_iter().flatten() {
+  let mut warnings = vec![];
+  for (index, (code, sourcemaps, chunk_warnings)) in result.into_iter().flatten() {
     let asset = &mut assets[index];
     asset.content = code.into();
     if !sourcemaps.is_empty() {
@@ -64,7 +68,8 @@ pub async fn render_chunks(
         asset.map = Some(collapse_sourcemaps(&sourcemap_chain));
       }
     }
+    warnings.extend(chunk_warnings);
   }
 
-  Ok(())
+  Ok(warnings)
 }

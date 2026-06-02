@@ -16,7 +16,7 @@ use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookRenderChunkOutput, HookResolveIdArgs,
   HookResolveIdOutput, HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn,
-  HookUsage, Plugin, PluginContext, SharedLoadPluginContext,
+  HookTransformOutputMap, HookUsage, Plugin, PluginContext, SharedLoadPluginContext,
 };
 use rolldown_plugin_utils::{
   AssetUrlResult, ModulePreload, RenderBuiltUrl, ToOutputFilePathEnv,
@@ -127,7 +127,7 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
         bytes[index + replacement_bytes.len()..index + IS_MODERN_FLAG.len()].fill(b' ');
       }
 
-      Ok(Some(HookRenderChunkOutput { code, map: None }))
+      Ok(Some(HookRenderChunkOutput { code, map: HookTransformOutputMap::Null }))
     } else {
       Ok(None)
     }

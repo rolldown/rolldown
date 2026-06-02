@@ -4,8 +4,9 @@ use crate::{types::diagnostic_options::DiagnosticOptions, types::event_kind::Eve
 #[derive(Debug)]
 pub struct SourcemapBroken {
   pub plugin_name: String,
-  /// The id of the module whose transform broke the sourcemap chain.
-  pub id: String,
+  /// The id of the module whose `transform` broke the sourcemap chain. `None`
+  /// for `renderChunk`, which operates on a chunk rather than a module.
+  pub id: Option<String>,
 }
 
 impl BuildEvent for SourcemapBroken {
@@ -14,7 +15,7 @@ impl BuildEvent for SourcemapBroken {
   }
 
   fn id(&self) -> Option<String> {
-    Some(self.id.clone())
+    self.id.clone()
   }
 
   fn plugin(&self) -> Option<String> {

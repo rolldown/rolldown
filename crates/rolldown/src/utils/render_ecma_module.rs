@@ -48,8 +48,11 @@ pub fn render_ecma_module(
           rolldown_common::SourcemapChainElement::Omitted { plugin_name, .. } => {
             owned_chain.push(&empty);
             warnings.push(
-              BuildDiagnostic::sourcemap_broken(plugin_name.to_string(), module.id.to_string())
-                .with_severity_warning(),
+              BuildDiagnostic::sourcemap_broken(
+                plugin_name.to_string(),
+                Some(module.id.to_string()),
+              )
+              .with_severity_warning(),
             );
           }
           rolldown_common::SourcemapChainElement::Null { original_content: content, .. } => {

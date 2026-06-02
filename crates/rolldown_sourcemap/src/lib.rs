@@ -1,12 +1,16 @@
 mod source;
 mod source_joiner;
 
-use std::sync::Arc;
+use std::borrow::Cow;
 
 use oxc_sourcemap::Token;
 
-pub use oxc_sourcemap::{JSONSourceMap, SourceMap, SourceMapBuilder, SourcemapVisualizer};
+pub use oxc_sourcemap::{JSONSourceMap, OwnedSourceMap, SourceMapBuilder, SourcemapVisualizer};
 pub use source_joiner::SourceJoiner;
+
+/// Rolldown always stores and produces owned sourcemaps, so we alias the
+/// lifetime-parameterized `oxc_sourcemap::SourceMap` to its `'static` form.
+pub type SourceMap = oxc_sourcemap::SourceMap<'static>;
 
 pub use crate::source::{Source, SourceMapSource};
 
@@ -34,11 +38,11 @@ pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, lines: u32) -> SourceMap
     .collect();
 
   SourceMap::new(
-    sourcemap.get_file().cloned(),
-    sourcemap.get_names().cloned().collect(),
-    sourcemap.get_source_root().map(str::to_owned),
-    sourcemap.get_sources().cloned().collect(),
-    sourcemap.get_source_contents().map(|c| c.map(Arc::clone)).collect(),
+    sourcemap.get_file().map(|f| Cow::Owned(f.to_owned())),
+    sourcemap.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
+    sourcemap.get_source_root().map(|s| Cow::Owned(s.to_owned())),
+    sourcemap.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
+    sourcemap.get_source_contents().map(|c| c.map(|s| Cow::Owned(s.to_owned()))).collect(),
     tokens,
     None,
   )
@@ -89,10 +93,10 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
 
   SourceMap::new(
     None,
-    first_map.get_names().cloned().collect(),
+    first_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
     None,
-    first_map.get_sources().cloned().collect(),
-    first_map.get_source_contents().map(|x| x.map(Arc::clone)).collect(),
+    first_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
+    first_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
     tokens,
     None,
   )
@@ -124,7 +128,8 @@ fn test_collapse_sourcemaps() {
       ..CodegenOptions::default()
     })
     .build(&ret1.program);
-  source_joiner.append_source(SourceMapSource::new(code, map.as_ref().unwrap().clone()));
+  source_joiner
+    .append_source(SourceMapSource::new(code, map.as_ref().unwrap().as_source_map().clone()));
 
   let filename = "bar.js".to_string();
   let source_text = "const bar = 2; console.log(bar);\n".to_string();
@@ -135,7 +140,8 @@ fn test_collapse_sourcemaps() {
       ..CodegenOptions::default()
     })
     .build(&ret2.program);
-  source_joiner.append_source(SourceMapSource::new(code, map.as_ref().unwrap().clone()));
+  source_joiner
+    .append_source(SourceMapSource::new(code, map.as_ref().unwrap().as_source_map().clone()));
 
   let (source_text, source_map) = source_joiner.join();
 
@@ -152,7 +158,7 @@ fn test_collapse_sourcemaps() {
       ..CodegenOptions::default()
     })
     .build(&ret3.program);
-  sourcemap_chain.push(map.as_ref().unwrap());
+  sourcemap_chain.push(map.as_ref().unwrap().as_source_map());
 
   let map = collapse_sourcemaps(&sourcemap_chain);
   assert_eq!(

@@ -74,6 +74,7 @@ pub struct MatchGroup {
     schemars(with = "Option<Vec<BuiltinModuleTag>>")
   )]
   pub tags: Option<Vec<ModuleTag>>,
+  pub include_dependencies_recursively: Option<bool>,
 }
 
 type MatchGroupTestFn = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static>>

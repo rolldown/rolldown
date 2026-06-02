@@ -2429,6 +2429,7 @@ export interface BindingMatchGroup {
   entriesAware?: boolean
   entriesAwareMergeThreshold?: number
   tags?: Array<string>
+  includeDependenciesRecursively?: boolean
 }
 
 export interface BindingModulePreloadOptions {

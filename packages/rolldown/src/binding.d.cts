@@ -1926,6 +1926,7 @@ export interface BindingChecksOptions {
   unsupportedTsconfigOption?: boolean
   ineffectiveDynamicImport?: boolean
   largeBarrelModules?: boolean
+  sourcemapBroken?: boolean
 }
 
 export interface BindingChunkImportMap {

@@ -7,11 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [INVALID_ANNOTATION] A comment "/* #__PURE__ */" in "main.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
-   ╭─[ main.js:2:1 ]
+   ╭─[ main.js:3:3 ]
    │
- 2 │ /* #__PURE__ */ function foo() {}
-   │ ───────┬───────  
-   │        ╰───────── comment ignored due to position
+ 3 │   /* #__PURE__ */ function inner() {}
+   │   ───────┬───────  
+   │          ╰───────── comment ignored due to position
    │ 
    │ Help 1: If you intended to mark all calls of this function as side-effect-free, use `/* @__NO_SIDE_EFFECTS__ */` before the function declaration.
    │ 

@@ -93,8 +93,15 @@ impl BuildDiagnostic {
     annotation: String,
     source: ArcStr,
     span: oxc::span::Span,
+    is_before_function_declaration: bool,
   ) -> Self {
-    Self::new_inner(InvalidAnnotation { module_id, annotation, source, span })
+    Self::new_inner(InvalidAnnotation {
+      module_id,
+      annotation,
+      source,
+      span,
+      is_before_function_declaration,
+    })
   }
 
   pub fn resolve_error(

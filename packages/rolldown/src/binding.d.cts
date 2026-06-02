@@ -1532,9 +1532,9 @@ export declare class BindingDevEngine {
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
   getBundleState(): Promise<BindingBundleState>
-  ensureLatestBuildOutput(): Promise<void>
+  ensureLatestBuildOutput(): Promise<BindingResult<undefined>>
   triggerFullBuild(): void
-  invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<Array<BindingClientHmrUpdate>>
+  invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<BindingResult<Array<BindingClientHmrUpdate>>>
   registerModules(clientId: string, modules: Array<string>): Promise<void>
   removeClient(clientId: string): Promise<void>
   close(): Promise<void>

@@ -101,7 +101,7 @@ catalog:
   tsx: ^4.22.0
   typescript: ^6.0.0
   unified: ^11.0.5
-  valibot: 1.4.0
+  valibot: 1.4.1
   vite: ^8.0.0
   vitepress: ^2.0.0-alpha.15
   vitepress-plugin-group-icons: ^1.7.1

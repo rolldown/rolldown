@@ -10,7 +10,7 @@ use rolldown_ecmascript::{
 };
 
 use crate::hmr::{
-  hmr_ast_finalizer::HmrAstFinalizer,
+  hmr_ast_finalizer::{HmrAstFinalizer, ModuleInitializerMode},
   utils::{HmrAstBuilder, MODULE_ID_PARAM_FOR_HMR},
 };
 
@@ -144,10 +144,8 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // mark the callback as PIFE because the callback is executed when this chunk is loaded
     user_code_wrapper.pife = self.use_pife_for_module_wrappers;
 
-    // Initializer call arguments: always (stable_id, factory). For lazy-compilation
-    // chunks we append a truthy dedup flag so the runtime short-circuits re-execution
-    // when another lazy blob has already registered this module. HMR patches omit the
-    // flag so the runtime always re-executes the body to publish new exports.
+    // Initializer call arguments: always (stable_id, factory). An optional numeric mode tells the
+    // runtime to deduplicate a definition.
     let mut initializer_args = self.snippet.builder.vec_with_capacity(3);
     initializer_args.push(ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
       SPAN,
@@ -156,10 +154,14 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     )));
     initializer_args
       .push(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper)));
-    if self.dedup_module_initializer {
+    let mode = match self.module_initializer_mode {
+      ModuleInitializerMode::Always => None,
+      ModuleInitializerMode::Deduplicate => Some(1.0),
+    };
+    if let Some(mode) = mode {
       initializer_args.push(ast::Argument::from(self.snippet.builder.expression_numeric_literal(
         SPAN,
-        1.0,
+        mode,
         None,
         ast::NumberBase::Decimal,
       )));

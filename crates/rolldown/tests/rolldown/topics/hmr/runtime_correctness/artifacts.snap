@@ -369,6 +369,17 @@ var init_trigger_dep_11 = __rolldown_runtime__.createEsmInitializer("trigger-dep
 }));
 
 //#endregion
+__rolldown_runtime__.runModuleInitializerIfLoaded("cases/deconflict_import_bindings/foo.mjs", init_foo_0);
+__rolldown_runtime__.runModuleInitializerIfLoaded("cases/deconflict_import_bindings/foo/index.mjs", init_foo_1);
+__rolldown_runtime__.runModuleInitializerIfLoaded("cases/deconflict_import_bindings/index.js", init_deconflict_import_bindings_2);
+__rolldown_runtime__.runModuleInitializerIfLoaded("cases/manual_reexport/barrel.js", init_barrel_3);
+__rolldown_runtime__.runModuleInitializerIfLoaded("cases/manual_reexport/index.js", init_manual_reexport_4);
+__rolldown_runtime__.runModuleInitializerIfLoaded("cases/manual_reexport/lib.js", init_lib_5);
+__rolldown_runtime__.runModuleInitializerIfLoaded("cases/require/cjs-lib-reassign-module-exports.js", require_cjs_lib_reassign_module_exports_6);
+__rolldown_runtime__.runModuleInitializerIfLoaded("cases/require/cjs-lib.js", require_cjs_lib_7);
+__rolldown_runtime__.runModuleInitializerIfLoaded("cases/require/index.js", init_require_8);
+__rolldown_runtime__.runModuleInitializerIfLoaded("cases/require/umd-lib.js", require_umd_lib_9);
+__rolldown_runtime__.runModuleInitializerIfLoaded("trigger-dep.js", init_trigger_dep_11);
 init_main_10()
 __rolldown_runtime__.applyUpdates([['main.js', 'main.js']]);
 ```

@@ -179,7 +179,10 @@ class DevServer {
             break;
           case 'hmr:module-registered': {
             console.log('Registering modules:', clientMessage.modules);
-            this.#devEngine?.registerModules(clientSession.id, clientMessage.modules);
+            await this.#devEngine?.registerModules(clientSession.id, clientMessage.modules);
+            for (const moduleId of clientMessage.modules) {
+              clientSession.registeredModules.add(moduleId);
+            }
             this.#moduleRegistrationSeq++;
             break;
           }
@@ -239,6 +242,12 @@ class DevServer {
             buildSeq: this.#buildSeq,
             connectedClients: this.#clients.size,
             moduleRegistrationSeq: this.#moduleRegistrationSeq,
+            registeredModulesByClient: Object.fromEntries(
+              Array.from(this.#clients, ([clientId, client]) => [
+                clientId,
+                Array.from(client.registeredModules),
+              ]),
+            ),
           }),
         );
         return;

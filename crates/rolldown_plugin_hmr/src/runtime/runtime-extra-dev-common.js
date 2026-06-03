@@ -81,14 +81,21 @@ export class DevRuntime {
       return {};
     }
   }
+  /**
+   * Re-execute a real HMR update only if this client already loaded the module.
+   *
+   * @param {string} id
+   * @param {() => any} initializer
+   */
+  runModuleInitializerIfLoaded(id, initializer) {
+    if (this.modules[id]) initializer();
+  }
 
   /**
    * __esmMin
    *
    * When `dedup` is truthy and `id` is already registered on the runtime,
-   * skip the factory: another lazy blob got there first. HMR patches pass
-   * no `dedup` so they always re-run the factory and replace the registered
-   * exports.
+   * skip the factory.
    *
    * @type {<T>(id: string, fn: any, dedup: any, res: T) => () => T}
    * @internal
@@ -100,9 +107,7 @@ export class DevRuntime {
   /**
    * __commonJSMin
    *
-   * Same dedup gate as createEsmInitializer. With `dedup` truthy and `id`
-   * registered, reuse the registered exports object; otherwise run the
-   * factory.
+   * Same dedup gate as createEsmInitializer.
    *
    * @type {<T extends { exports: any }>(id: string, cb: any, dedup: any, mod: { exports: any }, registered: any) => () => T}
    * @internal

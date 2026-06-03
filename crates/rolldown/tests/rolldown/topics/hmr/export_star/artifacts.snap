@@ -78,7 +78,7 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer("hmr.js", (function(_
 }));
 
 //#endregion
-init_hmr_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("hmr.js", init_hmr_0);
 __rolldown_runtime__.applyUpdates([['hmr.js', 'hmr.js']]);
 ```
 

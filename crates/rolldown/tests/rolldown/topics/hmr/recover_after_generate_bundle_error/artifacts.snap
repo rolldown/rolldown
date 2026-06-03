@@ -41,7 +41,7 @@ var init_dep_0 = __rolldown_runtime__.createEsmInitializer("dep.js", (function(_
 }));
 
 //#endregion
-init_dep_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("dep.js", init_dep_0);
 __rolldown_runtime__.applyUpdates([['dep.js', 'dep.js']]);
 ```
 
@@ -84,7 +84,7 @@ var init_dep_0 = __rolldown_runtime__.createEsmInitializer("dep.js", (function(_
 }));
 
 //#endregion
-init_dep_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("dep.js", init_dep_0);
 __rolldown_runtime__.applyUpdates([['dep.js', 'dep.js']]);
 ```
 

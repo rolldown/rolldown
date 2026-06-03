@@ -133,7 +133,10 @@ var init_messenger_3 = __rolldown_runtime__.createEsmInitializer("messenger.js",
 }));
 
 //#endregion
-init_messenger_3()
+__rolldown_runtime__.runModuleInitializerIfLoaded("bar.js", init_bar_0);
+__rolldown_runtime__.runModuleInitializerIfLoaded("common.js", init_common_1);
+__rolldown_runtime__.runModuleInitializerIfLoaded("foo.js", init_foo_2);
+__rolldown_runtime__.runModuleInitializerIfLoaded("messenger.js", init_messenger_3);
 __rolldown_runtime__.applyUpdates([['messenger.js', 'messenger.js']]);
 ```
 

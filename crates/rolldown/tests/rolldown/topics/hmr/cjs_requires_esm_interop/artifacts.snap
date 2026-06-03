@@ -94,7 +94,7 @@ var init_shim_0 = __rolldown_runtime__.createEsmInitializer("shim.js", (function
 }));
 
 //#endregion
-init_shim_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("shim.js", init_shim_0);
 __rolldown_runtime__.applyUpdates([['main.js', 'shim.js']]);
 ```
 

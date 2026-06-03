@@ -116,7 +116,7 @@ var init_self_accept_0 = __rolldown_runtime__.createEsmInitializer("self_accept.
 }));
 
 //#endregion
-init_self_accept_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("self_accept.js", init_self_accept_0);
 __rolldown_runtime__.applyUpdates([['self_accept.js', 'self_accept.js']]);
 ```
 
@@ -148,7 +148,7 @@ var init_self_accept_0 = __rolldown_runtime__.createEsmInitializer("self_accept.
 }));
 
 //#endregion
-init_self_accept_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("self_accept.js", init_self_accept_0);
 __rolldown_runtime__.applyUpdates([['self_accept.js', 'self_accept.js']]);
 ```
 
@@ -176,7 +176,7 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer("single_accept/chil
 }));
 
 //#endregion
-init_child_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("single_accept/child.js", init_child_0);
 __rolldown_runtime__.applyUpdates([['single_accept/parent.js', 'single_accept/child.js']]);
 ```
 
@@ -204,7 +204,7 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer("single_accept/chil
 }));
 
 //#endregion
-init_child_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("single_accept/child.js", init_child_0);
 __rolldown_runtime__.applyUpdates([['single_accept/parent.js', 'single_accept/child.js']]);
 ```
 
@@ -232,7 +232,7 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer("array_accept/child
 }));
 
 //#endregion
-init_child_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("array_accept/child.js", init_child_0);
 __rolldown_runtime__.applyUpdates([['array_accept/parent.js', 'array_accept/child.js']]);
 ```
 
@@ -260,7 +260,7 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer("array_accept/child
 }));
 
 //#endregion
-init_child_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("array_accept/child.js", init_child_0);
 __rolldown_runtime__.applyUpdates([['array_accept/parent.js', 'array_accept/child.js']]);
 ```
 
@@ -292,7 +292,7 @@ var init_optional_chaining_0 = __rolldown_runtime__.createEsmInitializer("option
 }));
 
 //#endregion
-init_optional_chaining_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("optional_chaining.js", init_optional_chaining_0);
 __rolldown_runtime__.applyUpdates([['optional_chaining.js', 'optional_chaining.js']]);
 ```
 

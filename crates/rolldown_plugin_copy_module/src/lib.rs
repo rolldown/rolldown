@@ -5,8 +5,8 @@ use memchr::memmem;
 use rolldown_common::{EmittedAsset, ModuleType, ResolvedExternal, StrOrBytes};
 use rolldown_plugin::{
   HookRenderChunkArgs, HookRenderChunkOutput, HookRenderChunkReturn, HookResolveIdArgs,
-  HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin, PluginContext, PluginHookMeta,
-  PluginOrder,
+  HookResolveIdOutput, HookResolveIdReturn, HookTransformOutputMap, HookUsage, Plugin,
+  PluginContext, PluginHookMeta, PluginOrder,
 };
 use rolldown_utils::url::clean_url;
 use rustc_hash::FxHashSet;
@@ -189,7 +189,7 @@ impl Plugin for CopyModulePlugin {
     if changed {
       Ok(Some(HookRenderChunkOutput {
         code: magic_string.to_string(),
-        map: args.options.sourcemap.is_some().then(|| {
+        map: HookTransformOutputMap::from_if_enabled(args.options.sourcemap.is_some(), || {
           magic_string.source_map(SourceMapOptions {
             hires: string_wizard::Hires::Boundary,
             include_content: false,

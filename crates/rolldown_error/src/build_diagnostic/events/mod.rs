@@ -48,6 +48,7 @@ pub mod prefer_builtin_feature;
 pub mod require_tla;
 pub mod resolve_error;
 pub mod runtime_module_symbol_not_found;
+pub mod sourcemap_broken;
 pub mod tsconfig_error;
 pub mod unhandleable_error;
 pub mod unloadable_dependency;
@@ -66,6 +67,10 @@ pub trait BuildEvent: Debug + Sync + Send + AsAny + AsAnyMut {
   // extra properties to match RollupLog interface
   // https://rollupjs.org/configuration-options/#onlog
   fn id(&self) -> Option<String> {
+    None
+  }
+
+  fn plugin(&self) -> Option<String> {
     None
   }
 

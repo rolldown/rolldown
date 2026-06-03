@@ -146,12 +146,10 @@ impl Plugin for ViteAssetPlugin {
       },
     };
     // TODO: consider using `MagicString` later
-    Ok(
-      env
-        .render_asset_url_in_js()
-        .await?
-        .map(|code| rolldown_plugin::HookRenderChunkOutput { code, map: None }),
-    )
+    Ok(env.render_asset_url_in_js().await?.map(|code| rolldown_plugin::HookRenderChunkOutput {
+      code,
+      map: rolldown_plugin::HookTransformOutputMap::Null,
+    }))
   }
 
   async fn generate_bundle(

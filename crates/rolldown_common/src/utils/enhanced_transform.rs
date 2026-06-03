@@ -25,7 +25,7 @@ use oxc::{
 use oxc_resolver::TsConfig;
 use rolldown_ecmascript::semantic_builder_for_transform;
 use rolldown_error::{BuildDiagnostic, EventKind, Severity};
-use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
+use rolldown_sourcemap::{OwnedSourceMap, SourceMap, collapse_sourcemaps};
 use rustc_hash::FxHashMap;
 
 use crate::inner_bundler_options::types::transform_option::{
@@ -204,7 +204,7 @@ fn generate_declarations(
       ..Default::default()
     })
     .build(&ret.program);
-  (Some(codegen_ret.code), codegen_ret.map)
+  (Some(codegen_ret.code), codegen_ret.map.map(OwnedSourceMap::into_inner))
 }
 
 fn append_oxc_diagnostics(
@@ -414,7 +414,7 @@ pub fn enhanced_transform(
     })
     .build(&program);
 
-  let output_map = match (input_map, codegen_ret.map) {
+  let output_map = match (input_map, codegen_ret.map.map(OwnedSourceMap::into_inner)) {
     (Some(im), Some(om)) => Some(collapse_sourcemaps(&[&im, &om])),
     (None, map) => map,
     (Some(_), None) => None,

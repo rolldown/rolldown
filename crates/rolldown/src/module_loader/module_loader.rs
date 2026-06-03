@@ -583,7 +583,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             ast,
             raw_import_records,
             resolved_deps,
+            warnings,
           } = *task_result;
+          all_warnings.extend(warnings);
 
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
           for (raw_rec, info) in raw_import_records.into_iter().zip(resolved_deps) {

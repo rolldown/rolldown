@@ -338,9 +338,9 @@ pub fn prepare_build_context(
     match tsconfig {
       ref v @ TsConfig::Manual(ref path) => {
         // Manual mode: Resolve tsconfig now and create Normal mode
-        let resolved_tsconfig = resolver.resolve_tsconfig(&path).map_err(|err| {
-          anyhow::anyhow!("Failed to resolve `tsconfig` option: {}", path.display()).context(err)
-        })?;
+        let resolved_tsconfig = resolver
+          .resolve_tsconfig(&path)
+          .map_err(|err| BuildDiagnostic::tsconfig_error(path.display().to_string(), err))?;
         Box::new(if resolved_tsconfig.references_resolved.is_empty() {
           TransformOptions::new(
             merge_transform_options_with_tsconfig(

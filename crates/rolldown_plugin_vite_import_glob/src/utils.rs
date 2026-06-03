@@ -12,6 +12,7 @@ use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
+use unicode_normalization::{UnicodeNormalization, is_nfc};
 
 pub struct GlobImportVisit<'a> {
   pub ctx: &'a PluginContext,
@@ -61,7 +62,7 @@ struct ImportGlobFileData {
 #[derive(Debug)]
 struct PathWithGlob<'a> {
   pub path: String,
-  pub glob: &'a str,
+  pub glob: Cow<'a, str>,
 }
 
 impl<'a> PathWithGlob<'a> {
@@ -69,7 +70,12 @@ impl<'a> PathWithGlob<'a> {
     let j = Self::split_path_and_glob_inner(&path, glob);
     let i = Self::find_glob_syntax(&glob[glob.len() - j..]);
     path.truncate(path.len() - i);
-    Self { path, glob: &glob[glob.len() - i..] }
+    // NFC-normalize both the base path and glob pattern so they match
+    // the NFC-normalized filesystem paths (see eval_glob_expr).
+    let path = if is_nfc(&path) { path } else { path.nfc().collect() };
+    let glob_str = &glob[glob.len() - i..];
+    let glob = if is_nfc(glob_str) { Cow::Borrowed(glob_str) } else { Cow::Owned(glob_str.nfc().collect()) };
+    Self { path, glob }
   }
 
   fn find_glob_syntax(path: &str) -> usize {
@@ -495,7 +501,8 @@ impl GlobImportVisit<'_> {
 
     for entry in entries {
       let file = entry.path();
-      let path = file.to_slash_lossy();
+      let slash_path = file.to_slash_lossy();
+      let path = if is_nfc(&slash_path) { slash_path } else { Cow::Owned(slash_path.nfc().collect()) };
 
       // Skip the file itself if it matches the glob pattern, to avoid self-importing.
       if self.id == path {
@@ -505,7 +512,7 @@ impl GlobImportVisit<'_> {
       let matches = match &insensitive_globs {
         None => {
           let matches_rule = |v: &PathWithGlob| -> bool {
-            path.strip_prefix(&v.path).is_some_and(|path| fast_glob::glob_match(v.glob, path))
+            path.strip_prefix(&v.path).is_some_and(|path| fast_glob::glob_match(v.glob.as_bytes(), path))
           };
           !negated_globs.iter().any(matches_rule) && positive_globs.iter().any(matches_rule)
         }

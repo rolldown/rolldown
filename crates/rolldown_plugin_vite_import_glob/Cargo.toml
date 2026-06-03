@@ -30,4 +30,5 @@ rolldown_plugin_utils = { workspace = true }
 rolldown_utils = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
+unicode-normalization = { workspace = true }
 walkdir = { workspace = true }

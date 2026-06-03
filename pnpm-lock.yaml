@@ -285,7 +285,7 @@ importers:
         specifier: 'catalog:'
         version: 6.0.3
       vite-plus:
-        specifier: ^0.1.13
+        specifier: ^0.1.24
         version: 0.1.24(@types/node@24.10.3)(esbuild@0.28.0)(jiti@2.7.0)(publint@0.3.21)(terser@5.47.1)(tsx@4.22.1)(typescript@6.0.3)(vite@8.0.11(@types/node@24.10.3)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.1)(yaml@2.9.0))(yaml@2.9.0)
 
   crates/rolldown/tests/rolldown/topics/npm_packages:

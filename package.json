@@ -28,7 +28,7 @@
     "remove-unused-vars": "^0.0.12",
     "rolldown": "workspace:*",
     "typescript": "catalog:",
-    "vite-plus": "^0.1.13"
+    "vite-plus": "^0.1.24"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

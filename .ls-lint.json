@@ -31,6 +31,7 @@
     "packages/rollup-tests/test/**",
     "packages/rolldown/npm/**",
     "packages/rolldown/tests/fixtures/**/_config.ts",
+    "packages/rolldown/tests/fixtures/builtin-plugin/import-glob/case-sensitive/dir/DATA-other.js",
     "packages/rolldown/**/__snapshots__",
     "packages/vite-tests/repo/**",
     "docs/**",

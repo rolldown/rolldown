@@ -5,7 +5,7 @@ use rolldown_common::{
   ChunkIdx, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx, PreserveEntrySignatures,
   StmtInfoIdx,
 };
-use rolldown_utils::BitSet;
+use rolldown_utils::{BitSet, IndexBitSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::chunk_graph::ChunkGraph;
@@ -30,6 +30,7 @@ impl GenerateStage<'_> {
     index_splitting_info: &mut IndexSplittingInfo,
     chunk_graph: &ChunkGraph,
     entries_len: u32,
+    module_is_assigned: &IndexBitSet<ModuleIdx>,
   ) {
     let DynamicEntryAnalysis {
       dynamic_entry_indices,
@@ -41,12 +42,12 @@ impl GenerateStage<'_> {
       return;
     }
 
-    let mut atoms = self.group_modules_by_dependent_entries(index_splitting_info);
+    let mut atoms =
+      self.group_modules_by_dependent_entries(index_splitting_info, module_is_assigned);
     if atoms.is_empty() {
       return;
     }
     let module_to_atom_idx = self.compute_module_to_atom_idx(&atoms);
-    let atom_dependencies = self.compute_atom_dependencies(&atoms, &module_to_atom_idx);
 
     let static_dependency_atoms_by_entry =
       Self::compute_static_dependency_atoms_by_entry(entries_len as usize, &atoms);
@@ -58,33 +59,53 @@ impl GenerateStage<'_> {
       atoms.len(),
     );
 
-    let mut changed = false;
+    let original_dependent_entries =
+      atoms.iter().map(|atom| atom.dependent_entries.clone()).collect::<Vec<_>>();
+    let mut reduction_candidates = vec![];
     for atom_idx in 0..atoms.len() {
-      let original_dependent_entries = atoms[atom_idx].dependent_entries.clone();
-      let dependent_entries = atoms[atom_idx].dependent_entries.index_of_one().collect::<Vec<_>>();
+      let mut dependent_entries = original_dependent_entries[atom_idx].clone();
+      let entries = dependent_entries.index_of_one().collect::<Vec<_>>();
       let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
-      for entry_idx in dependent_entries {
+      for entry_idx in entries {
         if already_loaded_atoms_by_entry[entry_idx as usize].has_bit(atom_bit) {
-          atoms[atom_idx].dependent_entries.clear_bit(entry_idx);
+          dependent_entries.clear_bit(entry_idx);
         }
       }
-      if atoms[atom_idx].dependent_entries != original_dependent_entries
+      if dependent_entries != original_dependent_entries[atom_idx]
         && self.can_use_reduced_dependent_entries(
           &atoms[atom_idx],
-          &original_dependent_entries,
-          &atoms[atom_idx].dependent_entries,
+          &original_dependent_entries[atom_idx],
+          &dependent_entries,
           chunk_graph,
           &dynamic_entry_modules_by_entry,
         )
-        && !Self::reduced_atom_graph_has_static_cycle(&atoms, &atom_dependencies)
       {
-        changed = true;
-      } else {
-        atoms[atom_idx].dependent_entries = original_dependent_entries;
+        reduction_candidates.push((atom_idx, dependent_entries));
       }
     }
 
-    if !changed {
+    if reduction_candidates.is_empty() {
+      return;
+    }
+
+    for (atom_idx, dependent_entries) in &reduction_candidates {
+      atoms[*atom_idx].dependent_entries = dependent_entries.clone();
+    }
+
+    if self.reduced_chunk_graph_has_static_cycle(&atoms, &module_to_atom_idx, chunk_graph) {
+      for (atom_idx, _) in &reduction_candidates {
+        atoms[*atom_idx].dependent_entries = original_dependent_entries[*atom_idx].clone();
+        if !self.reduced_chunk_graph_has_static_cycle(&atoms, &module_to_atom_idx, chunk_graph) {
+          break;
+        }
+      }
+    }
+
+    if !atoms
+      .iter()
+      .enumerate()
+      .any(|(atom_idx, atom)| atom.dependent_entries != original_dependent_entries[atom_idx])
+    {
       return;
     }
 
@@ -176,54 +197,55 @@ impl GenerateStage<'_> {
     module_to_atom_idx
   }
 
-  fn compute_atom_dependencies(
+  fn reduced_chunk_graph_has_static_cycle(
     &self,
     atoms: &[ChunkAtom],
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
-  ) -> Vec<Vec<usize>> {
-    atoms
-      .iter()
-      .enumerate()
-      .map(|(atom_idx, atom)| {
-        let mut dependencies = FxHashSet::default();
-        for &module_idx in &atom.modules {
-          for &dep_module_idx in &self.link_output.metas[module_idx].dependencies {
-            let Some(dep_atom_idx) = module_to_atom_idx[dep_module_idx] else {
-              continue;
-            };
-            if dep_atom_idx != atom_idx {
-              dependencies.insert(dep_atom_idx);
-            }
-          }
-        }
-        dependencies.into_iter().collect()
-      })
-      .collect()
-  }
-
-  fn reduced_atom_graph_has_static_cycle(
-    atoms: &[ChunkAtom],
-    atom_dependencies: &[Vec<usize>],
+    chunk_graph: &ChunkGraph,
   ) -> bool {
+    let existing_chunk_count = chunk_graph.chunk_table.len();
     let mut chunk_idx_by_bits = FxHashMap::default();
     let mut atom_to_chunk = Vec::with_capacity(atoms.len());
     for atom in atoms {
-      let next_chunk_idx = chunk_idx_by_bits.len();
-      let chunk_idx = match chunk_idx_by_bits.entry(atom.dependent_entries.clone()) {
-        std::collections::hash_map::Entry::Occupied(occupied) => *occupied.get(),
-        std::collections::hash_map::Entry::Vacant(vacant) => {
-          vacant.insert(next_chunk_idx);
-          next_chunk_idx
+      let chunk_idx = if atom.dependent_entries.bit_count() == 1 {
+        let entry_bit = atom.dependent_entries.index_of_one().next().expect("must have one bit");
+        ChunkIdx::from_raw(entry_bit).index()
+      } else {
+        let next_chunk_idx = existing_chunk_count + chunk_idx_by_bits.len();
+        match chunk_idx_by_bits.entry(atom.dependent_entries.clone()) {
+          std::collections::hash_map::Entry::Occupied(occupied) => *occupied.get(),
+          std::collections::hash_map::Entry::Vacant(vacant) => {
+            vacant.insert(next_chunk_idx);
+            next_chunk_idx
+          }
         }
       };
       atom_to_chunk.push(chunk_idx);
     }
 
-    let mut chunk_dependencies = vec![FxHashSet::default(); chunk_idx_by_bits.len()];
-    for (atom_idx, dependencies) in atom_dependencies.iter().enumerate() {
-      let from_chunk_idx = atom_to_chunk[atom_idx];
-      for &dep_atom_idx in dependencies {
-        let to_chunk_idx = atom_to_chunk[dep_atom_idx];
+    let mut chunk_dependencies =
+      vec![FxHashSet::default(); existing_chunk_count + chunk_idx_by_bits.len()];
+    for module_idx in &self.link_output.sorted_modules {
+      if !self.link_output.metas[*module_idx].is_included {
+        continue;
+      }
+      let Some(from_chunk_idx) = Self::module_to_reduced_chunk_idx(
+        *module_idx,
+        chunk_graph,
+        module_to_atom_idx,
+        &atom_to_chunk,
+      ) else {
+        continue;
+      };
+      for &dep_module_idx in &self.link_output.metas[*module_idx].dependencies {
+        let Some(to_chunk_idx) = Self::module_to_reduced_chunk_idx(
+          dep_module_idx,
+          chunk_graph,
+          module_to_atom_idx,
+          &atom_to_chunk,
+        ) else {
+          continue;
+        };
         if from_chunk_idx != to_chunk_idx {
           chunk_dependencies[from_chunk_idx].insert(to_chunk_idx);
         }
@@ -231,6 +253,17 @@ impl GenerateStage<'_> {
     }
 
     Self::chunk_dependency_graph_has_cycle(&chunk_dependencies)
+  }
+
+  fn module_to_reduced_chunk_idx(
+    module_idx: ModuleIdx,
+    chunk_graph: &ChunkGraph,
+    module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
+    atom_to_chunk: &[usize],
+  ) -> Option<usize> {
+    chunk_graph.module_to_chunk[module_idx]
+      .map(ChunkIdx::index)
+      .or_else(|| module_to_atom_idx[module_idx].map(|atom_idx| atom_to_chunk[atom_idx]))
   }
 
   fn chunk_dependency_graph_has_cycle(chunk_dependencies: &[FxHashSet<usize>]) -> bool {
@@ -350,6 +383,7 @@ impl GenerateStage<'_> {
   fn group_modules_by_dependent_entries(
     &self,
     index_splitting_info: &IndexSplittingInfo,
+    module_is_assigned: &IndexBitSet<ModuleIdx>,
   ) -> Vec<ChunkAtom> {
     let mut atoms = vec![];
     let mut bits_to_atom_idx = FxHashMap::default();
@@ -358,6 +392,9 @@ impl GenerateStage<'_> {
         continue;
       };
       if !self.link_output.metas[normal_module.idx].is_included {
+        continue;
+      }
+      if module_is_assigned.has_bit(normal_module.idx) {
         continue;
       }
 

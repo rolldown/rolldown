@@ -852,19 +852,6 @@ impl GenerateStage<'_> {
     let allow_avoid_redundant_chunk_loads =
       self.options.experimental.is_avoid_redundant_chunk_loads_enabled()
         && !has_tla_or_tla_dependency;
-    // See meta/design/code-splitting.md#dynamic-already-loaded-analysis.
-    if allow_avoid_redundant_chunk_loads {
-      let entries_len: u32 = self
-        .link_output
-        .entries
-        .values()
-        .map(Vec::len)
-        .sum::<usize>()
-        .try_into()
-        .expect("Too many entries, u32 overflowed.");
-      self.optimize_dynamic_entry_bits(index_splitting_info, chunk_graph, entries_len);
-    }
-
     let mut module_is_assigned: IndexBitSet<ModuleIdx> =
       IndexBitSet::new(self.link_output.module_table.modules.len());
 
@@ -877,6 +864,24 @@ impl GenerateStage<'_> {
         &tag_registry,
       )
       .await?;
+
+    // See meta/design/code-splitting.md#dynamic-already-loaded-analysis.
+    if allow_avoid_redundant_chunk_loads {
+      let entries_len: u32 = self
+        .link_output
+        .entries
+        .values()
+        .map(Vec::len)
+        .sum::<usize>()
+        .try_into()
+        .expect("Too many entries, u32 overflowed.");
+      self.optimize_dynamic_entry_bits(
+        index_splitting_info,
+        chunk_graph,
+        entries_len,
+        &module_is_assigned,
+      );
+    }
 
     // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
     // This is used to generate less chunks when possible.

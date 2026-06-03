@@ -1,0 +1,15 @@
+{
+  "snapshotOutputStats": true,
+  "config": {
+    "input": [
+      { "name": "index", "import": "./index.js" },
+      { "name": "index-1", "import": "./index-1.js" }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        { "test": "a\\.js", "name": "bundle-a" },
+        { "test": "b\\.js", "name": "bundle-b" }
+      ]
+    }
+  }
+}

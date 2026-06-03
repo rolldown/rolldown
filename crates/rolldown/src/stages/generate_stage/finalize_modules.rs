@@ -33,7 +33,9 @@ impl GenerateStage<'_> {
           let ast = ast.as_mut()?;
           let module = self.link_output.module_table[idx].as_normal().unwrap();
           let ast_scope = &self.link_output.symbol_db[idx].as_ref().unwrap().ast_scopes;
-          let chunk_idx = chunk_graph.module_to_chunk[idx].unwrap();
+          // Empty common chunk elimination can leave included renderless modules unassigned when
+          // there is no side-effect replacement chunk to retarget to. See meta/design/code-splitting.md.
+          let chunk_idx = chunk_graph.module_to_chunk[idx]?;
           let chunk = &chunk_graph.chunk_table[chunk_idx];
           let linking_info = &self.link_output.metas[module.idx];
           let ctx = ScopeHoistingFinalizerContext {

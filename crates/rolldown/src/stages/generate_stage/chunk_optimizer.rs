@@ -5,9 +5,9 @@ use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType,
-  FacadeChunkEliminationReason, ImportKind, Module, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleTable, PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, StmtInfos,
-  WrapKind,
+  FacadeChunkEliminationReason, ImportKind, ImportRecordMeta, Module, ModuleIdx,
+  ModuleNamespaceIncludedReason, ModuleTable, ModuleType, PostChunkOptimizationOperation,
+  PreserveEntrySignatures, RuntimeHelper, StmtInfos, WrapKind,
 };
 use rolldown_utils::{BitSet, IndexBitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -38,6 +38,13 @@ struct FacadeChunkElimination {
 struct CommonChunkMerge {
   from_chunk_idx: ChunkIdx,
   to_chunk_idx: ChunkIdx,
+}
+
+struct EmptyCommonChunkElimination {
+  chunk_idx: ChunkIdx,
+  modules: Vec<ModuleIdx>,
+  replacement_chunks: Vec<ChunkIdx>,
+  importer_chunks: Vec<ChunkIdx>,
 }
 
 #[derive(Debug, Default)]
@@ -1139,6 +1146,216 @@ impl GenerateStage<'_> {
       &module_included_vec,
       &module_namespace_reason_vec,
     );
+  }
+
+  /// Remove non-entry chunks that only contain modules whose statements were fully
+  /// tree-shaken, while preserving the side-effect imports those modules forwarded.
+  pub(super) fn optimize_empty_common_chunks(&self, chunk_graph: &mut ChunkGraph) {
+    let mut removable_chunks = FxHashSet::default();
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      if chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx)
+        || !matches!(chunk.kind, ChunkKind::Common)
+        || chunk.modules.is_empty()
+        || !chunk.depended_runtime_helper.is_empty()
+      {
+        continue;
+      }
+
+      if chunk
+        .modules
+        .iter()
+        .all(|module_idx| self.can_remove_empty_common_chunk_module(*module_idx))
+      {
+        removable_chunks.insert(chunk_idx);
+      }
+    }
+
+    if removable_chunks.is_empty() {
+      return;
+    }
+
+    let mut eliminations = vec![];
+    for chunk_idx in chunk_graph.chunk_table.indices() {
+      if !removable_chunks.contains(&chunk_idx) {
+        continue;
+      }
+      let mut replacement_chunks = vec![];
+      Self::collect_empty_common_chunk_replacements(
+        chunk_idx,
+        chunk_graph,
+        &self.link_output.module_table,
+        &self.link_output.metas,
+        &removable_chunks,
+        &mut FxHashSet::default(),
+        &mut replacement_chunks,
+      );
+
+      let mut importer_chunks = vec![];
+      for &module_idx in &chunk_graph.chunk_table[chunk_idx].modules {
+        let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+          continue;
+        };
+        for &importer_idx in &module.importers_idx {
+          let Some(importer_chunk_idx) = chunk_graph.module_to_chunk[importer_idx] else {
+            continue;
+          };
+          if importer_chunk_idx != chunk_idx
+            && !removable_chunks.contains(&importer_chunk_idx)
+            && !chunk_graph.post_chunk_optimization_operations.contains_key(&importer_chunk_idx)
+          {
+            Self::push_unique_chunk(&mut importer_chunks, importer_chunk_idx);
+          }
+        }
+      }
+
+      eliminations.push(EmptyCommonChunkElimination {
+        chunk_idx,
+        modules: chunk_graph.chunk_table[chunk_idx].modules.clone(),
+        replacement_chunks,
+        importer_chunks,
+      });
+    }
+
+    for elimination in eliminations {
+      chunk_graph
+        .post_chunk_optimization_operations
+        .insert(elimination.chunk_idx, PostChunkOptimizationOperation::Removed);
+
+      let primary_replacement = elimination.replacement_chunks.first().copied();
+      for module_idx in elimination.modules {
+        chunk_graph.module_to_chunk[module_idx] = primary_replacement;
+      }
+
+      for importer_chunk_idx in elimination.importer_chunks {
+        for &replacement_chunk_idx in &elimination.replacement_chunks {
+          if importer_chunk_idx == replacement_chunk_idx {
+            continue;
+          }
+          chunk_graph.chunk_table[importer_chunk_idx]
+            .imports_from_other_chunks
+            .entry(replacement_chunk_idx)
+            .or_default();
+        }
+      }
+    }
+  }
+
+  fn can_remove_empty_common_chunk_module(&self, module_idx: ModuleIdx) -> bool {
+    let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+      return false;
+    };
+    let meta = &self.link_output.metas[module_idx];
+    if !meta.is_included
+      || !matches!(
+        module.module_type,
+        ModuleType::Js | ModuleType::Jsx | ModuleType::Ts | ModuleType::Tsx
+      )
+      || !matches!(meta.wrap_kind(), WrapKind::None)
+      || meta.has_side_effectful_runtime_dep
+      || !module.dynamic_importers.is_empty()
+      || !self.can_ignore_included_stmts_for_empty_common_chunk(module_idx)
+    {
+      return false;
+    }
+
+    module.import_records.iter().all(|rec| {
+      if rec.kind != ImportKind::Import {
+        return true;
+      }
+      let Some(importee_idx) = rec.resolved_module else {
+        return true;
+      };
+      matches!(
+        &self.link_output.module_table[importee_idx],
+        Module::Normal(importee) if importee.module_type != ModuleType::Css
+      )
+    })
+  }
+
+  fn can_ignore_included_stmts_for_empty_common_chunk(&self, module_idx: ModuleIdx) -> bool {
+    let meta = &self.link_output.metas[module_idx];
+    !meta.stmt_info_included.is_empty()
+      && meta.stmt_info_included.index_of_one().all(|stmt_idx| {
+        let stmt = &self.link_output.stmt_infos[module_idx][stmt_idx];
+        let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+          return false;
+        };
+        !stmt.side_effect.has_side_effect()
+          && stmt.referenced_symbols.is_empty()
+          && stmt.meta.is_empty()
+          && stmt.import_records.iter().all(|record_idx| {
+            let record = &module.import_records[*record_idx];
+            record.kind == ImportKind::Import
+              && record
+                .meta
+                .intersects(ImportRecordMeta::IsReExportOnly | ImportRecordMeta::IsExportStar)
+          })
+          && stmt.declared_symbols.iter().all(|symbol_ref| {
+            symbol_ref.inner().canonical_ref(&self.link_output.symbol_db).owner != module_idx
+          })
+      })
+  }
+
+  fn collect_empty_common_chunk_replacements(
+    chunk_idx: ChunkIdx,
+    chunk_graph: &ChunkGraph,
+    module_table: &ModuleTable,
+    metas: &IndexVec<ModuleIdx, LinkingMetadata>,
+    removable_chunks: &FxHashSet<ChunkIdx>,
+    visiting: &mut FxHashSet<ChunkIdx>,
+    replacements: &mut Vec<ChunkIdx>,
+  ) {
+    if !visiting.insert(chunk_idx) {
+      return;
+    }
+
+    for &module_idx in &chunk_graph.chunk_table[chunk_idx].modules {
+      let Some(module) = module_table[module_idx].as_normal() else {
+        continue;
+      };
+      for rec in &module.import_records {
+        if rec.kind != ImportKind::Import {
+          continue;
+        }
+        let Some(importee_idx) = rec.resolved_module else {
+          continue;
+        };
+        if !metas[importee_idx].is_included
+          || !module_table[importee_idx].side_effects().has_side_effects()
+        {
+          continue;
+        }
+        let Some(importee_chunk_idx) = chunk_graph.module_to_chunk[importee_idx] else {
+          continue;
+        };
+        if importee_chunk_idx == chunk_idx
+          || chunk_graph.post_chunk_optimization_operations.contains_key(&importee_chunk_idx)
+        {
+          continue;
+        }
+        if removable_chunks.contains(&importee_chunk_idx) {
+          Self::collect_empty_common_chunk_replacements(
+            importee_chunk_idx,
+            chunk_graph,
+            module_table,
+            metas,
+            removable_chunks,
+            visiting,
+            replacements,
+          );
+        } else {
+          Self::push_unique_chunk(replacements, importee_chunk_idx);
+        }
+      }
+    }
+
+    visiting.remove(&chunk_idx);
+  }
+
+  fn push_unique_chunk(chunks: &mut Vec<ChunkIdx>, chunk_idx: ChunkIdx) {
+    if !chunks.contains(&chunk_idx) {
+      chunks.push(chunk_idx);
+    }
   }
 
   /// Re-home the runtime module to avoid closing a static import cycle when

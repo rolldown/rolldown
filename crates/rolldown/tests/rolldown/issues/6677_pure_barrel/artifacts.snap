@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bundle-a.js
+
+```js
+//#region a.js
+const A = "pure-a";
+//#endregion
+export { A as t };
+
+```
+
+## bundle-b.js
+
+```js
+//#region b.js
+const B = "pure-b";
+//#endregion
+export { B as t };
+
+```
+
+## index-1.js
+
+```js
+import { t as A } from "./bundle-a.js";
+import { t as B } from "./bundle-b.js";
+//#region index-1.js
+console.log(B);
+console.log(A);
+//#endregion
+
+```
+
+## index.js
+
+```js
+import { t as A } from "./bundle-a.js";
+//#region index.js
+console.log(A);
+//#endregion
+
+```
+
+# Output Stats
+
+- bundle-a.js, is_entry false, is_dynamic_entry false, exports ["t"]
+- bundle-b.js, is_entry false, is_dynamic_entry false, exports ["t"]
+- index-1.js, is_entry true, is_dynamic_entry false, exports []
+- index.js, is_entry true, is_dynamic_entry false, exports []

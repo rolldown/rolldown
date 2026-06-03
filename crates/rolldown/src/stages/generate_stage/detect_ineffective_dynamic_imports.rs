@@ -14,7 +14,10 @@ impl GenerateStage<'_> {
       return;
     }
 
-    for chunk in chunk_graph.chunk_table.iter() {
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      if chunk_graph.post_chunk_optimization_operations.contains_key(&chunk_idx) {
+        continue;
+      }
       let pre_rendered_chunk =
         chunk.pre_rendered_chunk.as_ref().expect("Should have pre_rendered_chunk");
 

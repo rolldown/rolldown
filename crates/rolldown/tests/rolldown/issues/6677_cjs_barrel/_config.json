@@ -1,0 +1,9 @@
+{
+  "snapshotOutputStats": true,
+  "config": {
+    "input": [
+      { "name": "index", "import": "./index.js" },
+      { "name": "index-1", "import": "./index-1.js" }
+    ]
+  }
+}

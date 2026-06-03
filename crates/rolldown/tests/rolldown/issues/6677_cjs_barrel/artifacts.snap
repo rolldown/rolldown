@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## components.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region components.js
+var require_components = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.A = "cjs-a";
+	exports.B = "cjs-b";
+}));
+//#endregion
+export { __toESM as n, require_components as t };
+
+```
+
+## index-1.js
+
+```js
+import { t as require_components } from "./components.js";
+require_components();
+console.log("cjs-b");
+//#endregion
+
+```
+
+## index.js
+
+```js
+import { t as require_components } from "./components.js";
+require_components();
+console.log("cjs-a");
+//#endregion
+
+```
+
+# Output Stats
+
+- components.js, is_entry false, is_dynamic_entry false, exports ["n", "t"]
+- index-1.js, is_entry true, is_dynamic_entry false, exports []
+- index.js, is_entry true, is_dynamic_entry false, exports []

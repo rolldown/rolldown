@@ -9,4 +9,13 @@ const caseInsensitiveModules = import.meta.glob('./dir/data-*.js', {
   caseSensitive: false,
 });
 
-export { caseSensitiveModules, caseInsensitiveModules };
+const caseInsensitiveNegatedModules = import.meta.glob(
+  ['./dir/data-*.js', '!./dir/DATA-other.js'],
+  {
+    eager: true,
+    import: 'default',
+    caseSensitive: false,
+  },
+);
+
+export { caseSensitiveModules, caseInsensitiveModules, caseInsensitiveNegatedModules };

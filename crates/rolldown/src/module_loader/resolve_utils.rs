@@ -66,7 +66,9 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
   let mut dedup_map: FxHashMap<(&str, ImportKind), ImportRecordIdx> =
     FxHashMap::with_capacity_and_hasher(dependencies.len(), Default::default());
   dedup_map.extend(
-    dependencies.iter_enumerated().map(|(idx, item)| ((item.module_request.as_str(), item.kind), idx)),
+    dependencies
+      .iter_enumerated()
+      .map(|(idx, item)| ((item.module_request.as_str(), item.kind), idx)),
   );
 
   let jobs = dedup_map.values().map(|&idx| async move {

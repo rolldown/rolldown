@@ -483,10 +483,7 @@ impl LinkStage<'_> {
                     }
                     break;
                   };
-                  if !meta
-                    .sorted_and_non_ambiguous_resolved_exports
-                    .contains_key(&CompactStr::new(name))
-                  {
+                  if !meta.sorted_and_non_ambiguous_resolved_exports.contains_key(name) {
                     resolved_map.insert(
                       member_expr_ref.span,
                       MemberExprRefResolution {

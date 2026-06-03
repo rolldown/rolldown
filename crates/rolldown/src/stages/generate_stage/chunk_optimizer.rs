@@ -18,7 +18,8 @@ use crate::{
     IncludeContext, SymbolIncludeReason, include_runtime_symbol, include_symbol,
   },
   types::linking_metadata::{
-    LinkingMetadata, included_info_to_linking_metadata_vec, linking_metadata_vec_to_included_info,
+    LinkingMetadata, LinkingMetadataVec, included_info_to_linking_metadata_vec,
+    linking_metadata_vec_to_included_info,
   },
 };
 
@@ -397,11 +398,10 @@ impl GenerateStage<'_> {
         }
         let chunk_idxs: Vec<_> = bits.index_of_one().map(ChunkIdx::from_raw).collect();
 
-        let merge_target = Self::try_insert_into_existing_chunk(
+        let merge_target = self.try_insert_into_existing_chunk(
           &chunk_idxs,
           &static_entry_chunk_reference,
           chunk_graph,
-          &self.link_output.module_table,
           &dynamic_entry_to_dynamic_importers,
           temp_chunk,
           temp_chunk_graph,
@@ -558,14 +558,16 @@ impl GenerateStage<'_> {
   ///
   /// Returns `Some(ChunkIdx)` if a suitable merge target is found, `None` otherwise.
   fn try_insert_into_existing_chunk(
+    &self,
     chunk_idxs: &[ChunkIdx],
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
     chunk_graph: &ChunkGraph,
-    module_table: &ModuleTable,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
     info: &ChunkCandidate,
     temp_chunk_graph: &ChunkOptimizationGraph,
   ) -> Option<ChunkIdx> {
+    let module_table = &self.link_output.module_table;
+    let linking_infos = &self.link_output.metas;
     let mut user_defined_entry = vec![];
     let mut dynamic_entry = vec![];
     for &idx in chunk_idxs {
@@ -589,7 +591,37 @@ impl GenerateStage<'_> {
       Self::find_merge_target(&user_defined_entry, &user_defined_entry_modules, module_table);
     if user_defined_entry.is_empty() {
       let dynamic_chunk_entry_modules = Self::collect_entry_modules(&dynamic_entry, chunk_graph)?;
-      Self::find_merge_target(&dynamic_entry, &dynamic_chunk_entry_modules, module_table)
+      let target_chunk_idx =
+        Self::find_merge_target(&dynamic_entry, &dynamic_chunk_entry_modules, module_table)?;
+      // Cyclic-merge export-pollution guard for `find_merge_target`.
+      //
+      // `find_merge_target` accepts any candidate whose entry module is
+      // statically imported by every other entry module. In a dynamic-entry
+      // static cycle, an exporting entry module can be merged into a
+      // different dynamic-entry chunk. That chunk file is what
+      // `import('./<target>.js')` resolves to at runtime, so the merged-in
+      // entry's exports pollute the target dynamic-import namespace observed
+      // by callers (issue #9320).
+      //
+      // See meta/design/code-splitting.md for the merge-safety invariant.
+      // The selected target may own its own exports, but no other pending
+      // dynamic-entry module may contribute observable exports to the target
+      // chunk's file-level export list.
+      if dynamic_chunk_entry_modules.len() >= 2 {
+        let target_entry_module =
+          dynamic_entry.iter().zip(dynamic_chunk_entry_modules.iter()).find_map(
+            |(chunk_idx, module_idx)| (*chunk_idx == target_chunk_idx).then_some(*module_idx),
+          )?;
+        let would_pollute_target_namespace = info.modules.iter().any(|&m| {
+          m != target_entry_module
+            && dynamic_chunk_entry_modules.contains(&m)
+            && Self::module_has_observable_exports(m, module_table, linking_infos)
+        });
+        if would_pollute_target_namespace {
+          return None;
+        }
+      }
+      Some(target_chunk_idx)
     } else {
       let chunk_idx = merged_user_defined_chunk?;
       let chunk = &chunk_graph.chunk_table[chunk_idx];
@@ -725,6 +757,22 @@ impl GenerateStage<'_> {
       });
       can_merge.then_some(*chunk_idx)
     })
+  }
+
+  /// Returns true when a module can contribute keys to a dynamic-import namespace.
+  ///
+  /// This intentionally uses linked export metadata instead of
+  /// `NormalModule::named_exports`, because re-export-only modules can have no
+  /// direct named exports while still exposing resolved exports through
+  /// `export * from ...`.
+  fn module_has_observable_exports(
+    module_idx: ModuleIdx,
+    module_table: &ModuleTable,
+    linking_infos: &LinkingMetadataVec,
+  ) -> bool {
+    module_table[module_idx].as_normal().is_some()
+      && (linking_infos[module_idx].has_dynamic_exports
+        || linking_infos[module_idx].canonical_exports(false).next().is_some())
   }
 
   /// Finds empty dynamic entry chunks that should be merged with their target common chunks.

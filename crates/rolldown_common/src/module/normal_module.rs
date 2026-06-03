@@ -13,7 +13,7 @@ use itertools::Itertools;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
-use rolldown_sourcemap::collapse_sourcemaps;
+use rolldown_sourcemap::{OwnedSourceMap, collapse_sourcemaps};
 use rolldown_utils::IndexBitSet;
 use rustc_hash::FxHashSet;
 use string_wizard::SourceMapOptions;
@@ -232,11 +232,15 @@ impl NormalModule {
             source: Arc::clone(&original_code),
             ..Default::default()
           });
-          let map =
-            render_output.map.map(|original| collapse_sourcemaps(&[&original, &mutated_map]));
+          let map = render_output
+            .map
+            .map(|original| collapse_sourcemaps(&[&original.into_inner(), &mutated_map]));
           return ModuleRenderOutput { code, map };
         }
-        ModuleRenderOutput { code: render_output.code, map: render_output.map }
+        ModuleRenderOutput {
+          code: render_output.code,
+          map: render_output.map.map(OwnedSourceMap::into_inner),
+        }
       }
     }
   }

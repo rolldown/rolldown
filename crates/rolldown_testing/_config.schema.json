@@ -1349,6 +1349,12 @@
           "items": {
             "$ref": "#/$defs/BuiltinModuleTag"
           }
+        },
+        "includeDependenciesRecursively": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false,
@@ -1493,6 +1499,12 @@
           ]
         },
         "largeBarrelModules": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "sourcemapBroken": {
           "type": [
             "boolean",
             "null"

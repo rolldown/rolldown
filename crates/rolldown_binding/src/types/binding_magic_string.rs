@@ -1,5 +1,5 @@
 #![expect(clippy::inherent_to_string)]
-use std::sync::Arc;
+use std::borrow::Cow;
 
 use napi::bindgen_prelude::{Either, This};
 use napi::{Env, JsString};
@@ -1122,11 +1122,11 @@ impl BindingMagicString<'_> {
     // If file option is provided, reconstruct the source map with the file field
     let source_map = if let Some(file) = opts.file {
       let mut m = SourceMap::new(
-        Some(Arc::from(file)),
-        source_map.get_names().map(Arc::clone).collect(),
+        Some(Cow::Owned(file)),
+        source_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
         None,
-        source_map.get_sources().map(Arc::clone).collect(),
-        source_map.get_source_contents().map(|x| x.map(Arc::clone)).collect(),
+        source_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
+        source_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
         source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
         None,
       );
@@ -1163,11 +1163,11 @@ impl BindingMagicString<'_> {
     // If file option is provided, reconstruct the source map with the file field
     let source_map = if let Some(file) = opts.file {
       let mut m = SourceMap::new(
-        Some(Arc::from(file)),
-        source_map.get_names().map(Arc::clone).collect(),
+        Some(Cow::Owned(file)),
+        source_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
         None,
-        source_map.get_sources().map(Arc::clone).collect(),
-        source_map.get_source_contents().map(|x| x.map(Arc::clone)).collect(),
+        source_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
+        source_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
         source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
         None,
       );

@@ -423,6 +423,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000)',
     ),
   ),
+  sourcemapBroken: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a plugin transforms code without generating a sourcemap',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 
@@ -828,6 +834,7 @@ const AdvancedChunksSchema = v.strictObject({
         maxModuleSize: v.optional(v.number()),
         entriesAware: v.optional(v.boolean()),
         entriesAwareMergeThreshold: v.optional(v.number()),
+        includeDependenciesRecursively: v.optional(v.boolean()),
         tags: v.optional(v.array(v.string())),
       }),
     ),

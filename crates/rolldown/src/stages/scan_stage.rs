@@ -215,9 +215,11 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
         while let Ok(msg) = rx.recv() {
           match msg {
             SourceMapGenMsg::MagicString(v) => {
-              let (module_idx, plugin_idx, magic_string) = *v;
-              let generated_sourcemap =
-                magic_string.source_map(string_wizard::SourceMapOptions::default());
+              let (module_idx, plugin_idx, id, magic_string) = *v;
+              let generated_sourcemap = magic_string.source_map(string_wizard::SourceMapOptions {
+                source: id.as_str().into(),
+                ..Default::default()
+              });
               map
                 .entry(module_idx)
                 .or_default()
@@ -265,21 +267,27 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
         for element in module.sourcemap_chain.drain(..) {
           match element {
             SourcemapChainElement::Load(_) => load_elements.push(element),
-            SourcemapChainElement::Transform(_) => transform_elements.push(element),
+            SourcemapChainElement::Transform(_)
+            | SourcemapChainElement::Omitted { .. }
+            | SourcemapChainElement::Null { .. } => {
+              transform_elements.push(element);
+            }
           }
         }
 
         // Sort only Transform elements by plugin order
         transform_elements.sort_by(|a, b| {
-          if let (
-            SourcemapChainElement::Transform((a_plugin_idx, _)),
-            SourcemapChainElement::Transform((b_plugin_idx, _)),
-          ) = (a, b)
-          {
+          let plugin_idx_of = |el: &SourcemapChainElement| match el {
+            SourcemapChainElement::Transform((plugin_idx, _))
+            | SourcemapChainElement::Omitted { plugin_idx, .. }
+            | SourcemapChainElement::Null { plugin_idx, .. } => Some(*plugin_idx),
+            SourcemapChainElement::Load(_) => None,
+          };
+          if let (Some(a_plugin_idx), Some(b_plugin_idx)) = (plugin_idx_of(a), plugin_idx_of(b)) {
             let a_order =
-              transform_plugin_order_map.get(a_plugin_idx).copied().unwrap_or(usize::MAX);
+              transform_plugin_order_map.get(&a_plugin_idx).copied().unwrap_or(usize::MAX);
             let b_order =
-              transform_plugin_order_map.get(b_plugin_idx).copied().unwrap_or(usize::MAX);
+              transform_plugin_order_map.get(&b_plugin_idx).copied().unwrap_or(usize::MAX);
             a_order.cmp(&b_order)
           } else {
             std::cmp::Ordering::Equal

@@ -211,6 +211,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       resolved_deps,
       raw_import_records,
       local_symbol_ref_db: symbol_ref_db,
+      warnings: vec![],
     }));
 
     // If the main thread is dead, nothing we can do to handle these send failures.

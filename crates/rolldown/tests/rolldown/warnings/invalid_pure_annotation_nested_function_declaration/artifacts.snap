@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_ANNOTATION
+
+```text
+[INVALID_ANNOTATION] A comment "/* #__PURE__ */" in "main.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+   ╭─[ main.js:3:3 ]
+   │
+ 3 │   /* #__PURE__ */ function inner() {}
+   │   ───────┬───────  
+   │          ╰───────── comment ignored due to position
+   │ 
+   │ Help 1: If you intended to mark all calls of this function as side-effect-free, use `/* @__NO_SIDE_EFFECTS__ */` before the function declaration.
+   │ 
+   │ Help 2: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+
+```

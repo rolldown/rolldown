@@ -76,7 +76,6 @@
     }
   },
   "publishConfig": {
-    "access": "public",
     "exports": {
       ".": "./dist/index.mjs",
       "./config": "./dist/config.mjs",
@@ -92,6 +91,7 @@
       "./plugins": "./dist/plugins-index.mjs",
       "./utils": "./dist/utils-index.mjs"
     },
+    "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {

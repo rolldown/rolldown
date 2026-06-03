@@ -710,17 +710,6 @@ dependencies = [
 
 [[package]]
 name = "fancy-regex"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72cf461f865c862bb7dc573f643dd6a2b6842f7c30b07882b56bd148cc2761b8"
-dependencies = [
- "bit-set",
- "regex-automata",
- "regex-syntax",
-]
-
-[[package]]
-name = "fancy-regex"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1e1dacd0d2082dfcf1351c4bdd566bbe89a2b263235a2b50058f1e130a47277"
@@ -1335,7 +1324,7 @@ dependencies = [
  "bytecount",
  "data-encoding",
  "email_address",
- "fancy-regex 0.18.0",
+ "fancy-regex",
  "fraction",
  "getrandom 0.3.4",
  "idna",
@@ -2156,9 +2145,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "11.19.1"
+version = "11.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5632fcd47d4fdaf7ef5ee150c7001fa8ed814ce38d1a073536a366dbfc239aad"
+checksum = "6c64950816ae082c23c9e43e59cf75343f3087a37ae9888c0a174fde95e5f7de"
 dependencies = [
  "cfg-if",
  "compact_str",
@@ -2168,6 +2157,7 @@ dependencies = [
  "nodejs-built-in-modules",
  "once_cell",
  "papaya",
+ "percent-encoding",
  "pnp",
  "rustc-hash",
  "rustix",
@@ -2178,17 +2168,16 @@ dependencies = [
  "simdutf8",
  "thiserror 2.0.18",
  "tracing",
- "url",
  "windows",
 ]
 
 [[package]]
 name = "oxc_resolver_napi"
-version = "11.19.1"
+version = "11.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c961d87777f4f2d0e16e203701a0308e41ff4738254ca1fc4b238dad2e096d5"
+checksum = "b6128551e6aa92c3d9033335fe0389cf9c33e489c943a877e50c171c1ea183f7"
 dependencies = [
- "fancy-regex 0.17.0",
+ "fancy-regex",
  "napi",
  "napi-build",
  "napi-derive",
@@ -2519,7 +2508,7 @@ checksum = "d021b5b4a2ea34bf137831fbbc5856e9c7ca70861f95a0f8dc51323b6e821faa"
 dependencies = [
  "byteorder",
  "concurrent_lru",
- "fancy-regex 0.18.0",
+ "fancy-regex",
  "flate2",
  "indexmap",
  "nodejs-built-in-modules",

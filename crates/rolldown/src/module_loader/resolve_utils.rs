@@ -63,10 +63,11 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
   module_type: &ModuleType,
 ) -> BuildResult<IndexVec<ImportRecordIdx, ResolvedId>> {
   // NOTE: this dedupes the identical (specifier, kind) resolve calls
-  let dedup_map: FxHashMap<(&str, ImportKind), ImportRecordIdx> = dependencies
-    .iter_enumerated()
-    .map(|(idx, item)| ((item.module_request.as_str(), item.kind), idx))
-    .collect();
+  let mut dedup_map: FxHashMap<(&str, ImportKind), ImportRecordIdx> =
+    FxHashMap::with_capacity_and_hasher(dependencies.len(), Default::default());
+  dedup_map.extend(
+    dependencies.iter_enumerated().map(|(idx, item)| ((item.module_request.as_str(), item.kind), idx)),
+  );
 
   let jobs = dedup_map.values().map(|&idx| async move {
     let item = &dependencies[idx];

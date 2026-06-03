@@ -30,7 +30,7 @@ impl SourcemapBuilder {
     }
   }
 
-  pub fn into_source_map(self) -> oxc_sourcemap::SourceMap {
+  pub fn into_source_map(self) -> oxc_sourcemap::SourceMap<'static> {
     self.source_map_builder.into_sourcemap()
   }
 

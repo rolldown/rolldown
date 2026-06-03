@@ -89,7 +89,7 @@ test-node-rollup *args="": build-rolldown
   just t-node-rollup {{ args }}
 
 # Run both Rolldown's tests and Rollup's test suite.
-test-node *args="": build-rolldown
+test-node *args="": build-rolldown build-rolldown-test-dev-server
   just test-node-rolldown {{ args }}
   just test-node-rollup
 
@@ -189,6 +189,10 @@ build-rolldown-binding:
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding.
 build-rolldown:
   vp run --filter rolldown build-native:debug
+
+# Build `@rolldown/test-dev-server` itself.
+build-rolldown-test-dev-server:
+  vp run --filter @rolldown/test-dev-server build
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.wasm` binding for WASI.
 build-rolldown-wasi:

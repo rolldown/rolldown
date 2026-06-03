@@ -12,6 +12,7 @@ use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{
   PathBufExt as _, PathExt as _, representative_file_name_for_preserve_modules,
+  strip_path_prefix_to_slash,
 };
 use rolldown_utils::{
   dashmap::FxDashMap,
@@ -235,10 +236,13 @@ impl<'a> GenerateStage<'a> {
                 let p = PathBuf::from(sanitized_absolute_filename.as_str());
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
-                    if absolute_chunk_file_name.starts_with(preserve_modules_root.as_str()) {
-                      absolute_chunk_file_name[preserve_modules_root.len()..]
-                        .trim_start_matches(['/', '\\'])
-                        .to_string()
+                    // See meta/design/module-id.md: output paths may normalize separators even
+                    // when module ids keep native separators.
+                    if let Some(relative_path) = strip_path_prefix_to_slash(
+                      absolute_chunk_file_name.as_path(),
+                      preserve_modules_root.as_path(),
+                    ) {
+                      relative_path
                     } else {
                       p.relative(input_base.as_str()).to_slash_lossy().into_owned()
                     }

@@ -97,7 +97,11 @@ impl Plugin for ViteTransformPlugin {
     }
 
     Ok(Some(rolldown_plugin::HookTransformOutput {
-      map: if let Some(map) = map { map.into() } else { HookTransformOutputMap::Omitted },
+      map: if let Some(map) = map {
+        map.into_inner().into()
+      } else {
+        HookTransformOutputMap::Omitted
+      },
       code: Some(code),
       module_type: Some(ModuleType::Js),
       ..Default::default()

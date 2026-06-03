@@ -31,7 +31,8 @@ console.log(data, data2);
 - ../main.js
 (1:6) "data2 = require(" --> (3:6) "data2 = ("
 (1:6) "data2 = require(" --> (3:15) "/* @__PURE__ */ ((x) => typeof require !== \"undefined\" ? require : typeof Proxy !== \"undefined\" ? new Proxy(x, { get: (a, b) => (typeof require !== \"undefined\" ? require : a)[b] }) : x)(function(x) {\n"
-(1:6) "data2 = require(" --> (6:1) "))("
+(1:6) "data2 = require(" --> (6:1) "))"
+(1:6) "data2 = require(" --> (6:3) "("
 (1:22) "'./hello.txt'" --> (6:4) "\"./assets/hello-CUbDYdKJ.txt\""
 (1:35) ");\n" --> (6:33) ");\n"
 (2:0) "console." --> (7:0) "console."

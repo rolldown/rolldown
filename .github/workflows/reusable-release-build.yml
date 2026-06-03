@@ -80,7 +80,7 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           # No caching to avoid cache poisoning in release artifacts
           restore-cache: false
@@ -98,7 +98,7 @@ jobs:
         if: ${{ contains(matrix.target, 'ohos') }}
         uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
 
-      - uses: taiki-e/install-action@e0eafa9a0d485c37f97c0f7beb930a58a2facbac # v2.79.4
+      - uses: taiki-e/install-action@6ed6112eb9893c58dd600eebccdf6e77ab7bfa9c # v2.79.12
         if: ${{ contains(matrix.target, 'musl') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -222,7 +222,7 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           # No caching to avoid cache poisoning in release artifacts
           restore-cache: false
@@ -266,7 +266,7 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           # No caching to avoid cache poisoning in release artifacts
           restore-cache: false

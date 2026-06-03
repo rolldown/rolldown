@@ -47,7 +47,7 @@ impl Generator for EcmaGenerator {
   #[expect(clippy::too_many_lines)]
   async fn instantiate_chunk(ctx: &mut GenerateContext<'_>) -> Result<BuildResult<GenerateOutput>> {
     let module_id_to_codegen_ret = std::mem::take(&mut ctx.module_id_to_codegen_ret);
-    let rendered_module_sources: RenderedModuleSources = ctx
+    let rendered_pairs: Vec<(RenderedModuleSource, Vec<BuildDiagnostic>)> = ctx
       .chunk
       .modules
       .par_iter()
@@ -59,14 +59,22 @@ impl Generator for EcmaGenerator {
           .map(|m| (m, codegen_ret.expect("should have codegen_ret")))
       })
       .map(|(m, codegen_ret)| {
-        RenderedModuleSource::new(
-          m.idx,
-          m.id.clone(),
-          m.exec_order,
-          render_ecma_module(m, ctx.options, codegen_ret),
+        let render = render_ecma_module(m, ctx.options, codegen_ret);
+        (
+          RenderedModuleSource::new(m.idx, m.id.clone(), m.exec_order, render.sources),
+          render.warnings,
         )
       })
       .collect::<Vec<_>>();
+
+    let mut sourcemap_broken_warnings: Vec<BuildDiagnostic> = Vec::new();
+    let rendered_module_sources: RenderedModuleSources = rendered_pairs
+      .into_iter()
+      .map(|(source, warnings)| {
+        sourcemap_broken_warnings.extend(warnings);
+        source
+      })
+      .collect();
 
     let rendered_modules: FxHashMap<ModuleId, RenderedModule> = rendered_module_sources
       .iter()
@@ -186,7 +194,7 @@ impl Generator for EcmaGenerator {
       None => None,
     };
 
-    let mut warnings = vec![];
+    let mut warnings = sourcemap_broken_warnings;
 
     // Warn when multiple shebang sources would produce duplicate shebangs in the output.
     // UMD format silently drops the entry hashbang, so it doesn't count as a shebang source.

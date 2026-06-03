@@ -712,7 +712,7 @@ export interface InputOptions {
      * significantly improving build performance for large codebases with many barrel modules.
      *
      * @see {@link https://rolldown.rs/in-depth/lazy-barrel-optimization | Lazy Barrel Documentation}
-     * @default false
+     * @default true
      */
     lazyBarrel?: boolean;
   };

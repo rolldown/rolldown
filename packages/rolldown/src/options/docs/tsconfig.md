@@ -4,11 +4,7 @@
 
 When set to `true`, Rolldown enables auto-discovery mode (similar to Vite). For each module, both the resolver and transformer will find the nearest `tsconfig.json`.
 
-If the tsconfig has `references`, Rolldown resolves them the way TypeScript does: each referenced project is checked in order, and the **first one that includes the file takes precedence over the root**. A referenced project includes the file when the file's extension is allowed by that project's own `allowJs` and the file matches its `files`/`include` patterns (and is not excluded). Only when no referenced project includes the file does Rolldown fall back to the root tsconfig.
-
-:::info Changed in v1.1.0
-Project references are now resolved like TypeScript: they are checked before the root tsconfig, so the `paths` / `allowJs` that apply to a file may differ from earlier versions.
-:::
+If the tsconfig has `references`, Rolldown resolves them the way TypeScript does: a referenced project that includes the file **takes precedence over the root**. Each referenced project uses its own `allowJs`, so a `.js`/`.jsx`/`.mjs`/`.cjs` file is only included by projects that enable it. If no referenced project includes the file, Rolldown falls back to the root tsconfig.
 
 ```js
 export default {

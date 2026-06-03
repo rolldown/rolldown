@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_error"
-version = "1.0.3"
+version = "1.1.0"
 publish = true
 description = "rolldown_error"
 readme = "../../README.md"

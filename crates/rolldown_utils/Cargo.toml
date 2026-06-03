@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_utils"
-version = "1.0.3"
+version = "1.1.0"
 publish = true
 description = "General-purpose utilities for Rolldown"
 readme = "../../README.md"

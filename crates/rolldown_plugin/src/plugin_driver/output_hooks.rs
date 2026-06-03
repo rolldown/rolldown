@@ -3,7 +3,9 @@ use std::sync::Arc;
 use crate::types::hook_close_bundle_args::HookCloseBundleArgs;
 use crate::types::hook_render_error::HookRenderErrorArgs;
 use crate::{HookAddonArgs, PluginDriver};
-use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
+use crate::{
+  HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs, HookTransformOutputMap,
+};
 use anyhow::{Context, Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOptions};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
@@ -130,8 +132,9 @@ impl PluginDriver {
   pub async fn render_chunk(
     &self,
     mut args: HookRenderChunkArgs<'_>,
-  ) -> Result<(String, Vec<SourceMap>)> {
+  ) -> Result<(String, Vec<SourceMap>, Vec<BuildDiagnostic>)> {
     let mut sourcemap_chain = vec![];
+    let mut warnings = vec![];
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_render_chunk_meta)
     {
@@ -149,8 +152,15 @@ impl PluginDriver {
         let result = plugin.call_render_chunk(ctx, &args).await;
         self.record_timing(plugin_idx, start);
         if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+          if matches!(r.map, HookTransformOutputMap::Omitted) && args.options.is_sourcemap_enabled()
+          {
+            warnings.push(
+              BuildDiagnostic::sourcemap_broken(plugin.call_name().to_string(), None)
+                .with_severity_warning(),
+            );
+          }
           args.code = Arc::new(r.code);
-          if let Some(map) = r.map {
+          if let Some(map) = r.map.into_sourcemap() {
             sourcemap_chain.push(map);
           }
           if trace_action_enabled!() {
@@ -180,7 +190,7 @@ impl PluginDriver {
       ))
       .await?;
     }
-    Ok((args.into_code(), sourcemap_chain))
+    Ok((args.into_code(), sourcemap_chain, warnings))
   }
 
   #[tracing::instrument(

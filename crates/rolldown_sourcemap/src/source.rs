@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use oxc_sourcemap::SourceMap;
+use crate::SourceMap;
 
 pub trait Source {
   fn sourcemap(&self) -> Option<&SourceMap>;

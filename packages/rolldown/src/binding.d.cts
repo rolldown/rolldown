@@ -1926,6 +1926,7 @@ export interface BindingChecksOptions {
   unsupportedTsconfigOption?: boolean
   ineffectiveDynamicImport?: boolean
   largeBarrelModules?: boolean
+  sourcemapBroken?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -2246,7 +2247,11 @@ export interface BindingHookLoadOutput {
 
 export interface BindingHookRenderChunkOutput {
   code: string
-  map?: BindingSourcemap
+  /**
+   * A sourcemap, or `null` to explicitly signal "no sourcemap" (distinct from
+   * omitting the field, which mirrors Rollup's "possibly broken" semantics).
+   */
+  map?: BindingSourcemap | null
 }
 
 export interface BindingHookResolveIdExtraArgs {
@@ -2429,6 +2434,7 @@ export interface BindingMatchGroup {
   entriesAware?: boolean
   entriesAwareMergeThreshold?: number
   tags?: Array<string>
+  includeDependenciesRecursively?: boolean
 }
 
 export interface BindingModulePreloadOptions {

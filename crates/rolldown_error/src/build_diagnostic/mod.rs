@@ -45,6 +45,10 @@ impl BuildDiagnostic {
     self.inner.id()
   }
 
+  pub fn plugin(&self) -> Option<String> {
+    self.inner.plugin()
+  }
+
   pub fn kind(&self) -> crate::types::event_kind::EventKind {
     self.inner.kind()
   }

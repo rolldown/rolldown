@@ -88,9 +88,11 @@ pub fn render_chunk_exports(
   let GenerateContext { chunk, link_output, options, .. } = ctx;
   let mut export_items: Vec<(CompactStr, SymbolRef)> = ctx.render_export_items_index_vec
     [ctx.chunk_idx]
-    .clone()
-    .into_iter()
-    .flat_map(|(symbol_ref, names)| names.into_iter().map(move |name| (name, symbol_ref)))
+    .iter()
+    .flat_map(|(symbol_ref, names)| {
+      let symbol_ref = *symbol_ref;
+      names.iter().map(move |name| (name.clone(), symbol_ref))
+    })
     .collect();
 
   match options.format {

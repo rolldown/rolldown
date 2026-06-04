@@ -3,7 +3,7 @@ mod source_joiner;
 
 use std::borrow::Cow;
 
-use oxc_sourcemap::Token;
+use oxc_sourcemap::{SourceMapParts, Token};
 
 pub use oxc_sourcemap::{JSONSourceMap, OwnedSourceMap, SourceMapBuilder, SourcemapVisualizer};
 pub use source_joiner::SourceJoiner;
@@ -13,6 +13,19 @@ pub use source_joiner::SourceJoiner;
 pub type SourceMap = oxc_sourcemap::SourceMap<'static>;
 
 pub use crate::source::{Source, SourceMapSource};
+
+/// Rebuilds an owned `SourceMap` from `parts`, swapping in freshly computed
+/// `tokens`. Drops the metadata that no longer matches the new token array:
+/// `token_chunks` (its chunk boundaries index the old tokens) and the
+/// per-encode `x_google_ignore_list`/`debug_id`. The string tables and
+/// `file`/`source_root` are left exactly as the caller set them in `parts`.
+fn rebuild_with_tokens(mut parts: SourceMapParts<'static>, tokens: Box<[Token]>) -> SourceMap {
+  parts.tokens = tokens;
+  parts.token_chunks = None;
+  parts.x_google_ignore_list = None;
+  parts.debug_id = None;
+  SourceMap::from_parts(parts)
+}
 
 /// Strips the first `lines` destination lines from the sourcemap, decrementing all remaining
 /// destination line numbers accordingly. Used to re-anchor a sourcemap after removing a
@@ -37,15 +50,12 @@ pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, lines: u32) -> SourceMap
     })
     .collect();
 
-  SourceMap::new(
-    sourcemap.get_file().map(|f| Cow::Owned(f.to_owned())),
-    sourcemap.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
-    sourcemap.get_source_root().map(|s| Cow::Owned(s.to_owned())),
-    sourcemap.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
-    sourcemap.get_source_contents().map(|c| c.map(|s| Cow::Owned(s.to_owned()))).collect(),
-    tokens,
-    None,
-  )
+  // The input map is owned, so move its `file`/`names`/`sources`/`source_contents`
+  // (notably the full source text in `source_contents`) into the result instead of
+  // re-cloning every string through the accessors. Only `tokens` is rebuilt — its
+  // dst lines shifted — keeping `file`/`source_root` since the code is unchanged
+  // apart from the stripped prefix.
+  rebuild_with_tokens(sourcemap.into_parts(), tokens)
 }
 
 /// Builds an empty sourcemap with no tokens, sources, names, or contents.
@@ -53,16 +63,12 @@ pub fn empty_sourcemap() -> SourceMap {
   SourceMap::new(None, vec![], None, vec![], vec![], Box::new([]), None)
 }
 
-// <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
-pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
-  debug_assert!(sourcemap_chain.len() > 1);
-  if sourcemap_chain.len() == 1 {
-    // If there's only one sourcemap, return it as is.
-    return sourcemap_chain[0].clone();
-  }
-
+/// Walks every destination token of the chain's last map back through the
+/// preceding maps, producing the collapsed token list. The resulting tokens'
+/// `source_id`/`name_id` index into the chain's *first* map, so callers pair
+/// these tokens with the first map's `names`/`sources`/`source_contents`.
+fn collapse_chain_tokens(sourcemap_chain: &[&SourceMap]) -> Box<[Token]> {
   let last_map = sourcemap_chain.last().expect("sourcemap_chain should not be empty");
-  let first_map = sourcemap_chain.first().expect("sourcemap_chain should not be empty");
   let chain_without_last = &sourcemap_chain[..sourcemap_chain.len() - 1];
 
   // Pre-compute lookup tables in reverse order so we avoid reversing on every token lookup.
@@ -72,7 +78,7 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
     .map(|sourcemap| (*sourcemap, sourcemap.generate_lookup_table()))
     .collect();
 
-  let tokens: Box<[Token]> = last_map
+  last_map
     .get_source_view_tokens()
     .filter_map(|token| {
       let original_token =
@@ -94,7 +100,19 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
         )
       })
     })
-    .collect();
+    .collect()
+}
+
+// <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
+pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
+  debug_assert!(sourcemap_chain.len() > 1);
+  if sourcemap_chain.len() == 1 {
+    // If there's only one sourcemap, return it as is.
+    return sourcemap_chain[0].clone();
+  }
+
+  let first_map = sourcemap_chain.first().expect("sourcemap_chain should not be empty");
+  let tokens = collapse_chain_tokens(sourcemap_chain);
 
   SourceMap::new(
     None,
@@ -107,9 +125,37 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
   )
 }
 
+/// Like [`collapse_sourcemaps`] but consumes the chain's first map (`first_map`,
+/// followed by `rest_maps`), moving its `names`/`sources`/`source_contents` into
+/// the result instead of cloning them.
+///
+/// The collapsed result always reuses the *first* map's strings, so when the
+/// caller owns that map this avoids duplicating `source_contents` — the full
+/// original source text. For chunk-level maps that is the concatenation of every
+/// module in the chunk and dominates sourcemap memory, so prefer this whenever
+/// the first map can be given up.
+pub fn collapse_sourcemaps_owned(first_map: SourceMap, rest_maps: &[&SourceMap]) -> SourceMap {
+  if rest_maps.is_empty() {
+    // Nothing to remap against; the first map is already the result.
+    return first_map;
+  }
+
+  let mut sourcemap_chain = Vec::with_capacity(rest_maps.len() + 1);
+  sourcemap_chain.push(&first_map);
+  sourcemap_chain.extend(rest_maps.iter().copied());
+  let tokens = collapse_chain_tokens(&sourcemap_chain);
+  // The `sourcemap_chain` borrow of `first_map` ends at its last use above, so
+  // `first_map` can now be moved. Reuse its strings; only `tokens` is replaced.
+  // Like `collapse_sourcemaps`, a collapsed map has no single `file`/`source_root`.
+  let mut parts = first_map.into_parts();
+  parts.file = None;
+  parts.source_root = None;
+  rebuild_with_tokens(parts, tokens)
+}
+
 #[test]
 fn test_collapse_sourcemaps() {
-  use crate::{SourceJoiner, SourceMapSource, collapse_sourcemaps};
+  use crate::{SourceJoiner, SourceMapSource, collapse_sourcemaps, collapse_sourcemaps_owned};
   use oxc::{
     allocator::Allocator,
     codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions},
@@ -186,6 +232,12 @@ fn test_collapse_sourcemaps() {
 (0:30) ");\n" --> (3:15) ");\n"
 "#
   );
+
+  // The owned variant moves the first map's strings instead of cloning them, but
+  // must produce a byte-identical map for the same chain.
+  let (first, rest) = sourcemap_chain.split_first().unwrap();
+  let owned_map = collapse_sourcemaps_owned((*first).clone(), rest);
+  assert_eq!(owned_map.to_json_string(), map.to_json_string());
 }
 
 /// Test for https://github.com/rollup/rollup/issues/5955

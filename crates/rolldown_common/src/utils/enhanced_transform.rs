@@ -25,7 +25,7 @@ use oxc::{
 use oxc_resolver::TsConfig;
 use rolldown_ecmascript::semantic_builder_for_transform;
 use rolldown_error::{BuildDiagnostic, EventKind, Severity};
-use rolldown_sourcemap::{OwnedSourceMap, SourceMap, collapse_sourcemaps};
+use rolldown_sourcemap::{OwnedSourceMap, SourceMap, collapse_sourcemaps_owned};
 use rustc_hash::FxHashMap;
 
 use crate::inner_bundler_options::types::transform_option::{
@@ -415,7 +415,8 @@ pub fn enhanced_transform(
     .build(&program);
 
   let output_map = match (input_map, codegen_ret.map.map(OwnedSourceMap::into_inner)) {
-    (Some(im), Some(om)) => Some(collapse_sourcemaps(&[&im, &om])),
+    // `im` is owned and dropped here, so move it into the collapse.
+    (Some(im), Some(om)) => Some(collapse_sourcemaps_owned(im, &[&om])),
     (None, map) => map,
     (Some(_), None) => None,
   };

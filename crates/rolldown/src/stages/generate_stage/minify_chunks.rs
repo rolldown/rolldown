@@ -3,7 +3,7 @@ use oxc_allocator::AllocatorPool;
 use rolldown_common::{MinifyOptions, NormalizedBundlerOptions};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildResult;
-use rolldown_sourcemap::collapse_sourcemaps;
+use rolldown_sourcemap::collapse_sourcemaps_owned;
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::type_alias::IndexInstantiatedChunks;
@@ -56,12 +56,15 @@ impl GenerateStage<'_> {
             codegen_options,
           );
           chunk.content = minified_content.into();
-          match (&chunk.map, &new_map) {
+          match (chunk.map.take(), &new_map) {
             (Some(origin_map), Some(new_map)) => {
-              chunk.map = Some(collapse_sourcemaps(&[origin_map, new_map]));
+              chunk.map = Some(collapse_sourcemaps_owned(origin_map, &[new_map]));
             }
-            _ => {
+            (origin_map, _) => {
+              // Minify produced no new map (or there was none to begin with);
+              // restore whatever we took.
               // TODO: Map is dirty. Should we reset the `chunk.map` to `None`?
+              chunk.map = origin_map;
             }
           }
         }

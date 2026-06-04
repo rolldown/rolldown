@@ -8,7 +8,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
-use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
+use rolldown_sourcemap::{SourceMap, collapse_sourcemaps_owned};
 use rolldown_utils::indexmap::FxIndexMap;
 
 use crate::type_alias::IndexInstantiatedChunks;
@@ -61,11 +61,11 @@ pub async fn render_chunks(
     let asset = &mut assets[index];
     asset.content = code.into();
     if !sourcemaps.is_empty() {
-      if let Some(asset_map) = &asset.map {
-        let mut sourcemap_chain = Vec::with_capacity(sourcemaps.len() + 1);
-        sourcemap_chain.push(asset_map);
-        sourcemap_chain.extend(sourcemaps.iter());
-        asset.map = Some(collapse_sourcemaps(&sourcemap_chain));
+      if let Some(asset_map) = asset.map.take() {
+        // Move `asset_map` into the collapse so its (chunk-sized) `source_contents`
+        // is reused rather than cloned; the plugin-returned maps remap on top.
+        let rest: Vec<&SourceMap> = sourcemaps.iter().collect();
+        asset.map = Some(collapse_sourcemaps_owned(asset_map, &rest));
       }
     }
     warnings.extend(chunk_warnings);

@@ -1,0 +1,10 @@
+{
+  "config": {},
+  "configVariants": [
+    {
+      "_configName": "cjs",
+      "format": "cjs",
+      "treeshake": false
+    }
+  ]
+}

@@ -1,0 +1,142 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## isArrayLike.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region isArrayLike.cjs
+var require_isArrayLike = /* @__PURE__ */ __commonJSMin(((exports) => {
+	function isArrayLike(value) {
+		return value != null && typeof value.length === "number";
+	}
+	exports.isArrayLike = isArrayLike;
+}));
+//#endregion
+export { __commonJSMin as n, __toESM as r, require_isArrayLike as t };
+
+```
+
+## last.js
+
+```js
+import { n as __commonJSMin, t as require_isArrayLike$1 } from "./isArrayLike.js";
+//#region last.cjs
+var require_last = /* @__PURE__ */ __commonJSMin(((exports) => {
+	var require_isArrayLike = require_isArrayLike$1();
+	function last(array) {
+		if (!require_isArrayLike.isArrayLike(array)) return;
+		return array[array.length - 1];
+	}
+	var require_isArrayLike$2 = {};
+	exports.shadow = function() {
+		return require_isArrayLike$2;
+	};
+	exports.last = last;
+}));
+//#endregion
+export default require_last();
+
+```
+
+## main.js
+
+```js
+import { r as __toESM, t as require_isArrayLike } from "./isArrayLike.js";
+const eager = (0, require_isArrayLike().isArrayLike)([1]);
+async function lazy() {
+	return (await import("./last.js").then((m) => /* @__PURE__ */ __toESM(m.default))).default.last([
+		1,
+		2,
+		3
+	]);
+}
+//#endregion
+export { eager, lazy };
+
+```
+
+# Variant: cjs: [format: Cjs] [treeshake: Boolean(false)]
+
+## Assets
+
+### isArrayLike.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region isArrayLike.cjs
+var require_isArrayLike = /* @__PURE__ */ __commonJSMin(((exports) => {
+	function isArrayLike(value) {
+		return value != null && typeof value.length === "number";
+	}
+	exports.isArrayLike = isArrayLike;
+}));
+//#endregion
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+Object.defineProperty(exports, "require_isArrayLike", {
+	enumerable: true,
+	get: function() {
+		return require_isArrayLike;
+	}
+});
+
+```
+
+### last.js
+
+```js
+const require_isArrayLike$1 = require("./isArrayLike.js");
+//#region last.cjs
+var require_last = /* @__PURE__ */ require_isArrayLike$1.__commonJSMin(((exports) => {
+	var require_isArrayLike = require_isArrayLike$1.require_isArrayLike();
+	function last(array) {
+		if (!require_isArrayLike.isArrayLike(array)) return;
+		return array[array.length - 1];
+	}
+	var require_isArrayLike$2 = {};
+	exports.shadow = function() {
+		return require_isArrayLike$2;
+	};
+	exports.last = last;
+}));
+//#endregion
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return require_last();
+	}
+});
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_isArrayLike$1 = require("./isArrayLike.js");
+const eager = (0, require_isArrayLike$1.require_isArrayLike().isArrayLike)([1]);
+async function lazy() {
+	return (await Promise.resolve().then(() => /* @__PURE__ */ require_isArrayLike$1.__toESM(require("./last.js").default))).default.last([
+		1,
+		2,
+		3
+	]);
+}
+//#endregion
+exports.eager = eager;
+exports.lazy = lazy;
+
+```

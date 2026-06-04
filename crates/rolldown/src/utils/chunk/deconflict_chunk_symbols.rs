@@ -121,6 +121,25 @@ pub fn deconflict_chunk_symbols(
         .insert(CompactStr::new(canonical_ref.name(&link_output.symbol_db)));
     }
   }
+  if matches!(format, OutputFormat::Esm) {
+    // A CJS wrapper whose module lives in *another* chunk is hoisted here as a real root-scope
+    // import binding (`import { ... as require_foo } from "./other.js"`) and is likewise captured
+    // by every CJS-wrapped closure in this chunk. The in-chunk loop above can't see it because its
+    // owner module isn't in `chunk.modules`, so we recover it from the cross-chunk import list.
+    // Without this, an author-local of the same name inside a CJS closure shadows the imported
+    // wrapper, emitting the self-referential `var require_foo = require_foo()` (issue #9630).
+    for item in chunk.imports_from_other_chunks.values().flatten() {
+      let canonical_ref = link_output.symbol_db.canonical_ref_for(item.import_ref);
+      let is_cjs_wrapper =
+        link_output.metas[canonical_ref.owner].wrapper_ref.is_some_and(|wrapper_ref| {
+          link_output.symbol_db.canonical_ref_for(wrapper_ref) == canonical_ref
+        });
+      if is_cjs_wrapper {
+        chunk_scope_captured_names
+          .insert(CompactStr::new(canonical_ref.name(&link_output.symbol_db)));
+      }
+    }
+  }
 
   chunk
     .modules

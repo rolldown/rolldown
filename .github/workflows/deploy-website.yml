@@ -23,12 +23,16 @@ concurrency:
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  # Validates the docs on every PR/merge-queue run, and additionally deploys to Void on main.
-  # The deploy steps are gated to `main`, so VOID_TOKEN is only ever used there.
+  # Builds/validates the docs and decides whether a deploy is needed. This job runs untrusted
+  # PR code, so it deliberately has NO `environment` and NO access to VOID_TOKEN. The actual
+  # deploy is a separate, main-only job (below) so the secret is never in scope while PR build
+  # steps run.
   docs-validation:
     name: Docs Validation
     runs-on: ubuntu-latest
-    environment: void
+    outputs:
+      fingerprint: ${{ steps.fingerprint.outputs.hash }}
+      deploy: ${{ steps.gate.outputs.deploy }}
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
@@ -37,7 +41,7 @@ jobs:
           cache: true
 
       # Always run: the generated API reference is the input to both the validation build and
-      # the content fingerprint. On main the deploy step builds the site, so the standalone
+      # the content fingerprint. On main the deploy job builds the site, so the standalone
       # validation build below is skipped there to avoid building twice.
       - name: Generate API reference
         run: vp run --filter rolldown-docs generate
@@ -66,7 +70,6 @@ jobs:
           echo "hash=$hash" >> "$GITHUB_OUTPUT"
           echo "Docs content fingerprint: $hash"
 
-      # --- Deploy (main only) -------------------------------------------------------------
       - name: Was this content already deployed?
         id: deployed
         if: github.ref_name == 'main'
@@ -83,25 +86,38 @@ jobs:
           # Deploy when the content changed (cache miss) or when manually dispatched (force).
           if [ "${{ steps.deployed.outputs.cache-hit }}" = "true" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
             echo "deploy=false" >> "$GITHUB_OUTPUT"
-            echo "Docs content unchanged — fingerprint ${{ steps.fingerprint.outputs.hash }} already deployed; skipping."
+            echo "Docs content unchanged — fingerprint ${{ steps.fingerprint.outputs.hash }} already deployed; skipping deploy."
           else
             echo "deploy=true" >> "$GITHUB_OUTPUT"
           fi
 
+  # Deploy to Void. Isolated, main-only job: it is the only place VOID_TOKEN is in scope, and it
+  # runs nothing before the deploy except checkout + setup. It only runs when docs-validation
+  # determined a deploy is needed, so unchanged content never even enters the void environment.
+  deploy-void:
+    name: Deploy to Void
+    needs: [docs-validation]
+    if: github.ref_name == 'main' && needs.docs-validation.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: void
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+        with:
+          cache: true
+
       - name: Deploy to Void
-        if: steps.gate.outputs.deploy == 'true'
-        run: vp run --filter rolldown-docs void deploy
+        run: vp run docs:void
         env:
           VOID_TOKEN: ${{ secrets.VOID_TOKEN }}
           VOID_PROJECT: rolldown
 
       - name: Record deployed fingerprint
-        if: steps.gate.outputs.deploy == 'true'
-        run: echo "${{ steps.fingerprint.outputs.hash }}" > .docs-deploy-marker
+        run: echo "${{ needs.docs-validation.outputs.fingerprint }}" > .docs-deploy-marker
 
       - name: Save deploy marker
-        if: steps.gate.outputs.deploy == 'true'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: .docs-deploy-marker
-          key: docs-deploy-${{ steps.fingerprint.outputs.hash }}
+          key: docs-deploy-${{ needs.docs-validation.outputs.fingerprint }}

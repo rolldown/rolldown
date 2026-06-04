@@ -3,39 +3,38 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## lib.js
-
-```js
-const require_lib$1 = require("./lib2.js");
-Object.defineProperty(exports, "default", {
-	enumerable: true,
-	get: function() {
-		return require_lib$1.require_lib();
-	}
-});
-
-```
-
-## lib2.js
+## chunk.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.js
-var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.foo = "foo_value";
-	exports.bar = 42;
-}));
-//#endregion
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
 Object.defineProperty(exports, "__toESM", {
 	enumerable: true,
 	get: function() {
 		return __toESM;
 	}
 });
-Object.defineProperty(exports, "require_lib", {
+
+```
+
+## lib.js
+
+```js
+//#region lib.js
+var require_lib = /* @__PURE__ */ require("./chunk.js").__commonJSMin(((exports) => {
+	exports.foo = "foo_value";
+	exports.bar = 42;
+}));
+//#endregion
+Object.defineProperty(exports, "default", {
 	enumerable: true,
 	get: function() {
-		return require_lib;
+		return require_lib();
 	}
 });
 
@@ -45,11 +44,12 @@ Object.defineProperty(exports, "require_lib", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_lib$1 = require("./lib2.js");
+const require_chunk = require("./chunk.js");
+const require_lib$1 = require("./lib.js");
 let node_assert = require("node:assert");
-node_assert = require_lib$1.__toESM(node_assert);
+node_assert = require_chunk.__toESM(node_assert);
 //#region main.js
-var import_lib = require_lib$1.require_lib();
+var import_lib = require_lib$1.default;
 node_assert.default.strictEqual(import_lib.foo, "foo_value");
 node_assert.default.strictEqual(import_lib.bar, 42);
 //#endregion

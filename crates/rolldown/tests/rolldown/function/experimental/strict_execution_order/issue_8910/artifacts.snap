@@ -3,10 +3,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
+## chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```
+
 ## node0.js
 
 ```js
-import { r as __esmMin } from "./node1.js";
+import { n as __esmMin } from "./chunk.js";
 //#region node0.js
 var node_0;
 //#endregion
@@ -22,7 +30,7 @@ __esmMin((() => {
 ## node1.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./chunk.js";
 //#region node2.js
 var node2_exports = /* @__PURE__ */ __exportAll({ node_2: () => node_2 });
 var node_2;
@@ -41,6 +49,6 @@ var require_node1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 }));
 //#endregion
 export default require_node1();
-export { node2_exports as n, __esmMin as r, init_node2 as t };
+export { node2_exports as n, init_node2 as t };
 
 ```

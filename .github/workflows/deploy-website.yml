@@ -10,7 +10,7 @@ on:
     branches:
       - main
     # These inputs can affect the rendered site, so a change here is worth *checking*.
-    # Whether we actually deploy is decided by the content fingerprint below, not by the path.
+    # Whether we actually deploy is decided by the content comparison below, not by the path.
     paths:
       - 'docs/**'
       - 'packages/rolldown/src/**'
@@ -23,26 +23,24 @@ concurrency:
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  # Builds/validates the docs and decides whether a deploy is needed. This job runs untrusted
-  # PR code, so it deliberately has NO `environment` and NO access to VOID_TOKEN. The actual
-  # deploy is a separate, main-only job (below) so the secret is never in scope while PR build
-  # steps run.
+  # Builds/validates the docs and decides whether a deploy is needed. Runs untrusted PR code,
+  # so it has NO `environment` and NO access to VOID_TOKEN. The deploy is a separate main-only
+  # job below.
   docs-validation:
     name: Docs Validation
     runs-on: ubuntu-latest
     outputs:
-      fingerprint: ${{ steps.fingerprint.outputs.hash }}
       deploy: ${{ steps.gate.outputs.deploy }}
     steps:
-      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 2 # need the previous commit to compare against
+          persist-credentials: false
 
       - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
         with:
           cache: true
 
-      # Always run: the generated API reference is the input to both the validation build and
-      # the content fingerprint. On main the deploy job builds the site, so the standalone
-      # validation build below is skipped there to avoid building twice.
       - name: Generate API reference
         run: vp run --filter rolldown-docs generate
 
@@ -50,50 +48,43 @@ jobs:
         if: github.ref_name != 'main'
         run: vp run --filter rolldown-docs build
 
-      - name: Fingerprint docs content
-        id: fingerprint
-        run: |
-          set -euo pipefail
-          # Hash the deployable *content*: git-tracked docs sources (pages, theme, .vitepress
-          # config, the generator script) plus the generated API reference under docs/reference.
-          # Build output (dist), the vitepress cache and deps are excluded, so the hash is stable
-          # and independent of lastUpdated/sitemap/OG-image artifacts. API/exports/tsconfig
-          # changes are captured indirectly via the regenerated reference; a packages/rolldown/src
-          # change that leaves the public API untouched yields the same hash and so no deploy.
-          hash="$(
-            {
-              git ls-files -z -- docs
-              find docs/reference -type f -print0
-            } | LC_ALL=C sort -zu | xargs -0 sha256sum | sha256sum
-          )"
-          hash="${hash%% *}"
-          echo "hash=$hash" >> "$GITHUB_OUTPUT"
-          echo "Docs content fingerprint: $hash"
-
-      - name: Was this content already deployed?
-        id: deployed
-        if: github.ref_name == 'main'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: .docs-deploy-marker
-          key: docs-deploy-${{ steps.fingerprint.outputs.hash }}
-          lookup-only: true
-
       - name: Decide whether to deploy
         id: gate
         if: github.ref_name == 'main'
         run: |
-          # Deploy when the content changed (cache miss) or when manually dispatched (force).
-          if [ "${{ steps.deployed.outputs.cache-hit }}" = "true" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+          set -uo pipefail
+          # Deploy only when the docs content actually changed vs the previous commit. We
+          # compare the *generated* content that drives the site — the git-tracked docs sources
+          # plus the TypeDoc-generated reference (docs/reference) — instead of the built dist,
+          # which is not reproducible (some vitepress plugins emit unstable ordering). TypeDoc
+          # output is deterministic, so a packages/rolldown/src change that doesn't alter the
+          # public API yields an identical reference and is skipped.
+          fingerprint() {
+            { git ls-files -z -- docs; find docs/reference -type f -print0; } \
+              | LC_ALL=C sort -zu | xargs -0 sha256sum | sha256sum | cut -d' ' -f1
+          }
+
+          head_fp="$(fingerprint)" # docs/reference was generated for HEAD above
+
+          # Regenerate the reference from the previous commit and fingerprint that. Any failure
+          # here (e.g. a dependency change between commits) falls through to deploying.
+          prev_fp=""
+          if git checkout HEAD^ -- docs packages/rolldown && vp run --filter rolldown-docs generate; then
+            prev_fp="$(fingerprint)"
+          fi
+          git checkout HEAD -- docs packages/rolldown || true
+
+          echo "HEAD:     $head_fp"
+          echo "previous: ${prev_fp:-<unavailable>}"
+          if [ -n "$prev_fp" ] && [ "$head_fp" = "$prev_fp" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
             echo "deploy=false" >> "$GITHUB_OUTPUT"
-            echo "Docs content unchanged — fingerprint ${{ steps.fingerprint.outputs.hash }} already deployed; skipping deploy."
+            echo "Docs content unchanged since the previous commit — skipping deploy."
           else
             echo "deploy=true" >> "$GITHUB_OUTPUT"
           fi
 
-  # Deploy to Void. Isolated, main-only job: it is the only place VOID_TOKEN is in scope, and it
-  # runs nothing before the deploy except checkout + setup. It only runs when docs-validation
-  # determined a deploy is needed, so unchanged content never even enters the void environment.
+  # Deploy to Void. Isolated, main-only job: the only place VOID_TOKEN is in scope, and it runs
+  # only when docs-validation determined the content changed.
   deploy-void:
     name: Deploy to Void
     needs: [docs-validation]
@@ -112,12 +103,3 @@ jobs:
         env:
           VOID_TOKEN: ${{ secrets.VOID_TOKEN }}
           VOID_PROJECT: rolldown
-
-      - name: Record deployed fingerprint
-        run: echo "${{ needs.docs-validation.outputs.fingerprint }}" > .docs-deploy-marker
-
-      - name: Save deploy marker
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: .docs-deploy-marker
-          key: docs-deploy-${{ needs.docs-validation.outputs.fingerprint }}

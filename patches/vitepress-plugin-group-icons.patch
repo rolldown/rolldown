@@ -1,0 +1,13 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index d71334a734dba3c98707e4d870e4baa11842e442..401fbd55c444b13dcb8ce1f872595cc0d8b346d0 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -323,7 +323,7 @@ function prefixSelectors(prefix, selectors) {
+ }
+ async function generateIconCSS(matched) {
+ 	return (await Promise.all(matched.map(async ({ icon, labels }) => {
+-		const selectors = labels.map((label) => `[data-title='${label}']::before`);
++		const selectors = [...labels].sort().map((label) => `[data-title='${label}']::before`);
+ 		if (typeof icon === "string") {
+ 			if (!icon) return "";
+ 			const svg = await getSVG(icon);

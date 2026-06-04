@@ -10,7 +10,7 @@ on:
     branches:
       - main
     # These inputs can affect the rendered site, so a change here is worth *checking*.
-    # Whether we actually deploy is decided by the content comparison below, not by the path.
+    # Whether we actually deploy is decided by the built-output diff below, not by the path.
     paths:
       - 'docs/**'
       - 'packages/rolldown/src/**'
@@ -34,57 +34,54 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 2 # need the previous commit to compare against
+          fetch-depth: 2 # need the previous commit to build & compare against
           persist-credentials: false
 
       - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
         with:
           cache: true
 
-      - name: Generate API reference
-        run: vp run --filter rolldown-docs generate
-
+      # Builds the whole site for HEAD. Doubles as the PR validation build.
       - name: Build Docs
-        if: github.ref_name != 'main'
-        run: vp run --filter rolldown-docs build
+        run: |
+          vp run --filter rolldown-docs generate
+          vp run --filter rolldown-docs build
 
       - name: Decide whether to deploy
         id: gate
         if: github.ref_name == 'main'
         run: |
           set -uo pipefail
-          # Deploy only when the docs content actually changed vs the previous commit. We
-          # compare the *generated* content that drives the site — the git-tracked docs sources
-          # plus the TypeDoc-generated reference (docs/reference) — instead of the built dist,
-          # which is not reproducible (some vitepress plugins emit unstable ordering). TypeDoc
-          # output is deterministic, so a packages/rolldown/src change that doesn't alter the
-          # public API yields an identical reference and is skipped.
-          fingerprint() {
-            { git ls-files -z -- docs; find docs/reference -type f -print0; } \
-              | LC_ALL=C sort -zu | xargs -0 sha256sum | sha256sum | cut -d' ' -f1
-          }
+          # Deploy only when the built site actually changed vs the previous commit. We build
+          # both commits and diff the dist. The build is reproducible (group-icons selector
+          # ordering is patched); the only non-deterministic outputs are the generated
+          # llms*.txt aggregations, which we exclude — any real content change shows up in the
+          # HTML anyway. A packages/rolldown/src change that doesn't alter the rendered output
+          # therefore produces an identical dist and is skipped.
+          mv docs/.vitepress/dist /tmp/dist-head
 
-          head_fp="$(fingerprint)" # docs/reference was generated for HEAD above
-
-          # Regenerate the reference from the previous commit and fingerprint that. Any failure
-          # here (e.g. a dependency change between commits) falls through to deploying.
-          prev_fp=""
-          if git checkout HEAD^ -- docs packages/rolldown && vp run --filter rolldown-docs generate; then
-            prev_fp="$(fingerprint)"
+          changed=1 # default to deploying
+          if git checkout HEAD^ -- docs packages/rolldown \
+            && vp run --filter rolldown-docs generate \
+            && vp run --filter rolldown-docs build; then
+            mv docs/.vitepress/dist /tmp/dist-prev
+            if diff -rq -x 'llms.txt' -x 'llms-full.txt' /tmp/dist-head /tmp/dist-prev >/dev/null 2>&1; then
+              changed=0
+            fi
+          else
+            echo "Could not build the previous commit; deploying to be safe."
           fi
           git checkout HEAD -- docs packages/rolldown || true
 
-          echo "HEAD:     $head_fp"
-          echo "previous: ${prev_fp:-<unavailable>}"
-          if [ -n "$prev_fp" ] && [ "$head_fp" = "$prev_fp" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+          if [ "$changed" -eq 0 ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
             echo "deploy=false" >> "$GITHUB_OUTPUT"
-            echo "Docs content unchanged since the previous commit — skipping deploy."
+            echo "Built site unchanged since the previous commit — skipping deploy."
           else
             echo "deploy=true" >> "$GITHUB_OUTPUT"
           fi
 
   # Deploy to Void. Isolated, main-only job: the only place VOID_TOKEN is in scope, and it runs
-  # only when docs-validation determined the content changed.
+  # only when docs-validation determined the built site changed.
   deploy-void:
     name: Deploy to Void
     needs: [docs-validation]

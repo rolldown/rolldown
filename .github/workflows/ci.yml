@@ -28,7 +28,6 @@ jobs:
     outputs:
       rust-changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}
       node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}
-      docs-changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}
       # Allows opting into Windows CI per-PR by adding the `ci: windows` label.
       run-windows: "${{ (github.event_name == 'pull_request') && contains(github.event.pull_request.labels.*.name, 'ci: windows') }}"
     steps:
@@ -60,17 +59,10 @@ jobs:
               - 'examples/**'
               - 'scripts/**'
               - 'rollup'
-            docs-changes:
-              - *infra-changes
-              - 'docs/**'
-              - 'packages/rolldown/src/**'
-              - 'packages/rolldown/package.json'
-              - 'packages/rolldown/tsconfig*.json'
       - name: Show outputs
         run: |
           echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}"
           echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}"
-          echo "Docs changes: ${{ (steps.filter.outputs.docs-changes == 'true') || (github.ref_name == 'main') }}"
 
   rust-validation:
     name: Rust Validation
@@ -375,37 +367,3 @@ jobs:
       - uses: crate-ci/typos@f8a58b6b53f2279f71eb605f03a4ae4d10608f45 # v1.47.0
         with:
           files: .
-
-  docs-validation:
-    name: Docs Validation
-    needs: changes
-    if: ${{ needs.changes.outputs.docs-changes == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-
-      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
-        with:
-          cache: true
-
-      - name: Build Docs
-        run: vp run docs:build
-
-  deploy-void:
-    name: Deploy to Void
-    needs: [docs-validation]
-    if: github.ref_name == 'main'
-    runs-on: ubuntu-latest
-    environment: void
-    steps:
-      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-
-      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
-        with:
-          cache: true
-
-      - name: Deploy to Void
-        run: vp run docs:void
-        env:
-          VOID_TOKEN: ${{ secrets.VOID_TOKEN }}
-          VOID_PROJECT: rolldown

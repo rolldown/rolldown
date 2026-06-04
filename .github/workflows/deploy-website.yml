@@ -23,9 +23,9 @@ concurrency:
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  # Builds/validates the docs and decides whether a deploy is needed. Runs untrusted PR code,
-  # so it has NO `environment` and NO access to VOID_TOKEN. The deploy is a separate main-only
-  # job below.
+  # Builds/validates the docs and decides whether the rendered site changed. Runs untrusted PR
+  # code, so it has NO `environment` and NO access to VOID_TOKEN. The deploy is a separate
+  # main-only job below.
   docs-validation:
     name: Docs Validation
     runs-on: ubuntu-latest
@@ -34,51 +34,66 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 2 # need the previous commit to build & compare against
+          fetch-depth: 2 # need the previous commit on main; the PR baseline is fetched below
           persist-credentials: false
 
       - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
         with:
           cache: true
 
-      # Builds the whole site for HEAD. Doubles as the PR validation build.
+      # Builds the whole site for the current ref. Doubles as the PR validation build.
       - name: Build Docs
         run: |
           vp run --filter rolldown-docs generate
           vp run --filter rolldown-docs build
 
-      - name: Decide whether to deploy
+      - name: Compare built site against baseline
         id: gate
-        if: github.ref_name == 'main'
+        if: github.event_name != 'merge_group'
         run: |
           set -uo pipefail
-          # Deploy only when the built site actually changed vs the previous commit. We build
-          # both commits and diff the dist. The build is reproducible (group-icons selector
-          # ordering is patched); the only non-deterministic outputs are the generated
-          # llms*.txt aggregations, which we exclude — any real content change shows up in the
-          # HTML anyway. A packages/rolldown/src change that doesn't alter the rendered output
-          # therefore produces an identical dist and is skipped.
-          mv docs/.vitepress/dist /tmp/dist-head
+          # Compare the freshly built site against a baseline:
+          #   - on main: the previous commit
+          #   - on a PR: the target branch (main)
+          # and deploy (main only) when it differs. The build is reproducible — the only
+          # non-deterministic outputs are the generated llms*.txt aggregations, which the diff
+          # excludes (real content changes still show up in the HTML), so a packages/rolldown/src
+          # change that doesn't alter the rendered site produces an identical dist and is skipped.
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            base="HEAD^"
+          else
+            base_branch="${{ github.base_ref || 'main' }}"
+            git fetch --no-tags --depth=1 origin "$base_branch" >/dev/null 2>&1 || true
+            base="origin/$base_branch"
+          fi
 
-          changed=1 # default to deploying
-          if git checkout HEAD^ -- docs packages/rolldown \
+          mv docs/.vitepress/dist /tmp/dist-head
+          changed=1 # default to "changed" if the baseline build fails
+          if git checkout "$base" -- docs packages/rolldown \
             && vp run --filter rolldown-docs generate \
             && vp run --filter rolldown-docs build; then
-            mv docs/.vitepress/dist /tmp/dist-prev
-            if diff -rq -x 'llms.txt' -x 'llms-full.txt' /tmp/dist-head /tmp/dist-prev >/dev/null 2>&1; then
+            mv docs/.vitepress/dist /tmp/dist-base
+            if diff -rq -x 'llms.txt' -x 'llms-full.txt' /tmp/dist-head /tmp/dist-base >/dev/null 2>&1; then
               changed=0
             fi
           else
-            echo "Could not build the previous commit; deploying to be safe."
+            echo "Could not build baseline ($base); assuming the site changed."
           fi
           git checkout HEAD -- docs packages/rolldown || true
 
-          if [ "$changed" -eq 0 ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-            echo "Built site unchanged since the previous commit — skipping deploy."
-          else
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          deploy=false
+          if [ "$changed" -eq 1 ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            deploy=true
           fi
+          echo "deploy=$deploy" >> "$GITHUB_OUTPUT"
+
+          if [ "$changed" -eq 0 ]; then
+            msg="Docs site unchanged vs \`$base\`."
+          else
+            msg="Docs site changed vs \`$base\`."
+          fi
+          echo "$msg (deploy=$deploy)"
+          echo "$msg" >> "$GITHUB_STEP_SUMMARY"
 
   # Deploy to Void. Isolated, main-only job: the only place VOID_TOKEN is in scope, and it runs
   # only when docs-validation determined the built site changed.

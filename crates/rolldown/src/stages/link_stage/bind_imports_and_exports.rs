@@ -822,6 +822,11 @@ impl BindImportsAndExportsContext<'_> {
       return;
     };
     let is_esm = matches!(self.options.format, OutputFormat::Esm);
+    // Reused across all named imports of this module. `match_import_with_export` always starts
+    // from an empty stack (and the ambiguous-reexport recursion gets its own cloned stack), so
+    // clearing before each call preserves behavior while reusing this allocation instead of
+    // allocating a fresh `Vec` per import.
+    let mut matching_ctx = MatchingContext { tracker_stack: Vec::new() };
     for (imported_as_ref, named_import) in &module.named_imports {
       let match_import_span = tracing::trace_span!(
         "MATCH_IMPORT",
@@ -860,9 +865,10 @@ impl BindImportsAndExportsContext<'_> {
           Specifier::Literal(_) => {}
         }
       }
+      matching_ctx.tracker_stack.clear();
       let ret = self.match_import_with_export(
         self.index_modules,
-        &mut MatchingContext { tracker_stack: Vec::default() },
+        &mut matching_ctx,
         ImportTracker {
           importer: module_idx,
           importee: resolved_module_idx,

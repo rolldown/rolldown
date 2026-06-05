@@ -3,28 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## lib.js
-
-```js
-Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_lib = require("./lib2.js");
-require_lib.init_lib();
-exports.bar = require_lib.bar;
-exports.foo = require_lib.foo;
-
-```
-
-## lib2.js
+## chunk.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.js
-var foo, bar;
-var init_lib = __esmMin((() => {
-	foo = "foo_value";
-	bar = 42;
-}));
-//#endregion
 Object.defineProperty(exports, "__esmMin", {
 	enumerable: true,
 	get: function() {
@@ -37,18 +19,24 @@ Object.defineProperty(exports, "__toESM", {
 		return __toESM;
 	}
 });
-Object.defineProperty(exports, "bar", {
-	enumerable: true,
-	get: function() {
-		return bar;
-	}
-});
-Object.defineProperty(exports, "foo", {
-	enumerable: true,
-	get: function() {
-		return foo;
-	}
-});
+
+```
+
+## lib.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_chunk = require("./chunk.js");
+//#region lib.js
+var foo, bar;
+var init_lib = require_chunk.__esmMin((() => {
+	foo = "foo_value";
+	bar = 42;
+}));
+//#endregion
+init_lib();
+exports.bar = bar;
+exports.foo = foo;
 Object.defineProperty(exports, "init_lib", {
 	enumerable: true,
 	get: function() {
@@ -62,11 +50,12 @@ Object.defineProperty(exports, "init_lib", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_lib = require("./lib2.js");
+const require_chunk = require("./chunk.js");
+const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
-node_assert = require_lib.__toESM(node_assert);
+node_assert = require_chunk.__toESM(node_assert);
 //#endregion
-require_lib.__esmMin((() => {
+require_chunk.__esmMin((() => {
 	require_lib.init_lib();
 	node_assert.default.strictEqual(require_lib.foo, "foo_value");
 	node_assert.default.strictEqual(42, 42);

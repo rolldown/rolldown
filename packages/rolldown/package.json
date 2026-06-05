@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
     "bundler",
@@ -76,7 +76,6 @@
     }
   },
   "publishConfig": {
-    "access": "public",
     "exports": {
       ".": "./dist/index.mjs",
       "./config": "./dist/config.mjs",
@@ -92,6 +91,7 @@
       "./plugins": "./dist/plugins-index.mjs",
       "./utils": "./dist/utils-index.mjs"
     },
+    "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {

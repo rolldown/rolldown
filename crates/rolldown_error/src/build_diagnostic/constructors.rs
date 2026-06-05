@@ -36,6 +36,7 @@ use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::require_tla::RequireTla;
 use super::events::resolve_error::DiagnosableResolveError;
+use super::events::sourcemap_broken::SourcemapBroken;
 
 use super::events::tsconfig_error::TsConfigError;
 use super::events::unhandleable_error::UnhandleableError;
@@ -93,8 +94,15 @@ impl BuildDiagnostic {
     annotation: String,
     source: ArcStr,
     span: oxc::span::Span,
+    is_before_function_declaration: bool,
   ) -> Self {
-    Self::new_inner(InvalidAnnotation { module_id, annotation, source, span })
+    Self::new_inner(InvalidAnnotation {
+      module_id,
+      annotation,
+      source,
+      span,
+      is_before_function_declaration,
+    })
   }
 
   pub fn resolve_error(
@@ -410,6 +418,10 @@ impl BuildDiagnostic {
 
   pub fn duplicate_shebang(filename: String, source: &str) -> Self {
     Self::new_inner(DuplicateShebang { filename, source: source.to_string() })
+  }
+
+  pub fn sourcemap_broken(plugin_name: String, id: Option<String>) -> Self {
+    Self::new_inner(SourcemapBroken { plugin_name, id })
   }
 
   pub fn tsconfig_error(file_path: String, reason: ResolveError) -> Self {

@@ -111,12 +111,9 @@ class DevServer {
       watch: getDevWatchOptionsForCi(),
     });
     this.#devEngine = devEngine;
-    process.stdin.on('data', async (data) => {
+    process.stdin.on('data', (data) => {
       if (data.toString() === 'r') {
-        const { hasStaleOutput } = await devEngine.getBundleState();
-        if (hasStaleOutput) {
-          await devEngine.ensureLatestBuildOutput();
-        }
+        devEngine.triggerFullBuild();
       }
     });
     // Unref stdin to prevent it from keeping the process alive.

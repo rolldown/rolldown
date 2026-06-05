@@ -1,6 +1,6 @@
 use napi_derive::napi;
 use rolldown_dev::{BundleState, BundlingFuture, OnHmrUpdatesCallback, OnOutputCallback};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::binding_dev_options::BindingDevOptions;
@@ -15,6 +15,7 @@ use napi::{Either, Env, threadsafe_function::ThreadsafeFunctionCallMode};
 #[napi]
 pub struct BindingDevEngine {
   inner: rolldown_dev::DevEngine,
+  cwd: Arc<Path>,
   _session_id: Arc<str>,
   _session: rolldown_devtools::Session,
 }
@@ -33,7 +34,7 @@ impl BindingDevEngine {
     let on_hmr_updates_callback = dev_options.as_ref().and_then(|opts| opts.on_hmr_updates.clone());
     let on_output_callback = dev_options.as_ref().and_then(|opts| opts.on_output.clone());
 
-    let cwd = Arc::new(PathBuf::from(options.input_options.cwd.clone()));
+    let cwd: Arc<Path> = Arc::from(PathBuf::from(options.input_options.cwd.clone()));
 
     let rebuild_strategy =
       dev_options.as_ref().and_then(|opts| opts.rebuild_strategy).map(Into::into);
@@ -64,7 +65,7 @@ impl BindingDevEngine {
 
     // If callback is provided, wrap it to convert BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)> to BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
-      let cwd = Arc::<std::path::PathBuf>::clone(&cwd);
+      let cwd = Arc::<Path>::clone(&cwd);
       Arc::new(
         move |result: rolldown_error::BuildResult<(
           Vec<rolldown_common::ClientHmrUpdate>,
@@ -93,7 +94,7 @@ impl BindingDevEngine {
 
     // If callback is provided, wrap it to convert BuildResult<BundleOutput> to BindingResult<BindingOutputs>
     let on_output = on_output_callback.map(|js_callback| {
-      let cwd = Arc::<std::path::PathBuf>::clone(&cwd);
+      let cwd = Arc::<Path>::clone(&cwd);
       Arc::new(move |result: rolldown_error::BuildResult<rolldown::BundleOutput>| {
         let binding_result: BindingResult<BindingOutputs> = match result {
           Ok(bundle_output) => Either::B(BindingOutputs::from(bundle_output.assets)),
@@ -145,7 +146,7 @@ impl BindingDevEngine {
     let inner = rolldown_dev::DevEngine::new(bundler_config, rolldown_dev_options)
       .map_err(|e| napi::Error::from_reason(format!("Fail to create dev engine: {e:#?}")))?;
 
-    Ok(Self { inner, _session_id: session_id, _session: session })
+    Ok(Self { inner, cwd, _session_id: session_id, _session: session })
   }
 
   #[napi]
@@ -175,9 +176,22 @@ impl BindingDevEngine {
   }
 
   #[napi]
-  pub async fn ensure_latest_build_output(&self) -> napi::Result<()> {
-    self.inner.ensure_latest_bundle_output().await.expect("Should handle this error");
-    Ok(())
+  pub async fn ensure_latest_build_output(&self) -> napi::Result<BindingResult<()>> {
+    match self.inner.ensure_latest_bundle_output().await {
+      Ok(()) => Ok(Either::B(())),
+      Err(errors) => {
+        let binding_errors: Vec<_> = errors
+          .iter()
+          .map(|diagnostic| to_binding_error(diagnostic, self.cwd.to_path_buf()))
+          .collect();
+        Ok(Either::A(BindingErrors::new(binding_errors)))
+      }
+    }
+  }
+
+  #[napi]
+  pub fn trigger_full_build(&self) {
+    self.inner.trigger_full_build().expect("Should handle this error");
   }
 
   #[napi]
@@ -185,11 +199,21 @@ impl BindingDevEngine {
     &self,
     caller: String,
     first_invalidated_by: Option<String>,
-  ) -> napi::Result<Vec<BindingClientHmrUpdate>> {
-    let updates =
-      self.inner.invalidate(caller, first_invalidated_by).await.expect("Should handle this error");
-    let binding_updates = updates.into_iter().map(BindingClientHmrUpdate::from).collect();
-    Ok(binding_updates)
+  ) -> napi::Result<BindingResult<Vec<BindingClientHmrUpdate>>> {
+    match self.inner.invalidate(caller, first_invalidated_by).await {
+      Ok(updates) => {
+        let binding_updates =
+          updates.into_iter().map(BindingClientHmrUpdate::from).collect::<Vec<_>>();
+        Ok(Either::B(binding_updates))
+      }
+      Err(errors) => {
+        let binding_errors: Vec<_> = errors
+          .iter()
+          .map(|diagnostic| to_binding_error(diagnostic, self.cwd.to_path_buf()))
+          .collect();
+        Ok(Either::A(BindingErrors::new(binding_errors)))
+      }
+    }
   }
 
   #[napi]

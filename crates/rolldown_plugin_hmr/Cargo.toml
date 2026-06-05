@@ -1,12 +1,13 @@
 [package]
 name = "rolldown_plugin_hmr"
-version = "0.1.0"
+version = "1.1.0"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
 description = "Rolldown plugin for Hot Module Replacement (HMR)"
+readme = "../../README.md"
 
 [dependencies]
 rolldown_common = { workspace = true }

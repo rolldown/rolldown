@@ -10,7 +10,7 @@ import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
-import { normalizeBindingResult } from '../../utils/error';
+import { normalizeBindingResult, unwrapBindingResult } from '../../utils/error';
 import { normalizedStringOrRegex } from '../../utils/normalize-string-or-regex';
 import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
 import type { DevOptions } from './dev-options';
@@ -107,11 +107,15 @@ export class DevEngine {
   }
 
   async ensureLatestBuildOutput(): Promise<void> {
-    await this.#inner.ensureLatestBuildOutput();
+    unwrapBindingResult(await this.#inner.ensureLatestBuildOutput());
+  }
+
+  triggerFullBuild(): void {
+    this.#inner.triggerFullBuild();
   }
 
   async invalidate(file: string, firstInvalidatedBy?: string): Promise<BindingClientHmrUpdate[]> {
-    return this.#inner.invalidate(file, firstInvalidatedBy);
+    return unwrapBindingResult(await this.#inner.invalidate(file, firstInvalidatedBy));
   }
 
   async registerModules(clientId: string, modules: string[]): Promise<void> {

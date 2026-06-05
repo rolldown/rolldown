@@ -42,6 +42,7 @@ OPTIONS
   --checks.mixed-exports      Whether to emit warnings when the way to export values is ambiguous.
   --checks.plugin-timings     Whether to emit warnings when plugins take significant time during the build process.
   --checks.prefer-builtin-feature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.sourcemap-broken   Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.tolerated-transform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolved-entry   Whether to emit warnings when an entrypoint cannot be resolved.
   --checks.unresolved-import  Whether to emit warnings when an import cannot be resolved.
@@ -100,6 +101,7 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorator.emit-decorator-metadata .
   --transform.decorator.legacy .
+  --transform.decorator.strict-null-checks .
   --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
   --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
@@ -187,6 +189,7 @@ OPTIONS
   --checks.mixed-exports      Whether to emit warnings when the way to export values is ambiguous.
   --checks.plugin-timings     Whether to emit warnings when plugins take significant time during the build process.
   --checks.prefer-builtin-feature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.sourcemap-broken   Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.tolerated-transform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolved-entry   Whether to emit warnings when an entrypoint cannot be resolved.
   --checks.unresolved-import  Whether to emit warnings when an import cannot be resolved.
@@ -245,6 +248,7 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorator.emit-decorator-metadata .
   --transform.decorator.legacy .
+  --transform.decorator.strict-null-checks .
   --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
   --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
@@ -332,6 +336,7 @@ OPTIONS
   --checks.mixed-exports      Whether to emit warnings when the way to export values is ambiguous.
   --checks.plugin-timings     Whether to emit warnings when plugins take significant time during the build process.
   --checks.prefer-builtin-feature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.sourcemap-broken   Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.tolerated-transform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolved-entry   Whether to emit warnings when an entrypoint cannot be resolved.
   --checks.unresolved-import  Whether to emit warnings when an import cannot be resolved.
@@ -390,6 +395,7 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorator.emit-decorator-metadata .
   --transform.decorator.legacy .
+  --transform.decorator.strict-null-checks .
   --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
   --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
@@ -477,6 +483,7 @@ OPTIONS
   --checks.mixed-exports      Whether to emit warnings when the way to export values is ambiguous.
   --checks.plugin-timings     Whether to emit warnings when plugins take significant time during the build process.
   --checks.prefer-builtin-feature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.sourcemap-broken   Whether to emit warnings when a plugin transforms code without generating a sourcemap.
   --checks.tolerated-transform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolved-entry   Whether to emit warnings when an entrypoint cannot be resolved.
   --checks.unresolved-import  Whether to emit warnings when an import cannot be resolved.
@@ -535,6 +542,7 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorator.emit-decorator-metadata .
   --transform.decorator.legacy .
+  --transform.decorator.strict-null-checks .
   --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
   --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.

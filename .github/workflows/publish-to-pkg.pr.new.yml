@@ -128,4 +128,4 @@ jobs:
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
 
       - name: Release
-        run: vpx pkg-pr-new publish --compact --pnpm './packages/rolldown/npm/*' './packages/rolldown' './packages/browser' './packages/debug'
+        run: vpx pkg-pr-new publish --compact --pnpm './packages/rolldown/npm/*' './packages/rolldown' './packages/browser' './packages/debug' --packageManager=pnpm,npm,yarn --commentWithDev

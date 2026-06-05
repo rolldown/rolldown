@@ -19,7 +19,7 @@ use crate::{
   BundleOutput,
   chunk_graph::ChunkGraph,
   ecmascript::ecma_generator::EcmaGenerator,
-  type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
+  type_alias::{AssetVec, IndexChunkToInstances, IndexEcmaAst, IndexInstantiatedChunks},
   types::generator::{GenerateContext, GenerateOutput, Generator},
   utils::{
     augment_chunk_hash::augment_chunk_hash,
@@ -42,15 +42,21 @@ impl GenerateStage<'_> {
   pub async fn render_chunk_to_assets(
     &mut self,
     chunk_graph: &ChunkGraph,
+    ast_table: IndexEcmaAst,
   ) -> BuildResult<BundleOutput> {
     let mut errors = std::mem::take(&mut self.link_output.errors);
     let mut warnings = std::mem::take(&mut self.link_output.warnings);
+    // `ast_table` is threaded by value into `create_chunk_to_codegen_ret_map`
+    // (the last reader), where it is dropped at scope exit by the compiler —
+    // releasing the per-module bumpalo arenas before `minify_chunks` and
+    // `finalize_assets` allocate.
     let (mut instantiated_chunks, index_chunk_to_instances) =
-      self.instantiate_chunks(chunk_graph, &mut errors, &mut warnings).await?;
+      self.instantiate_chunks(chunk_graph, ast_table, &mut errors, &mut warnings).await?;
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
 
-    render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?;
+    warnings
+      .extend(render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?);
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 
@@ -144,6 +150,7 @@ impl GenerateStage<'_> {
   async fn instantiate_chunks(
     &self,
     chunk_graph: &ChunkGraph,
+    ast_table: IndexEcmaAst,
     errors: &mut Vec<BuildDiagnostic>,
     warnings: &mut Vec<BuildDiagnostic>,
   ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToInstances)> {
@@ -151,7 +158,7 @@ impl GenerateStage<'_> {
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
     let mut index_instantiated_chunks: IndexInstantiatedChunks =
       IndexVec::with_capacity(chunk_graph.chunk_table.len());
-    let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph);
+    let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph, ast_table);
     let render_export_items_index_vec = &chunk_graph
       .chunk_table
       .chunks
@@ -230,9 +237,15 @@ impl GenerateStage<'_> {
   ///   [Some(ecma1_codegen), Some(ecma2_codegen), None],
   ///   [Some(ecma3_codegen), None],
   /// ]
+  // `ast_table` is taken by value on purpose: this is the last reader, and
+  // having the compiler drop it at scope exit (rather than borrowing it and
+  // dropping later) is what releases the per-module bumpalo arenas before the
+  // rest of `instantiate_chunks` runs.
+  #[expect(clippy::needless_pass_by_value)]
   fn create_chunk_to_codegen_ret_map(
     &self,
     chunk_graph: &ChunkGraph,
+    ast_table: IndexEcmaAst,
   ) -> Vec<Vec<Option<ModuleRenderOutput>>> {
     let needs_extra_indent = matches!(
       self.options.format,
@@ -247,7 +260,7 @@ impl GenerateStage<'_> {
           .par_iter()
           .map(|&module_idx| match self.link_output.module_table[module_idx].as_normal() {
             Some(module) => {
-              let ast = self.link_output.ast_table[module.idx].as_ref().expect("should have ast");
+              let ast = ast_table[module.idx].as_ref().expect("should have ast");
               #[expect(clippy::bool_to_int_with_if)]
               let initial_indent = if needs_extra_indent
                 || !matches!(

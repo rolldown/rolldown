@@ -8,7 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region keep-these.js
 undef = void 0;
-keepMe();
+(() => {
+	keepMe();
+})();
 ((x = keepMe()) => {})();
 var someVar;
 (([y]) => {})(someVar);
@@ -35,9 +37,8 @@ use(isNotPure);
 
 ```js
 //#region remove-these.js
-(() => {})(keepThisButRemoveTheIIFE);
-var someVar;
-((x) => {})(someVar);
+keepThisButRemoveTheIIFE;
+(() => 123)();
 //#endregion
 
 ```

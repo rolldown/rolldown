@@ -1,8 +1,10 @@
 use std::path::Path;
 
+use arcstr::ArcStr;
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
-use oxc::ast_visit::VisitMut;
+use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
+use oxc::ast_visit::{Visit, VisitMut, walk};
 use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, Stats};
@@ -17,7 +19,7 @@ use rolldown_common::{ConstExportMeta, ConstantValue, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields, semantic_builder_for_transform};
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -92,20 +94,9 @@ impl PreProcessEcmaAst {
     // `CommentContent::PureNotApplied` when their position prevents the parser
     // from applying them (expression-level, statement-level, or variable declarator).
     // Aligns with Rollup's `INVALID_ANNOTATION` log code.
-    ast.program.with_dependent(|_owner, dep| {
-      for comment in
-        dep.program.comments.iter().filter(|c| c.content == CommentContent::PureNotApplied)
-      {
-        let span = comment.span;
-        let annotation = source[span.start as usize..span.end as usize].to_string();
-        warnings.push(BuildDiagnostic::invalid_annotation(
-          resolved_id.to_string(),
-          annotation,
-          source.clone(),
-          span,
-        ));
-      }
-    });
+    warnings.extend(ast.program.with_dependent(|_owner, dep| {
+      invalid_pure_annotation_warnings(&dep.program, &source, resolved_id)
+    }));
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
@@ -288,4 +279,99 @@ impl PreProcessEcmaAst {
     self.stats = ret.stats();
     ret.into_scoping()
   }
+}
+
+fn function_declaration_stmt_start(stmt: &Statement<'_>) -> Option<u32> {
+  match stmt {
+    Statement::FunctionDeclaration(decl) => Some(decl.span.start),
+    Statement::ExportNamedDeclaration(e) => match &e.declaration {
+      Some(Declaration::FunctionDeclaration(decl)) => Some(decl.span.start),
+      _ => None,
+    },
+    Statement::ExportDefaultDeclaration(e) => match &e.declaration {
+      ExportDefaultDeclarationKind::FunctionDeclaration(decl) => Some(decl.span.start),
+      _ => None,
+    },
+    _ => None,
+  }
+}
+
+struct FunctionDeclarationStartMatcher {
+  target_statement_starts: FxHashSet<u32>,
+  matched_statement_starts: FxHashSet<u32>,
+  remaining_target_count: usize,
+}
+
+impl FunctionDeclarationStartMatcher {
+  fn new(target_statement_starts: FxHashSet<u32>) -> Self {
+    let remaining_target_count = target_statement_starts.len();
+    Self {
+      target_statement_starts,
+      matched_statement_starts: FxHashSet::default(),
+      remaining_target_count,
+    }
+  }
+}
+
+impl<'ast> Visit<'ast> for FunctionDeclarationStartMatcher {
+  fn visit_program(&mut self, program: &Program<'ast>) {
+    for stmt in &program.body {
+      if self.remaining_target_count == 0 {
+        break;
+      }
+      self.visit_statement(stmt);
+    }
+  }
+
+  fn visit_statement(&mut self, stmt: &Statement<'ast>) {
+    if self.remaining_target_count == 0 {
+      return;
+    }
+    if let Some(start) = function_declaration_stmt_start(stmt) {
+      if self.target_statement_starts.contains(&start)
+        && self.matched_statement_starts.insert(start)
+      {
+        self.remaining_target_count -= 1;
+      }
+    }
+    if self.remaining_target_count > 0 {
+      walk::walk_statement(self, stmt);
+    }
+  }
+}
+
+fn invalid_pure_annotation_warnings(
+  program: &Program<'_>,
+  source: &ArcStr,
+  resolved_id: &str,
+) -> Vec<BuildDiagnostic> {
+  let pure_not_applied_comments: Vec<_> =
+    program.comments.iter().filter(|c| c.content == CommentContent::PureNotApplied).collect();
+
+  if pure_not_applied_comments.is_empty() {
+    return Vec::new();
+  }
+
+  let target_statement_starts: FxHashSet<u32> =
+    pure_not_applied_comments.iter().map(|comment| comment.attached_to).collect();
+  let mut function_declaration_start_matcher =
+    FunctionDeclarationStartMatcher::new(target_statement_starts);
+  function_declaration_start_matcher.visit_program(program);
+
+  pure_not_applied_comments
+    .into_iter()
+    .map(|comment| {
+      let span = comment.span;
+      let annotation = source[span.start as usize..span.end as usize].to_string();
+      let is_before_function_declaration =
+        function_declaration_start_matcher.matched_statement_starts.contains(&comment.attached_to);
+      BuildDiagnostic::invalid_annotation(
+        resolved_id.to_string(),
+        annotation,
+        source.clone(),
+        span,
+        is_before_function_declaration,
+      )
+    })
+    .collect()
 }

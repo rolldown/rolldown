@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## initial-deps.js
 
 ```js
-import { n as __exportAll, r as __toCommonJS, t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 //#region shared.js
 const shared = "shared-initial";
 //#endregion
@@ -39,13 +39,5 @@ export { lazyDep };
 ```js
 import { n as required, r as shared, t as lazy } from "./initial-deps.js";
 export { lazy, required, shared };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __toCommonJS as r, __esmMin as t };
 
 ```

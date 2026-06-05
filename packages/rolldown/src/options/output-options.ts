@@ -914,6 +914,20 @@ export type CodeSplittingGroup = {
    */
   entriesAwareMergeThreshold?: number;
   /**
+   * Whether to include captured modules' dependencies.
+   *
+   * Enabling this option reduces the chance of generating circular chunks.
+   *
+   * If you want to disable this behavior, it's recommended to both set
+   * - {@linkcode InputOptions.preserveEntrySignatures | preserveEntrySignatures}: `false | 'allow-extension'`
+   * - {@linkcode OutputOptions.strictExecutionOrder | strictExecutionOrder}: `true`
+   *
+   * to avoid generating invalid chunks.
+   *
+   * @default true
+   */
+  includeDependenciesRecursively?: boolean;
+  /**
    * Filter modules by tags. Only modules that have **all** specified tags
    * are captured by this group. Combines with `test` and other filters —
    * a module must match all criteria.
@@ -942,15 +956,7 @@ export type AdvancedChunksGroup = CodeSplittingGroup;
  */
 export type CodeSplittingOptions = {
   /**
-   * By default, each group will also include captured modules' dependencies. This reduces the chance of generating circular chunks.
-   *
-   * If you want to disable this behavior, it's recommended to both set
-   * - {@linkcode InputOptions.preserveEntrySignatures | preserveEntrySignatures}: `false | 'allow-extension'`
-   * - {@linkcode OutputOptions.strictExecutionOrder | strictExecutionOrder}: `true`
-   *
-   * to avoid generating invalid chunks.
-   *
-   * @default true
+   * Global fallback of {@linkcode CodeSplittingGroup.includeDependenciesRecursively | group.includeDependenciesRecursively}, if it's not specified in the group.
    */
   includeDependenciesRecursively?: boolean;
   /**

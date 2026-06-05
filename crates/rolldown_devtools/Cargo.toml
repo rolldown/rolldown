@@ -1,12 +1,13 @@
 [package]
 name = "rolldown_devtools"
-version = "0.1.0"
+version = "1.1.0"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
 description = "DevTools utilities for Rolldown"
+readme = "../../README.md"
 
 [lints]
 workspace = true

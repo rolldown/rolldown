@@ -1,4 +1,145 @@
 
+## [1.1.0] - 2026-06-03
+
+### 🚀 Features
+
+- enable `experimental.lazyBarrel` by default (#9632) by @shulaoda
+- `import.meta.glob` support `caseSensitive` option (#9594) by @btea
+- add `SOURCEMAP_BROKEN` warning for renderChunk hook (#9601) by @sapphi-red
+- add `SOURCEMAP_BROKEN` warning for transform hook (#9600) by @sapphi-red
+- add `@__NO_SIDE_EFFECTS__` hint for invalid `@__PURE__` before function declarations (#9505) by @Copilot
+- code-splitting: support group-local `includeDependenciesRecursively` (#9587) by @hyf0
+
+### 🐛 Bug Fixes
+
+- report TSCONFIG_ERROR instead of UNHANDLEABLE_ERROR for a missing tsconfig file (#9633) by @shulaoda
+- browser: add missing exports and ensure consistency with `rolldown` package (#9629) by @sapphi-red
+- should build test-dev-server when test-node (#9610) by @situ2001
+- chunk-optimizer: refuse asymmetric merge for cyclic dynamic entries (#9320) (#9322) by @aminpaks
+- dev: handle the remaining errors in dev (#9570) by @h-a-n-a
+- handle slash-normalized ids with preserveModulesRoot (#9595) by @IWANABETHATGUY
+- json: preserve .default access on JSON default imports (#9568) by @IWANABETHATGUY
+- testing: remove unintended trigger_full_build from test harness (#9573) by @hyf0
+
+### 🚜 Refactor
+
+- js-regex: use regress native replace/replace_all (#9607) by @IWANABETHATGUY
+- remove never-constructed `ImportStatus` variants (#9606) by @Boshen
+
+### 📚 Documentation
+
+- clarify that `RolldownBuild::close` method should be called in most cases (#9619) by @sapphi-red
+
+### ⚡ Performance
+
+- avoid unnecessary intermediate sourcemaps (#9599) by @sapphi-red
+
+### 🧪 Testing
+
+- add unit test for collapsing module sourcemap (#9626) by @sapphi-red
+- cover vite-alias regex capture-group expansion (#9602) (#9608) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update oxc_resolver to 11.21.0 (#9634) by @shulaoda
+- update invalid option diagnostic link to point to Rolldown docs (#9631) by @sapphi-red
+- deps: update vite+ to v0.1.24 (#9628) by @renovate[bot]
+- deps: update oxc resolver to v11.20.0 (#9549) by @renovate[bot]
+- deps: update dependency vite-plus to v0.1.24 (#9470) by @renovate[bot]
+- deps: update npm packages (#9614) by @renovate[bot]
+- deps: upgrade oxc to 0.134.0 (#9625) by @shulaoda
+- deps: update crate-ci/typos action to v1.47.0 (#9620) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.61.0 (#9623) by @rolldown-guard[bot]
+- deps: update github actions (#9613) by @renovate[bot]
+- deps: update pnpm to v11.4.0 (#9616) by @renovate[bot]
+- deps: update rust crates (#9615) by @renovate[bot]
+- deps: update test262 submodule for tests (#9624) by @rolldown-guard[bot]
+- deps: update dependency @napi-rs/cli to v3.7.0 (#9588) by @renovate[bot]
+- deps: update dependency rust to v1.96.0 (#9596) by @renovate[bot]
+- re-enable WASI testing with proper infrastructure (#9397) by @Boshen
+
+### ❤️ New Contributors
+
+* @aminpaks made their first contribution in [#9322](https://github.com/rolldown/rolldown/pull/9322)
+
+
+## [1.0.3] - 2026-05-27
+
+### 🚀 Features
+
+- transform: respect decorator strictNullChecks option (#9580) by @kylecannon
+- drop `defer` keyword (#9503) by @TheAlexLichter
+
+### 🐛 Bug Fixes
+
+- ci: create target dir before cargo release-oxc update (#9584) by @shulaoda
+- ci: reorder prepare-release steps to avoid dirty git check failure (#9583) by @shulaoda
+- testing: canonicalize temp dir early and use platform-specific separator in test262 (#9582) by @shulaoda
+- testing: resolve symlinked temp dir in test262 snapshot normalization (#9581) by @shulaoda
+- testing: canonicalize temp dir path in test262 snapshot normalization (#9579) by @shulaoda
+- dev: `onOutput` called twice when initial build fails (#9552) by @hyf0
+- dev: make `ensureCurrentBuildFinish` not returning error when engine closes (#9564) by @h-a-n-a
+- oxc-runtime: route require() to CJS helper variant (#9263) (#9526) by @IWANABETHATGUY
+- generator: use exporter chunk's export mode for CJS default re-exports (#9299) (#9529) by @IWANABETHATGUY
+- rolldown: always run reduced-atom static cycle check (#9441) (#9514) by @IWANABETHATGUY
+- apply transform.dropLabels before scanning (#9521) (#9522) by @IWANABETHATGUY
+- rolldown_watcher: take `rolldown` dep through the workspace (#9510) by @Boshen
+- cache: keep the scan-stage cache consistent when a build fails (#9495) by @h-a-n-a
+- skip JSON default-import namespace optimization for write targets (#9484) (#9489) by @IWANABETHATGUY
+- deps: skip pnpm frozen-lockfile on Netlify to dodge catalog mismatch bug (#9471) by @Boshen
+
+### 🚜 Refactor
+
+- oxc-runtime: use Cow for helper path construction (#9538) by @IWANABETHATGUY
+- fold import defer phase drop into PreProcessor (#9524) by @IWANABETHATGUY
+- distinguish `map: null` vs `map: undefined` in transform hook output (#9497) by @sapphi-red
+
+### 📚 Documentation
+
+- explain the policy for Rust crates (#9547) by @sapphi-red
+- cache: add design doc for cache (#9544) by @h-a-n-a
+- guide/troubleshooting: add TDZ error section (#9537) by @sapphi-red
+- dev-engine: add design doc for dev-engine (#9479) by @h-a-n-a
+- lazy-barrel: tweak some words (#9483) by @shulaoda
+- lazy-barrel: expand reasoning behind LARGE_BARREL_MODULES advice (#9477) by @shulaoda
+
+### ⚡ Performance
+
+- generate: thread ast_table by value into codegen consumer (#9555) by @Boshen
+- finalizers: replace `_reExport` construction with a direct call to avoid calling `clone_in` (#9501) by @Dunqing
+- reorder hot-path boolean checks to short-circuit on cheap predicates first (#9523) by @Boshen
+
+### 🧪 Testing
+
+- rolldown: regression fixture for #9401 (#9418) by @IWANABETHATGUY
+- failing test for #9441 (#9504) by @TheAlexLichter
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: upgrade oxc to 0.133.0 (#9563) by @Dunqing
+- deps: update crate-ci/typos action to v1.46.3 (#9576) by @renovate[bot]
+- deps: update mimalloc-safe to 0.1.62 (#9577) by @shulaoda
+- mimalloc-safe: update to a bug-fix branch for verification (#9569) by @shulaoda
+- deps: update test262 submodule for tests (#9551) by @rolldown-guard[bot]
+- point published crates' readme to root README.md (#9553) by @Boshen
+- replace actions-cool/issues-helper with gh CLI (#9543) by @Boshen
+- deps: update cargo-shear to 1.12.4 (#9541) by @Boshen
+- deps: update taiki-e/install-action action to v2.79.4 (#9535) by @renovate[bot]
+- deps: update github actions (#9532) by @renovate[bot]
+- deps: update rust crates (#9534) by @renovate[bot]
+- deps: update npm packages (#9533) by @renovate[bot]
+- gate experimental/testing-only items to silence dead_code in publish builds (#9517) by @Boshen
+- docs: deploy to Void (#9509) by @Boshen
+- release: set up cargo-release-oxc for publishing crates (#9476) by @Boshen
+- rolldown_plugin_lazy_compilation: add missing description (#9507) by @Boshen
+- mimalloc-safe: update to a bug-fix branch for verification (#9506) by @shulaoda
+- deps: update crate-ci/typos action to v1.46.2 (#9468) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @kylecannon made their first contribution in [#9580](https://github.com/rolldown/rolldown/pull/9580)
+
+
 ## [1.0.2] - 2026-05-20
 
 ### 🚀 Features

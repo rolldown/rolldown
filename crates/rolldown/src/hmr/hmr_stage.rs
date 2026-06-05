@@ -501,7 +501,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         let outro_comment: Box<dyn Source + Send> = Box::new(concat_string!("//#endregion"));
 
         let code_source: Box<dyn Source + Send> = if let Some(map) = codegen.map {
-          Box::new(SourceMapSource::new(codegen.code, map))
+          Box::new(SourceMapSource::new(codegen.code, map.into_inner()))
         } else {
           Box::new(codegen.code)
         };
@@ -739,7 +739,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         let outro_comment: Box<dyn Source + Send> = Box::new(concat_string!("//#endregion"));
 
         let code_source: Box<dyn Source + Send> = if let Some(map) = codegen.map {
-          Box::new(SourceMapSource::new(codegen.code, map))
+          Box::new(SourceMapSource::new(codegen.code, map.into_inner()))
         } else {
           Box::new(codegen.code)
         };
@@ -931,7 +931,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         let outro_comment: Box<dyn Source + Send> = Box::new(concat_string!("//#endregion"));
 
         let code_source: Box<dyn Source + Send> = if let Some(map) = codegen.map {
-          Box::new(SourceMapSource::new(codegen.code, map))
+          Box::new(SourceMapSource::new(codegen.code, map.into_inner()))
         } else {
           Box::new(codegen.code)
         };

@@ -1,10 +1,11 @@
 [package]
 name = "rolldown_plugin_chunk_import_map"
-version = "0.1.0"
+version = "1.1.0"
 edition.workspace = true
 license = "MIT"
 publish = true
 description = "Rolldown plugin for chunk import mapping"
+readme = "../../README.md"
 
 [lib]
 doctest = false

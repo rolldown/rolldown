@@ -12,6 +12,7 @@ use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{
   PathBufExt as _, PathExt as _, representative_file_name_for_preserve_modules,
+  strip_path_prefix_to_slash,
 };
 use rolldown_utils::{
   dashmap::FxDashMap,
@@ -86,6 +87,7 @@ use crate::{
   BundleOutput, SharedOptions,
   chunk_graph::ChunkGraph,
   stages::link_stage::LinkStageOutput,
+  type_alias::IndexEcmaAst,
   types::generator::GenerateContext,
   utils::chunk::{
     deconflict_chunk_symbols::deconflict_chunk_symbols,
@@ -110,6 +112,10 @@ mod render_chunk_to_assets;
 
 pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
+  /// Per-module AST table threaded by value from `LinkStage::link()`. Moved out
+  /// of `self` into `render_chunk_to_assets` so it falls out of scope (and is
+  /// dropped) at the consumer's exit, before post-codegen stages run.
+  ast_table: IndexEcmaAst,
   options: &'a SharedOptions,
   plugin_driver: &'a SharedPluginDriver,
   /// Pre-resolved paths for external modules. When the user provides a JS function for the
@@ -121,10 +127,11 @@ pub struct GenerateStage<'a> {
 impl<'a> GenerateStage<'a> {
   pub fn new(
     link_output: &'a mut LinkStageOutput,
+    ast_table: IndexEcmaAst,
     options: &'a SharedOptions,
     plugin_driver: &'a SharedPluginDriver,
   ) -> Self {
-    Self { link_output, options, plugin_driver, resolved_paths: None }
+    Self { link_output, ast_table, options, plugin_driver, resolved_paths: None }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -132,7 +139,15 @@ impl<'a> GenerateStage<'a> {
     self.plugin_driver.render_start(self.options).await?;
     let mut chunk_graph = self.generate_chunks().await?;
 
-    if chunk_graph.chunk_table.len() > 1 {
+    // Count only live chunks. Chunks merged away during chunk optimization (e.g.
+    // the standalone runtime chunk folded back into its host) stay in
+    // `chunk_table` as tombstones but are skipped at render time, so they must
+    // not count toward the multi-chunk check that gates single-file output.
+    let live_chunk_count = chunk_graph
+      .chunk_table
+      .len()
+      .saturating_sub(chunk_graph.post_chunk_optimization_operations.len());
+    if live_chunk_count > 1 {
       validate_options_for_multi_chunk_output(self.options)?;
     }
 
@@ -182,9 +197,10 @@ impl<'a> GenerateStage<'a> {
       self.resolved_paths = Some(paths.resolve_all(ids).await);
     }
 
-    self.finalize_modules(&mut chunk_graph);
+    let mut ast_table = std::mem::take(&mut self.ast_table);
+    self.finalize_modules(&mut chunk_graph, &mut ast_table);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
-    self.render_chunk_to_assets(&chunk_graph).await
+    self.render_chunk_to_assets(&chunk_graph, ast_table).await
   }
 
   /// Notices:
@@ -228,10 +244,13 @@ impl<'a> GenerateStage<'a> {
                 let p = PathBuf::from(sanitized_absolute_filename.as_str());
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
-                    if absolute_chunk_file_name.starts_with(preserve_modules_root.as_str()) {
-                      absolute_chunk_file_name[preserve_modules_root.len()..]
-                        .trim_start_matches(['/', '\\'])
-                        .to_string()
+                    // See meta/design/module-id.md: output paths may normalize separators even
+                    // when module ids keep native separators.
+                    if let Some(relative_path) = strip_path_prefix_to_slash(
+                      absolute_chunk_file_name.as_path(),
+                      preserve_modules_root.as_path(),
+                    ) {
+                      relative_path
                     } else {
                       p.relative(input_base.as_str()).to_slash_lossy().into_owned()
                     }

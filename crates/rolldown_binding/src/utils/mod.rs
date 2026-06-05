@@ -84,7 +84,7 @@ pub async fn handle_warnings(
             exporter: warning.exporter(),
             code: Some(code),
             message: diag.to_color_string(),
-            plugin: None,
+            plugin: warning.plugin(),
             loc,
             pos,
             ids: warning.ids(),

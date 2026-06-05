@@ -2,7 +2,7 @@ use rolldown_common::ModuleType;
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_sourcemap::SourceMap;
 
-/// The sourcemap returned by a transform plugin's `map` field.
+/// The sourcemap returned by a `transform` or `renderChunk` plugin's `map` field.
 ///
 /// Mirrors Rollup's behavior where `null` and an omitted `map` field differ:
 ///

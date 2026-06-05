@@ -51,5 +51,6 @@ bitflags! {
     const IneffectiveDynamicImport = 1 << 44;
     const RequireTlaError = 1 << 45;
     const LargeBarrelModules = 1 << 46;
+    const SourcemapBroken = 1 << 47;
   }
 }

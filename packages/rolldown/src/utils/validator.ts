@@ -170,6 +170,7 @@ const HelperModeSchema = v.union([v.literal('Runtime'), v.literal('External')]);
 const DecoratorOptionSchema = v.object({
   legacy: v.optional(v.boolean()),
   emitDecoratorMetadata: v.optional(v.boolean()),
+  strictNullChecks: v.optional(v.boolean()),
 });
 isTypeTrue<
   IsSchemaSubType<typeof DecoratorOptionSchema, Exclude<TransformOptions['decorator'], undefined>>
@@ -422,6 +423,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000)',
     ),
   ),
+  sourcemapBroken: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a plugin transforms code without generating a sourcemap',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 
@@ -475,6 +482,15 @@ isTypeTrue<IsSchemaSubType<typeof MangleOptionsSchema, MangleOptions>>();
 
 const CodegenOptionsSchema = v.strictObject({
   removeWhitespace: v.optional(v.boolean()),
+  legalComments: v.optional(
+    v.union([
+      v.literal('none'),
+      v.literal('inline'),
+      v.literal('eof'),
+      v.literal('external'),
+      v.strictObject({ linked: v.string() }),
+    ]),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof CodegenOptionsSchema, CodegenOptions>>();
 
@@ -818,6 +834,7 @@ const AdvancedChunksSchema = v.strictObject({
         maxModuleSize: v.optional(v.number()),
         entriesAware: v.optional(v.boolean()),
         entriesAwareMergeThreshold: v.optional(v.number()),
+        includeDependenciesRecursively: v.optional(v.boolean()),
         tags: v.optional(v.array(v.string())),
       }),
     ),

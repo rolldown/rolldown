@@ -1,10 +1,11 @@
 [package]
 name = "rolldown_plugin_copy_module"
-version = "0.1.0"
+version = "1.1.0"
 edition.workspace = true
 license = "MIT"
 publish = true
 description = "Rolldown builtin plugin implementing esbuild copy loader semantics"
+readme = "../../README.md"
 
 [lib]
 doctest = false

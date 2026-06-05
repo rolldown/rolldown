@@ -108,6 +108,7 @@ pub enum CoordinatorMsg {
   ScheduleBuildIfStale { reply: … },         // ask coordinator to drain its queue
   GetState { reply: … },                     // snapshot of coordinator state
   EnsureLatestBundleOutput { reply: … },     // "I need a fresh full bundle"
+  TriggerFullBuild,                           // unconditional full build (fire-and-forget)
   GetWatchedFiles { reply: … },              // list of watched paths
   ModuleChanged { module_id: String },       // programmatic module change
   Close,                                     // shut the coordinator down
@@ -123,6 +124,7 @@ Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
 | `ScheduleBuildIfStale`     | `schedule_build_if_stale`, reply with result |
 | `GetState`                 | `create_state_snapshot`, reply               |
 | `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply         |
+| `TriggerFullBuild`         | `trigger_full_build` (no reply)              |
 | `GetWatchedFiles`          | reply with the `watched_files` set           |
 | `ModuleChanged`            | queue a `Rebuild`, schedule                  |
 | `Close`                    | await running task, then `break` the loop    |
@@ -586,14 +588,14 @@ loop {
 
 Returns `Option<EnsureLatestBundleOutputReturn>` per state:
 
-| State                                | Action                                              | `future`      | `is_ensure_latest_bundle_output_future` |
-| ------------------------------------ | --------------------------------------------------- | ------------- | --------------------------------------- |
-| `Initialized`                        | warn, return `None`                                 | —             | —                                       |
-| `Idle`, queue empty, **stale**       | queue an empty-files `Rebuild`, schedule            | the new build | `true`                                  |
-| `Idle`, queue empty, **fresh**       | return `None`                                       | —             | —                                       |
-| `Idle`, queue non-empty              | schedule the queued task                            | that build    | `false`                                 |
-| `FullBuildInProgress` / `InProgress` | return the running future                           | running build | `false`                                 |
-| `Failed` / `FullBuildFailed`         | `queued_tasks.clear()`, queue `FullBuild`, schedule | the new build | `true`                                  |
+| State                                | Action                                   | `future`      | `is_ensure_latest_bundle_output_future` |
+| ------------------------------------ | ---------------------------------------- | ------------- | --------------------------------------- |
+| `Initialized`                        | warn, return `None`                      | —             | —                                       |
+| `Idle`, queue empty, **stale**       | queue an empty-files `Rebuild`, schedule | the new build | `true`                                  |
+| `Idle`, queue empty, **fresh**       | return `None`                            | —             | —                                       |
+| `Idle`, queue non-empty              | schedule the queued task                 | that build    | `false`                                 |
+| `FullBuildInProgress` / `InProgress` | return the running future                | running build | `false`                                 |
+| `Failed` / `FullBuildFailed`         | return `None`                            | —             | —                                       |
 
 ### 13c. The `is_ensure_latest_bundle_output_future` flag
 
@@ -601,8 +603,7 @@ The flag tells the `DevEngine` loop whether the awaited future is _the_
 build that definitively produces fresh output:
 
 - `true` — a build was scheduled specifically to refresh output (a
-  `Rebuild` for stale `Idle`, or a recovery `FullBuild` for
-  `Failed`/`FullBuildFailed`). When it resolves, output is fresh — the
+  `Rebuild` for stale `Idle`). When it resolves, output is fresh — the
   loop breaks.
 - `false` — the awaited future is some other build (a pre-existing
   queued task, or an already-running build). When it resolves the output
@@ -632,6 +633,60 @@ false` → `has_generated_bundle_output == false` →
    → `has_stale_bundle_output = false`, state `Idle`.
 7. `DevEngine`'s awaited future resolves; flag was `true` → loop breaks.
    The middleware serves the now-fresh bundle.
+
+### 13e. Scenarios
+
+The semantics of `ensure_latest_bundle_output` is: **make sure the
+caller gets the latest output**. If the output is stale, it schedules
+a build to produce fresh output. If a build is already running, it
+waits. If the build has failed and no files have changed, the failure
+is the latest state — there is nothing it can do.
+
+**Browser refresh — output is stale after Hmr-only task.** The most
+common case. The coordinator is `Idle`, `has_stale_bundle_output` is
+true, no tasks queued. `ensure_latest_bundle_output` schedules a
+`Rebuild` and waits — see §13d for the full walkthrough.
+
+**Browser refresh — build is running.** A file change triggered a
+rebuild that hasn't finished yet. The coordinator returns the running
+future. The loop waits, then re-checks in case more work queued up
+during the build.
+
+**Browser refresh — build previously failed.** The coordinator is in
+`FullBuildFailed` or `Failed`. The failure _is_ the latest output —
+there is nothing fresher to serve without new file changes.
+`ensure_latest_bundle_output` returns `None`.
+
+**Recovery from a failed build.** The user fixes their code. The
+watcher detects the change and triggers `handle_file_changes` (§7),
+which queues a new build. By the time the user refreshes the browser,
+the coordinator is either `InProgress` (build still running —
+`ensure_latest_bundle_output` waits for it) or `Idle` (build finished —
+output is fresh). This works because `update_watch_paths()` runs even
+after a failed build (`handle_bundle_completed`, §11), so files that
+were already parsed are watched.
+
+**Edge case: recovery from a missing-import failure.** If the initial
+build failed because of a missing import, the missing file was never
+parsed and is not in `watch_paths`. The watcher cannot detect its
+creation, so editing or creating it does not trigger a rebuild. In this
+case, `triggerFullBuild` (below) is needed to force a rebuild.
+
+**`DevEngine::run()` — waiting for the initial build.** `run()` calls
+`ensure_latest_bundle_output` to wait for the first `FullBuild`. The
+coordinator is in `FullBuildInProgress` and returns the running future.
+When the build finishes — success or failure — the output is as
+current as it can be. The loop breaks, `run()` returns.
+
+**Manual retry via `triggerFullBuild`.** A separate, fire-and-forget
+operation for callers that explicitly want to force a new build
+regardless of state (e.g., a dev server reload command).
+`DevEngine::trigger_full_build` sends `TriggerFullBuild` to the
+coordinator, which unconditionally clears `queued_tasks`, pushes a
+`FullBuild`, and schedules it. The call returns immediately without
+waiting for the build. Callers that need to wait compose it with
+`ensure_latest_bundle_output` — FIFO channel ordering guarantees the
+`FullBuild` is scheduled before the ensure message is processed.
 
 ---
 
@@ -720,17 +775,18 @@ barrel state. Relevant methods:
 Beyond `ensure_latest_bundle_output`, the public methods on `DevEngine`
 (`dev_engine.rs`):
 
-| Method                                           | Purpose                                                                                 |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `new(config, options)`                           | builds the `Bundler`, normalizes options, creates the watcher and coordinator           |
-| `run()`                                          | spawns the coordinator task, awaits the initial build via `ensure_latest_bundle_output` |
-| `wait_for_close()`                               | awaits the coordinator's join handle                                                    |
-| `wait_for_ongoing_bundle()`                      | `GetState`, awaits any running future                                                   |
-| `get_bundle_state()`                             | `GetState` → `BundleState { last_full_build_failed, has_stale_output }`                 |
-| `invalidate(caller, first_invalidated_by)`       | locks the bundler, calls `compute_update_for_calling_invalidate` per client             |
-| `compile_lazy_entry(proxy_module_id, client_id)` | compiles a lazy entry; on success sends `ModuleChanged`                                 |
-| `close()`                                        | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                          |
-| `is_closed()` / `bundler_options()`              | accessors                                                                               |
+| Method                                           | Purpose                                                                                        |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `new(config, options)`                           | builds the `Bundler`, normalizes options, creates the watcher and coordinator                  |
+| `run()`                                          | spawns the coordinator task, awaits the initial build via `ensure_latest_bundle_output`        |
+| `trigger_full_build()`                           | sends `TriggerFullBuild` (fire-and-forget, compose with `ensure_latest_bundle_output` to wait) |
+| `wait_for_close()`                               | awaits the coordinator's join handle                                                           |
+| `wait_for_ongoing_bundle()`                      | `GetState`, awaits any running future                                                          |
+| `get_bundle_state()`                             | `GetState` → `BundleState { last_full_build_failed, has_stale_output }`                        |
+| `invalidate(caller, first_invalidated_by)`       | locks the bundler, calls `compute_update_for_calling_invalidate` per client                    |
+| `compile_lazy_entry(proxy_module_id, client_id)` | compiles a lazy entry; on success sends `ModuleChanged`                                        |
+| `close()`                                        | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                                 |
+| `is_closed()` / `bundler_options()`              | accessors                                                                                      |
 
 `ModuleChanged` handling (`bundle_coordinator.rs:123-140`): updates watch
 paths, queues a `TaskInput::Rebuild` for the changed module, sets
@@ -743,7 +799,260 @@ synthetic file changes and inspect coordinator state.
 
 ---
 
-## 16. Quick reference — concept-to-file map
+## 16. Error handling
+
+The dev engine has three error audiences. Naming them is important because
+they want different handling and the same `Result` can't be all things to
+all of them. The categories of error and the delivery channels then split by
+audience.
+
+### 16a. The three audiences
+
+- **End user** — the application developer using a framework built on top
+  of `rolldown_dev` (typically Vite). Writes source code and plugins. Sees
+  errors that originate from their own work — build errors, plugin
+  failures.
+- **Binding consumer** — the framework or tool integrating `rolldown_dev`
+  (typically Vite). Owns the engine lifecycle: constructs it, calls `run`,
+  routes HMR client messages into `invalidate`, calls `close` on shutdown.
+  Sees errors when it calls the engine at the wrong time (`invalidate`
+  after `close`, `ensure_latest_build_output` before `run`, etc.). They
+  are responsible for sequencing correctly; we surface the misuse so they
+  can detect their own bug.
+- **Us** — `rolldown_dev` itself. Sees invariant violations as panics
+  (§16g). These are bugs we shipped; neither user can recover from them
+  and a panic is the right way to make them loud.
+
+Errors split by audience:
+
+- **Build errors** → end user.
+- **Lifecycle errors** → binding consumer.
+- **Invariant violations** → panic (us).
+
+#### Build errors (end user)
+
+`BuildResult<T>` / `BatchedBuildDiagnostic` produced inside the bundler.
+Originate in user code or plugins (resolve, load, transform, plugin
+lifecycle hooks).
+
+Examples:
+
+- `Bundler::compute_hmr_update_for_file_changes` — diagnostics from HMR
+  computation, surfaced inside `BundlingTask::generate_hmr_updates`.
+- `Bundler::compute_update_for_calling_invalidate` — diagnostics from the
+  programmatic `invalidate()` path, surfaced by `DevEngine::invalidate`.
+- `Bundler::incremental_write` / `incremental_generate` — diagnostics from a
+  rebuild, surfaced inside `BundlingTask::rebuild`.
+- `plugin_driver.watch_change` — an `anyhow::Error` from a plugin's
+  `watchChange` hook, lifted into `BatchedBuildDiagnostic` at the
+  `BundlingTask::run_inner` call site.
+
+#### Lifecycle errors (binding consumer)
+
+`BuildResult<T>` produced by the `DevEngine` itself, not by the bundler.
+Originate from the engine's state machine: a method was called against a
+closed engine, the coordinator's mpsc channel was dropped mid-operation, an
+internal oneshot reply never arrived because the coordinator went away.
+
+Examples:
+
+- `create_error_if_closed()?` at the top of every `DevEngine` method that
+  touches the coordinator (`dev_engine.rs`).
+- `coordinator_sender.send(...).map_err_to_unhandleable().context(...)?`
+  after the engine has been closed.
+- `reply_receiver.await.map_err_to_unhandleable().context(...)?` when the
+  coordinator has shut down before responding.
+
+These are the binding consumer's responsibility — Vite must sequence its
+calls so they don't race with `close()`. When the race happens anyway we
+report rather than swallow (§16d), so the consumer can detect and fix the
+ordering bug.
+
+The two categories share the `BuildResult<T>` type today — there is no
+static distinction. Code that needs to react differently must inspect
+`DevEngine::is_closed()` first.
+
+### 16b. The two delivery channels
+
+**Throw (synchronous API)** — public napi methods that take a single caller
+and return a single result use `BindingResult<T> = Either<BindingErrors, T>`
+on the boundary, and the JS wrapper calls `unwrapBindingResult` to either
+return the success value or throw a `BundleError`.
+
+Used by: `invalidate`, `ensureLatestBuildOutput`, `getBundleState`,
+`waitForOngoingBundle`. The thrown error reaches whichever audience called
+the method:
+
+- `invalidate` is typically called by the binding consumer's HMR layer in
+  response to an end-user HMR client message. The thrown error is observed
+  by the consumer; whether to propagate it to the end user is the
+  consumer's decision.
+- `ensureLatestBuildOutput` is called by the consumer's dev-server
+  middleware before serving a request. The consumer handles or propagates.
+- `close`, `run`, lifecycle-shaped methods are consumer-driven by
+  construction.
+
+**Callback (async lifecycle)** — work that happens asynchronously inside a
+`BundlingTask` is reported through the `on_output` / `on_hmr_updates`
+callbacks registered when the engine was constructed (see §10).
+
+Used by: every error produced inside `BundlingTask::run_inner` —
+`watch_change`, `generate_hmr_updates`, `rebuild`. The consumer subscribes
+once at engine creation and is notified for every build's result. These
+callbacks are the canonical channel for build errors reaching the end user
+(via the consumer forwarding them into its own error overlay / HMR error
+display).
+
+Rule for picking the channel: **if the consumer cannot have set up a callback
+in advance (because the error originates from a one-shot call), throw;
+otherwise deliver to the callback**.
+
+### 16c. Error routing inside `BundlingTask`
+
+`run_inner` has three error-producing phases. Each phase owns the routing
+decision for its own errors; `run_inner` itself does not have a top-level
+error handler.
+
+| Phase                  | Callback used    | If callback registered     | If not registered      |
+| ---------------------- | ---------------- | -------------------------- | ---------------------- |
+| `watch_change` hooks   | `on_output`      | deliver, then return early | log only, return early |
+| `generate_hmr_updates` | `on_hmr_updates` | deliver, then may continue | log only, may stop     |
+| `rebuild`              | `on_output`      | deliver                    | log only               |
+
+A failure in any phase sets `self.has_encountered_error = true`, reported to
+the coordinator via `BundleCompleted { has_encountered_error, ... }`. The
+coordinator uses this to transition into `FullBuildFailed` / `Failed` (§11)
+regardless of whether a callback was registered to receive the error itself.
+
+`generate_hmr_updates` returns `bool` — "may subsequent stages continue?" —
+preserving the pre-`BuildResult` short-circuit: rebuild is skipped only when
+an HMR error had no callback to surface it through (matching how the older
+`?` propagation behaved).
+
+`watch_change` is short-circuiting: if a plugin's `watchChange` hook fails,
+neither HMR generation nor rebuild can proceed safely, so `run_inner` returns
+early.
+
+### 16d. Engine-closed: surface to the binding consumer by default
+
+Lifecycle errors (engine closed, coordinator gone, channel dropped) are
+surfaced **to the binding consumer**, not silently swallowed. Vite needs
+to see that it called `invalidate` after `close` so it can fix the
+sequencing; swallowing hides the misuse and lets it metastasize.
+
+**Per-method exception**: a method MAY return `Ok` instead of the lifecycle
+error when "nothing to do, return" is the obviously correct answer for
+that method's semantics. The exception applies when:
+
+- The method is doing waiting / observation, not requesting work.
+- "The thing you were waiting on can no longer happen" is a complete and
+  honest answer.
+- A throw would force the consumer to write `try/catch` around a normal
+  shutdown event with no useful recovery action.
+
+Current methods that take the exception:
+
+- `DevEngine::wait_for_ongoing_bundle` (`dev_engine.rs:144-172`) — waiting
+  for an in-flight build that just won't happen anymore; returning `Ok` is
+  semantically correct. The doc comment on the method spells this out.
+- `BindingDevEngine::ensure_current_build_finish` (the napi wrapper used
+  by `DevEngine.ensureCurrentBuildFinish` in JS) — same shape, PR #9564.
+
+Every other lifecycle error path should surface. When adding a new method,
+**default to surfacing**; only take the exception when there's an
+affirmative semantic reason and document it on the method.
+
+### 16e. The conversion path: `BuildResult` → `BindingResult` → JS
+
+Three stops:
+
+1. **`BuildResult<T>`** (`Result<T, BatchedBuildDiagnostic>`) — the bundler's
+   native error type, used everywhere inside the rust crates.
+   `BatchedBuildDiagnostic` carries one or more `BuildDiagnostic`s.
+
+2. **`BindingResult<T>`** (`Either<BindingErrors, T>`,
+   `crates/rolldown_binding/src/types/error/mod.rs`) — the napi boundary
+   type. On the `Err` side, each `BuildDiagnostic` is converted to a
+   `BindingError` via `to_binding_error(diagnostic, cwd)`
+   (`crates/rolldown_binding/src/types/binding_outputs.rs:79`). The `cwd`
+   is required for `DiagnosticOptions` to format paths relative to the
+   project root. `BindingDevEngine` stores `cwd: Arc<Path>` so the struct
+   methods and the two callback closures share one allocation.
+
+3. **JS layer** (`packages/rolldown/src/utils/error.ts`) —
+   `unwrapBindingResult(container)` returns `T` on success or throws a
+   `BundleError` aggregating the individual `BindingError`s.
+   `normalizeBindingResult(container)` returns `T | Error` without throwing,
+   used by callbacks that don't have a useful `throw` semantic.
+
+### 16f. Conventions
+
+- **No `.expect()` / `.unwrap()` on `BuildResult` or any consumer-reachable
+  `Result`.** A panic crosses the napi FFI boundary and can crash the Node
+  process. `match` and route through the appropriate channel instead.
+- **`create_error_if_closed()` is the entry guard.** Every `DevEngine`
+  method that touches the coordinator runs it first. By default the
+  resulting error is surfaced to the binding consumer (§16d); methods that
+  take the "swallow as `Ok`" exception (§16d) must also handle the
+  mid-call closed-race at every `.send(...)` and `.recv()` site.
+- **Plugin errors are user-visible.** Never silently drop them; they always
+  reach `on_output` or `on_hmr_updates`.
+- **Each phase owns its delivery.** Inside `BundlingTask`, each phase
+  function handles its own error delivery; `run_inner` is not a centralized
+  error handler.
+- **`has_encountered_error` is the coordinator signal, callbacks are the
+  consumer signal.** Both are set on every error; one drives the state
+  machine, the other notifies the user.
+
+### 16g. When to panic
+
+Not every `Result` in the dev engine should be routed. Some `.expect(...)` /
+`.unwrap()` calls are correct: they assert internal invariants — properties
+our own code guarantees — and a panic surfaces a programming bug rather than
+a runtime condition.
+
+The rule:
+
+- **Panic on invariant violations.** The codepath should be unreachable if
+  our own state-machine logic, shutdown ordering, or message-protocol
+  contracts are correct. If it fires we shipped a bug, and the panic makes
+  it loud rather than swallowing it into a silent log.
+- **Route runtime conditions.** Anything that depends on user code, plugin
+  behavior, filesystem state, network, races with consumer-driven lifecycle
+  events (e.g. `close()`), or input validation — route through the channels
+  in §16b. A panic on these would crash the Node process for something the
+  consumer must be able to observe and recover from.
+
+A useful test when deciding: _could this error be triggered by anything
+outside our crate?_ If yes, route it. If no, panic.
+
+Existing panic sites in `rolldown_dev` that are intentional, not punts:
+
+- `crates/rolldown_dev/src/watcher_event_handler.rs:10` —
+  `coordinator_tx.send(...).expect(...)`. The coordinator's mpsc receiver is
+  owned by the coordinator task, which only shuts down on the `Close`
+  message. The fs watcher cannot trigger that path; if its `send` fails, our
+  shutdown ordering is wrong.
+- `crates/rolldown_dev/src/bundling_task.rs:71` — same pattern on the final
+  `BundleCompleted` send. The coordinator awaits any in-flight `BundlingTask`
+  before processing `Close` (§4), so by construction the receiver is alive
+  when this send runs.
+- `crates/rolldown_dev/src/bundle_coordinator.rs:323, 420` —
+  `current_bundling_future.clone().unwrap()` is reachable only in states
+  `*InProgress`, where the state machine guarantees `Some(_)`. A `None` here
+  means a transition was missed.
+- `crates/rolldown_dev/src/dev_engine.rs:117` — `join_handle.await.unwrap()`
+  on the coordinator task. The coordinator's `run()` is internal code that
+  must not panic; a `JoinError` here means we introduced a panic in
+  coordinator logic and should fix _that_, not paper over the symptom.
+
+When adding new panic sites, document the invariant being asserted in the
+`.expect(...)` message so the next reader sees the contract without having to
+reconstruct it.
+
+---
+
+## 17. Quick reference — concept-to-file map
 
 | Concept                                        | File                                                            |
 | ---------------------------------------------- | --------------------------------------------------------------- |
@@ -758,6 +1067,21 @@ synthetic file changes and inspect coordinator state.
 | Incremental entry points, `with_cached_bundle` | `crates/rolldown/src/bundler/impl_bundler_incremental_build.rs` |
 | HMR entry points                               | `crates/rolldown/src/bundler/impl_bundler_hmr.rs`               |
 | `ScanStageCache`                               | `crates/rolldown/src/types/scan_stage_cache.rs`                 |
+
+---
+
+## Unresolved Questions
+
+- **Auto-recovery from missing-import failures.** When a build fails
+  because of an unresolved import, the missing file was never parsed and
+  is not in `watch_paths`. Creating it does not trigger a rebuild — the
+  user must either touch a watched file or use `triggerFullBuild`. A
+  fix: during resolution, when a file is not found, record its path and
+  add its parent directory to the watcher. A directory-level create event
+  matching a previously-missing path would then trigger a rebuild
+  automatically. The existing watcher tests acknowledge this gap
+  (`watch.test.ts`: "the missing file's directory is not auto-watched,
+  so we need to touch a watched file").
 
 ---
 

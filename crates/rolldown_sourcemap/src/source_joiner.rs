@@ -1,5 +1,6 @@
-use oxc_sourcemap::{ConcatSourceMapBuilder, SourceMap};
+use oxc_sourcemap::ConcatSourceMapBuilder;
 
+use crate::SourceMap;
 use crate::source::Source;
 
 #[derive(Default)]
@@ -66,7 +67,7 @@ impl<'source> SourceJoiner<'source> {
         line_offset += source.lines_count() + 1; // +1 for the newline
       }
     }
-    (ret_source, sourcemap_builder.map(ConcatSourceMapBuilder::into_sourcemap))
+    (ret_source, sourcemap_builder.map(|builder| builder.into_sourcemap().into_owned()))
   }
 
   fn accumulate_sourcemap_data_size(&mut self, hint: &SourceMap) {
@@ -106,7 +107,8 @@ fn test_concat_sourcemaps() {
       ..CodegenOptions::default()
     })
     .build(&ret1.program);
-  source_joiner.append_source(SourceMapSource::new(code, map.as_ref().unwrap().clone()));
+  source_joiner
+    .append_source(SourceMapSource::new(code, map.as_ref().unwrap().as_source_map().clone()));
 
   let (content, map) = source_joiner.join();
 

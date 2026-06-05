@@ -43,7 +43,7 @@ impl BuildEvent for InvalidOption {
         }
         InvalidOptionType::InvalidOutputFile => "Invalid value for option \"output.file\" - When building multiple chunks, the \"output.dir\" option must be used, not \"output.file\". You may set `output.codeSplitting` to `false` when using dynamic imports.".to_string(),
         InvalidOptionType::InvalidOutputDirOption => "Invalid value for option \"output.dir\" - you must set either \"output.file\" for a single-file build or \"output.dir\" when generating multiple chunks.".to_string(),
-        InvalidOptionType::NoEntryPoint =>"You must supply `options.input` to rolldown, you should at least provide one entrypoint via `options.input` or `this.emitFile({type: 'chunk', ...})` (https://rollupjs.org/plugin-development/#this-emitfile)".to_string(),
+        InvalidOptionType::NoEntryPoint =>"You must supply `options.input` to rolldown, you should at least provide one entrypoint via `options.input` or `this.emitFile({type: 'chunk', ...})` (https://rolldown.rs/reference/Interface.PluginContext#in-depth-type-chunk)".to_string(),
         InvalidOptionType::ManualCodeSplittingWithoutGroups(options) => {
           let options_list = options.join(", ");
           format!("Manual code splitting options ({options_list}) specified without groups. These options have no effect without groups - you should either add groups to use manual code splitting or remove these options.")

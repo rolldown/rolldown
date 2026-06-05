@@ -40,11 +40,30 @@ load();
 
 ## Assets
 
+### chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+
+```
+
 ### imp.js
 
 ```js
 //#region imp.js
-var imp_exports = /* @__PURE__ */ require("./rolldown-runtime.js").__exportAll({
+var imp_exports = /* @__PURE__ */ require("./chunk.js").__exportAll({
 	imp2: () => 2,
 	imp22: () => 22
 });
@@ -68,10 +87,10 @@ Object.defineProperty(exports, "imp_exports", {
 ### main.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+const require_chunk = require("./chunk.js");
 require("./imp.js");
 let node_assert = require("node:assert");
-node_assert = require_rolldown_runtime.__toESM(node_assert);
+node_assert = require_chunk.__toESM(node_assert);
 //#region main.js
 node_assert.default.strictEqual(2, 2);
 node_assert.default.strictEqual(22, 22);
@@ -82,24 +101,5 @@ const load = async () => {
 };
 load();
 //#endregion
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__exportAll", {
-	enumerable: true,
-	get: function() {
-		return __exportAll;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
 
 ```

@@ -9,7 +9,6 @@ readme = "../../README.md"
 
 [lib]
 doctest = false
-test = false
 
 [dependencies]
 anyhow = { workspace = true }

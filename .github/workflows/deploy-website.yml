@@ -34,7 +34,9 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 2 # need the previous commit on main; the PR baseline is fetched below
+          # Full history so vitepress `lastUpdated` resolves from git (not file mtime) and is
+          # therefore identical across the two builds we diff. Also gives us the baseline commit.
+          fetch-depth: 0
           persist-credentials: false
 
       - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
@@ -66,7 +68,7 @@ jobs:
             base="HEAD^"
           else
             base_branch="${BASE_REF:-main}"
-            git fetch --no-tags --depth=1 origin "$base_branch" >/dev/null 2>&1 || true
+            git fetch --no-tags origin "$base_branch" >/dev/null 2>&1 || true
             base="origin/$base_branch"
           fi
 
@@ -74,15 +76,15 @@ jobs:
           mv docs/.vitepress/dist "$RUNNER_TEMP/head"
 
           changed=1 # default to "changed" if the baseline build fails
+          diffout='(baseline build failed)'
           if git checkout "$base" -- docs packages/rolldown \
             && vp run --filter rolldown-docs generate \
             && vp run --filter rolldown-docs build; then
             mv docs/.vitepress/dist "$RUNNER_TEMP/base"
             node scripts/misc/normalize-docs-dist.mjs "$RUNNER_TEMP/head"
             node scripts/misc/normalize-docs-dist.mjs "$RUNNER_TEMP/base"
-            if diff -rq "$RUNNER_TEMP/head" "$RUNNER_TEMP/base" >/dev/null 2>&1; then
-              changed=0
-            fi
+            diffout="$(diff -rq "$RUNNER_TEMP/head" "$RUNNER_TEMP/base" 2>&1 || true)"
+            [ -z "$diffout" ] && changed=0
           else
             echo "Could not build the baseline ($base); assuming the site changed."
           fi
@@ -101,6 +103,12 @@ jobs:
           fi
           echo "$msg (deploy=$deploy)"
           echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$changed" -eq 1 ]; then
+            echo "::group::Normalized dist differences (first 80 lines)"
+            printf '%s\n' "$diffout" | head -80
+            echo "::endgroup::"
+          fi
 
   # Deploy to Void. Isolated, main-only job: the only place VOID_TOKEN is in scope, and it runs
   # only when docs-validation determined the built site changed.

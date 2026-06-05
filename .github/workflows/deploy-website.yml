@@ -1,0 +1,106 @@
+name: Deploy Website
+
+permissions: {}
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  merge_group:
+  push:
+    branches:
+      - main
+    # These inputs can affect the rendered site, so a change here is worth *checking*.
+    # Whether we actually deploy is decided by the content fingerprint below, not by the path.
+    paths:
+      - 'docs/**'
+      - 'packages/rolldown/src/**'
+      - 'packages/rolldown/package.json'
+      - 'packages/rolldown/tsconfig*.json'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
+
+jobs:
+  # Builds/validates the docs and, on main, decides whether the content needs deploying. Runs
+  # untrusted PR code, so it has NO `environment` and NO access to VOID_TOKEN. The deploy is a
+  # separate main-only job below — we never deploy to Void from a PR.
+  docs-validation:
+    name: Docs Validation
+    runs-on: ubuntu-latest
+    outputs:
+      # Deploy when this content's fingerprint hasn't been deployed before, or on manual dispatch.
+      deploy: ${{ steps.deployed.outputs.cache-hit != 'true' || github.event_name == 'workflow_dispatch' }}
+      fingerprint: ${{ steps.fingerprint.outputs.hash }}
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+        with:
+          cache: true
+
+      - name: Generate API reference
+        run: vp run --filter rolldown-docs generate
+
+      - name: Build Docs
+        if: github.ref_name != 'main'
+        run: vp run --filter rolldown-docs build
+
+      # Deterministic fingerprint of the deployable content: git-tracked docs sources plus the
+      # generated TypeDoc reference (docs/reference). It is used as a GitHub Actions cache key to
+      # identify an already-deployed state — so a packages/rolldown/src change that doesn't alter
+      # the public API (and therefore the reference) keeps the same fingerprint and is not
+      # redeployed. The built site is never hashed (it isn't reproducible); TypeDoc output is.
+      - name: Fingerprint docs content
+        id: fingerprint
+        if: github.ref_name == 'main'
+        run: |
+          set -euo pipefail
+          hash="$(
+            {
+              git ls-files -z -- docs
+              find docs/reference -type f -print0
+            } | LC_ALL=C sort -zu | xargs -0 sha256sum | sha256sum
+          )"
+          echo "hash=${hash%% *}" >> "$GITHUB_OUTPUT"
+
+      - name: Was this content already deployed?
+        id: deployed
+        if: github.ref_name == 'main'
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .docs-deploy-marker
+          key: docs-deploy-${{ steps.fingerprint.outputs.hash }}
+          lookup-only: true
+
+  deploy-void:
+    name: Deploy to Void
+    needs: [docs-validation]
+    if: github.ref_name == 'main' && needs.docs-validation.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: void
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+        with:
+          cache: true
+
+      - name: Deploy to Void
+        run: vp run docs:void
+        env:
+          VOID_TOKEN: ${{ secrets.VOID_TOKEN }}
+          VOID_PROJECT: rolldown
+
+      # Mark this fingerprint as deployed so the next identical-content run skips. The marker
+      # file's contents are unused (the cache key is the fingerprint); an evicted marker only
+      # causes a harmless redundant redeploy.
+      - name: Mark fingerprint deployed
+        run: touch .docs-deploy-marker
+
+      - name: Save deploy marker
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .docs-deploy-marker
+          key: docs-deploy-${{ needs.docs-validation.outputs.fingerprint }}

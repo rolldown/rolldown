@@ -600,6 +600,14 @@ mod tests {
   }
 
   #[test]
+  fn prefixes_bare_deep_imports_with_windows_separators() {
+    assert_eq!(
+      get_path_with_prefix("C:\\pkg\\styles\\mixins", "_").as_deref(),
+      Some("C:/pkg/styles/_mixins"),
+    );
+  }
+
+  #[test]
   fn preserves_existing_package_root_prefix_behavior() {
     assert_eq!(get_path_with_prefix("pkg", "_").as_deref(), Some("_pkg"));
     assert_eq!(get_path_with_prefix("@scope/pkg", "_").as_deref(), Some("@scope/_pkg"));

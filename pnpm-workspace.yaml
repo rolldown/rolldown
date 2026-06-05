@@ -191,6 +191,3 @@ minimumReleaseAgeExclude:
   - oxc-minify@0.134.0
   - oxc-parser@0.134.0
   - oxc-transform@0.134.0
-
-patchedDependencies:
-  vitepress-plugin-group-icons: patches/vitepress-plugin-group-icons.patch

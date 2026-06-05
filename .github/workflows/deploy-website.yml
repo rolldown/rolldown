@@ -10,7 +10,7 @@ on:
     branches:
       - main
     # These inputs can affect the rendered site, so a change here is worth *checking*.
-    # Whether we actually deploy is decided by the built-site diff below, not by the path.
+    # Whether we actually deploy is decided by the content fingerprint below, not by the path.
     paths:
       - 'docs/**'
       - 'packages/rolldown/src/**'
@@ -23,95 +23,71 @@ concurrency:
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  # Builds/validates the docs and decides whether the built site changed. Runs untrusted PR code,
-  # so it has NO `environment` and NO access to VOID_TOKEN. The deploy is a separate main-only
-  # job below.
+  # Builds/validates the docs and, on main, decides whether the content needs deploying. Runs
+  # untrusted PR code, so it has NO `environment` and NO access to VOID_TOKEN. The deploy is a
+  # separate main-only job below — we never deploy to Void from a PR.
   docs-validation:
     name: Docs Validation
     runs-on: ubuntu-latest
     outputs:
       deploy: ${{ steps.gate.outputs.deploy }}
+      fingerprint: ${{ steps.fingerprint.outputs.hash }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          # Full history so vitepress `lastUpdated` resolves from git (not file mtime) and is
-          # therefore identical across the two builds we diff. Also gives us the baseline commit.
-          fetch-depth: 0
-          persist-credentials: false
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
 
       - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
         with:
           cache: true
 
-      # Builds the whole site for the current ref. Doubles as the PR validation build.
-      - name: Build Docs
-        run: |
-          vp run --filter rolldown-docs generate
-          vp run --filter rolldown-docs build
+      - name: Generate API reference
+        run: vp run --filter rolldown-docs generate
 
-      - name: Compare built site against baseline
+      - name: Build Docs
+        if: github.ref_name != 'main'
+        run: vp run --filter rolldown-docs build
+
+      # Deterministic fingerprint of the deployable content: git-tracked docs sources plus the
+      # generated TypeDoc reference (docs/reference). It is used as a GitHub Actions cache key to
+      # identify an already-deployed state — so a packages/rolldown/src change that doesn't alter
+      # the public API (and therefore the reference) keeps the same fingerprint and is not
+      # redeployed. The built site is never hashed (it isn't reproducible); TypeDoc output is.
+      - name: Fingerprint docs content
+        id: fingerprint
+        if: github.ref_name == 'main'
+        run: |
+          set -euo pipefail
+          hash="$(
+            {
+              git ls-files -z -- docs
+              find docs/reference -type f -print0
+            } | LC_ALL=C sort -zu | xargs -0 sha256sum | sha256sum
+          )"
+          echo "hash=${hash%% *}" >> "$GITHUB_OUTPUT"
+
+      - name: Was this content already deployed?
+        id: deployed
+        if: github.ref_name == 'main'
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .docs-deploy-marker
+          key: docs-deploy-${{ steps.fingerprint.outputs.hash }}
+          lookup-only: true
+
+      - name: Decide whether to deploy
         id: gate
-        if: github.event_name != 'merge_group'
+        if: github.ref_name == 'main'
         env:
-          REF_NAME: ${{ github.ref_name }}
-          BASE_REF: ${{ github.base_ref }}
+          CACHE_HIT: ${{ steps.deployed.outputs.cache-hit }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          set -uo pipefail
-          # Deploy (main only) when the built site differs from a baseline:
-          #   - on main: the previous commit
-          #   - on a PR: the target branch (main)
-          # The build isn't byte-reproducible (some vitepress plugins emit unstable ordering), so
-          # both dists are normalized for comparison via scripts/misc/normalize-docs-dist.mjs. The
-          # deploy itself still ships the real, un-normalized build.
-          if [ "$REF_NAME" = "main" ]; then
-            base="HEAD^"
+          # Deploy when this fingerprint has not been deployed before, or on a manual dispatch.
+          if [ "$CACHE_HIT" = "true" ] && [ "$EVENT_NAME" != "workflow_dispatch" ]; then
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "Docs content already deployed (fingerprint cached) — skipping."
           else
-            base_branch="${BASE_REF:-main}"
-            git fetch --no-tags origin "$base_branch" >/dev/null 2>&1 || true
-            base="origin/$base_branch"
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
           fi
 
-          rm -rf "$RUNNER_TEMP/head" "$RUNNER_TEMP/base"
-          mv docs/.vitepress/dist "$RUNNER_TEMP/head"
-
-          changed=1 # default to "changed" if the baseline build fails
-          diffout='(baseline build failed)'
-          if git checkout "$base" -- docs packages/rolldown \
-            && vp run --filter rolldown-docs generate \
-            && vp run --filter rolldown-docs build; then
-            mv docs/.vitepress/dist "$RUNNER_TEMP/base"
-            node scripts/misc/normalize-docs-dist.mjs "$RUNNER_TEMP/head"
-            node scripts/misc/normalize-docs-dist.mjs "$RUNNER_TEMP/base"
-            diffout="$(diff -rq "$RUNNER_TEMP/head" "$RUNNER_TEMP/base" 2>&1 || true)"
-            [ -z "$diffout" ] && changed=0
-          else
-            echo "Could not build the baseline ($base); assuming the site changed."
-          fi
-          git checkout HEAD -- docs packages/rolldown || true
-
-          deploy=false
-          if [ "$changed" -eq 1 ] || [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            deploy=true
-          fi
-          echo "deploy=$deploy" >> "$GITHUB_OUTPUT"
-
-          if [ "$deploy" = "false" ]; then
-            msg="Built docs site unchanged vs \`$base\`."
-          else
-            msg="Built docs site changed vs \`$base\`."
-          fi
-          echo "$msg (deploy=$deploy)"
-          echo "$msg" >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$changed" -eq 1 ]; then
-            echo "::group::Normalized dist differences (first 80 lines)"
-            printf '%s\n' "$diffout" | head -80
-            echo "::endgroup::"
-          fi
-
-  # Deploy to Void. Isolated, main-only job: the only place VOID_TOKEN is in scope, and it runs
-  # only when docs-validation determined the built site changed.
   deploy-void:
     name: Deploy to Void
     needs: [docs-validation]
@@ -130,3 +106,15 @@ jobs:
         env:
           VOID_TOKEN: ${{ secrets.VOID_TOKEN }}
           VOID_PROJECT: rolldown
+
+      # Record this fingerprint as deployed so the next run with identical content skips.
+      - name: Record deployed fingerprint
+        env:
+          FINGERPRINT: ${{ needs.docs-validation.outputs.fingerprint }}
+        run: echo "$FINGERPRINT" > .docs-deploy-marker
+
+      - name: Save deploy marker
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .docs-deploy-marker
+          key: docs-deploy-${{ needs.docs-validation.outputs.fingerprint }}

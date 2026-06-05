@@ -30,7 +30,8 @@ jobs:
     name: Docs Validation
     runs-on: ubuntu-latest
     outputs:
-      deploy: ${{ steps.gate.outputs.deploy }}
+      # Deploy when this content's fingerprint hasn't been deployed before, or on manual dispatch.
+      deploy: ${{ steps.deployed.outputs.cache-hit != 'true' || github.event_name == 'workflow_dispatch' }}
       fingerprint: ${{ steps.fingerprint.outputs.hash }}
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
@@ -73,21 +74,6 @@ jobs:
           key: docs-deploy-${{ steps.fingerprint.outputs.hash }}
           lookup-only: true
 
-      - name: Decide whether to deploy
-        id: gate
-        if: github.ref_name == 'main'
-        env:
-          CACHE_HIT: ${{ steps.deployed.outputs.cache-hit }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          # Deploy when this fingerprint has not been deployed before, or on a manual dispatch.
-          if [ "$CACHE_HIT" = "true" ] && [ "$EVENT_NAME" != "workflow_dispatch" ]; then
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-            echo "Docs content already deployed (fingerprint cached) — skipping."
-          else
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-          fi
-
   deploy-void:
     name: Deploy to Void
     needs: [docs-validation]
@@ -107,11 +93,11 @@ jobs:
           VOID_TOKEN: ${{ secrets.VOID_TOKEN }}
           VOID_PROJECT: rolldown
 
-      # Record this fingerprint as deployed so the next run with identical content skips.
-      - name: Record deployed fingerprint
-        env:
-          FINGERPRINT: ${{ needs.docs-validation.outputs.fingerprint }}
-        run: echo "$FINGERPRINT" > .docs-deploy-marker
+      # Mark this fingerprint as deployed so the next identical-content run skips. The marker
+      # file's contents are unused (the cache key is the fingerprint); an evicted marker only
+      # causes a harmless redundant redeploy.
+      - name: Mark fingerprint deployed
+        run: touch .docs-deploy-marker
 
       - name: Save deploy marker
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5

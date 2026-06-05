@@ -107,13 +107,6 @@ jobs:
           if [ "$changed" -eq 1 ]; then
             echo "::group::Normalized dist differences (first 80 lines)"
             printf '%s\n' "$diffout" | head -80
-            for rel in $(cd "$RUNNER_TEMP/head" && find . -name '*.css' -o -name '*.html' | head -5); do
-              h="$RUNNER_TEMP/head/$rel"; b="$RUNNER_TEMP/base/$rel"
-              if [ -f "$h" ] && [ -f "$b" ] && ! cmp -s "$h" "$b"; then
-                echo "### $rel head=$(wc -c <"$h")B base=$(wc -c <"$b")B difflines=$(diff "$h" "$b" | grep -c '^[<>]')"
-                diff "$h" "$b" | head -4 | cut -c1-160
-              fi
-            done
             echo "::endgroup::"
           fi
 

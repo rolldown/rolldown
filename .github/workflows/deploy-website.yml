@@ -50,6 +50,10 @@ jobs:
       - name: Compare generated content against baseline
         id: gate
         if: github.event_name != 'merge_group'
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          BASE_REF: ${{ github.base_ref }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -uo pipefail
           # Compare the generated docs content against a baseline and deploy (main only) when it
@@ -61,10 +65,10 @@ jobs:
           # (some vitepress plugins emit unstable ordering). TypeDoc output is deterministic, so a
           # packages/rolldown/src change that doesn't alter the public API yields an identical
           # reference and is skipped.
-          if [ "${{ github.ref_name }}" = "main" ]; then
+          if [ "$REF_NAME" = "main" ]; then
             base="HEAD^"
           else
-            base_branch="${{ github.base_ref || 'main' }}"
+            base_branch="${BASE_REF:-main}"
             git fetch --no-tags --depth=1 origin "$base_branch" >/dev/null 2>&1 || true
             base="origin/$base_branch"
           fi
@@ -84,7 +88,7 @@ jobs:
           git checkout HEAD -- docs packages/rolldown || true
 
           deploy=false
-          if [ -z "$prev_fp" ] || [ "$head_fp" != "$prev_fp" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ -z "$prev_fp" ] || [ "$head_fp" != "$prev_fp" ] || [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             deploy=true
           fi
           echo "deploy=$deploy" >> "$GITHUB_OUTPUT"

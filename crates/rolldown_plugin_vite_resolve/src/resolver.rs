@@ -599,6 +599,7 @@ mod tests {
     );
   }
 
+  #[cfg(windows)]
   #[test]
   fn prefixes_bare_deep_imports_with_windows_separators() {
     assert_eq!(

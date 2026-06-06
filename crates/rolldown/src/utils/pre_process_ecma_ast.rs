@@ -16,7 +16,10 @@ use oxc::transformer_plugins::{
 use oxc_str::CompactStr;
 
 use rolldown_common::{ConstExportMeta, ConstantValue, NormalizedBundlerOptions};
-use rolldown_ecmascript::{EcmaAst, WithMutFields, semantic_builder_for_transform};
+use rolldown_ecmascript::{
+  EcmaAst, WithMutFields, semantic_builder_for_transform,
+  semantic_builder_for_transform_without_errors,
+};
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -271,7 +274,7 @@ impl PreProcessEcmaAst {
     if let Some(scoping) = scoping.take() {
       return scoping;
     }
-    let ret = semantic_builder_for_transform()
+    let ret = semantic_builder_for_transform_without_errors()
       // Preallocate memory for the underlying data structures.
       .with_stats(self.stats)
       .build(program)

@@ -15,7 +15,7 @@ mod r#gen;
 mod helpers;
 pub mod program_cell;
 pub use r#gen::ToSourceString;
-pub use helpers::semantic_builder_for_transform;
+pub use helpers::{semantic_builder_for_transform, semantic_builder_for_transform_without_errors};
 
 /// - To access `&mut ast::Program`, use `ast.program.with_mut(|fields| { fields.program; })`.
 pub struct EcmaAst {

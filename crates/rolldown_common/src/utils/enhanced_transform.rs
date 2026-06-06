@@ -14,7 +14,6 @@ use oxc::transformer::{Helper, HelperLoaderOptions};
 use oxc::{
   codegen::{Codegen, CodegenOptions, CodegenReturn},
   isolated_declarations::{IsolatedDeclarations, IsolatedDeclarationsOptions},
-  semantic::SemanticBuilder,
   span::SourceType,
   transformer::Transformer,
   transformer_plugins::{
@@ -23,7 +22,9 @@ use oxc::{
   },
 };
 use oxc_resolver::TsConfig;
-use rolldown_ecmascript::semantic_builder_for_transform;
+use rolldown_ecmascript::{
+  semantic_builder_for_transform, semantic_builder_for_transform_without_errors,
+};
 use rolldown_error::{BuildDiagnostic, EventKind, Severity};
 use rolldown_sourcemap::{OwnedSourceMap, SourceMap, collapse_sourcemaps};
 use rustc_hash::FxHashMap;
@@ -386,9 +387,9 @@ pub fn enhanced_transform(
     }
   }
 
-  let scoping = scoping
-    .take()
-    .unwrap_or_else(|| semantic_builder_for_transform().build(&program).semantic.into_scoping());
+  let scoping = scoping.take().unwrap_or_else(|| {
+    semantic_builder_for_transform_without_errors().build(&program).semantic.into_scoping()
+  });
 
   let transform_ret = Transformer::new(&allocator, Path::new(filename), &oxc_transform_options)
     .build_with_scoping(scoping, &mut program);
@@ -403,7 +404,8 @@ pub fn enhanced_transform(
     && !inject.is_empty()
   {
     let config = build_inject_config(inject);
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping =
+      oxc::semantic::SemanticBuilder::new_without_errors().build(&program).semantic.into_scoping();
     let _ = InjectGlobalVariables::new(&allocator, config).build(scoping, &mut program);
   }
 

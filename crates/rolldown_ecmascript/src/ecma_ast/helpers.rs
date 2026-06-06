@@ -19,13 +19,19 @@ pub fn semantic_builder_for_transform<'a>() -> SemanticBuilder<'a> {
   SemanticBuilder::new().with_enum_eval(true)
 }
 
+/// Returns a diagnostics-free [`SemanticBuilder`] pre-configured for transform
+/// scoping rebuilds.
+pub fn semantic_builder_for_transform_without_errors<'a>() -> SemanticBuilder<'a, false> {
+  SemanticBuilder::new_without_errors().with_enum_eval(true)
+}
+
 impl EcmaAst {
   pub fn is_body_empty(&self) -> bool {
     self.program().is_empty()
   }
 
   pub fn make_semantic<'ast>(program: &'ast Program<'ast>, with_cfg: bool) -> Semantic<'ast> {
-    SemanticBuilder::new().with_cfg(with_cfg).build(program).semantic
+    SemanticBuilder::new_without_errors().with_cfg(with_cfg).build(program).semantic
   }
 
   pub fn make_scoping(&self) -> Scoping {
@@ -36,7 +42,7 @@ impl EcmaAst {
 
   pub fn make_symbol_table_and_scope_tree_with_semantic_builder<'a>(
     &'a self,
-    semantic_builder: SemanticBuilder<'a>,
+    semantic_builder: SemanticBuilder<'a, false>,
   ) -> Scoping {
     self.program.with_dependent::<'a, Scoping>(|_owner, dep| {
       semantic_builder.build(&dep.program).semantic.into_scoping()

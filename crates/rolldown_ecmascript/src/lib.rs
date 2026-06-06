@@ -10,6 +10,7 @@ pub use crate::{
   },
   ecma_ast::{
     EcmaAst, ToSourceString, program_cell::WithMutFields, semantic_builder_for_transform,
+    semantic_builder_for_transform_without_errors,
   },
   ecma_compiler::{EcmaCompiler, PrintCommentsOptions, PrintOptions},
 };

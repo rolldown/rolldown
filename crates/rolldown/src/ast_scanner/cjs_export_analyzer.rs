@@ -260,7 +260,7 @@ mod tests {
     let source_type = SourceType::default();
     let ret = Parser::new(allocator, source, source_type).parse();
     let program = ret.program;
-    let semantic_ret = SemanticBuilder::new().build(&program);
+    let semantic_ret = SemanticBuilder::new_without_errors().build(&program);
     (AstScopes::new(semantic_ret.semantic.into_scoping()), program)
   }
 

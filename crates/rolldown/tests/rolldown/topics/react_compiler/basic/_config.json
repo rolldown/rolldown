@@ -1,0 +1,16 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.jsx" }],
+    "external": ["react/compiler-runtime"],
+    "transform": {
+      "jsx": "preserve",
+      "reactCompiler": {
+        "shouldCompile": true,
+        "enableReanimated": false,
+        "isDev": false,
+        "filename": "main.jsx"
+      }
+    }
+  },
+  "expectExecuted": false
+}

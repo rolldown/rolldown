@@ -96,6 +96,9 @@ pub struct EnhancedTransformOptions {
   /// Configure how TSX and JSX are transformed.
   pub jsx: Option<Either<String, JsxOptions>>,
 
+  /// Experimental: run the React Compiler.
+  pub react_compiler: Option<oxc_react_compiler::PluginOptions>,
+
   /// Sets the target environment for the generated JavaScript.
   pub target: Option<Either<String, Vec<String>>>,
 
@@ -155,6 +158,7 @@ impl EnhancedTransformOptions {
   ) -> Self {
     Self {
       jsx: options.jsx,
+      react_compiler: options.react_compiler,
       target: options.target,
       assumptions: options.assumptions,
       decorator: options.decorator,

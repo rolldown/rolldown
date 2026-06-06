@@ -6,7 +6,8 @@ use napi_derive::napi;
 use oxc_napi::get_source_type;
 use oxc_sourcemap::napi::SourceMap;
 use oxc_transform_napi::{
-  CompilerAssumptions, DecoratorOptions, Helpers, JsxOptions, PluginsOptions, TypeScriptOptions,
+  CompilerAssumptions, DecoratorOptions, Helpers, JsxOptions, PluginsOptions, ReactCompilerOptions,
+  TypeScriptOptions,
 };
 use rolldown_common::{EnhancedTransformOptions, TsconfigOption};
 use rustc_hash::FxHashMap;
@@ -132,6 +133,9 @@ pub struct BindingEnhancedTransformOptions {
   /// @see {@link https://oxc.rs/docs/guide/usage/transformer/jsx}
   #[napi(ts_type = "'preserve' | JsxOptions")]
   pub jsx: Option<Either<String, JsxOptions>>,
+  /// Experimental: enable the React Compiler.
+  #[napi(ts_type = "boolean | ReactCompilerOptions")]
+  pub react_compiler: Option<Either<bool, ReactCompilerOptions>>,
   /// Sets the target environment for the generated JavaScript.
   ///
   /// The lowest target is `es2015`.
@@ -181,6 +185,7 @@ impl BindingEnhancedTransformOptions {
       assumptions: self.assumptions,
       typescript: self.typescript,
       jsx: self.jsx,
+      react_compiler: self.react_compiler,
       target: self.target,
       helpers: self.helpers,
       define: self.define,

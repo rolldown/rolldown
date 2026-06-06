@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.jsx
+function Component(props) {
+	return <div onClick={() => props.onClick()}>{props.text}</div>;
+}
+//#endregion
+export { Component };
+
+```

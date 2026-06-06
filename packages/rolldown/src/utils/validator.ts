@@ -228,6 +228,42 @@ isTypeTrue<
   IsSchemaSubType<typeof TransformPluginsSchema, Exclude<TransformOptions['plugins'], undefined>>
 >();
 
+const ReactCompilerGatingSchema = v.object({
+  source: v.string(),
+  importSpecifierName: v.string(),
+});
+
+const ReactCompilerDynamicGatingSchema = v.object({
+  source: v.string(),
+});
+
+const ReactCompilerOptionsSchema = v.object({
+  compilationMode: v.optional(
+    v.union([v.literal('infer'), v.literal('syntax'), v.literal('annotation'), v.literal('all')]),
+  ),
+  panicThreshold: v.optional(
+    v.union([v.literal('none'), v.literal('critical_errors'), v.literal('all_errors')]),
+  ),
+  target: v.optional(v.union([v.literal('17'), v.literal('18'), v.literal('19')])),
+  noEmit: v.optional(v.boolean()),
+  outputMode: v.optional(v.union([v.literal('client'), v.literal('ssr'), v.literal('lint')])),
+  ignoreUseNoForget: v.optional(v.boolean()),
+  flowSuppressions: v.optional(v.boolean()),
+  enableReanimated: v.optional(v.boolean()),
+  isDev: v.optional(v.boolean()),
+  filename: v.optional(v.string()),
+  eslintSuppressionRules: v.optional(v.array(v.string())),
+  customOptOutDirectives: v.optional(v.array(v.string())),
+  gating: v.optional(ReactCompilerGatingSchema),
+  dynamicGating: v.optional(ReactCompilerDynamicGatingSchema),
+});
+isTypeTrue<
+  IsSchemaSubType<
+    typeof ReactCompilerOptionsSchema,
+    Exclude<TransformOptions['reactCompiler'], boolean | undefined>
+  >
+>();
+
 const TransformOptionsSchema = v.object({
   assumptions: v.optional(AssumptionsSchema),
   typescript: v.optional(TypescriptSchema),
@@ -241,6 +277,10 @@ const TransformOptionsSchema = v.object({
       v.literal('react-jsx'),
       JsxOptionsSchema,
     ]),
+  ),
+  reactCompiler: v.pipe(
+    v.optional(v.union([v.boolean(), ReactCompilerOptionsSchema])),
+    v.description('Enable the experimental React Compiler'),
   ),
   target: v.pipe(
     v.optional(v.union([v.string(), v.array(v.string())])),

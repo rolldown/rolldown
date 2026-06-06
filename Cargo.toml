@@ -257,6 +257,8 @@ oxc_minify_napi = { version = "0.134.0" }
 oxc_parser_napi = { version = "0.134.0" }
 oxc_transform_napi = { version = "0.134.0" }
 oxc_traverse = { version = "0.134.0" }
+# Not on crates.io; pulled from the same git rev as the patched oxc crates below.
+oxc_react_compiler = { git = "https://github.com/oxc-project/oxc.git", rev = "c20a85e377a95cbcc34838742ad294cde6fe29b3" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
@@ -303,3 +305,15 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+# Pin the oxc crates to the React Compiler integration PR (oxc-project/oxc#22942).
+[patch.crates-io]
+oxc = { git = "https://github.com/oxc-project/oxc.git", rev = "c20a85e377a95cbcc34838742ad294cde6fe29b3" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc.git", rev = "c20a85e377a95cbcc34838742ad294cde6fe29b3" }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc.git", rev = "c20a85e377a95cbcc34838742ad294cde6fe29b3" }
+oxc_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "c20a85e377a95cbcc34838742ad294cde6fe29b3" }
+oxc_str = { git = "https://github.com/oxc-project/oxc.git", rev = "c20a85e377a95cbcc34838742ad294cde6fe29b3" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "c20a85e377a95cbcc34838742ad294cde6fe29b3" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "c20a85e377a95cbcc34838742ad294cde6fe29b3" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc.git", rev = "c20a85e377a95cbcc34838742ad294cde6fe29b3" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc.git", rev = "c20a85e377a95cbcc34838742ad294cde6fe29b3" }

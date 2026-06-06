@@ -525,6 +525,10 @@ where
               }
             };
           }
+          "reactCompiler" => {
+            transform_options.react_compiler =
+              Some(serde_json::from_value(v).map_err(serde::de::Error::custom)?);
+          }
           _ => return Err(serde::de::Error::custom(format!("unknown transform option: {k}"))),
         }
       }

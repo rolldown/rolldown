@@ -20,6 +20,9 @@ pub struct TransformOptions {
   /// Configure how TSX and JSX are transformed.
   pub jsx: Option<Either<String, JsxOptions>>,
 
+  /// Experimental: run the React Compiler.
+  pub react_compiler: Option<oxc_react_compiler::PluginOptions>,
+
   /// Sets the target environment for the generated JavaScript.
   ///
   /// The lowest target is `es2015`.
@@ -54,6 +57,7 @@ impl From<crate::utils::enhanced_transform::EnhancedTransformOptions> for Transf
   fn from(options: crate::utils::enhanced_transform::EnhancedTransformOptions) -> Self {
     Self {
       jsx: options.jsx,
+      react_compiler: options.react_compiler,
       target: options.target,
       assumptions: options.assumptions,
       decorator: options.decorator,
@@ -68,6 +72,7 @@ impl From<TransformOptions> for crate::utils::enhanced_transform::EnhancedTransf
   fn from(options: TransformOptions) -> Self {
     Self {
       jsx: options.jsx,
+      react_compiler: options.react_compiler,
       target: options.target,
       assumptions: options.assumptions,
       decorator: options.decorator,

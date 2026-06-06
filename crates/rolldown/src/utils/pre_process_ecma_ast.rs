@@ -158,13 +158,29 @@ impl PreProcessEcmaAst {
     // Step 3: Transform TypeScript and jsx.
     // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
     let is_not_js = !matches!(parsed_type, OxcParseType::Js);
+    let react_compiler_options = bundle_options.transform_options.react_compiler.as_ref();
     let mut preserve_jsx = false;
     if is_not_js
       || bundle_options.transform_options.should_transform_js()
+      // The React Compiler must run even when the regular transform would be skipped.
+      || react_compiler_options.is_some()
       // Run transformer on JS files containing `</script` to handle tagged template literals.
       || contains_script_closing_tag(ast.source().as_bytes())
     {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
+        // Run the React Compiler first, on the pristine AST, before the transformer.
+        if let Some(react_compiler_options) = react_compiler_options {
+          self.run_react_compiler(
+            program,
+            allocator,
+            &mut scoping,
+            react_compiler_options,
+            &source,
+            resolved_id,
+            &mut warnings,
+          )?;
+        }
+
         // Pass file path only for non-JS modules (TS/TSX/JSX) to enable tsconfig discovery.
         // For plain JS files, we skip tsconfig lookup since they don't need TS-specific transformations.
         let transform_options = bundle_options
@@ -265,6 +281,50 @@ impl PreProcessEcmaAst {
       preserve_jsx,
       enum_member_value_map,
     })
+  }
+
+  /// Run the React Compiler, rewriting `program` in place and updating `scoping`.
+  #[expect(clippy::too_many_arguments)]
+  fn run_react_compiler<'a>(
+    &mut self,
+    program: &mut Program<'a>,
+    allocator: &'a oxc::allocator::Allocator,
+    scoping: &mut Option<Scoping>,
+    options: &oxc_react_compiler::PluginOptions,
+    source: &ArcStr,
+    resolved_id: &str,
+    warnings: &mut Vec<BuildDiagnostic>,
+  ) -> Result<(), BatchedBuildDiagnostic> {
+    let current_scoping = self.recreate_scoping(scoping, program);
+    let mut react_compiler_errors = Vec::new();
+    let new_scoping = oxc_react_compiler::run(
+      program,
+      allocator,
+      current_scoping,
+      options,
+      &mut react_compiler_errors,
+    );
+    *scoping = Some(new_scoping);
+
+    let (errors, react_compiler_warnings): (Vec<_>, Vec<_>) =
+      react_compiler_errors.into_iter().partition(|error| error.severity == OxcSeverity::Error);
+    if !errors.is_empty() {
+      return Err(BatchedBuildDiagnostic::from(BuildDiagnostic::from_oxc_diagnostics(
+        errors,
+        source,
+        resolved_id,
+        Severity::Error,
+        EventKind::TransformError,
+      )));
+    }
+    warnings.extend(BuildDiagnostic::from_oxc_diagnostics(
+      react_compiler_warnings,
+      source,
+      resolved_id,
+      Severity::Warning,
+      EventKind::ToleratedTransform,
+    ));
+    Ok(())
   }
 
   fn recreate_scoping(&mut self, scoping: &mut Option<Scoping>, program: &Program<'_>) -> Scoping {

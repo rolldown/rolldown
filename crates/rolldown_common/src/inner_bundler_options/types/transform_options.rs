@@ -86,6 +86,9 @@ pub struct TransformOptions {
   inner: TransformOptionsInner,
   pub target: EngineTargets,
   pub jsx_preset: JsxPreset,
+  /// Experimental: React Compiler options, surfaced here so it can run at the
+  /// pre-ecma-ast stage regardless of the `inner` variant.
+  pub react_compiler: Option<oxc_react_compiler::PluginOptions>,
 }
 
 impl Deref for TransformOptions {
@@ -105,12 +108,17 @@ impl DerefMut for TransformOptions {
 impl TransformOptions {
   #[inline]
   pub fn new(options: OxcTransformOptions, target: EngineTargets, jsx_preset: JsxPreset) -> Self {
-    Self { inner: TransformOptionsInner::Normal(Arc::new(options)), target, jsx_preset }
+    Self {
+      inner: TransformOptionsInner::Normal(Arc::new(options)),
+      target,
+      jsx_preset,
+      react_compiler: None,
+    }
   }
 
   #[inline]
   pub fn new_raw(raw: RawTransformOptions, target: EngineTargets, jsx_preset: JsxPreset) -> Self {
-    Self { inner: TransformOptionsInner::Raw(raw), target, jsx_preset }
+    Self { inner: TransformOptionsInner::Raw(raw), target, jsx_preset, react_compiler: None }
   }
 
   #[inline]
@@ -157,6 +165,7 @@ impl Default for TransformOptions {
       inner: TransformOptionsInner::Normal(Arc::new(OxcTransformOptions::default())),
       target: EngineTargets::default(),
       jsx_preset: JsxPreset::default(),
+      react_compiler: None,
     }
   }
 }

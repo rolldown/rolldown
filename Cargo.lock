@@ -1888,7 +1888,7 @@ checksum = "eee538c54f0efefd69029969fb274891cf3b7fa3f26d8aad338c753b57f619bf"
 dependencies = [
  "bitflags",
  "itertools",
- "oxc_index",
+ "oxc_index 4.1.0",
  "oxc_syntax",
  "petgraph",
  "rustc-hash",
@@ -1907,7 +1907,7 @@ dependencies = [
  "oxc_allocator",
  "oxc_ast",
  "oxc_data_structures",
- "oxc_index",
+ "oxc_index 4.1.0",
  "oxc_semantic",
  "oxc_sourcemap",
  "oxc_span",
@@ -1983,6 +1983,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb3e6120999627ec9703025eab7c9f410ebb7e95557632a8902ca48210416c2b"
 dependencies = [
  "nonmax",
+ "serde",
+]
+
+[[package]]
+name = "oxc_index"
+version = "5.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "191884bee6c3744909a51acc7d78d4ae370d817b25875b10642f632327b6296e"
+dependencies = [
  "rayon",
  "serde",
 ]
@@ -2015,7 +2024,7 @@ dependencies = [
  "oxc_allocator",
  "oxc_ast",
  "oxc_data_structures",
- "oxc_index",
+ "oxc_index 4.1.0",
  "oxc_semantic",
  "oxc_span",
  "oxc_str",
@@ -2037,7 +2046,7 @@ dependencies = [
  "oxc_compat",
  "oxc_data_structures",
  "oxc_ecmascript",
- "oxc_index",
+ "oxc_index 4.1.0",
  "oxc_mangler",
  "oxc_parser",
  "oxc_regular_expression",
@@ -2198,7 +2207,7 @@ dependencies = [
  "oxc_cfg",
  "oxc_diagnostics",
  "oxc_ecmascript",
- "oxc_index",
+ "oxc_index 4.1.0",
  "oxc_span",
  "oxc_str",
  "oxc_syntax",
@@ -2264,7 +2273,7 @@ dependencies = [
  "oxc_allocator",
  "oxc_ast_macros",
  "oxc_estree",
- "oxc_index",
+ "oxc_index 4.1.0",
  "oxc_span",
  "oxc_str",
  "phf",
@@ -2730,7 +2739,7 @@ dependencies = [
  "oxc",
  "oxc_allocator",
  "oxc_ecmascript",
- "oxc_index",
+ "oxc_index 5.0.0",
  "oxc_str",
  "oxc_traverse",
  "petgraph",
@@ -2912,7 +2921,7 @@ dependencies = [
  "num-bigint",
  "oxc",
  "oxc_ecmascript",
- "oxc_index",
+ "oxc_index 5.0.0",
  "oxc_resolver",
  "oxc_str",
  "rolldown_ecmascript",
@@ -3060,7 +3069,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "nodejs-built-in-modules",
- "oxc_index",
+ "oxc_index 5.0.0",
  "rolldown_common",
  "rolldown_devtools",
  "rolldown_ecmascript",
@@ -3648,7 +3657,7 @@ dependencies = [
  "mime",
  "nom",
  "oxc",
- "oxc_index",
+ "oxc_index 5.0.0",
  "oxc_str",
  "rayon",
  "regex",
@@ -3671,7 +3680,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "futures",
- "oxc_index",
+ "oxc_index 5.0.0",
  "rolldown",
  "rolldown-notify",
  "rolldown_common",
@@ -4014,7 +4023,7 @@ version = "1.1.0"
 dependencies = [
  "insta",
  "memchr",
- "oxc_index",
+ "oxc_index 5.0.0",
  "oxc_sourcemap",
  "regex",
  "rustc-hash",

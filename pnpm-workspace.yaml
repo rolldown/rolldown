@@ -87,7 +87,7 @@ catalog:
   react-dom: ^19.0.0
   remark-parse: ^11.0.0
   remeda: ^2.34.1
-  rolldown-plugin-dts: ^0.25.1
+  rolldown-plugin-dts: ^0.25.2
   rollup: ^4.60.4
   semver: ^7.8.0
   serve-static: ^2.0.0

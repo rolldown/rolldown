@@ -785,12 +785,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       if let Some(ref mut init_expr) = var_decl.init {
         let left = var_decl.id.take_in(self.alloc).into_assignment_target(self.alloc);
         Some(ast::Expression::AssignmentExpression(
-          ast::AssignmentExpression {
+          self.snippet.builder.alloc_assignment_expression(
+            SPAN,
+            ast::AssignmentOperator::Assign,
             left,
-            right: init_expr.take_in(self.alloc),
-            ..ast::AssignmentExpression::dummy(self.alloc)
-          }
-          .into_in(self.alloc),
+            init_expr.take_in(self.alloc),
+          ),
         ))
       } else {
         None
@@ -830,23 +830,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let prop_name = export;
         let (returned, _) =
           self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
-        Some(ast::ObjectPropertyKind::ObjectProperty(
-          ast::ObjectProperty {
-            // `__proto__` has special semantics in object literals - it sets the prototype
-            // instead of creating a property. Use computed property syntax for it.
-            key: if is_validate_identifier_name(prop_name) && prop_name != "__proto__" {
-              ast::PropertyKey::StaticIdentifier(
-                self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
-              )
-            } else {
-              ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
-            },
-            value: self.snippet.only_return_arrow_expr(returned),
-            computed: prop_name == "__proto__",
-            ..ast::ObjectProperty::dummy(self.alloc)
-          }
-          .into_in(self.alloc),
-        ))
+        // `__proto__` has special semantics in object literals - it sets the prototype
+        // instead of creating a property. Use computed property syntax for it.
+        let key = if is_validate_identifier_name(prop_name) && prop_name != "__proto__" {
+          ast::PropertyKey::StaticIdentifier(
+            self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
+          )
+        } else {
+          ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
+        };
+        Some(ast::ObjectPropertyKind::ObjectProperty(self.snippet.builder.alloc_object_property(
+          SPAN,
+          ast::PropertyKind::Init,
+          key,
+          self.snippet.only_return_arrow_expr(returned),
+          false,
+          false,
+          prop_name == "__proto__",
+        )))
       },
     ));
 
@@ -1367,25 +1368,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   let (ns_name, _) =
                     self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
                   let to_commonjs_ref_name = self.finalized_expr_for_runtime_symbol("__toCommonJS");
-                  Some(
-                    self.snippet.seq2_in_paren_expr(
-                      ast::Expression::CallExpression(
-                        self.snippet.alloc_simple_call_expr(wrap_ref_expr),
-                      ),
-                      ast::Expression::StaticMemberExpression(
-                        ast::StaticMemberExpression {
-                          object: self.snippet.call_expr_with_arg_expr(
-                            to_commonjs_ref_name,
-                            ns_name,
-                            false,
-                          ),
-                          property: self.snippet.id_name("default", SPAN),
-                          ..ast::StaticMemberExpression::dummy(self.alloc)
-                        }
-                        .into_in(self.alloc),
+                  Some(self.snippet.seq2_in_paren_expr(
+                    ast::Expression::CallExpression(
+                      self.snippet.alloc_simple_call_expr(wrap_ref_expr),
+                    ),
+                    ast::Expression::StaticMemberExpression(
+                      self.snippet.builder.alloc_static_member_expression(
+                        SPAN,
+                        self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name, false),
+                        self.snippet.id_name("default", SPAN),
+                        false,
                       ),
                     ),
-                  )
+                  ))
                 }
               }
               _ => {

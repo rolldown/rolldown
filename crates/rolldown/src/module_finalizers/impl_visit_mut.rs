@@ -3,7 +3,7 @@ use oxc::allocator::FromIn;
 use oxc::ast::AstType;
 use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression, Str};
 use oxc::{
-  allocator::{self, Dummy as _, IntoIn, TakeIn},
+  allocator::{self, IntoIn, TakeIn},
   ast::{
     NONE,
     ast::{self, BindingPattern, Expression, SimpleAssignmentTarget, Statement},
@@ -671,29 +671,26 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       if let Some(target) =
         self.generate_finalized_simple_assignment_target_for_reference(&prop.binding)
       {
+        let binding = if let Some(init) = prop.init.take() {
+          ast::AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
+            self.snippet.builder.alloc_assignment_target_with_default(
+              Span::default(),
+              ast::AssignmentTarget::from(target),
+              init,
+            ),
+          )
+        } else {
+          ast::AssignmentTargetMaybeDefault::from(target)
+        };
         *property = ast::AssignmentTargetProperty::AssignmentTargetPropertyProperty(
-          ast::AssignmentTargetPropertyProperty {
-            name: ast::PropertyKey::StaticIdentifier(
+          self.snippet.builder.alloc_assignment_target_property_property(
+            Span::default(),
+            ast::PropertyKey::StaticIdentifier(
               self.snippet.id_name(&prop.binding.name, prop.span).into_in(self.alloc),
             ),
-            binding: if let Some(init) = prop.init.take() {
-              ast::AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
-                ast::AssignmentTargetWithDefault {
-                  binding: ast::AssignmentTarget::from(target),
-                  init,
-                  span: Span::default(),
-                  ..ast::AssignmentTargetWithDefault::dummy(self.alloc)
-                }
-                .into_in(self.alloc),
-              )
-            } else {
-              ast::AssignmentTargetMaybeDefault::from(target)
-            },
-            span: Span::default(),
-            computed: false,
-            ..ast::AssignmentTargetPropertyProperty::dummy(self.alloc)
-          }
-          .into_in(self.alloc),
+            binding,
+            false,
+          ),
         );
       } else {
         prop.binding.reference_id.get_mut().take();

@@ -217,6 +217,29 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     })
   }
 
+  /// Lazy barrel must not skip any of an entry's re-exports — an entry has to
+  /// preserve all of its exports. Request `All` from it: if it has already been
+  /// loaded as a barrel, load its remaining (deferred) records now; otherwise
+  /// record the request so they get loaded once it finishes loading.
+  #[expect(clippy::rc_buffer)]
+  fn request_all_exports_for_entry(
+    &mut self,
+    idx: ModuleIdx,
+    user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
+  ) {
+    if let Some(barrel_module_state) = self.cache.barrel_state.barrel_infos.get(&idx) {
+      // If the module is already a barrel module, we need to load its remaining re-export import records
+      if barrel_module_state.is_some() {
+        self.process_barrel_import_record(
+          &mut VecDeque::from_iter([(idx, ImportedExports::All)]),
+          user_defined_entries,
+        );
+      }
+    } else {
+      self.cache.barrel_state.requested_exports.insert(idx, ImportedExports::All);
+    }
+  }
+
   #[expect(clippy::rc_buffer)]
   fn try_spawn_new_task(
     &mut self,
@@ -229,17 +252,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let idx = match self.cache.module_id_to_idx.get(&resolved_id.id).copied() {
       Some(VisitState::Seen(idx)) => {
         if self.flat_options.is_lazy_barrel_enabled() && owner.is_none() {
-          if let Some(barrel_module_state) = self.cache.barrel_state.barrel_infos.get(&idx) {
-            // If the module is already a barrel module, we need to load its remaining re-export import records
-            if barrel_module_state.is_some() {
-              self.process_barrel_import_record(
-                &mut VecDeque::from_iter([(idx, ImportedExports::All)]),
-                user_defined_entries,
-              );
-            }
-          } else {
-            self.cache.barrel_state.requested_exports.insert(idx, ImportedExports::All);
-          }
+          self.request_all_exports_for_entry(idx, user_defined_entries);
         }
         return idx;
       }
@@ -263,6 +276,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         idx
       }
     };
+    if self.flat_options.is_lazy_barrel_enabled() && owner.is_none() {
+      self.request_all_exports_for_entry(idx, user_defined_entries);
+    }
     let ctx = Arc::clone(&self.shared_context);
     if resolved_id.external.is_external() {
       let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));

@@ -15,6 +15,9 @@ pub struct InvalidAnnotation {
   pub source: ArcStr,
   /// Span of the comment within the module source.
   pub span: Span,
+  /// Whether the annotation appears immediately before a function declaration.
+  /// When true, an additional hint suggests using `@__NO_SIDE_EFFECTS__`.
+  pub is_before_function_declaration: bool,
 }
 
 impl BuildEvent for InvalidAnnotation {
@@ -43,6 +46,12 @@ impl BuildEvent for InvalidAnnotation {
       self.span.start..self.span.end,
       String::from("comment ignored due to position"),
     );
+
+    if self.is_before_function_declaration {
+      diagnostic.add_help(String::from(
+        "If you intended to mark all calls of this function as side-effect-free, use `/* @__NO_SIDE_EFFECTS__ */` before the function declaration.",
+      ));
+    }
 
     diagnostic.add_help(String::from("For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure"));
   }

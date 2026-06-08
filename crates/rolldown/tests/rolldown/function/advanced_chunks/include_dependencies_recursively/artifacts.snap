@@ -3,10 +3,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
+## chunk.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as __esmMin } from "./chunk.js";
 import { n as init_foo, t as foo } from "./vendor.js";
 import nodeAssert from "node:assert";
 //#endregion
@@ -17,18 +25,10 @@ __esmMin((() => {
 
 ```
 
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
-
-```
-
 ## vendor.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as __esmMin } from "./chunk.js";
 //#region bar.js
 var init_bar = __esmMin((() => {}));
 //#endregion

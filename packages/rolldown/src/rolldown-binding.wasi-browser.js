@@ -43,7 +43,7 @@ const {
     })
     worker.addEventListener('message', __wasmCreateOnMessageForFsProxy(__fs))
 
-    worker.addEventListener('error', (event) => {
+    worker.addEventListener('message', (event) => {
       if (event.data && typeof event.data === 'object' && event.data.type === 'error') {
         window.dispatchEvent(new CustomEvent('napi-rs-worker-error', { detail: event.data }))
       }

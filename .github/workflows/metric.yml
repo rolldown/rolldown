@@ -24,7 +24,7 @@ jobs:
       binary_size: ${{ steps.run.outputs.BINARY_SIZE }}
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+      - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           cache-key: metric
           save-cache: ${{ github.ref_name == 'main' }}
@@ -49,14 +49,14 @@ jobs:
     runs-on: namespace-profile-linux-x64-default
     steps:
       - name: Checkout rolldown metric repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: 'rolldown/metric'
           ref: 'main'
           token: ${{ secrets.METRIC_SECRET_KEY }}
           persist-credentials: true # required by `git push` below
 
-      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:
           cache: true
 

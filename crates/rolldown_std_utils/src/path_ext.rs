@@ -65,6 +65,10 @@ pub fn representative_file_name_for_preserve_modules(
   (file_name, ab_path, path.extension().map(|item| item.to_string_lossy()))
 }
 
+pub fn strip_path_prefix_to_slash(path: &Path, prefix: &Path) -> Option<String> {
+  path.strip_prefix(prefix).ok().map(PathExt::expect_to_slash)
+}
+
 #[test]
 fn test_representative_file_name() {
   let cwd = Path::new(".").join("project");
@@ -89,4 +93,23 @@ fn test_representative_file_name() {
     let path = cwd.join("src").join("vue.js");
     assert_eq!(representative_file_name_for_preserve_modules(&path).1, "./project/src/vue");
   }
+}
+
+#[test]
+fn test_strip_path_prefix_to_slash() {
+  let path = Path::new("/project/src/bin/index");
+  let prefix = Path::new("/project/src");
+  assert_eq!(strip_path_prefix_to_slash(path, prefix).as_deref(), Some("bin/index"));
+
+  let path = Path::new("/project/src2/bin/index");
+  let prefix = Path::new("/project/src");
+  assert_eq!(strip_path_prefix_to_slash(path, prefix), None);
+}
+
+#[cfg(target_os = "windows")]
+#[test]
+fn test_strip_path_prefix_to_slash_with_mixed_windows_separators() {
+  let path = Path::new(r"C:/project/src/bin/index");
+  let prefix = Path::new(r"C:\project\src");
+  assert_eq!(strip_path_prefix_to_slash(path, prefix).as_deref(), Some("bin/index"));
 }

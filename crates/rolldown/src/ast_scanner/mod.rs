@@ -152,6 +152,9 @@ pub struct AstScanner<'me, 'ast> {
   cur_class_decl: Option<SymbolId>,
   visit_path: Vec<AstKind<'ast>>,
   scope_stack: Vec<ScopeFlags>,
+  /// Reused scratch buffer for building facade namespace symbol names in `add_import_record`,
+  /// so each import record doesn't allocate a fresh `String` just to hand a `&str` to oxc.
+  namespace_name_buf: String,
   dynamic_import_usage_info: DynamicImportUsageInfo,
   /// "top level" `this` AstNode range in source code
   top_level_this_expr_set: FxHashSet<Span>,
@@ -253,6 +256,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       cur_class_decl: None,
       visit_path: vec![],
       scope_stack: vec![],
+      namespace_name_buf: String::new(),
       dynamic_import_usage_info: DynamicImportUsageInfo::default(),
       top_level_this_expr_set: FxHashSet::default(),
       is_nested_this_inside_class: false,
@@ -492,12 +496,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // If 'foo' in `import ... from 'foo'` is finally a commonjs module, we will convert the import statement
     // to `var import_foo = __toESM(require_foo())`, so we create a symbol for `import_foo` here. Notice that we
     // just create the symbol. If the symbol is finally used would be determined in the linking stage.
+    self.namespace_name_buf.clear();
+    self.namespace_name_buf.push_str("#LOCAL_NAMESPACE_IN_");
+    self.namespace_name_buf.push_str(itoa::Buffer::new().format(self.current_stmt_idx.raw()));
+    self.namespace_name_buf.push('#');
     let namespace_ref: SymbolRef =
-      self.result.symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(
-        "#LOCAL_NAMESPACE_IN_",
-        itoa::Buffer::new().format(self.current_stmt_idx.raw()),
-        "#"
-      ));
+      self.result.symbol_ref_db.create_facade_root_symbol_ref(&self.namespace_name_buf);
     let rec = RawImportRecord::new(
       CompactStr::from(module_request),
       kind,

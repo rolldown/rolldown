@@ -362,7 +362,6 @@
 
 ### The error/warning not implement
  - rollup@hooks@Throws when using the "sourcemapFile" option for multiple chunks (`INVALID_OPTION` error)
- - rollup@function@transform-without-sourcemap-render-chunk: preserves sourcemap chains when transforming (`SOURCEMAP_BROKEN` warning)
  - rollup@function@non-function-hook-async: throws when providing a value for an async function hook (expected `INVALID_PLUGIN_HOOK` error, but got `PLUGIN_ERROR`)
  - rollup@function@non-function-hook-sync: throws when providing a value for a sync function hook (`INVALID_PLUGIN_HOOK` error)
  - rollup@function@export-type-mismatch-b: export type must be auto, default, named or none (expected `INVALID_EXPORT_OPTION` error, but got `InvalidArg`)

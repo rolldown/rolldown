@@ -114,12 +114,6 @@ pub enum ImportStatus {
     commonjs_symbol: SymbolRef,
   },
 
-  /// The import was treated as a CommonJS import but the file is known to have no exports
-  _CommonJSWithoutExports,
-
-  /// The imported file was disabled by mapping it to false in the "browser" field of package.json
-  _Disabled,
-
   /// The imported file is external and has unknown exports
   External(SymbolRef),
 }
@@ -432,10 +426,20 @@ impl LinkStage<'_> {
                 // (or worse, an inlined constant) is unsound and would crash the finalizer.
                 // Also skip all reads from a JSON default object that has any member write,
                 // because the split `foo` export no longer reflects `data.foo` after mutation.
+                // Finally, skip when the first prop is `"default"`: `data` is already the
+                // default export value, and the JSON module's `"default"` named export points
+                // to that same symbol, so the optimization would resolve `.default` to `data`
+                // itself and silently drop the access. Since JSON resolution is single-level,
+                // gating at setup is sufficient — the loop never re-enters for a JSON module
+                // after the first iteration.
                 let is_json_import_ns = matches!(canonical_ref_owner.module_type, ModuleType::Json)
                   && member_expr_ref.object_ref_type == MemberExprObjectReferencedType::Default
                   && !member_expr_ref.is_write
-                  && !json_default_imports_with_member_write.contains(&canonical_ref);
+                  && !json_default_imports_with_member_write.contains(&canonical_ref)
+                  && member_expr_ref
+                    .prop_and_span_list
+                    .first()
+                    .is_none_or(|prop| prop.name.as_str() != "default");
                 let mut is_namespace_ref =
                   canonical_ref_owner.namespace_object_ref == canonical_ref || is_json_import_ns;
                 let mut cursor = 0;
@@ -479,10 +483,7 @@ impl LinkStage<'_> {
                     }
                     break;
                   };
-                  if !meta
-                    .sorted_and_non_ambiguous_resolved_exports
-                    .contains_key(&CompactStr::new(name))
-                  {
+                  if !meta.sorted_and_non_ambiguous_resolved_exports.contains_key(name) {
                     resolved_map.insert(
                       member_expr_ref.span,
                       MemberExprRefResolution {
@@ -821,6 +822,11 @@ impl BindImportsAndExportsContext<'_> {
       return;
     };
     let is_esm = matches!(self.options.format, OutputFormat::Esm);
+    // Reused across all named imports of this module. `match_import_with_export` always starts
+    // from an empty stack (and the ambiguous-reexport recursion gets its own cloned stack), so
+    // clearing before each call preserves behavior while reusing this allocation instead of
+    // allocating a fresh `Vec` per import.
+    let mut matching_ctx = MatchingContext { tracker_stack: Vec::new() };
     for (imported_as_ref, named_import) in &module.named_imports {
       let match_import_span = tracing::trace_span!(
         "MATCH_IMPORT",
@@ -859,9 +865,10 @@ impl BindImportsAndExportsContext<'_> {
           Specifier::Literal(_) => {}
         }
       }
+      matching_ctx.tracker_stack.clear();
       let ret = self.match_import_with_export(
         self.index_modules,
-        &mut MatchingContext { tracker_stack: Vec::default() },
+        &mut matching_ctx,
         ImportTracker {
           importer: module_idx,
           importee: resolved_module_idx,
@@ -1158,12 +1165,6 @@ impl BindImportsAndExportsContext<'_> {
           }
 
           break MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports });
-        }
-        ImportStatus::_CommonJSWithoutExports => {
-          panic!("`ImportStatus::_CommonJSWithoutExports` is not implemented yet")
-        }
-        ImportStatus::_Disabled => {
-          panic!("`ImportStatus::_Disabled` is not implemented yet")
         }
         ImportStatus::External(symbol_ref) => {
           if self.options.format.keep_esm_import_export_syntax() {

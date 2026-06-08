@@ -126,27 +126,27 @@ fn render_chunk_content<'code>(
       }
       continue;
     }
-    let (hoisted_fns, hoisted_vars) = group
-      .modules
-      .iter()
-      .filter_map(|idx| {
-        let render_concatenated_module =
-          ctx.chunk.module_idx_to_render_concatenated_module.get(idx)?;
-        let hoisted_fns = render_concatenated_module.hoisted_functions_or_module_ns_decl.join("");
-        let hoisted_vars = render_concatenated_module.hoisted_vars.join(", ");
-        Some((hoisted_fns, hoisted_vars))
-      })
-      .fold(
-        (String::new(), String::new()),
-        |(mut acc_hoisted_fns, mut acc_hoisted_vars), (hoisted_fn, hoisted_vars)| {
-          acc_hoisted_fns += &hoisted_fn;
-          if !hoisted_vars.is_empty() && !acc_hoisted_vars.is_empty() {
-            acc_hoisted_vars += ", ";
-          }
-          acc_hoisted_vars += &hoisted_vars;
-          (acc_hoisted_fns, acc_hoisted_vars)
-        },
-      );
+    // Concatenate hoisted functions and comma-join hoisted vars across the group's modules by
+    // appending each element directly into the accumulators, instead of allocating a temporary
+    // joined `String` per module just to append it.
+    let mut hoisted_fns = String::new();
+    let mut hoisted_vars = String::new();
+    for idx in &group.modules {
+      let Some(render_concatenated_module) =
+        ctx.chunk.module_idx_to_render_concatenated_module.get(idx)
+      else {
+        continue;
+      };
+      for hoisted_fn in &render_concatenated_module.hoisted_functions_or_module_ns_decl {
+        hoisted_fns.push_str(hoisted_fn);
+      }
+      for hoisted_var in &render_concatenated_module.hoisted_vars {
+        if !hoisted_vars.is_empty() {
+          hoisted_vars.push_str(", ");
+        }
+        hoisted_vars.push_str(hoisted_var);
+      }
+    }
 
     let entry_module_stable_id = ctx.link_output.module_table[group.entry].stable_id();
     // render var init_entry = __esm("", () => {

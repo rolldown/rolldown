@@ -33,7 +33,7 @@ jobs:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           submodules: true
           fetch-depth: 0
@@ -99,14 +99,14 @@ jobs:
 
       - name: Setup Rust
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           tools: just
           cache-key: native-build
           save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+        uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:
           cache: true
 
@@ -158,7 +158,7 @@ jobs:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           submodules: true
           fetch-depth: 0
@@ -218,14 +218,14 @@ jobs:
 
       - name: Setup Rust
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           tools: just
           cache-key: native-build
           save-cache: false
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+        uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:
           cache: true
 
@@ -274,7 +274,7 @@ jobs:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: true # for create-pull-request
 
@@ -327,7 +327,7 @@ jobs:
       # as this step will call `git restore .` which will reset the changes to urls.ts
       - name: Setup Rust
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-rust@23f38cfb0c04af97a055f76acee94d5be71c7c82 # v1.0.16
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
         with:
           tools: just
           cache-key: native-build
@@ -345,7 +345,7 @@ jobs:
           grep "const ESBUILD_VERSION = " scripts/src/esbuild-tests/urls.ts
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+        uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:
           cache: true
 

@@ -88,9 +88,11 @@ pub fn render_chunk_exports(
   let GenerateContext { chunk, link_output, options, .. } = ctx;
   let mut export_items: Vec<(CompactStr, SymbolRef)> = ctx.render_export_items_index_vec
     [ctx.chunk_idx]
-    .clone()
-    .into_iter()
-    .flat_map(|(symbol_ref, names)| names.into_iter().map(move |name| (name, symbol_ref)))
+    .iter()
+    .flat_map(|(symbol_ref, names)| {
+      let symbol_ref = *symbol_ref;
+      names.iter().map(move |name| (name.clone(), symbol_ref))
+    })
     .collect();
 
   match options.format {
@@ -121,15 +123,13 @@ pub fn render_chunk_exports(
               .symbol_db
               .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
             let property_name = &ns_alias.property_name;
-            s.push_str(&concat_string!(
-              "var ",
-              canonical_name,
-              " = ",
-              canonical_ns_name,
-              ".",
-              property_name,
-              ";\n"
-            ));
+            s.push_str("var ");
+            s.push_str(canonical_name);
+            s.push_str(" = ");
+            s.push_str(canonical_ns_name);
+            s.push('.');
+            s.push_str(property_name);
+            s.push_str(";\n");
           }
 
           if canonical_name == exported_name {
@@ -143,7 +143,14 @@ pub fn render_chunk_exports(
           }
         })
         .collect::<Vec<_>>();
-      s.push_str(&concat_string!("export { ", rendered_items.join(", "), " };"));
+      s.push_str("export { ");
+      for (i, item) in rendered_items.iter().enumerate() {
+        if i > 0 {
+          s.push_str(", ");
+        }
+        s.push_str(item);
+      }
+      s.push_str(" };");
       Some(s)
     }
     OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {

@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/browser",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
     "bundler",
@@ -39,14 +39,19 @@
       "browser": "./dist/experimental-index.browser.mjs",
       "default": "./dist/experimental-index.mjs"
     },
+    "./experimental/runtime-types": {
+      "types": "./dist/experimental-runtime-types.d.ts"
+    },
     "./plugins": {
       "browser": "./dist/plugins-index.browser.mjs",
       "default": "./dist/plugins-index.mjs"
     },
     "./filter": "./dist/filter-index.mjs",
+    "./getLogFilter": "./dist/get-log-filter.mjs",
     "./parallelPlugin": "./dist/parallel-plugin.mjs",
     "./parseAst": "./dist/parse-ast-index.mjs",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./utils": "./dist/utils-index.mjs"
   },
   "publishConfig": {
     "access": "public",

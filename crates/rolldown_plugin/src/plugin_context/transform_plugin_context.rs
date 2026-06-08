@@ -3,7 +3,7 @@ use std::{ops::Deref, sync::Arc};
 use crate::PluginContext;
 use arcstr::ArcStr;
 use rolldown_common::{ModuleIdx, PluginIdx, SourceMapGenMsg, SourcemapChainElement};
-use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
+use rolldown_sourcemap::{SourceMap, collapse_sourcemaps, empty_sourcemap};
 use rolldown_utils::unique_arc::WeakRef;
 use std::sync::mpsc;
 use string_wizard::{MagicString, SourceMapOptions};
@@ -34,23 +34,21 @@ impl TransformPluginContext {
 
   pub fn get_combined_sourcemap(&self) -> SourceMap {
     self.sourcemap_chain.with_inner(|sourcemap_chain| {
-      if sourcemap_chain.is_empty() {
-        self.create_sourcemap()
-      } else if sourcemap_chain.len() == 1 {
-        match sourcemap_chain.first().expect("should have one sourcemap") {
+      let empty_map = empty_sourcemap();
+      let chain: Vec<&SourceMap> = sourcemap_chain
+        .iter()
+        .filter_map(|element| match element {
           SourcemapChainElement::Transform((_, sourcemap))
-          | SourcemapChainElement::Load(sourcemap) => sourcemap.clone(),
-        }
-      } else {
-        let sourcemap_chain = sourcemap_chain
-          .iter()
-          .map(|element| match element {
-            SourcemapChainElement::Transform((_, sourcemap))
-            | SourcemapChainElement::Load(sourcemap) => sourcemap,
-          })
-          .collect::<Vec<_>>();
+          | SourcemapChainElement::Load(sourcemap) => Some(sourcemap),
+          SourcemapChainElement::Omitted { .. } => Some(&empty_map),
+          SourcemapChainElement::Null { .. } => None,
+        })
+        .collect();
+      match chain.as_slice() {
+        [] => self.create_sourcemap(),
+        [single] => (*single).clone(),
         // TODO Here could be cache result for pervious sourcemap_chain, only remapping new sourcemap chain
-        collapse_sourcemaps(&sourcemap_chain)
+        _ => collapse_sourcemaps(&chain),
       }
     })
   }
@@ -93,6 +91,7 @@ impl TransformPluginContext {
       tx.send(SourceMapGenMsg::MagicString(Box::new((
         self.module_idx,
         self.plugin_idx,
+        self.id.clone(),
         magic_string,
       ))))
       .map(|()| None)

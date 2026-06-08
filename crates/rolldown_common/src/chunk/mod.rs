@@ -16,7 +16,7 @@ pub mod types;
 
 use arcstr::ArcStr;
 use oxc_str::CompactStr;
-use rolldown_std_utils::PathExt;
+use rolldown_std_utils::{PathExt, strip_path_prefix_to_slash};
 use rolldown_utils::{
   BitSet,
   dashmap::FxDashMap,
@@ -80,7 +80,7 @@ pub struct Chunk {
   /// For mixed-mode externals: maps external `namespace_ref` to the node-mode binding name.
   /// Only populated when an external has both ESM and non-ESM importers needing interop.
   pub node_mode_external_ns_names: FxHashMap<SymbolRef, CompactStr>,
-  // Sorted by Module#stable_id of modules in the chunk
+  // Sorted by Chunk#exec_order of the imported chunks
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
   pub bits: BitSet,
@@ -245,10 +245,12 @@ impl Chunk {
     let p = PathBuf::from(chunk_name);
     let p = if p.is_absolute() {
       if let Some(ref preserve_modules_root) = options.preserve_modules_root {
-        if chunk_name.starts_with(preserve_modules_root) {
-          return Cow::Borrowed(
-            chunk_name[preserve_modules_root.len()..].trim_start_matches(['/', '\\']),
-          );
+        // See meta/design/module-id.md: output paths may normalize separators even when module
+        // ids keep native separators.
+        if let Some(relative_path) =
+          strip_path_prefix_to_slash(chunk_name.as_path(), preserve_modules_root.as_path())
+        {
+          return Cow::Owned(relative_path);
         }
       }
       p.relative(self.input_base.as_str())

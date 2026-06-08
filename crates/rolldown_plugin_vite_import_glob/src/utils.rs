@@ -50,6 +50,7 @@ pub struct ImportGlobOptions {
   base: Option<String>,
   query: Option<String>,
   import: Option<String>,
+  case_sensitive: Option<bool>,
 }
 
 struct ImportGlobFileData {
@@ -455,6 +456,21 @@ impl GlobImportVisit<'_> {
       return Some(());
     }
 
+    let case_sensitive = options.case_sensitive.unwrap_or(true);
+    // `fast_glob` has no case-insensitive flag, so we approximate it by lowercasing
+    // both the glob (base + pattern) and the candidate path before matching. This
+    // matches picomatch's `nocase` for ASCII; it may diverge on character-class
+    // ranges (e.g. `[A-Z]`) or non-ASCII case folding, which is acceptable here.
+    let insensitive_globs = (!case_sensitive).then(|| {
+      let lower = |globs: &[PathWithGlob]| {
+        globs
+          .iter()
+          .map(|glob| (glob.path.to_lowercase(), glob.glob.to_lowercase()))
+          .collect::<Vec<_>>()
+      };
+      (lower(&negated_globs), lower(&positive_globs))
+    });
+
     if is_virtual_module && is_relative && options.base.as_ref().is_none() {
       self.errors.push(anyhow::anyhow!("In virtual modules, all globs must start with '/'"));
       return None;
@@ -486,10 +502,23 @@ impl GlobImportVisit<'_> {
         continue;
       }
 
-      let matches_rule = |v: &PathWithGlob| -> bool {
-        path.strip_prefix(&v.path).map(|path| fast_glob::glob_match(v.glob, path)).unwrap_or(false)
+      let matches = match &insensitive_globs {
+        None => {
+          let matches_rule = |v: &PathWithGlob| -> bool {
+            path.strip_prefix(&v.path).is_some_and(|path| fast_glob::glob_match(v.glob, path))
+          };
+          !negated_globs.iter().any(matches_rule) && positive_globs.iter().any(matches_rule)
+        }
+        Some((negated, positive)) => {
+          let path = path.to_lowercase();
+          let matches_rule = |(base, glob): &(String, String)| -> bool {
+            path.strip_prefix(base).is_some_and(|path| fast_glob::glob_match(glob, path))
+          };
+          !negated.iter().any(matches_rule) && positive.iter().any(matches_rule)
+        }
       };
-      if negated_globs.iter().any(matches_rule) || !positive_globs.iter().any(matches_rule) {
+
+      if !matches {
         continue;
       }
 
@@ -568,6 +597,11 @@ impl GlobImportVisit<'_> {
         "exhaustive" => {
           if let Expression::BooleanLiteral(bool) = &p.value {
             options.exhaustive = bool.value;
+          }
+        }
+        "caseSensitive" => {
+          if let Expression::BooleanLiteral(bool) = &p.value {
+            options.case_sensitive = Some(bool.value);
           }
         }
         "query" => match &p.value {

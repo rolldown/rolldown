@@ -1,4 +1,68 @@
 
+## [1.1.0] - 2026-06-03
+
+### 🚀 Features
+
+- enable `experimental.lazyBarrel` by default (#9632) by @shulaoda
+- `import.meta.glob` support `caseSensitive` option (#9594) by @btea
+- add `SOURCEMAP_BROKEN` warning for renderChunk hook (#9601) by @sapphi-red
+- add `SOURCEMAP_BROKEN` warning for transform hook (#9600) by @sapphi-red
+- add `@__NO_SIDE_EFFECTS__` hint for invalid `@__PURE__` before function declarations (#9505) by @Copilot
+- code-splitting: support group-local `includeDependenciesRecursively` (#9587) by @hyf0
+
+### 🐛 Bug Fixes
+
+- report TSCONFIG_ERROR instead of UNHANDLEABLE_ERROR for a missing tsconfig file (#9633) by @shulaoda
+- browser: add missing exports and ensure consistency with `rolldown` package (#9629) by @sapphi-red
+- should build test-dev-server when test-node (#9610) by @situ2001
+- chunk-optimizer: refuse asymmetric merge for cyclic dynamic entries (#9320) (#9322) by @aminpaks
+- dev: handle the remaining errors in dev (#9570) by @h-a-n-a
+- handle slash-normalized ids with preserveModulesRoot (#9595) by @IWANABETHATGUY
+- json: preserve .default access on JSON default imports (#9568) by @IWANABETHATGUY
+- testing: remove unintended trigger_full_build from test harness (#9573) by @hyf0
+
+### 🚜 Refactor
+
+- js-regex: use regress native replace/replace_all (#9607) by @IWANABETHATGUY
+- remove never-constructed `ImportStatus` variants (#9606) by @Boshen
+
+### 📚 Documentation
+
+- clarify that `RolldownBuild::close` method should be called in most cases (#9619) by @sapphi-red
+
+### ⚡ Performance
+
+- avoid unnecessary intermediate sourcemaps (#9599) by @sapphi-red
+
+### 🧪 Testing
+
+- add unit test for collapsing module sourcemap (#9626) by @sapphi-red
+- cover vite-alias regex capture-group expansion (#9602) (#9608) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update oxc_resolver to 11.21.0 (#9634) by @shulaoda
+- update invalid option diagnostic link to point to Rolldown docs (#9631) by @sapphi-red
+- deps: update vite+ to v0.1.24 (#9628) by @renovate[bot]
+- deps: update oxc resolver to v11.20.0 (#9549) by @renovate[bot]
+- deps: update dependency vite-plus to v0.1.24 (#9470) by @renovate[bot]
+- deps: update npm packages (#9614) by @renovate[bot]
+- deps: upgrade oxc to 0.134.0 (#9625) by @shulaoda
+- deps: update crate-ci/typos action to v1.47.0 (#9620) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.61.0 (#9623) by @rolldown-guard[bot]
+- deps: update github actions (#9613) by @renovate[bot]
+- deps: update pnpm to v11.4.0 (#9616) by @renovate[bot]
+- deps: update rust crates (#9615) by @renovate[bot]
+- deps: update test262 submodule for tests (#9624) by @rolldown-guard[bot]
+- deps: update dependency @napi-rs/cli to v3.7.0 (#9588) by @renovate[bot]
+- deps: update dependency rust to v1.96.0 (#9596) by @renovate[bot]
+- re-enable WASI testing with proper infrastructure (#9397) by @Boshen
+
+### ❤️ New Contributors
+
+* @aminpaks made their first contribution in [#9322](https://github.com/rolldown/rolldown/pull/9322)
+
+
 ## [1.0.3] - 2026-05-27
 
 ### 🚀 Features

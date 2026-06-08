@@ -49,9 +49,6 @@ impl GenerateStage<'_> {
       .sum::<usize>()
       .try_into()
       .expect("Too many entries, u32 overflowed.");
-    // If we are in test environment, to make the runtime module always fall into a standalone chunk,
-    // we create a facade entry point for it.
-
     let mut chunk_graph = ChunkGraph::new(self.link_output.module_table.modules.len());
     chunk_graph.chunk_table.chunks.reserve(entries_len as usize);
 
@@ -845,6 +842,9 @@ impl GenerateStage<'_> {
       );
     }
 
+    let mut module_is_assigned: IndexBitSet<ModuleIdx> =
+      IndexBitSet::new(self.link_output.module_table.modules.len());
+
     let has_tla_or_tla_dependency =
       self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
     let allow_merge_common_chunks =
@@ -864,9 +864,12 @@ impl GenerateStage<'_> {
         .expect("Too many entries, u32 overflowed.");
       self.optimize_dynamic_entry_bits(index_splitting_info, chunk_graph, entries_len);
     }
-
-    let mut module_is_assigned: IndexBitSet<ModuleIdx> =
-      IndexBitSet::new(self.link_output.module_table.modules.len());
+    self.extract_standalone_runtime_chunk(
+      index_splitting_info,
+      &mut module_is_assigned,
+      chunk_graph,
+      input_base,
+    );
 
     self
       .apply_manual_code_splitting(
@@ -964,7 +967,47 @@ impl GenerateStage<'_> {
       );
     }
 
+    self.try_merge_runtime_chunk(chunk_graph, None);
+
     Ok(())
+  }
+
+  pub(super) fn extract_standalone_runtime_chunk(
+    &self,
+    index_splitting_info: &IndexSplittingInfo,
+    module_is_assigned: &mut IndexBitSet<ModuleIdx>,
+    chunk_graph: &mut ChunkGraph,
+    input_base: &ArcStr,
+  ) -> Option<ChunkIdx> {
+    let runtime_module_idx = self.link_output.runtime.id();
+    if self.options.code_splitting.is_disabled()
+      || !self.link_output.metas[runtime_module_idx].is_included
+      || module_is_assigned.has_bit(runtime_module_idx)
+    {
+      return None;
+    }
+
+    debug_assert!(
+      matches!(&self.link_output.module_table[runtime_module_idx], Module::Normal(_)),
+      "rolldown runtime is always a normal module"
+    );
+
+    // See meta/design/code-splitting.md#runtime-module-placement.
+    let bits = &index_splitting_info[runtime_module_idx].bits;
+    let mut runtime_chunk =
+      Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);
+    runtime_chunk.add_creation_reason(
+      ChunkCreationReason::CommonChunk { bits, link_output: self.link_output },
+      self.options,
+    );
+    let runtime_chunk_idx = chunk_graph.add_chunk(runtime_chunk);
+    chunk_graph.add_module_to_chunk(
+      runtime_module_idx,
+      runtime_chunk_idx,
+      self.link_output.metas[runtime_module_idx].depended_runtime_helper,
+    );
+    module_is_assigned.set_bit(runtime_module_idx);
+    Some(runtime_chunk_idx)
   }
 
   fn determine_reachable_modules_for_entry(

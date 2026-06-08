@@ -126,18 +126,18 @@ load();
 ### imp.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+const require_main = require("./main.js");
 //#region imp1.js
-var imp1_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ imp1: () => 1 });
+var imp1_exports = /* @__PURE__ */ require_main.__exportAll({ imp1: () => 1 });
 //#endregion
 //#region imp2.js
-var imp2_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
+var imp2_exports = /* @__PURE__ */ require_main.__exportAll({
 	imp2: () => 2,
 	imp22: () => 22
 });
 //#endregion
 //#region imp3.js
-var imp3_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
+var imp3_exports = /* @__PURE__ */ require_main.__exportAll({
 	imp3: () => 3,
 	imp33: () => 33
 });
@@ -166,9 +166,10 @@ Object.defineProperty(exports, "imp3_exports", {
 ### main.js
 
 ```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
-node_assert = require_rolldown_runtime.__toESM(node_assert);
+node_assert = __toESM(node_assert);
 //#region main.js
 const load = async () => {
 	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp1_exports).then((m) => {
@@ -186,24 +187,6 @@ const load = async () => {
 };
 load();
 //#endregion
-
-```
-
-### rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__exportAll", {
-	enumerable: true,
-	get: function() {
-		return __exportAll;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
+exports.__exportAll = __exportAll;
 
 ```

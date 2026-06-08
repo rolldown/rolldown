@@ -228,6 +228,32 @@ isTypeTrue<
   IsSchemaSubType<typeof TransformPluginsSchema, Exclude<TransformOptions['plugins'], undefined>>
 >();
 
+const ReactCompilerOptionsSchema = v.object({
+  compilationMode: v.optional(
+    v.union([v.literal('infer'), v.literal('syntax'), v.literal('annotation'), v.literal('all')]),
+  ),
+  panicThreshold: v.optional(
+    v.union([v.literal('none'), v.literal('critical_errors'), v.literal('all_errors')]),
+  ),
+  target: v.optional(v.union([v.literal('17'), v.literal('18'), v.literal('19')])),
+  noEmit: v.optional(v.boolean()),
+  outputMode: v.optional(v.union([v.literal('client'), v.literal('ssr'), v.literal('lint')])),
+  ignoreUseNoForget: v.optional(v.boolean()),
+  flowSuppressions: v.optional(v.boolean()),
+  enableReanimated: v.optional(v.boolean()),
+  isDev: v.optional(v.boolean()),
+  filename: v.optional(v.string()),
+  eslintSuppressionRules: v.optional(v.array(v.string())),
+  customOptOutDirectives: v.optional(v.array(v.string())),
+  gating: v.optional(
+    v.object({
+      source: v.string(),
+      importSpecifierName: v.string(),
+    }),
+  ),
+  dynamicGating: v.optional(v.object({ source: v.string() })),
+});
+
 const TransformOptionsSchema = v.object({
   assumptions: v.optional(AssumptionsSchema),
   typescript: v.optional(TypescriptSchema),
@@ -259,6 +285,7 @@ const TransformOptionsSchema = v.object({
     v.description('Remove labeled statements with these label names'),
   ),
   plugins: v.pipe(v.optional(TransformPluginsSchema), v.description('Third-party plugins to use')),
+  reactCompiler: v.optional(v.union([v.boolean(), ReactCompilerOptionsSchema])),
 });
 isTypeTrue<IsSchemaSubType<typeof TransformOptionsSchema, TransformOptions>>();
 
@@ -421,6 +448,12 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description(
       'Whether to emit info logs when a barrel module has a very large number of re-exports (more than 5000)',
+    ),
+  ),
+  sourcemapBroken: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a plugin transforms code without generating a sourcemap',
     ),
   ),
 });
@@ -828,6 +861,7 @@ const AdvancedChunksSchema = v.strictObject({
         maxModuleSize: v.optional(v.number()),
         entriesAware: v.optional(v.boolean()),
         entriesAwareMergeThreshold: v.optional(v.number()),
+        includeDependenciesRecursively: v.optional(v.boolean()),
         tags: v.optional(v.array(v.string())),
       }),
     ),

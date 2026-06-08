@@ -1,0 +1,17 @@
+{
+  "_comment": "Two entries where `main` reads `lib`'s exports and independently pulls runtime helpers, so the runtime is a candidate to fold into the `lib` entry chunk. The runtime-merge signature guard must respect `preserveEntrySignatures`: for `strict` (and the default `exports-only`, since lib declares exports) it must keep the runtime — and thus its helpers — out of lib's public exports; for `allow-extension` the merge is allowed and helpers become extension exports on lib. The `strict`/`allow-extension` cases are covered explicitly via `configVariants`, so the auto-generated `extendedTests` variants for them are disabled to avoid redundant runs.",
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "lib", "import": "./lib.js" }
+    ],
+    "format": "cjs",
+    "exports": "named",
+    "strictExecutionOrder": true,
+    "minifyInternalExports": false,
+    "preserveEntrySignatures": "strict"
+  },
+  "configVariants": [
+    { "_configName": "allow-extension", "preserveEntrySignatures": "allow-extension" }
+  ]
+}

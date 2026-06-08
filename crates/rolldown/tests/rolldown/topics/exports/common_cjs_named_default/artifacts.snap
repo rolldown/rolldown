@@ -3,21 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## main.js
-
-```js
-const require_rolldown_runtime = require("./rolldown-runtime.js");
-const require_shared$1 = require("./shared.js");
-let node_assert = require("node:assert");
-node_assert = require_rolldown_runtime.__toESM(node_assert);
-//#region main.js
-var import_shared = /* @__PURE__ */ require_rolldown_runtime.__toESM(require_shared$1.require_shared());
-node_assert.default.strictEqual(import_shared.default.value, 42);
-//#endregion
-
-```
-
-## rolldown-runtime.js
+## chunk.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
@@ -36,11 +22,25 @@ Object.defineProperty(exports, "__toESM", {
 
 ```
 
+## main.js
+
+```js
+const require_chunk = require("./chunk.js");
+const require_shared$1 = require("./shared.js");
+let node_assert = require("node:assert");
+node_assert = require_chunk.__toESM(node_assert);
+//#region main.js
+var import_shared = /* @__PURE__ */ require_chunk.__toESM(require_shared$1.require_shared());
+node_assert.default.strictEqual(import_shared.default.value, 42);
+//#endregion
+
+```
+
 ## shared.js
 
 ```js
 //#region shared.js
-var require_shared = /* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports, module) => {
+var require_shared = /* @__PURE__ */ require("./chunk.js").__commonJSMin(((exports, module) => {
 	module.exports = { value: 42 };
 }));
 //#endregion

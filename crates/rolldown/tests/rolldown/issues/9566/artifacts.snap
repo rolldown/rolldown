@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+//#endregion
+//#region main.js
+assert.strictEqual({ "default": { "value": 1 } }.default.value, 1);
+//#endregion
+
+```

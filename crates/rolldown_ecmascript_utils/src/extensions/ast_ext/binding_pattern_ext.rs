@@ -1,9 +1,11 @@
 use oxc::{
-  allocator::{Allocator, Box, Dummy as _, IntoIn as _, TakeIn as _},
-  ast::ast::{
-    ArrayAssignmentTarget, ArrayExpressionElement, AssignmentTarget, AssignmentTargetMaybeDefault,
-    AssignmentTargetRest, AssignmentTargetWithDefault, BindingPattern, Expression,
-    ObjectAssignmentTarget, ObjectPropertyKind, PropertyKind,
+  allocator::{Allocator, TakeIn as _},
+  ast::{
+    AstBuilder,
+    ast::{
+      ArrayExpressionElement, AssignmentTarget, AssignmentTargetMaybeDefault, BindingPattern,
+      Expression, ObjectPropertyKind, PropertyKind,
+    },
   },
   span::SPAN,
 };
@@ -27,59 +29,51 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
       }
       // Turn `var { a, b = 2 } = ...` to `{a, b = 2} = ...`
       BindingPattern::ObjectPattern(mut obj_pat) => {
-        let mut obj_target = ObjectAssignmentTarget {
-          rest: obj_pat.rest.take().map(|rest| {
-            Box::new_in(
-              AssignmentTargetRest {
-                span: rest.span,
-                target: rest.unbox().argument.into_assignment_target(alloc),
-                ..AssignmentTargetRest::dummy(alloc)
-              },
-              alloc,
-            )
-          }),
-          ..ObjectAssignmentTarget::dummy(alloc)
-        };
-        obj_pat.properties.take_in(alloc).into_iter().for_each(|binding_prop| {
-          obj_target.properties.push(binding_prop.into_assignment_target_property(alloc));
+        let builder = AstBuilder::new(alloc);
+        let rest = obj_pat.rest.take().map(|rest| {
+          builder.alloc_assignment_target_rest(
+            rest.span,
+            rest.unbox().argument.into_assignment_target(alloc),
+          )
         });
-        AssignmentTarget::ObjectAssignmentTarget(obj_target.into_in(alloc))
+        let mut properties = builder.vec_with_capacity(obj_pat.properties.len());
+        obj_pat.properties.take_in(alloc).into_iter().for_each(|binding_prop| {
+          properties.push(binding_prop.into_assignment_target_property(alloc));
+        });
+        AssignmentTarget::ObjectAssignmentTarget(
+          builder.alloc_object_assignment_target(SPAN, properties, rest),
+        )
       }
       // Turn `var [a, ,c = 1] = ...` to `[a, ,c = 1] = ...`
       BindingPattern::ArrayPattern(mut arr_pat) => {
-        let mut arr_target = ArrayAssignmentTarget {
-          span: arr_pat.span,
-          rest: arr_pat.rest.take().map(|rest| {
-            Box::new_in(
-              AssignmentTargetRest {
-                span: rest.span,
-                target: rest.unbox().argument.into_assignment_target(alloc),
-                ..AssignmentTargetRest::dummy(alloc)
-              },
-              alloc,
-            )
-          }),
-          elements: oxc::allocator::Vec::with_capacity_in(arr_pat.elements.len(), alloc),
-          ..ArrayAssignmentTarget::dummy(alloc)
-        };
+        let builder = AstBuilder::new(alloc);
+        let rest = arr_pat.rest.take().map(|rest| {
+          builder.alloc_assignment_target_rest(
+            rest.span,
+            rest.unbox().argument.into_assignment_target(alloc),
+          )
+        });
+        let mut elements = builder.vec_with_capacity(arr_pat.elements.len());
         arr_pat.elements.take_in(alloc).into_iter().for_each(|binding_pat| {
-          arr_target.elements.push(binding_pat.map(|binding_pat| match binding_pat {
+          elements.push(binding_pat.map(|binding_pat| match binding_pat {
             BindingPattern::AssignmentPattern(assign_pat) => {
               let assign_pat = assign_pat.unbox();
               AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
-                AssignmentTargetWithDefault {
-                  span: assign_pat.span,
-                  init: assign_pat.right,
-                  binding: assign_pat.left.into_assignment_target(alloc),
-                  ..AssignmentTargetWithDefault::dummy(alloc)
-                }
-                .into_in(alloc),
+                builder.alloc_assignment_target_with_default(
+                  assign_pat.span,
+                  assign_pat.left.into_assignment_target(alloc),
+                  assign_pat.right,
+                ),
               )
             }
             _ => AssignmentTargetMaybeDefault::from(binding_pat.into_assignment_target(alloc)),
           }));
         });
-        AssignmentTarget::ArrayAssignmentTarget(arr_target.into_in(alloc))
+        AssignmentTarget::ArrayAssignmentTarget(builder.alloc_array_assignment_target(
+          arr_pat.span,
+          elements,
+          rest,
+        ))
       }
       BindingPattern::AssignmentPattern(_) => {
         unreachable!("`BindingPattern::AssignmentPattern` should be pre-handled in above")

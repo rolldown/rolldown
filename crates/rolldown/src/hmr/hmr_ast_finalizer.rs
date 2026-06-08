@@ -649,19 +649,16 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             SPAN,
             ast::TemplateElementValue { raw: self.builder.str("/@vite/lazy?id="), cooked: None },
             false,
-            false,
           ),
           self.builder.template_element(
             SPAN,
             ast::TemplateElementValue { raw: self.builder.str("&clientId="), cooked: None },
-            false,
             false,
           ),
           self.builder.template_element(
             SPAN,
             ast::TemplateElementValue { raw: self.builder.str(""), cooked: None },
             true,
-            false,
           ),
         ]);
         let expressions = self.builder.vec_from_iter([

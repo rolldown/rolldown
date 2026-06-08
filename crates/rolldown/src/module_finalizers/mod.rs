@@ -234,6 +234,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let canonical_ref = self.ctx.symbol_db.canonical_ref_resolving_namespace(symbol_ref);
     let meta = &self.ctx.linking_infos[canonical_ref.owner];
     if matches!(meta.wrap_kind(), WrapKind::Esm)
+      // Only emit `init_*()` for wrapped owners that tree-shaking actually kept.
+      // A non-wrapped barrel can forward a binding (e.g. via `export { ns }` or
+      // `export *`) from a wrapped ESM module that ends up tree-shaken because the
+      // binding is never read. In that case the owner's `init_*` wrapper statement
+      // was never included, so it has no chunk assignment and emitting a call to it
+      // would reference a function that doesn't exist in the output. This mirrors
+      // the `is_included` guard in `generate_transitive_esm_init`.
+      && meta.is_included
       && meta.wrapper_ref.is_some()
       && !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner)
     {

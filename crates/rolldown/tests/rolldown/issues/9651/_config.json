@@ -1,0 +1,9 @@
+{
+  "_comment": "Reproduces #9651: the module finalizer panicked with `\"init_external\" is not in any chunk` when a side-effect-free (`sideEffects: false`) barrel module is reached both statically (via `import * as z from './zod'`) and via a dynamic import() chain, under cjs + inlineDynamicImports + tree-shaking. The static `import * as` lowering walked every resolved export of the barrel and emitted `init_external()` for `external.js` even though tree-shaking had dropped it. The fixture now bundles and runs successfully.",
+  "config": {
+    "platform": "node",
+    "format": "cjs",
+    "codeSplitting": false,
+    "shimMissingExports": true
+  }
+}

@@ -712,8 +712,8 @@ importers:
         specifier: 'catalog:'
         version: 3.3.3
       kill-port:
-        specifier: ^1.6.1
-        version: 1.6.1
+        specifier: ^2.0.0
+        version: 2.0.1
       rimraf:
         specifier: ^6.0.1
         version: 6.1.3
@@ -6458,8 +6458,8 @@ packages:
   jsonfile@6.2.1:
     resolution: {integrity: sha512-zwOTdL3rFQ/lRdBnntKVOX6k5cKJwEc1HdilT71BWEu7J41gXIB2MRp+vxduPSwZJPWBxEzv4yH1wYLJGUHX4Q==}
 
-  kill-port@1.6.1:
-    resolution: {integrity: sha512-un0Y55cOM7JKGaLnGja28T38tDDop0AQ8N0KlAdyh+B1nmMoX8AnNmqPNZbS3mUMgiST51DCVqmbFT1gNJpVNw==}
+  kill-port@2.0.1:
+    resolution: {integrity: sha512-e0SVOV5jFo0mx8r7bS29maVWp17qGqLBZ5ricNSajON6//kmb7qqqNnml4twNE8Dtj97UQD+gNFOaipS/q1zzQ==}
     hasBin: true
 
   kind-of@6.0.3:
@@ -12842,7 +12842,7 @@ snapshots:
     optionalDependencies:
       graceful-fs: 4.2.11
 
-  kill-port@1.6.1:
+  kill-port@2.0.1:
     dependencies:
       get-them-args: 1.3.2
       shell-exec: 1.0.2

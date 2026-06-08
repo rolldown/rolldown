@@ -33,6 +33,6 @@ jobs:
           tools: just,cargo-insta,typos-cli,cargo-shear@1.12.4
           components: clippy rust-docs rustfmt
 
-      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:
           cache: true

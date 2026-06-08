@@ -87,7 +87,7 @@ catalog:
   react-dom: ^19.0.0
   remark-parse: ^11.0.0
   remeda: ^2.34.1
-  rolldown-plugin-dts: ^0.25.1
+  rolldown-plugin-dts: ^0.25.2
   rollup: ^4.60.4
   semver: ^7.8.0
   serve-static: ^2.0.0
@@ -103,13 +103,8 @@ catalog:
   unified: ^11.0.5
   valibot: 1.4.1
   vite: ^8.0.0
-  vitepress: ^2.0.0-alpha.15
-  vitepress-plugin-group-icons: ^1.7.1
-  vitepress-plugin-llms: ^1.1.0
-  vitepress-plugin-og: ^0.0.5
-  vitepress-plugin-graphviz: ^0.1.0
   vitest: ^4.1.6
-  vue: ^3.5.13
+  vue: ^3.5.35
   web-tree-sitter: ^0.26.0
   ws: ^8.20.1
   zx: ^8.1.2

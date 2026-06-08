@@ -22,7 +22,7 @@ jobs:
     runs-on: ${{ inputs.os == 'ubuntu-latest' && 'namespace-profile-linux-x64-default' || inputs.os == 'macos-latest' && 'namespace-profile-mac-default' || inputs.os }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           submodules: true # Pull submodules for additional files
           persist-credentials: false
@@ -40,7 +40,7 @@ jobs:
         if: ${{ inputs.node-version == 20 }}
         run: npm pkg set packageManager=pnpm@10.33.4
 
-      - uses: voidzero-dev/setup-vp@ca1c46663915d6c1042ae23bd39ab85718bfb0fa # v1.10.0
+      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:
           node-version: ${{ inputs.node-version }}
           cache: true

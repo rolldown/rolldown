@@ -3,7 +3,6 @@
   "config": {
     "platform": "node",
     "format": "cjs",
-    "codeSplitting": false,
-    "shimMissingExports": true
+    "codeSplitting": false
   }
 }

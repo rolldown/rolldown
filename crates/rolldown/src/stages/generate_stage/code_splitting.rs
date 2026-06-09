@@ -994,8 +994,15 @@ impl GenerateStage<'_> {
 
     // See meta/design/code-splitting.md#runtime-module-placement.
     let bits = &index_splitting_info[runtime_module_idx].bits;
-    let mut runtime_chunk =
-      Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);
+    let mut runtime_chunk = Chunk::new(
+      Some("rolldown-runtime".into()),
+      None,
+      bits.clone(),
+      vec![],
+      ChunkKind::Common,
+      input_base.clone(),
+      None,
+    );
     runtime_chunk.add_creation_reason(
       ChunkCreationReason::CommonChunk { bits, link_output: self.link_output },
       self.options,

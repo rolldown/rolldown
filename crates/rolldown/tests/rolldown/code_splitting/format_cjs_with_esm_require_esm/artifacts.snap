@@ -38,9 +38,7 @@ require("./chunk.js");
 ## main2.js
 
 ```js
-//#endregion
-//#region main2.js
-require("./chunk.js").__esmMin((() => {}))();
+require("./chunk.js").__esmMin((() => {}));
 //#endregion
 
 ```

@@ -157,12 +157,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           false,
           false,
         );
-        let init_call = self.snippet.builder.expression_call(
+        let init_call = self.snippet.builder.expression_call_with_pure(
           SPAN,
           wrapper_ref_expr,
           NONE,
           self.snippet.builder.vec(),
           false,
+          // A no-op `init_*()` (empty wrapped-ESM closure) is pure; let `dce-only` drop it.
+          importee_linking_info.init_is_noop,
         );
         body.push(self.snippet.builder.statement_expression(SPAN, init_call));
       } else {
@@ -285,13 +287,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         importee_linking_info.is_tla_or_contains_tla_dependency;
       let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(wrapper_ref, false, false);
 
-      let init_call = ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-        SPAN,
-        wrapper_ref_expr,
-        NONE,
-        self.snippet.builder.vec(),
-        false,
-      ));
+      let init_call =
+        ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression_with_pure(
+          SPAN,
+          wrapper_ref_expr,
+          NONE,
+          self.snippet.builder.vec(),
+          false,
+          // A no-op `init_*()` (empty wrapped-ESM closure) is pure; let `dce-only` drop it.
+          importee_linking_info.init_is_noop,
+        ));
 
       Some(if is_tla_or_contains_tla_dependency {
         ast::Expression::AwaitExpression(
@@ -1406,13 +1411,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
                     wrap_ref_expr
                   } else {
-                    ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-                      SPAN,
-                      wrap_ref_expr,
-                      NONE,
-                      self.snippet.builder.vec(),
-                      false,
-                    ))
+                    ast::Expression::CallExpression(
+                      self.snippet.builder.alloc_call_expression_with_pure(
+                        SPAN,
+                        wrap_ref_expr,
+                        NONE,
+                        self.snippet.builder.vec(),
+                        false,
+                        // No-op `init_*()` (empty ESM closure) is pure; `init_is_noop` is only
+                        // set for `WrapKind::Esm`, so a `require_*()` here is never marked pure.
+                        importee_linking_info.init_is_noop,
+                      ),
+                    )
                   };
 
                 if matches!(importee.exports_kind, ExportsKind::CommonJs)

@@ -210,6 +210,17 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             }
           });
 
+        // Safety net for the `init_is_noop` predictive classifier (see
+        // `generate_stage::compute_init_is_noop`): if a module was flagged as having an empty
+        // `__esm` closure, the statements that actually land inside the closure must be empty.
+        // Otherwise we'd have marked a side-effecting `init_*()` as `@__PURE__` and DCE could
+        // wrongly drop it. Turns any misclassification into a loud failure across the fixtures.
+        debug_assert!(
+          !self.ctx.linking_info.init_is_noop || stmts_inside_closure.is_empty(),
+          "init_is_noop set but the __esm closure is non-empty for {}",
+          self.ctx.module.stable_id
+        );
+
         if is_concatenated_wrapped_module {
           self.rendered_concatenated_wrapped_module_parts.hoisted_functions_or_module_ns_decl =
             declaration_of_module_namespace_object

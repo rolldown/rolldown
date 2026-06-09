@@ -11,14 +11,14 @@
     "webpack"
   ],
   "homepage": "https://rolldown.rs/",
+  "bugs": {
+    "url": "https://github.com/rolldown/rolldown/issues"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rolldown/rolldown.git",
     "directory": "packages/rolldown"
-  },
-  "bugs": {
-    "url": "https://github.com/rolldown/rolldown/issues"
   },
   "bin": {
     "rolldown": "./bin/cli.mjs"

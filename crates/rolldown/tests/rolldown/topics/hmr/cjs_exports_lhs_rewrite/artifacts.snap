@@ -47,7 +47,7 @@ var require_a_0 = __rolldown_runtime__.createCjsInitializer("a.js", (function(__
 }));
 
 //#endregion
-require_a_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("a.js", require_a_0);
 __rolldown_runtime__.applyUpdates([['a.js', 'a.js']]);
 ```
 

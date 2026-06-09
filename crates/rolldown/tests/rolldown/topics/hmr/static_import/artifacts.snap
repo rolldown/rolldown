@@ -135,7 +135,9 @@ var init_new_dep_esm_2 = __rolldown_runtime__.createEsmInitializer("modules/new-
 }));
 
 //#endregion
-init_hmr_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("hmr.js", init_hmr_0);
+__rolldown_runtime__.runModuleInitializerIfLoaded("modules/new-dep-cjs.js", require_new_dep_cjs_1);
+__rolldown_runtime__.runModuleInitializerIfLoaded("modules/new-dep-esm.js", init_new_dep_esm_2);
 __rolldown_runtime__.applyUpdates([['hmr.js', 'hmr.js']]);
 ```
 

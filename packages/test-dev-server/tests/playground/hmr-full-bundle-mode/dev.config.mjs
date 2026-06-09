@@ -8,6 +8,10 @@ export default defineDevConfig({
   build: {
     input: {
       main: 'main.js',
+      lateAccept: 'late-accept.js',
+      dynamicImporter: 'dynamic-importer.js',
+      // Keep the facade in Rolldown's graph without loading it in the browser.
+      unloaded: 'unloaded-entry.js',
     },
     platform: 'browser',
     treeshake: false,

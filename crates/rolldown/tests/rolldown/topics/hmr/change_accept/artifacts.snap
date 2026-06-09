@@ -74,7 +74,7 @@ var init_parent_0 = __rolldown_runtime__.createEsmInitializer("parent.js", (func
 }));
 
 //#endregion
-init_parent_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("parent.js", init_parent_0);
 __rolldown_runtime__.applyUpdates([['main.js', 'parent.js']]);
 ```
 
@@ -102,7 +102,7 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer("child.js", (functi
 }));
 
 //#endregion
-init_child_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("child.js", init_child_0);
 __rolldown_runtime__.applyUpdates([['parent.js', 'child.js']]);
 ```
 

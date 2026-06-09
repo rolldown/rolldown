@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import nodeFs from 'node:fs';
 import { resolve } from 'node:path';
 import { vi } from 'vitest';
@@ -118,6 +120,7 @@ interface DevStatus {
   buildSeq: number;
   connectedClients: number;
   moduleRegistrationSeq: number;
+  registeredModulesByClient: Record<string, string[]>;
 }
 
 async function fetchDevStatus(port: number): Promise<DevStatus> {
@@ -202,6 +205,37 @@ export async function waitForModuleRegistration(
 export async function getModuleRegistrationSeq(port: number): Promise<number> {
   const status = await fetchDevStatus(port);
   return status.moduleRegistrationSeq;
+}
+
+/** Poll until the given client has registered every requested module. */
+export async function waitForClientModuleRegistration(
+  port: number,
+  clientId: string,
+  modules: string[],
+  timeoutMs = 30_000,
+): Promise<DevStatus> {
+  return vi.waitFor(
+    async () => {
+      const status = await fetchDevStatus(port);
+      const registeredModules = status.registeredModulesByClient[clientId] ?? [];
+      const missingModules = modules.filter((moduleId) => !registeredModules.includes(moduleId));
+      if (missingModules.length === 0) return status;
+      throw new Error(
+        `Client ${clientId} has not registered: ${missingModules.join(', ')}. ` +
+          `Registered: ${registeredModules.join(', ')}`,
+      );
+    },
+    { timeout: timeoutMs, interval: 50 },
+  );
+}
+
+/** Get the modules the dev server has observed for one client. */
+export async function getClientRegisteredModules(
+  port: number,
+  clientId: string,
+): Promise<string[]> {
+  const status = await fetchDevStatus(port);
+  return status.registeredModulesByClient[clientId] ?? [];
 }
 
 /** Get current build sequence number. */

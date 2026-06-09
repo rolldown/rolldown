@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 // Per-file setup that runs in the SAME PROCESS as tests (setupFiles).
 // Each test file gets its own servers, browser, and pages.
 // Servers are killed in afterAll so the worker can exit cleanly.
@@ -31,7 +33,14 @@ async function killPort(port: number): Promise<void> {
   }
 }
 
-const TEST_FILES_TO_RESET = ['hmr.js', 'main.js'];
+const TEST_FILES_TO_RESET = [
+  'conditional-changed.cjs',
+  'dynamic-importer.js',
+  'hmr.js',
+  'implementation.js',
+  'late-accept.js',
+  'main.js',
+];
 
 async function resetTestFiles() {
   for (const filename of TEST_FILES_TO_RESET) {

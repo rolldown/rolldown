@@ -1,6 +1,8 @@
 export const foo = 'hello';
 
-text('.hmr', foo);
+export const render = (value) => value;
+
+text('.hmr', render(foo));
 
 function text(el, text) {
   document.querySelector(el).textContent = text;
@@ -8,6 +10,6 @@ function text(el, text) {
 
 import.meta.hot?.accept((mod) => {
   if (mod) {
-    text('.hmr', mod.foo);
+    text('.hmr', mod.render(mod.foo));
   }
 });

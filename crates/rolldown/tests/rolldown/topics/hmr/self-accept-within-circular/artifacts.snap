@@ -60,7 +60,7 @@ var init_c_0 = __rolldown_runtime__.createEsmInitializer("c.js", (function(__rol
 }));
 
 //#endregion
-init_c_0()
+__rolldown_runtime__.runModuleInitializerIfLoaded("c.js", init_c_0);
 __rolldown_runtime__.applyUpdates([['c.js', 'c.js']]);
 ```
 

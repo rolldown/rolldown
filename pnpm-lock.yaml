@@ -632,6 +632,12 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/rolldown/tests/fixtures/tree-shake/hook-side-effects-overrides-package-json:
+    dependencies:
+      rolldown-tests:
+        specifier: workspace:*
+        version: link:../../..
+
   packages/rollup-tests:
     dependencies:
       acorn-import-assertions:

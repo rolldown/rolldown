@@ -175,7 +175,9 @@ pub async fn normalize_side_effects(
 ) -> BuildResult<DeterminedSideEffects> {
   let side_effects = match hook_side_effects {
     Some(side_effects) => match side_effects {
-      HookSideEffects::True => lazy_check_side_effects(resolved_id, stmt_infos),
+      // The hook explicitly asserted side effects, so it takes priority over the
+      // `package.json#sideEffects`.
+      HookSideEffects::True => lazy_check_side_effects(resolved_id, stmt_infos, false),
       HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
       HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
     },
@@ -191,7 +193,7 @@ pub async fn normalize_side_effects(
             .await?
           {
             Some(value) => DeterminedSideEffects::UserDefined(value),
-            None => lazy_check_side_effects(resolved_id, stmt_infos),
+            None => lazy_check_side_effects(resolved_id, stmt_infos, true),
           }
         } else {
           match opt
@@ -199,7 +201,7 @@ pub async fn normalize_side_effects(
             .native_resolve(&resolved_id.id, resolved_id.external.is_external())
           {
             Some(value) => DeterminedSideEffects::UserDefined(value),
-            None => lazy_check_side_effects(resolved_id, stmt_infos),
+            None => lazy_check_side_effects(resolved_id, stmt_infos, true),
           }
         }
       }
@@ -211,6 +213,7 @@ pub async fn normalize_side_effects(
 pub fn lazy_check_side_effects(
   resolved_id: &ResolvedId,
   stmt_infos: Option<&rolldown_common::StmtInfos>,
+  check_package_json_side_effects: bool,
 ) -> DeterminedSideEffects {
   if resolved_id.external.is_external() {
     return if resolved_id.is_external_without_side_effects {
@@ -220,10 +223,8 @@ pub fn lazy_check_side_effects(
     };
   }
   let stmt_infos = stmt_infos.expect("Normal module should have stmt_infos");
-  resolved_id
-    .package_json
-    .as_ref()
-    .and_then(|p| {
+  if check_package_json_side_effects
+    && let Some(side_effects) = resolved_id.package_json.as_ref().and_then(|p| {
       // the glob expr is based on parent path of package.json, which is package path
       // so we should use the relative path of the module to package path
       let module_path_relative_to_package =
@@ -231,12 +232,13 @@ pub fn lazy_check_side_effects(
       p.check_side_effects_for(&module_path_relative_to_package.to_string_lossy())
         .map(DeterminedSideEffects::UserDefined)
     })
-    .unwrap_or_else(|| {
-      // when determining cjs module side effects:
-      // we don't considered `exports.a` has side effects
-      let analyzed_side_effects = stmt_infos
-        .iter()
-        .any(|stmt_info| stmt_info.side_effect.contains(SideEffectDetail::Unknown));
-      DeterminedSideEffects::Analyzed(analyzed_side_effects)
-    })
+  {
+    return side_effects;
+  }
+
+  // when determining cjs module side effects:
+  // we don't considered `exports.a` has side effects
+  let analyzed_side_effects =
+    stmt_infos.iter().any(|stmt_info| stmt_info.side_effect.contains(SideEffectDetail::Unknown));
+  DeterminedSideEffects::Analyzed(analyzed_side_effects)
 }

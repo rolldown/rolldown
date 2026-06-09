@@ -6,6 +6,7 @@ packages:
   - packages/test-dev-server/tests/fixtures/*
   - packages/rolldown/tests/fixtures/resolve/issue-5846
   - packages/rolldown/tests/fixtures/resolve/issue-5846-2
+  - packages/rolldown/tests/fixtures/tree-shake/hook-side-effects-overrides-package-json
   - docs
   - examples/*
   - scripts

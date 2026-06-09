@@ -13,7 +13,6 @@ export * from "node:fs";
 ## entry2.js
 
 ```js
-import "./entry.js";
 export * from "node:fs";
 
 ```

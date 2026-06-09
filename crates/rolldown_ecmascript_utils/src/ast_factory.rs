@@ -6,7 +6,8 @@ use oxc::{
     AstBuilder, NONE,
     ast::{
       AssignmentOperator, AssignmentTarget, Declaration, ExportDefaultDeclarationKind, Expression,
-      ImportOrExportKind, SimpleAssignmentTarget, Statement, VariableDeclarationKind,
+      FormalParameterKind, ImportOrExportKind, SimpleAssignmentTarget, Statement,
+      VariableDeclarationKind,
     },
   },
   span::SPAN,
@@ -100,6 +101,21 @@ impl<'ast> AstFactory<'ast> {
       None,
       ImportOrExportKind::Value,
       NONE,
+    ))
+  }
+
+  /// `() => <expr>`
+  pub fn make_arrow_returning(&self, expr: Expression<'ast>) -> Expression<'ast> {
+    let statements =
+      self.vec1(Statement::ExpressionStatement(self.alloc_expression_statement(SPAN, expr)));
+    Expression::ArrowFunctionExpression(self.alloc_arrow_function_expression(
+      SPAN,
+      true,
+      false,
+      NONE,
+      self.formal_parameters(SPAN, FormalParameterKind::Signature, self.vec(), NONE),
+      NONE,
+      self.function_body(SPAN, self.vec(), statements),
     ))
   }
 }

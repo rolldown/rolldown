@@ -10,7 +10,7 @@ use oxc::{
   semantic::ScopeFlags,
   span::SPAN,
 };
-use rolldown_ecmascript_utils::AstSnippet;
+use rolldown_ecmascript_utils::AstFactory;
 use rolldown_plugin_utils::constants::RemovedPureCSSFilesCache;
 use sugar_path::SugarPath;
 
@@ -20,7 +20,7 @@ const PRELOAD_METHOD: &str = "__vitePreload";
 
 #[expect(clippy::struct_excessive_bools)]
 pub struct BuildImportAnalysisVisitor<'a> {
-  pub snippet: AstSnippet<'a>,
+  pub ast_factory: AstFactory<'a>,
   pub scope_stack: Vec<ScopeFlags>,
   pub insert_preload: bool,
   pub has_inserted_helper: bool,
@@ -34,17 +34,17 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   fn visit_program(&mut self, it: &mut oxc::ast::ast::Program<'a>) {
     walk_mut::walk_program(self, it);
     if self.need_prepend_helper && self.insert_preload && !self.has_inserted_helper {
-      it.body.push(Statement::from(self.snippet.builder.module_declaration_import_declaration(
+      it.body.push(Statement::from(self.ast_factory.module_declaration_import_declaration(
         SPAN,
-        Some(self.snippet.builder.vec1(
-          self.snippet.builder.import_declaration_specifier_import_specifier(
+        Some(self.ast_factory.vec1(
+          self.ast_factory.import_declaration_specifier_import_specifier(
             SPAN,
-            self.snippet.builder.module_export_name_identifier_name(SPAN, PRELOAD_METHOD),
-            self.snippet.id(PRELOAD_METHOD, SPAN),
+            self.ast_factory.module_export_name_identifier_name(SPAN, PRELOAD_METHOD),
+            self.ast_factory.binding_identifier(SPAN, self.ast_factory.str(PRELOAD_METHOD)),
             ImportOrExportKind::Value,
           ),
         )),
-        self.snippet.builder.string_literal(SPAN, PRELOAD_HELPER_ID, None),
+        self.ast_factory.string_literal(SPAN, PRELOAD_HELPER_ID, None),
         None,
         NONE,
         ImportOrExportKind::Value,
@@ -82,10 +82,10 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
             Some(Expression::AwaitExpression(expr)) if matches!(expr.argument, Expression::ImportExpression(_))
           )
         {
-          decl.init = Some(self.snippet.builder.expression_await(
+          decl.init = Some(self.ast_factory.expression_await(
             SPAN,
             self.construct_vite_preload_call(
-              decl.id.clone_in(self.snippet.alloc()),
+              decl.id.clone_in(self.ast_factory.allocator),
               decl.init.take().unwrap(),
             ),
           ));

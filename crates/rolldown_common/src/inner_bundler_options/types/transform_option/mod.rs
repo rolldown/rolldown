@@ -48,6 +48,13 @@ pub struct TransformOptions {
 
   /// Behaviour for runtime helpers.
   pub helpers: Option<HelperLoaderOptions>,
+
+  /// React Compiler options.
+  ///
+  /// Unlike the other fields, this is not part of `oxc::transformer::TransformOptions`.
+  /// The React Compiler is a standalone pass that must run before any other transform
+  /// on the pristine AST, so it is threaded through separately.
+  pub react_compiler: Option<Box<oxc_react_compiler::PluginOptions>>,
 }
 
 impl From<crate::utils::enhanced_transform::EnhancedTransformOptions> for TransformOptions {
@@ -60,6 +67,9 @@ impl From<crate::utils::enhanced_transform::EnhancedTransformOptions> for Transf
       typescript: options.typescript,
       plugins: options.plugins,
       helpers: options.helpers,
+      // `EnhancedTransformOptions` (the standalone transform API) does not expose
+      // React Compiler yet.
+      react_compiler: None,
     }
   }
 }

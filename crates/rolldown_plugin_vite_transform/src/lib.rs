@@ -71,7 +71,50 @@ impl Plugin for ViteTransformPlugin {
     }
 
     let mut program = ret.program;
-    let scoping = semantic_builder_for_transform().build(&program).semantic.into_scoping();
+    let mut scoping = semantic_builder_for_transform().build(&program).semantic.into_scoping();
+
+    // Run the React Compiler as a standalone pre-transform pass, before any other
+    // transform (TS/JSX lowering) runs, on the pristine AST. It rebuilds and returns
+    // the scoping used by the downstream transformer. This mirrors the rolldown core
+    // pass in `pre_process_ecma_ast.rs` so unbundled (Vite dev) and bundled builds
+    // behave identically.
+    if let Some(react_compiler_options) = &self.transform_options.react_compiler {
+      let mut react_errors = Vec::new();
+      scoping = oxc_react_compiler::run(
+        &mut program,
+        &allocator,
+        scoping,
+        react_compiler_options,
+        &mut react_errors,
+      );
+
+      let (errors, warnings): (Vec<_>, Vec<_>) = react_errors
+        .into_iter()
+        .partition(|error| error.severity == oxc::diagnostics::Severity::Error);
+      if !errors.is_empty() {
+        return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
+          errors,
+          args.code,
+          args.id,
+          Severity::Error,
+          EventKind::TransformError,
+        )))?;
+      }
+      for warning in BuildDiagnostic::from_oxc_diagnostics(
+        warnings,
+        args.code,
+        args.id,
+        Severity::Warning,
+        EventKind::ToleratedTransform,
+      ) {
+        ctx.warn(rolldown_common::LogWithoutPlugin {
+          message: warning.to_string(),
+          id: Some(args.id.to_string()),
+          ..Default::default()
+        });
+      }
+    }
+
     let transformer = Transformer::new(&allocator, Path::new(args.id), &transform_options);
     let transformer_return = transformer.build_with_scoping(scoping, &mut program);
     if !transformer_return.errors.is_empty() {

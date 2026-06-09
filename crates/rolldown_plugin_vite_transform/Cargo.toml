@@ -22,6 +22,7 @@ anyhow = { workspace = true }
 itertools = { workspace = true }
 memchr = { workspace = true }
 oxc = { workspace = true }
+oxc_react_compiler = { workspace = true }
 oxc_resolver = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_ecmascript = { workspace = true }

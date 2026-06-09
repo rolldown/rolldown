@@ -86,6 +86,11 @@ pub struct TransformOptions {
   inner: TransformOptionsInner,
   pub target: EngineTargets,
   pub jsx_preset: JsxPreset,
+  /// React Compiler options, shared across all files.
+  ///
+  /// The React Compiler is a standalone pass that runs before any other transform,
+  /// so it lives here rather than inside the per-file `oxc::transformer::TransformOptions`.
+  pub react_compiler: Option<Arc<oxc_react_compiler::PluginOptions>>,
 }
 
 impl Deref for TransformOptions {
@@ -105,12 +110,27 @@ impl DerefMut for TransformOptions {
 impl TransformOptions {
   #[inline]
   pub fn new(options: OxcTransformOptions, target: EngineTargets, jsx_preset: JsxPreset) -> Self {
-    Self { inner: TransformOptionsInner::Normal(Arc::new(options)), target, jsx_preset }
+    Self {
+      inner: TransformOptionsInner::Normal(Arc::new(options)),
+      target,
+      jsx_preset,
+      react_compiler: None,
+    }
   }
 
   #[inline]
   pub fn new_raw(raw: RawTransformOptions, target: EngineTargets, jsx_preset: JsxPreset) -> Self {
-    Self { inner: TransformOptionsInner::Raw(raw), target, jsx_preset }
+    Self { inner: TransformOptionsInner::Raw(raw), target, jsx_preset, react_compiler: None }
+  }
+
+  #[inline]
+  #[must_use]
+  pub fn with_react_compiler(
+    mut self,
+    react_compiler: Option<Box<oxc_react_compiler::PluginOptions>>,
+  ) -> Self {
+    self.react_compiler = react_compiler.map(Arc::from);
+    self
   }
 
   #[inline]
@@ -157,6 +177,7 @@ impl Default for TransformOptions {
       inner: TransformOptionsInner::Normal(Arc::new(OxcTransformOptions::default())),
       target: EngineTargets::default(),
       jsx_preset: JsxPreset::default(),
+      react_compiler: None,
     }
   }
 }

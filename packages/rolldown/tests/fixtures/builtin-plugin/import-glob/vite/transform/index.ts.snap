@@ -1,4 +1,4 @@
-import { t as __exportAll } from "./chunk.js";
+import { t as __exportAll } from "./rolldown-runtime.js";
 import { t as a_exports$1 } from "./a.js";
 import { t as b_exports$1 } from "./b.js";
 //#region ../fixtures/a/modules/index.ts

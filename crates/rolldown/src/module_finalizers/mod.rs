@@ -234,6 +234,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let canonical_ref = self.ctx.symbol_db.canonical_ref_resolving_namespace(symbol_ref);
     let meta = &self.ctx.linking_infos[canonical_ref.owner];
     if matches!(meta.wrap_kind(), WrapKind::Esm)
+      // Only emit `init_*()` for wrapped owners that tree-shaking actually kept.
+      // A non-wrapped barrel can forward a binding (e.g. via `export { ns }` or
+      // `export *`) from a wrapped ESM module that ends up tree-shaken because the
+      // binding is never read. In that case the owner's `init_*` wrapper statement
+      // was never included, so it has no chunk assignment and emitting a call to it
+      // would reference a function that doesn't exist in the output. This mirrors
+      // the `is_included` guard in `generate_transitive_esm_init`.
+      && meta.is_included
       && meta.wrapper_ref.is_some()
       && !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner)
     {
@@ -785,12 +793,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       if let Some(ref mut init_expr) = var_decl.init {
         let left = var_decl.id.take_in(self.alloc).into_assignment_target(self.alloc);
         Some(ast::Expression::AssignmentExpression(
-          ast::AssignmentExpression {
+          self.snippet.builder.alloc_assignment_expression(
+            SPAN,
+            ast::AssignmentOperator::Assign,
             left,
-            right: init_expr.take_in(self.alloc),
-            ..ast::AssignmentExpression::dummy(self.alloc)
-          }
-          .into_in(self.alloc),
+            init_expr.take_in(self.alloc),
+          ),
         ))
       } else {
         None
@@ -830,23 +838,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let prop_name = export;
         let (returned, _) =
           self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
-        Some(ast::ObjectPropertyKind::ObjectProperty(
-          ast::ObjectProperty {
-            // `__proto__` has special semantics in object literals - it sets the prototype
-            // instead of creating a property. Use computed property syntax for it.
-            key: if is_validate_identifier_name(prop_name) && prop_name != "__proto__" {
-              ast::PropertyKey::StaticIdentifier(
-                self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
-              )
-            } else {
-              ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
-            },
-            value: self.snippet.only_return_arrow_expr(returned),
-            computed: prop_name == "__proto__",
-            ..ast::ObjectProperty::dummy(self.alloc)
-          }
-          .into_in(self.alloc),
-        ))
+        // `__proto__` has special semantics in object literals - it sets the prototype
+        // instead of creating a property. Use computed property syntax for it.
+        let key = if is_validate_identifier_name(prop_name) && prop_name != "__proto__" {
+          ast::PropertyKey::StaticIdentifier(
+            self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
+          )
+        } else {
+          ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
+        };
+        Some(ast::ObjectPropertyKind::ObjectProperty(self.snippet.builder.alloc_object_property(
+          SPAN,
+          ast::PropertyKind::Init,
+          key,
+          self.snippet.only_return_arrow_expr(returned),
+          false,
+          false,
+          prop_name == "__proto__",
+        )))
       },
     ));
 
@@ -1367,25 +1376,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   let (ns_name, _) =
                     self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
                   let to_commonjs_ref_name = self.finalized_expr_for_runtime_symbol("__toCommonJS");
-                  Some(
-                    self.snippet.seq2_in_paren_expr(
-                      ast::Expression::CallExpression(
-                        self.snippet.alloc_simple_call_expr(wrap_ref_expr),
-                      ),
-                      ast::Expression::StaticMemberExpression(
-                        ast::StaticMemberExpression {
-                          object: self.snippet.call_expr_with_arg_expr(
-                            to_commonjs_ref_name,
-                            ns_name,
-                            false,
-                          ),
-                          property: self.snippet.id_name("default", SPAN),
-                          ..ast::StaticMemberExpression::dummy(self.alloc)
-                        }
-                        .into_in(self.alloc),
+                  Some(self.snippet.seq2_in_paren_expr(
+                    ast::Expression::CallExpression(
+                      self.snippet.alloc_simple_call_expr(wrap_ref_expr),
+                    ),
+                    ast::Expression::StaticMemberExpression(
+                      self.snippet.builder.alloc_static_member_expression(
+                        SPAN,
+                        self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name, false),
+                        self.snippet.id_name("default", SPAN),
+                        false,
                       ),
                     ),
-                  )
+                  ))
                 }
               }
               _ => {

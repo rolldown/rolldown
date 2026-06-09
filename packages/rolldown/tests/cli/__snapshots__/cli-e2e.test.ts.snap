@@ -109,6 +109,7 @@ OPTIONS
   --transform.jsx <transform.jsx>.
   --transform.plugins.styled-components <transform.plugins.styled-components>.
   --transform.plugins.tagged-template-escape .
+  --transform.react-compiler <transform.react-compiler>.
   --transform.target <transform.target>The JavaScript target environment.
   --transform.typescript.allow-declare-fields .
   --transform.typescript.allow-namespaces .
@@ -256,6 +257,7 @@ OPTIONS
   --transform.jsx <transform.jsx>.
   --transform.plugins.styled-components <transform.plugins.styled-components>.
   --transform.plugins.tagged-template-escape .
+  --transform.react-compiler <transform.react-compiler>.
   --transform.target <transform.target>The JavaScript target environment.
   --transform.typescript.allow-declare-fields .
   --transform.typescript.allow-namespaces .
@@ -403,6 +405,7 @@ OPTIONS
   --transform.jsx <transform.jsx>.
   --transform.plugins.styled-components <transform.plugins.styled-components>.
   --transform.plugins.tagged-template-escape .
+  --transform.react-compiler <transform.react-compiler>.
   --transform.target <transform.target>The JavaScript target environment.
   --transform.typescript.allow-declare-fields .
   --transform.typescript.allow-namespaces .
@@ -550,6 +553,7 @@ OPTIONS
   --transform.jsx <transform.jsx>.
   --transform.plugins.styled-components <transform.plugins.styled-components>.
   --transform.plugins.tagged-template-escape .
+  --transform.react-compiler <transform.react-compiler>.
   --transform.target <transform.target>The JavaScript target environment.
   --transform.typescript.allow-declare-fields .
   --transform.typescript.allow-namespaces .

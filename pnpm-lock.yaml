@@ -632,11 +632,17 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
-  packages/rolldown/tests/fixtures/tree-shake/hook-side-effects-overrides-package-json:
+  packages/rolldown/tests/fixtures/tree-shake/module-side-effects-precedence/hook-side-effects-overrides-package-json:
     dependencies:
       rolldown-tests:
         specifier: workspace:*
-        version: link:../../..
+        version: link:../../../..
+
+  packages/rolldown/tests/fixtures/tree-shake/module-side-effects-precedence/option-over-package-json:
+    dependencies:
+      rolldown-tests:
+        specifier: workspace:*
+        version: link:../../../..
 
   packages/rollup-tests:
     dependencies:

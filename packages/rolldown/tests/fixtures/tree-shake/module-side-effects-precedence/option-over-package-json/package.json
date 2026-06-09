@@ -1,0 +1,8 @@
+{
+  "name": "module-side-effects-precedence-option-over-package-json",
+  "private": true,
+  "sideEffects": false,
+  "dependencies": {
+    "rolldown-tests": "workspace:*"
+  }
+}

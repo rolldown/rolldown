@@ -13,7 +13,7 @@ use rolldown_common::{
   Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
-use rolldown_ecmascript_utils::AstSnippet;
+use rolldown_ecmascript_utils::AstFactory;
 use rolldown_error::BuildResult;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
@@ -459,9 +459,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
           let mut finalizer = HmrAstFinalizer {
             modules,
-            alloc: fields.allocator,
-            snippet: AstSnippet::new(fields.allocator),
-            builder: &oxc::ast::AstBuilder::new(fields.allocator),
+            ast_factory: AstFactory::new(fields.allocator),
             import_bindings: FxHashMap::default(),
             module: affected_module,
             exports: oxc::allocator::Vec::new_in(fields.allocator),
@@ -699,9 +697,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
           let mut finalizer = HmrAstFinalizer {
             modules,
-            alloc: fields.allocator,
-            snippet: AstSnippet::new(fields.allocator),
-            builder: &oxc::ast::AstBuilder::new(fields.allocator),
+            ast_factory: AstFactory::new(fields.allocator),
             import_bindings: FxHashMap::default(),
             module: affected_module,
             exports: oxc::allocator::Vec::new_in(fields.allocator),
@@ -891,9 +887,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
           let mut finalizer = HmrAstFinalizer {
             modules,
-            alloc: fields.allocator,
-            snippet: AstSnippet::new(fields.allocator),
-            builder: &oxc::ast::AstBuilder::new(fields.allocator),
+            ast_factory: AstFactory::new(fields.allocator),
             import_bindings: FxHashMap::default(),
             module: affected_module,
             exports: oxc::allocator::Vec::new_in(fields.allocator),

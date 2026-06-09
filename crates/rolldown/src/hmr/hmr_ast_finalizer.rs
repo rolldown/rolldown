@@ -1,8 +1,8 @@
 use oxc::ast::ast::Str;
 use oxc::{
-  allocator::{Allocator, Box as ArenaBox, IntoIn, TakeIn},
+  allocator::{Box as ArenaBox, IntoIn, TakeIn},
   ast::{
-    AstBuilder, NONE,
+    NONE,
     ast::{self, ExportDefaultDeclarationKind, Expression, ObjectPropertyKind, Statement},
   },
   semantic::{IsGlobalReference, Scoping, SymbolId},
@@ -13,7 +13,7 @@ use rolldown_common::{
   ExternalModule, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, NormalModule,
 };
 use rolldown_ecmascript::CJS_REQUIRE_REF_STR;
-use rolldown_ecmascript_utils::{AstSnippet, ExpressionExt};
+use rolldown_ecmascript_utils::{AstFactory, ExpressionExt};
 use rolldown_utils::{
   ecmascript::is_validate_identifier_name,
   indexmap::{FxIndexMap, FxIndexSet},
@@ -24,9 +24,7 @@ use crate::hmr::utils::{HmrAstBuilder, MODULE_EXPORTS_NAME_FOR_ESM};
 
 pub struct HmrAstFinalizer<'me, 'ast> {
   // Outside input
-  pub alloc: &'ast Allocator,
-  pub snippet: AstSnippet<'ast>,
-  pub builder: &'me AstBuilder<'ast>,
+  pub ast_factory: AstFactory<'ast>,
   pub modules: &'me IndexModules,
   pub module: &'me NormalModule,
   pub affected_module_idx_to_init_fn_name: &'me FxHashMap<ModuleIdx, String>,
@@ -158,25 +156,25 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
               self.dependencies.insert(importee_idx);
               let binding_name = self.ensure_static_import_info(importee_idx, rec_id).to_string();
               self.exports.extend(decl.specifiers.iter().map(|specifier| {
-                        self.snippet.object_property_kind_object_property(
+                        self.ast_factory.make_lazy_export_property(
                           &specifier.exported.name(),
                           match &specifier.local {
                             ast::ModuleExportName::IdentifierName(ident) => {
                               Expression::StaticMemberExpression(
-                                self.snippet.builder.alloc_static_member_expression(
+                                self.ast_factory.alloc_static_member_expression(
                                   SPAN,
-                                  self.snippet.id_ref_expr(&binding_name, SPAN),
-                                  self.snippet.builder.identifier_name(SPAN, ident.name.as_str()),
+                                  self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(&binding_name)),
+                                  self.ast_factory.identifier_name(SPAN, ident.name.as_str()),
                                   false,
                                 ),
                               )
                             }
                             ast::ModuleExportName::StringLiteral(str) => {
                               Expression::ComputedMemberExpression(
-                                self.snippet.builder.alloc_computed_member_expression(
+                                self.ast_factory.alloc_computed_member_expression(
                                   SPAN,
-                                  self.snippet.id_ref_expr(&binding_name, SPAN),
-                                  self.snippet.builder.expression_string_literal(
+                                  self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(&binding_name)),
+                                  self.ast_factory.expression_string_literal(
                                     SPAN, str.value.as_str(), None
                                   ),
                                   false,
@@ -204,9 +202,11 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                   // export var { foo, bar } = { foo: 1, bar: 2 }
                   self.exports.extend(var_decl.declarations.iter().flat_map(|decl| {
                     decl.id.get_binding_identifiers().into_iter().map(|ident| {
-                      self.snippet.object_property_kind_object_property(
+                      self.ast_factory.make_lazy_export_property(
                         ident.name.as_str(),
-                        self.snippet.id_ref_expr(ident.name.as_str(), SPAN),
+                        self
+                          .ast_factory
+                          .expression_identifier(SPAN, self.ast_factory.str(ident.name.as_str())),
                         false,
                       )
                     })
@@ -215,24 +215,24 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                 ast::Declaration::FunctionDeclaration(fn_decl) => {
                   // export function foo() {}
                   let id = fn_decl.id.as_ref().unwrap().name.as_str();
-                  self.exports.push(self.snippet.object_property_kind_object_property(
+                  self.exports.push(self.ast_factory.make_lazy_export_property(
                     id,
-                    self.snippet.id_ref_expr(id, SPAN),
+                    self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(id)),
                     false,
                   ));
                 }
                 ast::Declaration::ClassDeclaration(cls_decl) => {
                   // export class Foo {}
                   let id = cls_decl.id.as_ref().unwrap().name.as_str();
-                  self.exports.push(self.snippet.object_property_kind_object_property(
+                  self.exports.push(self.ast_factory.make_lazy_export_property(
                     id,
-                    self.snippet.id_ref_expr(id, SPAN),
+                    self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(id)),
                     false,
                   ));
                 }
                 _ => unreachable!("doesn't support ts now"),
               }
-              program_body.push(ast::Statement::from(decl.take_in(self.alloc)));
+              program_body.push(ast::Statement::from(decl.take_in(self.ast_factory.allocator)));
             } else {
               // export { foo, bar as bar2 }
               decl.specifiers.iter().for_each(|specifier| {
@@ -249,54 +249,77 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => match &mut decl.declaration {
             ast::ExportDefaultDeclarationKind::FunctionDeclaration(function) => {
               if let Some(id) = &function.id {
-                self.exports.push(self.snippet.object_property_kind_object_property(
+                self.exports.push(self.ast_factory.make_lazy_export_property(
                   "default",
-                  self.snippet.id_ref_expr(&id.name, SPAN),
+                  self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(&id.name)),
                   false,
                 ));
               } else {
-                function.id = Some(self.snippet.id("__rolldown_default__", SPAN));
-                self.exports.push(self.snippet.object_property_kind_object_property(
-                  "default",
-                  self.snippet.id_ref_expr("__rolldown_default__", SPAN),
-                  false,
-                ));
+                function.id = Some(
+                  self
+                    .ast_factory
+                    .binding_identifier(SPAN, self.ast_factory.str("__rolldown_default__")),
+                );
+                self.exports.push(
+                  self.ast_factory.make_lazy_export_property(
+                    "default",
+                    self
+                      .ast_factory
+                      .expression_identifier(SPAN, self.ast_factory.str("__rolldown_default__")),
+                    false,
+                  ),
+                );
               }
               program_body.push(ast::Statement::FunctionDeclaration(ArenaBox::new_in(
-                function.as_mut().take_in(self.alloc),
-                self.alloc,
+                function.as_mut().take_in(self.ast_factory.allocator),
+                self.ast_factory.allocator,
               )));
             }
             ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
               if let Some(id) = &class.id {
-                self.exports.push(self.snippet.object_property_kind_object_property(
+                self.exports.push(self.ast_factory.make_lazy_export_property(
                   "default",
-                  self.snippet.id_ref_expr(&id.name, SPAN),
+                  self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(&id.name)),
                   false,
                 ));
               } else {
-                class.id = Some(self.snippet.id("__rolldown_default__", SPAN));
-                self.exports.push(self.snippet.object_property_kind_object_property(
-                  "default",
-                  self.snippet.id_ref_expr("__rolldown_default__", SPAN),
-                  false,
-                ));
+                class.id = Some(
+                  self
+                    .ast_factory
+                    .binding_identifier(SPAN, self.ast_factory.str("__rolldown_default__")),
+                );
+                self.exports.push(
+                  self.ast_factory.make_lazy_export_property(
+                    "default",
+                    self
+                      .ast_factory
+                      .expression_identifier(SPAN, self.ast_factory.str("__rolldown_default__")),
+                    false,
+                  ),
+                );
               }
               program_body.push(ast::Statement::ClassDeclaration(ArenaBox::new_in(
-                class.as_mut().take_in(self.alloc),
-                self.alloc,
+                class.as_mut().take_in(self.ast_factory.allocator),
+                self.ast_factory.allocator,
               )));
             }
             expr @ ast::match_expression!(ExportDefaultDeclarationKind) => {
               let expr = expr.to_expression_mut();
               // Transform `export default [expression]` => `var __rolldown_default__ = [expression]`
-              program_body
-                .push(self.snippet.var_decl_stmt("__rolldown_default__", expr.take_in(self.alloc)));
-              self.exports.push(self.snippet.object_property_kind_object_property(
-                "default",
-                self.snippet.id_ref_expr("__rolldown_default__", SPAN),
-                false,
-              ));
+              program_body.push(
+                self
+                  .ast_factory
+                  .make_var_decl("__rolldown_default__", expr.take_in(self.ast_factory.allocator)),
+              );
+              self.exports.push(
+                self.ast_factory.make_lazy_export_property(
+                  "default",
+                  self
+                    .ast_factory
+                    .expression_identifier(SPAN, self.ast_factory.str("__rolldown_default__")),
+                  false,
+                ),
+              );
             }
             unhandled_kind => {
               unreachable!("Unexpected export default declaration kind: {unhandled_kind:#?}");
@@ -377,13 +400,13 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     //       ));
 
     //       // { exports: namespace }
-    //       ast::Argument::ObjectExpression(self.snippet.builder.alloc_object_expression(
+    //       ast::Argument::ObjectExpression(self.ast_factory.alloc_object_expression(
     //         SPAN,
-    //         self.snippet.builder.vec1(self.snippet.builder.object_property_kind_object_property(
+    //         self.ast_factory.vec1(self.ast_factory.object_property_kind_object_property(
     //           SPAN,
     //           PropertyKind::Init,
-    //           self.snippet.builder.property_key_static_identifier(SPAN, "exports"),
-    //           self.snippet.id_ref_expr(&binding_name_for_namespace_object_ref, SPAN),
+    //           self.ast_factory.property_key_static_identifier(SPAN, "exports"),
+    //           self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(&binding_name_for_namespace_object_ref)),
     //           true,
     //           false,
     //           false,
@@ -392,27 +415,27 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     //     }
     //     rolldown_common::ExportsKind::CommonJs => {
     //       // `module`
-    //       ast::Argument::Identifier(self.snippet.builder.alloc_identifier_reference(SPAN, "module"))
+    //       ast::Argument::Identifier(self.ast_factory.alloc_identifier_reference(SPAN, "module"))
     //     }
     //     rolldown_common::ExportsKind::None => ast::Argument::ObjectExpression(
     //       // `{}`
-    //       self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec()),
+    //       self.ast_factory.alloc_object_expression(SPAN, self.ast_factory.vec()),
     //     ),
     //   };
 
     // // __rolldown_runtime__.registerModule(moduleId, module)
-    // let arguments = self.snippet.builder.vec_from_array([
-    //   ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
+    // let arguments = self.ast_factory.vec_from_array([
+    //   ast::Argument::StringLiteral(self.ast_factory.alloc_string_literal(
     //     SPAN,
-    //     self.snippet.builder.str(&self.module.stable_id),
+    //     self.ast_factory.str(&self.module.stable_id),
     //     None,
     //   )),
     //   module_exports,
     // ]);
 
-    // let register_call = self.snippet.builder.alloc_call_expression(
+    // let register_call = self.ast_factory.alloc_call_expression(
     //   SPAN,
-    //   self.snippet.id_ref_expr("__rolldown_runtime__.registerModule", SPAN),
+    //   self.ast_factory.expression_identifier(SPAN, self.ast_factory.str("__rolldown_runtime__.registerModule")),
     //   NONE,
     //   arguments,
     //   false,
@@ -446,7 +469,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           [self.module.hmr_info.module_request_to_import_record_idx[string_literal.value.as_str()]];
         let Some(module_idx) = import_record.resolved_module else { return };
         // Use stable module ID for consistent runtime lookup
-        string_literal.value = self.snippet.builder.str(self.modules[module_idx].stable_id());
+        string_literal.value = self.ast_factory.str(self.modules[module_idx].stable_id());
       }
       ast::Argument::ArrayExpression(array_expression) => {
         // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
@@ -457,7 +480,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                 [string_literal.value.as_str()]];
             let Some(module_idx) = import_record.resolved_module else { return };
             // Use stable module ID for consistent runtime lookup
-            string_literal.value = self.snippet.builder.str(self.modules[module_idx].stable_id());
+            string_literal.value = self.ast_factory.str(self.modules[module_idx].stable_id());
           }
         });
       }
@@ -468,7 +491,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
   pub fn rewrite_import_meta_hot(&self, expr: &mut ast::Expression<'ast>) {
     if expr.is_import_meta_hot() {
       let hot_name = format!("hot_{}", self.module.repr_name);
-      *expr = self.snippet.id_ref_expr(&hot_name, SPAN);
+      *expr = self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(&hot_name));
     }
   }
 
@@ -489,16 +512,35 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       Module::Normal(importee) => self.module.interop(importee),
       Module::External(_) => None,
     };
-    let call_expr = self.snippet.call_expr_with_arg_expr(
-      self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
-      self.snippet.string_literal_expr(id, SPAN),
+    let call_expr = self.ast_factory.make_call_with_arg(
+      self.ast_factory.make_member_access_expr("__rolldown_runtime__", "loadExports"),
+      self.ast_factory.expression_string_literal(SPAN, self.ast_factory.str(id), None),
       false,
     );
 
-    let stmt = self.snippet.variable_declarator_require_call_stmt(
-      binding_name,
-      self.snippet.to_esm_call_with_interop("__rolldown_runtime__.__toESM", call_expr, interop),
-      span,
+    // var [binding_name] = [__toESM-wrapped loadExports call];
+    let stmt = Statement::from(
+      self.ast_factory.declaration_variable(
+        span,
+        ast::VariableDeclarationKind::Var,
+        self.ast_factory.vec1(
+          self.ast_factory.variable_declarator(
+            SPAN,
+            ast::VariableDeclarationKind::Var,
+            self
+              .ast_factory
+              .binding_pattern_binding_identifier(SPAN, self.ast_factory.str(binding_name)),
+            NONE,
+            Some(self.ast_factory.make_to_esm_call_with_interop(
+              "__rolldown_runtime__.__toESM",
+              call_expr,
+              interop,
+            )),
+            false,
+          ),
+        ),
+        false,
+      ),
     );
     Some(stmt)
   }
@@ -516,7 +558,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let module_request = &importee.id;
 
     // import * as [binding_name] from 'external';
-    let stmt = self.snippet.import_star_stmt(module_request, binding_name);
+    let stmt = self.ast_factory.make_import_star_stmt(module_request, binding_name);
 
     self.generated_static_import_stmts_from_external.insert(importee.idx, stmt);
   }
@@ -534,14 +576,23 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     let self_exports = self.module_exports_name();
 
-    let call_expr = self.snippet.call_expr_with_2arg_expr(
-      self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "__reExport"),
-      self.snippet.id_ref_expr(self_exports, SPAN),
-      self.snippet.id_ref_expr(binding_name, SPAN),
+    let call_expr = self.ast_factory.expression_call(
+      SPAN,
+      self.ast_factory.make_member_access_expr("__rolldown_runtime__", "__reExport"),
+      NONE,
+      self.ast_factory.vec_from_iter([
+        ast::Argument::from(
+          self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(self_exports)),
+        ),
+        ast::Argument::from(
+          self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(binding_name)),
+        ),
+      ]),
+      false,
     );
 
     Some(ast::Statement::ExpressionStatement(
-      self.snippet.builder.alloc_expression_statement(span, call_expr),
+      self.ast_factory.alloc_expression_statement(span, call_expr),
     ))
   }
 
@@ -554,38 +605,38 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     // construct `{ prop_name: () => returned, ... }`
     let mut arg_obj_expr = self
-      .snippet
-      .builder
-      .alloc_object_expression(SPAN, self.snippet.builder.vec_with_capacity(self.exports.len()));
+      .ast_factory
+      .alloc_object_expression(SPAN, self.ast_factory.vec_with_capacity(self.exports.len()));
     arg_obj_expr.properties.extend(self.exports.drain(..));
     arg_obj_expr.properties.extend(self.named_exports.iter().map(|(exported, named_export)| {
       let expr = if let Some(local_binding) = self.import_bindings.get(&named_export.local_binding)
       {
-        self.snippet.id_ref_expr(local_binding, SPAN)
+        self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(local_binding))
       } else {
         let name = scoping.symbol_name(named_export.local_binding);
-        self.snippet.id_ref_expr(name, SPAN)
+        self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(name))
       };
       // Use computed property syntax for non-identifier export names (e.g., 'rolldown:exports')
       let computed = !is_validate_identifier_name(exported.as_str());
-      self.snippet.object_property_kind_object_property(exported, expr, computed)
+      self.ast_factory.make_lazy_export_property(exported, expr, computed)
     }));
 
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
-    let export_call_expr = self.snippet.builder.expression_call(
+    let export_call_expr = self.ast_factory.expression_call(
       SPAN,
-      self.snippet.id_ref_expr("__rolldown_runtime__.__exportAll", SPAN),
-      NONE,
       self
-        .snippet
-        .builder
-        .vec_from_array([ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc))]),
+        .ast_factory
+        .expression_identifier(SPAN, self.ast_factory.str("__rolldown_runtime__.__exportAll")),
+      NONE,
+      self.ast_factory.vec_from_array([ast::Argument::ObjectExpression(
+        arg_obj_expr.into_in(self.ast_factory.allocator),
+      )]),
       false,
     );
 
     // construct `var [binding_name_for_namespace_object_ref] = __exportAll({ prop_name: () => returned, ... })`
     let decl_stmt =
-      self.snippet.var_decl_stmt(binding_name_for_namespace_object_ref, export_call_expr);
+      self.ast_factory.make_var_decl(binding_name_for_namespace_object_ref, export_call_expr);
     vec![decl_stmt]
   }
 
@@ -630,96 +681,104 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     // TODO: hyf0 should switch to a more robust way to identify lazy proxy modules
     if importee.id.contains("?rolldown-lazy=1") {
       // Build: encodeURIComponent(importee.id)
-      let encode_call = ast::Expression::CallExpression(self.builder.alloc_call_expression(
-        SPAN,
-        self.snippet.id_ref_expr("encodeURIComponent", SPAN),
-        NONE,
-        self.builder.vec1(ast::Argument::StringLiteral(self.builder.alloc_string_literal(
+      let encode_call =
+        ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
           SPAN,
-          self.builder.str(&importee.id),
-          None,
-        ))),
-        false,
-      ));
+          self.ast_factory.expression_identifier(SPAN, self.ast_factory.str("encodeURIComponent")),
+          NONE,
+          self.ast_factory.vec1(ast::Argument::StringLiteral(
+            self.ast_factory.alloc_string_literal(SPAN, self.ast_factory.str(&importee.id), None),
+          )),
+          false,
+        ));
 
       // Build template literal: `/@vite/lazy?id=${encodeURIComponent(importee.id)}&clientId=${__rolldown_runtime__.clientId}`
       let url_expr = {
-        let quasis = self.builder.vec_from_iter([
-          self.builder.template_element(
+        let quasis = self.ast_factory.vec_from_iter([
+          self.ast_factory.template_element(
             SPAN,
-            ast::TemplateElementValue { raw: self.builder.str("/@vite/lazy?id="), cooked: None },
+            ast::TemplateElementValue {
+              raw: self.ast_factory.str("/@vite/lazy?id="),
+              cooked: None,
+            },
             false,
           ),
-          self.builder.template_element(
+          self.ast_factory.template_element(
             SPAN,
-            ast::TemplateElementValue { raw: self.builder.str("&clientId="), cooked: None },
+            ast::TemplateElementValue { raw: self.ast_factory.str("&clientId="), cooked: None },
             false,
           ),
-          self.builder.template_element(
+          self.ast_factory.template_element(
             SPAN,
-            ast::TemplateElementValue { raw: self.builder.str(""), cooked: None },
+            ast::TemplateElementValue { raw: self.ast_factory.str(""), cooked: None },
             true,
           ),
         ]);
-        let expressions = self.builder.vec_from_iter([
+        let expressions = self.ast_factory.vec_from_iter([
           encode_call,
-          self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "clientId"),
+          self.ast_factory.make_member_access_expr("__rolldown_runtime__", "clientId"),
         ]);
-        self.builder.expression_template_literal(SPAN, quasis, expressions)
+        self.ast_factory.expression_template_literal(SPAN, quasis, expressions)
       };
 
       // Build: import(`/@vite/lazy?id=...&clientId=...`)
-      let import_expr = self.builder.expression_import(SPAN, url_expr, None, None);
+      let import_expr = self.ast_factory.expression_import(SPAN, url_expr, None, None);
 
       // Build: __rolldown_runtime__.loadExports("<stable_proxy_id>")
-      let load_exports_call = ast::Expression::CallExpression(self.builder.alloc_call_expression(
-        SPAN,
-        self.snippet.id_ref_expr("__rolldown_runtime__.loadExports", SPAN),
-        NONE,
-        self.builder.vec1(ast::Argument::StringLiteral(self.builder.alloc_string_literal(
+      let load_exports_call = ast::Expression::CallExpression(
+        self.ast_factory.alloc_call_expression(
           SPAN,
-          self.builder.str(&importee.stable_id),
-          None,
-        ))),
-        false,
-      ));
+          self
+            .ast_factory
+            .expression_identifier(SPAN, self.ast_factory.str("__rolldown_runtime__.loadExports")),
+          NONE,
+          self.ast_factory.vec1(ast::Argument::StringLiteral(
+            self.ast_factory.alloc_string_literal(
+              SPAN,
+              self.ast_factory.str(&importee.stable_id),
+              None,
+            ),
+          )),
+          false,
+        ),
+      );
 
       // Build: () => __rolldown_runtime__.loadExports("<stable_proxy_id>")
-      let arrow_fn = self.builder.expression_arrow_function(
+      let arrow_fn = self.ast_factory.expression_arrow_function(
         SPAN,
         /* expression */ true,
         /* async */ false,
         NONE,
-        self.builder.formal_parameters(
+        self.ast_factory.formal_parameters(
           SPAN,
           ast::FormalParameterKind::ArrowFormalParameters,
-          self.builder.vec(),
+          self.ast_factory.vec(),
           NONE,
         ),
         NONE,
-        self.builder.function_body(
+        self.ast_factory.function_body(
           SPAN,
-          self.builder.vec(),
-          self.builder.vec1(ast::Statement::ExpressionStatement(
-            self.builder.alloc_expression_statement(SPAN, load_exports_call),
+          self.ast_factory.vec(),
+          self.ast_factory.vec1(ast::Statement::ExpressionStatement(
+            self.ast_factory.alloc_expression_statement(SPAN, load_exports_call),
           )),
         ),
       );
 
       // Build: import(...).then(() => __rolldown_runtime__.loadExports("..."))
       let then_callee =
-        Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
+        Expression::StaticMemberExpression(self.ast_factory.alloc_static_member_expression(
           SPAN,
           import_expr,
-          self.builder.identifier_name(SPAN, "then"),
+          self.ast_factory.identifier_name(SPAN, "then"),
           false,
         ));
 
-      *it = self.builder.expression_call(
+      *it = self.ast_factory.expression_call(
         SPAN,
         then_callee,
         NONE,
-        self.builder.vec1(ast::Argument::from(arrow_fn)),
+        self.ast_factory.vec1(ast::Argument::from(arrow_fn)),
         false,
       );
       return;
@@ -730,27 +789,28 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     // __rolldown_runtime__.loadExports('./foo.js')
     // Use stable module ID for consistent runtime lookup
-    let mut load_exports_call_expr =
-      ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+    let mut load_exports_call_expr = ast::Expression::CallExpression(
+      self.ast_factory.alloc_call_expression(
         SPAN,
-        self.snippet.id_ref_expr("__rolldown_runtime__.loadExports", SPAN),
+        self
+          .ast_factory
+          .expression_identifier(SPAN, self.ast_factory.str("__rolldown_runtime__.loadExports")),
         NONE,
-        self.snippet.builder.vec1(ast::Argument::StringLiteral(
-          self.snippet.builder.alloc_string_literal(
-            SPAN,
-            self.snippet.builder.str(&importee.stable_id),
-            None,
-          ),
-        )),
+        self.ast_factory.vec1(ast::Argument::StringLiteral(self.ast_factory.alloc_string_literal(
+          SPAN,
+          self.ast_factory.str(&importee.stable_id),
+          None,
+        ))),
         false,
-      ));
+      ),
+    );
 
     if is_importee_cjs {
       let is_node_cjs = importee.def_format.is_commonjs();
 
-      let mut args = self.snippet.builder.vec1(ast::Argument::from(load_exports_call_expr));
+      let mut args = self.ast_factory.vec1(ast::Argument::from(load_exports_call_expr));
       if is_node_cjs {
-        args.push(ast::Argument::from(self.snippet.builder.expression_numeric_literal(
+        args.push(ast::Argument::from(self.ast_factory.expression_numeric_literal(
           SPAN,
           1.0,
           None,
@@ -759,9 +819,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       }
 
       // __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports('./foo.js'), node_mode)
-      load_exports_call_expr = self.snippet.builder.expression_call(
+      load_exports_call_expr = self.ast_factory.expression_call(
         SPAN,
-        self.snippet.id_ref_expr("__rolldown_runtime__.__toDynamicImportESM", SPAN),
+        self.ast_factory.expression_identifier(
+          SPAN,
+          self.ast_factory.str("__rolldown_runtime__.__toDynamicImportESM"),
+        ),
         NONE,
         args,
         false,
@@ -773,23 +836,23 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       // Turn `import('./foo.js')` into `(init_foo(), Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js')))`
 
       // init_foo()
-      let init_fn_call = self.snippet.builder.alloc_call_expression(
+      let init_fn_call = self.ast_factory.alloc_call_expression(
         SPAN,
-        self.snippet.id_ref_expr(init_fn_name, SPAN),
+        self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(init_fn_name)),
         NONE,
-        self.snippet.builder.vec(),
+        self.ast_factory.vec(),
         false,
       );
 
       // Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js'))
       let promise_resolve_then_load_exports =
-        self.snippet.promise_resolve_then_call_expr(load_exports_call_expr);
+        self.ast_factory.make_promise_resolve_then(load_exports_call_expr);
 
       // (init_foo(), Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js')))
       let ret_expr =
-        ast::Expression::SequenceExpression(self.snippet.builder.alloc_sequence_expression(
+        ast::Expression::SequenceExpression(self.ast_factory.alloc_sequence_expression(
           SPAN,
-          self.snippet.builder.vec_from_array([
+          self.ast_factory.vec_from_array([
             ast::Expression::CallExpression(init_fn_call),
             promise_resolve_then_load_exports,
           ]),
@@ -799,7 +862,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       // Turn `import('./foo.js')` into `Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js'))`
 
       // `Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js'))`
-      *it = self.snippet.promise_resolve_then_call_expr(load_exports_call_expr);
+      *it = self.ast_factory.make_promise_resolve_then(load_exports_call_expr);
     }
   }
 
@@ -816,8 +879,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       && id_ref.is_global_reference(scoping)
       && !ctx.parent().is_call_expression()
     {
-      *it =
-        self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports");
+      *it = self.ast_factory.make_member_access_expr("__rolldown_runtime__", "loadExports");
     }
 
     // Rewrite `require(...)` to `(require_xxx(), __rolldown_runtime__.loadExports())` or keep it as is for external module importee.
@@ -850,9 +912,13 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
 
     // Use stable module ID for consistent runtime lookup
-    let load_exports_call = self.snippet.call_expr_with_arg_expr(
-      self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
-      self.snippet.string_literal_expr(&importee.stable_id, SPAN),
+    let load_exports_call = self.ast_factory.make_call_with_arg(
+      self.ast_factory.make_member_access_expr("__rolldown_runtime__", "loadExports"),
+      self.ast_factory.expression_string_literal(
+        SPAN,
+        self.ast_factory.str(&importee.stable_id),
+        None,
+      ),
       false,
     );
 
@@ -883,20 +949,20 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       load_exports_call
     } else if rec.meta.contains(ImportRecordMeta::JsonModule) {
       // Vite-mode JSON: ESM-wrapped at runtime, unwrap to the JSON value.
-      let to_commonjs_call = self.snippet.call_expr_with_arg_expr(
-        self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "__toCommonJS"),
+      let to_commonjs_call = self.ast_factory.make_call_with_arg(
+        self.ast_factory.make_member_access_expr("__rolldown_runtime__", "__toCommonJS"),
         load_exports_call,
         false,
       );
-      Expression::from(self.snippet.builder.member_expression_static(
+      Expression::from(self.ast_factory.member_expression_static(
         SPAN,
         to_commonjs_call,
-        self.snippet.id_name("default", SPAN),
+        self.ast_factory.identifier_name(SPAN, self.ast_factory.str("default")),
         false,
       ))
     } else {
-      self.snippet.call_expr_with_arg_expr(
-        self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "__toCommonJS"),
+      self.ast_factory.make_call_with_arg(
+        self.ast_factory.make_member_access_expr("__rolldown_runtime__", "__toCommonJS"),
         load_exports_call,
         false,
       )
@@ -905,9 +971,16 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     if let Some(init_fn_name) = self.affected_module_idx_to_init_fn_name.get(&importee_idx) {
       // If the importee is in the current patch, call init before loading exports
       // Turn `require('./foo.js')` into `(init_foo(), __rolldown_runtime__.loadExports('./foo.js'))`
-      *it = self
-        .snippet
-        .seq2_in_paren_expr(self.snippet.call_expr_expr(init_fn_name), load_exports_expr);
+      *it = self.ast_factory.make_seq_in_parens(
+        self.ast_factory.expression_call(
+          SPAN,
+          self.ast_factory.expression_identifier(SPAN, self.ast_factory.str(init_fn_name)),
+          NONE,
+          self.ast_factory.vec(),
+          false,
+        ),
+        load_exports_expr,
+      );
     } else {
       // Importee is not in current patch (already executed by client), just load its exports
       // Turn `require('./foo.js')` into `__rolldown_runtime__.loadExports('./foo.js')`

@@ -906,7 +906,18 @@ fn add_module_and_dependencies_to_group_recursively(
 
 #[cfg(test)]
 mod tests {
-  use super::{pick_split_index_in_range, stable_id_similarity};
+  use super::{collect_split_ranges, pick_split_index_in_range, stable_id_similarity};
+
+  /// Runs the full recursive partition and returns each piece as a list of keys.
+  fn partition(keys: &[&str], sizes: &[f64], min_size: f64, max_size: f64) -> Vec<Vec<String>> {
+    let prefix = prefix_sizes(sizes);
+    let mut ranges = Vec::new();
+    collect_split_ranges(keys, &prefix, 0, keys.len(), min_size, max_size, &mut ranges);
+    ranges
+      .iter()
+      .map(|(lo, hi)| keys[*lo..*hi].iter().map(|key| (*key).to_string()).collect())
+      .collect()
+  }
 
   fn prefix_sizes(sizes: &[f64]) -> Vec<f64> {
     let mut prefix = Vec::with_capacity(sizes.len() + 1);
@@ -1022,5 +1033,98 @@ mod tests {
       max_size: 10.0,
       expected: None,
     });
+  }
+
+  #[test]
+  fn partition_keeps_each_fitting_package_together() {
+    // Three vendor packages, each pair fits within max_size; cross-package boundaries
+    // are the relevant cuts, so every package ends up in its own chunk.
+    let pieces = partition(
+      &[
+        "node_modules/lodash/a.js",
+        "node_modules/lodash/b.js",
+        "node_modules/react/a.js",
+        "node_modules/react/b.js",
+        "node_modules/vue/a.js",
+        "node_modules/vue/b.js",
+      ],
+      &[30.0, 30.0, 30.0, 30.0, 30.0, 30.0],
+      0.0,
+      70.0,
+    );
+    assert_eq!(
+      pieces,
+      vec![
+        vec!["node_modules/lodash/a.js", "node_modules/lodash/b.js"],
+        vec!["node_modules/react/a.js", "node_modules/react/b.js"],
+        vec!["node_modules/vue/a.js", "node_modules/vue/b.js"],
+      ],
+    );
+  }
+
+  #[test]
+  fn partition_groups_scoped_package_siblings() {
+    // Scoped-package siblings share a long prefix, so they stay together and split away
+    // from the unrelated package.
+    let pieces = partition(
+      &[
+        "node_modules/@scope/pkg-a/index.js",
+        "node_modules/@scope/pkg-b/index.js",
+        "node_modules/zod/index.js",
+      ],
+      &[40.0, 40.0, 40.0],
+      0.0,
+      90.0,
+    );
+    assert_eq!(
+      pieces,
+      vec![
+        vec!["node_modules/@scope/pkg-a/index.js", "node_modules/@scope/pkg-b/index.js"],
+        vec!["node_modules/zod/index.js"],
+      ],
+    );
+  }
+
+  #[test]
+  fn partition_groups_virtual_module_siblings() {
+    // Virtual ids (leading NUL) must be scored without panicking and grouped by prefix.
+    let pieces = partition(
+      &["\0virtual:polyfill-a.js", "\0virtual:polyfill-b.js", "node_modules/react/index.js"],
+      &[40.0, 40.0, 40.0],
+      0.0,
+      90.0,
+    );
+    assert_eq!(
+      pieces,
+      vec![
+        vec!["\0virtual:polyfill-a.js", "\0virtual:polyfill-b.js"],
+        vec!["node_modules/react/index.js"],
+      ],
+    );
+  }
+
+  #[test]
+  fn partition_emits_unsplittable_oversized_module_as_singleton() {
+    // `a.js` alone exceeds max_size and min_size forbids re-pairing it, so it is emitted
+    // as an oversized singleton while the remainder is grouped normally.
+    let pieces = partition(&["a.js", "b.js", "c.js"], &[100.0, 30.0, 30.0], 50.0, 80.0);
+    assert_eq!(pieces, vec![vec!["a.js"], vec!["b.js", "c.js"]]);
+  }
+
+  #[test]
+  fn partition_without_common_prefix_stays_within_size_bounds() {
+    // Unrelated ids have no relevance signal; the partition must still be a valid,
+    // exhaustive cover with every non-singleton piece within max_size.
+    let keys = &["alpha.js", "beta.js", "gamma.js", "delta.js"];
+    let sizes = &[30.0, 30.0, 30.0, 30.0];
+    let pieces = partition(keys, sizes, 0.0, 70.0);
+
+    let flattened: Vec<String> = pieces.iter().flatten().cloned().collect();
+    let expected: Vec<String> = keys.iter().map(|key| (*key).to_string()).collect();
+    assert_eq!(flattened, expected, "partition must be a contiguous, exhaustive cover");
+    // Each module is 30.0 and max_size is 70.0, so any non-singleton piece holds <= 2.
+    for piece in &pieces {
+      assert!(piece.len() <= 2, "non-singleton piece {piece:?} exceeds max_size");
+    }
   }
 }

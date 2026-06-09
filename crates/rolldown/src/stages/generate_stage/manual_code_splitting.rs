@@ -370,11 +370,12 @@ impl ManualSplitter<'_> {
         .map_or(self.chunking_options.max_size, Some)
       {
         if group.sizes > allow_max_size {
-          if let Some((left, right)) =
-            self.try_split_oversized_group(&group, allow_min_size, allow_max_size)
+          if let Some(pieces) =
+            self.partition_oversized_group(&group, allow_min_size, allow_max_size)
           {
-            module_groups.push(left);
-            module_groups.push(right);
+            for piece in pieces {
+              self.emit_chunk_from_group(&piece, &mut module_groups);
+            }
             continue;
           }
         }
@@ -384,14 +385,24 @@ impl ManualSplitter<'_> {
     }
   }
 
-  fn try_split_oversized_group(
+  /// Partitions an oversized group into size-bounded pieces along stable-id relevance
+  /// boundaries. The stable-id sort, prefix sizes, and adjacency similarities are
+  /// computed once for the whole group, then a single recursive pass over index ranges
+  /// selects split points — avoiding the per-level re-sorting and intermediate set
+  /// allocations a worklist-driven bisection would incur. Boundary selection and the
+  /// min/max feasibility rules are identical to a top-down bisection, so the resulting
+  /// partition is the same contiguous one; only the work to compute it differs.
+  ///
+  /// Returns `None` when the group cannot be split (e.g. `minSize` forbids every cut),
+  /// leaving the caller to emit it unchanged as an oversized chunk.
+  fn partition_oversized_group(
     &self,
     group: &ModuleGroup,
     min_size: f64,
     max_size: f64,
-  ) -> Option<(ModuleGroup, ModuleGroup)> {
+  ) -> Option<Vec<ModuleGroup>> {
     let mut modules = group.modules.iter().copied().collect::<Vec<_>>();
-    // Split by lexical relevance first (stable module id), then by size constraints.
+    // Sort by lexical relevance first (stable module id), then by execution order.
     modules.sort_by(|lhs, rhs| {
       let lhs_module = &self.link_output.module_table[*lhs];
       let rhs_module = &self.link_output.module_table[*rhs];
@@ -401,27 +412,32 @@ impl ManualSplitter<'_> {
         .then(lhs_module.exec_order().cmp(&rhs_module.exec_order()))
     });
 
-    let (split_index, left_size, right_size) =
-      find_relevance_split_index(&modules, &self.link_output.module_table, min_size, max_size)?;
+    let keys = modules
+      .iter()
+      .map(|module_idx| self.link_output.module_table[*module_idx].stable_id().as_str())
+      .collect::<Vec<_>>();
+    let prefix_sizes = prefix_group_sizes(&modules, &self.link_output.module_table);
 
-    Some((
-      ModuleGroup {
-        name: group.name.clone(),
-        match_group_index: group.match_group_index,
-        modules: modules[..split_index].iter().copied().collect(),
-        priority: group.priority,
-        sizes: left_size,
-        entries_aware_bits: group.entries_aware_bits.clone(),
-      },
-      ModuleGroup {
-        name: group.name.clone(),
-        match_group_index: group.match_group_index,
-        modules: modules[split_index..].iter().copied().collect(),
-        priority: group.priority,
-        sizes: right_size,
-        entries_aware_bits: group.entries_aware_bits.clone(),
-      },
-    ))
+    let mut ranges = Vec::new();
+    collect_split_ranges(&keys, &prefix_sizes, 0, modules.len(), min_size, max_size, &mut ranges);
+
+    if ranges.len() <= 1 {
+      return None;
+    }
+
+    Some(
+      ranges
+        .into_iter()
+        .map(|(lo, hi)| ModuleGroup {
+          name: group.name.clone(),
+          match_group_index: group.match_group_index,
+          modules: modules[lo..hi].iter().copied().collect(),
+          priority: group.priority,
+          sizes: prefix_sizes[hi] - prefix_sizes[lo],
+          entries_aware_bits: group.entries_aware_bits.clone(),
+        })
+        .collect(),
+    )
   }
 
   fn emit_chunk_from_group(&mut self, group: &ModuleGroup, remaining_groups: &mut [ModuleGroup]) {
@@ -673,11 +689,6 @@ fn sum_group_sizes(modules: &FxHashSet<ModuleIdx>, module_table: &ModuleTable) -
   modules.iter().map(|module_idx| module_table[*module_idx].size() as f64).sum()
 }
 
-#[expect(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here.
-fn module_size(module_idx: ModuleIdx, module_table: &ModuleTable) -> f64 {
-  module_table[module_idx].size() as f64
-}
-
 /// Similarity differences within this threshold are treated as insignificant ties,
 /// allowing size-based criteria to decide. Value of 10 equals one character position's
 /// max score, absorbing digit-level ASCII noise while preserving directory boundary signals.
@@ -689,54 +700,74 @@ fn stable_id_similarity(lhs: &str, rhs: &str) -> i32 {
   })
 }
 
-fn find_relevance_split_index(
-  modules: &[ModuleIdx],
-  module_table: &ModuleTable,
-  min_size: f64,
-  max_size: f64,
-) -> Option<(usize, f64, f64)> {
-  if modules.len() < 2 {
-    return None;
-  }
-
-  let keys = modules
-    .iter()
-    .map(|module_idx| module_table[*module_idx].stable_id().as_str())
-    .collect::<Vec<_>>();
-  let sizes =
-    modules.iter().map(|module_idx| module_size(*module_idx, module_table)).collect::<Vec<_>>();
-  pick_relevance_split_index(&keys, &sizes, min_size, max_size)
-}
-
-fn pick_relevance_split_index(
-  keys: &[&str],
-  sizes: &[f64],
-  min_size: f64,
-  max_size: f64,
-) -> Option<(usize, f64, f64)> {
-  debug_assert_eq!(keys.len(), sizes.len());
-  if keys.len() < 2 || sizes.len() < 2 {
-    return None;
-  }
-
-  let mut prefix_sizes = Vec::with_capacity(sizes.len() + 1);
+#[expect(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here.
+fn prefix_group_sizes(modules: &[ModuleIdx], module_table: &ModuleTable) -> Vec<f64> {
+  let mut prefix_sizes = Vec::with_capacity(modules.len() + 1);
   prefix_sizes.push(0.0);
-  for size in sizes {
-    let next_size = prefix_sizes.last().copied().unwrap_or_default() + *size;
+  for module_idx in modules {
+    let next_size =
+      prefix_sizes.last().copied().unwrap_or_default() + module_table[*module_idx].size() as f64;
     prefix_sizes.push(next_size);
   }
+  prefix_sizes
+}
 
-  let total_size = prefix_sizes.last().copied().unwrap_or_default();
+/// Recursively partitions `[lo, hi)` into contiguous, size-bounded ranges, cutting at
+/// the most relevant boundary (see [`pick_split_index_in_range`]) until each range fits
+/// within `max_size`. Ranges that cannot be split without violating `min_size` are kept
+/// whole, so an unsplittable oversized run is emitted as a single oversized chunk.
+fn collect_split_ranges(
+  keys: &[&str],
+  prefix_sizes: &[f64],
+  lo: usize,
+  hi: usize,
+  min_size: f64,
+  max_size: f64,
+  out: &mut Vec<(usize, usize)>,
+) {
+  let range_size = prefix_sizes[hi] - prefix_sizes[lo];
+  if range_size <= max_size {
+    out.push((lo, hi));
+    return;
+  }
+
+  match pick_split_index_in_range(keys, prefix_sizes, lo, hi, min_size, max_size) {
+    Some(split) => {
+      collect_split_ranges(keys, prefix_sizes, lo, split, min_size, max_size, out);
+      collect_split_ranges(keys, prefix_sizes, split, hi, min_size, max_size, out);
+    }
+    None => out.push((lo, hi)),
+  }
+}
+
+/// Selects the best split point within `[lo, hi)` over a shared, group-wide
+/// `prefix_sizes` array. Boundaries are ranked by stable-id similarity first (lower is a
+/// stronger relevance boundary), with similarity differences within
+/// [`SIMILARITY_SIGNIFICANCE_THRESHOLD`] treated as ties broken by fewer oversized sides
+/// and then a smaller maximum side. Returns `None` when `min_size` forbids every cut.
+fn pick_split_index_in_range(
+  keys: &[&str],
+  prefix_sizes: &[f64],
+  lo: usize,
+  hi: usize,
+  min_size: f64,
+  max_size: f64,
+) -> Option<usize> {
+  if hi - lo < 2 {
+    return None;
+  }
+
+  let total_size = prefix_sizes[hi] - prefix_sizes[lo];
 
   // Find the leftmost split point that can satisfy min_size for the left group.
-  let mut left_bound = 1;
-  while left_bound < sizes.len() && prefix_sizes[left_bound] < min_size {
+  let mut left_bound = lo + 1;
+  while left_bound < hi && prefix_sizes[left_bound] - prefix_sizes[lo] < min_size {
     left_bound += 1;
   }
 
   // Find the rightmost split point that can satisfy min_size for the right group.
-  let mut right_bound = sizes.len() - 1;
-  while right_bound > 0 && total_size - prefix_sizes[right_bound] < min_size {
+  let mut right_bound = hi - 1;
+  while right_bound > lo && prefix_sizes[hi] - prefix_sizes[right_bound] < min_size {
     right_bound -= 1;
   }
 
@@ -750,7 +781,7 @@ fn pick_relevance_split_index(
   let mut best_max_side_size = f64::INFINITY;
 
   for split_index in left_bound..=right_bound {
-    let left_size = prefix_sizes[split_index];
+    let left_size = prefix_sizes[split_index] - prefix_sizes[lo];
     let right_size = total_size - left_size;
     if left_size < min_size || right_size < min_size {
       continue;
@@ -777,10 +808,7 @@ fn pick_relevance_split_index(
     }
   }
 
-  let split_index = best_split_index?;
-  let left_size = prefix_sizes[split_index];
-  let right_size = total_size - left_size;
-  Some((split_index, left_size, right_size))
+  best_split_index
 }
 
 fn derive_entries_aware_chunk_name(
@@ -878,7 +906,17 @@ fn add_module_and_dependencies_to_group_recursively(
 
 #[cfg(test)]
 mod tests {
-  use super::{pick_relevance_split_index, stable_id_similarity};
+  use super::{pick_split_index_in_range, stable_id_similarity};
+
+  fn prefix_sizes(sizes: &[f64]) -> Vec<f64> {
+    let mut prefix = Vec::with_capacity(sizes.len() + 1);
+    prefix.push(0.0);
+    for size in sizes {
+      let next = prefix.last().copied().unwrap_or_default() + *size;
+      prefix.push(next);
+    }
+    prefix
+  }
 
   struct SplitCase<'a> {
     keys: &'a [&'a str],
@@ -892,14 +930,22 @@ mod tests {
   fn assert_split(case: &SplitCase) {
     let similarities: Vec<i32> =
       case.keys.windows(2).map(|w| stable_id_similarity(w[0], w[1])).collect();
-    let result = pick_relevance_split_index(case.keys, case.sizes, case.min_size, case.max_size);
+    let prefix = prefix_sizes(case.sizes);
+    let result = pick_split_index_in_range(
+      case.keys,
+      &prefix,
+      0,
+      case.keys.len(),
+      case.min_size,
+      case.max_size,
+    );
     match (result, case.expected) {
-      (Some((split, _, _)), Some(expected)) => {
+      (Some(split), Some(expected)) => {
         let (left, right) = (&case.keys[..split], &case.keys[split..]);
         assert_eq!((left, right), expected, "similarities: {similarities:?}");
       }
       (None, None) => {}
-      (Some((split, _, _)), None) => {
+      (Some(split), None) => {
         panic!(
           "expected no split, but got split at {split}: ({:?}, {:?})\nsimilarities: {similarities:?}",
           &case.keys[..split],

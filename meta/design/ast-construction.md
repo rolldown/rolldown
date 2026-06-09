@@ -32,21 +32,21 @@ Two facts constrain every choice and are documented in [ast-mutation](./ast-muta
 
 ## The convention
 
-Everything goes through one handle, `ast: AstFactory<'a>` — rolldown's newtype over `oxc::ast::AstBuilder`. Pick the tool by what you are building:
+Everything goes through one handle, `ast_factory: AstFactory<'a>` — rolldown's newtype over `oxc::ast::AstBuilder`. Pick the tool by what you are building:
 
-### Generic nodes → the `ast` handle (oxc's builder, via `Deref`)
+### Generic nodes → the `ast_factory` handle (oxc's builder, via `Deref`)
 
-`AstFactory` derefs to the wrapped builder, so every oxc constructor is callable directly on `ast`. The thin `AstSnippet` renames collapse to those oxc calls:
+`AstFactory` derefs to the wrapped builder, so every oxc constructor is callable directly on `ast_factory`. The thin `AstSnippet` renames collapse to those oxc calls:
 
 ```rust
 // before: an AstSnippet wrapper method
 let member = self.snippet.builder.alloc_static_member_expression(SPAN, object, property, false);
 
-// after: the same oxc constructor, on the `ast` handle (resolved through Deref)
-let member = ast.alloc_static_member_expression(SPAN, object, property, false);
+// after: the same oxc constructor, on the `ast_factory` handle (resolved through Deref)
+let member = ast_factory.alloc_static_member_expression(SPAN, object, property, false);
 ```
 
-Don't construct an `AstFactory` / `AstBuilder` ad hoc when a handle is already in scope, and don't reach for raw `oxc::allocator::Vec` / `Box` when the builder already offers `ast.vec*` / `ast.alloc_*`. oxc's constructors are positional; preface a verbose chunk with a comment showing the JS it produces, as oxc itself recommends.
+Don't construct an `AstFactory` / `AstBuilder` ad hoc when a handle is already in scope, and don't reach for raw `oxc::allocator::Vec` / `Box` when the builder already offers `ast_factory.vec*` / `ast_factory.alloc_*`. oxc's constructors are positional; preface a verbose chunk with a comment showing the JS it produces, as oxc itself recommends.
 
 ### Rolldown-specific patterns → inherent `make_*` methods on `AstFactory`
 
@@ -62,21 +62,21 @@ impl<'a> Deref for AstFactory<'a> {          // generic oxc constructors, no boi
 }
 
 impl<'a> AstFactory<'a> {                     // rolldown's own patterns
-  pub fn make_to_esm_wrapper(self, namespace: Expression<'a>) -> Expression<'a> { /* ... */ }
-  pub fn make_commonjs_wrapper(self, /* ... */) -> Statement<'a> { /* ... */ }
+  pub fn make_to_esm_wrapper(&self, namespace: Expression<'a>) -> Expression<'a> { /* ... */ }
+  pub fn make_commonjs_wrapper(&self, /* ... */) -> Statement<'a> { /* ... */ }
 }
 ```
 
 These methods:
 
 - are prefixed **`make_`** and named after the **operation** (`make_to_esm_wrapper`), never after a bare AST node;
-- mirror oxc's builder signature style: positional args, `make_<x>` returns a value and `make_alloc_<x>` returns a boxed node. A caller-provided `span` comes first as in oxc, but most `make_*` patterns synthesize nodes with the reserved `SPAN` internally and take no span. `AstFactory` is `Copy` (like the builder it wraps), so taking `self` by value does not consume the caller's handle.
+- mirror oxc's builder signature style: positional args, `make_<x>` returns a value and `make_alloc_<x>` returns a boxed node. A caller-provided `span` comes first as in oxc, but most `make_*` patterns synthesize nodes with the reserved `SPAN` internally and take no span. They take **`&self`** and reach the wrapped builder through `Deref` (`self.foo()`, never `self.0.foo()`). `&self` keeps the **call sites** independent of `Copy` — the handle is borrowed, never moved, so reusing it after a `make_*` call always compiles. The method **bodies** still lean on today's `Copy` builder (Deref yields `&AstBuilder` and oxc's value-taking constructors copy it back out); when oxc#23043 lands — per-type constructors taking the generator by reference, `AstFactory` impl `AstGenerator`, the `Deref` dropped — the bodies move onto that API while the `&self` call sites stay unchanged.
 
 A method earns a place here only if it encodes a multi-step rolldown convention that is wrong-by-default when open-coded — not merely to shorten one oxc call.
 
 ### Build programmatically by default; parsing source is an exception
 
-Construct nodes through the `ast` handle (oxc constructors via `Deref`, rolldown patterns via `make_*`). This is the default for **all** node construction, including code rolldown emits, because direct construction has no runtime cost whereas parsing a source string pays lexing + parsing overhead on every build.
+Construct nodes through the `ast_factory` handle (oxc constructors via `Deref`, rolldown patterns via `make_*`). This is the default for **all** node construction, including code rolldown emits, because direct construction has no runtime cost whereas parsing a source string pays lexing + parsing overhead on every build.
 
 Authoring code as JS source and parsing it (`EcmaCompiler::parse`) is reserved for a large, fixed body of code where maintaining it as real JS clearly outweighs the one-time parse cost. In practice that is the **runtime module** (`crates/rolldown/src/module_loader/runtime_module_task.rs:226`) and essentially nothing else on the output side — treat it as a special case, not a tool to reach for. Never parse for nodes that splice into an existing AST and need a synthetic `SPAN` + dummy `NodeId` — build those programmatically, per the constraint above.
 
@@ -88,10 +88,10 @@ Keep read-only inspection helpers separate from construction; they are not metho
 
 The prefix is not decoration — it does two jobs:
 
-- **Every call site self-identifies.** A bare node name (`ast.call_expression(..)`) reaches oxc's builder through `Deref`; a `make_*` name (`ast.make_to_esm_wrapper(..)`) is a rolldown method on `AstFactory`. Rust doesn't mark the two differently at the call site, so the distinction is carried by naming: oxc methods are named after the node they produce (nouns), rolldown's after the operation they perform (verbs).
+- **Every call site self-identifies.** A bare node name (`ast_factory.call_expression(..)`) reaches oxc's builder through `Deref`; a `make_*` name (`ast_factory.make_to_esm_wrapper(..)`) is a rolldown method on `AstFactory`. Rust doesn't mark the two differently at the call site, so the distinction is carried by naming: oxc methods are named after the node they produce (nouns), rolldown's after the operation they perform (verbs).
 - **It prevents accidental shadowing.** Inherent methods on `AstFactory` take priority over the oxc methods reached through `Deref`. Naming a rolldown method after a bare node (e.g. `call_expression`) would silently override oxc's — occasionally that is the deliberate way to absorb an upstream change, but as an accident it's a trap. The `make_` prefix keeps rolldown's additions in their own namespace, so any override is intentional.
 
-Naming the handle `ast` matches oxc's own code, so oxc calls and rolldown calls read uniformly when interleaved.
+The handle is spelled out as `ast_factory` rather than a bare `ast`: it reads unambiguously as an instance of `AstFactory`, and isn't visually confused with oxc's `ast` module that some files import.
 
 ## Forward compatibility: one chokepoint for oxc's construction API
 
@@ -122,9 +122,19 @@ First, what this does **not** touch, to head off a likely assumption:
 
 The rollout shape — **create `AstFactory` as a brand-new type alongside `AstSnippet`, migrate consumers area-by-area smallest-first, then delete `AstSnippet`.** No bridging alias and no temporary `pub builder` on `AstFactory`: it is born in final form (`AstFactory(AstBuilder)` + `Deref` + `make_*`). The only transitional thing is the old `AstSnippet`, deleted once empty.
 
+### Conventions every step must follow (locked from #9682 review)
+
+Settled while reviewing #9682 (the introduce-`AstFactory` PR). They describe the **target** for every area — including the first two PRs (#9682 / #9683), whose own code is being brought into compliance — not what every file already shows, so the same review comments don't recur:
+
+- **Handle name `ast_factory`** (not `ast`). Spelled out it reads as an instance of `AstFactory` and isn't confused with oxc's `ast` module ([#9682](https://github.com/rolldown/rolldown/pull/9682)). Use it for every migrated handle, the ext-trait fold, and any new code — including the already-merged-style sites in `vite_web_worker_post` / `generate_lazy_export` / `tweak_ast_for_scanning`, which are renamed to match.
+- **`make_*` take `&self`**, reaching the builder through `Deref` (`self.foo()`, never `self.0.foo()`) — so the **call sites** never depend on `AstFactory: Copy` (the handle is borrowed, not moved) and survive oxc#23043 making `AstBuilder` non-`Copy` unchanged; the method bodies migrate onto oxc's new by-reference constructors when that lands ([#9682](https://github.com/rolldown/rolldown/pull/9682)). Applies to every `make_*` added in any step.
+- **Extract a reused, non-trivial snippet into a function** rather than inlining it at several sites (e.g. the `expr_without_parentheses` paren-unwrap loop in `generate_lazy_export`) ([#9682](https://github.com/rolldown/rolldown/pull/9682)). The guidance to inline old `AstSnippet` wrappers is only for _trivial one-liners_: when collapsing a wrapper yields a multi-line body that recurs, keep it as a named helper instead of copy-pasting it.
+
+One-off, not a per-step concern (recorded only so it isn't lost): the `AstFactory` struct doc comment in `ast_factory.rs` will be reworded for grammar ([#9682](https://github.com/rolldown/rolldown/pull/9682)).
+
 1. **Create `AstFactory`** — new file `crates/rolldown_ecmascript_utils/src/ast_factory.rs`: `struct AstFactory<'a>(AstBuilder<'a>)`, `Copy`, `Deref<Target = AstBuilder>`, `new(alloc)`; exported from `lib.rs`. `AstSnippet` is left untouched, so there are zero call-site changes.
-2. **Migrate consumers area-by-area, smallest blast radius first.** Per area: switch the handle to `AstFactory`; `.builder.*` reach-throughs become deref'd `ast.*` calls; genuine patterns become `make_*` methods added to `AstFactory` on first use; thin wrappers are inlined to their deref'd oxc equivalent. Delete each `AstSnippet` method once it has no callers left (e.g. when a lint flags it). Approximate order (touch counts): `vite_web_worker_post` (~13) → `generate_lazy_export` (~12) → `tweak_ast_for_scanning` (~26) → `vite_build_import_analysis` (~45) → hmr finalizer + `hmr_stage` → `module_finalizers` (~211). The one non-mechanical fix is the hmr `utils.rs:185` `Deref` blocker — change `HmrAstBuilder::builder` to return `AstBuilder` by value (it is `Copy`).
-3. **Fold the construction ext traits** (`binding_pattern_ext` etc.) onto the shared `ast: AstFactory` handle, removing their internal `AstBuilder::new(alloc)`. Read-only `as_*` / `is_*` traits stay.
+2. **Migrate consumers area-by-area, smallest blast radius first.** Per area: switch the handle to `AstFactory` (named `ast_factory`); `.builder.*` reach-throughs become deref'd `ast_factory.*` calls; genuine patterns become `make_*` methods added to `AstFactory` on first use; thin wrappers are inlined to their deref'd oxc equivalent (unless the body is non-trivial and recurs — then keep it a named helper). Delete each `AstSnippet` method once it has no callers left (e.g. when a lint flags it). Approximate order (touch counts): `vite_web_worker_post` (~13) → `generate_lazy_export` (~12) → `tweak_ast_for_scanning` (~26) → `vite_build_import_analysis` (~45) → hmr finalizer + `hmr_stage` → `module_finalizers` (~211). The one non-mechanical fix is the hmr `utils.rs:185` `Deref` blocker — change `HmrAstBuilder::builder` to return `AstBuilder` by value (it is `Copy`).
+3. **Fold the construction ext traits** (`binding_pattern_ext` etc.) onto the shared `ast_factory: AstFactory` handle, removing their internal `AstBuilder::new(alloc)`. Read-only `as_*` / `is_*` traits stay.
 4. **Delete `AstSnippet`** once empty — the file, the `lib.rs` export, any residual methods — and delete this Plan section.
 
 Two `make_*` names must avoid shadowing oxc builder methods reached via `Deref`: `object_property_kind_object_property` → `make_lazy_export_property`, `statement_module_declaration_export_named_declaration` → `make_export_named_stmt`.

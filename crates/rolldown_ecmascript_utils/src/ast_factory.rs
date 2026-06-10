@@ -5,11 +5,12 @@ use oxc::{
   ast::{
     AstBuilder, NONE,
     ast::{
-      AssignmentOperator, AssignmentTarget, Declaration, ExportDefaultDeclarationKind, Expression,
+      AssignmentOperator, AssignmentTarget, BindingIdentifier, Declaration,
+      ExportDefaultDeclarationKind, Expression, FormalParameterKind, IdentifierName,
       ImportOrExportKind, SimpleAssignmentTarget, Statement, VariableDeclarationKind,
     },
   },
-  span::SPAN,
+  span::{SPAN, Span},
 };
 
 /// Rolldown's newtype wrapper around oxc's [`AstBuilder`].
@@ -26,6 +27,21 @@ pub struct AstFactory<'ast>(AstBuilder<'ast>);
 impl<'ast> AstFactory<'ast> {
   pub fn new(allocator: &'ast Allocator) -> Self {
     Self(AstBuilder::new(allocator))
+  }
+
+  /// `<name>` as a `BindingIdentifier`, with the name copied into the arena.
+  pub fn make_id(&self, span: Span, name: &str) -> BindingIdentifier<'ast> {
+    self.binding_identifier(span, self.str(name))
+  }
+
+  /// A reference to `<name>` as an `Expression`, with the name copied into the arena.
+  pub fn make_id_ref_expr(&self, span: Span, name: &str) -> Expression<'ast> {
+    self.expression_identifier(span, self.str(name))
+  }
+
+  /// `<name>` as an `IdentifierName`, with the name copied into the arena.
+  pub fn make_id_name(&self, span: Span, name: &str) -> IdentifierName<'ast> {
+    self.identifier_name(span, self.str(name))
   }
 
   /// `var <name> = <init>;`
@@ -100,6 +116,21 @@ impl<'ast> AstFactory<'ast> {
       None,
       ImportOrExportKind::Value,
       NONE,
+    ))
+  }
+
+  /// `() => <expr>`
+  pub fn make_arrow_returning(&self, expr: Expression<'ast>) -> Expression<'ast> {
+    let statements =
+      self.vec1(Statement::ExpressionStatement(self.alloc_expression_statement(SPAN, expr)));
+    Expression::ArrowFunctionExpression(self.alloc_arrow_function_expression(
+      SPAN,
+      true,
+      false,
+      NONE,
+      self.formal_parameters(SPAN, FormalParameterKind::Signature, self.vec(), NONE),
+      NONE,
+      self.function_body(SPAN, self.vec(), statements),
     ))
   }
 }

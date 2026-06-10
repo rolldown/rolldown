@@ -95,8 +95,15 @@ pub struct LinkingMetadata {
   /// (every top-level statement is a hoisted function declaration or a source-less export clause,
   /// so nothing lands inside the wrapper closure). Calling such an `init_*` is a no-op, so init
   /// call sites are marked `@__PURE__` and the default `dce-only` minifier drops them (and the
-  /// now-unused wrapper). Computed by [`crate::stages::generate_stage`]'s `compute_init_is_noop`.
+  /// now-unused wrapper). Computed by [`crate::stages::generate_stage`]'s
+  /// `compute_wrapped_esm_init_metadata`.
   pub init_is_noop: bool,
+  /// For each non-included top-level re-export statement (`export * from`, `export {x} from`,
+  /// `export * as ns from`) of an included `WrapKind::Esm` module: the ordered wrapped-ESM
+  /// modules whose `init_*()` calls must be emitted in its place to preserve execution order.
+  /// Computed by [`crate::stages::generate_stage`]'s `compute_wrapped_esm_init_metadata`;
+  /// consumed by the module finalizer.
+  pub transitive_esm_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
 }
 
 impl LinkingMetadata {

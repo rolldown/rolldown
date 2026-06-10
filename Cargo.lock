@@ -2381,7 +2381,7 @@ dependencies = [
 [[package]]
 name = "oxc_resolver"
 version = "11.19.1"
-source = "git+https://github.com/oxc-project/oxc-resolver?rev=baf2d56000889d9ac0b6c9b9709e22bae1890164#baf2d56000889d9ac0b6c9b9709e22bae1890164"
+source = "git+https://github.com/oxc-project/oxc-resolver?rev=cf9a91c0b0a6d6c23839b36f090f8d836f131752#cf9a91c0b0a6d6c23839b36f090f8d836f131752"
 dependencies = [
  "cfg-if",
  "compact_str",
@@ -2408,7 +2408,7 @@ dependencies = [
 [[package]]
 name = "oxc_resolver_napi"
 version = "11.19.1"
-source = "git+https://github.com/oxc-project/oxc-resolver?rev=baf2d56000889d9ac0b6c9b9709e22bae1890164#baf2d56000889d9ac0b6c9b9709e22bae1890164"
+source = "git+https://github.com/oxc-project/oxc-resolver?rev=cf9a91c0b0a6d6c23839b36f090f8d836f131752#cf9a91c0b0a6d6c23839b36f090f8d836f131752"
 dependencies = [
  "fancy-regex",
  "napi",

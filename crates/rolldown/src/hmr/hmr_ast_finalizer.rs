@@ -370,62 +370,6 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     }
     ret.push(self.create_register_module_stmt());
 
-    // let module_exports =
-    //   match self.module.exports_kind {
-    //     rolldown_common::ExportsKind::Esm => {
-    //       ret.extend(self.generate_declaration_of_module_namespace_object(
-    //         &binding_name_for_namespace_object_ref,
-    //       ));
-
-    //       // { exports: namespace }
-    //       ast::Argument::ObjectExpression(self.ast_factory.alloc_object_expression(
-    //         SPAN,
-    //         self.ast_factory.vec1(self.ast_factory.object_property_kind_object_property(
-    //           SPAN,
-    //           PropertyKind::Init,
-    //           self.ast_factory.property_key_static_identifier(SPAN, "exports"),
-    //           self.ast_factory.make_id_ref_expr(SPAN, &binding_name_for_namespace_object_ref),
-    //           true,
-    //           false,
-    //           false,
-    //         )),
-    //       ))
-    //     }
-    //     rolldown_common::ExportsKind::CommonJs => {
-    //       // `module`
-    //       ast::Argument::Identifier(self.ast_factory.alloc_identifier_reference(SPAN, "module"))
-    //     }
-    //     rolldown_common::ExportsKind::None => ast::Argument::ObjectExpression(
-    //       // `{}`
-    //       self.ast_factory.alloc_object_expression(SPAN, self.ast_factory.vec()),
-    //     ),
-    //   };
-
-    // // __rolldown_runtime__.registerModule(moduleId, module)
-    // let arguments = self.ast_factory.vec_from_array([
-    //   ast::Argument::StringLiteral(self.ast_factory.alloc_string_literal(
-    //     SPAN,
-    //     self.ast_factory.str(&self.module.stable_id),
-    //     None,
-    //   )),
-    //   module_exports,
-    // ]);
-
-    // let register_call = self.ast_factory.alloc_call_expression(
-    //   SPAN,
-    //   self.ast_factory.make_id_ref_expr(SPAN, "__rolldown_runtime__.registerModule"),
-    //   NONE,
-    //   arguments,
-    //   false,
-    // );
-
-    // ret.push(ast::Statement::ExpressionStatement(
-    //   self
-    //     .snippet
-    //     .builder
-    //     .alloc_expression_statement(SPAN, ast::Expression::CallExpression(register_call)),
-    // ));
-
     ret
   }
 

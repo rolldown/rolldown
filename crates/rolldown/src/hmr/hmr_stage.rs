@@ -147,7 +147,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .await?;
 
     // Extract the single result
-    // ret.is_self_accepting = true; // (hyf0) TODO: what's this for?
     Ok(results.pop().unwrap().update)
   }
 
@@ -247,7 +246,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
           if let Module::Normal(module) = module {
             Some(module.originative_resolved_id.clone())
           } else {
-            // unreachable!("HMR only supports normal module. Got {:?}", module.id());
             None
           }
         })
@@ -579,7 +577,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
           if let Module::Normal(module) = module {
             Some(module.originative_resolved_id.clone())
           } else {
-            // unreachable!("HMR only supports normal module. Got {:?}", module.id());
             None
           }
         })

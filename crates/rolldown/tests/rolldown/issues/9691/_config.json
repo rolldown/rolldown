@@ -1,0 +1,16 @@
+{
+  "_comment": "Regression test for #9691 (ReferenceError in @aws-sdk/client-s3 with lazyBarrel + codeSplitting:false). main.js dynamically imports ./trigger.js; under `codeSplitting: false` the dynamic import cannot become its own chunk, so rolldown inlines it and *wraps* the imported module (determine_module_exports_kind.rs). The wrap propagates through the barrel's `export *` records (wrapping.rs `wrap_module_recursively`), and reference_needed_symbols.rs used to force-mark `export *` statements of wrapped importees as side-effectful, force-including the dead `sideEffects: false` star source lib/handler-b.js even though its only export (HandlerB) is never used. handler-b's retained body reads `dep_b` at the top level, but lazyBarrel drops the `./dep-b.js` import it needs (handler-b's exports are never requested) => `ReferenceError: dep_b is not defined` at runtime. Now the `export *` statement is tree-shaken like a named re-export (the finalizer's `generate_transitive_esm_init` re-creates the `init_*()` call if the star source ends up included), so handler-b.js must appear in NEITHER snapshot and the bundle must execute cleanly, matching the `code-splitting-on` variant.",
+  "config": {
+    "platform": "node",
+    "codeSplitting": false,
+    "experimental": {
+      "lazyBarrel": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "code-splitting-on",
+      "inlineDynamicImports": false
+    }
+  ]
+}

@@ -30,11 +30,9 @@ var init_Foo$1 = __esmMin((() => {
 var init_Foo = __esmMin((() => {
 	init_Foo$1();
 	init_fooClasses();
-	init_fooClasses();
 }));
 //#endregion
 __esmMin((() => {
-	init_Foo();
 	init_Foo();
 }))();
 export { Foo, fooClasses, getFooUtilityClass };

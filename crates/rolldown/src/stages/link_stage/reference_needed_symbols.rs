@@ -174,8 +174,28 @@ impl LinkStage<'_> {
                       }
                       WrapKind::Esm => {
                         // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
-                        stmt_info.side_effect =
-                          (is_reexport_all || importee.side_effects.has_side_effects()).into();
+                        //
+                        // `export * from 'bar_esm'` is treated like a named re-export and only
+                        // forced to be side-effectful when the eager `init_bar_esm()` call is
+                        // really needed (#9691). If the statement gets tree-shaken while the
+                        // importee is still included, the finalizer re-creates the init call for
+                        // excluded re-export statements of ESM-wrapped importers
+                        // (`generate_transitive_esm_init`), so initialization order is preserved
+                        // while a side-effect-free star source whose exports are all unused can
+                        // be dropped entirely. The eager call is still required when:
+                        // - the importee has dynamic exports: the `__reExport(...)` namespace
+                        //   copy must run eagerly;
+                        // - the importer is not ESM-wrapped (e.g. an entry module): the finalizer
+                        //   fallback only applies to wrapped importers;
+                        // - the importee is TLA-tainted: the fallback emits a plain call without
+                        //   `await`.
+                        let reexport_all_init_is_lazy = is_reexport_all
+                          && !importee_linking_info.has_dynamic_exports
+                          && !importee_linking_info.is_tla_or_contains_tla_dependency
+                          && matches!(self.metas[importer_idx].wrap_kind(), WrapKind::Esm);
+                        stmt_info.side_effect = ((is_reexport_all && !reexport_all_init_is_lazy)
+                          || importee.side_effects.has_side_effects())
+                        .into();
                         // Reference to `init_foo`
                         stmt_info
                           .referenced_symbols

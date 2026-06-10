@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import dep_a from "node:https";
+var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+//#endregion
+//#region lib/dep-a.js
+var init_dep_a = __esmMin((() => {}));
+//#endregion
+//#region lib/handler-a.js
+var HandlerA;
+var init_handler_a = __esmMin((() => {
+	init_dep_a();
+	HandlerA = class {
+		constants = dep_a.constants;
+	};
+}));
+//#endregion
+//#region main.js
+__esmMin((() => {
+	init_handler_a();
+}))();
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+console.log(HandlerA);
+//#endregion
+export {};
+
+```
+
+# Variant: code-splitting-on: [inline_dynamic_imports: false]
+
+## Assets
+
+### main.js
+
+```js
+import dep_a from "node:https";
+//#region lib/handler-a.js
+var HandlerA = class {
+	constants = dep_a.constants;
+};
+//#endregion
+//#region main.js
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+console.log(HandlerA);
+//#endregion
+export {};
+
+```

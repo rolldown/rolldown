@@ -4,13 +4,13 @@ use oxc::ast::NONE;
 use oxc::ast::ast::{self, BindingPattern, Declaration, ImportOrExportKind, Statement};
 use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{GetSpanMut, SPAN, Span};
-use rolldown_ecmascript_utils::{AstSnippet, StatementExt};
+use rolldown_ecmascript_utils::{AstFactory, StatementExt};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
 /// This also ensures span uniqueness in the AST.
 pub struct PreProcessor<'ast, 'a> {
-  snippet: AstSnippet<'ast>,
+  ast_factory: AstFactory<'ast>,
   /// used to store none_hoisted statements.
   top_level_stmt_temp_storage: Vec<Statement<'ast>>,
   keep_names: bool,
@@ -37,7 +37,7 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
     drop_labels: Option<&'a FxHashSet<String>>,
   ) -> Self {
     Self {
-      snippet: AstSnippet::new(alloc),
+      ast_factory: AstFactory::new(alloc),
       top_level_stmt_temp_storage: vec![],
       keep_names,
       drop_labels: drop_labels.filter(|set| !set.is_empty()),
@@ -61,7 +61,7 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
     if let Statement::LabeledStatement(stmt) = it
       && labels.contains(stmt.label.name.as_str())
     {
-      *it = self.snippet.builder.statement_empty(stmt.span);
+      *it = self.ast_factory.statement_empty(stmt.span);
       return true;
     }
     false
@@ -92,21 +92,21 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
   ) -> Vec<Statement<'ast>> {
     var_decl
       .declarations
-      .take_in(self.snippet.alloc())
+      .take_in(self.ast_factory.allocator)
       .into_iter()
       .enumerate()
       .map(|(i, declarator)| {
-        let new_decl = self.snippet.builder.alloc_variable_declaration(
+        let new_decl = self.ast_factory.alloc_variable_declaration(
           SPAN,
           var_decl.kind,
-          self.snippet.builder.vec_from_iter([declarator]),
+          self.ast_factory.vec_from_iter([declarator]),
           var_decl.declare,
         );
         if let Some(named_decl_span) = named_decl_span {
-          Statement::ExportNamedDeclaration(self.snippet.builder.alloc_export_named_declaration(
+          Statement::ExportNamedDeclaration(self.ast_factory.alloc_export_named_declaration(
             if i == 0 { named_decl_span } else { SPAN },
             Some(Declaration::VariableDeclaration(new_decl)),
-            self.snippet.builder.vec(),
+            self.ast_factory.vec(),
             // Since it is `export a = 1, b = 2;`, source should be `None`
             None,
             ImportOrExportKind::Value,
@@ -133,7 +133,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
     // Initialize next_unique_span_start for span uniqueness
     self.next_unique_span_start = program.span.end + 1;
 
-    let original_body = program.body.take_in(self.snippet.alloc());
+    let original_body = program.body.take_in(self.ast_factory.allocator);
     program.body.reserve_exact(original_body.len());
     self.top_level_stmt_temp_storage = Vec::with_capacity(
       original_body.iter().filter(|stmt| !stmt.is_module_declaration_with_source()).count(),
@@ -180,10 +180,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
 
       if let Some(stmts) = self.statement_replace_map.remove(&stmt_addr) {
         *it = Statement::BlockStatement(
-          self
-            .snippet
-            .builder
-            .alloc_block_statement(SPAN, self.snippet.builder.vec_from_iter(stmts)),
+          self.ast_factory.alloc_block_statement(SPAN, self.ast_factory.vec_from_iter(stmts)),
         );
       }
     } else {
@@ -194,7 +191,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
   /// If `keep_names` is true, we will keep the names of (function/class) variable declarations even it is not top level.
   fn visit_statements(&mut self, it: &mut oxc::allocator::Vec<'ast, Statement<'ast>>) {
     if self.keep_names {
-      let stmts = it.take_in(self.snippet.alloc());
+      let stmts = it.take_in(self.ast_factory.allocator);
       for mut stmt in stmts {
         if self.try_drop_labeled(&mut stmt) {
           it.push(stmt);
@@ -306,24 +303,24 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
           ast::Expression::ConditionalExpression(cond) => Some(cond),
           _ => None,
         }) {
-          let test = cond_expr.test.take_in(self.snippet.alloc());
-          let consequent = cond_expr.consequent.take_in(self.snippet.alloc());
-          let alternative = cond_expr.alternate.take_in(self.snippet.alloc());
-          let new_cond_expr = self.snippet.builder.alloc_conditional_expression(
+          let test = cond_expr.test.take_in(self.ast_factory.allocator);
+          let consequent = cond_expr.consequent.take_in(self.ast_factory.allocator);
+          let alternative = cond_expr.alternate.take_in(self.ast_factory.allocator);
+          let new_cond_expr = self.ast_factory.alloc_conditional_expression(
             SPAN,
             test,
-            self.snippet.builder.expression_call(
+            self.ast_factory.expression_call(
               SPAN,
-              self.snippet.builder.expression_identifier(SPAN, "require"),
+              self.ast_factory.expression_identifier(SPAN, "require"),
               NONE,
-              self.snippet.builder.vec1(ast::Argument::from(consequent)),
+              self.ast_factory.vec1(ast::Argument::from(consequent)),
               false,
             ),
-            self.snippet.builder.expression_call(
+            self.ast_factory.expression_call(
               SPAN,
-              self.snippet.builder.expression_identifier(SPAN, "require"),
+              self.ast_factory.expression_identifier(SPAN, "require"),
               NONE,
-              self.snippet.builder.vec1(ast::Argument::from(alternative)),
+              self.ast_factory.vec1(ast::Argument::from(alternative)),
               false,
             ),
           );
@@ -338,15 +335,15 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
         let source = &mut expr.source;
         match source {
           ast::Expression::ConditionalExpression(cond_expr) => {
-            let test = cond_expr.test.take_in(self.snippet.alloc());
-            let consequent = cond_expr.consequent.take_in(self.snippet.alloc());
-            let alternative = cond_expr.alternate.take_in(self.snippet.alloc());
+            let test = cond_expr.test.take_in(self.ast_factory.allocator);
+            let consequent = cond_expr.consequent.take_in(self.ast_factory.allocator);
+            let alternative = cond_expr.alternate.take_in(self.ast_factory.allocator);
 
-            let new_cond_expr = self.snippet.builder.expression_conditional(
+            let new_cond_expr = self.ast_factory.expression_conditional(
               SPAN,
               test,
-              self.snippet.builder.expression_import(SPAN, consequent, None, None),
-              self.snippet.builder.expression_import(SPAN, alternative, None, None),
+              self.ast_factory.expression_import(SPAN, consequent, None, None),
+              self.ast_factory.expression_import(SPAN, alternative, None, None),
             );
 
             Some(new_cond_expr)

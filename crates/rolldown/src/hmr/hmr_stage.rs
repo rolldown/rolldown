@@ -1188,7 +1188,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
             == *first_invalidated_by
         }) {
           require_full_reload = true;
-          // full_reload_reason = Some("circular import invalidate".to_string());
+          full_reload_reason = Some(format!(
+            "update propagated back to `{first_invalidated_by}`, which already called `import.meta.hot.invalidate()`"
+          ));
           continue;
         }
       }

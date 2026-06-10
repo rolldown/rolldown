@@ -4,7 +4,7 @@ use oxc::semantic::{ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
   allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
   ast::{
-    AstBuilder, NONE,
+    NONE,
     ast::{
       self, ClassElement, Expression, IdentifierReference, ImportExpression, MemberExpression,
       NumberBase, Statement, VariableDeclarationKind,
@@ -20,7 +20,7 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
-  AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
+  AstFactory, AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
 };
 
 mod finalizer_context;
@@ -32,7 +32,6 @@ use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
-use crate::hmr::utils::HmrAstBuilder;
 use crate::utils::external_import_interop::import_record_needs_interop;
 
 mod hmr;
@@ -82,6 +81,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub scope: &'me AstScopes,
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
+  pub ast_factory: AstFactory<'ast>,
   pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
   pub scope_stack: Vec<ScopeFlags>,
   pub state: TraverseState,
@@ -157,16 +157,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           false,
           false,
         );
-        let init_call = self.snippet.builder.expression_call_with_pure(
+        let init_call = self.ast_factory.expression_call_with_pure(
           SPAN,
           wrapper_ref_expr,
           NONE,
-          self.snippet.builder.vec(),
+          self.ast_factory.vec(),
           false,
           // A no-op `init_*()` (empty wrapped-ESM closure) is pure; let `dce-only` drop it.
           importee_linking_info.init_is_noop,
         );
-        body.push(self.snippet.builder.statement_expression(SPAN, init_call));
+        body.push(self.ast_factory.statement_expression(SPAN, init_call));
       } else {
         // Importee is not included (barrel module) — traverse its import records
         // to find included importees transitively.
@@ -288,20 +288,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(wrapper_ref, false, false);
 
       let init_call =
-        ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression_with_pure(
+        ast::Expression::CallExpression(self.ast_factory.alloc_call_expression_with_pure(
           SPAN,
           wrapper_ref_expr,
           NONE,
-          self.snippet.builder.vec(),
+          self.ast_factory.vec(),
           false,
           // A no-op `init_*()` (empty wrapped-ESM closure) is pure; let `dce-only` drop it.
           importee_linking_info.init_is_noop,
         ));
 
       Some(if is_tla_or_contains_tla_dependency {
-        ast::Expression::AwaitExpression(
-          self.snippet.builder.alloc_await_expression(SPAN, init_call),
-        )
+        ast::Expression::AwaitExpression(self.ast_factory.alloc_await_expression(SPAN, init_call))
       } else {
         init_call
       })
@@ -313,14 +311,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       1 => init_exprs
         .into_iter()
         .next()
-        .map(|init_expr| self.snippet.builder.statement_expression(SPAN, init_expr)),
-      _ => {
-        let builder = self.builder();
-        Some(builder.statement_expression(
-          SPAN,
-          builder.expression_sequence(SPAN, builder.vec_from_iter(init_exprs)),
-        ))
-      }
+        .map(|init_expr| self.ast_factory.statement_expression(SPAN, init_expr)),
+      _ => Some(self.ast_factory.statement_expression(
+        SPAN,
+        self.ast_factory.expression_sequence(SPAN, self.ast_factory.vec_from_iter(init_exprs)),
+      )),
     }
   }
 
@@ -377,11 +372,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let require_call = if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
           importee_wrapper_ref_name
         } else {
-          self.snippet.builder.expression_call(
+          self.ast_factory.expression_call(
             SPAN,
             importee_wrapper_ref_name,
             NONE,
-            self.snippet.builder.vec(),
+            self.ast_factory.vec(),
             false,
           )
         };
@@ -395,7 +390,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let init_expr = if needs_toesm {
           // `__toESM`
           let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
-          self.snippet.wrap_with_to_esm(
+          self.ast_factory.make_to_esm_wrapper(
             to_esm_fn_name,
             require_call,
             self.ctx.module.should_consider_node_esm_spec_for_static_import(),
@@ -406,7 +401,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
         // `import_foo`
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
-        *stmt = self.snippet.var_decl_stmt(binding_name_for_wrapper_call_ret, init_expr);
+        *stmt = self.ast_factory.make_var_decl(binding_name_for_wrapper_call_ret, init_expr);
 
         if self.transferred_import_record.contains_key(&rec_idx) {
           self.transferred_import_record.insert(rec_idx, stmt.to_source_string());
@@ -433,26 +428,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         );
 
         // `init_foo()`
-        let init_call =
-          ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-            stmt.span(),
-            wrapper_ref_expr,
-            NONE,
-            self.snippet.builder.vec(),
-            false,
-          ));
+        let init_call = ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
+          stmt.span(),
+          wrapper_ref_expr,
+          NONE,
+          self.ast_factory.vec(),
+          false,
+        ));
 
         if importee_linking_info.is_tla_or_contains_tla_dependency {
           // `await init_foo()`
-          *stmt = self.snippet.builder.statement_expression(
+          *stmt = self.ast_factory.statement_expression(
             SPAN,
             ast::Expression::AwaitExpression(
-              self.snippet.builder.alloc_await_expression(SPAN, init_call),
+              self.ast_factory.alloc_await_expression(SPAN, init_call),
             ),
           );
         } else {
           // `init_foo()`
-          *stmt = self.snippet.builder.statement_expression(SPAN, init_call);
+          *stmt = self.ast_factory.statement_expression(SPAN, init_call);
         }
 
         if self.transferred_import_record.contains_key(&rec_idx) {
@@ -477,7 +471,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !symbol_ref.is_declared_in_root_scope(self.ctx.symbol_db) {
       // No fancy things on none root scope symbols
       return (
-        self.snippet.id_ref_expr(self.canonical_name_for(symbol_ref), SPAN),
+        self.ast_factory.make_id_ref_expr(SPAN, self.canonical_name_for(symbol_ref)),
         FinalizedExprProcessHint::empty(),
       );
     }
@@ -496,10 +490,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       if !self.ctx.options.optimization.is_inline_const_smart_mode()
         || (self.state.contains(TraverseState::SmartInlineConst) || meta.safe_to_inline)
       {
-        return (
-          meta.value.to_expression(AstBuilder::new(self.alloc)),
-          FinalizedExprProcessHint::empty(),
-        );
+        return (meta.value.to_expression(*self.ast_factory), FinalizedExprProcessHint::empty());
       }
     }
     let mut hint = FinalizedExprProcessHint::empty();
@@ -508,12 +499,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       if self.ctx.module.should_consider_node_esm_spec_for_static_import() {
         if let Some(node_mode_name) = self.ctx.chunk.node_mode_external_ns_names.get(&canonical_ref)
         {
-          self.snippet.id_ref_expr(node_mode_name.as_str(), SPAN)
+          self.ast_factory.make_id_ref_expr(SPAN, node_mode_name.as_str())
         } else {
-          self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+          self.ast_factory.make_id_ref_expr(SPAN, self.canonical_name_for(canonical_ref))
         }
       } else {
-        self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+        self.ast_factory.make_id_ref_expr(SPAN, self.canonical_name_for(canonical_ref))
       }
     } else {
       match self.ctx.options.format {
@@ -536,27 +527,34 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             hint.insert(extra_hint);
             expr
           } else {
-            self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
+            self.ast_factory.make_id_ref_expr(SPAN, self.canonical_name_for(canonical_ref))
           }
         }
-        _ => self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN),
+        _ => self.ast_factory.make_id_ref_expr(SPAN, self.canonical_name_for(canonical_ref)),
       }
     };
 
     if let Some(ns_alias) = namespace_alias {
       if !optimize_namespace_alias_transform {
-        expr = ast::Expression::StaticMemberExpression(
-          self.snippet.builder.alloc_static_member_expression(
+        expr =
+          ast::Expression::StaticMemberExpression(self.ast_factory.alloc_static_member_expression(
             SPAN,
             expr,
-            self.snippet.id_name(&ns_alias.property_name, SPAN),
+            self.ast_factory.make_id_name(SPAN, &ns_alias.property_name),
             false,
-          ),
-        );
+          ));
       }
 
       if preserve_this_semantic_if_needed {
-        expr = self.snippet.seq2_in_paren_expr(self.snippet.number_expr(0.0, "0"), expr);
+        expr = self.ast_factory.make_seq_in_parens(
+          self.ast_factory.expression_numeric_literal(
+            SPAN,
+            0.0,
+            Some("0".into()),
+            NumberBase::Decimal,
+          ),
+          expr,
+        );
       }
     }
 
@@ -610,9 +608,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // Cases #1-3: Entry + Cjs
       let expr = match chunk.output_exports {
         // Case #1: Entry + Cjs + Default + default → require_binding
-        OutputExports::Default => self.snippet.id_ref_expr(require_binding, SPAN),
+        OutputExports::Default => self.ast_factory.make_id_ref_expr(SPAN, require_binding),
         // Cases #2-3: Entry + Cjs + Named → require_binding.default (the wrapped module)
-        _ => self.snippet.literal_prop_access_member_expr_expr(require_binding, "default"),
+        _ => self.ast_factory.make_member_access_expr(require_binding, "default"),
       };
       return (expr, FinalizedExprProcessHint::FromCjsWrapKindEntry);
     }
@@ -627,10 +625,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // See https://github.com/rolldown/rolldown/issues/7833
     let expr = match (&chunk.output_exports, is_default_export) {
       // Case #7: Entry + None + Default + default → require_binding
-      (OutputExports::Default, true) => self.snippet.id_ref_expr(require_binding, SPAN),
+      (OutputExports::Default, true) => self.ast_factory.make_id_ref_expr(SPAN, require_binding),
       // Cases #5, #8, #10, #12, #14: Named + default → require_binding.default
       // Cases #6, #9, #11, #13, #15: Named + named → require_binding.exportName
-      _ => self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name),
+      _ => self.ast_factory.make_member_access_expr(require_binding, exported_name),
     };
 
     (expr, FinalizedExprProcessHint::empty())
@@ -673,10 +671,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     {
       return None;
     }
-    Some((
-      constant_meta.value.to_expression(AstBuilder::new(self.alloc)),
-      FinalizedExprProcessHint::empty(),
-    ))
+    Some((constant_meta.value.to_expression(*self.ast_factory), FinalizedExprProcessHint::empty()))
   }
 
   /// Try to inline an enum member access from an expression. Handles:
@@ -778,7 +773,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let symbol_name = canonical_ref.name(self.ctx.symbol_db);
     let member_map = module.ecma_view.enum_member_value_map.get(symbol_name)?;
     let meta = member_map.get(property_name)?;
-    Some(meta.value.to_expression(AstBuilder::new(self.alloc)))
+    Some(meta.value.to_expression(*self.ast_factory))
   }
 
   fn var_declaration_to_expr_seq_and_bindings(
@@ -797,19 +792,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // Turn `var ... = ...` to `... = ...`
       if let Some(ref mut init_expr) = var_decl.init {
         let left = var_decl.id.take_in(self.alloc).into_assignment_target(self.alloc);
-        Some(ast::Expression::AssignmentExpression(
-          self.snippet.builder.alloc_assignment_expression(
-            SPAN,
-            ast::AssignmentOperator::Assign,
-            left,
-            init_expr.take_in(self.alloc),
-          ),
-        ))
+        Some(ast::Expression::AssignmentExpression(self.ast_factory.alloc_assignment_expression(
+          SPAN,
+          ast::AssignmentOperator::Assign,
+          left,
+          init_expr.take_in(self.alloc),
+        )))
       } else {
         None
       }
     });
-    Some((self.builder().expression_sequence(SPAN, self.builder().vec_from_iter(exprs)), ret))
+    Some((self.ast_factory.expression_sequence(SPAN, self.ast_factory.vec_from_iter(exprs)), ret))
   }
 
   fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
@@ -847,16 +840,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // instead of creating a property. Use computed property syntax for it.
         let key = if is_validate_identifier_name(prop_name) && prop_name != "__proto__" {
           ast::PropertyKey::StaticIdentifier(
-            self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
+            self.ast_factory.make_id_name(SPAN, prop_name).into_in(self.alloc),
           )
         } else {
-          ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
+          ast::PropertyKey::StringLiteral(self.ast_factory.alloc_string_literal(
+            SPAN,
+            self.ast_factory.str(prop_name),
+            None,
+          ))
         };
-        Some(ast::ObjectPropertyKind::ObjectProperty(self.snippet.builder.alloc_object_property(
+        Some(ast::ObjectPropertyKind::ObjectProperty(self.ast_factory.alloc_object_property(
           SPAN,
           ast::PropertyKind::Init,
           key,
-          self.snippet.only_return_arrow_expr(returned),
+          self.ast_factory.make_arrow_returning(returned),
           false,
           false,
           prop_name == "__proto__",
@@ -868,15 +865,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // else construct `__exportAll({ prop_name: () => returned, ... })`
     let module_namespace_rhs =
       if arg_obj_expr.properties.is_empty() && !self.ctx.options.generated_code.symbols {
-        Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
+        Expression::ObjectExpression(self.ast_factory.alloc(arg_obj_expr))
       } else {
         let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc));
         let args = if self.ctx.options.generated_code.symbols {
-          self.snippet.builder.vec_from_iter([obj_expr])
+          self.ast_factory.vec_from_iter([obj_expr])
         } else {
-          self.snippet.builder.vec_from_iter([
+          self.ast_factory.vec_from_iter([
             obj_expr,
-            ast::Argument::NumericLiteral(self.snippet.builder.alloc_numeric_literal(
+            ast::Argument::NumericLiteral(self.ast_factory.alloc_numeric_literal(
               SPAN,
               1.0,
               None,
@@ -884,7 +881,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             )),
           ])
         };
-        self.snippet.builder.expression_call_with_pure(
+        self.ast_factory.expression_call_with_pure(
           SPAN,
           self.finalized_expr_for_runtime_symbol("__exportAll"),
           NONE,
@@ -896,7 +893,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     // construct `var [binding_name_for_namespace_object_ref] = __exportAll(...)`
     let decl_stmt =
-      self.snippet.var_decl_stmt(binding_name_for_namespace_object_ref, module_namespace_rhs);
+      self.ast_factory.make_var_decl(binding_name_for_namespace_object_ref, module_namespace_rhs);
 
     let export_all_externals_rec_ids = &self.ctx.linking_info.star_exports_from_external_modules;
 
@@ -925,16 +922,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             };
             let importee_name = &module.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
             // construct `__reExport(importer_exports, importee_exports)`
-            let call_expr = self.snippet.re_export_call_expr(
-              self.snippet.id_ref_expr(re_export_name, SPAN),
-              self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
-              self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+            let call_expr = self.ast_factory.make_re_export_call(
+              self.ast_factory.make_id_ref_expr(SPAN, re_export_name),
+              self.ast_factory.make_id_ref_expr(SPAN, binding_name_for_namespace_object_ref),
+              self.ast_factory.make_id_ref_expr(SPAN, importee_namespace_name),
             );
             vec![
               // Insert `import * as ns from 'ext'`external module in esm format
-              self.snippet.import_star_stmt(importee_name, importee_namespace_name),
+              self.ast_factory.make_import_star_stmt(importee_name, importee_namespace_name),
               // Insert `__reExport(foo_exports, ns)`
-              self.snippet.builder.statement_expression(
+              self.ast_factory.statement_expression(
                 SPAN,
                 Expression::CallExpression(call_expr.into_in(self.alloc)),
               ),
@@ -953,17 +950,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let rec = &self.ctx.module.import_records[idx];
             let importee = rec.resolved_module.map(|module_idx| &self.ctx.modules[module_idx])?;
 
-            let re_export_call_expr = self.snippet.re_export_call_expr(
+            let re_export_call_expr = self.ast_factory.make_re_export_call(
               // Insert `__reExport(importer_exports, require('ext'))`
               self.finalized_expr_for_runtime_symbol("__reExport"),
               importer_namespace_ref_expr,
-              self.snippet.call_expr_with_arg_expr_expr(
-                "require",
-                self.snippet.string_literal_expr(importee.id().as_str(), SPAN),
+              self.ast_factory.make_call_with_arg(
+                self.ast_factory.expression_identifier(SPAN, "require"),
+                self.ast_factory.expression_string_literal(
+                  SPAN,
+                  self.ast_factory.str(importee.id().as_str()),
+                  None,
+                ),
+                false,
               ),
             );
 
-            Some(self.snippet.builder.statement_expression(
+            Some(self.ast_factory.statement_expression(
               SPAN,
               Expression::CallExpression(re_export_call_expr.into_in(self.alloc)),
             ))
@@ -999,43 +1001,42 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             // Replace it with `require('url').pathToFileURL(__filename).href`
 
             // require('url')
-            let require_call = self.snippet.builder.alloc_call_expression(
+            let require_call = self.ast_factory.alloc_call_expression(
               SPAN,
-              self.snippet.builder.expression_identifier(SPAN, "require"),
+              self.ast_factory.expression_identifier(SPAN, "require"),
               oxc::ast::NONE,
-              self.snippet.builder.vec1(ast::Argument::StringLiteral(
-                self.snippet.builder.alloc_string_literal(SPAN, "url", None),
+              self.ast_factory.vec1(ast::Argument::StringLiteral(
+                self.ast_factory.alloc_string_literal(SPAN, "url", None),
               )),
               false,
             );
 
             // require('url').pathToFileURL
-            let require_path_to_file_url = self.snippet.builder.alloc_static_member_expression(
+            let require_path_to_file_url = self.ast_factory.alloc_static_member_expression(
               SPAN,
               ast::Expression::CallExpression(require_call),
-              self.snippet.builder.identifier_name(SPAN, "pathToFileURL"),
+              self.ast_factory.identifier_name(SPAN, "pathToFileURL"),
               false,
             );
 
             // require('url').pathToFileURL(__filename)
-            let require_path_to_file_url_call = self.snippet.builder.alloc_call_expression(
+            let require_path_to_file_url_call = self.ast_factory.alloc_call_expression(
               SPAN,
               ast::Expression::StaticMemberExpression(require_path_to_file_url),
               oxc::ast::NONE,
-              self.snippet.builder.vec1(ast::Argument::Identifier(
-                self.snippet.builder.alloc_identifier_reference(SPAN, "__filename"),
+              self.ast_factory.vec1(ast::Argument::Identifier(
+                self.ast_factory.alloc_identifier_reference(SPAN, "__filename"),
               )),
               false,
             );
 
             // require('url').pathToFileURL(__filename).href
-            let require_path_to_file_url_href =
-              self.snippet.builder.alloc_static_member_expression(
-                original_expr_span,
-                ast::Expression::CallExpression(require_path_to_file_url_call),
-                self.snippet.builder.identifier_name(SPAN, "href"),
-                false,
-              );
+            let require_path_to_file_url_href = self.ast_factory.alloc_static_member_expression(
+              original_expr_span,
+              ast::Expression::CallExpression(require_path_to_file_url_call),
+              self.ast_factory.identifier_name(SPAN, "href"),
+              false,
+            );
             Some(ast::Expression::StaticMemberExpression(require_path_to_file_url_href))
           } else {
             // If we don't support polyfill `import.meta.url` in this platform and format, we just keep it as it is
@@ -1045,9 +1046,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           return new_expr;
         }
         "dirname" | "filename" => {
-          let name = self.snippet.atom(&format!("__{property_name}"));
+          let name = self.ast_factory.str(&format!("__{property_name}"));
           return is_node_cjs.then_some(ast::Expression::Identifier(
-            self.snippet.builder.alloc_identifier_reference(SPAN, name),
+            self.ast_factory.alloc_identifier_reference(SPAN, name),
           ));
         }
         _ => {}
@@ -1070,37 +1071,36 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
       // new URL({relative_asset_path}, import.meta.url).href
       // TODO: needs import.meta.url polyfill for non esm
-      let new_expr = ast::Expression::StaticMemberExpression(
-        self.snippet.builder.alloc_static_member_expression(
+      let new_expr =
+        ast::Expression::StaticMemberExpression(self.ast_factory.alloc_static_member_expression(
           SPAN,
-          self.snippet.builder.expression_new(
+          self.ast_factory.expression_new(
             SPAN,
-            self.snippet.builder.expression_identifier(SPAN, "URL"),
+            self.ast_factory.expression_identifier(SPAN, "URL"),
             NONE,
-            self.snippet.builder.vec_from_array([
-              ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
+            self.ast_factory.vec_from_array([
+              ast::Argument::StringLiteral(self.ast_factory.alloc_string_literal(
                 SPAN,
-                self.snippet.builder.str(relative_asset_path),
+                self.ast_factory.str(relative_asset_path),
                 None,
               )),
               ast::Argument::StaticMemberExpression(
-                self.snippet.builder.alloc_static_member_expression(
+                self.ast_factory.alloc_static_member_expression(
                   SPAN,
-                  self.snippet.builder.expression_meta_property(
+                  self.ast_factory.expression_meta_property(
                     SPAN,
-                    self.snippet.builder.identifier_name(SPAN, "import"),
-                    self.snippet.builder.identifier_name(SPAN, "meta"),
+                    self.ast_factory.identifier_name(SPAN, "import"),
+                    self.ast_factory.identifier_name(SPAN, "meta"),
                   ),
-                  self.snippet.builder.identifier_name(SPAN, "url"),
+                  self.ast_factory.identifier_name(SPAN, "url"),
                   false,
                 ),
               ),
             ]),
           ),
-          self.snippet.builder.identifier_name(SPAN, "href"),
+          self.ast_factory.identifier_name(SPAN, "href"),
           false,
-        ),
-      );
+        ));
       return Some(new_expr);
     }
     None
@@ -1144,7 +1144,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let abs_path = self.ctx.options.cwd.join(&self.ctx.options.out_dir).join(filename.as_str());
     let import_path = self.ctx.chunk.relative_path_for(abs_path.as_path());
 
-    *first_arg_expr = self.snippet.string_literal_expr(&import_path, first_arg_expr.span());
+    *first_arg_expr = self.ast_factory.expression_string_literal(
+      first_arg_expr.span(),
+      self.ast_factory.str(&import_path),
+      None,
+    );
     None
   }
 
@@ -1169,7 +1173,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               self.ctx.constant_value_map.get(&target_commonjs_exported_symbol_meta.0)
             }) {
             is_inlined_commonjs_export = true;
-            export_meta.value.to_expression(AstBuilder::new(self.alloc))
+            export_meta.value.to_expression(*self.ast_factory)
           } else {
             let (object_ref_expr, _) = self.finalized_expr_for_symbol_ref(
               object_ref,
@@ -1179,7 +1183,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             );
             object_ref_expr
           };
-          self.snippet.member_expr_or_ident_ref(
+          self.ast_factory.make_member_expr_or_ident_ref(
             object_ref_expr,
             // For commonjs member_expr resolving, the resolved ref is always namespace_alias,
             // so the props actually include the exported name, when inline member_expr access of commonjs exported
@@ -1188,7 +1192,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             span,
           )
         })
-        .or_else(|| Some(self.snippet.member_expr_with_void_zero_object(props, span))),
+        .or_else(|| Some(self.ast_factory.make_member_expr_with_void_zero_object(props, span))),
       _ => {
         let MemberExpression::StaticMemberExpression(static_member_expr) = member_expr else {
           return None;
@@ -1239,22 +1243,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // IMPORTANT: Use SPAN (0-0) for the new member expression to avoid being matched
     // by resolved_member_expr_refs lookup which uses span as key
     let ns_name = self.canonical_name_for(ns_alias.namespace_ref);
-    let ns_id_ref = self.snippet.id_ref_expr(ns_name, SPAN);
+    let ns_id_ref = self.ast_factory.make_id_ref_expr(SPAN, ns_name);
     let default_access =
-      ast::Expression::StaticMemberExpression(self.snippet.builder.alloc_static_member_expression(
+      ast::Expression::StaticMemberExpression(self.ast_factory.alloc_static_member_expression(
         SPAN,
         ns_id_ref,
-        self.snippet.id_name("default", SPAN),
+        self.ast_factory.identifier_name(SPAN, "default"),
         false,
       ));
 
     // Create: ns_name.default.property or ns_name.default[expression]
     match property {
       CjsMemberProperty::Static(property_name) => {
-        let final_access = self.snippet.builder.alloc_static_member_expression(
+        let final_access = self.ast_factory.alloc_static_member_expression(
           SPAN,
           default_access,
-          self.snippet.id_name(property_name, SPAN),
+          self.ast_factory.make_id_name(SPAN, property_name),
           false,
         );
         Some(ast::SimpleAssignmentTarget::StaticMemberExpression(final_access))
@@ -1268,7 +1272,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             .unwrap_or_else(|| expr.clone_in(self.alloc)),
           _ => expr.clone_in(self.alloc),
         };
-        let final_access = self.snippet.builder.alloc_computed_member_expression(
+        let final_access = self.ast_factory.alloc_computed_member_expression(
           SPAN,
           default_access,
           finalized_expr,
@@ -1318,17 +1322,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // needs to rewrite to `var T = class T { static a = new T(); }`
         let mut id = id.clone();
         let new_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
-        id.name = self.snippet.atom(new_name).into();
+        id.name = self.ast_factory.str(new_name).into();
         class.id = Some(id);
       }
     }
-    Some(self.snippet.builder.declaration_variable(
+    Some(self.ast_factory.declaration_variable(
       class.span,
       VariableDeclarationKind::Var,
-      self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
+      self.ast_factory.vec1(self.ast_factory.variable_declarator(
         SPAN,
         VariableDeclarationKind::Var,
-        ast::BindingPattern::BindingIdentifier(self.snippet.builder.alloc(id)),
+        ast::BindingPattern::BindingIdentifier(self.ast_factory.alloc(id)),
         NONE,
         Some(Expression::ClassExpression(ArenaBox::new_in(
           class.as_mut().take_in(self.alloc),
@@ -1373,23 +1377,31 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
                     Some(wrap_ref_expr)
                   } else {
-                    Some(ast::Expression::CallExpression(
-                      self.snippet.alloc_simple_call_expr(wrap_ref_expr),
-                    ))
+                    Some(ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
+                      SPAN,
+                      wrap_ref_expr,
+                      NONE,
+                      self.ast_factory.vec(),
+                      false,
+                    )))
                   }
                 } else {
                   let (ns_name, _) =
                     self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
                   let to_commonjs_ref_name = self.finalized_expr_for_runtime_symbol("__toCommonJS");
-                  Some(self.snippet.seq2_in_paren_expr(
-                    ast::Expression::CallExpression(
-                      self.snippet.alloc_simple_call_expr(wrap_ref_expr),
-                    ),
+                  Some(self.ast_factory.make_seq_in_parens(
+                    ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
+                      SPAN,
+                      wrap_ref_expr,
+                      NONE,
+                      self.ast_factory.vec(),
+                      false,
+                    )),
                     ast::Expression::StaticMemberExpression(
-                      self.snippet.builder.alloc_static_member_expression(
+                      self.ast_factory.alloc_static_member_expression(
                         SPAN,
-                        self.snippet.call_expr_with_arg_expr(to_commonjs_ref_name, ns_name, false),
-                        self.snippet.id_name("default", SPAN),
+                        self.ast_factory.make_call_with_arg(to_commonjs_ref_name, ns_name, false),
+                        self.ast_factory.identifier_name(SPAN, "default"),
                         false,
                       ),
                     ),
@@ -1407,23 +1419,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 );
 
                 // `init_xxx()` or `require_xxx()` or `require_xxx`
-                let wrap_ref_call_expr =
-                  if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
-                    wrap_ref_expr
-                  } else {
-                    ast::Expression::CallExpression(
-                      self.snippet.builder.alloc_call_expression_with_pure(
-                        SPAN,
-                        wrap_ref_expr,
-                        NONE,
-                        self.snippet.builder.vec(),
-                        false,
-                        // No-op `init_*()` (empty ESM closure) is pure; `init_is_noop` is only
-                        // set for `WrapKind::Esm`, so a `require_*()` here is never marked pure.
-                        importee_linking_info.init_is_noop,
-                      ),
-                    )
-                  };
+                let wrap_ref_call_expr = if hint
+                  .contains(FinalizedExprProcessHint::FromCjsWrapKindEntry)
+                {
+                  wrap_ref_expr
+                } else {
+                  ast::Expression::CallExpression(self.ast_factory.alloc_call_expression_with_pure(
+                    SPAN,
+                    wrap_ref_expr,
+                    NONE,
+                    self.ast_factory.vec(),
+                    false,
+                    // No-op `init_*()` (empty ESM closure) is pure; `init_is_noop` is only
+                    // set for `WrapKind::Esm`, so a `require_*()` here is never marked pure.
+                    importee_linking_info.init_is_noop,
+                  ))
+                };
 
                 if matches!(importee.exports_kind, ExportsKind::CommonJs)
                   || rec.meta.contains(ImportRecordMeta::IsRequireUnused)
@@ -1441,20 +1452,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   let to_commonjs_expr = self.finalized_expr_for_runtime_symbol("__toCommonJS");
                   // `__toCommonJS(xxx_exports)`
                   let to_commonjs_call_expr =
-                    ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+                    ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
                       SPAN,
                       to_commonjs_expr,
                       NONE,
-                      self.snippet.builder.vec1(ast::Argument::from(namespace_object_ref_expr)),
+                      self.ast_factory.vec1(ast::Argument::from(namespace_object_ref_expr)),
                       false,
                     ));
 
                   let final_expr = if is_json_module {
                     // `__toCommonJS(xxx_exports).default`
-                    Expression::from(self.snippet.builder.member_expression_static(
+                    Expression::from(self.ast_factory.member_expression_static(
                       SPAN,
                       to_commonjs_call_expr,
-                      self.snippet.id_name("default", SPAN),
+                      self.ast_factory.identifier_name(SPAN, "default"),
                       false,
                     ))
                   } else {
@@ -1462,7 +1473,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   };
 
                   // `(init_xxx(), __toCommonJS(xxx_exports))`
-                  Some(self.snippet.seq2_in_paren_expr(wrap_ref_call_expr, final_expr))
+                  Some(self.ast_factory.make_seq_in_parens(wrap_ref_call_expr, final_expr))
                 }
               }
             }
@@ -1471,10 +1482,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let request_path =
               call_expr.arguments.get_mut(0).expect("require should have an argument");
             // Rewrite `require('xxx')` to `require('fs')`, if there is an alias that maps 'xxx' to 'fs'
-            *request_path = ast::Argument::StringLiteral(self.snippet.alloc_string_literal(
-              &importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths),
-              request_path.span(),
-            ));
+            *request_path = ast::Argument::StringLiteral(
+              self.ast_factory.alloc_string_literal(
+                request_path.span(),
+                self
+                  .ast_factory
+                  .str(&importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths)),
+                None,
+              ),
+            );
             None
           }
         };
@@ -1493,11 +1509,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let importee_id = rec.resolved_module?;
 
     if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
-      return Some(
-        self
-          .snippet
-          .promise_resolve_then_call_expr(self.snippet.object_freeze_dynamic_import_polyfill()),
-      );
+      // `Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))`
+      return Some(self.ast_factory.make_promise_resolve_then(
+        self.ast_factory.make_call_with_arg(
+          self.ast_factory.make_member_access_expr("Object", "freeze"),
+          ast::Expression::ObjectExpression(self.ast_factory.alloc_object_expression(
+            SPAN,
+            self.ast_factory.vec1(self.ast_factory.object_property_kind_object_property(
+              SPAN,
+              ast::PropertyKind::Init,
+              self.ast_factory.property_key_static_identifier(SPAN, "__proto__"),
+              ast::Expression::NullLiteral(self.ast_factory.alloc_null_literal(SPAN)),
+              false,
+              false,
+              false,
+            )),
+          )),
+          true,
+        ),
+      ));
     }
 
     if self.ctx.options.code_splitting.is_disabled() {
@@ -1518,16 +1548,30 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
               if importee_linking_info.is_tla_or_contains_tla_dependency {
                 // `init_foo().then(function() { return foo_exports })`
-                Some(self.snippet.callee_then_call_expr(
-                  self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                  self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+                Some(self.ast_factory.make_callee_then_call(
+                  self.ast_factory.expression_call(
+                    SPAN,
+                    self.ast_factory.make_id_ref_expr(SPAN, importee_wrapper_ref_name),
+                    NONE,
+                    self.ast_factory.vec(),
+                    false,
+                  ),
+                  self.ast_factory.make_id_ref_expr(SPAN, importee_namespace_name),
                 ))
               } else {
                 //  Promise.resolve().then(function() { return (init_foo(), foo_exports) })
-                Some(self.snippet.promise_resolve_then_call_expr(self.snippet.seq2_in_paren_expr(
-                  self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                  self.snippet.id_ref_expr(importee_namespace_name, SPAN),
-                )))
+                Some(self.ast_factory.make_promise_resolve_then(
+                  self.ast_factory.make_seq_in_parens(
+                    self.ast_factory.expression_call(
+                      SPAN,
+                      self.ast_factory.make_id_ref_expr(SPAN, importee_wrapper_ref_name),
+                      NONE,
+                      self.ast_factory.vec(),
+                      false,
+                    ),
+                    self.ast_factory.make_id_ref_expr(SPAN, importee_namespace_name),
+                  ),
+                ))
               }
             }
             WrapKind::Cjs => {
@@ -1535,18 +1579,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
               let importee_wrapper_ref_name =
                 self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-              Some(
-                self.snippet.promise_resolve_then_call_expr(
-                  self.snippet.wrap_with_to_esm(
-                    self
-                      .snippet
-                      .builder
-                      .expression_identifier(SPAN, self.snippet.builder.str(to_esm_fn_name)),
-                    self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                    self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
+              Some(self.ast_factory.make_promise_resolve_then(
+                self.ast_factory.make_to_esm_wrapper(
+                  self.ast_factory.make_id_ref_expr(SPAN, to_esm_fn_name),
+                  self.ast_factory.expression_call(
+                    SPAN,
+                    self.ast_factory.make_id_ref_expr(SPAN, importee_wrapper_ref_name),
+                    NONE,
+                    self.ast_factory.vec(),
+                    false,
                   ),
+                  self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
                 ),
-              )
+              ))
             }
             WrapKind::None => {
               // The nature of `import()` is to load the module dynamically/lazily, so imported modules would
@@ -1643,13 +1688,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 {
                   let wrapper_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-                  let mut init_expr = self.snippet.call_expr_expr(wrapper_ref_name);
+                  let mut init_expr = self.ast_factory.expression_call(
+                    SPAN,
+                    self.ast_factory.make_id_ref_expr(SPAN, wrapper_ref_name),
+                    NONE,
+                    self.ast_factory.vec(),
+                    false,
+                  );
                   if importee_linking_info.is_tla_or_contains_tla_dependency {
                     init_expr = ast::Expression::AwaitExpression(
-                      self.snippet.builder.alloc_await_expression(SPAN, init_expr),
+                      self.ast_factory.alloc_await_expression(SPAN, init_expr),
                     );
                   }
-                  program.body.push(self.snippet.builder.statement_expression(SPAN, init_expr));
+                  program.body.push(self.ast_factory.statement_expression(SPAN, init_expr));
                 }
 
                 match importee.exports_kind {
@@ -1668,14 +1719,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                         false,
                       );
 
-                      let call_expr = self.snippet.re_export_call_expr(
+                      let call_expr = self.ast_factory.make_re_export_call(
                         self.finalized_expr_for_runtime_symbol("__reExport"),
                         importer_namespace_ref,
                         importee_namespace_ref,
                       );
                       // __reExport(exports, otherExports)
                       let stmt = ast::Statement::ExpressionStatement(
-                        self.builder().alloc_expression_statement(
+                        self.ast_factory.alloc_expression_statement(
                           SPAN,
                           Expression::CallExpression(call_expr.into_in(self.alloc)),
                         ),
@@ -1710,27 +1761,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       false,
                     );
 
-                    let call_expr = self.snippet.re_export_call_expr(
+                    let call_expr = self.ast_factory.make_re_export_call(
                       re_export_fn_name,
                       importer_namespace_ref,
-                      self.snippet.wrap_with_to_esm(
+                      self.ast_factory.make_to_esm_wrapper(
                         to_esm_fn_ref,
-                        ast::Expression::CallExpression(
-                          self.snippet.builder.alloc_call_expression(
-                            SPAN,
-                            importee_wrapper_ref_expr,
-                            NONE,
-                            self.snippet.builder.vec(),
-                            false,
-                          ),
-                        ),
+                        ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
+                          SPAN,
+                          importee_wrapper_ref_expr,
+                          NONE,
+                          self.ast_factory.vec(),
+                          false,
+                        )),
                         self.ctx.module.should_consider_node_esm_spec_for_static_import(),
                       ),
                     );
 
                     // __reExport(importer_exports, __toESM(require_foo()))
                     let stmt = ast::Statement::ExpressionStatement(
-                      self.builder().alloc_expression_statement(
+                      self.ast_factory.alloc_expression_statement(
                         SPAN,
                         Expression::CallExpression(call_expr.into_in(self.alloc)),
                       ),
@@ -1800,7 +1849,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   let name_ref = self.canonical_ref_for_runtime("__name");
                   let (finalized_callee, _) =
                     self.finalized_expr_for_symbol_ref(name_ref, false, false);
-                  init_expr = self.snippet.keep_name_call_expr(
+                  init_expr = self.ast_factory.make_keep_name_call(
                     "default",
                     init_expr,
                     finalized_callee,
@@ -1810,7 +1859,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               }
 
               top_stmt =
-                self.snippet.var_decl_stmt(canonical_name_for_default_export_ref, init_expr);
+                self.ast_factory.make_var_decl(canonical_name_for_default_export_ref, init_expr);
             }
             ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
               // "export default function() {}" => "function default() {}"
@@ -1818,7 +1867,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               if func.id.is_none() {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
-                func.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
+                func.id =
+                  Some(self.ast_factory.make_id(SPAN, canonical_name_for_default_export_ref));
 
                 // When keep_names is enabled, preserve "default" as the function name
                 if self.ctx.options.keep_names {
@@ -1840,7 +1890,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               if class.id.is_none() {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
-                class.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
+                class.id =
+                  Some(self.ast_factory.make_id(SPAN, canonical_name_for_default_export_ref));
 
                 // When keep_names is enabled, preserve "default" as the class name
                 // Skip if class has static name property
@@ -1960,7 +2011,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let fn_expr = expr.take_in(self.alloc);
           let name_ref = self.canonical_ref_for_runtime("__name");
           let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
-          *expr = self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_callee, true);
+          *expr =
+            self.ast_factory.make_keep_name_call(&original_name, fn_expr, finalized_callee, true);
         }
       }
       ast::Expression::ArrowFunctionExpression(_fn_expr) => {
@@ -1970,7 +2022,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let fn_expr = expr.take_in(self.alloc);
           let name_ref = self.canonical_ref_for_runtime("__name");
           let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
-          *expr = self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_callee, true);
+          *expr =
+            self.ast_factory.make_keep_name_call(&original_name, fn_expr, finalized_callee, true);
         }
       }
       _ => {}
@@ -2004,7 +2057,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let name_ref = self.canonical_ref_for_runtime("__name");
     let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
-    Some(self.snippet.static_block_keep_name_helper(&original_name, finalized_callee))
+    Some(self.ast_factory.make_static_block_keep_name(&original_name, finalized_callee))
   }
 
   /// Check if a class body has a static `name` property, method, or accessor.
@@ -2032,13 +2085,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     for (stmt_index, original_name, new_name) in self.keep_name_statement_to_insert.iter().rev() {
       let name_ref = self.canonical_ref_for_runtime("__name");
       let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
-      let target =
-        self.snippet.builder.expression_identifier(SPAN, self.snippet.builder.str(new_name));
+      let target = self.ast_factory.make_id_ref_expr(SPAN, new_name);
       statements.insert(
         *stmt_index,
-        self.snippet.builder.statement_expression(
+        self.ast_factory.statement_expression(
           SPAN,
-          self.snippet.keep_name_call_expr(original_name, target, finalized_callee, false),
+          self.ast_factory.make_keep_name_call(original_name, target, finalized_callee, false),
         ),
       );
     }
@@ -2087,16 +2139,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let finalized_to_esm = self.finalized_expr_for_runtime_symbol("__toESM");
 
           // require_xxx()
-          let wrapper_ref_call_expr = self.snippet.builder.expression_call(
+          let wrapper_ref_call_expr = self.ast_factory.expression_call(
             SPAN,
             finalized_importee_wrapper_ref,
             NONE,
-            self.snippet.builder.vec(),
+            self.ast_factory.vec(),
             false,
           );
 
           // __toESM(require_xxx(), isNodeMode)
-          self.snippet.wrap_with_to_esm(
+          self.ast_factory.make_to_esm_wrapper(
             finalized_to_esm,
             wrapper_ref_call_expr,
             self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
@@ -2113,12 +2165,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
 
           // init_xxx()
-          let wrapper_call_expr = ast::Expression::CallExpression(
-            self.snippet.alloc_simple_call_expr(finalized_importee_wrapper_ref),
-          );
+          let wrapper_call_expr =
+            ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
+              SPAN,
+              finalized_importee_wrapper_ref,
+              NONE,
+              self.ast_factory.vec(),
+              false,
+            ));
 
           // (init_xxx(), namespace_exports)
-          self.snippet.seq2_in_paren_expr(wrapper_call_expr, finalized_namespace)
+          self.ast_factory.make_seq_in_parens(wrapper_call_expr, finalized_namespace)
         }
         WrapKind::None => {
           let (finalized_expr, _) =
@@ -2127,7 +2184,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
       };
 
-      Some(self.snippet.promise_resolve_then_call_expr(finalized_expr))
+      Some(self.ast_factory.make_promise_resolve_then(finalized_expr))
     } else {
       // If the dynamic entry point is merged into another common chunk, we should
       // convert `import('./some-module.js')` to `import('./some-module.js').then(n => n.ns)`
@@ -2163,19 +2220,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let import_path = self.ctx.chunk.import_path_for(importee_chunk);
             // require('./some-module.js')
             let require_call_expr =
-              ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+              ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
                 SPAN,
-                self.snippet.builder.expression_identifier(SPAN, "require"),
+                self.ast_factory.expression_identifier(SPAN, "require"),
                 NONE,
-                self.snippet.builder.vec1(ast::Argument::StringLiteral(
-                  self.snippet.alloc_string_literal(&import_path, expr.span),
+                self.ast_factory.vec1(ast::Argument::StringLiteral(
+                  self.ast_factory.alloc_string_literal(
+                    expr.span,
+                    self.ast_factory.str(&import_path),
+                    None,
+                  ),
                 )),
                 false,
               ));
             // Promise.resolve().then(() => require('./some-module.js'))
-            self.snippet.promise_resolve_then_call_expr(require_call_expr)
+            self.ast_factory.make_promise_resolve_then(require_call_expr)
           } else {
-            let import_expr = expr.take_in_box(self.builder().allocator);
+            let import_expr = expr.take_in_box(self.ast_factory.allocator);
             Expression::ImportExpression(import_expr)
           };
 
@@ -2183,7 +2244,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             WrapKind::Cjs => {
               // For CJS modules: import('./chunk.js').then(n => __toESM(n.require_xxx()))
               let finalized_to_esm = self.finalized_expr_for_runtime_symbol("__toESM");
-              let call_expr = self.snippet.then_call_cjs_wrapper_with_to_esm(
+              let call_expr = self.ast_factory.make_then_call_cjs_wrapper_with_to_esm(
                 base_expr,
                 name,
                 finalized_to_esm,
@@ -2194,8 +2255,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             WrapKind::Esm => {
               // For ESM modules: import('./chunk.js').then(n => (n.init_xxx(), n.namespace))
               if let Some(ns_name) = namespace_export_name {
-                let call_expr =
-                  self.snippet.then_call_esm_wrapper_with_namespace(base_expr, name, ns_name);
+                let call_expr = self
+                  .ast_factory
+                  .make_then_call_esm_wrapper_with_namespace(base_expr, name, ns_name);
                 Some(Expression::CallExpression(call_expr))
               } else {
                 tracing::warn!(
@@ -2207,7 +2269,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               }
             }
             WrapKind::None => {
-              let call_expr = self.snippet.then_extract_property(base_expr, name);
+              let call_expr = self.ast_factory.make_then_extract_property(base_expr, name);
               Some(Expression::CallExpression(call_expr))
             }
           }
@@ -2242,14 +2304,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       {
         // Transform `import(expr)` to `Promise.resolve().then(() => __toESM(require(expr)))`
         let source = expr.source.take_in(self.alloc);
-        let require_call = self.snippet.call_expr_with_arg_expr_expr("require", source);
+        let require_call = self.ast_factory.make_call_with_arg(
+          self.ast_factory.expression_identifier(SPAN, "require"),
+          source,
+          false,
+        );
         let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
-        let wrapped = self.snippet.wrap_with_to_esm(
+        let wrapped = self.ast_factory.make_to_esm_wrapper(
           to_esm_fn_name,
           require_call,
           self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
         );
-        *node = self.snippet.promise_resolve_then_call_expr(wrapped);
+        *node = self.ast_factory.make_promise_resolve_then(wrapped);
         return true;
       }
       return false;
@@ -2265,7 +2331,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&importee_idx)
         else {
           // TODO: probably we should add the reason why it is replaced with `void 0`(just like webpack) when upstream support codegen with specific operation
-          *node = self.snippet.builder.void_0(SPAN);
+          *node = self.ast_factory.void_0(SPAN);
           return true;
         };
         let Some(importee_chunk) = self.ctx.chunk_graph.chunk_table.get(importee_chunk_idx) else {
@@ -2273,9 +2339,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         };
 
         let import_path = self.ctx.chunk.import_path_for(importee_chunk);
-        expr.source = Expression::StringLiteral(
-          self.snippet.alloc_string_literal(&import_path, expr.source.span()),
-        );
+        expr.source = Expression::StringLiteral(self.ast_factory.alloc_string_literal(
+          expr.source.span(),
+          self.ast_factory.str(&import_path),
+          None,
+        ));
 
         if let Some(rewritten_expr) = self.rewrite_dynamic_import_for_merged_entry(
           expr,
@@ -2293,12 +2361,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if matches!(self.ctx.options.format, OutputFormat::Cjs) {
           // require('foo.mjs')
           let mut require_call_expr =
-            ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+            ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
               SPAN,
-              self.snippet.builder.expression_identifier(SPAN, "require"),
+              self.ast_factory.expression_identifier(SPAN, "require"),
               NONE,
-              self.snippet.builder.vec1(ast::Argument::StringLiteral(
-                self.snippet.alloc_string_literal(&import_path, expr.span),
+              self.ast_factory.vec1(ast::Argument::StringLiteral(
+                self.ast_factory.alloc_string_literal(
+                  expr.span,
+                  self.ast_factory.str(&import_path),
+                  None,
+                ),
               )),
               false,
             ));
@@ -2309,23 +2381,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
             // require('foo.mjs').default
             let require_default_expr = ast::Expression::StaticMemberExpression(
-              self.snippet.builder.alloc_static_member_expression(
+              self.ast_factory.alloc_static_member_expression(
                 SPAN,
                 require_call_expr,
-                self.snippet.builder.identifier_name(SPAN, "default"),
+                self.ast_factory.identifier_name(SPAN, "default"),
                 false,
               ),
             );
 
             // __toESM(require('foo.mjs').default, isNodeMode)
-            require_call_expr = self.snippet.wrap_with_to_esm(
+            require_call_expr = self.ast_factory.make_to_esm_wrapper(
               to_esm_fn_name,
               require_default_expr,
               self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
             );
           }
 
-          *node = self.snippet.promise_resolve_then_call_expr(require_call_expr);
+          *node = self.ast_factory.make_promise_resolve_then(require_call_expr);
           return true;
         }
 
@@ -2334,9 +2406,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       Module::External(importee) => {
         let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
         if str != import_path {
-          expr.source = Expression::StringLiteral(
-            self.snippet.alloc_string_literal(&import_path, expr.source.span()),
-          );
+          expr.source = Expression::StringLiteral(self.ast_factory.alloc_string_literal(
+            expr.source.span(),
+            self.ast_factory.str(&import_path),
+            None,
+          ));
         }
         // Convert `import("external")` to `Promise.resolve().then(() => __toESM(require("external")))`
         // when format is CJS and dynamicImportInCjs is false
@@ -2344,14 +2418,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           && !self.ctx.options.dynamic_import_in_cjs
         {
           let source = expr.source.take_in(self.alloc);
-          let require_call = self.snippet.call_expr_with_arg_expr_expr("require", source);
+          let require_call = self.ast_factory.make_call_with_arg(
+            self.ast_factory.expression_identifier(SPAN, "require"),
+            source,
+            false,
+          );
           let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
-          let wrapped = self.snippet.wrap_with_to_esm(
+          let wrapped = self.ast_factory.make_to_esm_wrapper(
             to_esm_fn_name,
             require_call,
             self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
           );
-          *node = self.snippet.promise_resolve_then_call_expr(wrapped);
+          *node = self.ast_factory.make_promise_resolve_then(wrapped);
           return true;
         }
       }
@@ -2369,71 +2447,65 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
       // Build arrow function: (m) => __toESM(m.default, isNodeMode)
       // m.default
-      let m_default_expr = ast::Expression::StaticMemberExpression(
-        self.snippet.builder.alloc_static_member_expression(
+      let m_default_expr =
+        ast::Expression::StaticMemberExpression(self.ast_factory.alloc_static_member_expression(
           SPAN,
-          self.snippet.builder.expression_identifier(SPAN, "m"),
-          self.snippet.builder.identifier_name(SPAN, "default"),
+          self.ast_factory.expression_identifier(SPAN, "m"),
+          self.ast_factory.identifier_name(SPAN, "default"),
           false,
-        ),
-      );
+        ));
 
       // __toESM(m.default, isNodeMode)
-      let to_esm_call = self.snippet.wrap_with_to_esm(
+      let to_esm_call = self.ast_factory.make_to_esm_wrapper(
         to_esm_fn_name,
         m_default_expr,
         self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
       );
 
       // (m) => __toESM(m.default, isNodeMode)
-      let arrow_fn = self.snippet.builder.alloc_arrow_function_expression(
+      let arrow_fn = self.ast_factory.alloc_arrow_function_expression(
         SPAN,
         true,  // expression
         false, // async
         NONE,
-        self.snippet.builder.formal_parameters(
+        self.ast_factory.formal_parameters(
           SPAN,
           ast::FormalParameterKind::ArrowFormalParameters,
-          self.snippet.builder.vec1(
-            self.snippet.builder.formal_parameter(
-              SPAN,
-              self.snippet.builder.vec(),
-              self
-                .snippet
-                .builder
-                .binding_pattern_binding_identifier(SPAN, self.snippet.builder.str("m")),
-              NONE,
-              NONE,
-              false,
-              None,
-              false,
-              false,
-            ),
-          ),
+          self.ast_factory.vec1(self.ast_factory.formal_parameter(
+            SPAN,
+            self.ast_factory.vec(),
+            self.ast_factory.binding_pattern_binding_identifier(SPAN, self.ast_factory.str("m")),
+            NONE,
+            NONE,
+            false,
+            None,
+            false,
+            false,
+          )),
           NONE,
         ),
         NONE,
-        self.snippet.builder.function_body(
+        self.ast_factory.function_body(
           SPAN,
-          self.snippet.builder.vec(),
-          self.snippet.builder.vec1(self.snippet.builder.statement_expression(SPAN, to_esm_call)),
+          self.ast_factory.vec(),
+          self.ast_factory.vec1(self.ast_factory.statement_expression(SPAN, to_esm_call)),
         ),
       );
 
       // `import('./some-cjs-module.js').then
-      let callee = self.snippet.builder.alloc_static_member_expression(
+      let callee = self.ast_factory.alloc_static_member_expression(
         SPAN,
         original_import_expr,
-        self.snippet.builder.identifier_name(SPAN, "then"),
+        self.ast_factory.identifier_name(SPAN, "then"),
         false,
       );
 
       // `import('./some-cjs-module.js').then((m) => __toESM(m.default, isNodeMode))`
-      let call_expr = self.snippet.builder.alloc_call_expression(
+      let call_expr = self.ast_factory.alloc_call_expression(
         SPAN,
         ast::Expression::StaticMemberExpression(callee),
         NONE,
-        self.snippet.builder.vec1(ast::Argument::ArrowFunctionExpression(arrow_fn)),
+        self.ast_factory.vec1(ast::Argument::ArrowFunctionExpression(arrow_fn)),
         false,
       );
 
@@ -2467,7 +2539,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           .contains(&symbol_ref)
         {
           json_module_inlined_prop.insert(id, init.take_in(self.alloc));
-          *it = self.snippet.builder.statement_empty(SPAN);
+          *it = self.ast_factory.statement_empty(SPAN);
         }
       }
       None => {

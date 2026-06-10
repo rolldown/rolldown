@@ -1,20 +1,21 @@
 use std::ops::Deref;
 
 use oxc::{
-  allocator::{Allocator, IntoIn},
+  allocator::{self, Allocator, IntoIn},
   ast::{
     AstBuilder, NONE,
     ast::{
-      Argument, AssignmentOperator, AssignmentTarget, BindingIdentifier, Declaration,
-      ExportDefaultDeclarationKind, Expression, FormalParameterKind, IdentifierName,
-      ImportDeclarationSpecifier, ImportOrExportKind, MemberExpression, NumberBase,
-      ObjectPropertyKind, PropertyKey, PropertyKind, SimpleAssignmentTarget, Statement,
-      VariableDeclarationKind,
+      Argument, ArrowFunctionExpression, AssignmentOperator, AssignmentTarget, BindingIdentifier,
+      CallExpression, ClassElement, Declaration, ExportDefaultDeclarationKind, Expression,
+      FormalParameterKind, IdentifierName, ImportDeclarationSpecifier, ImportOrExportKind,
+      MemberExpression, NumberBase, ObjectPropertyKind, PropertyKey, PropertyKind,
+      SimpleAssignmentTarget, Statement, VariableDeclarationKind,
     },
   },
-  span::{SPAN, Span},
+  span::{GetSpanMut, SPAN, Span},
 };
-use rolldown_common::Interop;
+use rolldown_common::{Interop, MemberExprProp};
+use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 /// Rolldown's newtype wrapper around oxc's [`AstBuilder`].
 ///
@@ -262,6 +263,307 @@ impl<'ast> AstFactory<'ast> {
     Expression::ParenthesizedExpression(self.alloc_parenthesized_expression(
       SPAN,
       Expression::SequenceExpression(self.alloc_sequence_expression(SPAN, expressions)),
+    ))
+  }
+
+  /// `<object>.<prop>.<prop>...` — chains member access for each prop, then sets the span.
+  pub fn make_member_expr_or_ident_ref(
+    &self,
+    object: Expression<'ast>,
+    props: &[MemberExprProp],
+    span: Span,
+  ) -> Expression<'ast> {
+    let mut cur = object;
+    for prop in props {
+      cur = if oxc::syntax::identifier::is_identifier_name(&prop.name) {
+        Expression::from(self.member_expression_static(
+          SPAN,
+          cur,
+          self.identifier_name(prop.span, self.str(&prop.name)),
+          prop.optional,
+        ))
+      } else {
+        Expression::from(self.member_expression_computed(
+          SPAN,
+          cur,
+          self.expression_string_literal(prop.span, self.str(&prop.name), None),
+          prop.optional,
+        ))
+      };
+    }
+    *cur.span_mut() = span;
+    cur
+  }
+
+  /// The props of `foo_exports.value.a` is `["value", "a"]`; here convert it to `(void 0).a`.
+  #[inline]
+  pub fn make_member_expr_with_void_zero_object(
+    &self,
+    props: &[MemberExprProp],
+    span: Span,
+  ) -> Expression<'ast> {
+    if props.is_empty() {
+      self.void_0(SPAN)
+    } else {
+      self.make_member_expr_or_ident_ref(self.void_0(SPAN), &props[1..], span)
+    }
+  }
+
+  /// `__reExport(<first>, <second>)` (callee provided as `re_export_fn_ref`).
+  pub fn make_re_export_call(
+    &self,
+    re_export_fn_ref: Expression<'ast>,
+    first_arg: Expression<'ast>,
+    second_arg: Expression<'ast>,
+  ) -> CallExpression<'ast> {
+    let args = self.vec_from_iter([first_arg.into(), second_arg.into()]);
+    self.call_expression(SPAN, re_export_fn_ref, NONE, args, false)
+  }
+
+  /// `<callee>(<original_name as target>, "<original_name>")`, optionally `@__PURE__`.
+  pub fn make_keep_name_call(
+    &self,
+    original_name: &str,
+    target: Expression<'ast>,
+    callee: Expression<'ast>,
+    pure: bool,
+  ) -> Expression<'ast> {
+    self.expression_call_with_pure(
+      SPAN,
+      callee,
+      NONE,
+      {
+        let mut items = self.vec_with_capacity(2);
+        items.push(target.into());
+        items.push(self.expression_string_literal(SPAN, self.str(original_name), None).into());
+        items
+      },
+      false,
+      pure,
+    )
+  }
+
+  /// `static { <callee>(this, "<name>"); }`
+  pub fn make_static_block_keep_name(
+    &self,
+    name: &str,
+    callee: Expression<'ast>,
+  ) -> ClassElement<'ast> {
+    self.class_element_static_block(
+      SPAN,
+      self.vec1(self.statement_expression(
+        SPAN,
+        self.expression_call(
+          SPAN,
+          callee,
+          NONE,
+          {
+            let mut items = self.vec_with_capacity(2);
+            items.push(self.expression_this(SPAN).into());
+            items.push(self.expression_string_literal(SPAN, self.str(name), None).into());
+            items
+          },
+          false,
+        ),
+      )),
+    )
+  }
+
+  /// `node_mode` ? `__toESM(<expr>, 1)` : `__toESM(<expr>)` (callee `to_esm_fn_expr`, `@__PURE__`).
+  pub fn make_to_esm_wrapper(
+    &self,
+    to_esm_fn_expr: Expression<'ast>,
+    expr: Expression<'ast>,
+    node_mode: bool,
+  ) -> Expression<'ast> {
+    let args = if node_mode {
+      self.vec_from_iter([
+        Argument::from(expr),
+        Argument::from(self.expression_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal)),
+      ])
+    } else {
+      self.vec1(Argument::from(expr))
+    };
+    Expression::CallExpression(self.alloc_call_expression_with_pure(
+      SPAN,
+      to_esm_fn_expr,
+      NONE,
+      args,
+      false,
+      true,
+    ))
+  }
+
+  /// `n => n.<property_name>`
+  fn arrow_function_extract_property(
+    &self,
+    property_name: &str,
+  ) -> allocator::Box<'ast, ArrowFunctionExpression<'ast>> {
+    debug_assert!(is_validate_identifier_name(property_name));
+    self.alloc_arrow_function_expression(
+      SPAN,
+      true,
+      false,
+      NONE,
+      self.formal_parameters(
+        SPAN,
+        FormalParameterKind::ArrowFormalParameters,
+        self.vec1(self.formal_parameter(
+          SPAN,
+          self.vec(),
+          self.binding_pattern_binding_identifier(SPAN, self.str("n")),
+          NONE,
+          NONE,
+          false,
+          None,
+          false,
+          false,
+        )),
+        NONE,
+      ),
+      NONE,
+      self.function_body(
+        SPAN,
+        self.vec(),
+        self.vec1(Statement::ExpressionStatement(self.alloc_expression_statement(
+          SPAN,
+          Expression::StaticMemberExpression(self.alloc_static_member_expression(
+            SPAN,
+            self.expression_identifier(SPAN, "n"),
+            self.identifier_name(SPAN, self.str(property_name)),
+            false,
+          )),
+        ))),
+      ),
+    )
+  }
+
+  /// `<expr>.then(n => <return_expr>)`
+  fn then_with_arrow_callback(
+    &self,
+    expr: Expression<'ast>,
+    return_expr: Expression<'ast>,
+  ) -> allocator::Box<'ast, CallExpression<'ast>> {
+    let arrow_fn = self.alloc_arrow_function_expression(
+      SPAN,
+      true,
+      false,
+      NONE,
+      self.formal_parameters(
+        SPAN,
+        FormalParameterKind::ArrowFormalParameters,
+        self.vec1(self.formal_parameter(
+          SPAN,
+          self.vec(),
+          self.binding_pattern_binding_identifier(SPAN, self.str("n")),
+          NONE,
+          NONE,
+          false,
+          None,
+          false,
+          false,
+        )),
+        NONE,
+      ),
+      NONE,
+      self.function_body(
+        SPAN,
+        self.vec(),
+        self
+          .vec1(Statement::ExpressionStatement(self.alloc_expression_statement(SPAN, return_expr))),
+      ),
+    );
+    let callee =
+      self.alloc_static_member_expression(SPAN, expr, self.identifier_name(SPAN, "then"), false);
+    self.alloc_call_expression(
+      SPAN,
+      Expression::StaticMemberExpression(callee),
+      NONE,
+      self.vec1(Expression::ArrowFunctionExpression(arrow_fn).into()),
+      false,
+    )
+  }
+
+  /// `<expr>.then(n => n.<property_name>)`
+  pub fn make_then_extract_property(
+    &self,
+    expr: Expression<'ast>,
+    property_name: &str,
+  ) -> allocator::Box<'ast, CallExpression<'ast>> {
+    let callee =
+      self.alloc_static_member_expression(SPAN, expr, self.identifier_name(SPAN, "then"), false);
+    self.alloc_call_expression(
+      SPAN,
+      Expression::StaticMemberExpression(callee),
+      NONE,
+      self.vec1(
+        Expression::ArrowFunctionExpression(self.arrow_function_extract_property(property_name))
+          .into(),
+      ),
+      false,
+    )
+  }
+
+  /// `<expr>.then(n => (n.<wrapper_name>(), n.<namespace_name>))`
+  pub fn make_then_call_esm_wrapper_with_namespace(
+    &self,
+    expr: Expression<'ast>,
+    wrapper_name: &str,
+    namespace_name: &str,
+  ) -> allocator::Box<'ast, CallExpression<'ast>> {
+    let wrapper_member = Expression::StaticMemberExpression(self.alloc_static_member_expression(
+      SPAN,
+      self.expression_identifier(SPAN, "n"),
+      self.identifier_name(SPAN, self.str(wrapper_name)),
+      false,
+    ));
+    let wrapper_call = self.expression_call(SPAN, wrapper_member, NONE, self.vec(), false);
+    let namespace_member = Expression::StaticMemberExpression(self.alloc_static_member_expression(
+      SPAN,
+      self.expression_identifier(SPAN, "n"),
+      self.identifier_name(SPAN, self.str(namespace_name)),
+      false,
+    ));
+    let seq_expr = self.make_seq_in_parens(wrapper_call, namespace_member);
+    self.then_with_arrow_callback(expr, seq_expr)
+  }
+
+  /// `<expr>.then(n => __toESM(n.<property_name>()))`
+  pub fn make_then_call_cjs_wrapper_with_to_esm(
+    &self,
+    expr: Expression<'ast>,
+    property_name: &str,
+    to_esm_fn_expr: Expression<'ast>,
+    node_mode: bool,
+  ) -> allocator::Box<'ast, CallExpression<'ast>> {
+    let member_expr = Expression::StaticMemberExpression(self.alloc_static_member_expression(
+      SPAN,
+      self.expression_identifier(SPAN, "n"),
+      self.identifier_name(SPAN, self.str(property_name)),
+      false,
+    ));
+    let wrapper_call = self.expression_call(SPAN, member_expr, NONE, self.vec(), false);
+    let to_esm_call = self.make_to_esm_wrapper(to_esm_fn_expr, wrapper_call, node_mode);
+    self.then_with_arrow_callback(expr, to_esm_call)
+  }
+
+  /// `<call_expr>.then(() => <return_expr>)`
+  pub fn make_callee_then_call(
+    &self,
+    call_expr: Expression<'ast>,
+    return_expr: Expression<'ast>,
+  ) -> Expression<'ast> {
+    Expression::CallExpression(self.alloc_call_expression(
+      SPAN,
+      Expression::StaticMemberExpression(self.alloc_static_member_expression(
+        SPAN,
+        call_expr,
+        self.identifier_name(SPAN, "then"),
+        false,
+      )),
+      NONE,
+      self.vec1(Argument::from(self.make_arrow_returning(return_expr))),
+      false,
     ))
   }
 }

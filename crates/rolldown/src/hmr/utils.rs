@@ -182,7 +182,7 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
 
 impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast> {
   fn builder(&self) -> oxc::ast::AstBuilder<'ast> {
-    self.snippet.builder
+    *self.ast_factory
   }
 
   fn module(&self) -> &NormalModule {

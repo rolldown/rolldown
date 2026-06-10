@@ -14,7 +14,7 @@ use oxc::{
   },
   span::{GetSpanMut, SPAN, Span},
 };
-use rolldown_common::{Interop, MemberExprProp};
+use rolldown_common::{EcmaModuleAstUsage, Interop, MemberExprProp};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 /// Rolldown's newtype wrapper around oxc's [`AstBuilder`].
@@ -392,6 +392,116 @@ impl<'ast> AstFactory<'ast> {
       false,
       true,
     ))
+  }
+
+  /// `var <binding_name> = __commonJS(... (exports, module) => { <statements> } ...)`
+  #[expect(clippy::too_many_arguments)]
+  pub fn make_commonjs_wrapper_stmt(
+    &self,
+    binding_name: &str,
+    commonjs_expr: Expression<'ast>,
+    statements: allocator::Vec<'ast, Statement<'ast>>,
+    ast_usage: EcmaModuleAstUsage,
+    profiler_names: bool,
+    stable_id: &str,
+    is_async: bool,
+  ) -> Statement<'ast> {
+    let mut params =
+      self.formal_parameters(SPAN, FormalParameterKind::Signature, self.vec_with_capacity(1), NONE);
+    let body = self.function_body(SPAN, self.vec(), statements);
+    if ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports) {
+      params.items.push(self.formal_parameter(
+        SPAN,
+        self.vec(),
+        self.binding_pattern_binding_identifier(SPAN, "exports"),
+        NONE,
+        NONE,
+        false,
+        None,
+        false,
+        false,
+      ));
+    }
+    if ast_usage.contains(EcmaModuleAstUsage::ModuleRef) {
+      params.items.push(self.formal_parameter(
+        SPAN,
+        self.vec(),
+        self.binding_pattern_binding_identifier(SPAN, "module"),
+        NONE,
+        NONE,
+        false,
+        None,
+        false,
+        false,
+      ));
+    }
+    let mut commonjs_call_expr =
+      self.call_expression_with_pure(SPAN, commonjs_expr, NONE, self.vec(), false, true);
+    let mut arrow_expr =
+      self.alloc_arrow_function_expression(SPAN, false, is_async, NONE, params, NONE, body);
+    arrow_expr.pife = true;
+    if profiler_names {
+      let obj_expr = self.alloc_object_expression(
+        SPAN,
+        self.vec1(self.object_property_kind_object_property(
+          SPAN,
+          PropertyKind::Init,
+          PropertyKey::from(self.expression_string_literal(SPAN, self.str(stable_id), None)),
+          Expression::ArrowFunctionExpression(arrow_expr),
+          true,
+          false,
+          false,
+        )),
+      );
+      commonjs_call_expr.arguments.push(Argument::ObjectExpression(obj_expr));
+    } else {
+      commonjs_call_expr.arguments.push(Argument::ArrowFunctionExpression(arrow_expr));
+    }
+    self.make_var_decl(
+      binding_name,
+      Expression::CallExpression(commonjs_call_expr.into_in(self.allocator)),
+    )
+  }
+
+  /// `var <binding_name> = __esm(... () => { <statements> } ...)`
+  #[expect(clippy::too_many_arguments)]
+  pub fn make_esm_wrapper_stmt(
+    &self,
+    binding_name: &str,
+    esm_fn_expr: Expression<'ast>,
+    statements: allocator::Vec<'ast, Statement<'ast>>,
+    profiler_names: bool,
+    use_pife: bool,
+    stable_id: &str,
+    is_async: bool,
+  ) -> Statement<'ast> {
+    let params = self.formal_parameters(SPAN, FormalParameterKind::Signature, self.vec(), NONE);
+    let body = self.function_body(SPAN, self.vec(), statements);
+    let mut esm_call_expr = self.call_expression(SPAN, esm_fn_expr, NONE, self.vec(), false);
+    let mut arrow_expr =
+      self.alloc_arrow_function_expression(SPAN, false, is_async, NONE, params, NONE, body);
+    arrow_expr.pife = use_pife;
+    if profiler_names {
+      let obj_expr = self.alloc_object_expression(
+        SPAN,
+        self.vec1(self.object_property_kind_object_property(
+          SPAN,
+          PropertyKind::Init,
+          PropertyKey::from(self.expression_string_literal(SPAN, self.str(stable_id), None)),
+          Expression::ArrowFunctionExpression(arrow_expr),
+          false,
+          false,
+          false,
+        )),
+      );
+      esm_call_expr.arguments.push(Argument::ObjectExpression(obj_expr));
+    } else {
+      esm_call_expr.arguments.push(Argument::ArrowFunctionExpression(arrow_expr));
+    }
+    self.make_var_decl(
+      binding_name,
+      Expression::CallExpression(esm_call_expr.into_in(self.allocator)),
+    )
   }
 
   /// `n => n.<property_name>`

@@ -20,7 +20,7 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
-  AstFactory, AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
+  AstFactory, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
 };
 
 mod finalizer_context;
@@ -80,7 +80,6 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub ctx: ScopeHoistingFinalizerContext<'me>,
   pub scope: &'me AstScopes,
   pub alloc: &'ast Allocator,
-  pub snippet: AstSnippet<'ast>,
   pub ast_factory: AstFactory<'ast>,
   pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
   pub scope_stack: Vec<ScopeFlags>,

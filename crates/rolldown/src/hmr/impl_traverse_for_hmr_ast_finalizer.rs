@@ -20,7 +20,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node: &mut ast::Program<'ast>,
     ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
-    let taken_body = node.body.take_in(self.alloc);
+    let taken_body = node.body.take_in(self.ast_factory.allocator);
     node.body.reserve_exact(taken_body.len());
     taken_body.into_iter().for_each(|top_level_stmt| {
       self.handle_top_level_stmt(&mut node.body, top_level_stmt, ctx.scoping());
@@ -32,16 +32,21 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node: &mut ast::Program<'ast>,
     ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
-    let mut try_block =
-      self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());
+    let mut try_block = self.ast_factory.alloc_block_statement(SPAN, self.ast_factory.vec());
 
     let dependencies_init_fn_stmts: Vec<_> = self
       .dependencies
       .iter()
       .filter_map(|dep| self.affected_module_idx_to_init_fn_name.get(dep))
       .map(|fn_name| {
-        let call_expr = self.snippet.call_expr_expr(fn_name);
-        self.snippet.builder.statement_expression(SPAN, call_expr)
+        let call_expr = self.ast_factory.expression_call(
+          SPAN,
+          self.ast_factory.make_id_ref_expr(SPAN, fn_name),
+          NONE,
+          self.ast_factory.vec(),
+          false,
+        );
+        self.ast_factory.statement_expression(SPAN, call_expr)
       })
       .collect();
 
@@ -53,16 +58,15 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     try_block.body.extend(runtime_module_register);
     try_block.body.extend(dependencies_init_fn_stmts);
     try_block.body.push(self.create_module_hot_context_initializer_stmt());
-    try_block.body.extend(node.body.take_in(self.alloc));
+    try_block.body.extend(node.body.take_in(self.ast_factory.allocator));
 
     node
       .body
       .extend(std::mem::take(&mut self.generated_static_import_stmts_from_external).into_values());
 
-    let final_block = self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());
+    let final_block = self.ast_factory.alloc_block_statement(SPAN, self.ast_factory.vec());
 
-    let try_stmt =
-      self.snippet.builder.alloc_try_statement(SPAN, try_block, NONE, Some(final_block));
+    let try_stmt = self.ast_factory.alloc_try_statement(SPAN, try_block, NONE, Some(final_block));
 
     let init_fn_name = &self.affected_module_idx_to_init_fn_name[&self.module.idx];
 
@@ -70,10 +74,10 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // with the module's stable id as an extra argument, so it's available inside the body
     // as `__rolldown_module_id__`. This lets registerModule / createModuleHotContext reference
     // the id by identifier instead of duplicating the string literal.
-    let module_id_param = self.snippet.builder.formal_parameter(
+    let module_id_param = self.ast_factory.formal_parameter(
       SPAN,
-      self.builder.vec(),
-      self.snippet.builder.binding_pattern_binding_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR),
+      self.ast_factory.vec(),
+      self.ast_factory.binding_pattern_binding_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR),
       NONE,
       NONE,
       false,
@@ -81,18 +85,17 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       false,
       false,
     );
-    let params = self.snippet.builder.formal_parameters(
+    let params = self.ast_factory.formal_parameters(
       SPAN,
       ast::FormalParameterKind::Signature,
       {
         if self.module.exports_kind.is_commonjs() {
-          self.snippet.builder.vec_from_array([
-            self.snippet.builder.formal_parameter(
+          self.ast_factory.vec_from_array([
+            self.ast_factory.formal_parameter(
               SPAN,
-              self.builder.vec(),
+              self.ast_factory.vec(),
               self
-                .snippet
-                .builder
+                .ast_factory
                 .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_REF_IDENT),
               NONE,
               NONE,
@@ -101,12 +104,11 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
               false,
               false,
             ),
-            self.snippet.builder.formal_parameter(
+            self.ast_factory.formal_parameter(
               SPAN,
-              self.builder.vec(),
+              self.ast_factory.vec(),
               self
-                .snippet
-                .builder
+                .ast_factory
                 .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_REF_IDENT),
               NONE,
               NONE,
@@ -118,13 +120,13 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
             module_id_param,
           ])
         } else {
-          self.snippet.builder.vec1(module_id_param)
+          self.ast_factory.vec1(module_id_param)
         }
       },
       NONE,
     );
     // function () { [user code] }
-    let mut user_code_wrapper = self.snippet.builder.alloc_function(
+    let mut user_code_wrapper = self.ast_factory.alloc_function(
       SPAN,
       ast::FunctionType::FunctionExpression,
       None,
@@ -135,10 +137,10 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       NONE,
       params,
       NONE,
-      Some(self.snippet.builder.function_body(
+      Some(self.ast_factory.function_body(
         SPAN,
-        self.snippet.builder.vec(),
-        self.snippet.builder.vec1(ast::Statement::TryStatement(try_stmt)),
+        self.ast_factory.vec(),
+        self.ast_factory.vec1(ast::Statement::TryStatement(try_stmt)),
       )),
     );
     // mark the callback as PIFE because the callback is executed when this chunk is loaded
@@ -148,16 +150,16 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // chunks we append a truthy dedup flag so the runtime short-circuits re-execution
     // when another lazy blob has already registered this module. HMR patches omit the
     // flag so the runtime always re-executes the body to publish new exports.
-    let mut initializer_args = self.snippet.builder.vec_with_capacity(3);
-    initializer_args.push(ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
+    let mut initializer_args = self.ast_factory.vec_with_capacity(3);
+    initializer_args.push(ast::Argument::StringLiteral(self.ast_factory.alloc_string_literal(
       SPAN,
-      self.snippet.builder.str(&self.module.stable_id),
+      self.ast_factory.str(&self.module.stable_id),
       None,
     )));
     initializer_args
       .push(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper)));
     if self.dedup_module_initializer {
-      initializer_args.push(ast::Argument::from(self.snippet.builder.expression_numeric_literal(
+      initializer_args.push(ast::Argument::from(self.ast_factory.expression_numeric_literal(
         SPAN,
         1.0,
         None,
@@ -172,26 +174,25 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       // __rolldown__runtime.createEsmInitializer(stable_id, (function () { [user code] })[, 1])
       "__rolldown_runtime__.createEsmInitializer"
     };
-    let initializer_call = self.snippet.builder.alloc_call_expression(
+    let initializer_call = self.ast_factory.alloc_call_expression(
       SPAN,
-      self.snippet.id_ref_expr(initializer_callee, SPAN),
+      self.ast_factory.make_id_ref_expr(SPAN, initializer_callee),
       NONE,
       initializer_args,
       false,
     );
 
     // var init_foo = __rolldown__runtime.createEsmInitializer((function () { [user code] }))
-    let var_decl = self.snippet.builder.alloc_variable_declaration(
+    let var_decl = self.ast_factory.alloc_variable_declaration(
       SPAN,
       ast::VariableDeclarationKind::Var,
-      self.snippet.builder.vec1(
-        self.snippet.builder.variable_declarator(
+      self.ast_factory.vec1(
+        self.ast_factory.variable_declarator(
           SPAN,
           ast::VariableDeclarationKind::Var,
           self
-            .snippet
-            .builder
-            .binding_pattern_binding_identifier(SPAN, self.snippet.builder.str(init_fn_name)),
+            .ast_factory
+            .binding_pattern_binding_identifier(SPAN, self.ast_factory.str(init_fn_name)),
           NONE,
           Some(ast::Expression::CallExpression(initializer_call)),
           false,
@@ -222,7 +223,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       && self.module.exports_kind.is_commonjs()
       && self.module.ecma_view.this_expr_replace_map.contains_key(&this_expr.span)
     {
-      *node = self.snippet.id_ref_expr(CJS_ROLLDOWN_EXPORTS_REF, SPAN);
+      *node = self.ast_factory.make_id_ref_expr(SPAN, CJS_ROLLDOWN_EXPORTS_REF);
       return;
     }
 
@@ -255,7 +256,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let reference = ctx.scoping().get_reference(reference_id);
     if let Some(symbol_id) = reference.symbol_id() {
       if let Some(binding_name) = self.import_bindings.get(&symbol_id) {
-        ident.name = self.snippet.atom(binding_name.as_str()).into();
+        ident.name = self.ast_factory.str(binding_name.as_str()).into();
       }
     } else if ident.name == CJS_EXPORTS_REF_STR {
       ident.name = CJS_ROLLDOWN_EXPORTS_REF_IDENT;

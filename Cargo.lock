@@ -2380,9 +2380,8 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "11.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de26fd6c906418944e5b86a2442e8941c7c098eddfc9c6b8612de9947ac1237d"
+version = "11.19.1"
+source = "git+https://github.com/oxc-project/oxc-resolver?rev=ef0c86b29a43c3d8ae59bd2563832d8129deef7d#ef0c86b29a43c3d8ae59bd2563832d8129deef7d"
 dependencies = [
  "cfg-if",
  "compact_str",
@@ -2408,9 +2407,8 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver_napi"
-version = "11.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e6a546965fcb44d75d530cae2ca37781649ed5452ad415cd1b7c2a883f37d72"
+version = "11.19.1"
+source = "git+https://github.com/oxc-project/oxc-resolver?rev=ef0c86b29a43c3d8ae59bd2563832d8129deef7d#ef0c86b29a43c3d8ae59bd2563832d8129deef7d"
 dependencies = [
  "fancy-regex",
  "napi",

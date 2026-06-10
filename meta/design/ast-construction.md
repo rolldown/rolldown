@@ -6,7 +6,7 @@ Rolldown synthesizes oxc AST nodes in many places — module finalizers, the sca
 
 Going forward rolldown routes **all** construction through a single rolldown-owned newtype, **`AstFactory`**, which wraps oxc's `AstBuilder` (deref-ing to it for the generic node constructors) and adds rolldown's own recurring constructions as inherent `make_*` methods. Funnelling everything through one rolldown type — rather than calling oxc's `AstBuilder` directly at each site — is also what lets rolldown absorb future oxc construction-API changes at a single point. This document records that decision and the reasoning, so future work (and the upcoming oxc `AstBuilder` redesign, [oxc#23043](https://github.com/oxc-project/oxc/issues/23043)) has a baseline.
 
-## Current state
+## Prior state
 
 Before this convention, the same kind of node could be built four different ways, and the entry points overlapped:
 
@@ -110,34 +110,6 @@ This is an incremental convention, not a big-bang refactor:
 
 - `AstSnippet` becomes the `AstFactory` newtype: its `pub builder` field becomes the wrapped `AstBuilder` exposed via `Deref`; the thin renames are dropped in favor of the deref'd oxc constructors; the genuine patterns become inherent `make_*` methods. The awkward `AstSnippet` name disappears — rolldown now owns a properly-named builder.
 - New code follows the convention immediately; existing sites are migrated opportunistically (the `..::dummy()` cluster was already forced over by #9670).
-
-## Plan
-
-> **Temporary section — delete once the migration below is complete.** It tracks the concrete moves and exists only while the work is in flight.
-
-First, what this does **not** touch, to head off a likely assumption:
-
-- The `..Foo::dummy(alloc)` AST struct-spread idiom is **not** part of this work. oxc 0.135's `#[non_exhaustive]` already forces it out, and [#9670](https://github.com/rolldown/rolldown/pull/9670) migrated the ~26 affected sites (in `module_finalizers/` and the `ast_ext` traits) onto `AstBuilder`, dropping their `Dummy as _` imports.
-- rolldown defines **no `Dummy` impls of its own**, so there is nothing rolldown-maintained to delete there. The surviving `::dummy()` calls — `RuntimeModuleBrief::dummy()` (`crates/rolldown_common/src/module_loader/runtime_module_brief.rs:69`) and `rolldown_devtools::Session::dummy()` (`crates/rolldown_devtools/src/init_tracing.rs:69`, 3 call sites) — are inherent domain placeholders unrelated to AST construction. **Leave them.**
-
-The rollout shape — **create `AstFactory` as a brand-new type alongside `AstSnippet`, migrate consumers area-by-area smallest-first, then delete `AstSnippet`.** No bridging alias and no temporary `pub builder` on `AstFactory`: it is born in final form (`AstFactory(AstBuilder)` + `Deref` + `make_*`). The only transitional thing is the old `AstSnippet`, deleted once empty.
-
-### Conventions every step must follow (locked from #9682 review)
-
-Settled while reviewing #9682 (the introduce-`AstFactory` PR). They describe the **target** for every area — including the first two PRs (#9682 / #9683), whose own code is being brought into compliance — not what every file already shows, so the same review comments don't recur:
-
-- **Handle name `ast_factory`** (not `ast`). Spelled out it reads as an instance of `AstFactory` and isn't confused with oxc's `ast` module ([#9682](https://github.com/rolldown/rolldown/pull/9682)). Use it for every migrated handle, the ext-trait fold, and any new code — including the already-merged-style sites in `vite_web_worker_post` / `generate_lazy_export` / `tweak_ast_for_scanning`, which are renamed to match.
-- **`make_*` take `&self`**, reaching the builder through `Deref` (`self.foo()`, never `self.0.foo()`) — so the **call sites** never depend on `AstFactory: Copy` (the handle is borrowed, not moved) and survive oxc#23043 making `AstBuilder` non-`Copy` unchanged; the method bodies migrate onto oxc's new by-reference constructors when that lands ([#9682](https://github.com/rolldown/rolldown/pull/9682)). Applies to every `make_*` added in any step.
-- **Extract a reused, non-trivial snippet into a function** rather than inlining it at several sites (e.g. the `expr_without_parentheses` paren-unwrap loop in `generate_lazy_export`) ([#9682](https://github.com/rolldown/rolldown/pull/9682)). The guidance to inline old `AstSnippet` wrappers is only for _trivial one-liners_: when collapsing a wrapper yields a multi-line body that recurs, keep it as a named helper instead of copy-pasting it.
-
-One-off, not a per-step concern (recorded only so it isn't lost): the `AstFactory` struct doc comment in `ast_factory.rs` will be reworded for grammar ([#9682](https://github.com/rolldown/rolldown/pull/9682)).
-
-1. **Create `AstFactory`** — new file `crates/rolldown_ecmascript_utils/src/ast_factory.rs`: `struct AstFactory<'a>(AstBuilder<'a>)`, `Copy`, `Deref<Target = AstBuilder>`, `new(alloc)`; exported from `lib.rs`. `AstSnippet` is left untouched, so there are zero call-site changes.
-2. **Migrate consumers area-by-area, smallest blast radius first.** Per area: switch the handle to `AstFactory` (named `ast_factory`); `.builder.*` reach-throughs become deref'd `ast_factory.*` calls; genuine patterns become `make_*` methods added to `AstFactory` on first use; thin wrappers are inlined to their deref'd oxc equivalent (unless the body is non-trivial and recurs — then keep it a named helper). Delete each `AstSnippet` method once it has no callers left (e.g. when a lint flags it). Approximate order (touch counts): `vite_web_worker_post` (~13) → `generate_lazy_export` (~12) → `tweak_ast_for_scanning` (~26) → `vite_build_import_analysis` (~45) → hmr finalizer + `hmr_stage` → `module_finalizers` (~211). The one non-mechanical fix is the hmr `utils.rs:185` `Deref` blocker — change `HmrAstBuilder::builder` to return `AstBuilder` by value (it is `Copy`).
-3. **Fold the construction ext traits** (`binding_pattern_ext` etc.) onto the shared `ast_factory: AstFactory` handle, removing their internal `AstBuilder::new(alloc)`. Read-only `as_*` / `is_*` traits stay.
-4. **Delete `AstSnippet`** once empty — the file, the `lib.rs` export, any residual methods — and delete this Plan section.
-
-Two `make_*` names must avoid shadowing oxc builder methods reached via `Deref`: `object_property_kind_object_property` → `make_lazy_export_property`, `statement_module_declaration_export_named_declaration` → `make_export_named_stmt`.
 
 ## Related
 

@@ -1,12 +1,10 @@
 mod ast_factory;
-mod ast_snippet;
 mod extensions;
 mod scope;
 mod source_utils;
 
 pub use crate::{
   ast_factory::AstFactory,
-  ast_snippet::AstSnippet,
   extensions::ast_ext::{
     binding_pattern_ext::BindingPatternExt,
     call_expression_ext::CallExpressionExt,

@@ -17,11 +17,11 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
       SPAN,
       Expression::StaticMemberExpression(self.ast_factory.alloc_static_member_expression(
         SPAN,
-        self.ast_factory.expression_identifier(SPAN, self.ast_factory.str("self")),
-        self.ast_factory.identifier_name(SPAN, self.ast_factory.str("location")),
+        self.ast_factory.make_id_ref_expr(SPAN, "self"),
+        self.ast_factory.make_id_name(SPAN, "location"),
         false,
       )),
-      self.ast_factory.identifier_name(SPAN, self.ast_factory.str("href")),
+      self.ast_factory.make_id_name(SPAN, "href"),
       false,
     ))
   }
@@ -67,8 +67,7 @@ impl<'ast> VisitMut<'ast> for WebWorkerPostVisitor<'ast> {
         if meta.meta.name == "import" && meta.property.name == "meta" =>
       {
         self.should_inject_import_meta_object = true;
-        *it =
-          self.ast_factory.expression_identifier(SPAN, self.ast_factory.str("_vite_importMeta"));
+        *it = self.ast_factory.make_id_ref_expr(SPAN, "_vite_importMeta");
       }
       _ => oxc::ast_visit::walk_mut::walk_expression(self, it),
     }

@@ -197,7 +197,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
 
           let value = std::mem::replace(
             &mut property.value,
-            ast_factory.expression_identifier(SPAN, ast_factory.str(legitimized_ident.as_str())),
+            ast_factory.make_id_ref_expr(SPAN, legitimized_ident.as_str()),
           );
           // TODO(shulaoda): Waiting for oxc transform to support the ES feature `ShorthandProperties`.
           if key == "__proto__" {

@@ -1,75 +1,72 @@
 use oxc::{
-  allocator::{Allocator, TakeIn as _},
-  ast::{
-    AstBuilder,
-    ast::{
-      ArrayExpressionElement, AssignmentTarget, AssignmentTargetMaybeDefault, BindingPattern,
-      Expression, ObjectPropertyKind, PropertyKind,
-    },
+  allocator::TakeIn as _,
+  ast::ast::{
+    ArrayExpressionElement, AssignmentTarget, AssignmentTargetMaybeDefault, BindingPattern,
+    Expression, ObjectPropertyKind, PropertyKind,
   },
   span::SPAN,
 };
 
-use crate::{AstFactory, AstSnippet};
+use crate::AstFactory;
 
 use super::binding_property_ext::BindingPropertyExt as _;
 
 pub trait BindingPatternExt<'ast> {
-  fn into_assignment_target(self, alloc: &'ast Allocator) -> AssignmentTarget<'ast>;
+  fn into_assignment_target(self, ast_factory: &AstFactory<'ast>) -> AssignmentTarget<'ast>;
 
   fn into_expression(self, ast_factory: &AstFactory<'ast>) -> Expression<'ast>;
 }
 
 impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
-  fn into_assignment_target(self, alloc: &'ast Allocator) -> AssignmentTarget<'ast> {
+  fn into_assignment_target(self, ast_factory: &AstFactory<'ast>) -> AssignmentTarget<'ast> {
     match self {
       // Turn `var a = 1` into `a = 1`
-      BindingPattern::BindingIdentifier(id) => {
-        AstSnippet::new(alloc).simple_id_assignment_target(&id.name, id.span)
-      }
+      BindingPattern::BindingIdentifier(id) => AssignmentTarget::AssignmentTargetIdentifier(
+        ast_factory.alloc_identifier_reference(id.span, id.name),
+      ),
       // Turn `var { a, b = 2 } = ...` to `{a, b = 2} = ...`
       BindingPattern::ObjectPattern(mut obj_pat) => {
-        let builder = AstBuilder::new(alloc);
         let rest = obj_pat.rest.take().map(|rest| {
-          builder.alloc_assignment_target_rest(
+          ast_factory.alloc_assignment_target_rest(
             rest.span,
-            rest.unbox().argument.into_assignment_target(alloc),
+            rest.unbox().argument.into_assignment_target(ast_factory),
           )
         });
-        let mut properties = builder.vec_with_capacity(obj_pat.properties.len());
-        obj_pat.properties.take_in(alloc).into_iter().for_each(|binding_prop| {
-          properties.push(binding_prop.into_assignment_target_property(alloc));
+        let mut properties = ast_factory.vec_with_capacity(obj_pat.properties.len());
+        obj_pat.properties.take_in(ast_factory.allocator).into_iter().for_each(|binding_prop| {
+          properties.push(binding_prop.into_assignment_target_property(ast_factory));
         });
         AssignmentTarget::ObjectAssignmentTarget(
-          builder.alloc_object_assignment_target(SPAN, properties, rest),
+          ast_factory.alloc_object_assignment_target(SPAN, properties, rest),
         )
       }
       // Turn `var [a, ,c = 1] = ...` to `[a, ,c = 1] = ...`
       BindingPattern::ArrayPattern(mut arr_pat) => {
-        let builder = AstBuilder::new(alloc);
         let rest = arr_pat.rest.take().map(|rest| {
-          builder.alloc_assignment_target_rest(
+          ast_factory.alloc_assignment_target_rest(
             rest.span,
-            rest.unbox().argument.into_assignment_target(alloc),
+            rest.unbox().argument.into_assignment_target(ast_factory),
           )
         });
-        let mut elements = builder.vec_with_capacity(arr_pat.elements.len());
-        arr_pat.elements.take_in(alloc).into_iter().for_each(|binding_pat| {
+        let mut elements = ast_factory.vec_with_capacity(arr_pat.elements.len());
+        arr_pat.elements.take_in(ast_factory.allocator).into_iter().for_each(|binding_pat| {
           elements.push(binding_pat.map(|binding_pat| match binding_pat {
             BindingPattern::AssignmentPattern(assign_pat) => {
               let assign_pat = assign_pat.unbox();
               AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
-                builder.alloc_assignment_target_with_default(
+                ast_factory.alloc_assignment_target_with_default(
                   assign_pat.span,
-                  assign_pat.left.into_assignment_target(alloc),
+                  assign_pat.left.into_assignment_target(ast_factory),
                   assign_pat.right,
                 ),
               )
             }
-            _ => AssignmentTargetMaybeDefault::from(binding_pat.into_assignment_target(alloc)),
+            _ => {
+              AssignmentTargetMaybeDefault::from(binding_pat.into_assignment_target(ast_factory))
+            }
           }));
         });
-        AssignmentTarget::ArrayAssignmentTarget(builder.alloc_array_assignment_target(
+        AssignmentTarget::ArrayAssignmentTarget(ast_factory.alloc_array_assignment_target(
           arr_pat.span,
           elements,
           rest,

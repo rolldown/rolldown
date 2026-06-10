@@ -219,7 +219,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // binding is never read. In that case the owner's `init_*` wrapper statement
       // was never included, so it has no chunk assignment and emitting a call to it
       // would reference a function that doesn't exist in the output. This mirrors
-      // the `is_included` guard in `generate_transitive_esm_init`.
+      // the `is_included` guard in `collect_transitive_esm_init_targets`.
       && meta.is_included
       && meta.wrapper_ref.is_some()
       && !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner)

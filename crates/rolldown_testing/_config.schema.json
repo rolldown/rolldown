@@ -1839,10 +1839,14 @@
             "null"
           ]
         },
-        "inlineDynamicImports": {
-          "type": [
-            "boolean",
-            "null"
+        "codeSplitting": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CodeSplittingMode"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "dynamicImportInCjs": {

@@ -181,7 +181,7 @@ impl<'a> LinkStage<'a> {
             .iter()
             .filter_map(|rec| match rec.kind {
               // Dynamically imported modules are included automatically by `include_statements`
-              // when `inlineDynamicImports` is enabled.
+              // when code splitting is disabled (`codeSplitting: false`).
               ImportKind::DynamicImport | ImportKind::Require => None,
               _ => rec.resolved_module,
             })

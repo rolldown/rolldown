@@ -38,8 +38,8 @@ catalog:
   '@babel/core': ^7.24.7
   '@babel/preset-env': ^7.24.7
   '@babel/preset-typescript': ^7.24.7
-  '@napi-rs/cli': ^3.6.1
-  '@napi-rs/wasm-runtime': ^1.1.4
+  '@napi-rs/cli': ^3.7.1
+  '@napi-rs/wasm-runtime': ^1.1.5
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
   '@oxc-project/runtime': '=0.135.0'
@@ -253,3 +253,5 @@ minimumReleaseAgeExclude:
   - oxc-minify@0.135.0
   - oxc-parser@0.135.0
   - oxc-transform@0.135.0
+  - '@napi-rs/cli@3.7.1'
+  - '@napi-rs/wasm-runtime@1.1.5'

@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_common"
-version = "1.1.0"
+version = "1.1.1"
 publish = true
 description = "This crate is mostly for sharing code between rolldwon crates."
 readme = "../../README.md"

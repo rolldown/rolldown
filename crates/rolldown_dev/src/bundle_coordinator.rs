@@ -464,9 +464,14 @@ impl BundleCoordinator {
   fn create_state_snapshot(&self) -> CoordinatorStateSnapshot {
     let last_build_errored =
       matches!(self.state, CoordinatorState::Failed { .. } | CoordinatorState::FullBuildFailed);
+    let last_error_stage = match self.state {
+      CoordinatorState::Failed { last_error_stage } => Some(last_error_stage),
+      _ => None,
+    };
     CoordinatorStateSnapshot {
       running_future: self.current_bundling_future.clone(),
       last_build_errored,
+      last_error_stage,
       has_stale_output: self.has_stale_bundle_output,
     }
   }

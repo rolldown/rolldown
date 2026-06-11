@@ -6,6 +6,7 @@ use std::sync::Arc;
 use crate::binding_dev_options::BindingDevOptions;
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
+use crate::types::binding_error_stage::BindingErrorStage;
 use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
 use crate::utils::create_bundler_config_from_binding_options::create_bundler_config_from_binding_options;
@@ -274,11 +275,22 @@ impl ScheduledBuild {
 #[napi(object)]
 pub struct BindingBundleState {
   pub last_build_errored: bool,
+  /// The stage of the last incremental failure, when `last_build_errored`
+  /// is true and the engine is in an incremental-failure state. Absent on
+  /// success and for an initial full-build failure (use
+  /// `last_build_errored` to detect that). The consumer can force a full
+  /// rebuild on the next page load when this is `Hmr`. See
+  /// `meta/design/dev-engine.md` §12.
+  pub last_error_stage: Option<BindingErrorStage>,
   pub has_stale_output: bool,
 }
 
 impl From<BundleState> for BindingBundleState {
   fn from(state: BundleState) -> Self {
-    Self { last_build_errored: state.last_build_errored, has_stale_output: state.has_stale_output }
+    Self {
+      last_build_errored: state.last_build_errored,
+      last_error_stage: state.last_error_stage.map(Into::into),
+      has_stale_output: state.has_stale_output,
+    }
   }
 }

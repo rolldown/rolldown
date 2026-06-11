@@ -62,8 +62,22 @@ to each connected client individually and is not logged to the terminal.
 
 After a failed build, the engine waits for a file change before
 rebuilding. Both Vite config edits and user-land source edits are
-valid triggers. Nothing else — not page refresh, not elapsed time, not
-manual UI dismissal — counts as recovery.
+valid triggers. Inside rolldown_dev nothing else counts as recovery —
+not page refresh, not elapsed time, not manual UI dismissal:
+`ensure_latest_bundle_output` no-ops in every failed state (§13b), so
+access never rebuilds on its own.
+
+**One consumer-side exception — page refresh after an HMR-stage
+failure.** When the last failure originated in HMR generation
+(`last_error_stage == Hmr`), the consumer is permitted to treat a page
+refresh as a recovery trigger: on access it calls `triggerFullBuild`
+(§13e) to force a full rebuild that bypasses the possibly-buggy HMR
+path, instead of replaying the cached error. This stays scoped to the
+consumer — rolldown_dev itself does not change behavior; the escalation
+is the consumer's decision, keyed on the `last_error_stage` it reads
+from `BundleState` (§12). A `Rebuild`-stage or full-build failure gets
+no such exception — only a file change recovers those. (Not yet wired
+up in the in-repo reference consumer; the plumbing exists.)
 
 Realized in: `handle_file_changes` (§7) is the sole producer of
 post-failure rebuild tasks. `triggerFullBuild` (§13e) is an explicit
@@ -704,6 +718,35 @@ naive "promise resolved ⇒ build fresh" interpretation in the consumer
 leads to a spurious reload loop. It covers both initial-build failure
 (`FullBuildFailed`) and incremental failure (`Failed { .. }`) — the
 narrower initial-only predicate was removed as redundant.
+
+### Companion: `last_error_stage`
+
+The snapshot also exposes `last_error_stage: Option<ErrorStage>` — `Some`
+only in `Failed { last_error_stage }`, carrying the stage of the last
+incremental failure (§10). It is `None` on the success path and for
+`FullBuildFailed` (a full build covers every stage, so there is no single
+originating stage — detect that case with `last_build_errored` instead).
+It flows through `BundleState.last_error_stage` and
+`BindingBundleState.last_error_stage` (a `'Hmr' | 'Rebuild'` string union
+on the JS side).
+
+`Some(Hmr)` enables a deliberate **exception** to Design principles §3
+("file changes are the only recovery trigger"), scoped to the consumer
+rather than rolldown_dev: because HMR generation can itself be buggy, a
+consumer may, on a page load where `last_build_errored && last_error_stage
+== Hmr`, call `trigger_full_build` (§13e) before
+`ensure_latest_bundle_output` to force a full rebuild that bypasses the
+HMR path. FIFO channel ordering guarantees the `FullBuild` is scheduled
+before the ensure message is processed, so the access still waits for the
+fresh build. rolldown_dev itself stays conservative —
+`ensure_latest_bundle_output` still no-ops in every `Failed` /
+`FullBuildFailed` state (§13b). A `Rebuild`-stage or full-build failure is
+left alone; only a file change recovers those.
+
+This consumer-side escape hatch is **not yet wired up in-repo** — the
+plumbing (`last_error_stage` through the binding) exists, but the
+reference dev server in `packages/test-dev-server/src/dev-server.ts` does
+not yet escalate on it.
 
 ---
 

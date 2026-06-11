@@ -639,6 +639,7 @@ module.exports.TsconfigCache = nativeBinding.TsconfigCache
 module.exports.BindingAttachDebugInfo = nativeBinding.BindingAttachDebugInfo
 module.exports.BindingBuiltinPluginName = nativeBinding.BindingBuiltinPluginName
 module.exports.BindingChunkModuleOrderBy = nativeBinding.BindingChunkModuleOrderBy
+module.exports.BindingErrorStage = nativeBinding.BindingErrorStage
 module.exports.BindingLogLevel = nativeBinding.BindingLogLevel
 module.exports.BindingPluginOrder = nativeBinding.BindingPluginOrder
 module.exports.BindingPropertyReadSideEffects = nativeBinding.BindingPropertyReadSideEffects

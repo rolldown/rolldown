@@ -14,6 +14,7 @@ pub use {
   crate::{
     dev_context::BundlingFuture,
     dev_engine::{BundleState, DevEngine},
+    types::error_stage::ErrorStage,
   },
   rolldown::BundlerConfig,
   rolldown_dev_common::types::{

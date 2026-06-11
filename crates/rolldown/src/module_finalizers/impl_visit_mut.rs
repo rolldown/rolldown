@@ -211,8 +211,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           });
 
         // Safety net for the `init_is_noop` predictive classifier (see
-        // `generate_stage::compute_init_is_noop`): if a module was flagged as having an empty
-        // `__esm` closure, the statements that actually land inside the closure must be empty.
+        // `generate_stage::compute_wrapped_esm_init_metadata`): if a module was flagged as
+        // having an empty `__esm` closure, the statements that actually land inside the closure
+        // must be empty.
         // Otherwise we'd have marked a side-effecting `init_*()` as `@__PURE__` and DCE could
         // wrongly drop it. Turns any misclassification into a loud failure across the fixtures.
         debug_assert!(

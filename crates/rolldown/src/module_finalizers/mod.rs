@@ -10,7 +10,7 @@ use oxc::{
       NumberBase, Statement, VariableDeclarationKind,
     },
   },
-  span::{GetSpan, GetSpanMut, SPAN},
+  span::{GetSpan, GetSpanMut, SPAN, Span},
 };
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx,
@@ -81,6 +81,8 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub scope: &'me AstScopes,
   pub alloc: &'ast Allocator,
   pub ast_factory: AstFactory<'ast>,
+  /// Wrapped-ESM importees whose `init_*()` call was already emitted while finalizing this
+  /// module, so the various init-emission paths don't emit duplicates.
   pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
   pub scope_stack: Vec<ScopeFlags>,
   pub state: TraverseState,
@@ -123,60 +125,36 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     expr
   }
 
-  /// For excluded re-export statements in strict execution order, generate init
-  /// calls by traversing through non-included barrel modules to find included
-  /// importees whose wrappers are available in this chunk.
-  fn generate_transitive_esm_init(
-    &mut self,
-    module_idx: ModuleIdx,
-    body: &mut allocator::Vec<'ast, Statement<'ast>>,
-  ) {
-    let mut stack = vec![module_idx];
-    while let Some(module_idx) = stack.pop() {
-      let Module::Normal(importee) = &self.ctx.modules[module_idx] else { continue };
-      let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-      if !matches!(importee_linking_info.wrap_kind(), WrapKind::Esm) {
-        continue;
-      }
-
-      // `generated_init_esm_importee_ids` serves double duty: it tracks both
-      // modules for which we already emitted an init call AND modules we have
-      // already visited during transitive traversal.
-      if !self.generated_init_esm_importee_ids.insert(importee.idx) {
-        continue;
-      }
-
-      // Only generate init calls for modules in the same chunk whose wrapper is
-      // declared (i.e. the module is included in the output).
-      if importee_linking_info.is_included
-        && self.ctx.chunk_graph.module_to_chunk[importee.idx] == Some(self.ctx.chunk_idx)
-      {
-        let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(
-          importee_linking_info.wrapper_ref.unwrap(),
-          false,
-          false,
-        );
-        let init_call = self.ast_factory.expression_call_with_pure(
-          SPAN,
-          wrapper_ref_expr,
-          NONE,
-          self.ast_factory.vec(),
-          false,
-          // A no-op `init_*()` (empty wrapped-ESM closure) is pure; let `dce-only` drop it.
-          importee_linking_info.init_is_noop,
-        );
-        body.push(self.ast_factory.statement_expression(SPAN, init_call));
-      } else {
-        // Importee is not included (barrel module) — traverse its import records
-        // to find included importees transitively.
-        // Preserve the old recursive DFS order when using an explicit LIFO stack:
-        // pushing children in reverse keeps source-order visitation left-to-right.
-        for rec in importee.import_records.iter().rev() {
-          if let Some(sub_importee_idx) = rec.resolved_module {
-            stack.push(sub_importee_idx);
-          }
-        }
-      }
+  /// Build the `init_x()` call expression for a wrapped (`WrapKind::Esm`) importee.
+  ///
+  /// - `mark_pure_if_noop`: annotate the call `/* @__PURE__ */` when the importee's init is a
+  ///   no-op (empty wrapped-ESM closure), letting the default `dce-only` minify drop it.
+  /// - `await_if_tla`: wrap the call in `await` when the importee is TLA-tainted.
+  fn wrapped_esm_init_call_expr(
+    &self,
+    importee_idx: ModuleIdx,
+    call_span: Span,
+    mark_pure_if_noop: bool,
+    await_if_tla: bool,
+  ) -> ast::Expression<'ast> {
+    let importee_linking_info = &self.ctx.linking_infos[importee_idx];
+    // `init_foo`
+    let (wrapper_ref_expr, _) =
+      self.finalized_expr_for_symbol_ref(importee_linking_info.wrapper_ref.unwrap(), false, false);
+    // `init_foo()`
+    let init_call = self.ast_factory.expression_call_with_pure(
+      call_span,
+      wrapper_ref_expr,
+      NONE,
+      self.ast_factory.vec(),
+      false,
+      mark_pure_if_noop && importee_linking_info.init_is_noop,
+    );
+    if await_if_tla && importee_linking_info.is_tla_or_contains_tla_dependency {
+      // `await init_foo()`
+      ast::Expression::AwaitExpression(self.ast_factory.alloc_await_expression(SPAN, init_call))
+    } else {
+      init_call
     }
   }
 
@@ -241,7 +219,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // binding is never read. In that case the owner's `init_*` wrapper statement
       // was never included, so it has no chunk assignment and emitting a call to it
       // would reference a function that doesn't exist in the output. This mirrors
-      // the `is_included` guard in `generate_transitive_esm_init`.
+      // the `is_included` guard in `collect_transitive_esm_init_targets`.
       && meta.is_included
       && meta.wrapper_ref.is_some()
       && !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner)
@@ -279,29 +257,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       if !self.generated_init_esm_importee_ids.insert(module_idx) {
         return None;
       }
-
-      let importee_linking_info = &self.ctx.linking_infos[module_idx];
-      let wrapper_ref = importee_linking_info.wrapper_ref?;
-      let is_tla_or_contains_tla_dependency =
-        importee_linking_info.is_tla_or_contains_tla_dependency;
-      let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(wrapper_ref, false, false);
-
-      let init_call =
-        ast::Expression::CallExpression(self.ast_factory.alloc_call_expression_with_pure(
-          SPAN,
-          wrapper_ref_expr,
-          NONE,
-          self.ast_factory.vec(),
-          false,
-          // A no-op `init_*()` (empty wrapped-ESM closure) is pure; let `dce-only` drop it.
-          importee_linking_info.init_is_noop,
-        ));
-
-      Some(if is_tla_or_contains_tla_dependency {
-        ast::Expression::AwaitExpression(self.ast_factory.alloc_await_expression(SPAN, init_call))
-      } else {
-        init_call
-      })
+      // `add_wrapped_esm_init_module_for_symbol` only collects modules with a `wrapper_ref`.
+      Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
     });
 
     let init_exprs = init_exprs.collect::<Vec<_>>();
@@ -419,34 +376,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           return true;
         }
         self.generated_init_esm_importee_ids.insert(importee.idx);
-        // `init_foo`
-        let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(
-          importee_linking_info.wrapper_ref.unwrap(),
-          false,
-          false,
-        );
-
-        // `init_foo()`
-        let init_call = ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
-          stmt.span(),
-          wrapper_ref_expr,
-          NONE,
-          self.ast_factory.vec(),
-          false,
-        ));
-
-        if importee_linking_info.is_tla_or_contains_tla_dependency {
-          // `await init_foo()`
-          *stmt = self.ast_factory.statement_expression(
-            SPAN,
-            ast::Expression::AwaitExpression(
-              self.ast_factory.alloc_await_expression(SPAN, init_call),
-            ),
-          );
-        } else {
-          // `init_foo()`
-          *stmt = self.ast_factory.statement_expression(SPAN, init_call);
-        }
+        // `init_foo()` / `await init_foo()`
+        let init_expr = self.wrapped_esm_init_call_expr(importee.idx, stmt.span(), false, true);
+        *stmt = self.ast_factory.statement_expression(SPAN, init_expr);
 
         if self.transferred_import_record.contains_key(&rec_idx) {
           self.transferred_import_record.insert(rec_idx, stmt.to_source_string());
@@ -1623,20 +1555,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let is_stmt_included = self.ctx.linking_info.stmt_info_included.has_bit(stmt_info_idx);
 
         if !is_stmt_included {
-          // For ESM-wrapped modules, excluded re-export statements still need
-          // init calls for correct initialization order.
-          if matches!(self.ctx.linking_info.wrap_kind(), WrapKind::Esm) {
-            let rec_idx = if let Some(export_all) = top_stmt.as_export_all_declaration() {
-              Some(self.ctx.module.imports[&export_all.span])
-            } else if let Some(named_decl) = top_stmt.as_export_named_declaration() {
-              named_decl.source.as_ref().map(|_| self.ctx.module.imports[&named_decl.span])
-            } else {
-              None
-            };
-            if let Some(importee_idx) =
-              rec_idx.and_then(|idx| self.ctx.module.import_records[idx].resolved_module)
-            {
-              self.generate_transitive_esm_init(importee_idx, &mut program.body);
+          // For ESM-wrapped modules, excluded re-export statements still need init calls for
+          // correct initialization order. Their targets are precomputed by the generate
+          // stage's `compute_wrapped_esm_init_metadata`; emitting the calls (with the
+          // module-wide dedup below) is all that happens here.
+          let linking_info = self.ctx.linking_info;
+          if let Some(targets) = linking_info.transitive_esm_init_targets.get(&stmt_info_idx) {
+            for &importee_idx in targets {
+              if self.generated_init_esm_importee_ids.insert(importee_idx) {
+                let init_expr = self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, false);
+                program.body.push(self.ast_factory.statement_expression(SPAN, init_expr));
+              }
             }
           }
           return;
@@ -1685,6 +1614,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     ConcatenateWrappedModuleKind::Inner
                   )
                 {
+                  // Deliberately not unified with `wrapped_esm_init_call_expr`: this site
+                  // resolves the wrapper via `canonical_name_for` (bare identifier, no
+                  // cross-chunk `require_binding.init_x` form, no `@__PURE__`, no
+                  // `generated_init_esm_importee_ids` dedup); switching it would be a
+                  // behavior change, not a refactor.
                   let wrapper_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
                   let mut init_expr = self.ast_factory.expression_call(

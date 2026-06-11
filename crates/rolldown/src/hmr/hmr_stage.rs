@@ -13,7 +13,7 @@ use rolldown_common::{
   Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
-use rolldown_ecmascript_utils::AstSnippet;
+use rolldown_ecmascript_utils::AstFactory;
 use rolldown_error::BuildResult;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
@@ -147,7 +147,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .await?;
 
     // Extract the single result
-    // ret.is_self_accepting = true; // (hyf0) TODO: what's this for?
     Ok(results.pop().unwrap().update)
   }
 
@@ -247,7 +246,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
           if let Module::Normal(module) = module {
             Some(module.originative_resolved_id.clone())
           } else {
-            // unreachable!("HMR only supports normal module. Got {:?}", module.id());
             None
           }
         })
@@ -459,9 +457,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
           let mut finalizer = HmrAstFinalizer {
             modules,
-            alloc: fields.allocator,
-            snippet: AstSnippet::new(fields.allocator),
-            builder: &oxc::ast::AstBuilder::new(fields.allocator),
+            ast_factory: AstFactory::new(fields.allocator),
             import_bindings: FxHashMap::default(),
             module: affected_module,
             exports: oxc::allocator::Vec::new_in(fields.allocator),
@@ -581,7 +577,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
           if let Module::Normal(module) = module {
             Some(module.originative_resolved_id.clone())
           } else {
-            // unreachable!("HMR only supports normal module. Got {:?}", module.id());
             None
           }
         })
@@ -699,9 +694,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
           let mut finalizer = HmrAstFinalizer {
             modules,
-            alloc: fields.allocator,
-            snippet: AstSnippet::new(fields.allocator),
-            builder: &oxc::ast::AstBuilder::new(fields.allocator),
+            ast_factory: AstFactory::new(fields.allocator),
             import_bindings: FxHashMap::default(),
             module: affected_module,
             exports: oxc::allocator::Vec::new_in(fields.allocator),
@@ -891,9 +884,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
           let mut finalizer = HmrAstFinalizer {
             modules,
-            alloc: fields.allocator,
-            snippet: AstSnippet::new(fields.allocator),
-            builder: &oxc::ast::AstBuilder::new(fields.allocator),
+            ast_factory: AstFactory::new(fields.allocator),
             import_bindings: FxHashMap::default(),
             module: affected_module,
             exports: oxc::allocator::Vec::new_in(fields.allocator),
@@ -1197,7 +1188,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
             == *first_invalidated_by
         }) {
           require_full_reload = true;
-          // full_reload_reason = Some("circular import invalidate".to_string());
+          full_reload_reason = Some(format!(
+            "update propagated back to `{first_invalidated_by}`, which already called `import.meta.hot.invalidate()`"
+          ));
           continue;
         }
       }

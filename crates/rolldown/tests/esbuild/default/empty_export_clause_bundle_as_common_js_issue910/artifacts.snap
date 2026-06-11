@@ -10,10 +10,9 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region types.mjs
 var types_exports = /* @__PURE__ */ __exportAll({});
-var init_types = __esmMin((() => {}));
 //#endregion
 //#region entry.js
-assert.deepEqual((init_types(), __toCommonJS(types_exports)), {});
+assert.deepEqual(__toCommonJS(types_exports), {});
 //#endregion
 
 ```

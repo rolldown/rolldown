@@ -187,6 +187,7 @@ impl BindingEnhancedTransformOptions {
       inject: self.inject,
       decorator: self.decorator,
       plugins: self.plugins,
+      react_compiler: None,
     }
   }
 }

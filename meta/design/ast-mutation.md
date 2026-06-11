@@ -114,5 +114,6 @@ Oxc is introducing an `AstNodeId` — a true per-tree node identity, independent
 
 ## Related
 
+- [ast-construction](./ast-construction.md) — how rolldown builds the nodes whose identity this contract tracks; the synthetic-`SPAN` / dummy-`NodeId` discipline for synthesized nodes is shared with that doc
 - [bundler-data-lifecycle](./bundler-data-lifecycle.md)
 - [module-id](./module-id.md)

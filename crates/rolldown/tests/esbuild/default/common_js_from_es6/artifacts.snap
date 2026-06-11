@@ -13,20 +13,18 @@ var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo$1 });
 function foo$1() {
 	return "foo";
 }
-var init_foo = __esmMin((() => {}));
 //#endregion
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ bar: () => bar$1 });
 function bar$1() {
 	return "bar";
 }
-var init_bar = __esmMin((() => {}));
 //#endregion
 //#region entry.js
-const { foo } = (init_foo(), __toCommonJS(foo_exports));
+const { foo } = __toCommonJS(foo_exports);
 assert.equal(foo(), "foo");
 assert.equal(bar(), "bar");
-const { bar } = (init_bar(), __toCommonJS(bar_exports));
+const { bar } = __toCommonJS(bar_exports);
 //#endregion
 
 ```

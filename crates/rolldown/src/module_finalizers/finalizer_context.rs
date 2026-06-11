@@ -11,7 +11,7 @@ pub type FinalizerMutableFields = (
 
 use oxc::ast_visit::VisitMut as _;
 use rolldown_ecmascript::EcmaAst;
-use rolldown_ecmascript_utils::AstSnippet;
+use rolldown_ecmascript_utils::AstFactory;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -78,7 +78,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         alloc,
         ctx: self,
         scope: ast_scope,
-        snippet: AstSnippet::new(alloc),
+        ast_factory: AstFactory::new(alloc),
         generated_init_esm_importee_ids: FxHashSet::default(),
         scope_stack: vec![],
         top_level_var_bindings: FxIndexSet::default(),

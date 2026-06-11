@@ -157,7 +157,7 @@ async-scoped = "0.9.0"
 async-trait = "0.1.88"
 base-encode = "0.3.1"
 base64-simd = "0.8.0"
-bitflags = "2.9.1"
+bitflags = "2.13.0"
 blake3 = "1.8.2"
 commondir = "1.0.0"
 cow-utils = "0.1.3"
@@ -237,7 +237,7 @@ napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.134.0", features = [
+oxc = { version = "0.135.0", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -249,19 +249,19 @@ oxc = { version = "0.134.0", features = [
   "regular_expression",
   "cfg",
 ] }
-oxc_allocator = { version = "0.134.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.134.0" }
-oxc_napi = { version = "0.134.0" }
-oxc_str = { version = "0.134.0" }
-oxc_minify_napi = { version = "0.134.0" }
-oxc_parser_napi = { version = "0.134.0" }
-oxc_transform_napi = { version = "0.134.0" }
-oxc_traverse = { version = "0.134.0" }
+oxc_allocator = { version = "0.135.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.135.0" }
+oxc_napi = { version = "0.135.0" }
+oxc_str = { version = "0.135.0" }
+oxc_minify_napi = { version = "0.135.0" }
+oxc_parser_napi = { version = "0.135.0" }
+oxc_transform_napi = { version = "0.135.0" }
+oxc_traverse = { version = "0.135.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_resolver_napi oxc_sourcemap oxc_index oxc-browserslist`
-oxc_index = { version = "4", features = [
+oxc_index = { version = "5", features = [
   "rayon",
   "serde",
 ] } # https://github.com/oxc-project/oxc-index-vec

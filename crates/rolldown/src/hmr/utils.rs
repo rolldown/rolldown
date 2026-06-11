@@ -17,7 +17,7 @@ pub static MODULE_EXPORTS_NAME_FOR_ESM: &str = "__rolldown_exports__";
 pub static MODULE_ID_PARAM_FOR_HMR: &str = "__rolldown_module_id__";
 
 pub trait HmrAstBuilder<'any, 'ast> {
-  fn builder(&self) -> &oxc::ast::AstBuilder<'ast>;
+  fn builder(&self) -> oxc::ast::AstBuilder<'ast>;
 
   fn module(&self) -> &NormalModule;
 
@@ -149,8 +149,8 @@ pub trait HmrAstBuilder<'any, 'ast> {
 
 #[cfg(feature = "experimental")]
 impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
-  fn builder(&self) -> &oxc::ast::AstBuilder<'ast> {
-    self.builder
+  fn builder(&self) -> oxc::ast::AstBuilder<'ast> {
+    *self.ast_factory
   }
 
   fn module(&self) -> &NormalModule {
@@ -181,8 +181,8 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
 }
 
 impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast> {
-  fn builder(&self) -> &oxc::ast::AstBuilder<'ast> {
-    &self.snippet.builder
+  fn builder(&self) -> oxc::ast::AstBuilder<'ast> {
+    *self.ast_factory
   }
 
   fn module(&self) -> &NormalModule {

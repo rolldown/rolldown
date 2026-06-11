@@ -63,7 +63,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     if let Some(ns_alias) = &symbol.namespace_alias {
       let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
       let prop_name = &ns_alias.property_name;
-      let access_expr = self.snippet.literal_prop_access_member_expr(canonical_ns_name, prop_name);
+      let access_expr = self.ast_factory.make_member_access(canonical_ns_name, prop_name);
 
       return Some(ast::SimpleAssignmentTarget::from(access_expr));
     }
@@ -71,7 +71,9 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     let canonical_name = self.canonical_name_for(canonical_ref);
     if id_ref.name != canonical_name {
       return Some(ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(
-        self.snippet.alloc_id_ref(canonical_name, id_ref.span),
+        self
+          .ast_factory
+          .alloc_identifier_reference(id_ref.span, self.ast_factory.str(canonical_name)),
       ));
     }
 
@@ -112,15 +114,14 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         let symbol = self.ctx.symbol_db.get(canonical_ref);
 
         if let Some(ns_alias) = &symbol.namespace_alias {
-          *target =
-            ast::SimpleAssignmentTarget::from(self.snippet.literal_prop_access_member_expr(
-              self.canonical_name_for(ns_alias.namespace_ref),
-              &ns_alias.property_name,
-            ));
+          *target = ast::SimpleAssignmentTarget::from(self.ast_factory.make_member_access(
+            self.canonical_name_for(ns_alias.namespace_ref),
+            &ns_alias.property_name,
+          ));
         } else {
           let canonical_name = self.canonical_name_for(canonical_ref);
           if target_id_ref.name != canonical_name {
-            target_id_ref.name = self.snippet.atom(canonical_name).into();
+            target_id_ref.name = self.ast_factory.str(canonical_name).into();
           }
           target_id_ref.reference_id.take();
         }
@@ -149,7 +150,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           if let Some(symbol_id) = ident.symbol_id.get() {
             let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name {
-              ident.name = self.snippet.atom(canonical_name).into();
+              ident.name = self.ast_factory.str(canonical_name).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();
@@ -164,7 +165,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           if let Some(symbol_id) = ident.symbol_id.get() {
             let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name {
-              ident.name = self.snippet.atom(canonical_name).into();
+              ident.name = self.ast_factory.str(canonical_name).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();

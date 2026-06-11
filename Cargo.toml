@@ -98,30 +98,30 @@ trivial_regex = "allow"
 
 [workspace.dependencies]
 # publish = true
-rolldown = { version = "1.1.0", path = "crates/rolldown" }
-rolldown_common = { version = "1.1.0", path = "crates/rolldown_common" }
-rolldown_dev = { version = "1.1.0", path = "crates/rolldown_dev" }
-rolldown_dev_common = { version = "1.1.0", path = "crates/rolldown_dev_common" }
-rolldown_devtools = { version = "1.1.0", path = "crates/rolldown_devtools" }
-rolldown_devtools_action = { version = "1.1.0", path = "crates/rolldown_devtools_action" }
-rolldown_ecmascript = { version = "1.1.0", path = "crates/rolldown_ecmascript" }
-rolldown_ecmascript_utils = { version = "1.1.0", path = "crates/rolldown_ecmascript_utils" }
-rolldown_error = { version = "1.1.0", path = "crates/rolldown_error" }
-rolldown_fs = { version = "1.1.0", path = "crates/rolldown_fs" }
-rolldown_fs_watcher = { version = "1.1.0", path = "crates/rolldown_fs_watcher" }
-rolldown_plugin = { version = "1.1.0", path = "crates/rolldown_plugin" }
-rolldown_plugin_chunk_import_map = { version = "1.1.0", path = "crates/rolldown_plugin_chunk_import_map" }
-rolldown_plugin_asset_module = { version = "1.1.0", path = "crates/rolldown_plugin_asset_module" }
-rolldown_plugin_copy_module = { version = "1.1.0", path = "crates/rolldown_plugin_copy_module" }
-rolldown_plugin_bundle_analyzer = { version = "1.1.0", path = "crates/rolldown_plugin_bundle_analyzer" }
-rolldown_plugin_data_url = { version = "1.1.0", path = "crates/rolldown_plugin_data_url" }
-rolldown_plugin_esm_external_require = { version = "1.1.0", path = "crates/rolldown_plugin_esm_external_require" }
-rolldown_plugin_hmr = { version = "1.1.0", path = "crates/rolldown_plugin_hmr" }
-rolldown_plugin_isolated_declaration = { version = "1.1.0", path = "crates/rolldown_plugin_isolated_declaration" }
-rolldown_plugin_lazy_compilation = { version = "1.1.0", path = "crates/rolldown_plugin_lazy_compilation" }
-rolldown_plugin_oxc_runtime = { version = "1.1.0", path = "crates/rolldown_plugin_oxc_runtime" }
-rolldown_plugin_replace = { version = "1.1.0", path = "crates/rolldown_plugin_replace" }
-rolldown_plugin_utils = { version = "1.1.0", path = "crates/rolldown_plugin_utils" }
+rolldown = { version = "1.1.1", path = "crates/rolldown" }
+rolldown_common = { version = "1.1.1", path = "crates/rolldown_common" }
+rolldown_dev = { version = "1.1.1", path = "crates/rolldown_dev" }
+rolldown_dev_common = { version = "1.1.1", path = "crates/rolldown_dev_common" }
+rolldown_devtools = { version = "1.1.1", path = "crates/rolldown_devtools" }
+rolldown_devtools_action = { version = "1.1.1", path = "crates/rolldown_devtools_action" }
+rolldown_ecmascript = { version = "1.1.1", path = "crates/rolldown_ecmascript" }
+rolldown_ecmascript_utils = { version = "1.1.1", path = "crates/rolldown_ecmascript_utils" }
+rolldown_error = { version = "1.1.1", path = "crates/rolldown_error" }
+rolldown_fs = { version = "1.1.1", path = "crates/rolldown_fs" }
+rolldown_fs_watcher = { version = "1.1.1", path = "crates/rolldown_fs_watcher" }
+rolldown_plugin = { version = "1.1.1", path = "crates/rolldown_plugin" }
+rolldown_plugin_chunk_import_map = { version = "1.1.1", path = "crates/rolldown_plugin_chunk_import_map" }
+rolldown_plugin_asset_module = { version = "1.1.1", path = "crates/rolldown_plugin_asset_module" }
+rolldown_plugin_copy_module = { version = "1.1.1", path = "crates/rolldown_plugin_copy_module" }
+rolldown_plugin_bundle_analyzer = { version = "1.1.1", path = "crates/rolldown_plugin_bundle_analyzer" }
+rolldown_plugin_data_url = { version = "1.1.1", path = "crates/rolldown_plugin_data_url" }
+rolldown_plugin_esm_external_require = { version = "1.1.1", path = "crates/rolldown_plugin_esm_external_require" }
+rolldown_plugin_hmr = { version = "1.1.1", path = "crates/rolldown_plugin_hmr" }
+rolldown_plugin_isolated_declaration = { version = "1.1.1", path = "crates/rolldown_plugin_isolated_declaration" }
+rolldown_plugin_lazy_compilation = { version = "1.1.1", path = "crates/rolldown_plugin_lazy_compilation" }
+rolldown_plugin_oxc_runtime = { version = "1.1.1", path = "crates/rolldown_plugin_oxc_runtime" }
+rolldown_plugin_replace = { version = "1.1.1", path = "crates/rolldown_plugin_replace" }
+rolldown_plugin_utils = { version = "1.1.1", path = "crates/rolldown_plugin_utils" }
 rolldown_plugin_vite_alias = { version = "0.1.0", path = "crates/rolldown_plugin_vite_alias" }
 rolldown_plugin_vite_build_import_analysis = { version = "0.1.0", path = "crates/rolldown_plugin_vite_build_import_analysis" }
 rolldown_plugin_vite_dynamic_import_vars = { version = "0.1.0", path = "crates/rolldown_plugin_vite_dynamic_import_vars" }
@@ -132,20 +132,20 @@ rolldown_plugin_vite_manifest = { version = "0.1.0", path = "crates/rolldown_plu
 rolldown_plugin_vite_module_preload_polyfill = { version = "0.1.0", path = "crates/rolldown_plugin_vite_module_preload_polyfill" }
 rolldown_plugin_vite_react_refresh_wrapper = { version = "0.1.0", path = "crates/rolldown_plugin_vite_react_refresh_wrapper" }
 rolldown_plugin_vite_reporter = { version = "0.1.0", path = "crates/rolldown_plugin_vite_reporter" }
-rolldown_plugin_vite_resolve = { version = "1.1.0", path = "crates/rolldown_plugin_vite_resolve" }
+rolldown_plugin_vite_resolve = { version = "1.1.1", path = "crates/rolldown_plugin_vite_resolve" }
 rolldown_plugin_vite_transform = { version = "0.1.0", path = "crates/rolldown_plugin_vite_transform" }
 rolldown_plugin_vite_wasm_fallback = { version = "0.1.0", path = "crates/rolldown_plugin_vite_wasm_fallback" }
 rolldown_plugin_vite_web_worker_post = { version = "0.1.0", path = "crates/rolldown_plugin_vite_web_worker_post" }
-rolldown_resolver = { version = "1.1.0", path = "crates/rolldown_resolver" }
-rolldown_sourcemap = { version = "1.1.0", path = "crates/rolldown_sourcemap" }
-rolldown_std_utils = { version = "1.1.0", path = "crates/rolldown_std_utils" }
+rolldown_resolver = { version = "1.1.1", path = "crates/rolldown_resolver" }
+rolldown_sourcemap = { version = "1.1.1", path = "crates/rolldown_sourcemap" }
+rolldown_std_utils = { version = "1.1.1", path = "crates/rolldown_std_utils" }
 rolldown_testing = { version = "0.1.0", path = "crates/rolldown_testing" }
 rolldown_testing_config = { version = "0.1.0", path = "crates/rolldown_testing_config" }
-rolldown_tracing = { version = "1.1.0", path = "crates/rolldown_tracing" }
-rolldown_utils = { version = "1.1.0", path = "crates/rolldown_utils" }
-rolldown_watcher = { version = "1.1.0", path = "crates/rolldown_watcher" }
-rolldown_workspace = { version = "1.1.0", path = "crates/rolldown_workspace" }
-string_wizard = { version = "1.1.0", path = "crates/string_wizard", features = ["serde"] }
+rolldown_tracing = { version = "1.1.1", path = "crates/rolldown_tracing" }
+rolldown_utils = { version = "1.1.1", path = "crates/rolldown_utils" }
+rolldown_watcher = { version = "1.1.1", path = "crates/rolldown_watcher" }
+rolldown_workspace = { version = "1.1.1", path = "crates/rolldown_workspace" }
+string_wizard = { version = "1.1.1", path = "crates/string_wizard", features = ["serde"] }
 
 #
 anyhow = "1.0.98"

@@ -1,4 +1,81 @@
 
+## [1.1.1] - 2026-06-11
+
+### 🚀 Features
+
+- ecmascript_utils: introduce AstFactory for AST construction (#9682) by @hyf0
+- drop no-op init calls for empty wrapped-ESM modules (#9678) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- resolver: honor package.json#type for .jsx/.tsx extensions (#9690) (#9699) by @IWANABETHATGUY
+- hmr: report the full-reload reason for the invalidate-loop case (#9708) by @hyf0
+- explicit `moduleSideEffects` from a hook must take priority over the `package.json#sideEffects` (#9688) by @sapphi-red
+- keep the `rolldown-runtime` name for the standalone runtime chunk (#9685) by @shulaoda
+- lazy-barrel: request all exports for entry barrels on first encounter (#9672) by @shulaoda
+- finalizer: skip init_*() for tree-shaken wrapped ESM owners (#9669) by @IWANABETHATGUY
+- order `chunk.imports` by execution order (#9654) by @chuganzy
+- vite-resolve: preserve slash separators for Sass partial exports (#9546) by @cjc0013
+- cross-chunk CJS wrapper shadowed by author-local binding (#9648) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- precompute wrapped-ESM init metadata in generate stage (#9712) by @IWANABETHATGUY
+- ecmascript_utils: fold construction ext traits onto AstFactory and delete AstSnippet (#9702) by @hyf0
+- finalizer: finish ScopeHoistingFinalizer migration to AstFactory (#9701) by @hyf0
+- finalizer: migrate module_finalizers/mod.rs to AstFactory (#9700) by @hyf0
+- hmr: migrate hmr finalizer to AstFactory (#9695) by @hyf0
+- plugin: migrate vite_build_import_analysis to AstFactory (#9693) by @hyf0
+- scanner: migrate tweak_ast_for_scanning to AstFactory (#9683) by @hyf0
+- always split runtime module first (#9419) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- tsconfig: correct auto-discovery resolution to match TypeScript (#9714) by @shulaoda
+- design: plan to unify all internal AST construction (#9673) by @hyf0
+- tsconfig: align reference resolution docs with TypeScript behavior (#9641) by @shulaoda
+
+### ⚡ Performance
+
+- avoid per-module join Strings in scope-hoisting concatenation (#9645) by @Boshen
+- avoid intermediate Strings in the ESM export clause (#9644) by @Boshen
+- reuse a scratch buffer for facade namespace names in the scanner (#9642) by @Boshen
+- reuse the import-matching tracker stack across named imports (#9643) by @Boshen
+- avoid cloning the per-chunk export-items map in render_chunk_exports (#9639) by @Boshen
+- avoid CompactStr allocation in sorted-exports membership check (#9640) by @Boshen
+
+### 🧪 Testing
+
+- add more `moduleSideEffects` precedence tests (#9689) by @sapphi-red
+- 9651: drop shimMissingExports from regression fixture (#9674) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- update react repo links (#9711) by @iiio2
+- remove outdated pnpm configurations (#9666) by @btea
+- deps: update github actions to v2.81.5 (#9665) by @renovate[bot]
+- testing: migrate test harness off deprecated inlineDynamicImports (#9710) by @IWANABETHATGUY
+- hmr: delete commented-out dead code left from old register-module codegen (#9707) by @hyf0
+- deps: update napi-rs toolchain (#9706) by @shulaoda
+- deps: update rollup submodule for tests to v4.61.1 (#9676) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#9677) by @rolldown-guard[bot]
+- deps: update oxc to 0.135.0 (#9670) by @Boshen
+- pass ALGOLIA_APP_ID and ALGOLIA_API_KEY to void deploy (#9667) by @Boshen
+- deps: update github actions (#9662) by @renovate[bot]
+- deps: update rust crates (#9663) by @renovate[bot]
+- deps: update rolldown-plugin-dts to v0.25.2 (#9661) by @renovate[bot]
+- deps: update typos to v1.47.2 (#9660) by @renovate[bot]
+- deps: update docs dependencies (#9657) by @bddjr
+- deps: update typos to v1.47.1 (#9655) by @renovate[bot]
+- deploy website in its own workflow, only on docs output change (#9650) by @Boshen
+- publish to pkg.pr.new add pm and `commentWithDev` option (#9638) by @btea
+
+### ❤️ New Contributors
+
+* @chuganzy made their first contribution in [#9654](https://github.com/rolldown/rolldown/pull/9654)
+* @cjc0013 made their first contribution in [#9546](https://github.com/rolldown/rolldown/pull/9546)
+
+
 ## [1.1.0] - 2026-06-03
 
 ### 🚀 Features

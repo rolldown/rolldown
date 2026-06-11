@@ -1,10 +1,8 @@
 export const outerName = 'outer';
 
-// Nested dynamic import: this `import('./inner.js')` runs inside outer.js's body,
-// which is itself a lazy chunk. After the lazy-compilation plugin resolves the
-// dynamic import to `inner.js?rolldown-lazy=1`, the HMR AST finalizer rewrites
-// this call so the result mirrors the full-build proxy contract (a namespace
-// with the `'rolldown:exports'` key for `__unwrap_lazy_compilation_entry`).
+// This `import('./inner.js')` runs inside outer.js, which is itself a lazy
+// chunk. The HMR finalizer rewrites the call so the result looks like the
+// full build's proxy (a namespace with the `'rolldown:exports'` key).
 export async function loadInner() {
   return await import('./inner.js');
 }

@@ -1,4 +1,6 @@
 import { defineDevConfig } from '@rolldown/test-dev-server';
+import nodeFs from 'node:fs';
+import nodePath from 'node:path';
 
 export default defineDevConfig({
   platform: 'browser',
@@ -11,7 +13,11 @@ export default defineDevConfig({
     experimental: {
       devMode: {},
     },
-    plugins: [waitBundleCompleteUntilAccess(), delayTransformComment()],
+    plugins: [
+      waitBundleCompleteUntilAccess(),
+      delayTransformComment(),
+      breakGenerateBundleOnFlag(),
+    ],
   },
 });
 
@@ -46,6 +52,27 @@ function delayTransformComment() {
         console.log(`[delay-transform] Transform complete for ${id}`);
       }
       return null; // No transformation, just delay
+    },
+  };
+}
+
+/**
+ * Plugin: fail `generateBundle` unless `rebuild-error/flag.txt` says "ok".
+ * The flag file is not watched, so changing it never triggers a build by
+ * itself — the failure shows up on the next rebuild (HMR patches don't run
+ * generateBundle). The flag text goes into the error message so specs can
+ * tell one failing build from the next.
+ */
+function breakGenerateBundleOnFlag() {
+  const flagPath = nodePath.join(import.meta.dirname, 'rebuild-error', 'flag.txt');
+  return {
+    name: 'break-generate-bundle-on-flag',
+
+    generateBundle() {
+      const flag = nodeFs.readFileSync(flagPath, 'utf-8').trim();
+      if (flag !== 'ok') {
+        throw new Error(`generateBundle broken by flag: ${flag}`);
+      }
     },
   };
 }

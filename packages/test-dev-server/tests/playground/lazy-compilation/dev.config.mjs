@@ -5,16 +5,14 @@ import { viteAliasPlugin } from 'rolldown/experimental';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
-// One shared config for every lazy-compilation scenario. Each scenario lives in
-// its own sub-folder and is imported by `main.js`; because compilation is lazy,
-// bundling them into one project never warms another scenario's chunks — a lazy
-// chunk is compiled only when its own dynamic import fires. So a spec that clicks
-// only its scenario's button gets a virgin first-fetch for that scenario, exactly
-// as the four separate servers used to give.
+// One shared config for all lazy-compilation scenarios. Each scenario lives
+// in its own folder and is imported by `main.js`. A lazy chunk compiles only
+// when its dynamic import runs, so the scenarios don't warm each other up —
+// every spec still gets a fresh first fetch, as if it had its own server.
 //
-// The config is the union of what each scenario needs:
-// - `viteAliasPlugin` maps `@lazy` for the aliased-import scenario (inert for the
-//   others, which never import `@lazy`) — regression for vitejs/vite#22454.
+// The config is the union of what the scenarios need:
+// - `viteAliasPlugin` maps `@lazy` for aliased-import (vitejs/vite#22454);
+//   harmless for the others.
 export default defineDevConfig({
   platform: 'browser',
   build: {

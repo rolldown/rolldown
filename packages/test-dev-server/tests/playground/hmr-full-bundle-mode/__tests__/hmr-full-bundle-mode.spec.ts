@@ -2,9 +2,8 @@ import { setTimeout } from 'node:timers/promises';
 import { describe, expect, test } from 'vitest';
 import { editFile, page, waitForBuildStable } from '~utils';
 
-// Tests run sequentially within a file (the default) and share one page and one
-// in-process dev server. Each test restores the fixture it edits, so order and
-// retries stay safe.
+// Tests in this file run in order and share one page and one dev server.
+// Each test restores the files it edits, so order and retries stay safe.
 describe('hmr-full-bundle-mode', () => {
   test('should render initial content', async () => {
     const headingText = await page.textContent('h1');
@@ -22,8 +21,8 @@ describe('hmr-full-bundle-mode', () => {
 
     await expect.poll(() => page.textContent('.hmr')).toBe('hello1');
 
-    // Wait for the build to stabilize before the next edit so the watcher's
-    // debounce window has closed and will detect the new change.
+    // Wait for the build to settle so the watcher sees the next edit as a
+    // new change.
     await waitForBuildStable();
     editFile('hmr.js', (code) => code.replace("const foo = 'hello1'", "const foo = 'hello2'"));
 
@@ -64,21 +63,20 @@ describe('hmr-full-bundle-mode', () => {
     await expect.poll(() => page.textContent('.hmr')).toBe('hello');
   });
 
-  // The dev server injects its own build-error overlay (`#rolldown-error-overlay`)
-  // into the served HTML — the shared rolldown HMR runtime is deliberately not
-  // touched. This asserts the overlay appears on a build break and clears on
-  // recovery (exercising the dev engine's error-recovery path end-to-end).
+  // The dev server injects its own error overlay (`#rolldown-error-overlay`)
+  // into the served HTML. It should appear when the build breaks and clear
+  // when the file is fixed.
   test('shows build-error overlay and recovers on fix', async () => {
     await waitForBuildStable();
 
-    // Introduce a syntax error (unterminated string).
+    // Break the file with a syntax error (unterminated string).
     editFile('hmr.js', (code) => code.replace("const foo = 'hello'", "const foo = 'hello"));
 
     const overlay = page.locator('#rolldown-error-overlay');
     await expect.poll(() => overlay.count(), { timeout: 15_000 }).toBe(1);
     expect(await overlay.textContent()).toMatch(/Unterminated|PARSE_ERROR|error/i);
 
-    // Fix it: overlay clears (via recovery reload) and the app renders again.
+    // Fix it: the overlay clears and the app renders again.
     editFile('hmr.js', (code) => code.replace("const foo = 'hello", "const foo = 'hello'"));
     await expect.poll(() => overlay.count(), { timeout: 15_000 }).toBe(0);
     await expect.poll(() => page.textContent('.hmr')).toBe('hello');

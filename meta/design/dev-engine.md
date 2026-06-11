@@ -78,8 +78,9 @@ path, instead of replaying the cached error. This stays scoped to the
 consumer — rolldown_dev itself does not change behavior; the escalation
 is the consumer's decision, keyed on the `last_error_stage` it reads
 from `BundleState` (§12). A `Rebuild`-stage or full-build failure gets
-no such exception — only a file change recovers those. (Not yet wired
-up in the in-repo reference consumer; the plumbing exists.)
+no such exception — only a file change recovers those. (Wired up in the
+in-repo reference consumer: `triggerBundleRegenerationIfStale` in
+`packages/test-dev-server/src/environments/full-bundle-dev-environment.ts`.)
 
 Realized in: `handle_file_changes` (§7) is the sole producer of
 post-failure rebuild tasks. `triggerFullBuild` (§13e) is an explicit
@@ -745,10 +746,15 @@ fresh build. rolldown_dev itself stays conservative —
 `FullBuildFailed` state (§13b). A `Rebuild`-stage or full-build failure is
 left alone; only a file change recovers those.
 
-This consumer-side escape hatch is **not yet wired up in-repo** — the
-plumbing (`last_error_stage` through the binding) exists, but the
-reference dev server in `packages/test-dev-server/src/dev-server.ts` does
-not yet escalate on it.
+This consumer-side escape hatch is wired up in the in-repo reference
+consumer: `FullBundleDevEnvironment.triggerBundleRegenerationIfStale`
+(`packages/test-dev-server/src/environments/full-bundle-dev-environment.ts`)
+calls `triggerFullBuild` on access when `lastBuildErrored &&
+lastErrorStage === 'Hmr'`. Covered end-to-end by the
+`hmr-full-bundle-mode` playground's `__tests__/hmr-error.spec.ts`: a
+syntax error fails HMR generation, and a reload then triggers a full
+build — observable as a new build running on mere access (it fails
+again on the still-broken source, landing in `FullBuildFailed`).
 
 ---
 

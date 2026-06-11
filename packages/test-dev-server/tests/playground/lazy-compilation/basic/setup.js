@@ -1,6 +1,6 @@
-// basic: a single dynamic import is lazy-compiled into its own chunk(s) on first
-// click. The spec counts the `lazy-module` requests to prove the proxy chunk +
-// real chunk are fetched separately (which eager bundling would not produce).
+// basic: a single dynamic import compiles into its own chunk(s) on first
+// click. The spec counts the `lazy-module` requests to show the proxy chunk
+// and the real chunk are fetched separately — eager bundling would not do that.
 const log = (msg) => {
   document.getElementById('basic-log').textContent += msg + '\n';
 };

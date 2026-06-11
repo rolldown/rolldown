@@ -1,25 +1,17 @@
 import { describe, expect, test } from 'vitest';
 import { page, serverUrl } from '~utils';
 
-// Regression test for the fix in
-// `crates/rolldown/src/hmr/hmr_ast_finalizer.rs::try_rewrite_dynamic_import`
-// (the `?rolldown-lazy=1` branch). `outer.js` is itself loaded as a lazy chunk,
-// and its body contains `await import('./inner.js')`, which also resolves to a
-// lazy proxy. Before the fix the HMR AST finalizer rewrote that inner dynamic
-// import to a plain `import('/@vite/lazy?id=...')`, returning the partial
-// bundle's raw namespace — which has no `'rolldown:exports'` key, so
-// `__unwrap_lazy_compilation_entry` fell through and `inner.foo` came back
-// `undefined`. The fix chains `.then(() => loadExports("<stable_proxy_id>"))`
-// so the namespace read by the unwrap helper is the proxy module's registered
-// exports (which carry the `'rolldown:exports'` getter).
+// Regression for `hmr_ast_finalizer.rs::try_rewrite_dynamic_import` (the
+// `?rolldown-lazy=1` branch). `outer.js` is itself a lazy chunk and contains
+// `await import('./inner.js')`, which is also lazy. Before the fix, that
+// inner import returned a namespace without the `'rolldown:exports'` key, so
+// `inner.foo` came back undefined. The fix loads the proxy module's
+// registered exports instead.
 describe('lazy-nested-dynamic-import', () => {
-  // `retry: 0` is critical: the bug only manifests on the first click of a fresh
-  // page. The first click triggers `mark_as_fetched`, which rebuilds main.js so
-  // it references the *fetched* proxy chunk — and the fetched proxy chunk imports
-  // the full-build outer.js (compiled by scope_finalizer), bypassing the buggy
-  // HMR-finalizer rewrite entirely. With retries enabled, the reload between
-  // attempts would always land on the post-rebuild fetched-proxy path and mask
-  // the regression.
+  // `retry: 0` matters: the bug only shows on the first click of a fresh
+  // page. That click makes the server rebuild main.js to use the fetched
+  // proxy, which bypasses the buggy code path — so a retry would always pass
+  // and hide the regression.
   test('lazy chunk can dynamically import another lazy chunk', { retry: 0 }, async () => {
     await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
     await page.click('#nested-dynamic-import-btn');

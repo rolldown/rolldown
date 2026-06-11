@@ -2,30 +2,24 @@ import { describe, expect, test } from 'vitest';
 import { editFile, page, serverUrl, waitForBuildStable } from '~utils';
 
 describe('lazy-shared-module', () => {
-  // Regression test for PR #9132: when a dynamically imported
-  // module is shared by multiple lazy entries (so it lands in a
-  // `ChunkKind::Common` chunk with minified export keys), the fetched proxy
-  // must read exports from the runtime registry via `loadExports` rather than
-  // returning the raw chunk namespace. Before the fix, `sel.foo` was
-  // `undefined` because the namespace key was an alias like `$` instead of
-  // `foo`.
+  // Regression for PR #9132: when a lazily imported module is shared by
+  // several lazy entries, it lands in a common chunk where export names get
+  // minified. The fetched proxy must read exports from the runtime registry
+  // (`loadExports`), not from the raw chunk namespace — otherwise `sel.foo`
+  // is undefined because the chunk renamed `foo` to something like `$`.
   test('preserves original export names for shared lazy module (#9132)', { retry: 0 }, async () => {
-    // First load: triggers initial lazy fetches through the NOT-fetched proxy
-    // template. The server marks each proxy fetched and rebuilds main.js to
-    // embed the *fetched* proxy chunks. We don't assert against this load — we
-    // need the rebuilt output to land first, because the bug only manifests
-    // through the fetched-template path.
+    // First load: the lazy fetches mark each proxy as fetched, and the
+    // server rebuilds main.js around the fetched proxies. No assertions here
+    // — the bug only shows on the rebuilt output.
     await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
     await page.click('#shared-module-btn');
     await expect.poll(() => page.textContent('#shared-module-status')).toBe('done');
 
-    // Wait for the rebuild(s) triggered by mark_as_fetched to settle.
+    // Wait for those rebuilds to settle.
     await waitForBuildStable();
 
-    // Second load: main.js now imports the fetched-proxy chunks for page-a,
-    // page-b, and selectors. This is the path PR #9132 fixes — before the fix,
-    // returning the raw chunk namespace meant `sel.foo === undefined` because
-    // chunk-level export aliasing renamed `foo`/`bar` to short identifiers.
+    // Second load: main.js now uses the fetched proxies — the path PR #9132
+    // fixes. Before the fix, `sel.foo` was undefined here.
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.click('#shared-module-btn');
     await expect.poll(() => page.textContent('#shared-module-status')).toBe('done');
@@ -38,13 +32,10 @@ describe('lazy-shared-module', () => {
     expect(log).not.toContain('UNDEFINED');
   });
 
-  // `selectors.js` is pulled into the build only via lazy compilation (the
-  // initial graph contains just `main.js`; `page-a`, `page-b`, and `selectors`
-  // arrive through the dynamic-import proxies). The dev coordinator must
-  // register `selectors.js` with the FS watcher after `compile_lazy_entry`,
-  // otherwise edits to it are invisible and no full reload is dispatched.
-  // This test asserts the auto-reload path end-to-end: edit the file, let the
-  // dev server reload the page on its own, and verify the new values.
+  // `selectors.js` enters the build only through lazy compilation, so the
+  // dev server must add it to the file watcher when the lazy entry compiles
+  // — otherwise edits to it go unnoticed. Edit the file, let the server
+  // reload the page on its own, and check the new values.
   test('should watch and auto-reload a lazy-loaded module', { retry: 0 }, async () => {
     editFile('shared-module/selectors.js', (code) =>
       code
@@ -52,8 +43,8 @@ describe('lazy-shared-module', () => {
         .replace("'bar_value'", "'bar_value_updated'"),
     );
 
-    // The previous test left `#shared-module-status` as 'done'. A successful
-    // full reload resets it to the HTML default 'pending'.
+    // The previous test left the status at 'done'; a real full reload resets
+    // it to the HTML default 'pending'.
     await expect
       .poll(() => page.textContent('#shared-module-status'), { timeout: 15_000 })
       .toBe('pending');

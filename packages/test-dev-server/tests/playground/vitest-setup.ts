@@ -1,10 +1,9 @@
 // Per-file setup for the browser e2e suite, ported from Vite's
 // `playground/vitestSetup.ts` (see meta/design/dev-server-test-harness.md).
-// Each spec file derives its own playground from its path, connects to the
-// shared Chromium server, opens one page, and starts an in-process dev server
-// (default path) or runs a custom `__tests__/serve.ts` (lazy cold-start path).
-// No subprocess, no port registry, no killPort: teardown closes the page and
-// calls the server's own `close()`.
+// Each spec file finds its playground from its own path, connects to the
+// shared Chromium server, opens one page, and starts an in-process dev
+// server — or runs a custom `__tests__/serve.ts` if the playground has one.
+// Teardown just closes the page and the server.
 
 import {
   createDevServer,
@@ -51,11 +50,10 @@ export const serverLogs: string[] = [];
 let serverHandle: DevServerHandle | undefined;
 
 /**
- * Context handed to a playground's optional `__tests__/serve.ts`. `createServer`
- * loads the playground's `dev.config.mjs` and starts an in-process server
- * (logger + cwd already wired); a custom serve typically just calls it and
- * returns the handle WITHOUT navigating, so the spec controls the first
- * request (cold-start lazy semantics).
+ * Context passed to a playground's optional `__tests__/serve.ts`.
+ * `createServer` loads the playground's `dev.config.mjs` and starts the
+ * server. A custom serve usually just calls it and returns the handle
+ * without navigating, so the spec controls the first request.
  */
 export interface ServeContext {
   testName: string;
@@ -78,17 +76,16 @@ export function createInMemoryLogger(logs: string[]): Logger {
 /** Load `<testDir>/dev.config.mjs` and start an in-process dev server for it. */
 async function createServerForTest(testDir: string): Promise<DevServerHandle> {
   const config = await loadDevConfig(testDir);
-  // Relative `input` paths in the config resolve against `cwd`; in-process the
-  // worker's cwd is the tests dir, so pin it to the playground copy (the
-  // subprocess model got this for free via the child's cwd). This also lets
-  // `createDevServerPlugin` find the playground's `index.html`.
+  // Relative paths in the config resolve against `cwd`, which in-process
+  // would be the tests dir — pin it to the playground copy instead. This
+  // also lets the server find the playground's `index.html`.
   const build = { ...config.build, cwd: testDir };
   return createDevServer({ ...config, build }, { logger: createInMemoryLogger(serverLogs) });
 }
 
-// A custom serve lives next to the spec, in the SOURCE `__tests__/` dir — that
-// dir is filtered out of the temp copy (like Vite), so it must be resolved
-// from the spec's own path, not from `testDir`.
+// A custom serve lives next to the spec in the source `__tests__/` dir. That
+// dir is not copied to playground-temp, so resolve it from the spec's path,
+// not from `testDir`.
 function findCustomServe(specDir: string): string | undefined {
   for (const ext of ['ts', 'js', 'mjs']) {
     const candidate = nodePath.join(specDir, `serve.${ext}`);
@@ -124,8 +121,9 @@ beforeAll(async ({}, suite) => {
 
     const customServe = findCustomServe(nodePath.dirname(testPath));
     if (customServe) {
-      // Escape hatch: the playground manages its own server (and whether/when
-      // to navigate). Used by the lazy playgrounds to keep the server cold.
+      // The playground manages its own server and navigation. The lazy
+      // playground uses this to keep the server untouched until the spec
+      // navigates.
       const mod = await import(customServe);
       const serve: (ctx: ServeContext) => Promise<DevServerHandle> =
         mod.serve ?? mod.default?.serve;
@@ -148,8 +146,8 @@ beforeAll(async ({}, suite) => {
       await page.goto(serverUrl);
     }
   } catch (e) {
-    // Close the page so a setup failure (e.g. a build crash) surfaces here
-    // instead of as a downstream `page.click` timeout that hides the cause.
+    // Close the page so a setup failure shows up here, not as a confusing
+    // `page.click` timeout later.
     await page.close().catch(() => {});
     await serverHandle?.close().catch(() => {});
     throw e;

@@ -1,10 +1,7 @@
-// nested-dynamic-import: outer.js is itself a lazy chunk, and its body runs
-// `import('./inner.js')` — a lazy import inside a lazy chunk. Regression for the
-// HMR AST finalizer fix in `hmr_ast_finalizer.rs::try_rewrite_dynamic_import`
-// (the `?rolldown-lazy=1` branch): the inner import must resolve to the proxy
-// module's registered exports (carrying `'rolldown:exports'`), otherwise
-// `inner.foo` came back undefined. Only manifests on the first click of a fresh
-// page.
+// nested-dynamic-import: outer.js is itself a lazy chunk and runs
+// `import('./inner.js')` — a lazy import inside a lazy chunk. Regression for
+// `hmr_ast_finalizer.rs::try_rewrite_dynamic_import`: without the fix,
+// `inner.foo` was undefined. Only shows on the first click of a fresh page.
 const log = (msg) => {
   document.getElementById('nested-dynamic-import-log').textContent += msg + '\n';
 };

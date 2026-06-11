@@ -1,7 +1,6 @@
-// Shared helpers for the browser e2e specs, exposed via the `~utils` alias
-// (configured in vitest.config.e2e.mts). Ported from Vite's
-// `playground/test-utils.ts`. A spec does `import { page, editFile, ... } from
-// '~utils'`.
+// Shared helpers for the browser e2e specs, imported via the `~utils` alias
+// (set up in vitest.config.e2e.mts). Ported from Vite's
+// `playground/test-utils.ts`.
 
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';
@@ -26,8 +25,8 @@ export function readFile(filename: string): string {
 }
 
 /**
- * Edit a file in the current playground's temp copy. The replacer must produce
- * a change (a no-op edit means the test's intent didn't take, so we warn).
+ * Edit a file in the playground's temp copy. Warns if the replacer changed
+ * nothing — that usually means the test's edit missed its target.
  */
 export function editFile(filename: string, replacer: (content: string) => string): void {
   const filePath = nodePath.resolve(testDir, filename);
@@ -97,11 +96,10 @@ function promiseWithResolvers<T>(): PromiseWithResolvers<T> {
 type UntilBrowserLogAfterCallback = (logs: string[]) => PromiseLike<void> | void;
 
 /**
- * Run `operation` and resolve once the browser console has emitted the target
- * log(s). This is the deterministic alternative to sleeping after an action
- * that produces an async, log-announced effect (HMR patch applied, websocket
- * reconnected, page reloaded). Captures `console.debug` too — Playwright sees
- * it even though DevTools hides it by default.
+ * Run `operation`, then wait until the browser console prints the target
+ * log(s). Use this instead of sleeping after an action whose effect is
+ * announced by a log (HMR applied, websocket reconnected, page reloaded).
+ * Also sees `console.debug`, which DevTools hides by default.
  */
 export async function untilBrowserLogAfter(
   operation: () => unknown,

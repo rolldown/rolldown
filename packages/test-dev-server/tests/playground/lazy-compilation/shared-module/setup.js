@@ -1,8 +1,7 @@
-// shared-module: page-a and page-b each statically import selectors, so
-// selectors lands in a `ChunkKind::Common` chunk where export keys get aliased.
-// Regression for PR #9132 — the fetched proxy must read exports from the
-// runtime registry (`loadExports`) instead of the raw chunk namespace, otherwise
-// `sel.foo` is undefined. Only manifests on the first click of a virgin server.
+// shared-module: page-a and page-b both import selectors, so selectors lands
+// in a shared chunk where export names get minified. Regression for PR #9132
+// — the fetched proxy must read exports via `loadExports`, otherwise
+// `sel.foo` is undefined. Only shows on the first click of a fresh server.
 const log = (msg) => {
   document.getElementById('shared-module-log').textContent += msg + '\n';
 };

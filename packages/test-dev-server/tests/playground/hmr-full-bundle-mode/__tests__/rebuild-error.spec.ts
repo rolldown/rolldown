@@ -1,0 +1,90 @@
+import { describe, expect, test } from 'vitest';
+import { editFile, page, serverLogs, waitForBuildStable } from '~utils';
+
+// Covers the design principles in meta/design/dev-engine.md for a rebuild
+// failure:
+// - Design Principle 1 (Conservative rebuilds): opening or refreshing the
+//   page never starts or retries a build
+// - Design Principle 2 (Errors are emitted on every build): every failed
+//   build reports its own error, also to clients that reconnect
+// - Design Principle 3 (File changes are the only recovery trigger): only a
+//   file change recovers
+describe('hmr-full-bundle-mode: rebuild-stage failure', () => {
+  test('page access on fresh output does not rebuild', async () => {
+    // Design Principle 1: page access never triggers a build.
+    const { buildSeq: seqFresh } = await waitForBuildStable();
+
+    await page.reload();
+    await expect.poll(() => page.textContent('.rebuild-error')).toBe('rebuild-error: ok');
+
+    const status = await waitForBuildStable();
+    expect(status.buildSeq).toBe(seqFresh);
+    expect(status.hasStaleOutput).toBe(false);
+    expect(status.lastBuildErrored).toBe(false);
+  });
+
+  test('refresh never retries a failed rebuild; a file change recovers it', async () => {
+    await waitForBuildStable();
+
+    // Arm the failure. The flag file is not watched, so editing it does not
+    // trigger a build by itself.
+    editFile('rebuild-error/flag.txt', () => 'broken-1');
+
+    // This module is not self-accepting, so editing it forces a rebuild —
+    // and generateBundle now throws.
+    editFile('rebuild-error/module.js', (code) =>
+      code.replace("'rebuild-error: ok'", "'rebuild-error: updated'"),
+    );
+
+    const overlay = page.locator('#rolldown-error-overlay');
+    await expect.poll(() => overlay.count(), { timeout: 15_000 }).toBe(1);
+    expect(await overlay.textContent()).toContain('generateBundle broken by flag: broken-1');
+    // The failed rebuild did not reload the page; it still runs the old bundle.
+    expect(await page.textContent('.rebuild-error')).toBe('rebuild-error: ok');
+    // Build errors also reach the terminal.
+    expect(serverLogs.some((log) => log.includes('Build error'))).toBe(true);
+
+    // Design Principle 1: refreshing must not retry the build — without new
+    // input the same error would just happen again. The new client gets the
+    // saved error instead (Design Principle 2).
+    const { buildSeq: seqFailed, lastBuildErrored } = await waitForBuildStable();
+    expect(lastBuildErrored).toBe(true);
+    await page.reload();
+    await expect.poll(() => overlay.count(), { timeout: 15_000 }).toBe(1);
+    const afterReload = await waitForBuildStable();
+    expect(afterReload.buildSeq).toBe(seqFailed);
+    expect(afterReload.lastBuildErrored).toBe(true);
+
+    // Design Principle 2: each failed build reports its own error — another
+    // change while still broken shows the new message, not the old one.
+    editFile('rebuild-error/flag.txt', () => 'broken-2');
+    editFile('rebuild-error/module.js', (code) =>
+      code.replace("'rebuild-error: updated'", "'rebuild-error: updated-2'"),
+    );
+    await expect
+      .poll(() => overlay.textContent({ timeout: 500 }).catch(() => ''), { timeout: 15_000 })
+      .toContain('generateBundle broken by flag: broken-2');
+
+    // Design Principle 3: a file change recovers. Disarm the flag, then
+    // touch the module — the build succeeds and the server reloads the page
+    // onto the fresh bundle.
+    editFile('rebuild-error/flag.txt', () => 'ok');
+    editFile('rebuild-error/module.js', (code) =>
+      code.replace("'rebuild-error: updated-2'", "'rebuild-error: recovered'"),
+    );
+    await expect
+      .poll(() => page.textContent('.rebuild-error'), { timeout: 15_000 })
+      .toBe('rebuild-error: recovered');
+    await expect.poll(() => overlay.count()).toBe(0);
+
+    // Restore the fixture.
+    await waitForBuildStable();
+    editFile('rebuild-error/module.js', (code) =>
+      code.replace("'rebuild-error: recovered'", "'rebuild-error: ok'"),
+    );
+    await expect
+      .poll(() => page.textContent('.rebuild-error'), { timeout: 15_000 })
+      .toBe('rebuild-error: ok');
+    await waitForBuildStable();
+  });
+});

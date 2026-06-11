@@ -2,15 +2,23 @@
 
 ##### Auto-discovery mode (`true`)
 
-When set to `true`, Rolldown enables auto-discovery mode (similar to Vite). For each module, both the resolver and transformer will find the nearest `tsconfig.json`.
+When set to `true`, Rolldown enables auto-discovery mode. For each module, both the resolver and transformer search upward from the module's directory for a `tsconfig.json` that **owns the file**, the way TypeScript selects a project. A `tsconfig.json` whose `files`/`include`/`exclude` (or one of its `references`) does not cover the file is skipped, and the search continues in the parent directory. If nothing up the tree owns the file, Rolldown falls back to the **outermost (topmost)** `tsconfig.json` found, not the nearest one.
 
-If the tsconfig has `references`, Rolldown resolves them the way TypeScript does: a referenced project that includes the file **takes precedence over the root**. Each referenced project uses its own `allowJs`, so a `.js`/`.jsx`/`.mjs`/`.cjs` file is only included by projects that enable it. If no referenced project includes the file, Rolldown falls back to the root tsconfig.
+If the tsconfig has `references`, Rolldown resolves them the way TypeScript does: a referenced project that includes the file **takes precedence over the root**, and the first matching reference wins. Each referenced project uses its own `allowJs`, so a `.js`/`.jsx`/`.mjs`/`.cjs` file is only included by projects that enable it. If no referenced project includes the file, Rolldown falls back to the root's own `files`/`include`/`exclude`. A solution-style root (only `references` with an explicit empty `files`/`include`, as Vite scaffolds) includes nothing on its own, so once none of its references match either, it does **not** claim the file, and discovery continues in the parent directories as described above.
 
 ```js
 export default {
   tsconfig: true,
 };
 ```
+
+::: warning Behavior change in v1.1.0
+
+Rolldown 1.1.0 realigned tsconfig resolution with TypeScript. Discovery now walks **up** through ancestor directories and uses the `tsconfig.json` that actually owns the file, instead of stopping at the nearest one and falling back to the topmost when nothing owns it. For a tsconfig with `references`, a referenced project that includes the file takes precedence over the root, and each referenced project's own `allowJs` decides whether `.js`/`.jsx`/`.mjs`/`.cjs` files are included.
+
+For most projects this is a fix, but it is a breaking change if you relied on the old "nearest tsconfig / root wins" behavior. See the [v1.1.0 release notes](https://github.com/rolldown/rolldown/releases/tag/v1.1.0) for migration guidance.
+
+:::
 
 ##### Explicit path (`string`)
 

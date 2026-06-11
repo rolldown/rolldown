@@ -1063,7 +1063,7 @@ export interface JsxOptions {
   /**
    * Enable React Fast Refresh .
    *
-   * Conforms to the implementation in {@link https://github.com/react/react/tree/v18.3.1/packages/react-refresh}
+   * Conforms to the implementation in {@link https://github.com/facebook/react/tree/v18.3.1/packages/react-refresh}
    *
    * @default false
    */
@@ -1148,7 +1148,7 @@ export interface ReactCompilerGating {
 }
 
 /**
- * Options for the experimental [React Compiler](https://github.com/react/react/pull/36173).
+ * Options for the experimental [React Compiler](https://github.com/facebook/react/pull/36173).
  *
  * Mirrors the compiler's `PluginOptions`. The deep `environment` configuration
  * (inference / validation flags) is not surfaced here.
@@ -1402,7 +1402,7 @@ export interface TransformOptions {
   /** Decorator plugin */
   decorator?: DecoratorOptions
   /**
-   * Enable the experimental [React Compiler](https://github.com/react/react/pull/36173).
+   * Enable the experimental [React Compiler](https://github.com/facebook/react/pull/36173).
    *
    * `true` enables it with default options; an object enables it with the
    * given options; `false` or omitted disables it. When enabled, the compiler

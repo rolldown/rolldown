@@ -1,0 +1,23 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "tu",
+        "import": "./test-utils.js"
+      }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "shared",
+          "test": "shared\\.js$"
+        },
+        {
+          "name": "vue",
+          "test": "vue\\.js$"
+        }
+      ]
+    }
+  },
+  "_comment": "Regression test for rolldown/rolldown#9502: wrapped ESM re-exported through a namespace must import the generated init binding across chunks."
+}

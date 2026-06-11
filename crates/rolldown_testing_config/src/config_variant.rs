@@ -18,7 +18,7 @@ pub struct ConfigVariant {
   pub strict_execution_order: Option<bool>,
   pub strict: Option<StrictMode>,
   pub entry_filenames: Option<String>,
-  pub inline_dynamic_imports: Option<bool>,
+  pub code_splitting: Option<CodeSplittingMode>,
   pub dynamic_import_in_cjs: Option<bool>,
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
   pub treeshake: Option<TreeshakeOptions>,
@@ -69,8 +69,8 @@ impl ConfigVariant {
     if let Some(entry_filenames) = &self.entry_filenames {
       config.entry_filenames = Some(entry_filenames.clone().into());
     }
-    if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
-      config.code_splitting = Some(CodeSplittingMode::Bool(!*inline_dynamic_imports));
+    if let Some(code_splitting) = &self.code_splitting {
+      config.code_splitting = Some(*code_splitting);
     }
     if let Some(dynamic_import_in_cjs) = &self.dynamic_import_in_cjs {
       config.dynamic_import_in_cjs = Some(*dynamic_import_in_cjs);
@@ -160,8 +160,8 @@ impl ConfigVariant {
     if let Some(strict) = &self.strict {
       fields.push(format!("strict: {strict:?}"));
     }
-    if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
-      fields.push(format!("inline_dynamic_imports: {inline_dynamic_imports:?}"));
+    if let Some(code_splitting) = &self.code_splitting {
+      fields.push(format!("code_splitting: {code_splitting}"));
     }
     if let Some(dynamic_import_in_cjs) = &self.dynamic_import_in_cjs {
       fields.push(format!("dynamic_import_in_cjs: {dynamic_import_in_cjs:?}"));

@@ -92,6 +92,8 @@ jobs:
         env:
           VOID_TOKEN: ${{ secrets.VOID_TOKEN }}
           VOID_PROJECT: rolldown
+          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
+          ALGOLIA_API_KEY: ${{ secrets.ALGOLIA_API_KEY }}
 
       # Mark this fingerprint as deployed so the next identical-content run skips. The marker
       # file's contents are unused (the cache key is the fingerprint); an evicted marker only

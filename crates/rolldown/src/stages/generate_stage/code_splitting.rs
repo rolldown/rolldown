@@ -994,8 +994,18 @@ impl GenerateStage<'_> {
 
     // See meta/design/code-splitting.md#runtime-module-placement.
     let bits = &index_splitting_info[runtime_module_idx].bits;
-    let mut runtime_chunk =
-      Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);
+    // Keep the `rolldown-runtime` name: downstream tooling (Vite / @vitejs/plugin-rsc)
+    // identifies the runtime chunk by it. `None` emits a generic `chunk-[hash].js`
+    // and silently breaks them. See rolldown/rolldown#9685.
+    let mut runtime_chunk = Chunk::new(
+      Some("rolldown-runtime".into()),
+      None,
+      bits.clone(),
+      vec![],
+      ChunkKind::Common,
+      input_base.clone(),
+      None,
+    );
     runtime_chunk.add_creation_reason(
       ChunkCreationReason::CommonChunk { bits, link_output: self.link_output },
       self.options,

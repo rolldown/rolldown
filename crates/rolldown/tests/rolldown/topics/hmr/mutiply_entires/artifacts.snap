@@ -3,17 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## chunk.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-
-```
-
 ## entry.js
 
 ```js
-import "./chunk.js";
+import "./rolldown-runtime.js";
 __rolldown_runtime__.createModuleHotContext("entry.js");
 __rolldown_runtime__.registerModule("entry.js", {});
 console.log("entry");
@@ -24,10 +17,17 @@ console.log("entry");
 ## index.js
 
 ```js
-import "./chunk.js";
+import "./rolldown-runtime.js";
 __rolldown_runtime__.createModuleHotContext("index.js");
 __rolldown_runtime__.registerModule("index.js", {});
 console.log("index");
 //#endregion
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
 
 ```

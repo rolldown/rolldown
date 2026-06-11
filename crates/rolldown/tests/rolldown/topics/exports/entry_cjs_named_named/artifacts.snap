@@ -3,30 +3,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## chunk.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__commonJSMin", {
-	enumerable: true,
-	get: function() {
-		return __commonJSMin;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
-
-```
-
 ## lib.js
 
 ```js
 //#region lib.js
-var require_lib = /* @__PURE__ */ require("./chunk.js").__commonJSMin(((exports) => {
+var require_lib = /* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports) => {
 	exports.foo = "foo_value";
 	exports.bar = 42;
 }));
@@ -44,10 +25,10 @@ Object.defineProperty(exports, "default", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_chunk = require("./chunk.js");
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_lib$1 = require("./lib.js");
 let node_assert = require("node:assert");
-node_assert = require_chunk.__toESM(node_assert);
+node_assert = require_rolldown_runtime.__toESM(node_assert);
 //#region main.js
 var import_lib = require_lib$1.default;
 node_assert.default.strictEqual(import_lib.foo, "foo_value");
@@ -55,5 +36,24 @@ node_assert.default.strictEqual(import_lib.bar, 42);
 //#endregion
 exports.bar = import_lib.bar;
 exports.foo = import_lib.foo;
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
 
 ```

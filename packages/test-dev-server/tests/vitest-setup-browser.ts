@@ -43,11 +43,19 @@ async function resetTestFiles() {
 }
 
 async function waitForDevServerReady(port: number) {
-  const maxAttempts = 60;
+  // Browser platform no longer blocks requests until the build is ready (it
+  // serves a "Bundling in progress" spinner instead, mirroring Vite), so a bare
+  // `/` returns 200 immediately. Poll the status endpoint until the initial
+  // build has completed (buildSeq >= 1) so navigations land on the real page,
+  // not the spinner.
+  const maxAttempts = 100;
   for (let i = 0; i < maxAttempts; i++) {
     try {
-      const response = await fetch(`http://localhost:${port}`);
-      if (response.ok) return;
+      const response = await fetch(`http://localhost:${port}/_dev/status`);
+      if (response.ok) {
+        const status = await response.json();
+        if (status.buildSeq >= 1) return;
+      }
     } catch {}
     await new Promise((r) => setTimeout(r, 100));
   }

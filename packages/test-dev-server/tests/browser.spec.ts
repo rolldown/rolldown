@@ -86,6 +86,29 @@ describe('hmr-full-bundle-mode', () => {
     );
     await expect.poll(() => page.textContent('.hmr')).toBe('hello');
   });
+
+  // The dev server injects its own build-error overlay (`#rolldown-error-overlay`)
+  // into the served HTML — the shared rolldown HMR runtime is deliberately not
+  // touched. This asserts the overlay appears on a build break and clears on
+  // recovery (exercising the dev engine's error-recovery path end-to-end).
+  test.sequential('shows build-error overlay and recovers on fix', async () => {
+    const page = getPage();
+    await waitForBuildStable(CONFIG.ports.hmrFullBundleMode);
+
+    // Introduce a syntax error (unterminated string).
+    await editFile('hmr.js', (code) => code.replace("const foo = 'hello'", "const foo = 'hello"));
+
+    const overlay = page.locator('#rolldown-error-overlay');
+    await expect.poll(() => overlay.count(), { timeout: 15_000 }).toBe(1);
+    expect(await overlay.textContent()).toMatch(/Unterminated|PARSE_ERROR|error/i);
+
+    // Fix it: overlay clears (via recovery reload) and the app renders again.
+    await editFile('hmr.js', (code) => code.replace("const foo = 'hello", "const foo = 'hello'"));
+    await expect.poll(() => overlay.count(), { timeout: 15_000 }).toBe(0);
+    await expect.poll(() => page.textContent('.hmr')).toBe('hello');
+
+    await waitForBuildStable(CONFIG.ports.hmrFullBundleMode);
+  });
 });
 
 describe('lazy-compilation', () => {

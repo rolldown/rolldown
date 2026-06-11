@@ -48,8 +48,10 @@ error overlay appears even after a browser refresh.
 Vite-side realization (in `fullBundleEnvironment.ts`): a single
 `lastBuildError: Error | null` field caches the most recent error from
 **either** channel — it is set in both `onOutput` (full-build errors)
-and `onHmrUpdates` (HMR errors), and cleared back to `null` only on a
-successful `onOutput`. It is replayed on the **`vite:client:connect`**
+and `onHmrUpdates` (HMR errors), and cleared back to `null` on a
+successful build from **either** channel (a successful `onOutput` _or_
+a successful `onHmrUpdates`, since an HMR patch that computes cleanly
+supersedes a previously cached error). It is replayed on the **`vite:client:connect`**
 event for every freshly connected client (including a post-refresh
 reconnect), so the error overlay reappears after a browser refresh.
 The two channels differ only in their _live_

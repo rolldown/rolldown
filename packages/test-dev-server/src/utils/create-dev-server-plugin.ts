@@ -1,6 +1,7 @@
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';
 import type { NormalizedInputOptions, Plugin } from 'rolldown';
+import { injectOverlayScript } from '../error-overlay.js';
 import type { NormalizedDevOptions } from '../types/normalized-dev-options';
 
 export function createDevServerPlugin(devOptions: NormalizedDevOptions): Plugin {
@@ -37,7 +38,9 @@ export function createDevServerPlugin(devOptions: NormalizedDevOptions): Plugin 
         this.emitFile({
           type: 'asset',
           fileName: 'index.html',
-          source: htmlSource,
+          // Inject the dev-server error overlay client (kept out of the shared
+          // rolldown HMR runtime — see error-overlay.ts).
+          source: injectOverlayScript(htmlSource),
         });
       }
     },

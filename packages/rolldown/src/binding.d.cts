@@ -1998,7 +1998,7 @@ export interface BindingBundlerOptions {
 }
 
 export interface BindingBundleState {
-  lastFullBuildFailed: boolean
+  lastBuildErrored: boolean
   hasStaleOutput: boolean
 }
 

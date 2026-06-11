@@ -273,15 +273,12 @@ impl ScheduledBuild {
 
 #[napi(object)]
 pub struct BindingBundleState {
-  pub last_full_build_failed: bool,
+  pub last_build_errored: bool,
   pub has_stale_output: bool,
 }
 
 impl From<BundleState> for BindingBundleState {
   fn from(state: BundleState) -> Self {
-    Self {
-      last_full_build_failed: state.last_full_build_failed,
-      has_stale_output: state.has_stale_output,
-    }
+    Self { last_build_errored: state.last_build_errored, has_stale_output: state.has_stale_output }
   }
 }

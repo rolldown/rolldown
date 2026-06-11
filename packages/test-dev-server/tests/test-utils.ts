@@ -114,7 +114,7 @@ export function getLazyAliasedImportPage() {
 
 interface DevStatus {
   hasStaleOutput: boolean;
-  lastFullBuildFailed: boolean;
+  lastBuildErrored: boolean;
   buildSeq: number;
   connectedClients: number;
   moduleRegistrationSeq: number;

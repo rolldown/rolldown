@@ -11,7 +11,7 @@ use rolldown::Bundler;
 
 use crate::{
   dev_context::SharedDevContext,
-  types::{coordinator_msg::CoordinatorMsg, task_input::TaskInput},
+  types::{coordinator_msg::CoordinatorMsg, error_stage::ErrorStage, task_input::TaskInput},
 };
 
 pub struct BundlingTask {
@@ -19,7 +19,11 @@ pub struct BundlingTask {
   pub bundler: Arc<Mutex<Bundler>>,
   pub dev_context: SharedDevContext,
   pub next_hmr_patch_id: Arc<AtomicU32>,
-  has_encountered_error: bool,
+  /// Set when `watch_change` hook or `generate_hmr_updates` errored.
+  hmr_errored: bool,
+  /// Set when `rebuild()` errored. Takes precedence over `hmr_errored`
+  /// when deriving the final stage — see `final_error_stage`.
+  rebuild_errored: bool,
   has_rebuild_happen: bool,
 }
 
@@ -50,7 +54,21 @@ impl BundlingTask {
       dev_context,
       next_hmr_patch_id,
       has_rebuild_happen: false,
-      has_encountered_error: false,
+      hmr_errored: false,
+      rebuild_errored: false,
+    }
+  }
+
+  /// Rebuild precedes Hmr: if both stages errored in the same task (only
+  /// possible after the auto-upgrade rewrite), `Rebuild` is reported so
+  /// recovery forces a fresh rebuild on the next file change.
+  fn final_error_stage(&self) -> Option<ErrorStage> {
+    if self.rebuild_errored {
+      Some(ErrorStage::Rebuild)
+    } else if self.hmr_errored {
+      Some(ErrorStage::Hmr)
+    } else {
+      None
     }
   }
 
@@ -59,14 +77,14 @@ impl BundlingTask {
     self.run_inner().await;
 
     let has_generated_bundle_output = self.has_rebuild_happen;
-    let has_encountered_error = self.has_encountered_error;
+    let error_stage = self.final_error_stage();
 
     tracing::trace!(
       "[BundlingTask] completed\n - has_generated_bundle_output: {has_generated_bundle_output:?}",
     );
 
     self.dev_context.coordinator_tx.send(CoordinatorMsg::BundleCompleted {
-      has_encountered_error,
+      error_stage,
       has_generated_bundle_output,
     }).expect(
       "Coordinator channel closed while sending BundleCompleted - coordinator terminated unexpectedly"
@@ -83,7 +101,9 @@ impl BundlingTask {
           if let Err(err) = plugin_driver.watch_change(changed_file.to_str().unwrap(), *event).await
           {
             tracing::error!("[BundlingTask] watchChange hook failed: {err:?}");
-            self.has_encountered_error = true;
+            // Classified as Hmr stage: the next Hmr task re-runs watch_change,
+            // which is sufficient to retry the hook.
+            self.hmr_errored = true;
             if let Some(on_output) = self.dev_context.options.on_output.as_ref() {
               on_output(Err(err.into()));
             }
@@ -169,7 +189,7 @@ impl BundlingTask {
     let has_callback = self.dev_context.options.on_hmr_updates.is_some();
     if let Err(err) = &hmr_result {
       tracing::error!("[BundlingTask] failed to generate HMR updates: {:?}", err);
-      self.has_encountered_error = true;
+      self.hmr_errored = true;
     }
 
     // Call on_hmr_updates callback if provided
@@ -210,7 +230,7 @@ impl BundlingTask {
 
     if let Err(err) = &build_result {
       tracing::error!("[BundlingTask] rebuild failed: {:?}", err);
-      self.has_encountered_error = true;
+      self.rebuild_errored = true;
     }
 
     // Call on_output callback if provided

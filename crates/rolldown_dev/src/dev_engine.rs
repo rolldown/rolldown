@@ -453,14 +453,15 @@ impl DevEngine {
 
 #[derive(Debug, Clone)]
 pub struct BundleState {
-  pub last_full_build_failed: bool,
+  /// True for any error state (initial or incremental).
+  pub last_build_errored: bool,
   pub has_stale_output: bool,
 }
 
 impl From<CoordinatorStateSnapshot> for BundleState {
   fn from(snapshot: CoordinatorStateSnapshot) -> Self {
     Self {
-      last_full_build_failed: snapshot.last_full_build_failed,
+      last_build_errored: snapshot.last_build_errored,
       has_stale_output: snapshot.has_stale_output,
     }
   }

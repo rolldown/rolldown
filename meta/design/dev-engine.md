@@ -17,6 +17,75 @@ implementation, not the narrative of any particular change.
 
 ---
 
+## Design principles
+
+Four principles govern when the dev engine rebuilds and how its errors
+flow out to the binding consumer. They define rolldown_dev's contract
+with its consumer (typically Vite) and constrain the implementation in
+§7, §13, and §16.
+
+### 1. Conservative rebuilds
+
+Rebuilds happen only when the bundle is **stale** — when input has
+changed since the last build attempt. Page access and browser
+reconnect on their own never trigger a rebuild. In particular: if the
+previous build failed, an access request does not retry — without new
+input the same error would recur.
+
+Realized in: `BundleCoordinator::ensure_latest_bundle_output` returning
+`None` for `Failed` / `FullBuildFailed` (§13b, §13e).
+
+### 2. Errors are emitted on every build
+
+rolldown_dev surfaces build errors to the binding consumer on every
+build via the `on_output` / `on_hmr_updates` callbacks (§16b). It never
+silently retries past an error, never silently swallows one, and never
+caches one across requests — rolldown_dev is stateless across HTTP
+requests. The binding consumer (Vite) is responsible for retaining the
+most recent error and replaying it on each client reconnect, so the
+error overlay appears even after a browser refresh.
+
+Vite-side realization (in `fullBundleEnvironment.ts`): a single
+`lastBuildError: Error | null` field caches the most recent error from
+**either** channel — it is set in both `onOutput` (full-build errors)
+and `onHmrUpdates` (HMR errors), and cleared back to `null` only on a
+successful `onOutput`. It is replayed on the **`vite:client:connect`**
+event for every freshly connected client (including a post-refresh
+reconnect), so the error overlay reappears after a browser refresh.
+The two channels differ only in their _live_
+delivery: an `onOutput` error is additionally logged to the terminal
+(`logger.error`) so a build break is visible without a browser, and is
+broadcast to all clients via `hot.send`; an `onHmrUpdates` error is sent
+to each connected client individually and is not logged to the terminal.
+
+### 3. File changes are the only recovery trigger
+
+After a failed build, the engine waits for a file change before
+rebuilding. Both Vite config edits and user-land source edits are
+valid triggers. Nothing else — not page refresh, not elapsed time, not
+manual UI dismissal — counts as recovery.
+
+Realized in: `handle_file_changes` (§7) is the sole producer of
+post-failure rebuild tasks. `triggerFullBuild` (§13e) is an explicit
+escape hatch for cases the watcher cannot observe (e.g. missing-import
+resolution; see Unresolved Questions).
+
+Corollary: a file change after a failed build must schedule work that
+can undo the failure. In practice this means tracking where the
+failure originated (HMR computation vs incremental rebuild) so the
+next task covers the stage that broke (§7).
+
+### 4. Build errors are recoverable; panics are bugs
+
+Every error reaching the consumer via `on_output` / `on_hmr_updates`
+is treated as a **user error** — caused by source code or plugin
+behavior, recoverable by editing source. Rolldown and Vite themselves
+are assumed bug-free in this model. The only state not recoverable
+through a file-change cycle is a panic, which signals an invariant
+violation in rolldown_dev itself (§16g).
+
+---
+
 ## 1. Components and layering
 
 The dev engine is built from four cooperating pieces, all in
@@ -102,7 +171,7 @@ coordinator is one of these messages:
 pub enum CoordinatorMsg {
   WatchEvent(FsEventResult),                 // raw fs-watcher event batch
   BundleCompleted {                          // a BundlingTask finished
-    has_encountered_error: bool,
+    error_stage: Option<ErrorStage>,         // None on success; see §10
     has_generated_bundle_output: bool,
   },
   ScheduleBuildIfStale { reply: … },         // ask coordinator to drain its queue
@@ -154,7 +223,7 @@ pub enum CoordinatorState {
   FullBuildInProgress,
   FullBuildFailed,
   InProgress,
-  Failed,
+  Failed { last_error_stage: ErrorStage },
 }
 ```
 
@@ -169,63 +238,84 @@ two halves joined by `Idle`:
 
 ### State meanings
 
-| State                 | Meaning                                                            |
-| --------------------- | ------------------------------------------------------------------ |
-| `Initialized`         | Constructed but `run()` not yet entered. Transient.                |
-| `FullBuildInProgress` | The initial `TaskInput::FullBuild` is running.                     |
-| `FullBuildFailed`     | The initial full build errored. No usable output exists at all.    |
-| `Idle`                | No build running; last build (if any) succeeded.                   |
-| `InProgress`          | An incremental task (`Hmr` / `HmrRebuild` / `Rebuild`) is running. |
-| `Failed`              | The last incremental task errored.                                 |
+| State                         | Meaning                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------- |
+| `Initialized`                 | Constructed but `run()` not yet entered. Transient.                                         |
+| `FullBuildInProgress`         | The initial `TaskInput::FullBuild` is running.                                              |
+| `FullBuildFailed`             | The initial full build errored. No usable output exists at all.                             |
+| `Idle`                        | No build running; last build (if any) succeeded.                                            |
+| `InProgress`                  | An incremental task (`Hmr` / `HmrRebuild` / `Rebuild`) is running.                          |
+| `Failed { last_error_stage }` | The last incremental task errored; `last_error_stage` records which stage produced it (§7). |
 
 ### Transition map
 
-```
-            ┌──────────────┐
-            │ Initialized  │  (constructor: BundleCoordinator::new)
-            └──────┬───────┘
-                   │ run() entry: push TaskInput::FullBuild,
-                   │ set state=Idle, schedule_build_if_stale()
-                   ▼
-        ┌────────────────────┐
-        │        Idle        │ ◄──────────────────────────────┐
-        └─────────┬──────────┘                                │
-                  │ schedule_build_if_stale pops a task:      │
-                  │   FullBuild → FullBuildInProgress         │
-                  │   else      → InProgress                  │
-        ┌─────────┴──────────┐                                │
-        ▼                    ▼                                │
-┌───────────────────┐  ┌───────────────────┐                  │
-│FullBuildInProgress│  │    InProgress     │                  │
-└─────────┬─────────┘  └─────────┬─────────┘                  │
-          │ BundleCompleted      │ BundleCompleted            │
-          │  err → FullBuildFailed│  err → Failed             │
-          │  ok  → Idle ─────────┼──ok──→ Idle ───────────────┤
-          ▼                      ▼  (then schedule_build_if_  │
-┌───────────────────┐  ┌───────────────────┐    stale always)│
-│  FullBuildFailed  │  │      Failed       │                  │
-└─────────┬─────────┘  └─────────┬─────────┘                  │
-          │ next file change:    │ next file change:          │
-          │  queue FullBuild,    │  queue Hmr/HmrRebuild,     │
-          │  schedule →          │  schedule →                │
-          │  FullBuildInProgress │  InProgress ───────────────┘
-          ▼                      ▼
-       (loop)                 (loop)
+Edges are grouped by what drives them: **scheduling** (a queued task
+starts), **completion** (`BundleCompleted`), **file-change recovery**, and
+the **rebuild triggers** that enqueue work without a file change
+(access-driven `EnsureLatestBundleOutput`, programmatic `ModuleChanged`,
+manual `TriggerFullBuild`). Every rebuild trigger enqueues a task and then
+calls `schedule_build_if_stale`, which is the actual state-mutation site
+(§8) — so while a build is already running, a trigger only appends to the
+queue and the transition happens when the current task completes and the
+queue drains.
+
+```mermaid
+stateDiagram-v2
+    state "Failed { stage }" as Failed
+
+    [*] --> Initialized : new()
+    Initialized --> Idle : run() startup<br/>queue FullBuild + schedule
+
+    %% scheduling: schedule_build_if_stale pops a queued task and starts it
+    Idle --> FullBuildInProgress : schedule pops FullBuild
+    Idle --> InProgress : schedule pops Rebuild / Hmr / HmrRebuild
+
+    %% completion: BundleCompleted
+    FullBuildInProgress --> Idle : completed ok
+    FullBuildInProgress --> FullBuildFailed : completed err
+    InProgress --> Idle : completed ok → schedule
+    InProgress --> Failed : completed err<br/>(records stage)
+
+    %% file-change recovery from a failed build
+    FullBuildFailed --> FullBuildInProgress : file change<br/>queue FullBuild
+    Failed --> InProgress : file change<br/>queue Hmr / HmrRebuild
+
+    %% rebuild triggers (no file change)
+    Idle --> InProgress : EnsureLatestBundleOutput when stale<br/>queue empty Rebuild
+    Idle --> InProgress : ModuleChanged<br/>queue Rebuild
+    Idle --> FullBuildInProgress : TriggerFullBuild<br/>clear queue + FullBuild
+    Failed --> FullBuildInProgress : TriggerFullBuild
+    FullBuildFailed --> FullBuildInProgress : TriggerFullBuild
 ```
 
 ### Where each transition lives
 
+These are the `set_initial_build_state` call sites — the single mutation
+point, a convenient place to observe every transition.
+
 | Transition                                                         | Site                                           |
 | ------------------------------------------------------------------ | ---------------------------------------------- |
 | `Initialized → Idle`                                               | `run()` startup, `bundle_coordinator.rs:84-87` |
-| `Idle/Failed/FullBuildFailed → FullBuildInProgress` / `InProgress` | `schedule_build_if_stale`, `:352-356`          |
-| `FullBuildInProgress → FullBuildFailed`                            | `handle_bundle_completed`, `:263`              |
-| `FullBuildInProgress → Idle`                                       | `handle_bundle_completed`, `:268`              |
-| `InProgress → Failed`                                              | `handle_bundle_completed`, `:288`              |
-| `InProgress → Idle`                                                | `handle_bundle_completed`, `:293`              |
+| `Idle/Failed/FullBuildFailed → FullBuildInProgress` / `InProgress` | `schedule_build_if_stale`, `:378-380`          |
+| `FullBuildInProgress → FullBuildFailed`                            | `handle_bundle_completed`, `:286`              |
+| `FullBuildInProgress → Idle`                                       | `handle_bundle_completed`, `:291`              |
+| `InProgress → Failed { last_error_stage }`                         | `handle_bundle_completed`, `:311`              |
+| `InProgress → Idle`                                                | `handle_bundle_completed`, `:316`              |
 
-`set_initial_build_state` is the single mutation point — a convenient
-place to observe all transitions.
+### What enqueues a rebuild
+
+Each of these enqueues a `TaskInput` and calls `schedule_build_if_stale`;
+the state mutation itself is the `schedule_build_if_stale` row above. They
+are the distinct ways a build gets initiated — a file change is only one
+of them.
+
+| Trigger                                                      | Enqueues                       | Resulting state       | Site                                                |
+| ------------------------------------------------------------ | ------------------------------ | --------------------- | --------------------------------------------------- |
+| File change, steady state (`Idle` / `InProgress` / `Failed`) | `Hmr` or `HmrRebuild`          | `InProgress`          | `handle_file_changes`, `:202`                       |
+| File change, `FullBuildFailed`                               | `FullBuild` (clears the stash) | `FullBuildInProgress` | `handle_file_changes`, `:248`                       |
+| Browser access while stale (`EnsureLatestBundleOutput`)      | empty-files `Rebuild`          | `InProgress`          | `ensure_latest_bundle_output`, `:401` (push `:419`) |
+| Programmatic module change (`ModuleChanged`)                 | `Rebuild`                      | `InProgress`          | run loop, `:128-145`                                |
+| Manual full build (`TriggerFullBuild`)                       | clears queue, `FullBuild`      | `FullBuildInProgress` | `trigger_full_build`, `:457`                        |
 
 ---
 
@@ -323,8 +413,15 @@ state                                 → action
 FullBuildInProgress                   → stash files into
                                         queued_file_changes_waited_
                                         for_full_build (no task queued)
-Idle | InProgress | Failed            → queue Hmr (or HmrRebuild if
+Idle | InProgress                     → queue Hmr (or HmrRebuild if
                                         rebuild_strategy == Always),
+                                        then schedule_build_if_stale()
+Failed { last_error_stage: Hmr }      → queue Hmr (or HmrRebuild if
+                                        rebuild_strategy == Always),
+                                        then schedule_build_if_stale()
+Failed { last_error_stage: Rebuild }  → queue HmrRebuild
+                                        (unconditional — Rebuild-stage
+                                        failure must rebuild),
                                         then schedule_build_if_stale()
 FullBuildFailed                       → clear queued_file_changes,
                                         queue TaskInput::FullBuild,
@@ -338,12 +435,20 @@ Notes:
   they are stashed and replayed when the full build succeeds
   (`handle_bundle_completed` `:269-273` calls `handle_file_changes` with
   the drained set).
-- `Idle`, `InProgress`, and `Failed` are treated **identically** here —
-  all three queue an `Hmr`/`HmrRebuild`.
+- `Idle` and `InProgress` behave identically — both queue `Hmr`
+  (or `HmrRebuild` under `Always`).
+- `Failed` discriminates on `last_error_stage`. An `Hmr`-stage failure
+  recovers by re-running the same Hmr task (the `watch_change` hook and
+  HMR computation get a second chance). A `Rebuild`-stage failure left
+  the bundle output stale w.r.t. source, so the recovery task must
+  include a rebuild — `HmrRebuild` regardless of `rebuild_strategy`.
+  This realizes the Design principles §3 corollary.
 - The `Always` vs non-`Always` choice for `Hmr` vs `HmrRebuild` is the
-  `rebuild_strategy` option (see §9).
+  `rebuild_strategy` option (see §9). Only the `Idle`, `InProgress`, and
+  `Failed { Hmr }` arms honor it; `Failed { Rebuild }` overrides it.
 - `FullBuildFailed` is the one state whose file-change handling queues a
-  `FullBuild`.
+  `FullBuild`. Stage tracking is unnecessary because a full rebuild
+  covers every stage by construction.
 
 ---
 
@@ -431,12 +536,41 @@ a `HmrRebuild` mid-task.
 ## 10. `BundlingTask` — executing one unit of work
 
 `BundlingTask::run` (`bundling_task.rs:58-81`) calls `run_inner`, then
-sends `BundleCompleted` back to the coordinator with two booleans:
+sends `BundleCompleted` back to the coordinator with two fields:
 
-- `has_encountered_error` — `has_encountered_error` flag OR `run_inner`
-  returned `Err`.
-- `has_generated_bundle_output` — equals `has_rebuild_happen`, i.e.
-  whether the task actually performed a rebuild.
+- `error_stage: Option<ErrorStage>` — `None` on success; on error,
+  identifies which stage produced it.
+- `has_generated_bundle_output: bool` — equals `has_rebuild_happen`,
+  i.e. whether the task actually performed a rebuild.
+
+### Stage classification
+
+`BundlingTask` tracks two independent flags during `run_inner`
+(`hmr_errored`, `rebuild_errored`) and derives the reported
+`Option<ErrorStage>` via the precedence **`Rebuild > Hmr`**:
+
+| `rebuild_errored` | `hmr_errored` | reported `error_stage` |
+| ----------------- | ------------- | ---------------------- |
+| `true`            | any           | `Some(Rebuild)`        |
+| `false`           | `true`        | `Some(Hmr)`            |
+| `false`           | `false`       | `None`                 |
+
+`Rebuild` wins because of the auto-upgrade path (§9b): an `Hmr` task can
+be rewritten to `HmrRebuild` mid-task, then fail in rebuild. In that
+case both flags are set; reporting `Rebuild` is conservative — the next
+file change forces a rebuild, which is what's needed to confirm the fix.
+
+Set sites:
+
+| `run_inner` site                          | flag set          |
+| ----------------------------------------- | ----------------- |
+| `plugin_driver.watch_change` hook failure | `hmr_errored`     |
+| `generate_hmr_updates` failure            | `hmr_errored`     |
+| `rebuild()` (`incremental_*`) failure     | `rebuild_errored` |
+
+`watch_change` failures classify as `Hmr` because the next `Hmr` task
+re-runs the hook against the new changed files — sufficient retry
+without forcing a rebuild.
 
 `run_inner` (`bundling_task.rs:83-122`) does, in order:
 
@@ -456,7 +590,7 @@ true` and calls `rebuild()`.
 - Calls `bundler.compute_hmr_update_for_file_changes(...)`.
 - Scans the resulting updates; if any `is_full_reload()`, sets
   `has_full_reload_update = true`.
-- On error, sets `self.has_encountered_error = true`.
+- On error, sets `self.hmr_errored = true`.
 - Invokes the `on_hmr_updates` callback if configured.
 
 ### `rebuild` (`bundling_task.rs:189-223`)
@@ -472,7 +606,7 @@ true` and calls `rebuild()`.
   ```
 - Calls `bundler.incremental_write(scan_mode)` if `skip_write` is
   false, else `bundler.incremental_generate(scan_mode)`.
-- On error, sets `self.has_encountered_error = true`.
+- On error, sets `self.rebuild_errored = true`.
 - Invokes the `on_output` callback if configured.
 
 Only `TaskInput::FullBuild` produces `ScanMode::Full`. Every other
@@ -490,7 +624,9 @@ rebuilding task (`Rebuild`, `HmrRebuild`) produces `ScanMode::Partial`.
 ```rust
 current_bundling_future = None;
 update_watch_paths();                       // even on failure
-if has_encountered_error {
+if error_stage.is_some() {
+  // FullBuildFailed always recovers via FullBuild on next file change,
+  // so the originating stage is discarded here.
   state = FullBuildFailed;
   has_stale_bundle_output = true;
 } else {
@@ -510,8 +646,8 @@ if has_encountered_error {
 ```rust
 current_bundling_future = None;
 update_watch_paths();                       // register newly-pulled-in files
-if has_encountered_error {
-  state = Failed;
+if let Some(stage) = error_stage {
+  state = Failed { last_error_stage: stage };
   has_stale_bundle_output = true;
 } else {
   has_stale_bundle_output = !has_generated_bundle_output;
@@ -519,6 +655,10 @@ if has_encountered_error {
 }
 schedule_build_if_stale();                  // ALWAYS — drain the queue
 ```
+
+The stage carried into `Failed` is the one reported by `BundleCompleted`
+(§10 precedence). It's read on the next file change by §7 to choose
+between `Hmr` and `HmrRebuild`.
 
 Key facts:
 
@@ -551,6 +691,19 @@ It is consumed by `ensure_latest_bundle_output` (§13) to decide whether
 a lazy rebuild is needed before serving the full bundle. It is also
 surfaced in `CoordinatorStateSnapshot.has_stale_output` and thence
 `BundleState.has_stale_output`.
+
+### Companion: `last_build_errored`
+
+The snapshot also exposes `last_build_errored: bool` — `true` when the
+coordinator is in any error state (`FullBuildFailed` OR `Failed { .. }`).
+This is the predicate the binding consumer should pair with
+`has_stale_output` when deciding whether to kick an access-triggered
+regen: a stale-and-errored bundle must NOT be regenerated on access
+(Design principles §1), since the engine no-ops the request and the
+naive "promise resolved ⇒ build fresh" interpretation in the consumer
+leads to a spurious reload loop. It covers both initial-build failure
+(`FullBuildFailed`) and incremental failure (`Failed { .. }`) — the
+narrower initial-only predicate was removed as redundant.
 
 ---
 
@@ -782,7 +935,7 @@ Beyond `ensure_latest_bundle_output`, the public methods on `DevEngine`
 | `trigger_full_build()`                           | sends `TriggerFullBuild` (fire-and-forget, compose with `ensure_latest_bundle_output` to wait) |
 | `wait_for_close()`                               | awaits the coordinator's join handle                                                           |
 | `wait_for_ongoing_bundle()`                      | `GetState`, awaits any running future                                                          |
-| `get_bundle_state()`                             | `GetState` → `BundleState { last_full_build_failed, has_stale_output }`                        |
+| `get_bundle_state()`                             | `GetState` → `BundleState { last_build_errored, has_stale_output }`                            |
 | `invalidate(caller, first_invalidated_by)`       | locks the bundler, calls `compute_update_for_calling_invalidate` per client                    |
 | `compile_lazy_entry(proxy_module_id, client_id)` | compiles a lazy entry; on success sends `ModuleChanged`                                        |
 | `close()`                                        | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                                 |
@@ -919,10 +1072,13 @@ error handler.
 | `generate_hmr_updates` | `on_hmr_updates` | deliver, then may continue | log only, may stop     |
 | `rebuild`              | `on_output`      | deliver                    | log only               |
 
-A failure in any phase sets `self.has_encountered_error = true`, reported to
-the coordinator via `BundleCompleted { has_encountered_error, ... }`. The
-coordinator uses this to transition into `FullBuildFailed` / `Failed` (§11)
-regardless of whether a callback was registered to receive the error itself.
+A failure in a phase sets the matching per-stage flag (`hmr_errored` for
+`watch_change` / `generate_hmr_updates`, `rebuild_errored` for `rebuild`).
+At task end these collapse to `error_stage: Option<ErrorStage>` (precedence
+`Rebuild > Hmr`, §10), reported to the coordinator via `BundleCompleted {
+error_stage, .. }`. The coordinator uses it to transition into
+`FullBuildFailed` / `Failed { last_error_stage }` (§11) regardless of
+whether a callback was registered to receive the error itself.
 
 `generate_hmr_updates` returns `bool` — "may subsequent stages continue?" —
 preserving the pre-`BuildResult` short-circuit: rebuild is skipped only when
@@ -1000,9 +1156,9 @@ Three stops:
 - **Each phase owns its delivery.** Inside `BundlingTask`, each phase
   function handles its own error delivery; `run_inner` is not a centralized
   error handler.
-- **`has_encountered_error` is the coordinator signal, callbacks are the
-  consumer signal.** Both are set on every error; one drives the state
-  machine, the other notifies the user.
+- **`error_stage` is the coordinator signal, callbacks are the consumer
+  signal.** Both are produced on every error; the stage drives the state
+  machine, the callback notifies the user.
 
 ### 16g. When to panic
 
@@ -1063,6 +1219,7 @@ reconstruct it.
 | `CoordinatorState` enum                        | `crates/rolldown_dev/src/types/coordinator_state.rs`            |
 | `TaskInput` enum, merge rules                  | `crates/rolldown_dev/src/types/task_input.rs`                   |
 | `CoordinatorMsg` enum                          | `crates/rolldown_dev/src/types/coordinator_msg.rs`              |
+| `ErrorStage` enum                              | `crates/rolldown_dev/src/types/error_stage.rs`                  |
 | `RebuildStrategy` enum                         | `crates/rolldown_dev_common/src/types/rebuild_strategy.rs`      |
 | Incremental entry points, `with_cached_bundle` | `crates/rolldown/src/bundler/impl_bundler_incremental_build.rs` |
 | HMR entry points                               | `crates/rolldown/src/bundler/impl_bundler_hmr.rs`               |

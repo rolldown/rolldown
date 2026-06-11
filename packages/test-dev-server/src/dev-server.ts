@@ -235,7 +235,7 @@ class DevServer {
         res.end(
           JSON.stringify({
             hasStaleOutput: bundleState.hasStaleOutput,
-            lastFullBuildFailed: bundleState.lastFullBuildFailed,
+            lastBuildErrored: bundleState.lastBuildErrored,
             buildSeq: this.#buildSeq,
             connectedClients: this.#clients.size,
             moduleRegistrationSeq: this.#moduleRegistrationSeq,

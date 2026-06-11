@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['fixtures.test.ts'],
+    include: ['fixtures.test.ts', 'dev-engine-close.test.ts'],
     retry: process.env.CI ? 3 : 0,
     testTimeout: 90000, // Increased from 40000 to 90000 for Windows compatibility
     // Disabled, Because the error printed by Rust cannot be seen

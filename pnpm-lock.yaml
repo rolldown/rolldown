@@ -797,6 +797,12 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/test-dev-server/tests/playground/lazy-compilation:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
   packages/vite-tests:
     devDependencies:
       '@oxc-node/cli':

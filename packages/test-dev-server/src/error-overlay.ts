@@ -43,16 +43,38 @@ function showOverlay(err) {
 }
 const clientId = crypto.randomUUID();
 const socket = new WebSocket('ws://' + location.host + '?clientId=' + clientId);
+// The "[test-dev-server]" console markers below exist for the browser test
+// harness: it asserts ordered log sequences via untilBrowserLogAfter instead
+// of only DOM-polling. See meta/design/dev-server-test-harness.md.
 socket.onmessage = (event) => {
   const data = JSON.parse(event.data);
   if (data.type === 'error') {
     showOverlay(data.err);
-  } else if (data.type === 'hmr:update' || data.type === 'build:ok') {
+    console.log('[test-dev-server] error overlay shown: ' + data.err.message);
+  } else if (data.type === 'build:ok') {
+    clearOverlay();
+    console.log('[test-dev-server] build ok');
+  } else if (data.type === 'hmr:update') {
     clearOverlay();
   } else if (data.type === 'hmr:reload') {
     location.reload();
   }
 };
+// Post-apply HMR marker. The runtime logs BEFORE a patch executes (loading is
+// async), so wrap applyUpdates to log after it ran. This script tag is
+// injected last in the document, so the entry module has already installed
+// the runtime; the guard covers the spinner page (no runtime there).
+const runtime = globalThis.__rolldown_runtime__;
+if (runtime && typeof runtime.applyUpdates === 'function') {
+  const originalApplyUpdates = runtime.applyUpdates;
+  runtime.applyUpdates = function (boundaries) {
+    const result = originalApplyUpdates.call(this, boundaries);
+    console.log(
+      '[test-dev-server] hot updated: ' + boundaries.map((b) => b[0]).join(', '),
+    );
+    return result;
+  };
+}
 `;
 }
 

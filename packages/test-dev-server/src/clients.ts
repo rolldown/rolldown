@@ -1,4 +1,5 @@
 import type { ClientSession } from './types/client-session.js';
+import type { Logger } from './types/logger.js';
 
 /**
  * Registry of connected HMR clients, mirroring the `Clients` class in Vite
@@ -9,6 +10,11 @@ import type { ClientSession } from './types/client-session.js';
  */
 export class Clients {
   #byId = new Map<string, ClientSession>();
+  #logger: Logger;
+
+  constructor(logger: Logger = console) {
+    this.#logger = logger;
+  }
 
   get size(): number {
     return this.#byId.size;
@@ -18,7 +24,7 @@ export class Clients {
   setupIfNeeded(client: ClientSession): void {
     const existing = this.#byId.get(client.id);
     if (existing && existing.ws !== client.ws) {
-      console.warn(`Client ${client.id} reconnecting, replacing existing session`);
+      this.#logger.warn(`Client ${client.id} reconnecting, replacing existing session`);
       existing.ws.close(1000, 'Replaced by new connection');
     }
     this.#byId.set(client.id, client);

@@ -28,7 +28,7 @@ export function triggerLazyBundlingMiddleware(env: FullBundleDevEnvironment) {
 
     const moduleId = params.get('id');
     const clientId = params.get('clientId');
-    console.log(`Lazy compile request for module ${moduleId} from client ${clientId}`);
+    env.logger.info(`Lazy compile request for module ${moduleId} from client ${clientId}`);
 
     let code: string | undefined;
     try {
@@ -36,7 +36,7 @@ export function triggerLazyBundlingMiddleware(env: FullBundleDevEnvironment) {
     } catch (err) {
       res.statusCode = 500;
       res.end('Internal Server Error during lazy compilation');
-      console.error('Error handling lazy compile request:', err);
+      env.logger.error('Error handling lazy compile request:', err);
       return;
     }
 

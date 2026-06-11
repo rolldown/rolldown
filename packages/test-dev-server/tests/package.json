@@ -5,7 +5,7 @@
   "scripts": {
     "test": "pnpm run test:fixtures && pnpm run test:browser",
     "test:fixtures": "vitest run --config=vitest.config.fixtures.mts",
-    "test:browser": "vitest run --config=vitest.config.browser.mts",
+    "test:browser": "vitest run --config=vitest.config.e2e.mts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

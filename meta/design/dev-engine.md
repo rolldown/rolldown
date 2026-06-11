@@ -1299,7 +1299,7 @@ reconstruct it.
 - [lazy-compilation](./lazy-compilation.md) — lazy entry compilation,
   reached via `DevEngine::compile_lazy_entry` and the `ModuleChanged`
   message
-- [dev-server-browser-tests](./dev-server-browser-tests.md) — browser
+- [dev-server-test-harness](./dev-server-test-harness.md) — browser
   test harness for the dev server
 - `crates/rolldown_dev/` — dev engine implementation
 - `crates/rolldown_dev_common/` — `RebuildStrategy`, dev options

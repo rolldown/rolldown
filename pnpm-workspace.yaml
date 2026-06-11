@@ -2,7 +2,7 @@ packages:
   - packages/*
   - packages/rolldown/tests
   - packages/test-dev-server/tests
-  - packages/test-dev-server/tests/playground/hmr-full-bundle-mode
+  - packages/test-dev-server/tests/playground/*
   - packages/test-dev-server/tests/fixtures/*
   - packages/rolldown/tests/fixtures/resolve/issue-5846
   - packages/rolldown/tests/fixtures/resolve/issue-5846-2

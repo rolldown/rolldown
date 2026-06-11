@@ -82,7 +82,11 @@
       "entry": [],
     },
     "packages/test-dev-server/tests": {
-      "entry": ["**/*.{test,spec}.{js,ts}"],
+      "entry": [
+        "**/*.{test,spec}.{js,ts}",
+        "playground/test-utils.ts", // suppress the unused exports errors
+        "src/dev-engine-close-child.mjs", // spawned by dev-engine-close.test.ts via execa
+      ],
     },
     "scripts": {
       "entry": ["misc/**", "lint/index.ts"],
@@ -91,20 +95,17 @@
       "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin
     },
     "packages/test-dev-server/tests/playground/hmr-full-bundle-mode": {
-      "entry": ["dev.config.mjs", "main.js", "hmr.js"], // Playwright test with dev config and source files
+      "entry": ["dev.config.mjs", "main.js", "hmr.js", "__tests__/*.spec.ts"], // Playwright test with dev config and source files
     },
     "packages/test-dev-server/tests/playground/lazy-compilation": {
-      "entry": ["dev.config.mjs", "main.js", "lazy-module.js"], // Playwright test with dev config and source files
-    },
-    "packages/test-dev-server/tests/playground/lazy-shared-module": {
-      "entry": ["dev.config.mjs", "app.js", "page-a.js", "page-b.js", "selectors.js"], // Playwright test with dev config and source files
-    },
-    "packages/test-dev-server/tests/playground/lazy-nested-dynamic-import": {
-      "entry": ["dev.config.mjs", "app.js", "outer.js", "inner.js"], // Playwright test with dev config and source files
-    },
-    "packages/test-dev-server/tests/playground/lazy-aliased-import": {
-      "entry": ["dev.config.mjs", "app.js", "lazy.js"], // Playwright test with dev config and source files
-      "ignoreDependencies": ["@lazy"], // alias resolved via dev.config.mjs
+      "entry": [
+        "dev.config.mjs",
+        "main.js",
+        "*/*.js", // each scenario sub-folder's setup.js + lazy modules, imported by main.js
+        "__tests__/*.spec.ts",
+        "__tests__/serve.ts",
+      ], // One project, one config; each scenario (basic, aliased-import, shared-module, nested-dynamic-import) is a sub-folder imported by main.js
+      "ignoreDependencies": ["@lazy"], // aliased-import scenario; alias resolved via dev.config.mjs
     },
   },
 }

@@ -7,6 +7,7 @@ import type { WebSocket } from 'ws';
 import { Clients } from '../clients.js';
 import { MemoryFiles, weakEtag } from '../memory-files.js';
 import { ClientSession } from '../types/client-session.js';
+import type { Logger } from '../types/logger.js';
 import type {
   BuildOkMessage,
   ConnectedMessage,
@@ -17,6 +18,7 @@ import type {
 import { debounce } from '../utils/debounce.js';
 import { getDevWatchOptionsForCi } from '../utils/get-dev-watch-options-for-ci.js';
 import { prepareError } from '../utils/prepare-error.js';
+import { withResolvers } from '../utils/with-resolvers.js';
 
 type ServerMessage =
   | HmrUpdateMessage
@@ -35,6 +37,8 @@ export interface FullBundleDevEnvironmentOptions {
    * rolldown build target — see `DevServer`.
    */
   serveFromMemory: boolean;
+  /** Sink for server-side log output. Defaults to `console`. */
+  logger?: Logger;
 }
 
 /**
@@ -59,9 +63,10 @@ export class FullBundleDevEnvironment {
    */
   readonly memoryFiles = new MemoryFiles();
   readonly serveFromMemory: boolean;
+  readonly logger: Logger;
 
   #devEngine!: DevEngine;
-  #clients = new Clients();
+  #clients: Clients;
 
   /**
    * Most recent build error from *either* callback channel. Set in both
@@ -78,6 +83,13 @@ export class FullBundleDevEnvironment {
   #fullReloadPending = false;
   /** Gate for access-triggered regeneration (see `triggerBundleRegenerationIfStale`). */
   #initialBuildCompleted = false;
+  /**
+   * Resolved once the first `onOutput` callback (success or error) has
+   * executed on the JS side. `run()` resolves when the initial build settles
+   * inside the engine, which can race the callback dispatch; awaiting this
+   * guarantees the first bundle is actually in `memoryFiles` / on disk.
+   */
+  #firstOutput = withResolvers<void>();
 
   // Test-only instrumentation (no Vite equivalent); surfaced via the status
   // middleware so the e2e harness can await builds / module registrations.
@@ -92,16 +104,18 @@ export class FullBundleDevEnvironment {
     for (const client of this.#clients.getAll()) {
       this.#send(client.ws, { type: 'hmr:reload' });
     }
-    console.log('[hmr]: page reload');
+    this.logger.info('[hmr]: page reload');
   });
 
-  private constructor(serveFromMemory: boolean) {
+  private constructor(serveFromMemory: boolean, logger: Logger) {
     this.serveFromMemory = serveFromMemory;
+    this.logger = logger;
+    this.#clients = new Clients(logger);
   }
 
   /** Create the environment and its dev engine (Vite's `listen()`). */
   static async create(options: FullBundleDevEnvironmentOptions): Promise<FullBundleDevEnvironment> {
-    const env = new FullBundleDevEnvironment(options.serveFromMemory);
+    const env = new FullBundleDevEnvironment(options.serveFromMemory, options.logger ?? console);
     env.#devEngine = await dev(options.inputOptions, options.outputOptions, {
       onHmrUpdates: (result) => env.#onHmrUpdates(result),
       onOutput: (result) => env.#onOutput(result),
@@ -113,9 +127,9 @@ export class FullBundleDevEnvironment {
   /** Run the initial build, then reload any spinner clients (Vite parity). */
   async run(): Promise<void> {
     const start = Date.now();
-    console.log('Starting initial build...');
+    this.logger.info('Starting initial build...');
     await this.#devEngine.run();
-    console.log(`Initial build completed in ${Date.now() - start}ms`);
+    this.logger.info(`Initial build completed in ${Date.now() - start}ms`);
     // `run()` resolves once the initial build settles (success OR failure), so
     // the engine is now in its steady state and access-triggered regeneration
     // may begin.
@@ -128,6 +142,11 @@ export class FullBundleDevEnvironment {
   async close(): Promise<void> {
     this.memoryFiles.clear();
     await this.#devEngine.close();
+  }
+
+  /** Resolves after the first build output (or build error) reached the JS side. */
+  async waitForFirstOutput(): Promise<void> {
+    return this.#firstOutput.promise;
   }
 
   triggerFullBuild(): void {
@@ -173,7 +192,7 @@ export class FullBundleDevEnvironment {
   }
 
   async registerModules(clientId: string, modules: string[]): Promise<void> {
-    console.log('Registering modules:', modules);
+    this.logger.info('Registering modules:', modules);
     await this.#devEngine.registerModules(clientId, modules);
     this.#moduleRegistrationSeq++;
   }
@@ -184,7 +203,7 @@ export class FullBundleDevEnvironment {
    * crashing the connection handler.
    */
   async invalidate(moduleId: string, client: ClientSession): Promise<void> {
-    console.log('Invalidating...');
+    this.logger.info('Invalidating...');
     let updates: BindingClientHmrUpdate[];
     try {
       updates = await this.#devEngine.invalidate(moduleId);
@@ -248,7 +267,7 @@ export class FullBundleDevEnvironment {
     result: Error | { updates: BindingClientHmrUpdate[]; changedFiles: string[] },
   ): void {
     if (result instanceof Error) {
-      console.error('HMR update error:', result);
+      this.logger.error('HMR update error:', result);
       this.#lastBuildError = result;
       this.#broadcastError(result);
       this.#buildSeq++;
@@ -278,8 +297,9 @@ export class FullBundleDevEnvironment {
   }
 
   #onOutput(result: Error | { output: readonly unknown[] }): void {
+    this.#firstOutput.resolve();
     if (result instanceof Error) {
-      console.error('Build error:', result);
+      this.logger.error('Build error:', result);
       this.#lastBuildError = result;
       this.#broadcastError(result);
       this.#buildSeq++;
@@ -324,7 +344,7 @@ export class FullBundleDevEnvironment {
         case 'Patch': {
           const client = this.#clients.get(clientUpdate.clientId);
           if (!client) {
-            console.warn(`Client ${clientUpdate.clientId} not found`);
+            this.logger.warn(`Client ${clientUpdate.clientId} not found`);
             continue;
           }
           this.#sendPatch(client.ws, update);
@@ -344,7 +364,7 @@ export class FullBundleDevEnvironment {
           }
           break;
         case 'Noop':
-          console.warn(`Client ${clientUpdate.clientId} received noop update`);
+          this.logger.warn(`Client ${clientUpdate.clientId} received noop update`);
           break;
         default:
           throw new Error(`Unknown update type: ${JSON.stringify(update)}`);
@@ -357,10 +377,10 @@ export class FullBundleDevEnvironment {
       return;
     }
     if (!output.code) {
-      console.debug('Failed to send update to client: patch has no code');
+      this.logger.debug('Failed to send update to client: patch has no code');
       return;
     }
-    console.log('Patching...');
+    this.logger.info('Patching...');
 
     if (this.serveFromMemory) {
       // Store the patch (and its sourcemap) in memory; the client loads it by

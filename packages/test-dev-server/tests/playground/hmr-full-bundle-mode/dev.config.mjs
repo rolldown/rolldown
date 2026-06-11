@@ -2,9 +2,6 @@ import { defineDevConfig } from '@rolldown/test-dev-server';
 
 export default defineDevConfig({
   platform: 'browser',
-  dev: {
-    port: 3636,
-  },
   build: {
     input: {
       main: 'main.js',

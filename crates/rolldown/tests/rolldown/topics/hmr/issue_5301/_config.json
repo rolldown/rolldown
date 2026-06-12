@@ -1,0 +1,15 @@
+{
+  "config": {
+    "experimental": {
+      "devMode": {}
+    },
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "foo",
+          "test": "foo(?:_\\w+)?\\.js"
+        }
+      ]
+    }
+  }
+}

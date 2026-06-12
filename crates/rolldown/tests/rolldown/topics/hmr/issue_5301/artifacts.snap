@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## foo.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+//#region foo_inner.js
+var foo_inner_exports = /* @__PURE__ */ __exportAll({ default: () => foo_inner_default });
+__rolldown_runtime__.createModuleHotContext("foo_inner.js");
+__rolldown_runtime__.registerModule("foo_inner.js", { exports: foo_inner_exports });
+var foo_inner_default = { foo: 1 };
+//#endregion
+//#region foo.js
+var foo_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("foo.js");
+__rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
+console.log(foo_inner_default);
+//#endregion
+
+```
+
+## main.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+import "./foo.js";
+//#region main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+//#endregion
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```

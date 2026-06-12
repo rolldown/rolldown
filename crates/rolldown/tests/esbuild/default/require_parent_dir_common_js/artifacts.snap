@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dir_entry.js
 
 ```js
-import assert from "node:assert";
+import assert from "node:assert/strict";
 // HIDDEN [\0rolldown/runtime.js]
 //#region index.js
 var require_require_parent_dir_common_js = /* @__PURE__ */ __commonJSMin(((exports, module) => {

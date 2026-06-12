@@ -533,7 +533,8 @@ impl IntegrationTest {
     }
 
     if options.external.is_none() {
-      options.external = Some(IsExternal::from(vec!["node:assert".to_string()]));
+      options.external =
+        Some(IsExternal::from(vec!["node:assert".to_string(), "node:assert/strict".to_string()]));
     }
 
     if options.input.is_none() {

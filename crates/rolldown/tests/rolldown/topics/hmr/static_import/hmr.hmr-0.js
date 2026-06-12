@@ -1,4 +1,4 @@
-import assert from 'node:assert';
+import assert from 'node:assert/strict';
 import './modules/dep-cjs';
 import './modules/dep-esm';
 import cjsDefault from './modules/dep-cjs-default';
@@ -18,10 +18,10 @@ assert.deepStrictEqual(cjsNamespace, {
   value: 'cjs-namespace',
   default: { value: 'cjs-namespace' },
 });
-assert.deepEqual(esmNamespace, {
-  [Symbol.toStringTag]: 'Module',
-  value: 'esm-namespace',
-});
+assert.deepEqual(
+  esmNamespace,
+  Object.defineProperty({ value: 'esm-namespace' }, Symbol.toStringTag, { value: 'Module' }),
+);
 
 import.meta.hot.accept((mod) => {
   if (mod) {

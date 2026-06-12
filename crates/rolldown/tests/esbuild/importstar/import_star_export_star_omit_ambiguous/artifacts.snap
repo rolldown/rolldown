@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import assert from "node:assert";
+import assert from "node:assert/strict";
 // HIDDEN [\0rolldown/runtime.js]
 //#region common.js
 var common_exports = /* @__PURE__ */ __exportAll({
@@ -15,11 +15,10 @@ var common_exports = /* @__PURE__ */ __exportAll({
 });
 //#endregion
 //#region entry.js
-assert.deepEqual(common_exports, {
-	[Symbol.toStringTag]: "Module",
+assert.deepEqual(common_exports, Object.defineProperty({
 	x: 1,
 	z: 4
-});
+}, Symbol.toStringTag, { value: "Module" }));
 //#endregion
 
 ```

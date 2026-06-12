@@ -1,4 +1,4 @@
-const assert = require('node:assert');
+const assert = require('node:assert/strict');
 const { rollup } = require('../../dist/rollup');
 const { loader } = require('../utils.js');
 const { compareError } = require('../utils.js');

@@ -1,6 +1,6 @@
 import shared from './share';
 import sharedJson from './share.json';
-import assert from 'node:assert';
+import assert from 'node:assert/strict';
 
 assert.strictEqual(shared, 'shared');
 assert.deepStrictEqual(sharedJson, {});

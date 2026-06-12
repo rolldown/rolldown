@@ -1,5 +1,5 @@
 // @ts-nocheck
-import assert from 'node:assert';
+import assert from 'node:assert/strict';
 import { SourceMapConsumer } from 'source-map-js';
 import { RolldownMagicString as MagicString } from 'rolldown';
 import { describe, it } from 'vitest';

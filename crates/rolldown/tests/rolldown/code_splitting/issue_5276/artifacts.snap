@@ -29,7 +29,7 @@ export { imp2_exports as n, imp1_exports as r, imp3_exports as t };
 ## main.js
 
 ```js
-import assert from "node:assert";
+import assert from "node:assert/strict";
 //#region main.js
 const load = async () => {
 	import("./imp.js").then((n) => n.r).then((m) => {
@@ -39,7 +39,7 @@ const load = async () => {
 		assert.strictEqual(m.imp2, 2);
 	});
 	import("./imp.js").then((n) => n.t).then((m) => {
-		assert.deepEqual(JSON.parse(JSON.stringify(m)), {
+		assert.deepStrictEqual(JSON.parse(JSON.stringify(m)), {
 			imp3: 3,
 			imp33: 33
 		});
@@ -98,7 +98,7 @@ export { imp3, imp33 };
 ### main.js
 
 ```js
-import assert from "node:assert";
+import assert from "node:assert/strict";
 //#region main.js
 const load = async () => {
 	import("./imp1.js").then((m) => {
@@ -108,7 +108,7 @@ const load = async () => {
 		assert.strictEqual(m.imp2, 2);
 	});
 	import("./imp3.js").then((m) => {
-		assert.deepEqual(JSON.parse(JSON.stringify(m)), {
+		assert.deepStrictEqual(JSON.parse(JSON.stringify(m)), {
 			imp3: 3,
 			imp33: 33
 		});
@@ -168,18 +168,18 @@ Object.defineProperty(exports, "imp3_exports", {
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-let node_assert = require("node:assert");
-node_assert = __toESM(node_assert);
+let node_assert_strict = require("node:assert/strict");
+node_assert_strict = __toESM(node_assert_strict);
 //#region main.js
 const load = async () => {
 	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp1_exports).then((m) => {
-		node_assert.default.strictEqual(m.imp1, 1);
+		node_assert_strict.default.strictEqual(m.imp1, 1);
 	});
 	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp2_exports).then((m) => {
-		node_assert.default.strictEqual(m.imp2, 2);
+		node_assert_strict.default.strictEqual(m.imp2, 2);
 	});
 	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp3_exports).then((m) => {
-		node_assert.default.deepEqual(JSON.parse(JSON.stringify(m)), {
+		node_assert_strict.default.deepStrictEqual(JSON.parse(JSON.stringify(m)), {
 			imp3: 3,
 			imp33: 33
 		});

@@ -6,7 +6,7 @@
  * @typedef {import('./types').TestConfigBase} TestConfigBase
  */
 
-const assert = require('node:assert');
+const assert = require('node:assert/strict');
 const {
 	closeSync,
 	fsyncSync,

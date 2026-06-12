@@ -22,7 +22,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import assert from "node:assert";
+import assert from "node:assert/strict";
 // HIDDEN [\0rolldown/runtime.js]
 //#region share.js
 var share_exports$1 = /* @__PURE__ */ __exportAll({ default: () => share_default$1 });

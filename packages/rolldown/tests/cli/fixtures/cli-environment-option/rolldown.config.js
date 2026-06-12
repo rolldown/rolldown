@@ -1,4 +1,4 @@
-import assert from 'node:assert';
+import assert from 'node:assert/strict';
 import { defineConfig } from 'rolldown';
 
 export default defineConfig(() => {

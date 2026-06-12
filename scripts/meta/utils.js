@@ -1,4 +1,4 @@
-import * as nodeAssert from 'node:assert';
+import * as nodeAssert from 'node:assert/strict';
 import * as nodePath from 'node:path';
 import { REPO_ROOT } from './constants.js';
 

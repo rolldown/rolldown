@@ -62,6 +62,21 @@ export default defineConfig({
           argsIgnorePattern: '^_',
         },
       ],
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'assert',
+              message: "Use 'assert/strict' instead of 'assert'.",
+            },
+            {
+              name: 'node:assert',
+              message: "Use 'node:assert/strict' instead of 'node:assert'.",
+            },
+          ],
+        },
+      ],
       'unicorn/prefer-node-protocol': 'error',
       'typescript/no-base-to-string': 'allow',
       'typescript/no-floating-promises': 'allow',

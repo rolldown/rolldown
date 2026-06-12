@@ -467,6 +467,13 @@ where
               .ok_or_else(|| serde::de::Error::custom("transform.target should be a string"))?;
             transform_options.target = Some(Either::Left(target.to_string()));
           }
+          "reactCompiler" => {
+            let enabled = v.as_bool().ok_or_else(|| {
+              serde::de::Error::custom("transform.reactCompiler should be a boolean")
+            })?;
+            transform_options.react_compiler =
+              enabled.then(oxc_react_compiler::default_plugin_options);
+          }
           "jsx" => {
             transform_options.jsx = match v {
               Value::String(str) if str == "preserve" => Some(Either::Left(str)),

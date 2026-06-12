@@ -1148,7 +1148,7 @@ export interface ReactCompilerGating {
 }
 
 /**
- * Options for the experimental [React Compiler](https://github.com/facebook/react/pull/36173).
+ * Options for the experimental [React Compiler](https://github.com/react/react/tree/main/compiler).
  *
  * Mirrors the compiler's `PluginOptions`. The deep `environment` configuration
  * (inference / validation flags) is not surfaced here.
@@ -1271,7 +1271,10 @@ export interface StyledComponentsOptions {
    * Transpiles styled-components tagged template literals to a smaller representation
    * than what Babel normally creates, helping to reduce bundle size.
    *
-   * @default true
+   * Disabled by default because Oxc does not down-level template literals, so this
+   * transform only increases output size.
+   *
+   * @default false
    */
   transpileTemplateLiterals?: boolean
   /**
@@ -1338,6 +1341,13 @@ export declare function transform(filename: string, sourceText: string, options?
 /**
  * Options for transforming a JavaScript or TypeScript file.
  *
+ * Options are listed in evaluation order: the source is parsed (`lang`,
+ * `sourceType`), declarations are emitted (`typescript.declaration`), then
+ * transforms run (`reactCompiler`, `typescript`, `decorator`, `plugins`,
+ * `jsx`, `target`), followed by the `inject` and `define` plugins, and
+ * finally codegen (`sourcemap`). `helpers` configures the runtime helpers
+ * the transforms emit.
+ *
  * @see {@link transform}
  */
 export interface TransformOptions {
@@ -1350,23 +1360,31 @@ export interface TransformOptions {
    * options.
    */
   cwd?: string
-  /**
-   * Enable source map generation.
-   *
-   * When `true`, the `sourceMap` field of transform result objects will be populated.
-   *
-   * @default false
-   *
-   * @see {@link SourceMap}
-   */
-  sourcemap?: boolean
   /** Set assumptions in order to produce smaller output. */
   assumptions?: CompilerAssumptions
   /**
+   * Enable the experimental [React Compiler](https://github.com/react/react/tree/main/compiler).
+   *
+   * `true` enables it with default options; an object enables it with the
+   * given options; `false` or omitted disables it. When enabled, the compiler
+   * runs as the first transform and memoizes React components and hooks.
+   */
+  reactCompiler?: boolean | ReactCompilerOptions
+  /**
    * Configure how TypeScript is transformed.
+   *
+   * `typescript.declaration` is evaluated before all transforms.
+   *
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/typescript}
    */
   typescript?: TypeScriptOptions
+  /** Decorator plugin */
+  decorator?: DecoratorOptions
+  /**
+   * Third-party plugins to use.
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/plugins}
+   */
+  plugins?: PluginsOptions
   /**
    * Configure how TSX and JSX are transformed.
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/jsx}
@@ -1390,30 +1408,31 @@ export interface TransformOptions {
   /** Behaviour for runtime helpers. */
   helpers?: Helpers
   /**
+   * Inject Plugin
+   *
+   * Runs after all transforms.
+   *
+   * @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#inject}
+   */
+  inject?: Record<string, string | [string, string]>
+  /**
    * Define Plugin
+   *
+   * Runs after the inject plugin.
+   *
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#define}
    */
   define?: Record<string, string>
   /**
-   * Inject Plugin
-   * @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#inject}
-   */
-  inject?: Record<string, string | [string, string]>
-  /** Decorator plugin */
-  decorator?: DecoratorOptions
-  /**
-   * Enable the experimental [React Compiler](https://github.com/facebook/react/pull/36173).
+   * Enable source map generation.
    *
-   * `true` enables it with default options; an object enables it with the
-   * given options; `false` or omitted disables it. When enabled, the compiler
-   * runs as the first transform and memoizes React components and hooks.
+   * When `true`, the `sourceMap` field of transform result objects will be populated.
+   *
+   * @default false
+   *
+   * @see {@link SourceMap}
    */
-  reactCompiler?: boolean | ReactCompilerOptions
-  /**
-   * Third-party plugins to use.
-   * @see {@link https://oxc.rs/docs/guide/usage/transformer/plugins}
-   */
-  plugins?: PluginsOptions
+  sourcemap?: boolean
 }
 
 export interface TransformResult {
@@ -2204,6 +2223,11 @@ export interface BindingEnhancedTransformOptions {
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/plugins}
    */
   plugins?: PluginsOptions
+  /**
+   * Experimental [React Compiler](https://github.com/facebook/react/tree/main/compiler).
+   * `true` enables it with default options; pass an object to configure it.
+   */
+  reactCompiler?: boolean | ReactCompilerOptions
   /**
    * Configure tsconfig handling.
    * - true: Auto-discover and load the nearest tsconfig.json

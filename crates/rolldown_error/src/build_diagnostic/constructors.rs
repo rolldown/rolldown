@@ -285,7 +285,7 @@ impl BuildDiagnostic {
           id.to_string(),
           error.help.take().unwrap_or_default().into(),
           error.message.to_string(),
-          error.labels.take().unwrap_or_default(),
+          std::mem::take(&mut error.labels).as_slice().to_vec(),
           event_kind,
         );
         if matches!(severity, Severity::Warning) {

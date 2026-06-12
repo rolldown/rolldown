@@ -62,7 +62,7 @@ impl Plugin for ViteAssetImportMetaUrlPlugin {
         oxc::parser::Parser::new(&allocator, args.code, oxc::span::SourceType::default()).parse();
       if parser_ret.panicked
         && let Some(err) =
-          parser_ret.errors.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
+          parser_ret.diagnostics.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
       {
         return Err(anyhow::anyhow!(format!(
           "Failed to parse code in '{}': {:?}",

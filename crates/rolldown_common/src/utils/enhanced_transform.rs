@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use oxc::allocator::Allocator;
-use oxc::diagnostics::{OxcDiagnostic, Severity as OxcSeverity};
+use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::transformer::{Helper, HelperLoaderOptions};
 use oxc::{
@@ -114,6 +114,10 @@ pub struct EnhancedTransformOptions {
   /// Behaviour for runtime helpers.
   pub helpers: Option<HelperLoaderOptions>,
 
+  /// Experimental [React Compiler](https://github.com/facebook/react/tree/main/compiler).
+  /// Runs in a separate pass before all other transforms.
+  pub react_compiler: Option<oxc_react_compiler::PluginOptions>,
+
   /// The current working directory. Used to resolve relative paths in other
   /// options.
   pub cwd: Option<String>,
@@ -161,6 +165,7 @@ impl EnhancedTransformOptions {
       typescript: options.typescript,
       plugins: options.plugins,
       helpers: options.helpers,
+      react_compiler: options.react_compiler,
       cwd,
       source_type,
       tsconfig,
@@ -186,8 +191,8 @@ fn generate_declarations(
     IsolatedDeclarationsOptions { strip_internal: options.strip_internal.unwrap_or(false) };
 
   let ret = IsolatedDeclarations::new(allocator, isolated_decl_options).build(program);
-  if !ret.errors.is_empty() {
-    append_oxc_diagnostics(ret.errors, source, filename, warnings, errors);
+  if !ret.diagnostics.is_empty() {
+    append_oxc_diagnostics(ret.diagnostics, source, filename, warnings, errors);
     if !errors.is_empty() {
       return (None, None);
     }
@@ -208,7 +213,7 @@ fn generate_declarations(
 }
 
 fn append_oxc_diagnostics(
-  diagnostics: Vec<OxcDiagnostic>,
+  diagnostics: oxc::diagnostics::Diagnostics,
   source: &ArcStr,
   filename: &str,
   warnings: &mut Vec<BuildDiagnostic>,
@@ -326,8 +331,8 @@ pub fn enhanced_transform(
   let parse_ret = Parser::new(&allocator, &source, source_type)
     .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
     .parse();
-  if parse_ret.panicked || !parse_ret.errors.is_empty() {
-    append_oxc_diagnostics(parse_ret.errors, &source, filename, &mut warnings, &mut errors);
+  if parse_ret.panicked || !parse_ret.diagnostics.is_empty() {
+    append_oxc_diagnostics(parse_ret.diagnostics, &source, filename, &mut warnings, &mut errors);
     return EnhancedTransformResult::new_for_error(errors, warnings, tsconfig_file_paths);
   }
 
@@ -335,8 +340,8 @@ pub fn enhanced_transform(
 
   let semantic_ret = semantic_builder_for_transform().build(&program);
   let mut scoping = Some(semantic_ret.semantic.into_scoping());
-  if !semantic_ret.errors.is_empty() {
-    append_oxc_diagnostics(semantic_ret.errors, &source, filename, &mut warnings, &mut errors);
+  if !semantic_ret.diagnostics.is_empty() {
+    append_oxc_diagnostics(semantic_ret.diagnostics, &source, filename, &mut warnings, &mut errors);
     if !errors.is_empty() {
       return EnhancedTransformResult::new_for_error(errors, warnings, tsconfig_file_paths);
     }
@@ -392,8 +397,14 @@ pub fn enhanced_transform(
 
   let transform_ret = Transformer::new(&allocator, Path::new(filename), &oxc_transform_options)
     .build_with_scoping(scoping, &mut program);
-  if !transform_ret.errors.is_empty() {
-    append_oxc_diagnostics(transform_ret.errors, &source, filename, &mut warnings, &mut errors);
+  if !transform_ret.diagnostics.is_empty() {
+    append_oxc_diagnostics(
+      transform_ret.diagnostics,
+      &source,
+      filename,
+      &mut warnings,
+      &mut errors,
+    );
     if !errors.is_empty() {
       return EnhancedTransformResult::new_for_error(errors, warnings, tsconfig_file_paths);
     }

@@ -29,9 +29,9 @@ impl EcmaCompiler {
           ..ParseOptions::default()
         });
         let ret = parser.parse();
-        if ret.panicked || !ret.errors.is_empty() {
+        if ret.panicked || !ret.diagnostics.is_empty() {
           Err(BuildDiagnostic::from_oxc_diagnostics(
-            ret.errors,
+            ret.diagnostics,
             &source.clone(),
             id,
             Severity::Error,

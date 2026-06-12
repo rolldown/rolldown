@@ -38,15 +38,10 @@ impl BuildEvent for OxcError {
     let file_id = diagnostic.add_file(opts.stabilize_path(&self.id), self.source.clone());
 
     self.error_labels.iter().for_each(|label| {
-      // Skip labels with spans that don't fit in u32 or would overflow,
-      // rather than panicking or attaching a bogus span.
-      let Ok(offset) = u32::try_from(label.offset()) else {
-        return;
-      };
-      let Ok(len) = u32::try_from(label.len()) else {
-        return;
-      };
-      let Some(end) = offset.checked_add(len) else {
+      // Skip labels whose spans would overflow, rather than panicking or
+      // attaching a bogus span.
+      let offset = label.offset();
+      let Some(end) = offset.checked_add(label.len()) else {
         return;
       };
 

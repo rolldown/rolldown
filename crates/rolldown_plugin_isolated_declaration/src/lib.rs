@@ -52,9 +52,9 @@ impl Plugin for IsolatedDeclarationPlugin {
         .build(fields.program)
       });
 
-      if !ret.errors.is_empty() {
+      if !ret.diagnostics.is_empty() {
         return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
-          ret.errors,
+          ret.diagnostics,
           &ArcStr::from(ret.program.source_text),
           args.id,
           Severity::Error,

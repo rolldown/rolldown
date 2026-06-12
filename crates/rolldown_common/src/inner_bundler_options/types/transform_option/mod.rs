@@ -48,6 +48,10 @@ pub struct TransformOptions {
 
   /// Behaviour for runtime helpers.
   pub helpers: Option<HelperLoaderOptions>,
+
+  /// Experimental [React Compiler](https://github.com/facebook/react/tree/main/compiler).
+  /// Runs in a separate pass before all other transforms.
+  pub react_compiler: Option<oxc_react_compiler::PluginOptions>,
 }
 
 impl From<crate::utils::enhanced_transform::EnhancedTransformOptions> for TransformOptions {
@@ -60,6 +64,7 @@ impl From<crate::utils::enhanced_transform::EnhancedTransformOptions> for Transf
       typescript: options.typescript,
       plugins: options.plugins,
       helpers: options.helpers,
+      react_compiler: options.react_compiler,
     }
   }
 }
@@ -74,6 +79,7 @@ impl From<TransformOptions> for crate::utils::enhanced_transform::EnhancedTransf
       typescript: options.typescript,
       plugins: options.plugins,
       helpers: options.helpers,
+      react_compiler: options.react_compiler,
       // These fields are not present in TransformOptions
       cwd: None,
       source_type: None,
@@ -123,6 +129,7 @@ impl TryFrom<TransformOptions> for oxc::transformer::TransformOptions {
         .helpers
         .map_or_else(HelperLoaderOptions::default, HelperLoaderOptions::from),
       plugins: oxc::transformer::PluginsOptions::from(options.plugins.unwrap_or_default()),
+      react_compiler: options.react_compiler,
       ..Default::default()
     })
   }

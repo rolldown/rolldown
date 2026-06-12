@@ -60,9 +60,9 @@ impl Plugin for ViteTransformPlugin {
 
     let allocator = oxc::allocator::Allocator::default();
     let ret = Parser::new(&allocator, args.code, source_type).parse();
-    if ret.panicked || !ret.errors.is_empty() {
+    if ret.panicked || !ret.diagnostics.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
-        ret.errors,
+        ret.diagnostics,
         args.code,
         args.id,
         Severity::Error,
@@ -74,9 +74,9 @@ impl Plugin for ViteTransformPlugin {
     let scoping = semantic_builder_for_transform().build(&program).semantic.into_scoping();
     let transformer = Transformer::new(&allocator, Path::new(args.id), &transform_options);
     let transformer_return = transformer.build_with_scoping(scoping, &mut program);
-    if !transformer_return.errors.is_empty() {
+    if !transformer_return.diagnostics.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
-        transformer_return.errors,
+        transformer_return.diagnostics,
         args.code,
         args.id,
         Severity::Error,

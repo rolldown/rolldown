@@ -6,7 +6,8 @@ use napi_derive::napi;
 use oxc_napi::get_source_type;
 use oxc_sourcemap::napi::SourceMap;
 use oxc_transform_napi::{
-  CompilerAssumptions, DecoratorOptions, Helpers, JsxOptions, PluginsOptions, TypeScriptOptions,
+  CompilerAssumptions, DecoratorOptions, Helpers, JsxOptions, PluginsOptions, ReactCompilerOptions,
+  TypeScriptOptions,
 };
 use rolldown_common::{EnhancedTransformOptions, TsconfigOption};
 use rustc_hash::FxHashMap;
@@ -160,6 +161,10 @@ pub struct BindingEnhancedTransformOptions {
   /// Third-party plugins to use.
   /// @see {@link https://oxc.rs/docs/guide/usage/transformer/plugins}
   pub plugins: Option<PluginsOptions>,
+  /// Experimental [React Compiler](https://github.com/facebook/react/tree/main/compiler).
+  /// `true` enables it with default options; pass an object to configure it.
+  #[napi(ts_type = "boolean | ReactCompilerOptions")]
+  pub react_compiler: Option<Either<bool, ReactCompilerOptions>>,
 
   // --- Enhanced options ---
   /// Configure tsconfig handling.
@@ -187,7 +192,7 @@ impl BindingEnhancedTransformOptions {
       inject: self.inject,
       decorator: self.decorator,
       plugins: self.plugins,
-      react_compiler: None,
+      react_compiler: self.react_compiler,
     }
   }
 }

@@ -78,12 +78,12 @@ impl IntegrationTest {
   }
 
   pub async fn run_with_plugins(&self, options: BundlerOptions, plugins: Vec<SharedPluginable>) {
-    self
-      .run_multiple(
-        vec![NamedBundlerOptions { options, description: None, snapshot: None, config_name: None }],
-        plugins,
-      )
-      .await;
+    // Boxed so callers' futures stay under clippy's `large_futures` threshold.
+    Box::pin(self.run_multiple(
+      vec![NamedBundlerOptions { options, description: None, snapshot: None, config_name: None }],
+      plugins,
+    ))
+    .await;
   }
 
   /// Determine if output should be executed based on test meta
@@ -118,9 +118,9 @@ impl IntegrationTest {
           .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
           .parse();
 
-        if ret.panicked || !ret.errors.is_empty() {
+        if ret.panicked || !ret.diagnostics.is_empty() {
           let errors_str = ret
-            .errors
+            .diagnostics
             .iter()
             .map(|e| e.clone().with_source_code(chunk.code.clone()).to_string())
             .collect::<Vec<_>>()

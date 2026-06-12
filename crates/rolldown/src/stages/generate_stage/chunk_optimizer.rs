@@ -952,10 +952,22 @@ impl GenerateStage<'_> {
     input_base: &ArcStr,
     module_is_assigned: &mut IndexBitSet<ModuleIdx>,
     temp_chunk_opt_graph: &ChunkOptimizationGraph,
+    allow_common_chunk_merges: bool,
   ) {
-    // Find empty dynamic entry chunks that should be merged with their target common chunks
-    let (mut facade_eliminations, common_chunk_merges, emitted_chunk_groups) =
+    // Find empty dynamic entry chunks that should be merged with their target chunks.
+    let (mut facade_eliminations, mut common_chunk_merges, mut emitted_chunk_groups) =
       self.find_facade_chunk_merge_ops(chunk_graph, temp_chunk_opt_graph);
+
+    if !allow_common_chunk_merges {
+      common_chunk_merges.clear();
+      emitted_chunk_groups.clear();
+      facade_eliminations.retain(|elimination| {
+        matches!(
+          elimination.reason,
+          FacadeChunkEliminationReason::DynamicEntryMergedIntoManualGroup
+        )
+      });
+    }
 
     if facade_eliminations.is_empty()
       && common_chunk_merges.is_empty()

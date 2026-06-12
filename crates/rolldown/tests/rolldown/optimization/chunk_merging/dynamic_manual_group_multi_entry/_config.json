@@ -1,0 +1,23 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "main2",
+        "import": "./main2.js"
+      }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "shared-abc",
+          "test": "/[abc]\\.js$",
+          "entriesAware": true
+        }
+      ]
+    }
+  }
+}

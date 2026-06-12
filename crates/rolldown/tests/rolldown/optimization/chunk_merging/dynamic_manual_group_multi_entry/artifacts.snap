@@ -1,0 +1,69 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+const [a, b, c] = await Promise.all([
+	import("./shared-abc~a.js").then((n) => n.t),
+	import("./shared-abc~b.js").then((n) => n.t),
+	import("./shared-abc~c.js").then((n) => n.t)
+]);
+if (`${a.A}${b.B}${c.C}` !== "ABC") throw new Error("unexpected dynamic namespace result");
+//#endregion
+
+```
+
+## main2.js
+
+```js
+//#region main2.js
+const [a, b] = await Promise.all([import("./shared-abc~a.js").then((n) => n.t), import("./shared-abc~b.js").then((n) => n.t)]);
+if (`${a.A}${b.B}` !== "AB") throw new Error("unexpected dynamic namespace result");
+//#endregion
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```
+
+## shared-abc~a.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+//#region a.js
+var a_exports = /* @__PURE__ */ __exportAll({ A: () => "A" });
+//#endregion
+export { a_exports as t };
+
+```
+
+## shared-abc~b.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+//#region b.js
+var b_exports = /* @__PURE__ */ __exportAll({ B: () => "B" });
+//#endregion
+export { b_exports as t };
+
+```
+
+## shared-abc~c.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+//#region c.js
+var c_exports = /* @__PURE__ */ __exportAll({ C: () => "C" });
+//#endregion
+export { c_exports as t };
+
+```

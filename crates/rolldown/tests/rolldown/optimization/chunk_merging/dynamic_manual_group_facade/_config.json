@@ -1,0 +1,12 @@
+{
+  "config": {
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "shared-abc",
+          "test": "/[abc]\\.js$"
+        }
+      ]
+    }
+  }
+}

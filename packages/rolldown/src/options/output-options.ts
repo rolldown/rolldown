@@ -899,6 +899,8 @@ export type CodeSplittingGroup = {
    *
    * With `entriesAware: false` → one `vendor.js` chunk with both modules; C loads `moduleY` unnecessarily.
    * With `entriesAware: true`  → `vendor.js` (moduleX, loaded by all) + `vendor2.js` (moduleY, loaded by A and B only).
+   * Dynamic imports use the same reachability model: if one entry imports `a`, `b`, and `c` dynamically,
+   * while another imports only `a` and `b`, an entries-aware group can keep `c` out of the second entry's load path.
    *
    * @default false
    */

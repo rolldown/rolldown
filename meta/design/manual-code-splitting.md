@@ -45,6 +45,8 @@ Step 3: Each subgroup → chunk
 
 Entry A loads all three vendor chunks. Entry B loads the first two. Entry C loads only the first. Each entry only downloads what it actually needs.
 
+Dynamic imports participate in the same reachability model. If one entry dynamically imports `a`, `b`, and `c`, while another dynamically imports only `a` and `b`, an entries-aware manual group can keep the `c` subgroup out of the second entry's dynamic load path. Facade elimination may still remove the dynamic-entry proxy chunks, but the rewritten imports target the relevant entries-aware subgroup chunks instead of one flat group chunk.
+
 #### Why flat-then-split matters
 
 The split must happen **after** collecting all modules into a flat group. If subgroups are created during the build phase (per module's own bits), `includeDependenciesRecursively` adds shared dependencies to each subgroup independently:

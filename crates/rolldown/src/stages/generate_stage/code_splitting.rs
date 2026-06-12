@@ -957,15 +957,16 @@ impl GenerateStage<'_> {
         input_base,
         &mut temp_chunk_graph,
       );
-
-      self.optimize_facade_entry_chunks(
-        chunk_graph,
-        index_splitting_info,
-        input_base,
-        &mut module_is_assigned,
-        &temp_chunk_graph,
-      );
     }
+
+    self.optimize_facade_entry_chunks(
+      chunk_graph,
+      index_splitting_info,
+      input_base,
+      &mut module_is_assigned,
+      &temp_chunk_graph,
+      allow_merge_common_chunks,
+    );
 
     self.try_merge_runtime_chunk(chunk_graph, None);
 

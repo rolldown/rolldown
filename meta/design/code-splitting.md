@@ -153,10 +153,16 @@ For chunks shared only by dynamic entries, the optimizer does not infer a merge 
 
 ### Facade Elimination (`optimize_facade_entry_chunks`)
 
-Dynamic/emitted entries can become empty facades when all their modules are pulled into other chunks by the optimizer. The optimizer identifies these and either:
+Dynamic/emitted entries can become empty facades when all their modules are pulled into other chunks by the optimizer or by manual code splitting. The optimizer identifies these and either:
 
 - Merges the facade into its target chunk
 - Marks it as `Removed` in `post_chunk_optimization_operations`
+
+Manual code splitting can also create this shape without common-chunk merging: a dynamic entry module may be assigned directly to a manual group while its original dynamic-entry chunk would otherwise only proxy to that group. In that case, facade elimination may remove the proxy and rewrite `import("./entry")` to the manual chunk with namespace extraction, as long as the dynamic import still resolves to the original entry module namespace rather than the whole manual chunk namespace.
+
+Facade elimination does not split flat manual groups. If a flat manual group contains `a`, `b`, and `c`, every dynamic import rewritten to that group loads the whole group. Use `entriesAware: true` when the manual group should split by entry reachability; dynamic-entry facades can then collapse to the corresponding entries-aware subgroup chunks instead of one monolithic group chunk.
+
+The first implementation deliberately keeps this narrow. It reuses the same absorbed-facade namespace machinery as other dynamic-entry facade eliminations, and it does not introduce a manual-code-splitting-specific rewrite path. Top-level-await and import-attribute refinements are not modeled here; those cases should keep the facade until a dedicated design proves they are safe.
 
 ### Runtime Module Placement
 
@@ -206,6 +212,7 @@ Runtime used to be placed by normal bitset grouping and later peeled out when a 
 - `crates/rolldown/tests/rolldown/issues/8989/` — facade elimination introduces helper consumers; runtime may merge only into a downstream dominator.
 - `crates/rolldown/tests/rolldown/issues/8920_2/` — fuzz-discovered shape where consumer-count heuristics produced a cycle.
 - `crates/rolldown/tests/rolldown/issues/9597/` — a static + dynamic import cycle that previously placed the runtime chunk inside the cycle, throwing `__exportAll is not a function`; standalone-first keeps the runtime out of the cycle.
+- `crates/rolldown/tests/rolldown/optimization/chunk_merging/dynamic_manual_group_facade/` — manual grouping can remove dynamic-entry proxy chunks while preserving each original dynamic import namespace.
 
 These fixtures assert structural invariants in `_test.mjs`, so runtime-placement regressions fail immediately rather than only showing up as snapshot drift.
 

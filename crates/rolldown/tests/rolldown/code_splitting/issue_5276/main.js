@@ -8,9 +8,19 @@ const load = async () => {
     assert.strictEqual(m.imp2, 2);
   });
   import('./imp3').then((m) => {
-    // When m is imported from a facade chunk, plain object assertion would fail since it has StringTag `Module`
-    // use JSON serialization as a workaround
-    assert.deepStrictEqual(JSON.parse(JSON.stringify(m)), { imp3: 3, imp33: 33 });
+    assert.deepEqual(
+      // Workaround: When m is imported from a facade chunk, it has a null prototype
+      Object.setPrototypeOf(m, null),
+      Object.defineProperty(
+        {
+          __proto__: null,
+          imp3: 3,
+          imp33: 33,
+        },
+        Symbol.toStringTag,
+        { value: 'Module' },
+      ),
+    );
   });
 };
 

@@ -39,10 +39,11 @@ const load = async () => {
 		assert.strictEqual(m.imp2, 2);
 	});
 	import("./imp.js").then((n) => n.t).then((m) => {
-		assert.deepStrictEqual(JSON.parse(JSON.stringify(m)), {
+		assert.deepEqual(Object.setPrototypeOf(m, null), Object.defineProperty({
+			__proto__: null,
 			imp3: 3,
 			imp33: 33
-		});
+		}, Symbol.toStringTag, { value: "Module" }));
 	});
 };
 load();
@@ -108,10 +109,11 @@ const load = async () => {
 		assert.strictEqual(m.imp2, 2);
 	});
 	import("./imp3.js").then((m) => {
-		assert.deepStrictEqual(JSON.parse(JSON.stringify(m)), {
+		assert.deepEqual(Object.setPrototypeOf(m, null), Object.defineProperty({
+			__proto__: null,
 			imp3: 3,
 			imp33: 33
-		});
+		}, Symbol.toStringTag, { value: "Module" }));
 	});
 };
 load();
@@ -179,10 +181,11 @@ const load = async () => {
 		node_assert_strict.default.strictEqual(m.imp2, 2);
 	});
 	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp3_exports).then((m) => {
-		node_assert_strict.default.deepStrictEqual(JSON.parse(JSON.stringify(m)), {
+		node_assert_strict.default.deepEqual(Object.setPrototypeOf(m, null), Object.defineProperty({
+			__proto__: null,
 			imp3: 3,
 			imp33: 33
-		});
+		}, Symbol.toStringTag, { value: "Module" }));
 	});
 };
 load();

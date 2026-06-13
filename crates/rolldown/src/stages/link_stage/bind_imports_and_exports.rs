@@ -7,9 +7,9 @@ use oxc_str::CompactStr;
 // if we want more enhancements related to exports.
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprObjectReferencedType, MemberExprRef,
-  MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDb, SymbolRefFlags,
+  MemberExprRefResolution, MemberExprRefResolutionMap, Module, ModuleIdx, ModuleType,
+  NamespaceAlias, NormalModule, OutputFormat, ResolvedExport, Specifier, StmtInfos,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 #[cfg(not(target_family = "wasm"))]
@@ -402,7 +402,13 @@ impl LinkStage<'_> {
       .zip(self.stmt_infos.par_iter())
       .map(|(module, stmt_infos)| match module {
         Module::Normal(module) => {
-          let mut resolved_map = FxHashMap::default();
+          // Lazily allocate the per-module resolution map: in practice almost every
+          // module resolves zero member exprs here, so allocating + storing an empty
+          // FxHashMap per module is pure waste. `None` is observably identical to an
+          // empty map to all downstream readers (they only `.get`/`.values`/iterate),
+          // and the meta's `resolved_member_expr_refs` already starts default-empty,
+          // so skipping the assignment on `None` reproduces the same map contents.
+          let mut resolved_map: Option<MemberExprRefResolutionMap> = None;
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
           let json_default_imports_with_member_write =
@@ -455,7 +461,7 @@ impl LinkStage<'_> {
                     // that `a` pointed to, convert the `a.b.c` into `void 0` if module `a` do not
                     // have any dynamic exports.
                     if !self.metas[canonical_ref_owner.idx].has_dynamic_exports {
-                      resolved_map.insert(
+                      resolved_map.get_or_insert_with(FxHashMap::default).insert(
                         member_expr_ref.node_id,
                         MemberExprRefResolution {
                           resolved: if is_json_import_ns { Some(canonical_ref) } else { None },
@@ -484,7 +490,7 @@ impl LinkStage<'_> {
                     break;
                   };
                   if !meta.sorted_and_non_ambiguous_resolved_exports.contains_key(name) {
-                    resolved_map.insert(
+                    resolved_map.get_or_insert_with(FxHashMap::default).insert(
                       member_expr_ref.node_id,
                       MemberExprRefResolution {
                         resolved: None,
@@ -652,7 +658,7 @@ impl LinkStage<'_> {
                 }
 
                 if cursor > 0 || target_commonjs_exported_symbol.is_some() {
-                  resolved_map.insert(
+                  resolved_map.get_or_insert_with(FxHashMap::default).insert(
                     member_expr_ref.node_id,
                     MemberExprRefResolution {
                       resolved: Some(canonical_ref),
@@ -670,7 +676,7 @@ impl LinkStage<'_> {
 
           (resolved_map, side_effects_dependency, written_cjs_exports)
         }
-        Module::External(_) => (FxHashMap::default(), vec![], vec![]),
+        Module::External(_) => (None, vec![], vec![]),
       })
       .collect::<Vec<_>>();
 
@@ -707,7 +713,12 @@ impl LinkStage<'_> {
     }
     self.metas.iter_mut().zip(resolved_meta_data).for_each(
       |(meta, (resolved_map, side_effects_dependency, _))| {
-        meta.resolved_member_expr_refs = resolved_map;
+        // `meta.resolved_member_expr_refs` starts default-empty; only overwrite it when
+        // this module actually resolved something. A `None` here is byte-identical to
+        // assigning an empty map.
+        if let Some(resolved_map) = resolved_map {
+          meta.resolved_member_expr_refs = resolved_map;
+        }
         meta.dependencies.extend(side_effects_dependency);
       },
     );

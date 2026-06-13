@@ -82,9 +82,11 @@ Oxc `Address` is still acceptable for scratch state inside one live AST traversa
 
 Do not store `Address` in module metadata, entry metadata, or link-stage tables that outlive the traversal that produced it. In the post-semantic scanner, prefer `NodeId` even for same-traversal node identity checks when the compared nodes already have semantic IDs.
 
-## Pre-Scan Span Normalization
+## Pre-Scan Span Handling
 
-`PreProcessor` still rewrites duplicate spans for a targeted set of node kinds before semantic information is rebuilt. After the `NodeId` migration, pairwise span uniqueness no longer backs any identity table; the machinery's one remaining functional job is keeping the synthetic span out of scanned ASTs. `SPAN` (`0..0`) is pre-seeded into the visited set, so nodes `PreProcessor` itself creates with `SPAN` (e.g. the transposed `require(a ? 'x' : 'y')` calls) are rewritten to fresh non-zero empty spans. That upholds the `span.is_unspanned()` checks that mean "synthesized by the finalizer": the global-`require` rewrite guard in `crates/rolldown/src/module_finalizers/mod.rs` and the member-expression-chain guard in `crates/rolldown/src/ast_scanner/impl_visit.rs`. Shrinking the machinery down to that single job is a candidate follow-up cleanup.
+`PreProcessor` does not rewrite spans for identity anymore. Pairwise span uniqueness does not back any identity table after the `NodeId` migration, so ordinary duplicate spans are left alone, and nodes created during pre-scan rewrites can keep the reserved synthetic span (`SPAN`, `0..0`).
+
+Later passes must not use `span.is_unspanned()` to decide whether a scanner-visible node has a cross-pass record. For example, finalizing a `require()` call now relies on `EcmaView::imports.get(call_expr.node_id())`: pre-scan-created calls have semantic `NodeId`s and can hit, while finalizer-created calls keep `NodeId::DUMMY` and miss.
 
 The practical rule is simple: treat `Span` as location, `NodeId` as same-AST node identity, and `(ModuleIdx, NodeId)` as cross-module node identity.
 

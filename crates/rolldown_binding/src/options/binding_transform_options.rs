@@ -165,7 +165,6 @@ pub struct BindingEnhancedTransformOptions {
   /// Configure tsconfig handling.
   /// - true: Auto-discover and load the nearest tsconfig.json
   /// - TsconfigRawOptions: Use the provided inline tsconfig options
-  #[napi(ts_type = "boolean | BindingTsconfigRawOptions")]
   pub tsconfig: Option<Either<bool, BindingTsconfigRawOptions>>,
   /// An input source map to collapse with the output source map.
   pub input_map: Option<SourceMap>,

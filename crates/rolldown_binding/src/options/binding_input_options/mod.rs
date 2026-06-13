@@ -86,7 +86,6 @@ pub struct BindingInputOptions<'env> {
   pub module_types: Option<HashMap<String, String, FxBuildHasher>>,
   pub define: Option<Vec<(/* Target to be replaced */ String, /* Replacement */ String)>>,
   pub drop_labels: Option<Vec<String>>,
-  #[napi(ts_type = "Array<BindingInjectImportNamed | BindingInjectImportNamespace>")]
   pub inject: Option<Vec<BindingInjectImport>>,
   pub experimental: Option<binding_experimental_options::BindingExperimentalOptions>,
   pub profiler_names: Option<bool>,
@@ -106,6 +105,5 @@ pub struct BindingInputOptions<'env> {
   pub preserve_entry_signatures: Option<BindingPreserveEntrySignatures>,
   pub optimization: Option<BindingOptimization>,
   pub context: Option<String>,
-  #[napi(ts_type = "boolean | string")]
   pub tsconfig: Option<Either<bool, String>>,
 }

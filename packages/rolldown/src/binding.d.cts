@@ -2419,6 +2419,9 @@ export interface BindingIndentOptions {
   exclude?: Array<Array<number>> | Array<number>
 }
 
+export type BindingInjectImport =
+  BindingInjectImportNamed | BindingInjectImportNamespace
+
 export interface BindingInjectImportNamed {
   tagNamed: true
   imported: string
@@ -2456,7 +2459,7 @@ export interface BindingInputOptions {
   moduleTypes?: Record<string, string>
   define?: Array<[string, string]>
   dropLabels?: Array<string>
-  inject?: Array<BindingInjectImportNamed | BindingInjectImportNamespace>
+  inject?: Array<BindingInjectImport>
   experimental?: BindingExperimentalOptions
   profilerNames?: boolean
   transform?: TransformOptions
@@ -2570,7 +2573,7 @@ export interface BindingModules {
 export interface BindingModuleSideEffectsRule {
   test?: RegExp | undefined
   sideEffects: boolean
-  external?: boolean | undefined
+  external?: boolean
 }
 
 export interface BindingOptimization {

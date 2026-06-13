@@ -88,7 +88,6 @@ pub struct BindingOutputOptions<'env> {
   #[napi(ts_type = "'es' | 'cjs' | 'iife' | 'umd'")]
   pub format: Option<String>,
   // freeze: boolean;
-  #[napi(ts_type = "BindingGeneratedCodeOptions")]
   pub generated_code: Option<BindingGeneratedCodeOptions>,
   #[debug(skip)]
   #[napi(ts_type = "Record<string, string> | ((name: string) => string)")]

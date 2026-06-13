@@ -57,7 +57,6 @@ pub struct BindingModuleSideEffectsRule {
   #[napi(ts_type = "RegExp | undefined")]
   pub test: Option<JsRegExp>,
   pub side_effects: bool,
-  #[napi(ts_type = "boolean | undefined")]
   pub external: Option<bool>,
 }
 

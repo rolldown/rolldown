@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { editFile, page, serverLogs, waitForBuildStable } from '~utils';
+import { editFile, getBuildSeq, page, readFile, serverLogs, waitForBuildStable } from '~utils';
 
 // Covers the design principles in meta/design/dev-engine.md for a rebuild
 // failure:
@@ -87,12 +87,20 @@ describe('hmr-full-bundle-mode: rebuild-stage failure', () => {
           const text = await page.textContent('.rebuild-error');
           const overlayCount = await overlay.count();
           const elapsed = Date.now() - recoverStart;
+          // Read what is actually on disk this tick — confirms the recovery
+          // write landed (and stays) even while the server never reacts.
+          const diskModule =
+            readFile('rebuild-error/module.js').match(/value = (['"].*?['"])/)?.[1] ?? '<no value>';
+          const diskFlag = readFile('rebuild-error/flag.txt');
+          // buildSeq from /_dev/status: if it never increments, the recovery
+          // edit never triggered a build (a dropped file-watch event).
+          const buildSeq = await getBuildSeq().catch(() => -1);
           for (const log of serverLogs.slice(serverLogsSeen)) {
             console.log(`[recover] +${elapsed}ms serverLog: ${log}`);
           }
           serverLogsSeen = serverLogs.length;
           console.log(
-            `[recover] +${elapsed}ms .rebuild-error=${JSON.stringify(text)} overlay=${overlayCount}`,
+            `[recover] +${elapsed}ms .rebuild-error=${JSON.stringify(text)} overlay=${overlayCount} buildSeq=${buildSeq} disk:module.value=${diskModule} disk:flag=${JSON.stringify(diskFlag)}`,
           );
           return text;
         },

@@ -29,9 +29,6 @@ export default defineConfig({
     // is Phase 4 (meta/design/dev-server-test-harness.md, Unresolved Q1).
     pool: 'forks',
     fileParallelism: false,
-    // DEBUG (CI flake #9727): surface what keeps the process alive after the
-    // suite ("something prevents Vite server from exiting" / orphan processes).
-    reporters: process.env.CI ? ['default', 'hanging-process'] : ['default'],
     testTimeout: timeout,
     hookTimeout: timeout,
     // Test knobs that the subprocess model passed via child env now live on the

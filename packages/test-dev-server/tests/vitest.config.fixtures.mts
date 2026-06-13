@@ -11,10 +11,6 @@ export default defineConfig({
     // https://vitest.dev/api/mock.html#mockreset, since we run each test twice, so we need to reset the mockReset for each run
     mockReset: true,
     pool: 'forks',
-    // DEBUG (CI flake #9727): this suite logged "close timed out after 10000ms /
-    // something prevents Vite server from exiting" right before the browser
-    // suite hung — surface what is keeping the process alive.
-    reporters: process.env.CI ? ['default', 'hanging-process'] : ['default'],
     sequence: {
       concurrent: true,
     },

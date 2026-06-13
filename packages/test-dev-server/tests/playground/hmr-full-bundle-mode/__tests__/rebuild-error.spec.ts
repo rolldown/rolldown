@@ -72,8 +72,32 @@ describe('hmr-full-bundle-mode: rebuild-stage failure', () => {
     editFile('rebuild-error/module.js', (code) =>
       code.replace("'rebuild-error: updated-2'", "'rebuild-error: recovered'"),
     );
+    // DEBUG (CI flake #9727): on the constrained CI runner this recovery poll
+    // sometimes never sees 'recovered'. Poll up to 30s (well past the normal
+    // 15s) to learn whether it recovers late or is truly stuck, and on each
+    // tick print what `.rebuild-error` reads, the overlay count, and any new
+    // server-log lines — overlay gone means the rebuild recovered server-side,
+    // so a value stuck at 'ok' means the page never reloaded onto the fresh
+    // bundle. Grep the log for `[recover]`.
+    const recoverStart = Date.now();
+    let serverLogsSeen = serverLogs.length;
     await expect
-      .poll(() => page.textContent('.rebuild-error'), { timeout: 15_000 })
+      .poll(
+        async () => {
+          const text = await page.textContent('.rebuild-error');
+          const overlayCount = await overlay.count();
+          const elapsed = Date.now() - recoverStart;
+          for (const log of serverLogs.slice(serverLogsSeen)) {
+            console.log(`[recover] +${elapsed}ms serverLog: ${log}`);
+          }
+          serverLogsSeen = serverLogs.length;
+          console.log(
+            `[recover] +${elapsed}ms .rebuild-error=${JSON.stringify(text)} overlay=${overlayCount}`,
+          );
+          return text;
+        },
+        { timeout: 30_000, interval: 250 },
+      )
       .toBe('rebuild-error: recovered');
     await expect.poll(() => overlay.count()).toBe(0);
 

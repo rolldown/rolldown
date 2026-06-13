@@ -468,7 +468,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
       ast::Expression::ThisExpression(this_expr) => {
-        if let Some(kind) = self.ctx.module.ecma_view.this_expr_replace_map.get(&this_expr.span) {
+        if let Some(kind) =
+          self.ctx.module.ecma_view.this_expr_replace_map.get(&this_expr.node_id())
+        {
           match kind {
             ThisExprReplaceKind::Exports => {
               *expr = self.ast_factory.expression_identifier(SPAN, "exports");

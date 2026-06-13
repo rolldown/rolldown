@@ -91,7 +91,7 @@ pub async fn create_ecma_view(
     dummy_record_set,
     constant_export_map,
     import_attribute_map,
-    cjs_reexport_require_spans: _,
+    cjs_reexport_require_node_ids: _,
     cjs_reexport_import_record_ids,
   } = scan_result;
   // If a export symbol in commonjs defined in multiple time, we just bailout treeshake it.

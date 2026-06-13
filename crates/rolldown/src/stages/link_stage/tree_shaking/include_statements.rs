@@ -1,7 +1,7 @@
 use std::cmp::Reverse;
 
 use itertools::Itertools;
-use oxc_allocator::Address;
+use oxc::semantic::NodeId;
 use oxc_index::IndexVec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
@@ -210,7 +210,10 @@ fn collect_depended_runtime_helpers(
 
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn include_statements(&mut self, unreachable_import_expression_addrs: &FxHashSet<Address>) {
+  pub fn include_statements(
+    &mut self,
+    unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
+  ) {
     let mut is_stmt_info_included_vec: StmtInclusionVec = self
       .module_table
       .modules
@@ -303,7 +306,7 @@ impl LinkStage<'_> {
           &cycled_idx,
           context,
           &mut unused_record_idxs,
-          unreachable_import_expression_addrs,
+          unreachable_import_expression_node_ids,
         );
         if included {
           included_dynamic_entry.insert(entry.idx);
@@ -432,13 +435,13 @@ impl LinkStage<'_> {
     cycled_idx: &FxHashSet<ModuleIdx>,
     context: &mut IncludeContext,
     unused_record_idxs: &mut Vec<(ModuleIdx, ImportRecordIdx)>,
-    unreachable_import_expression_addr: &FxHashSet<Address>,
+    unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
   ) -> bool {
     if !cycled_idx.contains(&entry.idx) {
       if let Some(item) = self.is_dynamic_entry_alive(
         entry,
         context.is_included_vec,
-        unreachable_import_expression_addr,
+        unreachable_import_expression_node_ids,
       ) {
         unused_record_idxs.extend(item);
         return false;
@@ -581,7 +584,7 @@ impl LinkStage<'_> {
     &self,
     entry_point: &EntryPoint,
     is_stmt_included_vec: &StmtInclusionVec,
-    unreachable_import_expression_addrs: &FxHashSet<Address>,
+    unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
   ) -> Option<Vec<(ModuleIdx, ImportRecordIdx)>> {
     let mut ret = vec![];
     let is_lived = match entry_point.kind {
@@ -594,8 +597,8 @@ impl LinkStage<'_> {
 
         // Mark the dynamic entry as lived if at least one statement that create this entry is included
         entry_point.related_stmt_infos.iter().any(
-          |(module_idx, stmt_idx, address, import_record_idx)| {
-            if unreachable_import_expression_addrs.contains(address) {
+          |(module_idx, stmt_idx, node_id, import_record_idx)| {
+            if unreachable_import_expression_node_ids.contains(&(*module_idx, *node_id)) {
               return false;
             }
             let module =

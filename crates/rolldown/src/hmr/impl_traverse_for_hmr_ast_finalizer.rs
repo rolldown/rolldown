@@ -221,7 +221,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // Use `this_expr_replace_map` from scanning to avoid rewriting `this` inside classes
     if let ast::Expression::ThisExpression(this_expr) = node
       && self.module.exports_kind.is_commonjs()
-      && self.module.ecma_view.this_expr_replace_map.contains_key(&this_expr.span)
+      && self.module.ecma_view.this_expr_replace_map.contains_key(&this_expr.node_id())
     {
       *node = self.ast_factory.make_id_ref_expr(SPAN, CJS_ROLLDOWN_EXPORTS_REF);
       return;

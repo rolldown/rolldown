@@ -2,115 +2,91 @@
 
 ## Summary
 
-Rolldown threads per-AST-node metadata between compiler passes via side tables keyed by the oxc `Span` of the node. Scan populates them, Link adds more, and the Finalizer mutates the AST in place by calling `node.span()` and looking the result up. This works today, but it rests on an implicit "spans are stable and unique within a module" contract that has no validation layer and is easy to break. This document describes the current behavior so that a future migration to oxc's upcoming `AstNodeId` has a baseline to compare against — it is not itself a proposal for that migration.
+Rolldown threads per-AST-node metadata between compiler passes via side tables. The cross-pass identity key is now oxc's post-semantic `NodeId`, while `Span` remains source-location metadata for diagnostics, comments, source maps, and generated replacement spans.
 
-## Pass overview
+The public oxc type is `oxc::semantic::NodeId`. It is the implementation behind the `node_id()` / `set_node_id()` accessors on AST nodes after semantic analysis; there is not a separate public `AstNodeId` type in the version Rolldown currently uses.
+
+## Pass Overview
 
 Rolldown's bundling pipeline has three stages that interact with the AST:
 
-- **Scan** — `ScanStage::scan` (`crates/rolldown/src/stages/scan_stage.rs:159`). Per module: parse, then walk the AST read-only via `AstScanner` to populate `EcmaView` side tables (imports, this-expressions, `new URL(...)` references, etc.). The AST itself is not mutated.
-- **Link** — `LinkStage::link` (`crates/rolldown/src/stages/link_stage/mod.rs:229`). Cross-module work — symbol binding, export resolution, tree shaking. Still no AST mutation. Computes additional side tables (most notably `resolved_member_expr_refs`) keyed by spans collected during scan.
-- **Generate / Finalize** — `ScopeHoistingFinalizer` (`crates/rolldown/src/module_finalizers/impl_visit_mut.rs:26`), driven from `GenerateStage::generate` (`crates/rolldown/src/stages/generate_stage/mod.rs:82`). The only stage that mutates the AST. Implemented as a `VisitMut` traversal; at each interesting node it calls `node.span()` and queries the side tables to decide what to rewrite.
+- **Scan** - `ScanStage::scan` parses each module, runs Rolldown's pre-scan AST tweaks, then rebuilds semantic/scoping information. This final rebuild is what assigns every node — including the nodes the tweaks created — its `NodeId`, so the subsequent read-only walk via `AstScanner` sees stable ids while populating `EcmaView` side tables.
+- **Link** - `LinkStage::link` performs cross-module work such as symbol binding, export resolution, tree shaking, and cross-module optimization. It still does not mutate the AST, but it can derive additional side tables from scan-time records.
+- **Generate / Finalize** - `ScopeHoistingFinalizer`, driven from `GenerateStage::generate`, is the main stage that mutates the AST in place. It visits interesting nodes, calls `node_id()`, and queries the side tables to decide what to rewrite.
 
-Between passes, rolldown does **not** hold direct references to AST nodes (lifetimes wouldn't allow it across the parallel + cross-module boundaries anyway). The only thing that survives across passes is the `Span`.
+Between passes, Rolldown does not hold direct references to AST nodes. Lifetimes and parallel cross-module work make that impractical. The durable identity for a node within one module AST is therefore its `NodeId`.
 
-## The Span-as-identity contract
+## NodeId Contract
 
-The shared invariant across all passes:
+The shared invariant across passes:
 
-- **Insertion**: scan/link write side-table entries using the `Span` of the AST node being recorded.
-- **Lookup**: the finalizer (or other AST walkers) read `node.span()` and query the table.
-- **Required guarantees**: each recorded node has a `Span` that is (a) unique within its module and (b) preserved unchanged from the time of insertion to the time of lookup.
+- **Insertion**: scan/link write side-table entries using the `NodeId` of the AST node being recorded.
+- **Lookup**: finalizer or another later AST walker reads `node_id()` from the current node and queries the table.
+- **Required guarantees**: the node comes from the same post-semantic AST, and the side table is scoped to the module unless the key also includes `ModuleIdx`.
 
-There is no `AstNodeId` or other stable identity. The span doubles as both source-position metadata and as a primary key.
+Important constraints:
 
-### Pre-scan span normalization
+- `NodeId` is only unique within a single AST. Any table that combines records from multiple modules must key by `(ModuleIdx, NodeId)`.
+- `NodeId` is meaningful only after semantic analysis has assigned ids. Rolldown's normal scan path is post-semantic, so scan-created records are valid.
+- Synthetic/default nodes use `NodeId::DUMMY` unless ids are assigned later. Do not insert cross-pass side-table records for synthetic `DUMMY` nodes.
+- `NodeId::DUMMY` equals `NodeId::ROOT` (both are `0`, the `Program` node's id). `DUMMY` probes from synthesized nodes only miss because no side table records a `Program`-level entry — never add a `Program`-keyed entry to a per-module `NodeId` table.
+- Cloned post-semantic nodes can preserve the original node id unless the clone is reset or semantic information is rebuilt. Treat cloned nodes as identity-sensitive.
 
-The contract above would be unsafe if held over the raw post-parse AST: oxc gives every node a span derived from source position, but identical-looking source can yield identical spans (most often empty / synthetic spans inside the parser's output). Rolldown therefore runs a pre-scan pass — `PreProcessor` in `crates/rolldown/src/utils/tweak_ast_for_scanning.rs` — that walks the AST and, for the node kinds it cares about, rewrites any duplicate span to a fresh empty span (`start == end`, allocated upward from `program.span.end + 1`).
+Two paths finalize a _clone_ of the scanned AST, produced by `EcmaAst::clone_with_another_arena` into a fresh allocator, and they satisfy the "same post-semantic AST" guarantee through different mechanisms:
 
-The deduplication is **a targeted subset, not an exhaustive list of all span-keyed node kinds**. `PreProcessor` visits the node kinds where the parser is known to produce duplicate or synthetic spans (e.g., empty spans from desugaring, or kinds that can legitimately overlap):
+- **Cache path — id preservation.** The incremental-build cache (`NormalizedScanStageOutput::make_copy`, `ScanStageCache::create_output`) hands its clones to the link stage and `ScopeHoistingFinalizer`, which reuse scan-time scoping and never re-run semantic. The clone itself must carry the scan-time ids — this is why `clone_with_another_arena` uses oxc's `clone_in_with_semantic_ids` rather than plain `clone_in`, which would reset every id to `NodeId::DUMMY` and silently break every lookup.
+- **HMR path — deterministic re-derivation.** The HMR renderers in `crates/rolldown/src/hmr/hmr_stage.rs` clone and then immediately run `EcmaAst::make_semantic` on the clone, which re-stamps every `NodeId`; the ids the clone preserved are overwritten before any lookup. Lookups still hit because `SemanticBuilder` numbers nodes purely by traversal order, so an unmutated clone of the same tree shape re-derives exactly the scan-time ids. Two invariants keep this true: nothing may mutate the clone before `make_semantic` runs, and oxc's numbering must remain a pure function of tree shape (true as of oxc 0.135 — builder options such as `with_cfg` / `with_enum_eval` do not affect numbering). Breaking either shifts ids silently: the indexing lookups (`module.imports[&…]`) panic, the `.get()` lookups silently skip rewrites.
 
-- `ModuleDeclaration` (import/export decls)
-- `ImportExpression` (dynamic `import()`)
-- `ThisExpression`
-- `CallExpression` whose callee is `require` (and `IdentifierReference`s named `require`)
-- `NewExpression`
+## Current NodeId-Keyed Tables
 
-See `tweak_ast_for_scanning.rs:208-240`. Other node kinds keep whatever span the parser gave them — including `StaticMemberExpression`, which `resolved_member_expr_refs` uses as a key. Member expressions are not deduplicated because their spans cover real source ranges and don't collide in practice. The synthetic `SPAN` (`0..0`) is pre-seeded into the visited set so the deduplicator never produces it as a "unique" replacement — synthetic spans remain reserved for finalizer-generated nodes.
+The main cross-pass side tables keyed by `NodeId` are:
 
-The practical guarantee is narrower than it might appear: **for the node kinds `PreProcessor` visits, spans are unique within a module by the time scan runs.** For any other side-table key — including the member-expression case — uniqueness relies on the parser's own behavior. Adding a new side table whose key is prone to collisions or synthetic spans would need either an entry added to `PreProcessor` or a different identity strategy.
+- `EcmaView::imports` - import declarations, export-from declarations, dynamic `import()` expressions, and recognized `require()` call expressions.
+- `EcmaView::dummy_record_set` - `require` identifier references that need the runtime helper rewrite.
+- `EcmaView::new_url_references` - `new URL('...', import.meta.url)` nodes mapped to asset import records.
+- `EcmaView::this_expr_replace_map` - top-level `this` expressions that should become `exports` or `undefined`.
+- `MemberExprRef::node_id` and `LinkingMetadata::resolved_member_expr_refs` - namespace/member-expression resolution from scan through link to finalization.
+- `DynamicImportExprInfo::node_id` records the dynamic `import()` node within its own module; `EntryPoint::related_stmt_infos` then carries `(ModuleIdx, …, NodeId, …)` tuples so a dynamic-import entry can be traced back across the module graph.
+- Cross-module optimization state, which comes in two shapes: a per-module set of side-effect-free call expressions (bare `NodeId`, only consumed within the same module's traversal) and a graph-wide set of unreachable dynamic imports keyed by `(ModuleIdx, NodeId)` because it aggregates records from every module.
 
-## Address-as-identity (alternative key)
+This means finalizer-generated nodes that keep the default `NodeId::DUMMY` do not accidentally match scan-time records. `Span` no longer needs to double as the key for these rewrite decisions.
 
-`Span` isn't the only node identity rolldown threads between passes. Some side tables key off oxc's `Address` (the arena pointer obtained via `GetAddress::address` / `UnstableAddress::unstable_address`). Unlike spans, an `Address` is **unique by construction within a live AST** — two distinct allocator-resident nodes can never share one, with no `PreProcessor` involvement needed — but it is only valid for the lifetime of the `Allocator` that owns the AST and is therefore unusable across reparses or after the AST is dropped.
+## Where Span Still Belongs
 
-Rolldown uses `Address` where the producer and consumer hold references into the same arena and the table doesn't need to survive the AST going away:
+`Span` remains the right representation for source positions. It is still used for:
 
-- **`DynamicImportExprInfo.address`** (`crates/rolldown_common/src/types/import_record.rs:22`) — scan records the `ImportExpression`'s address on each dynamic-import record (`ast_scanner/mod.rs:509-510`), and link looks it up during cross-module optimization (`stages/link_stage/cross_module_optimization.rs:328-329`).
-- **`side_effect_free_call_expr_addr`** (`stages/link_stage/cross_module_optimization.rs:376`) — link populates a `FxHashSet<Address>` of pure call expressions; `SideEffectDetector` consults it when re-evaluating side effects (`ast_scanner/side_effect_detector/mod.rs:48`).
-- **`unreachable_import_expression_addresses`** (`stages/link_stage/cross_module_optimization.rs:340`) — link flags dynamic imports inside lazy paths so the tree-shaker can skip them (`stages/link_stage/tree_shaking/include_statements.rs:213`).
-- **`EntryPoint.related_stmt_infos`** (`crates/rolldown_common/src/types/entry_point.rs:16`) — tuples carry an `Address` alongside `(ModuleIdx, StmtInfoIdx, ImportRecordIdx)` to point at the originating AST node.
-- **`PreProcessor`'s `statement_stack` / `statement_replace_map`** (`crates/rolldown/src/utils/tweak_ast_for_scanning.rs:17-18`) — scratch state used within a single traversal, where the AST is obviously still alive.
+- diagnostics and warnings that point at user source;
+- comments, source-map ranges, directive/hashbang ranges, and TLA keyword locations;
+- generated replacement spans where codegen should preserve a useful source location;
+- import-record source locations, including the raw module-request span for resolver diagnostics and resolved `importer_span` for diagnostics that need to point at the full import site.
 
-Why both mechanisms exist side by side: `Span` is what survives all the way into the finalizer, which re-derives identity by calling `node.span()` after the AST has been threaded through scan → link → finalize with no direct node references kept. `Address` is the natural choice when the consumer can keep a reference into the same arena and would otherwise have to extend `PreProcessor` (or fight synthetic-span collisions) just to make `Span` work. A future `AstNodeId` migration would in principle subsume both, but the fragilities listed below are specifically about the `Span` contract — `Address`-keyed sites aren't subject to them.
+For import records, the module-request span belongs to `ImportRecordStateInit`: dependency
+resolution diagnostics still need to underline the original specifier, but the span is not
+carried into `ImportRecordStateResolved`. Resolved records keep `importer_span` because later
+passes, such as TLA import-chain diagnostics, need a location for the resolved import edge.
 
-## Classical patterns
+For member expressions, `NodeId` is the cross-pass lookup key, but spans remain necessary as
+source locations: `MemberExprRef::span` points diagnostics at the original expression, and the
+finalizer applies the current member expression span to generated replacements so source-map and
+diagnostic locations stay tied to the rewritten source range.
 
-The side tables differ in detail, but they all instantiate one of two patterns. The pattern dictates which passes touch the entry, not the shape of the data.
+Do not add a cross-pass node side table keyed only by `Span`. If a later pass needs to identify the same AST node, prefer `NodeId`; if records from more than one module can share a table, include `ModuleIdx`.
 
-### Pattern A — Scan → Finalize
+## Address Use
 
-Scan records the span together with whatever rewriting decision it can make locally. The link stage doesn't modify the entry. The finalizer reads it back and mutates the AST.
+Oxc `Address` is still acceptable for scratch state inside one live AST traversal, where producer and consumer operate before the traversal returns and no data survives as cross-pass metadata. The current example is:
 
-Example: `EcmaView::new_url_references`.
+- `PreProcessor`'s `statement_stack` / `statement_replace_map` in `crates/rolldown/src/utils/tweak_ast_for_scanning.rs`.
 
-1. During scan, `ast_scanner/new_url.rs:69` sees a `new URL('./img.png', import.meta.url)`, resolves the path into an import record, and inserts `(NewExpression.span → ImportRecordIdx)` into the side table.
-2. During finalize, `module_finalizers/mod.rs:961` visits each `NewExpression`, looks up its span, and on a hit rewrites the expression to emit the resolved asset URL.
+`PreProcessor` specifically _cannot_ use `NodeId`: it runs before the final semantic rebuild (`recreate_scoping` in `crates/rolldown/src/utils/pre_process_ecma_ast.rs`), so node ids are not yet assigned to the nodes it creates or moves. `Address` is the only stable per-node identity available at that point, and it is safe because the table never outlives the traversal.
 
-The same shape recurs in:
+Do not store `Address` in module metadata, entry metadata, or link-stage tables that outlive the traversal that produced it. In the post-semantic scanner, prefer `NodeId` even for same-traversal node identity checks when the compared nodes already have semantic IDs.
 
-- `EcmaView::this_expr_replace_map` — scan picks the replacement (`exports` vs `undefined`), finalizer applies it at `impl_visit_mut.rs:460`.
-- `EcmaView::imports` — scan records the import-site span, finalizer rewrites the site.
-- `EcmaView::dummy_record_set` — scan flags `require` identifier references (`ast_scanner/impl_visit.rs:591`), finalizer at `module_finalizers/rename.rs:86` consults the set on each `IdentifierReference` and rewrites the call to use the runtime `__require` helper. Here the span functions as a per-node boolean rather than a key for richer data, but the round-trip is still scan→finalize.
+## Pre-Scan Span Normalization
 
-### Pattern B — Scan → Link → Finalize
+`PreProcessor` still rewrites duplicate spans for a targeted set of node kinds before semantic information is rebuilt. After the `NodeId` migration, pairwise span uniqueness no longer backs any identity table; the machinery's one remaining functional job is keeping the synthetic span out of scanned ASTs. `SPAN` (`0..0`) is pre-seeded into the visited set, so nodes `PreProcessor` itself creates with `SPAN` (e.g. the transposed `require(a ? 'x' : 'y')` calls) are rewritten to fresh non-zero empty spans. That upholds the `span.is_unspanned()` checks that mean "synthesized by the finalizer": the global-`require` rewrite guard in `crates/rolldown/src/module_finalizers/mod.rs` and the member-expression-chain guard in `crates/rolldown/src/ast_scanner/impl_visit.rs`. Shrinking the machinery down to that single job is a candidate follow-up cleanup.
 
-Scan collects the span with only the local information available to it; link uses those records to populate a resolution table keyed by the same spans once cross-module facts are known; the finalizer applies the final decision.
-
-Example: `LinkingMetadata::resolved_member_expr_refs`.
-
-1. **Scan** sees a chain like `ns.foo.bar` and records the `StaticMemberExpression.span` together with the local symbol reference.
-2. **Link**, in `link_stage/bind_imports_and_exports.rs:445-447, 477-479`, resolves each recorded span to the actual exported binding it points at across the module graph and writes the result into a `FxHashMap<Span, MemberExprRefResolution>` (committed to `LinkingMetadata` at `link_stage/bind_imports_and_exports.rs:700`).
-3. **Finalize**, in `module_finalizers/mod.rs:1006`, visits each `StaticMemberExpression`, calls `.span()`, and on a hit replaces the chain with a direct reference to the linked symbol.
-
-This is the fullest expression of the contract: three passes communicate about the same AST node entirely through its span.
-
-## Known fragilities
-
-- **Cloned nodes carry the original span.** If any pass clones an AST node without resetting its span, the clone falsely matches the side-table entry that belonged to the original. Future lookups can fire against the wrong node.
-- **Synthetic spans collide with each other.** When the finalizer constructs new AST nodes (helpers, member expressions, etc.) it must give them a span that won't accidentally match a recorded one. The convention is the synthetic `SPAN` (`0..0`) — see `module_finalizers/mod.rs:1088-1090`, where the comment explicitly notes the workaround:
-
-  ```rust
-  // IMPORTANT: Use SPAN (0-0) for the new member expression to avoid being
-  // matched by resolved_member_expr_refs lookup which uses span as key
-  let ns_id_ref = self.snippet.id_ref_expr(ns_name, SPAN);
-  ```
-
-  This is fragile in the other direction: every synthetic node shares the same key, so adding side tables that look up by `SPAN` itself would immediately collide.
-
-- **Uniqueness coverage is hand-maintained.** `PreProcessor` only deduplicates the node kinds it has been taught about (see "Pre-scan span normalization"). Other span-keyed kinds (e.g. `StaticMemberExpression`) rely on the parser to produce unique spans on its own. Adding a new side table on a kind prone to collisions or synthetic spans silently exits the safety net unless `PreProcessor` is extended — there's no compile-time check linking the two.
-- **No post-`PreProcessor` validation.** Nothing checks at runtime that the uniqueness invariant still holds once `PreProcessor` has finished — the contract is enforced by construction, not by assertion. (Plugin `transform` hooks operate on source code before parsing, so they're not a concern; the AST being keyed wasn't built yet when they ran.) When the invariant breaks anyway — a cloned span, a new side-table kind not covered by `PreProcessor`, etc. — the regression manifests as a silent miss in the finalizer (a rewrite that should have happened didn't) rather than as a crash.
-- **Existing FIXME.** `crates/rolldown_common/src/types/member_expr_ref.rs:23-24` already calls this out:
-
-  ```rust
-  /// FIXME: use `AstNodeId` to identify the MemberExpr instead of `Span`
-  /// related discussion: https://github.com/rolldown/rolldown/pull/1818#discussion_r1699374441
-  pub span: Span,
-  ```
-
-## Why this is on the radar
-
-Oxc is introducing an `AstNodeId` — a true per-tree node identity, independent of source position. Switching the side tables to be keyed by `AstNodeId` instead of `Span` would dissolve the structural problems above: no uniqueness assumption to maintain, no synthetic-span workaround for finalizer-generated nodes (synthesized nodes get fresh ids that can't collide with anything), and no need for `PreProcessor` to keep a hand-curated list of node kinds in sync with the side-table set. This document captures the current state so that migration can be evaluated and planned against a concrete description of what's there today.
+The practical rule is simple: treat `Span` as location, `NodeId` as same-AST node identity, and `(ModuleIdx, NodeId)` as cross-module node identity.
 
 ## Related
 

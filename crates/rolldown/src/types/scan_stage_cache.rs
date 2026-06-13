@@ -171,7 +171,7 @@ impl ScanStageCache {
           .collect::<FxHashSet<_>>();
         _ = old_entry_point
           .related_stmt_infos
-          .extract_if(.., |(module_idx, _stmt_info_idx, _address, _)| {
+          .extract_if(.., |(module_idx, _stmt_info_idx, _node_id, _)| {
             removed_module_idxs.contains(module_idx)
           });
         old_entry_point.related_stmt_infos.extend(entry_point.related_stmt_infos);

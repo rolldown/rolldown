@@ -18,20 +18,8 @@ enum TlaVisitState {
   Visited(Option<ModuleIdx>),
 }
 
-/// Look up the source span of a given import record within a module. Linear
-/// in `imports.len()` but only called on error paths.
-///
-/// Every `Import`/`Require` record is registered in `module.imports` by the
-/// ast scanner, so this lookup must succeed for the kinds the TLA check
-/// traverses. A miss indicates a scanner invariant violation.
 fn import_span_for(module: &NormalModule, target: ImportRecordIdx) -> Span {
-  let span = module.imports.iter().find_map(|(span, &idx)| (idx == target).then_some(*span));
-  debug_assert!(
-    span.is_some(),
-    "import record {target:?} missing from imports map in module {:?}",
-    module.stable_id
-  );
-  span.unwrap_or(Span::empty(0))
+  module.import_records.get(target).map_or(Span::empty(0), |rec| rec.importer_span)
 }
 
 impl LinkStage<'_> {

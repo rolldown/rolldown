@@ -85,7 +85,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     ident_ref: &ast::IdentifierReference<'ast>,
     is_callee: bool,
   ) -> Option<Expression<'ast>> {
-    if self.ctx.module.dummy_record_set.contains(&ident_ref.span) {
+    if self.ctx.module.dummy_record_set.contains(&ident_ref.node_id()) {
       // use `__require` instead of `require`
       return Some(self.finalized_expr_for_runtime_symbol("__require"));
     }

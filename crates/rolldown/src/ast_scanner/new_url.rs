@@ -62,10 +62,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       path,
       ImportKind::NewUrl,
       first_arg_span,
+      expr.span,
       ImportRecordMeta::empty(),
       None,
     );
     self.result.import_records[idx].asserted_module_type = Some(ModuleType::Asset);
-    self.result.new_url_references.insert(expr.span, idx);
+    self.result.new_url_references.insert(expr.node_id(), idx);
   }
 }

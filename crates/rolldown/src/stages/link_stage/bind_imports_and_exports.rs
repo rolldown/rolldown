@@ -456,7 +456,7 @@ impl LinkStage<'_> {
                     // have any dynamic exports.
                     if !self.metas[canonical_ref_owner.idx].has_dynamic_exports {
                       resolved_map.insert(
-                        member_expr_ref.span,
+                        member_expr_ref.node_id,
                         MemberExprRefResolution {
                           resolved: if is_json_import_ns { Some(canonical_ref) } else { None },
                           prop_and_related_span_list: member_expr_ref.prop_and_span_list[cursor..]
@@ -485,7 +485,7 @@ impl LinkStage<'_> {
                   };
                   if !meta.sorted_and_non_ambiguous_resolved_exports.contains_key(name) {
                     resolved_map.insert(
-                      member_expr_ref.span,
+                      member_expr_ref.node_id,
                       MemberExprRefResolution {
                         resolved: None,
                         prop_and_related_span_list: member_expr_ref.prop_and_span_list[cursor..]
@@ -653,7 +653,7 @@ impl LinkStage<'_> {
 
                 if cursor > 0 || target_commonjs_exported_symbol.is_some() {
                   resolved_map.insert(
-                    member_expr_ref.span,
+                    member_expr_ref.node_id,
                     MemberExprRefResolution {
                       resolved: Some(canonical_ref),
                       prop_and_related_span_list: member_expr_ref.prop_and_span_list[cursor..]

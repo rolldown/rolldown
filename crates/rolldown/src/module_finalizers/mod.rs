@@ -1041,7 +1041,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     expr: &mut ast::NewExpression<'ast>,
   ) -> Option<()> {
-    let &rec_idx = self.ctx.module.new_url_references.get(&expr.span())?;
+    let &rec_idx = self.ctx.module.new_url_references.get(&expr.node_id())?;
     let rec = &self.ctx.module.import_records[rec_idx];
     let is_callee_global_url = matches!(expr.callee.as_identifier(), Some(ident) if ident.name == "URL" && self.is_global_identifier_reference(ident));
 
@@ -1090,7 +1090,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     member_expr: &ast::MemberExpression<'ast>,
   ) -> Option<Expression<'ast>> {
     let span = member_expr.span();
-    match self.ctx.linking_info.resolved_member_expr_refs.get(&span) {
+    match self.ctx.linking_info.resolved_member_expr_refs.get(&member_expr.node_id()) {
       Some(MemberExprRefResolution {
         resolved: object_ref,
         prop_and_related_span_list: props,
@@ -1170,9 +1170,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
 
-    // Build: ns_name.default
-    // IMPORTANT: Use SPAN (0-0) for the new member expression to avoid being matched
-    // by resolved_member_expr_refs lookup which uses span as key
+    // Build: ns_name.default. The resolved_member_expr_refs lookup is keyed by post-semantic
+    // NodeId, so this synthetic expression won't match scan-time records.
     let ns_name = self.canonical_name_for(ns_alias.namespace_ref);
     let ns_id_ref = self.ast_factory.make_id_ref_expr(SPAN, ns_name);
     let default_access =
@@ -1282,7 +1281,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if call_expr.is_global_require_call(self.scope) && !call_expr.span.is_unspanned() {
       //  `require` calls that can't be recognized by rolldown are ignored in scanning, so they were not stored in `NormalModule#imports`.
       //  we just keep these `require` calls as it is
-      if let Some(rec_idx) = self.ctx.module.imports.get(&call_expr.span).copied() {
+      if let Some(rec_idx) = self.ctx.module.imports.get(&call_expr.node_id()).copied() {
         let rec = &self.ctx.module.import_records[rec_idx];
         let module_idx = rec.resolved_module?;
         // use `__require` instead of `require`
@@ -1435,7 +1434,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     import_expr: &oxc::allocator::Box<'ast, ImportExpression<'ast>>,
   ) -> Option<Expression<'ast>> {
-    let rec_idx = self.ctx.module.imports.get(&import_expr.span)?;
+    let rec_idx = self.ctx.module.imports.get(&import_expr.node_id())?;
     let rec = &self.ctx.module.import_records[*rec_idx];
     let importee_id = rec.resolved_module?;
 
@@ -1575,7 +1574,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
         if let Some(import_decl) = top_stmt.as_import_declaration() {
           let span = import_decl.span;
-          let rec_idx = self.ctx.module.imports[&import_decl.span];
+          let rec_idx = self.ctx.module.imports[&import_decl.node_id()];
           if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
             for comment in &mut program.comments {
               if comment.attached_to == span.start {
@@ -1588,7 +1587,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             return;
           }
         } else if let Some(export_all_decl) = top_stmt.as_export_all_declaration() {
-          let rec_idx = self.ctx.module.imports[&export_all_decl.span];
+          let rec_idx = self.ctx.module.imports[&export_all_decl.node_id()];
           // "export * as ns from 'path'"
           if let Some(_alias) = &export_all_decl.exported {
             if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
@@ -1867,7 +1866,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
           } else {
             // `export { foo } from 'path'`
-            let rec_idx = self.ctx.module.imports[&named_decl.span];
+            let rec_idx = self.ctx.module.imports[&named_decl.node_id()];
             if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
               return;
             }
@@ -2230,7 +2229,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
 
     let (Some(str), Some(rec_idx)) =
-      (expr.source.as_static_module_request(), self.ctx.module.imports.get(&expr.span))
+      (expr.source.as_static_module_request(), self.ctx.module.imports.get(&expr.node_id()))
     else {
       if matches!(self.ctx.options.format, OutputFormat::Cjs)
         && !self.ctx.options.dynamic_import_in_cjs

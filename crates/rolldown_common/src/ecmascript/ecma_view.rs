@@ -1,7 +1,10 @@
 use crate::{ConstExportMeta, ImportAttribute, SourcemapChainElement};
 use arcstr::ArcStr;
 use bitflags::bitflags;
-use oxc::{semantic::SymbolId, span::Span};
+use oxc::{
+  semantic::{NodeId, SymbolId},
+  span::Span,
+};
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -38,10 +41,10 @@ pub enum ThisExprReplaceKind {
 #[inline]
 #[expect(clippy::implicit_hasher)]
 pub fn generate_replace_this_expr_map(
-  set: &FxHashSet<Span>,
+  set: &FxHashSet<NodeId>,
   kind: ThisExprReplaceKind,
-) -> FxHashMap<Span, ThisExprReplaceKind> {
-  set.iter().map(|span| (*span, kind)).collect()
+) -> FxHashMap<NodeId, ThisExprReplaceKind> {
+  set.iter().map(|node_id| (*node_id, kind)).collect()
 }
 
 impl EcmaViewMeta {
@@ -61,7 +64,7 @@ impl EcmaViewMeta {
 
 #[derive(Debug, Clone)]
 pub struct EcmaView {
-  pub dummy_record_set: FxHashSet<Span>,
+  pub dummy_record_set: FxHashSet<NodeId>,
   pub source: ArcStr,
   pub def_format: ModuleDefFormat,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
@@ -69,9 +72,11 @@ pub struct EcmaView {
   pub named_imports: FxIndexMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<CompactStr, LocalExport>,
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
-  /// The key is the `Span` of `ImportDeclaration`, `ImportExpression`, `ExportNamedDeclaration`, `ExportAllDeclaration`
+  /// Cross-pass AST-node side tables use post-semantic `NodeId`. See meta/design/ast-mutation.md.
+  ///
+  /// The key is the `NodeId` of `ImportDeclaration`, `ImportExpression`, `ExportNamedDeclaration`, `ExportAllDeclaration`
   /// and `CallExpression`(only when the callee is `require`).
-  pub imports: FxHashMap<Span, ImportRecordIdx>,
+  pub imports: FxHashMap<NodeId, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub default_export_ref: SymbolRef,
   pub sourcemap_chain: Vec<SourcemapChainElement>,
@@ -92,9 +97,9 @@ pub struct EcmaView {
   pub directive_range: Vec<Span>,
   pub meta: EcmaViewMeta,
   pub mutations: Vec<ArcSourceMutation>,
-  /// `Span` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
-  pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
-  pub this_expr_replace_map: FxHashMap<Span, ThisExprReplaceKind>,
+  /// `NodeId` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
+  pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
+  pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
 
   pub hmr_hot_ref: Option<SymbolRef>,
   pub hmr_info: HmrInfo,

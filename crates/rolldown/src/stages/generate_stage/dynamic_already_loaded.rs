@@ -296,7 +296,7 @@ impl GenerateStage<'_> {
       let dynamic_entry_bit: u32 =
         dynamic_entry_idx.try_into().expect("Too many entries, u32 overflowed.");
 
-      for (importer_idx, stmt_info_idx, _address, import_record_idx) in
+      for (importer_idx, stmt_info_idx, _node_id, import_record_idx) in
         &entry_point.related_stmt_infos
       {
         if !self.is_included_dynamic_import_record(

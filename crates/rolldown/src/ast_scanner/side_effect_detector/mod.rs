@@ -3,8 +3,7 @@ use oxc::ast::ast::{
   IdentifierReference, UnaryOperator, VariableDeclarationKind,
 };
 use oxc::ast::match_member_expression;
-use oxc::semantic::SymbolId;
-use oxc_allocator::{Address, UnstableAddress};
+use oxc::semantic::{NodeId, SymbolId};
 use oxc_ecmascript::GlobalContext;
 use oxc_ecmascript::side_effects::{
   MayHaveSideEffects, MayHaveSideEffectsContext, PropertyReadSideEffects,
@@ -18,8 +17,8 @@ pub struct SideEffectDetector<'a> {
   scope: &'a AstScopes,
   options: &'a SharedNormalizedBundlerOptions,
   flat_options: FlatOptions,
-  /// Cross-module optimization: addresses of call expressions to known-pure functions.
-  side_effect_free_call_expr_addr: Option<&'a FxHashSet<Address>>,
+  /// Cross-module optimization: node IDs of call expressions to known-pure functions.
+  side_effect_free_call_expr_node_ids: Option<&'a FxHashSet<NodeId>>,
   /// Symbol IDs of namespace imports (`import * as ns from '...'`).
   /// Property reads on ES module namespace objects are guaranteed side-effect-free
   /// because namespace objects are frozen/sealed by spec with no getters.
@@ -31,21 +30,21 @@ impl<'a> SideEffectDetector<'a> {
     scope: &'a AstScopes,
     flat_options: FlatOptions,
     options: &'a SharedNormalizedBundlerOptions,
-    side_effect_free_call_expr_addr: Option<&'a FxHashSet<Address>>,
+    side_effect_free_call_expr_node_ids: Option<&'a FxHashSet<NodeId>>,
     namespace_object_symbol_ids: Option<&'a FxHashSet<SymbolId>>,
   ) -> Self {
     Self {
       scope,
       options,
       flat_options,
-      side_effect_free_call_expr_addr,
+      side_effect_free_call_expr_node_ids,
       namespace_object_symbol_ids,
     }
   }
 
   /// Check if a call expression has been marked pure by cross-module optimization.
   fn is_call_expr_marked_pure(&self, expr: &CallExpression) -> bool {
-    self.side_effect_free_call_expr_addr.is_some_and(|set| set.contains(&expr.unstable_address()))
+    self.side_effect_free_call_expr_node_ids.is_some_and(|set| set.contains(&expr.node_id()))
   }
 
   #[inline]

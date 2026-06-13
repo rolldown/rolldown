@@ -12,7 +12,7 @@ use const_eval::{ConstEvalCtx, try_extract_const_literal};
 use oxc::ast::ast::{BindingPattern, Expression, ImportExpression};
 use oxc::ast::{AstKind, ast};
 use oxc::ast_visit::walk;
-use oxc::semantic::{Reference, ReferenceId, ScopeFlags, Scoping};
+use oxc::semantic::{NodeId, Reference, ScopeFlags, Scoping};
 use oxc::span::SPAN;
 use oxc::{
   ast::{
@@ -26,17 +26,16 @@ use oxc::{
   semantic::SymbolId,
   span::{GetSpan, Span},
 };
-use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
   ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
   ExportsKind, FlatOptions, HmrInfo, ImportAttribute, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, LocalExport, MemberExprObjectReferencedType, MemberExprProp, MemberExprRef,
-  ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord, SideEffectDetail, Specifier,
-  StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
-  TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
+  ImportRecordMeta, LocalExport, MemberExprProp, MemberExprRef, ModuleDefFormat, ModuleId,
+  ModuleIdx, NamedImport, RawImportRecord, SideEffectDetail, Specifier, StmtInfo, StmtInfoIdx,
+  StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef,
+  ThisExprReplaceKind, generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::FunctionExt;
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -84,8 +83,8 @@ pub struct ScanResult {
   pub default_export_ref: SymbolRef,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
-  pub imports: FxHashMap<Span, ImportRecordIdx>,
-  pub dummy_record_set: FxHashSet<Span>,
+  pub imports: FxHashMap<NodeId, ImportRecordIdx>,
+  pub dummy_record_set: FxHashSet<NodeId>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
@@ -114,16 +113,16 @@ pub struct ScanResult {
   /// temporarily
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
   /// `new URL('...', import.meta.url)`
-  pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
-  pub this_expr_replace_map: FxHashMap<Span, ThisExprReplaceKind>,
+  pub new_url_references: FxHashMap<NodeId, ImportRecordIdx>,
+  pub this_expr_replace_map: FxHashMap<NodeId, ThisExprReplaceKind>,
   pub hmr_info: HmrInfo,
   pub hmr_hot_ref: Option<SymbolRef>,
   pub directive_range: Vec<Span>,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
   pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
-  /// Temporary storage for spans of `require()` calls in `module.exports = require(...)` patterns.
+  /// Temporary storage for node IDs of `require()` calls in `module.exports = require(...)` patterns.
   /// Resolved to `cjs_reexport_import_record_ids` after scanning completes.
-  pub cjs_reexport_require_spans: Vec<Span>,
+  pub cjs_reexport_require_node_ids: Vec<NodeId>,
   /// Import record indices for `module.exports = require(...)` patterns.
   pub cjs_reexport_import_record_ids: Vec<ImportRecordIdx>,
 }
@@ -156,8 +155,8 @@ pub struct AstScanner<'me, 'ast> {
   /// so each import record doesn't allocate a fresh `String` just to hand a `&str` to oxc.
   namespace_name_buf: String,
   dynamic_import_usage_info: DynamicImportUsageInfo,
-  /// "top level" `this` AstNode range in source code
-  top_level_this_expr_set: FxHashSet<Span>,
+  /// Node IDs of top-level `this` expressions.
+  top_level_this_expr_set: FxHashSet<NodeId>,
   /// A flag to resolve `this` appear with propertyKey in class
   is_nested_this_inside_class: bool,
   /// Used in commonjs module it self
@@ -231,7 +230,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       constant_export_map: FxHashMap::default(),
       ecma_view_meta: EcmaViewMeta::default(),
       import_attribute_map: FxHashMap::default(),
-      cjs_reexport_require_spans: Vec::new(),
+      cjs_reexport_require_node_ids: Vec::new(),
       cjs_reexport_import_record_ids: Vec::new(),
     };
 
@@ -367,12 +366,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
     self.result.exports_kind = exports_kind;
 
-    // Resolve CJS re-export require spans to import record indices
+    // Resolve CJS re-export require node IDs to import record indices.
     self.result.cjs_reexport_import_record_ids = self
       .result
-      .cjs_reexport_require_spans
+      .cjs_reexport_require_node_ids
       .iter()
-      .filter_map(|span| self.result.imports.get(span).copied())
+      .filter_map(|node_id| self.result.imports.get(node_id).copied())
       .collect();
 
     // If some commonjs module facade exports was used locally, we need to explicitly mark them as
@@ -482,16 +481,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   /// `is_dummy` means if it the import record is created during ast transformation.
   ///
-  /// `import_expression_address` - The AST address of the ImportExpression node,
+  /// `import_expression_node_id` - The AST node ID of the ImportExpression node,
   /// required for dynamic imports to track their position for optimization purposes.
-  /// Should be `None` for static imports and `Some(addr)` for dynamic imports.
+  /// Should be `None` for static imports and `Some(node_id)` for dynamic imports.
   fn add_import_record(
     &mut self,
     module_request: &str,
     kind: ImportKind,
     span: Span,
+    importer_span: Span,
     init_meta: ImportRecordMeta,
-    import_expression_address: Option<Address>,
+    import_expression_node_id: Option<NodeId>,
   ) -> ImportRecordIdx {
     // If 'foo' in `import ... from 'foo'` is finally a commonjs module, we will convert the import statement
     // to `var import_foo = __toESM(require_foo())`, so we create a symbol for `import_foo` here. Notice that we
@@ -507,11 +507,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       kind,
       namespace_ref,
       span,
+      importer_span,
       None,
       // The first index stmt is reserved for the facade statement that constructs Module Namespace
       // Object
-      import_expression_address.map(|address| {
-        Box::new(DynamicImportExprInfo { stmt_info_idx: self.current_stmt_idx, address })
+      import_expression_node_id.map(|node_id| {
+        Box::new(DynamicImportExprInfo { stmt_info_idx: self.current_stmt_idx, node_id })
       }),
     )
     .with_meta(init_meta);
@@ -687,6 +688,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       decl.source.value.as_str(),
       ImportKind::Import,
       decl.source.span(),
+      decl.span,
       if decl.source.span().is_empty() {
         ImportRecordMeta::IsUnspannedImport
       } else {
@@ -703,7 +705,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.import_records[id].meta.insert(ImportRecordMeta::IsExportStar);
       self.result.ecma_view_meta.insert(EcmaViewMeta::HasStarExport);
     }
-    self.result.imports.insert(decl.span, id);
+    self.result.imports.insert(decl.node_id(), id);
     if let Some(ref with_clause) = decl.with_clause {
       self.result.import_attribute_map.insert(id, ImportAttribute::from_with_clause(with_clause));
     }
@@ -728,6 +730,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         source.value.as_str(),
         ImportKind::Import,
         source.span(),
+        decl.span,
         if source.span().is_empty() {
           ImportRecordMeta::IsUnspannedImport
         } else {
@@ -749,7 +752,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           .import_attribute_map
           .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
       }
-      self.result.imports.insert(decl.span, record_idx);
+      self.result.imports.insert(decl.node_id(), record_idx);
       self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsReExportOnly);
     } else {
       decl.specifiers.iter().for_each(|spec| {
@@ -911,6 +914,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       decl.source.value.as_str(),
       ImportKind::Import,
       decl.source.span(),
+      decl.span,
       if decl.source.span().is_empty() {
         ImportRecordMeta::IsUnspannedImport
       } else {
@@ -925,7 +929,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .import_attribute_map
         .insert(rec_id, ImportAttribute::from_with_clause(with_clause));
     }
-    self.result.imports.insert(decl.span, rec_id);
+    self.result.imports.insert(decl.node_id(), rec_id);
 
     let Some(specifiers) = &decl.specifiers else { return };
     specifiers.iter().for_each(|spec| match spec {
@@ -980,26 +984,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   #[inline]
-  pub fn add_member_expr_reference(
-    &mut self,
-    object_ref: SymbolRef,
-    prop_and_span_list: Vec<MemberExprProp>,
-    span: Span,
-    obj_ref_type: MemberExprObjectReferencedType,
-    reference_id: Option<ReferenceId>,
-    is_write: bool,
-  ) {
-    self.current_stmt_info.referenced_symbols.push(
-      MemberExprRef::new(
-        object_ref,
-        prop_and_span_list,
-        span,
-        obj_ref_type,
-        reference_id,
-        is_write,
-      )
-      .into(),
-    );
+  pub fn add_member_expr_reference(&mut self, member_expr_ref: MemberExprRef) {
+    self.current_stmt_info.referenced_symbols.push(member_expr_ref.into());
   }
 
   /// Check if this identifier reference is the object of a member expression in a write context
@@ -1051,12 +1037,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn try_extract_parent_static_member_expr_chain(
     &self,
     max_len: usize,
-  ) -> Option<(Span, Vec<MemberExprProp>)> {
+  ) -> Option<(NodeId, Span, Vec<MemberExprProp>)> {
+    let mut node_id = NodeId::DUMMY;
     let mut span = SPAN;
     let mut props = vec![];
     for ancestor_ast in self.visit_path.iter().rev().take(max_len) {
       match ancestor_ast {
         AstKind::StaticMemberExpression(expr) => {
+          node_id = ancestor_ast.node_id();
           span = ancestor_ast.span();
           props.push(MemberExprProp {
             name: expr.property.name.as_str().into(),
@@ -1066,6 +1054,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         }
         AstKind::ComputedMemberExpression(expr) => {
           if let Some(name) = expr.static_property_name() {
+            node_id = ancestor_ast.node_id();
             span = ancestor_ast.span();
             props.push(MemberExprProp {
               name: name.into(),
@@ -1079,7 +1068,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         _ => break,
       }
     }
-    (!props.is_empty()).then_some((span, props))
+    (!props.is_empty()).then_some((node_id, span, props))
   }
 
   // `console` in `console.log` is a global reference

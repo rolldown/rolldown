@@ -28,7 +28,7 @@ Before this convention, the same kind of node could be built four different ways
 
 - **Parse-from-source-string.** Not all AST is built — some is authored as JS source and parsed via `EcmaCompiler::parse` (`crates/rolldown_ecmascript/src/ecma_compiler.rs`), which parses a source string into a standalone `EcmaAst` with its own allocator. On the output side this is essentially just the runtime module (`crates/rolldown/src/module_loader/runtime_module_task.rs:226`). The ~35 direct oxc `Parser::new` sites in plugins and scanner sub-analyzers parse _input_ source to analyze or transform it — a different activity from constructing rolldown's own AST.
 
-Two facts constrain every choice and are documented in [ast-mutation](./ast-mutation.md): synthesized nodes must carry a synthetic span (the reserved `SPAN`, `0..0`) so they don't false-match the span-keyed side tables (see `crates/rolldown/src/module_finalizers/mod.rs:1088`), and rolldown does not re-run semantic after finalize, so synthesized nodes keep a dummy `NodeId` for life rather than being backfilled.
+Two facts constrain every choice and are documented in [ast-mutation](./ast-mutation.md): synthesized nodes must carry the reserved synthetic span (`SPAN`, `0..0`) — the cross-pass side tables are `NodeId`-keyed now, so the span no longer prevents false matches, but `span.is_unspanned()` checks (such as the global-`require` rewrite guard in `crates/rolldown/src/module_finalizers/mod.rs`) still use it to tell synthesized nodes from scanned ones — and rolldown does not re-run semantic after finalize, so synthesized nodes keep a dummy `NodeId` for life; that dummy id is what keeps them from matching scan-time records.
 
 ## The convention
 

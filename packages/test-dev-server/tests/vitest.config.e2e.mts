@@ -6,7 +6,13 @@ import { defineConfig } from 'vitest/config';
 // else: any `playground/**/*.spec.ts` is picked up, and the playground name is
 // derived from the spec's own path. No central playground registry.
 
-const timeout = process.env.CI ? 50_000 : 30_000;
+// DEBUG (CI flake #9727): allow overriding timeout/retry from the CI env so a
+// repro run can finish inside the 15-min job budget without a code edit.
+const timeout = process.env.RD_TEST_TIMEOUT
+  ? Number(process.env.RD_TEST_TIMEOUT)
+  : process.env.CI
+    ? 50_000
+    : 30_000;
 
 export default defineConfig({
   resolve: {
@@ -23,6 +29,9 @@ export default defineConfig({
     // is Phase 4 (meta/design/dev-server-test-harness.md, Unresolved Q1).
     pool: 'forks',
     fileParallelism: false,
+    // DEBUG (CI flake #9727): surface what keeps the process alive after the
+    // suite ("something prevents Vite server from exiting" / orphan processes).
+    reporters: process.env.CI ? ['default', 'hanging-process'] : ['default'],
     testTimeout: timeout,
     hookTimeout: timeout,
     // Test knobs that the subprocess model passed via child env now live on the
@@ -38,6 +47,8 @@ export default defineConfig({
     },
     // Retained through the migration; removal is Phase 4 once the determinism
     // crutches (port races, orphaned subprocesses) are gone.
-    retry: process.env.CI ? 3 : 1,
+    // DEBUG (CI flake #9727): `RD_TEST_RETRY=0` makes a repro fail fast so the
+    // first-attempt cause shows up without 3 retries blowing the job budget.
+    retry: process.env.RD_TEST_RETRY ? Number(process.env.RD_TEST_RETRY) : process.env.CI ? 3 : 1,
   },
 });

@@ -15,7 +15,7 @@ import nodeFs from 'node:fs';
 import nodePath from 'node:path';
 import type { Browser, Page } from 'playwright';
 import { chromium } from 'playwright';
-import { beforeAll, inject } from 'vitest';
+import { beforeAll, beforeEach, expect, inject, onTestFailed } from 'vitest';
 
 export type { DevServerHandle } from '@rolldown/test-dev-server';
 
@@ -162,6 +162,81 @@ beforeAll(async ({}, suite) => {
     serverHandle = undefined;
     await browser?.close().catch(() => {});
   };
+});
+
+// --- DEBUG instrumentation (CI flake #9727) ---------------------------------
+// These specs mutate a shared on-disk fixture (playground-temp/<name>/) via
+// anchored string replacement, with no per-test/per-retry reset. The theory is
+// that one flaky first-attempt failure leaves the fixture off-baseline, after
+// which retries and sibling specs can never recover (editFile silently
+// no-ops). To confirm, snapshot the whole fixture tree at the start of every
+// attempt and at failure time. Grep the CI log for `[fixtdbg]`.
+
+const FIXTURE_TEXT_EXT = new Set(['.js', '.mjs', '.cjs', '.ts', '.json', '.txt', '.html', '.css']);
+
+function dbgSnapshotFixtures(): string[] {
+  const lines: string[] = [];
+  const walk = (dir: string, rel: string): void => {
+    let entries: nodeFs.Dirent[];
+    try {
+      entries = nodeFs.readdirSync(dir, { withFileTypes: true });
+    } catch (err) {
+      lines.push(`[fixtdbg] <readdir failed for ${rel || '.'}: ${String(err)}>`);
+      return;
+    }
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const abs = nodePath.join(dir, entry.name);
+      const relPath = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git')
+          continue;
+        walk(abs, relPath);
+      } else if (FIXTURE_TEXT_EXT.has(nodePath.extname(entry.name))) {
+        try {
+          const c = nodeFs.readFileSync(abs, 'utf-8');
+          const shown = c.length > 400 ? `${c.slice(0, 400)}…(+${c.length - 400})` : c;
+          lines.push(`[fixtdbg]   ${relPath} len=${c.length} = ${JSON.stringify(shown)}`);
+        } catch (err) {
+          lines.push(`[fixtdbg]   ${relPath} <read failed: ${String(err)}>`);
+        }
+      }
+    }
+  };
+  walk(testDir, '');
+  return lines;
+}
+
+const dbgAttempts = new Map<string, number>();
+
+beforeEach((context) => {
+  const name = context.task?.name ?? expect.getState().currentTestName ?? '<unknown>';
+  const key = context.task?.id ?? `${testName}::${name}`;
+  const attempt = (dbgAttempts.get(key) ?? 0) + 1;
+  dbgAttempts.set(key, attempt);
+  const retryCount = context.task?.result?.retryCount;
+  console.log(
+    `[fixtdbg] ── BEFORE [${testName}] "${name}" attempt#${attempt} (vitest.retryCount=${retryCount ?? 'n/a'}) serverUrl=${serverUrl}`,
+  );
+  for (const line of dbgSnapshotFixtures()) console.log(line);
+
+  onTestFailed((ctx) => {
+    console.error(`[fixtdbg] ── FAILED [${testName}] "${name}" attempt#${attempt}`);
+    for (const err of ctx.task?.result?.errors ?? []) {
+      console.error(`[fixtdbg]   error: ${err?.name}: ${err?.message}`);
+      if (err?.stack) {
+        console.error(
+          `[fixtdbg]   stack: ${String(err.stack).split('\n').slice(0, 6).join(' | ')}`,
+        );
+      }
+    }
+    console.error('[fixtdbg]   fixtures at failure:');
+    for (const line of dbgSnapshotFixtures()) console.error(line);
+    console.error(`[fixtdbg]   serverLogs tail: ${JSON.stringify(serverLogs.slice(-30))}`);
+    console.error(`[fixtdbg]   browserLogs tail: ${JSON.stringify(browserLogs.slice(-30))}`);
+    console.error(
+      `[fixtdbg]   browserErrors: ${JSON.stringify(browserErrors.map((e) => e.message))}`,
+    );
+  });
 });
 
 declare module 'vitest' {

@@ -33,9 +33,20 @@ export function editFile(filename: string, replacer: (content: string) => string
   const content = nodeFs.readFileSync(filePath, 'utf-8');
   const newContent = replacer(content);
   if (content === newContent) {
-    console.warn(`[editFile] No changes detected for ${filename}`);
+    // DEBUG (CI flake #9727): a silent no-op means the anchor string was
+    // already gone — i.e. the fixture was off-baseline before this edit. Print
+    // the current content so the CI log shows what state it was actually in.
+    const shown =
+      content.length > 200 ? `${content.slice(0, 200)}…(+${content.length - 200})` : content;
+    console.warn(
+      `[editFile] NOOP ${filename} (replacer changed nothing) current=${JSON.stringify(shown)}`,
+    );
     return;
   }
+  const clip = (s: string) => (s.length > 120 ? `${s.slice(0, 120)}…(+${s.length - 120})` : s);
+  console.log(
+    `[editFile] APPLIED ${filename}: ${JSON.stringify(clip(content))} -> ${JSON.stringify(clip(newContent))}`,
+  );
   nodeFs.writeFileSync(filePath, newContent, 'utf-8');
 }
 

@@ -1,0 +1,48 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] foo.js is dynamically imported by b.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region b.js
+var B = class {
+	async foo() {
+		return new (await (Promise.resolve().then(() => foo_exports))).default();
+	}
+};
+await Promise.resolve();
+//#endregion
+//#region a.js
+var A = class extends B {};
+//#endregion
+//#region foo.js
+var foo_exports = /* @__PURE__ */ __exportAll({ default: () => Foo });
+var Foo = class extends A {
+	foo() {
+		return "hello-from-foo";
+	}
+};
+//#endregion
+//#region main.js
+var Bar = class extends A {
+	bar() {
+		return new Foo().foo();
+	}
+};
+assert.strictEqual(new Bar().bar(), "hello-from-foo");
+//#endregion
+
+```

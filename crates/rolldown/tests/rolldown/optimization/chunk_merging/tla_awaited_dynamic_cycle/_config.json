@@ -1,0 +1,4 @@
+{
+  "_comment": "Guard test for the Rollup-aligned TLA handling. `main` uses top-level await and `await import('./route.js')` while also statically importing `shared.js`; `route.js` statically imports `shared.js` too. The avoid-redundant-chunk-loads pass would otherwise notice `shared` is 'already loaded' by `main` and fold it into `main`'s chunk — but that routes `route -> main` statically while `main -> route` is an awaited dynamic edge, closing an awaited dependency cycle. `compute_atom_dependencies` now feeds awaited dynamic edges into `reduced_atom_graph_has_static_cycle`, so the reduction is rejected and `shared` stays reachable without forming the cycle. The bundle must execute correctly (asserts in main.js).",
+  "config": {}
+}

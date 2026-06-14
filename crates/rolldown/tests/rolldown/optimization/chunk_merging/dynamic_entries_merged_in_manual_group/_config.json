@@ -1,0 +1,14 @@
+{
+  "_comment": "Regression for `rolldown-dynamic-imports-extra-proxy-chunks`: three pure-ESM modules are each dynamically imported by the entry and a manual code splitting group merges all three into one `shared-abc` chunk. The entry uses top-level await. Rolldown used to flag the whole graph as TLA and bail out of `optimize_facade_entry_chunks` (the old `allow_merge_common_chunks = merge_common_chunks && !has_tla_or_tla_dependency` gate), keeping one re-export proxy chunk per target (a.js/b.js/c.js). Now TLA only models *awaited* dynamic-import edges as blocking edges in the merge/dedup cycle checks (Rollup-aligned), so with no awaited cycle the proxies are eliminated: the snapshot must show only `main.js` + `shared-abc.js`, with `import(\"./shared-abc.js\").then(n => n.r)` inlined in the entry.",
+  "config": {
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "shared-abc",
+          "test": "[abc]\\.js$",
+          "priority": 30
+        }
+      ]
+    }
+  }
+}

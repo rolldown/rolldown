@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+//#region main.js
+const [a, b, c] = await Promise.all([
+	import("./shared-abc.js").then((n) => n.r),
+	import("./shared-abc.js").then((n) => n.n),
+	import("./shared-abc.js").then((n) => n.t)
+]);
+assert.strictEqual(a.A, "a-payload");
+assert.strictEqual(b.B, "b-payload");
+assert.strictEqual(c.C, "c-payload");
+//#endregion
+
+```
+
+## shared-abc.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region a.js
+var a_exports = /* @__PURE__ */ __exportAll({ A: () => A });
+const A = "a-payload";
+//#endregion
+//#region b.js
+var b_exports = /* @__PURE__ */ __exportAll({ B: () => B });
+const B = "b-payload";
+//#endregion
+//#region c.js
+var c_exports = /* @__PURE__ */ __exportAll({ C: () => C });
+const C = "c-payload";
+//#endregion
+export { b_exports as n, a_exports as r, c_exports as t };
+
+```

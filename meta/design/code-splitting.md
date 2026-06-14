@@ -106,7 +106,9 @@ Every accepted reduction must also keep the regrouped static atom graph acyclic.
 
 Runtime may participate in this bit reduction, but only as placement metadata. It is extracted into a standalone runtime chunk before manual and normal chunk materialization, so this pass does not assign runtime code to user chunks and does not need runtime-specific cycle handling.
 
-Top-level-await refinements are intentionally not modeled here yet. The existing chunk optimizer still bails out globally when any included module is TLA or contains a TLA dependency, so the awaited-dynamic-import safety path remains future work.
+Top-level await is modeled per *awaited dynamic-import edge* rather than via a global bail-out. A top-level-await module blocks on every module it dynamically imports, so `collect_awaited_dynamic_imports` records those importer→target edges and `compute_atom_dependencies` folds them into the acyclicity check above (and `ChunkOptimizationGraph::would_create_circular_dependency` does the same for common-chunk merging). A reduction or merge that would close a dependency cycle through an awaited dynamic import is rejected; lazy (non-awaited) dynamic imports stay excluded, and graphs with no awaited cycle now optimize normally instead of bailing whenever any module touches TLA.
+
+Remaining gap vs. Rollup: this catches cycles that stay *inter-chunk* after reduction, but not yet Rollup's separate rule that isolates a module which is itself in a dependency cycle and has a top-level-await dynamic importer (`chunkAssignment.ts`: `cycles.size > 0 && includedTopLevelAwaitingDynamicImporters.size > 0`). A cycle member that fully collapses into its TLA importer's chunk is not specially isolated; that module-cycle guard is not yet implemented.
 
 ## Reachability Propagation
 

@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { t as s } from "./shared.js";
+import assert from "node:assert";
+//#region main.js
+const route = await import("./route.js");
+assert.strictEqual(s, "shared");
+assert.strictEqual(route.fromRoute, "shared->route");
+//#endregion
+
+```
+
+## route.js
+
+```js
+import { t as s } from "./shared.js";
+//#region route.js
+const fromRoute = `${s}->route`;
+//#endregion
+export { fromRoute };
+
+```
+
+## shared.js
+
+```js
+//#region shared.js
+const s = "shared";
+//#endregion
+export { s as t };
+
+```

@@ -46,7 +46,18 @@ struct ChunkCandidate {
   modules: Vec<ModuleIdx>,
   /// Whether this chunk needs to be created in the final chunk graph.
   needs_creation: bool,
+  /// Static (eager) chunk dependencies: this chunk statically imports a module
+  /// that lives in the dependency chunk.
   dependencies: FxHashSet<ChunkIdx>,
+  /// Top-level-await *blocking* dynamic-import edges: a module in this chunk uses
+  /// top-level await and dynamically imports a module that lives in the dependency
+  /// chunk. These behave like static edges for deadlock purposes (the importer's
+  /// evaluation blocks on the awaited chunk), so they are folded into the merge
+  /// cycle check — but only there. The analog of Rollup's
+  /// `includedTopLevelAwaitingDynamicImporters`. Kept separate from `dependencies`
+  /// so static-only consumers (`is_reachable`, used for the runtime helper-cycle
+  /// guard) are unaffected.
+  awaited_dynamic_dependencies: FxHashSet<ChunkIdx>,
   /// Whether any module in this chunk has side effects.
   has_side_effects: bool,
 }
@@ -99,6 +110,7 @@ impl ChunkOptimizationGraph {
           modules: item.modules.clone(),
           needs_creation: false,
           dependencies: FxHashSet::default(),
+          awaited_dynamic_dependencies: FxHashSet::default(),
           has_side_effects,
         }
       })
@@ -132,6 +144,7 @@ impl ChunkOptimizationGraph {
         modules: vec![module_idx],
         needs_creation: true,
         dependencies: FxHashSet::default(),
+        awaited_dynamic_dependencies: FxHashSet::default(),
         has_side_effects: module_has_side_effects,
       };
       let chunk_idx = self.chunks.push(temp_chunk);
@@ -175,7 +188,11 @@ impl ChunkOptimizationGraph {
   /// as a dependency of the current chunk.
   ///
   /// This is similar to Rollup's `addChunkDependenciesAndGetExternalSideEffectAtoms`.
-  pub fn calc_chunk_dependencies(&mut self, metas: &IndexVec<ModuleIdx, LinkingMetadata>) {
+  pub fn calc_chunk_dependencies(
+    &mut self,
+    metas: &IndexVec<ModuleIdx, LinkingMetadata>,
+    awaited_dynamic_imports: &FxHashMap<ModuleIdx, Vec<ModuleIdx>>,
+  ) {
     for chunk_idx in self.chunks.indices() {
       let modules = std::mem::take(&mut self.chunks[chunk_idx].modules);
       for module_idx in &modules {
@@ -188,9 +205,32 @@ impl ChunkOptimizationGraph {
             }
           }
         }
+        // A top-level-await module blocks its own evaluation on the chunks it
+        // dynamically imports, so those edges are deadlock-relevant for merging
+        // (see `would_create_circular_dependency`). Non-awaited dynamic imports
+        // are lazy and intentionally excluded.
+        if let Some(awaited_targets) = awaited_dynamic_imports.get(module_idx) {
+          for &target_module_idx in awaited_targets {
+            if let Some(target_chunk_idx) = self.module_to_chunk[target_module_idx] {
+              if target_chunk_idx != chunk_idx {
+                self.chunks[chunk_idx].awaited_dynamic_dependencies.insert(target_chunk_idx);
+              }
+            }
+          }
+        }
       }
       self.chunks[chunk_idx].modules = modules;
     }
+  }
+
+  /// Out-edges relevant to deadlock/cycle detection: static dependencies plus
+  /// top-level-await dynamic-import edges (both block the importer's evaluation).
+  fn blocking_deps(&self, chunk_idx: ChunkIdx) -> impl Iterator<Item = ChunkIdx> + '_ {
+    self.chunks[chunk_idx]
+      .dependencies
+      .iter()
+      .chain(self.chunks[chunk_idx].awaited_dynamic_dependencies.iter())
+      .copied()
   }
 
   /// Checks if merging `source_chunk` into `target_chunk` would create a circular dependency.
@@ -211,13 +251,11 @@ impl ChunkOptimizationGraph {
     source_chunk_idx: ChunkIdx,
     target_chunk_idx: ChunkIdx,
   ) -> bool {
-    // Start BFS from the combined deps of source and target.
-    let mut queue: VecDeque<ChunkIdx> = self.chunks[source_chunk_idx]
-      .dependencies
-      .iter()
-      .chain(self.chunks[target_chunk_idx].dependencies.iter())
-      .copied()
-      .collect();
+    // Start BFS from the combined deps of source and target. `blocking_deps`
+    // unions static edges with top-level-await dynamic edges, so a cycle that
+    // closes only through an awaited dynamic import is also detected.
+    let mut queue: VecDeque<ChunkIdx> =
+      self.blocking_deps(source_chunk_idx).chain(self.blocking_deps(target_chunk_idx)).collect();
     let mut visited = FxHashSet::default();
 
     while let Some(chunk_idx) = queue.pop_front() {
@@ -227,14 +265,14 @@ impl ChunkOptimizationGraph {
       if !visited.insert(chunk_idx) {
         continue;
       }
-      for &dep in &self.chunks[chunk_idx].dependencies {
+      for dep in self.blocking_deps(chunk_idx) {
         if !visited.contains(&dep) {
           queue.push_back(dep);
         }
       }
       // Any chunk that depends on source will depend on target after the merge.
       // Simulate this by also queuing target when we encounter such a chunk.
-      if self.chunks[chunk_idx].dependencies.contains(&source_chunk_idx) {
+      if self.blocking_deps(chunk_idx).any(|dep| dep == source_chunk_idx) {
         queue.push_back(target_chunk_idx);
       }
     }
@@ -279,8 +317,18 @@ impl ChunkOptimizationGraph {
         self.chunks[target_chunk_idx].dependencies.insert(dep_chunk_idx);
       }
     }
+    // Carry the awaited (top-level-await) dynamic edges across the merge too, so
+    // later merge cycle checks still see them.
+    let source_awaited =
+      std::mem::take(&mut self.chunks[source_chunk_idx].awaited_dynamic_dependencies);
+    for dep_chunk_idx in source_awaited {
+      if dep_chunk_idx != target_chunk_idx {
+        self.chunks[target_chunk_idx].awaited_dynamic_dependencies.insert(dep_chunk_idx);
+      }
+    }
     // Remove self-reference if it exists (source might have depended on target)
     self.chunks[target_chunk_idx].dependencies.remove(&target_chunk_idx);
+    self.chunks[target_chunk_idx].awaited_dynamic_dependencies.remove(&target_chunk_idx);
     self.chunks[target_chunk_idx].has_side_effects |= source_has_side_effects;
   }
 }

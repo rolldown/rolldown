@@ -30,6 +30,7 @@ impl GenerateStage<'_> {
     index_splitting_info: &mut IndexSplittingInfo,
     chunk_graph: &ChunkGraph,
     entries_len: u32,
+    awaited_dynamic_imports: &FxHashMap<ModuleIdx, Vec<ModuleIdx>>,
   ) {
     let DynamicEntryAnalysis {
       dynamic_entry_indices,
@@ -46,7 +47,8 @@ impl GenerateStage<'_> {
       return;
     }
     let module_to_atom_idx = self.compute_module_to_atom_idx(&atoms);
-    let atom_dependencies = self.compute_atom_dependencies(&atoms, &module_to_atom_idx);
+    let atom_dependencies =
+      self.compute_atom_dependencies(&atoms, &module_to_atom_idx, awaited_dynamic_imports);
 
     let static_dependency_atoms_by_entry =
       Self::compute_static_dependency_atoms_by_entry(entries_len as usize, &atoms);
@@ -176,10 +178,19 @@ impl GenerateStage<'_> {
     module_to_atom_idx
   }
 
+  /// Builds the atom dependency graph used only by [`Self::reduced_atom_graph_has_static_cycle`].
+  ///
+  /// Besides static module dependencies, this folds in *awaited* dynamic-import
+  /// edges: a top-level-await module blocks on the chunks it dynamically imports,
+  /// so an "already loaded" bit reduction that would route such an edge into a
+  /// chunk cycle must be rejected to avoid a runtime deadlock — the same reason
+  /// the static edges are tracked (see the design doc's "already loaded ≠ already
+  /// initialized" note). Non-awaited dynamic imports stay excluded; they are lazy.
   fn compute_atom_dependencies(
     &self,
     atoms: &[ChunkAtom],
     module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
+    awaited_dynamic_imports: &FxHashMap<ModuleIdx, Vec<ModuleIdx>>,
   ) -> Vec<Vec<usize>> {
     atoms
       .iter()
@@ -187,7 +198,11 @@ impl GenerateStage<'_> {
       .map(|(atom_idx, atom)| {
         let mut dependencies = FxHashSet::default();
         for &module_idx in &atom.modules {
-          for &dep_module_idx in &self.link_output.metas[module_idx].dependencies {
+          let static_deps = self.link_output.metas[module_idx].dependencies.iter().copied();
+          // Awaited dynamic imports block like static edges (see doc comment).
+          let awaited_deps =
+            awaited_dynamic_imports.get(&module_idx).into_iter().flatten().copied();
+          for dep_module_idx in static_deps.chain(awaited_deps) {
             let Some(dep_atom_idx) = module_to_atom_idx[dep_module_idx] else {
               continue;
             };

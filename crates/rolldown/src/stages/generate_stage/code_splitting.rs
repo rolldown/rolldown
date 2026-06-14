@@ -10,10 +10,10 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTag,
-  ModuleTagBitSet, ModuleTagRegistry, PostChunkOptimizationOperation, PreserveEntrySignatures,
-  SymbolRef, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, EcmaModuleAstUsage, EntryPointKind, ExportsKind,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
+  ModuleNamespaceIncludedReason, ModuleTag, ModuleTagBitSet, ModuleTagRegistry,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
@@ -845,13 +845,17 @@ impl GenerateStage<'_> {
     let mut module_is_assigned: IndexBitSet<ModuleIdx> =
       IndexBitSet::new(self.link_output.module_table.modules.len());
 
-    let has_tla_or_tla_dependency =
-      self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
-    let allow_merge_common_chunks =
-      self.options.experimental.is_merge_common_chunks_enabled() && !has_tla_or_tla_dependency;
+    // Top-level await no longer disables these passes wholesale. Instead, awaited
+    // dynamic-import edges are modeled as *blocking* edges in the merge and
+    // already-loaded cycle checks (see `collect_awaited_dynamic_imports`,
+    // `ChunkOptimizationGraph::would_create_circular_dependency`, and
+    // `reduced_atom_graph_has_static_cycle`). A pass therefore only bails for the
+    // specific chunks that would actually close an awaited dependency cycle, the
+    // way Rollup does, rather than for any graph that happens to contain TLA.
+    let awaited_dynamic_imports = self.collect_awaited_dynamic_imports();
+    let allow_merge_common_chunks = self.options.experimental.is_merge_common_chunks_enabled();
     let allow_avoid_redundant_chunk_loads =
-      self.options.experimental.is_avoid_redundant_chunk_loads_enabled()
-        && !has_tla_or_tla_dependency;
+      self.options.experimental.is_avoid_redundant_chunk_loads_enabled();
     // See meta/design/code-splitting.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self
@@ -862,7 +866,12 @@ impl GenerateStage<'_> {
         .sum::<usize>()
         .try_into()
         .expect("Too many entries, u32 overflowed.");
-      self.optimize_dynamic_entry_bits(index_splitting_info, chunk_graph, entries_len);
+      self.optimize_dynamic_entry_bits(
+        index_splitting_info,
+        chunk_graph,
+        entries_len,
+        &awaited_dynamic_imports,
+      );
     }
     self.extract_standalone_runtime_chunk(
       index_splitting_info,
@@ -950,7 +959,7 @@ impl GenerateStage<'_> {
     }
 
     if allow_merge_common_chunks {
-      temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
+      temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas, &awaited_dynamic_imports);
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,
@@ -970,6 +979,47 @@ impl GenerateStage<'_> {
     self.try_merge_runtime_chunk(chunk_graph, None);
 
     Ok(())
+  }
+
+  /// Collects, for every included module that uses top-level await, the modules
+  /// it dynamically imports (skipping dead/unresolved imports).
+  ///
+  /// A top-level-await module suspends its own evaluation on every dynamic import
+  /// it awaits, so these importer→target edges *block* like static imports. The
+  /// chunk-merge and already-loaded cycle checks fold them in (as
+  /// `awaited_dynamic_dependencies`) so the optimizer never produces a chunk graph
+  /// whose only cycle closes through an awaited dynamic import — which would
+  /// deadlock at runtime. This is the analog of Rollup's
+  /// `includedTopLevelAwaitingDynamicImporters`.
+  ///
+  /// We conservatively treat *all* dynamic imports of a TLA module as awaited
+  /// (matching Rollup) rather than proving each `import()` is syntactically
+  /// awaited; the worst case is a missed merge, never a deadlock.
+  fn collect_awaited_dynamic_imports(&self) -> FxHashMap<ModuleIdx, Vec<ModuleIdx>> {
+    let mut map: FxHashMap<ModuleIdx, Vec<ModuleIdx>> = FxHashMap::default();
+    for module in &self.link_output.module_table.modules {
+      let Some(module) = module.as_normal() else {
+        continue;
+      };
+      if !self.link_output.metas[module.idx].is_included
+        || !module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait)
+      {
+        continue;
+      }
+      for rec in &module.import_records {
+        if rec.kind != ImportKind::DynamicImport
+          || rec.meta.contains(ImportRecordMeta::DeadDynamicImport)
+        {
+          continue;
+        }
+        if let Some(target) = rec.resolved_module {
+          if self.link_output.metas[target].is_included {
+            map.entry(module.idx).or_default().push(target);
+          }
+        }
+      }
+    }
+    map
   }
 
   pub(super) fn extract_standalone_runtime_chunk(

@@ -1,37 +1,30 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] file.json is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
 # Assets
 
-## file.js
+## main.js
 
 ```js
+import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region file.json
 var require_file = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { "foo": "bar" };
 }));
 //#endregion
-export { __toESM as n, require_file as t };
-
-```
-
-## file2.js
-
-```js
-import { t as require_file } from "./file.js";
-export default require_file();
-
-```
-
-## main.js
-
-```js
-import { n as __toESM, t as require_file } from "./file.js";
-import assert from "node:assert";
 //#region main.js
 const required = require_file();
-const dynamicRes = await import("./file2.js").then((m) => /* @__PURE__ */ __toESM(m.default));
+const dynamicRes = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_file()));
 assert.strictEqual(required.foo, "bar");
 assert.strictEqual(dynamicRes.default.foo, "bar");
 //#endregion

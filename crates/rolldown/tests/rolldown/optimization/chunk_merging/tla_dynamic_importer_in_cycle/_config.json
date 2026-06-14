@@ -1,0 +1,4 @@
+{
+  "_comment": "Port of Rollup's `splitting-cycles-module-with-TLA-and-dynamic-importer`. `foo` is in a dependency cycle (foo -> a -> b -> dynamic import foo) and is dynamically imported by `b`, a top-level-await module. The avoid-redundant-chunk-loads pass must not strip `foo`'s dynamic-entry bit and collapse it into the importer chunk: that hides the cycle from the chunk-level check yet still deadlocks at runtime. `foo` must stay in its own chunk. Asserts execute, so a deadlock surfaces as an unsettled top-level await.",
+  "config": {}
+}

@@ -7,13 +7,13 @@ settings:
 catalogs:
   default:
     '@babel/core':
-      specifier: ^7.24.7
+      specifier: ^7.29.7
       version: 7.29.7
     '@babel/preset-env':
-      specifier: ^7.24.7
+      specifier: ^7.29.7
       version: 7.29.7
     '@babel/preset-typescript':
-      specifier: ^7.24.7
+      specifier: ^7.29.7
       version: 7.29.7
     '@napi-rs/cli':
       specifier: ^3.7.2
@@ -79,7 +79,7 @@ catalogs:
       specifier: ^8.18.0
       version: 8.18.1
     acorn:
-      specifier: ^8.12.1
+      specifier: ^8.17.0
       version: 8.17.0
     acorn-import-assertions:
       specifier: ^1.9.0
@@ -861,7 +861,7 @@ importers:
         specifier: 'catalog:'
         version: 0.1.0
       '@oxlint/plugins':
-        specifier: ^1.66.0
+        specifier: ^1.69.0
         version: 1.69.0
       acorn:
         specifier: 'catalog:'

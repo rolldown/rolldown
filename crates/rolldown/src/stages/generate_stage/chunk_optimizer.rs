@@ -516,10 +516,11 @@ impl GenerateStage<'_> {
         if matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict)) {
           // We can safely merge into this chunk in two scenarios:
           // 1. The target chunk is an async entry - dynamic chunks are not restricted by `PreserveEntrySignatures`.
-          // 2. The target chunk has strict signature preservation, but the modules being merged won't alter
-          //    the entry's exported interface (they either have no exports or only re-export existing entry symbols).
-          if is_async_entry_only || self.can_merge_without_changing_entry_signature(chunk, modules)
-          {
+          // 2. The merged modules don't widen the entry's exported interface: each either has no
+          //    exports / only re-exports existing entry symbols, or keeps its exports internal
+          //    (see `can_merge_into_strict_entry`). `try_insert` only ever sees plain common
+          //    chunks, so this never dissolves a user-directed manual/advanced chunk.
+          if is_async_entry_only || self.can_merge_into_strict_entry(chunk, modules) {
             self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
             ChunkAssignment::Merged(chunk_idx)
           } else {
@@ -787,6 +788,59 @@ impl GenerateStage<'_> {
           .get(export_name)
           .is_some_and(|entry_export| entry_export.symbol_ref == resolved_export.symbol_ref)
       })
+    })
+  }
+
+  /// Like [`Self::can_merge_without_changing_entry_signature`], but also accepts a module whose
+  /// exports stay *internal* after the merge, so folding it in cannot widen the entry's public
+  /// signature. A module qualifies when it is not itself an entry (user or dynamic) and not
+  /// dynamically imported — otherwise its namespace is observable — and every static importer
+  /// already lands in the merged chunk, so no cross-chunk import can reference its bindings.
+  ///
+  /// This is the Rollup-aligned relaxation (Rollup folds such modules into the entry even under
+  /// `exports-only`/`strict`). It is used *only* by `try_insert_common_module_to_exist_chunk`,
+  /// which only ever processes plain common chunks, so it never dissolves a user-directed
+  /// manual/advanced-chunk group (those keep using the stricter signature check).
+  fn can_merge_into_strict_entry(&self, chunk: &Chunk, modules: &[ModuleIdx]) -> bool {
+    let Some(entry_module_idx) = chunk.entry_module_idx() else {
+      return false;
+    };
+    let metas = &self.link_output.metas;
+    let module_table = &self.link_output.module_table;
+    let entry_exports = &metas[entry_module_idx].resolved_exports;
+
+    // The modules that will live in the chunk after the merge.
+    let merged_modules: FxHashSet<ModuleIdx> =
+      chunk.modules.iter().copied().chain(modules.iter().copied()).collect();
+
+    modules.iter().all(|&module_idx| {
+      if module_idx == entry_module_idx {
+        return true;
+      }
+      let Some(module) = module_table[module_idx].as_normal() else {
+        return true;
+      };
+
+      // (a) All of the module's exports are already covered by the entry's signature.
+      let covered_by_entry =
+        metas[module_idx].resolved_exports.iter().all(|(export_name, resolved_export)| {
+          entry_exports
+            .get(export_name)
+            .is_some_and(|entry_export| entry_export.symbol_ref == resolved_export.symbol_ref)
+        });
+      if covered_by_entry {
+        return true;
+      }
+
+      // (b) The module's exports stay internal after the merge. An entry module or a
+      // dynamically imported module has an observable namespace, so it can never be folded
+      // silently; otherwise the exports stay private as long as every static importer is
+      // already inside the merged chunk.
+      if self.link_output.entries.contains_key(&module_idx) || !module.dynamic_importers.is_empty()
+      {
+        return false;
+      }
+      module.importers_idx.iter().all(|importer| merged_modules.contains(importer))
     })
   }
 

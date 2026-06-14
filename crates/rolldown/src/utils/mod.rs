@@ -1,6 +1,7 @@
 pub mod apply_inner_plugins;
 pub mod augment_chunk_hash;
 pub mod chunk;
+pub mod defer_drop;
 pub mod external_import_interop;
 pub mod fs_utils;
 pub mod load_entry_module;

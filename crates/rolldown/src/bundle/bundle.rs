@@ -277,7 +277,13 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     // performance; reinstate it here, before the fallible steps below, so the
     // cache stays whole on their `Err` paths.
     // See meta/design/bundler-data-lifecycle.md ("Cache integrity on a failed build").
-    self.merge_immutable_fields_for_cache(link_stage_output.symbol_db);
+    self.merge_immutable_fields_for_cache(std::mem::take(&mut link_stage_output.symbol_db));
+
+    // `link_stage_output` is dead from here on (its `symbol_db` was just taken
+    // for the cache merge); ship the remaining heavy fields (module_table,
+    // metas, stmt_infos, ...) to a rayon worker so their free() happens off
+    // the critical path.
+    crate::utils::defer_drop::spawn_drop(link_stage_output);
 
     if let Err(errors) = &bundle_output {
       debug_assert!(errors.iter().all(|e| e.severity() == Severity::Error));

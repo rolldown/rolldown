@@ -152,6 +152,12 @@ impl BundleFactory {
     resolver: SharedResolver<Fs>,
     cache: ScanStageCache,
   ) -> Bundle<Fs> {
+    // Every build passes through here exactly once before any scan/link work
+    // starts. Wait for the previous build's deferred drops to retire so they
+    // can never overlap this build's rayon work; a no-op in steady state.
+    // See `utils::defer_drop` for the full invariant.
+    crate::utils::defer_drop::drain();
+
     let bundle_span = self.generate_unique_bundle_span();
     let module_infos = Arc::clone(&self.module_infos_for_incremental_build);
     let transform_dependencies = Arc::clone(&self.transform_dependencies_for_incremental_build);

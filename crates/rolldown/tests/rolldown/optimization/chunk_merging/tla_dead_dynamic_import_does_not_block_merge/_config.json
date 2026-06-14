@@ -1,0 +1,18 @@
+{
+  "_comment": "A top-level-await module contains a dynamic import to `route.js` inside an unused function. `route.js` is still included through `loader.js`, whose static dependencies already load `main.js` and `shared.js`. The excluded dynamic import statement must not be collected as an awaited blocking edge; otherwise the optimizer sees a false `main -> route` edge and rejects the route-bit reduction for `main/shared`.",
+  "expectExecuted": false,
+  "snapshot": false,
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "loader",
+        "import": "./loader.js"
+      }
+    ],
+    "minifyInternalExports": false
+  }
+}

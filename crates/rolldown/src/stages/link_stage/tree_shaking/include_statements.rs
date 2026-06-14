@@ -706,6 +706,12 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
 
   // Include imported modules for its side effects
   module_meta.dependencies.iter().copied().for_each(|dependency_idx| {
+    // Guard-hoist: skip already-included dependencies before paying the
+    // `ctx.modules[idx]` match + `has_side_effects()` check. The authoritative
+    // dedup is still `set_bit` inside `include_module`; this is a pure work-skip.
+    if ctx.is_module_included_vec.has_bit(dependency_idx) {
+      return;
+    }
     match &ctx.modules[dependency_idx] {
       Module::Normal(importee) => {
         if !ctx.tree_shaking || importee.side_effects.has_side_effects() {

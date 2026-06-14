@@ -1,4 +1,4 @@
 {
-  "_comment": "Port of Rollup's `splitting-cycles-module-with-TLA-and-dynamic-importer`. `foo` is in a dependency cycle (foo -> a -> b -> dynamic import foo) and is dynamically imported by `b`, a top-level-await module. The avoid-redundant-chunk-loads pass must not strip `foo`'s dynamic-entry bit and collapse it into the importer chunk: that hides the cycle from the chunk-level check yet still deadlocks at runtime. `foo` must stay in its own chunk. Asserts execute, so a deadlock surfaces as an unsettled top-level await.",
+  "_comment": "Port of Rollup's `splitting-cycles-module-with-TLA-and-dynamic-importer`. `foo` is in a dependency cycle (foo -> a -> b -> dynamic import foo) and is dynamically imported by `b`, a top-level-await module. Unlike Rollup, Rolldown may safely collapse the whole statically reachable cycle into one chunk, rewriting the dynamic import to an internal Promise.resolve path. The runtime asserts exercise both the direct static path and the rewritten dynamic path.",
   "config": {}
 }

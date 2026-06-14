@@ -3,9 +3,9 @@ import A from './a.js';
 import Foo from './foo.js';
 
 // Mirrors Rollup's `splitting-cycles-module-with-TLA-and-dynamic-importer`.
-// `foo` is in a dependency cycle (foo -> a -> b -> dynamic import foo) and is
-// dynamically imported by `b`, which is a top-level-await module. `foo` must be
-// isolated into its own chunk; collapsing it into the importer's chunk deadlocks.
+// Rolldown may collapse the whole statically reachable cycle into one chunk, so
+// this fixture asserts both the direct static path and the rewritten dynamic
+// import path execute correctly.
 class Bar extends A {
   bar() {
     return new Foo().foo();
@@ -13,3 +13,4 @@ class Bar extends A {
 }
 
 assert.strictEqual(new Bar().bar(), 'hello-from-foo');
+assert.strictEqual((await new A().foo()).foo(), 'hello-from-foo');

@@ -43,6 +43,7 @@ var Bar = class extends A {
 	}
 };
 assert.strictEqual(new Bar().bar(), "hello-from-foo");
+assert.strictEqual((await new A().foo()).foo(), "hello-from-foo");
 //#endregion
 
 ```

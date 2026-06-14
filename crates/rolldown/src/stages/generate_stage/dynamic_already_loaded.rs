@@ -120,7 +120,7 @@ impl GenerateStage<'_> {
     };
 
     let can_merge_without_changing_entry_signature =
-      self.can_merge_without_changing_entry_signature(chunk, &atom.modules);
+      self.can_merge_without_changing_entry_signature(chunk, &atom.modules, false);
     let is_runtime_only_atom = self.is_runtime_only_atom(atom);
     let removed_entries_are_dynamic_entry_modules = Self::removed_entries_are_dynamic_entry_modules(
       atom,

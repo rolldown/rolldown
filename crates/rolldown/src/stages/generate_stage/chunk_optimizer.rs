@@ -520,7 +520,9 @@ impl GenerateStage<'_> {
           //    exports / only re-exports existing entry symbols, or keeps its exports internal
           //    (see `can_merge_into_strict_entry`). `try_insert` only ever sees plain common
           //    chunks, so this never dissolves a user-directed manual/advanced chunk.
-          if is_async_entry_only || self.can_merge_into_strict_entry(chunk, modules) {
+          if is_async_entry_only
+            || self.can_merge_without_changing_entry_signature(chunk, modules, true)
+          {
             self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
             ChunkAssignment::Merged(chunk_idx)
           } else {
@@ -751,69 +753,42 @@ impl GenerateStage<'_> {
     Some(ret)
   }
 
-  /// Checks if merging the given modules into an entry chunk would change the entry's export signature.
+  /// Checks whether merging `modules` into an entry chunk would change the entry's *public* export
+  /// signature (relevant under `preserveEntrySignatures: 'strict'`/`'exports-only'`).
   ///
-  /// With `preserveEntrySignatures: 'strict'`, we need to ensure that merging modules doesn't add
-  /// new exports to the entry chunk. A module is safe to merge if:
-  /// 1. It has no exports of its own (purely internal implementation code), OR
-  /// 2. All its exports are already part of the entry's resolved exports (re-exported by the entry)
+  /// A module is always safe to merge when it has no exports of its own, or all of its exports are
+  /// already re-exported by the entry (covered by the entry's signature).
+  ///
+  /// When `allow_internal_only` is set, a module is *also* safe when its exports stay **internal**
+  /// after the merge: it is not itself an entry (user or dynamic) and not dynamically imported —
+  /// otherwise its namespace would be observable — and every static importer already lands in the
+  /// merged chunk, so nothing outside the chunk can reference its bindings. This is the
+  /// Rollup-aligned relaxation (Rollup folds such modules in even under `exports-only`). Only
+  /// `try_insert_common_module_to_exist_chunk` enables it, and it only ever sees plain common
+  /// chunks, so user-directed manual/advanced-chunk groups are never dissolved — the facade pass
+  /// and the already-loaded reduction pass `false`.
   pub(super) fn can_merge_without_changing_entry_signature(
     &self,
     chunk: &Chunk,
     modules: &[ModuleIdx],
+    allow_internal_only: bool,
   ) -> bool {
     let Some(entry_module_idx) = chunk.entry_module_idx() else {
       return false;
     };
     let metas = &self.link_output.metas;
     let module_table = &self.link_output.module_table;
-
     let entry_exports = &metas[entry_module_idx].resolved_exports;
 
-    modules.iter().all(|&module_idx| {
-      // Skip the entry module itself - it's always safe
-      if module_idx == entry_module_idx || module_table[module_idx].as_normal().is_none() {
-        return true;
-      }
-
-      let module_meta = &metas[module_idx];
-
-      // A module is safe to merge if all its exports are already covered by the entry's exports.
-      // This means either:
-      // 1. The module has no exports (empty resolved_exports)
-      // 2. All of the module's exports point to symbols that the entry also exports
-      module_meta.resolved_exports.iter().all(|(export_name, resolved_export)| {
-        // Check if the entry has an export with the same name that resolves to the same symbol
-        entry_exports
-          .get(export_name)
-          .is_some_and(|entry_export| entry_export.symbol_ref == resolved_export.symbol_ref)
-      })
-    })
-  }
-
-  /// Like [`Self::can_merge_without_changing_entry_signature`], but also accepts a module whose
-  /// exports stay *internal* after the merge, so folding it in cannot widen the entry's public
-  /// signature. A module qualifies when it is not itself an entry (user or dynamic) and not
-  /// dynamically imported — otherwise its namespace is observable — and every static importer
-  /// already lands in the merged chunk, so no cross-chunk import can reference its bindings.
-  ///
-  /// This is the Rollup-aligned relaxation (Rollup folds such modules into the entry even under
-  /// `exports-only`/`strict`). It is used *only* by `try_insert_common_module_to_exist_chunk`,
-  /// which only ever processes plain common chunks, so it never dissolves a user-directed
-  /// manual/advanced-chunk group (those keep using the stricter signature check).
-  fn can_merge_into_strict_entry(&self, chunk: &Chunk, modules: &[ModuleIdx]) -> bool {
-    let Some(entry_module_idx) = chunk.entry_module_idx() else {
-      return false;
+    // Only needed for the internal-only relaxation below.
+    let merged_modules: FxHashSet<ModuleIdx> = if allow_internal_only {
+      chunk.modules.iter().copied().chain(modules.iter().copied()).collect()
+    } else {
+      FxHashSet::default()
     };
-    let metas = &self.link_output.metas;
-    let module_table = &self.link_output.module_table;
-    let entry_exports = &metas[entry_module_idx].resolved_exports;
-
-    // The modules that will live in the chunk after the merge.
-    let merged_modules: FxHashSet<ModuleIdx> =
-      chunk.modules.iter().copied().chain(modules.iter().copied()).collect();
 
     modules.iter().all(|&module_idx| {
+      // The entry module itself never widens its own signature.
       if module_idx == entry_module_idx {
         return true;
       }
@@ -821,7 +796,8 @@ impl GenerateStage<'_> {
         return true;
       };
 
-      // (a) All of the module's exports are already covered by the entry's signature.
+      // (a) Every export is already covered by the entry's signature: the module has no exports,
+      // or each export points to a symbol the entry also exports.
       let covered_by_entry =
         metas[module_idx].resolved_exports.iter().all(|(export_name, resolved_export)| {
           entry_exports
@@ -832,15 +808,13 @@ impl GenerateStage<'_> {
         return true;
       }
 
-      // (b) The module's exports stay internal after the merge. An entry module or a
-      // dynamically imported module has an observable namespace, so it can never be folded
-      // silently; otherwise the exports stay private as long as every static importer is
-      // already inside the merged chunk.
-      if self.link_output.entries.contains_key(&module_idx) || !module.dynamic_importers.is_empty()
-      {
-        return false;
-      }
-      module.importers_idx.iter().all(|importer| merged_modules.contains(importer))
+      // (b) Otherwise the module is only safe under `allow_internal_only`, and only if its exports
+      // stay internal after the merge: it is neither an entry nor dynamically imported (those have
+      // observable namespaces) and every static importer is already inside the merged chunk.
+      allow_internal_only
+        && !self.link_output.entries.contains_key(&module_idx)
+        && module.dynamic_importers.is_empty()
+        && module.importers_idx.iter().all(|importer| merged_modules.contains(importer))
     })
   }
 
@@ -917,7 +891,7 @@ impl GenerateStage<'_> {
         if matches!(target_chunk.kind, ChunkKind::Common) {
           let can_merge = match chunk.preserve_entry_signature {
             Some(PreserveEntrySignatures::Strict) => {
-              self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules)
+              self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules, false)
             }
             _ => true,
           };

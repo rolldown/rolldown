@@ -16,8 +16,8 @@ catalogs:
       specifier: ^7.24.7
       version: 7.28.5
     '@napi-rs/cli':
-      specifier: ^3.7.1
-      version: 3.7.1
+      specifier: ^3.7.2
+      version: 3.7.2
     '@napi-rs/wasm-runtime':
       specifier: ^1.1.5
       version: 1.1.5
@@ -253,7 +253,7 @@ importers:
         version: 2.2.0
       knip:
         specifier: ^6.13.1
-        version: 6.14.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+        version: 6.14.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
       playwright-chromium:
         specifier: ^1.60.0
         version: 1.60.0
@@ -293,7 +293,7 @@ importers:
     devDependencies:
       '@voidzero-dev/vitepress-theme':
         specifier: ^4.8.4
-        version: 4.8.4(change-case@5.4.4)(focus-trap@8.2.1)(vite@8.0.11(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0))(vitepress@2.0.0-alpha.17(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.35(typescript@6.0.3))
+        version: 4.8.4(change-case@5.4.4)(focus-trap@8.2.1)(vite@8.0.11(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0))(vitepress@2.0.0-alpha.17(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.35(typescript@6.0.3))
       oxc-minify:
         specifier: 'catalog:'
         version: 0.135.0
@@ -311,10 +311,10 @@ importers:
         version: 1.1.3(typedoc-plugin-markdown@4.12.0(typedoc@0.28.19(typescript@6.0.3)))
       vitepress:
         specifier: ^2.0.0-alpha.17
-        version: 2.0.0-alpha.17(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0)
+        version: 2.0.0-alpha.17(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0)
       vitepress-plugin-graphviz:
         specifier: ^0.1.0
-        version: 0.1.0(vitepress@2.0.0-alpha.17(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0))
+        version: 0.1.0(vitepress@2.0.0-alpha.17(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0))
       vitepress-plugin-group-icons:
         specifier: ^1.7.5
         version: 1.7.5(vite@8.0.11(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0))
@@ -323,7 +323,7 @@ importers:
         version: 1.13.1
       vitepress-plugin-og:
         specifier: ^0.0.5
-        version: 0.0.5(vitepress@2.0.0-alpha.17(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0))
+        version: 0.0.5(vitepress@2.0.0-alpha.17(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0))
       void:
         specifier: ^0.9.2
         version: 0.9.2(arktype@2.2.0)(kysely@0.29.2)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(valibot@1.4.1(typescript@6.0.3))(vite@8.0.11(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0))(vitest@4.1.6(@types/node@24.10.3)(vite@8.0.11(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0)))(vue@3.5.35(typescript@6.0.3))(workerd@1.20260603.1)(zod@4.4.3)
@@ -507,14 +507,14 @@ importers:
   packages/browser:
     dependencies:
       '@emnapi/core':
-        specifier: 1.11.0
-        version: 1.11.0
+        specifier: 1.11.1
+        version: 1.11.1
       '@emnapi/runtime':
-        specifier: 1.11.0
-        version: 1.11.0
+        specifier: 1.11.1
+        version: 1.11.1
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
-        version: 1.1.5(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+        version: 1.1.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
 
   packages/debug:
     devDependencies:
@@ -533,10 +533,10 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: 'catalog:'
-        version: 3.7.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)
+        version: 3.7.2(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
-        version: 1.1.5(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+        version: 1.1.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.1.0
@@ -572,7 +572,7 @@ importers:
         version: 'link:'
       rolldown-plugin-dts:
         specifier: 'catalog:'
-        version: 0.25.2(oxc-resolver@11.19.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0))(rolldown@packages+rolldown)(typescript@6.0.3)
+        version: 0.25.2(oxc-resolver@11.19.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(rolldown@packages+rolldown)(typescript@6.0.3)
       rollup:
         specifier: 'catalog:'
         version: 4.60.4
@@ -1603,8 +1603,8 @@ packages:
   '@emnapi/core@1.10.0':
     resolution: {integrity: sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==}
 
-  '@emnapi/core@1.11.0':
-    resolution: {integrity: sha512-l9Oo58x0HOP5znGzVhYW9U3e5wVuA4LAZU2AGezTmkhO1CgQRFDhDg4nneHsu/t3WniXg9QrG2nIXL/ZS8ln8Q==}
+  '@emnapi/core@1.11.1':
+    resolution: {integrity: sha512-RSvbQmHzdKzNsLYa/wHrbc3KN4sYLKAdPZxqiM2HATqv/SBk2/ENSHpvXGaLOMcsAyz0poEGqkmmKYG3OWiJEQ==}
 
   '@emnapi/core@1.9.1':
     resolution: {integrity: sha512-mukuNALVsoix/w1BJwFzwXBN/dHeejQtuVzcDsfOEsdpCumXb/E9j8w11h5S54tT1xhifGfbbSm/ICrObRb3KA==}
@@ -1614,6 +1614,9 @@ packages:
 
   '@emnapi/runtime@1.11.0':
     resolution: {integrity: sha512-55coeOFKHv1ywEcUXJtWU5f+Jr/W5tZDvZig8DLKSwUN1JpROQ4rk/SNOQiFWmaR/VKF4zuFyW1B8JduOSv6Pg==}
+
+  '@emnapi/runtime@1.11.1':
+    resolution: {integrity: sha512-vgj7R3y3Wgx24IQaGPA/R6YFXLHVMOZ0uVEyIQPaWs+rd1AzfEMXlAC22FYwO1XkKR6NPsq7mUandH8oIRdZFw==}
 
   '@emnapi/runtime@1.9.1':
     resolution: {integrity: sha512-VYi5+ZVLhpgK4hQ0TAjiQiZ6ol0oe4mBx7mVv7IflsiEp0OWoVsp/+f9Vc1hOhE0TtkORVrI1GvzyreqpgWtkA==}
@@ -2611,8 +2614,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@napi-rs/cli@3.7.1':
-    resolution: {integrity: sha512-7FkcxJ70SqpsYnyjaYwLVpkP3Xoyd8YkT5g7DevuEvSY7mzpLSva8oSQNENHiQ1T0GMLnae1X46KmiNIu5OXDw==}
+  '@napi-rs/cli@3.7.2':
+    resolution: {integrity: sha512-shDW0Td/XZQpP04Yy+OsMt1ILMKGGkoLcy1zVAsSAK0fLfWm0Upgkmfs/NOV2ZhMQwkgpR3ZEdyHmTwgrUDQuA==}
     engines: {node: '>= 16'}
     hasBin: true
     peerDependencies:
@@ -5979,8 +5982,8 @@ packages:
   electron-to-chromium@1.5.353:
     resolution: {integrity: sha512-kOrWphBi8TOZyiJZqsgqIle0lw+tzmnQK83pV9dZUd01Nm2POECSyFQMAuarzZdYqQW7FH9RaYOuaRo3h+bQ3w==}
 
-  emnapi@1.11.0:
-    resolution: {integrity: sha512-3+AyVLAzk2jr9FPnCT9fgU4/gGoHrB3MpYxqNG6JdmkWmFPpKAhArQgfK/WEiT9kExX2ecXVA6DoPceDShR47g==}
+  emnapi@1.11.1:
+    resolution: {integrity: sha512-kSRjhIcxjMFsBqk7ORvoc9aA5SBKDmecrtF5RMcmOTao0kD/zamaxsuTxMI8C1//wGUuvE7a+19pCE7AEhGVnA==}
     peerDependencies:
       node-addon-api: '>= 6.1.0'
     peerDependenciesMeta:
@@ -9174,7 +9177,7 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@emnapi/core@1.11.0':
+  '@emnapi/core@1.11.1':
     dependencies:
       '@emnapi/wasi-threads': 1.2.2
       tslib: 2.8.1
@@ -9191,6 +9194,11 @@ snapshots:
     optional: true
 
   '@emnapi/runtime@1.11.0':
+    dependencies:
+      tslib: 2.8.1
+    optional: true
+
+  '@emnapi/runtime@1.11.1':
     dependencies:
       tslib: 2.8.1
 
@@ -9676,7 +9684,7 @@ snapshots:
 
   '@img/sharp-wasm32@0.34.5':
     dependencies:
-      '@emnapi/runtime': 1.10.0
+      '@emnapi/runtime': 1.11.0
     optional: true
 
   '@img/sharp-win32-arm64@0.34.5':
@@ -9853,22 +9861,22 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@napi-rs/cli@3.7.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)':
+  '@napi-rs/cli@3.7.2(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@24.10.3)
-      '@napi-rs/cross-toolchain': 1.0.3(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
-      '@napi-rs/wasm-tools': 1.0.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      '@napi-rs/cross-toolchain': 1.0.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      '@napi-rs/wasm-tools': 1.0.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
       '@octokit/rest': 22.0.1
       clipanion: 4.0.0-rc.4(typanion@3.14.0)
       colorette: 2.0.20
-      emnapi: 1.11.0
+      emnapi: 1.11.1
       es-toolkit: 1.47.0
       js-yaml: 4.2.0
       obug: 2.1.2
       semver: 7.8.2
       typanion: 3.14.0
     optionalDependencies:
-      '@emnapi/runtime': 1.11.0
+      '@emnapi/runtime': 1.11.1
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@napi-rs/cross-toolchain-arm64-target-aarch64'
@@ -9885,10 +9893,10 @@ snapshots:
       - node-addon-api
       - supports-color
 
-  '@napi-rs/cross-toolchain@1.0.3(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
+  '@napi-rs/cross-toolchain@1.0.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
-      '@napi-rs/lzma': 1.4.5(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
-      '@napi-rs/tar': 1.1.0(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      '@napi-rs/lzma': 1.4.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      '@napi-rs/tar': 1.1.0(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
       - '@emnapi/core'
@@ -9985,9 +9993,9 @@ snapshots:
   '@napi-rs/lzma-linux-x64-musl@1.4.5':
     optional: true
 
-  '@napi-rs/lzma-wasm32-wasi@1.4.5(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
+  '@napi-rs/lzma-wasm32-wasi@1.4.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.4(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      '@napi-rs/wasm-runtime': 1.1.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -10002,7 +10010,7 @@ snapshots:
   '@napi-rs/lzma-win32-x64-msvc@1.4.5':
     optional: true
 
-  '@napi-rs/lzma@1.4.5(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
+  '@napi-rs/lzma@1.4.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     optionalDependencies:
       '@napi-rs/lzma-android-arm-eabi': 1.4.5
       '@napi-rs/lzma-android-arm64': 1.4.5
@@ -10017,7 +10025,7 @@ snapshots:
       '@napi-rs/lzma-linux-s390x-gnu': 1.4.5
       '@napi-rs/lzma-linux-x64-gnu': 1.4.5
       '@napi-rs/lzma-linux-x64-musl': 1.4.5
-      '@napi-rs/lzma-wasm32-wasi': 1.4.5(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      '@napi-rs/lzma-wasm32-wasi': 1.4.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
       '@napi-rs/lzma-win32-arm64-msvc': 1.4.5
       '@napi-rs/lzma-win32-ia32-msvc': 1.4.5
       '@napi-rs/lzma-win32-x64-msvc': 1.4.5
@@ -10061,9 +10069,9 @@ snapshots:
   '@napi-rs/tar-linux-x64-musl@1.1.0':
     optional: true
 
-  '@napi-rs/tar-wasm32-wasi@1.1.0(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
+  '@napi-rs/tar-wasm32-wasi@1.1.0(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.4(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      '@napi-rs/wasm-runtime': 1.1.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -10078,7 +10086,7 @@ snapshots:
   '@napi-rs/tar-win32-x64-msvc@1.1.0':
     optional: true
 
-  '@napi-rs/tar@1.1.0(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
+  '@napi-rs/tar@1.1.0(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     optionalDependencies:
       '@napi-rs/tar-android-arm-eabi': 1.1.0
       '@napi-rs/tar-android-arm64': 1.1.0
@@ -10092,7 +10100,7 @@ snapshots:
       '@napi-rs/tar-linux-s390x-gnu': 1.1.0
       '@napi-rs/tar-linux-x64-gnu': 1.1.0
       '@napi-rs/tar-linux-x64-musl': 1.1.0
-      '@napi-rs/tar-wasm32-wasi': 1.1.0(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      '@napi-rs/tar-wasm32-wasi': 1.1.0(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
       '@napi-rs/tar-win32-arm64-msvc': 1.1.0
       '@napi-rs/tar-win32-ia32-msvc': 1.1.0
       '@napi-rs/tar-win32-x64-msvc': 1.1.0
@@ -10107,10 +10115,10 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  '@napi-rs/wasm-runtime@1.1.4(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
+  '@napi-rs/wasm-runtime@1.1.4(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
-      '@emnapi/core': 1.11.0
-      '@emnapi/runtime': 1.11.0
+      '@emnapi/core': 1.11.1
+      '@emnapi/runtime': 1.11.1
       '@tybys/wasm-util': 0.10.1
     optional: true
 
@@ -10121,10 +10129,10 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  '@napi-rs/wasm-runtime@1.1.5(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
+  '@napi-rs/wasm-runtime@1.1.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
-      '@emnapi/core': 1.11.0
-      '@emnapi/runtime': 1.11.0
+      '@emnapi/core': 1.11.1
+      '@emnapi/runtime': 1.11.1
       '@tybys/wasm-util': 0.10.2
 
   '@napi-rs/wasm-tools-android-arm-eabi@1.0.1':
@@ -10154,9 +10162,9 @@ snapshots:
   '@napi-rs/wasm-tools-linux-x64-musl@1.0.1':
     optional: true
 
-  '@napi-rs/wasm-tools-wasm32-wasi@1.0.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
+  '@napi-rs/wasm-tools-wasm32-wasi@1.0.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.4(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      '@napi-rs/wasm-runtime': 1.1.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -10171,7 +10179,7 @@ snapshots:
   '@napi-rs/wasm-tools-win32-x64-msvc@1.0.1':
     optional: true
 
-  '@napi-rs/wasm-tools@1.0.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
+  '@napi-rs/wasm-tools@1.0.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     optionalDependencies:
       '@napi-rs/wasm-tools-android-arm-eabi': 1.0.1
       '@napi-rs/wasm-tools-android-arm64': 1.0.1
@@ -10182,7 +10190,7 @@ snapshots:
       '@napi-rs/wasm-tools-linux-arm64-musl': 1.0.1
       '@napi-rs/wasm-tools-linux-x64-gnu': 1.0.1
       '@napi-rs/wasm-tools-linux-x64-musl': 1.0.1
-      '@napi-rs/wasm-tools-wasm32-wasi': 1.0.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      '@napi-rs/wasm-tools-wasm32-wasi': 1.0.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
       '@napi-rs/wasm-tools-win32-arm64-msvc': 1.0.1
       '@napi-rs/wasm-tools-win32-ia32-msvc': 1.0.1
       '@napi-rs/wasm-tools-win32-x64-msvc': 1.0.1
@@ -10634,9 +10642,9 @@ snapshots:
   '@oxc-resolver/binding-openharmony-arm64@11.19.1':
     optional: true
 
-  '@oxc-resolver/binding-wasm32-wasi@11.19.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
+  '@oxc-resolver/binding-wasm32-wasi@11.19.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.4(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      '@napi-rs/wasm-runtime': 1.1.4(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -11176,9 +11184,9 @@ snapshots:
   '@rolldown/binding-openharmony-arm64@1.0.0-rc.18':
     optional: true
 
-  '@rolldown/binding-wasm32-wasi@1.0.0-beta.53(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
+  '@rolldown/binding-wasm32-wasi@1.0.0-beta.53(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.5(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      '@napi-rs/wasm-runtime': 1.1.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -11593,10 +11601,10 @@ snapshots:
 
   '@ungap/structured-clone@1.3.1': {}
 
-  '@vitejs/plugin-vue@6.0.7(rolldown-vite@7.3.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0))(vue@3.5.35(typescript@6.0.3))':
+  '@vitejs/plugin-vue@6.0.7(rolldown-vite@7.3.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0))(vue@3.5.35(typescript@6.0.3))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: rolldown-vite@7.3.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0)
+      vite: rolldown-vite@7.3.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0)
       vue: 3.5.35(typescript@6.0.3)
 
   '@vitest/expect@4.1.6':
@@ -11730,7 +11738,7 @@ snapshots:
   '@voidzero-dev/vite-plus-win32-x64-msvc@0.1.24':
     optional: true
 
-  '@voidzero-dev/vitepress-theme@4.8.4(change-case@5.4.4)(focus-trap@8.2.1)(vite@8.0.11(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0))(vitepress@2.0.0-alpha.17(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.35(typescript@6.0.3))':
+  '@voidzero-dev/vitepress-theme@4.8.4(change-case@5.4.4)(focus-trap@8.2.1)(vite@8.0.11(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0))(vitepress@2.0.0-alpha.17(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0))(vue@3.5.35(typescript@6.0.3))':
     dependencies:
       '@docsearch/css': 4.6.3
       '@docsearch/js': 4.6.3
@@ -11747,7 +11755,7 @@ snapshots:
       minisearch: 7.2.0
       reka-ui: 2.9.9(vue@3.5.35(typescript@6.0.3))
       tailwindcss: 4.3.0
-      vitepress: 2.0.0-alpha.17(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0)
+      vitepress: 2.0.0-alpha.17(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0)
       vue: 3.5.35(typescript@6.0.3)
     transitivePeerDependencies:
       - '@vue/composition-api'
@@ -12362,9 +12370,9 @@ snapshots:
       drizzle-orm: 0.45.2(@cloudflare/workers-types@4.20260605.1)(better-sqlite3@12.10.0)(kysely@0.29.2)(pg@8.21.0)
       zod: 4.4.3
 
-  dts-resolver@3.0.0(oxc-resolver@11.19.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)):
+  dts-resolver@3.0.0(oxc-resolver@11.19.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)):
     optionalDependencies:
-      oxc-resolver: 11.19.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      oxc-resolver: 11.19.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
 
   eastasianwidth@0.2.0: {}
 
@@ -12372,7 +12380,7 @@ snapshots:
 
   electron-to-chromium@1.5.353: {}
 
-  emnapi@1.11.0: {}
+  emnapi@1.11.1: {}
 
   emoji-regex@8.0.0: {}
 
@@ -12930,7 +12938,7 @@ snapshots:
 
   kleur@4.1.5: {}
 
-  knip@6.14.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0):
+  knip@6.14.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1):
     dependencies:
       fdir: 6.5.0(picomatch@4.0.4)
       formatly: 0.3.0
@@ -12938,7 +12946,7 @@ snapshots:
       jiti: 2.7.0
       minimist: 1.2.8
       oxc-parser: 0.130.0
-      oxc-resolver: 11.19.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      oxc-resolver: 11.19.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
       picomatch: 4.0.4
       smol-toml: 1.6.1
       strip-json-comments: 5.0.3
@@ -13546,7 +13554,7 @@ snapshots:
       '@oxc-parser/binding-win32-arm64-msvc': 0.37.0
       '@oxc-parser/binding-win32-x64-msvc': 0.37.0
 
-  oxc-resolver@11.19.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0):
+  oxc-resolver@11.19.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1):
     optionalDependencies:
       '@oxc-resolver/binding-android-arm-eabi': 11.19.1
       '@oxc-resolver/binding-android-arm64': 11.19.1
@@ -13564,7 +13572,7 @@ snapshots:
       '@oxc-resolver/binding-linux-x64-gnu': 11.19.1
       '@oxc-resolver/binding-linux-x64-musl': 11.19.1
       '@oxc-resolver/binding-openharmony-arm64': 11.19.1
-      '@oxc-resolver/binding-wasm32-wasi': 11.19.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      '@oxc-resolver/binding-wasm32-wasi': 11.19.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
       '@oxc-resolver/binding-win32-arm64-msvc': 11.19.1
       '@oxc-resolver/binding-win32-ia32-msvc': 11.19.1
       '@oxc-resolver/binding-win32-x64-msvc': 11.19.1
@@ -13911,7 +13919,7 @@ snapshots:
 
   read-yaml-file@2.1.0:
     dependencies:
-      js-yaml: 4.1.1
+      js-yaml: 4.2.0
       strip-bom: 4.0.0
 
   readable-stream@3.6.2:
@@ -14053,14 +14061,14 @@ snapshots:
       glob: 13.0.6
       package-json-from-dist: 1.0.1
 
-  rolldown-plugin-dts@0.25.2(oxc-resolver@11.19.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0))(rolldown@packages+rolldown)(typescript@6.0.3):
+  rolldown-plugin-dts@0.25.2(oxc-resolver@11.19.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(rolldown@packages+rolldown)(typescript@6.0.3):
     dependencies:
       '@babel/generator': 8.0.0-rc.6
       '@babel/helper-validator-identifier': 8.0.0-rc.6
       '@babel/parser': 8.0.0-rc.6
       ast-kit: 3.0.0-beta.1
       birpc: 4.0.0
-      dts-resolver: 3.0.0(oxc-resolver@11.19.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0))
+      dts-resolver: 3.0.0(oxc-resolver@11.19.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))
       get-tsconfig: 5.0.0-beta.5
       obug: 2.1.2
       rolldown: link:packages/rolldown
@@ -14069,14 +14077,14 @@ snapshots:
     transitivePeerDependencies:
       - oxc-resolver
 
-  rolldown-vite@7.3.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0):
+  rolldown-vite@7.3.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0):
     dependencies:
       '@oxc-project/runtime': 0.101.0
       fdir: 6.5.0(picomatch@4.0.4)
       lightningcss: 1.32.0
       picomatch: 4.0.4
       postcss: 8.5.15
-      rolldown: 1.0.0-beta.53(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      rolldown: 1.0.0-beta.53(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
       tinyglobby: 0.2.17
     optionalDependencies:
       '@types/node': 24.10.3
@@ -14090,7 +14098,7 @@ snapshots:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
-  rolldown@1.0.0-beta.53(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0):
+  rolldown@1.0.0-beta.53(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1):
     dependencies:
       '@oxc-project/types': 0.101.0
       '@rolldown/pluginutils': 1.0.0-beta.53
@@ -14105,7 +14113,7 @@ snapshots:
       '@rolldown/binding-linux-x64-gnu': 1.0.0-beta.53
       '@rolldown/binding-linux-x64-musl': 1.0.0-beta.53
       '@rolldown/binding-openharmony-arm64': 1.0.0-beta.53
-      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.53(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.53(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
       '@rolldown/binding-win32-arm64-msvc': 1.0.0-beta.53
       '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.53
     transitivePeerDependencies:
@@ -14790,10 +14798,10 @@ snapshots:
       tsx: 4.22.4
       yaml: 2.9.0
 
-  vitepress-plugin-graphviz@0.1.0(vitepress@2.0.0-alpha.17(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0)):
+  vitepress-plugin-graphviz@0.1.0(vitepress@2.0.0-alpha.17(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0)):
     dependencies:
       '@hpcc-js/wasm-graphviz': 1.22.0
-      vitepress: 2.0.0-alpha.17(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0)
+      vitepress: 2.0.0-alpha.17(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0)
 
   vitepress-plugin-group-icons@1.7.5(vite@8.0.11(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0)):
     dependencies:
@@ -14822,13 +14830,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  vitepress-plugin-og@0.0.5(vitepress@2.0.0-alpha.17(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0)):
+  vitepress-plugin-og@0.0.5(vitepress@2.0.0-alpha.17(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0)):
     dependencies:
       sharp: 0.34.5
       ufo: 1.6.4
-      vitepress: 2.0.0-alpha.17(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0)
+      vitepress: 2.0.0-alpha.17(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0)
 
-  vitepress@2.0.0-alpha.17(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0):
+  vitepress@2.0.0-alpha.17(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(change-case@5.4.4)(esbuild@0.27.3)(jiti@2.7.0)(oxc-minify@0.135.0)(postcss@8.5.15)(terser@5.47.1)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0):
     dependencies:
       '@docsearch/css': 4.6.3
       '@docsearch/js': 4.6.3
@@ -14838,7 +14846,7 @@ snapshots:
       '@shikijs/transformers': 3.23.0
       '@shikijs/types': 3.23.0
       '@types/markdown-it': 14.1.2
-      '@vitejs/plugin-vue': 6.0.7(rolldown-vite@7.3.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0))(vue@3.5.35(typescript@6.0.3))
+      '@vitejs/plugin-vue': 6.0.7(rolldown-vite@7.3.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0))(vue@3.5.35(typescript@6.0.3))
       '@vue/devtools-api': 8.1.2
       '@vue/shared': 3.5.35
       '@vueuse/core': 14.3.0(vue@3.5.35(typescript@6.0.3))
@@ -14847,7 +14855,7 @@ snapshots:
       mark.js: 8.11.1
       minisearch: 7.2.0
       shiki: 3.23.0
-      vite: rolldown-vite@7.3.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0)
+      vite: rolldown-vite@7.3.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.9.0)
       vue: 3.5.35(typescript@6.0.3)
     optionalDependencies:
       oxc-minify: 0.135.0
@@ -15126,7 +15134,7 @@ snapshots:
 
   write-yaml-file@5.0.0:
     dependencies:
-      js-yaml: 4.1.1
+      js-yaml: 4.2.0
       write-file-atomic: 5.0.1
 
   ws@8.20.1: {}

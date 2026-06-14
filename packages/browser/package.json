@@ -66,8 +66,8 @@
     "publint": "publint ."
   },
   "dependencies": {
-    "@emnapi/core": "1.11.0",
-    "@emnapi/runtime": "1.11.0",
+    "@emnapi/core": "1.11.1",
+    "@emnapi/runtime": "1.11.1",
     "@napi-rs/wasm-runtime": "catalog:"
   }
 }

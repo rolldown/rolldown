@@ -35,9 +35,9 @@ overrides:
   vitepress>vite: npm:rolldown-vite@latest
 
 catalog:
-  '@babel/core': ^7.24.7
-  '@babel/preset-env': ^7.24.7
-  '@babel/preset-typescript': ^7.24.7
+  '@babel/core': ^7.29.7
+  '@babel/preset-env': ^7.29.7
+  '@babel/preset-typescript': ^7.29.7
   '@napi-rs/cli': ^3.7.2
   '@napi-rs/wasm-runtime': ^1.1.5
   '@oxc-node/cli': ^0.1.0
@@ -59,7 +59,7 @@ catalog:
   '@types/serve-static': ^2.0.0
   '@types/strip-comments': ^2.0.4
   '@types/ws': ^8.18.0
-  acorn: ^8.12.1
+  acorn: ^8.17.0
   acorn-import-assertions: ^1.9.0
   astring: ^1.9.0
   buble: ^0.20.0

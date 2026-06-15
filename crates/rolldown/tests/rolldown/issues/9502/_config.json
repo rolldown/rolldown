@@ -1,0 +1,23 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "tu",
+        "import": "./test-utils.js"
+      }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "shared",
+          "test": "shared\\.js$"
+        },
+        {
+          "name": "vue",
+          "test": "vue\\.js$"
+        }
+      ]
+    }
+  },
+  "_comment": "Regression test for rolldown/rolldown#9502: when a wrapped ESM module is re-exported through a namespace barrel in another chunk, the finalizer must not synthesize an init_*() call for the wrapper unless it is reachable in this chunk; otherwise the call renders as a dangling identifier (ReferenceError). Initialization instead flows through the barrel's own chunk."
+}

@@ -221,11 +221,28 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // would reference a function that doesn't exist in the output. This mirrors
       // the `is_included` guard in `collect_transitive_esm_init_targets`.
       && meta.is_included
-      && meta.wrapper_ref.is_some()
+      && meta.wrapper_ref.is_some_and(|wrapper_ref| self.wrapper_is_reachable_in_chunk(wrapper_ref))
       && !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner)
     {
       init_modules.insert(canonical_ref.owner);
     }
+  }
+
+  /// Whether a wrapper symbol can be referenced from the chunk being finalized: it is either
+  /// declared in this chunk or registered as a cross-chunk import — exactly the symbols
+  /// deconfliction assigned a canonical name for. Finalizers run after cross-chunk imports are
+  /// computed, so a synthesized call to any other wrapper would render as a bare identifier
+  /// with no backing import (`ReferenceError` at runtime).
+  ///
+  /// Skipping the init call in that case is sound: cross-chunk wrapper imports are registered
+  /// whenever a chunk depends on a symbol *owned by* the wrapped module
+  /// (`add_depended_symbol_with_wrapped_esm_init`), so an unreachable wrapper means every
+  /// access flows through the forwarding barrel's namespace object instead. That namespace
+  /// dependency imports the barrel's chunk, which executes first and performs the init via the
+  /// barrel's own lowered statements.
+  fn wrapper_is_reachable_in_chunk(&self, wrapper_ref: SymbolRef) -> bool {
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(wrapper_ref);
+    self.ctx.chunk.canonical_names.contains_key(&canonical_ref)
   }
 
   fn wrapped_esm_init_stmt_for_import_record(

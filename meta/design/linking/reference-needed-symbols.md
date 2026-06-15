@@ -33,7 +33,7 @@ For each `(importer, stmt_info, rec)` triple this pass dispatches on `rec.kind`,
 
 ### `Module::Normal` importees
 
-- **`Import`, `WrapKind::None`, not reexport** — nothing recorded; flat ESM on both sides has no wrapper to call. Later stages still must check the canonical owner of live imported symbols: a non-wrapped barrel can forward a binding from a wrapped ESM module, and that owner still needs its `init_*()` call before the binding is read when the barrel does not execute in the same chunk.
+- **`Import`, `WrapKind::None`, not reexport** — nothing recorded; flat ESM on both sides has no wrapper to call. Later stages still must check the canonical owner of live imported symbols: a non-wrapped barrel can forward a binding from a wrapped ESM module, and that owner still needs its `init_*()` call before the binding is read when the barrel does not execute in the same chunk — but only when the wrapper is reachable from the importer's chunk (declared there or registered as a cross-chunk import); otherwise the access flows through the barrel's namespace and the barrel's chunk performs the init itself.
 
   ```js
   // foo.js: export const x = 1;

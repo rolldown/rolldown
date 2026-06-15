@@ -233,7 +233,14 @@ impl BarrelInfo {
             .extend(self.named.values().filter(|v| v.is_direct_reexport).map(|v| v.record_idx));
           reexports.extend(self.star.iter().copied());
           imported_exports_per_record.retain(|rec_idx, rec| match needs_records.entry(*rec_idx) {
-            Entry::Occupied(_) => true,
+            Entry::Occupied(mut occ) => {
+              if reexports.contains(rec_idx) {
+                true
+              } else {
+                occ.get_mut().merge(rec);
+                false
+              }
+            }
             Entry::Vacant(vac) => {
               if reexports.contains(rec_idx) {
                 vac.insert(ImportedExports::Partial(FxHashSet::default()));

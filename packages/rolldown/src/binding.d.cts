@@ -1980,7 +1980,6 @@ export type BindingBuiltinPluginName =  'builtin:bundle-analyzer'|
 'builtin:vite-reporter'|
 'builtin:vite-resolve'|
 'builtin:vite-transform'|
-'builtin:vite-wasm-fallback'|
 'builtin:vite-web-worker-post'|
 'builtin:oxc-runtime';
 

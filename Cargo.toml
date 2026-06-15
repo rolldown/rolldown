@@ -134,7 +134,6 @@ rolldown_plugin_vite_react_refresh_wrapper = { version = "0.1.0", path = "crates
 rolldown_plugin_vite_reporter = { version = "0.1.0", path = "crates/rolldown_plugin_vite_reporter" }
 rolldown_plugin_vite_resolve = { version = "1.1.1", path = "crates/rolldown_plugin_vite_resolve" }
 rolldown_plugin_vite_transform = { version = "0.1.0", path = "crates/rolldown_plugin_vite_transform" }
-rolldown_plugin_vite_wasm_fallback = { version = "0.1.0", path = "crates/rolldown_plugin_vite_wasm_fallback" }
 rolldown_plugin_vite_web_worker_post = { version = "0.1.0", path = "crates/rolldown_plugin_vite_web_worker_post" }
 rolldown_resolver = { version = "1.1.1", path = "crates/rolldown_resolver" }
 rolldown_sourcemap = { version = "1.1.1", path = "crates/rolldown_sourcemap" }

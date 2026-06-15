@@ -1,1 +1,1 @@
-export const C = "c-payload";
+export const C = 'c-payload';

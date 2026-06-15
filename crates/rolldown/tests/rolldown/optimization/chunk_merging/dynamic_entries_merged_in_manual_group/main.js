@@ -6,11 +6,7 @@ import assert from 'node:assert';
 // close an *awaited* dependency cycle, and these targets form none, so the proxies
 // are eliminated: each `import('./x.js')` is rewritten to load the merged
 // `shared-abc` chunk directly (see _config.json).
-const [a, b, c] = await Promise.all([
-  import('./a.js'),
-  import('./b.js'),
-  import('./c.js'),
-]);
+const [a, b, c] = await Promise.all([import('./a.js'), import('./b.js'), import('./c.js')]);
 
 assert.strictEqual(a.A, 'a-payload');
 assert.strictEqual(b.B, 'b-payload');

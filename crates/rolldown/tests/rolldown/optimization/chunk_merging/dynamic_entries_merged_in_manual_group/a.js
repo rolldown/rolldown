@@ -1,1 +1,1 @@
-export const A = "a-payload";
+export const A = 'a-payload';

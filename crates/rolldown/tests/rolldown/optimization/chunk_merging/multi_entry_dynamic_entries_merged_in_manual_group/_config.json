@@ -1,0 +1,18 @@
+{
+  "_comment": "Multi-entry variant of `dynamic_entries_merged_in_manual_group` (rolldown/rolldown#9729). `index` dynamically imports a/b/c and `index2` dynamically imports a/b; a single `shared-abc` manual code splitting group merges all three matched modules into one chunk. Verifies that with more than one static entry the #9729 fix still holds: every dynamic import is rewritten to load the merged `shared-abc` chunk directly (no per-target re-export proxy chunks) and both entries execute correctly.",
+  "config": {
+    "input": [
+      { "name": "index", "import": "./index.js" },
+      { "name": "index2", "import": "./index2.js" }
+    ],
+    "manualCodeSplitting": {
+      "groups": [
+        {
+          "name": "shared-abc",
+          "test": "[abc]\\.js$",
+          "priority": 30
+        }
+      ]
+    }
+  }
+}

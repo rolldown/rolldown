@@ -6,37 +6,26 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import "./b2.js";
+import "./b.js";
 
 ```
 
 ## b.js
 
 ```js
-import "./b2.js";
-
-```
-
-## b2.js
-
-```js
-import "./c2.js";
+import "./c.js";
 
 ```
 
 ## c.js
 
 ```js
-import "./c2.js";
-
-```
-
-## c2.js
-
-```js
+// HIDDEN [\0rolldown/runtime.js]
 //#region c.js
+var c_exports = /* @__PURE__ */ __exportAll({});
 await 0;
 //#endregion
+export { c_exports as t };
 
 ```
 
@@ -46,7 +35,7 @@ await 0;
 //#region entry.js
 import("./a.js");
 import("./b.js");
-import("./c.js");
+import("./c.js").then((n) => n.t);
 import("./entry.js");
 await 0;
 //#endregion

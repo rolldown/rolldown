@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+import assert from "node:assert";
+//#region index.js
+const [a, b, c] = await Promise.all([
+	import("./shared-abc.js").then((n) => n.r),
+	import("./shared-abc.js").then((n) => n.n),
+	import("./shared-abc.js").then((n) => n.t)
+]);
+assert.strictEqual(`${a.A}${b.B}${c.C}`, "ABC");
+//#endregion
+
+```
+
+## index2.js
+
+```js
+import assert from "node:assert";
+//#region index2.js
+const [a, b] = await Promise.all([import("./shared-abc.js").then((n) => n.r), import("./shared-abc.js").then((n) => n.n)]);
+assert.strictEqual(`${a.A}${b.B}`, "AB");
+//#endregion
+
+```
+
+## shared-abc.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region a.js
+var a_exports = /* @__PURE__ */ __exportAll({ A: () => "A" });
+//#endregion
+//#region b.js
+var b_exports = /* @__PURE__ */ __exportAll({ B: () => "B" });
+//#endregion
+//#region c.js
+var c_exports = /* @__PURE__ */ __exportAll({ C: () => "C" });
+//#endregion
+export { b_exports as n, a_exports as r, c_exports as t };
+
+```

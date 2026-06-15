@@ -13,7 +13,7 @@ await 0;
 //#region entry.js
 import("./a.js");
 import("./b.js");
-import("./c.js");
+import("./c.js").then((n) => n.t);
 import("./entry.js");
 await 0;
 //#endregion
@@ -31,7 +31,7 @@ await 0;
 -require_entry();
 +import("./a.js");
 +import("./b.js");
-+import("./c.js");
++import("./c.js").then(n => n.t);
 +import("./entry.js");
  await 0;
 

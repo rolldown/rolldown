@@ -5,7 +5,7 @@ use derive_more::Debug;
 
 use super::log_level::LogLevel;
 
-pub type OnLogFn = dyn Fn(LogLevel, Log) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'static>>
+pub type OnLogFn = dyn Fn(LogLevel, Vec<Log>) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -19,7 +19,19 @@ impl OnLog {
   }
 
   pub async fn call(&self, log_level: LogLevel, log: Log) -> anyhow::Result<()> {
-    self.0(log_level, log).await
+    self.0(log_level, vec![log]).await
+  }
+
+  /// Emit multiple logs that share the same `log_level` in a single call.
+  ///
+  /// This crosses the Rust->JS boundary once for the whole batch instead of
+  /// once per log, which avoids serializing the build behind tens of thousands
+  /// of NAPI round-trips when a build produces a large number of warnings.
+  pub async fn call_batch(&self, log_level: LogLevel, logs: Vec<Log>) -> anyhow::Result<()> {
+    if logs.is_empty() {
+      return Ok(());
+    }
+    self.0(log_level, logs).await
   }
 }
 

@@ -36,18 +36,20 @@ async fn allow_pass_custom_arg() {
   let count = Arc::new(Mutex::new(0_usize));
 
   let temp = Arc::<std::sync::Mutex<usize>>::clone(&count);
-  let on_log = OnLog::new(Arc::new(move |log_level: LogLevel, log: Log| {
+  let on_log = OnLog::new(Arc::new(move |log_level: LogLevel, logs: Vec<Log>| {
     let temp = Arc::<std::sync::Mutex<usize>>::clone(&temp);
     Box::pin(async move {
       let mut guard = temp.lock().unwrap();
-      if log.plugin.is_none_or(|p| p != "TestPlugin") {
-        return Ok(());
-      }
-      match log_level {
-        LogLevel::Info if log.message == "info" => *guard ^= 1 << 0,
-        LogLevel::Warn if log.message == "warn" => *guard ^= 1 << 1,
-        LogLevel::Debug if log.message == "debug" => *guard ^= 1 << 2,
-        _ => unreachable!(),
+      for log in logs {
+        if log.plugin.is_none_or(|p| p != "TestPlugin") {
+          continue;
+        }
+        match log_level {
+          LogLevel::Info if log.message == "info" => *guard ^= 1 << 0,
+          LogLevel::Warn if log.message == "warn" => *guard ^= 1 << 1,
+          LogLevel::Debug if log.message == "debug" => *guard ^= 1 << 2,
+          _ => unreachable!(),
+        }
       }
       Ok(())
     })

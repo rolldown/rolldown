@@ -81,7 +81,13 @@ export function bindingifyInputOptions(
     platform: inputOptions.platform,
     shimMissingExports: inputOptions.shimMissingExports,
     logLevel: bindingifyLogLevel(logLevel),
-    onLog,
+    // Logs are batched across the NAPI boundary in a single call (see #9748),
+    // so fan them back out to the per-log handler here on the JS side.
+    onLog: (level, logs) => {
+      for (const log of logs) {
+        onLog(level, log);
+      }
+    },
     // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
     // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
     // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in Rust side), to represent `false | NormalizedTreeshakingOptions`

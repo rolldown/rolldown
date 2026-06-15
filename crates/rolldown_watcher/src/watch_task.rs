@@ -190,42 +190,42 @@ impl WatchTask {
       return Ok(());
     }
     if let Some(on_log) = options.on_log.as_ref() {
-      for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
-        let diag = warning.to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() });
-        let code = warning.kind().to_string();
-        #[expect(
-          clippy::cast_possible_truncation,
-          reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
-        )]
-        let (loc, pos) = if let Some((_file, line, column, position)) = diag.get_primary_location()
-        {
-          (
-            Some(rolldown_common::LogLocation {
-              line: line as u32,
-              column: column as u32,
-              file: warning.id(),
-            }),
-            Some(position as u32),
-          )
-        } else {
-          (None, None)
-        };
-        on_log
-          .call(
-            LogLevel::Warn,
-            rolldown_common::Log {
-              id: warning.id(),
-              exporter: warning.exporter(),
-              code: Some(code),
-              message: diag.to_color_string(),
-              plugin: None,
-              loc,
-              pos,
-              ids: warning.ids(),
-            },
-          )
-          .await?;
-      }
+      // Batch all warnings into a single `on_log` call so they cross the
+      // Rust->JS NAPI boundary once instead of once per warning (see #9748).
+      let logs = filter_out_disabled_diagnostics(warnings, &options.checks)
+        .map(|warning| {
+          let diag = warning.to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() });
+          let code = warning.kind().to_string();
+          #[expect(
+            clippy::cast_possible_truncation,
+            reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
+          )]
+          let (loc, pos) =
+            if let Some((_file, line, column, position)) = diag.get_primary_location() {
+              (
+                Some(rolldown_common::LogLocation {
+                  line: line as u32,
+                  column: column as u32,
+                  file: warning.id(),
+                }),
+                Some(position as u32),
+              )
+            } else {
+              (None, None)
+            };
+          rolldown_common::Log {
+            id: warning.id(),
+            exporter: warning.exporter(),
+            code: Some(code),
+            message: diag.to_color_string(),
+            plugin: None,
+            loc,
+            pos,
+            ids: warning.ids(),
+          }
+        })
+        .collect::<Vec<_>>();
+      on_log.call_batch(LogLevel::Warn, logs).await?;
     }
     Ok(())
   }

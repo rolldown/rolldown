@@ -266,13 +266,11 @@ pub fn normalize_binding_options(
   });
 
   let on_log = input_options.on_log.map(|ts_fn| {
-    rolldown::OnLog::new(Arc::new(move |level, log| {
+    rolldown::OnLog::new(Arc::new(move |level, logs: Vec<rolldown::Log>| {
       let ts_fn = Arc::clone(&ts_fn);
       Box::pin(async move {
-        ts_fn
-          .invoke_async((level.to_string(), log.into()).into())
-          .await
-          .map_err(anyhow::Error::from)
+        let logs: Vec<_> = logs.into_iter().map(Into::into).collect();
+        ts_fn.invoke_async((level.to_string(), logs).into()).await.map_err(anyhow::Error::from)
       })
     }))
   });

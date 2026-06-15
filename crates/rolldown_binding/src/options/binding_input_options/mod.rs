@@ -32,7 +32,7 @@ use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
 };
 
-pub type BindingOnLog = Option<JsCallback<FnArgs<(String, BindingLog)>, ()>>;
+pub type BindingOnLog = Option<JsCallback<FnArgs<(String, Vec<BindingLog>)>, ()>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
@@ -76,7 +76,7 @@ pub struct BindingInputOptions<'env> {
   pub platform: Option<String>,
   pub log_level: BindingLogLevel,
   #[debug(skip)]
-  #[napi(ts_type = "(logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void")]
+  #[napi(ts_type = "(logLevel: 'debug' | 'warn' | 'info', logs: BindingLog[]) => void")]
   pub on_log: BindingOnLog,
   // extra
   pub cwd: String,

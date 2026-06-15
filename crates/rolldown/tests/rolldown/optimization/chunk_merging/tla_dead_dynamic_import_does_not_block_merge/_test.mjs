@@ -5,7 +5,10 @@ import { pathToFileURL } from 'node:url';
 import { assertNoStaticImportCycle } from '../../../_test_helpers/find-static-cycle.mjs';
 
 const distDir = path.join(import.meta.dirname, 'dist');
-const files = fs.readdirSync(distDir).filter((file) => file.endsWith('.js')).sort();
+const files = fs
+  .readdirSync(distDir)
+  .filter((file) => file.endsWith('.js'))
+  .sort();
 
 assertNoStaticImportCycle(distDir);
 assert.ok(

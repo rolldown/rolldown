@@ -1,8 +1,11 @@
 # Maintenance Guide
 
-A plugin for `rolldown-vite` that handles loading files with `query` or `hash` fragments, ported from `Vite`'s [loadFallbackPlugin](https://github.com/vitejs/rolldown-vite/blob/fa334944/packages/vite/src/node/plugins/loadFallback.ts).
+A plugin for `vite` that handles loading files with `query` or `hash` fragments, ported from `Vite`'s [loadFallbackPlugin](https://github.com/vitejs/rolldown-vite/blob/fa334944/packages/vite/src/node/plugins/loadFallback.ts).
 
-**This plugin is exclusive to `rolldown-vite` and is not recommended for external use.**
+> [!NOTE]
+> This plugin is exclusive to `vite`; external use is not recommended.
+> Its API may change between minor versions of `rolldown`, but
+> stays compatible within the same minor version.
 
 ## 📦 What it does
 

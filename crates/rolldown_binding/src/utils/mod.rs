@@ -11,7 +11,9 @@ use std::any::Any;
 use futures::stream::{StreamExt, TryStreamExt};
 use napi_derive::napi;
 use rolldown::{LogLevel, NormalizedBundlerOptions};
-use rolldown_error::{BuildDiagnostic, DiagnosticOptions, filter_out_disabled_diagnostics};
+use rolldown_error::{
+  BuildDiagnostic, Diagnostic, DiagnosticOptions, filter_out_disabled_diagnostics,
+};
 use rolldown_tracing::try_init_tracing;
 
 pub use normalize_binding_transform_options::normalize_binding_transform_options;
@@ -48,12 +50,9 @@ pub async fn handle_warnings(
   options: &NormalizedBundlerOptions,
 ) -> anyhow::Result<()> {
   // Emitting warnings one at a time forces a Rust -> JS -> Rust round-trip per
-  // warning. With tens of thousands of warnings (e.g. a large app whose deps are
-  // littered with `"use client"` directives or `eval`) awaiting each call
-  // sequentially degenerates into a pathological ping-pong across the napi bridge
-  // that can appear to hang the build entirely (#9748). Pipelining the calls with
-  // bounded concurrency lets the JS event loop drain many queued calls per tick
-  // while capping the number of in-flight calls (and therefore memory).
+  // warning; pipelining the calls with bounded concurrency lets the JS event loop
+  // drain many queued calls per tick while capping the number of in-flight calls
+  // (and therefore memory). See #9748.
   const MAX_IN_FLIGHT_WARNINGS: usize = 256;
 
   if options.log_level == Some(LogLevel::Silent) {
@@ -63,53 +62,62 @@ pub async fn handle_warnings(
     return Ok(());
   };
 
-  futures::stream::iter(filter_out_disabled_diagnostics(warnings, &options.checks).map(
-    |warning| {
-      let diag = warning.to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() });
-      let code = warning.kind().to_string();
+  let warnings: Vec<BuildDiagnostic> =
+    filter_out_disabled_diagnostics(warnings, &options.checks).collect();
+  if warnings.is_empty() {
+    return Ok(());
+  }
 
-      // Extract location information from the diagnostic if available
+  // Render every warning up front through the batch API. Rendering per-warning
+  // rebuilds the line index / ariadne `Source` for the whole file each time,
+  // which is O(N^2) for many warnings in one large file and is what actually
+  // makes a high-volume build appear to hang (#9748).
+  let diagnostic_options = DiagnosticOptions { cwd: options.cwd.clone() };
+  let diagnostics: Vec<Diagnostic> =
+    warnings.iter().map(|warning| warning.to_diagnostic_with(&diagnostic_options)).collect();
+  let rendered = Diagnostic::render_batch(&diagnostics, true);
+
+  let logs: Vec<rolldown::Log> = warnings
+    .into_iter()
+    .zip(rendered)
+    .map(|(warning, rendered)| {
       // Only include loc/pos for warning types that report specific source locations.
-      // Note: Line numbers, columns, and byte positions are cast to u32.
-      // This is safe for practical use cases as files with >4 billion lines or bytes are extremely rare.
       // Use warning.id() for the file path since the diagnostic may only store the filename.
       #[expect(
         clippy::cast_possible_truncation,
         reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
       )]
-      let (loc, pos) = if let Some((_file, line, column, position)) = diag.get_primary_location() {
-        (
+      let (loc, pos) = match rendered.primary_location {
+        Some(location) => (
           Some(rolldown::LogLocation {
-            line: line as u32,
-            column: column as u32,
+            line: location.line as u32,
+            column: location.column as u32,
             file: warning.id(),
           }),
-          Some(position as u32),
-        )
-      } else {
-        (None, None)
+          Some(location.utf16_position as u32),
+        ),
+        None => (None, None),
       };
 
-      on_log.call(
-        LogLevel::Warn,
-        rolldown::Log {
-          id: warning.id(),
-          exporter: warning.exporter(),
-          code: Some(code),
-          message: diag.to_color_string(),
-          plugin: warning.plugin(),
-          loc,
-          pos,
-          ids: warning.ids(),
-        },
-      )
-    },
-  ))
+      rolldown::Log {
+        id: warning.id(),
+        exporter: warning.exporter(),
+        code: Some(warning.kind().to_string()),
+        message: rendered.message,
+        plugin: warning.plugin(),
+        loc,
+        pos,
+        ids: warning.ids(),
+      }
+    })
+    .collect();
+
   // `buffer_unordered` is fine here: warnings are collected from parallel module
   // tasks in completion order, so there is no cross-module ordering to preserve.
-  .buffer_unordered(MAX_IN_FLIGHT_WARNINGS)
-  .try_collect::<Vec<()>>()
-  .await?;
+  futures::stream::iter(logs.into_iter().map(|log| on_log.call(LogLevel::Warn, log)))
+    .buffer_unordered(MAX_IN_FLIGHT_WARNINGS)
+    .try_collect::<Vec<()>>()
+    .await?;
 
   Ok(())
 }

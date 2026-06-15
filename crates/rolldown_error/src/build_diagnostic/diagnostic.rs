@@ -153,6 +153,18 @@ impl Diagnostic {
   }
 
   pub fn convert_to_string(&self, color: bool) -> String {
+    let mut cache = sources(self.files.clone());
+    self.convert_to_string_with_cache(color, &mut cache)
+  }
+
+  /// Like [`Self::convert_to_string`], but renders against a caller-owned ariadne
+  /// source cache so the line-indexed `Source` for each file is built once and
+  /// reused across many diagnostics instead of rebuilt per render (see #9748).
+  fn convert_to_string_with_cache(
+    &self,
+    color: bool,
+    cache: &mut impl ariadne::Cache<DiagnosticFileId>,
+  ) -> String {
     let builder = self.init_report_builder();
     let mut output = Vec::new();
     let result = builder
@@ -163,7 +175,7 @@ impl Diagnostic {
           .with_severity_prefix(false),
       )
       .finish()
-      .write_for_stdout(sources(self.files.clone()), &mut output);
+      .write_for_stdout(&mut *cache, &mut output);
     match result {
       Ok(()) => String::from_utf8_lossy(&output).into_owned(),
       Err(_) => format!("[{}] {}", self.kind, self.title),
@@ -174,6 +186,7 @@ impl Diagnostic {
     self.convert_to_string(true)
   }
 
+  #[must_use]
   pub fn with_kind(mut self, kind: String) -> Self {
     self.kind = kind;
     self
@@ -212,6 +225,113 @@ impl Diagnostic {
 
   pub fn kind(&self) -> String {
     self.kind.clone()
+  }
+
+  /// Render many diagnostics at once, sharing per-source work across all of them.
+  ///
+  /// Rendering diagnostics one by one re-derives line offsets and rebuilds the
+  /// ariadne `Source` for the whole file on every diagnostic, so emitting N
+  /// diagnostics that point into the same large file is O(N^2) and can appear to
+  /// hang the build (#9748). Sharing the per-source line table and source cache
+  /// makes it O(N log N).
+  pub fn render_batch(diagnostics: &[Diagnostic], color: bool) -> Vec<RenderedDiagnostic> {
+    // Collect every source referenced by any diagnostic, deduplicated, so the
+    // ariadne cache builds each `Source` exactly once.
+    let mut files: FxHashMap<DiagnosticFileId, ArcStr> = FxHashMap::default();
+    for diagnostic in diagnostics {
+      for (id, content) in &diagnostic.files {
+        files.entry(id.clone()).or_insert_with(|| content.clone());
+      }
+    }
+    let mut cache = sources(files.iter().map(|(id, content)| (id.clone(), content.clone())));
+    let mut line_tables: FxHashMap<DiagnosticFileId, LineTable> = FxHashMap::default();
+
+    diagnostics
+      .iter()
+      .map(|diagnostic| {
+        let primary_location = diagnostic.primary_location_with(&files, &mut line_tables);
+        let message = diagnostic.convert_to_string_with_cache(color, &mut cache);
+        RenderedDiagnostic { message, primary_location }
+      })
+      .collect()
+  }
+
+  /// Compute the primary location using a caller-owned per-source line-table
+  /// cache, so the line index for each file is built once across many lookups.
+  fn primary_location_with(
+    &self,
+    files: &FxHashMap<DiagnosticFileId, ArcStr>,
+    line_tables: &mut FxHashMap<DiagnosticFileId, LineTable>,
+  ) -> Option<DiagnosticPrimaryLocation> {
+    let first_label = self.labels.first()?;
+    let span = first_label.span();
+    let source_id = span.source();
+    let source = files.get(source_id)?;
+    let table = line_tables.entry(source_id.clone()).or_insert_with(|| LineTable::new(source));
+    let (line, column, utf16_position) = table.locate(source, span.start());
+    Some(DiagnosticPrimaryLocation { line, column, utf16_position })
+  }
+}
+
+/// Primary source location of a diagnostic's first label.
+#[derive(Debug, Clone)]
+pub struct DiagnosticPrimaryLocation {
+  /// 1-based line number.
+  pub line: usize,
+  /// 0-based UTF-16 column within the line.
+  pub column: usize,
+  /// UTF-16 code-unit offset from the start of the file.
+  pub utf16_position: usize,
+}
+
+/// A diagnostic rendered to its display string together with its primary location.
+#[derive(Debug, Clone)]
+pub struct RenderedDiagnostic {
+  pub message: String,
+  pub primary_location: Option<DiagnosticPrimaryLocation>,
+}
+
+/// Precomputed line-start offsets for one source, mapping a byte offset to a
+/// (line, column) in O(log n) instead of scanning from the start of the file.
+struct LineTable {
+  /// Byte offset of the start of each line.
+  line_byte_starts: Vec<usize>,
+  /// UTF-16 offset (from file start) of the start of each line, parallel to
+  /// `line_byte_starts`.
+  line_utf16_starts: Vec<usize>,
+}
+
+impl LineTable {
+  fn new(source: &str) -> Self {
+    let mut line_byte_starts = vec![0usize];
+    let mut line_utf16_starts = vec![0usize];
+    let mut utf16 = 0usize;
+    for (byte_idx, ch) in source.char_indices() {
+      utf16 += ch.len_utf16();
+      if ch == '\n' {
+        line_byte_starts.push(byte_idx + ch.len_utf8());
+        line_utf16_starts.push(utf16);
+      }
+    }
+    Self { line_byte_starts, line_utf16_starts }
+  }
+
+  /// Returns `(1-based line, 0-based utf16 column, utf16 offset from file start)`
+  /// for `byte_offset`. Mirrors the semantics of the previous linear scan.
+  fn locate(&self, source: &str, byte_offset: usize) -> (usize, usize, usize) {
+    // Index of the last line whose start is <= byte_offset. `line_byte_starts`
+    // always begins with 0, so `partition_point` is >= 1 and the `- 1` is safe.
+    let line_idx = self.line_byte_starts.partition_point(|&start| start <= byte_offset) - 1;
+    let line_byte_start = self.line_byte_starts[line_idx];
+    let line_utf16_start = self.line_utf16_starts[line_idx];
+    // Clamp to the source length so a (malformed) out-of-range offset degrades to
+    // the end-of-file position instead of yielding column 0.
+    let end = byte_offset.min(source.len());
+    let column: usize = source
+      .get(line_byte_start..end)
+      .map(|within_line| within_line.chars().map(char::len_utf16).sum())
+      .unwrap_or(0);
+    (line_idx + 1, column, line_utf16_start + column)
   }
 }
 

@@ -4,7 +4,7 @@ use rolldown_common::{
   BundleMode, LogLevel, NormalizedBundlerOptions, ScanMode, WatcherChangeKind,
 };
 use rolldown_error::{
-  BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, DiagnosticOptions, ResultExt,
+  BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Diagnostic, DiagnosticOptions, ResultExt,
   filter_out_disabled_diagnostics,
 };
 use rolldown_fs_watcher::{DynFsWatcher, RecursiveMode};
@@ -189,43 +189,55 @@ impl WatchTask {
     if warnings.is_empty() || options.log_level == Some(LogLevel::Silent) {
       return Ok(());
     }
-    if let Some(on_log) = options.on_log.as_ref() {
-      for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
-        let diag = warning.to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() });
-        let code = warning.kind().to_string();
-        #[expect(
-          clippy::cast_possible_truncation,
-          reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
-        )]
-        let (loc, pos) = if let Some((_file, line, column, position)) = diag.get_primary_location()
-        {
-          (
-            Some(rolldown_common::LogLocation {
-              line: line as u32,
-              column: column as u32,
-              file: warning.id(),
-            }),
-            Some(position as u32),
-          )
-        } else {
-          (None, None)
-        };
-        on_log
-          .call(
-            LogLevel::Warn,
-            rolldown_common::Log {
-              id: warning.id(),
-              exporter: warning.exporter(),
-              code: Some(code),
-              message: diag.to_color_string(),
-              plugin: None,
-              loc,
-              pos,
-              ids: warning.ids(),
-            },
-          )
-          .await?;
-      }
+    let Some(on_log) = options.on_log.as_ref() else {
+      return Ok(());
+    };
+
+    let warnings: Vec<BuildDiagnostic> =
+      filter_out_disabled_diagnostics(warnings, &options.checks).collect();
+    if warnings.is_empty() {
+      return Ok(());
+    }
+
+    // Render all warnings through the batch API so the per-source line index /
+    // ariadne `Source` is built once and shared, rather than rebuilt for every
+    // warning (O(N^2) for many warnings in one large file, see #9748).
+    let diagnostic_options = DiagnosticOptions { cwd: options.cwd.clone() };
+    let diagnostics: Vec<Diagnostic> =
+      warnings.iter().map(|warning| warning.to_diagnostic_with(&diagnostic_options)).collect();
+    let rendered = Diagnostic::render_batch(&diagnostics, true);
+
+    for (warning, rendered) in warnings.into_iter().zip(rendered) {
+      #[expect(
+        clippy::cast_possible_truncation,
+        reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
+      )]
+      let (loc, pos) = match rendered.primary_location {
+        Some(location) => (
+          Some(rolldown_common::LogLocation {
+            line: location.line as u32,
+            column: location.column as u32,
+            file: warning.id(),
+          }),
+          Some(location.utf16_position as u32),
+        ),
+        None => (None, None),
+      };
+      on_log
+        .call(
+          LogLevel::Warn,
+          rolldown_common::Log {
+            id: warning.id(),
+            exporter: warning.exporter(),
+            code: Some(warning.kind().to_string()),
+            message: rendered.message,
+            plugin: None,
+            loc,
+            pos,
+            ids: warning.ids(),
+          },
+        )
+        .await?;
     }
     Ok(())
   }

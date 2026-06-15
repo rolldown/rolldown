@@ -19,5 +19,5 @@
       ]
     }
   },
-  "_comment": "Regression test for rolldown/rolldown#9502: wrapped ESM re-exported through a namespace must import the generated init binding across chunks."
+  "_comment": "Regression test for rolldown/rolldown#9502: when a wrapped ESM module is re-exported through a namespace barrel in another chunk, the finalizer must not synthesize an init_*() call for the wrapper unless it is reachable in this chunk; otherwise the call renders as a dangling identifier (ReferenceError). Initialization instead flows through the barrel's own chunk."
 }

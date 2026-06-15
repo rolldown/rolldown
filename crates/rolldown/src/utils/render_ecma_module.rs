@@ -141,7 +141,7 @@ mod tests {
     let source_id = builder.add_source_and_content(source, content);
     builder.add_token(0, 0, 0, 0, Some(source_id), None);
     builder.add_token(0, 6, 0, 6, Some(source_id), None);
-    builder.into_sourcemap()
+    builder.into_sourcemap().into_owned()
   }
 
   /// The oxc codegen map is always the last element of the chain and, in production, uses

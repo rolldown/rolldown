@@ -26,6 +26,7 @@ oxc_ecmascript = { workspace = true }
 oxc_index = { workspace = true }
 oxc_str = { workspace = true }
 oxc_resolver = { workspace = true }
+oxc_sourcemap = { workspace = true }
 rolldown_ecmascript = { workspace = true }
 rolldown_error = { workspace = true }
 rolldown_sourcemap = { workspace = true }

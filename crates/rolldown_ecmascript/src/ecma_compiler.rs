@@ -9,7 +9,7 @@ use oxc::{
   parser::{ParseOptions, Parser},
   span::{SPAN, SourceType},
 };
-use oxc_sourcemap::{OwnedSourceMap, SourceMap};
+use oxc_sourcemap::SourceMap;
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKind, Severity};
 
 use crate::ecma_ast::{
@@ -29,9 +29,9 @@ impl EcmaCompiler {
           ..ParseOptions::default()
         });
         let ret = parser.parse();
-        if ret.panicked || !ret.errors.is_empty() {
+        if ret.panicked || !ret.diagnostics.is_empty() {
           Err(BuildDiagnostic::from_oxc_diagnostics(
-            ret.errors,
+            ret.diagnostics,
             &source.clone(),
             id,
             Severity::Error,
@@ -81,7 +81,7 @@ impl EcmaCompiler {
     Ok(EcmaAst { program: inner, source_type: ty })
   }
 
-  pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn {
+  pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn<'_> {
     let legal = if options.comments.legal { LegalComment::Inline } else { LegalComment::None };
     Codegen::new()
       .with_options(CodegenOptions {
@@ -124,7 +124,7 @@ impl EcmaCompiler {
       .with_scoping(ret.scoping)
       .with_private_member_mappings(ret.class_private_mappings)
       .build(&program);
-    (ret.code, ret.map.map(OwnedSourceMap::into_inner))
+    (ret.code, ret.map.map(SourceMap::into_owned))
   }
 }
 

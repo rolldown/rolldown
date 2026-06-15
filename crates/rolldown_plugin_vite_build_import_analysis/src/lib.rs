@@ -171,8 +171,10 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
             )
             .parse();
             if parser_ret.panicked
-              && let Some(err) =
-                parser_ret.errors.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
+              && let Some(err) = parser_ret
+                .diagnostics
+                .iter()
+                .find(|e| e.severity == oxc::diagnostics::Severity::Error)
             {
               return Err(anyhow::anyhow!(format!(
                 "Failed to parse code in '{}': {:?}",
@@ -228,8 +230,10 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
           )
           .parse();
           if parser_ret.panicked
-            && let Some(err) =
-              parser_ret.errors.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
+            && let Some(err) = parser_ret
+              .diagnostics
+              .iter()
+              .find(|e| e.severity == oxc::diagnostics::Severity::Error)
           {
             return Err(anyhow::anyhow!(format!(
               "Failed to parse code in '{}': {:?}",

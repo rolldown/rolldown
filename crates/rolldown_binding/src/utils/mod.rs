@@ -8,6 +8,7 @@ pub mod normalize_binding_options;
 
 use std::any::Any;
 
+use futures::stream::{StreamExt, TryStreamExt};
 use napi_derive::napi;
 use rolldown::{LogLevel, NormalizedBundlerOptions};
 use rolldown_error::{BuildDiagnostic, DiagnosticOptions, filter_out_disabled_diagnostics};
@@ -46,11 +47,24 @@ pub async fn handle_warnings(
   warnings: Vec<BuildDiagnostic>,
   options: &NormalizedBundlerOptions,
 ) -> anyhow::Result<()> {
+  // Emitting warnings one at a time forces a Rust -> JS -> Rust round-trip per
+  // warning. With tens of thousands of warnings (e.g. a large app whose deps are
+  // littered with `"use client"` directives or `eval`) awaiting each call
+  // sequentially degenerates into a pathological ping-pong across the napi bridge
+  // that can appear to hang the build entirely (#9748). Pipelining the calls with
+  // bounded concurrency lets the JS event loop drain many queued calls per tick
+  // while capping the number of in-flight calls (and therefore memory).
+  const MAX_IN_FLIGHT_WARNINGS: usize = 256;
+
   if options.log_level == Some(LogLevel::Silent) {
     return Ok(());
   }
-  if let Some(on_log) = options.on_log.as_ref() {
-    for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
+  let Some(on_log) = options.on_log.as_ref() else {
+    return Ok(());
+  };
+
+  futures::stream::iter(filter_out_disabled_diagnostics(warnings, &options.checks).map(
+    |warning| {
       let diag = warning.to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() });
       let code = warning.kind().to_string();
 
@@ -76,22 +90,26 @@ pub async fn handle_warnings(
         (None, None)
       };
 
-      on_log
-        .call(
-          LogLevel::Warn,
-          rolldown::Log {
-            id: warning.id(),
-            exporter: warning.exporter(),
-            code: Some(code),
-            message: diag.to_color_string(),
-            plugin: warning.plugin(),
-            loc,
-            pos,
-            ids: warning.ids(),
-          },
-        )
-        .await?;
-    }
-  }
+      on_log.call(
+        LogLevel::Warn,
+        rolldown::Log {
+          id: warning.id(),
+          exporter: warning.exporter(),
+          code: Some(code),
+          message: diag.to_color_string(),
+          plugin: warning.plugin(),
+          loc,
+          pos,
+          ids: warning.ids(),
+        },
+      )
+    },
+  ))
+  // `buffer_unordered` is fine here: warnings are collected from parallel module
+  // tasks in completion order, so there is no cross-module ordering to preserve.
+  .buffer_unordered(MAX_IN_FLIGHT_WARNINGS)
+  .try_collect::<Vec<()>>()
+  .await?;
+
   Ok(())
 }

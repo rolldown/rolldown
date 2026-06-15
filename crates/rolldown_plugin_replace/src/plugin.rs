@@ -88,7 +88,7 @@ impl ReplacePlugin {
     Ok(Self {
       matcher,
       prevent_assignment: options.prevent_assignment,
-      values: values.into_iter().collect(),
+      values,
       sourcemap: options.sourcemap,
     })
   }

@@ -51,7 +51,7 @@ await runCmdAndPipeOrExit(
 
 await runCmdAndPipeOrExit(
   '# Rebasing rolldown-canary onto main...',
-  ['git', ['rebase', '-X', 'ours', 'origin/main'], { nodeOptions: { cwd: REPO_PATH } }],
+  ['git', ['rebase', 'origin/main'], { nodeOptions: { cwd: REPO_PATH } }],
 );
 
 printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');

@@ -5,8 +5,7 @@ import { defineConfig } from 'vitest/config';
 // meta/design/dev-server-test-harness.md). Discovery lives here and nowhere
 // else: any `playground/**/*.spec.ts` is picked up, and the playground name is
 // derived from the spec's own path. No central playground registry.
-
-const timeout = process.env.CI ? 50_000 : 30_000;
+const timeout = process.env.PWDEBUG ? Infinity : process.env.CI ? 50_000 : 30_000;
 
 export default defineConfig({
   resolve: {
@@ -18,13 +17,10 @@ export default defineConfig({
     include: ['./playground/**/*.spec.[tj]s'],
     setupFiles: ['./playground/vitest-setup.ts'],
     globalSetup: ['./playground/vitest-global-setup.ts'],
-    // Each spec file owns an in-process dev engine (rust/napi threads); a fork
-    // per file keeps them isolated. Sequential for now — the parallelism trial
-    // is Phase 4 (meta/design/dev-server-test-harness.md, Unresolved Q1).
-    pool: 'forks',
-    fileParallelism: false,
     testTimeout: timeout,
     hookTimeout: timeout,
+    // Terse output, matching Vite's playground suite (failures still print full).
+    reporters: 'dot',
     // Test knobs that the subprocess model passed via child env now live on the
     // harness process itself (it runs the dev engine in-process).
     env: {
@@ -36,8 +32,6 @@ export default defineConfig({
         timeout: process.env.CI ? 1000 * 10 : 1000 * 3,
       },
     },
-    // Retained through the migration; removal is Phase 4 once the determinism
-    // crutches (port races, orphaned subprocesses) are gone.
-    retry: process.env.CI ? 3 : 1,
+    // No `retry` — vitest defaults to 0.
   },
 });

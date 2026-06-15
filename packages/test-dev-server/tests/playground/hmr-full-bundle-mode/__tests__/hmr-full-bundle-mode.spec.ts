@@ -1,27 +1,13 @@
-import { createDevServer, loadDevConfig } from '@rolldown/test-dev-server';
 import { setTimeout } from 'node:timers/promises';
 import { describe, expect, test } from 'vitest';
-import {
-  getBuildSeq as getBuildSeqByUrl,
-  waitForBuildStable as waitForBuildStableByUrl,
-} from '../../../src/dev-status';
-import {
-  createInMemoryLogger,
-  type DevServerHandle,
-  editFile,
-  page,
-  readFile,
-  serverLogs,
-  testDir,
-  waitForBuildStable,
-} from '~utils';
+import { editFile, page, serverLogs, waitForBuildStable } from '~utils';
 
-// All scenarios live in one spec file so the playground is exercised by a
-// single spec — that is what makes the e2e suite safe to run with file
-// parallelism (one spec file ⇒ one server ⇒ one `playground-temp` copy, no
-// cross-file contention). They share one page and one dev server (except
-// `initial build failure`, which needs a server that starts on broken sources),
-// run in order, and each restores the files it edits so order stays safe.
+// This playground's scenarios all exercise ONE shared full-bundle (index.html
+// renders every div, main.js imports every sub-module), so they must run on one
+// page and one server — they live here as `describe` blocks that run in order,
+// each restoring the files it edits. (A first-build failure can't be tested on
+// this already-built server, so it lives in its own `initial-build-error`
+// playground instead.)
 
 const SLOT = '/* @syntax-error-slot */';
 const BREAK = "const broken = '";
@@ -242,66 +228,5 @@ describe('hmr-full-bundle-mode: rebuild-stage failure', () => {
       .poll(() => page.textContent('.rebuild-error'), { timeout: 15_000 })
       .toBe('rebuild-error: ok');
     await waitForBuildStable();
-  });
-});
-
-// Covers the design principles in meta/design/dev-engine.md for a failing
-// FIRST build:
-// - Design Principle 1 (Conservative rebuilds): refreshing never retries
-//   the build
-// - Design Principle 2 (Errors are emitted on every build): the error
-//   reaches the browser and survives a refresh
-// - Design Principle 3 (File changes are the only recovery trigger): fixing
-//   the file recovers — the broken file is watched even though it never
-//   parsed
-//
-// Runs last: it breaks the shared sources and points `page` at its own server,
-// so keeping it after the describes that use the default server avoids
-// perturbing them.
-describe('hmr-full-bundle-mode: initial build failure', () => {
-  test('error on first load, access never retries, a file change recovers', async () => {
-    // The default server already built the working sources, so a first-build
-    // failure can't happen there. Break the module first, then start a second
-    // server on the broken sources.
-    editFile('initial-error/module.js', (code) => code.replace(SLOT, BREAK));
-
-    let server: DevServerHandle | undefined;
-    try {
-      const config = await loadDevConfig(testDir);
-      // A build error does not fail server startup; the server still serves.
-      server = await createDevServer(
-        { ...config, build: { ...config.build, cwd: testDir } },
-        { logger: createInMemoryLogger(serverLogs) },
-      );
-
-      // Design Principle 2: there is no output yet, so the spinner page is
-      // served and the saved build error shows up as an overlay on top.
-      await page.goto(server.url);
-      const overlay = page.locator('#rolldown-error-overlay');
-      await expect.poll(() => overlay.count(), { timeout: 15_000 }).toBe(1);
-
-      // Design Principle 1: refreshing never retries the build — without
-      // new input the same error would just happen again.
-      const seqFailed = await getBuildSeqByUrl(server.url);
-      await page.reload();
-      await expect.poll(() => overlay.count(), { timeout: 15_000 }).toBe(1);
-      const status = await waitForBuildStableByUrl(server.url);
-      expect(status.buildSeq).toBe(seqFailed);
-      expect(status.lastBuildErrored).toBe(true);
-
-      // Design Principle 3: fixing the file triggers a new build, and the
-      // server reloads the page onto the working app.
-      editFile('initial-error/module.js', (code) => code.replace(BREAK, SLOT));
-      await expect
-        .poll(() => page.textContent('.initial-error'), { timeout: 15_000 })
-        .toBe('initial-error: ok');
-      await expect.poll(() => overlay.count()).toBe(0);
-    } finally {
-      await server?.close();
-      // Restore the fixture even if an assertion above failed.
-      if (readFile('initial-error/module.js').includes(BREAK)) {
-        editFile('initial-error/module.js', (code) => code.replace(BREAK, SLOT));
-      }
-    }
   });
 });

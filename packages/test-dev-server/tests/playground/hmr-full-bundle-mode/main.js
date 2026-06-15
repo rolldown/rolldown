@@ -1,6 +1,5 @@
 import './hmr.js';
 import './hmr-error/module.js';
-import './initial-error/module.js';
 import './rebuild-error/module.js';
 
 text('.app', 'hello');

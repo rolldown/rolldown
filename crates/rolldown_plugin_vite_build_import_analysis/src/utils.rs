@@ -35,7 +35,7 @@ impl AddDeps<'_, '_> {
         }
         if let Some(cache) = self.ctx.meta().get::<ViteMetadata>() {
           if let Some(metadata) = cache.inner.get(chunk.preliminary_filename.as_str()) {
-            for file in metadata.imported_css.iter() {
+            for file in metadata.imported_css.iter_cloned() {
               self.deps.insert(file.to_string());
             }
           }
@@ -52,7 +52,7 @@ impl AddDeps<'_, '_> {
       if let Some(cache) = self.ctx.meta().get::<ViteMetadata>() {
         if let Some(metadata) = cache.inner.get(chunk.preliminary_filename.as_str()) {
           if !metadata.imported_css.is_empty() {
-            for file in metadata.imported_css.iter() {
+            for file in metadata.imported_css.iter_cloned() {
               self.deps.insert(file.to_string());
             }
             *self.has_removed_pure_css_chunks = true;

@@ -17,10 +17,12 @@ impl PackageJsonCache {
     oxc_pkg_json: &oxc_resolver::PackageJson,
   ) -> Arc<PackageJson> {
     match self.side_effects_cache.get(&oxc_pkg_json.realpath) {
-      Some(v) => Arc::clone(v.value()),
+      Some(v) => v,
       _ => {
         let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(oxc_pkg_json));
-        self.side_effects_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
+        self
+          .side_effects_cache
+          .insert_and_forget(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
         pkg_json
       }
     }
@@ -31,7 +33,7 @@ impl PackageJsonCache {
     oxc_pkg_json: &oxc_resolver::PackageJson,
   ) -> Arc<PackageJsonWithOptionalPeerDependencies> {
     match self.optional_peer_dep_cache.get(&oxc_pkg_json.realpath) {
-      Some(v) => Arc::clone(v.value()),
+      Some(v) => v,
       _ => {
         let package_json_with_optional_peer_deps = {
           let Ok(package_json_string) = fs::read_to_string(&oxc_pkg_json.realpath) else {
@@ -47,7 +49,9 @@ impl PackageJsonCache {
         };
 
         let pkg_json = Arc::new(package_json_with_optional_peer_deps);
-        self.optional_peer_dep_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
+        self
+          .optional_peer_dep_cache
+          .insert_and_forget(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
         pkg_json
       }
     }

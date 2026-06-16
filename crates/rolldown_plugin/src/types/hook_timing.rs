@@ -1,8 +1,8 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use arcstr::ArcStr;
-use dashmap::DashMap;
 use rolldown_common::PluginIdx;
+use rolldown_utils::dashmap::FxDashMap;
 
 /// Summary of timing for a single plugin
 #[derive(Debug, Clone)]
@@ -22,7 +22,7 @@ struct PluginTimingData {
 #[derive(Debug, Default)]
 pub struct HookTimingCollector {
   /// Map from plugin_idx to timing data (only non-internal plugins are registered)
-  plugins: DashMap<PluginIdx, PluginTimingData>,
+  plugins: FxDashMap<PluginIdx, PluginTimingData>,
   /// Total build time in microseconds
   total_build_micros: AtomicU64,
   /// Link stage time in microseconds (pure Rust core, no plugins)
@@ -32,12 +32,15 @@ pub struct HookTimingCollector {
 impl HookTimingCollector {
   /// Register a plugin with its name (only for non-internal plugins)
   pub fn register_plugin(&self, plugin_idx: PluginIdx, name: ArcStr) {
-    self.plugins.insert(plugin_idx, PluginTimingData { name, duration_micros: AtomicU64::new(0) });
+    self
+      .plugins
+      .pin()
+      .insert(plugin_idx, PluginTimingData { name, duration_micros: AtomicU64::new(0) });
   }
 
   /// Record a hook execution time in microseconds (only records if plugin was registered)
   pub fn record(&self, plugin_idx: PluginIdx, micros: u64) {
-    if let Some(data) = self.plugins.get(&plugin_idx) {
+    if let Some(data) = self.plugins.pin().get(&plugin_idx) {
       data.duration_micros.fetch_add(micros, Ordering::Relaxed);
     }
   }
@@ -74,10 +77,11 @@ impl HookTimingCollector {
   pub fn get_summary(&self) -> Vec<PluginTimingSummary> {
     let mut summaries = self
       .plugins
+      .pin()
       .iter()
-      .map(|entry| {
-        let total_duration_micros = entry.value().duration_micros.load(Ordering::Relaxed);
-        PluginTimingSummary { plugin_name: entry.value().name.clone(), total_duration_micros }
+      .map(|(_, data)| {
+        let total_duration_micros = data.duration_micros.load(Ordering::Relaxed);
+        PluginTimingSummary { plugin_name: data.name.clone(), total_duration_micros }
       })
       .collect::<Vec<_>>();
     summaries.sort_by_key(|b| std::cmp::Reverse(b.total_duration_micros));
@@ -86,8 +90,9 @@ impl HookTimingCollector {
 
   /// Clear all collected timings
   pub fn clear(&self) {
-    for mut entry in self.plugins.iter_mut() {
-      entry.value_mut().duration_micros.store(0, Ordering::Relaxed);
+    let plugins = self.plugins.pin();
+    for (_, data) in &plugins {
+      data.duration_micros.store(0, Ordering::Relaxed);
     }
   }
 }

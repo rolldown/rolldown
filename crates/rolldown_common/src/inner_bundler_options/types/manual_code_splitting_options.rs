@@ -170,6 +170,6 @@ pub struct ChunkingContextImpl {
 
 impl ChunkingContextImpl {
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<ModuleInfo>> {
-    self.module_infos.get(module_id).map(|v| Arc::<ModuleInfo>::clone(v.value()))
+    self.module_infos.get(module_id)
   }
 }

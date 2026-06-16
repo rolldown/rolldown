@@ -5,7 +5,6 @@ use crate::{
 };
 use anyhow::Context;
 use arcstr::ArcStr;
-use dashmap::{DashMap, DashSet, Entry};
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rolldown_utils::make_unique_name::make_unique_name;
@@ -95,23 +94,23 @@ impl FileEmitter {
   pub fn new(options: Arc<NormalizedBundlerOptions>) -> Self {
     Self {
       tx: Arc::new(Mutex::new(None)),
-      source_hash_to_reference_id: DashMap::default(),
-      names: DashMap::default(),
-      files: DashMap::default(),
-      chunks: DashMap::default(),
-      prebuilt_chunks: DashMap::default(),
-      emitted_chunks: DashMap::default(),
+      source_hash_to_reference_id: FxDashMap::default(),
+      names: FxDashMap::default(),
+      files: FxDashMap::default(),
+      chunks: FxDashMap::default(),
+      prebuilt_chunks: FxDashMap::default(),
+      emitted_chunks: FxDashMap::default(),
       base_reference_id: AtomicUsize::new(0),
       options,
-      emitted_files: DashSet::default(),
+      emitted_files: FxDashSet::default(),
       emitted_filenames: FxDashSet::default(),
-      module_to_file_ref: DashMap::default(),
+      module_to_file_ref: FxDashMap::default(),
     }
   }
 
   pub fn set_emitted_chunk_info(&self, emitted_chunk_info: impl Iterator<Item = EmittedChunkInfo>) {
     for info in emitted_chunk_info {
-      self.emitted_chunks.insert(info.reference_id, info.filename);
+      self.emitted_chunks.insert_and_forget(info.reference_id, info.filename);
     }
   }
 
@@ -143,13 +142,13 @@ impl FileEmitter {
           "FileEmitter: failed to send AddEntryModule message - module loader shut down during file emission",
         )
       })?;
-    self.chunks.insert(reference_id.clone(), chunk);
+    self.chunks.insert_and_forget(reference_id.clone(), chunk);
     Ok(reference_id)
   }
 
   pub fn emit_prebuilt_chunk(&self, chunk: EmittedPrebuiltChunk) -> ArcStr {
     let reference_id = self.assign_reference_id(Some(chunk.file_name.clone()));
-    self.prebuilt_chunks.insert(reference_id.clone(), Arc::new(chunk));
+    self.prebuilt_chunks.insert_and_forget(reference_id.clone(), Arc::new(chunk));
     reference_id
   }
 
@@ -173,28 +172,29 @@ impl FileEmitter {
 
     // Deduplicate assets if an explicit fileName is not provided
     let reference_id = if file.file_name.is_none() {
-      // Use entry API to atomically check and insert
-      match self.source_hash_to_reference_id.entry(hash.clone()) {
-        Entry::Occupied(entry) => {
-          // File already exists, add metadata and return existing reference_id
-          let reference_id = entry.get().clone();
-          self.files.entry(reference_id.clone()).and_modify(|output| {
-            if let Some(name) = file.name {
-              output.names.push(name);
-            }
-            if let Some(original_file_name) = file.original_file_name {
-              output.original_file_names.push(original_file_name);
-            }
-          });
-          return Ok(reference_id);
-        }
-        Entry::Vacant(entry) => {
-          // First time seeing this file, generate reference_id and continue
-          let reference_id = self.assign_reference_id(None);
-          entry.insert(reference_id.clone());
-          reference_id
-        }
+      // Atomically check-and-insert: pre-assign a candidate reference id, then
+      // `get_or_insert_with` so concurrent first-emitters agree on a single id.
+      // (A losing candidate only wastes one counter tick, which is harmless.)
+      let candidate = self.assign_reference_id(None);
+      let reference_id =
+        self.source_hash_to_reference_id.get_or_insert_with(hash.clone(), || candidate.clone());
+      if reference_id != candidate {
+        // File already exists, add metadata and return the existing reference_id.
+        let name = file.name.clone();
+        let original_file_name = file.original_file_name.clone();
+        self.files.pin().update(reference_id.clone(), |output| {
+          let mut output = output.clone();
+          if let Some(name) = name.clone() {
+            output.names.push(name);
+          }
+          if let Some(original_file_name) = original_file_name.clone() {
+            output.original_file_names.push(original_file_name);
+          }
+          output
+        });
+        return Ok(reference_id);
       }
+      reference_id
     } else {
       // File has explicit fileName, no deduplication needed
       self.assign_reference_id(file.file_name.clone())
@@ -202,7 +202,7 @@ impl FileEmitter {
 
     // Generate filename and insert into files map
     self.generate_file_name(&mut file, &hash, asset_filename_template, sanitized_file_name)?;
-    self.files.insert(
+    self.files.insert_and_forget(
       reference_id.clone(),
       OutputAsset {
         filename: file.file_name.unwrap(),
@@ -216,15 +216,15 @@ impl FileEmitter {
   }
 
   pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {
-    if let Some(file) = self.files.get(reference_id) {
-      return Ok(file.filename.clone());
+    if let Some(filename) = self.files.with(reference_id, |file| file.filename.clone()) {
+      return Ok(filename);
     }
     if let Some(chunk) = self.chunks.get(reference_id) {
       if let Some(filename) = chunk.file_name.as_ref() {
         return Ok(filename.clone());
       }
       if let Some(filename) = self.emitted_chunks.get(reference_id) {
-        return Ok(filename.clone());
+        return Ok(filename);
       }
       return Err(anyhow::anyhow!(
         "Unable to get file name for emitted chunk: {reference_id}.You can only get file names once chunks have been generated after the 'renderStart' hook."
@@ -299,12 +299,11 @@ impl FileEmitter {
     warnings: &mut Vec<BuildDiagnostic>,
   ) {
     let mut additional_assets = Vec::new();
-    self.files.iter_mut().for_each(|mut file| {
-      let (key, value) = file.pair_mut();
-      if self.emitted_files.contains(key) {
-        return;
+    let files = self.files.pin();
+    for (key, value) in &files {
+      if !self.emitted_files.insert(key.clone()) {
+        continue;
       }
-      self.emitted_files.insert(key.clone());
 
       // Follow rollup using lowercase filename to check conflicts
       let lowercase_filename = value.filename.as_str().to_lowercase().into();
@@ -313,29 +312,29 @@ impl FileEmitter {
           .push(BuildDiagnostic::filename_conflict(value.filename.clone()).with_severity_warning());
       }
 
-      let mut names = std::mem::take(&mut value.names);
+      let mut names = value.names.clone();
       sort_names(&mut names);
 
-      let mut original_file_names = std::mem::take(&mut value.original_file_names);
+      let mut original_file_names = value.original_file_names.clone();
       original_file_names.sort_unstable();
       additional_assets.push(Output::Asset(Arc::new(OutputAsset {
         filename: value.filename.clone(),
         names,
         original_file_names,
-        source: std::mem::take(&mut value.source),
+        source: value.source.clone(),
       })));
-    });
-    // Sort to ensure deterministic output order regardless of DashMap iteration order
+    }
+    drop(files);
+    // Sort to ensure deterministic output order regardless of map iteration order
     additional_assets.sort_unstable_by(|a, b| a.filename().cmp(b.filename()));
     bundle.extend(additional_assets);
 
     // Add prebuilt chunks to the bundle
-    self.prebuilt_chunks.iter().for_each(|prebuilt_chunk| {
-      let (key, value) = prebuilt_chunk.pair();
-      if self.emitted_files.contains(key) {
-        return;
+    let prebuilt_chunks = self.prebuilt_chunks.pin();
+    for (key, value) in &prebuilt_chunks {
+      if !self.emitted_files.insert(key.clone()) {
+        continue;
       }
-      self.emitted_files.insert(key.clone());
 
       // Check for filename conflicts
       let lowercase_filename: ArcStr = value.file_name.as_str().to_lowercase().into();
@@ -361,7 +360,7 @@ impl FileEmitter {
         sourcemap_filename: value.sourcemap_filename.clone(),
         preliminary_filename: value.file_name.to_string(),
       })));
-    });
+    }
   }
 
   pub fn set_context_load_modules_tx(
@@ -375,12 +374,12 @@ impl FileEmitter {
   /// Associate a module ID with an emitted file reference ID.
   /// This allows the `new URL()` finalizer to look up asset filenames by module ID.
   pub fn associate_module_with_file_ref(&self, module_id: &str, reference_id: &str) {
-    self.module_to_file_ref.insert(ArcStr::from(module_id), ArcStr::from(reference_id));
+    self.module_to_file_ref.insert_and_forget(ArcStr::from(module_id), ArcStr::from(reference_id));
   }
 
   /// Get the emitted file reference ID for a given module ID.
   pub fn file_ref_for_module(&self, module_id: &str) -> Option<ArcStr> {
-    self.module_to_file_ref.get(module_id).map(|v| v.value().clone())
+    self.module_to_file_ref.get(module_id)
   }
 
   pub fn clear(&self) {

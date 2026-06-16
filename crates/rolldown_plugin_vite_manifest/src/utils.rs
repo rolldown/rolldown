@@ -79,12 +79,12 @@ impl ViteManifestPlugin {
     is_legacy: bool,
     vite_metadata: Option<&Arc<ChunkMetadata>>,
   ) -> ManifestChunk {
-    let css = vite_metadata
-      .as_ref()
-      .map(|meta| meta.imported_css.iter().map(|s| s.to_string()).collect::<Vec<_>>());
-    let assets = vite_metadata
-      .as_ref()
-      .map(|meta| meta.imported_assets.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+    let css = vite_metadata.as_ref().map(|meta| {
+      meta.imported_css.iter_cloned().into_iter().map(|s| s.to_string()).collect::<Vec<_>>()
+    });
+    let assets = vite_metadata.as_ref().map(|meta| {
+      meta.imported_assets.iter_cloned().into_iter().map(|s| s.to_string()).collect::<Vec<_>>()
+    });
 
     ManifestChunk {
       file: chunk.filename.to_string(),

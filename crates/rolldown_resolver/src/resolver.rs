@@ -5,7 +5,6 @@ use std::{
 
 use anyhow::Context;
 use arcstr::ArcStr;
-use dashmap::DashMap;
 use oxc_resolver::{
   ModuleType, PackageJson as OxcPackageJson, PackageType, Resolution, ResolveError,
   ResolverGeneric, TsConfig as OxcTsConfig,
@@ -63,7 +62,7 @@ impl<Fs: FileSystem + Clone> Resolver<Fs> {
       require_resolver,
       css_resolver,
       new_url_resolver,
-      package_json_cache: DashMap::default(),
+      package_json_cache: FxDashMap::default(),
     }
   }
 }
@@ -112,14 +111,14 @@ impl<Fs: FileSystem> Resolver<Fs> {
 
   fn inner_try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
     if let Some(v) = self.package_json_cache.get(path) {
-      Ok(Arc::clone(v.value()))
+      Ok(v)
     } else {
       // User has the responsibility to ensure `path` is real path if needed. We just pass it through.
       let realpath = path.to_path_buf();
       let json_bytes = self.fs.read(path)?;
       let oxc_pkg_json = OxcPackageJson::parse(&self.fs, realpath.clone(), realpath, json_bytes)?;
       let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(&oxc_pkg_json));
-      self.package_json_cache.insert(path.to_path_buf(), Arc::clone(&pkg_json));
+      self.package_json_cache.insert_and_forget(path.to_path_buf(), Arc::clone(&pkg_json));
       Ok(pkg_json)
     }
   }
@@ -183,13 +182,9 @@ impl<Fs: FileSystem> Resolver<Fs> {
   }
 
   fn cached_package_json(&self, oxc_pkg_json: &OxcPackageJson) -> Arc<PackageJson> {
-    Arc::clone(
-      self
-        .package_json_cache
-        .entry(oxc_pkg_json.realpath.clone())
-        .or_insert_with(|| Arc::new(PackageJson::from_oxc_pkg_json(oxc_pkg_json)))
-        .value(),
-    )
+    self.package_json_cache.get_or_insert_with(oxc_pkg_json.realpath.clone(), || {
+      Arc::new(PackageJson::from_oxc_pkg_json(oxc_pkg_json))
+    })
   }
 
   /// Attempts to resolve using Rollup compatibility mode.

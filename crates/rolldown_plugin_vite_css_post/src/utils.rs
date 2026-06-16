@@ -118,7 +118,7 @@ impl ViteCSSPostPlugin {
           continue;
         }
 
-        let Some(style) = css_styles.inner.get(&id).map(|s| s.to_owned()) else {
+        let Some(style) = css_styles.inner.get(&id) else {
           return Err(anyhow::anyhow!("CSS content for  '{id}' was not found"));
         };
 
@@ -371,16 +371,12 @@ impl ViteCSSPostPlugin {
             .get::<PublicAssetUrlCache>()
             .ok_or_else(|| anyhow::anyhow!("PublicAssetUrlCache missing"))?;
 
-          let public_url = cache
-            .0
-            .get(hash)
-            .ok_or_else(|| {
-              anyhow::anyhow!(
-                "Can't find the cache of {}",
-                &css_chunk[(range.start as usize)..(range.end as usize)]
-              )
-            })?
-            .to_string();
+          let public_url = cache.0.get(hash).ok_or_else(|| {
+            anyhow::anyhow!(
+              "Can't find the cache of {}",
+              &css_chunk[(range.start as usize)..(range.end as usize)]
+            )
+          })?;
 
           let env = ToOutputFilePathEnv {
             is_ssr: self.is_ssr,
@@ -700,11 +696,11 @@ impl ViteCSSPostPlugin {
               if pure_css_chunk_names.contains(file) {
                 let chunk = &chunks[file];
                 let file_metadata = vite_metadata.get(chunk.preliminary_filename.as_str().into());
-                file_metadata.imported_css.iter().for_each(|file| {
-                  chunk_metadata.imported_css.insert(file.clone());
+                file_metadata.imported_css.iter_cloned().into_iter().for_each(|file| {
+                  chunk_metadata.imported_css.insert(file);
                 });
-                file_metadata.imported_assets.iter().for_each(|file| {
-                  chunk_metadata.imported_assets.insert(file.clone());
+                file_metadata.imported_assets.iter_cloned().into_iter().for_each(|file| {
+                  chunk_metadata.imported_assets.insert(file);
                 });
                 chunk_imports_pure_css_chunk = true;
                 return false;

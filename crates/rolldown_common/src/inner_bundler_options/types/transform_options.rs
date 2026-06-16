@@ -4,7 +4,6 @@ use std::{
   sync::Arc,
 };
 
-use dashmap::Entry;
 use oxc::transformer::{ESFeature, EngineTargets, TransformOptions as OxcTransformOptions};
 use oxc_resolver::{ResolveOptions, Resolver, TsconfigDiscovery, TsconfigOptions};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -58,25 +57,28 @@ impl RawTransformOptions {
     warnings: &mut Vec<BuildDiagnostic>,
   ) -> BuildResult<Arc<OxcTransformOptions>> {
     let cache_key = tsconfig.map(|t| t.path.clone()).unwrap_or_default();
-    match self.cache.entry(cache_key) {
-      Entry::Occupied(entry) => Ok(Arc::clone(entry.get())),
-      Entry::Vacant(vacant_entry) => {
-        let merged_options = Arc::new(merge_transform_options_with_tsconfig(
-          self.base_options.as_ref().clone(),
-          tsconfig,
-          warnings,
-        )?);
-        vacant_entry.insert(Arc::clone(&merged_options));
-        Ok(merged_options)
-      }
+    // Fast path: return the cached options if present.
+    if let Some(cached) = self.cache.get(&cache_key) {
+      return Ok(cached);
     }
+    // Slow path: compute the merged options (fallible, hence computed outside the
+    // map). If another thread inserted concurrently, `get_or_insert_with` returns
+    // the value already in the map, keeping callers consistent.
+    let merged_options = Arc::new(merge_transform_options_with_tsconfig(
+      self.base_options.as_ref().clone(),
+      tsconfig,
+      warnings,
+    )?);
+    Ok(self.cache.get_or_insert_with(cache_key, || merged_options))
   }
 }
 
 #[derive(Debug, Clone)]
 pub enum TransformOptionsInner {
-  /// Auto tsconfig discovery - each file uses its nearest tsconfig
-  Raw(RawTransformOptions),
+  /// Auto tsconfig discovery - each file uses its nearest tsconfig.
+  /// Boxed because `RawTransformOptions` embeds a concurrent cache and resolver,
+  /// which would otherwise make this variant far larger than `Normal`.
+  Raw(Box<RawTransformOptions>),
   /// Pre-resolved options - all files use the same options
   Normal(Arc<OxcTransformOptions>),
 }
@@ -110,7 +112,7 @@ impl TransformOptions {
 
   #[inline]
   pub fn new_raw(raw: RawTransformOptions, target: EngineTargets, jsx_preset: JsxPreset) -> Self {
-    Self { inner: TransformOptionsInner::Raw(raw), target, jsx_preset }
+    Self { inner: TransformOptionsInner::Raw(Box::new(raw)), target, jsx_preset }
   }
 
   #[inline]

@@ -1,6 +1,5 @@
 use std::{path::Path, sync::Arc};
 
-use dashmap::DashMap;
 use rolldown_std_utils::PathExt as _;
 use rolldown_utils::{dashmap::FxDashMap, pattern_filter::StringOrRegex};
 use rustc_hash::FxHashSet;
@@ -88,12 +87,12 @@ impl ExternalDecider {
     resolver: Arc<Resolver>,
     builtin_checker: Arc<BuiltinChecker>,
   ) -> Self {
-    Self { options, resolver, builtin_checker, processed_ids: DashMap::default() }
+    Self { options, resolver, builtin_checker, processed_ids: FxDashMap::default() }
   }
 
   pub fn is_external(&self, id: &str, importer: Option<&str>) -> bool {
     if let Some(cached) = self.processed_ids.get(id) {
-      return *cached;
+      return cached;
     }
 
     let mut is_external = false;
@@ -101,7 +100,7 @@ impl ExternalDecider {
       is_external =
         self.builtin_checker.is_builtin(id) || self.is_configured_as_external(id, importer);
     }
-    self.processed_ids.insert(id.to_owned(), is_external);
+    self.processed_ids.insert_and_forget(id.to_owned(), is_external);
 
     is_external
   }

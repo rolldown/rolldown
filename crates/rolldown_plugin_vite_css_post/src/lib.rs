@@ -157,9 +157,9 @@ impl Plugin for ViteCSSPostPlugin {
       rolldown_utils::concat_string!("export default ", serde_json::to_string(&css)?)
     } else {
       let styles = ctx.meta().get::<CSSStyles>().expect("CSSStyles missing");
-      styles.inner.insert(args.id.to_string(), css.into_owned());
+      styles.inner.insert_and_forget(args.id.to_string(), css.into_owned());
       if let Some(modules) = modules {
-        let data = serde_json::to_value(&*modules)?;
+        let data = serde_json::to_value(&modules)?;
         data_to_esm(&data, true)
       } else {
         String::new()
@@ -188,7 +188,7 @@ impl Plugin for ViteCSSPostPlugin {
     let mut css_chunk: Option<String> = None;
     for module_id in &args.chunk.module_ids {
       let id = module_id.as_str();
-      if let Some(css) = styles.inner.get(id).map(|s| s.to_owned()) {
+      if let Some(css) = styles.inner.get(id) {
         // `?transform-only` is used for ?url and shouldn't be included in normal CSS chunks
         if find_special_query(id, b"transform-only").is_some() {
           continue;
@@ -269,11 +269,12 @@ impl Plugin for ViteCSSPostPlugin {
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
     Ok(ctx.meta().get::<ViteMetadata>().and_then(|vite_metadata| {
       let metadata = vite_metadata.get(chunk.filename.clone());
-      (!metadata.imported_css.is_empty()).then(|| {
-        let capacity = metadata.imported_css.iter().fold(0, |acc, s| acc + s.len());
+      let imported_css = metadata.imported_css.iter_cloned();
+      (!imported_css.is_empty()).then(|| {
+        let capacity = imported_css.iter().fold(0, |acc, s| acc + s.len());
         let mut hash = String::with_capacity(capacity);
-        for id in metadata.imported_css.iter() {
-          hash.push_str(&id);
+        for id in &imported_css {
+          hash.push_str(id);
         }
         hash
       })

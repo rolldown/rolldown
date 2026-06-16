@@ -122,7 +122,8 @@ impl BundleCoordinator {
         }
         #[cfg(feature = "testing")]
         CoordinatorMsg::GetWatchedFiles { reply } => {
-          let result = self.watched_files.iter().map(|s| s.to_string()).collect();
+          let result =
+            self.watched_files.iter_cloned().into_iter().map(|s| s.to_string()).collect();
           let _ = reply.send(result);
         }
         CoordinatorMsg::ModuleChanged { module_id } => {
@@ -491,8 +492,8 @@ impl BundleCoordinator {
 
     let mut watcher = self.watcher.lock().ok().context("Failed to acquire watcher lock")?;
     let mut paths_mut = watcher.paths_mut();
-    for watch_file in watch_files.iter() {
-      let watch_file = &**watch_file;
+    for watch_file in watch_files.iter_cloned() {
+      let watch_file = &*watch_file;
       if !self.watched_files.contains(watch_file)
         && pattern_filter::filter(exclude, include, watch_file, &cwd).inner()
       {

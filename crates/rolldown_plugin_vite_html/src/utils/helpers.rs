@@ -162,7 +162,7 @@ pub fn get_css_files_for_chunk(
       .get::<ViteMetadata>()
       .map(|vite_metadata| vite_metadata.get(chunk.preliminary_filename.as_str().into()))
     {
-      for file in chunk_metadata.imported_css.iter() {
+      for file in chunk_metadata.imported_css.iter_cloned() {
         if !seen_css.contains(file.as_str()) {
           seen_css.insert(file.to_string());
           files.push(file.to_string());

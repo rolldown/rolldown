@@ -83,14 +83,15 @@ impl Plugin for ViteHtmlInlineProxyPlugin {
     if let Some(html_proxy_map) =
       ctx.meta().get::<HTMLProxyMap>().expect("HTMLProxyMap is missing").inner.get(url)
     {
-      if let Some(result) = html_proxy_map.get(&index) {
-        let HTMLProxyMapItem { code, map } = result.value();
-        return Ok(Some(HookLoadOutput {
+      if let Some(output) =
+        html_proxy_map.with(&index, |HTMLProxyMapItem { code, map }| HookLoadOutput {
           code: code.clone(),
           map: map.clone(),
           side_effects: Some(HookSideEffects::True),
           ..Default::default()
-        }));
+        })
+      {
+        return Ok(Some(output));
       }
     }
 

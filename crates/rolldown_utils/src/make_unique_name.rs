@@ -2,7 +2,7 @@ use std::{borrow::Cow, ffi::OsStr};
 
 use arcstr::ArcStr;
 use cow_utils::CowUtils as _;
-use dashmap::Entry;
+use papaya::{Compute, Operation};
 use sugar_path::SugarPath as _;
 
 use crate::{concat_string, dashmap::FxDashMap};
@@ -40,6 +40,7 @@ pub fn make_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>
     .map(|e| concat_string!(".", e))
     .unwrap_or_default();
   let file_name = &name[..name.len() - extension.len()];
+  let used_name_counts = used_name_counts.pin();
   loop {
     // Lowercase key for case-insensitive filesystems (macOS APFS, Windows NTFS).
     // When already lowercase, reuse the `candidate` Arc directly to avoid allocation.
@@ -47,21 +48,24 @@ pub fn make_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>
       Cow::Borrowed(_) => candidate.clone(),
       Cow::Owned(s) => s.into(),
     };
-    match used_name_counts.entry(lowercase_candidate) {
-      Entry::Occupied(mut occ) => {
+    // Atomically reserve the name: if it is already taken, bump its counter and
+    // retry with a numbered candidate; otherwise claim it (seeding the counter
+    // at 2 so the next conflict produces `<name>2`).
+    let next_count = used_name_counts.compute(lowercase_candidate, |entry| match entry {
+      Some((_, &count)) => Operation::Insert(count + 1),
+      None => Operation::Insert(2),
+    });
+    match next_count {
+      Compute::Updated { old: (_, &next_count), .. } => {
         // This name is already used
-        let next_count = *occ.get();
-        occ.insert(next_count + 1);
         candidate = ArcStr::from(concat_string!(
           file_name,
           itoa::Buffer::new().format(next_count),
           extension
         ));
       }
-      Entry::Vacant(vac) => {
-        vac.insert(2);
-        break candidate;
-      }
+      Compute::Inserted(..) => break candidate,
+      Compute::Removed(..) | Compute::Aborted(()) => unreachable!(),
     }
   }
 }

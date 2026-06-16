@@ -51,9 +51,10 @@ impl Plugin for ViteManifestPlugin {
         Output::Chunk(chunk) => {
           let name = self.get_chunk_name(chunk, is_legacy);
           let vite_metadata = if self.is_enable_v2 {
-            ctx.meta().get::<ViteMetadata>().and_then(|cache| {
-              cache.inner.get(chunk.preliminary_filename.as_str()).map(|v| v.clone())
-            })
+            ctx
+              .meta()
+              .get::<ViteMetadata>()
+              .and_then(|cache| cache.inner.get(chunk.preliminary_filename.as_str()))
           } else {
             None
           };
@@ -75,8 +76,9 @@ impl Plugin for ViteManifestPlugin {
                   .get::<CSSEntriesCache>()
                   .expect("CSSEntriesCache is missing")
                   .inner
-                  .iter()
-                  .map(|entry| (entry.key().to_string(), entry.value().to_string()))
+                  .iter_cloned()
+                  .into_iter()
+                  .map(|(key, value)| (key.to_string(), value.to_string()))
                   .collect::<FxHashMap<_, _>>()
               } else {
                 (self.css_entries)().await?

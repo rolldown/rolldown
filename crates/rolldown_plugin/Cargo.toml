@@ -25,7 +25,6 @@ workspace = true
 anyhow = { workspace = true }
 arcstr = { workspace = true }
 bitflags = { workspace = true }
-dashmap = { workspace = true }
 derive_more = { workspace = true, features = ["display"] }
 nodejs-built-in-modules = { workspace = true }
 oxc_index = { workspace = true }

@@ -177,11 +177,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       }
 
       // Check if any modules have this file as a transform dependency
-      for entry in self.plugin_driver.transform_dependencies.iter() {
-        let module_idx = *entry.key();
-        let deps = entry.value();
+      let transform_dependencies = self.plugin_driver.transform_dependencies.pin();
+      for (module_idx, deps) in &transform_dependencies {
         if deps.contains(&changed_file_path) {
-          changed_modules.insert(module_idx);
+          changed_modules.insert(*module_idx);
         }
       }
     }

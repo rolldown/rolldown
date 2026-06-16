@@ -3,7 +3,6 @@ use std::{
   sync::Arc,
 };
 
-use dashmap::Entry;
 use napi_derive::napi;
 use oxc_resolver::{ResolveError, ResolveOptions, Resolver, TsConfig, TsconfigDiscovery};
 use rolldown_utils::dashmap::FxDashMap;
@@ -58,14 +57,7 @@ impl TsconfigCache {
     match tsconfig_result {
       Ok(Some(arc_tsconfig)) => {
         let cache_key = arc_tsconfig.path.clone();
-
-        match self.cache.entry(cache_key) {
-          Entry::Occupied(entry) => Ok(Some(Arc::clone(entry.get()))),
-          Entry::Vacant(vacant_entry) => {
-            vacant_entry.insert(Arc::clone(&arc_tsconfig));
-            Ok(Some(arc_tsconfig))
-          }
-        }
+        Ok(Some(self.cache.get_or_insert_with(cache_key, || arc_tsconfig)))
       }
       Ok(None) | Err(_) => tsconfig_result,
     }

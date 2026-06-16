@@ -106,8 +106,7 @@ impl WatchTask {
 
           // Register watch files discovered during scan BEFORE checking scan errors
           // (so files are watched even on error — enables recovery when user fixes the issue)
-          let watch_files: Vec<ArcStr> =
-            bundle.get_watch_files().iter().map(|f| f.clone()).collect();
+          let watch_files: Vec<ArcStr> = bundle.get_watch_files().iter_cloned();
           Self::update_watch_files_from(
             fs_watcher_ref,
             watched_files_ref,
@@ -136,8 +135,7 @@ impl WatchTask {
         bundler.last_bundle_handle.clone().expect("bundle handle should exist after build");
 
       // Collect watch files while we have the lock (may include render-phase files)
-      let new_watch_files: Vec<ArcStr> =
-        bundle_handle.watch_files().iter().map(|f| f.clone()).collect();
+      let new_watch_files: Vec<ArcStr> = bundle_handle.watch_files().iter_cloned();
 
       (result, new_watch_files, bundle_handle)
     };

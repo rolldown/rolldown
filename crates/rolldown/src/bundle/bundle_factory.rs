@@ -1,7 +1,6 @@
 use std::{any::Any, sync::Arc};
 
 use arcstr::ArcStr;
-use dashmap::DashMap;
 use rolldown_common::{
   BundleMode, BundlerOptions, FileEmitter, ModuleIdx, NormalizedBundlerOptions, SharedFileEmitter,
   SharedModuleInfoDashMap,
@@ -10,7 +9,7 @@ use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{__inner::SharedPluginable, PluginDriverFactory};
 use rolldown_plugin_lazy_compilation::LazyCompilationContext;
-use rolldown_utils::dashmap::FxDashSet;
+use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rustc_hash::FxHashMap;
 
 use crate::{
@@ -49,7 +48,7 @@ pub struct BundleFactory {
   module_infos_for_incremental_build: SharedModuleInfoDashMap,
 
   // Used to preserve transform dependencies (from addWatchFile) across incremental builds for HMR
-  transform_dependencies_for_incremental_build: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
+  transform_dependencies_for_incremental_build: Arc<FxDashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
 
   // Used to generate unique id for each bundle process
   bundle_id_seed: u32,

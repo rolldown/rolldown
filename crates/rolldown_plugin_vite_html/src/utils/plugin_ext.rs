@@ -36,9 +36,8 @@ impl ViteHtmlPlugin {
       .meta()
       .get_or_insert_default::<HTMLProxyMap>()
       .inner
-      .entry(file)
-      .or_default()
-      .insert(index, result);
+      .get_or_insert_default(file)
+      .insert_and_forget(index, result);
   }
 
   #[expect(clippy::too_many_arguments)]
@@ -247,7 +246,7 @@ impl ViteHtmlPlugin {
       let cache = ctx.meta().get::<HTMLProxyResult>().expect("HTMLProxyResult missing");
       let css_transformed_code = cache.inner.get(scoped_name).unwrap();
       #[expect(clippy::cast_possible_truncation)]
-      s.update(start as u32, match_end as u32, css_transformed_code.to_string())
+      s.update(start as u32, match_end as u32, css_transformed_code)
         .expect("update should not fail in html plugin");
     }
     s
@@ -324,7 +323,7 @@ impl ViteHtmlPlugin {
             .get::<PublicAssetUrlCache>()
             .ok_or_else(|| anyhow::anyhow!("PublicAssetUrlCache missing"))?;
 
-          let filename = cache.0.get(hash).unwrap().to_owned();
+          let filename = cache.0.get(hash).unwrap();
           let uri =
             self.to_output_file_path(&filename, assets_base, true, relative_url_path).await?;
 

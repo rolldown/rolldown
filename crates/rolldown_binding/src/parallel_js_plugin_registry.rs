@@ -1,5 +1,4 @@
 use crate::options::plugin::{BindingPluginOptions, BindingPluginWithIndex};
-use dashmap::DashMap;
 use napi::{
   Env, Unknown,
   bindgen_prelude::{FromNapiValue, JavaScriptClassExt, JsObjectValue, Object, ObjectFinalize},
@@ -7,14 +6,19 @@ use napi::{
 use napi_derive::napi;
 use rolldown_utils::{dashmap::FxDashMap, rustc_hash::FxHashMapExt};
 use rustc_hash::FxHashMap;
-use std::sync::LazyLock;
 use std::sync::atomic::{self, AtomicU16};
+use std::sync::{Arc, LazyLock, Mutex};
 
 type PluginsInSingleWorker = Vec<BindingPluginWithIndex>;
 type PluginsList = Vec<PluginsInSingleWorker>;
 pub(crate) type PluginValues = FxHashMap<usize, Vec<BindingPluginOptions>>;
 
-static PLUGINS_MAP: LazyLock<FxDashMap<u16, PluginsList>> = LazyLock::new(DashMap::default);
+// `papaya` is lock-free and stores immutable values, so the per-id plugin list
+// (which is appended to from multiple workers and later moved out wholesale) is
+// kept behind an `Arc<Mutex<_>>`. This is a cold registration path, so the lock
+// is uncontended in practice.
+static PLUGINS_MAP: LazyLock<FxDashMap<u16, Arc<Mutex<PluginsList>>>> =
+  LazyLock::new(FxDashMap::default);
 static NEXT_ID: AtomicU16 = AtomicU16::new(1);
 
 #[napi(custom_finalize)]
@@ -34,13 +38,16 @@ impl ParallelJsPluginRegistry {
     }
 
     let id = NEXT_ID.fetch_add(1, atomic::Ordering::Relaxed);
-    PLUGINS_MAP.insert(id, vec![]);
+    PLUGINS_MAP.insert_and_forget(id, Arc::new(Mutex::new(vec![])));
 
     Ok(Self { id, worker_count })
   }
 
   pub fn take_plugin_values(&self) -> PluginValues {
-    let plugins_list = PLUGINS_MAP.remove(&self.id).expect("plugin list already taken").1;
+    let plugins_list = PLUGINS_MAP.get(&self.id).expect("plugin list already taken");
+    PLUGINS_MAP.pin().remove(&self.id);
+    let plugins_list =
+      std::mem::take(&mut *plugins_list.lock().expect("plugin list mutex poisoned"));
 
     let mut map: FxHashMap<usize, Vec<BindingPluginOptions>> =
       FxHashMap::with_capacity(plugins_list[0].len());
@@ -56,7 +63,7 @@ impl ParallelJsPluginRegistry {
 
 impl ObjectFinalize for ParallelJsPluginRegistry {
   fn finalize(self, mut _env: Env) -> napi::Result<()> {
-    PLUGINS_MAP.remove(&self.id);
+    PLUGINS_MAP.pin().remove(&self.id);
     Ok(())
   }
 }
@@ -82,7 +89,7 @@ impl FromNapiValue for ParallelJsPluginRegistry {
 
 #[napi]
 pub fn register_plugins(id: u16, plugins: Vec<BindingPluginWithIndex>) {
-  if let Some(mut existing_plugins) = PLUGINS_MAP.get_mut(&id) {
-    existing_plugins.push(plugins);
+  if let Some(existing_plugins) = PLUGINS_MAP.get(&id) {
+    existing_plugins.lock().expect("plugin list mutex poisoned").push(plugins);
   }
 }

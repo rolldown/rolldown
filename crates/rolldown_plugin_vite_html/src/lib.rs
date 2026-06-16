@@ -503,11 +503,7 @@ impl Plugin for ViteHtmlPlugin {
   ) -> rolldown_plugin::HookNoopReturn {
     let mut inline_entry_chunk = FxHashSet::default();
     let mut analyzed_imported_css_files = FxHashMap::default();
-    let html_result_map = self
-      .html_result_map
-      .iter()
-      .map(|item| (item.key().clone(), item.value().clone()))
-      .collect::<Vec<_>>();
+    let html_result_map = self.html_result_map.iter_cloned();
     for ((id, assets_base), (html, is_async)) in html_result_map {
       let mut result = html.clone();
 

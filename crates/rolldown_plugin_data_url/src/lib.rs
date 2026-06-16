@@ -69,7 +69,7 @@ impl Plugin for DataUrlPlugin {
       let id: ArcStr =
         format!("\0rolldown/data-url:{}", xxhash_base64_url(args.specifier.as_bytes())).into();
 
-      self.resolved_data_url.insert(id.clone(), ResolvedDataUrl { data, module_type });
+      self.resolved_data_url.insert_and_forget(id.clone(), ResolvedDataUrl { data, module_type });
 
       return Ok(Some(HookResolveIdOutput { id, ..Default::default() }));
     }
@@ -82,14 +82,14 @@ impl Plugin for DataUrlPlugin {
   }
 
   async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    let Some(resolved) = self.resolved_data_url.get(args.id) else {
-      return Ok(None);
-    };
-
-    Ok(Some(HookLoadOutput {
+    let Some(output) = self.resolved_data_url.with(args.id, |resolved| HookLoadOutput {
       code: resolved.data.clone(),
       module_type: Some(resolved.module_type.clone()),
       ..Default::default()
-    }))
+    }) else {
+      return Ok(None);
+    };
+
+    Ok(Some(output))
   }
 }

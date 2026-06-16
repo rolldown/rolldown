@@ -10,40 +10,22 @@ disallowed-methods = [
 ]
 
 ### await-holding-invalid-types
-## we can remove these if https://github.com/xacrimon/dashmap/issues/348 lands
+## `papaya` is lock-free, but holding a pin guard or a reference borrowed from it
+## across an await point keeps memory reclamation pinned and is a footgun. Clone
+## the value out of the guard scope before awaiting instead.
 
 [[await-holding-invalid-types]]
-path = "dashmap::mapref::one::Ref"
-reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
+path = "papaya::LocalGuard"
+reason = "holding a papaya pin guard across an await keeps memory reclamation pinned; clone values out before awaiting"
 
 [[await-holding-invalid-types]]
-path = "dashmap::mapref::one::RefMut"
-reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
+path = "papaya::OwnedGuard"
+reason = "holding a papaya pin guard across an await keeps memory reclamation pinned; clone values out before awaiting"
 
 [[await-holding-invalid-types]]
-path = "dashmap::mapref::one::MappedRef"
-reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
+path = "papaya::HashMapRef"
+reason = "holding a papaya map guard across an await keeps memory reclamation pinned; clone values out before awaiting"
 
 [[await-holding-invalid-types]]
-path = "dashmap::mapref::entry::Entry"
-reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
-
-[[await-holding-invalid-types]]
-path = "dashmap::mapref::multiple::RefMulti"
-reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
-
-[[await-holding-invalid-types]]
-path = "dashmap::mapref::multiple::RefMutMulti"
-reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
-
-[[await-holding-invalid-types]]
-path = "dashmap::iter::Iter"
-reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
-
-[[await-holding-invalid-types]]
-path = "dashmap::iter::IterMut"
-reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
-
-[[await-holding-invalid-types]]
-path = "dashmap::iter::OwningIter"
-reason = "holding dashmap references will cause deadlocks, if the same thread tries to acquire a reference"
+path = "papaya::HashSetRef"
+reason = "holding a papaya set guard across an await keeps memory reclamation pinned; clone values out before awaiting"

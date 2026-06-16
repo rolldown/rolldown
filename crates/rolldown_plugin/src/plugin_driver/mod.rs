@@ -13,12 +13,11 @@ use std::{
 
 use anyhow::Context;
 use arcstr::ArcStr;
-use dashmap::DashMap;
 use rolldown_common::{
   ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, PluginIdx, SharedFileEmitter,
   SharedModuleInfoDashMap,
 };
-use rolldown_utils::dashmap::FxDashSet;
+use rolldown_utils::dashmap::{Compute, FxDashMap, FxDashSet, Operation};
 use sugar_path::SugarPath;
 use tokio::sync::broadcast;
 
@@ -40,7 +39,7 @@ pub struct PluginDriver {
   pub watch_files: Arc<FxDashSet<ArcStr>>,
   pub module_infos: SharedModuleInfoDashMap,
   /// Module dependencies tracked during load/transform hooks for HMR invalidation
-  pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
+  pub transform_dependencies: Arc<FxDashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   context_load_completion_manager: ContextLoadCompletionManager,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   /// Timing collector for plugin hooks (None if plugin timing is disabled)
@@ -104,8 +103,7 @@ impl PluginDriver {
 
     self
       .transform_dependencies
-      .entry(module_idx)
-      .or_insert_with(|| Arc::new(FxDashSet::default()))
+      .get_or_insert_with(module_idx, || Arc::new(FxDashSet::default()))
       .insert(dependency);
   }
 
@@ -183,7 +181,7 @@ impl Deref for PluginDriver {
 
 #[derive(Default)]
 struct ContextLoadCompletionManager {
-  notifiers: DashMap<ModuleId, ContextLoadCompletionState>,
+  notifiers: FxDashMap<ModuleId, ContextLoadCompletionState>,
 }
 
 enum ContextLoadCompletionState {
@@ -193,19 +191,24 @@ enum ContextLoadCompletionState {
 
 impl ContextLoadCompletionManager {
   pub async fn wait_for_completion(&self, module_id: ModuleId) {
-    let mut rx = match self.notifiers.entry(module_id) {
-      dashmap::Entry::Vacant(guard) => {
-        let (tx, rx) = broadcast::channel(1);
-        guard.insert(ContextLoadCompletionState::Pending(tx));
-        rx
-      }
-      dashmap::Entry::Occupied(mut guard) => match guard.get_mut() {
+    let mut rx = {
+      // Atomically register a pending notifier if absent, then subscribe to the
+      // sender currently stored for this module. Whether we inserted it or it was
+      // already pending, subscribing before `mark_completion` runs guarantees the
+      // completion signal is delivered to this receiver.
+      let notifiers = self.notifiers.pin();
+      let state = notifiers.get_or_insert_with(module_id, || {
+        let (tx, _rx) = broadcast::channel(1);
+        ContextLoadCompletionState::Pending(tx)
+      });
+      match state {
         ContextLoadCompletionState::Pending(sender) => sender.subscribe(),
         ContextLoadCompletionState::Completed => {
           /* no need to wait */
           return;
         }
-      },
+      }
+      // `notifiers` guard is dropped here, before the `.await` below.
     };
 
     if let Err(err) = rx.recv().await {
@@ -219,28 +222,38 @@ impl ContextLoadCompletionManager {
   }
 
   pub fn mark_completion(&self, module_id: ModuleId) {
-    match self.notifiers.entry(module_id) {
-      dashmap::Entry::Vacant(guard) => {
-        guard.insert(ContextLoadCompletionState::Completed);
+    let notifiers = self.notifiers.pin();
+    // Atomically transition the entry to `Completed`. The closure must be pure
+    // (it may be retried under contention), so the actual notification is sent
+    // afterwards using the previous `Pending` sender exposed by `Compute::Updated`,
+    // which remains valid for the lifetime of the pin guard.
+    match notifiers.compute(module_id, |entry| match entry {
+      Some((_, ContextLoadCompletionState::Completed)) => {
+        // Re-marking an already-completed module: leave it unchanged.
+        Operation::Abort(())
       }
-      dashmap::Entry::Occupied(mut guard) => match guard.get_mut() {
-        ContextLoadCompletionState::Pending(sender) => {
-          sender.send(()).expect(
-            "PluginDriver: failed to send completion notification - receiver was dropped before wait_for_completion was called, indicating a race condition in module loading"
-          );
-          *guard.get_mut() = ContextLoadCompletionState::Completed;
-        }
-        ContextLoadCompletionState::Completed => {
-          // This happens if `.mark_completion` is called multiple times, which is not expected
-          debug_assert!(false, "mark_completion was called even though it was already completed");
-          tracing::warn!("mark_completion was called even though it was already completed");
-        }
-      },
+      _ => Operation::Insert(ContextLoadCompletionState::Completed),
+    }) {
+      Compute::Updated { old: (_, ContextLoadCompletionState::Pending(sender)), .. } => {
+        sender.send(()).expect(
+          "PluginDriver: failed to send completion notification - receiver was dropped before wait_for_completion was called, indicating a race condition in module loading"
+        );
+      }
+      Compute::Inserted(..) => {
+        // No waiter had registered yet; `Completed` is recorded for future waiters.
+      }
+      Compute::Aborted(()) => {
+        // This happens if `.mark_completion` is called multiple times, which is not expected
+        debug_assert!(false, "mark_completion was called even though it was already completed");
+        tracing::warn!("mark_completion was called even though it was already completed");
+      }
+      Compute::Updated { old: (_, ContextLoadCompletionState::Completed), .. }
+      | Compute::Removed(..) => unreachable!(),
     }
   }
 
   pub fn invalidate(&self, module_id: &ModuleId) {
-    self.notifiers.remove(module_id);
+    self.notifiers.pin().remove(module_id);
   }
 
   pub fn clear(&self) {

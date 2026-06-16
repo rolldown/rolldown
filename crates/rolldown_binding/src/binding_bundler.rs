@@ -193,7 +193,7 @@ impl BindingBundler {
     self
       .last_bundle_handle
       .as_ref()
-      .map(|handle| handle.watch_files().iter().map(|s| s.to_string()).collect())
+      .map(|handle| handle.watch_files().iter_cloned().into_iter().map(|s| s.to_string()).collect())
       .unwrap_or_default()
   }
 }

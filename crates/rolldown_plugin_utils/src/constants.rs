@@ -38,7 +38,7 @@ pub struct ViteMetadata {
 
 impl ViteMetadata {
   pub fn get(&self, key: ArcStr) -> Arc<ChunkMetadata> {
-    self.inner.entry(key).or_default().clone()
+    self.inner.get_or_insert_default(key)
   }
 }
 
@@ -65,7 +65,7 @@ pub struct HTMLProxyMapItem {
 
 #[derive(Debug, Default)]
 pub struct HTMLProxyMap {
-  pub inner: FxDashMap<String, FxDashMap<usize, HTMLProxyMapItem>>,
+  pub inner: FxDashMap<String, Arc<FxDashMap<usize, HTMLProxyMapItem>>>,
 }
 
 #[derive(Debug, Default)]

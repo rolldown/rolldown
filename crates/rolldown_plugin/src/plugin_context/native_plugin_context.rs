@@ -176,11 +176,11 @@ impl NativePluginContextImpl {
   }
 
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
-    self.module_infos.get(module_id).map(|v| Arc::<rolldown_common::ModuleInfo>::clone(v.value()))
+    self.module_infos.get(module_id)
   }
 
   pub fn get_module_ids(&self) -> Vec<ArcStr> {
-    self.module_infos.iter().map(|v| v.key().clone()).collect()
+    self.module_infos.pin().keys().cloned().collect()
   }
 
   pub fn cwd(&self) -> &PathBuf {

@@ -22,10 +22,22 @@ pub enum Severity {
   Warning,
 }
 
-#[derive(Debug)]
 pub struct BuildDiagnostic {
   inner: Box<dyn BuildEvent>,
   severity: Severity,
+}
+
+// `BuildEvent` is not `Debug` (dropping the supertrait lets the per-event `Debug`
+// impls be dead-stripped from release builds), so format the diagnostic via its
+// public accessors instead of the boxed event's `Debug`.
+impl std::fmt::Debug for BuildDiagnostic {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("BuildDiagnostic")
+      .field("severity", &self.severity)
+      .field("kind", &self.kind())
+      .field("message", &self.inner.message(&DiagnosticOptions::default()))
+      .finish()
+  }
 }
 
 impl std::error::Error for BuildDiagnostic {}
@@ -114,8 +126,14 @@ impl From<anyhow::Error> for BuildDiagnostic {
   }
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct BatchedBuildDiagnostic(Vec<BuildDiagnostic>);
+
+impl std::fmt::Debug for BatchedBuildDiagnostic {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_tuple("BatchedBuildDiagnostic").field(&self.0).finish()
+  }
+}
 
 impl BatchedBuildDiagnostic {
   pub fn new(vec: Vec<BuildDiagnostic>) -> Self {

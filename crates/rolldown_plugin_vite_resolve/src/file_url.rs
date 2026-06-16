@@ -114,8 +114,7 @@ mod tests {
 
   #[test]
   fn query_and_fragment_become_postfix() {
-    let (path, postfix) =
-      file_url_str_to_path_and_postfix("file:///foo/bar.js?v=1#frag").unwrap();
+    let (path, postfix) = file_url_str_to_path_and_postfix("file:///foo/bar.js?v=1#frag").unwrap();
     assert_eq!(path, "/foo/bar.js");
     assert_eq!(postfix, "?v=1#frag");
   }

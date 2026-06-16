@@ -12,6 +12,7 @@ use crate::{
   options::plugin::JsPlugin,
   types::{binding_rendered_chunk::BindingRenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
 };
+use iri_string::types::UriStr;
 use napi::bindgen_prelude::{Either, Either3, FnArgs};
 use oxc::transformer::EngineTargets;
 use rolldown::{
@@ -28,7 +29,6 @@ use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::FxHashMap;
-use iri_string::types::UriStr;
 use std::path::PathBuf;
 
 #[cfg(not(target_family = "wasm"))]

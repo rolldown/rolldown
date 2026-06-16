@@ -16,8 +16,5 @@ const isDoc = computed(
     <template v-if="isDoc" #doc-after>
       <FeedbackWidget />
     </template>
-    <template v-if="isDoc" #aside-outline-after>
-      <FeedbackWidgetCompact />
-    </template>
   </Layout>
 </template>

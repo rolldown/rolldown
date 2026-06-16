@@ -67,9 +67,12 @@ pub fn json_value_to_expression<'a>(
     Value::Bool(b) => builder.expression_boolean_literal(SPAN, *b),
 
     Value::Number(n) => {
-      // serde_json::Number can always be represented as f64 for JSON numbers.
-      // Large integers may lose precision, matching JavaScript's JSON.parse behavior.
-      let f = n.as_f64().expect("JSON numbers are always representable as f64");
+      // A JSON number string is always a valid f64 literal, so parsing it never fails:
+      // in-range values parse exactly (large integers may lose precision, like JS
+      // `JSON.parse`), and out-of-range values like `1e400` saturate to a correctly
+      // signed `±Infinity`. `as_f64` can't be used here because it filters out those
+      // non-finite results and returns `None`, which is what used to panic.
+      let f = n.as_str().parse::<f64>().expect("a JSON number is always a valid f64 literal");
       builder.expression_numeric_literal(SPAN, f, None, oxc::ast::ast::NumberBase::Decimal)
     }
 
@@ -138,6 +141,21 @@ mod tests {
     // When parsed as f64 and back, it becomes 9007199254740996
     let json: Value = serde_json::from_str(r#"{ "v": 9007199254740995 }"#).unwrap();
     assert_snapshot!(to_code(&json), @r#"({ "v": 9007199254740996 });"#);
+  }
+
+  /// Regression test: numbers outside f64's finite range must not panic. With serde_json's
+  /// `arbitrary_precision` feature they parse successfully but `as_f64` returns `None`; we
+  /// saturate to a correctly-signed `±Infinity`, matching JS
+  /// `JSON.parse('{ "v": 1e400 }').v === Infinity`.
+  #[test]
+  fn test_out_of_range_number_saturates_to_infinity() {
+    let json: Value = serde_json::from_str(r#"{ "pos": 1e400, "neg": -1e400 }"#).unwrap();
+    assert_snapshot!(to_code(&json), @r#"
+    ({
+    	"pos": Infinity,
+    	"neg": -Infinity
+    });
+    "#);
   }
 
   #[test]

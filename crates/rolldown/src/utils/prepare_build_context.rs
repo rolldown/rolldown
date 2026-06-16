@@ -49,6 +49,17 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     );
   }
 
+  // `output.file` must contain a final file-name component. Values like `""`, `"/"`,
+  // `"."`, `".."`, or any path ending in `..` make `Path::file_name()` return `None`,
+  // which would otherwise panic later when deriving the chunk basename.
+  if let Some(file) = raw_options.file.as_ref()
+    && Path::new(file).file_name().is_none()
+  {
+    errors.push(BuildDiagnostic::invalid_option(InvalidOptionType::OutputFileWithoutName(
+      file.clone(),
+    )));
+  }
+
   if let Some(entity) = raw_options.context.as_ref() {
     if !is_validate_identifier_name(entity) {
       warnings.push(

@@ -13,7 +13,7 @@ readme = "../../README.md"
 memchr = { workspace = true }
 oxc_index = { workspace = true }
 oxc_sourcemap = { workspace = true, optional = true }
-regex = { workspace = true }
+regex-lite = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, optional = true }
 

@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 
 use anyhow::anyhow;
 use cow_utils::CowUtils;
-use regex::Regex;
+use regex_lite::Regex;
 use rolldown::BundlerOptions;
 use rolldown_error::{BuildDiagnostic, DiagnosticOptions, EventKind};
 use rolldown_testing::integration_test::IntegrationTest;

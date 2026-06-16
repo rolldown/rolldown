@@ -13,7 +13,7 @@ readme = "../../README.md"
 workspace = true
 
 [dependencies]
-regex = { workspace = true }
+regex-lite = { workspace = true }
 
 [lib]
 doctest = false

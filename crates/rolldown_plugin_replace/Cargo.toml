@@ -18,7 +18,7 @@ doctest = false
 [dependencies]
 anyhow = { workspace = true }
 oxc = { workspace = true }
-regex = { workspace = true }
+regex-lite = { workspace = true }
 regress = { workspace = true }
 rolldown_plugin = { workspace = true }
 rustc-hash = { workspace = true }

@@ -4,7 +4,7 @@ use std::{
   sync::LazyLock,
 };
 
-use regex::Regex;
+use regex_lite::Regex;
 use rolldown_common::WatcherChangeKind;
 use rustc_hash::FxHashMap;
 

@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::Context;
 use arcstr::ArcStr;
-use regex::Regex;
+use regex_lite::Regex;
 use rolldown_common::{
   AssetFilenamesOutputOption, EmittedAsset, Output, OutputChunk, OutputFormat,
   RollupPreRenderedAsset,
@@ -657,7 +657,7 @@ impl ViteCSSPostPlugin {
         let empty_chunk_files = pure_css_chunk_names
           .iter()
           .filter_map(|file| {
-            Path::new(file.as_str()).file_name().and_then(|v| v.to_str().map(regex::escape))
+            Path::new(file.as_str()).file_name().and_then(|v| v.to_str().map(regex_lite::escape))
           })
           .collect::<Vec<_>>()
           .join("|");
@@ -714,7 +714,7 @@ impl ViteCSSPostPlugin {
             .collect::<Vec<_>>();
           if chunk_imports_pure_css_chunk {
             new_chunk.code = empty_chunk_re
-              .replace_all(&chunk.code, |captures: &regex::Captures<'_>| {
+              .replace_all(&chunk.code, |captures: &regex_lite::Captures<'_>| {
                 let len = captures.get(0).unwrap().len();
                 if args.options.format.is_esm() {
                   return format!("/* empty css {:<width$}*/", "", width = len.saturating_sub(15));

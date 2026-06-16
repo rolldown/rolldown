@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use regex::Regex;
+use regex_lite::Regex;
 use std::sync::LazyLock;
 
 static MODULE_MATCHER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?:\w+::)").unwrap());

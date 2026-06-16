@@ -210,7 +210,7 @@ fn trim_start_pattern<'a>(s: &'a str, pattern: &str) -> &'a str {
 
   // Use regex for custom patterns
   let regex_pattern = format!("^({pattern})+");
-  match regex::Regex::new(&regex_pattern) {
+  match regex_lite::Regex::new(&regex_pattern) {
     Ok(re) => {
       if let Some(m) = re.find(s) {
         &s[m.end()..]
@@ -237,7 +237,7 @@ fn trim_end_pattern<'a>(s: &'a str, pattern: &str) -> &'a str {
 
   // Use regex for custom patterns
   let regex_pattern = format!("({pattern})+$");
-  match regex::Regex::new(&regex_pattern) {
+  match regex_lite::Regex::new(&regex_pattern) {
     Ok(re) => {
       if let Some(m) = re.find(s) {
         &s[..m.start()]

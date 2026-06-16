@@ -1,7 +1,7 @@
 use std::{borrow::Cow, sync::LazyLock};
 
 use cow_utils::CowUtils;
-use regex::Regex;
+use regex_lite::Regex;
 use rustc_hash::FxHashSet;
 
 use super::html_tag::{AttrValue, HtmlTagChildren, HtmlTagDescriptor};
@@ -118,13 +118,13 @@ fn serialize_tags(tags: &[HtmlTagDescriptor], indent: &str) -> String {
 fn prepend_inject_fallback<'a>(html: &'a str, tags: &[HtmlTagDescriptor]) -> Cow<'a, str> {
   // prepend to the html tag, append after doctype, or the document start
   if HTML_PREPEND_INJECT_RE.is_match(html) {
-    return HTML_PREPEND_INJECT_RE.replace(html, |caps: &regex::Captures| {
+    return HTML_PREPEND_INJECT_RE.replace(html, |caps: &regex_lite::Captures| {
       rolldown_utils::concat_string!(&caps[0], "\n", serialize_tags(tags, ""))
     });
   }
 
   if DOCTYPE_PREPEND_INJECT_RE.is_match(html) {
-    return DOCTYPE_PREPEND_INJECT_RE.replace(html, |caps: &regex::Captures| {
+    return DOCTYPE_PREPEND_INJECT_RE.replace(html, |caps: &regex_lite::Captures| {
       rolldown_utils::concat_string!(&caps[0], "\n", serialize_tags(tags, ""))
     });
   }
@@ -146,7 +146,7 @@ pub fn inject_to_head<'a>(
   if prepend {
     // inject as the first element of head
     if HEAD_PREPEND_INJECT_RE.is_match(html) {
-      return HEAD_PREPEND_INJECT_RE.replace(html, |caps: &regex::Captures| {
+      return HEAD_PREPEND_INJECT_RE.replace(html, |caps: &regex_lite::Captures| {
         rolldown_utils::concat_string!(
           &caps[0],
           "\n",
@@ -157,15 +157,16 @@ pub fn inject_to_head<'a>(
   } else {
     // inject before head close
     if HEAD_INJECT_RE.is_match(html) {
-      return HEAD_INJECT_RE.replace(html, |caps: &regex::Captures| {
+      return HEAD_INJECT_RE.replace(html, |caps: &regex_lite::Captures| {
         serialize_tags(tags, &increment_indent(&caps[1])) + &caps[0]
       });
     }
 
     // try to inject before the body tag
     if BODY_PREPEND_INJECT_RE.is_match(html) {
-      return BODY_PREPEND_INJECT_RE
-        .replace(html, |caps: &regex::Captures| serialize_tags(tags, &caps[1]) + "\n" + &caps[0]);
+      return BODY_PREPEND_INJECT_RE.replace(html, |caps: &regex_lite::Captures| {
+        serialize_tags(tags, &caps[1]) + "\n" + &caps[0]
+      });
     }
   }
 
@@ -187,7 +188,7 @@ pub fn inject_to_body<'a>(
   if prepend {
     // inject after body open
     if BODY_PREPEND_INJECT_RE.is_match(html) {
-      return BODY_PREPEND_INJECT_RE.replace(html, |caps: &regex::Captures| {
+      return BODY_PREPEND_INJECT_RE.replace(html, |caps: &regex_lite::Captures| {
         rolldown_utils::concat_string!(
           &caps[0],
           "\n",
@@ -198,7 +199,7 @@ pub fn inject_to_body<'a>(
 
     // if no body tag is present, inject after head or fallback to prepend in html
     if HEAD_INJECT_RE.is_match(html) {
-      return HEAD_INJECT_RE.replace(html, |caps: &regex::Captures| {
+      return HEAD_INJECT_RE.replace(html, |caps: &regex_lite::Captures| {
         rolldown_utils::concat_string!(&caps[0], "\n", serialize_tags(tags, &caps[1]))
       });
     }
@@ -207,14 +208,14 @@ pub fn inject_to_body<'a>(
   } else {
     // inject before body close
     if BODY_INJECT_RE.is_match(html) {
-      return BODY_INJECT_RE.replace(html, |caps: &regex::Captures| {
+      return BODY_INJECT_RE.replace(html, |caps: &regex_lite::Captures| {
         serialize_tags(tags, &increment_indent(&caps[1])) + &caps[0]
       });
     }
 
     // if no body tag is present, append to the html tag, or at the end of the file
     if HTML_INJECT_RE.is_match(html) {
-      return HTML_INJECT_RE.replace(html, |caps: &regex::Captures| {
+      return HTML_INJECT_RE.replace(html, |caps: &regex_lite::Captures| {
         rolldown_utils::concat_string!(serialize_tags(tags, ""), "\n", &caps[0])
       });
     }

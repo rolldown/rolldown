@@ -448,11 +448,12 @@ impl BindingMagicString<'_> {
   /// When `global` is true, replaces all matches; otherwise replaces only the first.
   /// Handles `$&`, `$$`, and `$N` substitution patterns in the replacement string.
   ///
-  /// NOTE: Uses `HybridRegex` which tries `regex::Regex` first (orders of magnitude
-  /// faster) and only falls back to `regress::Regex` when the pattern uses syntax
-  /// not supported by the `regex` crate (e.g. backreferences, lookaround).
-  /// Sticky (`y`) flag always uses the `regress` path since `regex` doesn't support it,
-  /// and `lastIndex` is respected via `find_from`.
+  /// NOTE: Uses `HybridRegex` which tries `regex_lite::Regex` first (much smaller than
+  /// the full `regex` crate, faster than `regress` for supported patterns) and only
+  /// falls back to `regress::Regex` when the pattern uses syntax not supported by
+  /// `regex-lite` (e.g. backreferences, lookaround).
+  /// Sticky (`y`) flag always uses the `regress` path since `regex-lite` doesn't support
+  /// it, and `lastIndex` is respected via `find_from`.
   fn regex_replace(&mut self, js_regex: &JsRegExp, replacement: &str) -> napi::Result<Option<u32>> {
     let global = js_regex.flags.contains('g');
     let flags_without_g: String = js_regex.flags.chars().filter(|&c| c != 'g').collect();
@@ -468,8 +469,8 @@ impl BindingMagicString<'_> {
     #[expect(clippy::cast_possible_truncation)]
     let overwrites: Vec<(u32, u32, String)> = match &reg {
       HybridRegex::Optimize(r) => {
-        // The `regex` crate path is only used for non-sticky patterns (the `y` flag
-        // causes `regex::Regex::new` to fail, falling back to regress).
+        // The `regex-lite` path is only used for non-sticky patterns (the `y` flag
+        // causes `regex_lite::Regex::new` to fail, falling back to regress).
         // For non-sticky regexes, JS resets `lastIndex` before matching, so we
         // always start from the beginning.
         let iter = r.captures_iter(source);
@@ -1256,11 +1257,11 @@ fn apply_replacement<'a>(
   result
 }
 
-/// `apply_replacement` adapter for `regex::Captures` (fast path).
+/// `apply_replacement` adapter for `regex_lite::Captures` (fast path).
 fn apply_replacement_regex(
   replacement: &str,
   matched: &str,
-  caps: &regex::Captures<'_>,
+  caps: &regex_lite::Captures<'_>,
   group_count: usize,
 ) -> String {
   apply_replacement(replacement, matched, group_count, |n| caps.get(n).map(|m| m.as_str()))

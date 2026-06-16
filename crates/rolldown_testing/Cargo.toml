@@ -23,7 +23,7 @@ insta = { workspace = true }
 json-strip-comments = { workspace = true }
 jsonschema = { workspace = true }
 oxc = { workspace = true }
-regex = { workspace = true }
+regex-lite = { workspace = true }
 rolldown = { workspace = true, features = ["testing"] }
 rolldown_common = { workspace = true }
 rolldown_dev = { workspace = true, features = ["testing"] }

@@ -1,7 +1,7 @@
 use std::{borrow::Cow, fmt::Write, sync::LazyLock};
 
 use arcstr::ArcStr;
-use regex::Regex;
+use regex_lite::Regex;
 use rolldown_plugin::{
   HookResolveIdOutput, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
   PluginHookMeta, PluginOrder,

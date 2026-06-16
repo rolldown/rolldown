@@ -25,7 +25,7 @@ pub struct ReplaceOptions {
 // only the enum is needed
 #[derive(Debug)]
 enum HybridRegex {
-  Optimize(regex::Regex),
+  Optimize(regex_lite::Regex),
   Ecma(regress::Regex),
 }
 
@@ -74,14 +74,14 @@ impl ReplacePlugin {
 
     let lookahead = if options.prevent_assignment { "(?!\\s*=[^=])" } else { "" };
 
-    let joined_keys = keys.iter().map(|key| regex::escape(key)).collect::<Vec<_>>().join("|");
+    let joined_keys = keys.iter().map(|key| regex_lite::escape(key)).collect::<Vec<_>>().join("|");
     // https://rustexp.lpil.uk/
     let matcher = if let Some((delimiter_left, delimiter_right)) = options.delimiters {
       let pattern = format!("{delimiter_left}({joined_keys}){delimiter_right}{lookahead}");
       HybridRegex::Ecma(regress::Regex::new(&pattern)?)
     } else {
       HybridRegex::Optimize(
-        regex::Regex::new(&format!("\\b({joined_keys})\\b"))
+        regex_lite::Regex::new(&format!("\\b({joined_keys})\\b"))
           .expect("to be a valid regex because we escape the keys"),
       )
     };
@@ -108,7 +108,7 @@ impl ReplacePlugin {
     &'text self,
     code: &'text str,
     magic_string: &mut MagicString<'text>,
-    regex: &regex::Regex,
+    regex: &regex_lite::Regex,
   ) -> bool {
     let mut changed = false;
     for captures in regex.captures_iter(code) {

@@ -2818,7 +2818,7 @@ dependencies = [
  "oxc_traverse",
  "petgraph",
  "rayon",
- "regex",
+ "regex-lite",
  "rolldown_common",
  "rolldown_dev_common",
  "rolldown_devtools",
@@ -2939,7 +2939,7 @@ dependencies = [
  "oxc_resolver_napi",
  "oxc_sourcemap",
  "oxc_transform_napi",
- "regex",
+ "regex-lite",
  "regress",
  "rolldown",
  "rolldown_common",
@@ -3295,7 +3295,7 @@ version = "1.1.1"
 dependencies = [
  "anyhow",
  "oxc",
- "regex",
+ "regex-lite",
  "regress",
  "rolldown",
  "rolldown_plugin",
@@ -3317,7 +3317,7 @@ dependencies = [
  "itertools",
  "memchr",
  "percent-encoding",
- "regex",
+ "regex-lite",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_sourcemap",
@@ -3375,7 +3375,7 @@ dependencies = [
  "derive_more",
  "itertools",
  "oxc",
- "regex",
+ "regex-lite",
  "rolldown_common",
  "rolldown_ecmascript_utils",
  "rolldown_plugin",
@@ -3409,7 +3409,7 @@ dependencies = [
  "base64-simd",
  "cow-utils",
  "derive_more",
- "regex",
+ "regex-lite",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_plugin_utils",
@@ -3448,7 +3448,7 @@ dependencies = [
  "html5gum",
  "itoa",
  "oxc",
- "regex",
+ "regex-lite",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_plugin_utils",
@@ -3544,7 +3544,7 @@ version = "0.1.0"
 dependencies = [
  "arcstr",
  "memchr",
- "regex",
+ "regex-lite",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_utils",
@@ -3650,7 +3650,7 @@ dependencies = [
 name = "rolldown_std_utils"
 version = "1.1.1"
 dependencies = [
- "regex",
+ "regex-lite",
 ]
 
 [[package]]
@@ -3664,7 +3664,7 @@ dependencies = [
  "json-strip-comments",
  "jsonschema",
  "oxc",
- "regex",
+ "regex-lite",
  "rolldown",
  "rolldown_common",
  "rolldown_dev",
@@ -3725,7 +3725,7 @@ dependencies = [
  "oxc_index",
  "oxc_str",
  "rayon",
- "regex",
+ "regex-lite",
  "regress",
  "rolldown_error",
  "rolldown_std_utils",
@@ -4095,7 +4095,7 @@ dependencies = [
  "memchr",
  "oxc_index",
  "oxc_sourcemap",
- "regex",
+ "regex-lite",
  "rustc-hash",
  "serde",
 ]

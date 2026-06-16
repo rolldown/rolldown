@@ -4,7 +4,7 @@ use std::pin::Pin;
 use std::sync::{Arc, LazyLock};
 
 use dashmap::Entry;
-use regex::Regex;
+use regex_lite::Regex;
 
 use rolldown_utils::base64::to_standard_base64;
 use rolldown_utils::concat_string;

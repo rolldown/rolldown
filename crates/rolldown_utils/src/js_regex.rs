@@ -2,12 +2,18 @@ use std::borrow::Cow;
 
 use crate::concat_string;
 
+/// The fast path uses `regex-lite`, a much smaller, dependency-free engine than the
+/// full `regex` crate (no `regex-automata`/`regex-syntax`/`aho-corasick`/SIMD `memchr`
+/// or large Unicode tables), which meaningfully reduces the shipped binary size.
+/// It is a linear-time PikeVM with a larger constant factor than `regex`, and supports
+/// a subset of `regex`'s syntax. Patterns it cannot compile fall back to `regress`.
+///
 /// According to the doc of `regress`, https://docs.rs/regress/0.10.0/regress/#comparison-to-regex-crate
 /// **regress supports features that regex does not, in particular backreferences and zero-width lookaround assertions.**
 /// these features are not commonly used, so in most cases the slow path will not be reached.
 #[derive(Debug, Clone)]
 pub enum HybridRegex {
-  Optimize(regex::Regex),
+  Optimize(regex_lite::Regex),
   Ecma(regress::Regex),
 }
 
@@ -22,7 +28,7 @@ impl From<&str> for HybridRegex {
 impl HybridRegex {
   pub fn new(pattern: &str) -> anyhow::Result<Self> {
     let regex_pattern = Self::get_regex_pattern(pattern, "");
-    match regex::Regex::new(&regex_pattern).map(HybridRegex::Optimize) {
+    match regex_lite::Regex::new(&regex_pattern).map(HybridRegex::Optimize) {
       Ok(reg) => Ok(reg),
       Err(_) => regress::Regex::new(pattern).map(HybridRegex::Ecma).map_err(anyhow::Error::from),
     }
@@ -30,7 +36,7 @@ impl HybridRegex {
 
   pub fn with_flags(pattern: &str, flags: &str) -> anyhow::Result<Self> {
     let regex_pattern = Self::get_regex_pattern(pattern, flags);
-    match regex::Regex::new(&regex_pattern).map(HybridRegex::Optimize) {
+    match regex_lite::Regex::new(&regex_pattern).map(HybridRegex::Optimize) {
       Ok(reg) => Ok(reg),
       Err(_) => regress::Regex::with_flags(pattern, flags)
         .map(HybridRegex::Ecma)

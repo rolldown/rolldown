@@ -3,7 +3,7 @@ use std::{
   sync::{Arc, LazyLock},
 };
 
-use regex::Regex;
+use regex_lite::Regex;
 use rolldown_common::{Output, OutputChunk};
 
 pub const MODULE_PRELOAD_POLYFILL: &str = "vite/modulepreload-polyfill";

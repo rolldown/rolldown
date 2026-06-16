@@ -1,4 +1,4 @@
-use regex::Regex;
+use regex_lite::Regex;
 use rolldown_common::Output;
 use rolldown_plugin::PluginContext;
 use rolldown_plugin_utils::constants::{RemovedPureCSSFilesCache, ViteMetadata};

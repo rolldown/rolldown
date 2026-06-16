@@ -2,7 +2,7 @@ pub mod snapshot;
 
 use std::{borrow::Cow, sync::LazyLock};
 
-use regex::Regex;
+use regex_lite::Regex;
 
 #[macro_export]
 /// `std::file!` alternative that returns an absolute path.

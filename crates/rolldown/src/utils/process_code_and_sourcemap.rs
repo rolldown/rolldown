@@ -3,10 +3,9 @@ use std::path::Path;
 use futures::future::try_join_all;
 use oxc::ast::CommentKind;
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
-use rolldown_error::{BuildResult, ResultExt};
+use rolldown_error::BuildResult;
 use rolldown_sourcemap::SourceMap;
 use sugar_path::SugarPath;
-use url::Url;
 
 use super::uuid::uuid_v4_string_from_u128;
 
@@ -120,11 +119,13 @@ pub async fn process_code_and_sourcemap(
               source.push_str("# sourceMappingURL=");
 
               match &options.sourcemap_base_url {
-                Some(url_string) => {
-                  let url = Url::parse(url_string)
-                    .and_then(|base| base.join(&map_filename))
-                    .map_err_to_unhandleable()?;
-                  source.push_str(url.as_str());
+                Some(base_url) => {
+                  // `base_url` is normalized to end with `/` (see
+                  // `normalize_sourcemap_base_url` in rolldown_binding), so
+                  // resolving the relative map filename against it is a plain
+                  // append.
+                  source.push_str(base_url);
+                  source.push_str(&map_filename);
                 }
                 None => {
                   source.push_str(

@@ -32,5 +32,4 @@ rustc-hash = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sugar_path = { workspace = true }
-url = { workspace = true }
 urlencoding = { workspace = true }

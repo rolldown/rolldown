@@ -93,17 +93,17 @@ impl BundleFactory {
     })
   }
 
-  fn generate_unique_bundle_span(&mut self) -> Arc<tracing::Span> {
+  fn generate_unique_bundle_span(&mut self) -> tracing::Span {
     let bundle_id = rolldown_devtools::generate_build_id(self.bundle_id_seed);
     self.bundle_id_seed += 1;
-    Arc::new(tracing::info_span!(
+    tracing::info_span!(
       parent: &self.session.span,
       "build",
       CONTEXT_build_id = bundle_id.as_ref(),
       // - This behaves like default value for `${hook_resolve_id_trigger}`.
       // - For case like injecting `manual`, we will override this field by adding a child span to shadow this one.
       CONTEXT_hook_resolve_id_trigger = "automatic"
-    ))
+    )
   }
 
   pub fn create_bundle(

@@ -257,7 +257,7 @@ impl PluginDriver {
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
     side_effects: &mut Option<HookSideEffects>,
     module_type: &mut ModuleType,
-    magic_string_tx: Option<Arc<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>>,
+    magic_string_tx: Option<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>,
     code_changed_by_plugins: &mut Option<Vec<String>>,
   ) -> Result<String> {
     let mut code = original_code;

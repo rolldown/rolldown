@@ -79,11 +79,15 @@ impl ReplacePlugin {
     let matcher = if let Some((delimiter_left, delimiter_right)) = options.delimiters {
       let pattern = format!("{delimiter_left}({joined_keys}){delimiter_right}{lookahead}");
       HybridRegex::Ecma(regress::Regex::new(&pattern)?)
-    } else {
+    } else if joined_keys.is_ascii() {
       HybridRegex::Optimize(
         regex_lite::Regex::new(&format!("\\b({joined_keys})\\b"))
           .expect("to be a valid regex because we escape the keys"),
       )
+    } else {
+      // `regex-lite` is ASCII-only, so non-ASCII keys must be matched by `regress`
+      // (the JS engine) to keep `String.prototype.replace`-compatible semantics.
+      HybridRegex::Ecma(regress::Regex::new(&format!("\\b({joined_keys})\\b"))?)
     };
     Ok(Self {
       matcher,

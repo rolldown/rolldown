@@ -17,6 +17,51 @@ pub enum HybridRegex {
   Ecma(regress::Regex),
 }
 
+/// Returns `true` when a JS regex must be evaluated by `regress` (the `Ecma` path) instead
+/// of the `regex-lite` (`Optimize`) fast path, because its semantics depend on Unicode.
+///
+/// `regex-lite` is ASCII-only: it implements ASCII `\s`/`\S` and ASCII case-insensitive
+/// matching, so routing Unicode-sensitive patterns to it would produce non-JS results
+/// (e.g. `/\s/` not matching NBSP, `/é/i` not matching `É`). Over-routing to `regress` is
+/// safe (it is the correct JS engine); the binary-size win is unaffected because it comes
+/// from which crates are *linked*, not from runtime routing.
+///
+/// Note `\w`/`\d`/`\b` are ASCII in JS by definition, so patterns using only those stay on
+/// the `regex-lite` fast path (which is actually more JS-correct there than the old `regex`).
+fn needs_unicode_engine(pattern: &str, flags: &str) -> bool {
+  // The `i` (ignoreCase) flag triggers Unicode case folding in JS; `regex-lite` is ASCII-only
+  // (so `/é/i` matching `É` requires `regress`).
+  if flags.contains('i') {
+    return true;
+  }
+
+  // A non-ASCII literal codepoint can interact with case folding / Unicode literals; route to
+  // `regress` to be safe.
+  if !pattern.is_ascii() {
+    return true;
+  }
+
+  let bytes = pattern.as_bytes();
+  let mut i = 0;
+  while i < bytes.len() {
+    if bytes[i] == b'\\' && i + 1 < bytes.len() {
+      match bytes[i + 1] {
+        // `\s`/`\S`: JS whitespace includes Unicode (NBSP, ` `, etc.); `regex-lite` is ASCII.
+        // `\p{...}`/`\P{...}`: Unicode property classes; `regex-lite` cannot compile them anyway.
+        b's' | b'S' | b'p' | b'P' => return true,
+        // Skip the escaped character so an escaped backslash (`\\`) is not misread.
+        _ => {
+          i += 2;
+          continue;
+        }
+      }
+    }
+    i += 1;
+  }
+
+  false
+}
+
 // Please only used for testing
 impl From<&str> for HybridRegex {
   fn from(pattern: &str) -> Self {
@@ -27,6 +72,9 @@ impl From<&str> for HybridRegex {
 }
 impl HybridRegex {
   pub fn new(pattern: &str) -> anyhow::Result<Self> {
+    if needs_unicode_engine(pattern, "") {
+      return regress::Regex::new(pattern).map(HybridRegex::Ecma).map_err(anyhow::Error::from);
+    }
     let regex_pattern = Self::get_regex_pattern(pattern, "");
     match regex_lite::Regex::new(&regex_pattern).map(HybridRegex::Optimize) {
       Ok(reg) => Ok(reg),
@@ -35,6 +83,11 @@ impl HybridRegex {
   }
 
   pub fn with_flags(pattern: &str, flags: &str) -> anyhow::Result<Self> {
+    if needs_unicode_engine(pattern, flags) {
+      return regress::Regex::with_flags(pattern, flags)
+        .map(HybridRegex::Ecma)
+        .map_err(anyhow::Error::from);
+    }
     let regex_pattern = Self::get_regex_pattern(pattern, flags);
     match regex_lite::Regex::new(&regex_pattern).map(HybridRegex::Optimize) {
       Ok(reg) => Ok(reg),
@@ -150,5 +203,35 @@ mod test {
     let reg = HybridRegex::with_flags("a$", "m").unwrap();
     assert!(reg.matches("a\n"));
     assert!(reg.matches("a\r\n"));
+  }
+
+  // `\s` in JS matches Unicode whitespace such as NBSP; `regex-lite` only matches ASCII
+  // whitespace, so the pattern must be routed to `regress`.
+  #[test]
+  fn js_regex_unicode_whitespace_routes_to_regress() {
+    let reg = HybridRegex::new(r"\s").unwrap();
+    assert!(matches!(reg, HybridRegex::Ecma(_)));
+    assert!(reg.matches("\u{00A0}"));
+  }
+
+  // `/é/i` matches `É` in JS via Unicode case folding; `regex-lite` is ASCII-only, so the
+  // `i` flag (and the non-ASCII literal) must route to `regress`.
+  #[test]
+  fn js_regex_unicode_case_insensitive_routes_to_regress() {
+    let reg = HybridRegex::with_flags("é", "i").unwrap();
+    assert!(matches!(reg, HybridRegex::Ecma(_)));
+    assert!(reg.matches("É"));
+  }
+
+  // ASCII-safe patterns keep the `regex-lite` fast path (`\w`/`\d`/`\b` are ASCII in JS).
+  #[test]
+  fn ascii_pattern_keeps_optimize_fast_path() {
+    let reg = HybridRegex::new("foo").unwrap();
+    assert!(matches!(reg, HybridRegex::Optimize(_)));
+    assert!(reg.matches("foo"));
+
+    let reg = HybridRegex::new(r"\w+").unwrap();
+    assert!(matches!(reg, HybridRegex::Optimize(_)));
+    assert!(reg.matches("abc"));
   }
 }

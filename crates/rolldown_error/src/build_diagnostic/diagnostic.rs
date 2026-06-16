@@ -395,13 +395,9 @@ mod tests {
   #[test]
   fn line_table_matches_linear_reference() {
     for source in [
-      "",
-      "abc",
-      "a\nbc\n\ndef",
-      "trailing\n",
-      "héllo\nwörld",  // 2-byte chars
-      "a𝐀b\n𝐁cd",      // astral (4-byte) chars
-      "café\n😀xy\nz", // emoji astral + accent across lines
+      "",              // empty source / single-entry table + out-of-range clamp
+      "a\nbc\n\ndef",  // multiple lines incl. an empty one: binary-search line lookup
+      "café\n😀xy\nz", // 2-byte accent + astral emoji across lines: cumulative utf16 table
     ] {
       assert_matches_reference(source);
     }

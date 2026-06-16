@@ -172,7 +172,7 @@ heck = "0.5.0"
 html5gum = "0.8.1"
 ignore = "0.4.23"
 indexmap = "2.9.0"
-infer = "0.19.0"
+infer = { version = "0.19.0", default-features = false }
 insta = "1.48.0"
 itertools = "0.14.0"
 itoa = "1.0.15"

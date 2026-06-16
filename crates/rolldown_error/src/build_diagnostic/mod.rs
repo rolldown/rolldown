@@ -30,13 +30,22 @@ pub struct BuildDiagnostic {
 // `BuildEvent` is not `Debug` (dropping the supertrait lets the per-event `Debug`
 // impls be dead-stripped from release builds), so format the diagnostic via its
 // public accessors instead of the boxed event's `Debug`.
+//
+// We render through `to_diagnostic()` rather than reading `inner.message()`
+// directly: for plugin-wrapped diagnostics `PluginError::message()` intentionally
+// returns an empty string (the real text is injected later by `on_diagnostic`), so
+// using the raw message here would print an empty `message`. `to_diagnostic()` runs
+// `on_diagnostic`, which populates the real content. This is the error/cold path.
 impl std::fmt::Debug for BuildDiagnostic {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let diagnostic = self.to_diagnostic();
+    // `inner` is rendered (via `to_diagnostic`) rather than printed directly, so the
+    // struct is intentionally non-exhaustive over its raw fields.
     f.debug_struct("BuildDiagnostic")
       .field("severity", &self.severity)
-      .field("kind", &self.kind())
-      .field("message", &self.inner.message(&DiagnosticOptions::default()))
-      .finish()
+      .field("kind", &diagnostic.kind)
+      .field("message", &diagnostic.title)
+      .finish_non_exhaustive()
   }
 }
 
@@ -235,4 +244,27 @@ pub fn consolidate_diagnostics(diagnostics: Vec<BuildDiagnostic>) -> Vec<BuildDi
     }
   }
   result
+}
+
+#[cfg(test)]
+mod tests {
+  use super::BuildDiagnostic;
+  use crate::build_diagnostic::events::plugin_error::CausedPlugin;
+
+  // A plugin-wrapped diagnostic's inner `PluginError::message()` is intentionally
+  // empty (the real text is injected via `on_diagnostic`). `Debug` must still render
+  // the underlying error text, so render through `to_diagnostic()`.
+  #[test]
+  fn debug_renders_nested_plugin_diagnostic_message() {
+    let inner =
+      BuildDiagnostic::bundler_initialize_error("the underlying failure text".to_string(), None);
+    let plugin_diag =
+      BuildDiagnostic::plugin_error(CausedPlugin::new("my-plugin".into()), inner.into());
+
+    let debug_output = format!("{plugin_diag:?}");
+    assert!(
+      debug_output.contains("the underlying failure text"),
+      "expected non-empty underlying message in Debug output, got: {debug_output}"
+    );
+  }
 }

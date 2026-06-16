@@ -106,17 +106,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-trait"
-version = "0.1.89"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9035ad2d096bed7955a320ee7e2230574d28fd3c3a0f186cbea1ff3c7eed5dbb"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -278,17 +267,6 @@ checksum = "a1dce859f0832a7d088c4f1119888ab94ef4b5d6795d1ce05afb7fe159d79f98"
 dependencies = [
  "find-msvc-tools",
  "shlex",
-]
-
-[[package]]
-name = "cfb"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d38f2da7a0a2c4ccf0065be06397cc26a81f4e528be095826eee9d4adbb8c60f"
-dependencies = [
- "byteorder",
- "fnv",
- "uuid",
 ]
 
 [[package]]
@@ -825,12 +803,6 @@ dependencies = [
  "ref-cast",
  "serde",
 ]
-
-[[package]]
-name = "fnv"
-version = "1.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foldhash"
@@ -1423,9 +1395,6 @@ name = "infer"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a588916bfdfd92e71cacef98a63d9b1f0d74d6599980d11894290e7ddefffcf7"
-dependencies = [
- "cfb",
-]
 
 [[package]]
 name = "inotify"
@@ -1601,9 +1570,9 @@ dependencies = [
 
 [[package]]
 name = "libmimalloc-sys2"
-version = "0.1.58"
+version = "0.1.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52406d0c46b81d2f65422a6d6086172f4e6b2753414cbee48be53850f90b804e"
+checksum = "9f9aa481aef14f119fb6d06536fd475dff463130ba19c5d5eb0821a5763e0d75"
 dependencies = [
  "cc",
  "cmake",
@@ -1664,9 +1633,9 @@ checksum = "c2a86d3146ed3995b5913c414f6664344b9617457320782e64f0bb44afd49d74"
 
 [[package]]
 name = "mimalloc-safe"
-version = "0.1.62"
+version = "0.1.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e8b607e1874a1962cca1b926ffcf66c62aeda8cb62634acd904ee39582ed323"
+checksum = "fb255e42b32f2e317b73c3c7285556cfd5a1bcf5ce272d4adce8c49e5e828ec2"
 dependencies = [
  "libmimalloc-sys2",
 ]
@@ -3255,7 +3224,6 @@ dependencies = [
  "oxc",
  "oxc_resolver",
  "rolldown-ariadne",
- "ropey",
  "rustc-hash",
  "sugar_path",
 ]
@@ -3291,7 +3259,6 @@ version = "1.1.1"
 dependencies = [
  "anyhow",
  "arcstr",
- "async-trait",
  "bitflags",
  "dashmap",
  "derive_more",

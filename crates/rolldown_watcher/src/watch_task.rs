@@ -207,6 +207,9 @@ impl WatchTask {
       warnings.iter().map(|warning| warning.to_diagnostic_with(&diagnostic_options)).collect();
     let rendered = Diagnostic::render_batch(&diagnostics, true);
 
+    // Dispatch sequentially, awaiting each callback before the next, so a handler
+    // that throws to abort the build stops at the first failure without invoking
+    // later handlers. Mirrors `handle_warnings` in the binding. See #9748.
     for (warning, rendered) in warnings.into_iter().zip(rendered) {
       #[expect(
         clippy::cast_possible_truncation,

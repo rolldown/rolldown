@@ -229,11 +229,20 @@ impl Diagnostic {
 
   /// Render many diagnostics at once, sharing per-source work across all of them.
   ///
-  /// Rendering diagnostics one by one re-derives line offsets and rebuilds the
-  /// ariadne `Source` for the whole file on every diagnostic, so emitting N
+  /// Rendering diagnostics one by one rebuilds the ariadne `Source` (its rope and
+  /// full line index) for the whole file on every diagnostic, so emitting N
   /// diagnostics that point into the same large file is O(N^2) and can appear to
-  /// hang the build (#9748). Sharing the per-source line table and source cache
-  /// makes it O(N log N).
+  /// hang the build (#9748). Sharing the `Source` cache and a per-source line table
+  /// removes that quadratic factor — the line containing an offset is found in
+  /// O(log lines) per diagnostic, then its UTF-16 column is read by scanning only
+  /// that one line (see [`LineTable`]).
+  ///
+  /// One residual cost is outside this batching: ariadne prints the entire labelled
+  /// line for every diagnostic, so a pathological input where N diagnostics all land
+  /// on one very long line (e.g. a minified bundle) still costs O(N * line_len)
+  /// inside ariadne itself — the within-line column scan is bounded by that same
+  /// line and is not the deciding factor. The cross-diagnostic O(N^2) blow-up that
+  /// actually caused the reported hang is what this removes.
   pub fn render_batch(diagnostics: &[Diagnostic], color: bool) -> Vec<RenderedDiagnostic> {
     // Collect every source referenced by any diagnostic, deduplicated, so the
     // ariadne cache builds each `Source` exactly once.
@@ -291,8 +300,10 @@ pub struct RenderedDiagnostic {
   pub primary_location: Option<DiagnosticPrimaryLocation>,
 }
 
-/// Precomputed line-start offsets for one source, mapping a byte offset to a
-/// (line, column) in O(log n) instead of scanning from the start of the file.
+/// Precomputed line-start offsets for one source. Finding the line that contains a
+/// byte offset is O(log lines) instead of scanning from the start of the file; the
+/// UTF-16 column within that line is then read by scanning the line's prefix (see
+/// [`Self::locate`]).
 struct LineTable {
   /// Byte offset of the start of each line.
   line_byte_starts: Vec<usize>,
@@ -317,7 +328,7 @@ impl LineTable {
   }
 
   /// Returns `(1-based line, 0-based utf16 column, utf16 offset from file start)`
-  /// for `byte_offset`. Mirrors the semantics of the previous linear scan.
+  /// for `byte_offset`.
   fn locate(&self, source: &str, byte_offset: usize) -> (usize, usize, usize) {
     // Index of the last line whose start is <= byte_offset. `line_byte_starts`
     // always begins with 0, so `partition_point` is >= 1 and the `- 1` is safe.
@@ -327,6 +338,9 @@ impl LineTable {
     // Clamp to the source length so a (malformed) out-of-range offset degrades to
     // the end-of-file position instead of yielding column 0.
     let end = byte_offset.min(source.len());
+    // UTF-16 column within the line. Linear in the line's length, which is short in
+    // practice; the pathological single-very-long-line case is bounded by ariadne
+    // re-rendering that whole line per diagnostic anyway (see `render_batch`).
     let column: usize = source
       .get(line_byte_start..end)
       .map(|within_line| within_line.chars().map(char::len_utf16).sum())
@@ -338,5 +352,58 @@ impl LineTable {
 impl Display for Diagnostic {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     self.convert_to_string(false).fmt(f)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::LineTable;
+
+  /// Straightforward, independent reference for [`LineTable::locate`] used to
+  /// validate it. `byte_offset` must fall on a char boundary.
+  fn reference_locate(source: &str, byte_offset: usize) -> (usize, usize, usize) {
+    let end = byte_offset.min(source.len());
+    let prefix = &source[..end];
+    let utf16_position: usize = prefix.chars().map(char::len_utf16).sum();
+    let line0 = prefix.matches('\n').count();
+    let line_byte_start = prefix.rfind('\n').map_or(0, |i| i + 1);
+    let column: usize = source[line_byte_start..end].chars().map(char::len_utf16).sum();
+    (line0 + 1, column, utf16_position)
+  }
+
+  fn assert_matches_reference(source: &str) {
+    let table = LineTable::new(source);
+    for byte_offset in 0..=source.len() {
+      if !source.is_char_boundary(byte_offset) {
+        continue;
+      }
+      assert_eq!(
+        table.locate(source, byte_offset),
+        reference_locate(source, byte_offset),
+        "mismatch at byte offset {byte_offset} of {source:?}"
+      );
+    }
+    // An out-of-range offset clamps to the end-of-file position.
+    let past_end = source.len() + 5;
+    assert_eq!(
+      table.locate(source, past_end),
+      reference_locate(source, past_end),
+      "mismatch at out-of-range offset {past_end} of {source:?}"
+    );
+  }
+
+  #[test]
+  fn line_table_matches_linear_reference() {
+    for source in [
+      "",
+      "abc",
+      "a\nbc\n\ndef",
+      "trailing\n",
+      "héllo\nwörld",  // 2-byte chars
+      "a𝐀b\n𝐁cd",      // astral (4-byte) chars
+      "café\n😀xy\nz", // emoji astral + accent across lines
+    ] {
+      assert_matches_reference(source);
+    }
   }
 }

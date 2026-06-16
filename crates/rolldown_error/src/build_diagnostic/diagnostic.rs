@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use ariadne::{Config, Label, Report, ReportBuilder, ReportKind, Span, sources};
 use rustc_hash::FxHashMap;
 
-use crate::utils::is_context_too_long;
+use crate::utils::{ByteLocator, is_context_too_long};
 
 use super::Severity;
 
@@ -235,7 +235,7 @@ impl Diagnostic {
   /// hang the build (#9748). Sharing the `Source` cache and a per-source line table
   /// removes that quadratic factor — the line containing an offset is found in
   /// O(log lines) per diagnostic, then its UTF-16 column is read by scanning only
-  /// that one line (see [`LineTable`]).
+  /// that one line (see [`ByteLocator::locate_utf16`]).
   ///
   /// One residual cost is outside this batching: ariadne prints the entire labelled
   /// line for every diagnostic, so a pathological input where N diagnostics all land
@@ -253,12 +253,12 @@ impl Diagnostic {
       }
     }
     let mut cache = sources(files.iter().map(|(id, content)| (id.clone(), content.clone())));
-    let mut line_tables: FxHashMap<DiagnosticFileId, LineTable> = FxHashMap::default();
+    let mut locators: FxHashMap<DiagnosticFileId, ByteLocator> = FxHashMap::default();
 
     diagnostics
       .iter()
       .map(|diagnostic| {
-        let primary_location = diagnostic.primary_location_with(&files, &mut line_tables);
+        let primary_location = diagnostic.primary_location_with(&files, &mut locators);
         let message = diagnostic.convert_to_string_with_cache(color, &mut cache);
         RenderedDiagnostic { message, primary_location }
       })
@@ -270,14 +270,14 @@ impl Diagnostic {
   fn primary_location_with(
     &self,
     files: &FxHashMap<DiagnosticFileId, ArcStr>,
-    line_tables: &mut FxHashMap<DiagnosticFileId, LineTable>,
+    locators: &mut FxHashMap<DiagnosticFileId, ByteLocator>,
   ) -> Option<DiagnosticPrimaryLocation> {
     let first_label = self.labels.first()?;
     let span = first_label.span();
     let source_id = span.source();
     let source = files.get(source_id)?;
-    let table = line_tables.entry(source_id.clone()).or_insert_with(|| LineTable::new(source));
-    let (line, column, utf16_position) = table.locate(source, span.start());
+    let locator = locators.entry(source_id.clone()).or_insert_with(|| ByteLocator::new(source));
+    let (line, column, utf16_position) = locator.locate_utf16(source, span.start());
     Some(DiagnosticPrimaryLocation { line, column, utf16_position })
   }
 }
@@ -300,106 +300,8 @@ pub struct RenderedDiagnostic {
   pub primary_location: Option<DiagnosticPrimaryLocation>,
 }
 
-/// Precomputed line-start offsets for one source. Finding the line that contains a
-/// byte offset is O(log lines) instead of scanning from the start of the file; the
-/// UTF-16 column within that line is then read by scanning the line's prefix (see
-/// [`Self::locate`]).
-struct LineTable {
-  /// Byte offset of the start of each line.
-  line_byte_starts: Vec<usize>,
-  /// UTF-16 offset (from file start) of the start of each line, parallel to
-  /// `line_byte_starts`.
-  line_utf16_starts: Vec<usize>,
-}
-
-impl LineTable {
-  fn new(source: &str) -> Self {
-    let mut line_byte_starts = vec![0usize];
-    let mut line_utf16_starts = vec![0usize];
-    let mut utf16 = 0usize;
-    for (byte_idx, ch) in source.char_indices() {
-      utf16 += ch.len_utf16();
-      if ch == '\n' {
-        line_byte_starts.push(byte_idx + ch.len_utf8());
-        line_utf16_starts.push(utf16);
-      }
-    }
-    Self { line_byte_starts, line_utf16_starts }
-  }
-
-  /// Returns `(1-based line, 0-based utf16 column, utf16 offset from file start)`
-  /// for `byte_offset`.
-  fn locate(&self, source: &str, byte_offset: usize) -> (usize, usize, usize) {
-    // Index of the last line whose start is <= byte_offset. `line_byte_starts`
-    // always begins with 0, so `partition_point` is >= 1 and the `- 1` is safe.
-    let line_idx = self.line_byte_starts.partition_point(|&start| start <= byte_offset) - 1;
-    let line_byte_start = self.line_byte_starts[line_idx];
-    let line_utf16_start = self.line_utf16_starts[line_idx];
-    // Clamp to the source length so a (malformed) out-of-range offset degrades to
-    // the end-of-file position instead of yielding column 0.
-    let end = byte_offset.min(source.len());
-    // UTF-16 column within the line. Linear in the line's length, which is short in
-    // practice; the pathological single-very-long-line case is bounded by ariadne
-    // re-rendering that whole line per diagnostic anyway (see `render_batch`).
-    let column: usize = source
-      .get(line_byte_start..end)
-      .map(|within_line| within_line.chars().map(char::len_utf16).sum())
-      .unwrap_or(0);
-    (line_idx + 1, column, line_utf16_start + column)
-  }
-}
-
 impl Display for Diagnostic {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     self.convert_to_string(false).fmt(f)
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::LineTable;
-
-  /// Straightforward, independent reference for [`LineTable::locate`] used to
-  /// validate it. `byte_offset` must fall on a char boundary.
-  fn reference_locate(source: &str, byte_offset: usize) -> (usize, usize, usize) {
-    let end = byte_offset.min(source.len());
-    let prefix = &source[..end];
-    let utf16_position: usize = prefix.chars().map(char::len_utf16).sum();
-    let line0 = prefix.matches('\n').count();
-    let line_byte_start = prefix.rfind('\n').map_or(0, |i| i + 1);
-    let column: usize = source[line_byte_start..end].chars().map(char::len_utf16).sum();
-    (line0 + 1, column, utf16_position)
-  }
-
-  fn assert_matches_reference(source: &str) {
-    let table = LineTable::new(source);
-    for byte_offset in 0..=source.len() {
-      if !source.is_char_boundary(byte_offset) {
-        continue;
-      }
-      assert_eq!(
-        table.locate(source, byte_offset),
-        reference_locate(source, byte_offset),
-        "mismatch at byte offset {byte_offset} of {source:?}"
-      );
-    }
-    // An out-of-range offset clamps to the end-of-file position.
-    let past_end = source.len() + 5;
-    assert_eq!(
-      table.locate(source, past_end),
-      reference_locate(source, past_end),
-      "mismatch at out-of-range offset {past_end} of {source:?}"
-    );
-  }
-
-  #[test]
-  fn line_table_matches_linear_reference() {
-    for source in [
-      "",              // empty source / single-entry table + out-of-range clamp
-      "a\nbc\n\ndef",  // multiple lines incl. an empty one: binary-search line lookup
-      "café\n😀xy\nz", // 2-byte accent + astral emoji across lines: cumulative utf16 table
-    ] {
-      assert_matches_reference(source);
-    }
   }
 }

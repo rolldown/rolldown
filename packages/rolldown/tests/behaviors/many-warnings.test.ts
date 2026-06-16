@@ -58,29 +58,34 @@ test('throwing from a warning handler aborts before invoking later handlers', as
   let calls = 0;
   await expect(
     (async () => {
-      const bundle = await rolldown({
-        input: virtualId,
-        plugins: [
-          {
-            name: 'virtual-eval',
-            resolveId(id) {
-              if (id === virtualId) return id;
+      let bundle;
+      try {
+        bundle = await rolldown({
+          input: virtualId,
+          plugins: [
+            {
+              name: 'virtual-eval',
+              resolveId(id) {
+                if (id === virtualId) return id;
+              },
+              load(id) {
+                if (id === virtualId) {
+                  let src = '';
+                  for (let i = 0; i < WARNING_COUNT; i++) src += `eval("${i}");\n`;
+                  return src;
+                }
+              },
             },
-            load(id) {
-              if (id === virtualId) {
-                let src = '';
-                for (let i = 0; i < WARNING_COUNT; i++) src += `eval("${i}");\n`;
-                return src;
-              }
-            },
+          ],
+          onwarn() {
+            calls++;
+            throw new Error('abort from warning handler');
           },
-        ],
-        onwarn() {
-          calls++;
-          throw new Error('abort from warning handler');
-        },
-      });
-      await bundle.generate({});
+        });
+        await bundle.generate({});
+      } finally {
+        await bundle?.close();
+      }
     })(),
   ).rejects.toThrow('abort from warning handler');
 

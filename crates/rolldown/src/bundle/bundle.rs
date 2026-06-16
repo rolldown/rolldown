@@ -36,11 +36,11 @@ pub struct Bundle<Fs: FileSystem + Clone + 'static = OsFileSystem> {
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) cache: ScanStageCache,
-  pub(crate) bundle_span: Arc<tracing::Span>,
+  pub(crate) bundle_span: tracing::Span,
 }
 
 impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {
     let start = self.plugin_driver.start_timing();
@@ -58,7 +58,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     self.append_plugin_timings_warning(result)
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn generate(mut self) -> BuildResult<BundleOutput> {
     let start = self.plugin_driver.start_timing();
@@ -79,7 +79,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     self.append_plugin_timings_warning(result)
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn scan(mut self) -> BuildResult<()> {
     self.scan_modules(ScanMode::Full).await?;
@@ -87,7 +87,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     Ok(())
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   pub async fn scan_modules(
     &mut self,
     scan_mode: ScanMode<ArcStr>,
@@ -151,7 +151,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   pub async fn bundle_write(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
@@ -220,7 +220,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     Ok(output)
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   pub async fn bundle_generate(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,

@@ -38,6 +38,10 @@ describe('<name>', () => {
 
 Synchronize on the server's async work — never `sleep`. Poll the DOM with `expect.poll`, `await waitForBuildStable()` before a follow-up edit, or wait on a browser log with `untilBrowserLogAfter`.
 
+Tests in one spec file share a single `page` and run sequentially, so don't let them perturb one another. Keep **edits forward-only** — or restore what they changed, since a later test must not rely on an earlier one's edit being reverted. And **re-acquire element handles after any reload** (`page.locator(...)` / a fresh `page.$`); a reload invalidates the old ones.
+
+Prefer giving each scenario its **own DOM node** so one test's edits can't disturb another's assertions — `hmr-full-bundle-mode` keeps `.app`, `.hmr`, `.hmr-error`, and `.rebuild-error` separate, one per scenario.
+
 Build once (after changing rust or the dev-server `src/`):
 
 ```sh

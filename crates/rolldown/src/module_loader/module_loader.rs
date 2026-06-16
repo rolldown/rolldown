@@ -116,7 +116,7 @@ pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
   cache: &'a mut ScanStageCache,
   pub flat_options: FlatOptions,
-  pub magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+  pub magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
   tla_module_count: usize,
   /// Centralized map from modules that contain top-level `await` to the span
   /// of the first TLA keyword. Stored here instead of on every `EcmaView`
@@ -166,7 +166,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     plugin_driver: SharedPluginDriver,
     cache: &'a mut ScanStageCache,
     is_full_scan: bool,
-    magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+    magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
   ) -> BuildResult<Self> {
     if is_full_scan {
       // TODO: drop the cache in another thread

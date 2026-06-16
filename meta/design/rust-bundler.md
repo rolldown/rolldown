@@ -63,7 +63,7 @@ pub struct Bundle {
     plugin_driver: SharedPluginDriver,
     warnings: Vec<BuildDiagnostic>,
     cache: ScanStageCache,
-    bundle_span: Arc<tracing::Span>,
+    bundle_span: tracing::Span,
 }
 ```
 

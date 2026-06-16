@@ -120,11 +120,9 @@ where
   async fn invoke_async(&self, args: Args) -> Result<Ret, napi::Error> {
     match self.call_async_catch(args).await? {
       Either::A(ret) => Ok(ret),
-      Either::B(invalid) => Err(create_invalid_return_error(
-        invalid.value_type,
-        Ret::value_type(),
-        rolldown_utils::debug::pretty_type_name::<Self>(),
-      )),
+      Either::B(invalid) => {
+        Err(create_invalid_return_error(invalid.value_type, Ret::value_type(), Ret::type_name()))
+      }
     }
   }
 }
@@ -147,12 +145,12 @@ fn js_type_name(value_type: ValueType) -> &'static str {
 fn create_invalid_return_error(
   received: ValueType,
   expected: ValueType,
-  fn_type: std::borrow::Cow<'_, str>,
+  expected_type_name: &'static str,
 ) -> napi::Error {
   napi::Error::new(
     Status::InvalidArg,
     format!(
-      "The function returned `{}`, but expected `{}` in `{fn_type}`.",
+      "The function returned `{}`, but expected `{}` for `{expected_type_name}`.",
       js_type_name(received),
       js_type_name(expected),
     ),
@@ -174,11 +172,9 @@ where
     match self.call_async_catch(args).await? {
       Either::A(Either::A(promise)) => promise.await,
       Either::A(Either::B(ret)) => Ok(ret),
-      Either::B(invalid) => Err(create_invalid_return_error(
-        invalid.value_type,
-        Ret::value_type(),
-        rolldown_utils::debug::pretty_type_name::<Self>(),
-      )),
+      Either::B(invalid) => {
+        Err(create_invalid_return_error(invalid.value_type, Ret::value_type(), Ret::type_name()))
+      }
     }
   }
 }

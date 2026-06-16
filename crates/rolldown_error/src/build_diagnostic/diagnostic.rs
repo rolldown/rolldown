@@ -106,9 +106,25 @@ impl Diagnostic {
     message: String,
   ) -> &mut Self {
     let range = range.into();
-    let range = range.start as usize..range.end as usize;
+    let mut start = range.start as usize;
+    let mut end = range.end as usize;
+    // `convert_to_string` renders with `IndexType::Byte`, so ariadne slices the source by
+    // raw byte offsets and panics if a label boundary falls inside a multibyte UTF-8
+    // character. Clamp to the source length and snap to char boundaries so a malformed
+    // span degrades gracefully instead of crashing diagnostic rendering.
+    if let Some(source) = self.files.get(file_id) {
+      let len = source.len();
+      start = start.min(len);
+      end = end.clamp(start, len);
+      while start > 0 && !source.is_char_boundary(start) {
+        start -= 1;
+      }
+      while end < len && !source.is_char_boundary(end) {
+        end += 1;
+      }
+    }
     let label =
-      Label::new(RolldownLabelSpan(file_id.0.clone().into(), range)).with_message(message);
+      Label::new(RolldownLabelSpan(file_id.0.clone().into(), start..end)).with_message(message);
     self.labels.push(label);
     self
   }
@@ -218,5 +234,27 @@ impl Diagnostic {
 impl Display for Diagnostic {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     self.convert_to_string(false).fmt(f)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// Regression test: a label span whose boundary falls inside a multibyte UTF-8
+  /// character (or runs past EOF) must not panic when the diagnostic is rendered.
+  /// `convert_to_string` uses `IndexType::Byte`, so rolldown-ariadne slices the
+  /// source by raw byte offsets and previously panicked on such spans.
+  #[test]
+  fn label_span_inside_multibyte_char_does_not_panic() {
+    // `é` occupies bytes 3..5; byte 4 is a UTF-8 continuation byte.
+    let src = "{ \"é\": }";
+    for range in [4u32..4, 3u32..4, 4u32..5, 0u32..200] {
+      let mut d = Diagnostic::new("X".to_string(), "t".to_string(), Severity::Error);
+      let f = d.add_file("a.json", src);
+      d.add_label(&f, range.clone(), "here".to_string());
+      let out = d.convert_to_string(false);
+      assert!(!out.is_empty(), "rendering produced no output for span {range:?}");
+    }
   }
 }

@@ -1,7 +1,6 @@
 use std::io::{StdoutLock, Write};
 
 use flate2::{Compression, write::GzEncoder};
-use num_format::{Locale, ToFormattedString as _};
 
 pub const COMPRESSIBLE_ASSETS: [&str; 7] =
   [".html", ".json", ".svg", ".txt", ".xml", ".xhtml", ".wasm"];
@@ -25,7 +24,23 @@ pub struct LogEntry<'a> {
 
 pub fn display_size(size: usize) -> String {
   let (quotient, remainder) = (size / 1000, (size % 1000) / 10);
-  format!("{}.{:02} kB", quotient.to_formatted_string(&Locale::en), remainder)
+  format!("{}.{:02} kB", group_thousands(quotient), remainder)
+}
+
+/// Inserts a `,` thousands separator every three digits from the right,
+/// matching `num_format`'s `Locale::en` formatting (standard 3-digit grouping).
+fn group_thousands(n: usize) -> String {
+  let digits = itoa::Buffer::new().format(n).to_string();
+  let len = digits.len();
+  // 1 separator for every 3 digits beyond the first group.
+  let mut out = String::with_capacity(len + (len.saturating_sub(1)) / 3);
+  for (i, ch) in digits.bytes().enumerate() {
+    if i != 0 && (len - i).is_multiple_of(3) {
+      out.push(',');
+    }
+    out.push(ch as char);
+  }
+  out
 }
 
 struct CountingWriter {
@@ -76,4 +91,26 @@ pub fn log_info(message: &str) {
   let mut lock = std::io::stdout().lock();
   let _ = writeln!(&mut lock, "{message}");
   let _ = lock.flush();
+}
+
+#[cfg(test)]
+mod tests {
+  use super::{display_size, group_thousands};
+
+  #[test]
+  fn test_group_thousands() {
+    assert_eq!(group_thousands(0), "0");
+    assert_eq!(group_thousands(5), "5");
+    assert_eq!(group_thousands(999), "999");
+    assert_eq!(group_thousands(1000), "1,000");
+    assert_eq!(group_thousands(12345), "12,345");
+    assert_eq!(group_thousands(1_234_567), "1,234,567");
+    assert_eq!(group_thousands(1_000_000), "1,000,000");
+  }
+
+  #[test]
+  fn test_display_size() {
+    assert_eq!(display_size(0), "0.00 kB");
+    assert_eq!(display_size(1_234_560), "1,234.56 kB");
+  }
 }

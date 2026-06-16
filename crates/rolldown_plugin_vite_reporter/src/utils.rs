@@ -1,7 +1,11 @@
-use std::io::{StdoutLock, Write};
+use std::{
+  io::{StdoutLock, Write},
+  sync::OnceLock,
+};
 
 use flate2::{Compression, write::GzEncoder};
 use num_format::{Locale, ToFormattedString as _};
+use owo_colors::OwoColorize as _;
 
 pub const COMPRESSIBLE_ASSETS: [&str; 7] =
   [".html", ".json", ".svg", ".txt", ".xml", ".xhtml", ".wasm"];
@@ -76,4 +80,75 @@ pub fn log_info(message: &str) {
   let mut lock = std::io::stdout().lock();
   let _ = writeln!(&mut lock, "{message}");
   let _ = lock.flush();
+}
+
+/// Returns whether colored output should be emitted on stdout.
+///
+/// This replicates the precedence used by the `supports-color` crate (which
+/// `owo-colors`' `if_supports_color` relies on) for the common cases, without
+/// pulling in that crate. The result is computed once and cached for the
+/// lifetime of the process, matching `supports_color::on_cached`.
+///
+/// Precedence (highest first):
+/// 1. `FORCE_COLOR` set to anything other than `"0"`/`"false"` -> color on.
+/// 2. `NO_COLOR` set to a non-empty, non-`"0"` value, or `TERM=dumb` -> color off.
+/// 3. otherwise, color on only when stdout is a terminal.
+pub fn should_color() -> bool {
+  fn compute() -> bool {
+    if let Ok(force) = std::env::var("FORCE_COLOR") {
+      return !matches!(force.as_str(), "0" | "false");
+    }
+    if matches!(std::env::var("NO_COLOR"), Ok(value) if !value.is_empty() && value != "0") {
+      return false;
+    }
+    if matches!(std::env::var("TERM"), Ok(term) if term == "dumb") {
+      return false;
+    }
+    std::io::IsTerminal::is_terminal(&std::io::stdout())
+  }
+
+  static CACHE: OnceLock<bool> = OnceLock::new();
+  *CACHE.get_or_init(compute)
+}
+
+/// Applies the `apply` color transformation to `value` when stdout supports
+/// color, otherwise returns the plain value. Mirrors
+/// `value.if_supports_color(Stream::Stdout, apply)` but gates on the local
+/// [`should_color`] check instead of the `supports-color` crate.
+///
+/// `apply` renders the colored form to a `String` (e.g. `|t| t.green().to_string()`)
+/// so that chained `owo-colors` styles, which borrow intermediate temporaries,
+/// don't escape the closure.
+#[inline]
+pub fn paint<T>(value: T, apply: impl FnOnce(&T) -> String) -> String
+where
+  T: std::fmt::Display,
+{
+  if should_color() { apply(&value) } else { value.to_string() }
+}
+
+/// Convenience wrappers around [`paint`] for the color methods used by the
+/// reporter, keeping the call sites terse.
+pub fn dimmed(value: impl std::fmt::Display) -> String {
+  paint(value, |t| t.dimmed().to_string())
+}
+
+pub fn green(value: impl std::fmt::Display) -> String {
+  paint(value, |t| t.green().to_string())
+}
+
+pub fn cyan(value: impl std::fmt::Display) -> String {
+  paint(value, |t| t.cyan().to_string())
+}
+
+pub fn magenta(value: impl std::fmt::Display) -> String {
+  paint(value, |t| t.magenta().to_string())
+}
+
+pub fn bold_yellow(value: impl std::fmt::Display) -> String {
+  paint(value, |t| t.bold().yellow().to_string())
+}
+
+pub fn bold_dimmed(value: impl std::fmt::Display) -> String {
+  paint(value, |t| t.bold().dimmed().to_string())
 }

@@ -166,6 +166,23 @@ impl<'name> Renamer<'name> {
   /// other top-level names and nested scope names that could cause capture.
   pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef, needs_deconflict: bool) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
+    self.add_canonical_symbol_in_root_scope(canonical_ref, needs_deconflict);
+  }
+
+  /// Same as [`Self::add_symbol_in_root_scope`] but takes an already-canonicalized
+  /// `canonical_ref`. Hot callers (e.g. `deconflict_chunk_symbols`) that have already
+  /// resolved the canonical ref use this to avoid a redundant `canonical_ref` union-find
+  /// walk. `canonical_ref` MUST be canonical (i.e. `symbol_ref.canonical_ref(db)`).
+  pub fn add_canonical_symbol_in_root_scope(
+    &mut self,
+    canonical_ref: SymbolRef,
+    needs_deconflict: bool,
+  ) {
+    debug_assert_eq!(
+      canonical_ref,
+      canonical_ref.canonical_ref(self.symbol_db),
+      "add_canonical_symbol_in_root_scope requires an already-canonical ref"
+    );
     let canonical_name = canonical_ref.name(self.symbol_db);
 
     // Dedup-before-alloc: in the deconflict path, a re-add of an already-present

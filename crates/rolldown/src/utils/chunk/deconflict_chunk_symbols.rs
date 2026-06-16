@@ -195,7 +195,9 @@ pub fn deconflict_chunk_symbols(
             } else {
               true
             };
-            renamer.add_symbol_in_root_scope(symbol_ref, needs_deconflict);
+            // `canonical_ref` was already resolved above; pass it directly to skip a
+            // redundant `canonical_ref` union-find lookup in this hot deconflict loop.
+            renamer.add_canonical_symbol_in_root_scope(canonical_ref, needs_deconflict);
           }
         });
     });

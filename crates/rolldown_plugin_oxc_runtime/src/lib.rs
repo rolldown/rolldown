@@ -97,3 +97,54 @@ impl Plugin for OxcRuntimePlugin {
     Some(rolldown_plugin::PluginHookMeta { order: Some(rolldown_plugin::PluginOrder::Pre) })
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::generated::embedded_helpers::{
+    CJS_HELPERS, ESM_HELPERS, RUNTIME_HELPER_PREFIX, get_helper_content,
+  };
+
+  /// Every embedded (compressed) helper must inflate to a non-empty UTF-8 string.
+  #[test]
+  fn all_helpers_inflate_to_non_empty_strings() {
+    let esm = ESM_HELPERS.keys().map(|name| format!("{RUNTIME_HELPER_PREFIX}esm/{name}.js"));
+    let cjs = CJS_HELPERS.keys().map(|name| format!("{RUNTIME_HELPER_PREFIX}{name}.js"));
+    let mut count = 0;
+    for specifier in esm.chain(cjs) {
+      let content =
+        get_helper_content(&specifier).unwrap_or_else(|| panic!("missing helper: {specifier}"));
+      assert!(!content.is_empty(), "helper inflated to empty string: {specifier}");
+      count += 1;
+    }
+    assert_eq!(count, ESM_HELPERS.len() + CJS_HELPERS.len());
+  }
+
+  /// Spot-check that a couple of known helpers inflate to their exact expected bodies (byte
+  /// identical to the upstream `@oxc-project/runtime` sources). This guards against a broken
+  /// compression/decompression round-trip.
+  #[test]
+  fn known_helpers_match_expected_content() {
+    let esm_await_value =
+      get_helper_content(&format!("{RUNTIME_HELPER_PREFIX}esm/AwaitValue.js")).unwrap();
+    assert_eq!(
+      esm_await_value.as_str(),
+      "function _AwaitValue(t) {\n  this.wrapped = t;\n}\nexport { _AwaitValue as default };"
+    );
+
+    let cjs_write_only_error =
+      get_helper_content(&format!("{RUNTIME_HELPER_PREFIX}writeOnlyError.js")).unwrap();
+    assert_eq!(
+      cjs_write_only_error.as_str(),
+      "function _writeOnlyError(r) {\n  throw new TypeError('\"' + r + '\" is write-only');\n}\nmodule.exports = _writeOnlyError, module.exports.__esModule = true, module.exports[\"default\"] = module.exports;"
+    );
+  }
+
+  /// Inflating the same helper twice must return identical content (cache correctness).
+  #[test]
+  fn repeated_inflation_is_stable() {
+    let specifier = format!("{RUNTIME_HELPER_PREFIX}esm/objectSpread2.js");
+    let first = get_helper_content(&specifier).unwrap();
+    let second = get_helper_content(&specifier).unwrap();
+    assert_eq!(first.as_str(), second.as_str());
+  }
+}

@@ -11,11 +11,12 @@ readme = "../../README.md"
 
 [lib]
 doctest = false
-test = false
 
 [dependencies]
 arcstr = { workspace = true }
+flate2 = { workspace = true }
 phf = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_utils = { workspace = true }
+rustc-hash = { workspace = true }

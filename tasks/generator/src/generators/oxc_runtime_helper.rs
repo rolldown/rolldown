@@ -1,8 +1,10 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::fs;
+use std::io::Write as _;
 use std::path::Path;
 
+use flate2::{Compression, write::DeflateEncoder};
 use oxc_resolver::ResolveOptions;
 
 use crate::{
@@ -82,11 +84,56 @@ fn generate_embedded_helpers_rs(
 
   write!(
     &mut code,
-    r#"use arcstr::ArcStr;
+    r#"use std::io::Read as _;
+use std::sync::{{OnceLock, RwLock}};
+
+use arcstr::ArcStr;
 use phf::{{Map, phf_map}};
+use rustc_hash::FxHashMap;
 
 pub const RUNTIME_HELPER_PREFIX: &str = "@oxc-project+runtime@{version}/helpers/";
 pub const RUNTIME_HELPER_UNVERSIONED_PREFIX: &str = "@oxc-project/runtime/helpers/";
+
+/// A single embedded helper.
+///
+/// The JS body is stored as raw-DEFLATE-compressed bytes (no zlib/gzip header) to keep the
+/// shipped binary small. The `flate2` inflate code is already linked into the binary (via
+/// `oxc_compat -> oxc-browserslist -> flate2`), so decompressing here adds essentially no new
+/// code.
+pub struct Helper {{
+  /// Raw-DEFLATE-compressed JS body.
+  compressed: &'static [u8],
+  /// Length in bytes of the inflated JS body (used to pre-size the buffer).
+  len: usize,
+}}
+
+impl Helper {{
+  /// Inflate this helper's JS body into an `ArcStr`.
+  fn inflate(&self) -> ArcStr {{
+    let mut decoder = flate2::read::DeflateDecoder::new(self.compressed);
+    let mut content = String::with_capacity(self.len);
+    decoder.read_to_string(&mut content).expect("embedded helper must inflate to valid UTF-8");
+    ArcStr::from(content)
+  }}
+}}
+
+/// Cache of already-inflated helper bodies, keyed by the helper's `'static` address (which is
+/// unique per entry across both `ESM_HELPERS` and `CJS_HELPERS`). Each helper is inflated at
+/// most once per process; subsequent loads return the cached `ArcStr` clone (a cheap refcount
+/// bump).
+static HELPER_CACHE: OnceLock<RwLock<FxHashMap<usize, ArcStr>>> = OnceLock::new();
+
+/// Inflate a helper, caching the result so repeated lookups are cheap.
+fn inflate_cached(helper: &'static Helper) -> ArcStr {{
+  let key = std::ptr::from_ref(helper) as usize;
+  let cache = HELPER_CACHE.get_or_init(|| RwLock::new(FxHashMap::default()));
+  if let Some(cached) = cache.read().unwrap().get(&key) {{
+    return cached.clone();
+  }}
+  let content = helper.inflate();
+  cache.write().unwrap().entry(key).or_insert_with(|| content.clone());
+  content
+}}
 
 "#
   )
@@ -106,9 +153,9 @@ pub fn get_helper_content(specifier: &str) -> Option<ArcStr> {
   let helper_path = specifier.strip_prefix(RUNTIME_HELPER_PREFIX)?;
   let helper_path = helper_path.strip_suffix(".js").unwrap_or(helper_path);
   if let Some(name) = helper_path.strip_prefix("esm/") {
-    ESM_HELPERS.get(name).cloned()
+    ESM_HELPERS.get(name).map(inflate_cached)
   } else {
-    CJS_HELPERS.get(helper_path).cloned()
+    CJS_HELPERS.get(helper_path).map(inflate_cached)
   }
 }
 
@@ -136,35 +183,46 @@ fn write_helper_map(
   writeln!(
     code,
     "/// Map of all helpers from `@oxc-project/runtime/{source_dir_doc}`.\n\
-     pub static {map_name}: Map<&'static str, ArcStr> = phf_map! {{"
+     ///\n\
+     /// Values are the raw-DEFLATE-compressed JS bodies, inflated lazily on first use.\n\
+     pub static {map_name}: Map<&'static str, Helper> = phf_map! {{"
   )
   .unwrap();
 
   for (helper_name, content) in helpers {
-    let hash_count = calculate_hash_count(content);
-    let hashes = "#".repeat(hash_count);
-    writeln!(code, "  \"{helper_name}\" => arcstr::literal!(r{hashes}\"{content}\"{hashes}),")
-      .unwrap();
+    let compressed = deflate_raw(content.as_bytes());
+    let bytes = format_byte_string(&compressed);
+    writeln!(
+      code,
+      "  \"{helper_name}\" => Helper {{ compressed: {bytes}, len: {} }},",
+      content.len()
+    )
+    .unwrap();
   }
 
   code.push_str("};\n\n");
 }
 
-/// Calculate the number of # needed for raw string literal
-fn calculate_hash_count(content: &str) -> usize {
-  let mut count = 0;
-  let mut chars = content.chars().peekable();
+/// Compress `data` with raw DEFLATE (no zlib/gzip header) at maximum level.
+fn deflate_raw(data: &[u8]) -> Vec<u8> {
+  let mut encoder = DeflateEncoder::new(Vec::new(), Compression::best());
+  encoder.write_all(data).unwrap();
+  encoder.finish().unwrap()
+}
 
-  while let Some(ch) = chars.next() {
-    if ch == '"' {
-      let mut hash_seq = 0;
-      while chars.peek() == Some(&'#') {
-        chars.next();
-        hash_seq += 1;
-      }
-      count = count.max(hash_seq);
+/// Format `bytes` as a Rust byte-string literal, e.g. `b"\x00\xff..."`.
+fn format_byte_string(bytes: &[u8]) -> String {
+  let mut out = String::with_capacity(bytes.len() * 4 + 3);
+  out.push_str("b\"");
+  for &byte in bytes {
+    match byte {
+      b'\\' => out.push_str("\\\\"),
+      b'"' => out.push_str("\\\""),
+      // Keep printable ASCII (excluding `\` and `"` handled above) readable.
+      0x20..=0x7e => out.push(byte as char),
+      _ => write!(out, "\\x{byte:02x}").unwrap(),
     }
   }
-
-  count + 1 // Add one more to be safe
+  out.push('"');
+  out
 }

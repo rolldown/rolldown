@@ -28,8 +28,8 @@ use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::FxHashMap;
+use iri_string::types::UriStr;
 use std::path::PathBuf;
-use url::Url;
 
 #[cfg(not(target_family = "wasm"))]
 use crate::{options::plugin::ParallelJsPlugin, worker_manager::WorkerManager};
@@ -329,21 +329,14 @@ pub fn normalize_binding_options(
     sourcemap_base_url: output_options
       .sourcemap_base_url
       .map(|maybe_url| {
-        Url::parse(&maybe_url)
-          .map(|mut url| {
-            if !url.path().ends_with('/') {
-              url.set_path(&rolldown_utils::concat_string!(url.path(), "/"));
-            }
-            url.to_string()
-          })
-          .map_err(|_err| {
-            napi::Error::new(
-              napi::Status::GenericFailure,
-              format!(
-                "Invalid value for `sourcemapBaseUrl` option, should be a valid URL: {maybe_url}"
-              ),
-            )
-          })
+        normalize_sourcemap_base_url(&maybe_url).ok_or_else(|| {
+          napi::Error::new(
+            napi::Status::GenericFailure,
+            format!(
+              "Invalid value for `sourcemapBaseUrl` option, should be a valid URL: {maybe_url}"
+            ),
+          )
+        })
       })
       .transpose()?,
     sourcemap_ignore_list,
@@ -647,4 +640,60 @@ pub fn normalize_binding_options(
     .collect::<Result<Vec<_>, _>>()?;
 
   Ok(BundlerConfig::new(bundler_options, plugins))
+}
+
+/// Validate that `value` is an absolute URL and ensure its path ends with `/`
+/// so that joining the sourcemap filename later is a plain append. Uses
+/// `iri-string` (RFC 3986, no IDNA/ICU) for validation instead of the `url`
+/// crate. Returns `None` for invalid input (surfaced as the "should be a valid
+/// URL" error by the caller).
+fn normalize_sourcemap_base_url(value: &str) -> Option<String> {
+  // A valid RFC 3986 URI requires a scheme, so this rejects relative inputs.
+  UriStr::new(value).ok()?;
+
+  // Append `/` to the end of the path, before any `?query` / `#fragment`.
+  let suffix_start = value.find(['?', '#']).unwrap_or(value.len());
+  let (head, suffix) = value.split_at(suffix_start);
+  let mut normalized = String::with_capacity(value.len() + 1);
+  normalized.push_str(head);
+  if !head.ends_with('/') {
+    normalized.push('/');
+  }
+  normalized.push_str(suffix);
+  Some(normalized)
+}
+
+#[cfg(test)]
+mod sourcemap_base_url_tests {
+  use super::normalize_sourcemap_base_url;
+
+  #[test]
+  fn appends_trailing_slash() {
+    assert_eq!(
+      normalize_sourcemap_base_url("https://example.com/foo/bar").as_deref(),
+      Some("https://example.com/foo/bar/")
+    );
+  }
+
+  #[test]
+  fn keeps_existing_trailing_slash() {
+    assert_eq!(
+      normalize_sourcemap_base_url("https://example.com/foo/bar/").as_deref(),
+      Some("https://example.com/foo/bar/")
+    );
+  }
+
+  #[test]
+  fn slash_inserted_before_query_and_fragment() {
+    assert_eq!(
+      normalize_sourcemap_base_url("https://example.com/foo?x=1#h").as_deref(),
+      Some("https://example.com/foo/?x=1#h")
+    );
+  }
+
+  #[test]
+  fn rejects_non_absolute_urls() {
+    assert_eq!(normalize_sourcemap_base_url("/foo/bar"), None);
+    assert_eq!(normalize_sourcemap_base_url("example.com/foo"), None);
+  }
 }

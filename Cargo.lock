@@ -1429,6 +1429,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "iri-string"
+version = "0.7.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25e659a4bb38e810ebc252e53b5814ff908a8c58c2a9ce2fae1bbec24cbf4e20"
+dependencies = [
+ "memchr",
+ "serde",
+]
+
+[[package]]
 name = "is-terminal"
 version = "0.4.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2972,7 +2982,6 @@ dependencies = [
  "testing_macros",
  "tokio",
  "tracing",
- "url",
  "walkdir",
  "xxhash-rust",
 ]
@@ -3047,6 +3056,7 @@ dependencies = [
  "derive_more",
  "futures",
  "indexmap",
+ "iri-string",
  "itertools",
  "mimalloc-safe",
  "napi",
@@ -3098,7 +3108,6 @@ dependencies = [
  "string_wizard",
  "sugar_path",
  "tracing",
- "url",
 ]
 
 [[package]]
@@ -3699,6 +3708,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "fast-glob",
+ "iri-string",
  "nodejs-built-in-modules",
  "owo-colors",
  "oxc_resolver",
@@ -3713,7 +3723,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sugar_path",
- "url",
  "urlencoding",
 ]
 
@@ -4589,18 +4598,6 @@ name = "unsafe-libyaml"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
-
-[[package]]
-name = "url"
-version = "2.5.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff67a8a4397373c3ef660812acab3268222035010ab8680ec4215f38ba3d0eed"
-dependencies = [
- "form_urlencoded",
- "idna",
- "percent-encoding",
- "serde",
-]
 
 [[package]]
 name = "urlencoding"

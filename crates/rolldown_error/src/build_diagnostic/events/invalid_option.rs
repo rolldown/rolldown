@@ -6,6 +6,7 @@ pub enum InvalidOptionType {
   UnsupportedInlineDynamicFormat(String),
   UnsupportedCodeSplittingFormat(String),
   InvalidOutputFile,
+  OutputFileWithoutName(String),
   InvalidOutputDirOption,
   NoEntryPoint,
   ManualCodeSplittingWithoutGroups(Vec<String>),
@@ -42,6 +43,9 @@ impl BuildEvent for InvalidOption {
           format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code-splitting builds. For single entry builds, you can set `output.codeSplitting` to `false` to disable code-splitting.")
         }
         InvalidOptionType::InvalidOutputFile => "Invalid value for option \"output.file\" - When building multiple chunks, the \"output.dir\" option must be used, not \"output.file\". You may set `output.codeSplitting` to `false` when using dynamic imports.".to_string(),
+        InvalidOptionType::OutputFileWithoutName(file) => {
+          format!("Invalid value \"{file}\" for option \"output.file\" - it does not contain a file name. Please provide a path that ends with a file name.")
+        }
         InvalidOptionType::InvalidOutputDirOption => "Invalid value for option \"output.dir\" - you must set either \"output.file\" for a single-file build or \"output.dir\" when generating multiple chunks.".to_string(),
         InvalidOptionType::NoEntryPoint =>"You must supply `options.input` to rolldown, you should at least provide one entrypoint via `options.input` or `this.emitFile({type: 'chunk', ...})` (https://rolldown.rs/reference/Interface.PluginContext#in-depth-type-chunk)".to_string(),
         InvalidOptionType::ManualCodeSplittingWithoutGroups(options) => {

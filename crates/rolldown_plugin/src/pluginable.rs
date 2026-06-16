@@ -1,4 +1,4 @@
-use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
+use std::{any::Any, borrow::Cow, fmt::Debug, future::Future, pin::Pin, sync::Arc};
 
 use super::plugin_context::PluginContext;
 use crate::{
@@ -23,13 +23,13 @@ pub use crate::plugin::HookTransformAstReturn;
 pub use crate::plugin::HookTransformReturn;
 
 pub type SharedPluginable = Arc<dyn Pluginable>;
+type HookFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
 /// `Pluginable` is under the hood trait that rolldown to run. It's not recommended to use this trait directly.
 /// To create a plugin, you should use [Plugin] trait instead.
 ///
-/// The main reason we don't expose this trait is that it used `async_trait`, which make it rust-analyzer can't
-/// provide a good auto-completion experience.
-#[async_trait::async_trait]
+/// The main reason we don't expose this trait is that its boxed futures make it harder for
+/// rust-analyzer to provide a good auto-completion experience.
 pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   fn call_name(&self) -> Cow<'static, str>;
 
@@ -37,175 +37,179 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   // --- Build hooks ---
 
-  async fn call_build_start(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookBuildStartArgs,
-  ) -> HookNoopReturn;
+  fn call_build_start<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookBuildStartArgs<'a>,
+  ) -> HookFuture<'a, HookNoopReturn>;
 
   fn call_build_start_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_resolve_id(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookResolveIdArgs,
-  ) -> HookResolveIdReturn;
+  fn call_resolve_id<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookResolveIdArgs<'a>,
+  ) -> HookFuture<'a, HookResolveIdReturn>;
 
   fn call_resolve_id_meta(&self) -> Option<PluginHookMeta>;
 
   #[deprecated(
     note = "This hook is only for rollup compatibility, please use `resolve_id` instead."
   )]
-  async fn call_resolve_dynamic_import(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookResolveIdArgs,
-  ) -> HookResolveIdReturn;
+  fn call_resolve_dynamic_import<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookResolveIdArgs<'a>,
+  ) -> HookFuture<'a, HookResolveIdReturn>;
 
   fn call_resolve_dynamic_import_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_load(&self, _ctx: SharedLoadPluginContext, _args: &HookLoadArgs) -> HookLoadReturn;
+  fn call_load<'a>(
+    &'a self,
+    _ctx: SharedLoadPluginContext,
+    _args: &'a HookLoadArgs<'a>,
+  ) -> HookFuture<'a, HookLoadReturn>;
 
   fn call_load_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_transform(
-    &self,
+  fn call_transform<'a>(
+    &'a self,
     _ctx: SharedTransformPluginContext,
-    _args: &HookTransformArgs,
-  ) -> HookTransformReturn;
+    _args: &'a HookTransformArgs<'a>,
+  ) -> HookFuture<'a, HookTransformReturn>;
 
   fn call_transform_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_transform_ast(
-    &self,
-    _ctx: &PluginContext,
-    args: HookTransformAstArgs<'_>,
-  ) -> HookTransformAstReturn;
+  fn call_transform_ast<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    args: HookTransformAstArgs<'a>,
+  ) -> HookFuture<'a, HookTransformAstReturn>;
 
   fn call_transform_ast_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_module_parsed(
-    &self,
-    _ctx: &PluginContext,
+  fn call_module_parsed<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
     _module_info: Arc<ModuleInfo>,
-    _normal_module: &NormalModule,
-  ) -> HookNoopReturn;
+    _normal_module: &'a NormalModule,
+  ) -> HookFuture<'a, HookNoopReturn>;
 
   fn call_module_parsed_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_build_end(
-    &self,
-    _ctx: &PluginContext,
-    _args: Option<&HookBuildEndArgs>,
-  ) -> HookNoopReturn;
+  fn call_build_end<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: Option<&'a HookBuildEndArgs<'a>>,
+  ) -> HookFuture<'a, HookNoopReturn>;
 
   fn call_build_end_meta(&self) -> Option<PluginHookMeta>;
 
   // --- Generate hooks ---
 
-  async fn call_render_start(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookRenderStartArgs,
-  ) -> HookNoopReturn;
+  fn call_render_start<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookRenderStartArgs<'a>,
+  ) -> HookFuture<'a, HookNoopReturn>;
 
   fn call_render_start_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_banner(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn;
+  fn call_banner<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookAddonArgs,
+  ) -> HookFuture<'a, HookInjectionOutputReturn>;
 
   fn call_banner_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_footer(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn;
+  fn call_footer<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookAddonArgs,
+  ) -> HookFuture<'a, HookInjectionOutputReturn>;
 
   fn call_footer_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_intro(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn;
+  fn call_intro<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookAddonArgs,
+  ) -> HookFuture<'a, HookInjectionOutputReturn>;
 
   fn call_intro_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_outro(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn;
+  fn call_outro<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookAddonArgs,
+  ) -> HookFuture<'a, HookInjectionOutputReturn>;
 
   fn call_outro_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_render_chunk(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookRenderChunkArgs,
-  ) -> HookRenderChunkReturn;
+  fn call_render_chunk<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookRenderChunkArgs<'a>,
+  ) -> HookFuture<'a, HookRenderChunkReturn>;
 
   fn call_render_chunk_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_augment_chunk_hash(
-    &self,
-    _ctx: &PluginContext,
+  fn call_augment_chunk_hash<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
     _chunk: Arc<RollupRenderedChunk>,
-  ) -> HookAugmentChunkHashReturn;
+  ) -> HookFuture<'a, HookAugmentChunkHashReturn>;
 
   fn call_augment_chunk_hash_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_render_error(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookRenderErrorArgs,
-  ) -> HookNoopReturn;
+  fn call_render_error<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a HookRenderErrorArgs<'a>,
+  ) -> HookFuture<'a, HookNoopReturn>;
 
   fn call_render_error_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_generate_bundle(
-    &self,
-    _ctx: &PluginContext,
-    _args: &mut HookGenerateBundleArgs,
-  ) -> HookNoopReturn;
+  fn call_generate_bundle<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a mut HookGenerateBundleArgs<'a>,
+  ) -> HookFuture<'a, HookNoopReturn>;
 
   fn call_generate_bundle_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_write_bundle(
-    &self,
-    _ctx: &PluginContext,
-    _args: &mut HookWriteBundleArgs,
-  ) -> HookNoopReturn;
+  fn call_write_bundle<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: &'a mut HookWriteBundleArgs<'a>,
+  ) -> HookFuture<'a, HookNoopReturn>;
 
   fn call_write_bundle_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_close_bundle(
-    &self,
-    _ctx: &PluginContext,
-    _args: Option<&HookCloseBundleArgs>,
-  ) -> HookNoopReturn;
+  fn call_close_bundle<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _args: Option<&'a HookCloseBundleArgs<'a>>,
+  ) -> HookFuture<'a, HookNoopReturn>;
 
   fn call_close_bundle_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_watch_change(
-    &self,
-    _ctx: &PluginContext,
-    _path: &str,
+  fn call_watch_change<'a>(
+    &'a self,
+    _ctx: &'a PluginContext,
+    _path: &'a str,
     _event: WatcherChangeKind,
-  ) -> HookNoopReturn {
-    Ok(())
+  ) -> HookFuture<'a, HookNoopReturn> {
+    Box::pin(async { Ok(()) })
   }
 
   fn call_watch_change_meta(&self) -> Option<PluginHookMeta> {
     None
   }
 
-  async fn call_close_watcher(&self, _ctx: &PluginContext) -> HookNoopReturn {
-    Ok(())
+  fn call_close_watcher<'a>(&'a self, _ctx: &'a PluginContext) -> HookFuture<'a, HookNoopReturn> {
+    Box::pin(async { Ok(()) })
   }
 
   fn call_close_watcher_meta(&self) -> Option<PluginHookMeta> {
@@ -215,30 +219,29 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   fn call_hook_usage(&self) -> HookUsage;
 }
 
-#[async_trait::async_trait]
 impl<T: Plugin> Pluginable for T {
   fn call_name(&self) -> Cow<'static, str> {
     Plugin::name(self)
   }
 
-  async fn call_build_start(
-    &self,
-    ctx: &PluginContext,
-    args: &HookBuildStartArgs,
-  ) -> HookNoopReturn {
-    Plugin::build_start(self, ctx, args).await
+  fn call_build_start<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookBuildStartArgs<'a>,
+  ) -> HookFuture<'a, HookNoopReturn> {
+    Box::pin(Plugin::build_start(self, ctx, args))
   }
 
   fn call_build_start_meta(&self) -> Option<PluginHookMeta> {
     Plugin::build_start_meta(self)
   }
 
-  async fn call_resolve_id(
-    &self,
-    ctx: &PluginContext,
-    args: &HookResolveIdArgs,
-  ) -> HookResolveIdReturn {
-    Plugin::resolve_id(self, ctx, args).await
+  fn call_resolve_id<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookResolveIdArgs<'a>,
+  ) -> HookFuture<'a, HookResolveIdReturn> {
+    Box::pin(Plugin::resolve_id(self, ctx, args))
   }
 
   fn call_resolve_id_meta(&self) -> Option<PluginHookMeta> {
@@ -246,222 +249,226 @@ impl<T: Plugin> Pluginable for T {
   }
 
   #[expect(deprecated)]
-  async fn call_resolve_dynamic_import(
-    &self,
-    ctx: &PluginContext,
-    args: &HookResolveIdArgs,
-  ) -> HookResolveIdReturn {
-    Plugin::resolve_dynamic_import(self, ctx, args).await
+  fn call_resolve_dynamic_import<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookResolveIdArgs<'a>,
+  ) -> HookFuture<'a, HookResolveIdReturn> {
+    Box::pin(Plugin::resolve_dynamic_import(self, ctx, args))
   }
 
   fn call_resolve_dynamic_import_meta(&self) -> Option<PluginHookMeta> {
     Plugin::resolve_dynamic_import_meta(self)
   }
 
-  async fn call_load(&self, ctx: SharedLoadPluginContext, args: &HookLoadArgs) -> HookLoadReturn {
-    Plugin::load(self, ctx, args).await
+  fn call_load<'a>(
+    &'a self,
+    ctx: SharedLoadPluginContext,
+    args: &'a HookLoadArgs<'a>,
+  ) -> HookFuture<'a, HookLoadReturn> {
+    Box::pin(Plugin::load(self, ctx, args))
   }
 
   fn call_load_meta(&self) -> Option<PluginHookMeta> {
     Plugin::load_meta(self)
   }
 
-  async fn call_transform(
-    &self,
+  fn call_transform<'a>(
+    &'a self,
     ctx: SharedTransformPluginContext,
-    args: &HookTransformArgs,
-  ) -> HookTransformReturn {
-    Plugin::transform(self, ctx, args).await
+    args: &'a HookTransformArgs<'a>,
+  ) -> HookFuture<'a, HookTransformReturn> {
+    Box::pin(Plugin::transform(self, ctx, args))
   }
 
   fn call_transform_meta(&self) -> Option<PluginHookMeta> {
     Plugin::transform_meta(self)
   }
 
-  async fn call_module_parsed(
-    &self,
-    ctx: &PluginContext,
+  fn call_module_parsed<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
     module_info: Arc<ModuleInfo>,
-    normal_module: &NormalModule,
-  ) -> HookNoopReturn {
-    Plugin::module_parsed(self, ctx, module_info, normal_module).await
+    normal_module: &'a NormalModule,
+  ) -> HookFuture<'a, HookNoopReturn> {
+    Box::pin(Plugin::module_parsed(self, ctx, module_info, normal_module))
   }
 
   fn call_module_parsed_meta(&self) -> Option<PluginHookMeta> {
     Plugin::module_parsed_meta(self)
   }
 
-  async fn call_build_end(
-    &self,
-    ctx: &PluginContext,
-    args: Option<&HookBuildEndArgs>,
-  ) -> HookNoopReturn {
-    Plugin::build_end(self, ctx, args).await
+  fn call_build_end<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: Option<&'a HookBuildEndArgs<'a>>,
+  ) -> HookFuture<'a, HookNoopReturn> {
+    Box::pin(Plugin::build_end(self, ctx, args))
   }
 
   fn call_build_end_meta(&self) -> Option<PluginHookMeta> {
     Plugin::build_end_meta(self)
   }
 
-  async fn call_render_start(
-    &self,
-    ctx: &PluginContext,
-    args: &HookRenderStartArgs,
-  ) -> HookNoopReturn {
-    Plugin::render_start(self, ctx, args).await
+  fn call_render_start<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookRenderStartArgs<'a>,
+  ) -> HookFuture<'a, HookNoopReturn> {
+    Box::pin(Plugin::render_start(self, ctx, args))
   }
 
   fn call_render_start_meta(&self) -> Option<PluginHookMeta> {
     Plugin::render_start_meta(self)
   }
 
-  async fn call_banner(
-    &self,
-    ctx: &PluginContext,
-    args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn {
-    Plugin::banner(self, ctx, args).await
+  fn call_banner<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookAddonArgs,
+  ) -> HookFuture<'a, HookInjectionOutputReturn> {
+    Box::pin(Plugin::banner(self, ctx, args))
   }
 
   fn call_banner_meta(&self) -> Option<PluginHookMeta> {
     Plugin::banner_meta(self)
   }
 
-  async fn call_footer(
-    &self,
-    ctx: &PluginContext,
-    args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn {
-    Plugin::footer(self, ctx, args).await
+  fn call_footer<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookAddonArgs,
+  ) -> HookFuture<'a, HookInjectionOutputReturn> {
+    Box::pin(Plugin::footer(self, ctx, args))
   }
 
   fn call_footer_meta(&self) -> Option<PluginHookMeta> {
     Plugin::footer_meta(self)
   }
 
-  async fn call_intro(
-    &self,
-    ctx: &PluginContext,
-    args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn {
-    Plugin::intro(self, ctx, args).await
+  fn call_intro<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookAddonArgs,
+  ) -> HookFuture<'a, HookInjectionOutputReturn> {
+    Box::pin(Plugin::intro(self, ctx, args))
   }
 
   fn call_intro_meta(&self) -> Option<PluginHookMeta> {
     Plugin::intro_meta(self)
   }
 
-  async fn call_outro(
-    &self,
-    ctx: &PluginContext,
-    args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn {
-    Plugin::outro(self, ctx, args).await
+  fn call_outro<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookAddonArgs,
+  ) -> HookFuture<'a, HookInjectionOutputReturn> {
+    Box::pin(Plugin::outro(self, ctx, args))
   }
 
   fn call_outro_meta(&self) -> Option<PluginHookMeta> {
     Plugin::outro_meta(self)
   }
 
-  async fn call_render_chunk(
-    &self,
-    ctx: &PluginContext,
-    args: &HookRenderChunkArgs,
-  ) -> HookRenderChunkReturn {
-    Plugin::render_chunk(self, ctx, args).await
+  fn call_render_chunk<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookRenderChunkArgs<'a>,
+  ) -> HookFuture<'a, HookRenderChunkReturn> {
+    Box::pin(Plugin::render_chunk(self, ctx, args))
   }
 
   fn call_render_chunk_meta(&self) -> Option<PluginHookMeta> {
     Plugin::render_chunk_meta(self)
   }
 
-  async fn call_augment_chunk_hash(
-    &self,
-    ctx: &PluginContext,
+  fn call_augment_chunk_hash<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
     chunk: Arc<RollupRenderedChunk>,
-  ) -> HookAugmentChunkHashReturn {
-    Plugin::augment_chunk_hash(self, ctx, chunk).await
+  ) -> HookFuture<'a, HookAugmentChunkHashReturn> {
+    Box::pin(Plugin::augment_chunk_hash(self, ctx, chunk))
   }
 
   fn call_augment_chunk_hash_meta(&self) -> Option<PluginHookMeta> {
     Plugin::augment_chunk_hash_meta(self)
   }
 
-  async fn call_render_error(
-    &self,
-    ctx: &PluginContext,
-    args: &HookRenderErrorArgs,
-  ) -> HookNoopReturn {
-    Plugin::render_error(self, ctx, args).await
+  fn call_render_error<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a HookRenderErrorArgs<'a>,
+  ) -> HookFuture<'a, HookNoopReturn> {
+    Box::pin(Plugin::render_error(self, ctx, args))
   }
 
   fn call_render_error_meta(&self) -> Option<PluginHookMeta> {
     Plugin::render_error_meta(self)
   }
 
-  async fn call_generate_bundle(
-    &self,
-    ctx: &PluginContext,
-    args: &mut HookGenerateBundleArgs,
-  ) -> HookNoopReturn {
-    Plugin::generate_bundle(self, ctx, args).await
+  fn call_generate_bundle<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a mut HookGenerateBundleArgs<'a>,
+  ) -> HookFuture<'a, HookNoopReturn> {
+    Box::pin(Plugin::generate_bundle(self, ctx, args))
   }
 
   fn call_generate_bundle_meta(&self) -> Option<PluginHookMeta> {
     Plugin::generate_bundle_meta(self)
   }
 
-  async fn call_write_bundle(
-    &self,
-    ctx: &PluginContext,
-    args: &mut HookWriteBundleArgs,
-  ) -> HookNoopReturn {
-    Plugin::write_bundle(self, ctx, args).await
+  fn call_write_bundle<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: &'a mut HookWriteBundleArgs<'a>,
+  ) -> HookFuture<'a, HookNoopReturn> {
+    Box::pin(Plugin::write_bundle(self, ctx, args))
   }
 
   fn call_write_bundle_meta(&self) -> Option<PluginHookMeta> {
     Plugin::write_bundle_meta(self)
   }
 
-  async fn call_close_bundle(
-    &self,
-    ctx: &PluginContext,
-    args: Option<&HookCloseBundleArgs>,
-  ) -> HookNoopReturn {
-    Plugin::close_bundle(self, ctx, args).await
+  fn call_close_bundle<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: Option<&'a HookCloseBundleArgs<'a>>,
+  ) -> HookFuture<'a, HookNoopReturn> {
+    Box::pin(Plugin::close_bundle(self, ctx, args))
   }
 
   fn call_close_bundle_meta(&self) -> Option<PluginHookMeta> {
     Plugin::close_bundle_meta(self)
   }
 
-  async fn call_watch_change(
-    &self,
-    ctx: &PluginContext,
-    path: &str,
+  fn call_watch_change<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    path: &'a str,
     event: WatcherChangeKind,
-  ) -> HookNoopReturn {
-    Plugin::watch_change(self, ctx, path, event).await
+  ) -> HookFuture<'a, HookNoopReturn> {
+    Box::pin(Plugin::watch_change(self, ctx, path, event))
   }
 
   fn call_watch_change_meta(&self) -> Option<PluginHookMeta> {
     Plugin::watch_change_meta(self)
   }
 
-  async fn call_close_watcher(&self, ctx: &PluginContext) -> HookNoopReturn {
-    Plugin::close_watcher(self, ctx).await
+  fn call_close_watcher<'a>(&'a self, ctx: &'a PluginContext) -> HookFuture<'a, HookNoopReturn> {
+    Box::pin(Plugin::close_watcher(self, ctx))
   }
 
   fn call_close_watcher_meta(&self) -> Option<PluginHookMeta> {
     Plugin::close_watcher_meta(self)
   }
 
-  async fn call_transform_ast(
-    &self,
-    ctx: &PluginContext,
-    args: HookTransformAstArgs<'_>,
-  ) -> HookTransformAstReturn {
-    Plugin::transform_ast(self, ctx, args).await
+  fn call_transform_ast<'a>(
+    &'a self,
+    ctx: &'a PluginContext,
+    args: HookTransformAstArgs<'a>,
+  ) -> HookFuture<'a, HookTransformAstReturn> {
+    Box::pin(Plugin::transform_ast(self, ctx, args))
   }
 
   fn call_transform_ast_meta(&self) -> Option<PluginHookMeta> {

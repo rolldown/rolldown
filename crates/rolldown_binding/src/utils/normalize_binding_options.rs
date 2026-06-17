@@ -5,7 +5,7 @@ use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, San
 use crate::types::binding_string_or_regex::bindingify_string_or_regex_array;
 use crate::{
   options::binding_inject_import::normalize_binding_inject_import,
-  types::js_callback::JsCallbackExt,
+  types::js_callback::{JsCallbackExt, JsCallbackResultExt},
 };
 #[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
@@ -54,6 +54,7 @@ fn normalize_generated_code_option(
 
 fn normalize_addon_option(
   addon_option: Option<crate::options::AddonOutputOption>,
+  name: &'static str,
 ) -> Option<AddonOutputOption> {
   addon_option.map(move |value| match value {
     // Static string - no JS function call needed
@@ -65,6 +66,7 @@ fn normalize_addon_option(
         fn_js
           .await_call(FnArgs { data: (BindingRenderedChunk::new(chunk),) })
           .await
+          .context(name)
           .map_err(anyhow::Error::from)
       })
     })),
@@ -73,6 +75,7 @@ fn normalize_addon_option(
 
 fn normalize_chunk_file_names_option(
   option: Option<ChunkFileNamesOutputOption>,
+  name: &'static str,
 ) -> napi::Result<Option<ChunkFilenamesOutputOption>> {
   option
     .map(move |value| match value {
@@ -81,7 +84,7 @@ fn normalize_chunk_file_names_option(
         let func = Arc::clone(&func);
         let chunk = (chunk.clone().into(),);
         Box::pin(async move {
-          func.invoke_async(FnArgs { data: chunk }).await.map_err(anyhow::Error::from)
+          func.invoke_async(FnArgs { data: chunk }).await.context(name).map_err(anyhow::Error::from)
         })
       }))),
     })
@@ -98,7 +101,11 @@ fn normalize_sanitize_filename(
         let func = Arc::clone(&func);
         let name = name.to_string();
         Box::pin(async move {
-          func.invoke_async(FnArgs { data: (name,) }).await.map_err(anyhow::Error::from)
+          func
+            .invoke_async(FnArgs { data: (name,) })
+            .await
+            .context("sanitizeFileName option")
+            .map_err(anyhow::Error::from)
         })
       }))),
     })
@@ -115,7 +122,11 @@ fn normalize_asset_file_names_option(
         let func = Arc::clone(&func);
         let asset = (asset.clone().into(),);
         Box::pin(async move {
-          func.invoke_async(FnArgs { data: asset }).await.map_err(anyhow::Error::from)
+          func
+            .invoke_async(FnArgs { data: asset })
+            .await
+            .context("assetFileNames option")
+            .map_err(anyhow::Error::from)
         })
       }))),
     })
@@ -130,7 +141,13 @@ fn normalize_globals_option(
     Either::B(func) => rolldown_common::GlobalsOutputOption::Fn(Arc::new(move |name| {
       let func = Arc::clone(&func);
       let name = name.to_string();
-      Box::pin(async move { func.invoke_async((name,).into()).await.map_err(anyhow::Error::from) })
+      Box::pin(async move {
+        func
+          .invoke_async((name,).into())
+          .await
+          .context("globals option")
+          .map_err(anyhow::Error::from)
+      })
     })),
   })
 }
@@ -143,7 +160,9 @@ fn normalize_paths_option(
     Either::B(func) => rolldown_common::PathsOutputOption::Fn(Arc::new(move |id| {
       let func = Arc::clone(&func);
       let id = id.to_string();
-      Box::pin(async move { func.invoke_async((id,).into()).await.map_err(anyhow::Error::from) })
+      Box::pin(async move {
+        func.invoke_async((id,).into()).await.context("paths option").map_err(anyhow::Error::from)
+      })
     })),
   })
 }
@@ -209,6 +228,7 @@ pub fn normalize_binding_options(
           is_external
             .invoke_async((source.clone(), importer, is_resolved).into())
             .await
+            .context("external option")
             .map_err(anyhow::Error::from)
         })
       })))
@@ -310,8 +330,14 @@ pub fn normalize_binding_options(
     shim_missing_exports: input_options.shim_missing_exports,
     name: output_options.name,
     asset_filenames: normalize_asset_file_names_option(output_options.asset_file_names)?,
-    entry_filenames: normalize_chunk_file_names_option(output_options.entry_file_names)?,
-    chunk_filenames: normalize_chunk_file_names_option(output_options.chunk_file_names)?,
+    entry_filenames: normalize_chunk_file_names_option(
+      output_options.entry_file_names,
+      "entryFileNames option",
+    )?,
+    chunk_filenames: normalize_chunk_file_names_option(
+      output_options.chunk_file_names,
+      "chunkFileNames option",
+    )?,
     sanitize_filename: normalize_sanitize_filename(output_options.sanitize_file_name)?,
     dir: output_options.dir,
     file: output_options.file,
@@ -320,12 +346,12 @@ pub fn normalize_binding_options(
       Either::A(es_module_bool) => es_module_bool.into(),
       Either::B(es_module_string) => es_module_string.into(),
     }),
-    banner: normalize_addon_option(output_options.banner),
-    footer: normalize_addon_option(output_options.footer),
-    post_banner: normalize_addon_option(output_options.post_banner),
-    post_footer: normalize_addon_option(output_options.post_footer),
-    intro: normalize_addon_option(output_options.intro),
-    outro: normalize_addon_option(output_options.outro),
+    banner: normalize_addon_option(output_options.banner, "banner option"),
+    footer: normalize_addon_option(output_options.footer, "footer option"),
+    post_banner: normalize_addon_option(output_options.post_banner, "post_banner option"),
+    post_footer: normalize_addon_option(output_options.post_footer, "post_footer option"),
+    intro: normalize_addon_option(output_options.intro, "intro option"),
+    outro: normalize_addon_option(output_options.outro, "outro option"),
     sourcemap_base_url: output_options
       .sourcemap_base_url
       .map(|maybe_url| {

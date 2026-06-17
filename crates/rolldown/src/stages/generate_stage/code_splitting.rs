@@ -248,7 +248,7 @@ impl GenerateStage<'_> {
     let sorted_chunk_idx_vec = chunk_graph
       .chunk_table
       .iter_enumerated()
-      .sorted_by_key(|(index, chunk)| match &chunk.kind {
+      .sorted_unstable_by_key(|(index, chunk)| match &chunk.kind {
         ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) => {
           (0, index.raw())
         }

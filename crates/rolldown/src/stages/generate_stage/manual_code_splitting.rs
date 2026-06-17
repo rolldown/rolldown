@@ -133,7 +133,7 @@ impl ManualSplitter<'_> {
       .modules
       .iter()
       .filter_map(Module::as_normal)
-      .sorted_by(|a, b| a.stable_id.cmp(&b.stable_id));
+      .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id));
 
     for normal_module in sorted_normal_modules {
       if !metas[normal_module.idx].is_included {

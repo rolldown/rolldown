@@ -95,3 +95,8 @@ napi-build = { workspace = true }
 chrome-tracing = ["rolldown_tracing/chrome-tracing"]
 default_global_allocator = []
 disable_panic_hook = []
+# Statically compile out `debug!`/`trace!` events and `#[instrument(level = "debug" | "trace")]`
+# spans in release builds, shrinking the shipped binary (~0.4 MiB on darwin-arm64).
+# Enabled by the `build-binding:release` / `build-binding:wasi:release` npm scripts.
+# Intentionally NOT enabled for `build-binding:profile`, which needs those spans for chrome tracing.
+release_max_level_info = ["tracing/release_max_level_info"]

@@ -6,3 +6,4 @@ import './basic/setup.js';
 import './aliased-import/setup.js';
 import './shared-module/setup.js';
 import './nested-dynamic-import/setup.js';
+import './emitted-asset/setup.js';

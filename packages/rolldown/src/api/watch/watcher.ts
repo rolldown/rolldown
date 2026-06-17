@@ -11,6 +11,10 @@ import {
 import { arraify } from '../../utils/misc';
 import type { WatcherEmitter } from './watch-emitter';
 
+type BindingWatcherWithRequestClose = BindingWatcher & {
+  requestClose(): void;
+};
+
 function createEventCallback(
   emitter: WatcherEmitter,
 ): (event: BindingWatcherEvent) => Promise<void> {
@@ -60,6 +64,7 @@ class Watcher {
   inner: BindingWatcher;
   emitter: WatcherEmitter;
   stopWorkers: ((() => Promise<void>) | undefined)[];
+  private closePromise: Promise<void> | undefined;
 
   constructor(
     emitter: WatcherEmitter,
@@ -83,19 +88,28 @@ class Watcher {
   }
 
   async close(): Promise<void> {
-    if (this.closed) return;
+    if (this.closePromise) return this.closePromise;
     this.closed = true;
-    for (const stop of this.stopWorkers) {
-      await stop?.();
-    }
-    await this.inner.close();
-    shutdownAsyncRuntime();
+    const isClosingFromEventCallback = this.emitter.isEmitting;
+    this.closePromise = (async () => {
+      for (const stop of this.stopWorkers) {
+        await stop?.();
+      }
+      if (isClosingFromEventCallback) {
+        (this.inner as BindingWatcherWithRequestClose).requestClose();
+      } else {
+        await this.inner.close();
+        shutdownAsyncRuntime();
+      }
+    })();
+    return this.closePromise;
   }
 
   private async run(): Promise<void> {
+    if (this.closed) return;
     await this.inner.run();
     // No `.await`: Create pending Promise to keep Node.js event loop alive
-    this.inner.waitForClose();
+    void this.inner.waitForClose().finally(() => shutdownAsyncRuntime());
   }
 }
 

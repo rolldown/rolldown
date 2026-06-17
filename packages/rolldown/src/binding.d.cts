@@ -1911,6 +1911,7 @@ export declare class BindingWatcher {
    * The Node.js layer relies on the pending Promise to keep the process from exiting.
    */
   waitForClose(): Promise<void>
+  requestClose(): void
   close(): Promise<void>
 }
 

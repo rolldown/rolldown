@@ -1826,7 +1826,6 @@ dependencies = [
  "oxc_allocator",
  "oxc_ast",
  "oxc_ast_visit",
- "oxc_cfg",
  "oxc_codegen",
  "oxc_diagnostics",
  "oxc_isolated_declarations",
@@ -1934,20 +1933,6 @@ dependencies = [
  "oxc_ast",
  "oxc_span",
  "oxc_syntax",
-]
-
-[[package]]
-name = "oxc_cfg"
-version = "0.136.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bbdce99b584941e447485ac464acf663f2dc91955e73d962bf1635296f32a7a"
-dependencies = [
- "bitflags",
- "itertools",
- "oxc_index",
- "oxc_syntax",
- "petgraph",
- "rustc-hash",
 ]
 
 [[package]]
@@ -2274,7 +2259,6 @@ dependencies = [
  "oxc_allocator",
  "oxc_ast",
  "oxc_ast_visit",
- "oxc_cfg",
  "oxc_data_structures",
  "oxc_diagnostics",
  "oxc_ecmascript",
@@ -3095,14 +3079,6 @@ dependencies = [
  "rolldown-ariadne",
  "rustc-hash",
  "sugar_path",
-]
-
-[[package]]
-name = "rolldown_filter_analyzer"
-version = "0.1.0"
-dependencies = [
- "oxc",
- "rolldown_ecmascript",
 ]
 
 [[package]]

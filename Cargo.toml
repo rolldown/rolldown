@@ -249,7 +249,6 @@ oxc = { version = "0.136.0", features = [
   "serialize",
   "isolated_declarations",
   "regular_expression",
-  "cfg",
 ] }
 oxc_allocator = { version = "0.136.0", features = ["pool"] }
 oxc_ecmascript = { version = "0.136.0" }

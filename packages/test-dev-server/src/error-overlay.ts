@@ -45,7 +45,7 @@ const clientId = crypto.randomUUID();
 const socket = new WebSocket('ws://' + location.host + '?clientId=' + clientId);
 // The "[test-dev-server]" console markers below exist for the browser test
 // harness: it asserts ordered log sequences via untilBrowserLogAfter instead
-// of only DOM-polling. See meta/design/dev-server-test-harness.md.
+// of only DOM-polling. See internal-docs/dev-server-test-harness/implementation.md.
 socket.onmessage = (event) => {
   const data = JSON.parse(event.data);
   if (data.type === 'error') {

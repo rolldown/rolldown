@@ -11,14 +11,15 @@ Rolldown is a JavaScript/TypeScript bundler written in Rust and TypeScript, desi
 
 # Context Engineering
 
-## Design Docs
+## Internal Docs
 
-AI needs more context to produce correct code, and code alone doesn't carry all the context. Design docs in `meta/design/` capture what's missing — trade-offs, intentions, and decisions.
+AI needs more context to produce correct code, and code alone doesn't carry all the context. `internal-docs/` captures what's missing — trade-offs, intentions, decisions, and how the machinery actually works.
 
-- **Read first:** If a design doc covers the area you're working in, read it before starting.
-- **Keep in sync:** If your changes affect a design doc, update it in the same change.
-- **Format:** See `meta/design/template.md`. Keep it freeform — one concept per file, link between docs. Capture not just the _what_ but the _why_: trade-offs considered, alternatives rejected, known pitfalls, future directions.
-- **Reference in code:** When code implements something described in a design doc, add a comment referencing the doc (e.g. `// See meta/design/watch-mode.md`).
+- **Structure:** one folder per feature, holding up to two files — `design.md` (the _why_: principles, goals, trade-offs, rejected alternatives, unresolved questions) and `implementation.md` (the _how_: components, data flow, file pointers, invariants). A feature with no recorded rationale keeps only `implementation.md`; add `design.md` when there's a _why_ worth capturing. The two files cross-link each other.
+- **Read first:** If a doc covers the area you're working in, read it before starting.
+- **Keep in sync:** If your changes affect a doc, update it in the same change.
+- **Format:** See `internal-docs/template/` for the `design.md` / `implementation.md` templates. Keep it freeform — one feature per folder, link between docs. Capture not just the _what_ but the _why_.
+- **Reference in code:** When code implements something described in a doc, add a comment referencing it — `// See internal-docs/watch-mode/implementation.md`, or point at `internal-docs/dev-engine/design.md` for a principle.
 - **Maintain like a garden:** Docs that drift from reality are worse than no docs. Trim what's been implemented and is now obvious from the code. Keep what's still valuable — the "why" behind decisions, failure modes, unresolved questions.
 
 # Architecture
@@ -46,9 +47,9 @@ Rust Core (crates/rolldown)
 - `packages/rolldown`: The main Node.js package exposing the TypeScript API.
 - `packages/rolldown-tests`: Test suite for the `rolldown` package using Vitest.
 - `packages/rollup-tests`: Compatibility test suite for Rollup plugins.
-- `crates/rolldown_watcher`: Watch mode coordinator. See `meta/design/watch-mode.md` for architecture, state machine, debounce/consolidation rules, and event lifecycle.
+- `crates/rolldown_watcher`: Watch mode coordinator. See `internal-docs/watch-mode/implementation.md` for architecture, state machine, debounce/consolidation rules, and event lifecycle.
 - `docs/`: Documentation site built with VitePress.
-- `meta/design/`: Design documents. See the "Context Engineering" section above.
+- `internal-docs/`: Internal design & implementation docs — one folder per feature (`design.md` + `implementation.md`). See the "Context Engineering" section above.
 
 ## Auto-generated or Submodule Files
 

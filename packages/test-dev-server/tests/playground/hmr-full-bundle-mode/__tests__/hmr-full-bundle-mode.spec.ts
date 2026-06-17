@@ -93,7 +93,7 @@ describe('hmr-full-bundle-mode', () => {
   });
 });
 
-// Covers the design principles in meta/design/dev-engine.md for an HMR
+// Covers the design principles in internal-docs/dev-engine/design.md for an HMR
 // failure: a syntax error makes the HMR update fail and the overlay shows
 // (Design Principle 2). Refreshing the page then triggers a full rebuild —
 // the one exception in Design Principle 3 where page access starts a build,
@@ -143,7 +143,7 @@ describe('hmr-full-bundle-mode: HMR-stage failure', () => {
   });
 });
 
-// Covers the design principles in meta/design/dev-engine.md for a rebuild
+// Covers the design principles in internal-docs/dev-engine/design.md for a rebuild
 // failure:
 // - Design Principle 1 (Conservative rebuilds): opening or refreshing the
 //   page never starts or retries a build

@@ -81,7 +81,7 @@ pub async fn finalize_assets(
     .par_iter()
     .map(|chunk| {
       // Normalize rolldown-generated placeholders before hashing so the hash is stable across
-      // their (transient) index drift. See `meta/design/chunk-hash.md` for the full reasoning.
+      // their (transient) index drift. See `internal-docs/chunk-hash/implementation.md` for the full reasoning.
       let mut hash = match &chunk.content {
         StrOrBytes::Str(content) => {
           let mut hasher = Xxh3::default();

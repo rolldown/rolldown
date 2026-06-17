@@ -243,7 +243,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       // mutates per-module `side_effects` best-effort, so its error doesn't
       // invalidate `output`. Commit it rather than fall back to the stale prior
       // snapshot.
-      // See meta/design/bundler-data-lifecycle.md ("Cache integrity on a failed build").
+      // See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
       let result =
         defer_sync_scan_data(&self.options, &self.cache.module_id_to_idx, &mut output).await;
       if is_incremental {
@@ -276,7 +276,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     // `create_output`/`make_copy` strip symbol-table scoping from the cache for
     // performance; reinstate it here, before the fallible steps below, so the
     // cache stays whole on their `Err` paths.
-    // See meta/design/bundler-data-lifecycle.md ("Cache integrity on a failed build").
+    // See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
     self.merge_immutable_fields_for_cache(std::mem::take(&mut link_stage_output.symbol_db));
 
     // `link_stage_output` is dead from here on (its `symbol_db` was just taken

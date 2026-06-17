@@ -603,7 +603,7 @@ impl GenerateStage<'_> {
       // entry's exports pollute the target dynamic-import namespace observed
       // by callers (issue #9320).
       //
-      // See meta/design/code-splitting.md for the merge-safety invariant.
+      // See internal-docs/code-splitting/implementation.md for the merge-safety invariant.
       // The selected target may own its own exports, but no other pending
       // dynamic-entry module may contribute observable exports to the target
       // chunk's file-level export list.

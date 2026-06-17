@@ -1,0 +1,25 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "page-a",
+        "import": "./src/page-a.js"
+      },
+      {
+        "name": "page-b",
+        "import": "./src/page-b.js"
+      },
+      {
+        "name": "page-c",
+        "import": "./src/page-c.js"
+      }
+    ],
+    "preserveEntrySignatures": "allow-extension",
+    "experimental": {
+      "chunkOptimization": {
+        "minChunkSize": 10000
+      }
+    }
+  },
+  "expectExecuted": false
+}

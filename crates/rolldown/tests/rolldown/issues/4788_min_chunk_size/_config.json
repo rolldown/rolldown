@@ -1,0 +1,44 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "page-a",
+        "import": "./src/page-a.js"
+      },
+      {
+        "name": "page-b",
+        "import": "./src/page-b.js"
+      },
+      {
+        "name": "page-c",
+        "import": "./src/page-c.js"
+      }
+    ],
+    "preserveEntrySignatures": "allow-extension",
+    "experimental": {
+      "chunkOptimization": {
+        "minChunkSize": 10000
+      }
+    }
+  },
+  "expectExecuted": false,
+  "configVariants": [
+    {
+      "_configName": "disabled-zero",
+      "chunkOptimization": {
+        "minChunkSize": 0
+      }
+    },
+    {
+      "_configName": "disabled-false",
+      "chunkOptimization": false
+    },
+    {
+      "_configName": "disabled-merge-common-chunks-false",
+      "chunkOptimization": {
+        "mergeCommonChunks": false,
+        "minChunkSize": 10000
+      }
+    }
+  ]
+}

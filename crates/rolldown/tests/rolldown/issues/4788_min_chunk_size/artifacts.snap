@@ -1,0 +1,212 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## common2.js
+
+```js
+//#region src/common1.js
+const common1 = "common1 marker";
+//#endregion
+//#region src/common2.js
+const common2 = "common2 marker";
+//#endregion
+export { common1 as n, common2 as t };
+
+```
+
+## page-a.js
+
+```js
+import { n as common1 } from "./common2.js";
+//#region src/page-a.js
+console.log("page-a", common1);
+//#endregion
+
+```
+
+## page-b.js
+
+```js
+import { n as common1, t as common2 } from "./common2.js";
+//#region src/page-b.js
+console.log("page-b", common1, common2);
+//#endregion
+
+```
+
+## page-c.js
+
+```js
+import { t as common2 } from "./common2.js";
+//#region src/page-c.js
+console.log("page-c", common2);
+//#endregion
+
+```
+
+# Variant: disabled-zero: [chunk_optimization: Options(ChunkOptimizationOptions { merge_common_chunks: true, avoid_redundant_chunk_loads: true, min_chunk_size: 0 })]
+
+## Assets
+
+### common1.js
+
+```js
+//#region src/common1.js
+const common1 = "common1 marker";
+//#endregion
+export { common1 as t };
+
+```
+
+### common2.js
+
+```js
+//#region src/common2.js
+const common2 = "common2 marker";
+//#endregion
+export { common2 as t };
+
+```
+
+### page-a.js
+
+```js
+import { t as common1 } from "./common1.js";
+//#region src/page-a.js
+console.log("page-a", common1);
+//#endregion
+
+```
+
+### page-b.js
+
+```js
+import { t as common1 } from "./common1.js";
+import { t as common2 } from "./common2.js";
+//#region src/page-b.js
+console.log("page-b", common1, common2);
+//#endregion
+
+```
+
+### page-c.js
+
+```js
+import { t as common2 } from "./common2.js";
+//#region src/page-c.js
+console.log("page-c", common2);
+//#endregion
+
+```
+
+# Variant: disabled-false: [chunk_optimization: Bool(false)]
+
+## Assets
+
+### common1.js
+
+```js
+//#region src/common1.js
+const common1 = "common1 marker";
+//#endregion
+export { common1 as t };
+
+```
+
+### common2.js
+
+```js
+//#region src/common2.js
+const common2 = "common2 marker";
+//#endregion
+export { common2 as t };
+
+```
+
+### page-a.js
+
+```js
+import { t as common1 } from "./common1.js";
+//#region src/page-a.js
+console.log("page-a", common1);
+//#endregion
+
+```
+
+### page-b.js
+
+```js
+import { t as common1 } from "./common1.js";
+import { t as common2 } from "./common2.js";
+//#region src/page-b.js
+console.log("page-b", common1, common2);
+//#endregion
+
+```
+
+### page-c.js
+
+```js
+import { t as common2 } from "./common2.js";
+//#region src/page-c.js
+console.log("page-c", common2);
+//#endregion
+
+```
+
+# Variant: disabled-merge-common-chunks-false: [chunk_optimization: Options(ChunkOptimizationOptions { merge_common_chunks: false, avoid_redundant_chunk_loads: true, min_chunk_size: 10000 })]
+
+## Assets
+
+### common1.js
+
+```js
+//#region src/common1.js
+const common1 = "common1 marker";
+//#endregion
+export { common1 as t };
+
+```
+
+### common2.js
+
+```js
+//#region src/common2.js
+const common2 = "common2 marker";
+//#endregion
+export { common2 as t };
+
+```
+
+### page-a.js
+
+```js
+import { t as common1 } from "./common1.js";
+//#region src/page-a.js
+console.log("page-a", common1);
+//#endregion
+
+```
+
+### page-b.js
+
+```js
+import { t as common1 } from "./common1.js";
+import { t as common2 } from "./common2.js";
+//#region src/page-b.js
+console.log("page-b", common1, common2);
+//#endregion
+
+```
+
+### page-c.js
+
+```js
+import { t as common2 } from "./common2.js";
+//#region src/page-c.js
+console.log("page-c", common2);
+//#endregion
+
+```

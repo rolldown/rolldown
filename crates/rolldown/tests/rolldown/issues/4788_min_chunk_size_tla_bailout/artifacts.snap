@@ -1,0 +1,58 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## common1.js
+
+```js
+//#region src/common1.js
+const common1 = "common1 marker";
+//#endregion
+export { common1 as t };
+
+```
+
+## common2.js
+
+```js
+//#region src/common2.js
+const common2 = "common2 marker";
+//#endregion
+export { common2 as t };
+
+```
+
+## page-a.js
+
+```js
+import { t as common1 } from "./common1.js";
+//#region src/tla.js
+await Promise.resolve();
+//#endregion
+//#region src/page-a.js
+console.log("page-a", common1, "tla marker");
+//#endregion
+
+```
+
+## page-b.js
+
+```js
+import { t as common1 } from "./common1.js";
+import { t as common2 } from "./common2.js";
+//#region src/page-b.js
+console.log("page-b", common1, common2);
+//#endregion
+
+```
+
+## page-c.js
+
+```js
+import { t as common2 } from "./common2.js";
+//#region src/page-c.js
+console.log("page-c", common2);
+//#endregion
+
+```

@@ -32,7 +32,7 @@ export { load, value as t };
 
 ```
 
-# Variant: disableAvoidRedundantChunkLoads: [chunk_optimization: Options(ChunkOptimizationOptions { merge_common_chunks: false, avoid_redundant_chunk_loads: false })]
+# Variant: disableAvoidRedundantChunkLoads: [chunk_optimization: Options(ChunkOptimizationOptions { merge_common_chunks: false, avoid_redundant_chunk_loads: false, min_chunk_size: 0 })]
 
 ## Assets
 

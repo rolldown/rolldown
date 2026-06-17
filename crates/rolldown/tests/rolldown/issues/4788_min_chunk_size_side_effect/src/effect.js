@@ -1,0 +1,1 @@
+console.log('effectful dependency');

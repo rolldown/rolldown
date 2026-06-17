@@ -1,5 +1,7 @@
 use napi_derive::napi;
-use rolldown_dev::{BundleState, BundlingFuture, OnHmrUpdatesCallback, OnOutputCallback};
+use rolldown_dev::{
+  BundleState, BundlingFuture, OnAdditionalAssetsCallback, OnHmrUpdatesCallback, OnOutputCallback,
+};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -34,6 +36,8 @@ impl BindingDevEngine {
 
     let on_hmr_updates_callback = dev_options.as_ref().and_then(|opts| opts.on_hmr_updates.clone());
     let on_output_callback = dev_options.as_ref().and_then(|opts| opts.on_output.clone());
+    let on_additional_assets_callback =
+      dev_options.as_ref().and_then(|opts| opts.on_additional_assets.clone());
 
     let cwd: Arc<Path> = Arc::from(PathBuf::from(options.input_options.cwd.clone()));
 
@@ -111,6 +115,15 @@ impl BindingDevEngine {
       }) as OnOutputCallback
     });
 
+    // Assets emitted during an HMR patch / lazy compile. No error path: these
+    // are already-emitted files, so always deliver them as a success result.
+    let on_additional_assets = on_additional_assets_callback.map(|js_callback| {
+      Arc::new(move |assets: Vec<rolldown_common::Output>| {
+        let binding_result: BindingResult<BindingOutputs> = Either::B(BindingOutputs::from(assets));
+        js_callback.call(FnArgs { data: (binding_result,) }, ThreadsafeFunctionCallMode::Blocking);
+      }) as OnAdditionalAssetsCallback
+    });
+
     let dev_watch_options = if skip_write.is_some()
       || use_polling.is_some()
       || poll_interval.is_some()
@@ -140,6 +153,7 @@ impl BindingDevEngine {
     let rolldown_dev_options = rolldown_dev::DevOptions {
       on_hmr_updates,
       on_output,
+      on_additional_assets,
       rebuild_strategy,
       watch: dev_watch_options,
     };

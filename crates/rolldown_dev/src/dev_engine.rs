@@ -43,6 +43,9 @@ pub struct CoordinatorState {
 pub struct DevEngine {
   coordinator_sender: CoordinatorSender,
   bundler: Arc<Mutex<Bundler>>,
+  /// Shared dev context, kept so out-of-coordinator entry points (e.g.
+  /// `compile_lazy_entry`) can reach `options.on_additional_assets`.
+  dev_context: Arc<DevContext>,
   coordinator_state: Mutex<CoordinatorState>,
   pub clients: SharedClients,
   is_closed: AtomicBool,
@@ -95,6 +98,7 @@ impl DevEngine {
     Ok(Self {
       coordinator_sender: coordinator_tx,
       bundler,
+      dev_context: Arc::clone(&ctx),
       coordinator_state: Mutex::new(CoordinatorState {
         coordinator: Some(coordinator),
         handle: None,
@@ -331,9 +335,21 @@ impl DevEngine {
       )
       .await;
 
-    // Notify that the proxy module has changed so build output gets updated.
-    // This ensures future page loads get the fetched template directly.
     if result.is_ok() {
+      // Deliver assets emitted while compiling the lazy entry (e.g. an image
+      // imported by the lazy module) before returning the code, so the consumer
+      // can register/serve them before the client requests them.
+      if let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref() {
+        let mut assets = Vec::new();
+        let mut warnings = Vec::new();
+        bundler.file_emitter.add_additional_files(&mut assets, &mut warnings);
+        if !assets.is_empty() {
+          on_additional_assets(assets);
+        }
+      }
+
+      // Notify that the proxy module has changed so build output gets updated.
+      // This ensures future page loads get the fetched template directly.
       self.notify_module_changed(proxy_module_id);
     }
 

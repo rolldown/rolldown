@@ -10,6 +10,12 @@ export default defineDevConfig({
     },
     platform: 'browser',
     treeshake: false,
+    // `hmr-asset/module.js` imports a `.png`; emitting it as a real hashed
+    // asset (not an inlined data URL) is what exercises vitejs/vite#22596.
+    // The other scenarios import no assets, so this is a no-op for them.
+    moduleTypes: {
+      '.png': 'asset',
+    },
     experimental: {
       devMode: {},
     },

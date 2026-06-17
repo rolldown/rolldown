@@ -13,12 +13,18 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 // The config is the union of what the scenarios need:
 // - `viteAliasPlugin` maps `@lazy` for aliased-import (vitejs/vite#22454);
 //   harmless for the others.
+// - `moduleTypes` makes emitted-asset's `.png` import emit a real hashed asset
+//   (vitejs/vite#22596); the other scenarios import no assets, so it is a no-op
+//   for them.
 export default defineDevConfig({
   platform: 'browser',
   build: {
     input: { main: 'main.js' },
     platform: 'browser',
     treeshake: false,
+    moduleTypes: {
+      '.png': 'asset',
+    },
     experimental: {
       devMode: { lazy: true },
     },

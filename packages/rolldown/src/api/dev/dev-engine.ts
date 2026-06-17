@@ -55,9 +55,23 @@ export class DevEngine {
         }
       : undefined;
 
+    const userOnAdditionalAssets = devOptions.onAdditionalAssets;
+    const bindingOnAdditionalAssets: BindingDevOptions['onAdditionalAssets'] =
+      userOnAdditionalAssets
+        ? function (rawResult) {
+            const result = normalizeBindingResult(rawResult);
+            if (result instanceof Error) {
+              userOnAdditionalAssets(result);
+              return;
+            }
+            userOnAdditionalAssets(transformToRollupOutput(result));
+          }
+        : undefined;
+
     const bindingDevOptions: BindingDevOptions = {
       onHmrUpdates: bindingOnHmrUpdates,
       onOutput: bindingOnOutput,
+      onAdditionalAssets: bindingOnAdditionalAssets,
       rebuildStrategy: devOptions.rebuildStrategy
         ? devOptions.rebuildStrategy === 'always'
           ? BindingRebuildStrategy.Always

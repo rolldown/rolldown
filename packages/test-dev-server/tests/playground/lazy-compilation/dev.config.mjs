@@ -27,6 +27,9 @@ export default defineDevConfig({
     },
     experimental: {
       devMode: { lazy: true },
+      // `new-url` scenario: emit `new URL('./x', import.meta.url)` targets as
+      // hashed assets (vitejs/vite#22596). No-op for the other scenarios.
+      resolveNewUrlToAsset: true,
     },
     plugins: [
       viteAliasPlugin({

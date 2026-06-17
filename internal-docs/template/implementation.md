@@ -9,6 +9,7 @@
 
 <!-- If a design.md exists, point to it for the "why". Drop this line     -->
 <!-- for an implementation-only feature with no design.md.                -->
+
 > The rationale and principles behind this live in [design.md](./design.md).
 
 ## Summary

@@ -139,7 +139,6 @@ The dev server handles `/@vite/lazy?id=...&clientId=...` requests:
 6. **Return compiled JS directly** - browser loads it as an ES module
 7. **Notify coordinator** - trigger rebuild to update build output for future page loads
 
-
 ## Related
 
 - [implementation.md](./implementation.md) — the lazy-compilation implementation

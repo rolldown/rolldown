@@ -281,9 +281,8 @@ mod tests {
 
   #[test]
   fn returns_none_when_no_placeholder() {
-    let out = resolve_asset_placeholders("export const a = 1;", "hmr_patch_0.js", |_| {
-      None::<String>
-    });
+    let out =
+      resolve_asset_placeholders("export const a = 1;", "hmr_patch_0.js", |_| None::<String>);
     assert_eq!(out, None);
   }
 

@@ -11,7 +11,10 @@ use crate::{
   options::plugin::types::binding_limited_boolean::BindingTrueValue,
   types::{
     binding_string_or_regex::{BindingStringOrRegex, bindingify_string_or_regex_array},
-    js_callback::{JsCallback, JsCallbackExt as _, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt},
+    js_callback::{
+      JsCallback, JsCallbackExt as _, JsCallbackResultExt as _, MaybeAsyncJsCallback,
+      MaybeAsyncJsCallbackExt,
+    },
   },
 };
 
@@ -87,6 +90,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
               finalizer_fn
                 .invoke_async((resolved_id, raw_id, importer).into())
                 .await
+                .context("viteResolve finalizeBareSpecifier option")
                 .map_err(anyhow::Error::from)
             })
           })
@@ -102,6 +106,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
               finalizer_fn
                 .invoke_async((resolved_id, raw_id).into())
                 .await
+                .context("viteResolve finalizeOtherSpecifiers option")
                 .map_err(anyhow::Error::from)
             })
           })
@@ -116,6 +121,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
             resolve_fn
               .invoke_async((id, importer, is_require, scan).into())
               .await
+              .context("viteResolve resolveSubpathImports option")
               .map_err(anyhow::Error::from)
           })
         },
@@ -124,7 +130,11 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
         Arc::new(move |message: String| {
           let on_warn = Arc::clone(&on_warn);
           Box::pin(async move {
-            on_warn.await_call((message,).into()).await.map_err(anyhow::Error::from)
+            on_warn
+              .await_call((message,).into())
+              .await
+              .context("viteResolve onWarn option")
+              .map_err(anyhow::Error::from)
           })
         })
       }),
@@ -132,7 +142,11 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
         Arc::new(move |message: String| {
           let on_debug = Arc::clone(&on_debug);
           Box::pin(async move {
-            on_debug.await_call((message,).into()).await.map_err(anyhow::Error::from)
+            on_debug
+              .await_call((message,).into())
+              .await
+              .context("viteResolve onDebug option")
+              .map_err(anyhow::Error::from)
           })
         })
       }),

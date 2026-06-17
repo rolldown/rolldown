@@ -7,7 +7,7 @@ use napi::{
 };
 use rolldown_plugin_utils::{ModulePreload, ModulePreloadOptions, ResolveDependenciesFn};
 
-use crate::types::js_callback::{JsCallback, JsCallbackExt as _};
+use crate::types::js_callback::{JsCallback, JsCallbackExt as _, JsCallbackResultExt as _};
 
 #[napi_derive::napi(object, object_from_js = true)]
 pub struct BindingResolveDependenciesContext {
@@ -62,6 +62,7 @@ impl FromNapiValue for BindingModulePreload {
                   resolve_dependencies
                     .invoke_async((filename, deps, context).into())
                     .await
+                    .context("modulePreload.resolveDependencies option")
                     .map_err(anyhow::Error::from)
                 })
               })

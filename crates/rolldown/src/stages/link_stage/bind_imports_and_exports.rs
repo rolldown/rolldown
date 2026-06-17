@@ -187,10 +187,20 @@ impl LinkStage<'_> {
     self.external_import_namespace_merger = binding_ctx.external_import_namespace_merger;
 
     for (module_idx, map) in &binding_ctx.external_import_binding_merger {
-      for (key, symbol_set) in map {
+      let mut imported_binding_merger = map.iter().collect::<Vec<_>>();
+      imported_binding_merger.sort_by(|left, right| left.0.as_str().cmp(right.0.as_str()));
+
+      for (key, symbol_set) in imported_binding_merger {
         let name = if key.as_str() == "default" {
           let key = symbol_set
-            .first()
+            .iter()
+            .min_by_key(|symbol_ref| {
+              let symbol_ref = **symbol_ref;
+              (
+                self.module_table.modules[symbol_ref.owner].stable_id().as_str(),
+                symbol_ref.name(&self.symbols),
+              )
+            })
             .map_or_else(|| key.clone(), |sym_ref| sym_ref.name(&self.symbols).into());
           Cow::Owned(key)
         } else if is_validate_identifier_name(key.as_str()) {

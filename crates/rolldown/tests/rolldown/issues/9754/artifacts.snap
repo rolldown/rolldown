@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry0.js
+
+```js
+import process from "node:process";
+//#region mod0.js
+console.log(0, process.pid);
+//#endregion
+export {};
+
+```
+
+## entry1.js
+
+```js
+import process from "node:process";
+//#region mod1.js
+console.log(1, process.pid);
+//#endregion
+export {};
+
+```

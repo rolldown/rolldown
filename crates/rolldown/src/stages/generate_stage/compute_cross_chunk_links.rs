@@ -91,7 +91,7 @@ impl GenerateStage<'_> {
         }
         importee_map
           .into_iter()
-          .sorted_by_key(|(importee_chunk_id, _)| {
+          .sorted_unstable_by_key(|(importee_chunk_id, _)| {
             chunk_graph.chunk_table[*importee_chunk_id].exec_order
           })
           .collect::<FxIndexMap<_, _>>()
@@ -104,7 +104,7 @@ impl GenerateStage<'_> {
         .map(|imports_from_external_modules| {
           imports_from_external_modules
             .into_iter()
-            .sorted_by_key(|(external_module_id, _)| {
+            .sorted_unstable_by_key(|(external_module_id, _)| {
               self.link_output.module_table[*external_module_id].exec_order()
             })
             .collect_vec()
@@ -265,7 +265,7 @@ impl GenerateStage<'_> {
             for export_ref in entry_meta
               .resolved_exports
               .iter()
-              .sorted_by_key(|(name, _)| *name)
+              .sorted_unstable_by_key(|(name, _)| *name)
               .map(|(_, export)| export)
               // A chunk should always consume a cjs export symbol by property access, so filter
               // out a exported symbol that came from a cjs module.

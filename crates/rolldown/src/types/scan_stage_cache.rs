@@ -86,7 +86,7 @@ impl ScanStageCache {
       }
       rolldown_common::HybridIndexVec::Map(map) => {
         let mut modules = map.into_iter().collect_vec();
-        modules.sort_by_key(|(k, _)| *k);
+        modules.sort_unstable_by_key(|(k, _)| *k);
         modules
       }
     };

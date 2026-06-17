@@ -77,7 +77,8 @@ impl GenerateStage<'_> {
           .copied()
           .chain(chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks.keys().copied())
           .collect::<Vec<_>>();
-        cross_chunk_imports.sort_by_key(|chunk_id| chunk_graph.chunk_table[*chunk_id].exec_order);
+        cross_chunk_imports
+          .sort_unstable_by_key(|chunk_id| chunk_graph.chunk_table[*chunk_id].exec_order);
         cross_chunk_imports
       })
       .collect::<Vec<_>>();

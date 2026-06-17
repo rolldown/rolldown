@@ -1058,7 +1058,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // FIXME(hyf0): In practice, the order of importers doesn't matter since we're going to traverse all of them.
     // However, non-deterministic order causes unstable snapshots.
     importers_idx
-      .sort_by_key(|importer_idx| self.module_table().modules[*importer_idx].stable_id());
+      .sort_unstable_by_key(|importer_idx| self.module_table().modules[*importer_idx].stable_id());
 
     for importer_idx in importers_idx {
       let Module::Normal(importer) = &self.module_table().modules[importer_idx] else {

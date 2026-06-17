@@ -28,7 +28,7 @@ impl BuildEvent for TsConfigError {
   fn message(&self, opts: &DiagnosticOptions) -> String {
     let mut stabilized_paths =
       self.file_paths.iter().map(|p| opts.stabilize_path(p)).collect::<Vec<_>>();
-    stabilized_paths.sort();
+    stabilized_paths.sort_unstable();
     let file_list =
       stabilized_paths.into_iter().map(|p| format!("'{p}'")).collect::<Vec<_>>().join(", ");
     format!(

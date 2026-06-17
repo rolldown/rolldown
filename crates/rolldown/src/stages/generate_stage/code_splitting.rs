@@ -648,7 +648,7 @@ impl GenerateStage<'_> {
         }
       }
       let mut vec = entry_level_external_modules.into_iter().collect_vec();
-      vec.sort_by_key(|idx| self.link_output.module_table[*idx].exec_order());
+      vec.sort_unstable_by_key(|idx| self.link_output.module_table[*idx].exec_order());
       chunk_graph.chunk_table[chunk_idx].entry_level_external_module_idx = vec;
     }
     // re propagate `meta.has_dynamic_exports` for affect modules

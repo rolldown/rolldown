@@ -392,7 +392,7 @@ impl ManualSplitter<'_> {
   ) -> Option<(ModuleGroup, ModuleGroup)> {
     let mut modules = group.modules.iter().copied().collect::<Vec<_>>();
     // Split by lexical relevance first (stable module id), then by size constraints.
-    modules.sort_by(|lhs, rhs| {
+    modules.sort_unstable_by(|lhs, rhs| {
       let lhs_module = &self.link_output.module_table[*lhs];
       let rhs_module = &self.link_output.module_table[*rhs];
       lhs_module

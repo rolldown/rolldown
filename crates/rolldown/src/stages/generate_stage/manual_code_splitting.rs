@@ -159,7 +159,7 @@ impl ManualSplitter<'_> {
           continue;
         }
 
-        // Filter by module tags. See meta/design/module-tags.md
+        // Filter by module tags. See internal-docs/module-tags/implementation.md
         if let Some(required_tags) = &self.match_group_required_tags[match_group_index] {
           if !splitting_info.tags_bit_set.contains_all(required_tags) {
             continue;

@@ -4,7 +4,7 @@ import { editFile, page, waitForBuildStable } from '~utils';
 const SLOT = '/* @syntax-error-slot */';
 const BREAK = "const broken = '";
 
-// Covers meta/design/dev-engine.md for a failing FIRST build. This playground
+// Covers internal-docs/dev-engine/design.md for a failing FIRST build. This playground
 // SHIPS BROKEN (`module.js` ends with an unterminated string), so the harness's
 // first build already failed and `page` is on the spinner + error overlay — the
 // spec creates no server of its own.

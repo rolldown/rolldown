@@ -7,7 +7,7 @@ use rolldown_dev::ErrorStage;
 /// [`crate::binding_dev_engine::BindingBundleState`] so the consumer can
 /// treat an `Hmr`-stage failure as recoverable by forcing a full rebuild
 /// on the next page load (HMR generation may itself be buggy). See
-/// `meta/design/dev-engine.md` §12.
+/// `internal-docs/dev-engine/implementation.md` §12.
 #[derive(Debug, Clone, Copy)]
 #[napi(string_enum)]
 pub enum BindingErrorStage {

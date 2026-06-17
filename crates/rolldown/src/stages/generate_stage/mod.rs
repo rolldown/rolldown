@@ -162,7 +162,7 @@ impl<'a> GenerateStage<'a> {
 
     self.merge_cjs_namespace(&mut chunk_graph);
 
-    // See meta/design/devtools.md for devtools action lifecycle.
+    // See internal-docs/devtools/implementation.md for devtools action lifecycle.
     self.trace_action_chunks_infos(&chunk_graph);
 
     let mut warnings = vec![];
@@ -246,7 +246,7 @@ impl<'a> GenerateStage<'a> {
                 let p = PathBuf::from(sanitized_absolute_filename.as_str());
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
-                    // See meta/design/module-id.md: output paths may normalize separators even
+                    // See internal-docs/module-id/implementation.md: output paths may normalize separators even
                     // when module ids keep native separators.
                     if let Some(relative_path) = strip_path_prefix_to_slash(
                       absolute_chunk_file_name.as_path(),

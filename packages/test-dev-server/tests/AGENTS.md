@@ -12,4 +12,4 @@ it before adding or changing a test here:
   (published at <https://rolldown.rs/development-guide/testing>)
 
 The deeper "why" behind the harness is in
-[`meta/design/dev-server-test-harness.md`](../../../meta/design/dev-server-test-harness.md).
+[`internal-docs/dev-server-test-harness/implementation.md`](../../../internal-docs/dev-server-test-harness/implementation.md).

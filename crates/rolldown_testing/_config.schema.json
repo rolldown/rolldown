@@ -1335,7 +1335,7 @@
           "format": "double"
         },
         "tags": {
-          "description": "Filter modules by tags. Only modules with all specified tags are captured.\nSee meta/design/module-tags.md",
+          "description": "Filter modules by tags. Only modules with all specified tags are captured.\nSee internal-docs/module-tags/implementation.md",
           "type": [
             "array",
             "null"

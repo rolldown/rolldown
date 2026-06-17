@@ -12,7 +12,7 @@ pub enum CoordinatorMsg {
   BundleCompleted {
     /// `None` on success; on error, identifies which stage produced it
     /// so the coordinator can pick the right recovery task variant on
-    /// the next file change. See `meta/design/dev-engine.md` §7.
+    /// the next file change. See `internal-docs/dev-engine/implementation.md` §7.
     error_stage: Option<ErrorStage>,
     has_generated_bundle_output: bool,
   },

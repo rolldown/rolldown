@@ -24,7 +24,7 @@ use rolldown_utils::ecmascript::is_validate_identifier_name;
 /// construction through this single type lets rolldown absorb future oxc
 /// construction-API changes at one point.
 ///
-/// See `meta/design/ast-construction.md`.
+/// See `internal-docs/ast-construction/implementation.md`.
 #[derive(Clone, Copy)]
 pub struct AstFactory<'ast>(AstBuilder<'ast>);
 

@@ -236,6 +236,7 @@ napi-derive = { version = "3.0.0", default-features = false, features = ["type-d
 oxc = { version = "0.136.0", features = [
   "ast_visit",
   "transformer",
+  "react_compiler",
   "minifier",
   "mangler",
   "semantic",
@@ -248,6 +249,7 @@ oxc = { version = "0.136.0", features = [
 oxc_allocator = { version = "0.136.0", features = ["pool"] }
 oxc_ecmascript = { version = "0.136.0" }
 oxc_napi = { version = "0.136.0" }
+oxc_react_compiler = { version = "0.136.0" }
 oxc_str = { version = "0.136.0" }
 oxc_minify_napi = { version = "0.136.0" }
 oxc_parser_napi = { version = "0.136.0" }

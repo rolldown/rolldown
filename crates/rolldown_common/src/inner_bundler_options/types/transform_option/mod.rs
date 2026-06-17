@@ -43,6 +43,13 @@ pub struct TransformOptions {
   /// Configure how TypeScript is transformed.
   pub typescript: Option<TypeScriptOptions>,
 
+  /// Experimental [React Compiler](https://github.com/facebook/react/tree/main/compiler).
+  /// Runs in a separate pass before all other transforms.
+  ///
+  /// Boxed because `PluginOptions` is large (~700 bytes) and almost always `None`;
+  /// keeping it out of line avoids bloating every clone of this per-file struct.
+  pub react_compiler: Option<Box<oxc_react_compiler::PluginOptions>>,
+
   /// Third-party plugins to use.
   pub plugins: Option<PluginsOptions>,
 
@@ -60,6 +67,7 @@ impl From<crate::utils::enhanced_transform::EnhancedTransformOptions> for Transf
       typescript: options.typescript,
       plugins: options.plugins,
       helpers: options.helpers,
+      react_compiler: options.react_compiler,
     }
   }
 }
@@ -74,6 +82,7 @@ impl From<TransformOptions> for crate::utils::enhanced_transform::EnhancedTransf
       typescript: options.typescript,
       plugins: options.plugins,
       helpers: options.helpers,
+      react_compiler: options.react_compiler,
       // These fields are not present in TransformOptions
       cwd: None,
       source_type: None,
@@ -123,6 +132,7 @@ impl TryFrom<TransformOptions> for oxc::transformer::TransformOptions {
         .helpers
         .map_or_else(HelperLoaderOptions::default, HelperLoaderOptions::from),
       plugins: oxc::transformer::PluginsOptions::from(options.plugins.unwrap_or_default()),
+      react_compiler: options.react_compiler.map(|react_compiler| *react_compiler),
       ..Default::default()
     })
   }

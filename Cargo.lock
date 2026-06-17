@@ -3107,6 +3107,7 @@ dependencies = [
  "oxc",
  "oxc_ecmascript",
  "oxc_index",
+ "oxc_react_compiler",
  "oxc_resolver",
  "oxc_sourcemap",
  "oxc_str",

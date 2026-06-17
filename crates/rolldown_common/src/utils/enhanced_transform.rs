@@ -108,6 +108,12 @@ pub struct EnhancedTransformOptions {
   /// Configure how TypeScript is transformed.
   pub typescript: Option<TypeScriptOptions>,
 
+  /// Experimental [React Compiler](https://github.com/facebook/react/tree/main/compiler).
+  /// Runs in a separate pass before all other transforms.
+  ///
+  /// Boxed because `PluginOptions` is large (~700 bytes) and almost always `None`.
+  pub react_compiler: Option<Box<oxc_react_compiler::PluginOptions>>,
+
   /// Third-party plugins to use.
   pub plugins: Option<PluginsOptions>,
 
@@ -161,6 +167,7 @@ impl EnhancedTransformOptions {
       typescript: options.typescript,
       plugins: options.plugins,
       helpers: options.helpers,
+      react_compiler: options.react_compiler,
       cwd,
       source_type,
       tsconfig,

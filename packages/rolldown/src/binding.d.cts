@@ -2184,6 +2184,11 @@ export interface BindingEnhancedTransformOptions {
    */
   typescript?: TypeScriptOptions
   /**
+   * Experimental [React Compiler](https://github.com/facebook/react/tree/main/compiler).
+   * `true` enables it with default options; pass an object to configure it.
+   */
+  reactCompiler?: boolean | ReactCompilerOptions
+  /**
    * Configure how TSX and JSX are transformed.
    * @see {@link https://oxc.rs/docs/guide/usage/transformer/jsx}
    */

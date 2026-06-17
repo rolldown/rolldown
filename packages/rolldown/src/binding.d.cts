@@ -2355,13 +2355,24 @@ export type BindingGenerateHmrPatchReturn =
   | { type: 'Ok', field0: Array<BindingHmrUpdate> }
   | { type: 'Error', field0: Array<BindingError> }
 
+/**
+ * An asset emitted while computing an HMR patch (see `HmrPatch::assets`). An HMR
+ * update runs no `generate`, so the consumer must register these for the asset
+ * URLs the patch references to resolve on the first request.
+ * See `meta/design/plugin-asset-module.md` (rolldown#9812 / vitejs/vite#22596).
+ */
+export interface BindingHmrAsset {
+  filename: string
+  source: string | Uint8Array
+}
+
 export interface BindingHmrBoundaryOutput {
   boundary: string
   acceptedVia: string
 }
 
 export type BindingHmrUpdate =
-  | { type: 'Patch', code: string, filename: string, sourcemap?: string, sourcemapFilename?: string, hmrBoundaries: Array<BindingHmrBoundaryOutput> }
+  | { type: 'Patch', code: string, filename: string, sourcemap?: string, sourcemapFilename?: string, hmrBoundaries: Array<BindingHmrBoundaryOutput>, assets: Array<BindingHmrAsset> }
   | { type: 'FullReload', reason?: string }
   | { type: 'Noop' }
 

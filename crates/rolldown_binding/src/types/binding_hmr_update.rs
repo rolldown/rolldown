@@ -1,5 +1,6 @@
 use napi_derive::napi;
 
+use super::binding_hmr_asset::BindingHmrAsset;
 use super::binding_hmr_boundary_output::BindingHmrBoundaryOutput;
 
 #[napi(discriminant = "type", object_from_js = false)]
@@ -11,6 +12,7 @@ pub enum BindingHmrUpdate {
     sourcemap: Option<String>,
     sourcemap_filename: Option<String>,
     hmr_boundaries: Vec<BindingHmrBoundaryOutput>,
+    assets: Vec<BindingHmrAsset>,
   },
   FullReload {
     reason: Option<String>,
@@ -27,6 +29,7 @@ impl From<rolldown_common::HmrUpdate> for BindingHmrUpdate {
         sourcemap: patch.sourcemap,
         sourcemap_filename: patch.sourcemap_filename,
         hmr_boundaries: patch.hmr_boundaries.into_iter().map(Into::into).collect(),
+        assets: patch.assets.into_iter().map(BindingHmrAsset::from).collect(),
       },
       rolldown_common::HmrUpdate::FullReload { reason } => {
         Self::FullReload { reason: Some(reason) }

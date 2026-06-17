@@ -131,9 +131,9 @@ binding.
 
 ## Related
 
-- [cli](./cli.md) — CLI argument parsing; the upstream stage that produces JS
+- [cli](../cli/implementation.md) — CLI argument parsing; the upstream stage that produces JS
   `InputOptions`/`OutputOptions` before this pipeline begins
-- [rust-bundler](./rust-bundler.md) — `Bundler`/`BundleFactory`, which hold the
+- [rust-bundler](../rust-bundler/implementation.md) — `Bundler`/`BundleFactory`, which hold the
   resulting `Arc<NormalizedBundlerOptions>`
 - `crates/rolldown/src/utils/prepare_build_context.rs` — the single
   raw → normalized normalization function

@@ -96,5 +96,4 @@ The merge algorithm uses a min-heap to process smallest subgroups first. For eac
 
 ## Related
 
-- [app-scenario-chunking.md](../app-scenario-chunking/implementation.md) — chunking in app scenario context
 - [code-splitting.md](../code-splitting/implementation.md) — automatic code splitting

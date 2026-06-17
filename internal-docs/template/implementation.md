@@ -22,4 +22,4 @@ One paragraph: a map of the machinery this doc describes.
 ## Related
 
 - [design.md](./design.md) — the principles and trade-offs behind this
-- [other-feature](../other-feature/implementation.md)
+- [other-feature](xxx)

@@ -70,7 +70,7 @@ impl ConfigVariant {
       config.entry_filenames = Some(entry_filenames.clone().into());
     }
     if let Some(code_splitting) = &self.code_splitting {
-      config.code_splitting = Some(*code_splitting);
+      config.code_splitting = Some(code_splitting.clone());
     }
     if let Some(dynamic_import_in_cjs) = &self.dynamic_import_in_cjs {
       config.dynamic_import_in_cjs = Some(*dynamic_import_in_cjs);

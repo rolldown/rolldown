@@ -152,16 +152,23 @@ pub fn merge_transform_options_with_tsconfig(
   }
 
   // `strictNullChecks` (falling back to `strict`, mirroring tsc's `strictNullChecks ?? strict`)
-  // controls whether `null`/`undefined` are elided from union `design:type` metadata under
-  // `emitDecoratorMetadata`. The explicit `transform.decorator.strictNullChecks` option wins; when
-  // tsconfig sets neither flag, rolldown keeps the transformer default (`true`).
-  let tsconfig_strict_null_checks = compiler_options.strict_null_checks.or(compiler_options.strict);
-  if let Some(strict_null_checks) = tsconfig_strict_null_checks {
-    if transform_options.decorator.as_ref().is_none_or(|d| d.strict_null_checks.is_none()) {
-      let mut decorator = transform_options.decorator.unwrap_or_default();
-      decorator.strict_null_checks = Some(strict_null_checks);
-      transform_options.decorator = Some(decorator);
-    } else if warn_on_conflict {
+  // controls whether `null`/`undefined` are elided from union `design:type` metadata. It only
+  // has an effect when decorator metadata is emitted, so only forward it then. Otherwise we
+  // would attach it to a `decorator` option for every TS project that sets `strict`/
+  // `strictNullChecks` (i.e. almost all of them) without using decorators.
+  //
+  // The explicit `transform.decorator.strictNullChecks` option wins over tsconfig. When
+  // tsconfig sets neither flag we keep the transformer default (`true`), aligning with
+  // TypeScript 6.0+, where `strict` (and thus `strictNullChecks`) is enabled by default.
+  if let Some(decorator) =
+    transform_options.decorator.as_mut().filter(|d| d.emit_decorator_metadata == Some(true))
+  {
+    if decorator.strict_null_checks.is_none() {
+      decorator.strict_null_checks =
+        compiler_options.strict_null_checks.or(compiler_options.strict);
+    } else if warn_on_conflict
+      && (compiler_options.strict_null_checks.is_some() || compiler_options.strict.is_some())
+    {
       warnings.push(
         BuildDiagnostic::configuration_field_conflict(
           "transform.decorator",

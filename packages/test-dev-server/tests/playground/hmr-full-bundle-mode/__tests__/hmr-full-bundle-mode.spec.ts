@@ -1,6 +1,7 @@
 import { setTimeout } from 'node:timers/promises';
+import type { Response } from 'playwright';
 import { describe, expect, test } from 'vitest';
-import { editFile, page, serverLogs, waitForBuildStable } from '~utils';
+import { addFile, editFile, page, readFile, serverLogs, waitForBuildStable } from '~utils';
 
 // This playground's scenarios all exercise ONE shared full-bundle (index.html
 // renders every div, main.js imports every sub-module), so they must run on one
@@ -90,6 +91,69 @@ describe('hmr-full-bundle-mode', () => {
     await expect.poll(() => page.textContent('.hmr')).toBe('hello');
 
     await waitForBuildStable();
+  });
+});
+
+// https://github.com/vitejs/vite/issues/22596
+// When an HMR edit ADDS an import to an asset (here a JS-imported image), the
+// image must usably load via the HMR patch — not only after a full reload. The
+// HMR codegen never runs the `renderChunk` hook (where asset placeholders are
+// resolved), so the patch currently ships an unresolved `__ROLLDOWN_ASSET__`
+// reference. Same root cause as lazy-compilation's `emitted-asset` scenario,
+// but reached through the regular HMR update path instead of lazy compilation.
+describe('hmr-full-bundle-mode: HMR adds an asset import', () => {
+  test('an HMR-added image loads without a full reload (#vite-22596)', async () => {
+    await waitForBuildStable();
+
+    const original = readFile('hmr-asset/module.js');
+    const failedAssetResponses: string[] = [];
+    const onResponse = (res: Response) => {
+      const url = res.url();
+      if (/\.png(?:\?|$)/.test(url) && res.status() >= 400) {
+        failedAssetResponses.push(`${res.status()} ${url}`);
+      }
+    };
+    page.on('response', onResponse);
+
+    try {
+      // The img exists from the initial bundle but has no src yet.
+      expect(await page.$eval('#hmr-asset-image', (img: HTMLImageElement) => img.id)).toBe(
+        'hmr-asset-image',
+      );
+
+      // Edit the module to add the asset import and point the img at it. This
+      // lands as an HMR patch (the module self-accepts), not a reload.
+      editFile(
+        'hmr-asset/module.js',
+        (code) =>
+          `import imageUrl from './image.png';\n` +
+          code.replace('/* @asset-src */', 'img.src = imageUrl;'),
+      );
+
+      // The image must actually decode (`naturalWidth > 0`), which only happens
+      // if the asset URL in the HMR patch was resolved and served — not left as
+      // a `__ROLLDOWN_ASSET__` placeholder.
+      await expect
+        .poll(
+          () =>
+            page
+              .$eval(
+                '#hmr-asset-image',
+                (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
+              )
+              .catch(() => false),
+          { timeout: 15_000 },
+        )
+        .toBe(true);
+
+      // No asset request 404'd while applying the patch.
+      expect(failedAssetResponses).toEqual([]);
+    } finally {
+      page.off('response', onResponse);
+      // Restore the fixture for any later blocks / reruns.
+      addFile('hmr-asset/module.js', original);
+      await waitForBuildStable();
+    }
   });
 });
 

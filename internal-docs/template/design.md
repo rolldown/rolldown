@@ -27,4 +27,4 @@ for its consumers. For the machinery that realizes it, link
 ## Related
 
 - [implementation.md](./implementation.md) — the machinery that realizes this
-- [other-feature](xxx)
+- `../other-feature/implementation.md` - other features that are relevant to this one

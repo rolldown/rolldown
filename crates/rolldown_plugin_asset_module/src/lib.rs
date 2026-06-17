@@ -215,3 +215,101 @@ fn compute_relative_path(chunk_filename: &str, asset_filename: &str) -> String {
     format!("./{relative_str}")
   }
 }
+
+/// Resolve `__ROLLDOWN_ASSET__#<refId>` placeholders to chunk-relative asset
+/// paths for code that does NOT pass through the `renderChunk` hook — namely HMR
+/// and lazy-compilation patches. The normal generate path resolves these in
+/// [`AssetModulePlugin::render_chunk`]; the HMR/lazy codegen assembles its output
+/// directly and bypasses generate, so without this the placeholder would leak to
+/// the browser and 404 (rolldown#9812, vitejs/vite#22596). See
+/// `meta/design/plugin-asset-module.md`.
+///
+/// `chunk_filename` is the served filename of the patch (e.g. `hmr_patch_0.js`),
+/// used to compute the path from the patch to each asset. `get_file_name`
+/// resolves a reference id to its emitted filename (e.g. via
+/// `FileEmitter::get_file_name`); a reference it cannot resolve is left as-is.
+/// Returns the rewritten code, or `None` when there is nothing to resolve so
+/// callers can skip the allocation.
+pub fn resolve_asset_placeholders<S>(
+  code: &str,
+  chunk_filename: &str,
+  get_file_name: impl Fn(&str) -> Option<S>,
+) -> Option<String>
+where
+  S: AsRef<str>,
+{
+  // Quick bail mirrors `render_chunk`: most patches reference no assets.
+  if !code.contains(PREFIX) {
+    return None;
+  }
+
+  let mut out = String::with_capacity(code.len());
+  let mut last = 0usize;
+  let mut changed = false;
+
+  for abs_pos in memmem::find_iter(code.as_bytes(), PREFIX.as_bytes()) {
+    let after_prefix = abs_pos + PREFIX.len();
+    // The ref id runs until the closing quote of the placeholder string literal.
+    let rest = &code[after_prefix..];
+    let ref_end = rest.find(['"', '\'']).unwrap_or(rest.len());
+    let ref_id = &rest[..ref_end];
+    if ref_id.is_empty() {
+      continue;
+    }
+    let Some(asset_filename) = get_file_name(ref_id) else {
+      // Unknown reference: leave the placeholder verbatim (it stays within the
+      // verbatim ranges copied below, since `last` is not advanced past it).
+      continue;
+    };
+    let relative = compute_relative_path(chunk_filename, asset_filename.as_ref());
+    out.push_str(&code[last..abs_pos]);
+    out.push_str(&relative);
+    last = after_prefix + ref_end;
+    changed = true;
+  }
+
+  if !changed {
+    return None;
+  }
+  out.push_str(&code[last..]);
+  Some(out)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::resolve_asset_placeholders;
+
+  #[test]
+  fn returns_none_when_no_placeholder() {
+    let out = resolve_asset_placeholders("export const a = 1;", "hmr_patch_0.js", |_| {
+      None::<String>
+    });
+    assert_eq!(out, None);
+  }
+
+  #[test]
+  fn resolves_single_placeholder_relative_to_patch() {
+    let code = r#"module.exports = "__ROLLDOWN_ASSET__#abc""#;
+    let out = resolve_asset_placeholders(code, "hmr_patch_0.js", |id| {
+      (id == "abc").then(|| "assets/img-h.png".to_string())
+    });
+    assert_eq!(out.as_deref(), Some(r#"module.exports = "./assets/img-h.png""#));
+  }
+
+  #[test]
+  fn leaves_unknown_reference_verbatim() {
+    let code = r#"f("__ROLLDOWN_ASSET__#missing")"#;
+    // The only reference is unresolvable, so nothing changes.
+    let out = resolve_asset_placeholders(code, "hmr_patch_0.js", |_| None::<String>);
+    assert_eq!(out, None);
+  }
+
+  #[test]
+  fn resolves_known_and_keeps_unknown() {
+    let code = r#"["__ROLLDOWN_ASSET__#a","__ROLLDOWN_ASSET__#b"]"#;
+    let out = resolve_asset_placeholders(code, "hmr_patch_0.js", |id| {
+      (id == "a").then(|| "assets/a.png".to_string())
+    });
+    assert_eq!(out.as_deref(), Some(r#"["./assets/a.png","__ROLLDOWN_ASSET__#b"]"#));
+  }
+}

@@ -10,13 +10,14 @@ use arcstr::ArcStr;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, ImportKind,
-  Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
+  Module, ModuleIdx, ModuleTable, Output, OutputAsset, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_ecmascript_utils::AstFactory;
 use rolldown_error::BuildResult;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_plugin_asset_module::resolve_asset_placeholders;
 use rolldown_sourcemap::{Source, SourceJoiner, SourceMapSource};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -523,6 +524,19 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     let lazy_patch_id = self.next_hmr_patch_id.fetch_add(1, Ordering::Relaxed);
     let filename = format!("lazy_compile_{lazy_patch_id}.js");
 
+    // Resolve `__ROLLDOWN_ASSET__#<refId>` placeholders the lazily-compiled
+    // modules carry. The generate phase (`renderChunk`) would normally do this,
+    // but lazy codegen bypasses it — so without this the patch would reference an
+    // unresolved placeholder and 404. The asset bytes are flushed by the
+    // follow-up rebuild this lazy compile triggers; the consumer awaits that
+    // before serving this code. See `meta/design/plugin-asset-module.md`
+    // (rolldown#9812 / vitejs/vite#22596).
+    if let Some(resolved) = resolve_asset_placeholders(&code, &filename, |ref_id| {
+      self.plugin_driver.file_emitter.get_file_name(ref_id).ok()
+    }) {
+      code = resolved;
+    }
+
     let file_dir = self.options.cwd.as_path().join(&self.options.out_dir);
 
     if let Some(map) = map.as_mut() {
@@ -539,6 +553,24 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     }
 
     Ok(code)
+  }
+
+  /// Drain assets emitted since the last flush (e.g. an image imported by a
+  /// module this patch adds) so the patch can carry them to the consumer. An HMR
+  /// update runs no `generate`, so `add_additional_files` is the only thing that
+  /// surfaces them; it is idempotent (guarded by `emitted_files`), so a later
+  /// full build won't re-emit them. See `meta/design/plugin-asset-module.md`.
+  fn collect_newly_emitted_assets(&self) -> Vec<Arc<OutputAsset>> {
+    let mut outputs = Vec::new();
+    let mut warnings = Vec::new();
+    self.plugin_driver.file_emitter.add_additional_files(&mut outputs, &mut warnings);
+    outputs
+      .into_iter()
+      .filter_map(|output| match output {
+        Output::Asset(asset) => Some(asset),
+        Output::Chunk(_) => None,
+      })
+      .collect()
   }
 
   // Kept for backwards compatibility - this method is no longer used but kept in case
@@ -798,6 +830,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       filename,
       sourcemap_filename: sourcemap_asset.as_ref().map(|asset| asset.filename.to_string()),
       sourcemap: sourcemap_asset.map(|asset| asset.source.try_into_string()).transpose()?,
+      // Dead path (`render_hmr_patch_from_prerequisites` is live); no assets here.
+      assets: Vec::new(),
       // Use stable module IDs for hmr_boundaries output
       hmr_boundaries: hmr_prerequisites
         .boundaries
@@ -986,6 +1020,22 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       None
     };
 
+    // Resolve `__ROLLDOWN_ASSET__#<refId>` placeholders that modules added by
+    // this patch carry. The generate phase (`renderChunk`) normally does this,
+    // but HMR codegen bypasses it — so without this the patch references an
+    // unresolved placeholder and 404s. See `meta/design/plugin-asset-module.md`
+    // (rolldown#9812 / vitejs/vite#22596).
+    if let Some(resolved) = resolve_asset_placeholders(&code, &filename, |ref_id| {
+      self.plugin_driver.file_emitter.get_file_name(ref_id).ok()
+    }) {
+      code = resolved;
+    }
+
+    // Surface assets emitted while computing this patch (e.g. a newly imported
+    // image). An HMR update runs no `generate`, so the consumer must register
+    // these for the URLs above to resolve on the first request.
+    let assets = self.collect_newly_emitted_assets();
+
     // Use stable module IDs for hmr_boundaries output
     Ok(HmrUpdate::Patch(HmrPatch {
       code,
@@ -1003,6 +1053,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
             .clone(),
         })
         .collect(),
+      assets,
     }))
   }
 

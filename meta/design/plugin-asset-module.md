@@ -71,7 +71,38 @@ The remaining ESM overhead gap (compared to the old `has_lazy_export` approach) 
 
 This is a balanced tradeoff: a small bridge API on the `FileEmitter` (`associate_module_with_file_ref` / `file_ref_for_module`) avoids the cost of re-parsing modules in a plugin `transform` hook. The core handles detection and rewriting; the plugin handles asset emission and filename generation.
 
+## HMR and lazy compilation
+
+`renderChunk` only runs in the **generate** phase. HMR patches and lazy-compilation
+chunks are assembled directly by the HMR codegen (`crates/rolldown/src/hmr/hmr_stage.rs`,
+via `EcmaCompiler::print_with` + `SourceJoiner`) and never run `renderChunk` — so the
+`__ROLLDOWN_ASSET__#<ref_id>` placeholder would otherwise leak to the browser and 404
+on the first request, only resolving after a full reload served the generated bundle
+(rolldown#9812 / vitejs/vite#22596).
+
+Two parts close that gap, for both the lazy entry path (`compile_lazy_entry`) and the
+live HMR patch path (`render_hmr_patch_from_prerequisites`):
+
+1. **Placeholder resolution.** `resolve_asset_placeholders()` (exported from this crate)
+   performs the same scan-and-replace as `renderChunk`, but as a plain-string pass
+   (no sourcemap remap) against the patch's served filename (e.g. `hmr_patch_0.js`).
+   The asset's final hashed filename is already known at this point — it is computed in
+   `FileEmitter::emit_file` during the `load` hook of the partial scan — so
+   `FileEmitter::get_file_name(ref_id)` resolves immediately. The shared `PREFIX` and
+   `compute_relative_path` keep this in lockstep with `renderChunk` without touching the
+   proven generate path.
+
+2. **Asset bytes.** An HMR update runs no `generate`, so the emitted bytes are never
+   flushed to the served output. The HMR patch path collects newly-emitted assets via
+   `FileEmitter::add_additional_files` (idempotent — guarded by `emitted_files`, so a
+   later full build won't re-emit them) and carries them on `HmrPatch.assets` →
+   `BindingHmrUpdate::Patch.assets` → the consumer registers them. The **lazy** path does
+   not change `compileEntry`'s `String` contract (Vite depends on it); instead the lazy
+   compile triggers a follow-up rebuild whose `onOutput` flushes the bytes, and the
+   consumer awaits `ensureLatestBuildOutput()` before serving the patch.
+
 ## Related
 
-- `crates/rolldown_plugin_asset_module/` — plugin implementation
+- `crates/rolldown_plugin_asset_module/` — plugin implementation (`resolve_asset_placeholders`)
+- `crates/rolldown/src/hmr/hmr_stage.rs` — HMR/lazy codegen that calls it
 - `crates/rolldown_plugin_copy_module/` — similar plugin pattern for `ModuleType::Copy`

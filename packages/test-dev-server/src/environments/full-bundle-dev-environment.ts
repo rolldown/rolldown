@@ -258,7 +258,15 @@ export class FullBundleDevEnvironment {
     if (!moduleId || !clientId) {
       return undefined;
     }
-    return this.#devEngine.compileEntry(moduleId, clientId);
+    const code = await this.#devEngine.compileEntry(moduleId, clientId);
+    // The lazy chunk's emitted assets are flushed into `memoryFiles` by the
+    // follow-up rebuild this compile triggers (via `onOutput`). Wait for it so
+    // the asset URLs the patch references are serveable before the browser —
+    // which receives `code` as the response — requests them. The placeholder
+    // resolution itself happens in core HMR codegen, so `code` already carries
+    // real `./assets/...` URLs. See vitejs/vite#22596 / rolldown#9812.
+    await this.#devEngine.ensureLatestBuildOutput();
+    return code;
   }
 
   // --- Dev engine callbacks --------------------------------------------------
@@ -390,6 +398,16 @@ export class FullBundleDevEnvironment {
       this.memoryFiles.set(output.filename, { source: output.code + '\n; export {}' });
       if (output.sourcemapFilename && output.sourcemap) {
         this.memoryFiles.set(output.sourcemapFilename, { source: output.sourcemap });
+      }
+      // Serve assets emitted by this HMR patch (e.g. a newly imported image).
+      // The patch references them by URL, but an HMR update runs no `generate`,
+      // so nothing else puts them in memory. See vitejs/vite#22596 /
+      // rolldown#9812.
+      for (const asset of output.assets) {
+        this.memoryFiles.set(asset.filename, {
+          source: asset.source,
+          etag: weakEtag(asset.source),
+        });
       }
       const url = `/${output.filename}`;
       this.#send(socket, { type: 'hmr:update', url, path: url });

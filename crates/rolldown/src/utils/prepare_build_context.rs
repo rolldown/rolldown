@@ -96,18 +96,14 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
         InvalidOptionType::CodeSplittingDisabledWithPreserveModules,
       ));
     }
-    if raw_options.manual_code_splitting.is_some() {
-      errors.push(BuildDiagnostic::invalid_option(
-        InvalidOptionType::CodeSplittingDisabledWithManualCodeSplitting,
-      ));
-    }
+    // `codeSplitting: false` and the object form (manual groups) are mutually exclusive
+    // by construction, so a "disabled + groups" conflict can no longer be expressed.
   }
 
-  // The grouping config may arrive either via the dedicated `manual_code_splitting`
-  // field or inline through the merged `codeSplitting` object form (`Advanced`).
+  // Manual chunk grouping arrives via the merged `codeSplitting` object form (`Advanced`).
   let manual_code_splitting = match &raw_options.code_splitting {
     Some(CodeSplittingMode::Advanced(options)) => Some(options),
-    _ => raw_options.manual_code_splitting.as_ref(),
+    _ => None,
   };
   if let Some(manual_code_splitting) = manual_code_splitting {
     let has_groups = manual_code_splitting.groups.as_ref().is_some_and(|groups| !groups.is_empty());
@@ -171,14 +167,14 @@ pub fn prepare_build_context(
 
   let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
 
-  // Decompose the (possibly merged) `codeSplitting` option into the gate
-  // (`code_splitting`) and the grouping config (`manual_code_splitting`). The raw
-  // option may carry the object form (`Advanced`) mirroring the public JS
-  // `codeSplitting: { groups, ... }`; the normalized layer keeps them as two fields.
+  // Decompose the merged `codeSplitting` option into the gate (`code_splitting`) and the
+  // grouping config (`manual_code_splitting`). The raw option may carry the object form
+  // (`Advanced`) mirroring the public JS `codeSplitting: { groups, ... }`; the normalized
+  // layer keeps them as two separate fields.
   let (raw_code_splitting_mode, manual_code_splitting) = match raw_options.code_splitting.take() {
     Some(CodeSplittingMode::Advanced(options)) => (CodeSplittingMode::Bool(true), Some(options)),
-    Some(mode @ CodeSplittingMode::Bool(_)) => (mode, raw_options.manual_code_splitting.take()),
-    None => (CodeSplittingMode::default(), raw_options.manual_code_splitting.take()),
+    Some(mode @ CodeSplittingMode::Bool(_)) => (mode, None),
+    None => (CodeSplittingMode::default(), None),
   };
 
   let preserve_entry_signatures = if let Some(manual_code_splitting) = &manual_code_splitting

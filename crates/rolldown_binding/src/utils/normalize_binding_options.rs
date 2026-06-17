@@ -464,89 +464,99 @@ pub fn normalize_binding_options(
       .inject
       .map(|inner| inner.into_iter().map(normalize_binding_inject_import).collect()),
     external_live_bindings: output_options.external_live_bindings,
-    code_splitting: match output_options.inline_dynamic_imports {
-      Some(true) => Some(CodeSplittingMode::Bool(false)),
-      Some(false) => Some(CodeSplittingMode::Bool(true)),
-      None => None,
+    code_splitting: {
+      // Reconcile the two still-separate binding inputs — `inlineDynamicImports` and the
+      // grouping config (`manualCodeSplitting`, fed from JS `advancedChunks` / `manualChunks`)
+      // — into the core's single `codeSplitting` option, whose object form (`Advanced`)
+      // carries the groups.
+      let manual_code_splitting = output_options
+        .manual_code_splitting
+        .map(|inner| -> napi::Result<ManualCodeSplittingOptions> {
+          Ok(ManualCodeSplittingOptions {
+            min_size: inner.min_size,
+            min_share_count: inner.min_share_count,
+            min_module_size: inner.min_module_size,
+            max_module_size: inner.max_module_size,
+            max_size: inner.max_size,
+            groups: inner
+              .groups
+              .map(|inner| {
+                inner
+                  .into_iter()
+                  .map(|item| -> napi::Result<MatchGroup> {
+                    Ok(MatchGroup {
+                      name: match item.name {
+                        Either::A(name) => MatchGroupName::Static(name),
+                        Either::B(func) => {
+                          let func = Arc::clone(&func);
+                          MatchGroupName::Dynamic(Arc::new(move |module_id, ctx| {
+                            let module_id = module_id.to_string();
+                            let func = Arc::clone(&func);
+                            let owned_ctx = ctx.clone();
+                            Box::pin(async move {
+                              func
+                                .invoke_async(
+                                  (module_id, BindingChunkingContext::new(owned_ctx)).into(),
+                                )
+                                .await
+                                .map_err(anyhow::Error::from)
+                            })
+                          }))
+                        }
+                      },
+                      test: item
+                        .test
+                        .map(|inner| -> napi::Result<rolldown::MatchGroupTest> {
+                          match inner {
+                            Either::A(reg) => Ok(rolldown::MatchGroupTest::Regex(
+                              reg.try_into().map_err(|err| {
+                                napi::Error::from_reason(format!(
+                                  "Invalid regex in `manualCodeSplitting` group `test`: {err}"
+                                ))
+                              })?,
+                            )),
+                            Either::B(func) => {
+                              Ok(rolldown::MatchGroupTest::Function(Arc::new(move |id: &str| {
+                                let id = id.to_string();
+                                let func = Arc::clone(&func);
+                                Box::pin(async move {
+                                  func.invoke_async((id,).into()).await.map_err(anyhow::Error::from)
+                                })
+                              })))
+                            }
+                          }
+                        })
+                        .transpose()?,
+                      priority: item.priority,
+                      min_size: item.min_size,
+                      min_share_count: item.min_share_count,
+                      max_module_size: item.max_module_size,
+                      min_module_size: item.min_module_size,
+                      max_size: item.max_size,
+                      entries_aware: item.entries_aware,
+                      entries_aware_merge_threshold: item.entries_aware_merge_threshold,
+                      tags: item.tags.map(|tags| tags.into_iter().map(ModuleTag::from).collect()),
+                      include_dependencies_recursively: item.include_dependencies_recursively,
+                    })
+                  })
+                  .collect::<napi::Result<Vec<_>>>()
+              })
+              .transpose()?,
+            include_dependencies_recursively: inner.include_dependencies_recursively,
+          })
+        })
+        .transpose()?;
+      match (output_options.inline_dynamic_imports, manual_code_splitting) {
+        // `inlineDynamicImports: true` wins and disables splitting. The JS layer already drops
+        // (and warns about) any grouping config in this case, so groups normally reach here only
+        // when a caller sets the binding fields directly; the `_` drops them to stay consistent.
+        (Some(true), _) => Some(CodeSplittingMode::Bool(false)),
+        (_, Some(groups)) => Some(CodeSplittingMode::Advanced(groups)),
+        (Some(false), None) => Some(CodeSplittingMode::Bool(true)),
+        (None, None) => None,
+      }
     },
     dynamic_import_in_cjs: output_options.dynamic_import_in_cjs,
-    manual_code_splitting: output_options
-      .manual_code_splitting
-      .map(|inner| -> napi::Result<ManualCodeSplittingOptions> {
-        Ok(ManualCodeSplittingOptions {
-          min_size: inner.min_size,
-          min_share_count: inner.min_share_count,
-          min_module_size: inner.min_module_size,
-          max_module_size: inner.max_module_size,
-          max_size: inner.max_size,
-          groups: inner
-            .groups
-            .map(|inner| {
-              inner
-                .into_iter()
-                .map(|item| -> napi::Result<MatchGroup> {
-                  Ok(MatchGroup {
-                    name: match item.name {
-                      Either::A(name) => MatchGroupName::Static(name),
-                      Either::B(func) => {
-                        let func = Arc::clone(&func);
-                        MatchGroupName::Dynamic(Arc::new(move |module_id, ctx| {
-                          let module_id = module_id.to_string();
-                          let func = Arc::clone(&func);
-                          let owned_ctx = ctx.clone();
-                          Box::pin(async move {
-                            func
-                              .invoke_async(
-                                (module_id, BindingChunkingContext::new(owned_ctx)).into(),
-                              )
-                              .await
-                              .map_err(anyhow::Error::from)
-                          })
-                        }))
-                      }
-                    },
-                    test: item
-                      .test
-                      .map(|inner| -> napi::Result<rolldown::MatchGroupTest> {
-                        match inner {
-                          Either::A(reg) => Ok(rolldown::MatchGroupTest::Regex(
-                            reg.try_into().map_err(|err| {
-                              napi::Error::from_reason(format!(
-                                "Invalid regex in `manualCodeSplitting` group `test`: {err}"
-                              ))
-                            })?,
-                          )),
-                          Either::B(func) => {
-                            Ok(rolldown::MatchGroupTest::Function(Arc::new(move |id: &str| {
-                              let id = id.to_string();
-                              let func = Arc::clone(&func);
-                              Box::pin(async move {
-                                func.invoke_async((id,).into()).await.map_err(anyhow::Error::from)
-                              })
-                            })))
-                          }
-                        }
-                      })
-                      .transpose()?,
-                    priority: item.priority,
-                    min_size: item.min_size,
-                    min_share_count: item.min_share_count,
-                    max_module_size: item.max_module_size,
-                    min_module_size: item.min_module_size,
-                    max_size: item.max_size,
-                    entries_aware: item.entries_aware,
-                    entries_aware_merge_threshold: item.entries_aware_merge_threshold,
-                    tags: item.tags.map(|tags| tags.into_iter().map(ModuleTag::from).collect()),
-                    include_dependencies_recursively: item.include_dependencies_recursively,
-                  })
-                })
-                .collect::<napi::Result<Vec<_>>>()
-            })
-            .transpose()?,
-          include_dependencies_recursively: inner.include_dependencies_recursively,
-        })
-      })
-      .transpose()?,
     checks: input_options.checks.map(Into::into),
     profiler_names: input_options.profiler_names,
     watch: input_options.watch.map(TryInto::try_into).transpose()?,

@@ -17,7 +17,6 @@ pub enum InvalidOptionType {
   InvalidFilenameSubstitution { name: String, pattern_name: String },
   CodeSplittingDisabledWithMultipleInputs,
   CodeSplittingDisabledWithPreserveModules,
-  CodeSplittingDisabledWithManualCodeSplitting,
   HashLengthTooLong { pattern_name: String, received: usize, max: usize },
   HashLengthTooShort { pattern_name: String, received: usize, min: usize, chunk_count: u32 },
   InvalidEmittedFileName(String),
@@ -96,9 +95,6 @@ impl BuildEvent for InvalidOption {
         }
         InvalidOptionType::CodeSplittingDisabledWithPreserveModules => {
           "Invalid value \"false\" for option \"output.codeSplitting\" - this option is not supported for \"output.preserveModules\".".to_string()
-        }
-        InvalidOptionType::CodeSplittingDisabledWithManualCodeSplitting => {
-          "Invalid value \"false\" for option \"output.codeSplitting\" - this option is not supported with manual code splitting groups.".to_string()
         }
         InvalidOptionType::HashLengthTooLong { pattern_name, received, max } => {
           format!("Hashes cannot be longer than {max} characters, received {received}. Check the `{pattern_name}` option.")

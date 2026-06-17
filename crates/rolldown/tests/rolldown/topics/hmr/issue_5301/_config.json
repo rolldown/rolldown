@@ -3,7 +3,7 @@
     "experimental": {
       "devMode": {}
     },
-    "manualCodeSplitting": {
+    "codeSplitting": {
       "groups": [
         {
           "name": "foo",

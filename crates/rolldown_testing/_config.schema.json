@@ -398,6 +398,7 @@
           ]
         },
         "codeSplitting": {
+          "description": "Mirrors the public `codeSplitting: boolean | CodeSplittingOptions`. The object\nform (`Advanced`) carries the manual chunk grouping config; it is decomposed into\nthe gate + `NormalizedBundlerOptions::manual_code_splitting` during normalization.",
           "anyOf": [
             {
               "$ref": "#/$defs/CodeSplittingMode"
@@ -411,16 +412,6 @@
           "type": [
             "boolean",
             "null"
-          ]
-        },
-        "manualCodeSplitting": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ManualCodeSplittingOptions"
-            },
-            {
-              "type": "null"
-            }
           ]
         },
         "checks": {

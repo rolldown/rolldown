@@ -2023,7 +2023,7 @@ export interface BindingBundleState {
    * success and for an initial full-build failure (use
    * `last_build_errored` to detect that). The consumer can force a full
    * rebuild on the next page load when this is `Hmr`. See
-   * `meta/design/dev-engine.md` §12.
+   * `internal-docs/dev-engine/implementation.md` §12.
    */
   lastErrorStage?: BindingErrorStage
   hasStaleOutput: boolean
@@ -2304,7 +2304,7 @@ export interface BindingErrors {
  * [`crate::binding_dev_engine::BindingBundleState`] so the consumer can
  * treat an `Hmr`-stage failure as recoverable by forcing a full rebuild
  * on the next page load (HMR generation may itself be buggy). See
- * `meta/design/dev-engine.md` §12.
+ * `internal-docs/dev-engine/implementation.md` §12.
  */
 export type BindingErrorStage =  'Hmr'|
 'Rebuild';

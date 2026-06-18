@@ -72,7 +72,7 @@ export class FullBundleDevEnvironment {
    * Most recent build error from *either* callback channel. Set in both
    * `onOutput` and `onHmrUpdates` on failure, cleared on a success from either
    * channel, and replayed to freshly-connected clients so the error survives a
-   * refresh. See `meta/design/dev-engine.md` §2.
+   * refresh. See `internal-docs/dev-engine/design.md` — principle 2.
    */
   #lastBuildError: Error | null = null;
   /**

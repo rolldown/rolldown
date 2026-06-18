@@ -280,7 +280,7 @@ pub struct BindingBundleState {
   /// success and for an initial full-build failure (use
   /// `last_build_errored` to detect that). The consumer can force a full
   /// rebuild on the next page load when this is `Hmr`. See
-  /// `meta/design/dev-engine.md` §12.
+  /// `internal-docs/dev-engine/implementation.md` §12.
   pub last_error_stage: Option<BindingErrorStage>,
   pub has_stale_output: bool,
 }

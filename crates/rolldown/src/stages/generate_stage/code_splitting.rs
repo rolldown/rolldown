@@ -31,7 +31,7 @@ use super::{GenerateStage, chunk_ext::ChunkCreationReason};
 pub struct SplittingInfo {
   pub bits: BitSet,
   pub share_count: u32,
-  /// Module tags bitset. See meta/design/module-tags.md
+  /// Module tags bitset. See internal-docs/module-tags/implementation.md
   pub tags_bit_set: ModuleTagBitSet,
 }
 
@@ -852,7 +852,7 @@ impl GenerateStage<'_> {
     let allow_avoid_redundant_chunk_loads =
       self.options.experimental.is_avoid_redundant_chunk_loads_enabled()
         && !has_tla_or_tla_dependency;
-    // See meta/design/code-splitting.md#dynamic-already-loaded-analysis.
+    // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self
         .link_output
@@ -992,7 +992,7 @@ impl GenerateStage<'_> {
       "rolldown runtime is always a normal module"
     );
 
-    // See meta/design/code-splitting.md#runtime-module-placement.
+    // See internal-docs/code-splitting/implementation.md#runtime-module-placement.
     let bits = &index_splitting_info[runtime_module_idx].bits;
     // Keep the `rolldown-runtime` name: downstream tooling (Vite / @vitejs/plugin-rsc)
     // identifies the runtime chunk by it. `None` emits a generic `chunk-[hash].js`
@@ -1050,7 +1050,7 @@ impl GenerateStage<'_> {
       index_splitting_info[module_idx].bits.set_bit(entry_index);
       index_splitting_info[module_idx].share_count += 1;
       // Tag as initial if reachable from a user-defined entry via static imports.
-      // See meta/design/module-tags.md
+      // See internal-docs/module-tags/implementation.md
       if is_user_defined_entry {
         index_splitting_info[module_idx].tags_bit_set.set_bit(ModuleTag::INITIAL_BIT);
       }

@@ -67,7 +67,7 @@ impl GenerateContext<'_> {
           // Scoped symbols don't get assigned a `ChunkIdx`. There are skipped for performance reason, because they are surely
           // belong to the chunk they are declared in and won't link to other chunks.
           let symbol_name = canonical_ref.name(symbol_db);
-          panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which isn't unexpected");
+          panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
         });
 
         let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;

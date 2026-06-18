@@ -455,7 +455,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         ast.program.with_mut(|fields| {
           // Re-running semantic re-stamps every NodeId. The NodeId-keyed side-table lookups
           // below still hit only because the clone is unmutated at this point: identical tree
-          // shape re-derives exactly the scan-time ids (see meta/design/ast-mutation.md).
+          // shape re-derives exactly the scan-time ids (see internal-docs/ast-mutation/implementation.md).
           let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
 
           let mut finalizer = HmrAstFinalizer {
@@ -695,7 +695,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         ast.program.with_mut(|fields| {
           // Re-running semantic re-stamps every NodeId. The NodeId-keyed side-table lookups
           // below still hit only because the clone is unmutated at this point: identical tree
-          // shape re-derives exactly the scan-time ids (see meta/design/ast-mutation.md).
+          // shape re-derives exactly the scan-time ids (see internal-docs/ast-mutation/implementation.md).
           let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
 
           let mut finalizer = HmrAstFinalizer {
@@ -888,7 +888,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         ast.program.with_mut(|fields| {
           // Re-running semantic re-stamps every NodeId. The NodeId-keyed side-table lookups
           // below still hit only because the clone is unmutated at this point: identical tree
-          // shape re-derives exactly the scan-time ids (see meta/design/ast-mutation.md).
+          // shape re-derives exactly the scan-time ids (see internal-docs/ast-mutation/implementation.md).
           let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
 
           let mut finalizer = HmrAstFinalizer {

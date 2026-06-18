@@ -205,7 +205,7 @@ To run the `tests/fixtures/resolve/alias` test, you could use `just test-node-ro
 | **browser**  | `browser` | A real Chromium page against an **in-process** dev server. Most dev-engine tests live here. |
 | **fixtures** | `node`    | The dev server building to **disk**, with the built artifact run as a `node` child process. |
 
-The architecture and the reasoning behind the harness are captured in the [Dev Server Test Harness design doc](https://github.com/rolldown/rolldown/blob/main/meta/design/dev-server-test-harness.md) — read it before changing the harness itself.
+The architecture and the reasoning behind the harness are captured in the [Dev Server Test Harness design doc](https://github.com/rolldown/rolldown/blob/main/internal-docs/dev-server-test-harness/implementation.md) — read it before changing the harness itself.
 
 ### Browser playgrounds
 

@@ -461,7 +461,7 @@ pub struct BundleState {
   /// The stage of the last incremental failure (`Some` only in
   /// `Failed { .. }`; `None` on success and on `FullBuildFailed`). Lets
   /// the consumer force a full rebuild on access after an `Hmr`-stage
-  /// failure — see `meta/design/dev-engine.md` §12.
+  /// failure — see `internal-docs/dev-engine/implementation.md` §12.
   pub last_error_stage: Option<ErrorStage>,
   pub has_stale_output: bool,
 }

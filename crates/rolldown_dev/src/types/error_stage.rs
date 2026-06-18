@@ -6,7 +6,7 @@
 /// a `Rebuild`-stage failure requires `HmrRebuild` so the link/codegen
 /// stage runs again.
 ///
-/// See `meta/design/dev-engine.md` — Design principles §3, §4.
+/// See `internal-docs/dev-engine/design.md` — principles 3 and 4.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorStage {
   /// Failed in `plugin_driver.watch_change` or `generate_hmr_updates`.

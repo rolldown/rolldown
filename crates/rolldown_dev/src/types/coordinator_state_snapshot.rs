@@ -8,9 +8,10 @@ pub struct CoordinatorStateSnapshot {
   /// True when the coordinator is in any error state — `FullBuildFailed`
   /// OR `Failed { .. }`.
   ///
-  /// Consumers should use this to gate
-  /// access-triggered rebuilds (Design principles §1) so a stale + errored bundle doesn't keep retriggering work
-  /// that the engine will no-op anyway. See `meta/design/dev-engine.md`.
+  /// Consumers should use this to gate access-triggered rebuilds
+  /// (`internal-docs/dev-engine/design.md`, principle 1) so a stale +
+  /// errored bundle doesn't keep retriggering work that the engine will
+  /// no-op anyway.
   pub last_build_errored: bool,
   /// The stage that produced the last incremental failure, when the
   /// coordinator is in `Failed { .. }`. `None` for the success path and
@@ -21,7 +22,7 @@ pub struct CoordinatorStateSnapshot {
   /// Consumers use this as an escape hatch: an `Hmr`-stage failure may be
   /// a bug in HMR generation, so a page reload can force a full rebuild
   /// (via `trigger_full_build`) rather than replaying the cached HMR
-  /// error. See `meta/design/dev-engine.md` §12.
+  /// error. See `internal-docs/dev-engine/implementation.md` §12.
   pub last_error_stage: Option<ErrorStage>,
   pub has_stale_output: bool,
 }

@@ -120,10 +120,30 @@ where
   async fn invoke_async(&self, args: Args) -> Result<Ret, napi::Error> {
     match self.call_async_catch(args).await? {
       Either::A(ret) => Ok(ret),
-      Either::B(invalid) => {
-        Err(create_invalid_return_error(invalid.value_type, Ret::value_type(), Ret::type_name()))
-      }
+      Either::B(invalid) => Err(create_invalid_return_error(invalid.value_type, Ret::value_type())),
     }
+  }
+}
+
+/// Extension trait for attaching a human-readable name (e.g. the option or hook
+/// name) to errors returned by [`JsCallbackExt::invoke_async`] /
+/// [`MaybeAsyncJsCallbackExt::await_call`].
+///
+/// Errors that cross the JS boundary (such as the "invalid return value" error
+/// from [`create_invalid_return_error`]) have no knowledge of the user-facing
+/// option/hook they belong to. Call `.context("external option")` on the result
+/// to prefix the name so the message points at the option instead of the
+/// internal callback type.
+pub trait JsCallbackResultExt<T> {
+  fn context(self, name: &str) -> napi::Result<T>;
+}
+
+impl<T> JsCallbackResultExt<T> for napi::Result<T> {
+  fn context(self, name: &str) -> napi::Result<T> {
+    self.map_err(|mut err| {
+      err.reason = format!("{name}: {}", err.reason);
+      err
+    })
   }
 }
 
@@ -142,15 +162,11 @@ fn js_type_name(value_type: ValueType) -> &'static str {
   }
 }
 
-fn create_invalid_return_error(
-  received: ValueType,
-  expected: ValueType,
-  expected_type_name: &'static str,
-) -> napi::Error {
+fn create_invalid_return_error(received: ValueType, expected: ValueType) -> napi::Error {
   napi::Error::new(
     Status::InvalidArg,
     format!(
-      "The function returned `{}`, but expected `{}` for `{expected_type_name}`.",
+      "The function returned `{}`, but expected `{}`.",
       js_type_name(received),
       js_type_name(expected),
     ),
@@ -172,9 +188,7 @@ where
     match self.call_async_catch(args).await? {
       Either::A(Either::A(promise)) => promise.await,
       Either::A(Either::B(ret)) => Ok(ret),
-      Either::B(invalid) => {
-        Err(create_invalid_return_error(invalid.value_type, Ret::value_type(), Ret::type_name()))
-      }
+      Either::B(invalid) => Err(create_invalid_return_error(invalid.value_type, Ret::value_type())),
     }
   }
 }

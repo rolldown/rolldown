@@ -14,11 +14,10 @@ use std::path::{Component, Path, PathBuf};
 pub fn common_dir<P, I>(paths: I) -> Option<PathBuf>
 where
   P: AsRef<Path>,
-  I: IntoIterator<Item = P> + Clone,
+  I: IntoIterator<Item = P>,
 {
-  let first = paths.clone().into_iter().next()?;
-  let path_trunk = first.as_ref().parent()?;
   let set = paths.into_iter().map(|p| p.as_ref().to_path_buf()).collect::<Vec<_>>();
+  let path_trunk = set.first()?.parent()?;
 
   for ancestor in path_trunk.ancestors() {
     if set.iter().all(|path| path.starts_with(ancestor)) {
@@ -108,21 +107,51 @@ mod tests {
   }
 
   #[test]
-  #[cfg(not(windows))]
   fn test_common_dir() {
-    // Multiple files sharing a directory -> that directory.
-    assert_eq!(
-      common_dir(["/my/common/path/a.png", "/my/common/path/b.png", "/my/common/path/c.png"]),
-      Some(PathBuf::from("/my/common/path"))
-    );
-    // Partially shared paths -> the deepest shared ancestor.
-    assert_eq!(
-      common_dir(["/my/common/path/a.png", "/my/common/path/b.png", "/my/uncommon/path/c.png"]),
-      Some(PathBuf::from("/my"))
-    );
-    // A single file -> its parent directory (bounded by the first path's parent).
-    assert_eq!(common_dir(["/my/common/path/a.png"]), Some(PathBuf::from("/my/common/path")));
-    // Empty input -> None.
+    // Empty input -> None (platform-independent).
     assert_eq!(common_dir(Vec::<&str>::new()), None);
+
+    #[cfg(not(windows))]
+    {
+      // Multiple files sharing a directory -> that directory.
+      assert_eq!(
+        common_dir(["/my/common/path/a.png", "/my/common/path/b.png", "/my/common/path/c.png"]),
+        Some(PathBuf::from("/my/common/path"))
+      );
+      // Partially shared paths -> the deepest shared ancestor.
+      assert_eq!(
+        common_dir(["/my/common/path/a.png", "/my/common/path/b.png", "/my/uncommon/path/c.png"]),
+        Some(PathBuf::from("/my"))
+      );
+      // A single file -> its parent directory (bounded by the first path's parent).
+      assert_eq!(common_dir(["/my/common/path/a.png"]), Some(PathBuf::from("/my/common/path")));
+    }
+
+    #[cfg(windows)]
+    {
+      // Multiple files sharing a directory -> that directory.
+      assert_eq!(
+        common_dir([
+          r"C:\my\common\path\a.png",
+          r"C:\my\common\path\b.png",
+          r"C:\my\common\path\c.png",
+        ]),
+        Some(PathBuf::from(r"C:\my\common\path"))
+      );
+      // Partially shared paths -> the deepest shared ancestor.
+      assert_eq!(
+        common_dir([
+          r"C:\my\common\path\a.png",
+          r"C:\my\common\path\b.png",
+          r"C:\my\uncommon\path\c.png",
+        ]),
+        Some(PathBuf::from(r"C:\my"))
+      );
+      // A single file -> its parent directory (bounded by the first path's parent).
+      assert_eq!(
+        common_dir([r"C:\my\common\path\a.png"]),
+        Some(PathBuf::from(r"C:\my\common\path"))
+      );
+    }
   }
 }

@@ -2110,6 +2110,12 @@ export interface BindingDeferSyncScanData {
 export interface BindingDevOptions {
   onHmrUpdates?: undefined | ((result: BindingResult<[BindingClientHmrUpdate[], string[]]>) => void | Promise<void>)
   onOutput?: undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)
+  /**
+   * Called with assets emitted while generating an HMR patch or compiling a
+   * lazy entry. These never go through `on_output`, so a consumer (e.g. Vite)
+   * must register this to serve them (e.g. write them to its in-memory files).
+   */
+  onAdditionalAssets?: undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)
   rebuildStrategy?: BindingRebuildStrategy
   watch?: BindingDevWatchOptions
 }

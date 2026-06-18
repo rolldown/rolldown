@@ -192,6 +192,21 @@ impl BundlingTask {
       self.hmr_errored = true;
     }
 
+    // Deliver any assets emitted while generating this HMR patch (e.g. an image
+    // newly imported by the changed module) BEFORE sending the patch, so the
+    // consumer can register/serve them before the client requests them. A pure
+    // HMR patch never triggers `on_output`, so this is their only delivery path.
+    if succeeded {
+      if let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref() {
+        let mut assets = Vec::new();
+        let mut warnings = Vec::new();
+        bundler.file_emitter.add_additional_files(&mut assets, &mut warnings);
+        if !assets.is_empty() {
+          on_additional_assets(assets);
+        }
+      }
+    }
+
     // Call on_hmr_updates callback if provided
     if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
       on_hmr_updates(hmr_result.map(|client_updates| {

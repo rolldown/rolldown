@@ -22,9 +22,10 @@ cow-utils = { workspace = true }
 derive_more = { workspace = true }
 flate2 = { workspace = true }
 itoa = { workspace = true }
-owo-colors = { workspace = true, features = ["supports-colors"] }
+owo-colors = { workspace = true }
 rayon = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 sugar_path = { workspace = true }
+supports-color = { workspace = true }
 terminal_size = { workspace = true }

@@ -210,6 +210,7 @@ serde_yaml = "0.9.34"
 simdutf8 = "0.1.5"
 string_cache = "0.9.0"
 sugar_path = { version = "2.0.1", features = ["cached_current_dir"] }
+supports-color = "3"
 terminal_size = "0.4.2"
 testing_macros = "1.0.0"
 tokio = { version = "1.45.0", default-features = false }

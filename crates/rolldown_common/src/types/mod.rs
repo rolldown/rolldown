@@ -29,7 +29,6 @@ pub mod member_expr_ref;
 pub mod member_expr_ref_resolution;
 pub mod module_def_format;
 pub mod module_id;
-pub mod module_idx;
 pub mod module_info;
 pub mod module_namespace_included_reason;
 pub mod module_render_output;

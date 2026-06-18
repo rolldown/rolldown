@@ -6,6 +6,7 @@ WORKSPACE_DIR = { value = "", relative = true }
 ck = "check --workspace --all-features --all-targets --locked"
 ls-lint = "run --bin ls-lint"
 run-fixture = "run --bin run-fixture"
+allocs = "run -p track_memory_allocations"
 
 [target.x86_64-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]

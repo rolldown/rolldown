@@ -82,6 +82,12 @@ jobs:
 
       - run: just lint-rust
 
+      - name: Check allocations
+        run: |
+          cargo allocs
+          git diff --exit-code -- tasks/track_memory_allocations/allocs.snap ||
+          (echo 'Allocations have changed. Run `just allocs` to update the snapshot, otherwise please fix the regression.' && exit 1)
+
   cargo-test:
     needs: changes
     strategy:

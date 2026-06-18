@@ -240,9 +240,9 @@ syn = { version = "2", default-features = false }
 # napi
 # Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks
 # (e.g. #7289) by showing which napi function is pending.
-napi = { version = "3.0.0", features = ["async", "anyhow", "tracing", "object_indexmap"] }
-napi-build = { version = "2.2.2" }
-napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
+napi = { version = "3", features = ["async", "anyhow", "tracing", "object_indexmap"] }
+napi-build = { version = "2" }
+napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
 oxc = { version = "0.137.0", features = [

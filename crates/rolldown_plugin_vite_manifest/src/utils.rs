@@ -2,9 +2,10 @@ use std::{ffi::OsString, sync::Arc};
 
 use arcstr::ArcStr;
 use cow_utils::CowUtils;
-use rolldown_common::{Output, OutputAsset, OutputChunk};
+use rolldown_common::{OutputAsset, OutputChunk};
 use rolldown_plugin_utils::constants::ChunkMetadata;
 use rolldown_utils::pattern_filter::normalize_path;
+use rustc_hash::FxHashMap;
 use serde::Serialize;
 
 use super::ViteManifestPlugin;
@@ -73,10 +74,9 @@ impl ViteManifestPlugin {
 
   pub fn create_chunk(
     &self,
-    bundle: &Vec<Output>,
+    chunk_names: &FxHashMap<ArcStr, String>,
     chunk: &OutputChunk,
     src: &str,
-    is_legacy: bool,
     vite_metadata: Option<&Arc<ChunkMetadata>>,
   ) -> ManifestChunk {
     let css = vite_metadata
@@ -92,8 +92,8 @@ impl ViteManifestPlugin {
       src: chunk.facade_module_id.is_some().then(|| src.to_string()),
       is_entry: chunk.is_entry,
       is_dynamic_entry: chunk.is_dynamic_entry,
-      imports: self.get_internal_imports(bundle, &chunk.imports, is_legacy),
-      dynamic_imports: self.get_internal_imports(bundle, &chunk.dynamic_imports, is_legacy),
+      imports: Self::get_internal_imports(chunk_names, &chunk.imports),
+      dynamic_imports: Self::get_internal_imports(chunk_names, &chunk.dynamic_imports),
       css,
       assets,
       ..Default::default()
@@ -101,23 +101,10 @@ impl ViteManifestPlugin {
   }
 
   fn get_internal_imports(
-    &self,
-    bundle: &Vec<Output>,
-    imports: &Vec<ArcStr>,
-    is_legacy: bool,
+    chunk_names: &FxHashMap<ArcStr, String>,
+    imports: &[ArcStr],
   ) -> Vec<String> {
-    let mut filtered_imports = vec![];
-    for file in imports {
-      for output in bundle {
-        if let Output::Chunk(chunk) = output {
-          if chunk.filename == *file {
-            filtered_imports.push(self.get_chunk_name(chunk, is_legacy));
-            break;
-          }
-        }
-      }
-    }
-    filtered_imports
+    imports.iter().filter_map(|file| chunk_names.get(file).cloned()).collect()
   }
 }
 

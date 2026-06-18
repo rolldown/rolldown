@@ -46,10 +46,24 @@ impl Plugin for ViteManifestPlugin {
     let mut manifest = BTreeMap::default();
     let mut css_entries = None;
 
+    // Compute each chunk's manifest name once, keyed by output filename, so that
+    // both the chunk's own entry and any chunk importing it reuse it instead of
+    // recomputing the name (and rescanning the bundle) for every import.
+    let chunk_names = args
+      .bundle
+      .iter()
+      .filter_map(|output| match output {
+        Output::Chunk(chunk) => {
+          Some((chunk.filename.clone(), self.get_chunk_name(chunk, is_legacy)))
+        }
+        Output::Asset(_) => None,
+      })
+      .collect::<FxHashMap<_, _>>();
+
     for file in args.bundle.iter() {
       match file {
         Output::Chunk(chunk) => {
-          let name = self.get_chunk_name(chunk, is_legacy);
+          let name = chunk_names[&chunk.filename].clone();
           let vite_metadata = if self.is_enable_v2 {
             ctx.meta().get::<ViteMetadata>().and_then(|cache| {
               cache.inner.get(chunk.preliminary_filename.as_str()).map(|v| v.clone())
@@ -57,13 +71,8 @@ impl Plugin for ViteManifestPlugin {
           } else {
             None
           };
-          let chunk_manifest = Arc::new(self.create_chunk(
-            args.bundle,
-            chunk,
-            &name,
-            is_legacy,
-            vite_metadata.as_ref(),
-          ));
+          let chunk_manifest =
+            Arc::new(self.create_chunk(&chunk_names, chunk, &name, vite_metadata.as_ref()));
           manifest.insert(name, chunk_manifest);
         }
         Output::Asset(asset) => {

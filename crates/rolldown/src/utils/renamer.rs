@@ -1,7 +1,5 @@
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use std::collections::hash_map::Entry;
-
 use oxc::semantic::Scoping;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use oxc_str::CompactStr;
@@ -13,25 +11,12 @@ use rolldown_common::{
 use rolldown_utils::concat_string;
 
 use crate::stages::link_stage::LinkStageOutput;
+use crate::utils::chunk::conflict_resolver::ConflictResolver;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
-  /// Tracks all canonical names used in the top-level scope.
-  ///
-  /// Key is the canonical name, value is the conflict index for generating unique names.
-  /// When we need a unique name like `foo$1`, we increment the conflict index stored here.
-  ///
-  /// Example:
-  /// ```js
-  /// // index.js
-  /// import {a as b} from './a.js'
-  /// const a = 1;      // used_canonical_names: {a: 0}
-  /// const a$1 = 1000; // used_canonical_names: {a: 0, a$1: 0}
-  ///
-  /// // a.js
-  /// export const a = 100; // Try `a` (used), `a$1` (used), `a$2` (available) → rename to `a$2`
-  /// ```
-  used_canonical_names: FxHashMap<CompactStr, u32>,
+  /// Shared conflict-suffix engine; owns the set of taken top-level names.
+  resolver: ConflictResolver,
   /// Final symbol → name mappings.
   canonical_names: FxHashMap<SymbolRef, CompactStr>,
   symbol_db: &'name SymbolRefDb,
@@ -57,12 +42,13 @@ impl<'name> Renamer<'name> {
     Self {
       canonical_names: FxHashMap::default(),
       symbol_db,
-      used_canonical_names: manual_reserved
-        .iter()
-        .chain(RESERVED_KEYWORDS.iter())
-        .chain(GLOBAL_OBJECTS.iter())
-        .map(|s| (CompactStr::new(s), 0))
-        .collect(),
+      resolver: ConflictResolver::new(
+        manual_reserved
+          .iter()
+          .chain(RESERVED_KEYWORDS.iter())
+          .chain(GLOBAL_OBJECTS.iter())
+          .map(|s| CompactStr::new(s)),
+      ),
       entry_module_idx: base_module_index,
     }
   }
@@ -81,17 +67,7 @@ impl<'name> Renamer<'name> {
   }
 
   pub fn reserve(&mut self, name: CompactStr) {
-    self.used_canonical_names.entry(name).or_insert(0);
-  }
-
-  /// Returns true if `name` exists in any nested (non-root) scope of the module.
-  /// Returns false for modules without AST (external modules).
-  fn has_nested_scope_binding(&self, module_idx: ModuleIdx, name: &str) -> bool {
-    let Some(db) = &self.symbol_db[module_idx] else {
-      return false;
-    };
-    // Skip root scope (index 0), check nested scopes only
-    db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
+    self.resolver.reserve(name);
   }
 
   /// Check if a candidate name is available for a top-level symbol without causing
@@ -139,13 +115,15 @@ impl<'name> Renamer<'name> {
   ///
   /// Here the author intentionally wrote a parameter named `value` that shadows the import.
   /// We allow this (`is_original_name = true`), so the import keeps its name `value`.
-  fn is_name_available(
-    &self,
+  #[inline]
+  fn is_name_available_with(
+    symbol_db: &SymbolRefDb,
+    entry_module_idx: Option<ModuleIdx>,
     candidate_name: &str,
     symbol_ref: SymbolRef,
     is_original_name: bool,
   ) -> bool {
-    if let Some(entry_idx) = self.entry_module_idx {
+    if let Some(entry_idx) = entry_module_idx {
       if symbol_ref.owner == entry_idx {
         // Entry module symbols can use their original names freely - shadowing is
         // handled by reference-based renaming of nested bindings later
@@ -155,7 +133,7 @@ impl<'name> Renamer<'name> {
 
     // Renamed candidates must not conflict with own module's nested bindings
     // (original names are allowed to shadow - that's intentional)
-    if !is_original_name && self.has_nested_scope_binding(symbol_ref.owner, candidate_name) {
+    if !is_original_name && has_nested_scope_binding(symbol_db, symbol_ref.owner, candidate_name) {
       return false;
     }
 
@@ -195,63 +173,24 @@ impl<'name> Renamer<'name> {
       return;
     }
 
-    // Fast path: original name is available
-    if !self.used_canonical_names.contains_key(&original_name)
-      && self.is_name_available(&original_name, canonical_ref, true)
-    {
-      self.used_canonical_names.insert(original_name.clone(), 0);
-      self.canonical_names.insert(canonical_ref, original_name);
-      return;
-    }
-
-    // Slow path: find alternative name (original$1, original$2, ...)
-    let mut conflict_index = self
-      .used_canonical_names
-      .get_mut(&original_name)
-      .map(|idx| {
-        *idx += 1;
-        *idx
-      })
-      .unwrap_or(1);
-
-    loop {
-      let candidate_name: CompactStr =
-        concat_string!(original_name, "$", itoa::Buffer::new().format(conflict_index)).into();
-
-      if let Some(idx) = self.used_canonical_names.get_mut(&candidate_name) {
-        *idx += 1;
-        conflict_index = *idx;
-        continue;
-      }
-
-      if !self.is_name_available(&candidate_name, canonical_ref, false) {
-        conflict_index += 1;
-        continue;
-      }
-
-      self.used_canonical_names.insert(candidate_name.clone(), 0);
-      self.canonical_names.insert(canonical_ref, candidate_name);
-      break;
-    }
+    // Bind the fields the `accept` closure reads as locals so the borrow of
+    // `self.resolver` (mutable, in `resolve`) does not overlap a borrow of `self`.
+    let symbol_db = self.symbol_db;
+    let entry_module_idx = self.entry_module_idx;
+    let canonical_name = self.resolver.resolve(original_name, |candidate, is_original| {
+      Self::is_name_available_with(
+        symbol_db,
+        entry_module_idx,
+        candidate,
+        canonical_ref,
+        is_original,
+      )
+    });
+    self.canonical_names.insert(canonical_ref, canonical_name);
   }
 
-  pub fn create_conflictless_name(&mut self, hint: &str) -> String {
-    let mut conflictless_name = CompactStr::new(hint);
-    loop {
-      match self.used_canonical_names.entry(conflictless_name.clone()) {
-        Entry::Occupied(mut occ) => {
-          let next_conflict_index = occ.get() + 1;
-          *occ.get_mut() = next_conflict_index;
-          conflictless_name =
-            concat_string!(hint, "$", itoa::Buffer::new().format(next_conflict_index)).into();
-        }
-        Entry::Vacant(vac) => {
-          vac.insert(0);
-          break;
-        }
-      }
-    }
-    conflictless_name.to_string()
+  pub fn create_conflictless_name(&mut self, hint: &str) -> CompactStr {
+    self.resolver.resolve(CompactStr::new(hint), |_, _| true)
   }
 
   pub fn register_nested_scope_symbols(&mut self, symbol_ref: SymbolRef, original_name: &str) {
@@ -266,7 +205,7 @@ impl<'name> Renamer<'name> {
       let name: CompactStr =
         concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
 
-      if self.used_canonical_names.contains_key(&name) {
+      if self.resolver.contains(&name) {
         continue;
       }
 
@@ -274,12 +213,12 @@ impl<'name> Renamer<'name> {
       // a nested scope of the same module. Without this check, renaming `child`
       // to `child$1` could collide with an existing `child$1` binding in the
       // same scope (e.g. from Gleam's variable shadowing convention).
-      if self.has_nested_scope_binding(symbol_ref.owner, &name) {
-        self.used_canonical_names.insert(name, 0);
+      if has_nested_scope_binding(self.symbol_db, symbol_ref.owner, &name) {
+        self.resolver.reserve(name);
         continue;
       }
 
-      self.used_canonical_names.insert(name.clone(), 0);
+      self.resolver.reserve(name.clone());
       self.canonical_names.insert(symbol_ref, name);
       return;
     }
@@ -289,6 +228,16 @@ impl<'name> Renamer<'name> {
   pub fn into_canonical_names(self) -> FxHashMap<SymbolRef, CompactStr> {
     self.canonical_names
   }
+}
+
+/// Returns true if `name` exists in any nested (non-root) scope of the module.
+/// Returns false for modules without AST (external modules).
+fn has_nested_scope_binding(symbol_db: &SymbolRefDb, module_idx: ModuleIdx, name: &str) -> bool {
+  let Some(db) = &symbol_db[module_idx] else {
+    return false;
+  };
+  // Skip root scope (index 0), check nested scopes only
+  db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
 }
 
 /// Context for renaming nested scope symbols that would shadow top-level symbols.

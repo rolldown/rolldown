@@ -6,7 +6,7 @@ use rolldown_common::{
   ResolvedId,
 };
 use rolldown_error::BuildResult;
-use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
+use rolldown_utils::{commondir, ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 use sugar_path::SugarPath;
 
 use rolldown_fs::FileSystem;
@@ -71,12 +71,11 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
       && Path::new(resolved_id.id.as_str()).is_absolute();
 
     let file_name: ArcStr = if need_renormalize_render_path {
-      let entries_common_dir = commondir::CommonDir::try_new(
+      let entries_common_dir = commondir::common_dir(
         self.user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
       )
       .expect("should have common dir for entries");
-      let relative_path =
-        Path::new(resolved_id.id.as_str()).relative(entries_common_dir.common_root());
+      let relative_path = Path::new(resolved_id.id.as_str()).relative(&entries_common_dir);
       relative_path.to_slash_lossy().into()
     } else {
       resolved_id.id.as_arc_str().clone()

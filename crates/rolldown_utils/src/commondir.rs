@@ -1,4 +1,33 @@
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
+
+/// Finds the common root directory of a set of paths.
+///
+/// The returned directory is the deepest ancestor of (or equal to) the parent of
+/// the first path that is also a prefix of every input path. When no deeper common
+/// ancestor exists, the parent of the first path is returned.
+///
+/// Returns `None` when `paths` is empty or the first path has no parent directory.
+/// Paths are expected to be absolute.
+///
+/// This is a port of the [`commondir`](https://crates.io/crates/commondir) crate's
+/// `CommonDir::common_root`, kept in-tree to avoid the extra dependency.
+pub fn common_dir<P, I>(paths: I) -> Option<PathBuf>
+where
+  P: AsRef<Path>,
+  I: IntoIterator<Item = P> + Clone,
+{
+  let first = paths.clone().into_iter().next()?;
+  let path_trunk = first.as_ref().parent()?;
+  let set = paths.into_iter().map(|p| p.as_ref().to_path_buf()).collect::<Vec<_>>();
+
+  for ancestor in path_trunk.ancestors() {
+    if set.iter().all(|path| path.starts_with(ancestor)) {
+      return Some(ancestor.to_path_buf());
+    }
+  }
+
+  Some(path_trunk.to_path_buf())
+}
 
 /// Extracts the longest common path from two given file paths.
 ///
@@ -76,5 +105,24 @@ mod tests {
       let path_mixed2 = "/Users/user/Documents/report.txt";
       assert_eq!(extract_longest_common_path(path_mixed1, path_mixed2), "");
     }
+  }
+
+  #[test]
+  #[cfg(not(windows))]
+  fn test_common_dir() {
+    // Multiple files sharing a directory -> that directory.
+    assert_eq!(
+      common_dir(["/my/common/path/a.png", "/my/common/path/b.png", "/my/common/path/c.png"]),
+      Some(PathBuf::from("/my/common/path"))
+    );
+    // Partially shared paths -> the deepest shared ancestor.
+    assert_eq!(
+      common_dir(["/my/common/path/a.png", "/my/common/path/b.png", "/my/uncommon/path/c.png"]),
+      Some(PathBuf::from("/my"))
+    );
+    // A single file -> its parent directory (bounded by the first path's parent).
+    assert_eq!(common_dir(["/my/common/path/a.png"]), Some(PathBuf::from("/my/common/path")));
+    // Empty input -> None.
+    assert_eq!(common_dir(Vec::<&str>::new()), None);
   }
 }

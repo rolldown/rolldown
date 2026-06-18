@@ -82,7 +82,6 @@
 /crates/rolldown_utils/                                 @IWANABETHATGUY @hyf0 @shulaoda
 /crates/rolldown_std_utils/                             @IWANABETHATGUY @shulaoda
 /crates/rolldown_tracing/                               @hyf0 @IWANABETHATGUY
-/crates/rolldown_filter_analyzer/                       @IWANABETHATGUY @hyf0
 /crates/rolldown_workspace/                             @IWANABETHATGUY @hyf0
 /crates/rolldown_testing/                               @hyf0 @IWANABETHATGUY
 /crates/rolldown_testing_config/                        @IWANABETHATGUY @hyf0

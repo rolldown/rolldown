@@ -26,7 +26,11 @@ pub fn is_deep_import(id: &str) -> bool {
 }
 
 pub fn get_extension(id: &str) -> &str {
-  id.rsplit_once('.').map_or("", |(_, ext)| ext)
+  // Match Node's `path.extname` (the extension without its leading dot): only
+  // inspect the basename, and treat a leading-dot basename (dotfiles such as
+  // `.bashrc`) as having no extension. A dot in a directory segment (e.g. pnpm's
+  // `.pnpm`/`.store` stores or `pkg@1.2.3` dirs) must not be read as the extension.
+  std::path::Path::new(id).extension().and_then(|ext| ext.to_str()).unwrap_or_default()
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Character_class_escape#w

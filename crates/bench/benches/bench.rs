@@ -4,7 +4,7 @@ static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 use std::fmt::Write as _;
 
 use bench::{BenchMode, DeriveOptions, bench_preset, rome_ts_preset, run_bench_group};
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{BatchSize, Criterion, black_box, criterion_group, criterion_main};
 use oxc::{
   allocator::Allocator,
   codegen::{Codegen, CodegenOptions, CodegenReturn},
@@ -149,23 +149,27 @@ const BIG_CHUNK: u32 = 2000;
 fn sourcemap_benches(c: &mut Criterion) {
   let mut group = c.benchmark_group("sourcemap");
 
-  // `SourceJoiner::join` rebuilds the `ConcatSourceMapBuilder` and output on
-  // every call, so each joiner is built once here and every iteration measures
-  // a full chunk assembly + sourcemap merge.
+  // `join` consumes the joiner, so it's rebuilt per iteration in the (excluded) setup; each measured iteration is one full chunk assembly + sourcemap merge.
 
   // With sourcemaps: a large (shit-mountain-scale) chunk of mapped modules +
   // banner/footer — drives `ConcatSourceMapBuilder` (token buffer + dedup + line offsets).
-  let app_chunk = build_chunk_joiner(BIG_CHUNK);
   group.bench_function("join_with_sourcemap", |b| {
-    b.iter(|| black_box(app_chunk.join()));
+    b.iter_batched(
+      || build_chunk_joiner(BIG_CHUNK),
+      |chunk| black_box(chunk.join()),
+      BatchSize::SmallInput,
+    );
   });
 
   // Without sourcemaps: the same module bodies as plain sources — the
   // `enable_sourcemap == false` fast path that skips the builder entirely (the
   // most common production build, `output.sourcemap` unset).
-  let plain_chunk = build_plain_joiner(BIG_CHUNK);
   group.bench_function("join_no_sourcemap", |b| {
-    b.iter(|| black_box(plain_chunk.join()));
+    b.iter_batched(
+      || build_plain_joiner(BIG_CHUNK),
+      |chunk| black_box(chunk.join()),
+      BatchSize::SmallInput,
+    );
   });
 
   // `collapse_sourcemaps` — the module-transform (`render_chunks.rs`) and

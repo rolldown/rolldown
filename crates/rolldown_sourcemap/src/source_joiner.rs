@@ -36,49 +36,43 @@ impl<'source> SourceJoiner<'source> {
     self.prepend_source.push(Box::new(source));
   }
 
-  pub fn join(&self) -> (String, Option<SourceMap>) {
+  pub fn join(self) -> (String, Option<SourceMap>) {
     let sources_len = self.prepend_source.len() + self.inner.len();
-    let sources_iter = self.prepend_source.iter().chain(self.inner.iter()).enumerate();
 
-    let size_hint_of_ret_source =
-      sources_iter.clone().map(|(_idx, source)| source.content().len()).sum::<usize>()
-        + sources_len;
+    let size_hint_of_ret_source = self
+      .prepend_source
+      .iter()
+      .chain(self.inner.iter())
+      .map(|source| source.content().len())
+      .sum::<usize>()
+      + sources_len;
     let mut ret_source = String::with_capacity(size_hint_of_ret_source);
 
-    // Fast path: when no source carries a sourcemap, `join` is a plain
-    // concatenation with `\n` separators. `line_offset` and the per-source
-    // `lines_count()` newline scan exist only to feed the sourcemap builder,
-    // so skip them entirely here. Splitting the loop (rather than branching
-    // inside it) also keeps the sourcemap loop below free of per-iteration
-    // builder checks.
-    if !self.enable_sourcemap {
-      for (index, source) in sources_iter {
-        ret_source.push_str(source.content());
-        if index < sources_len - 1 {
-          ret_source.push('\n');
+    let mut line_offset = 0;
+
+    let mut sourcemap_builder = self.enable_sourcemap.then(|| {
+      ConcatSourceMapBuilder::with_capacity(
+        self.names_len,
+        self.sources_len,
+        self.tokens_len,
+        self.token_chunks_len,
+      )
+    });
+    // Move each owned map into the builder (no per-string copy), so the result is `'static` and the trailing into_owned is gone.
+    for (index, source) in self.prepend_source.into_iter().chain(self.inner).enumerate() {
+      let lines_count = source.lines_count();
+      ret_source.push_str(source.content());
+      if let Some(sourcemap_builder) = &mut sourcemap_builder {
+        if let Some(map) = source.into_sourcemap() {
+          sourcemap_builder.add_sourcemap_owned(map, line_offset);
         }
       }
-      return (ret_source, None);
-    }
-
-    let mut line_offset = 0;
-    let mut sourcemap_builder = ConcatSourceMapBuilder::with_capacity(
-      self.names_len,
-      self.sources_len,
-      self.tokens_len,
-      self.token_chunks_len,
-    );
-    for (index, source) in sources_iter {
-      source.sourcemap().inspect(|map| {
-        sourcemap_builder.add_sourcemap(map, line_offset);
-      });
-      ret_source.push_str(source.content());
       if index < sources_len - 1 {
         ret_source.push('\n');
-        line_offset += source.lines_count() + 1; // +1 for the newline
+        line_offset += lines_count + 1; // +1 for the newline
       }
     }
-    (ret_source, Some(sourcemap_builder.into_sourcemap().into_owned()))
+    (ret_source, sourcemap_builder.map(ConcatSourceMapBuilder::into_sourcemap))
   }
 
   fn accumulate_sourcemap_data_size(&mut self, hint: &SourceMap) {

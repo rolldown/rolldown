@@ -8,6 +8,10 @@ pub trait Source {
   fn lines_count(&self) -> u32 {
     lines_count(self.content())
   }
+  /// By-value taker so `SourceJoiner::join` can move the owned map into the merge instead of copying it.
+  fn into_sourcemap(self: Box<Self>) -> Option<SourceMap> {
+    None
+  }
 }
 
 impl Source for &str {
@@ -62,6 +66,10 @@ impl Source for SourceMapSource {
 
   fn lines_count(&self) -> u32 {
     self.pre_computed_lines_count.unwrap_or_else(|| lines_count(&self.content))
+  }
+
+  fn into_sourcemap(self: Box<Self>) -> Option<SourceMap> {
+    Some(self.sourcemap)
   }
 }
 

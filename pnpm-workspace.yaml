@@ -135,3 +135,5 @@ minimumReleaseAgeExclude:
   - oxc-minify
   - oxc-parser
   - oxc-transform
+  - '@voidzero-dev/*'
+  - vite-plus

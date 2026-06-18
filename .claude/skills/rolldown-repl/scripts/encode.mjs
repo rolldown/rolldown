@@ -326,7 +326,7 @@ function main() {
         console.error(`warning: could not parse _config.json (${e.message}) — emitting files only`);
       }
       if (parsed) {
-        let rawConfig = { ...(parsed.config || {}) };
+        let rawConfig = { ...parsed.config };
 
         const variants = parsed.configVariants || [];
         if (variant) {

@@ -10,7 +10,7 @@ import assert from "node:assert";
 //#endregion
 //#region text.data
 var text_default = (/* @__PURE__ */ (() => {
-	var table = new Uint8Array(128);
+	var table = /* @__PURE__ */ new Uint8Array(128);
 	for (var i = 0; i < 64; i++) table[i < 26 ? i + 65 : i < 52 ? i + 71 : i < 62 ? i - 4 : i * 4 - 205] = i;
 	return (base64) => {
 		var n = base64.length, bytes = new Uint8Array((n - (base64[n - 1] == "=") - (base64[n - 2] == "=")) * 3 / 4 | 0);

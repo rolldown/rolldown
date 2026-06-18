@@ -24,7 +24,6 @@ itertools = { workspace = true }
 oxc = { workspace = true }
 oxc_ecmascript = { workspace = true }
 oxc_index = { workspace = true }
-oxc_react_compiler = { workspace = true }
 oxc_str = { workspace = true }
 oxc_resolver = { workspace = true }
 oxc_sourcemap = { workspace = true }

@@ -141,6 +141,19 @@ pub fn deconflict_chunk_symbols(
     }
   }
 
+  // The renamer relies on `chunk.modules` being in ascending exec_order so that
+  // `.rev()` yields entry-first / descending exec_order — the same priority as
+  // `deconflict_order_key`. Enforce that invariant in debug builds (was only a
+  // prose + pinned-SHA comment before).
+  debug_assert!(
+    chunk
+      .modules
+      .iter()
+      .filter_map(|idx| link_output.module_table[*idx].as_normal().map(|m| m.exec_order))
+      .is_sorted(),
+    "chunk.modules must be in ascending exec_order for deconfliction"
+  );
+
   chunk
     .modules
     .iter()
@@ -215,10 +228,12 @@ pub fn deconflict_chunk_symbols(
     .map(|(id, _)| {
       (
         *id,
-        renamer.create_conflictless_name(&legitimize_identifier_name(&format!(
-          "require_{}",
-          index_chunk_id_to_name[id]
-        ))),
+        renamer
+          .create_conflictless_name(&legitimize_identifier_name(&format!(
+            "require_{}",
+            index_chunk_id_to_name[id]
+          )))
+          .to_string(),
       )
     })
     .collect();
@@ -255,7 +270,7 @@ pub fn deconflict_chunk_symbols(
         let canonical_ref = link_output.symbol_db.canonical_ref_for(ext.namespace_ref);
         let original_name = canonical_ref.name(&link_output.symbol_db);
         let node_name = renamer.create_conflictless_name(original_name);
-        node_mode_names.insert(canonical_ref, CompactStr::new(&node_name));
+        node_mode_names.insert(canonical_ref, node_name);
       }
     }
     chunk.node_mode_external_ns_names = node_mode_names;

@@ -246,6 +246,11 @@ bump-packages *args:
 update-generated-code:
   cargo run --bin generator
 
+# Update the allocation-count snapshot (tasks/track_memory_allocations/allocs.snap).
+# Run after changes to `rolldown_sourcemap` if the allocs CI gate fails.
+allocs:
+  cargo allocs
+
 # Run the `rolldown` cli using node.
 run *args:
   ./node_modules/.bin/rolldown {{ args }}

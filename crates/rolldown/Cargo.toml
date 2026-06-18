@@ -24,7 +24,6 @@ append-only-vec = { workspace = true }
 arcstr = { workspace = true }
 dashmap = { workspace = true }
 bitflags = { workspace = true }
-commondir = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
 itertools = { workspace = true }

@@ -21,6 +21,7 @@ nodejs-built-in-modules = { workspace = true }
 owo-colors = { workspace = true }
 oxc_resolver = { workspace = true }
 parking_lot = { workspace = true }
+percent-encoding = { workspace = true }
 pnp = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
@@ -32,7 +33,6 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 sugar_path = { workspace = true }
 url = { workspace = true }
-urlencoding = { workspace = true }
 
 # `url` pulls in `idna`, which by default uses a heavy ICU Unicode backend. We keep IDNA
 # support turned off (ASCII-only) by pinning `idna_adapter` to its no-ICU 1.0.0 release.

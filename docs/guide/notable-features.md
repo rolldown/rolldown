@@ -28,9 +28,6 @@ The following transforms are supported:
   - Sets configurations based on the `tsconfig.json` when the [`tsconfig`](/reference/InputOptions.tsconfig) option is provided.
   - Supported legacy decorators and decorator metadata.
 - JSX
-- React Compiler (experimental)
-  - Enable via the [`transform.reactCompiler`](/reference/InputOptions.transform#reactcompiler) option — set it to `true` to use the defaults, or pass a `ReactCompilerOptions` object to configure it.
-  - Runs the [React Compiler](https://react.dev/learn/react-compiler) as the first transform pass, before JSX lowering, to memoize components and hooks.
 - Syntax lowering
   - Automatically transforms modern syntax to be compatible with your defined target.
   - Supports [down to ES2015](https://oxc.rs/docs/guide/usage/transformer/lowering#transformations).

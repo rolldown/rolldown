@@ -1,4 +1,126 @@
 
+## [1.1.2] - 2026-06-18
+
+### 🚀 Features
+
+- add option named for invalid return type errors for more places (#9846) by @shulaoda
+- add option names for invalid return type errors (#9821) by @sapphi-red
+- transform: infer decorator strictNullChecks from tsconfig (#9590) by @kylecannon
+- expose React Compiler options for rolldown and Vite users (#9801) by @Boshen
+- tracing: gate chrome-json trace layer behind `chrome-tracing` feature (#9773) by @hyf0
+- dev: align test-dev-server with Vite dev server (#9668) by @h-a-n-a
+
+### 🐛 Bug Fixes
+
+- plugin_timings: point doc link to existing checks reference page (#9837) by @hyf0
+- generator: correct contradictory panic message in cjs cross-chunk symbol lookup (#9836) by @hyf0
+- esm: preserve with clause on export * from external (#9796) by @hyf0
+- Make external_import_binding_merger deterministic (#9755) by @naruaway
+- surface invalid `manualCodeSplitting` group `test` regex as an error (#9792) by @shulaoda
+- avoid panic on `output.file` without a file name (#9789) by @shulaoda
+- avoid O(N^2) rendering of high-volume diagnostics (#9748) (#9749) by @IWANABETHATGUY
+- avoid panic on JSON numbers outside f64 range (#9788) by @shulaoda
+- deps: bump mimalloc-safe to 0.1.63 to fix worker_threads segfault (#9785) by @shulaoda
+- cache ESM evaluation errors (#9784) by @sapphi-red
+- wrap node require helper in pure IIFE (#9783) by @kb019
+- lazy-barrel: load locally-used imports on a re-exported record (#9757) by @shulaoda
+- avoid dangling wrapped-ESM init call across chunks (#9502) (#9717) by @IWANABETHATGUY
+- dev: detect same-second rewrites in CI poll watcher (#9736) by @h-a-n-a
+- dev: force rebuild after HMR errors (#9686) by @h-a-n-a
+- dev: print build errors on browser refresh after a failed build (#9652) by @h-a-n-a
+
+### 🚜 Refactor
+
+- single-source the chunk $N symbol-naming algorithm (#9831) by @Dunqing
+- simplify common_dir helper (#9857) by @IWANABETHATGUY
+- drop commondir crate in favor of in-house helper (#9849) by @Boshen
+- binding: extract helpers from normalize_binding_options (#9842) by @Boshen
+- move rolldown_filter_analyzer to tasks and scope oxc cfg feature (#9839) by @Boshen
+- options: merge manualCodeSplitting into codeSplitting object form (#9805) by @IWANABETHATGUY
+- options: support codeSplitting object form in CodeSplittingMode (#9804) by @IWANABETHATGUY
+- diagnostic: reuse ByteLocator for per-source line lookup (#9762) by @IWANABETHATGUY
+- remove redundant Arc around tracing spans (#9778) by @camc314
+- remove unnecessary `Arc` around sourcemap sender (#9777) by @camc314
+- rolldown_plugin_vite_wasm_fallback: remove the plugin (#9775) by @sapphi-red
+- binding: remove infer-able `napi(ts_type)` (#9737) by @sapphi-red
+- remove preprocessor span dedup (#9734) by @hyf0
+- identify AST nodes by NodeId instead of Span/Address (#9609) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- tsconfig: align auto-discovery docs with oxc-resolver behavior (#9845) by @shulaoda
+- relocate meta/design to internal-docs, split design from implementation (#9826) by @h-a-n-a
+- meta: add options normalization design doc (#9818) by @IWANABETHATGUY
+- document why the napi tracing feature is enabled (#9766) by @Boshen
+- dev: move test-dev-server test guidance into the testing docs (#9809) by @h-a-n-a
+
+### ⚡ Performance
+
+- drop unused regex unicode property tables from the binding (#9848) by @Boshen
+- drop urlencoding crate in favor of percent-encoding (#9851) by @Boshen
+- drop owo-colors supports-colors feature in vite reporter (#9824) by @Boshen
+- skip enum member value extraction for non-TypeScript modules (#9840) by @shulaoda
+- rolldown: use unstable sort for itertools sorted_by at unique-key sites (#9827) by @Boshen
+- cheaper deterministic ordering in external import binding merger (#9810) by @IWANABETHATGUY
+- disable idna's ICU backend by pinning idna_adapter to 1.0.0 (-129 KB) (#9811) by @Boshen
+- size: use unstable sort where stability is unneeded (#9803) by @Boshen
+- remove num-format dependency from vite reporter (#9795) by @Boshen
+- reduce js callback error size (#9776) by @Boshen
+- rolldown_error: remove Debug supertrait from BuildEvent (#9798) by @Boshen
+- reduce plugin hook order code size (#9761) by @Boshen
+- deps: disable `infer` default features to reduce binary size (#9765) by @Boshen
+- reduce pluginable monomorphization size (#9771) by @Boshen
+- avoid rebuilding replace plugin values (#9764) by @Boshen
+- defer link-stage-output drop to rayon workers after output is produced (#9733) by @Brooooooklyn
+- tree-shaking: hoist already-included guard to call sites in inclusion DFS (#9738) by @Brooooooklyn
+- renamer: dedup before allocating the owned name in add_symbol_in_root_scope (#9740) by @Brooooooklyn
+
+### 🧪 Testing
+
+- allocs: track allocation counts for rolldown_sourcemap (#9835) by @hyf0
+- bench: add CodSpeed micro-benchmarks for rolldown_sourcemap (#9834) by @hyf0
+- add cjs named export mutation test (#9823) by @sapphi-red
+- dev: restore shared-page reliability conventions in AGENTS.md (#9786) by @h-a-n-a
+- dev: add `AGENTS.md` test guidance for agents (#9763) by @h-a-n-a
+- dev: split out initial-build-error into its own playground (#9772) by @h-a-n-a
+- dev: align e2e suite with Vite and parallelize playgrounds (#9759) by @h-a-n-a
+- remove unnecessary module namespace object JSON serializations in tests (#9725) by @sapphi-red
+- use `assert.deepStrictEqual` instead of `assert.deepEqual` by using `assert/strict` instead of `assert` (#9724) by @sapphi-red
+- hmr: add test case for #5301 (#5302) by @sapphi-red
+- dev: add tests for dev-engine principles (#9720) by @h-a-n-a
+- dev: align dev-engine test harness with Vite (#9684) by @h-a-n-a
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update oxc to 0.137.0 (#9856) by @Boshen
+- re-enable default lld linker on x86_64-unknown-linux-gnu (#9855) by @Boshen
+- deps: bump vite-plus to 0.2.1 (#9850) by @Boshen
+- skills: translate _config.json when encoding rolldown REPL links (#9847) by @IWANABETHATGUY
+- deps: update oxc_resolver and oxc_resolver_napi to 11.21.3 (#9841) by @Boshen
+- pin vite-plus (vp) CLI to 0.1.24 in setup-vp (#9830) by @Boshen
+- add crate/package-level CODEOWNERS (#9819) by @IWANABETHATGUY
+- drop unused derive_more display feature from rolldown_plugin (#9820) by @Boshen
+- remove auto-assign PR workflow (#9807) by @IWANABETHATGUY
+- deps: update rollup submodule for tests to v4.62.0 (#9780) by @rolldown-guard[bot]
+- deps: update esbuild for tests to 0.28.1 (#9779) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#9781) by @rolldown-guard[bot]
+- deps: update oxc to 0.136.0 (#9770) by @Boshen
+- add pull request template (#9756) by @sapphi-red
+- clarify `rolldown_plugin_vite_*` is compatible for the same minor (#9774) by @sapphi-red
+- deps: update github actions (#9745) by @renovate[bot]
+- deps: update rust crates (#9747) by @renovate[bot]
+- deps: update napi to v3.9.2 (#9744) by @renovate[bot]
+- deps: update npm packages (#9746) by @renovate[bot]
+- deps: update @napi-rs/cli and emnapi deps (#9741) by @Brooooooklyn
+- generator: fix `vp fmt` on Windows (#9727) by @sapphi-red
+- ban importing from `assert` and recommend `assert/strict` (#9726) by @sapphi-red
+
+### ❤️ New Contributors
+
+* @naruaway made their first contribution in [#9755](https://github.com/rolldown/rolldown/pull/9755)
+* @kb019 made their first contribution in [#9783](https://github.com/rolldown/rolldown/pull/9783)
+
+
 ## [1.1.1] - 2026-06-11
 
 ### 🚀 Features

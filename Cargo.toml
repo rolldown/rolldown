@@ -196,7 +196,15 @@ petgraph = "0.8.1"
 phf = "0.13.0"
 pnp = "0.12.9"
 rayon = "1.10.0"
-regex = "1.12.4"
+# Default features drop the `\p{…}` Unicode property tables (gencat/script/age/bool/segment),
+# which no hardcoded pattern uses. `unicode-perl`/`unicode-case` are kept so `\w \d \s \b` and
+# `(?i)` stay Unicode-aware. User patterns needing `\p{…}` fall back to `regress` via `HybridRegex`.
+regex = { version = "1.12.4", default-features = false, features = [
+  "std",
+  "perf",
+  "unicode-perl",
+  "unicode-case",
+] }
 regress = "0.11.0"
 rolldown-notify = "10.2.0"
 rolldown-notify-debouncer-full = "0.7.5"

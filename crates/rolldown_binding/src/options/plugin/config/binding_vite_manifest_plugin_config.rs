@@ -5,7 +5,7 @@ use rustc_hash::FxHashMap;
 
 use crate::types::{
   binding_normalized_options::BindingNormalizedOptions,
-  js_callback::{JsCallback, JsCallbackExt as _},
+  js_callback::{JsCallback, JsCallbackExt as _, JsCallbackResultExt as _},
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -33,13 +33,20 @@ impl From<BindingViteManifestPluginConfig> for ViteManifestPlugin {
             is_legacy_fn
               .invoke_async(BindingNormalizedOptions::new(opts))
               .await
+              .context("viteManifest isLegacy option")
               .map_err(anyhow::Error::from)
           })
         })
       }),
       css_entries: Arc::new(move || {
         let css_entries_fn = Arc::clone(&value.css_entries);
-        Box::pin(async move { css_entries_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
+        Box::pin(async move {
+          css_entries_fn
+            .invoke_async(())
+            .await
+            .context("viteManifest cssEntries option")
+            .map_err(anyhow::Error::from)
+        })
       }),
     }
   }

@@ -250,6 +250,7 @@ fn normalize_defer_sync_scan_data_option(
         ts_fn
           .invoke_async(())
           .await
+          .context("deferSyncScanData option")
           .and_then(|ret| {
             ret.into_iter().map(TryInto::try_into).collect::<Result<Vec<DeferSyncScanData>, _>>()
           })
@@ -273,7 +274,11 @@ fn normalize_sourcemap_ignore_list_option(
         let source = source.to_string();
         let sourcemap_path = sourcemap_path.to_string();
         Box::pin(async move {
-          ts_fn.invoke_async((source, sourcemap_path).into()).await.map_err(anyhow::Error::from)
+          ts_fn
+            .invoke_async((source, sourcemap_path).into())
+            .await
+            .context("sourcemapIgnoreList option")
+            .map_err(anyhow::Error::from)
         })
       }))
     }
@@ -289,7 +294,11 @@ fn normalize_sourcemap_path_transform_option(
       let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();
       Box::pin(async move {
-        ts_fn.invoke_async((source, sourcemap_path).into()).await.map_err(anyhow::Error::from)
+        ts_fn
+          .invoke_async((source, sourcemap_path).into())
+          .await
+          .context("sourcemapPathTransform option")
+          .map_err(anyhow::Error::from)
       })
     }))
   })
@@ -301,7 +310,13 @@ fn normalize_invalidate_js_side_cache_option(
   invalidate_js_side_cache.map(|ts_fn| {
     rolldown::InvalidateJsSideCache::new(Arc::new(move || {
       let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move { ts_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
+      Box::pin(async move {
+        ts_fn
+          .invoke_async(())
+          .await
+          .context("invalidateJsSideCache option")
+          .map_err(anyhow::Error::from)
+      })
     }))
   })
 }
@@ -314,6 +329,7 @@ fn normalize_on_log_option(on_log: BindingOnLog) -> Option<rolldown::OnLog> {
         ts_fn
           .invoke_async((level.to_string(), log.into()).into())
           .await
+          .context("onLog option")
           .map_err(anyhow::Error::from)
       })
     }))
@@ -357,6 +373,7 @@ fn normalize_code_splitting(
                               (module_id, BindingChunkingContext::new(owned_ctx)).into(),
                             )
                             .await
+                            .context("advancedChunks group name option")
                             .map_err(anyhow::Error::from)
                         })
                       }))
@@ -378,7 +395,11 @@ fn normalize_code_splitting(
                             let id = id.to_string();
                             let func = Arc::clone(&func);
                             Box::pin(async move {
-                              func.invoke_async((id,).into()).await.map_err(anyhow::Error::from)
+                              func
+                                .invoke_async((id,).into())
+                                .await
+                                .context("advancedChunks group test option")
+                                .map_err(anyhow::Error::from)
                             })
                           })))
                         }

@@ -18,7 +18,7 @@ impl BuildEvent for PluginTimings {
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
-    const DOC_LINK: &str = "https://rolldown.rs/options/checks#plugintimings";
+    const DOC_LINK: &str = "https://rolldown.rs/reference/InputOptions.checks#plugintimings";
 
     match self.plugins.len() {
       0 => unreachable!("PluginTimings should have at least one plugin"),

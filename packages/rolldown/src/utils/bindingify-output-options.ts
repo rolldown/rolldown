@@ -286,6 +286,18 @@ function bindingifyCodeSplitting(
     };
   }
 
+  // `inlineDynamicImports: true` (the deprecated alias for `codeSplitting: false`) disables code
+  // splitting, so any resolved chunk grouping is dropped here, mirroring the `codeSplitting: false`
+  // path above. `manualChunks` already throws earlier, so only `advancedChunks` can reach this
+  // point. Without this, the grouping would be forwarded and then silently discarded in the Rust
+  // binding, ignoring the requested groups without any diagnostic.
+  if (inlineDynamicImports === true && effectiveChunksOption != null) {
+    logger.warn(
+      '`advancedChunks` option is ignored because `inlineDynamicImports: true` disables code splitting.',
+    );
+    effectiveChunksOption = undefined;
+  }
+
   // Transform effectiveChunksOption to binding format
   let advancedChunksResult: BindingOutputOptions['manualCodeSplitting'];
   if (effectiveChunksOption != null) {

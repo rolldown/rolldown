@@ -49,6 +49,17 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     );
   }
 
+  // `output.file` must contain a final file-name component. Values like `""`, `"/"`,
+  // `"."`, `".."`, or any path ending in `..` make `Path::file_name()` return `None`,
+  // which would otherwise panic later when deriving the chunk basename.
+  if let Some(file) = raw_options.file.as_ref()
+    && Path::new(file).file_name().is_none()
+  {
+    errors.push(BuildDiagnostic::invalid_option(InvalidOptionType::OutputFileWithoutName(
+      file.clone(),
+    )));
+  }
+
   if let Some(entity) = raw_options.context.as_ref() {
     if !is_validate_identifier_name(entity) {
       warnings.push(
@@ -59,7 +70,10 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
   }
 
   if let Some(format @ (OutputFormat::Umd | OutputFormat::Iife)) = raw_options.format {
-    if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(true))) {
+    if matches!(
+      &raw_options.code_splitting,
+      Some(CodeSplittingMode::Bool(true) | CodeSplittingMode::Advanced(_))
+    ) {
       warnings.push(
         BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedCodeSplittingFormat(
           format.to_string(),
@@ -69,7 +83,7 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     }
   }
 
-  if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(false))) {
+  if matches!(&raw_options.code_splitting, Some(CodeSplittingMode::Bool(false))) {
     if let Some(input) = &raw_options.input
       && input.len() > 1
     {
@@ -82,14 +96,16 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
         InvalidOptionType::CodeSplittingDisabledWithPreserveModules,
       ));
     }
-    if raw_options.manual_code_splitting.is_some() {
-      errors.push(BuildDiagnostic::invalid_option(
-        InvalidOptionType::CodeSplittingDisabledWithManualCodeSplitting,
-      ));
-    }
+    // `codeSplitting: false` and the object form (manual groups) are mutually exclusive
+    // by construction, so a "disabled + groups" conflict can no longer be expressed.
   }
 
-  if let Some(manual_code_splitting) = &raw_options.manual_code_splitting {
+  // Manual chunk grouping arrives via the merged `codeSplitting` object form (`Advanced`).
+  let manual_code_splitting = match &raw_options.code_splitting {
+    Some(CodeSplittingMode::Advanced(options)) => Some(options),
+    _ => None,
+  };
+  if let Some(manual_code_splitting) = manual_code_splitting {
     let has_groups = manual_code_splitting.groups.as_ref().is_some_and(|groups| !groups.is_empty());
 
     if !has_groups {
@@ -151,8 +167,17 @@ pub fn prepare_build_context(
 
   let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
 
-  let preserve_entry_signatures = if let Some(manual_code_splitting) =
-    &raw_options.manual_code_splitting
+  // Decompose the merged `codeSplitting` option into the gate (`code_splitting`) and the
+  // grouping config (`manual_code_splitting`). The raw option may carry the object form
+  // (`Advanced`) mirroring the public JS `codeSplitting: { groups, ... }`; the normalized
+  // layer keeps them as two separate fields.
+  let (raw_code_splitting_mode, manual_code_splitting) = match raw_options.code_splitting.take() {
+    Some(CodeSplittingMode::Advanced(options)) => (CodeSplittingMode::Bool(true), Some(options)),
+    Some(mode @ CodeSplittingMode::Bool(_)) => (mode, None),
+    None => (CodeSplittingMode::default(), None),
+  };
+
+  let preserve_entry_signatures = if let Some(manual_code_splitting) = &manual_code_splitting
     && has_non_recursive_dependency_capture(manual_code_splitting)
     && raw_options.preserve_entry_signatures.is_none()
   {
@@ -258,7 +283,7 @@ pub fn prepare_build_context(
 
   let code_splitting = match format {
     OutputFormat::Umd | OutputFormat::Iife => CodeSplittingMode::Bool(false),
-    _ => raw_options.code_splitting.unwrap_or_default(),
+    _ => raw_code_splitting_mode,
   };
 
   // If the `file` is provided, use the parent directory of the file as the `out_dir`.
@@ -428,7 +453,7 @@ pub fn prepare_build_context(
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
     code_splitting,
     dynamic_import_in_cjs: raw_options.dynamic_import_in_cjs.unwrap_or(true),
-    manual_code_splitting: raw_options.manual_code_splitting,
+    manual_code_splitting,
     checks: raw_options.checks.unwrap_or_default().into(),
     watch: raw_options.watch.unwrap_or_default(),
     legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Inline),

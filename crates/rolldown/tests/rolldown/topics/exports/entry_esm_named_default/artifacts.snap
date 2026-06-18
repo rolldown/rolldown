@@ -3,25 +3,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## chunk.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__esmMin", {
-	enumerable: true,
-	get: function() {
-		return __esmMin;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
-
-```
-
 ## lib.js
 
 ```js
@@ -29,10 +10,10 @@ Object.defineProperties(exports, {
 	__esModule: { value: true },
 	[Symbol.toStringTag]: { value: "Module" }
 });
-const require_chunk = require("./chunk.js");
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 //#region lib.js
 var lib_default, named;
-var init_lib = require_chunk.__esmMin((() => {
+var init_lib = require_rolldown_runtime.__esmMin((() => {
 	lib_default = { value: 42 };
 	named = "named_value";
 }));
@@ -53,15 +34,34 @@ exports.named = named;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_chunk = require("./chunk.js");
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
-node_assert = require_chunk.__toESM(node_assert);
+node_assert = require_rolldown_runtime.__toESM(node_assert);
 //#endregion
-require_chunk.__esmMin((() => {
+require_rolldown_runtime.__esmMin((() => {
 	require_lib.init_lib();
 	node_assert.default.strictEqual(require_lib.default.value, 42);
 }))();
 exports.lib = require_lib.default;
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
 
 ```

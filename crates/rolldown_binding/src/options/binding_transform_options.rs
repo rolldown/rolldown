@@ -6,7 +6,8 @@ use napi_derive::napi;
 use oxc_napi::get_source_type;
 use oxc_sourcemap::napi::SourceMap;
 use oxc_transform_napi::{
-  CompilerAssumptions, DecoratorOptions, Helpers, JsxOptions, PluginsOptions, TypeScriptOptions,
+  CompilerAssumptions, DecoratorOptions, Helpers, JsxOptions, PluginsOptions, ReactCompilerOptions,
+  TypeScriptOptions,
 };
 use rolldown_common::{EnhancedTransformOptions, TsconfigOption};
 use rustc_hash::FxHashMap;
@@ -135,6 +136,10 @@ pub struct BindingEnhancedTransformOptions {
   /// Configure how TypeScript is transformed.
   /// @see {@link https://oxc.rs/docs/guide/usage/transformer/typescript}
   pub typescript: Option<TypeScriptOptions>,
+  /// Experimental [React Compiler](https://github.com/facebook/react/tree/main/compiler).
+  /// `true` enables it with default options; pass an object to configure it.
+  #[napi(ts_type = "boolean | ReactCompilerOptions")]
+  pub react_compiler: Option<Either<bool, ReactCompilerOptions>>,
   /// Configure how TSX and JSX are transformed.
   /// @see {@link https://oxc.rs/docs/guide/usage/transformer/jsx}
   #[napi(ts_type = "'preserve' | JsxOptions")]
@@ -172,7 +177,6 @@ pub struct BindingEnhancedTransformOptions {
   /// Configure tsconfig handling.
   /// - true: Auto-discover and load the nearest tsconfig.json
   /// - TsconfigRawOptions: Use the provided inline tsconfig options
-  #[napi(ts_type = "boolean | BindingTsconfigRawOptions")]
   pub tsconfig: Option<Either<bool, BindingTsconfigRawOptions>>,
   /// An input source map to collapse with the output source map.
   pub input_map: Option<SourceMap>,
@@ -194,7 +198,7 @@ impl BindingEnhancedTransformOptions {
       inject: self.inject,
       decorator: self.decorator,
       plugins: self.plugins,
-      react_compiler: None,
+      react_compiler: self.react_compiler,
     }
   }
 }

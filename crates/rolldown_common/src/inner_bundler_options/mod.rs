@@ -10,7 +10,6 @@ use types::invalidate_js_side_cache::InvalidateJsSideCache;
 use types::legal_comments::LegalComments;
 use types::log_level::LogLevel;
 use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
-use types::manual_code_splitting_options::ManualCodeSplittingOptions;
 use types::minify_options::RawMinifyOptions;
 use types::on_log::OnLog;
 use types::optimization::OptimizationOption;
@@ -189,9 +188,11 @@ pub struct BundlerOptions {
   pub keep_names: Option<bool>,
   pub inject: Option<Vec<InjectImport>>,
   pub external_live_bindings: Option<bool>,
+  /// Mirrors the public `codeSplitting: boolean | CodeSplittingOptions`. The object
+  /// form (`Advanced`) carries the manual chunk grouping config; it is decomposed into
+  /// the gate + `NormalizedBundlerOptions::manual_code_splitting` during normalization.
   pub code_splitting: Option<CodeSplittingMode>,
   pub dynamic_import_in_cjs: Option<bool>,
-  pub manual_code_splitting: Option<ManualCodeSplittingOptions>,
   pub checks: Option<ChecksOptions>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
@@ -466,6 +467,13 @@ where
               .as_str()
               .ok_or_else(|| serde::de::Error::custom("transform.target should be a string"))?;
             transform_options.target = Some(Either::Left(target.to_string()));
+          }
+          "reactCompiler" => {
+            let enabled = v.as_bool().ok_or_else(|| {
+              serde::de::Error::custom("transform.reactCompiler should be a boolean")
+            })?;
+            transform_options.react_compiler =
+              enabled.then(|| Box::new(oxc_react_compiler::default_plugin_options()));
           }
           "jsx" => {
             transform_options.jsx = match v {

@@ -98,4 +98,4 @@ const packageRows = packageGraph?.packages.map((pkg) => ({
 
 To detect duplicate packages, group records by non-null `name`, then mark groups that contain more than one version or package root.
 
-See `meta/design/devtools.md` in the Rolldown repository for implementation details and event lifecycle notes.
+See `internal-docs/devtools/implementation.md` in the Rolldown repository for implementation details and event lifecycle notes.

@@ -161,6 +161,7 @@ module.exports.TsconfigCache = __napiModule.exports.TsconfigCache
 module.exports.BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 module.exports.BindingChunkModuleOrderBy = __napiModule.exports.BindingChunkModuleOrderBy
+module.exports.BindingErrorStage = __napiModule.exports.BindingErrorStage
 module.exports.BindingLogLevel = __napiModule.exports.BindingLogLevel
 module.exports.BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 module.exports.BindingPropertyReadSideEffects = __napiModule.exports.BindingPropertyReadSideEffects

@@ -101,6 +101,7 @@ mod chunk_ext;
 mod chunk_optimizer;
 mod code_splitting;
 mod compute_cross_chunk_links;
+mod compute_wrapped_esm_init_metadata;
 mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
 mod finalize_modules;
@@ -161,7 +162,7 @@ impl<'a> GenerateStage<'a> {
 
     self.merge_cjs_namespace(&mut chunk_graph);
 
-    // See meta/design/devtools.md for devtools action lifecycle.
+    // See internal-docs/devtools/implementation.md for devtools action lifecycle.
     self.trace_action_chunks_infos(&chunk_graph);
 
     let mut warnings = vec![];
@@ -198,6 +199,7 @@ impl<'a> GenerateStage<'a> {
     }
 
     let mut ast_table = std::mem::take(&mut self.ast_table);
+    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph);
     self.finalize_modules(&mut chunk_graph, &mut ast_table);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table).await
@@ -244,7 +246,7 @@ impl<'a> GenerateStage<'a> {
                 let p = PathBuf::from(sanitized_absolute_filename.as_str());
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
-                    // See meta/design/module-id.md: output paths may normalize separators even
+                    // See internal-docs/module-id/implementation.md: output paths may normalize separators even
                     // when module ids keep native separators.
                     if let Some(relative_path) = strip_path_prefix_to_slash(
                       absolute_chunk_file_name.as_path(),

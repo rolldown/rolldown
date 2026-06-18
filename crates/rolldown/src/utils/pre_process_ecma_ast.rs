@@ -70,7 +70,7 @@ impl PreProcessEcmaAst {
     });
 
     let (errors, warnings): (Vec<_>, Vec<_>) =
-      semantic_ret.errors.into_iter().partition(|w| w.severity == OxcSeverity::Error);
+      semantic_ret.diagnostics.into_iter().partition(|w| w.severity == OxcSeverity::Error);
 
     let mut warnings = if errors.is_empty() {
       BuildDiagnostic::from_oxc_diagnostics(
@@ -109,7 +109,10 @@ impl PreProcessEcmaAst {
     // Tree-shaking in `include_statements.rs` skips including the enum declaration
     // when a member access will be inlined. Regular enum IIFEs are `@__PURE__`, so
     // they are naturally tree-shaken if no other references keep them alive.
-    let enum_member_value_map = {
+    // Enums are a TypeScript-only construct, so only Ts/Tsx modules can declare
+    // them. For plain JS/JSX modules, skip the full symbol-table walk and the map
+    // allocation entirely (the result would always be empty).
+    let enum_member_value_map = if matches!(parsed_type, OxcParseType::Ts | OxcParseType::Tsx) {
       let scoping_ref = scoping.as_mut().unwrap();
       let mut enum_values: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>> =
         FxHashMap::default();
@@ -142,6 +145,8 @@ impl PreProcessEcmaAst {
         }
       }
       enum_values
+    } else {
+      FxHashMap::default()
     };
 
     // Step 2: Run define plugin.
@@ -179,7 +184,7 @@ impl PreProcessEcmaAst {
           .build_with_scoping(scoping, program);
 
         let (errors, transformer_warnings): (Vec<_>, Vec<_>) =
-          ret.errors.into_iter().partition(|error| error.severity == OxcSeverity::Error);
+          ret.diagnostics.into_iter().partition(|error| error.severity == OxcSeverity::Error);
         if !errors.is_empty() {
           return Err(BatchedBuildDiagnostic::from(BuildDiagnostic::from_oxc_diagnostics(
             errors,
@@ -249,7 +254,7 @@ impl PreProcessEcmaAst {
         String::new(),
         "`import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used.".to_string(),
         vec![LabeledSpan::at(
-          span.start as usize..span.end as usize,
+          span.start..span.end,
           "The deferred phase is removed here.",
         )],
         EventKind::UnsupportedFeatureError,

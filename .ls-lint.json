@@ -19,6 +19,7 @@
     "packages/debug/src/generated/**",
     "**/*.config.{js,mjs,cjs,ts,cts,mts}",
     "**/*.test.{js,mjs,cjs,ts,cts,mts}",
+    "**/__tests__",
     ".git/**",
     ".github/**",
     ".vscode/**",

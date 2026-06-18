@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_devtools"
-version = "1.1.0"
+version = "1.1.1"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true

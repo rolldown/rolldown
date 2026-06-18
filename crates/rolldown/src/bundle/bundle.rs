@@ -36,11 +36,11 @@ pub struct Bundle<Fs: FileSystem + Clone + 'static = OsFileSystem> {
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) cache: ScanStageCache,
-  pub(crate) bundle_span: Arc<tracing::Span>,
+  pub(crate) bundle_span: tracing::Span,
 }
 
 impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {
     let start = self.plugin_driver.start_timing();
@@ -58,7 +58,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     self.append_plugin_timings_warning(result)
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn generate(mut self) -> BuildResult<BundleOutput> {
     let start = self.plugin_driver.start_timing();
@@ -79,7 +79,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     self.append_plugin_timings_warning(result)
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn scan(mut self) -> BuildResult<()> {
     self.scan_modules(ScanMode::Full).await?;
@@ -87,7 +87,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     Ok(())
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   pub async fn scan_modules(
     &mut self,
     scan_mode: ScanMode<ArcStr>,
@@ -151,7 +151,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   pub async fn bundle_write(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
@@ -220,7 +220,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     Ok(output)
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   pub async fn bundle_generate(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
@@ -243,7 +243,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       // mutates per-module `side_effects` best-effort, so its error doesn't
       // invalidate `output`. Commit it rather than fall back to the stale prior
       // snapshot.
-      // See meta/design/bundler-data-lifecycle.md ("Cache integrity on a failed build").
+      // See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
       let result =
         defer_sync_scan_data(&self.options, &self.cache.module_id_to_idx, &mut output).await;
       if is_incremental {
@@ -276,8 +276,14 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     // `create_output`/`make_copy` strip symbol-table scoping from the cache for
     // performance; reinstate it here, before the fallible steps below, so the
     // cache stays whole on their `Err` paths.
-    // See meta/design/bundler-data-lifecycle.md ("Cache integrity on a failed build").
-    self.merge_immutable_fields_for_cache(link_stage_output.symbol_db);
+    // See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
+    self.merge_immutable_fields_for_cache(std::mem::take(&mut link_stage_output.symbol_db));
+
+    // `link_stage_output` is dead from here on (its `symbol_db` was just taken
+    // for the cache merge); ship the remaining heavy fields (module_table,
+    // metas, stmt_infos, ...) to a rayon worker so their free() happens off
+    // the critical path.
+    crate::utils::defer_drop::spawn_drop(link_stage_output);
 
     if let Err(errors) = &bundle_output {
       debug_assert!(errors.iter().all(|e| e.severity() == Severity::Error));

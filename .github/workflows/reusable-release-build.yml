@@ -98,7 +98,7 @@ jobs:
         if: ${{ contains(matrix.target, 'ohos') }}
         uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
 
-      - uses: taiki-e/install-action@cde8c9e634f4a17bc06b61413ac0ef75450eac46 # v2.81.4
+      - uses: taiki-e/install-action@7a79fe8c3a13344501c80d99cae481c1c9085912 # v2.81.10
         if: ${{ contains(matrix.target, 'musl') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -107,6 +107,7 @@ jobs:
 
       - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:
+          version: '0.1.24'
           cache: true
 
       - name: Build Binding
@@ -181,6 +182,7 @@ jobs:
 
       - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:
+          version: '0.1.24'
           cache: true
 
       - name: Build Node binding
@@ -233,6 +235,7 @@ jobs:
 
       - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:
+          version: '0.1.24'
           cache: true
 
       - name: Build Node binding
@@ -274,6 +277,7 @@ jobs:
 
       - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:
+          version: '0.1.24'
           cache: true
 
       - name: Build `@rolldown/debug`

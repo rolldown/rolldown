@@ -118,9 +118,9 @@ impl IntegrationTest {
           .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
           .parse();
 
-        if ret.panicked || !ret.errors.is_empty() {
+        if ret.panicked || !ret.diagnostics.is_empty() {
           let errors_str = ret
-            .errors
+            .diagnostics
             .iter()
             .map(|e| e.clone().with_source_code(chunk.code.clone()).to_string())
             .collect::<Vec<_>>()
@@ -533,7 +533,8 @@ impl IntegrationTest {
     }
 
     if options.external.is_none() {
-      options.external = Some(IsExternal::from(vec!["node:assert".to_string()]));
+      options.external =
+        Some(IsExternal::from(vec!["node:assert".to_string(), "node:assert/strict".to_string()]));
     }
 
     if options.input.is_none() {

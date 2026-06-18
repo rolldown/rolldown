@@ -1,0 +1,11 @@
+{
+  "expectExecuted": false,
+  "config": {
+    "platform": "node",
+    "input": [
+      { "name": "entry0", "import": "entry0.js" },
+      { "name": "entry1", "import": "entry1.js" }
+    ],
+    "external": ["node:process"]
+  }
+}

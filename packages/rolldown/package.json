@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
     "bundler",
@@ -99,7 +99,7 @@
     "artifacts": "napi artifacts --cwd ./src --package-json-path ../package.json -o=../artifacts --npm-dir ../npm",
     "build-binding": "oxnode ./build-binding.ts",
     "build-binding:release": "pnpm build-binding --release",
-    "build-binding:profile": "pnpm build-binding --profile profile",
+    "build-binding:profile": "pnpm build-binding --profile profile --features chrome-tracing",
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
     "# Scrips for node #": "_",

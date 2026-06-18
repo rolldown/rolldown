@@ -122,6 +122,7 @@ export const TsconfigCache = __napiModule.exports.TsconfigCache
 export const BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo
 export const BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 export const BindingChunkModuleOrderBy = __napiModule.exports.BindingChunkModuleOrderBy
+export const BindingErrorStage = __napiModule.exports.BindingErrorStage
 export const BindingLogLevel = __napiModule.exports.BindingLogLevel
 export const BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 export const BindingPropertyReadSideEffects = __napiModule.exports.BindingPropertyReadSideEffects

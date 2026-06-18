@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## from-ts.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+let mock_cjs = require("mock-cjs");
+mock_cjs = require_rolldown_runtime.__toESM(mock_cjs, 1);
+//#region src/from-ts.ts
+const result = mock_cjs.default.div``;
+//#endregion
+exports.result = result;
+
+```
+
+## from-tsx.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+let mock_cjs = require("mock-cjs");
+mock_cjs = require_rolldown_runtime.__toESM(mock_cjs, 1);
+//#region src/from-tsx.tsx
+const result = mock_cjs.default.div``;
+//#endregion
+exports.result = result;
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+
+```

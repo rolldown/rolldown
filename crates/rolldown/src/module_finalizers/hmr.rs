@@ -27,7 +27,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     if expr.is_import_meta_hot() {
       if let Some(hmr_hot_ref) = self.ctx.module.ecma_view.hmr_hot_ref {
         let hot_name = self.canonical_name_for(hmr_hot_ref);
-        *expr = self.snippet.id_ref_expr(hot_name, SPAN);
+        *expr = self.ast_factory.make_id_ref_expr(SPAN, hot_name);
       }
     }
   }
@@ -56,10 +56,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           .hmr_info
           .module_request_to_import_record_idx[string_literal.value.as_str()]];
         // Use stable module ID for consistent runtime lookup
-        string_literal.value = self
-          .snippet
-          .builder
-          .str(self.ctx.modules[import_record.into_resolved_module()].stable_id());
+        string_literal.value =
+          self.ast_factory.str(self.ctx.modules[import_record.into_resolved_module()].stable_id());
       }
       ast::Argument::ArrayExpression(array_expression) => {
         // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
@@ -72,8 +70,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
               .module_request_to_import_record_idx[string_literal.value.as_str()]];
             // Use stable module ID for consistent runtime lookup
             string_literal.value = self
-              .snippet
-              .builder
+              .ast_factory
               .str(self.ctx.modules[import_record.into_resolved_module()].stable_id());
           }
         });

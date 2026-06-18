@@ -1,9 +1,14 @@
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';
 import type { NormalizedInputOptions, Plugin } from 'rolldown';
+import { injectOverlayScript } from '../error-overlay.js';
+import type { Logger } from '../types/logger.js';
 import type { NormalizedDevOptions } from '../types/normalized-dev-options';
 
-export function createDevServerPlugin(devOptions: NormalizedDevOptions): Plugin {
+export function createDevServerPlugin(
+  devOptions: NormalizedDevOptions,
+  logger: Logger = console,
+): Plugin {
   let inputOptions: NormalizedInputOptions | null = null;
   return {
     name: 'rolldown-dev-server',
@@ -12,7 +17,7 @@ export function createDevServerPlugin(devOptions: NormalizedDevOptions): Plugin 
     },
     generateBundle() {
       if (devOptions.platform === 'browser') {
-        console.log('[createDevServerPlugin] Generating index.html for browser platform');
+        logger.info('[createDevServerPlugin] Generating index.html for browser platform');
         let htmlSource = `<!doctype html>
   <html lang="en">
     <head>
@@ -30,14 +35,16 @@ export function createDevServerPlugin(devOptions: NormalizedDevOptions): Plugin 
         if (inputOptions) {
           const customHtmlPath = nodePath.resolve(inputOptions.cwd, 'index.html');
           if (nodeFs.existsSync(customHtmlPath)) {
-            console.log(`[createDevServerPlugin] Using custom html file: ${customHtmlPath}`);
+            logger.info(`[createDevServerPlugin] Using custom html file: ${customHtmlPath}`);
             htmlSource = nodeFs.readFileSync(customHtmlPath, 'utf-8');
           }
         }
         this.emitFile({
           type: 'asset',
           fileName: 'index.html',
-          source: htmlSource,
+          // Inject the dev-server error overlay client (kept out of the shared
+          // rolldown HMR runtime — see error-overlay.ts).
+          source: injectOverlayScript(htmlSource),
         });
       }
     },

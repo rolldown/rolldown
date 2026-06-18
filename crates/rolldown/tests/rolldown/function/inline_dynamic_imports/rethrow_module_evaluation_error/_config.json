@@ -1,0 +1,9 @@
+{
+  "_comment": "An error thrown while a wrapped ESM module is being evaluated must be stored and rethrown on every subsequent `import()` of that module, instead of silently resolving.",
+  "configVariants": [
+    {
+      "_configName": "inline",
+      "codeSplitting": false
+    }
+  ]
+}

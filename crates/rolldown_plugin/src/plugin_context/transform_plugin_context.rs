@@ -16,7 +16,7 @@ pub struct TransformPluginContext {
   id: ArcStr,
   module_idx: ModuleIdx,
   plugin_idx: PluginIdx,
-  magic_string_tx: Option<Arc<mpsc::Sender<SourceMapGenMsg>>>,
+  magic_string_tx: Option<mpsc::Sender<SourceMapGenMsg>>,
 }
 
 impl TransformPluginContext {
@@ -27,7 +27,7 @@ impl TransformPluginContext {
     id: ArcStr,
     module_idx: ModuleIdx,
     plugin_idx: PluginIdx,
-    magic_string_tx: Option<Arc<mpsc::Sender<SourceMapGenMsg>>>,
+    magic_string_tx: Option<mpsc::Sender<SourceMapGenMsg>>,
   ) -> Self {
     Self { inner, sourcemap_chain, original_code, id, module_idx, plugin_idx, magic_string_tx }
   }

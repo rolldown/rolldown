@@ -2,9 +2,9 @@
 
 ##### Auto-discovery mode (`true`)
 
-When set to `true`, Rolldown enables auto-discovery mode (similar to Vite). For each module, both the resolver and transformer will find the nearest `tsconfig.json`.
+When set to `true`, Rolldown enables auto-discovery mode. For each module, both the resolver and transformer search **upward** from the module's directory, starting at the nearest `tsconfig.json`. If it has `references`, Rolldown checks each referenced project's `files`/`include`/`exclude` and uses the first one that matches the file. If no reference matches, it checks the `tsconfig.json`'s own `files`/`include`/`exclude`. If the file matches neither, Rolldown continues upward to the next `tsconfig.json` and repeats. If no `tsconfig.json` matches the file, it falls back to the **outermost (topmost)** one found, not the nearest one.
 
-If the tsconfig has `references`, Rolldown resolves them the way TypeScript does: a referenced project that includes the file **takes precedence over the root**. Each referenced project uses its own `allowJs`, so a `.js`/`.jsx`/`.mjs`/`.cjs` file is only included by projects that enable it. If no referenced project includes the file, Rolldown falls back to the root tsconfig.
+If the tsconfig has `references`, Rolldown resolves them the way TypeScript does: a referenced project that includes the file **takes precedence over the root**, and the first matching reference wins. Each referenced project uses its own `allowJs`, so a `.js`/`.jsx`/`.mjs`/`.cjs` file is only included by projects that enable it. If no referenced project includes the file, Rolldown falls back to the root's own `files`/`include`/`exclude`. A solution-style root (only `references` with an explicit empty `files`/`include`, as Vite scaffolds) has no file patterns of its own, so once none of its references match either, it does **not** own the file, and discovery continues in the parent directories as described above.
 
 ```js
 export default {

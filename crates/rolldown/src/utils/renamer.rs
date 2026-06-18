@@ -168,6 +168,14 @@ impl<'name> Renamer<'name> {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     let canonical_name = canonical_ref.name(self.symbol_db);
 
+    // Dedup-before-alloc: in the deconflict path, a re-add of an already-present
+    // canonical_ref is a no-op, so check it BEFORE building the owned name and
+    // skip the wasted CompactStr allocation on that path. The `!needs_deconflict`
+    // path still inserts and therefore still needs the built name.
+    if needs_deconflict && self.canonical_names.contains_key(&canonical_ref) {
+      return;
+    }
+
     let original_name = if self.symbol_db.has_module_preserve_jsx()
       && canonical_name.as_bytes()[0].is_ascii_lowercase()
       && canonical_ref
@@ -184,10 +192,6 @@ impl<'name> Renamer<'name> {
 
     if !needs_deconflict {
       self.canonical_names.insert(canonical_ref, original_name);
-      return;
-    }
-
-    if self.canonical_names.contains_key(&canonical_ref) {
       return;
     }
 

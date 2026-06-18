@@ -38,6 +38,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           self.add_import_record(
             &string_literal.value,
             ImportKind::HotAccept,
+            string_literal.span,
             call_expr.span,
             ImportRecordMeta::empty(),
             None,
@@ -52,17 +53,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             .iter()
             .filter_map(|element| {
               if let ast::ArrayExpressionElement::StringLiteral(string_literal) = element {
-                Some(string_literal.value)
+                Some((string_literal.value, string_literal.span))
               } else {
                 None
               }
             })
-            .map(|lit| {
+            .map(|(lit, span)| {
               (
                 lit.as_str().into(),
                 self.add_import_record(
                   &lit,
                   ImportKind::HotAccept,
+                  span,
                   call_expr.span,
                   ImportRecordMeta::empty(),
                   None,

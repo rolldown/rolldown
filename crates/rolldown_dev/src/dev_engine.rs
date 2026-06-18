@@ -22,7 +22,10 @@ use crate::{
   dev_context::{DevContext, PinBoxSendStaticFuture},
   normalize_dev_options,
   type_aliases::CoordinatorSender,
-  types::{coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot},
+  types::{
+    coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
+    error_stage::ErrorStage,
+  },
 };
 
 #[cfg(feature = "testing")]
@@ -453,14 +456,21 @@ impl DevEngine {
 
 #[derive(Debug, Clone)]
 pub struct BundleState {
-  pub last_full_build_failed: bool,
+  /// True for any error state (initial or incremental).
+  pub last_build_errored: bool,
+  /// The stage of the last incremental failure (`Some` only in
+  /// `Failed { .. }`; `None` on success and on `FullBuildFailed`). Lets
+  /// the consumer force a full rebuild on access after an `Hmr`-stage
+  /// failure — see `internal-docs/dev-engine/implementation.md` §12.
+  pub last_error_stage: Option<ErrorStage>,
   pub has_stale_output: bool,
 }
 
 impl From<CoordinatorStateSnapshot> for BundleState {
   fn from(snapshot: CoordinatorStateSnapshot) -> Self {
     Self {
-      last_full_build_failed: snapshot.last_full_build_failed,
+      last_build_errored: snapshot.last_build_errored,
+      last_error_stage: snapshot.last_error_stage,
       has_stale_output: snapshot.has_stale_output,
     }
   }

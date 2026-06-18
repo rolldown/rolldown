@@ -133,7 +133,7 @@ impl ManualSplitter<'_> {
       .modules
       .iter()
       .filter_map(Module::as_normal)
-      .sorted_by(|a, b| a.stable_id.cmp(&b.stable_id));
+      .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id));
 
     for normal_module in sorted_normal_modules {
       if !metas[normal_module.idx].is_included {
@@ -159,7 +159,7 @@ impl ManualSplitter<'_> {
           continue;
         }
 
-        // Filter by module tags. See meta/design/module-tags.md
+        // Filter by module tags. See internal-docs/module-tags/implementation.md
         if let Some(required_tags) = &self.match_group_required_tags[match_group_index] {
           if !splitting_info.tags_bit_set.contains_all(required_tags) {
             continue;
@@ -392,7 +392,7 @@ impl ManualSplitter<'_> {
   ) -> Option<(ModuleGroup, ModuleGroup)> {
     let mut modules = group.modules.iter().copied().collect::<Vec<_>>();
     // Split by lexical relevance first (stable module id), then by size constraints.
-    modules.sort_by(|lhs, rhs| {
+    modules.sort_unstable_by(|lhs, rhs| {
       let lhs_module = &self.link_output.module_table[*lhs];
       let rhs_module = &self.link_output.module_table[*rhs];
       lhs_module

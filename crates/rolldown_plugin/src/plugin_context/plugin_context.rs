@@ -62,8 +62,8 @@ impl PluginContext {
         module_infos: Arc::clone(&ctx.module_infos),
         tx: Arc::clone(&ctx.tx),
         session: ctx.session.clone(),
-        bundle_span: Arc::clone(&ctx.bundle_span),
-        manual_resolve_span: Arc::clone(&ctx.manual_resolve_span),
+        bundle_span: ctx.bundle_span.clone(),
+        manual_resolve_span: ctx.manual_resolve_span.clone(),
       })),
     }
   }

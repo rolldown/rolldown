@@ -223,7 +223,7 @@ impl Plugin for ViteHtmlPlugin {
                   .parse();
                   if parser_ret.panicked
                     && let Some(err) = parser_ret
-                      .errors
+                      .diagnostics
                       .iter()
                       .find(|e| e.severity == oxc::diagnostics::Severity::Error)
                   {

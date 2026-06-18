@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./chunk.js";
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 var foo;
@@ -20,7 +20,7 @@ export { foo, init_a as n, a_exports as t };
 ## b.js
 
 ```js
-import { r as __toCommonJS } from "./chunk.js";
+import { r as __toCommonJS } from "./rolldown-runtime.js";
 import { n as init_a, t as a_exports } from "./a.js";
 //#region b.js
 let bar = (init_a(), __toCommonJS(a_exports));
@@ -29,7 +29,7 @@ export { bar };
 
 ```
 
-## chunk.js
+## rolldown-runtime.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]

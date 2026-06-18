@@ -1,56 +1,49 @@
 use oxc::{ast::ast::Expression, ast_visit::VisitMut, span::SPAN};
-use rolldown_ecmascript_utils::{AstSnippet, ExpressionExt as _};
+use rolldown_ecmascript_utils::{AstFactory, ExpressionExt as _};
 
 pub struct WebWorkerPostVisitor<'ast> {
-  pub ast_snippet: AstSnippet<'ast>,
+  pub ast_factory: AstFactory<'ast>,
   pub should_inject_import_meta_object: bool,
 }
 
 impl<'ast> WebWorkerPostVisitor<'ast> {
-  pub fn new(ast_snippet: AstSnippet<'ast>) -> Self {
-    Self { ast_snippet, should_inject_import_meta_object: false }
+  pub fn new(ast_factory: AstFactory<'ast>) -> Self {
+    Self { ast_factory, should_inject_import_meta_object: false }
   }
 
   #[inline]
   fn create_self_location_href_expr(&self) -> Expression<'ast> {
-    Expression::StaticMemberExpression(self.ast_snippet.builder.alloc_static_member_expression(
+    Expression::StaticMemberExpression(self.ast_factory.alloc_static_member_expression(
       SPAN,
-      Expression::StaticMemberExpression(self.ast_snippet.builder.alloc_static_member_expression(
+      Expression::StaticMemberExpression(self.ast_factory.alloc_static_member_expression(
         SPAN,
-        self.ast_snippet.id_ref_expr("self", SPAN),
-        self.ast_snippet.id_name("location", SPAN),
+        self.ast_factory.make_id_ref_expr(SPAN, "self"),
+        self.ast_factory.make_id_name(SPAN, "location"),
         false,
       )),
-      self.ast_snippet.id_name("href", SPAN),
+      self.ast_factory.make_id_name(SPAN, "href"),
       false,
     ))
   }
 
   #[inline]
   fn create_import_meta_object_decl(&self) -> oxc::ast::ast::Statement<'ast> {
-    self.ast_snippet.var_decl_stmt(
+    self.ast_factory.make_var_decl(
       "_vite_importMeta",
-      Expression::ObjectExpression(
-        self.ast_snippet.builder.alloc_object_expression(
+      Expression::ObjectExpression(self.ast_factory.alloc_object_expression(
+        SPAN,
+        self.ast_factory.vec1(self.ast_factory.object_property_kind_object_property(
           SPAN,
-          self.ast_snippet.builder.vec1(
-            self.ast_snippet.builder.object_property_kind_object_property(
-              SPAN,
-              oxc::ast::ast::PropertyKind::Init,
-              oxc::ast::ast::PropertyKey::StaticIdentifier(
-                self
-                  .ast_snippet
-                  .builder
-                  .alloc_identifier_name(SPAN, self.ast_snippet.builder.str("url")),
-              ),
-              self.create_self_location_href_expr(),
-              false,
-              false,
-              false,
-            ),
+          oxc::ast::ast::PropertyKind::Init,
+          oxc::ast::ast::PropertyKey::StaticIdentifier(
+            self.ast_factory.alloc_identifier_name(SPAN, self.ast_factory.str("url")),
           ),
-        ),
-      ),
+          self.create_self_location_href_expr(),
+          false,
+          false,
+          false,
+        )),
+      )),
     )
   }
 }
@@ -74,7 +67,7 @@ impl<'ast> VisitMut<'ast> for WebWorkerPostVisitor<'ast> {
         if meta.meta.name == "import" && meta.property.name == "meta" =>
       {
         self.should_inject_import_meta_object = true;
-        *it = self.ast_snippet.id_ref_expr("_vite_importMeta", SPAN);
+        *it = self.ast_factory.make_id_ref_expr(SPAN, "_vite_importMeta");
       }
       _ => oxc::ast_visit::walk_mut::walk_expression(self, it),
     }

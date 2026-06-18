@@ -285,7 +285,7 @@ impl BuildDiagnostic {
           id.to_string(),
           error.help.take().unwrap_or_default().into(),
           error.message.to_string(),
-          error.labels.take().unwrap_or_default(),
+          error.labels.to_vec(),
           event_kind,
         );
         if matches!(severity, Severity::Warning) {
@@ -447,8 +447,8 @@ impl BuildDiagnostic {
     mut static_importers: Vec<String>,
     mut dynamic_importers: Vec<String>,
   ) -> Self {
-    static_importers.sort();
-    dynamic_importers.sort();
+    static_importers.sort_unstable();
+    dynamic_importers.sort_unstable();
     Self::new_inner(super::events::ineffective_dynamic_import::IneffectiveDynamicImport {
       module_id,
       static_importers,

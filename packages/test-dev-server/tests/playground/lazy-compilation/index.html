@@ -2,12 +2,41 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Lazy Compilation Test</title>
+    <title>lazy-compilation</title>
   </head>
   <body>
-    <h1>Lazy Compilation Test</h1>
-    <div class="status">loading</div>
-    <div class="lazy-result"></div>
+    <h1>lazy-compilation</h1>
+
+    <!-- Each scenario owns a disjoint set of DOM nodes (Vite's hmr co-tenant
+         pattern) so one scenario's spec can't perturb another's assertions. -->
+    <section id="basic">
+      <h2>basic</h2>
+      <button id="basic-btn">load</button>
+      <div id="basic-status">pending</div>
+      <pre id="basic-log"></pre>
+    </section>
+
+    <section id="aliased-import">
+      <h2>aliased-import</h2>
+      <button id="aliased-import-btn">load</button>
+      <div id="aliased-import-status">pending</div>
+      <pre id="aliased-import-log"></pre>
+    </section>
+
+    <section id="shared-module">
+      <h2>shared-module</h2>
+      <button id="shared-module-btn">load</button>
+      <div id="shared-module-status">pending</div>
+      <pre id="shared-module-log"></pre>
+    </section>
+
+    <section id="nested-dynamic-import">
+      <h2>nested-dynamic-import</h2>
+      <button id="nested-dynamic-import-btn">load</button>
+      <div id="nested-dynamic-import-status">pending</div>
+      <pre id="nested-dynamic-import-log"></pre>
+    </section>
+
     <script type="module" src="/main.js"></script>
   </body>
 </html>

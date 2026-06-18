@@ -6,7 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
 var init_a = __esmMin((() => {})), init_b = __esmMin((() => {}));
 var init_commonjs = __esmMin((() => {
 	init_a();

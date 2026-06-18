@@ -1,6 +1,6 @@
 use indexmap::map::Entry;
 use oxc::{
-  allocator::TakeIn,
+  allocator::{Allocator, TakeIn},
   ast::ast::{self, Expression},
   semantic::{SemanticBuilder, Stats},
   span::SPAN,
@@ -12,7 +12,7 @@ use rolldown_common::{
   SymbolRefDbForModule, TaggedSymbolRef, WrapKind,
 };
 use rolldown_ecmascript::EcmaAst;
-use rolldown_ecmascript_utils::AstSnippet;
+use rolldown_ecmascript_utils::AstFactory;
 use rolldown_utils::ecmascript::legitimize_json_local_binding_name;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -105,17 +105,30 @@ enum LazyExportWrap {
 /// and replaces the statement with either `module.exports = expr` or `export default expr`.
 fn replace_first_expr_stmt(ecma_ast: &mut EcmaAst, kind: LazyExportWrap) {
   ecma_ast.program.with_mut(|fields| {
-    let snippet = AstSnippet::new(fields.allocator);
+    let ast_factory = AstFactory::new(fields.allocator);
     let Some(stmt) = fields.program.body.first_mut() else { unreachable!() };
     let expr = match stmt {
-      ast::Statement::ExpressionStatement(stmt) => stmt.expression.take_in(snippet.alloc()),
+      ast::Statement::ExpressionStatement(stmt) => stmt.expression.take_in(ast_factory.allocator),
       _ => unreachable!(),
     };
     *stmt = match kind {
-      LazyExportWrap::CjsExport => snippet.module_exports_expr_stmt(expr),
-      LazyExportWrap::EsmDefault => snippet.export_default_expr_stmt(expr),
+      LazyExportWrap::CjsExport => ast_factory.make_module_exports_stmt(expr),
+      LazyExportWrap::EsmDefault => ast_factory.make_export_default_stmt(expr),
     };
   });
+}
+
+/// Takes `expr` (leaving a dummy in its place) and returns the owned inner
+/// expression with any wrapping `(...)` parentheses removed.
+fn take_without_parentheses<'ast>(
+  expr: &mut Expression<'ast>,
+  allocator: &'ast Allocator,
+) -> Expression<'ast> {
+  let mut inner_expr = expr.take_in(allocator);
+  while let Expression::ParenthesizedExpression(mut paren_expr) = inner_expr {
+    inner_expr = paren_expr.expression.take_in(allocator);
+  }
+  inner_expr
 }
 
 fn update_module_default_export_info(
@@ -144,7 +157,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
     FxIndexMap::default();
   let transformed = ecma_ast.program.with_mut(|fields| {
     let mut index_map = FxIndexMap::default();
-    let snippet = AstSnippet::new(fields.allocator);
+    let ast_factory = AstFactory::new(fields.allocator);
     let program = fields.program;
     let Some(stmts) = program.body.first_mut() else { unreachable!() };
     let expr = match stmts {
@@ -157,7 +170,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
       return false;
     }
     let Expression::ObjectExpression(mut obj_expr) =
-      snippet.expr_without_parentheses(expr.take_in(snippet.alloc()))
+      take_without_parentheses(expr, ast_factory.allocator)
     else {
       unreachable!();
     };
@@ -184,9 +197,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
 
           let value = std::mem::replace(
             &mut property.value,
-            snippet
-              .builder
-              .expression_identifier(SPAN, snippet.builder.str(legitimized_ident.as_str())),
+            ast_factory.make_id_ref_expr(SPAN, legitimized_ident.as_str()),
           );
           // TODO(shulaoda): Waiting for oxc transform to support the ES feature `ShorthandProperties`.
           if key == "__proto__" {
@@ -194,9 +205,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
           } else if is_legal_ident {
             property.shorthand = is_legal_ident;
             property.key = ast::PropertyKey::StaticIdentifier(
-              snippet
-                .builder
-                .alloc_identifier_name(SPAN, snippet.builder.str(legitimized_ident.as_ref())),
+              ast_factory.alloc_identifier_name(SPAN, ast_factory.str(legitimized_ident.as_ref())),
             );
           }
           match index_map.entry(legitimized_ident) {
@@ -215,16 +224,15 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
     let stmts = index_map
       .into_iter()
       // declaration
-      .map(|(local, v)| snippet.var_decl_stmt(local.as_str(), v))
+      .map(|(local, v)| ast_factory.make_var_decl(local.as_str(), v))
       // export default json module
       .chain(std::iter::once(
-        snippet.export_default_expr_stmt(Expression::ObjectExpression(obj_expr)),
+        ast_factory.make_export_default_stmt(Expression::ObjectExpression(obj_expr)),
       ))
       // export all declaration
-      .chain(std::iter::once(snippet.statement_module_declaration_export_named_declaration(
-        None,
-        declaration_binding_names.iter(),
-      )));
+      .chain(std::iter::once(
+        ast_factory.make_export_named_stmt(None, declaration_binding_names.iter()),
+      ));
     program.body.extend(stmts);
     true
   });

@@ -7,8 +7,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_resolver::{
-  ModuleType, PackageJson as OxcPackageJson, Resolution, ResolveError, ResolverGeneric,
-  TsConfig as OxcTsConfig,
+  ModuleType, PackageJson as OxcPackageJson, PackageType, Resolution, ResolveError,
+  ResolverGeneric, TsConfig as OxcTsConfig,
 };
 use rolldown_common::{
   ImportKind, ModuleDefFormat, ModuleId, PackageJson, Platform, ResolveOptions, ResolvedId,
@@ -243,6 +243,17 @@ fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
         ModuleType::CommonJs => ModuleDefFormat::CjsPackageJson,
         ModuleType::Module => ModuleDefFormat::EsmPackageJson,
         ModuleType::Json | ModuleType::Wasm | ModuleType::Addon => ModuleDefFormat::Unknown,
+      };
+    }
+    // `oxc_resolver` only resolves `module_type` from `package.json#type` for `.js`/`.ts`
+    // extensions, following the Node.js ESM spec which has no native `.jsx`/`.tsx`. As a bundler,
+    // rolldown also treats `.jsx`/`.tsx` according to the nearest `package.json#type`, so fall back
+    // to reading it directly here to keep all js-like extensions consistent.
+    // See https://github.com/rolldown/rolldown/issues/9690
+    if let Some(ty) = info.package_json().and_then(|pkg_json| pkg_json.r#type()) {
+      return match ty {
+        PackageType::CommonJs => ModuleDefFormat::CjsPackageJson,
+        PackageType::Module => ModuleDefFormat::EsmPackageJson,
       };
     }
   }

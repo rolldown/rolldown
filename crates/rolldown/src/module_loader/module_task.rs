@@ -51,7 +51,7 @@ pub struct ModuleTask<Fs: FileSystem + Clone + 'static> {
   /// The module is asserted to be this specific module type.
   asserted_module_type: Option<ModuleType>,
   flat_options: FlatOptions,
-  magic_string_tx: Option<std::sync::Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+  magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
 }
 
 impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
@@ -64,7 +64,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     is_user_defined_entry: bool,
     assert_module_type: Option<ModuleType>,
     flat_options: FlatOptions,
-    magic_string_tx: Option<std::sync::Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+    magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
   ) -> Self {
     Self {
       ctx,
@@ -251,7 +251,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     &self,
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
     hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
-    magic_string_tx: Option<std::sync::Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+    magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
   ) -> BuildResult<(StrOrBytes, ModuleType)> {
     let mut is_read_from_disk = true;
     let result = load_source(

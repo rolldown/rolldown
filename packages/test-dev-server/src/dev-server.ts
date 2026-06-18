@@ -1,345 +1,307 @@
 import connect from 'connect';
-import nodeFs from 'node:fs';
 import http from 'node:http';
+import type { AddressInfo } from 'node:net';
 import nodePath from 'node:path';
-import nodeUrl from 'node:url';
-import type { BindingClientHmrUpdate, DevEngine } from 'rolldown/experimental';
-import { dev } from 'rolldown/experimental';
 import serveStatic from 'serve-static';
-import { WebSocket, WebSocketServer } from 'ws';
-import type { HmrInvalidateMessage } from './types/client-message.js';
-import { ClientSession } from './types/client-session.js';
-import type { NormalizedDevOptions } from './types/normalized-dev-options.js';
-import type {
-  ConnectedMessage,
-  HmrReloadMessage,
-  HmrUpdateMessage,
-} from './types/server-message.js';
+import { WebSocketServer } from 'ws';
+import { FullBundleDevEnvironment } from './environments/full-bundle-dev-environment.js';
+import { indexHtmlMiddleware } from './middlewares/index-html.js';
+import { memoryFilesMiddleware } from './middlewares/memory-files.js';
+import { statusMiddleware } from './middlewares/status.js';
+import { triggerLazyBundlingMiddleware } from './middlewares/trigger-lazy-bundling.js';
 import { createDevServerPlugin } from './utils/create-dev-server-plugin.js';
 import { decodeClientMessage } from './utils/decode-client-message.js';
-import { getDevWatchOptionsForCi } from './utils/get-dev-watch-options-for-ci.js';
+import type { Logger } from './types/logger.js';
+import type { DevConfig } from './utils/define-dev-config.js';
 import { loadDevConfig } from './utils/load-dev-config.js';
 import { normalizeDevOptions } from './utils/normalize-dev-options.js';
+import { withResolvers } from './utils/with-resolvers.js';
 
-let seed = 0;
+interface DevServerOptions {
+  /** Port to bind. `0` lets the OS assign one (the default for `createDevServer`). */
+  port: number;
+  /**
+   * Wire the stdin `'r'` rebuild trigger. Only the CLI path (`serve()`) wants
+   * this — the node fixtures signal rebuilds through it. In-process servers
+   * created by the test harness must not touch the worker's stdin.
+   */
+  attachStdinTrigger: boolean;
+  /** Sink for server-side log output. Defaults to `console`. */
+  logger?: Logger;
+}
 
-// Node20 does not support `Promise.withResolvers`
-const withResolvers = <T>() => {
-  let resolve: (value: T | PromiseLike<T>) => void;
-  let reject: (reason?: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve: resolve!, reject: reject! };
-};
+export interface DevServerHandle {
+  /** The resolved URL of the running server, bound port included. */
+  url: string;
+  port: number;
+  close(): Promise<void>;
+}
 
+/**
+ * The http/websocket transport and middleware wiring around a
+ * {@link FullBundleDevEnvironment} — the test-dev-server equivalent of Vite's
+ * `server/index.ts`. All full-bundle behavior lives in the environment; this
+ * class only owns the connect/http/ws plumbing and registers the same
+ * middleware chain Vite does.
+ */
 class DevServer {
-  connectServer = connect();
-  server = http.createServer(this.connectServer);
-  serverStatus = {
+  #connectServer = connect();
+  #server = http.createServer(this.#connectServer);
+  #wsServer = new WebSocketServer({ server: this.#server });
+  #config: DevConfig;
+  #options: DevServerOptions;
+  #env: FullBundleDevEnvironment | null = null;
+  #logger: Logger;
+  #stdinListener: ((data: Buffer) => void) | null = null;
+  #port = 0;
+  #closed = false;
+
+  // node platform gates requests until the initial build is on disk (browser
+  // serves a spinner instead, so it never blocks). Mirrors nothing in Vite —
+  // Vite is browser-only.
+  #serverStatus = {
     allowRequest: false,
-    allowRequestPromiseResolvers: withResolvers<void>(),
+    resolvers: withResolvers<void>(),
   };
-  wsServer = new WebSocketServer({ server: this.server });
-  #clients = new Map<string, ClientSession>();
-  #devOptions?: NormalizedDevOptions;
-  #devEngine?: DevEngine;
-  #port = 3000;
-  #buildSeq = 0;
-  #moduleRegistrationSeq = 0;
 
-  constructor() {}
-
-  #sendMessage(
-    socket: WebSocket,
-    message: HmrUpdateMessage | HmrReloadMessage | ConnectedMessage,
-  ): void {
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(message));
-    }
+  constructor(config: DevConfig, options: DevServerOptions) {
+    this.#config = config;
+    this.#options = options;
+    this.#logger = options.logger ?? console;
   }
 
-  async serve(): Promise<void> {
-    const devConfig = await loadDevConfig();
-    const devOptions = normalizeDevOptions(devConfig.dev ?? {});
-    this.#devOptions = devOptions;
-    this.#port = process.env.DEV_SERVER_PORT
-      ? parseInt(process.env.DEV_SERVER_PORT, 10)
-      : devOptions.port;
+  async start(): Promise<DevServerHandle> {
+    const devOptions = normalizeDevOptions(this.#config.dev ?? {});
+    // Shallow-clone before injecting the dev-server plumbing so starting a
+    // server never mutates the caller's config (a config object may be used
+    // to create more than one server).
+    const buildOptions = { ...this.#config.build };
 
-    this.#prepareServer();
+    // Serve from memory (Vite full-bundle parity) only for a browser build
+    // target; node builds keep disk serving (the fixture harness execs the
+    // artifact from disk). `build.platform` is the only platform signal set
+    // consistently across every fixture/playground config.
+    const serveFromMemory = buildOptions.platform === 'browser';
 
-    const buildOptions = devConfig.build ?? {};
-
-    // Inject port into devMode options for HMR runtime
-    buildOptions.experimental = buildOptions.experimental ?? {};
-    buildOptions.experimental.devMode = buildOptions.experimental.devMode ?? {};
-    if (typeof buildOptions.experimental.devMode === 'object') {
-      buildOptions.experimental.devMode.port = this.#port;
-    }
-
-    if (buildOptions.plugins == null || Array.isArray(buildOptions.plugins)) {
-      buildOptions.plugins = [...(buildOptions.plugins || []), createDevServerPlugin(devOptions)];
-    } else {
+    if (buildOptions.plugins != null && !Array.isArray(buildOptions.plugins)) {
       throw new Error('Plugins must be an array');
     }
 
+    // Bind BEFORE building: with `port: 0` the OS-assigned port only exists
+    // after listen, and the HMR runtime's websocket address is baked into the
+    // bundle at build time via `experimental.devMode.port`.
+    // See internal-docs/dev-server-test-harness/implementation.md ("listen-before-build").
+    this.#prepareGate(serveFromMemory);
+    this.#port = await this.#listen(this.#options.port);
+
+    // Inject the bound port into devMode options for the HMR runtime.
+    const experimental = { ...buildOptions.experimental };
+    const devMode = experimental.devMode ?? {};
+    experimental.devMode = typeof devMode === 'object' ? { ...devMode, port: this.#port } : devMode;
+    buildOptions.experimental = experimental;
+    buildOptions.plugins = [
+      ...(buildOptions.plugins ?? []),
+      createDevServerPlugin(devOptions, this.#logger),
+    ];
+
     const { output: outputOptions, ...inputOptions } = buildOptions;
-    let devEngine = await dev(inputOptions, outputOptions ?? {}, {
-      onHmrUpdates: (errOrUpdates) => {
-        if (errOrUpdates instanceof Error) {
-          console.error('HMR update error:', errOrUpdates);
-          this.#buildSeq++;
-        } else {
-          this.handleHmrUpdates(errOrUpdates.updates);
-          // Only increment if no FullReload — a FullReload triggers a rebuild
-          // which will call onOutput, so we let onOutput do the increment to
-          // avoid double-counting a single build cycle.
-          const hasFullReload = errOrUpdates.updates.some((u) => u.update.type === 'FullReload');
-          if (!hasFullReload) {
-            this.#buildSeq++;
-          }
-        }
-      },
-      onOutput: (errOrOutputs) => {
-        if (errOrOutputs instanceof Error) {
-          console.error('Build error:', errOrOutputs);
-        }
-        this.#buildSeq++;
-      },
-      watch: getDevWatchOptionsForCi(),
-    });
-    this.#devEngine = devEngine;
-    process.stdin.on('data', (data) => {
-      if (data.toString() === 'r') {
-        devEngine.triggerFullBuild();
+
+    try {
+      const env = await FullBundleDevEnvironment.create({
+        inputOptions,
+        outputOptions: outputOptions ?? {},
+        serveFromMemory,
+        logger: this.#logger,
+      });
+      this.#env = env;
+      this.#prepareWebSocket(env);
+      if (this.#options.attachStdinTrigger) {
+        this.#prepareStdin(env);
       }
-    });
-    // Unref stdin to prevent it from keeping the process alive.
-    // Some Node.js versions (e.g., 24) may not have unref() on stdin.
-    if (typeof process.stdin.unref === 'function') {
-      process.stdin.unref();
+      this.#registerMiddlewares(env, serveFromMemory);
+
+      await env.run();
+      // `run()` resolves when the initial build settles inside the engine, but
+      // the JS-side output callback may not have executed yet. Wait for it so
+      // a resolved `start()` means the first bundle (or its error) is being
+      // served — a navigation will not land on the spinner.
+      await env.waitForFirstOutput();
+    } catch (e) {
+      // Engine/lifecycle failure after the socket is bound: release the port
+      // so the error surfaces instead of a leaked listener keeping the
+      // process alive. (Build errors don't throw — they arrive via the
+      // engine callbacks; see internal-docs/dev-engine/implementation.md §16.)
+      await this.close().catch(() => {});
+      throw e;
     }
-    this.#prepareHttpServerAfterCreateDevEngine(devEngine);
-    const initialBuildStart = Date.now();
-    console.log('Starting initial build...');
-    await devEngine.run();
-    const initialBuildEnd = Date.now();
-    console.log(`Initial build completed in ${initialBuildEnd - initialBuildStart}ms`);
     this.#readyHttpServer();
+
+    return {
+      url: `http://localhost:${this.#port}`,
+      port: this.#port,
+      close: () => this.close(),
+    };
   }
 
-  #prepareServer(): void {
-    this.connectServer.use(async (_req, _res, next) => {
-      if (this.serverStatus.allowRequest) {
+  /**
+   * The teardown the subprocess model never needed (it SIGKILLed instead):
+   * stop accepting websocket connections, drop connected clients, close the
+   * http server, then close the dev engine so its watcher and worker threads
+   * release the process.
+   */
+  async close(): Promise<void> {
+    if (this.#closed) {
+      return;
+    }
+    this.#closed = true;
+    if (this.#stdinListener) {
+      process.stdin.off('data', this.#stdinListener);
+      this.#stdinListener = null;
+    }
+    this.#wsServer.close();
+    for (const client of this.#wsServer.clients) {
+      client.terminate();
+    }
+    // Destroy idle keep-alive sockets so `close()` resolves promptly.
+    this.#server.closeAllConnections();
+    if (this.#server.listening) {
+      await new Promise<void>((resolve, reject) => {
+        this.#server.close((err) => (err ? reject(err) : resolve()));
+      });
+    }
+    await this.#env?.close();
+  }
+
+  async #listen(port: number): Promise<number> {
+    await new Promise<void>((resolve, reject) => {
+      this.#server.once('error', reject);
+      this.#server.listen(port, () => {
+        this.#server.off('error', reject);
+        resolve();
+      });
+    });
+    const boundPort = (this.#server.address() as AddressInfo).port;
+    this.#logger.info(`Server listening on http://localhost:${boundPort}`);
+    return boundPort;
+  }
+
+  /** First middleware: block node requests until the initial build is ready. */
+  #prepareGate(serveFromMemory: boolean): void {
+    this.#connectServer.use(async (_req, _res, next) => {
+      // Browser never blocks: a not-ready request is answered with the
+      // "Bundling in progress" spinner by the index-html middleware.
+      if (serveFromMemory || this.#serverStatus.allowRequest) {
         next();
       } else {
-        await this.serverStatus.allowRequestPromiseResolvers.promise;
+        await this.#serverStatus.resolvers.promise;
         next();
       }
     });
+  }
 
-    this.wsServer.on('connection', (ws, req) => {
-      // Parse client ID from WebSocket URL query parameter
+  #prepareWebSocket(env: FullBundleDevEnvironment): void {
+    this.#wsServer.on('connection', (ws, req) => {
       const url = new URL(req.url ?? '', `http://localhost:${this.#port}`);
       const clientId = url.searchParams.get('clientId');
-
       if (!clientId) {
-        console.warn('WebSocket connection without clientId, closing');
+        this.#logger.warn('WebSocket connection without clientId, closing');
         ws.close(1008, 'Missing clientId');
         return;
       }
 
-      // Handle duplicate client ID (could be a reconnect)
-      if (this.#clients.has(clientId)) {
-        console.warn(`Client ${clientId} reconnecting, replacing existing session`);
-        const oldSession = this.#clients.get(clientId)!;
-        oldSession.ws.close(1000, 'Replaced by new connection');
-        this.#clients.delete(clientId);
-      }
+      const client = env.connectClient(ws, clientId);
 
-      const clientSession = new ClientSession(ws, clientId);
-      this.#clients.set(clientSession.id, clientSession);
-
-      // Acknowledge the connection
-      this.#sendMessage(ws, { type: 'connected' });
-
-      ws.on('error', console.error);
+      ws.on('error', (err) => this.#logger.error(err));
       ws.on('close', () => {
-        this.#clients.delete(clientSession.id);
-        this.#devEngine?.removeClient(clientSession.id);
-        console.log(`Client ${clientSession.id} disconnected`);
+        env.disconnectClient(client.id);
+        this.#logger.info(`Client ${client.id} disconnected`);
       });
       ws.on('message', async (rawData) => {
         const clientMessage = decodeClientMessage(rawData);
         switch (clientMessage.type) {
           case 'hmr:invalidate':
-            await this.#handleHmrInvalidate(clientMessage);
+            await env.invalidate(clientMessage.moduleId, client);
             break;
-          case 'hmr:module-registered': {
-            console.log('Registering modules:', clientMessage.modules);
-            this.#devEngine?.registerModules(clientSession.id, clientMessage.modules);
-            this.#moduleRegistrationSeq++;
+          case 'hmr:module-registered':
+            await env.registerModules(client.id, clientMessage.modules);
             break;
-          }
           default: {
             const _never: never = clientMessage;
+            void _never;
           }
         }
       });
     });
-
-    this.server.listen(this.#port, () => {
-      console.log(`Server listening on http://localhost:${this.#port}`);
-    });
   }
 
-  #prepareHttpServerAfterCreateDevEngine(devEngine: DevEngine): void {
-    this.connectServer.use(async (req, _res, next) => {
-      if (req.url === '/' || req.url === '/index.html') {
-        await devEngine.ensureLatestBuildOutput();
-        next();
-      } else {
-        next();
+  #prepareStdin(env: FullBundleDevEnvironment): void {
+    this.#stdinListener = (data) => {
+      if (data.toString() === 'r') {
+        env.triggerFullBuild();
       }
-    });
-    this.connectServer.use(async (req, res, next) => {
-      if (req.url?.startsWith('/@vite/lazy?')) {
-        try {
-          const url = new URL(req.url, `http://localhost:${this.#port}`);
-          const moduleId = url.searchParams.get('id');
-          const clientId = url.searchParams.get('clientId');
-          console.log(`Lazy compile request for module ${moduleId} from client ${clientId}`);
-
-          if (moduleId && clientId) {
-            const moduleCode = await devEngine.compileEntry(moduleId, clientId);
-            res!.setHeader('Content-Type', 'application/javascript');
-            res!.end(moduleCode);
-            return;
-          }
-        } catch (err) {
-          // Return server error response
-          res!.statusCode = 500;
-          res!.end('Internal Server Error during lazy compilation');
-          console.error('Error handling lazy compile request:', err);
-          return;
-        }
-      }
-      next();
-    });
-    this.connectServer.use(async (req, res, next) => {
-      if (req.url === '/_dev/status') {
-        const bundleState = await devEngine.getBundleState();
-        res.setHeader('Content-Type', 'application/json');
-        res.end(
-          JSON.stringify({
-            hasStaleOutput: bundleState.hasStaleOutput,
-            lastFullBuildFailed: bundleState.lastFullBuildFailed,
-            buildSeq: this.#buildSeq,
-            connectedClients: this.#clients.size,
-            moduleRegistrationSeq: this.#moduleRegistrationSeq,
-          }),
-        );
-        return;
-      }
-      next();
-    });
-    this.connectServer.use(
-      serveStatic(nodePath.join(process.cwd(), 'dist'), {
-        index: ['index.html'],
-        extensions: ['html'],
-      }),
-    );
-  }
-
-  #readyHttpServer() {
-    this.serverStatus.allowRequest = true;
-    this.serverStatus.allowRequestPromiseResolvers.resolve();
-  }
-
-  handleHmrUpdates(updates: BindingClientHmrUpdate[]): void {
-    for (const clientUpdate of updates) {
-      const update = clientUpdate.update;
-      switch (update.type) {
-        case 'Patch': {
-          const client = this.#clients.get(clientUpdate.clientId);
-          if (!client) {
-            console.warn(`Client ${clientUpdate.clientId} not found`);
-            continue;
-          }
-          this.sendUpdateToClient(client.ws, update);
-          break;
-        }
-        case 'FullReload':
-          if (this.#devOptions?.platform === 'browser') {
-            const client = this.#clients.get(clientUpdate.clientId);
-            if (!client) {
-              console.warn(`Client ${clientUpdate.clientId} not found`);
-              break;
-            }
-            console.log(`[hmr]: Sending reload message to client ${clientUpdate.clientId}`);
-            this.#sendMessage(client.ws, { type: 'hmr:reload' });
-          }
-          this.#devEngine?.ensureLatestBuildOutput();
-          break;
-        case 'Noop':
-          console.warn(`Client ${clientUpdate.clientId} received noop update`);
-          break;
-        default:
-          throw new Error(`Unknown update type: ${update}`);
-      }
+    };
+    process.stdin.on('data', this.#stdinListener);
+    // Unref stdin to prevent it from keeping the process alive.
+    // Some Node.js versions (e.g., 24) may not have unref() on stdin.
+    if (typeof process.stdin.unref === 'function') {
+      process.stdin.unref();
     }
   }
 
-  sendUpdateToClient(socket: WebSocket, output: BindingClientHmrUpdate['update']): void {
-    if (output.type !== 'Patch') {
-      return;
-    }
-    if (output.code) {
-      console.log('Patching...');
-      const path = `${seed}.js`;
-      seed++;
-      nodeFs.writeFileSync(nodePath.join(process.cwd(), 'dist', path), output.code);
-      const patchUriForBrowser = `/${path}`;
-      const patchUriForFile = nodeUrl
-        .pathToFileURL(nodePath.join(process.cwd(), 'dist', path))
-        .toString();
-      console.log(
-        'Patch:',
-        JSON.stringify({
-          type: 'update',
-          url: patchUriForBrowser,
-          path: patchUriForFile,
+  /** Register the full-bundle middleware chain (Vite's `server/index.ts` order). */
+  #registerMiddlewares(env: FullBundleDevEnvironment, serveFromMemory: boolean): void {
+    this.#connectServer.use(triggerLazyBundlingMiddleware(env));
+    this.#connectServer.use(statusMiddleware(env));
+
+    if (serveFromMemory) {
+      this.#connectServer.use(memoryFilesMiddleware(env));
+      this.#connectServer.use(indexHtmlMiddleware(env));
+    } else {
+      // node: the artifact (and HMR patches) are written to disk and read
+      // directly by the fixture harness, so serve `dist/` statically.
+      this.#connectServer.use(
+        serveStatic(nodePath.join(process.cwd(), 'dist'), {
+          index: ['index.html'],
+          extensions: ['html'],
         }),
       );
-      this.#sendMessage(socket, {
-        type: 'hmr:update',
-        url: patchUriForBrowser,
-        path: patchUriForFile,
-      });
-    } else {
-      console.debug(
-        `Failed to send update to client due to ${JSON.stringify(
-          {
-            hasCode: output.code != null,
-          },
-          null,
-          2,
-        )}`,
-      );
     }
   }
 
-  async #handleHmrInvalidate(msg: HmrInvalidateMessage): Promise<void> {
-    console.log('Invalidating...');
-    // Always invalidate - sendMessage will handle empty client lists
-    const updates = await this.#devEngine!.invalidate(msg.moduleId);
-    this.handleHmrUpdates(updates);
+  #readyHttpServer(): void {
+    this.#serverStatus.allowRequest = true;
+    this.#serverStatus.resolvers.resolve();
   }
 }
 
+/**
+ * Programmatic entry point for the browser test harness: take a config, bind
+ * an OS-assigned port (or `opts.port`), run the initial build, and hand back
+ * the resolved URL plus a `close()` — the test-dev-server analog of Vite's
+ * `createServer(config).listen()` / `server.resolvedUrls`.
+ *
+ * Deliberately does NOT consult `DEV_SERVER_PORT`: that env var is the
+ * fixtures/CLI channel consumed by `serve()`.
+ */
+export async function createDevServer(
+  config: DevConfig,
+  opts?: { port?: number; logger?: Logger },
+): Promise<DevServerHandle> {
+  const devServer = new DevServer(config, {
+    port: opts?.port ?? 0,
+    attachStdinTrigger: false,
+    logger: opts?.logger,
+  });
+  return devServer.start();
+}
+
+/** CLI entry point (`serve` bin): config and port come from cwd / env. */
 export async function serve(): Promise<void> {
-  const devServer = new DevServer();
-  await devServer.serve();
+  const devConfig = await loadDevConfig(process.cwd());
+  const devOptions = normalizeDevOptions(devConfig.dev ?? {});
+  const port = process.env.DEV_SERVER_PORT
+    ? parseInt(process.env.DEV_SERVER_PORT, 10)
+    : devOptions.port;
+  const devServer = new DevServer(devConfig, { port, attachStdinTrigger: true });
+  await devServer.start();
 }

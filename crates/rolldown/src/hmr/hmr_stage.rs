@@ -13,7 +13,7 @@ use rolldown_common::{
   Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
-use rolldown_ecmascript_utils::AstSnippet;
+use rolldown_ecmascript_utils::AstFactory;
 use rolldown_error::BuildResult;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
@@ -147,7 +147,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .await?;
 
     // Extract the single result
-    // ret.is_self_accepting = true; // (hyf0) TODO: what's this for?
     Ok(results.pop().unwrap().update)
   }
 
@@ -247,7 +246,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
           if let Module::Normal(module) = module {
             Some(module.originative_resolved_id.clone())
           } else {
-            // unreachable!("HMR only supports normal module. Got {:?}", module.id());
             None
           }
         })
@@ -455,13 +453,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         let modules = &self.module_table().modules;
 
         ast.program.with_mut(|fields| {
-          let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
+          // Re-running semantic re-stamps every NodeId. The NodeId-keyed side-table lookups
+          // below still hit only because the clone is unmutated at this point: identical tree
+          // shape re-derives exactly the scan-time ids (see internal-docs/ast-mutation/implementation.md).
+          let scoping = EcmaAst::make_semantic(fields.program).into_scoping();
 
           let mut finalizer = HmrAstFinalizer {
             modules,
-            alloc: fields.allocator,
-            snippet: AstSnippet::new(fields.allocator),
-            builder: &oxc::ast::AstBuilder::new(fields.allocator),
+            ast_factory: AstFactory::new(fields.allocator),
             import_bindings: FxHashMap::default(),
             module: affected_module,
             exports: oxc::allocator::Vec::new_in(fields.allocator),
@@ -501,7 +500,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         let outro_comment: Box<dyn Source + Send> = Box::new(concat_string!("//#endregion"));
 
         let code_source: Box<dyn Source + Send> = if let Some(map) = codegen.map {
-          Box::new(SourceMapSource::new(codegen.code, map.into_inner()))
+          Box::new(SourceMapSource::new(codegen.code, map.into_owned()))
         } else {
           Box::new(codegen.code)
         };
@@ -581,7 +580,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
           if let Module::Normal(module) = module {
             Some(module.originative_resolved_id.clone())
           } else {
-            // unreachable!("HMR only supports normal module. Got {:?}", module.id());
             None
           }
         })
@@ -695,13 +693,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         let modules = &self.module_table().modules;
 
         ast.program.with_mut(|fields| {
-          let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
+          // Re-running semantic re-stamps every NodeId. The NodeId-keyed side-table lookups
+          // below still hit only because the clone is unmutated at this point: identical tree
+          // shape re-derives exactly the scan-time ids (see internal-docs/ast-mutation/implementation.md).
+          let scoping = EcmaAst::make_semantic(fields.program).into_scoping();
 
           let mut finalizer = HmrAstFinalizer {
             modules,
-            alloc: fields.allocator,
-            snippet: AstSnippet::new(fields.allocator),
-            builder: &oxc::ast::AstBuilder::new(fields.allocator),
+            ast_factory: AstFactory::new(fields.allocator),
             import_bindings: FxHashMap::default(),
             module: affected_module,
             exports: oxc::allocator::Vec::new_in(fields.allocator),
@@ -739,7 +738,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         let outro_comment: Box<dyn Source + Send> = Box::new(concat_string!("//#endregion"));
 
         let code_source: Box<dyn Source + Send> = if let Some(map) = codegen.map {
-          Box::new(SourceMapSource::new(codegen.code, map.into_inner()))
+          Box::new(SourceMapSource::new(codegen.code, map.into_owned()))
         } else {
           Box::new(codegen.code)
         };
@@ -887,13 +886,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         let modules = &self.module_table().modules;
 
         ast.program.with_mut(|fields| {
-          let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
+          // Re-running semantic re-stamps every NodeId. The NodeId-keyed side-table lookups
+          // below still hit only because the clone is unmutated at this point: identical tree
+          // shape re-derives exactly the scan-time ids (see internal-docs/ast-mutation/implementation.md).
+          let scoping = EcmaAst::make_semantic(fields.program).into_scoping();
 
           let mut finalizer = HmrAstFinalizer {
             modules,
-            alloc: fields.allocator,
-            snippet: AstSnippet::new(fields.allocator),
-            builder: &oxc::ast::AstBuilder::new(fields.allocator),
+            ast_factory: AstFactory::new(fields.allocator),
             import_bindings: FxHashMap::default(),
             module: affected_module,
             exports: oxc::allocator::Vec::new_in(fields.allocator),
@@ -931,7 +931,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         let outro_comment: Box<dyn Source + Send> = Box::new(concat_string!("//#endregion"));
 
         let code_source: Box<dyn Source + Send> = if let Some(map) = codegen.map {
-          Box::new(SourceMapSource::new(codegen.code, map.into_inner()))
+          Box::new(SourceMapSource::new(codegen.code, map.into_owned()))
         } else {
           Box::new(codegen.code)
         };
@@ -1058,7 +1058,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // FIXME(hyf0): In practice, the order of importers doesn't matter since we're going to traverse all of them.
     // However, non-deterministic order causes unstable snapshots.
     importers_idx
-      .sort_by_key(|importer_idx| self.module_table().modules[*importer_idx].stable_id());
+      .sort_unstable_by_key(|importer_idx| self.module_table().modules[*importer_idx].stable_id());
 
     for importer_idx in importers_idx {
       let Module::Normal(importer) = &self.module_table().modules[importer_idx] else {
@@ -1197,7 +1197,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
             == *first_invalidated_by
         }) {
           require_full_reload = true;
-          // full_reload_reason = Some("circular import invalidate".to_string());
+          full_reload_reason = Some(format!(
+            "update propagated back to `{first_invalidated_by}`, which already called `import.meta.hot.invalidate()`"
+          ));
           continue;
         }
       }

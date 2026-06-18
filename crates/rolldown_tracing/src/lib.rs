@@ -4,10 +4,14 @@
 ///   - https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives
 /// - Using `RD_LOG=trace RD_LOG_OUTPUT=chrome-json` to collect tracing events into a json file.
 ///   - Using `RD_LOG_OUTPUT_STYLE=async` to record traces as a group of asynchronous operations.
+///   - Requires building with the `chrome-tracing` feature, which is enabled for profile
+///     builds but disabled in release builds to keep the shipped binary smaller.
 use std::sync::atomic::AtomicBool;
 use std::{any::Any, str::FromStr};
 
+#[cfg(feature = "chrome-tracing")]
 use tracing_chrome::ChromeLayerBuilder;
+#[cfg(feature = "chrome-tracing")]
 use tracing_chrome::TraceStyle;
 use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::{
@@ -44,15 +48,39 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
 
   match output_mode.as_str() {
     "chrome-json" | "chrome-json-threaded" => {
-      let trace_style =
-        if output_mode == "chrome-json" { TraceStyle::Async } else { TraceStyle::Threaded };
-      let (chrome_layer, guard) =
-        ChromeLayerBuilder::new().trace_style(trace_style).include_args(true).build();
-      tracing_subscriber::registry()
-        .with(Targets::from_str(&env_var).unwrap())
-        .with(chrome_layer.with_filter(filter_for_removing_devtools_event))
-        .init();
-      Some(Box::new(guard))
+      #[cfg(feature = "chrome-tracing")]
+      {
+        let trace_style =
+          if output_mode == "chrome-json" { TraceStyle::Async } else { TraceStyle::Threaded };
+        let (chrome_layer, guard) =
+          ChromeLayerBuilder::new().trace_style(trace_style).include_args(true).build();
+        tracing_subscriber::registry()
+          .with(Targets::from_str(&env_var).unwrap())
+          .with(chrome_layer.with_filter(filter_for_removing_devtools_event))
+          .init();
+        Some(Box::new(guard))
+      }
+      #[cfg(not(feature = "chrome-tracing"))]
+      {
+        #![expect(clippy::print_stderr, reason = "Warn before tracing is initialized")]
+        eprintln!(
+          "`RD_LOG_OUTPUT={output_mode}` requires building with the `chrome-tracing` feature, \
+           which is disabled in release builds. Falling back to readable stdout output. \
+           Build a profile binary (`pnpm build-binding:profile`) to enable chrome tracing."
+        );
+        tracing_subscriber::registry()
+          .with(filter_for_removing_devtools_event)
+          .with(Targets::from_str(&env_var).unwrap())
+          .with(
+            fmt::layer()
+              .pretty()
+              .with_span_events(FmtSpan::NONE)
+              .with_level(true)
+              .with_target(false),
+          )
+          .init();
+        None
+      }
     }
     "json" => {
       panic!("`json` output mode is not implemented yet");

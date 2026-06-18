@@ -36,6 +36,13 @@ impl BuildEvent for PluginError {
     EventKind::PluginError
   }
 
+  fn id(&self) -> Option<String> {
+    // A `PluginError` wraps an inner diagnostic (e.g. an `OxcError` carrying the
+    // offending file path). Delegate to it so the file id is preserved; otherwise
+    // it defaults to `None` and is lost in the error object exposed to JS.
+    self.error.downcast_ref::<BuildDiagnostic>().and_then(BuildDiagnostic::id)
+  }
+
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     if self.error.downcast_ref::<BuildDiagnostic>().is_some() {
       String::default()

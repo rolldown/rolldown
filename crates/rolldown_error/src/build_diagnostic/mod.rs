@@ -267,4 +267,27 @@ mod tests {
       "expected non-empty underlying message in Debug output, got: {debug_output}"
     );
   }
+
+  // Regression test for #9843: re-wrapping a diagnostic in a `PluginError` must not
+  // drop the inner diagnostic's file id. That id feeds `NativeError.id` / `loc.file`
+  // in the error object exposed to JS, so losing it makes `err.errors[0].id`
+  // `undefined` (a regression from rollup@4).
+  #[test]
+  fn plugin_error_preserves_inner_diagnostic_id() {
+    let inner = BuildDiagnostic::missing_global_name(
+      "/project/src/main.tsx".to_string(),
+      "main".into(),
+      "Main".into(),
+    );
+    // Sanity check: the inner diagnostic carries the id.
+    assert_eq!(inner.id().as_deref(), Some("/project/src/main.tsx"));
+
+    let plugin_diag =
+      BuildDiagnostic::plugin_error(CausedPlugin::new("my-plugin".into()), inner.into());
+    assert_eq!(
+      plugin_diag.id().as_deref(),
+      Some("/project/src/main.tsx"),
+      "PluginError must delegate id() to the inner diagnostic (#9843)"
+    );
+  }
 }

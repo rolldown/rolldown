@@ -153,7 +153,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       &raw_import_records,
       ecma_view.source.clone(),
       &mut warnings,
-      &module_type,
     )
     .await?;
 

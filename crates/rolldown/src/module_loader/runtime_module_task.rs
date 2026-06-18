@@ -147,7 +147,6 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       &raw_import_records,
       source.clone(),
       &mut vec![],
-      &module_type,
     )
     .await?;
 

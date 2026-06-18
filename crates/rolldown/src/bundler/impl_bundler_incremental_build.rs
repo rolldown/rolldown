@@ -24,7 +24,7 @@ impl Bundler {
     // `Bundler` on every outcome; bailing on `Err` would drop `bundle` and leave
     // `Bundler::cache` at the `default()` (snapshot = None) that `mem::take`
     // installed above, making the next HMR cycle panic in `get_snapshot()`.
-    // See meta/design/bundler-data-lifecycle.md ("Cache integrity on a failed build").
+    // See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
     let ret = with_fn(&mut bundle).await;
     self.cache = bundle.cache;
     ret

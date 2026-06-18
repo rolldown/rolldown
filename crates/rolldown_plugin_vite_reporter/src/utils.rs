@@ -1,6 +1,23 @@
 use std::io::{StdoutLock, Write};
 
 use flate2::{Compression, write::GzEncoder};
+use owo_colors::{Style, Styled};
+
+/// Apply `style` to `text` only when stdout supports color.
+///
+/// This is what owo-colors' `if_supports_color` does internally, but without its
+/// `supports-colors` feature (which would pull a duplicate `supports-color` into
+/// the tree). Like miette, the no-color path applies an empty [`Style`], which
+/// emits no escape codes. `on_cached` caches detection, so this is cheap per call.
+#[inline]
+pub fn paint<T: std::fmt::Display>(text: T, style: Style) -> Styled<T> {
+  let style = if supports_color::on_cached(supports_color::Stream::Stdout).is_some() {
+    style
+  } else {
+    Style::new()
+  };
+  style.style(text)
+}
 
 pub const COMPRESSIBLE_ASSETS: [&str; 7] =
   [".html", ".json", ".svg", ".txt", ".xml", ".xhtml", ".wasm"];

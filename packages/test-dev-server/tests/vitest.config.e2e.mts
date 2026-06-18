@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 // Browser e2e suite (the in-process, auto-discovered harness — see
-// meta/design/dev-server-test-harness.md). Discovery lives here and nowhere
+// internal-docs/dev-server-test-harness/implementation.md). Discovery lives here and nowhere
 // else: any `playground/**/*.spec.ts` is picked up, and the playground name is
 // derived from the spec's own path. No central playground registry.
 const timeout = process.env.PWDEBUG ? Infinity : process.env.CI ? 50_000 : 30_000;

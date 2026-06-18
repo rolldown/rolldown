@@ -133,7 +133,7 @@ impl ManualSplitter<'_> {
       .modules
       .iter()
       .filter_map(Module::as_normal)
-      .sorted_by(|a, b| a.stable_id.cmp(&b.stable_id));
+      .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id));
 
     for normal_module in sorted_normal_modules {
       if !metas[normal_module.idx].is_included {
@@ -159,7 +159,7 @@ impl ManualSplitter<'_> {
           continue;
         }
 
-        // Filter by module tags. See meta/design/module-tags.md
+        // Filter by module tags. See internal-docs/module-tags/implementation.md
         if let Some(required_tags) = &self.match_group_required_tags[match_group_index] {
           if !splitting_info.tags_bit_set.contains_all(required_tags) {
             continue;

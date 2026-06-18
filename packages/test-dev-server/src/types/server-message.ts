@@ -18,7 +18,7 @@ export interface ConnectedMessage {
  * Mirrors Vite full-bundle mode: a build error is pushed to every connected
  * client and replayed to freshly-connected ones, so the error survives a
  * browser refresh. See `fullBundleEnvironment.ts` (`prepareError` + the
- * `vite:client:connect` replay) and `meta/design/dev-engine.md` §2.
+ * `vite:client:connect` replay) and `internal-docs/dev-engine/design.md` — principle 2.
  *
  * `err` is the ANSI-stripped, serializable payload produced by `prepareError`,
  * mirroring the `err` field of Vite's `ErrorPayload`.

@@ -1,11 +1,21 @@
 use super::normalize_binding_transform_options;
 use crate::options::BindingGeneratedCodeOptions;
-use crate::options::binding_manual_code_splitting_options::BindingChunkingContext;
-use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, SanitizeFileName};
-use crate::types::binding_string_or_regex::bindingify_string_or_regex_array;
+use crate::options::binding_manual_code_splitting_options::{
+  BindingChunkingContext, BindingManualCodeSplittingOptions,
+};
+use crate::options::{
+  AssetFileNamesOutputOption, BindingOnLog, ChunkFileNamesOutputOption, SanitizeFileName,
+  SourcemapIgnoreListOutputOption,
+};
+use crate::types::binding_string_or_regex::{
+  BindingStringOrRegex, bindingify_string_or_regex_array,
+};
+use crate::types::defer_sync_scan_data::BindingDeferSyncScanData;
 use crate::{
   options::binding_inject_import::normalize_binding_inject_import,
-  types::js_callback::{JsCallbackExt, JsCallbackResultExt},
+  types::js_callback::{
+    JsCallbackResultExt, {JsCallback, JsCallbackExt},
+  },
 };
 #[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
@@ -206,18 +216,12 @@ fn napi_compress_options_to_raw_compress_options(
   })
 }
 
-#[expect(clippy::too_many_lines)]
-pub fn normalize_binding_options(
-  input_options: crate::options::BindingInputOptions,
-  output_options: crate::options::BindingOutputOptions,
-  #[cfg(not(target_family = "wasm"))] mut parallel_plugins_map: Option<
-    crate::parallel_js_plugin_registry::PluginValues,
+fn normalize_external_option(
+  external: Option<
+    Either<Vec<BindingStringOrRegex>, JsCallback<FnArgs<(String, Option<String>, bool)>, bool>>,
   >,
-  #[cfg(not(target_family = "wasm"))] worker_manager: Option<WorkerManager>,
-) -> napi::Result<BundlerConfig> {
-  let cwd = PathBuf::from(input_options.cwd);
-
-  let external = input_options.external.map(|external| match external {
+) -> Option<IsExternal> {
+  external.map(|external| match external {
     Either::A(patterns) => IsExternal::StringOrRegex(bindingify_string_or_regex_array(patterns)),
     Either::B(is_external) => {
       IsExternal::Fn(Some(Arc::new(move |source, importer, is_resolved| {
@@ -233,9 +237,13 @@ pub fn normalize_binding_options(
         })
       })))
     }
-  });
+  })
+}
 
-  let get_defer_sync_scan_data = input_options.defer_sync_scan_data.map(|ts_fn| {
+fn normalize_defer_sync_scan_data_option(
+  defer_sync_scan_data: Option<JsCallback<(), Vec<BindingDeferSyncScanData>>>,
+) -> Option<DeferSyncScanDataOption> {
+  defer_sync_scan_data.map(|ts_fn| {
     DeferSyncScanDataOption::new(move || {
       let ts_fn = Arc::clone(&ts_fn);
       Box::pin(async move {
@@ -249,9 +257,13 @@ pub fn normalize_binding_options(
           .map_err(anyhow::Error::from)
       })
     })
-  });
+  })
+}
 
-  let sourcemap_ignore_list = output_options.sourcemap_ignore_list.map(|option| match option {
+fn normalize_sourcemap_ignore_list_option(
+  sourcemap_ignore_list: Option<SourcemapIgnoreListOutputOption>,
+) -> Option<rolldown::SourceMapIgnoreList> {
+  sourcemap_ignore_list.map(|option| match option {
     Either3::A(bool_val) => rolldown::SourceMapIgnoreList::from_bool(bool_val),
     Either3::B(string_or_regex) => {
       rolldown::SourceMapIgnoreList::from_string_or_regex(string_or_regex.inner())
@@ -270,9 +282,13 @@ pub fn normalize_binding_options(
         })
       }))
     }
-  });
+  })
+}
 
-  let sourcemap_path_transform = output_options.sourcemap_path_transform.map(|ts_fn| {
+fn normalize_sourcemap_path_transform_option(
+  sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
+) -> Option<rolldown::SourceMapPathTransform> {
+  sourcemap_path_transform.map(|ts_fn| {
     rolldown::SourceMapPathTransform::new(Arc::new(move |source, sourcemap_path| {
       let ts_fn = Arc::clone(&ts_fn);
       let source = source.to_string();
@@ -285,9 +301,13 @@ pub fn normalize_binding_options(
           .map_err(anyhow::Error::from)
       })
     }))
-  });
+  })
+}
 
-  let invalidate_js_side_cache = input_options.invalidate_js_side_cache.map(|ts_fn| {
+fn normalize_invalidate_js_side_cache_option(
+  invalidate_js_side_cache: Option<JsCallback>,
+) -> Option<rolldown::InvalidateJsSideCache> {
+  invalidate_js_side_cache.map(|ts_fn| {
     rolldown::InvalidateJsSideCache::new(Arc::new(move || {
       let ts_fn = Arc::clone(&ts_fn);
       Box::pin(async move {
@@ -298,9 +318,11 @@ pub fn normalize_binding_options(
           .map_err(anyhow::Error::from)
       })
     }))
-  });
+  })
+}
 
-  let on_log = input_options.on_log.map(|ts_fn| {
+fn normalize_on_log_option(on_log: BindingOnLog) -> Option<rolldown::OnLog> {
+  on_log.map(|ts_fn| {
     rolldown::OnLog::new(Arc::new(move |level, log| {
       let ts_fn = Arc::clone(&ts_fn);
       Box::pin(async move {
@@ -311,7 +333,130 @@ pub fn normalize_binding_options(
           .map_err(anyhow::Error::from)
       })
     }))
-  });
+  })
+}
+
+fn normalize_code_splitting(
+  manual_code_splitting: Option<BindingManualCodeSplittingOptions>,
+  inline_dynamic_imports: Option<bool>,
+) -> napi::Result<Option<CodeSplittingMode>> {
+  // Reconcile the two still-separate binding inputs — `inlineDynamicImports` and the
+  // grouping config (`manualCodeSplitting`, fed from JS `advancedChunks` / `manualChunks`)
+  // — into the core's single `codeSplitting` option, whose object form (`Advanced`)
+  // carries the groups.
+  let manual_code_splitting = manual_code_splitting
+    .map(|inner| -> napi::Result<ManualCodeSplittingOptions> {
+      Ok(ManualCodeSplittingOptions {
+        min_size: inner.min_size,
+        min_share_count: inner.min_share_count,
+        min_module_size: inner.min_module_size,
+        max_module_size: inner.max_module_size,
+        max_size: inner.max_size,
+        groups: inner
+          .groups
+          .map(|inner| {
+            inner
+              .into_iter()
+              .map(|item| -> napi::Result<MatchGroup> {
+                Ok(MatchGroup {
+                  name: match item.name {
+                    Either::A(name) => MatchGroupName::Static(name),
+                    Either::B(func) => {
+                      let func = Arc::clone(&func);
+                      MatchGroupName::Dynamic(Arc::new(move |module_id, ctx| {
+                        let module_id = module_id.to_string();
+                        let func = Arc::clone(&func);
+                        let owned_ctx = ctx.clone();
+                        Box::pin(async move {
+                          func
+                            .invoke_async(
+                              (module_id, BindingChunkingContext::new(owned_ctx)).into(),
+                            )
+                            .await
+                            .context("advancedChunks group name option")
+                            .map_err(anyhow::Error::from)
+                        })
+                      }))
+                    }
+                  },
+                  test: item
+                    .test
+                    .map(|inner| -> napi::Result<rolldown::MatchGroupTest> {
+                      match inner {
+                        Either::A(reg) => {
+                          Ok(rolldown::MatchGroupTest::Regex(reg.try_into().map_err(|err| {
+                            napi::Error::from_reason(format!(
+                              "Invalid regex in `manualCodeSplitting` group `test`: {err}"
+                            ))
+                          })?))
+                        }
+                        Either::B(func) => {
+                          Ok(rolldown::MatchGroupTest::Function(Arc::new(move |id: &str| {
+                            let id = id.to_string();
+                            let func = Arc::clone(&func);
+                            Box::pin(async move {
+                              func
+                                .invoke_async((id,).into())
+                                .await
+                                .context("advancedChunks group test option")
+                                .map_err(anyhow::Error::from)
+                            })
+                          })))
+                        }
+                      }
+                    })
+                    .transpose()?,
+                  priority: item.priority,
+                  min_size: item.min_size,
+                  min_share_count: item.min_share_count,
+                  max_module_size: item.max_module_size,
+                  min_module_size: item.min_module_size,
+                  max_size: item.max_size,
+                  entries_aware: item.entries_aware,
+                  entries_aware_merge_threshold: item.entries_aware_merge_threshold,
+                  tags: item.tags.map(|tags| tags.into_iter().map(ModuleTag::from).collect()),
+                  include_dependencies_recursively: item.include_dependencies_recursively,
+                })
+              })
+              .collect::<napi::Result<Vec<_>>>()
+          })
+          .transpose()?,
+        include_dependencies_recursively: inner.include_dependencies_recursively,
+      })
+    })
+    .transpose()?;
+  // `inlineDynamicImports: true` wins and disables splitting. The JS layer already drops
+  // (and warns about) any grouping config in this case, so groups normally reach here only
+  // when a caller sets the binding fields directly; the `_` drops them to stay consistent.
+  Ok(match (inline_dynamic_imports, manual_code_splitting) {
+    (Some(true), _) => Some(CodeSplittingMode::Bool(false)),
+    (_, Some(groups)) => Some(CodeSplittingMode::Advanced(groups)),
+    (Some(false), None) => Some(CodeSplittingMode::Bool(true)),
+    (None, None) => None,
+  })
+}
+
+#[expect(clippy::too_many_lines)]
+pub fn normalize_binding_options(
+  input_options: crate::options::BindingInputOptions,
+  output_options: crate::options::BindingOutputOptions,
+  #[cfg(not(target_family = "wasm"))] mut parallel_plugins_map: Option<
+    crate::parallel_js_plugin_registry::PluginValues,
+  >,
+  #[cfg(not(target_family = "wasm"))] worker_manager: Option<WorkerManager>,
+) -> napi::Result<BundlerConfig> {
+  let cwd = PathBuf::from(input_options.cwd);
+
+  let external = normalize_external_option(input_options.external);
+  let get_defer_sync_scan_data =
+    normalize_defer_sync_scan_data_option(input_options.defer_sync_scan_data);
+  let sourcemap_ignore_list =
+    normalize_sourcemap_ignore_list_option(output_options.sourcemap_ignore_list);
+  let sourcemap_path_transform =
+    normalize_sourcemap_path_transform_option(output_options.sourcemap_path_transform);
+  let invalidate_js_side_cache =
+    normalize_invalidate_js_side_cache_option(input_options.invalidate_js_side_cache);
+  let on_log = normalize_on_log_option(input_options.on_log);
 
   let mut module_types = None;
   if let Some(raw) = input_options.module_types {
@@ -506,103 +651,10 @@ pub fn normalize_binding_options(
       .inject
       .map(|inner| inner.into_iter().map(normalize_binding_inject_import).collect()),
     external_live_bindings: output_options.external_live_bindings,
-    code_splitting: {
-      // Reconcile the two still-separate binding inputs — `inlineDynamicImports` and the
-      // grouping config (`manualCodeSplitting`, fed from JS `advancedChunks` / `manualChunks`)
-      // — into the core's single `codeSplitting` option, whose object form (`Advanced`)
-      // carries the groups.
-      let manual_code_splitting = output_options
-        .manual_code_splitting
-        .map(|inner| -> napi::Result<ManualCodeSplittingOptions> {
-          Ok(ManualCodeSplittingOptions {
-            min_size: inner.min_size,
-            min_share_count: inner.min_share_count,
-            min_module_size: inner.min_module_size,
-            max_module_size: inner.max_module_size,
-            max_size: inner.max_size,
-            groups: inner
-              .groups
-              .map(|inner| {
-                inner
-                  .into_iter()
-                  .map(|item| -> napi::Result<MatchGroup> {
-                    Ok(MatchGroup {
-                      name: match item.name {
-                        Either::A(name) => MatchGroupName::Static(name),
-                        Either::B(func) => {
-                          let func = Arc::clone(&func);
-                          MatchGroupName::Dynamic(Arc::new(move |module_id, ctx| {
-                            let module_id = module_id.to_string();
-                            let func = Arc::clone(&func);
-                            let owned_ctx = ctx.clone();
-                            Box::pin(async move {
-                              func
-                                .invoke_async(
-                                  (module_id, BindingChunkingContext::new(owned_ctx)).into(),
-                                )
-                                .await
-                                .context("advancedChunks group name option")
-                                .map_err(anyhow::Error::from)
-                            })
-                          }))
-                        }
-                      },
-                      test: item
-                        .test
-                        .map(|inner| -> napi::Result<rolldown::MatchGroupTest> {
-                          match inner {
-                            Either::A(reg) => Ok(rolldown::MatchGroupTest::Regex(
-                              reg.try_into().map_err(|err| {
-                                napi::Error::from_reason(format!(
-                                  "Invalid regex in `manualCodeSplitting` group `test`: {err}"
-                                ))
-                              })?,
-                            )),
-                            Either::B(func) => {
-                              Ok(rolldown::MatchGroupTest::Function(Arc::new(move |id: &str| {
-                                let id = id.to_string();
-                                let func = Arc::clone(&func);
-                                Box::pin(async move {
-                                  func
-                                    .invoke_async((id,).into())
-                                    .await
-                                    .context("advancedChunks group test option")
-                                    .map_err(anyhow::Error::from)
-                                })
-                              })))
-                            }
-                          }
-                        })
-                        .transpose()?,
-                      priority: item.priority,
-                      min_size: item.min_size,
-                      min_share_count: item.min_share_count,
-                      max_module_size: item.max_module_size,
-                      min_module_size: item.min_module_size,
-                      max_size: item.max_size,
-                      entries_aware: item.entries_aware,
-                      entries_aware_merge_threshold: item.entries_aware_merge_threshold,
-                      tags: item.tags.map(|tags| tags.into_iter().map(ModuleTag::from).collect()),
-                      include_dependencies_recursively: item.include_dependencies_recursively,
-                    })
-                  })
-                  .collect::<napi::Result<Vec<_>>>()
-              })
-              .transpose()?,
-            include_dependencies_recursively: inner.include_dependencies_recursively,
-          })
-        })
-        .transpose()?;
-      match (output_options.inline_dynamic_imports, manual_code_splitting) {
-        // `inlineDynamicImports: true` wins and disables splitting. The JS layer already drops
-        // (and warns about) any grouping config in this case, so groups normally reach here only
-        // when a caller sets the binding fields directly; the `_` drops them to stay consistent.
-        (Some(true), _) => Some(CodeSplittingMode::Bool(false)),
-        (_, Some(groups)) => Some(CodeSplittingMode::Advanced(groups)),
-        (Some(false), None) => Some(CodeSplittingMode::Bool(true)),
-        (None, None) => None,
-      }
-    },
+    code_splitting: normalize_code_splitting(
+      output_options.manual_code_splitting,
+      output_options.inline_dynamic_imports,
+    )?,
     dynamic_import_in_cjs: output_options.dynamic_import_in_cjs,
     checks: input_options.checks.map(Into::into),
     profiler_names: input_options.profiler_names,

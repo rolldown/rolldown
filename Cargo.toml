@@ -210,6 +210,7 @@ serde_yaml = "0.9.34"
 simdutf8 = "0.1.5"
 string_cache = "0.9.0"
 sugar_path = { version = "2.0.1", features = ["cached_current_dir"] }
+supports-color = "3"
 terminal_size = "0.4.2"
 testing_macros = "1.0.0"
 tokio = { version = "1.45.0", default-features = false }
@@ -249,7 +250,6 @@ oxc = { version = "0.136.0", features = [
   "serialize",
   "isolated_declarations",
   "regular_expression",
-  "cfg",
 ] }
 oxc_allocator = { version = "0.136.0", features = ["pool"] }
 oxc_ecmascript = { version = "0.136.0" }
@@ -268,10 +268,10 @@ oxc_index = { version = "5", features = [
   "rayon",
   "serde",
 ] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver = { version = "11.21.0", features = [
+oxc_resolver = { version = "11.21.3", features = [
   "yarn_pnp",
 ] } # https://github.com/oxc-project/oxc-resolver
-oxc_resolver_napi = { version = "11.21.0", default-features = false, features = ["yarn_pnp"] }
+oxc_resolver_napi = { version = "11.21.3", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "8.0.1" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]

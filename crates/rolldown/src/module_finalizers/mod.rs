@@ -162,7 +162,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     rec_idx: ImportRecordIdx,
   ) -> FxIndexSet<ModuleIdx> {
-    // See meta/design/linking/reference-needed-symbols.md for why this follows
+    // See internal-docs/linking/reference-needed-symbols/implementation.md for why this follows
     // canonical owners through non-wrapped barrel modules.
     let mut init_modules = FxIndexSet::default();
     let rec = &self.ctx.module.import_records[rec_idx];

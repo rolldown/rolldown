@@ -1,0 +1,21 @@
+[package]
+name = "rolldown_filter_analyzer"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+publish = false
+repository.workspace = true
+description = "Analyzer for filter patterns in Rolldown"
+
+[lints]
+workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+# The `cfg` feature (control flow graph) is only required by this crate, so it
+# is enabled here rather than on the workspace-wide `oxc` dependency.
+oxc = { workspace = true, features = ["cfg"] }
+rolldown_ecmascript = { workspace = true }

@@ -5,7 +5,7 @@ import { chromium } from 'playwright';
 import type { TestProject } from 'vitest/node';
 
 // Global setup for the browser e2e suite, ported from Vite's playground
-// harness (see meta/design/dev-server-test-harness.md): launch one Chromium
+// harness (see internal-docs/dev-server-test-harness/implementation.md): launch one Chromium
 // server for the whole run (each spec file opens its own page), and copy
 // each playground used by the selected specs into playground-temp/ so tests
 // edit a throwaway copy.

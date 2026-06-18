@@ -90,7 +90,7 @@ class DevServer {
     // Bind BEFORE building: with `port: 0` the OS-assigned port only exists
     // after listen, and the HMR runtime's websocket address is baked into the
     // bundle at build time via `experimental.devMode.port`.
-    // See meta/design/dev-server-test-harness.md ("listen-before-build").
+    // See internal-docs/dev-server-test-harness/implementation.md ("listen-before-build").
     this.#prepareGate(serveFromMemory);
     this.#port = await this.#listen(this.#options.port);
 
@@ -130,7 +130,7 @@ class DevServer {
       // Engine/lifecycle failure after the socket is bound: release the port
       // so the error surfaces instead of a leaked listener keeping the
       // process alive. (Build errors don't throw — they arrive via the
-      // engine callbacks; see meta/design/dev-engine.md §16.)
+      // engine callbacks; see internal-docs/dev-engine/implementation.md §16.)
       await this.close().catch(() => {});
       throw e;
     }

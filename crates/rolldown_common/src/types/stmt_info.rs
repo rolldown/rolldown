@@ -59,10 +59,6 @@ impl StmtInfos {
     self.symbol_ref_to_referenced_stmt_idx.entry(symbol_ref).or_default().push(id);
   }
 
-  pub fn get_namespace_stmt_info(&self) -> &StmtInfo {
-    &self.infos[Self::NAMESPACE_STMT_IDX]
-  }
-
   pub fn replace_namespace_stmt_info(&mut self, info: StmtInfo) -> StmtInfoIdx {
     self.infos[Self::NAMESPACE_STMT_IDX] = info;
     for symbol_ref in self.infos[Self::NAMESPACE_STMT_IDX]

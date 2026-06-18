@@ -24,18 +24,12 @@ impl EcmaAst {
     self.program().is_empty()
   }
 
-  pub fn make_semantic<'ast>(program: &'ast Program<'ast>, with_cfg: bool) -> Semantic<'ast> {
-    // oxc 0.136 no longer builds the `AstNodes` store by default. CFG consumers
-    // (e.g. the filter analyzer) map each instruction's `node_id` back to its AST
-    // node via `Semantic::nodes`, so build the node store whenever the CFG is
-    // requested. Scoping-only callers (`with_cfg == false`) keep the cheaper path.
-    SemanticBuilder::new().with_build_nodes(with_cfg).with_cfg(with_cfg).build(program).semantic
+  pub fn make_semantic<'ast>(program: &'ast Program<'ast>) -> Semantic<'ast> {
+    SemanticBuilder::new().build(program).semantic
   }
 
   pub fn make_scoping(&self) -> Scoping {
-    self.program.with_dependent(|_owner, dep| {
-      Self::make_semantic(&dep.program, /*with_cfg*/ false).into_scoping()
-    })
+    self.program.with_dependent(|_owner, dep| Self::make_semantic(&dep.program).into_scoping())
   }
 
   pub fn make_symbol_table_and_scope_tree_with_semantic_builder<'a>(

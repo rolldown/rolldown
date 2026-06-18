@@ -15,5 +15,7 @@ workspace = true
 doctest = false
 
 [dependencies]
-oxc = { workspace = true }
+# The `cfg` feature (control flow graph) is only required by this crate, so it
+# is enabled here rather than on the workspace-wide `oxc` dependency.
+oxc = { workspace = true, features = ["cfg"] }
 rolldown_ecmascript = { workspace = true }

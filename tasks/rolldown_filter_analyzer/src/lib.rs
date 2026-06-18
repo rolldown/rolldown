@@ -5,15 +5,19 @@ use oxc::cfg::graph::adj::NodeIndex;
 use oxc::cfg::graph::visit::{Control, DfsEvent, EdgeRef};
 use oxc::cfg::visit::set_depth_first_search;
 use oxc::cfg::{EdgeType, InstructionKind};
-use oxc::semantic::Semantic;
+use oxc::semantic::{Semantic, SemanticBuilder};
 use oxc::span::SourceType;
-use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
+use rolldown_ecmascript::EcmaCompiler;
 
 #[cfg(test)]
 mod test;
 pub fn filterable(source: &str) -> bool {
   let ast = EcmaCompiler::parse("<Noop>", source, SourceType::mjs()).unwrap();
-  let semantic = EcmaAst::make_semantic(ast.program(), true);
+  // The control-flow-graph traversal below needs both the CFG and the `AstNodes`
+  // store (CFG instructions map back to AST nodes via `Semantic::nodes`). oxc 0.136
+  // builds neither by default, so enable them explicitly here.
+  let semantic =
+    SemanticBuilder::new().with_build_nodes(true).with_cfg(true).build(ast.program()).semantic;
   let mut analyzer = FilterableAnalyzer::new(&semantic);
   analyzer.visit_program(ast.program());
   analyzer.ret

@@ -30,6 +30,11 @@ use crate::types::{
   BuildArtifactsSnapshot, BuildRoundOutput, DevArtifactsSnapshot, DevRoundOutput, HmrStepOutput,
 };
 
+/// RFC 3986 unreserved set — matches the former `urlencoding::encode`: percent-encode
+/// everything except `A-Za-z0-9` and `-._~`.
+const DATA_URL_ENCODE_SET: &percent_encoding::AsciiSet =
+  &percent_encoding::NON_ALPHANUMERIC.remove(b'-').remove(b'.').remove(b'_').remove(b'~');
+
 #[derive(Default)]
 pub struct IntegrationTest {
   test_meta: TestMeta,
@@ -641,8 +646,10 @@ impl IntegrationTest {
       Self::generate_globals_injection_for_execute_output(config_name, patch_chunks, options);
 
     if !globals_injection.is_empty() {
-      let inject_script_url =
-        format!("data:text/javascript,{}", urlencoding::encode(&globals_injection));
+      let inject_script_url = format!(
+        "data:text/javascript,{}",
+        percent_encoding::utf8_percent_encode(&globals_injection, DATA_URL_ENCODE_SET)
+      );
       node_command.arg("--import");
       node_command.arg(inject_script_url);
     }
@@ -677,8 +684,10 @@ impl IntegrationTest {
       let post_globals_injection =
         Self::generate_post_globals_injection_for_execute_output(patch_chunks, &dist_folder);
       if !post_globals_injection.is_empty() {
-        let inject_script_url =
-          format!("data:text/javascript,{}", urlencoding::encode(&post_globals_injection));
+        let inject_script_url = format!(
+          "data:text/javascript,{}",
+          percent_encoding::utf8_percent_encode(&post_globals_injection, DATA_URL_ENCODE_SET)
+        );
         compiled_entries.push(inject_script_url);
       }
 

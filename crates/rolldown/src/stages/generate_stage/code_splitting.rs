@@ -389,6 +389,13 @@ impl GenerateStage<'_> {
       let mut module_init_position = module_init_position.into_iter().collect_vec();
       module_init_position.sort_by_cached_key(|(idx, _)| chunk_module_to_exec_order[idx]);
 
+      // Map each wrapped module to its index in `wrapped_modules` so the prefix
+      // membership test below is O(1) instead of a linear scan. `wrapped_modules`
+      // has no duplicates, so "position < deps_length" is equivalent to being in
+      // `wrapped_modules[0..deps_length]`.
+      let wrapped_module_positions: FxHashMap<ModuleIdx, usize> =
+        wrapped_modules.iter().enumerate().map(|(i, &m)| (m, i)).collect();
+
       let mut pending_transfer = vec![];
       let mut insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>> =
         FxHashMap::default();
@@ -399,8 +406,9 @@ impl GenerateStage<'_> {
             if let Some(deps_length) =
               none_wrapped_module_to_wrapped_dependency_length.get(&module_idx)
             {
-              let transfer_item = pending_transfer
-                .extract_if(0.., |(midx, _, _)| wrapped_modules[0..*deps_length].contains(midx));
+              let transfer_item = pending_transfer.extract_if(0.., |(midx, _, _)| {
+                wrapped_module_positions.get(midx).is_some_and(|&pos| pos < *deps_length)
+              });
               for (_midx, iidx, ridx) in transfer_item {
                 // Should always avoid transfer any initialization from a low execution order module to a high execution order module.
                 if chunk_module_to_exec_order[&iidx] <= chunk_module_to_exec_order[&module_idx] {

@@ -695,22 +695,4 @@ export enum Num {
       expect(result.map?.sources).toEqual(['test.js']);
     });
   });
-
-  describe('reactCompiler', () => {
-    const component =
-      'export function Comp(props) { const data = compute(props.a, props.b); return <div>{data}</div>; }';
-
-    it('threads custom options through to the React Compiler', async () => {
-      const result = await transform('main.jsx', component, {
-        reactCompiler: { target: '18' },
-      });
-      expect(result.errors).toHaveLength(0);
-      // `target: '18'` pulls the memo cache from the `react-compiler-runtime`
-      // shim instead of React 19's built-in `react/compiler-runtime`, proving
-      // the custom option reached the compiler; `_c(n)` proves it ran.
-      expect(result.code).toContain('react-compiler-runtime');
-      expect(result.code).not.toContain('react/compiler-runtime');
-      expect(result.code).toMatch(/\b_?c\(\d+\)/);
-    });
-  });
 });

@@ -49,6 +49,11 @@ export function bindingifyInputOptions(
     if ('_parallel' in plugin) {
       return undefined;
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ('_nativeLib' in (plugin as any)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (plugin as any)._nativeLib as { name: string; path: string };
+    }
     if (plugin instanceof BuiltinPlugin) {
       switch (plugin.name) {
         case 'builtin:vite-manifest':

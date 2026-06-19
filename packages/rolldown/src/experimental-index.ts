@@ -16,6 +16,7 @@ export {
 } from './binding.cjs';
 export { resolveTsconfig } from './utils/resolve-tsconfig';
 
+export { defineNativeLibPlugin } from './plugin/native-lib-plugin';
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 
 // Builtin plugin factory

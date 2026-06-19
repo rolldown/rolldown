@@ -15,6 +15,7 @@ import type { SourceMapInput } from '../types/sourcemap';
 import type { MakeAsync, MaybePromise, NullValue, PartialNull } from '../types/utils';
 import type { GeneralHookFilter, HookFilter } from './hook-filter';
 import type { MinimalPluginContext } from './minimal-plugin-context';
+import type { NativeLibPlugin } from './native-lib-plugin';
 import type { ParallelPlugin } from './parallel-plugin';
 import type { PluginContext } from './plugin-context';
 import type { TransformPluginContext } from './transform-plugin-context';
@@ -706,7 +707,11 @@ export interface Plugin<A = any> extends OutputPlugin, Partial<PluginHooks> {
   api?: A;
 }
 
-export type RolldownPlugin<A = any> = Plugin<A> | BuiltinPlugin | ParallelPlugin;
+export type RolldownPlugin<A = any> =
+  | Plugin<A>
+  | BuiltinPlugin
+  | ParallelPlugin
+  | NativeLibPlugin;
 export type RolldownPluginOption<A = any> = MaybePromise<
   | NullValue<RolldownPlugin<A>>
   | { name: string } // for rollup plugin compatibility

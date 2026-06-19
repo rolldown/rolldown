@@ -135,4 +135,4 @@ minimumReleaseAgeExclude:
   - oxc-minify
   - oxc-parser
   - oxc-transform
-  - vitepress-plugin-feedback-tracker@0.2.0-alpha.0
+  - vitepress-plugin-feedback-tracker@0.2.0-alpha.1

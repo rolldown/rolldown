@@ -149,6 +149,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bench_native_lib_plugin"
+version = "0.0.1"
+dependencies = [
+ "oxc",
+ "oxc_react_compiler",
+ "rolldown_ecmascript",
+ "rolldown_native_plugin_abi",
+]
+
+[[package]]
 name = "bit-set"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

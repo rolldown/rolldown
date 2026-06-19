@@ -1,0 +1,21 @@
+[package]
+name = "bench_native_lib_plugin"
+version = "0.0.1"
+publish = false
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+doctest = false
+
+[dependencies]
+oxc = { workspace = true }
+oxc_react_compiler = { workspace = true }
+rolldown_ecmascript = { workspace = true }
+rolldown_native_plugin_abi = { workspace = true }

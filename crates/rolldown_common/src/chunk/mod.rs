@@ -245,7 +245,7 @@ impl Chunk {
     let p = PathBuf::from(chunk_name);
     let p = if p.is_absolute() {
       if let Some(ref preserve_modules_root) = options.preserve_modules_root {
-        // See meta/design/module-id.md: output paths may normalize separators even when module
+        // See internal-docs/module-id/implementation.md: output paths may normalize separators even when module
         // ids keep native separators.
         if let Some(relative_path) =
           strip_path_prefix_to_slash(chunk_name.as_path(), preserve_modules_root.as_path())

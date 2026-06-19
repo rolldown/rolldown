@@ -12,7 +12,7 @@ pub struct AddDeps<'a, 'b> {
   pub s: &'a mut MagicString<'b>,
   pub ctx: &'a PluginContext,
   pub deps: &'a mut FxHashSet<String>,
-  pub owner_filename: String,
+  pub owner_filename: &'a str,
   pub analyzed: FxHashSet<String>,
   pub has_removed_pure_css_chunks: &'a mut bool,
   pub expr_range: std::ops::Range<usize>,

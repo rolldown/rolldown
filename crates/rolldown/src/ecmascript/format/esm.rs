@@ -1,8 +1,8 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
 use rolldown_common::{
-  AddonRenderContext, ExportsKind, ExternalModule, ImportRecordIdx, ModuleIdx, ModuleTable,
-  Specifier, SymbolRef,
+  AddonRenderContext, ExportsKind, ExternalModule, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
+  ModuleTable, Specifier, SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
@@ -58,7 +58,39 @@ pub fn render_esm<'code>(
         let importee = &ctx.link_output.module_table[importee_idx];
         if let Some(m) = importee.as_external() {
           let ext_name = m.get_import_path(ctx.chunk, ctx.resolved_paths);
-          source_joiner.append_source(concat_string!("export * from \"", ext_name, "\"\n"));
+          // Preserve the `with { ... }` import attribute from the originating
+          // `export * from "..." with { ... }` record (issue #9160) instead of dropping it.
+          // Find the entry-level export-star record (in a chunk module) that resolved to this
+          // external and reuse its attribute. Notes:
+          // - If no such record carries an attribute, `with_clause` is `None` and we emit the
+          //   plain `export * from` exactly as before (safe degradation, no regression). This is
+          //   also what happens if the owning module lives in a different chunk.
+          // - If several records re-export the same external with *different* attributes (a
+          //   pathological, conflicting input), the first by chunk exec-order wins — consistent
+          //   with the existing import-side behavior (see the TODO in `render_esm_chunk_imports`).
+          let with_clause = ctx
+            .chunk
+            .modules
+            .iter()
+            .filter_map(|module_idx| ctx.link_output.module_table[*module_idx].as_normal())
+            .find_map(|module| {
+              module.import_records.iter_enumerated().find_map(|(rec_idx, rec)| {
+                (rec.resolved_module == Some(importee_idx)
+                  && rec.meta.contains(ImportRecordMeta::IsExportStar)
+                  && rec.meta.contains(ImportRecordMeta::EntryLevelExternal))
+                .then(|| module.import_attribute_map.get(&rec_idx))
+                .flatten()
+              })
+            });
+          // An absent attribute is just an empty suffix, so both cases collapse to a
+          // single `append_source` (same shape `create_import_declaration` uses below).
+          source_joiner.append_source(concat_string!(
+            "export * from \"",
+            ext_name,
+            "\"",
+            with_clause.map(|attr| concat_string!(" ", attr.to_string())).unwrap_or_default(),
+            "\n"
+          ));
         }
       }
     }

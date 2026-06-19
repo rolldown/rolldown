@@ -53,7 +53,7 @@ impl ScanStageCache {
       // outcome. Bailing with `?` would drop it, leaving `self.snapshot == None`
       // and panicking the next HMR cycle's `get_snapshot()`. A partially-synced
       // snapshot is recoverable; a missing one is not.
-      // See meta/design/bundler-data-lifecycle.md ("Cache integrity on a failed build").
+      // See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
       let result = defer_sync_scan_data(options, &self.module_id_to_idx, &mut snapshot).await;
       self.set_snapshot(snapshot);
       result?;
@@ -86,7 +86,7 @@ impl ScanStageCache {
       }
       rolldown_common::HybridIndexVec::Map(map) => {
         let mut modules = map.into_iter().collect_vec();
-        modules.sort_by_key(|(k, _)| *k);
+        modules.sort_unstable_by_key(|(k, _)| *k);
         modules
       }
     };

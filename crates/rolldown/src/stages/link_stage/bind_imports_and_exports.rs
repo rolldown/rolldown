@@ -187,10 +187,32 @@ impl LinkStage<'_> {
     self.external_import_namespace_merger = binding_ctx.external_import_namespace_merger;
 
     for (module_idx, map) in &binding_ctx.external_import_binding_merger {
-      for (key, symbol_set) in map {
+      // `map` is a `FxHashMap` with randomized iteration order. Facade symbols must be created
+      // deterministically, but only an external imported under more than one name has anything to
+      // order — so sort by name only in that (rare) case and skip the work otherwise.
+      // `sort_unstable_by` is fine here: the names are `FxHashMap` keys, so they're unique and
+      // there are no ties for a stable sort to preserve.
+      let mut entries = map.iter().collect::<Vec<_>>();
+      if entries.len() > 1 {
+        entries.sort_unstable_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
+      }
+      for (key, symbol_set) in entries {
         let name = if key.as_str() == "default" {
+          // The default export has no intrinsic name, so we derive one from the local names that
+          // import it. `symbol_set` collects them in non-deterministic module-load order, so pick
+          // the candidate with the smallest `(exec_order, name)`: `exec_order` is a deterministic
+          // `u32` assigned by `sort_modules` (which runs before this stage), so the chosen name is
+          // stable across builds and the comparison is a cheap integer compare. This also matches
+          // how the sibling `external_import_namespace_merger` is ordered (by `exec_order` in
+          // `code_splitting.rs`).
           let key = symbol_set
-            .first()
+            .iter()
+            .min_by_key(|&&symbol_ref| {
+              (
+                self.module_table.modules[symbol_ref.owner].exec_order(),
+                symbol_ref.name(&self.symbols),
+              )
+            })
             .map_or_else(|| key.clone(), |sym_ref| sym_ref.name(&self.symbols).into());
           Cow::Owned(key)
         } else if is_validate_identifier_name(key.as_str()) {

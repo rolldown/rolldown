@@ -7,7 +7,7 @@ use napi::{
 };
 use rolldown_plugin_utils::UsizeOrFunction;
 
-use crate::types::js_callback::{JsCallback, JsCallbackExt as _};
+use crate::types::js_callback::{JsCallback, JsCallbackExt as _, JsCallbackResultExt as _};
 
 pub struct BindingAssetInlineLimit(UsizeOrFunction);
 
@@ -29,6 +29,7 @@ impl FromNapiValue for BindingAssetInlineLimit {
               asset_inline_limit_fn
                 .invoke_async((file, content).into())
                 .await
+                .context("assetsInlineLimit option")
                 .map_err(anyhow::Error::from)
             })
           }))

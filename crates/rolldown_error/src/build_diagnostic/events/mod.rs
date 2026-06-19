@@ -1,4 +1,4 @@
-use std::{any::Any, fmt::Debug};
+use std::any::Any;
 
 use arcstr::ArcStr;
 use oxc::span::Span;
@@ -57,7 +57,7 @@ pub mod unsupported_feature;
 pub mod unsupported_tsconfig_option;
 pub mod untranspiled_syntax;
 
-pub trait BuildEvent: Debug + Sync + Send + AsAny + AsAnyMut {
+pub trait BuildEvent: Sync + Send + AsAny + AsAnyMut {
   fn kind(&self) -> EventKind;
 
   fn message(&self, opts: &DiagnosticOptions) -> String;

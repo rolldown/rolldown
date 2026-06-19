@@ -104,7 +104,7 @@ impl ChunkGraph {
         }
       }
       side_effects_free_leaf_modules
-        .sort_by_key(|idx| link_output.module_table[*idx].id().as_str());
+        .sort_unstable_by_key(|idx| link_output.module_table[*idx].id().as_str());
       rest.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
       runtime_related.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
 

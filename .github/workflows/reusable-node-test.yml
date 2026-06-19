@@ -42,6 +42,7 @@ jobs:
 
       - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:
+          version: '0.2.1'
           node-version: ${{ inputs.node-version }}
           cache: true
 

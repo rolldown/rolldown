@@ -42,8 +42,8 @@ catalog:
   '@napi-rs/wasm-runtime': ^1.1.5
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
-  '@oxc-project/runtime': '=0.136.0'
-  '@oxc-project/types': '=0.136.0'
+  '@oxc-project/runtime': '=0.137.0'
+  '@oxc-project/types': '=0.137.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
@@ -81,9 +81,9 @@ catalog:
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
   mocha: ^11.7.5
-  oxc-minify: '=0.136.0'
-  oxc-parser: '=0.136.0'
-  oxc-transform: '=0.136.0'
+  oxc-minify: '=0.137.0'
+  oxc-parser: '=0.137.0'
+  oxc-transform: '=0.137.0'
   pathe: ^2.0.3
   react: ^19.0.0
   react-dom: ^19.0.0
@@ -135,4 +135,6 @@ minimumReleaseAgeExclude:
   - oxc-minify
   - oxc-parser
   - oxc-transform
+  - '@voidzero-dev/*'
+  - vite-plus
   - vitepress-plugin-feedback-tracker@0.2.0-alpha.1

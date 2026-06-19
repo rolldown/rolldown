@@ -183,7 +183,6 @@ pub use crate::{
   types::member_expr_ref_resolution::MemberExprRefResolution,
   types::module_def_format::ModuleDefFormat,
   types::module_id::ModuleId,
-  types::module_idx::LegacyModuleIdx,
   types::module_info::ModuleInfo,
   types::module_namespace_included_reason::ModuleNamespaceIncludedReason,
   types::module_render_output::ModuleRenderOutput,

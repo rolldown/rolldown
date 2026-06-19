@@ -6,16 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Expected `,` or `)` but found `class`
-   ╭─[ main.jsx:8:8 ]
+[PARSE_ERROR] Adjacent JSX elements must be wrapped in an enclosing tag.
+   ╭─[ main.jsx:8:5 ]
    │
- 4 │   return (
-   │          ┬  
-   │          ╰── Opened here
-   │ 
  8 │     <a class="the">
-   │        ──┬──  
-   │          ╰──── `,` or `)` expected
+   │     ┬  
+   │     ╰── 
+   │ 
+   │ Help: Did you want a JSX fragment `<>...</>`?
 ───╯
 
 ```

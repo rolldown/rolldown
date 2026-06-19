@@ -109,7 +109,10 @@ impl PreProcessEcmaAst {
     // Tree-shaking in `include_statements.rs` skips including the enum declaration
     // when a member access will be inlined. Regular enum IIFEs are `@__PURE__`, so
     // they are naturally tree-shaken if no other references keep them alive.
-    let enum_member_value_map = {
+    // Enums are a TypeScript-only construct, so only Ts/Tsx modules can declare
+    // them. For plain JS/JSX modules, skip the full symbol-table walk and the map
+    // allocation entirely (the result would always be empty).
+    let enum_member_value_map = if matches!(parsed_type, OxcParseType::Ts | OxcParseType::Tsx) {
       let scoping_ref = scoping.as_mut().unwrap();
       let mut enum_values: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>> =
         FxHashMap::default();
@@ -142,6 +145,8 @@ impl PreProcessEcmaAst {
         }
       }
       enum_values
+    } else {
+      FxHashMap::default()
     };
 
     // Step 2: Run define plugin.

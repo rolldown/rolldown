@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_error"
-version = "1.1.1"
+version = "1.1.2"
 publish = true
 description = "rolldown_error"
 readme = "../../README.md"
@@ -28,6 +28,5 @@ heck = { workspace = true }
 napi = { workspace = true, optional = true }
 oxc = { workspace = true }
 oxc_resolver = { workspace = true }
-ropey = { workspace = true }
 rustc-hash = { workspace = true }
 sugar_path = { workspace = true }

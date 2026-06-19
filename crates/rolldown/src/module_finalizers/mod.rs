@@ -162,7 +162,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     rec_idx: ImportRecordIdx,
   ) -> FxIndexSet<ModuleIdx> {
-    // See meta/design/linking/reference-needed-symbols.md for why this follows
+    // See internal-docs/linking/reference-needed-symbols/implementation.md for why this follows
     // canonical owners through non-wrapped barrel modules.
     let mut init_modules = FxIndexSet::default();
     let rec = &self.ctx.module.import_records[rec_idx];
@@ -262,23 +262,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
 
-    let init_modules = self
+    let init_exprs = self
       .collect_wrapped_esm_init_modules_for_import_record(rec_idx)
       .into_iter()
+      .filter_map(|module_idx| {
+        if !self.generated_init_esm_importee_ids.insert(module_idx) {
+          return None;
+        }
+        // `add_wrapped_esm_init_module_for_symbol` only collects modules with a `wrapper_ref`.
+        Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
+      })
       .collect::<Vec<_>>();
-    if init_modules.is_empty() {
-      return None;
-    }
-
-    let init_exprs = init_modules.into_iter().filter_map(|module_idx| {
-      if !self.generated_init_esm_importee_ids.insert(module_idx) {
-        return None;
-      }
-      // `add_wrapped_esm_init_module_for_symbol` only collects modules with a `wrapper_ref`.
-      Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
-    });
-
-    let init_exprs = init_exprs.collect::<Vec<_>>();
     match init_exprs.len() {
       0 => None,
       1 => init_exprs

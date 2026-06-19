@@ -1,8 +1,6 @@
-use std::borrow::Cow;
-use std::cmp::Reverse;
-
 use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
+use crate::utils::chunk::conflict_resolver::{ConflictResolver, deconflict_order_key};
 use crate::utils::chunk::normalize_preserve_entry_signature;
 use crate::utils::external_import_interop::external_import_needs_interop;
 use itertools::{Itertools, multizip};
@@ -13,11 +11,9 @@ use rolldown_common::{
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
   PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolRef, WrapKind,
 };
-use rolldown_utils::concat_string;
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
-use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxIndexSet<SymbolRef>>;
@@ -77,7 +73,8 @@ impl GenerateStage<'_> {
           .copied()
           .chain(chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks.keys().copied())
           .collect::<Vec<_>>();
-        cross_chunk_imports.sort_by_key(|chunk_id| chunk_graph.chunk_table[*chunk_id].exec_order);
+        cross_chunk_imports
+          .sort_unstable_by_key(|chunk_id| chunk_graph.chunk_table[*chunk_id].exec_order);
         cross_chunk_imports
       })
       .collect::<Vec<_>>();
@@ -90,7 +87,7 @@ impl GenerateStage<'_> {
         }
         importee_map
           .into_iter()
-          .sorted_by_key(|(importee_chunk_id, _)| {
+          .sorted_unstable_by_key(|(importee_chunk_id, _)| {
             chunk_graph.chunk_table[*importee_chunk_id].exec_order
           })
           .collect::<FxIndexMap<_, _>>()
@@ -103,7 +100,7 @@ impl GenerateStage<'_> {
         .map(|imports_from_external_modules| {
           imports_from_external_modules
             .into_iter()
-            .sorted_by_key(|(external_module_id, _)| {
+            .sorted_unstable_by_key(|(external_module_id, _)| {
               self.link_output.module_table[*external_module_id].exec_order()
             })
             .collect_vec()
@@ -264,7 +261,7 @@ impl GenerateStage<'_> {
             for export_ref in entry_meta
               .resolved_exports
               .iter()
-              .sorted_by_key(|(name, _)| *name)
+              .sorted_unstable_by_key(|(name, _)| *name)
               .map(|(_, export)| export)
               // A chunk should always consume a cjs export symbol by property access, so filter
               // out a exported symbol that came from a cjs module.
@@ -702,12 +699,12 @@ impl GenerateStage<'_> {
         for (chunk_export, _predefined_names) in index_chunk_exported_symbols[chunk_id]
           .iter()
           .sorted_unstable_by_key(|(symbol_ref, _predefined_names)| {
-            let symbol_owner = &self.link_output.module_table[symbol_ref.owner];
-            let symbol_name = symbol_ref.name(&self.link_output.symbol_db);
-            // `Reverse(symbol_owner.exec_order()` is used to follow the same deconflict order as in
-            // https://github.com/rolldown/rolldown/blob/504ea76c00563eb7db7a49c2b6e04b2fbe61bdc1/crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs?plain=1#L86-L102
-            // Then we sort by the symbol name to ensure a stable order within the same module.
-            (Reverse(symbol_owner.exec_order()), symbol_name)
+            // Canonical naming order — see `deconflict_order_key`.
+            deconflict_order_key(
+              **symbol_ref,
+              &self.link_output.module_table,
+              &self.link_output.symbol_db,
+            )
           })
         {
           let export_ref = self.link_output.symbol_db.canonical_ref_for(*chunk_export);
@@ -730,13 +727,17 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      let mut name_count = FxHashMap::with_capacity(index_chunk_exported_symbols[chunk_id].len());
+      let mut resolver =
+        ConflictResolver::with_capacity(index_chunk_exported_symbols[chunk_id].len());
       for (chunk_export, predefined_names) in index_chunk_exported_symbols[chunk_id]
         .iter()
         .sorted_by_cached_key(|(symbol_ref, _predefined_names)| {
-          // same deconflict order in deconflict_chunk_symbols.rs
-          // https://github.com/rolldown/rolldown/blob/504ea76c00563eb7db7a49c2b6e04b2fbe61bdc1/crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs?plain=1#L86-L102
-          Reverse::<u32>(self.link_output.module_table[symbol_ref.owner].exec_order())
+          // Canonical naming order — see `deconflict_order_key`.
+          deconflict_order_key(
+            **symbol_ref,
+            &self.link_output.module_table,
+            &self.link_output.symbol_db,
+          )
         })
       {
         if !self.link_output.used_symbol_refs.contains(chunk_export) {
@@ -746,47 +747,27 @@ impl GenerateStage<'_> {
           [] => CompactStr::new(chunk_export.name(&self.link_output.symbol_db)),
           lst => {
             for item in lst {
-              name_count.insert(Cow::Borrowed(item), 0);
+              resolver.reserve(CompactStr::new(item));
             }
 
             chunk.exports_to_other_chunks.entry(*chunk_export).or_default().extend_from_slice(lst);
             continue;
           }
         };
-        // A special case for `default` export when setting `preserve_modules`.
-        // When `preserve_modules` is enabled, we need to ensure that the default export is
-        // correctly named as `default`.
-        // Otherwise, we just use the default_export_ref representative name
-        let mut candidate_name = if self.options.preserve_modules {
-          let module = chunk.entry_module(&self.link_output.module_table).unwrap();
-          // If `preserve_modules` is enabled, there should have only one default export per chunk.
-          if module.default_export_ref == *chunk_export {
-            "default".into()
-          } else {
-            original_name.clone()
-          }
+        // A special case for `default` export when setting `preserve_modules`: the
+        // single default export per chunk must be named `default`. Otherwise use the
+        // `default_export_ref` representative name. The `&&` keeps the `entry_module`
+        // lookup guarded behind the `preserve_modules` check.
+        let base = if self.options.preserve_modules
+          && chunk.entry_module(&self.link_output.module_table).unwrap().default_export_ref
+            == *chunk_export
+        {
+          CompactStr::new_const("default")
         } else {
-          original_name.clone()
+          original_name
         };
-        loop {
-          let key: Cow<'_, CompactStr> = Cow::Owned(candidate_name.clone());
-          match name_count.entry(key) {
-            std::collections::hash_map::Entry::Occupied(mut occ) => {
-              let next_conflict_index = *occ.get() + 1;
-              *occ.get_mut() = next_conflict_index;
-              candidate_name = CompactStr::new(&concat_string!(
-                original_name,
-                "$",
-                itoa::Buffer::new().format(next_conflict_index)
-              ));
-            }
-            std::collections::hash_map::Entry::Vacant(vac) => {
-              vac.insert(0);
-              break;
-            }
-          }
-        }
-        chunk.exports_to_other_chunks.entry(*chunk_export).or_default().push(candidate_name);
+        let chosen = resolver.resolve(base, |_, _| true);
+        chunk.exports_to_other_chunks.entry(*chunk_export).or_default().push(chosen);
       }
     }
   }
@@ -798,6 +779,9 @@ const REST_BASE: u32 = 64;
 const FREQUENT_CHARS: &[u8; REST_BASE as usize] =
   b"etnriaoscludfpmhg_vybxSCwTEDOkAjMNPFILRzBVHUWGKqJYXZQ$1024368579";
 
+// Intentionally NOT routed through `ConflictResolver`: this is a generative
+// base54 namer (not `$N`-suffix), so it shares only `deconflict_order_key`,
+// not the conflict loop. See docs/superpowers/specs/2026-06-17-renamer-naming-engine-design.md.
 fn generate_minified_names(mut value: u32) -> String {
   let mut buffer = vec![];
 

@@ -10,7 +10,7 @@
         "import": "./b.js"
       }
     ],
-    "manualCodeSplitting": {
+    "codeSplitting": {
       "groups": [
         {
           "test": "[ab]\\.js",

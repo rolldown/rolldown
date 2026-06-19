@@ -265,7 +265,7 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
               s: &mut s,
               ctx,
               deps: &mut deps,
-              owner_filename: chunk.filename.to_string(),
+              owner_filename: chunk.filename.as_str(),
               analyzed: FxHashSet::default(),
               has_removed_pure_css_chunks: &mut has_removed_pure_css_chunks,
               expr_range: import.start..import.end,

@@ -1,5 +1,5 @@
 // Per-file setup for the browser e2e suite, ported from Vite's
-// `playground/vitestSetup.ts` (see meta/design/dev-server-test-harness.md).
+// `playground/vitestSetup.ts` (see internal-docs/dev-server-test-harness/implementation.md).
 // Each spec file finds its playground from its own path, connects to the
 // shared Chromium server, opens one page, and starts an in-process dev
 // server — or runs a custom `__tests__/serve.ts` if the playground has one.

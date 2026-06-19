@@ -9,6 +9,7 @@ import { indexHtmlMiddleware } from './middlewares/index-html.js';
 import { memoryFilesMiddleware } from './middlewares/memory-files.js';
 import { statusMiddleware } from './middlewares/status.js';
 import { triggerLazyBundlingMiddleware } from './middlewares/trigger-lazy-bundling.js';
+import { createAssetPlugin } from './utils/create-asset-plugin.js';
 import { createDevServerPlugin } from './utils/create-dev-server-plugin.js';
 import { decodeClientMessage } from './utils/decode-client-message.js';
 import type { Logger } from './types/logger.js';
@@ -90,7 +91,7 @@ class DevServer {
     // Bind BEFORE building: with `port: 0` the OS-assigned port only exists
     // after listen, and the HMR runtime's websocket address is baked into the
     // bundle at build time via `experimental.devMode.port`.
-    // See meta/design/dev-server-test-harness.md ("listen-before-build").
+    // See internal-docs/dev-server-test-harness/implementation.md ("listen-before-build").
     this.#prepareGate(serveFromMemory);
     this.#port = await this.#listen(this.#options.port);
 
@@ -101,6 +102,11 @@ class DevServer {
     buildOptions.experimental = experimental;
     buildOptions.plugins = [
       ...(buildOptions.plugins ?? []),
+      // Ported bundled-dev branch of Vite's `vite:asset` plugin: resolves
+      // asset imports (`import url from './img.png'`) to a served URL eagerly
+      // at `load`, so HMR/lazy paths (which skip `renderChunk`) carry a real
+      // URL instead of a placeholder.
+      createAssetPlugin(),
       createDevServerPlugin(devOptions, this.#logger),
     ];
 
@@ -130,7 +136,7 @@ class DevServer {
       // Engine/lifecycle failure after the socket is bound: release the port
       // so the error surfaces instead of a leaked listener keeping the
       // process alive. (Build errors don't throw — they arrive via the
-      // engine callbacks; see meta/design/dev-engine.md §16.)
+      // engine callbacks; see internal-docs/dev-engine/implementation.md §16.)
       await this.close().catch(() => {});
       throw e;
     }

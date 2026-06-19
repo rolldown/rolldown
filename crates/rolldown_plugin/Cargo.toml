@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_plugin"
-version = "1.1.1"
+version = "1.1.2"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
@@ -26,7 +26,7 @@ anyhow = { workspace = true }
 arcstr = { workspace = true }
 bitflags = { workspace = true }
 dashmap = { workspace = true }
-derive_more = { workspace = true, features = ["display"] }
+derive_more = { workspace = true }
 nodejs-built-in-modules = { workspace = true }
 oxc_index = { workspace = true }
 rolldown_common = { workspace = true }

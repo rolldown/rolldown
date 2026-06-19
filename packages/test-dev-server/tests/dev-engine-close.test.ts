@@ -3,7 +3,7 @@ import nodePath from 'node:path';
 import { describe, expect, test } from 'vitest';
 
 // Smoke test for the in-process dev-engine lifecycle the browser harness
-// builds on (see meta/design/dev-server-test-harness.md, "Server entry point").
+// builds on (see internal-docs/dev-server-test-harness/implementation.md, "Server entry point").
 // Nothing else exercises `DevEngine.close()`: the node fixtures tear their
 // subprocess servers down with killPort/SIGKILL instead.
 describe('dev engine close path', () => {

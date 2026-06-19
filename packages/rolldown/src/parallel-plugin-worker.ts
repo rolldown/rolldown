@@ -43,7 +43,15 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
     parentPort!.postMessage({ type: 'success' });
   } catch (error) {
     parentPort!.postMessage({ type: 'error', error });
-  } finally {
     parentPort!.unref();
+    return;
   }
+  // Hold the worker alive (poll-style) so the TSFNs that wrap each plugin
+  // hook can be dispatched. The main thread terminates each worker explicitly
+  // via `worker.terminate()` when the build completes. Required on Node 24.x:
+  // without this the worker's JS event loop exits as soon as bootstrap
+  // returns, and the first hook dispatch from the main thread gets
+  // `Status::Closing`. Reproduces without this patch in
+  // `examples/par-plugin/parallel-noop-plugin/`.
+  setInterval(() => {}, 1 << 30);
 })();

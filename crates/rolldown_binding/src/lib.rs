@@ -36,6 +36,7 @@ pub mod binding_dev_options;
 pub mod binding_watcher_bundler;
 pub mod classic_bundler;
 mod generated;
+pub mod native_bridge;
 pub mod options;
 pub mod parallel_js_plugin_registry;
 pub mod transform;

@@ -641,8 +641,11 @@ pub fn normalize_binding_options(
           ParallelJsPlugin::new_shared(plugins, Arc::clone(worker_manager))
         },
         |plugin| match plugin {
-          Either::A(plugin_options) => JsPlugin::new_shared(plugin_options),
-          Either::B(builtin) => {
+          Either3::A(plugin_options) => JsPlugin::new_shared(plugin_options),
+          Either3::B(native_lib) => native_lib
+            .try_into()
+            .map(|p: super::super::options::plugin::NativeLibPlugin| p.into_shared()),
+          Either3::C(builtin) => {
             // Needs to save the name, since `try_into` will consume the ownership
             let name = format!("{:?}", builtin.__name);
             builtin.try_into().map_err(|err| {
@@ -664,8 +667,11 @@ pub fn normalize_binding_options(
     .chain(output_options.plugins)
     .filter_map(|plugin| {
       plugin.map(|plugin| match plugin {
-        Either::A(plugin_options) => JsPlugin::new_shared(plugin_options),
-        Either::B(builtin) => {
+        Either3::A(plugin_options) => JsPlugin::new_shared(plugin_options),
+        Either3::B(native_lib) => native_lib
+          .try_into()
+          .map(|p: super::super::options::plugin::NativeLibPlugin| p.into_shared()),
+        Either3::C(builtin) => {
           // Needs to save the name, since `try_into` will consume the ownership
           let name = format!("{:?}", builtin.__name);
           builtin.try_into().map_err(|err| {

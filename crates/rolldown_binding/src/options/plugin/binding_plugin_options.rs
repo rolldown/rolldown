@@ -1,4 +1,4 @@
-use napi::bindgen_prelude::{Either, FnArgs, Promise};
+use napi::bindgen_prelude::{Either3, FnArgs, Promise};
 use rolldown_utils::filter_expression::{self, FilterExprKind};
 use std::fmt::Debug;
 
@@ -31,8 +31,13 @@ use super::{
 };
 
 /// none is parallel js plugin
-pub type BindingPluginOrParallelJsPluginPlaceholder<'env> =
-  Option<Either<BindingPluginOptions, BindingBuiltinPlugin<'env>>>;
+pub type BindingPluginOrParallelJsPluginPlaceholder<'env> = Option<
+  Either3<
+    BindingPluginOptions,
+    super::binding_native_lib_plugin::BindingNativeLibPlugin,
+    BindingBuiltinPlugin<'env>,
+  >,
+>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default)]

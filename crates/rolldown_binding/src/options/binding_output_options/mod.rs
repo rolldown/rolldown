@@ -116,7 +116,9 @@ pub struct BindingOutputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "Record<string, string> | ((id: string) => string)")]
   pub paths: Option<PathsOutputOption>,
-  #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]
+  #[napi(
+    ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | BindingNativeLibPlugin | undefined)[]"
+  )]
   pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder<'env>>,
   // preferConst: boolean;
   #[napi(ts_type = "'file' | 'inline' | 'hidden'")]

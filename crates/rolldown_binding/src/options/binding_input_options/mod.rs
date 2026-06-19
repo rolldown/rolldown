@@ -63,7 +63,9 @@ pub struct BindingInputOptions<'env> {
   // moduleContext?: ((id: string) => string | null | void) | { [id: string]: string };
   // onwarn?: WarningHandlerWithDefault;
   // perf?: boolean;
-  #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]
+  #[napi(
+    ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | BindingNativeLibPlugin | undefined)[]"
+  )]
   pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder<'env>>,
   pub resolve: Option<BindingResolveOptions>,
   // preserveEntrySignatures?: PreserveEntrySignaturesOption;

@@ -2484,7 +2484,7 @@ export interface BindingInputItem {
 export interface BindingInputOptions {
   external?: Array<string | RegExp> | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
   input: Array<BindingInputItem>
-  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions | BindingNativeLibPlugin | undefined)[]
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
@@ -2612,6 +2612,23 @@ export interface BindingModuleSideEffectsRule {
   external?: boolean
 }
 
+/**
+ * JS-facing descriptor for a native plugin loaded via the
+ * `rolldown_native_plugin_abi` C ABI. The plugin's `.dylib`/`.so`/`.dll` at
+ * `path` must export the three required symbols
+ * (`rolldown_native_plugin_abi_version`, `rolldown_native_plugin_transform`,
+ * `rolldown_native_plugin_drop_output`).
+ *
+ * Plugins are loaded once at bundle setup and dispatched directly from
+ * rolldown's worker threads — no napi, no JS thread, no `ThreadsafeFunction`.
+ */
+export interface BindingNativeLibPlugin {
+  /** Display name (used in diagnostics and telemetry). */
+  name: string
+  /** Filesystem path to the plugin shared library. */
+  path: string
+}
+
 export interface BindingOptimization {
   inlineConst?: boolean | BindingInlineConstConfig
   pifeForModuleWrappers?: boolean
@@ -2642,7 +2659,7 @@ export interface BindingOutputOptions {
   intro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   outro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   paths?: Record<string, string> | ((id: string) => string)
-  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions | BindingNativeLibPlugin | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapBaseUrl?: string
   sourcemapIgnoreList?: boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)

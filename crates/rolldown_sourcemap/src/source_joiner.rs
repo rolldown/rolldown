@@ -55,19 +55,17 @@ impl<'source> SourceJoiner<'source> {
 
     let source_count = prepend_source.len() + inner.len();
 
-    let size_hint_of_ret_source = prepend_source
-      .iter()
-      .chain(inner.iter())
-      .map(|source| source.content().len())
-      .sum::<usize>()
-      + source_count;
+    let size_hint_of_ret_source =
+      prepend_source.iter().chain(inner.iter()).map(|source| source.content().len()).sum::<usize>()
+        + source_count;
     let mut ret_source = String::with_capacity(size_hint_of_ret_source);
 
     let mut line_offset = 0;
 
-    let mut sourcemap_builder: Option<ConcatSourceMapBuilder<'static>> = enable_sourcemap.then(|| {
-      ConcatSourceMapBuilder::with_capacity(names_len, sources_len, tokens_len, token_chunks_len)
-    });
+    let mut sourcemap_builder: Option<ConcatSourceMapBuilder<'static>> =
+      enable_sourcemap.then(|| {
+        ConcatSourceMapBuilder::with_capacity(names_len, sources_len, tokens_len, token_chunks_len)
+      });
     // Consume the sources, *moving* each owned sourcemap into the builder — no string is copied.
     for (index, mut source) in prepend_source.into_iter().chain(inner).enumerate() {
       if let Some(sourcemap_builder) = &mut sourcemap_builder {

@@ -66,7 +66,7 @@ function utilsSyncPlugin() {
     transform(code, id) {
       if (!shouldTransform(id)) return null;
       try {
-        return utilsTransformSync(id, code, { reactCompiler: true }).code;
+        return utilsTransformSync(id, code, { reactCompiler: { panicThreshold: 'none' } }).code;
       } catch {
         return null;
       }
@@ -81,7 +81,7 @@ function utilsAsyncPlugin() {
     async transform(code, id) {
       if (!shouldTransform(id)) return null;
       try {
-        const r = await utilsTransform(id, code, { reactCompiler: true });
+        const r = await utilsTransform(id, code, { reactCompiler: { panicThreshold: 'none' } });
         return r.code;
       } catch {
         return null;
@@ -162,7 +162,7 @@ async function runOnce(variant) {
       break;
     case 'builtin':
       transformPlugin = null;
-      bundlerTransform = { reactCompiler: true };
+      bundlerTransform = { reactCompiler: { panicThreshold: 'none' } };
       break;
     default:
       throw new Error(`unknown variant: ${variant}`);
@@ -176,6 +176,14 @@ async function runOnce(variant) {
     plugins,
     transform: bundlerTransform,
     logLevel: 'silent',
+    onLog() {
+      // Swallow warnings/errors. React Compiler is strict and emits a few
+      // hundred per run on Infisical's frontend (refs during render, etc.) —
+      // none of them affect transform timing, which is what we're measuring.
+    },
+    // Infisical's frontend has a handful of intra-tree type-only imports
+    // imported as values. Without this rolldown fails with MISSING_EXPORT.
+    shimMissingExports: true,
   });
   await bundle.generate({ format: 'esm' });
   await bundle.close();

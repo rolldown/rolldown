@@ -92,6 +92,8 @@ fn run_transform(source: &str, id: &str) -> String {
   let scoping = semantic_ret.semantic.into_scoping();
 
   let transform_options = TransformOptions {
+    // `default_plugin_options()` uses `panic_threshold: "none"` — matches the
+    // JS-side plugins which pass `{ panicThreshold: 'none' }` explicitly.
     react_compiler: Some(oxc_react_compiler::default_plugin_options()),
     ..Default::default()
   };

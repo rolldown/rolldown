@@ -1590,6 +1590,19 @@ export interface TypeScriptOptions {
    */
   rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
 }
+export declare class BenchOxcTransformer {
+  constructor()
+  transformStr(source: string, id: string): string
+  /**
+   * Async string variant. Same contract as `transform_str` but returns a
+   * `Promise<string>`. Yields once before the CPU work so the napi async
+   * machinery treats it as truly async.
+   */
+  transformStrAsync(source: string, id: string): Promise<string>
+  transformNative(sourceHandle: bigint, id: string): bigint
+  transformNativeAsync(sourceHandle: bigint, id: string): Promise<bigint>
+}
+
 export declare class BindingBundleEndEventData {
   output: string
   duration: number

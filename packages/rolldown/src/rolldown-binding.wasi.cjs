@@ -131,6 +131,7 @@ module.exports.moduleRunnerTransform = __napiModule.exports.moduleRunnerTransfor
 module.exports.moduleRunnerTransformSync = __napiModule.exports.moduleRunnerTransformSync
 module.exports.transform = __napiModule.exports.transform
 module.exports.transformSync = __napiModule.exports.transformSync
+module.exports.BenchOxcTransformer = __napiModule.exports.BenchOxcTransformer
 module.exports.BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 module.exports.BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
 module.exports.BindingBundler = __napiModule.exports.BindingBundler

@@ -135,6 +135,12 @@ export function bindingifyPlugin(
     transform,
     transformMeta,
     transformFilter,
+    // Experimental opaque-handle transform hooks. Pass-through; the Rust
+    // adapter (JsPlugin::transform) picks these up before the regular path.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    transformNativeBridge: (plugin as any).transformNativeBridge,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    transformNativeBridgeAsync: (plugin as any).transformNativeBridgeAsync,
     moduleParsed,
     moduleParsedMeta,
     load,

@@ -65,6 +65,15 @@ export function extractHookUsage(plugin: Plugin): HookUsage {
     hookUsage.union(HookUsageKind.transform);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((plugin as any).transformNativeBridge) {
+    hookUsage.union(HookUsageKind.transform);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((plugin as any).transformNativeBridgeAsync) {
+    hookUsage.union(HookUsageKind.transform);
+  }
+
   if (plugin.moduleParsed) {
     hookUsage.union(HookUsageKind.moduleParsed);
   }

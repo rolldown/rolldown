@@ -146,6 +146,16 @@ For a module with source `code` (an `ArcStr` in rolldown's module store):
 
 Two tables.
 
+**Prerequisites — both tables.** Both rolldown and the bench cdylib must be in release mode; debug overhead dominates the per-module budget and inverts the variant ordering. Run the following first:
+
+```
+just build-rolldown-release                       # binding + dist in release
+cargo build --release -p bench_native_lib_plugin  # the cdylib variant 5 loads
+node scripts/bench/seven-way-react-compiler/setup.mjs  # one-shot Infisical clone
+```
+
+`just build-rolldown-release` is preferred over `vp run --filter rolldown build-binding:release` because the former also refreshes `packages/rolldown/dist/`; running with a stale dist will silently load an older `.node` and produce misleading numbers (this caught the prior exploration mid-investigation).
+
 **Primary — full corpus (3847 files), 6 iterations (1 warm-up dropped).**
 Variants: 1, 3, 5, 6, 7. (2 and 4 are async; the prior exploration documented they deadlock above ~16 concurrent in-flight transforms — a generic napi-rs 3.x `async fn` ↔ `MaybeAsyncJsCallback` ↔ tokio interaction, not specific to the bridge code.)
 
@@ -168,11 +178,12 @@ Both runs go in `scripts/bench/seven-way-react-compiler/results.md`.
 
 The PoC ships successfully when:
 
-1. `just build-rolldown` builds the binding with the new ABI types crate, the bench cdylib, the split bridge fields, and the `NativeLibPlugin` loader compiled in.
-2. `cargo test -p rolldown_binding --lib` passes (unit tests for `NativeStringHolder` and `BenchOxcTransformer::run_transform`).
-3. `just t-node-rolldown -- native-bridge` passes a fresh integration test that round-trips both `transformNativeBridge` (sync) and `transformNativeBridgeAsync` (async) and asserts both match `rolldown/utils.transformSync` for the same input.
-4. `node scripts/bench/seven-way-react-compiler/run.mjs` runs the primary table (5 sync variants) to completion on the full Infisical corpus and writes `results.md`.
-5. `LIMIT=15 … VARIANTS=…all seven…` runs the secondary table covering all seven variants without hanging.
+1. `just build-rolldown` (debug) builds the binding with the new ABI types crate, the split bridge fields, and the `NativeLibPlugin` loader compiled in.
+2. `cargo build -p bench_native_lib_plugin` builds the cdylib used by variant 5.
+3. `cargo test -p rolldown_binding --lib` passes (unit tests for `NativeStringHolder` and `BenchOxcTransformer::run_transform`).
+4. `just t-node-rolldown -- native-bridge` passes a fresh integration test that round-trips both `transformNativeBridge` (sync) and `transformNativeBridgeAsync` (async) and asserts both match `rolldown/utils.transformSync` for the same input.
+5. `just build-rolldown-release` + `cargo build --release -p bench_native_lib_plugin`, then `node scripts/bench/seven-way-react-compiler/run.mjs` runs the primary table (5 sync variants) to completion on the full Infisical corpus and writes `results.md`.
+6. `LIMIT=15 … VARIANTS=…all seven…` runs the secondary table covering all seven variants without hanging.
 
 The PoC is **informative**, not pass/fail, on the measured ordering. We have predictions (see "Expected ordering" below) but the goal is publishable numbers, not a target.
 

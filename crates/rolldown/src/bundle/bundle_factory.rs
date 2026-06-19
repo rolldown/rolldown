@@ -7,7 +7,7 @@ use rolldown_common::{
   SharedModuleInfoDashMap,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
-use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_fs::{FileSystem, FileSystemOs};
 use rolldown_plugin::{__inner::SharedPluginable, PluginDriverFactory};
 use rolldown_plugin_lazy_compilation::LazyCompilationContext;
 use rolldown_utils::dashmap::FxDashSet;
@@ -34,9 +34,9 @@ pub struct BundleFactoryOptions {
 
 pub struct BundleFactory {
   pub plugin_driver_factory: PluginDriverFactory,
-  pub fs: OsFileSystem,
+  pub fs: FileSystemOs,
   pub options: SharedOptions,
-  pub resolver: SharedResolver<OsFileSystem>,
+  pub resolver: SharedResolver<FileSystemOs>,
   pub file_emitter: SharedFileEmitter,
   /// Warnings collected during bundle factory creation.
   /// These warnings are transferred to the first created `Bundle` via `create_bundle()` or `create_incremental_bundle()`.
@@ -110,7 +110,7 @@ impl BundleFactory {
     &mut self,
     bundle_mode: BundleMode,
     cache: Option<ScanStageCache>,
-  ) -> BuildResult<Bundle<OsFileSystem>> {
+  ) -> BuildResult<Bundle<FileSystemOs>> {
     let cache = if bundle_mode.is_incremental() {
       if let Some(cache) = cache {
         cache

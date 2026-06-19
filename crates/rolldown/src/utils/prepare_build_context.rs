@@ -10,7 +10,7 @@ use rolldown_common::{
   TreeshakeOptions, TsConfig, merge_transform_options_with_tsconfig, normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
-use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
+use rolldown_fs::{FileSystemOs, OxcResolverFileSystem as _};
 use rolldown_resolver::Resolver;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -19,8 +19,8 @@ use sugar_path::SugarPath;
 use crate::{SharedResolver, utils::determine_minify_internal_exports_default};
 
 pub struct PrepareBuildContext {
-  pub fs: OsFileSystem,
-  pub resolver: SharedResolver<OsFileSystem>,
+  pub fs: FileSystemOs,
+  pub resolver: SharedResolver<FileSystemOs>,
   pub options: Arc<NormalizedBundlerOptions>,
   pub warnings: Vec<BuildDiagnostic>,
 }
@@ -308,7 +308,7 @@ pub fn prepare_build_context(
 
   let tsconfig = raw_options.tsconfig.map(|tsconfig| tsconfig.with_base(&cwd)).unwrap_or_default();
   let yarn_pnp = raw_resolve.yarn_pnp.unwrap_or(false);
-  let fs = OsFileSystem::new(yarn_pnp);
+  let fs = FileSystemOs::new(yarn_pnp);
   let resolver = Arc::new(Resolver::new(fs.clone(), cwd.clone(), platform, &tsconfig, raw_resolve));
 
   let transform_options = {

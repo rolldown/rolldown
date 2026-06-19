@@ -3,13 +3,12 @@
 **Date:** 2026-06-20
 **Status:** Draft / awaiting user review
 **Author:** Claude + sapphi-red
-**Supersedes (in part):** `docs/superpowers/specs/2026-06-18-native-bridge-plugin-design.md`
+**Branch base:** `bea835c94` (clean checkout of main)
+**Prior exploration:** kept on `feat/native-bridge-plugin-poc-prior` for reference, but **not** carried into the implementation. This spec is the canonical description; everything below is built from scratch.
 
 ## Motivation
 
-The earlier native-bridge PoC accumulated nine bench variants over time, several of which conflated more than one axis (the bridge's calling convention, the sync/async dispatch shape, JS-vs-native-vs-builtin location). The most recent runs landed with `string` and `native` nearly tied because the `MaybeAsyncJsCallback` union match cost — added to support `Promise<bigint>` returns — happened to be the same order of magnitude as the bridge's UTF-conversion savings on this workload. The story stopped being readable.
-
-This spec defines a clean seven-way comparison, one variant per axis combination the user wants measured, and documents what we remove from the bench to keep the lineup honest.
+We want to measure where the actual cost lives when a JS plugin in rolldown applies a Rust-backed transform (concretely: React Compiler via oxc-transformer). Earlier exploration on this branch's prior incarnation accumulated overlapping bench variants that conflated multiple axes (the calling convention vs the sync/async dispatch shape vs JS-vs-native-vs-builtin location), which made the story unreadable. This spec defines a clean seven-way comparison — one variant per axis combination — and a benchmark harness that exercises each on the same Infisical corpus.
 
 ## Goal
 
@@ -33,50 +32,74 @@ Non-goals:
 | 6 | `builtin` | No plugin. `BundlerOptions.transform.reactCompiler = true`. Rolldown runs React Compiler as part of its internal transform pipeline. |
 | 7 | `bridge-parallel` | Variant (3)'s hook, but the JS plugin is registered via `defineParallelPlugin`. One `BenchOxcTransformer` per worker. Sync TSFN dispatch, parallelized across ~8 JS worker threads. |
 
-## What changes from the current branch
+## Implementation surface (built from scratch on top of main)
 
-**Removed from `run.mjs`** (variants that conflated axes or were superseded):
-- `string` (calls `BenchOxcTransformer.transformStr` directly — not what a real user writes)
-- `string-async` (same problem; only existed to corroborate the async deadlock)
-- `native` (same hook as `bridge-sync` but currently shares the `MaybeAsyncJsCallback` field with `bridge-async`; the splitting work below makes (3) the clean replacement)
-- `native-async` (superseded by `bridge-async`)
-- `native-parallel` (replaced by `bridge-parallel` — same setup, clearer name)
+The branch is reset to `bea835c94` and contains only this design doc. Every piece below is new.
 
-**Kept** (no changes):
-- `crates/rolldown_native_plugin_abi` — types crate
-- `crates/bench_native_lib_plugin` — cdylib
-- `crates/rolldown_binding/src/options/plugin/native_lib_plugin.rs` — dlopen loader
-- The parallel-plugin worker `setInterval` keep-alive patch
+### Crates
 
-**Added or modified:**
+1. **`crates/rolldown_native_plugin_abi`** — types-only crate. Defines the C ABI:
+   - `#[repr(C)] struct NativeStr { *const u8, usize }`
+   - `#[repr(C)] struct TransformOutput { code: NativeStr, error: NativeStr, plugin_data: *mut c_void }`
+   - `pub const ABI_VERSION: u32 = 1`
+   - Function-pointer typedefs and symbol-name string constants for `abi_version`, `transform`, `drop_output`.
 
-1. **Split the bridge hook into two fields** in `BindingPluginOptions`:
+2. **`crates/bench_native_lib_plugin`** — `cdylib` that exports the three required symbols and runs the same `oxc::Parser` → `semantic_builder_for_transform` → `Transformer{ react_compiler: Some(default_plugin_options()) }` → `Codegen` pipeline as the rolldown-binding bench transformer.
+
+### Inside `crates/rolldown_binding`
+
+3. **`src/native_bridge.rs`** — `NativeStrRef`, `NativeStringHolder` (enum-inner: `ArcStr` or `String`), `into_raw_handle` / `from_raw_handle` / `handle_as_str` API used by the bridge variants.
+
+4. **`src/bench_oxc_transformer.rs`** — `#[napi] BenchOxcTransformer` class with four methods (`transformStr` sync, `transformStrAsync` async, `transformNative` sync handle, `transformNativeAsync` async handle returning `Promise<bigint>`).
+
+5. **Two new fields on `BindingPluginOptions`** (split deliberately so the sync path doesn't pay the `MaybeAsyncJsCallback` cost):
    ```rust
    /// Sync-only zero-copy bridge.
    pub transform_native_bridge:
      Option<JsCallback<FnArgs<(i64, String)>, Option<i64>>>,
-   
-   /// Sync-Promise zero-copy bridge. The JS callback MUST return a
-   /// Promise<bigint>; sync returns are rejected at validation time.
+
+   /// Sync-Promise zero-copy bridge. JS callback MUST return Promise<bigint>;
+   /// sync returns are rejected at napi validation time.
    pub transform_native_bridge_async:
      Option<JsCallback<FnArgs<(i64, String)>, Promise<Option<i64>>>>,
    ```
-   The async path is opt-in via the dedicated field rather than auto-detected via `Either<Promise, T>`. This removes the per-call `Either::A(Either::A(promise)) | Either::A(Either::B(ret))` match that has been costing us on the sync path.
 
-2. **`JsPlugin::transform` dispatch order**: if `transform_native_bridge` is set, use it; else if `transform_native_bridge_async` is set, use it (await the Promise); else fall through to the existing `transform` path. Both bridge paths still drop the source `NativeStringHolder` after the call and own the result holder on return.
+6. **`JsPlugin::transform` dispatch order**: if `transform_native_bridge` is set, run the sync bridge; else if `transform_native_bridge_async` is set, await its Promise; else fall through to the existing `transform` path. Both bridge paths construct a `NativeStringHolder::from_arcstr(args.code.clone())`, leak it to an i64, drop the holder after the call, and reconstitute the result holder's String into `HookTransformOutput::code`.
 
-3. **`ParallelJsPlugin::transform`**: extend the existing OR to cover the new field too — `transform.is_some() || transform_native_bridge.is_some() || transform_native_bridge_async.is_some()`.
+7. **`ParallelJsPlugin::transform`**: dispatch when any of `transform`, `transform_native_bridge`, or `transform_native_bridge_async` is set on the per-worker `JsPlugin`.
 
-4. **JS-side wiring**:
-   - `bindingify-plugin.ts`: pass `transformNativeBridgeAsync` through alongside `transformNativeBridge`.
-   - `generated/hook-usage.ts`: union `HookUsageKind.transform` when either bridge field is set.
-   - Bench and test plugin definitions cast through `as unknown as Plugin` to attach the experimental hooks — same pattern the current `transformNativeBridge` test uses. We don't widen the public `Plugin` type; the new fields stay experimental.
+8. **`Plugin` variant chain** widens to `Either3<BindingPluginOptions, BindingNativeLibPlugin, BindingBuiltinPlugin>`. `BindingNativeLibPlugin` is a `#[napi_derive::napi(object)]` `{ name, path }` whose `TryInto<NativeLibPlugin>` opens the `.dylib` via `libloading`, version-checks, and stashes the three resolved fn pointers behind an `Arc<Library>`.
 
-5. **`BenchOxcTransformer`**: keep `transformStr`, `transformStrAsync`, `transformNative`, `transformNativeAsync`. The bench just stops importing `transformStr`/`transformStrAsync` directly (variants 1 and 2 use `rolldown/utils` instead). They stay in the binding for future micro-benches.
+9. **`src/options/plugin/native_lib_plugin.rs`** — `NativeLibPlugin` implementing `Plugin`. The transform impl builds two `NativeStr` views (source from `args.code`, id from `args.id`), calls the plugin's `transform` fn pointer with a stack `TransformOutput`, copies the result code into a Rust `String` (one terminal copy across the binary boundary), then calls the plugin's `drop_output`.
 
-6. **`bench_native_lib_plugin`**: no change.
+### Inside `packages/rolldown`
 
-7. **`scripts/bench/native-bridge-plugin/run.mjs`**: rewritten to define exactly the seven variants above. The `parallel-impl.mjs` worker file gets updated to match (still uses `transformNativeBridge` since that's the sync field the parallel workers want).
+10. **`src/plugin/native-lib-plugin.ts`** — `defineNativeLibPlugin({ name, path })` returning `{ _nativeLib: ... }` marker.
+
+11. **`src/plugin/index.ts`** — `RolldownPlugin` union extends to include `NativeLibPlugin`.
+
+12. **`src/experimental-index.ts`** — re-export `defineNativeLibPlugin`.
+
+13. **`src/utils/bindingify-input-options.ts`** — recognize `_nativeLib` and emit a `BindingNativeLibPlugin` directly.
+
+14. **`src/plugin/bindingify-plugin.ts`** — pass `transformNativeBridge` and `transformNativeBridgeAsync` through to the binding plugin options.
+
+15. **`src/plugin/generated/hook-usage.ts`** — union `HookUsageKind.transform` when either bridge field is set on a plugin.
+
+16. **`src/parallel-plugin-worker.ts`** — drop `parentPort.unref()` in the success path; add a long-interval `setInterval` so the worker's JS event loop stays alive after bootstrap. (Required on Node 24.11 to prevent `Status::Closing` on the first dispatch from the main thread; also reproduces in rolldown's own `parallel-noop-plugin` example without this patch.)
+
+### Bench harness
+
+17. **`scripts/bench/seven-way-react-compiler/`** — new directory.
+    - `.gitignore` for `.fixture/`, `corpus.json`, `out-*/`, etc.
+    - `setup.mjs` — sparse-clones `Infisical/infisical`'s `frontend/` and writes `corpus.json` (filters out `.d.ts`).
+    - `parallel-impl.mjs` — `defineParallelPluginImplementation` returning a plugin with the sync `transformNativeBridge` hook for variant 7.
+    - `run.mjs` — defines exactly the seven variants; primary table dispatches a sync set, secondary table at `LIMIT=15` covers all seven.
+    - `results.md` — populated after the bench runs.
+
+### Tests
+
+18. **`packages/rolldown/tests/native-bridge-plugin.test.ts`** — round-trip integration test that exercises both `transformNativeBridge` and `transformNativeBridgeAsync` and asserts the output matches the `rolldown/utils.transformSync` baseline for the same input.
 
 ## Architecture (data flow per variant)
 
@@ -124,10 +147,10 @@ For a module with source `code` (an `ArcStr` in rolldown's module store):
 Two tables.
 
 **Primary — full corpus (3847 files), 6 iterations (1 warm-up dropped).**
-Variants: 1, 3, 5, 6, 7. (2 and 4 are async and deadlock at scale.)
+Variants: 1, 3, 5, 6, 7. (2 and 4 are async; the prior exploration documented they deadlock above ~16 concurrent in-flight transforms — a generic napi-rs 3.x `async fn` ↔ `MaybeAsyncJsCallback` ↔ tokio interaction, not specific to the bridge code.)
 
 ```
-node scripts/bench/native-bridge-plugin/run.mjs
+node scripts/bench/seven-way-react-compiler/run.mjs
 ```
 
 Default `VARIANTS=utils-sync,bridge-sync,native-lib,builtin,bridge-parallel`.
@@ -136,20 +159,20 @@ Default `VARIANTS=utils-sync,bridge-sync,native-lib,builtin,bridge-parallel`.
 
 ```
 LIMIT=15 ITERS=6 VARIANTS=utils-sync,utils-async,bridge-sync,bridge-async,native-lib,builtin,bridge-parallel \
-  node scripts/bench/native-bridge-plugin/run.mjs
+  node scripts/bench/seven-way-react-compiler/run.mjs
 ```
 
-Both runs go in `scripts/bench/native-bridge-plugin/results.md`. The historical results section in that file is preserved as a "prior iterations" appendix.
+Both runs go in `scripts/bench/seven-way-react-compiler/results.md`.
 
 ## Success criteria
 
 The PoC ships successfully when:
 
-1. `pnpm build` (i.e. `just build-rolldown`) builds the binding with the new split fields compiled in.
-2. `cargo test -p rolldown_binding --lib` continues to pass.
-3. `just t-node-rolldown -- native-bridge` integration test continues to pass (with the test rewritten to exercise both `transformNativeBridge` and `transformNativeBridgeAsync`).
-4. `node scripts/bench/native-bridge-plugin/run.mjs` runs the primary table to completion and writes `results.md`.
-5. `LIMIT=15 … VARIANTS=…all seven…` runs the secondary table without hanging.
+1. `just build-rolldown` builds the binding with the new ABI types crate, the bench cdylib, the split bridge fields, and the `NativeLibPlugin` loader compiled in.
+2. `cargo test -p rolldown_binding --lib` passes (unit tests for `NativeStringHolder` and `BenchOxcTransformer::run_transform`).
+3. `just t-node-rolldown -- native-bridge` passes a fresh integration test that round-trips both `transformNativeBridge` (sync) and `transformNativeBridgeAsync` (async) and asserts both match `rolldown/utils.transformSync` for the same input.
+4. `node scripts/bench/seven-way-react-compiler/run.mjs` runs the primary table (5 sync variants) to completion on the full Infisical corpus and writes `results.md`.
+5. `LIMIT=15 … VARIANTS=…all seven…` runs the secondary table covering all seven variants without hanging.
 
 The PoC is **informative**, not pass/fail, on the measured ordering. We have predictions (see "Expected ordering" below) but the goal is publishable numbers, not a target.
 
@@ -176,14 +199,20 @@ If `bridge-sync` and `utils-sync` end up indistinguishable in the primary table 
 
 Roughly the following work, in dependency order:
 
-1. Split `transform_native_bridge` into two fields on the Rust side; adjust `JsPlugin::transform` and `ParallelJsPlugin::transform` to dispatch in priority order.
-2. Update `bindingify-plugin.ts` and `generated/hook-usage.ts` to surface the new field.
-3. Rewrite the JS integration test to round-trip both fields.
-4. Rewrite `run.mjs` to define exactly the seven variants. Add the `builtin` plugin (no plugin, just bundler option). Update `parallel-impl.mjs` to use the new sync field name explicitly.
-5. Run primary and secondary benches in release. Capture into `results.md`, preserving the prior-iteration history as an appendix.
+1. Create `rolldown_native_plugin_abi` types crate (item 1 above).
+2. Create `bench_native_lib_plugin` cdylib (item 2).
+3. Create `native_bridge.rs` + unit tests, then `bench_oxc_transformer.rs` with the four `#[napi]` methods (items 3, 4).
+4. Add the two split bridge fields on `BindingPluginOptions` and wire `JsPlugin::transform` to dispatch in priority order (items 5, 6).
+5. Add `BindingNativeLibPlugin` napi-derive object and `NativeLibPlugin` loader; widen the plugin variant chain to `Either3` (items 8, 9).
+6. Extend `ParallelJsPlugin::transform` to dispatch when either bridge field is set (item 7).
+7. Patch `parallel-plugin-worker.ts` keep-alive (item 16).
+8. Wire the JS surface: `defineNativeLibPlugin`, `RolldownPlugin` union, experimental re-export, `bindingify-input-options` recognition of `_nativeLib`, `bindingify-plugin` pass-through of both bridge fields, `hook-usage.ts` update (items 10-15).
+9. Write the JS integration test that round-trips both bridge variants and asserts equivalence with `rolldown/utils.transformSync` (item 18).
+10. Build out `scripts/bench/seven-way-react-compiler/` — fixture setup, parallel-plugin impl, runner, results template (item 17).
+11. Run primary and secondary benches in release. Fill in `results.md`.
 
 ## Open questions deferred to implementation
 
-- Whether `JsCallback<…, Promise<Option<i64>>>` is a valid napi-rs type — if not, we'll fall back to a custom wrapper that wraps `Promise<i64>` with a sentinel. Plan will note both shapes.
-- Whether the `builtin` variant produces the same byte-for-byte output as the plugin variants. If not, that's a separate finding — both are running the same `oxc_react_compiler::default_plugin_options()`.
-- Whether `setInterval(() => {}, 1 << 30)` in `parallel-plugin-worker.ts` ever fails to terminate cleanly. We haven't seen it but the test suite should confirm.
+- Whether `JsCallback<…, Promise<Option<i64>>>` is a valid napi-rs 3.x type — if `Promise<T>` here works only with `MaybeAsyncJsCallback`, fall back to wrapping the i64 in a `Promise<i64>` with a sentinel (e.g. negative-zero or i64::MIN) for "skip this transform" and document the choice in the plan.
+- Whether the `builtin` variant produces byte-for-byte identical output to the plugin variants (both run `oxc_react_compiler::default_plugin_options()`). The integration test asserts equivalence between `bridge-sync` and `rolldown/utils.transformSync`; `builtin` is harder to assert against without a separate bundle-output diff. Acceptable for a measurement spec.
+- Whether `setInterval(() => {}, 1 << 30)` in `parallel-plugin-worker.ts` ever fails to terminate cleanly. The prior exploration didn't see it, but the test suite should confirm; if it does fail, the right fix is upstream (have the TSFNs that wrap each plugin hook keep the worker's JS thread referenced).

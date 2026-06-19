@@ -3133,6 +3133,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_native_plugin_abi"
+version = "0.0.1"
+
+[[package]]
 name = "rolldown_plugin"
 version = "1.1.1"
 dependencies = [

@@ -109,6 +109,7 @@ rolldown_ecmascript_utils = { version = "1.1.1", path = "crates/rolldown_ecmascr
 rolldown_error = { version = "1.1.1", path = "crates/rolldown_error" }
 rolldown_fs = { version = "1.1.1", path = "crates/rolldown_fs" }
 rolldown_fs_watcher = { version = "1.1.1", path = "crates/rolldown_fs_watcher" }
+rolldown_native_plugin_abi = { version = "0.0.1", path = "crates/rolldown_native_plugin_abi" }
 rolldown_plugin = { version = "1.1.1", path = "crates/rolldown_plugin" }
 rolldown_plugin_chunk_import_map = { version = "1.1.1", path = "crates/rolldown_plugin_chunk_import_map" }
 rolldown_plugin_asset_module = { version = "1.1.1", path = "crates/rolldown_plugin_asset_module" }
@@ -182,6 +183,7 @@ itoa = "1.0.15"
 json-escape-simd = "3"
 json-strip-comments = "3"
 jsonschema = { version = "0.46.5", default-features = false }
+libloading = "0.8.5"
 memchr = "2.8.2"
 mimalloc-safe = "0.1.63"
 mime = "0.3.17"

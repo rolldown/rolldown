@@ -1178,7 +1178,128 @@ reconstruct it.
 
 ---
 
-## 17. Quick reference — concept-to-file map
+## 17. Asset emission and delivery (full bundle mode)
+
+Emitted files — a JS-imported image/SVG, a CSS `url(...)`, a `new URL('./x',
+import.meta.url)` — move through the engine in **two phases**:
+
+1. **Emit.** A plugin's `this.emitFile` calls `FileEmitter::emit_file`
+   (`crates/rolldown_common/src/file_emitter.rs`), which hashes the source,
+   assigns a `reference_id`, computes the final hashed filename, and stores an
+   `OutputAsset` in the `files` map. The URL is resolvable _immediately_ via
+   `get_file_name` — in full bundle mode the output layout is deterministic, so
+   no `renderChunk` is needed (see the Vite `vite:asset` plugin's bundled-dev
+   branch).
+2. **Drain + deliver.** `FileEmitter::add_additional_files` moves
+   not-yet-delivered entries into `Vec<Output>`, marking each in the
+   `emitted_files` set so every file is delivered **exactly once**. The drained
+   outputs leave through one of three callbacks.
+
+`add_additional_files` produces exactly two kinds of output — it iterates only
+the `files` and `prebuilt_chunks` maps, **never `chunks`**:
+
+- **`Output::Asset`** — one per `files` entry, i.e. everything emitted via
+  `emit_file` (`this.emitFile({ type: 'asset', … })`): JS-imported images/SVG,
+  CSS `url(...)` targets, `new URL('./x', import.meta.url)`, and
+  `import.meta.ROLLUP_FILE_URL_*` — the static files that resolve to
+  `assets/<name>-<hash>.ext`.
+- **`Output::Chunk`** — one per `prebuilt_chunks` entry (`emit_prebuilt_chunk`),
+  already-rendered chunks that carry their own `code` / `map` / `file_name`.
+
+It does **not** produce:
+
+- the rendered JS chunks (entry / dynamic-import / shared) — those come from
+  `GenerateStage::generate` and are already in `output.assets` before
+  `add_additional_files` runs (it only _appends_);
+- `emit_file({ type: 'chunk' })` outputs — those go to the `chunks` map and are
+  sent to the module loader as `AddEntryModule`, so the generate stage renders
+  them into real chunks (`add_additional_files` never reads `chunks`);
+- chunk sourcemaps — emitted with their chunk in the generate stage;
+- files a plugin emits inside its `generateBundle` hook — added by the hook,
+  which runs _after_ `add_additional_files` in `bundle_up`.
+
+The asset _bytes_ always converge on `FileEmitter` + `add_additional_files`;
+only the delivering callback changes per operation:
+
+```mermaid
+flowchart TD
+  %% ===== triggers =====
+  T1([initial load]) --> FULL["TaskInput: FullBuild"]
+  T2([file edit]) --> D{"HMR result?"}
+  T3([dynamic import]) --> LAZY["compileEntry (DevEngine)"]
+
+  %% ===== dispatch (run_inner) =====
+  D -->|"non-HMR rebuild"| REB["TaskInput: Rebuild"]
+  D -->|"accepted patch"| HMR["TaskInput: Hmr"]
+  D -->|"full reload"| HR["TaskInput: HmrRebuild"]
+
+  %% ===== function chains =====
+  FULL --> RB
+  REB --> RB["rebuild() → bundle_up:<br/>GenerateStage::generate (chunks)<br/>+ add_additional_files"]
+  HMR --> GH["generate_hmr_updates():<br/>render_hmr_patch (code)<br/>+ add_additional_files"]
+  HR --> GH
+  HR -. "then" .-> RB
+  LAZY --> CL["compile_lazy_entry (code)<br/>+ add_additional_files"]
+
+  %% ===== shared emitter (asset bytes converge here) =====
+  FE[("FileEmitter.files<br/>emit_file writes;<br/>add_additional_files drains once<br/>(emitted_files gate)")]
+  RB <-->|"emit / drain"| FE
+  GH <-->|"emit / drain"| FE
+  CL <-->|"emit / drain"| FE
+
+  %% ===== callbacks =====
+  RB --> OUT[["on_output"]]
+  GH --> HMRU[["on_hmr_updates"]]
+  GH --> ADD[["on_additional_assets"]]
+  CL --> ADD
+  CL --> RET[["compileEntry return"]]
+
+  %% ===== sinks =====
+  OUT --> MEM[("Vite memoryFiles")]
+  ADD --> MEM
+  MEM --> MW["memoryFilesMiddleware<br/>serves /assets/*"]
+  HMRU --> B(["browser / client"])
+  RET --> B
+  MW --> B
+```
+
+How to read it:
+
+- **Asset bytes** (path to `memoryFiles`): every operation emits into
+  `FileEmitter.files` and drains via `add_additional_files`; the outputs leave
+  through `on_output` (build/rebuild) or `on_additional_assets` (HMR patch /
+  lazy). All converge on the consumer's `memoryFiles`.
+- **Code / patch** (path to the client): build & rebuild ship chunks via
+  `on_output`; an HMR patch ships via `on_hmr_updates`; a lazy chunk is the
+  `compileEntry` return value.
+- **`HmrRebuild`** is the only fork: `generate_hmr_updates()` runs first
+  (→ `on_hmr_updates` + `on_additional_assets`), _then_ `rebuild()`
+  (→ `on_output`). The shared `emitted_files` gate means an asset drained in the
+  HMR phase is skipped by the later `bundle_up`.
+
+### The three delivery callbacks
+
+| Callback               | Fires from                                              | Carries                                                                 |
+| ---------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `on_output`            | `rebuild()` → `bundle_up`                               | full `BundleOutput` (chunks + assets via `add_additional_files`)        |
+| `on_hmr_updates`       | `generate_hmr_updates()`                                | `Vec<ClientHmrUpdate>` — patch **code** only (`HmrPatch` has no assets) |
+| `on_additional_assets` | `generate_hmr_updates()` **and** `compile_lazy_entry()` | `BundleOutput` — emitted assets + their `add_additional_files` warnings |
+
+`on_additional_assets` is the fix for the asset-not-served bug (vite#22596 and
+its HMR analog): a pure HMR patch and a lazy compile never go through
+`on_output`, so without this callback their emitted assets would never reach
+the consumer. It fires **before** the patch / lazy code reaches the client (in
+`generate_hmr_updates` it runs before `on_hmr_updates`; in `compile_lazy_entry`
+before the code is returned), so a consumer that serves built files (e.g. Vite,
+which writes them to `memoryFiles`) can serve the asset by the time the browser
+requests it. It carries only what `add_additional_files` produces (emit_file'd
+assets + prebuilt chunks) — not the rendered chunks, and not assets emitted
+inside a `generateBundle` hook (that hook does not run for patches). It is a
+`BundleOutput` so `add_additional_files` warnings ride along, as on `on_output`.
+
+---
+
+## 18. Quick reference — concept-to-file map
 
 | Concept                                        | File                                                            |
 | ---------------------------------------------- | --------------------------------------------------------------- |
@@ -1194,6 +1315,8 @@ reconstruct it.
 | Incremental entry points, `with_cached_bundle` | `crates/rolldown/src/bundler/impl_bundler_incremental_build.rs` |
 | HMR entry points                               | `crates/rolldown/src/bundler/impl_bundler_hmr.rs`               |
 | `ScanStageCache`                               | `crates/rolldown/src/types/scan_stage_cache.rs`                 |
+| Dev callbacks, `DevOptions`                    | `crates/rolldown_dev_common/src/types/dev_options.rs`           |
+| Asset emit / drain (`add_additional_files`)    | `crates/rolldown_common/src/file_emitter.rs`                    |
 
 ---
 

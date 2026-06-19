@@ -119,6 +119,7 @@ export class FullBundleDevEnvironment {
     env.#devEngine = await dev(options.inputOptions, options.outputOptions, {
       onHmrUpdates: (result) => env.#onHmrUpdates(result),
       onOutput: (result) => env.#onOutput(result),
+      onAdditionalAssets: (result) => env.#onAdditionalAssets(result),
       watch: { ...getDevWatchOptionsForCi(), skipWrite: options.serveFromMemory },
     });
     return env;
@@ -333,6 +334,29 @@ export class FullBundleDevEnvironment {
       this.#debouncedFullReload();
     }
     this.#buildSeq++;
+  }
+
+  /**
+   * Assets emitted while generating an HMR patch or compiling a lazy entry.
+   * These paths run no generate, so they never reach `#onOutput` — register the
+   * bytes into `memoryFiles` here. The dev engine fires this BEFORE the patch /
+   * lazy code reaches the client, so the asset is servable by the time the
+   * browser requests it. Bundled-dev behavior behind vitejs/vite#22596.
+   */
+  #onAdditionalAssets(result: { output: readonly unknown[] }): void {
+    if (!this.serveFromMemory) {
+      return;
+    }
+    for (const outputFile of result.output as Array<
+      | { type: 'chunk'; fileName: string; code: string }
+      | { type: 'asset'; fileName: string; source: string | Uint8Array }
+    >) {
+      const fileName = outputFile.fileName;
+      this.memoryFiles.set(fileName, () => {
+        const source = outputFile.type === 'chunk' ? outputFile.code : outputFile.source;
+        return { source, etag: weakEtag(source) };
+      });
+    }
   }
 
   // --- HMR fan-out -----------------------------------------------------------

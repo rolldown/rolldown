@@ -1,9 +1,10 @@
+use crate::native_bridge::NativeStringHolder;
 use crate::types::{
   binding_module_info::BindingModuleInfo,
   binding_normalized_options::BindingNormalizedOptions,
   binding_outputs::{JsChangedOutputs, to_binding_error},
   binding_rendered_chunk::BindingRenderedChunk,
-  js_callback::MaybeAsyncJsCallbackExt,
+  js_callback::{JsCallbackExt, MaybeAsyncJsCallbackExt},
 };
 use anyhow::Context;
 use napi::bindgen_prelude::FnArgs;
@@ -208,6 +209,57 @@ impl Plugin for JsPlugin {
     ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
+    // Sync zero-copy bridge. Skip the regular include/exclude filter (PoC scope).
+    if let Some(cb) = &self.transform_native_bridge {
+      let source_handle =
+        NativeStringHolder::from_arcstr(args.code.clone()).into_raw_handle();
+
+      let result_handle = cb
+        .invoke_async((source_handle, args.id.to_string()).into())
+        .instrument(debug_span!("transform_hook_native_bridge", plugin_name = self.name))
+        .await?;
+
+      // Reclaim the source holder; the sync JsCallback has returned so JS is done with it.
+      // SAFETY: source_handle was just produced above by into_raw_handle.
+      drop(unsafe { NativeStringHolder::from_raw_handle(source_handle) });
+
+      return Ok(result_handle.map(|h| {
+        // SAFETY: callee returned a handle produced by `NativeStringHolder::into_raw_handle`.
+        let holder = unsafe { NativeStringHolder::from_raw_handle(h) };
+        rolldown_plugin::HookTransformOutput {
+          code: Some(holder.into_string()),
+          map: rolldown_plugin::HookTransformOutputMap::Omitted,
+          side_effects: None,
+          module_type: None,
+        }
+      }));
+    }
+
+    // Async zero-copy bridge: JS returns Promise<bigint>; we await it.
+    if let Some(cb) = &self.transform_native_bridge_async {
+      let source_handle =
+        NativeStringHolder::from_arcstr(args.code.clone()).into_raw_handle();
+
+      let result_handle = cb
+        .invoke_async((source_handle, args.id.to_string()).into())
+        .instrument(debug_span!("transform_hook_native_bridge_async", plugin_name = self.name))
+        .await?
+        .await?;
+
+      drop(unsafe { NativeStringHolder::from_raw_handle(source_handle) });
+
+      return Ok(result_handle.map(|h| {
+        // SAFETY: callee returned a handle produced by `NativeStringHolder::into_raw_handle`.
+        let holder = unsafe { NativeStringHolder::from_raw_handle(h) };
+        rolldown_plugin::HookTransformOutput {
+          code: Some(holder.into_string()),
+          map: rolldown_plugin::HookTransformOutputMap::Omitted,
+          side_effects: None,
+          module_type: None,
+        }
+      }));
+    }
+
     let Some(cb) = &self.transform else { return Ok(None) };
     // Custom field have higher priority, it will override the default filter
     if let Some(ref v) = self.filter_expr_cache.transform {

@@ -310,3 +310,9 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+# TEMPORARY: use the unreleased owned move-in concat API (`from_owned_sourcemaps`) from
+# https://github.com/oxc-project/oxc-sourcemap/pull/368. Remove this patch and bump the
+# `oxc_sourcemap` version once that PR is merged and released.
+[patch.crates-io]
+oxc_sourcemap = { git = "https://github.com/oxc-project/oxc-sourcemap.git", branch = "perf/concat-owned-move-in" }

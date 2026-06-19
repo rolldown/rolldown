@@ -4,6 +4,14 @@ use crate::SourceMap;
 
 pub trait Source {
   fn sourcemap(&self) -> Option<&SourceMap>;
+  /// Take ownership of this source's sourcemap, leaving none behind.
+  ///
+  /// Defaults to `None` (sources without a map, e.g. `&str` / `String`). `SourceJoiner::join`
+  /// uses this to *move* owned maps into the concat builder instead of borrowing and recopying
+  /// them — see `ConcatSourceMapBuilder::add_sourcemap_owned`.
+  fn take_sourcemap(&mut self) -> Option<SourceMap> {
+    None
+  }
   fn content(&self) -> &str;
   fn lines_count(&self) -> u32 {
     lines_count(self.content())
@@ -54,6 +62,10 @@ impl SourceMapSource {
 impl Source for SourceMapSource {
   fn sourcemap(&self) -> Option<&SourceMap> {
     Some(&self.sourcemap)
+  }
+
+  fn take_sourcemap(&mut self) -> Option<SourceMap> {
+    Some(std::mem::take(&mut self.sourcemap))
   }
 
   fn content(&self) -> &str {

@@ -1,0 +1,5 @@
+.fixture/
+out-*/
+corpus.json
+*.local.json
+*.log

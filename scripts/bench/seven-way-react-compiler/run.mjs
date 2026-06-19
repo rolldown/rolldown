@@ -38,7 +38,10 @@ const isBareSpecifier = (s) =>
 const looksLikeSourceImport = (s) =>
   SOURCE_EXTS.some((ext) => s.endsWith(ext)) || !/\.[a-z0-9]+$/i.test(s);
 
-const shouldTransform = (id) => id.endsWith('.tsx') || id.endsWith('.jsx');
+// To match `builtin` (which runs React Compiler on every module the bundler
+// touches), we don't filter here. React Compiler no-ops on non-React files
+// at the oxc level, but parse+transform+codegen still happens per file.
+const shouldTransform = (_id) => true;
 
 function makeBasePlugins() {
   const entrySource = FILES.map((f) => `import ${JSON.stringify(join(ROOT, f))};`).join('\n');

@@ -12,7 +12,7 @@ export default defineParallelPluginImplementation((_options, _context) => {
   return {
     name: 'oxc-bench-bridge-parallel',
     transformNativeBridge(sourceHandle, id) {
-      if (!id.endsWith('.tsx') && !id.endsWith('.jsx')) return undefined;
+      // No filter — match `builtin`'s scope (every module).
       try {
         return transformer.transformNative(sourceHandle, id);
       } catch {

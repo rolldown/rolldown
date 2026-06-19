@@ -6,11 +6,16 @@
 **Binding build:** release (`just build-rolldown-release`)
 **Plugin cdylib build:** release (`cargo build --release -p bench_native_lib_plugin`)
 **Corpus:** Infisical `frontend/` — full corpus is 3860 source files. The
-**primary table** runs on a 1500-file subset because `utils-sync` (rolldown's
-public `transformSync` API) takes ~187 s per iteration at full scale, which
-makes a 6-iter × 7-variant primary run >90 min. 1500 files is enough to
-preserve the relative ordering; the variant deltas don't change between LIMIT
-slices.
+**primary table** runs on a 1500-file subset because `utils-sync`'s wall time
+at full corpus is ~470 s/iter, which would make the primary table take well
+over an hour. 1500 files preserves the relative ordering.
+
+**Transform scope:** every variant runs React Compiler on **every module the
+bundler touches** (not just `.tsx`/`.jsx`). React Compiler no-ops on non-React
+files at the oxc level, but parse + transform + codegen still happens per
+file. This is the same scope as `builtin`'s bundler-level
+`transform.reactCompiler` config, so the variant comparison stays
+apples-to-apples.
 
 ## Variants
 
@@ -29,107 +34,119 @@ corpus: 1500 files
 iterations: 4 (1 warm-up dropped, 3 measured)
 
 --- variant: utils-sync ---
-  warm-up: 29748.6 ms
-  iter 1:  29616.7 ms
-  iter 2:  29418.3 ms
-  iter 3:  29388.1 ms
+  warm-up: 45266.5 ms
+  iter 1:  44770.0 ms
+  iter 2:  44632.5 ms
+  iter 3:  44734.2 ms
 
 --- variant: bridge-sync ---
-  warm-up: 2270.7 ms
-  iter 1:  2248.0 ms
-  iter 2:  2323.6 ms
-  iter 3:  2275.1 ms
+  warm-up: 3066.3 ms
+  iter 1:  2952.7 ms
+  iter 2:  3030.3 ms
+  iter 3:  3034.9 ms
 
 --- variant: native-lib ---
-  warm-up: 1989.5 ms
-  iter 1:  2034.7 ms
-  iter 2:  2041.0 ms
-  iter 3:  1947.9 ms
+  warm-up: 1971.6 ms
+  iter 1:  1983.1 ms
+  iter 2:  2067.1 ms
+  iter 3:  1931.4 ms
 
 --- variant: builtin ---
   did not finish — see note below
 
 --- variant: bridge-parallel ---
-  warm-up: 1116.0 ms
-  iter 1:  1105.6 ms
-  iter 2:  1115.9 ms
-  iter 3:  1052.7 ms
+  warm-up: 1557.3 ms
+  iter 1:  1607.7 ms
+  iter 2:  1674.2 ms
+  iter 3:  1581.5 ms
 ```
 
 | Variant | min (ms) | median (ms) | mean (ms) | speedup vs utils-sync |
 |---|---:|---:|---:|---:|
-| utils-sync       | 29388 | 29418 | 29474 | 1.00x |
-| bridge-sync      |  2248 |  2275 |  2282 | **12.93x** |
-| native-lib       |  1948 |  2035 |  2008 | **14.45x** |
+| utils-sync       | 44632 | 44734 | 44712 | 1.00x |
+| bridge-sync      |  2953 |  3030 |  3006 | **14.76x** |
+| native-lib       |  1931 |  1983 |  1994 | **22.56x** |
 | builtin          | n/a   | n/a   | n/a   | (did not finish) |
-| bridge-parallel  |  1053 |  1106 |  1091 | **26.59x** |
+| bridge-parallel  |  1581 |  1608 |  1621 | **27.83x** |
 
-**Note — `builtin` did not finish.** With `BundlerOptions.transform.reactCompiler` set, rolldown's bundler-level transform pass scales poorly on Infisical's corpus (works fine at LIMIT=5; hangs indefinitely at LIMIT >= 20). The JS-plugin path that runs the same `oxc_react_compiler` transform via `transformer.transformNative` completes in ~2s for the same input. Cause is upstream in rolldown's bundler pipeline, not in this PoC's wiring; the **builtin** path is therefore measured in the secondary table only (small-scale).
+**Note — `builtin` did not finish at LIMIT >= 20.** At LIMIT=5 it completes in
+12 ms. At LIMIT=15 it returns ~67 ms. At LIMIT=20 and above it never returns.
+The same `oxc::Transformer` + `oxc_react_compiler::default_plugin_options()`
+runs to completion in ~2 s for 1500 files via every JS-plugin variant on the
+same input — so the underlying transform isn't the bottleneck. The issue is
+structural in rolldown's bundler-level transform pipeline. The
+filter-scope hypothesis is ruled out (this run already removed the
+`.tsx`/`.jsx` filter from every JS plugin; the others still complete in
+~2-3 s). The remaining hypotheses, in order of plausibility:
+
+1. **Tokio scheduling interaction.** Each module's pre-process step parses
+   → builds semantic → runs the bundler-level Transformer (with React
+   Compiler) → produces code. If React Compiler holds a future open across
+   a shared resource (diagnostic collector, sourcemap writer), tokio's
+   worker pool can serialize behind it. The JS-plugin path moves the
+   React Compiler work off the worker pool's critical path — it happens
+   inside a sync napi call that returns immediately.
+2. **Diagnostic accumulation.** With `panicThreshold: 'none'`, every React
+   Compiler diagnostic still gets collected into the bundler's
+   warning/error list. ~95% of Infisical's React components emit at least
+   one (Refs during render, missing memo deps, etc.). At LIMIT=1500 that's
+   thousands of `BuildDiagnostic` allocations; the JS-plugin path discards
+   them at the plugin boundary.
+3. **A specific file is a worst-case** for React Compiler when invoked
+   through the bundler driver (less likely — same oxc code in both paths,
+   but the surrounding state differs).
+
+A `samply record` or `cargo flamegraph` against `builtin` at LIMIT=20 would
+pin down (1) vs (2) cleanly. That's upstream-rolldown follow-up; out of
+scope for this PoC.
 
 ## Secondary table — LIMIT=15, 6 iterations, all seven variants
 
 ```
 corpus: 15 files
 iterations: 6 (1 warm-up dropped, 5 measured)
-
---- variant: utils-sync ---       med: 110.3 ms
---- variant: utils-async ---      med:  64.0 ms
---- variant: bridge-sync ---      med:  15.3 ms
---- variant: bridge-async ---     med:  16.1 ms
---- variant: native-lib ---       med:  15.2 ms
---- variant: builtin ---          med:  66.6 ms
---- variant: bridge-parallel ---  med:  46.6 ms
 ```
 
 | Variant | min (ms) | median (ms) | mean (ms) | speedup vs utils-sync |
 |---|---:|---:|---:|---:|
-| utils-sync       | 108.20 | 110.31 | 112.43 | 1.00x |
-| utils-async      |  61.09 |  64.05 |  66.43 | 1.72x |
-| bridge-sync      |  14.81 |  15.25 |  16.10 | **7.23x** |
-| bridge-async     |  15.60 |  16.12 |  17.07 | **6.84x** |
-| native-lib       |  14.68 |  15.24 |  15.25 | **7.24x** |
-| builtin          |  59.76 |  66.56 |  64.40 | 1.66x |
-| bridge-parallel  |  45.12 |  46.63 |  46.57 | 2.37x |
+| utils-sync       | 121.45 | 126.84 | 126.84 | 1.00x |
+| utils-async      |  62.34 |  68.76 |  69.48 | 1.85x |
+| bridge-sync      |  14.80 |  16.59 |  23.22 | **7.65x** |
+| bridge-async     |  12.25 |  12.84 |  13.79 | **9.88x** |
+| native-lib       |  13.67 |  15.46 |  15.06 | **8.20x** |
+| builtin          |  62.71 |  67.54 |  68.84 | 1.88x |
+| bridge-parallel  |  45.30 |  47.69 |  47.35 | 2.66x |
 
 ## Reading the numbers
 
-**`utils-sync` is the slow path. The bridge variants are 7–14x faster.**
+**utils-sync** is the slow path by a wide margin. At LIMIT=1500 it costs 45 s
+where `bridge-sync` does the same work in 3 s — 14.8x slower per call.
+`rolldown/utils.transformSync` carries a lot of per-call overhead (options
+re-normalization, warning/error aggregation, sourcemap wiring) that
+disappears when the napi method is called directly.
 
-The big finding: `rolldown/utils`'s `transformSync` adds *a lot* of overhead per
-call relative to the same `oxc_react_compiler` transform invoked directly via a
-napi class method. At LIMIT=1500 it costs 29 s where `bridge-sync` does the same
-work in 2.3 s — that's 12.9× slower per file. At LIMIT=15 the ratio is similar
-(7.2x). The bridge layer eliminates the UTF round trips and probably more
-importantly the per-call overhead inside `transformSync` (options
-re-normalization, warning/error aggregation, sourcemap wiring, etc.).
+**native-lib** is now clearly faster than **bridge-sync** at scale: 1.98 s vs
+3.03 s. The earlier "they're tied" reading was an artifact of the
+`.tsx`/`.jsx` filter restricting both variants to the same small workload;
+once both variants process every module, the napi-crossing cost per
+`bridge-sync` call accumulates and `native-lib`'s no-napi C-ABI dispatch
+pulls ahead. 22.6x over `utils-sync`.
 
-**`native-lib` and `bridge-sync` are essentially tied.** ~14.5x vs ~12.9x in
-the primary table; identical in the secondary. The cost of crossing the napi
-boundary for the bridge-sync variant is small compared to the actual transform
-work. `native-lib`'s structural win (skipping napi entirely and dispatching the
-plugin's `transform` fn pointer directly from rolldown's worker thread) is real
-but the absolute saving is in the low-percent range on this workload, not
-order-of-magnitude.
+**bridge-parallel** is the fastest at scale: 1.6 s, 27.8x over `utils-sync`,
+and ~1.2x faster than `native-lib`. With 8 OS-thread JS contexts the
+transform pool runs in parallel across CPU cores; `native-lib` is sync on
+rolldown's tokio worker pool, which has fewer effective cores for CPU-bound
+work. (A future improvement for `native-lib` would be a dedicated CPU-bound
+thread pool sized to the host.)
 
-**`bridge-parallel` doubles `bridge-sync`/`native-lib` at scale.** At LIMIT=1500
-it's the fastest variant (26.6x over `utils-sync`, ~2.1x over `bridge-sync`).
-The 8 OS-thread JS contexts let multiple transforms run truly in parallel
-across CPU cores. At LIMIT=15 the worker-spawn overhead dominates and
-`bridge-parallel` loses to `bridge-sync`/`native-lib` — useful confirmation
-that the parallel win comes from the actual transform pool, not anything
-intrinsic to the bridge's calling convention.
+**Async dispatch wins where it works.** At LIMIT=15 `utils-async` is 1.85x
+faster than `utils-sync` and `bridge-async` is the fastest variant (9.88x).
+Above ~16 concurrent in-flight async transforms both async variants hit the
+upstream napi-rs 3.x `async fn` ↔ tokio deadlock characterized in this PoC.
 
-**Async dispatch helps at small scale, deadlocks at large scale.** At LIMIT=15
-`utils-async` is 1.7x faster than `utils-sync` and `bridge-async` is at parity
-with `bridge-sync`. Above ~16 concurrent in-flight async transforms, both async
-variants hit the upstream napi-rs 3.x `async fn` ↔ `MaybeAsyncJsCallback` ↔
-tokio deadlock that this PoC has already characterized in detail.
-
-**`builtin` is the surprise loser at scale.** At LIMIT=15 it ties with
-`utils-async` at ~67 ms (1.66x). At LIMIT >= 20 it never completes. The same
-oxc transform runs to completion in 2 seconds via the JS-plugin bridge path on
-the same data, so the issue is in rolldown's bundler-level transform pipeline
-itself, not in the React Compiler. Worth following up upstream.
+**`builtin` is the surprise loser.** Same transform code as the JS-plugin
+variants, supposedly the theoretical floor — instead it hangs at modest
+scale. See the note above the primary table.
 
 ## Build steps to reproduce
 
@@ -151,10 +168,11 @@ LIMIT=15 ITERS=6 \
 
 ## Caveats and methodology notes
 
-- **`panicThreshold: 'none'`** is passed in all five variants that invoke React Compiler. `rolldown/utils`'s `transformSync`/`transform` default to a stricter threshold than `oxc_react_compiler::default_plugin_options()` (which uses `"none"`); without overriding, React Compiler diagnostics fail the bundle on ~95% of Infisical's React components. Aligning the JS plugins with the Rust path's lenient default keeps the variant comparison apples-to-apples.
-- **`shimMissingExports: true`** covers 5 intra-tree type-only-imports-used-as-values that exist in Infisical's source.
-- **`onLog: () => {}`** in the runner swallows the React Compiler warnings that survive `panicThreshold: 'none'` (Refs during render, missing memo dependencies, etc.). None of them affect timing.
-- **mimalloc** emits "invalid pointer" warnings throughout — pre-existing rolldown/oxc allocation pattern, not caused by any variant. Reproduces on the `null transform` control.
-- The async variants (`utils-async`, `bridge-async`) deadlock above ~16 concurrent in-flight transforms on Node 24.x — a generic napi-rs 3.x `async fn` ↔ tokio interaction. They appear only in the secondary table.
+- **No `.tsx`/`.jsx` filter on the JS-plugin variants.** Every variant runs React Compiler on every module to match `builtin`'s scope. Filter-scope hypothesis for the `builtin` hang was ruled out by running `bridge-sync` at LIMIT=50 (1.37 s) while `builtin` still hangs at the same scale.
+- **`panicThreshold: 'none'`** is passed in all variants that invoke React Compiler. `rolldown/utils`'s `transformSync`/`transform` default to a stricter threshold; without overriding, React Compiler diagnostics fail the bundle on ~95% of Infisical's React components. The Rust bench transformer and cdylib already use the lenient default.
+- **`shimMissingExports: true`** covers 5 intra-tree type-only-imports-used-as-values in Infisical's source.
+- **`onLog: () => {}`** in the runner swallows React Compiler warnings (Refs during render, missing memo dependencies, etc.).
+- **mimalloc** emits "invalid pointer" warnings throughout — pre-existing rolldown/oxc allocation pattern, not caused by any variant.
+- The async variants (`utils-async`, `bridge-async`) deadlock above ~16 concurrent in-flight transforms on Node 24.x. Only the secondary table runs them.
 - The bench cdylib is built in release; debug-mode dispatch costs mask the variant comparison.
 - React Compiler is the only transform; heavier transforms would shrink the bridge layer's relative win; cheaper ones would amplify it.

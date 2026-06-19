@@ -124,7 +124,11 @@ impl Plugin for ParallelJsPlugin {
     ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    if self.first_plugin().transform.is_some() {
+    let p = self.first_plugin();
+    if p.transform.is_some()
+      || p.transform_native_bridge.is_some()
+      || p.transform_native_bridge_async.is_some()
+    {
       self.run_single(|plugin| Box::pin(Plugin::transform(plugin, ctx, args))).await
     } else {
       Ok(None)

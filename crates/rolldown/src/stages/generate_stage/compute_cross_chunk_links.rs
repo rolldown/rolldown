@@ -241,7 +241,7 @@ impl GenerateStage<'_> {
         return false;
       }
 
-      stmt_infos.iter_enumerated_without_namespace_stmt().all(|(stmt_idx, stmt_info)| {
+      stmt_infos.iter_enumerated_without_namespace_stmt().all(|(_, stmt_info)| {
         if stmt_info.import_records.is_empty() {
           return false;
         }

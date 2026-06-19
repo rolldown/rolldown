@@ -137,3 +137,4 @@ minimumReleaseAgeExclude:
   - oxc-transform
   - '@voidzero-dev/*'
   - vite-plus
+  - vitepress-plugin-feedback-tracker@0.2.0-alpha.1

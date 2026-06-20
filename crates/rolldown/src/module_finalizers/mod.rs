@@ -161,10 +161,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   fn collect_wrapped_esm_init_modules_for_import_record(
     &self,
     rec_idx: ImportRecordIdx,
-  ) -> FxIndexSet<ModuleIdx> {
+  ) -> Vec<ModuleIdx> {
     // See internal-docs/linking/reference-needed-symbols/implementation.md for why this follows
     // canonical owners through non-wrapped barrel modules.
-    let mut init_modules = FxIndexSet::default();
+    //
+    // Duplicate owners are tolerated here rather than deduped via a set: the sole caller filters
+    // each owner through `generated_init_esm_importee_ids` (a persistent `FxHashSet`) *before*
+    // building the init call, so a repeat owner is dropped at that check and never re-emits. A
+    // `Vec` push avoids the per-record hashing/allocation of an `FxIndexSet` that the global set
+    // already subsumes.
+    let mut init_modules = Vec::new();
     let rec = &self.ctx.module.import_records[rec_idx];
     let Some(importee_idx) = rec.resolved_module else { return init_modules };
     let importee_linking_info = &self.ctx.linking_infos[importee_idx];
@@ -208,7 +214,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   fn add_wrapped_esm_init_module_for_symbol(
     &self,
     symbol_ref: SymbolRef,
-    init_modules: &mut FxIndexSet<ModuleIdx>,
+    init_modules: &mut Vec<ModuleIdx>,
   ) {
     let canonical_ref = self.ctx.symbol_db.canonical_ref_resolving_namespace(symbol_ref);
     let meta = &self.ctx.linking_infos[canonical_ref.owner];
@@ -224,7 +230,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       && meta.wrapper_ref.is_some_and(|wrapper_ref| self.wrapper_is_reachable_in_chunk(wrapper_ref))
       && !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner)
     {
-      init_modules.insert(canonical_ref.owner);
+      init_modules.push(canonical_ref.owner);
     }
   }
 
@@ -262,7 +268,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
 
-    let init_exprs = self
+    // `AstFactory` is `Copy`, so copying it out lets the `&mut self` iterator below stay borrowed
+    // while we still construct nodes through `factory`. That decouples node construction from the
+    // borrow without the throwaway heap `Vec` the previous `.collect()` needed: the common 0/1
+    // cases now allocate nothing, and only the rare sequence case allocates — straight in the arena.
+    let factory = self.ast_factory;
+    let mut init_exprs = self
       .collect_wrapped_esm_init_modules_for_import_record(rec_idx)
       .into_iter()
       .filter_map(|module_idx| {
@@ -271,19 +282,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         // `add_wrapped_esm_init_module_for_symbol` only collects modules with a `wrapper_ref`.
         Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
-      })
-      .collect::<Vec<_>>();
-    match init_exprs.len() {
-      0 => None,
-      1 => init_exprs
-        .into_iter()
-        .next()
-        .map(|init_expr| self.ast_factory.statement_expression(SPAN, init_expr)),
-      _ => Some(self.ast_factory.statement_expression(
-        SPAN,
-        self.ast_factory.expression_sequence(SPAN, self.ast_factory.vec_from_iter(init_exprs)),
-      )),
-    }
+      });
+    // Drive the iterator by hand. Every branch consumes it to exhaustion, so each owner's
+    // `generated_init_esm_importee_ids` insert still runs (the global dedup must observe all of
+    // them) regardless of how many statements we end up emitting.
+    let first = init_exprs.next()?;
+    let Some(second) = init_exprs.next() else {
+      return Some(factory.statement_expression(SPAN, first));
+    };
+    let mut exprs = factory.vec_with_capacity(2);
+    exprs.push(first);
+    exprs.push(second);
+    exprs.extend(init_exprs);
+    Some(factory.statement_expression(SPAN, factory.expression_sequence(SPAN, exprs)))
   }
 
   /// If return true the import stmt should be removed,

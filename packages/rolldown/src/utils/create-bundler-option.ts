@@ -4,6 +4,7 @@ import { getLogger, getOnLog } from '../log/logger';
 import { LOG_LEVEL_INFO } from '../log/logging';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
+import { PluginContextData } from '../plugin/plugin-context-data';
 import { PluginDriver } from '../plugin/plugin-driver';
 import { getObjectPlugins } from '../plugin/plugin-driver';
 import { bindingifyInputOptions } from './bindingify-input-options';
@@ -66,20 +67,27 @@ export async function createBundlerOptions(
   }
 
   try {
+    const pluginContextData = new PluginContextData(
+      onLog,
+      outputOptions,
+      normalizedInputPlugins,
+      normalizedOutputPlugins,
+    );
+
     // Convert `InputOptions` to `BindingInputOptions`
     const bindingInputOptions = bindingifyInputOptions(
       plugins,
       inputOptions,
       outputOptions,
-      normalizedInputPlugins,
+      pluginContextData,
       normalizedOutputPlugins,
       onLog,
       logLevel,
       watchMode,
     );
 
-    // Convert `OutputOptions` to `BindingInputOptions`
-    const bindingOutputOptions = bindingifyOutputOptions(outputOptions);
+    // Convert `OutputOptions` to `BindingOutputOptions`
+    const bindingOutputOptions = bindingifyOutputOptions(outputOptions, pluginContextData);
 
     return {
       bundlerOptions: {

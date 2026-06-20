@@ -48,8 +48,6 @@ impl<'source> SourceJoiner<'source> {
       + sources_len;
     let mut ret_source = String::with_capacity(size_hint_of_ret_source);
 
-    let mut line_offset = 0;
-
     let mut sourcemap_builder = self.enable_sourcemap.then(|| {
       ConcatSourceMapBuilder::with_capacity(
         self.names_len,
@@ -58,22 +56,33 @@ impl<'source> SourceJoiner<'source> {
         self.token_chunks_len,
       )
     });
-    // Move exclusively owned maps into the builder. A caller may still pass a
-    // shared source by reference; keep borrowing that map so its mappings are
-    // preserved, then copy only its borrowed strings when detaching below.
-    for (index, source) in self.prepend_source.iter_mut().chain(self.inner.iter_mut()).enumerate() {
-      let lines_count = source.lines_count();
-      ret_source.push_str(source.content());
-      if let Some(sourcemap_builder) = &mut sourcemap_builder {
+    if let Some(sourcemap_builder) = &mut sourcemap_builder {
+      let mut line_offset = 0;
+      // Move exclusively owned maps into the builder. A caller may still pass
+      // a shared source by reference; keep borrowing that map so its mappings
+      // are preserved, then copy only its borrowed strings when detaching.
+      for (index, source) in self.prepend_source.iter_mut().chain(self.inner.iter_mut()).enumerate()
+      {
+        let lines_count = source.lines_count();
+        ret_source.push_str(source.content());
         if let Some(map) = source.take_sourcemap() {
           sourcemap_builder.add_sourcemap_owned(map, line_offset);
         } else if let Some(map) = source.sourcemap() {
           sourcemap_builder.add_sourcemap(map, line_offset);
         }
+        if index < sources_len - 1 {
+          ret_source.push('\n');
+          line_offset += lines_count + 1; // +1 for the newline
+        }
       }
-      if index < sources_len - 1 {
-        ret_source.push('\n');
-        line_offset += lines_count + 1; // +1 for the newline
+    } else {
+      // Without a sourcemap there is no line offset to maintain. Avoid scanning
+      // every source for newlines on this common path.
+      for (index, source) in self.prepend_source.iter().chain(self.inner.iter()).enumerate() {
+        ret_source.push_str(source.content());
+        if index < sources_len - 1 {
+          ret_source.push('\n');
+        }
       }
     }
     (ret_source, sourcemap_builder.map(|builder| builder.into_owned_sourcemap().into_inner()))

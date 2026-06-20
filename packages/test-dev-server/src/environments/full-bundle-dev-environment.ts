@@ -302,6 +302,8 @@ export class FullBundleDevEnvironment {
     if (result instanceof Error) {
       this.logger.error('Build error:', result);
       this.#lastBuildError = result;
+      // Cancel any queued full reload so we never reload onto a broken bundle.
+      this.#fullReloadPending = false;
       this.#broadcastError(result);
       this.#buildSeq++;
       return;

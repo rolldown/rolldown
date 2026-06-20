@@ -24,7 +24,7 @@ use super::utils::{
 pub async fn render_umd<'code>(
   ctx: &GenerateContext<'_>,
   addon_render_context: AddonRenderContext<'code>,
-  module_sources: &'code RenderedModuleSources,
+  module_sources: &mut RenderedModuleSources,
   warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();

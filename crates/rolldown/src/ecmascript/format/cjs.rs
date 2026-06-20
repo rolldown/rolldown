@@ -18,7 +18,7 @@ use super::utils::{render_chunk_directives, render_modules_with_peek_runtime_mod
 pub fn render_cjs<'code>(
   ctx: &GenerateContext<'_>,
   addon_render_context: AddonRenderContext<'code>,
-  module_sources: &'code RenderedModuleSources,
+  module_sources: &mut RenderedModuleSources,
   _warnings: &mut Vec<BuildDiagnostic>,
 ) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();

@@ -21,7 +21,7 @@ use super::utils::{is_use_strict_directive, render_chunk_directives};
 pub fn render_esm<'code>(
   ctx: &GenerateContext<'_>,
   addon_render_context: AddonRenderContext<'code>,
-  module_sources: &'code RenderedModuleSources,
+  module_sources: &mut RenderedModuleSources,
 ) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
   let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
@@ -118,22 +118,16 @@ pub fn render_esm<'code>(
   source_joiner
 }
 
-fn render_chunk_content<'code>(
+fn render_chunk_content(
   ctx: &GenerateContext<'_>,
-  module_sources: &'code [RenderedModuleSource],
-  source_joiner: &mut SourceJoiner<'code>,
+  module_sources: &mut [RenderedModuleSource],
+  source_joiner: &mut SourceJoiner<'_>,
 ) {
   // If there is no concatenate_wrapping_modules, just concate all modules by exec order.
   if ctx.chunk.module_groups.is_empty() {
-    module_sources.iter().for_each(
-      |RenderedModuleSource { sources: module_render_output, .. }| {
-        if let Some(emitted_sources) = module_render_output {
-          for source in emitted_sources.as_ref() {
-            source_joiner.append_source(source);
-          }
-        }
-      },
-    );
+    for module_source in module_sources.iter_mut() {
+      module_source.append_sources(source_joiner);
+    }
     return;
   }
   let module_idx_to_source_idx = module_sources.iter().enumerate().fold(
@@ -150,12 +144,8 @@ fn render_chunk_content<'code>(
     // If the group is not belong to any concatenated module, we just render it as a single module.
     if group.modules.len() == 1 {
       let source =
-        module_sources.get(module_idx_to_source_idx[&group.entry]).expect("should have source");
-      if let Some(emitted_sources) = source.sources.as_ref() {
-        for source in emitted_sources.as_ref() {
-          source_joiner.append_source(source);
-        }
-      }
+        module_sources.get_mut(module_idx_to_source_idx[&group.entry]).expect("should have source");
+      source.append_sources(source_joiner);
       continue;
     }
     // Concatenate hoisted functions and comma-join hoisted vars across the group's modules by
@@ -219,15 +209,9 @@ fn render_chunk_content<'code>(
       if is_async { "async () => {" } else { "() => {" }
     ));
     // we render each module in the group by exec order.
-    group.modules.iter().for_each(|module_idx| {
-      if let Some(rendered) =
-        module_sources.get(module_idx_to_source_idx[module_idx]).and_then(|m| m.sources.as_ref())
-      {
-        for source in rendered.iter() {
-          source_joiner.append_source(source);
-        }
-      }
-    });
+    for module_idx in &group.modules {
+      module_sources[module_idx_to_source_idx[module_idx]].append_sources(source_joiner);
+    }
     let mut postfix = "}".to_string();
     if is_pife_for_module_wrappers_enabled {
       postfix += ")";

@@ -1,7 +1,10 @@
 use oxc::semantic::SymbolId;
 use rolldown_std_utils::OptionExt;
+use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{EcmaViewMeta, IndexModules, Module, ModuleIdx, SymbolRefDb, SymbolRefFlags};
+use crate::{
+  EcmaViewMeta, ImportKind, IndexModules, Module, ModuleIdx, SymbolRefDb, SymbolRefFlags,
+};
 
 use super::symbol_ref_db::{GetLocalDb, GetLocalDbMut};
 
@@ -49,13 +52,64 @@ impl SymbolRef {
   }
 
   pub fn is_side_effect_free_function(&self, db: &SymbolRefDb, modules: &IndexModules) -> bool {
+    let mut static_import_cycle_cache = FxHashMap::default();
+    // Without a caller module, variable-initialized functions must stay conservative because
+    // their initialization order cannot be checked.
+    self.is_side_effect_free_function_with_cycle_cache(
+      db,
+      modules,
+      self.owner,
+      &mut static_import_cycle_cache,
+    )
+  }
+
+  pub fn is_side_effect_free_function_with_cycle_cache(
+    &self,
+    db: &SymbolRefDb,
+    modules: &IndexModules,
+    callsite_module_idx: ModuleIdx,
+    static_import_cycle_cache: &mut FxHashMap<ModuleIdx, bool>,
+  ) -> bool {
     let Some(normal_module) = modules[self.owner].as_normal() else {
       return false;
     };
     if !normal_module.meta.contains(EcmaViewMeta::TopExportedSideEffectsFreeFunction) {
       return false;
     }
-    self.flags(db).is_some_and(|flag| flag.contains(SymbolRefFlags::SideEffectsFreeFunction))
+    if normal_module.meta.has_eval() {
+      return false;
+    }
+    let Some(flag) = self.flags(db) else {
+      return false;
+    };
+    if !flag.contains(SymbolRefFlags::IsNotReassigned)
+      || !flag.contains(SymbolRefFlags::SideEffectsFreeFunction)
+    {
+      return false;
+    }
+    if flag.contains(SymbolRefFlags::VarInitializedSideEffectsFreeFunction)
+      && self.owner == callsite_module_idx
+    {
+      return false;
+    }
+    if flag.intersects(
+      SymbolRefFlags::VarInitializedSideEffectsFreeFunction
+        | SymbolRefFlags::DelayedDefaultExportSideEffectsFreeFunction,
+    ) {
+      if *static_import_cycle_cache
+        .entry(self.owner)
+        .or_insert_with(|| module_has_static_import_cycle(self.owner, modules))
+      {
+        return false;
+      }
+      if *static_import_cycle_cache
+        .entry(callsite_module_idx)
+        .or_insert_with(|| module_has_static_import_cycle(callsite_module_idx, modules))
+      {
+        return false;
+      }
+    }
+    true
   }
 
   pub fn is_declared_in_root_scope(&self, db: &SymbolRefDb) -> bool {
@@ -92,6 +146,34 @@ impl SymbolRef {
       Module::External(_) => true,
     }
   }
+}
+
+fn module_has_static_import_cycle(module_idx: ModuleIdx, modules: &IndexModules) -> bool {
+  let mut seen = FxHashSet::default();
+  has_static_import_path_to(module_idx, module_idx, modules, &mut seen)
+}
+
+fn has_static_import_path_to(
+  target: ModuleIdx,
+  current: ModuleIdx,
+  modules: &IndexModules,
+  seen: &mut FxHashSet<ModuleIdx>,
+) -> bool {
+  let Some(module) = modules[current].as_normal() else {
+    return false;
+  };
+  module.import_records.iter().any(|record| {
+    if !matches!(record.kind, ImportKind::Import | ImportKind::Require) {
+      return false;
+    }
+    let Some(next) = record.resolved_module else {
+      return false;
+    };
+    if next == target {
+      return true;
+    }
+    seen.insert(next) && has_static_import_path_to(target, next, modules, seen)
+  })
 }
 
 /// passing a `SymbolRef`, it will return it's string repr, the format:

@@ -167,6 +167,7 @@ pub struct AstScanner<'me, 'ast> {
   /// Whether the current position is at the top level (all parent scopes are block or top-level).
   /// A cache of [AstScanner::is_valid_tla_scope].
   is_top_level: bool,
+  current_direct_root_var_decl_symbols: FxHashSet<SymbolId>,
   current_comment_idx: usize,
   untranspiled_syntax: UntranspiledSyntax,
   /// Symbol IDs of namespace imports (`import * as ns from '...'`).
@@ -265,6 +266,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       )]),
       has_module_exports_reassignment: false,
       is_top_level: false,
+      current_direct_root_var_decl_symbols: FxHashSet::default(),
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
       namespace_object_symbol_ids: FxHashSet::default(),
@@ -294,6 +296,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   pub fn is_root_scope(&self) -> bool {
     self.scope_stack.iter().rev().all(|flag| flag.is_top())
+  }
+
+  pub fn is_unconditionally_executed_root_var_decl_symbol(&self, symbol_id: SymbolId) -> bool {
+    self.current_direct_root_var_decl_symbols.contains(&symbol_id)
+  }
+
+  pub fn can_mark_var_initialized_export_side_effect_free(&self, symbol_id: SymbolId) -> bool {
+    self.is_unconditionally_executed_root_var_decl_symbol(symbol_id)
+      && !self.result.ecma_view_meta.has_eval()
   }
 
   pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {
@@ -557,8 +568,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let symbol_ref: SymbolRef = (self.immutable_ctx.idx, local).into();
 
     // If there is any write reference to the local variable, it is reassigned.
-    let is_reassigned =
-      self.result.symbol_ref_db.get_resolved_references(local).any(Reference::is_write);
+    let is_reassigned = self.is_symbol_reassigned(local);
 
     let ref_flags = symbol_ref.flags_mut(&mut self.result.symbol_ref_db);
     if !is_reassigned {
@@ -573,17 +583,29 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         came_from_commonjs: false,
       },
     );
+
+    if self.is_not_reassigned_side_effect_free_function(local) {
+      self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
+    }
   }
 
   fn add_local_default_export(&mut self, local: SymbolId, span: Span) {
-    // The default symbol ref never get reassigned.
     let symbol_ref: SymbolRef = (self.immutable_ctx.idx, local).into();
-    symbol_ref.flags_mut(&mut self.result.symbol_ref_db).insert(SymbolRefFlags::IsNotReassigned);
+    if !self.is_symbol_reassigned(local) {
+      symbol_ref.flags_mut(&mut self.result.symbol_ref_db).insert(SymbolRefFlags::IsNotReassigned);
+    }
 
     self.result.named_exports.insert(
       "default".into(),
       LocalExport { referenced: symbol_ref, span, came_from_commonjs: false },
     );
+
+    if self.is_not_reassigned_side_effect_free_function(local) {
+      symbol_ref
+        .flags_mut(&mut self.result.symbol_ref_db)
+        .insert(SymbolRefFlags::DelayedDefaultExportSideEffectsFreeFunction);
+      self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
+    }
   }
 
   /// Record `export { [imported] as [export_name] } from ...` statement.
@@ -772,31 +794,28 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 if let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref()) {
                   self.add_constant_symbol(symbol_id, ConstExportMeta::new(value, false));
                 }
-                let (is_side_effect_free_function, is_pure_annotation_only) = decl
+                let pure_annotation_only = decl
                   .init
                   .as_ref()
                   .map(|expr| match expr {
                     Expression::FunctionExpression(func) => {
                       let empty = func.is_side_effect_free();
-                      (empty || func.pure, func.pure && !empty)
+                      self.side_effect_free_function_pure_annotation_only(empty, func.pure)
                     }
                     Expression::ArrowFunctionExpression(func) => {
                       let empty = func.is_side_effect_free();
-                      (empty || func.pure, func.pure && !empty)
+                      self.side_effect_free_function_pure_annotation_only(empty, func.pure)
                     }
-                    _ => (false, false),
+                    _ => None,
                   })
-                  .unwrap_or((false, false));
-                if is_side_effect_free_function {
-                  self
-                    .result
-                    .ecma_view_meta
-                    .insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-                  let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
-                  flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
-                  if is_pure_annotation_only {
-                    flags.insert(SymbolRefFlags::PureAnnotationOnly);
-                  }
+                  .unwrap_or(None);
+                if self.can_mark_var_initialized_export_side_effect_free(symbol_id)
+                  && let Some(pure_annotation_only) = pure_annotation_only
+                {
+                  self.add_var_initialized_side_effect_free_function_symbol(
+                    symbol_id,
+                    pure_annotation_only,
+                  );
                 }
               }
             });
@@ -806,13 +825,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             let symbol_id = binding_id.symbol_id();
             self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
             let empty = fn_decl.is_side_effect_free();
-            if empty || fn_decl.pure {
-              self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-              let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
-              flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
-              if fn_decl.pure && !empty {
-                flags.insert(SymbolRefFlags::PureAnnotationOnly);
-              }
+            if let Some(pure_annotation_only) =
+              self.side_effect_free_function_pure_annotation_only(empty, fn_decl.pure)
+            {
+              self.add_side_effect_free_function_symbol(symbol_id, pure_annotation_only);
             }
           }
           ast::Declaration::ClassDeclaration(cls_decl) => {
@@ -866,18 +882,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
         let empty = fn_decl.is_side_effect_free();
-        if empty || fn_decl.pure {
-          self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-          let flags = self
-            .result
-            .symbol_ref_db
-            .flags
-            .entry(self.result.default_export_ref.symbol)
-            .or_default();
-          flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
-          if fn_decl.pure && !empty {
-            flags.insert(SymbolRefFlags::PureAnnotationOnly);
-          }
+        if let Some(pure_annotation_only) =
+          self.side_effect_free_function_pure_annotation_only(empty, fn_decl.pure)
+        {
+          self.add_side_effect_free_function_symbol(
+            self.result.default_export_ref.symbol,
+            pure_annotation_only,
+          );
         }
         fn_decl.id.as_ref().map(|id| {
           let symbol_id = id.symbol_id();
@@ -1126,6 +1137,88 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return;
     }
     self.result.constant_export_map.insert(symbol_id, value);
+  }
+
+  pub fn side_effect_free_function_pure_annotation_only(
+    &self,
+    empty: bool,
+    pure: bool,
+  ) -> Option<bool> {
+    if empty {
+      Some(false)
+    } else if pure && !self.immutable_ctx.flat_options.ignore_annotations() {
+      Some(true)
+    } else {
+      None
+    }
+  }
+
+  pub fn add_side_effect_free_function_symbol(
+    &mut self,
+    symbol_id: SymbolId,
+    pure_annotation_only: bool,
+  ) -> bool {
+    if self.result.ecma_view_meta.has_eval()
+      || (pure_annotation_only && self.immutable_ctx.flat_options.ignore_annotations())
+    {
+      return false;
+    }
+    {
+      let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
+      flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
+      if pure_annotation_only {
+        flags.insert(SymbolRefFlags::PureAnnotationOnly);
+      }
+    }
+    let symbol_ref: SymbolRef = (self.immutable_ctx.idx, symbol_id).into();
+    if self.is_not_reassigned_side_effect_free_function(symbol_id)
+      && self.result.named_exports.values().any(|export| export.referenced == symbol_ref)
+    {
+      self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
+    }
+    true
+  }
+
+  pub fn add_var_initialized_side_effect_free_function_symbol(
+    &mut self,
+    symbol_id: SymbolId,
+    pure_annotation_only: bool,
+  ) {
+    if self.add_side_effect_free_function_symbol(symbol_id, pure_annotation_only) {
+      self
+        .result
+        .symbol_ref_db
+        .flags
+        .entry(symbol_id)
+        .or_default()
+        .insert(SymbolRefFlags::VarInitializedSideEffectsFreeFunction);
+    }
+  }
+
+  pub fn discard_side_effect_free_function_symbols(&mut self) {
+    for flags in self.result.symbol_ref_db.flags.values_mut() {
+      flags.remove(
+        SymbolRefFlags::SideEffectsFreeFunction
+          | SymbolRefFlags::PureAnnotationOnly
+          | SymbolRefFlags::VarInitializedSideEffectsFreeFunction
+          | SymbolRefFlags::DelayedDefaultExportSideEffectsFreeFunction,
+      );
+    }
+    self.result.ecma_view_meta.remove(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
+  }
+
+  fn is_symbol_reassigned(&self, symbol_id: SymbolId) -> bool {
+    self.result.symbol_ref_db.get_resolved_references(symbol_id).any(Reference::is_write)
+  }
+
+  fn is_not_reassigned_side_effect_free_function(&self, symbol_id: SymbolId) -> bool {
+    if self.result.ecma_view_meta.has_eval() {
+      return false;
+    }
+    self.result.symbol_ref_db.flags.get(&symbol_id).is_some_and(|flags| {
+      flags.contains(SymbolRefFlags::IsNotReassigned)
+        && flags.contains(SymbolRefFlags::SideEffectsFreeFunction)
+    })
   }
 
   fn is_import_expr_ignored_by_comment(&mut self, expr: &ImportExpression<'ast>) -> bool {

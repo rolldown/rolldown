@@ -195,6 +195,7 @@ impl LinkStage<'_> {
               .unwrap_or(&default_stmt_idx_to_dynamic_import_expr_node_ids);
           let mut ctx = CrossModuleOptimizationRunnerContext {
             local_constant_symbol_map: FxHashMap::default(),
+            static_import_cycle_cache: FxHashMap::default(),
             side_effect_detail_mutations: FxHashMap::default(),
             side_effect_free_call_expr_node_ids: FxHashSet::default(),
             immutable_ctx: CrossModuleOptimizationImmutableCtx {
@@ -279,6 +280,7 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
 
 struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
   local_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
+  static_import_cycle_cache: FxHashMap<ModuleIdx, bool>,
   side_effect_detail_mutations: FxHashMap<StmtInfoIdx, SideEffectDetail>,
   side_effect_free_call_expr_node_ids: FxHashSet<NodeId>,
   immutable_ctx: CrossModuleOptimizationImmutableCtx<'a, 'ast>,
@@ -364,8 +366,12 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
           .immutable_ctx
           .symbols
           .canonical_ref_for((self.immutable_ctx.module_idx, symbol_id).into());
-        let is_free = symbol_ref
-          .is_side_effect_free_function(self.immutable_ctx.symbols, self.immutable_ctx.modules);
+        let is_free = symbol_ref.is_side_effect_free_function_with_cycle_cache(
+          self.immutable_ctx.symbols,
+          self.immutable_ctx.modules,
+          self.immutable_ctx.module_idx,
+          &mut self.static_import_cycle_cache,
+        );
         let is_annotation_only = is_free
           && self
             .immutable_ctx

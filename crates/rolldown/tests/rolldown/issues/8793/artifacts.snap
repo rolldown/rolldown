@@ -31,7 +31,7 @@ console.log(class {
 	constructor() {
 		console.log(Ub);
 	}
-	static p = Ub$1({});
+	static p = /* @__PURE__ */ Ub$1({});
 });
 //#endregion
 

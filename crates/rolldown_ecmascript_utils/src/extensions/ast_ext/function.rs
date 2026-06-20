@@ -6,7 +6,7 @@ pub trait FunctionExt {
 
 impl FunctionExt for oxc::ast::ast::FormalParameters<'_> {
   fn is_side_effect_free(&self) -> bool {
-    self.items.iter().all(|param| {
+    let simple_params = self.items.iter().all(|param| {
       // Check for default values with side effects
       // Type annotations are removed at compile time and cannot have side effects
       // No need to check for them
@@ -28,7 +28,12 @@ impl FunctionExt for oxc::ast::ast::FormalParameters<'_> {
           param.initializer.is_none()
         }
       }
-    })
+    });
+
+    simple_params
+      && self.rest.as_ref().is_none_or(|rest| {
+        matches!(rest.rest.argument, oxc::ast::ast::BindingPattern::BindingIdentifier(_))
+      })
   }
 }
 

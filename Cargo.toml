@@ -276,7 +276,7 @@ oxc_resolver = { version = "11.21.3", features = [
   "yarn_pnp",
 ] } # https://github.com/oxc-project/oxc-resolver
 oxc_resolver_napi = { version = "11.21.3", default-features = false, features = ["yarn_pnp"] }
-oxc_sourcemap = { version = "8.0.1" } # https://github.com/oxc-project/oxc-sourcemap
+oxc_sourcemap = { version = "8.0.2" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.

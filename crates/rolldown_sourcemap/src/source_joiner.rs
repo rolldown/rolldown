@@ -36,7 +36,7 @@ impl<'source> SourceJoiner<'source> {
     self.prepend_source.push(Box::new(source));
   }
 
-  pub fn join(self) -> (String, Option<SourceMap>) {
+  pub fn join(mut self) -> (String, Option<SourceMap>) {
     let sources_len = self.prepend_source.len() + self.inner.len();
 
     let size_hint_of_ret_source = self
@@ -58,13 +58,17 @@ impl<'source> SourceJoiner<'source> {
         self.token_chunks_len,
       )
     });
-    // Move each owned map into the builder (no per-string copy), so the result is `'static` and the trailing into_owned is gone.
-    for (index, source) in self.prepend_source.into_iter().chain(self.inner).enumerate() {
+    // Move exclusively owned maps into the builder. A caller may still pass a
+    // shared source by reference; keep borrowing that map so its mappings are
+    // preserved, then copy only its borrowed strings when detaching below.
+    for (index, source) in self.prepend_source.iter_mut().chain(self.inner.iter_mut()).enumerate() {
       let lines_count = source.lines_count();
       ret_source.push_str(source.content());
       if let Some(sourcemap_builder) = &mut sourcemap_builder {
-        if let Some(map) = source.into_sourcemap() {
+        if let Some(map) = source.take_sourcemap() {
           sourcemap_builder.add_sourcemap_owned(map, line_offset);
+        } else if let Some(map) = source.sourcemap() {
+          sourcemap_builder.add_sourcemap(map, line_offset);
         }
       }
       if index < sources_len - 1 {
@@ -72,7 +76,7 @@ impl<'source> SourceJoiner<'source> {
         line_offset += lines_count + 1; // +1 for the newline
       }
     }
-    (ret_source, sourcemap_builder.map(ConcatSourceMapBuilder::into_sourcemap))
+    (ret_source, sourcemap_builder.map(|builder| builder.into_owned_sourcemap().into_inner()))
   }
 
   fn accumulate_sourcemap_data_size(&mut self, hint: &SourceMap) {
@@ -137,4 +141,46 @@ console.log(foo);
 (0:30) ");\n" --> (4:15) ");\n"
 "#
   );
+}
+
+#[test]
+fn test_concat_mixed_owned_and_borrowed_sourcemaps() {
+  use std::borrow::Cow;
+
+  use crate::{Source, SourceJoiner, SourceMap, SourceMapSource};
+  use oxc_sourcemap::Token;
+
+  fn map(filename: &str, source_content: &str) -> SourceMap {
+    SourceMap::new(
+      None,
+      vec![],
+      None,
+      vec![Cow::Owned(filename.to_string())],
+      vec![Some(Cow::Owned(source_content.to_string()))],
+      vec![Token::new(0, 0, 0, 0, Some(0), None)].into_boxed_slice(),
+      None,
+    )
+  }
+
+  // Callers may still pass a shared source that cannot yield ownership of its map.
+  let borrowed_source: Box<dyn Source + Send + Sync> = Box::new(SourceMapSource::new(
+    "borrowed();".to_string(),
+    map("borrowed.js", "borrowed source"),
+  ));
+
+  let mut joiner = SourceJoiner::default();
+  joiner.append_source(&borrowed_source);
+  joiner
+    .append_source(SourceMapSource::new("owned();".to_string(), map("owned.js", "owned source")));
+
+  let (content, map) = joiner.join();
+  let map = map.expect("both input sourcemaps should be preserved");
+
+  assert_eq!(content, "borrowed();\nowned();");
+  assert_eq!(map.get_sources().collect::<Vec<_>>(), ["borrowed.js", "owned.js"]);
+  assert_eq!(map.get_source_content(0), Some("borrowed source"));
+  assert_eq!(map.get_source_content(1), Some("owned source"));
+  assert_eq!(map.get_token(0).and_then(|token| token.get_source_id()), Some(0));
+  assert_eq!(map.get_token(1).map(|token| token.get_dst_line()), Some(1));
+  assert_eq!(map.get_token(1).and_then(|token| token.get_source_id()), Some(1));
 }

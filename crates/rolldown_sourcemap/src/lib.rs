@@ -72,29 +72,30 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
     .map(|sourcemap| (*sourcemap, sourcemap.generate_lookup_table()))
     .collect();
 
-  let tokens: Box<[Token]> = last_map
-    .get_source_view_tokens()
-    .filter_map(|token| {
-      let original_token =
-        sourcemap_and_lookup_table.iter().try_fold(token, |token, (sourcemap, lookup_table)| {
-          sourcemap.lookup_source_view_token(
-            lookup_table,
-            token.get_src_line(),
-            token.get_src_col(),
-          )
-        });
-      original_token.map(|original_token| {
-        Token::new(
-          token.get_dst_line(),
-          token.get_dst_col(),
-          original_token.get_src_line(),
-          original_token.get_src_col(),
-          original_token.get_source_id(),
-          original_token.get_name_id(),
-        )
-      })
+  // `get_source_view_tokens()` is slice-backed, so its `size_hint` lower bound is
+  // the exact token count of `last_map`. `filter_map` would otherwise report a
+  // lower bound of 0, leaving `collect` to grow the buffer through ~log2(n)
+  // reallocations. Reserve the upper bound up front instead: nearly every token
+  // remaps successfully, so the over-allocation is negligible.
+  let source_view_tokens = last_map.get_source_view_tokens();
+  let mut tokens_vec = Vec::with_capacity(source_view_tokens.size_hint().0);
+  tokens_vec.extend(source_view_tokens.filter_map(|token| {
+    let original_token =
+      sourcemap_and_lookup_table.iter().try_fold(token, |token, (sourcemap, lookup_table)| {
+        sourcemap.lookup_source_view_token(lookup_table, token.get_src_line(), token.get_src_col())
+      });
+    original_token.map(|original_token| {
+      Token::new(
+        token.get_dst_line(),
+        token.get_dst_col(),
+        original_token.get_src_line(),
+        original_token.get_src_col(),
+        original_token.get_source_id(),
+        original_token.get_name_id(),
+      )
     })
-    .collect();
+  }));
+  let tokens: Box<[Token]> = tokens_vec.into_boxed_slice();
 
   SourceMap::new(
     None,

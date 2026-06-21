@@ -1,3 +1,5 @@
+use std::collections::hash_map::Entry;
+
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use oxc::semantic::Scoping;
@@ -5,8 +7,7 @@ use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use oxc_str::CompactStr;
 
 use rolldown_common::{
-  ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefDbForModule,
-  SymbolRefFlags, WrapKind,
+  ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefDbForModule, WrapKind,
 };
 use rolldown_utils::concat_string;
 
@@ -144,40 +145,31 @@ impl<'name> Renamer<'name> {
   /// other top-level names and nested scope names that could cause capture.
   pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef, needs_deconflict: bool) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
-    let canonical_name = canonical_ref.name(self.symbol_db);
 
-    // Dedup-before-alloc: in the deconflict path, a re-add of an already-present
-    // canonical_ref is a no-op, so check it BEFORE building the owned name and
-    // skip the wasted CompactStr allocation on that path. The `!needs_deconflict`
-    // path still inserts and therefore still needs the built name.
-    if needs_deconflict && self.canonical_names.contains_key(&canonical_ref) {
+    // The `!needs_deconflict` path always stores the bare original name and never
+    // dedups, so build and insert directly.
+    if !needs_deconflict {
+      self.canonical_names.insert(canonical_ref, self.symbol_db.original_name(canonical_ref));
       return;
     }
 
-    let original_name = if self.symbol_db.has_module_preserve_jsx()
-      && canonical_name.as_bytes()[0].is_ascii_lowercase()
-      && canonical_ref
-        .flags(self.symbol_db)
-        .is_some_and(|flags| flags.contains(SymbolRefFlags::MustStartWithCapitalLetterForJSX))
-    {
-      let mut s = String::with_capacity(canonical_name.len());
-      s.push(canonical_name.as_bytes()[0].to_ascii_uppercase() as char);
-      s.push_str(&canonical_name[1..]);
-      CompactStr::from(s)
-    } else {
-      CompactStr::new(canonical_name)
+    // Deconflict path: fuse the dedup check and the final insert into a single
+    // `canonical_names` probe via the entry API. An Occupied slot means this
+    // canonical_ref was already assigned, so re-adding is a no-op — and we still
+    // skip building the owned name on that path (dedup-before-alloc). The previous
+    // `contains_key(&canonical_ref)` + `insert(canonical_ref, _)` pair hashed and
+    // walked the table twice for the same key.
+    let Entry::Vacant(slot) = self.canonical_names.entry(canonical_ref) else {
+      return;
     };
 
-    if !needs_deconflict {
-      self.canonical_names.insert(canonical_ref, original_name);
-      return;
-    }
+    let original_name = self.symbol_db.original_name(canonical_ref);
 
     // Bind the fields the `accept` closure reads as locals so the borrow of
     // `self.resolver` (mutable, in `resolve`) does not overlap a borrow of `self`.
     let symbol_db = self.symbol_db;
     let entry_module_idx = self.entry_module_idx;
-    let canonical_name = self.resolver.resolve(original_name, |candidate, is_original| {
+    let resolved = self.resolver.resolve(original_name, |candidate, is_original| {
       Self::is_name_available_with(
         symbol_db,
         entry_module_idx,
@@ -186,7 +178,7 @@ impl<'name> Renamer<'name> {
         is_original,
       )
     });
-    self.canonical_names.insert(canonical_ref, canonical_name);
+    slot.insert(resolved);
   }
 
   pub fn create_conflictless_name(&mut self, hint: &str) -> CompactStr {

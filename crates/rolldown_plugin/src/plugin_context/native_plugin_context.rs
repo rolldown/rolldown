@@ -200,11 +200,7 @@ impl NativePluginContextImpl {
       // Run the async `onLog` callback as a detached task, but keep the handle so
       // the build can await it at a barrier and fail if the callback errored
       let handle = rolldown_utils::futures::spawn(async move { on_log.call(level, log).await });
-      self
-        .log_hook_tasks
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .push(handle);
+      self.log_hook_tasks.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push(handle);
     }
   }
 

@@ -72,29 +72,26 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
     .map(|sourcemap| (*sourcemap, sourcemap.generate_lookup_table()))
     .collect();
 
-  let tokens: Box<[Token]> = last_map
-    .get_source_view_tokens()
-    .filter_map(|token| {
-      let original_token =
-        sourcemap_and_lookup_table.iter().try_fold(token, |token, (sourcemap, lookup_table)| {
-          sourcemap.lookup_source_view_token(
-            lookup_table,
-            token.get_src_line(),
-            token.get_src_col(),
-          )
-        });
-      original_token.map(|original_token| {
-        Token::new(
-          token.get_dst_line(),
-          token.get_dst_col(),
-          original_token.get_src_line(),
-          original_token.get_src_col(),
-          original_token.get_source_id(),
-          original_token.get_name_id(),
-        )
-      })
+  // `filter_map` hides the slice's exact `size_hint`, so reserve the upper bound ourselves.
+  let source_view_tokens = last_map.get_source_view_tokens();
+  let mut tokens_vec = Vec::with_capacity(source_view_tokens.size_hint().0);
+  tokens_vec.extend(source_view_tokens.filter_map(|token| {
+    let original_token =
+      sourcemap_and_lookup_table.iter().try_fold(token, |token, (sourcemap, lookup_table)| {
+        sourcemap.lookup_source_view_token(lookup_table, token.get_src_line(), token.get_src_col())
+      });
+    original_token.map(|original_token| {
+      Token::new(
+        token.get_dst_line(),
+        token.get_dst_col(),
+        original_token.get_src_line(),
+        original_token.get_src_col(),
+        original_token.get_source_id(),
+        original_token.get_name_id(),
+      )
     })
-    .collect();
+  }));
+  let tokens: Box<[Token]> = tokens_vec.into_boxed_slice();
 
   SourceMap::new(
     None,

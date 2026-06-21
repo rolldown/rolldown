@@ -82,7 +82,7 @@ fn collapse_module_sourcemap(
   for element in sourcemap_chain {
     match element {
       SourcemapChainElement::Transform((_, sourcemap)) | SourcemapChainElement::Load(sourcemap) => {
-        owned_chain.push(sourcemap);
+        owned_chain.push(&**sourcemap);
       }
       SourcemapChainElement::Omitted { plugin_name, .. } => {
         owned_chain.push(&empty);
@@ -218,7 +218,7 @@ mod tests {
     // A real `Load`/`Transform` map is kept as-is; its sources/content win over the module
     // id placeholder and its mappings flow through the collapse.
     let mut warnings = vec![];
-    let load = SourcemapChainElement::Load(map("loaded.js", "const a = 1;\n"));
+    let load = SourcemapChainElement::Load(Box::new(map("loaded.js", "const a = 1;\n")));
     let result =
       collapse_module_sourcemap(&[load], Some(codegen_map("a(1);\n")), MODULE_ID, &mut warnings)
         .unwrap();

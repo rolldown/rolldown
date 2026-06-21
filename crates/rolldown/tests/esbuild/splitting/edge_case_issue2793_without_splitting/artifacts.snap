@@ -9,13 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 //#region a.js
 var A;
-var init_a = __esmMin((() => {
+var init_a = __toCommonJSInitMin((() => {
 	A = 42;
 }));
 //#endregion
 //#region b.js
 var B;
-var init_b = __esmMin((() => {
+var init_b = __toCommonJSInitMin((() => {
 	B = async () => (await Promise.resolve().then(() => (init_edge_case_issue2793_without_splitting(), edge_case_issue2793_without_splitting_exports))).A;
 }));
 //#endregion
@@ -24,7 +24,7 @@ var edge_case_issue2793_without_splitting_exports = /* @__PURE__ */ __exportAll(
 	A: () => 42,
 	B: () => B
 });
-var init_edge_case_issue2793_without_splitting = __esmMin((() => {
+var init_edge_case_issue2793_without_splitting = __toCommonJSInitMin((() => {
 	init_a();
 	init_b();
 }));

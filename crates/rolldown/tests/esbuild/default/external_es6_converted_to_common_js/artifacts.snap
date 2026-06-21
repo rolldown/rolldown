@@ -13,7 +13,7 @@ import "x";
 var e_exports = /* @__PURE__ */ __exportAll({});
 import * as import_x from "x";
 __reExport(e_exports, import_x);
-var init_e = __esmMin((() => {}));
+var init_e = __toCommonJSInitMin((() => {}));
 //#endregion
 //#region entry.js
 init_a();

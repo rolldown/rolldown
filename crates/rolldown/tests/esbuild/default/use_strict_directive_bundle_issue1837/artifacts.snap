@@ -27,7 +27,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 	process = __toESM(process);
 	node_assert_strict = __toESM(node_assert_strict);
 	//#region shims.js
-	var init_shims = __esmMin((() => {}));
+	var init_shims = __toCommonJSInitMin((() => {}));
 	//#endregion
 	//#region cjs.js
 	var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {

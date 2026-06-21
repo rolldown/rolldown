@@ -1371,7 +1371,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 );
 
                 // `init_xxx()` or `require_xxx()` or `require_xxx`
-                let wrap_ref_call_expr = if hint
+                let mut wrap_ref_call_expr = if hint
                   .contains(FinalizedExprProcessHint::FromCjsWrapKindEntry)
                 {
                   wrap_ref_expr
@@ -1397,35 +1397,30 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   // `xxx_exports`
                   let (namespace_object_ref_expr, _) =
                     self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
-
+                  if let Some(wrap_ref_call_expr_arguments) =
+                    wrap_ref_call_expr.as_call_expression_mut()
+                  {
+                    //adding xxx_exports to init_xxx or require_xxx
+                    wrap_ref_call_expr_arguments
+                      .arguments
+                      .push(ast::Argument::from(namespace_object_ref_expr));
+                  }
                   let is_json_module = rec.meta.contains(ImportRecordMeta::JsonModule);
-
-                  // `__toCommonJS`
-                  let to_commonjs_expr = self.finalized_expr_for_runtime_symbol("__toCommonJS");
-                  // `__toCommonJS(xxx_exports)`
-                  let to_commonjs_call_expr =
-                    ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
-                      SPAN,
-                      to_commonjs_expr,
-                      NONE,
-                      self.ast_factory.vec1(ast::Argument::from(namespace_object_ref_expr)),
-                      false,
-                    ));
 
                   let final_expr = if is_json_module {
                     // `__toCommonJS(xxx_exports).default`
                     Expression::from(self.ast_factory.member_expression_static(
                       SPAN,
-                      to_commonjs_call_expr,
+                      wrap_ref_call_expr,
                       self.ast_factory.identifier_name(SPAN, "default"),
                       false,
                     ))
                   } else {
-                    to_commonjs_call_expr
+                    wrap_ref_call_expr
                   };
 
-                  // `(init_xxx(), __toCommonJS(xxx_exports))`
-                  Some(self.ast_factory.make_seq_in_parens(wrap_ref_call_expr, final_expr))
+                  // `init_xxx() or init_xxx(xxx_exports)`
+                  Some(final_expr)
                 }
               }
             }

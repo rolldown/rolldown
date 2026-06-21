@@ -504,6 +504,47 @@ impl<'ast> AstFactory<'ast> {
     )
   }
 
+  /// `var <binding_name> = __toCommonJSInit(... () => { <statements> } ...)`
+  #[expect(clippy::too_many_arguments)]
+  pub fn make_commonjs_init_wrapper_stmt(
+    &self,
+    binding_name: &str,
+    commonjs_init_expr: Expression<'ast>,
+    statements: allocator::Vec<'ast, Statement<'ast>>,
+    profiler_names: bool,
+    use_pife: bool,
+    stable_id: &str,
+    is_async: bool,
+  ) -> Statement<'ast> {
+    let params = self.formal_parameters(SPAN, FormalParameterKind::Signature, self.vec(), NONE);
+    let body = self.function_body(SPAN, self.vec(), statements);
+    let mut common_js_init_expr =
+      self.call_expression(SPAN, commonjs_init_expr, NONE, self.vec(), false);
+    let mut arrow_expr =
+      self.alloc_arrow_function_expression(SPAN, false, is_async, NONE, params, NONE, body);
+    arrow_expr.pife = use_pife;
+    if profiler_names {
+      let obj_expr = self.alloc_object_expression(
+        SPAN,
+        self.vec1(self.object_property_kind_object_property(
+          SPAN,
+          PropertyKind::Init,
+          PropertyKey::from(self.expression_string_literal(SPAN, self.str(stable_id), None)),
+          Expression::ArrowFunctionExpression(arrow_expr),
+          false,
+          false,
+          false,
+        )),
+      );
+      common_js_init_expr.arguments.push(Argument::ObjectExpression(obj_expr));
+    } else {
+      common_js_init_expr.arguments.push(Argument::ArrowFunctionExpression(arrow_expr));
+    }
+    self.make_var_decl(
+      binding_name,
+      Expression::CallExpression(common_js_init_expr.into_in(self.allocator)),
+    )
+  }
   /// `n => n.<property_name>`
   fn arrow_function_extract_property(
     &self,

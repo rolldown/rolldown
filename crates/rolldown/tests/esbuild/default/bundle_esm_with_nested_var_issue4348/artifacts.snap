@@ -6,17 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry_js.js
 
 ```js
-var __esmMin = (fn, res, err) => () => {
-	if (err) throw err[0];
-	try {
-		return fn && (res = fn(fn = 0)), res;
-	} catch (e) {
-		throw err = [e], e;
-	}
-}, x;
-//#endregion
+// HIDDEN [\0rolldown/runtime.js]
 //#region entry.js
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	x = 1;
 	while (x--);
 	do	;

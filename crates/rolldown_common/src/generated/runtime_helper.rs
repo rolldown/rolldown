@@ -14,17 +14,17 @@ bitflags! {
     const GetOwnPropNames = 1 << 4;
     const GetProtoOf = 1 << 5;
     const HasOwnProp = 1 << 6;
-    const Esm = 1 << 7;
-    const EsmMin = 1 << 8;
-    const CommonJs = 1 << 9;
-    const CommonJsMin = 1 << 10;
-    const ExportAll = 1 << 11;
-    const CopyProps = 1 << 12;
-    const ReExport = 1 << 13;
-    const ToEsm = 1 << 14;
-    const ToCommonJs = 1 << 15;
-    const ToBinaryNode = 1 << 16;
-    const ToBinary = 1 << 17;
+    const CommonJs = 1 << 7;
+    const CommonJsMin = 1 << 8;
+    const ExportAll = 1 << 9;
+    const CopyProps = 1 << 10;
+    const ReExport = 1 << 11;
+    const ToEsm = 1 << 12;
+    const ToCommonJs = 1 << 13;
+    const ToBinaryNode = 1 << 14;
+    const ToBinary = 1 << 15;
+    const ToCommonJsInit = 1 << 16;
+    const ToCommonJsInitMin = 1 << 17;
     const Require = 1 << 18;
   }
 }
@@ -80,8 +80,6 @@ pub const RUNTIME_HELPER_NAMES: [&str; 19] = [
   "__getOwnPropNames",
   "__getProtoOf",
   "__hasOwnProp",
-  "__esm",
-  "__esmMin",
   "__commonJS",
   "__commonJSMin",
   "__exportAll",
@@ -91,5 +89,7 @@ pub const RUNTIME_HELPER_NAMES: [&str; 19] = [
   "__toCommonJS",
   "__toBinaryNode",
   "__toBinary",
+  "__toCommonJSInit",
+  "__toCommonJSInitMin",
   "__require",
 ];

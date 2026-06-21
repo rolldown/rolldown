@@ -61,7 +61,7 @@ init_foo();
 //#region foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({});
 var default$1, x, y;
-var init_foo = __esmMin((() => {
+var init_foo = __toCommonJSInitMin((() => {
 	console.log("no exports here");
 	default$1 = void 0;
 	x = void 0;
@@ -95,9 +95,9 @@ console.log(default$1(x, y));
 ## require.js
 
 ```js
-import { n as foo_exports, o as __toCommonJS, r as init_foo } from "./foo.js";
+import { n as foo_exports, r as init_foo } from "./foo.js";
 //#region require.js
-console.log((init_foo(), __toCommonJS(foo_exports)));
+console.log(init_foo(foo_exports));
 //#endregion
 
 ```

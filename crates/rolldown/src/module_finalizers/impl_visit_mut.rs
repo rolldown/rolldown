@@ -271,9 +271,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
 
         let esm_ref = if self.ctx.options.profiler_names {
-          self.canonical_ref_for_runtime("__esm")
+          self.canonical_ref_for_runtime("__toCommonJSInit")
         } else {
-          self.canonical_ref_for_runtime("__esmMin")
+          self.canonical_ref_for_runtime("__toCommonJSInitMin")
         };
         let (esm_ref_expr, _) = self.finalized_expr_for_symbol_ref(esm_ref, false, false);
         let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
@@ -290,7 +290,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           return;
         }
 
-        program.body.push(self.ast_factory.make_esm_wrapper_stmt(
+        program.body.push(self.ast_factory.make_commonjs_init_wrapper_stmt(
           wrap_ref_name,
           esm_ref_expr,
           stmts_inside_closure,

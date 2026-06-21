@@ -14,13 +14,13 @@ var require_c = /* @__PURE__ */ __commonJSMin((async () => {
 //#endregion
 //#region b.js
 var b_exports = /* @__PURE__ */ __exportAll({});
-var init_b = __esmMin((async () => {
+var init_b = __toCommonJSInitMin((async () => {
 	require_c();
 }));
 //#endregion
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({});
-var init_a = __esmMin((async () => {
+var init_a = __toCommonJSInitMin((async () => {
 	await init_b();
 }));
 //#endregion

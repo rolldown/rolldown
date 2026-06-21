@@ -6,17 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## src_entry.js
 
 ```js
-var __esmMin = (fn, res, err) => () => {
-	if (err) throw err[0];
-	try {
-		return fn && (res = fn(fn = 0)), res;
-	} catch (e) {
-		throw err = [e], e;
-	}
-};
-//#endregion
+// HIDDEN [\0rolldown/runtime.js]
 //#region src/entry.js
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	console.log("hello");
 }))();
 console.log("unused import");

@@ -258,9 +258,9 @@ pub fn create_wrapper(
       let stmt_info = StmtInfo {
         declared_symbols: vec![TaggedSymbolRef::Normal(wrapper_ref)],
         referenced_symbols: vec![if options.profiler_names {
-          runtime.resolve_symbol("__esm").into()
+          runtime.resolve_symbol("__toCommonJSInit").into()
         } else {
-          runtime.resolve_symbol("__esmMin").into()
+          runtime.resolve_symbol("__toCommonJSInitMin").into()
         }],
         side_effect: true.into(),
         import_records: Vec::new(),

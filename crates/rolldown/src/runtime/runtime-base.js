@@ -5,23 +5,7 @@ export var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 export var __getOwnPropNames = Object.getOwnPropertyNames;
 export var __getProtoOf = Object.getPrototypeOf;
 export var __hasOwnProp = Object.prototype.hasOwnProperty;
-export var __esm = (fn, res, err) =>
-  function () {
-    if (err) throw err[0];
-    try {
-      return (fn && (res = (0, fn[__getOwnPropNames(fn)[0]])((fn = 0))), res);
-    } catch (e) {
-      throw ((err = [e]), e);
-    }
-  };
-export var __esmMin = (fn, res, err) => () => {
-  if (err) throw err[0];
-  try {
-    return (fn && (res = fn((fn = 0))), res);
-  } catch (e) {
-    throw ((err = [e]), e);
-  }
-};
+
 export var __commonJS = (cb, mod) =>
   function () {
     return (
@@ -92,3 +76,82 @@ export var __toBinary = /* @__PURE__ */ (() => {
     return bytes;
   };
 })();
+
+export var __toCommonJSInit = (fn, done, res, err, p, has_res, post) =>
+  function (exports) {
+    if (err) throw err[0];
+
+    try {
+      if (exports && !has_res) {
+        post = __hasOwnProp.call(exports, "module.exports");
+
+        if (!post) {
+          res = __toCommonJS(exports);
+          has_res = true;
+        }
+      }
+
+      if (!done) {
+        done = true;
+        p = (0, fn[__getOwnPropNames(fn)[0]])((fn = 0));
+      }
+
+      if (p && p.then) {
+        return p.then(() => {
+          if (exports && !has_res) {
+            res = __toCommonJS(exports);
+            has_res = true;
+          }
+          return res;
+        });
+      }
+
+      if (exports && !has_res) {
+        res = __toCommonJS(exports);
+        has_res = true;
+      }
+
+      return res;
+    } catch (e) {
+      throw ((err = [e]), e);
+    }
+  };
+
+export var __toCommonJSInitMin = (fn, done, res, err, p, has_res, post) => (exports) => {
+  if (err) throw err[0];
+
+  try {
+    if (exports && !has_res) {
+      post = __hasOwnProp.call(exports, "module.exports");
+
+      if (!post) {
+        res = __toCommonJS(exports);
+        has_res = true;
+      }
+    }
+
+    if (!done) {
+      done = true;
+      p = fn((fn = 0));
+    }
+
+    if (p && p.then) {
+      return p.then(() => {
+        if (exports && !has_res) {
+          res = __toCommonJS(exports);
+          has_res = true;
+        }
+        return res;
+      });
+    }
+
+    if (exports && !has_res) {
+      res = __toCommonJS(exports);
+      has_res = true;
+    }
+
+    return res;
+  } catch (e) {
+    throw ((err = [e]), e);
+  }
+};

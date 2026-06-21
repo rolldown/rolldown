@@ -21,7 +21,7 @@ console.log(void 0);
 //#endregion
 //#region dummy.js
 var dummy_exports = /* @__PURE__ */ __exportAll({ dummy: () => 123 });
-var init_dummy = __esmMin((() => {}));
+var init_dummy = __toCommonJSInitMin((() => {}));
 //#endregion
 //#region es6-import-stmt.js
 console.log(void 0);
@@ -89,7 +89,7 @@ console.log(void 0);
 	module.exports = 123;
 	console.log(exports);
 })))();
-init_dummy(), __toCommonJS(dummy_exports);
+init_dummy(dummy_exports);
 console.log(void 0);
 //#endregion
 //#region es6-ns-export-variable.ts

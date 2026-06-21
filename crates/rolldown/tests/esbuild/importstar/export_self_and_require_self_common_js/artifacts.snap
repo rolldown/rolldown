@@ -11,9 +11,9 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 //#region entry.js
 var entry_exports = /* @__PURE__ */ __exportAll({ foo: () => 123 });
 var foo;
-var init_entry = __esmMin((() => {
+var init_entry = __toCommonJSInitMin((() => {
 	foo = 123;
-	console.log((init_entry(), __toCommonJS(entry_exports)));
+	console.log(init_entry(entry_exports));
 }));
 //#endregion
 init_entry();

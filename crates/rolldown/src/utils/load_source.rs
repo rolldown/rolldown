@@ -28,7 +28,8 @@ pub async fn load_source<Fs: FileSystem + 'static>(
       .load(&HookLoadArgs { id: &resolved_id.id, module_idx, asserted_module_type })
       .await?
       .map(|load_hook_output| {
-        sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
+        sourcemap_chain
+          .extend(load_hook_output.map.map(|map| SourcemapChainElement::Load(Box::new(map))));
         if let Some(v) = load_hook_output.side_effects {
           *side_effects = Some(v);
         }

@@ -223,7 +223,7 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
               map
                 .entry(module_idx)
                 .or_default()
-                .push(SourcemapChainElement::Transform((plugin_idx, generated_sourcemap)));
+                .push(SourcemapChainElement::Transform((plugin_idx, Box::new(generated_sourcemap))));
             }
             SourceMapGenMsg::Terminate => {
               break;

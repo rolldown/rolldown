@@ -39,7 +39,7 @@ impl TransformPluginContext {
         .iter()
         .filter_map(|element| match element {
           SourcemapChainElement::Transform((_, sourcemap))
-          | SourcemapChainElement::Load(sourcemap) => Some(sourcemap),
+          | SourcemapChainElement::Load(sourcemap) => Some(&**sourcemap),
           SourcemapChainElement::Omitted { .. } => Some(&empty_map),
           SourcemapChainElement::Null { .. } => None,
         })

@@ -299,7 +299,8 @@ impl PluginDriver {
         let map_was_omitted = matches!(r.map, crate::HookTransformOutputMap::Omitted);
         let map_was_null = matches!(r.map, crate::HookTransformOutputMap::Null);
         if let Some(map) = self.normalize_transform_sourcemap(r.map.into_sourcemap(), id, &code) {
-          original_sourcemap_chain.push(SourcemapChainElement::Transform((plugin_idx, map)));
+          original_sourcemap_chain
+            .push(SourcemapChainElement::Transform((plugin_idx, Box::new(map))));
         } else if map_was_omitted && r.code.is_some() {
           original_sourcemap_chain.push(SourcemapChainElement::Omitted {
             plugin_idx,

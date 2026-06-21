@@ -21,12 +21,12 @@ To fix:
 ## first.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { n as __toCommonJSInitMin, t as __exportAll } from "./rolldown-runtime.js";
 import { r as value$1, t as init_second } from "./second.js";
 //#region first.js
 var first_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
-var init_first = __esmMin((() => {
+var init_first = __toCommonJSInitMin((() => {
 	init_second();
 	value = "first" + value$1;
 }));
@@ -38,11 +38,11 @@ export { init_first as n, value as r, first_exports as t };
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as __toCommonJSInitMin } from "./rolldown-runtime.js";
 import { n as second_exports, t as init_second } from "./second.js";
 import { n as init_first, t as first_exports } from "./first.js";
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_first();
 	init_second();
 	console.log(first_exports, second_exports);
@@ -54,19 +54,19 @@ __esmMin((() => {
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
+export { __toCommonJSInitMin as n, __exportAll as t };
 
 ```
 
 ## second.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+import { n as __toCommonJSInitMin, t as __exportAll } from "./rolldown-runtime.js";
 import { n as init_first, r as value$1 } from "./first.js";
 //#region second.js
 var second_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
-var init_second = __esmMin((() => {
+var init_second = __toCommonJSInitMin((() => {
 	init_first();
 	value = "second" + value$1;
 }));

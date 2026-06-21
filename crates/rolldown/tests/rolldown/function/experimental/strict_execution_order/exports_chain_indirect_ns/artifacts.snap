@@ -24,36 +24,36 @@ nodeAssert.equal("foo", "foo");
 import nodeAssert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region dep.js
-var init_dep = __esmMin((() => {}));
+var init_dep = __toCommonJSInitMin((() => {}));
 //#endregion
 //#region lib-foo.js
 var value;
-var init_lib_foo = __esmMin((() => {
+var init_lib_foo = __toCommonJSInitMin((() => {
 	init_dep();
 	value = "foo";
 }));
 //#endregion
 //#region proxy-foo.js
-var init_proxy_foo = __esmMin((() => {
+var init_proxy_foo = __toCommonJSInitMin((() => {
 	init_lib_foo();
 }));
 //#endregion
 //#region proxy.js
-var init_proxy = __esmMin((() => {
+var init_proxy = __toCommonJSInitMin((() => {
 	init_proxy_foo();
 }));
 //#endregion
 //#region ns-proxy.js
-var init_ns_proxy = __esmMin((() => {
+var init_ns_proxy = __toCommonJSInitMin((() => {
 	init_proxy();
 }));
 //#endregion
 //#region ns-proxy-2.js
-var init_ns_proxy_2 = __esmMin((() => {
+var init_ns_proxy_2 = __toCommonJSInitMin((() => {
 	init_ns_proxy();
 }));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_ns_proxy_2();
 	nodeAssert.equal(value, "foo");
 }))();
@@ -70,7 +70,7 @@ __esmMin((() => {
 import nodeAssert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 var value;
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	//#region lib-foo.js
 	value = "foo";
 	//#endregion

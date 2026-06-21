@@ -69,13 +69,13 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region throws_error.js
 var throws_error_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
-var init_throws_error = __esmMin((() => {
+var init_throws_error = __toCommonJSInitMin((() => {
 	throw new Error("evaluation error");
 }));
 //#endregion
 //#region throws_null.js
 var throws_null_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
-var init_throws_null = __esmMin((() => {
+var init_throws_null = __toCommonJSInitMin((() => {
 	throw null;
 }));
 //#endregion

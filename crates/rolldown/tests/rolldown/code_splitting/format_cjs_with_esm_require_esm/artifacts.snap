@@ -13,7 +13,7 @@ require("./rolldown-runtime.js");
 ## main2.js
 
 ```js
-require("./rolldown-runtime.js").__esmMin((() => {}));
+require("./rolldown-runtime.js").__toCommonJSInitMin((() => {}));
 //#endregion
 
 ```
@@ -22,16 +22,22 @@ require("./rolldown-runtime.js").__esmMin((() => {}));
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__esmMin", {
-	enumerable: true,
-	get: function() {
-		return __esmMin;
-	}
-});
 Object.defineProperty(exports, "__exportAll", {
 	enumerable: true,
 	get: function() {
 		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__toCommonJS", {
+	enumerable: true,
+	get: function() {
+		return __toCommonJS;
+	}
+});
+Object.defineProperty(exports, "__toCommonJSInitMin", {
+	enumerable: true,
+	get: function() {
+		return __toCommonJSInitMin;
 	}
 });
 Object.defineProperty(exports, "__toESM", {

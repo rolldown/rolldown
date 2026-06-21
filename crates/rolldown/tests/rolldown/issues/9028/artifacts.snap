@@ -8,14 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
-var init_lib = __esmMin((() => {}));
+var init_lib = __toCommonJSInitMin((() => {}));
 //#endregion
 //#region barrel.js
-var init_barrel = __esmMin((() => {
+var init_barrel = __toCommonJSInitMin((() => {
 	init_lib();
 }));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_barrel();
 	console.log(42);
 }))();

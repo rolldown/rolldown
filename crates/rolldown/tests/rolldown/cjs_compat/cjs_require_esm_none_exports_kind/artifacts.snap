@@ -10,14 +10,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region aligner.js
 var aligner_exports = /* @__PURE__ */ __exportAll({});
 var Aligner;
-var init_aligner = __esmMin((() => {
+var init_aligner = __toCommonJSInitMin((() => {
 	Aligner = function() {};
 	Aligner.prototype.align = function() {};
 }));
 //#endregion
 //#region default_aligner.js
 var require_default_aligner = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var Aligner = (init_aligner(), __toCommonJS(aligner_exports));
+	var Aligner = init_aligner(aligner_exports);
 	var DefaultAligner = function() {};
 	DefaultAligner.prototype = Object.create(Aligner);
 	module.exports = DefaultAligner;

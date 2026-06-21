@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 //#region json.js
 var json_exports = /* @__PURE__ */ __exportAll({ default: () => json_default });
 var json_default;
-var init_json = __esmMin((() => {
+var init_json = __toCommonJSInitMin((() => {
 	json_default = JSON.parse("[1, 2, 3]");
 }));
 //#endregion
@@ -21,7 +21,7 @@ var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((e
 		return mod && mod.__esModule ? mod : { default: mod };
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.default = __importDefault((init_json(), __toCommonJS(json_exports))).default;
+	exports.default = __importDefault(init_json(json_exports)).default;
 	exports.foo = 1;
 })))());
 assert.deepEqual(import_commonjs.default.slice(1), [2, 3], "should import JSON file as expected");

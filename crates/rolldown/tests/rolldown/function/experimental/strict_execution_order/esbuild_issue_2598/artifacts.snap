@@ -39,9 +39,9 @@ export { foo as t };
 ### lazy-chunk.js
 
 ```js
-import { n as init_user_lib, r as __esmMin, t as foo } from "./main.js";
+import { n as init_user_lib, r as __toCommonJSInitMin, t as foo } from "./main.js";
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_user_lib();
 	foo();
 }))();
@@ -53,7 +53,7 @@ __esmMin((() => {
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region polyfill.js
-var init_polyfill = __esmMin((() => {
+var init_polyfill = __toCommonJSInitMin((() => {
 	Object.somePolyfilledFunction = () => {};
 }));
 //#endregion
@@ -61,15 +61,15 @@ var init_polyfill = __esmMin((() => {
 async function foo() {
 	return import("./lazy-chunk.js");
 }
-var init_user_lib = __esmMin((() => {
+var init_user_lib = __toCommonJSInitMin((() => {
 	Object.somePolyfilledFunction();
 }));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_polyfill();
 	init_user_lib();
 	foo();
 }))();
-export { init_user_lib as n, __esmMin as r, foo as t };
+export { init_user_lib as n, __toCommonJSInitMin as r, foo as t };
 
 ```

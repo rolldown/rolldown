@@ -27,31 +27,31 @@ export { value as normalLibValue, value$1 as tlaLibValue };
 // HIDDEN [\0rolldown/runtime.js]
 //#region normal-dep.js
 var value$3;
-var init_normal_dep = __esmMin((() => {
+var init_normal_dep = __toCommonJSInitMin((() => {
 	value$3 = "normal-dep";
 }));
 //#endregion
 //#region normal-lib.js
 var value;
-var init_normal_lib = __esmMin((() => {
+var init_normal_lib = __toCommonJSInitMin((() => {
 	init_normal_dep();
 	value = value$3 + "+normal-lib";
 }));
 //#endregion
 //#region tla-dep.js
 var value$2;
-var init_tla_dep = __esmMin((async () => {
+var init_tla_dep = __toCommonJSInitMin((async () => {
 	value$2 = await Promise.resolve("tla-dep");
 }));
 //#endregion
 //#region tla-lib.js
 var value$1;
-var init_tla_lib = __esmMin((async () => {
+var init_tla_lib = __toCommonJSInitMin((async () => {
 	await init_tla_dep();
 	value$1 = value$2 + "+tla-lib";
 }));
 //#endregion
-await __esmMin((async () => {
+await __toCommonJSInitMin((async () => {
 	init_normal_lib();
 	await init_tla_lib();
 }))();

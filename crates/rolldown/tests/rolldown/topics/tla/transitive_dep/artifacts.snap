@@ -24,18 +24,18 @@ export { value };
 // HIDDEN [\0rolldown/runtime.js]
 //#region tla.js
 var value$1;
-var init_tla = __esmMin((async () => {
+var init_tla = __toCommonJSInitMin((async () => {
 	value$1 = await Promise.resolve("tla");
 }));
 //#endregion
 //#region lib.js
 var value;
-var init_lib = __esmMin((async () => {
+var init_lib = __toCommonJSInitMin((async () => {
 	await init_tla();
 	value = value$1 + "+lib";
 }));
 //#endregion
-await __esmMin((async () => {
+await __toCommonJSInitMin((async () => {
 	await init_lib();
 }))();
 export { value };

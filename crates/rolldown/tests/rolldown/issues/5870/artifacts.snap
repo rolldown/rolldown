@@ -10,7 +10,7 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ constant: () => 1 });
-var init_lib = __esmMin((() => {}));
+var init_lib = __toCommonJSInitMin((() => {}));
 //#endregion
 //#region reexport.js
 init_lib();
@@ -18,7 +18,7 @@ init_lib();
 //#region log.js
 assert.strictEqual(1, 1);
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_lib(), __toCommonJS(lib_exports));
+	module.exports = init_lib(lib_exports);
 })))();
 //#endregion
 
@@ -35,13 +35,13 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ constant: () => 1 });
-var init_lib = __esmMin((() => {}));
+var init_lib = __toCommonJSInitMin((() => {}));
 //#endregion
 //#region commonjs.cjs
 var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_lib(), __toCommonJS(lib_exports));
+	module.exports = init_lib(lib_exports);
 }));
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	//#region reexport.js
 	init_lib();
 	//#endregion

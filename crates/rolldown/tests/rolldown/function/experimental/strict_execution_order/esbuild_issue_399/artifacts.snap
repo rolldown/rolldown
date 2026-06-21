@@ -39,13 +39,13 @@ global.foo.log();
 ### entry1.js
 
 ```js
-import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
+import { n as __toCommonJSInitMin, t as init_run_dep } from "./run-dep.js";
 //#region init-dep-1.js
-var init_init_dep_1 = __esmMin((() => {
+var init_init_dep_1 = __toCommonJSInitMin((() => {
 	global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
 }));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_init_dep_1();
 	init_run_dep();
 }))();
@@ -55,13 +55,13 @@ __esmMin((() => {
 ### entry2.js
 
 ```js
-import { n as __esmMin, t as init_run_dep } from "./run-dep.js";
+import { n as __toCommonJSInitMin, t as init_run_dep } from "./run-dep.js";
 //#region init-dep-2.js
-var init_init_dep_2 = __esmMin((() => {
+var init_init_dep_2 = __toCommonJSInitMin((() => {
 	global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
 }));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_init_dep_2();
 	init_run_dep();
 }))();
@@ -73,10 +73,10 @@ __esmMin((() => {
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region run-dep.js
-var init_run_dep = __esmMin((() => {
+var init_run_dep = __toCommonJSInitMin((() => {
 	global.foo.log();
 }));
 //#endregion
-export { __esmMin as n, init_run_dep as t };
+export { __toCommonJSInitMin as n, init_run_dep as t };
 
 ```

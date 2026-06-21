@@ -8,12 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region dep.js
-var init_dep = __esmMin((() => {}));
+var init_dep = __toCommonJSInitMin((() => {}));
 
 //#endregion
 //#region leaf.js
 var foo;
-var init_leaf = __esmMin((() => {
+var init_leaf = __toCommonJSInitMin((() => {
 	init_dep();
 	;
 	foo = 1;
@@ -22,19 +22,19 @@ var init_leaf = __esmMin((() => {
 //#endregion
 //#region inner.js
 var inner_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
-var init_inner = __esmMin((() => {
+var init_inner = __toCommonJSInitMin((() => {
 	init_leaf();
 }));
 
 //#endregion
 //#region outer.js
-var init_outer = __esmMin((() => {
+var init_outer = __toCommonJSInitMin((() => {
 	init_inner();
 }));
 
 //#endregion
 //#region main.js
-var init_main = __esmMin((() => {
+var init_main = __toCommonJSInitMin((() => {
 	init_outer();
 }));
 

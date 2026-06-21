@@ -16,14 +16,14 @@ var esm_exports = /* @__PURE__ */ __exportAll({
 	foo: () => "foo",
 	"module.exports": () => moduleExports
 }), esm_default, moduleExports;
-var init_esm = __esmMin((() => {
+var init_esm = __toCommonJSInitMin((() => {
 	esm_default = { default: "default-value" };
 	moduleExports = { foo: "foo" };
 }));
 //#endregion
 //#region main.js
 var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_esm(), __toCommonJS(esm_exports));
+	module.exports = init_esm(esm_exports);
 })))());
 assert.deepStrictEqual(import_cjs.default, { foo: "foo" });
 //#endregion

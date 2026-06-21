@@ -11,7 +11,7 @@ import assert from "node:assert";
 //#region main.js
 var A, foo;
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	A = { A: "A" };
 	({[A.A]: foo} = { A: "foo" });
 	assert.strictEqual(foo, "foo");

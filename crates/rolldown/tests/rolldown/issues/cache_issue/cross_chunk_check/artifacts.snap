@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region shared.js
+var shared_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+var init_shared = __toCommonJSInitMin((() => {}));
+//#endregion
+//#region a.js
+const fromA = init_shared(shared_exports);
+//#endregion
+//#region b.js
+const fromB = init_shared(shared_exports);
+//#endregion
+//#region main.js
+assert.strictEqual(fromA, fromB);
+assert.strictEqual(fromA.value, 1);
+assert.strictEqual(fromB.value, 1);
+//#endregion
+
+```

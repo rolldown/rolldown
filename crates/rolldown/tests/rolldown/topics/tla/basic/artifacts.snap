@@ -23,11 +23,11 @@ export { foo };
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var foo;
-var init_lib = __esmMin((async () => {
+var init_lib = __toCommonJSInitMin((async () => {
 	foo = await Promise.resolve("foo");
 }));
 //#endregion
-await __esmMin((async () => {
+await __toCommonJSInitMin((async () => {
 	await init_lib();
 }))();
 export { foo };

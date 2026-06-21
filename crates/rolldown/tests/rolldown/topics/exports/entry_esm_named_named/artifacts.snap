@@ -10,7 +10,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 //#region lib.js
 var foo, bar;
-var init_lib = require_rolldown_runtime.__esmMin((() => {
+var init_lib = require_rolldown_runtime.__toCommonJSInitMin((() => {
 	foo = "foo_value";
 	bar = 42;
 }));
@@ -36,7 +36,7 @@ const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
 //#endregion
-require_rolldown_runtime.__esmMin((() => {
+require_rolldown_runtime.__toCommonJSInitMin((() => {
 	require_lib.init_lib();
 	node_assert.default.strictEqual(require_lib.foo, "foo_value");
 	node_assert.default.strictEqual(42, 42);
@@ -50,10 +50,16 @@ exports.foo = require_lib.foo;
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__esmMin", {
+Object.defineProperty(exports, "__toCommonJS", {
 	enumerable: true,
 	get: function() {
-		return __esmMin;
+		return __toCommonJS;
+	}
+});
+Object.defineProperty(exports, "__toCommonJSInitMin", {
+	enumerable: true,
+	get: function() {
+		return __toCommonJSInitMin;
 	}
 });
 Object.defineProperty(exports, "__toESM", {

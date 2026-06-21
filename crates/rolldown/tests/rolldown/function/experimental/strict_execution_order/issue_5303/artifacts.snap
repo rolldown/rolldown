@@ -6,9 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as __toCommonJSInitMin } from "./rolldown-runtime.js";
 import { t as init_foo } from "./test.js";
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	//#region setup.js
 	globalThis.globalValue = "foo";
 	//#endregion
@@ -23,23 +23,23 @@ __esmMin((() => {
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { __toCommonJSInitMin as t };
 
 ```
 
 ## test.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as __toCommonJSInitMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
 //#region foo_inner.js
 var foo_inner_default;
-var init_foo_inner = __esmMin((() => {
+var init_foo_inner = __toCommonJSInitMin((() => {
 	foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
 }));
 //#endregion
 //#region foo.js
-var init_foo = __esmMin((() => {
+var init_foo = __toCommonJSInitMin((() => {
 	init_foo_inner();
 	assert.strictEqual(foo_inner_default.foo, "foo");
 }));

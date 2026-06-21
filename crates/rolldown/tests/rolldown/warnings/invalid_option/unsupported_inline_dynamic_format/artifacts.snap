@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 	// HIDDEN [\0rolldown/runtime.js]
 	//#region lib.js
 	var lib_exports = /* @__PURE__ */ __exportAll({ default: () => 2 });
-	var init_lib = __esmMin((() => {}));
+	var init_lib = __toCommonJSInitMin((() => {}));
 	//#endregion
 	//#region main.js
 	Promise.resolve().then(() => (init_lib(), lib_exports)).then(console.log);

@@ -6,11 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## node0.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
+import { r as __toCommonJSInitMin } from "./rolldown-runtime.js";
 //#region node0.js
 var node_0;
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	globalThis.__acyclic_output_fuzz_0 = 0;
 	import("./node1.js").then((n) => (n.t(), n.n));
 	node_0 = {};
@@ -22,11 +22,11 @@ __esmMin((() => {
 ## node1.js
 
 ```js
-import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+import { n as __exportAll, r as __toCommonJSInitMin, t as __commonJSMin } from "./rolldown-runtime.js";
 //#region node2.js
 var node2_exports = /* @__PURE__ */ __exportAll({ node_2: () => node_2 });
 var node_2;
-var init_node2 = __esmMin((() => {
+var init_node2 = __toCommonJSInitMin((() => {
 	globalThis.__acyclic_output_fuzz_2 = 2;
 	import("./node0.js");
 	node_2 = {};
@@ -49,6 +49,6 @@ export { node2_exports as n, init_node2 as t };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+export { __exportAll as n, __toCommonJSInitMin as r, __commonJSMin as t };
 
 ```

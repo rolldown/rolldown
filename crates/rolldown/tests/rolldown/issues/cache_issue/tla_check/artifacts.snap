@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+//#region dep.js
+let value;
+try {
+	value = await Promise.resolve("dep");
+} catch {}
+//#endregion
+//#region lib.js
+let libValue;
+try {
+	libValue = value + "+lib";
+} catch {}
+//#endregion
+//#region main.js
+assert.strictEqual(libValue, "dep+lib");
+//#endregion
+
+```

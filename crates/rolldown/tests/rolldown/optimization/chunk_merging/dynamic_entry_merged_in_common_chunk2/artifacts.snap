@@ -6,10 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## imp.js
 
 ```js
-import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./main.js";
+import { n as __exportAll, r as __toCommonJSInitMin, t as __commonJSMin } from "./main.js";
 //#region imp2.js
 var imp2_exports = /* @__PURE__ */ __exportAll({ imp2: () => 2 });
-var init_imp2 = __esmMin((() => {}));
+var init_imp2 = __toCommonJSInitMin((() => {}));
 //#endregion
 //#region imp.js
 var require_imp = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -36,7 +36,7 @@ const load = async () => {
 };
 load();
 //#endregion
-export { __esmMin as n, __exportAll as r, __commonJSMin as t };
+export { __exportAll as n, __toCommonJSInitMin as r, __commonJSMin as t };
 
 ```
 
@@ -50,7 +50,7 @@ export { __esmMin as n, __exportAll as r, __commonJSMin as t };
 const require_main = require("./main.js");
 //#region imp2.js
 var imp2_exports = /* @__PURE__ */ require_main.__exportAll({ imp2: () => 2 });
-var init_imp2 = require_main.__esmMin((() => {}));
+var init_imp2 = require_main.__toCommonJSInitMin((() => {}));
 //#endregion
 //#region imp.js
 var require_imp = /* @__PURE__ */ require_main.__commonJSMin(((exports) => {
@@ -97,7 +97,7 @@ const load = async () => {
 load();
 //#endregion
 exports.__commonJSMin = __commonJSMin;
-exports.__esmMin = __esmMin;
 exports.__exportAll = __exportAll;
+exports.__toCommonJSInitMin = __toCommonJSInitMin;
 
 ```

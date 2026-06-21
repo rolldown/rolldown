@@ -17,13 +17,13 @@ function myFunction() {
 	return "function value";
 }
 var moduleExports;
-var init_esm = __esmMin((() => {
+var init_esm = __toCommonJSInitMin((() => {
 	moduleExports = { customExport: "custom" };
 }));
 //#endregion
 //#region main.js
 var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_esm(), __toCommonJS(esm_exports));
+	module.exports = init_esm(esm_exports);
 })))());
 assert.deepStrictEqual(import_cjs.default, { customExport: "custom" });
 //#endregion

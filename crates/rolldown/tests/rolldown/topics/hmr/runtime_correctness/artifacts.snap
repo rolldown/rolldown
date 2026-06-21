@@ -10,7 +10,7 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region trigger-dep.js
 var trigger_dep_exports = /* @__PURE__ */ __exportAll({});
-var init_trigger_dep = __esmMin((() => {
+var init_trigger_dep = __toCommonJSInitMin((() => {
 	__rolldown_runtime__.createModuleHotContext("trigger-dep.js");
 	__rolldown_runtime__.registerModule("trigger-dep.js", { exports: trigger_dep_exports });
 	console.log();

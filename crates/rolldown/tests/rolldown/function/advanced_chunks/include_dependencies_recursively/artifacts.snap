@@ -6,11 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as __toCommonJSInitMin } from "./rolldown-runtime.js";
 import { n as init_foo, t as foo } from "./vendor.js";
 import nodeAssert from "node:assert";
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_foo();
 	nodeAssert.strictEqual(foo, "foo bar");
 }))();
@@ -21,20 +21,20 @@ __esmMin((() => {
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { __toCommonJSInitMin as t };
 
 ```
 
 ## vendor.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as __toCommonJSInitMin } from "./rolldown-runtime.js";
 //#region bar.js
-var init_bar = __esmMin((() => {}));
+var init_bar = __toCommonJSInitMin((() => {}));
 //#endregion
 //#region foo.js
 var foo;
-var init_foo = __esmMin((() => {
+var init_foo = __toCommonJSInitMin((() => {
 	init_bar();
 	foo = "foo bar";
 }));

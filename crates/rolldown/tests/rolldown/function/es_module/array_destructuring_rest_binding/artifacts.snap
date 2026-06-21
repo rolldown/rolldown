@@ -10,7 +10,7 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var stages;
-var init_lib = __esmMin((() => {
+var init_lib = __toCommonJSInitMin((() => {
 	stages = {
 		a: "1",
 		b: "2",
@@ -21,7 +21,7 @@ var init_lib = __esmMin((() => {
 //#region main.js
 var first, rest, all;
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_lib();
 	[first, ...rest] = Object.values(stages);
 	if (!first) throw new Error("empty");

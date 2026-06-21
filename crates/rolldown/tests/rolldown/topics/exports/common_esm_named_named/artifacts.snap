@@ -11,7 +11,7 @@ const require_shared = require("./shared.js");
 let node_assert = require("node:assert");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
 //#endregion
-require_rolldown_runtime.__esmMin((() => {
+require_rolldown_runtime.__toCommonJSInitMin((() => {
 	require_shared.init_shared();
 	node_assert.default.strictEqual(42, 42);
 }))();
@@ -22,10 +22,16 @@ require_rolldown_runtime.__esmMin((() => {
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__esmMin", {
+Object.defineProperty(exports, "__toCommonJS", {
 	enumerable: true,
 	get: function() {
-		return __esmMin;
+		return __toCommonJS;
+	}
+});
+Object.defineProperty(exports, "__toCommonJSInitMin", {
+	enumerable: true,
+	get: function() {
+		return __toCommonJSInitMin;
 	}
 });
 Object.defineProperty(exports, "__toESM", {
@@ -41,7 +47,7 @@ Object.defineProperty(exports, "__toESM", {
 
 ```js
 //#region shared.js
-var init_shared = require("./rolldown-runtime.js").__esmMin((() => {}));
+var init_shared = require("./rolldown-runtime.js").__toCommonJSInitMin((() => {}));
 //#endregion
 Object.defineProperty(exports, "init_shared", {
 	enumerable: true,

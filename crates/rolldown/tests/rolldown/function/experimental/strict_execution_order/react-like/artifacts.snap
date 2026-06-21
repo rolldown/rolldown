@@ -25,7 +25,7 @@ function test() {
 	return 1;
 }
 var import_commonjs;
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	//#region lib.js
 	import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
 	//#endregion

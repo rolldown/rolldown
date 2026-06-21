@@ -12,13 +12,13 @@ function getFooUtilityClass(slot) {
 	return "MuiFoo-" + slot;
 }
 var fooClasses;
-var init_fooClasses = __esmMin((() => {
+var init_fooClasses = __toCommonJSInitMin((() => {
 	fooClasses = { root: "MuiFoo-root" };
 }));
 //#endregion
 //#region components/Foo/Foo.js
 var Foo;
-var init_Foo$1 = __esmMin((() => {
+var init_Foo$1 = __toCommonJSInitMin((() => {
 	init_fooClasses();
 	Foo = {
 		name: "Foo",
@@ -27,13 +27,13 @@ var init_Foo$1 = __esmMin((() => {
 }));
 //#endregion
 //#region components/Foo/index.js
-var init_Foo = __esmMin((() => {
+var init_Foo = __toCommonJSInitMin((() => {
 	init_Foo$1();
 	init_fooClasses();
 	init_fooClasses();
 }));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_Foo();
 	init_Foo();
 }))();

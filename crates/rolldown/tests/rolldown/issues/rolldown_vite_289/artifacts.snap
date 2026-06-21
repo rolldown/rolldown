@@ -14,7 +14,7 @@ function foo() {
 	return fn();
 }
 var fn;
-var init_lib_impl = __esmMin((() => {
+var init_lib_impl = __toCommonJSInitMin((() => {
 	fn = () => 1;
 }));
 //#endregion
@@ -25,7 +25,7 @@ init_lib_impl();
 nodeAssert(foo() === 1, "foo() should return 1");
 //#endregion
 //#region trigger-wrapping.js
-console.log((init_lib_impl(), __toCommonJS(lib_impl_exports)));
+console.log(init_lib_impl(lib_impl_exports));
 //#endregion
 
 ```

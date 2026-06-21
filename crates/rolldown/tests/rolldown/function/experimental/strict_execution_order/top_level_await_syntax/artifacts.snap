@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-await __esmMin((async () => {
+await __toCommonJSInitMin((async () => {
 	await init_foo();
 	console.log(123);
 }))();

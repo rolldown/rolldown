@@ -24,26 +24,26 @@ nodeAssert.equal("foo", "foo");
 import nodeAssert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region dep.js
-var init_dep = __esmMin((() => {}));
+var init_dep = __toCommonJSInitMin((() => {}));
 //#endregion
 //#region lib-foo.js
 var value;
-var init_lib_foo = __esmMin((() => {
+var init_lib_foo = __toCommonJSInitMin((() => {
 	init_dep();
 	value = "foo";
 }));
 //#endregion
 //#region proxy-foo.js
-var init_proxy_foo = __esmMin((() => {
+var init_proxy_foo = __toCommonJSInitMin((() => {
 	init_lib_foo();
 }));
 //#endregion
 //#region proxy.js
-var init_proxy = __esmMin((() => {
+var init_proxy = __toCommonJSInitMin((() => {
 	init_proxy_foo();
 }));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_proxy();
 	nodeAssert.equal(value, "foo");
 }))();

@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var esm_exports = /* @__PURE__ */ __exportAll({ default: () => "esm" });
 //#endregion
 //#region main.js
-const esm = (__esmMin((() => {}))(), __toCommonJS(esm_exports));
+const esm = __toCommonJSInitMin((() => {}))(esm_exports);
 //#endregion
 export { esm };
 

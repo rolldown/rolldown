@@ -11,11 +11,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 var foo_exports = /* @__PURE__ */ __exportAll({});
 import * as import_external from "external";
 __reExport(foo_exports, import_external);
-var init_foo = __esmMin((() => {}));
+var init_foo = __toCommonJSInitMin((() => {}));
 //#endregion
 //#region main.js
 var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_foo(), __toCommonJS(foo_exports));
+	module.exports = init_foo(foo_exports);
 }));
 //#endregion
 export default require_main();

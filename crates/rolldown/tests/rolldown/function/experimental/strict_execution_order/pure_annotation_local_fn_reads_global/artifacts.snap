@@ -12,7 +12,7 @@ function getGlobalValue() {
 	return globalValue;
 }
 var dep_default;
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	//#region setup.js
 	globalThis.globalValue = "foo";
 	//#endregion

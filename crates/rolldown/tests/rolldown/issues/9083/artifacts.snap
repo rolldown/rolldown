@@ -41,7 +41,7 @@ function sleep(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 var value;
-var init_deep = __esmMin((async () => {
+var init_deep = __toCommonJSInitMin((async () => {
 	await sleep(100);
 	value = "hello";
 }));
@@ -51,7 +51,7 @@ function setup() {
 	manager.ready = true;
 }
 var manager;
-var init_middle = __esmMin((async () => {
+var init_middle = __toCommonJSInitMin((async () => {
 	await init_deep();
 	manager = {
 		value,
@@ -60,11 +60,11 @@ var init_middle = __esmMin((async () => {
 }));
 //#endregion
 //#region barrel.js
-var init_barrel = __esmMin((async () => {
+var init_barrel = __toCommonJSInitMin((async () => {
 	await init_middle();
 }));
 //#endregion
-await __esmMin((async () => {
+await __toCommonJSInitMin((async () => {
 	await init_barrel();
 	setup();
 }))();

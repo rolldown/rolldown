@@ -8,12 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 //#region init.js
-var init_init = __esmMin((() => {
+var init_init = __toCommonJSInitMin((() => {
 	globalThis.array = [];
 }));
 //#endregion
 //#region foo.js
-var init_foo = __esmMin((() => {
+var init_foo = __toCommonJSInitMin((() => {
 	{
 		const foo = "foo" + globalThis.foo;
 		setTimeout(() => {
@@ -23,14 +23,14 @@ var init_foo = __esmMin((() => {
 }));
 //#endregion
 //#region bar.js
-var init_bar = __esmMin((() => {
+var init_bar = __toCommonJSInitMin((() => {
 	{
 		const foo = "bar" + globalThis.bar;
 		globalThis.array.push(foo);
 	}
 }));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_init();
 	init_foo();
 	init_bar();

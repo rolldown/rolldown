@@ -9,23 +9,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region setup.js
-var init_setup = __esmMin((() => {
+var init_setup = __toCommonJSInitMin((() => {
 	globalThis.globalValue = "foo";
 }));
 //#endregion
 //#region foo_inner.js
 var foo_inner_default;
-var init_foo_inner = __esmMin((() => {
+var init_foo_inner = __toCommonJSInitMin((() => {
 	foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
 }));
 //#endregion
 //#region foo.js
-var init_foo = __esmMin((() => {
+var init_foo = __toCommonJSInitMin((() => {
 	init_foo_inner();
 	assert.strictEqual(foo_inner_default.foo, "foo");
 }));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_setup();
 	init_foo();
 	init_foo_inner();
@@ -44,7 +44,7 @@ __esmMin((() => {
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 var foo_inner_default;
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	//#region setup.js
 	globalThis.globalValue = "foo";
 	//#endregion

@@ -14,20 +14,20 @@ var require_dynamic = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 }));
 //#endregion
 export default require_dynamic();
-export { __esmMin as n, require_dynamic as t };
+export { __toCommonJSInitMin as n, require_dynamic as t };
 
 ```
 
 ## main.js
 
 ```js
-import { n as __esmMin, t as require_dynamic } from "./dynamic.js";
+import { n as __toCommonJSInitMin, t as require_dynamic } from "./dynamic.js";
 import { strictEqual } from "node:assert";
 function foo() {
 	return 100;
 }
 var a;
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	//#region sideeffects.js
 	globalThis.a = 2;
 	//#endregion

@@ -15,9 +15,9 @@ var required_exports = /* @__PURE__ */ __exportAll({ required: () => required$1 
 var required$1;
 //#endregion
 //#region main.js
-const required = (__esmMin((() => {
+const required = __toCommonJSInitMin((() => {
 	required$1 = "required-value";
-}))(), __toCommonJS(required_exports));
+}))(required_exports);
 const lazy = import("./lazy.js");
 //#endregion
 export { required as n, shared as r, lazy as t };

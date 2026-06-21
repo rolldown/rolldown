@@ -15,11 +15,11 @@ var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 }));
 //#endregion
 //#region dep-b.js
-var init_dep_b = __esmMin((() => {
+var init_dep_b = __toCommonJSInitMin((() => {
 	sideEffect.touched = true;
 }));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	require_dep_a();
 	init_dep_b();
 }))();
@@ -40,7 +40,7 @@ var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	globalThis.sideEffect = {};
 	module.exports = sideEffect;
 }));
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	//#region dep-b.js
 	sideEffect.touched = true;
 	//#endregion

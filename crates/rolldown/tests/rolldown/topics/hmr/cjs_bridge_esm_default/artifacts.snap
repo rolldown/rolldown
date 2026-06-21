@@ -19,7 +19,7 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({ default: () => esm_default }), esm_default;
-var init_esm = __esmMin((() => {
+var init_esm = __toCommonJSInitMin((() => {
 	__rolldown_runtime__.createModuleHotContext("esm.js");
 	__rolldown_runtime__.registerModule("esm.js", { exports: esm_exports });
 	esm_default = "esm-default";
@@ -29,7 +29,7 @@ var init_esm = __esmMin((() => {
 var require_bridge = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	__rolldown_runtime__.createModuleHotContext("bridge.js");
 	__rolldown_runtime__.registerModule("bridge.js", module);
-	module.exports = (init_esm(), __toCommonJS(esm_exports));
+	module.exports = init_esm(esm_exports);
 }));
 //#endregion
 //#region main.js

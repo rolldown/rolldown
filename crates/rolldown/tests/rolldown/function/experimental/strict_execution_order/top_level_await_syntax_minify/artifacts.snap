@@ -6,5 +6,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-var e=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}};async function t(){console.log(`foo`)}var n=e((()=>{}));await e((async()=>{n(),await t()}))();
+var e=Object.defineProperty,t=Object.getOwnPropertyDescriptor,n=Object.getOwnPropertyNames,r=Object.prototype.hasOwnProperty,i=(i,a,o,s)=>{if(a&&typeof a==`object`||typeof a==`function`)for(var c=n(a),l=0,u=c.length,d;l<u;l++)d=c[l],!r.call(i,d)&&d!==o&&e(i,d,{get:(e=>a[e]).bind(null,d),enumerable:!(s=t(a,d))||s.enumerable});return i},a=t=>r.call(t,`module.exports`)?t[`module.exports`]:i(e({},`__esModule`,{value:!0}),t),o=(e,t,n,i,o,s,c)=>l=>{if(i)throw i[0];try{return l&&!s&&(c=r.call(l,`module.exports`),c||(n=a(l),s=!0)),t||(t=!0,o=e(e=0)),o&&o.then?o.then(()=>(l&&!s&&(n=a(l),s=!0),n)):(l&&!s&&(n=a(l),s=!0),n)}catch(e){throw i=[e],e}};async function s(){console.log(`foo`)}var c=o((()=>{}));await o((async()=>{c(),await s()}))();
 ```

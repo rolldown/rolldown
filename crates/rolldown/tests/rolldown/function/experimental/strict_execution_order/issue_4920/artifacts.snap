@@ -13,11 +13,11 @@ function foo() {
 	globalThis.value = 1;
 }
 var dep_default;
-var init_dep = __esmMin((() => {
+var init_dep = __toCommonJSInitMin((() => {
 	dep_default = /*#__PURE__*/ foo();
 }));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_dep();
 	nodeAssert.strictEqual(globalThis.value, 1);
 }))();
@@ -39,11 +39,11 @@ function foo() {
 	globalThis.value = 1;
 }
 var dep_default;
-var init_dep = __esmMin((() => {
+var init_dep = __toCommonJSInitMin((() => {
 	dep_default = /*#__PURE__*/ foo();
 }));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_dep();
 	nodeAssert.strictEqual(globalThis.value, 1);
 }))();

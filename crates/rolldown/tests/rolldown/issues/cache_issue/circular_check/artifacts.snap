@@ -1,0 +1,48 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region b.js
+var b_exports = /* @__PURE__ */ __exportAll({
+	b: () => "b",
+	seenABefore: () => seenABefore,
+	seenAObject: () => seenAObject
+}), a$1, seenAObject, seenABefore;
+var init_b = __toCommonJSInitMin((() => {
+	a$1 = init_a(a_exports);
+	seenAObject = a$1;
+	seenABefore = a$1.before;
+}));
+//#endregion
+//#region a.js
+var a_exports = /* @__PURE__ */ __exportAll({
+	after: () => after,
+	before: () => before,
+	seenB: () => seenB
+});
+var before, b$1, seenB, after;
+var init_a = __toCommonJSInitMin((() => {
+	before = "a-before";
+	b$1 = init_b(b_exports);
+	seenB = b$1.b;
+	after = "a-after";
+}));
+//#endregion
+//#region main.js
+const a = init_a(a_exports);
+const b = init_b(b_exports);
+assert.strictEqual(a.before, "a-before");
+assert.strictEqual(a.after, "a-after");
+assert.strictEqual(a.seenB, "b");
+assert.strictEqual(b.b, "b");
+assert.strictEqual(b.seenABefore, "a-before");
+assert.strictEqual(b.seenAObject, a);
+//#endregion
+
+```

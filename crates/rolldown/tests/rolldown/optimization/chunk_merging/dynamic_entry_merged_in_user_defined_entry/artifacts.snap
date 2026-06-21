@@ -19,9 +19,9 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
-var init_lib = __esmMin((() => {}));
+var init_lib = __toCommonJSInitMin((() => {}));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_lib();
 	Promise.resolve().then(() => (init_lib(), lib_exports)).then((mod) => {
 		assert.strictEqual(mod.a, 123);
@@ -52,9 +52,9 @@ let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
-var init_lib = __esmMin((() => {}));
+var init_lib = __toCommonJSInitMin((() => {}));
 //#endregion
-__esmMin((() => {
+__toCommonJSInitMin((() => {
 	init_lib();
 	Promise.resolve().then(() => (init_lib(), lib_exports)).then((mod) => {
 		node_assert.default.strictEqual(mod.a, 123);

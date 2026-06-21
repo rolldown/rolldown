@@ -16,7 +16,7 @@ function createIcon(name) {
 	return SvgIcon.muiName + "-" + name;
 }
 var SvgIcon;
-var init_createIcon = __esmMin((() => {
+var init_createIcon = __toCommonJSInitMin((() => {
 	SvgIcon = { muiName: "SvgIcon" };
 }));
 

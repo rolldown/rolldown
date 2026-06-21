@@ -19,13 +19,13 @@ function toArray$1(children) {
 	return ret;
 }
 var import_react$1;
-var init_lib = __esmMin((() => {
+var init_lib = __toCommonJSInitMin((() => {
 	import_react$1 = /* @__PURE__ */ __toESM(require_react());
 }));
 //#endregion
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_lib(), __toCommonJS(lib_exports));
+	module.exports = init_lib(lib_exports);
 }));
 //#endregion
 //#region main.js

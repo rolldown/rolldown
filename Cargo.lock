@@ -2969,20 +2969,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_plugin_vite_asset"
-version = "0.1.0"
-dependencies = [
- "arcstr",
- "cow-utils",
- "derive_more",
- "rolldown_common",
- "rolldown_plugin",
- "rolldown_plugin_utils",
- "rolldown_utils",
- "serde_json",
-]
-
-[[package]]
 name = "rolldown_plugin_vite_asset_import_meta_url"
 version = "0.1.0"
 dependencies = [

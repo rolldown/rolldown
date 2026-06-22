@@ -15,14 +15,12 @@ export default defineTest({
     plugins: [viteImportGlobPlugin()],
   },
 
-  // On Windows, Git for Windows defaults `core.symlinks` to `false`, which
-  // means symlinks tracked in the repository are checked out as plain text
-  // files containing the link target path instead of real symbolic links.
-  // Since `linked/my-lib` must be a directory for the glob pattern
-  // `'./linked/*/components/*.js'` to match, we need to ensure it exists as
-  // a real link rather than a stale text file left by Git checkout.by default.
-  // When core.symlinks is false (the default on Windows),
-  // symbolic links are checked out as small plain files that contain the link text.
+  // On Windows, Git for Windows defaults `core.symlinks` to `false`, so
+  // symlinks tracked in the repository are checked out as plain text files
+  // containing the link target path instead of real symbolic links. Since
+  // `linked/my-lib` must be a directory for the glob
+  // `'./linked/*/components/*.js'` to match, recreate it as a real directory
+  // link below.
   async beforeTest() {
     if (existsSync(linkPath)) {
       const stat = lstatSync(linkPath);
@@ -37,13 +35,7 @@ export default defineTest({
     // - On Windows, use `'junction'` which doesn't require administrator
     //   privileges or Developer Mode (unlike real symlinks).
     // - On Unix, use `'dir'` which creates a standard symbolic link.
-    // if (!existsSync(linkPath)) {
-    //   await symlink(targetPath, linkPath, platform === 'win32' ? 'junction' : 'dir');
-    // }
-
     if (!existsSync(linkPath)) {
-      // Use `'junction'` on Windows (no admin privileges required) and `'dir'`
-      // on Unix.
       await symlink(targetPath, linkPath, platform === 'win32' ? 'junction' : 'dir');
     }
   },

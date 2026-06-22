@@ -2972,19 +2972,12 @@ dependencies = [
 name = "rolldown_plugin_vite_build_import_analysis"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "arcstr",
  "derive_more",
- "itertools",
  "oxc",
- "regex",
  "rolldown_common",
  "rolldown_ecmascript_utils",
  "rolldown_plugin",
- "rolldown_plugin_utils",
- "rustc-hash",
- "string_wizard",
- "sugar_path",
 ]
 
 [[package]]

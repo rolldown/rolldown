@@ -1981,8 +1981,7 @@ dependencies = [
 [[package]]
 name = "oxc_sourcemap"
 version = "8.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "174d2498c2390ccfab0a9caaf47ef5accda1d509aaa34a5be8f45e00e5299f04"
+source = "git+https://github.com/oxc-project/oxc-sourcemap.git?branch=perf%2Fconcat-owned-move-in#dbd6ef9f13e2721279bcbc7f8bbd65523447c323"
 dependencies = [
  "base64-simd",
  "json-escape-simd",

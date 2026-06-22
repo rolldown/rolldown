@@ -3018,26 +3018,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_plugin_vite_css_post"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arcstr",
- "base64-simd",
- "cow-utils",
- "derive_more",
- "regex",
- "rolldown_common",
- "rolldown_plugin",
- "rolldown_plugin_utils",
- "rolldown_utils",
- "rustc-hash",
- "serde_json",
- "string_wizard",
- "sugar_path",
-]
-
-[[package]]
 name = "rolldown_plugin_vite_dynamic_import_vars"
 version = "0.1.0"
 dependencies = [

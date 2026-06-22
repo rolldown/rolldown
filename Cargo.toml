@@ -168,7 +168,6 @@ form_urlencoded = "1.2.1"
 futures = "0.3.31"
 glob = "0.3.2"
 heck = "0.5.0"
-html5gum = "0.8.1"
 # Pinned to the no-ICU 1.0.0 backend to keep IDNA support turned off.
 # See crates/rolldown_plugin_vite_resolve/Cargo.toml for the full rationale.
 idna_adapter = "=1.0.0"
@@ -215,7 +214,6 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 serde_yaml = "0.9.34"
 simdutf8 = "0.1.5"
-string_cache = "0.9.0"
 sugar_path = { version = "2.0.1", features = ["cached_current_dir"] }
 supports-color = "3"
 terminal_size = "0.4.2"

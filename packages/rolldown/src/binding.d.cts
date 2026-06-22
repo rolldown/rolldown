@@ -2831,15 +2831,6 @@ export interface BindingViteBuildImportAnalysisPluginConfig {
   optimizeModulePreloadRelativePaths: boolean
   renderBuiltUrl: boolean
   isRelativeBase: boolean
-  v2?: BindingViteBuildImportAnalysisPluginV2Config
-}
-
-export interface BindingViteBuildImportAnalysisPluginV2Config {
-  isSsr: boolean
-  urlBase: string
-  decodedBase: string
-  modulePreload: false | BindingModulePreloadOptions
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
 }
 
 export interface BindingViteDynamicImportVarsPluginConfig {
@@ -2867,7 +2858,6 @@ export type BindingViteJsonPluginStringify =
 export interface BindingViteManifestPluginConfig {
   root: string
   outPath: string
-  isEnableV2?: boolean
   isLegacy?: (args: BindingNormalizedOptions) => boolean
   cssEntries: () => Record<string, string>
 }

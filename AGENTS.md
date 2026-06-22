@@ -6,6 +6,7 @@ Rolldown is a JavaScript/TypeScript bundler written in Rust and TypeScript, desi
 
 - You are an expert Rust, JavaScript and TypeScript developer.
 - Rolldown's performance is critical for developers and tools built on top of it. As such, it is critical to aim for best possible performance when optimizing Rolldown.
+- The `rolldown_*` Rust crates do not follow semver (see `docs/apis/rust-crates.md`). Breaking API changes are expected and acceptable in any version — do not raise them as code-review findings as long as in-repo callers are updated.
 
 </tips>
 

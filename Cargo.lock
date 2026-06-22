@@ -3018,21 +3018,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_plugin_vite_css"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64-simd",
- "derive_more",
- "rolldown_plugin",
- "rolldown_plugin_utils",
- "rolldown_sourcemap",
- "rolldown_utils",
- "rustc-hash",
- "serde_json",
-]
-
-[[package]]
 name = "rolldown_plugin_vite_css_post"
 version = "0.1.0"
 dependencies = [

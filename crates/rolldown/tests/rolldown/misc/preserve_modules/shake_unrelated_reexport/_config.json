@@ -1,0 +1,13 @@
+{
+  "_comment": "A preserveModules re-export facade should not be kept just because the same canonical symbol is used through a different module path, even when this module uses a different binding from the same source.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "preserveModules": true
+  },
+  "snapshot": false
+}

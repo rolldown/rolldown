@@ -9,10 +9,30 @@ use crate::{
   },
   utils::{handle_result, handle_warnings, normalize_binding_options::normalize_binding_options},
 };
-use napi::{Env, bindgen_prelude::PromiseRaw};
+use napi::{
+  Env,
+  bindgen_prelude::{PromiseRaw, ToNapiValue},
+};
 use napi_derive::napi;
 use rolldown::{BundleHandle, BundlerConfig};
-use std::sync::Arc;
+use std::{future::Future, pin::Pin, sync::Arc};
+
+/// Box a future before handing it to napi's [`Env::spawn_future`].
+///
+/// `Env::spawn_future` is monomorphized over the concrete future type, so every
+/// distinct async body re-instantiates the whole tokio task harness (`poll_future`,
+/// `Core<T, S>`, the scheduler dispatch, …). These `BindingBundler` entry points run
+/// once per build, so erasing the future to a single `Pin<Box<dyn Future>>` collapses
+/// that machinery to one instantiation per output type, at the cost of one
+/// (perf-irrelevant) heap allocation per call. Do NOT use this for per-module/per-hook
+/// futures, where the extra allocation would be on a hot path.
+fn spawn_boxed_future<T: 'static + Send + ToNapiValue>(
+  env: &Env,
+  fut: impl 'static + Send + Future<Output = napi::Result<T>>,
+) -> napi::Result<PromiseRaw<'_, T>> {
+  let fut: Pin<Box<dyn Future<Output = napi::Result<T>> + Send>> = Box::pin(fut);
+  env.spawn_future(fut)
+}
 
 #[napi]
 pub struct BindingBundler {
@@ -36,7 +56,7 @@ impl BindingBundler {
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let normalized = Self::normalize_binding_options(options)?;
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "generate") {
-      return env.spawn_future(async move { Ok(result) });
+      return spawn_boxed_future(env, async move { Ok(result) });
     }
 
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
@@ -74,7 +94,7 @@ impl BindingBundler {
 
       Ok(napi::Either::B(bundle_output.assets.into()))
     };
-    env.spawn_future(fut)
+    spawn_boxed_future(env, fut)
   }
 
   #[napi]
@@ -85,7 +105,7 @@ impl BindingBundler {
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let normalized = Self::normalize_binding_options(options)?;
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "write") {
-      return env.spawn_future(async move { Ok(result) });
+      return spawn_boxed_future(env, async move { Ok(result) });
     }
 
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
@@ -122,7 +142,7 @@ impl BindingBundler {
 
       Ok(napi::Either::B(bundle_output.assets.into()))
     };
-    env.spawn_future(fut)
+    spawn_boxed_future(env, fut)
   }
 
   #[napi]
@@ -133,7 +153,7 @@ impl BindingBundler {
   ) -> napi::Result<PromiseRaw<'env, BindingResult<()>>> {
     let normalized = Self::normalize_binding_options(options)?;
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "scan") {
-      return env.spawn_future(async move { Ok(result) });
+      return spawn_boxed_future(env, async move { Ok(result) });
     }
 
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
@@ -165,7 +185,7 @@ impl BindingBundler {
         }
       }
     };
-    env.spawn_future(fut)
+    spawn_boxed_future(env, fut)
   }
 
   #[napi]
@@ -176,7 +196,7 @@ impl BindingBundler {
   // - This also affects how the code is written in `Bundler::close()/inner.close()`, see the implementation there for more details.
   pub fn close<'env>(&mut self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let cleanup_fut = self.inner.close();
-    env.spawn_future(async move {
+    spawn_boxed_future(env, async move {
       let res = cleanup_fut.await;
       handle_result(res)?;
       Ok(())

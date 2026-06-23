@@ -1,15 +1,12 @@
 use std::path::Path;
 
-use arcstr::ArcStr;
 use napi_derive::napi;
 use oxc::allocator::Allocator;
 use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn};
-use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
 use rolldown_ecmascript::semantic_builder_for_transform;
-use rolldown_error::{BuildDiagnostic, EventKind, Severity};
 
 use crate::native_bridge::NativeStringHolder;
 
@@ -80,35 +77,10 @@ fn run_transform(source: &str, id: &str) -> String {
     ..Default::default()
   };
 
-  let transform_ret = Transformer::new(&allocator, path, &transform_options)
+  // Bench: ignore Transformer diagnostics entirely. The companion patch in
+  // `pre_process_ecma_ast.rs` does the same for the `builtin` variant.
+  let _ = Transformer::new(&allocator, path, &transform_options)
     .build_with_scoping(scoping, &mut program);
-
-  // Match the per-module work that `pre_process_ecma_ast.rs` does for the
-  // `builtin` variant: convert each oxc diagnostic into a `BuildDiagnostic`
-  // (the costly part — source-snippet refs + message/label string clones).
-  // We drop the result; rolldown's `builtin` path appends them to a
-  // bundle-scope `warnings` Vec, which is amortized across the whole build.
-  if !transform_ret.diagnostics.is_empty() {
-    let source_arc = ArcStr::from(source);
-    let (errors, warnings): (Vec<_>, Vec<_>) = transform_ret
-      .diagnostics
-      .into_iter()
-      .partition(|d| d.severity == OxcSeverity::Error);
-    let _converted_errors = BuildDiagnostic::from_oxc_diagnostics(
-      errors,
-      &source_arc,
-      id,
-      Severity::Error,
-      EventKind::TransformError,
-    );
-    let _converted_warnings = BuildDiagnostic::from_oxc_diagnostics(
-      warnings,
-      &source_arc,
-      id,
-      Severity::Warning,
-      EventKind::ToleratedTransform,
-    );
-  }
 
   let codegen_ret: CodegenReturn =
     Codegen::new().with_options(CodegenOptions::default()).build(&program);

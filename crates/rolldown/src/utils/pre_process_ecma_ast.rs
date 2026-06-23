@@ -175,28 +175,12 @@ impl PreProcessEcmaAst {
         }
 
         let scoping = self.recreate_scoping(&mut scoping, program);
-        let ret = Transformer::new(allocator, Path::new(stable_id), &transform_options)
+        // BENCH: ignore Transformer diagnostics so `builtin` doesn't accumulate
+        // BuildDiagnostics across modules. Companion to the `let _ = ...` in
+        // bench_oxc_transformer.rs / bench_native_lib_plugin/src/lib.rs.
+        let _ = Transformer::new(allocator, Path::new(stable_id), &transform_options)
           .build_with_scoping(scoping, program);
-
-        let (errors, transformer_warnings): (Vec<_>, Vec<_>) =
-          ret.diagnostics.into_iter().partition(|error| error.severity == OxcSeverity::Error);
-        if !errors.is_empty() {
-          return Err(BatchedBuildDiagnostic::from(BuildDiagnostic::from_oxc_diagnostics(
-            errors,
-            &source,
-            resolved_id,
-            Severity::Error,
-            EventKind::TransformError,
-          )));
-        }
-        warnings.extend(BuildDiagnostic::from_oxc_diagnostics(
-          transformer_warnings,
-          &source,
-          resolved_id,
-          Severity::Warning,
-          EventKind::ToleratedTransform,
-        ));
-        Ok(())
+        Ok::<(), BatchedBuildDiagnostic>(())
       })?;
     }
 

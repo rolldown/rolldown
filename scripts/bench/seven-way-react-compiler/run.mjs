@@ -26,8 +26,33 @@ if (!existsSync(CORPUS_JSON)) {
 const ITERATIONS = Number(process.env.ITERS ?? 6);
 const corpus = JSON.parse(readFileSync(CORPUS_JSON, 'utf8'));
 const ROOT = corpus.root;
-const FILES = corpus.files.slice(0, Number(process.env.LIMIT ?? corpus.files.length));
 
+// Skip-list of files that crash `builtin` with an oxc panic
+// (`oxc_ecmascript-0.136.0/src/side_effects/statements.rs:98` unreachable
+// when the AST still contains TS-only declarations like TSInterfaceDeclaration
+// at side-effects analysis time). The JS-plugin variants don't hit this
+// because they re-parse the transformed code, which strips TS leftovers.
+//
+// We apply the skip list to ALL variants when it exists, for a fair
+// comparison on the same corpus subset. Set NO_SKIP=1 to disable.
+const SKIP_LIST_JSON = process.env.SKIP_LIST_JSON ?? join(__dirname, 'builtin-skip.json');
+let skipSet = new Set();
+if (!process.env.NO_SKIP && existsSync(SKIP_LIST_JSON)) {
+  const skipData = JSON.parse(readFileSync(SKIP_LIST_JSON, 'utf8'));
+  for (const f of skipData.panicked ?? []) skipSet.add(f);
+  for (const f of skipData.errored ?? []) skipSet.add(f);
+  for (const f of skipData.timeouts ?? []) skipSet.add(f);
+}
+
+const ALL_FILES = corpus.files;
+const FILTERED_FILES = skipSet.size > 0
+  ? ALL_FILES.filter((f) => !skipSet.has(f))
+  : ALL_FILES;
+const FILES = FILTERED_FILES.slice(0, Number(process.env.LIMIT ?? FILTERED_FILES.length));
+
+if (skipSet.size > 0) {
+  console.log(`skip-list: ${skipSet.size} files excluded (builtin-panic)`);
+}
 console.log(`corpus: ${FILES.length} files under ${ROOT}`);
 console.log(`iterations: ${ITERATIONS} (1 warm-up dropped, ${ITERATIONS - 1} measured)`);
 

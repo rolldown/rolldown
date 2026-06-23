@@ -68,6 +68,25 @@ for (const config of Object.values(alias)) {
   }
 }
 
+function kebabToCamelCase(input: string) {
+  return input.replaceAll(/([a-z])-([a-z])/g, (_, p1, p2) => {
+    return p1 + p2.toUpperCase();
+  });
+}
+
+function camelizeNestedKeys(value: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  for (const [key, nestedValue] of Object.entries(value)) {
+    result[kebabToCamelCase(key)] =
+      nestedValue && typeof nestedValue === 'object'
+        ? camelizeNestedKeys(nestedValue as Record<string, unknown>)
+        : nestedValue;
+  }
+
+  return result;
+}
+
 export function parseCliArguments(): NormalizedCliOptions & {
   rawArgs: Record<string, any>;
 } {
@@ -170,6 +189,8 @@ export function parseCliArguments(): NormalizedCliOptions & {
     );
   }
 
+  //convert nested options to camelCase , cac only converts the top level Option
+  parsedOptions = camelizeNestedKeys(parsedOptions);
   // rawArgs assembly — snapshot before removing unknown keys
   const rawArgs: Record<string, any> = { ...parsedOptions };
 

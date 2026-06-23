@@ -14,7 +14,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use tokio::sync::mpsc;
+use tokio::sync::{Notify, mpsc};
 
 /// Default debounce duration in milliseconds.
 /// Matches Rollup's default buildDelay of 0ms.
@@ -76,6 +76,7 @@ pub struct Watcher {
   coordinator_state: std::sync::Mutex<CoordinatorState>,
   tx: mpsc::UnboundedSender<WatcherMsg>,
   closed: Arc<AtomicBool>,
+  close_notify: Arc<Notify>,
 }
 
 impl Watcher {
@@ -88,8 +89,16 @@ impl Watcher {
   ) -> BuildResult<Self> {
     let (tx, rx) = mpsc::unbounded_channel();
     let closed = Arc::new(AtomicBool::new(false));
+    let close_notify = Arc::new(Notify::new());
     let tasks = Self::create_tasks(configs, watcher_config, &tx, &closed)?;
-    let coordinator = WatchCoordinator::new(rx, handler, tasks, watcher_config);
+    let coordinator = WatchCoordinator::new(
+      rx,
+      handler,
+      tasks,
+      watcher_config,
+      Arc::clone(&closed),
+      Arc::clone(&close_notify),
+    );
     let coordinator_future: Pin<Box<dyn Future<Output = ()> + Send>> = Box::pin(coordinator.run());
 
     Ok(Self {
@@ -99,6 +108,7 @@ impl Watcher {
       }),
       tx,
       closed,
+      close_notify,
     })
   }
 
@@ -126,6 +136,9 @@ impl Watcher {
   /// Must be called after `run()` — calling before `run()` will skip cleanup hooks.
   pub async fn close(&self) -> Result<()> {
     self.closed.store(true, std::sync::atomic::Ordering::Relaxed);
+    // Wake the coordinator even when it is waiting for a user event callback. The mpsc message
+    // remains the normal state-machine input when the coordinator is idle or debouncing.
+    self.close_notify.notify_one();
     let _ = self.tx.send(WatcherMsg::Close);
     self.wait_for_close().await;
     Ok(())

@@ -5,10 +5,10 @@
 **Rolldown commit:** see git log on `feat/native-bridge-plugin-poc`
 **Binding build:** release (`just build-rolldown-release`)
 **Plugin cdylib build:** release (`cargo build --release -p bench_native_lib_plugin`)
-**Corpus:** Infisical `frontend/` — 1500-file subset (the full 3860-file corpus
-multiplies wall time without changing the relative ordering)
-**Skip-list:** 69 files excluded (`builtin-skip.json`) — see "Builtin panic
-investigation" below
+**Corpus:** Infisical `frontend/` — full 3860 source files
+**Skip-list:** 684 files excluded (`builtin-skip.json`, 17.7% panic rate) —
+see "Builtin panic investigation" below. Same 3176-file corpus is used for
+every variant for an apples-to-apples comparison.
 
 ## Variants
 
@@ -26,51 +26,51 @@ builtin, this is a temporary patch in `crates/rolldown/src/utils/pre_process_ecm
 that bypasses the partition + `warnings.extend(BuildDiagnostic::from_oxc_diagnostics(...))`
 block. That patch is bench-only and should not ship.
 
-## Primary table — LIMIT=1500 (1431 after skip), 4 iterations (1 warm-up dropped, 3 measured)
+## Primary table — full corpus (3176 panic-free files), 4 iterations (1 warm-up dropped, 3 measured)
 
 ```
-skip-list: 69 files excluded (builtin-panic)
-corpus: 1431 files
+skip-list: 684 files excluded (builtin-panic)
+corpus: 3176 files
 iterations: 4 (1 warm-up dropped, 3 measured)
 
 --- variant: utils-sync ---
-  warm-up: ~1820 ms
-  iter 1:  1817.4 ms
-  iter 2:  1819.4 ms
-  iter 3:  1888.4 ms
+  warm-up: 7333.7 ms
+  iter 1:  7409.6 ms
+  iter 2:  7532.4 ms
+  iter 3:  7482.6 ms
 
 --- variant: bridge-sync ---
-  warm-up: ~1600 ms
-  iter 1:  1604.6 ms
-  iter 2:  1612.2 ms
-  iter 3:  1620.0 ms
+  warm-up: 7019.2 ms
+  iter 1:  6962.3 ms
+  iter 2:  6828.2 ms
+  iter 3:  6854.1 ms
 
 --- variant: native-lib ---
-  warm-up: ~530 ms
-  iter 1:   525.0 ms
-  iter 2:   527.3 ms
-  iter 3:   568.3 ms
+  warm-up: 2235.6 ms
+  iter 1:  2170.1 ms
+  iter 2:  2260.8 ms
+  iter 3:  2246.8 ms
 
 --- variant: builtin ---
-  warm-up:  467.3 ms
-  iter 1:   487.3 ms
-  iter 2:   462.7 ms
-  iter 3:   416.5 ms
+  warm-up: 1908.0 ms
+  iter 1:  1839.6 ms
+  iter 2:  1925.5 ms
+  iter 3:  1939.6 ms
 
 --- variant: bridge-parallel ---
-  warm-up:  522.3 ms
-  iter 1:   488.8 ms
-  iter 2:   501.7 ms
-  iter 3:   503.5 ms
+  warm-up: 2034.2 ms
+  iter 1:  2030.3 ms
+  iter 2:  2038.2 ms
+  iter 3:  2071.5 ms
 ```
 
 | Variant | min (ms) | median (ms) | mean (ms) | speedup vs utils-sync |
 |---|---:|---:|---:|---:|
-| utils-sync       | 1817 | 1819 | 1842 | 1.00x |
-| bridge-sync      | 1605 | 1612 | 1612 | 1.13x |
-| native-lib       |  525 |  527 |  540 | 3.45x |
-| bridge-parallel  |  489 |  502 |  498 | 3.63x |
-| **builtin**      |  **416** |  **463** |  **456** | **3.93x** |
+| utils-sync       | 7410 | 7483 | 7475 | 1.00x |
+| bridge-sync      | 6828 | 6854 | 6882 | 1.09x |
+| native-lib       | 2170 | 2247 | 2226 | 3.33x |
+| bridge-parallel  | 2030 | 2038 | 2047 | 3.67x |
+| **builtin**      | **1840** | **1926** | **1902** | **3.89x** |
 
 ## Reading the numbers
 
@@ -104,7 +104,7 @@ So the real ordering is: the value of "skip the plugin layer entirely"
 ## Builtin panic investigation
 
 When running `transform.reactCompiler` at the bundler level on Infisical's
-frontend, ~4.6% of files hit:
+frontend, **~17.7% of files** (684 of 3860) hit:
 
 ```
 oxc_ecmascript-0.136.0/src/side_effects/statements.rs:98:57:
@@ -128,10 +128,11 @@ post-TS-lowering.
 individually with builtin's transform config, detects the oxc panic by
 watching stderr for `unreachable code`/`panicked at`, and writes the file
 path to `builtin-skip.json`. `run.mjs` applies the skip list to every variant
-(so the comparison stays apples-to-apples). 51 files panicked + 18 errored
-out of the first 1500 = 4.6% panic rate, 1.2% error rate (errors are mostly
-"untranspiled TypeScript syntax" / "untranspiled JSX syntax" which is the same
-underlying TS-lowering-didn't-run issue surfaced differently).
+(so the comparison stays apples-to-apples). Over the full 3860-file corpus:
+650 files panicked (16.8%) + 34 errored (0.9%) = **684 skipped (17.7%)**.
+Errored files emit "untranspiled TypeScript syntax" / "untranspiled JSX
+syntax" — the same underlying TS-lowering-didn't-run issue surfaced
+differently.
 
 **Proper upstream fix** would be either:
 - Force TS lowering to happen before side-effects analysis when

@@ -6,12 +6,15 @@
 
 use std::path::Path;
 
+use arcstr::ArcStr;
 use oxc::allocator::Allocator;
 use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn};
+use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::span::SourceType;
 use oxc::transformer::{TransformOptions, Transformer};
 use rolldown_ecmascript::semantic_builder_for_transform;
+use rolldown_error::{BuildDiagnostic, EventKind, Severity};
 use rolldown_native_plugin_abi::{ABI_VERSION, NativeStr, TransformOutput};
 
 /// Owned String tracked through `plugin_data` so `drop_output` can reclaim it.
@@ -98,8 +101,33 @@ fn run_transform(source: &str, id: &str) -> String {
     ..Default::default()
   };
 
-  let _ = Transformer::new(&allocator, path, &transform_options)
+  let transform_ret = Transformer::new(&allocator, path, &transform_options)
     .build_with_scoping(scoping, &mut program);
+
+  // Match the per-module diagnostic-conversion work that
+  // `pre_process_ecma_ast.rs` does for the `builtin` variant. We drop the
+  // result; the bundler-level path keeps them in a build-scope warnings Vec.
+  if !transform_ret.diagnostics.is_empty() {
+    let source_arc = ArcStr::from(source);
+    let (errors, warnings): (Vec<_>, Vec<_>) = transform_ret
+      .diagnostics
+      .into_iter()
+      .partition(|d| d.severity == OxcSeverity::Error);
+    let _converted_errors = BuildDiagnostic::from_oxc_diagnostics(
+      errors,
+      &source_arc,
+      id,
+      Severity::Error,
+      EventKind::TransformError,
+    );
+    let _converted_warnings = BuildDiagnostic::from_oxc_diagnostics(
+      warnings,
+      &source_arc,
+      id,
+      Severity::Warning,
+      EventKind::ToleratedTransform,
+    );
+  }
 
   let codegen_ret: CodegenReturn =
     Codegen::new().with_options(CodegenOptions::default()).build(&program);

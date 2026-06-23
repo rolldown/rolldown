@@ -152,9 +152,11 @@ dependencies = [
 name = "bench_native_lib_plugin"
 version = "0.0.1"
 dependencies = [
+ "arcstr",
  "oxc",
  "oxc_react_compiler",
  "rolldown_ecmascript",
+ "rolldown_error",
  "rolldown_native_plugin_abi",
 ]
 

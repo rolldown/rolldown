@@ -15,7 +15,9 @@ crate-type = ["cdylib"]
 doctest = false
 
 [dependencies]
+arcstr = { workspace = true }
 oxc = { workspace = true }
 oxc_react_compiler = { workspace = true }
 rolldown_ecmascript = { workspace = true }
+rolldown_error = { workspace = true }
 rolldown_native_plugin_abi = { workspace = true }

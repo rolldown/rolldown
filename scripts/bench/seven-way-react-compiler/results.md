@@ -139,27 +139,42 @@ differently.
   `transform.reactCompiler` is set, OR
 - Have side-effects analysis tolerate TS declarations (treat them as no-ops).
 
-## Secondary table — LIMIT=15, 6 iterations, all seven variants
+## Secondary table — LIMIT=15, 6 iterations (1 warm-up dropped, 5 measured)
 
 Async variants only run on the secondary table because they deadlock above
 ~16 concurrent in-flight transforms (the napi-rs `async fn` ↔ tokio
 interaction this PoC has previously characterized).
 
-Approximate numbers (re-running for final-final numbers is straightforward):
+```
+skip-list: 684 files excluded (builtin-panic)
+corpus: 15 files
+iterations: 6 (1 warm-up dropped, 5 measured)
+```
 
-| Variant | median (ms) | speedup vs utils-sync |
-|---|---:|---:|
-| utils-sync       | ~127 | 1.00x |
-| utils-async      | ~ 69 | 1.85x |
-| bridge-sync      | ~ 17 | 7.5x |
-| bridge-async     | ~ 13 | 9.7x |
-| native-lib       | ~ 15 | 8.5x |
-| builtin          | ~  6 | 21x (fastest at small scale) |
-| bridge-parallel  | ~ 47 | 2.7x (worker spawn overhead) |
+| Variant | min (ms) | median (ms) | mean (ms) | speedup vs utils-sync |
+|---|---:|---:|---:|---:|
+| utils-sync       | 10.65 | 10.86 | 10.91 | 1.00x |
+| utils-async      |  6.16 |  7.07 |  6.92 | 1.54x |
+| bridge-sync      |  9.36 |  9.52 | 10.04 | 1.14x |
+| bridge-async     |  5.93 |  6.17 |  6.99 | 1.76x |
+| native-lib       |  6.86 |  7.15 |  7.37 | 1.52x |
+| **builtin**      |  **5.54** |  **5.90** |  **6.69** | **1.84x** |
+| bridge-parallel  | 39.60 | 43.14 | 49.14 | 0.25x (worker-spawn overhead) |
 
-At LIMIT=15 the absolute numbers favor builtin even more strongly — the
-plugin variants amortize their double-pass cost across a tiny per-module
-budget, while builtin's single pass stays cheap.
+At small scale `builtin` is still the fastest variant but the gap to the
+async variants and `native-lib` is narrow. `bridge-parallel` loses badly
+(~4x slower than baseline) because the ~8 JS worker threads' bootstrap
+cost dwarfs the per-module transform cost when there are only 15 files.
+Async dispatch (`utils-async`, `bridge-async`) is competitive here — both
+beat their sync counterparts ~1.5–1.5x by overlapping multiple
+transforms.
+
+Compared to the earlier "approximate" numbers in this section (which
+predated the diagnostic-conversion fairness fix and the panic-skip list),
+the bridge-sync→utils-sync gap is much smaller now: 1.14x instead of 7.5x.
+The original gap was an artifact of bridge variants discarding diagnostics
+that utils-sync was forced to process through rolldown's transformSync
+wrapper.
 
 ## Build steps to reproduce
 

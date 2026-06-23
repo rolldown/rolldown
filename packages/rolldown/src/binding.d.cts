@@ -2662,6 +2662,12 @@ export declare enum BindingPropertyWriteSideEffects {
   False = 1
 }
 
+export interface BindingPureTopLevelCallsRule {
+  test?: RegExp | undefined
+  pure: boolean
+  external?: boolean
+}
+
 export declare enum BindingRebuildStrategy {
   Always = 0,
   Auto = 1,
@@ -2737,6 +2743,7 @@ export interface BindingTreeshake {
   moduleSideEffects: boolean | ReadonlyArray<string> | BindingModuleSideEffectsRule[] | ((id: string, external: boolean) => boolean | undefined)
   annotations?: boolean
   manualPureFunctions?: ReadonlyArray<string>
+  pureTopLevelCalls?: boolean | ReadonlyArray<BindingStringOrRegex> | BindingPureTopLevelCallsRule[] | ((id: string, external: boolean) => boolean | undefined)
   unknownGlobalSideEffects?: boolean
   invalidImportSideEffects?: boolean
   commonjs?: boolean

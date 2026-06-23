@@ -1,7 +1,15 @@
+import type { StringOrRegExp } from './utils';
+
 interface ModuleSideEffectsRule {
   test?: RegExp;
   external?: boolean;
   sideEffects: boolean;
+}
+
+interface PureTopLevelCallsRule {
+  test?: RegExp;
+  external?: boolean;
+  pure: boolean;
 }
 
 type ModuleSideEffectsOption =
@@ -10,6 +18,13 @@ type ModuleSideEffectsOption =
   | ModuleSideEffectsRule[]
   | ((id: string, external: boolean) => boolean | undefined)
   | 'no-external';
+
+type PureTopLevelCallsOption =
+  | boolean
+  | StringOrRegExp
+  | readonly StringOrRegExp[]
+  | PureTopLevelCallsRule[]
+  | ((id: string, external: boolean) => boolean | undefined);
 
 /**
  * When passing an object, you can fine-tune the tree-shaking behavior.
@@ -105,6 +120,49 @@ export type TreeshakingOptions = {
    * @default []
    */
   manualPureFunctions?: readonly string[];
+  /**
+   * Treat call and `new` expressions executed during module initialization as side-effect-free when
+   * they appear in assignment-like contexts for matching modules.
+   *
+   * This includes variable initializers, assignment right-hand sides for local bindings, exported
+   * expression values, and nested argument calls in those contexts. Calls used as the callee of
+   * another call or `new` expression, and standalone expression statements such as `fn()`, are not
+   * made pure by this option.
+   *
+   * **Values:**
+   *
+   * - **`true`**: Enable the behavior for every module that Rolldown scans.
+   * - **`false`**: Disable the behavior.
+   * - **`string | RegExp | Array<string | RegExp>`**: Enable the behavior for matching module IDs.
+   * - **`PureTopLevelCallsRule[]`**: Array of rules with `test`, `external`, and `pure` properties for fine-grained control.
+   * - **`function`**: Function that receives `(id, external)` and returns whether this behavior applies.
+   *
+   * **Important:** This is intentionally aggressive and can remove real side effects. Prefer
+   * scoping it to trusted modules with a string/RegExp pattern or rule.
+   *
+   * > [!NOTE]
+   * > **Performance: Prefer `PureTopLevelCallsRule[]` or patterns over functions**
+   * >
+   * > Rules and string/RegExp patterns are processed in Rust. JavaScript callbacks require runtime
+   * > calls between Rust and JavaScript and should be reserved for logic that cannot be expressed
+   * > declaratively.
+   *
+   * @example
+   * ```js
+   * treeshake: {
+   *   pureTopLevelCalls: /\/src\//
+   * }
+   *
+   * treeshake: {
+   *   pureTopLevelCalls: [
+   *     { test: /\/src\//, pure: true },
+   *     { test: /\/src\/unsafe\//, pure: false },
+   *   ]
+   * }
+   * ```
+   * @default false
+   */
+  pureTopLevelCalls?: PureTopLevelCallsOption;
   /**
    * Whether to assume that accessing unknown global properties might have side effects.
    *

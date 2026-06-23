@@ -324,10 +324,11 @@ function bindingifyTreeshakeOptions(
     };
   }
 
-  let normalizedConfig: BindingInputOptions['treeshake'] = {
+  let normalizedConfig: BindingInputOptions['treeshake'] & { pureTopLevelCalls?: unknown } = {
     moduleSideEffects: true,
     annotations: config.annotations,
     manualPureFunctions: config.manualPureFunctions,
+    pureTopLevelCalls: bindingifyPureTopLevelCalls(config.pureTopLevelCalls),
     unknownGlobalSideEffects: config.unknownGlobalSideEffects,
     invalidImportSideEffects: config.invalidImportSideEffects,
     commonjs: config.commonjs,
@@ -362,6 +363,24 @@ function bindingifyTreeshakeOptions(
   }
 
   return normalizedConfig;
+}
+
+function bindingifyPureTopLevelCalls(
+  config: Exclude<InputOptions['treeshake'], boolean | undefined>['pureTopLevelCalls'],
+) {
+  if (config === undefined || typeof config === 'boolean' || typeof config === 'function') {
+    return config;
+  }
+  if (Array.isArray(config) && config.some(isPureTopLevelCallsRule)) {
+    return config;
+  }
+  return normalizedStringOrRegex(config as string | RegExp | readonly (string | RegExp)[]);
+}
+
+function isPureTopLevelCallsRule(input: unknown): boolean {
+  return (
+    input !== null && typeof input === 'object' && !(input instanceof RegExp) && 'pure' in input
+  );
 }
 
 function bindingifyMakeAbsoluteExternalsRelative(

@@ -36,6 +36,9 @@ bitflags! {
     /// If set, lazy barrel optimization is enabled.
     /// Usage: `self.options.experimental.is_lazy_barrel_enabled()`
     const LazyBarrelEnabled = 1 << 10;
+    /// If set, configured top-level call/new initializers are treated as side-effect-free.
+    /// Resolved per module before AST scanning.
+    const PureTopLevelCalls = 1 << 11;
   }
 }
 
@@ -127,5 +130,10 @@ impl FlatOptions {
   #[inline]
   pub fn is_lazy_barrel_enabled(self) -> bool {
     self.contains(Self::LazyBarrelEnabled)
+  }
+
+  #[inline]
+  pub fn pure_top_level_calls(self) -> bool {
+    self.contains(Self::PureTopLevelCalls)
   }
 }

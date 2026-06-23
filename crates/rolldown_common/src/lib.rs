@@ -86,7 +86,7 @@ pub mod bundler_options {
       },
       treeshake::{
         InnerOptions, ModuleSideEffects, ModuleSideEffectsRule, PropertyReadSideEffects,
-        PropertyWriteSideEffects, TreeshakeOptions,
+        PropertyWriteSideEffects, PureTopLevelCalls, PureTopLevelCallsRule, TreeshakeOptions,
       },
       tsconfig::TsConfig,
       tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig,

@@ -41,6 +41,9 @@ pub async fn create_ecma_view(
   ctx.warnings.extend(warnings);
 
   let module_id = ctx.resolved_id.id.clone();
+  let pure_top_level_calls = resolve_pure_top_level_calls(ctx.options, ctx.resolved_id).await?;
+  let mut scan_flat_options = ctx.flat_options;
+  scan_flat_options.set(FlatOptions::PureTopLevelCalls, pure_top_level_calls);
 
   let repr_name = module_id.representative_name();
   let repr_name = legitimize_identifier_name(&repr_name);
@@ -57,7 +60,7 @@ pub async fn create_ecma_view(
       &program.comments,
       ctx.options,
       fields.allocator,
-      ctx.flat_options,
+      scan_flat_options,
     );
     scanner.scan(program)
   })?;
@@ -157,6 +160,23 @@ pub async fn create_ecma_view(
   let ecma_related =
     EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage, preserve_jsx, stmt_infos };
   Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records, tla_keyword_span })
+}
+
+async fn resolve_pure_top_level_calls(
+  options: &SharedNormalizedBundlerOptions,
+  resolved_id: &ResolvedId,
+) -> BuildResult<bool> {
+  let Some(config) = options.treeshake.pure_top_level_calls() else {
+    return Ok(false);
+  };
+
+  let resolved = if config.is_fn() {
+    config.ffi_resolve(&resolved_id.id, resolved_id.external.is_external()).await?
+  } else {
+    config.native_resolve(&resolved_id.id, resolved_id.external.is_external())
+  };
+
+  Ok(resolved.unwrap_or(false))
 }
 
 /// The side effects priority is:

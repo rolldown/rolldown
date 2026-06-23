@@ -11,5 +11,5 @@ pub use crate::{
   ecma_ast::{
     EcmaAst, ToSourceString, program_cell::WithMutFields, semantic_builder_for_transform,
   },
-  ecma_compiler::{EcmaCompiler, PrintCommentsOptions, PrintOptions},
+  ecma_compiler::{EcmaCompiler, PrintCommentsOptions, PrintOptions, allocator_for_source},
 };

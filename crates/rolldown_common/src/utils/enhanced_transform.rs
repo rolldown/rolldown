@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use oxc::allocator::Allocator;
 use oxc::diagnostics::{OxcDiagnostic, Severity as OxcSeverity};
 use oxc::parser::{ParseOptions, Parser};
 use oxc::transformer::{Helper, HelperLoaderOptions};
@@ -23,7 +22,7 @@ use oxc::{
   },
 };
 use oxc_resolver::TsConfig;
-use rolldown_ecmascript::semantic_builder_for_transform;
+use rolldown_ecmascript::{allocator_for_source, semantic_builder_for_transform};
 use rolldown_error::{BuildDiagnostic, EventKind, Severity};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 use rustc_hash::FxHashMap;
@@ -322,7 +321,7 @@ pub fn enhanced_transform(
 
   let source: ArcStr = source_text.into();
 
-  let allocator = Allocator::default();
+  let allocator = allocator_for_source(&source);
   let parse_ret = Parser::new(&allocator, &source, source_type)
     .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
     .parse();

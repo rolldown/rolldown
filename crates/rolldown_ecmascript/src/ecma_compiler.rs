@@ -21,7 +21,7 @@ pub struct EcmaCompiler;
 impl EcmaCompiler {
   pub fn parse(id: &str, source: impl Into<ArcStr>, ty: SourceType) -> BuildResult<EcmaAst> {
     let source: ArcStr = source.into();
-    let allocator = oxc::allocator::Allocator::default();
+    let allocator = allocator_for_source(&source);
     let inner =
       ProgramCell::try_new(ProgramCellOwner { source: source.clone(), allocator }, |owner| {
         let parser = Parser::new(&owner.allocator, &owner.source, ty).with_options(ParseOptions {
@@ -50,7 +50,7 @@ impl EcmaCompiler {
     ty: SourceType,
   ) -> BuildResult<EcmaAst> {
     let source: ArcStr = source.into();
-    let allocator = oxc::allocator::Allocator::default();
+    let allocator = allocator_for_source(&source);
     let inner =
       ProgramCell::try_new(ProgramCellOwner { source: source.clone(), allocator }, |owner| {
         let builder = AstBuilder::new(&owner.allocator);
@@ -128,11 +128,50 @@ impl EcmaCompiler {
   }
 }
 
+/// Create an Oxc AST allocator with initial capacity derived from the source shape.
+pub fn allocator_for_source(source: &str) -> Allocator {
+  initial_ast_capacity(source).map_or_else(Allocator::default, Allocator::with_capacity)
+}
+
+fn initial_ast_capacity(source: &str) -> Option<usize> {
+  // Oxc's default first chunk is 16 KiB, which over-allocates heavily for
+  // projects containing thousands of small modules. Source size is a useful
+  // baseline, while import-dense modules need extra room for their many short
+  // AST nodes. Larger estimates use Oxc's default growth policy to avoid a
+  // large upfront allocation for sources containing mostly comments or data.
+  const BYTES_PER_SOURCE_BYTE: usize = 8;
+  const BYTES_PER_IMPORT: usize = 1024;
+  const FIXED_HEADROOM: usize = 2048;
+  const MAX_INITIAL_CAPACITY: usize = 64 * 1024;
+
+  if source.is_empty() {
+    return Some(0);
+  }
+
+  let base_capacity =
+    source.len().saturating_mul(BYTES_PER_SOURCE_BYTE).saturating_add(FIXED_HEADROOM);
+  if base_capacity > MAX_INITIAL_CAPACITY {
+    return None;
+  }
+
+  let import_count = memchr::memmem::find_iter(source.as_bytes(), b"import").count();
+  let capacity = base_capacity.saturating_add(import_count.saturating_mul(BYTES_PER_IMPORT));
+  (capacity <= MAX_INITIAL_CAPACITY).then_some(capacity)
+}
+
 #[test]
 fn basic_test() {
   let ast = EcmaCompiler::parse("", "const a = 1;".to_string(), SourceType::default()).unwrap();
   let code = EcmaCompiler::print_with(&ast, PrintOptions::default()).code;
   assert_eq!(code, "const a = 1;\n");
+}
+
+#[test]
+fn initial_ast_capacity_accounts_for_source_shape_and_limit() {
+  let source = "import a from 'a';\nimport b from 'b';\nexport { a, b };";
+  assert_eq!(initial_ast_capacity(source), Some(source.len() * 8 + 2 * 1024 + 2048));
+  assert_eq!(initial_ast_capacity(""), Some(0));
+  assert_eq!(initial_ast_capacity(&"x".repeat(8 * 1024)), None);
 }
 #[derive(Debug, Default)]
 

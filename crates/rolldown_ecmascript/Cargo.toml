@@ -15,6 +15,7 @@ workspace = true
 
 [dependencies]
 arcstr = { workspace = true }
+memchr = { workspace = true }
 oxc = { workspace = true }
 oxc_sourcemap = { workspace = true }
 oxc_str = { workspace = true }

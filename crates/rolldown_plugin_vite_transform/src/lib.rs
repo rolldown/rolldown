@@ -7,7 +7,7 @@ use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions};
 use oxc::parser::Parser;
 use oxc::transformer::Transformer;
 use rolldown_common::{BundlerTransformOptions, ModuleType};
-use rolldown_ecmascript::semantic_builder_for_transform;
+use rolldown_ecmascript::{allocator_for_source, semantic_builder_for_transform};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
 use rolldown_plugin::{HookTransformOutputMap, HookUsage, Plugin, SharedTransformPluginContext};
 use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, url::clean_url};
@@ -58,7 +58,7 @@ impl Plugin for ViteTransformPlugin {
     let (source_type, transform_options) =
       self.get_modified_transform_options(&ctx, args.id, &cwd, extension, args.code)?;
 
-    let allocator = oxc::allocator::Allocator::default();
+    let allocator = allocator_for_source(args.code);
     let ret = Parser::new(&allocator, args.code, source_type).parse();
     if ret.panicked || !ret.diagnostics.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(

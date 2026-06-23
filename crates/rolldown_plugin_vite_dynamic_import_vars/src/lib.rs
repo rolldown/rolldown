@@ -6,6 +6,7 @@ use std::{borrow::Cow, pin::Pin, sync::Arc};
 
 use oxc::ast_visit::Visit;
 use rolldown_common::ModuleType;
+use rolldown_ecmascript::allocator_for_source;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
@@ -72,7 +73,7 @@ impl Plugin for ViteDynamicImportVarsPlugin {
       ModuleType::Js | ModuleType::Ts | ModuleType::Jsx | ModuleType::Tsx
     ) && utils::has_dynamic_import(args.code)
     {
-      let allocator = oxc::allocator::Allocator::default();
+      let allocator = allocator_for_source(args.code);
       let source_type = match args.module_type {
         ModuleType::Js => oxc::span::SourceType::mjs(),
         ModuleType::Jsx => oxc::span::SourceType::jsx(),

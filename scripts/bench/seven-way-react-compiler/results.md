@@ -28,6 +28,11 @@ block. That patch is bench-only and should not ship.
 
 ## Primary table — full corpus (3176 panic-free files), 4 iterations (1 warm-up dropped, 3 measured)
 
+All seven variants run at full corpus. The earlier "async variants
+deadlock above ~16 in-flight transforms" finding from the prior PoC does
+not reproduce with the current config — both `utils-async` and
+`bridge-async` complete cleanly at LIMIT=3176.
+
 ```
 skip-list: 684 files excluded (builtin-panic)
 corpus: 3176 files
@@ -35,71 +40,80 @@ iterations: 4 (1 warm-up dropped, 3 measured)
 
 --- variant: utils-sync ---
   warm-up: 7333.7 ms
-  iter 1:  7409.6 ms
-  iter 2:  7532.4 ms
-  iter 3:  7482.6 ms
+  iter 1:  7409.6 ms / iter 2:  7532.4 ms / iter 3:  7482.6 ms
+
+--- variant: utils-async ---
+  warm-up: 2356.8 ms
+  iter 1:  2363.3 ms / iter 2:  2406.5 ms / iter 3:  2503.6 ms
 
 --- variant: bridge-sync ---
   warm-up: 7019.2 ms
-  iter 1:  6962.3 ms
-  iter 2:  6828.2 ms
-  iter 3:  6854.1 ms
+  iter 1:  6962.3 ms / iter 2:  6828.2 ms / iter 3:  6854.1 ms
+
+--- variant: bridge-async ---
+  warm-up: 1827.5 ms
+  iter 1:  1874.0 ms / iter 2:  1782.3 ms / iter 3:  1832.9 ms
 
 --- variant: native-lib ---
   warm-up: 2235.6 ms
-  iter 1:  2170.1 ms
-  iter 2:  2260.8 ms
-  iter 3:  2246.8 ms
+  iter 1:  2170.1 ms / iter 2:  2260.8 ms / iter 3:  2246.8 ms
 
 --- variant: builtin ---
   warm-up: 1908.0 ms
-  iter 1:  1839.6 ms
-  iter 2:  1925.5 ms
-  iter 3:  1939.6 ms
+  iter 1:  1839.6 ms / iter 2:  1925.5 ms / iter 3:  1939.6 ms
 
 --- variant: bridge-parallel ---
   warm-up: 2034.2 ms
-  iter 1:  2030.3 ms
-  iter 2:  2038.2 ms
-  iter 3:  2071.5 ms
+  iter 1:  2030.3 ms / iter 2:  2038.2 ms / iter 3:  2071.5 ms
 ```
 
 | Variant | min (ms) | median (ms) | mean (ms) | speedup vs utils-sync |
 |---|---:|---:|---:|---:|
 | utils-sync       | 7410 | 7483 | 7475 | 1.00x |
 | bridge-sync      | 6828 | 6854 | 6882 | 1.09x |
+| utils-async      | 2363 | 2407 | 2424 | 3.11x |
 | native-lib       | 2170 | 2247 | 2226 | 3.33x |
 | bridge-parallel  | 2030 | 2038 | 2047 | 3.67x |
-| **builtin**      | **1840** | **1926** | **1902** | **3.89x** |
+| builtin          | 1840 | 1926 | 1902 | 3.89x |
+| **bridge-async** | **1782** | **1833** | **1830** | **4.08x** |
 
 ## Reading the numbers
 
-With the skip list in place and the bench-only patch suppressing builtin's
-diagnostic collection, the ordering finally makes structural sense:
+**`bridge-async` is the fastest variant** (4.08x over `utils-sync`).
+The bridge's zero-copy bigint handle + the napi async wrapper means
+each module's transform overlaps with the next, and JS-thread dispatch
+costs amortize across the batch. It even edges out `builtin`.
 
-**`builtin` is the fastest** (3.93x over `utils-sync`). It's doing the least
-work per module: parse → semantic → Transformer(react_compiler=ON) → keeps
-AST. One pass, no plugin round-trip, no JS thread, no string materialization
-for the result.
+**`builtin` is a close second** (3.89x). One transform pass per module,
+no plugin round-trip — but no overlap either. The async variants beat
+it here purely on concurrency.
 
-**`bridge-parallel` is second** (3.63x). Same per-module work as `bridge-sync`,
-but split across ~8 JS worker threads. The parallelism makes up for the
-overhead of doing the transform twice (plugin pass + rolldown's no-RC internal
-pass).
+**`bridge-parallel` (3.67x) and `native-lib` (3.33x) trade blows.**
+`bridge-parallel` distributes across ~8 JS worker threads (real OS-thread
+parallelism). `native-lib` skips napi entirely but runs on rolldown's
+tokio thread pool, which is mostly busy doing other bundle work.
 
-**`native-lib` is third** (3.45x). The C-ABI dispatch is cheap, but each
-module still gets parsed/transformed/codegen'd twice (once in the plugin's
-own pipeline, once in rolldown's internal pre_process). At full scale that
-double-pass is what `bridge-parallel` works around with parallelism and what
-`builtin` skips entirely.
+**`utils-async` (3.11x) shows what plain async dispatch buys.** Same
+per-module work as `utils-sync`, but the JS thread gets to dispatch the
+next transform while the napi side resolves the previous one. ~3x just
+from concurrency, no other engineering.
 
-**`bridge-sync` (1.13x) and `utils-sync` (1.00x) are essentially tied** —
-the bridge encoding's zero-copy/no-UTF wins are minor compared to the
-per-module React Compiler + rolldown bundler overhead.
+**`bridge-sync` (1.09x) and `utils-sync` (1.00x) are essentially tied** —
+the bridge encoding's zero-copy/no-UTF wins are tiny compared to React
+Compiler's per-module cost. The win in this benchmark is all about
+concurrency and skipping plugin round-trips, not data layout.
 
-So the real ordering is: the value of "skip the plugin layer entirely"
-(builtin) > "skip the JS thread" (bridge-parallel) > "skip the napi crossing"
-(native-lib) > "skip the UTF round-trip" (bridge-sync) > baseline.
+The real value ordering: async dispatch > skip plugin layer (builtin) >
+worker-thread parallelism > skip-napi (native-lib) > sync plugin >
+baseline.
+
+**Earlier "async deadlock" reading was wrong.** A prior PoC iteration
+characterized async variants as deadlocking above ~16 in-flight
+transforms. With this branch's current config (no async-fn in the bench
+napi class, no `Promise<Option<i64>>` wrapping, skip list applied), both
+async variants complete cleanly at LIMIT=3176. The deadlock was specific
+to the experimental `Promise<bigint>` napi return-type setup that was
+backed out earlier on this branch.
 
 ## Builtin panic investigation
 

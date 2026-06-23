@@ -33,6 +33,7 @@ onlyBuiltDependencies:
 
 overrides:
   vitepress>vite: npm:rolldown-vite@latest
+  '@tybys/wasm-util': '0.10.3'
 
 catalog:
   '@babel/core': ^7.29.7
@@ -138,3 +139,4 @@ minimumReleaseAgeExclude:
   - '@voidzero-dev/*'
   - vite-plus
   - vitepress-plugin-feedback-tracker@0.2.0-alpha.1
+  - '@tybys/wasm-util'

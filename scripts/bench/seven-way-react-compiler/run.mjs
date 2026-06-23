@@ -124,10 +124,11 @@ const transformer = new binding.BenchOxcTransformer();
 function bridgeSyncPlugin() {
   return {
     name: 'oxc-bench-bridge-sync',
-    transformNativeBridge(sourceHandle, id) {
-      if (!shouldTransform(id)) return undefined;
+    // Single bigint handle now carries both source and id — id no longer
+    // crosses napi as a separate JS string.
+    transformNativeBridge(handle) {
       try {
-        return transformer.transformNative(sourceHandle, id);
+        return transformer.transformNative(handle);
       } catch {
         return undefined;
       }
@@ -138,9 +139,8 @@ function bridgeSyncPlugin() {
 function bridgeAsyncPlugin() {
   return {
     name: 'oxc-bench-bridge-async',
-    transformNativeBridgeAsync(sourceHandle, id) {
-      if (!shouldTransform(id)) return Promise.resolve(undefined);
-      return transformer.transformNativeAsync(sourceHandle, id).catch(() => undefined);
+    transformNativeBridgeAsync(handle) {
+      return transformer.transformNativeAsync(handle).catch(() => undefined);
     },
   };
 }

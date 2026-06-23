@@ -34,24 +34,24 @@ impl BenchOxcTransformer {
     run_transform(&source, &id)
   }
 
-  #[napi(ts_args_type = "sourceHandle: bigint, id: string", ts_return_type = "bigint")]
-  pub fn transform_native(&self, source_handle: i64, id: String) -> i64 {
+  #[napi(ts_args_type = "sourceHandle: bigint", ts_return_type = "bigint")]
+  pub fn transform_native(&self, source_handle: i64) -> i64 {
     // SAFETY: caller supplies a handle previously produced by
-    // `NativeStringHolder::into_raw_handle` whose backing box is still alive.
-    let src: &str = unsafe { NativeStringHolder::handle_as_str(source_handle) };
-    let output = run_transform(src, &id);
+    // `NativeStringHolder::into_raw_handle{_with_id}` whose backing box is alive.
+    let holder = unsafe { NativeStringHolder::handle_as_ref(source_handle) };
+    let output = run_transform(holder.as_str(), holder.id_str());
     NativeStringHolder::from_string(output).into_raw_handle()
   }
 
   #[napi(
-    ts_args_type = "sourceHandle: bigint, id: string",
+    ts_args_type = "sourceHandle: bigint",
     ts_return_type = "Promise<bigint>"
   )]
-  pub async fn transform_native_async(&self, source_handle: i64, id: String) -> i64 {
+  pub async fn transform_native_async(&self, source_handle: i64) -> i64 {
     napi::tokio::task::yield_now().await;
     // SAFETY: same contract as `transform_native`.
-    let src: &str = unsafe { NativeStringHolder::handle_as_str(source_handle) };
-    let output = run_transform(src, &id);
+    let holder = unsafe { NativeStringHolder::handle_as_ref(source_handle) };
+    let output = run_transform(holder.as_str(), holder.id_str());
     NativeStringHolder::from_string(output).into_raw_handle()
   }
 }

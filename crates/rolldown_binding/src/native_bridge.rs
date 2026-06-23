@@ -19,23 +19,47 @@ enum HolderInner {
 pub struct NativeStringHolder {
   inner: HolderInner,
   view: NativeStrRef,
+  // Module id packed into the source-side holder so the napi method doesn't
+  // need a separate JS-string parameter (which would cost a UTF-16↔UTF-8 round
+  // trip + an extra heap allocation per call). Stored as ArcStr to keep the
+  // ownership story uniform with `inner`. `id_view` is a `#[repr(C)]` borrow
+  // that `id_str()` reads through; we keep `id` alive so the view stays valid.
+  // Empty `ArcStr::default()` for result holders that carry no id.
+  #[expect(dead_code, reason = "kept alive so id_view stays valid")]
+  id: ArcStr,
+  id_view: NativeStrRef,
 }
 
 impl NativeStringHolder {
   pub fn from_arcstr(s: ArcStr) -> Self {
+    Self::from_arcstr_with_id(s, ArcStr::default())
+  }
+
+  pub fn from_arcstr_with_id(s: ArcStr, id: ArcStr) -> Self {
     let view = NativeStrRef { ptr: s.as_ptr(), len: s.len() };
-    Self { inner: HolderInner::ArcStr(s), view }
+    let id_view = NativeStrRef { ptr: id.as_ptr(), len: id.len() };
+    Self { inner: HolderInner::ArcStr(s), view, id, id_view }
   }
 
   pub fn from_string(s: String) -> Self {
     let view = NativeStrRef { ptr: s.as_ptr(), len: s.len() };
-    Self { inner: HolderInner::String(s), view }
+    let id = ArcStr::default();
+    let id_view = NativeStrRef { ptr: id.as_ptr(), len: id.len() };
+    Self { inner: HolderInner::String(s), view, id, id_view }
   }
 
   pub fn as_str(&self) -> &str {
     // SAFETY: `inner` owns the buffer for the lifetime of `self`; bytes are valid UTF-8.
     unsafe {
       let bytes = std::slice::from_raw_parts(self.view.ptr, self.view.len);
+      std::str::from_utf8_unchecked(bytes)
+    }
+  }
+
+  pub fn id_str(&self) -> &str {
+    // SAFETY: `id` ArcStr lives as long as `self`.
+    unsafe {
+      let bytes = std::slice::from_raw_parts(self.id_view.ptr, self.id_view.len);
       std::str::from_utf8_unchecked(bytes)
     }
   }
@@ -64,6 +88,12 @@ impl NativeStringHolder {
   pub unsafe fn handle_as_str<'a>(handle: i64) -> &'a str {
     let holder: &'a Self = unsafe { &*(handle as *const Self) };
     holder.as_str()
+  }
+
+  /// # Safety
+  /// Same contract as `handle_as_str`.
+  pub unsafe fn handle_as_ref<'a>(handle: i64) -> &'a Self {
+    unsafe { &*(handle as *const Self) }
   }
 }
 

@@ -115,6 +115,37 @@ async variants complete cleanly at LIMIT=3176. The deadlock was specific
 to the experimental `Promise<bigint>` napi return-type setup that was
 backed out earlier on this branch.
 
+## What's left to optimize? (spoiler: not much at the bridge layer)
+
+After packing the `id` into the bigint handle (so neither source nor id
+crosses napi as a marshalled JS string), bridge-sync at LIMIT=3176 still
+clocks 6925 ms — essentially unchanged from the prior 6854 ms with the
+separate `id` parameter. The reason: `ArcStr::from(args.id)` on the
+adapter side allocates + copies the path bytes, which costs about as
+much as the napi marshalling we eliminated. We moved the copy, we didn't
+remove it.
+
+What remains on the bridge path:
+
+1. **`ArcStr::from(args.id)` per call** — one Arc-header alloc + path-byte
+   copy. To eliminate it we'd need rolldown to hand the plugin an `ArcStr`
+   for the id (currently `args.id: &str`). Out of scope.
+2. **Box allocation for the `NativeStringHolder`** — small (~120 bytes)
+   per call. Could be pooled via thread-local but the savings are
+   microseconds.
+3. **`ArcStr::from(code.as_str())` inside rolldown's transform driver** —
+   one full source-bytes copy before every plugin call. Not in our control
+   without changing rolldown's `Plugin` trait.
+4. **`run_transform`'s internal allocations** — parse arena, AST nodes,
+   codegen output String. These are unavoidable React Compiler work and
+   happen identically in every variant.
+
+The dominant cost on bridge-sync is not data copies; it's **sync TSFN
+dispatch latency** — each module's transform is a blocking JS-thread
+hop. `bridge-async`, `bridge-parallel`, and `native-lib` all win by
+sidestepping that hop in different ways. Removing the small remaining
+copies would shave ones-of-percent at best.
+
 ## Builtin panic investigation
 
 When running `transform.reactCompiler` at the bundler level on Infisical's

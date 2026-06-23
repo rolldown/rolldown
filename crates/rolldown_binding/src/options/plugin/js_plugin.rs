@@ -211,11 +211,18 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookTransformReturn {
     // Sync zero-copy bridge. Skip the regular include/exclude filter (PoC scope).
     if let Some(cb) = &self.transform_native_bridge {
-      let source_handle =
-        NativeStringHolder::from_arcstr(args.code.clone()).into_raw_handle();
+      // Pack source + id into a single handle so neither crosses napi as a
+      // marshalled JS string. id becomes a `ArcStr::from(&str)` allocation
+      // (one alloc + copy of the path) instead of a UTF-16↔UTF-8 round trip
+      // each way.
+      let source_handle = NativeStringHolder::from_arcstr_with_id(
+        args.code.clone(),
+        arcstr::ArcStr::from(args.id),
+      )
+      .into_raw_handle();
 
       let result_handle = cb
-        .invoke_async((source_handle, args.id.to_string()).into())
+        .invoke_async((source_handle,).into())
         .instrument(debug_span!("transform_hook_native_bridge", plugin_name = self.name))
         .await?;
 
@@ -237,11 +244,14 @@ impl Plugin for JsPlugin {
 
     // Async zero-copy bridge: JS returns Promise<bigint>; we await it.
     if let Some(cb) = &self.transform_native_bridge_async {
-      let source_handle =
-        NativeStringHolder::from_arcstr(args.code.clone()).into_raw_handle();
+      let source_handle = NativeStringHolder::from_arcstr_with_id(
+        args.code.clone(),
+        arcstr::ArcStr::from(args.id),
+      )
+      .into_raw_handle();
 
       let result_handle = cb
-        .invoke_async((source_handle, args.id.to_string()).into())
+        .invoke_async((source_handle,).into())
         .instrument(debug_span!("transform_hook_native_bridge_async", plugin_name = self.name))
         .await?
         .await?;

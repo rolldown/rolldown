@@ -102,22 +102,20 @@ pub struct BindingPluginOptions {
 
   /// Experimental: sync zero-copy bridge transform hook. Takes a `bigint`
   /// handle wrapping a `Box<NativeStringHolder>` (see
-  /// `crates/rolldown_binding/src/native_bridge.rs`) and returns a fresh
-  /// handle (or null). Avoids the UTF-8 ↔ UTF-16 round trip on the source
-  /// body. Sync-only; for the async variant see `transform_native_bridge_async`.
-  #[napi(ts_type = "(sourceHandle: bigint, id: string) => bigint | null | undefined")]
-  pub transform_native_bridge:
-    Option<JsCallback<FnArgs<(i64, String)>, Option<i64>>>,
+  /// `crates/rolldown_binding/src/native_bridge.rs`) which carries both the
+  /// source code and the module id. Returns a fresh handle (or null).
+  /// Avoids the UTF-8 ↔ UTF-16 round trip on the source body AND the id.
+  /// Sync-only; for the async variant see `transform_native_bridge_async`.
+  #[napi(ts_type = "(handle: bigint) => bigint | null | undefined")]
+  pub transform_native_bridge: Option<JsCallback<FnArgs<(i64,)>, Option<i64>>>,
 
   /// Experimental: async zero-copy bridge transform hook. Takes a `bigint`
   /// handle and MUST return a `Promise<bigint>` (or `Promise<null>`/
   /// `Promise<undefined>`). The JS thread is freed immediately on dispatch
   /// while the napi-side `transformNativeAsync` resolves the Promise.
-  #[napi(
-    ts_type = "(sourceHandle: bigint, id: string) => Promise<bigint | null | undefined>"
-  )]
+  #[napi(ts_type = "(handle: bigint) => Promise<bigint | null | undefined>")]
   pub transform_native_bridge_async:
-    Option<JsCallback<FnArgs<(i64, String)>, Promise<Option<i64>>>>,
+    Option<JsCallback<FnArgs<(i64,)>, Promise<Option<i64>>>>,
 
   #[napi(
     ts_type = "(ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>"

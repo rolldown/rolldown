@@ -11,10 +11,10 @@ export default defineParallelPluginImplementation((_options, _context) => {
   const transformer = new binding.BenchOxcTransformer();
   return {
     name: 'oxc-bench-bridge-parallel',
-    transformNativeBridge(sourceHandle, id) {
+    transformNativeBridge(handle) {
       // No filter — match `builtin`'s scope (every module).
       try {
-        return transformer.transformNative(sourceHandle, id);
+        return transformer.transformNative(handle);
       } catch {
         return undefined;
       }

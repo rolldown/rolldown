@@ -7,8 +7,8 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const binding = require('../src/binding.cjs') as {
   BenchOxcTransformer: new () => {
-    transformNative(sourceHandle: bigint, id: string): bigint;
-    transformNativeAsync(sourceHandle: bigint, id: string): Promise<bigint>;
+    transformNative(handle: bigint): bigint;
+    transformNativeAsync(handle: bigint): Promise<bigint>;
   };
 };
 
@@ -40,14 +40,14 @@ async function runWithBridge(bridgeKind: 'sync' | 'async') {
   const bridgePlugin = bridgeKind === 'sync'
     ? ({
       name: 'bridge-sync',
-      transformNativeBridge(handle: bigint, id: string) {
-        return transformer.transformNative(handle, id);
+      transformNativeBridge(handle: bigint) {
+        return transformer.transformNative(handle);
       },
     } as unknown as Plugin)
     : ({
       name: 'bridge-async',
-      transformNativeBridgeAsync(handle: bigint, id: string) {
-        return transformer.transformNativeAsync(handle, id);
+      transformNativeBridgeAsync(handle: bigint) {
+        return transformer.transformNativeAsync(handle);
       },
     } as unknown as Plugin);
 

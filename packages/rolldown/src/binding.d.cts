@@ -1599,8 +1599,8 @@ export declare class BenchOxcTransformer {
    * machinery treats it as truly async.
    */
   transformStrAsync(source: string, id: string): Promise<string>
-  transformNative(sourceHandle: bigint, id: string): bigint
-  transformNativeAsync(sourceHandle: bigint, id: string): Promise<bigint>
+  transformNative(sourceHandle: bigint): bigint
+  transformNativeAsync(sourceHandle: bigint): Promise<bigint>
 }
 
 export declare class BindingBundleEndEventData {
@@ -2737,18 +2737,19 @@ export interface BindingPluginOptions {
   /**
    * Experimental: sync zero-copy bridge transform hook. Takes a `bigint`
    * handle wrapping a `Box<NativeStringHolder>` (see
-   * `crates/rolldown_binding/src/native_bridge.rs`) and returns a fresh
-   * handle (or null). Avoids the UTF-8 ↔ UTF-16 round trip on the source
-   * body. Sync-only; for the async variant see `transform_native_bridge_async`.
+   * `crates/rolldown_binding/src/native_bridge.rs`) which carries both the
+   * source code and the module id. Returns a fresh handle (or null).
+   * Avoids the UTF-8 ↔ UTF-16 round trip on the source body AND the id.
+   * Sync-only; for the async variant see `transform_native_bridge_async`.
    */
-  transformNativeBridge?: (sourceHandle: bigint, id: string) => bigint | null | undefined
+  transformNativeBridge?: (handle: bigint) => bigint | null | undefined
   /**
    * Experimental: async zero-copy bridge transform hook. Takes a `bigint`
    * handle and MUST return a `Promise<bigint>` (or `Promise<null>`/
    * `Promise<undefined>`). The JS thread is freed immediately on dispatch
    * while the napi-side `transformNativeAsync` resolves the Promise.
    */
-  transformNativeBridgeAsync?: (sourceHandle: bigint, id: string) => Promise<bigint | null | undefined>
+  transformNativeBridgeAsync?: (handle: bigint) => Promise<bigint | null | undefined>
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
   moduleParsedMeta?: BindingPluginHookMeta
   buildEnd?: (ctx: BindingPluginContext, error?: BindingError[]) => MaybePromise<VoidNullable>

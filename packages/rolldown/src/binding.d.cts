@@ -1603,6 +1603,18 @@ export declare class BenchOxcTransformer {
   transformNativeAsync(sourceHandle: bigint): Promise<bigint>
 }
 
+export declare class BenchVizeTransformer {
+  /**
+   * `libPath` points to `libbench_vize_sfc_lib.dylib` (or `.so`/`.dll`) built
+   * from `scripts/bench/seven-way-vue/native/`. dlopens it and resolves the
+   * three ABI symbols once at construction; subsequent calls go through raw
+   * fn pointers.
+   */
+  constructor(libPath: string)
+  transformNative(sourceHandle: bigint): bigint | null
+  transformNativeAsync(sourceHandle: bigint): Promise<bigint | null>
+}
+
 export declare class BindingBundleEndEventData {
   output: string
   duration: number

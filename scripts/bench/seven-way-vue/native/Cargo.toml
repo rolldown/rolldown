@@ -1,0 +1,29 @@
+# Standalone workspace — explicitly NOT part of rolldown's workspace at /.
+# Required because Vize pins a different OXC fork (see notes below).
+[workspace]
+
+[package]
+name = "bench_vize_sfc_lib"
+version = "0.0.1"
+publish = false
+edition = "2024"
+
+# This crate is INTENTIONALLY outside the rolldown workspace. Vize pins OXC to
+# a specific git fork (`oxc-project/oxc#8265ed94...` at version =0.127.0) that
+# clashes with rolldown's `oxc = "0.136.0"`. Compiling them together produces
+# duplicate trait impls. Keeping this cdylib in its own Cargo project means
+# Vize statically links against its own OXC, and rolldown loads us via dlopen
+# (no symbol overlap on the wire — the FFI surface uses only `#[repr(C)]`
+# types).
+
+[lib]
+crate-type = ["cdylib"]
+doctest = false
+
+[dependencies]
+vize_atelier_sfc = { git = "https://github.com/ubugeeei-prod/vize" }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

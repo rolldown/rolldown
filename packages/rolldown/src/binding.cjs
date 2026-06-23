@@ -611,6 +611,7 @@ module.exports.moduleRunnerTransformSync = nativeBinding.moduleRunnerTransformSy
 module.exports.transform = nativeBinding.transform
 module.exports.transformSync = nativeBinding.transformSync
 module.exports.BenchOxcTransformer = nativeBinding.BenchOxcTransformer
+module.exports.BenchVizeTransformer = nativeBinding.BenchVizeTransformer
 module.exports.BindingBundleEndEventData = nativeBinding.BindingBundleEndEventData
 module.exports.BindingBundleErrorEventData = nativeBinding.BindingBundleErrorEventData
 module.exports.BindingBundler = nativeBinding.BindingBundler

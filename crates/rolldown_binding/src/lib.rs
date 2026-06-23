@@ -31,6 +31,7 @@ use napi_derive::napi;
 static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 
 pub mod bench_oxc_transformer;
+pub mod bench_vize_transformer;
 pub mod binding_bundler;
 pub mod binding_dev_engine;
 pub mod binding_dev_options;

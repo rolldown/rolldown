@@ -21,7 +21,8 @@
     "rolldown-tests": "workspace:*",
     "semver": "catalog:",
     "unified": "catalog:",
-    "zx": "catalog:"
+    "zx": "catalog:",
+    "@vue/compiler-sfc": "^3.5.38"
   },
   "devDependencies": {
     "@oxc-node/cli": "catalog:",

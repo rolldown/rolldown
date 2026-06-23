@@ -191,3 +191,8 @@ nul
 
 # Zed local config
 .zed
+
+# Seven-way Vue bench
+/scripts/bench/seven-way-vue/.fixture/
+/scripts/bench/seven-way-vue/native/target/
+/scripts/bench/seven-way-vue/native/Cargo.lock

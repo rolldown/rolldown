@@ -1,0 +1,5 @@
+# Vize crates require rustc >= 1.95.0. Pinning the same channel rolldown uses
+# at the workspace root.
+[toolchain]
+channel = "1.96.0"
+profile = "default"

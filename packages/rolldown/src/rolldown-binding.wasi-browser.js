@@ -93,6 +93,7 @@ export const moduleRunnerTransformSync = __napiModule.exports.moduleRunnerTransf
 export const transform = __napiModule.exports.transform
 export const transformSync = __napiModule.exports.transformSync
 export const BenchOxcTransformer = __napiModule.exports.BenchOxcTransformer
+export const BenchVizeTransformer = __napiModule.exports.BenchVizeTransformer
 export const BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 export const BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
 export const BindingBundler = __napiModule.exports.BindingBundler

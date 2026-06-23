@@ -675,6 +675,12 @@ export { cli_option_nested_default as default };
 "
 `;
 
+exports[`cli options for bundling > should handle options with dot when the name after dot is in kebab-case 1`] = `
+"<DIR>/index.js  chunk │ size: 0.09 kB
+
+"
+`;
+
 exports[`cli options for bundling > should handle single array options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.14 kB
 

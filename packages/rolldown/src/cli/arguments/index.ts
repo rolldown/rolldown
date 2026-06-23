@@ -74,14 +74,17 @@ function kebabToCamelCase(input: string) {
   });
 }
 
-function camelizeNestedKeys(value: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
+function camelizeNestedKeys(value: Record<string, any>): Record<string, any> {
+  const result: Record<string, any> = {};
 
   for (const [key, nestedValue] of Object.entries(value)) {
-    result[kebabToCamelCase(key)] =
-      nestedValue && typeof nestedValue === 'object'
-        ? camelizeNestedKeys(nestedValue as Record<string, unknown>)
-        : nestedValue;
+    if (Array.isArray(nestedValue)) {
+      result[kebabToCamelCase(key)] = nestedValue;
+    } else if (nestedValue && typeof nestedValue === 'object') {
+      result[kebabToCamelCase(key)] = camelizeNestedKeys(nestedValue as Record<string, any>);
+    } else {
+      result[kebabToCamelCase(key)] = nestedValue;
+    }
   }
 
   return result;

@@ -149,6 +149,16 @@ describe('cli options for bundling', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
+  it('should handle options with dot when the name after dot is in kebab-case', async () => {
+    const cwd = cliFixturesDir('cli-option-object');
+    const status = await $({
+      cwd,
+    })`rolldown index.ts --generated-code.profiler-names --module-types .123:text,notjson:json --module-types .b64:base64 -d dist`;
+
+    expect(status.exitCode).toBe(0);
+    expect(cleanStdout(status.stdout)).toMatchSnapshot();
+  });
+
   it('should handle comma-separated object options mixed with single object', async () => {
     const cwd = cliFixturesDir('cli-option-object');
     const status = await $({

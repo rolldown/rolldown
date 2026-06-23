@@ -172,46 +172,42 @@ impl FileEmitter {
       xxhash_with_base(file.source.as_bytes(), self.options.hash_characters.base()).into();
 
     // Deduplicate assets if an explicit fileName is not provided
-    let reference_id = if file.file_name.is_none() {
+    if file.file_name.is_none() {
       // Use entry API to atomically check and insert
       match self.source_hash_to_reference_id.entry(hash.clone()) {
         Entry::Occupied(entry) => {
           // File already exists, add metadata and return existing reference_id
           let reference_id = entry.get().clone();
-          self.files.entry(reference_id.clone()).and_modify(|output| {
+          if let Some(mut output) = self.files.get_mut(&reference_id) {
+            if file.name.as_ref().is_some_and(|n| output.names.iter().all(|e| n < e)) {
+              self.generate_file_name(
+                &mut file, &hash, asset_filename_template, sanitized_file_name,
+              )?;
+              output.filename = file.file_name.clone().unwrap();
+            }
             if let Some(name) = file.name {
               output.names.push(name);
             }
             if let Some(original_file_name) = file.original_file_name {
               output.original_file_names.push(original_file_name);
             }
-          });
+          }
           return Ok(reference_id);
         }
         Entry::Vacant(entry) => {
-          // First time seeing this file, generate reference_id and continue
           let reference_id = self.assign_reference_id(None);
+          // Insert into self.files while the VacantEntry holds its shard lock,
+          // so any concurrent Occupied branch always finds the files entry.
+          self.insert_new_file(&mut file, &hash, reference_id.clone(), asset_filename_template, sanitized_file_name)?;
           entry.insert(reference_id.clone());
-          reference_id
+          return Ok(reference_id);
         }
       }
-    } else {
-      // File has explicit fileName, no deduplication needed
-      self.assign_reference_id(file.file_name.clone())
-    };
+    }
 
-    // Generate filename and insert into files map
-    self.generate_file_name(&mut file, &hash, asset_filename_template, sanitized_file_name)?;
-    self.files.insert(
-      reference_id.clone(),
-      OutputAsset {
-        filename: file.file_name.unwrap(),
-        source: std::mem::take(&mut file.source),
-        names: std::mem::take(&mut file.name).map_or(vec![], |name| vec![name]),
-        original_file_names: std::mem::take(&mut file.original_file_name)
-          .map_or(vec![], |original_file_name| vec![original_file_name]),
-      },
-    );
+    // File has explicit fileName, no deduplication needed
+    let reference_id = self.assign_reference_id(file.file_name.clone());
+    self.insert_new_file(&mut file, &hash, reference_id.clone(), asset_filename_template, sanitized_file_name)?;
     Ok(reference_id)
   }
 
@@ -290,6 +286,28 @@ impl FileEmitter {
 
       file.file_name = Some(filename);
     }
+    Ok(())
+  }
+
+  fn insert_new_file(
+    &self,
+    file: &mut EmittedAsset,
+    hash: &ArcStr,
+    reference_id: ArcStr,
+    asset_filename_template: Option<FilenameTemplate>,
+    sanitized_file_name: Option<ArcStr>,
+  ) -> anyhow::Result<()> {
+    self.generate_file_name(file, hash, asset_filename_template, sanitized_file_name)?;
+    self.files.insert(
+      reference_id,
+      OutputAsset {
+        filename: file.file_name.clone().unwrap(),
+        source: std::mem::take(&mut file.source),
+        names: std::mem::take(&mut file.name).map_or(vec![], |name| vec![name]),
+        original_file_names: std::mem::take(&mut file.original_file_name)
+          .map_or(vec![], |original_file_name| vec![original_file_name]),
+      },
+    );
     Ok(())
   }
 

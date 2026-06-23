@@ -11,7 +11,7 @@ bin/cli.mjs
     → parseCliArguments()
       → arguments/index.ts
         → getCliSchemaInfo()                 — flatten valibot schema into { key: { type, description } }
-        → build `options` export             — for help.ts consumption (kebab-case keys)
+        → build `options` export             — for help.ts consumption (camelCase keys, aligns help display with Rollup/Vite)
         → build knownKeys / shortAliases     — for post-processing
         → register options with cac          — loop schemaInfo + alias, build rawName strings
         → cli.parse(process.argv, { run: true })

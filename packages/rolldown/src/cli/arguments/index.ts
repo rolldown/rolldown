@@ -46,8 +46,9 @@ export const options: {
         result.hint = config.hint;
       }
 
-      const kebabKey = camelCaseToKebabCase(key);
-      const optionKey = config?.reverse ? `no-${kebabKey}` : kebabKey;
+      // Display options in camelCase (aligns with Rollup and Vite). The parser still
+      // accepts kebab-case thanks to cac's top-level conversion.
+      const optionKey = config?.reverse ? `no-${key}` : key;
       return [optionKey, result];
     }),
 );

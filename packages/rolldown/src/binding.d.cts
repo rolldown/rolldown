@@ -1605,12 +1605,15 @@ export declare class BenchOxcTransformer {
 
 export declare class BenchVizeTransformer {
   /**
-   * `libPath` points to `libbench_vize_sfc_lib.dylib` (or `.so`/`.dll`) built
-   * from `scripts/bench/seven-way-vue/native/`. dlopens it and resolves the
-   * three ABI symbols once at construction; subsequent calls go through raw
-   * fn pointers.
+   * Constructs the transformer by `dlopen`ing the Vize bench cdylib that
+   * lives at `scripts/bench/seven-way-vue/native/target/release/...` in
+   * this repository. The path is resolved at compile time relative to this
+   * crate's `CARGO_MANIFEST_DIR`, so JS users just write
+   * `new binding.BenchVizeTransformer()` — matching `BenchOxcTransformer`'s
+   * no-arg shape. Set `BENCH_VIZE_LIB_PATH` to override (e.g. for CI builds
+   * that put the cdylib elsewhere).
    */
-  constructor(libPath: string)
+  constructor()
   transformNative(sourceHandle: bigint): bigint | null
   transformNativeAsync(sourceHandle: bigint): Promise<bigint | null>
 }

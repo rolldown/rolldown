@@ -20,7 +20,11 @@ const binding = require('../../../packages/rolldown/src/binding.cjs');
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_JSON = join(__dirname, 'corpus.json');
 const FIXTURE_DIR = join(__dirname, '.fixture');
-const VIZE_LIB_PATH = process.env.VIZE_LIB_PATH ?? resolve(
+
+// Path is now resolved inside BenchVizeTransformer's constructor (compile-time
+// relative to crates/rolldown_binding). The `defineNativeLibPlugin` variant
+// still needs an explicit path because it's generic across cdylibs.
+const VIZE_LIB_PATH = resolve(
   __dirname,
   'native/target/release/libbench_vize_sfc_lib.dylib',
 );
@@ -126,27 +130,15 @@ function utilsAsyncPlugin() {
 }
 
 // --- Variants 3 + 4: bridge sync / async (Vize via dlopened cdylib) ---
-let transformer;
-function ensureTransformer() {
-  if (!transformer) transformer = new binding.BenchVizeTransformer(VIZE_LIB_PATH);
-  return transformer;
-}
+const transformer = new binding.BenchVizeTransformer();
 
 function bridgeSyncPlugin() {
-  const t = ensureTransformer();
   return {
     name: 'vue-bench-bridge-sync',
     transformNativeBridge(handle) {
       try {
-        return t.transformNative(handle);
+        return transformer.transformNative(handle);
       } catch {
-        // Vize failed — rolldown will keep the original .vue source which
-        // its TS parser can't read. The JS-side utils plugins handle this by
-        // returning a stub; we'd need a stub-handle path here to do the
-        // same, but the bridge transform hook returns a bigint handle (not
-        // a JsObject). Returning undefined leaves the original source, which
-        // is fine when most files succeed — the few that don't will be
-        // caught by the skip list.
         return undefined;
       }
     },
@@ -154,11 +146,10 @@ function bridgeSyncPlugin() {
 }
 
 function bridgeAsyncPlugin() {
-  const t = ensureTransformer();
   return {
     name: 'vue-bench-bridge-async',
     transformNativeBridgeAsync(handle) {
-      return t.transformNativeAsync(handle).catch(() => undefined);
+      return transformer.transformNativeAsync(handle).catch(() => undefined);
     },
   };
 }

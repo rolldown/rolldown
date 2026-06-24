@@ -34,13 +34,18 @@ pub struct BenchVizeTransformer {
 
 #[napi]
 impl BenchVizeTransformer {
-  /// `libPath` points to `libbench_vize_sfc_lib.dylib` (or `.so`/`.dll`) built
-  /// from `scripts/bench/seven-way-vue/native/`. dlopens it and resolves the
-  /// three ABI symbols once at construction; subsequent calls go through raw
-  /// fn pointers.
+  /// Constructs the transformer by `dlopen`ing the Vize bench cdylib that
+  /// lives at `scripts/bench/seven-way-vue/native/target/release/...` in
+  /// this repository. The path is resolved at compile time relative to this
+  /// crate's `CARGO_MANIFEST_DIR`, so JS users just write
+  /// `new binding.BenchVizeTransformer()` — matching `BenchOxcTransformer`'s
+  /// no-arg shape. Set `BENCH_VIZE_LIB_PATH` to override (e.g. for CI builds
+  /// that put the cdylib elsewhere).
   #[napi(constructor)]
-  pub fn new(lib_path: String) -> napi::Result<Self> {
-    // SAFETY: dlopen runs the library's initializers; user-supplied path.
+  pub fn new() -> napi::Result<Self> {
+    let lib_path = std::env::var("BENCH_VIZE_LIB_PATH")
+      .unwrap_or_else(|_| default_lib_path().to_string());
+    // SAFETY: dlopen runs the library's initializers; path is known-by-build.
     let lib = unsafe { Library::new(&lib_path) }
       .with_context(|| format!("failed to dlopen Vize bench cdylib: {lib_path}"))
       .map_err(|e| napi::Error::from_reason(format!("{e:#}")))?;
@@ -92,6 +97,34 @@ impl BenchVizeTransformer {
     // SAFETY: same contract as `transform_native`.
     let holder = unsafe { NativeStringHolder::handle_as_ref(source_handle) };
     self.transform_inner(holder)
+  }
+}
+
+/// Cdylib path baked at compile time. `CARGO_MANIFEST_DIR` is the dir
+/// containing this crate's `Cargo.toml`, so the bench artifact lives at
+/// `<workspace_root>/scripts/bench/seven-way-vue/native/target/release/...`.
+/// Per-platform file name follows the standard cdylib convention.
+const fn default_lib_path() -> &'static str {
+  #[cfg(target_os = "macos")]
+  {
+    concat!(
+      env!("CARGO_MANIFEST_DIR"),
+      "/../../scripts/bench/seven-way-vue/native/target/release/libbench_vize_sfc_lib.dylib"
+    )
+  }
+  #[cfg(all(unix, not(target_os = "macos")))]
+  {
+    concat!(
+      env!("CARGO_MANIFEST_DIR"),
+      "/../../scripts/bench/seven-way-vue/native/target/release/libbench_vize_sfc_lib.so"
+    )
+  }
+  #[cfg(windows)]
+  {
+    concat!(
+      env!("CARGO_MANIFEST_DIR"),
+      "/../../scripts/bench/seven-way-vue/native/target/release/bench_vize_sfc_lib.dll"
+    )
   }
 }
 

@@ -181,7 +181,7 @@ json-escape-simd = "3"
 json-strip-comments = "3"
 jsonschema = { version = "0.46.5", default-features = false }
 memchr = "2.8.2"
-mimalloc-safe = { git = "https://github.com/napi-rs/mimalloc-safe", branch = "06-23-chore_deps_switch_mimalloc3_to_upstream_microsoft_mimalloc" }
+mimalloc-safe = "0.1.64"
 mime = "0.3.17"
 nodejs-built-in-modules = "1.0.0"
 nom = "8.0.0"

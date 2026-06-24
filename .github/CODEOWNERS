@@ -12,15 +12,13 @@
 # requirement (GitHub requests review from all listed owners, but only one
 # approval is needed).
 #
-# Precedence: GitHub uses LAST-MATCH-WINS. The global default (`*`) is listed
-# FIRST so that every more specific directory rule below it takes precedence.
-# Rules are grouped general -> specific within each section.
+# Precedence: GitHub uses LAST-MATCH-WINS. There is intentionally NO global
+# default (`*`) rule, so a file that matches none of the specific rules below
+# has no owners and won't auto-request reviews from everyone. This keeps small
+# or cross-cutting changes (e.g. root lockfile/dependency bumps) from spamming
+# every maintainer's GitHub review inbox; request the right reviewers manually
+# for those. Rules are grouped general -> specific within each section.
 # ============================================================================
-
-# ----------------------------------------------------------------------------
-# Global default (most general -- overridden by every rule below)
-# ----------------------------------------------------------------------------
-*                                                       @hyf0 @IWANABETHATGUY @shulaoda @h-a-n-a
 
 # ----------------------------------------------------------------------------
 # Core engine

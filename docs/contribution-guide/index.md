@@ -13,7 +13,7 @@ Outside of GitHub, we also use a [Discord server](https://chat.rolldown.rs) for 
 When using AI tools (including LLMs like ChatGPT, Claude, Copilot, etc.) to contribute to Rolldown:
 
 - **Please disclose AI usage** to reduce maintainer fatigue
-- **Please open an issue for discussion first**, before submitting a pull request
+- **Discuss before you open a pull request when the change calls for it** — follow the same rules as [Submitting a pull request](#submitting-a-pull-request) below; if you're unsure which path applies, open an issue first
 - **You are responsible** for all AI-generated issues or PRs you submit
 - **Low-quality or unreviewed AI content will be closed immediately**
 - **Contributors who submit repeated low-quality ("slop") PRs will be banned without prior warning.** Bans may be lifted if you commit to contributing to Rolldown in accordance with this policy. You may request an unban via our [Discord](https://chat.rolldown.rs/).
@@ -32,7 +32,7 @@ Before requesting new functionality, view [open issues](https://github.com/rolld
 
 ## Submitting a pull request
 
-We accept pull requests for all bugs, fixes, improvements, and new features. For anything beyond a trivial fix, please open an issue for discussion first. Before submitting a pull request, be sure your build passes locally using the development workflow above.
+We welcome pull requests for bugs, fixes, improvements, and new features. Before you open one, please check which of the two paths below applies to your change: [send it directly](#send-a-pull-request-directly), or [discuss the approach first](#discuss-the-approach-first). Either way, be sure your build passes locally before you submit.
 
 For setting up the project's development environment, see [Project Setup](../development-guide/setup-the-project.md).
 
@@ -41,6 +41,29 @@ For setting up the project's development environment, see [Project Setup](../dev
 Please read the [Etiquette](https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette) chapter before submitting a pull request.
 
 :::
+
+### Send a pull request directly
+
+No prior discussion is needed for changes whose correctness speaks for itself:
+
+- Clear bug fixes where the expected behavior is unambiguous
+- Documentation, typo, and comment fixes
+- Tests for existing behavior
+- Small, self-contained internal cleanups with no user-facing change
+
+If there's a related issue, link it in your pull request.
+
+### Discuss the approach first
+
+For the changes below, please open or comment on an issue and reach agreement with the team **before** you start coding or open a pull request:
+
+- New features and new public APIs
+- Changes to existing public APIs or to default behavior
+- Fixes for an issue that doesn't yet have an agreed-upon approach in the thread
+
+For these changes, the hard part is usually agreeing on the right direction, not writing the code. Talking it through first means your work goes into something we can merge, instead of stalling while the direction is still being worked out.
+
+If you open a pull request in this category without that agreement, we may close it. **Closing it is not a rejection of your work, or of you as a contributor.** It only means the change needs to go through the discussion process first. If you want to drive it forward, share your thinking on the linked issue or in our [Discord](https://chat.rolldown.rs) — once there's agreement on the direction, the pull request is very welcome.
 
 ### Draft pull requests
 

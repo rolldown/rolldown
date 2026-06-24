@@ -43,17 +43,22 @@
 //! their memory window and spike peak RSS), or for anything enqueued in a
 //! loop.
 
+#[cfg(not(target_family = "wasm"))]
 use std::sync::{Condvar, Mutex, PoisonError};
 
 /// Number of `spawn_drop` closures that have been enqueued but not yet
 /// finished dropping their value.
+#[cfg(not(target_family = "wasm"))]
 static PENDING: Mutex<usize> = Mutex::new(0);
+#[cfg(not(target_family = "wasm"))]
 static PENDING_IS_ZERO: Condvar = Condvar::new();
 
 /// Decrements `PENDING` on drop, so the count goes down even if the deferred
 /// value's `Drop` impl panics — a panic must not wedge `drain()` forever.
+#[cfg(not(target_family = "wasm"))]
 struct PendingGuard;
 
+#[cfg(not(target_family = "wasm"))]
 impl Drop for PendingGuard {
   fn drop(&mut self) {
     let mut pending = PENDING.lock().unwrap_or_else(PoisonError::into_inner);
@@ -68,11 +73,20 @@ impl Drop for PendingGuard {
 ///
 /// See the module docs for the invariants call sites must uphold.
 pub fn spawn_drop<T: Send + 'static>(value: T) {
-  *PENDING.lock().unwrap_or_else(PoisonError::into_inner) += 1;
-  rayon::spawn(move || {
-    let _guard = PendingGuard;
-    drop(value);
-  });
+  // On wasm the thread that later calls `drain()` may be the browser main
+  // thread, where the matching `Condvar::wait` lowers to `memory.atomic.wait`
+  // and is illegal ("Atomics.wait cannot be called in this context"). Drop
+  // inline so there is never a cross-build wait to perform there.
+  #[cfg(target_family = "wasm")]
+  drop(value);
+  #[cfg(not(target_family = "wasm"))]
+  {
+    *PENDING.lock().unwrap_or_else(PoisonError::into_inner) += 1;
+    rayon::spawn(move || {
+      let _guard = PendingGuard;
+      drop(value);
+    });
+  }
 }
 
 /// Block until every pending deferred drop has finished.
@@ -81,8 +95,13 @@ pub fn spawn_drop<T: Send + 'static>(value: T) {
 /// watch rebuild can never overlap the previous build's frees on the shared
 /// rayon pool. Expected to be a no-op in steady state; see the module docs.
 pub fn drain() {
-  let mut pending = PENDING.lock().unwrap_or_else(PoisonError::into_inner);
-  while *pending > 0 {
-    pending = PENDING_IS_ZERO.wait(pending).unwrap_or_else(PoisonError::into_inner);
+  // wasm drops inline in `spawn_drop`, so nothing is ever pending; a
+  // `Condvar::wait` here would crash on the browser main thread.
+  #[cfg(not(target_family = "wasm"))]
+  {
+    let mut pending = PENDING.lock().unwrap_or_else(PoisonError::into_inner);
+    while *pending > 0 {
+      pending = PENDING_IS_ZERO.wait(pending).unwrap_or_else(PoisonError::into_inner);
+    }
   }
 }

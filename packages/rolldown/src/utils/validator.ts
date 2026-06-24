@@ -668,6 +668,7 @@ const InputOptionsSchema = v.strictObject({
         ]),
       ),
       lazyBarrel: v.optional(v.boolean()),
+      minChunkSize: v.optional(v.number()),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),

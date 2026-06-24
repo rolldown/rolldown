@@ -106,6 +106,7 @@ mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
 mod finalize_modules;
 mod manual_code_splitting;
+mod min_chunk_size;
 mod minify_chunks;
 mod on_demand_wrapping;
 mod post_banner_footer;
@@ -139,6 +140,11 @@ impl<'a> GenerateStage<'a> {
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
     self.plugin_driver.render_start(self.options).await?;
     let mut chunk_graph = self.generate_chunks().await?;
+
+    // `experimental.minChunkSize`: duplicate small side-effect-free common leaf
+    // chunks into their importers (webpack `splitChunks.minSize` parity). Must run
+    // before `compute_cross_chunk_links` so duplicated leaves are accounted for.
+    self.merge_small_common_leaf_chunks(&mut chunk_graph);
 
     // Count only live chunks. Chunks merged away during chunk optimization (e.g.
     // the standalone runtime chunk folded back into its host) stay in
@@ -176,12 +182,17 @@ impl<'a> GenerateStage<'a> {
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
-      chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
+      // Disjoint borrow: `chunk_table` mutably, `duplicated_leaf_pinned_names`
+      // immutably, so the deconflicter can pin duplicated-leaf names per chunk.
+      let ChunkGraph { chunk_table, duplicated_leaf_pinned_names, .. } = &mut chunk_graph;
+      let pinned_names = &*duplicated_leaf_pinned_names;
+      chunk_table.par_iter_mut().for_each(|chunk| {
         deconflict_chunk_symbols(
           chunk,
           self.link_output,
           self.options.format,
           &index_chunk_id_to_name,
+          pinned_names,
         );
       });
     });

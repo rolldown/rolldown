@@ -302,6 +302,12 @@ impl GenerateStage<'_> {
     for (chunk_idx, symbol_list) in chunk_id_to_symbols_vec {
       for declared in symbol_list {
         let declared = declared.inner();
+        // Duplicated leaves (experimental.minChunkSize) live in several chunks;
+        // their symbol chunk_idx was pinned in `merge_small_common_leaf_chunks`,
+        // so skip the one-chunk assignment + its debug assertion here.
+        if chunk_graph.duplicated_leaf_modules.contains(&declared.owner) {
+          continue;
+        }
         if cfg!(debug_assertions) {
           let symbol_data = symbols.get(declared);
           debug_assert!(
@@ -501,6 +507,12 @@ impl GenerateStage<'_> {
         let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
         for import_ref in chunk_meta_imports.iter().copied() {
           if !self.link_output.used_symbol_refs.contains(&import_ref) {
+            continue;
+          }
+          // A duplicated leaf (experimental.minChunkSize) is copied into every
+          // chunk that references it, so it is always local — never import it
+          // across chunks.
+          if chunk_graph.duplicated_leaf_modules.contains(&import_ref.owner) {
             continue;
           }
           // If the symbol from external module and the format is commonjs, we might need to insert runtime

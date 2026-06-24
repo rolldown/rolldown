@@ -1,7 +1,8 @@
 # Min-size chunk merging (`experimental.minChunkSize`)
 
-Status: **in progress** — Stage 1 (option) implemented; Stages 2–4 (the linker
-duplication) are the remaining work. See the staged plan below.
+Status: **implemented** (experimental, default-off). Pass lives in
+`crates/rolldown/src/stages/generate_stage/min_chunk_size.rs`
+(`GenerateStage::merge_small_common_leaf_chunks`).
 
 ## Why
 
@@ -96,14 +97,24 @@ ways to get the authoritative set:
 4. Local-vs-cross set-membership in `compute_cross_chunk_links.rs` +
    `module_finalizers/mod.rs:266`.
 
-## Staged plan (option stays default-off until Stage 4)
+## Staged plan (all landed)
 
-- **S1 (done):** option plumbing; compiles. Behavior-neutral.
-- **S2:** detector + graph mutation + pinned-name computation behind the option;
-  unit-test the pure detector predicate + the pinned-name uniqueness.
-- **S3:** set-membership local-vs-cross; verify default-off snapshots unchanged.
-- **S4:** ON fixtures (multi-export leaf, 3-way share, minify on/off, re-export
-  exclusion) asserting chunk-count drop + correct runtime; off-vs-on benchmark.
+- **S1 (done):** option plumbing; behavior-neutral.
+- **S2 (done):** detector + graph mutation + pinned-name computation behind the option.
+- **S3 (done):** duplicated-leaf "local everywhere" rule in
+  `compute_cross_chunk_links.rs` (symbol-assign skip + cross-import skip) and
+  `module_finalizers/mod.rs`; `Renamer::pin_name` + deconflict pinning.
+- **S4 (done):** ON fixtures in `packages/rolldown/tests/fixtures/min-chunk-size/`
+  (`basic`, `multi-export-leaf` with minify, `re-export-excluded`) asserting
+  chunk-count drop + correct runtime.
+
+### Note: re-export completeness (learned during S4)
+
+The conservative re-export exclusion must scan **all** modules, not just
+`is_included` ones — a pure re-export pass-through (`export { k } from './util'`)
+is typically tree-shaken (`is_included == false`) yet a consumer can still
+reference the leaf through it. The `re-export-excluded` fixture pins this: it
+failed with `ReferenceError: k is not defined` before the all-modules scan.
 
 ## Risks / edge cases
 

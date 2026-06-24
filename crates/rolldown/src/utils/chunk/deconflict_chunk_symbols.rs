@@ -9,10 +9,31 @@ use crate::{
 };
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, NormalModule, OutputFormat, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleIdx, NormalModule, OutputFormat, SymbolRef,
+  TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
+
+/// Pin every duplicated-leaf symbol (`experimental.minChunkSize`) present in this
+/// chunk to its globally-unique name and reserve it *before* the normal
+/// deconfliction pass, so author symbols (including entry-module symbols, which
+/// otherwise bypass the `accept` veto) yield to the pinned name instead.
+fn pin_duplicated_leaf_names(
+  renamer: &mut Renamer,
+  chunk: &Chunk,
+  duplicated_leaf_pinned_names: &FxHashMap<SymbolRef, CompactStr>,
+) {
+  if duplicated_leaf_pinned_names.is_empty() {
+    return;
+  }
+  let chunk_modules: FxHashSet<ModuleIdx> = chunk.modules.iter().copied().collect();
+  for (&symbol_ref, name) in duplicated_leaf_pinned_names {
+    if chunk_modules.contains(&symbol_ref.owner) {
+      renamer.pin_name(symbol_ref, name.clone());
+    }
+  }
+}
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn deconflict_chunk_symbols(
@@ -20,8 +41,11 @@ pub fn deconflict_chunk_symbols(
   link_output: &LinkStageOutput,
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
+  duplicated_leaf_pinned_names: &FxHashMap<SymbolRef, CompactStr>,
 ) {
   let mut renamer = Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
+
+  pin_duplicated_leaf_names(&mut renamer, chunk, duplicated_leaf_pinned_names);
   // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
   // These are identifiers referenced but not defined in the module's scope (e.g., `console`, `window`).
   chunk

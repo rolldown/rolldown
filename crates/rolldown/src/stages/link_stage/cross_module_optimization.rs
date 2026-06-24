@@ -416,7 +416,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
         // mirrors what finalization checks for identifier callees.
         let is_free = symbol_ref
           .is_side_effect_free_function(self.immutable_ctx.symbols, self.immutable_ctx.modules)
-          && symbol_ref.is_not_reassigned(self.immutable_ctx.symbols) == Some(true);
+          && symbol_ref.is_not_reassigned(self.immutable_ctx.symbols);
         let is_annotation_only = is_free
           && self
             .immutable_ctx

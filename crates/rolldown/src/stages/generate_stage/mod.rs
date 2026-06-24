@@ -11,8 +11,7 @@ use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{
-  PathBufExt as _, PathExt as _, representative_file_name_for_preserve_modules,
-  strip_path_prefix_to_slash,
+  PathBufExt as _, representative_file_name_for_preserve_modules, strip_path_prefix_to_slash,
 };
 use rolldown_utils::{
   dashmap::FxDashMap,
@@ -299,9 +298,7 @@ impl<'a> GenerateStage<'a> {
                 }
               }
             } else {
-              let chunk_name = sanitize_filename
-                .call(&module.id().as_str().as_path().representative_file_name())
-                .await?;
+              let chunk_name = sanitize_filename.call(&module.id().representative_name()).await?;
 
               PreGeneratedChunkName {
                 representative_chunk_name: chunk_name.clone(),
@@ -318,8 +315,7 @@ impl<'a> GenerateStage<'a> {
               chunk.modules.iter().rev().find(|each| **each != self.link_output.runtime.id())
             {
               let module = &modules[*module_id];
-              let module_id = module.id().as_str();
-              let name = module_id.as_path().representative_file_name();
+              let name = module.id().representative_name();
               let sanitized_filename = sanitize_filename.call(&name).await?;
               Ok(PreGeneratedChunkName {
                 representative_chunk_name: sanitized_filename.clone(),

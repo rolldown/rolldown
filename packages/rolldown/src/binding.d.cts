@@ -1614,6 +1614,17 @@ export declare class BenchVizeTransformer {
    * that put the cdylib elsewhere).
    */
   constructor()
+  /**
+   * Plain-string entry: source + id cross napi as JS strings (one
+   * UTF-16↔UTF-8 round trip each, plus a heap allocation for `source`'s
+   * owned String). Equivalent to BenchOxcTransformer::transform_str.
+   */
+  transformStr(source: string, id: string): string
+  /**
+   * Async plain-string entry. Yields once before the CPU work so the napi
+   * async machinery treats it as truly async.
+   */
+  transformStrAsync(source: string, id: string): Promise<string>
   transformNative(sourceHandle: bigint): bigint | null
   transformNativeAsync(sourceHandle: bigint): Promise<bigint | null>
 }

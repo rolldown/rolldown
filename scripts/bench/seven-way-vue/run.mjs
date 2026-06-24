@@ -90,16 +90,17 @@ function makeBasePlugins() {
   ];
 }
 
-// --- Variant 1: utils-sync (plugin-vue JS, sync hook) ---
-//
 // `moduleType: 'ts'` because @vue/compiler-sfc leaves `import type` etc. in
 // the compileScript output — it's plugin-vue's downstream esbuild-in-Vite
 // step that normally strips TS. We let rolldown parse as TS so the
 // downstream OXC parser handles those constructs. Vize's output is already
 // TS-stripped, but `ts` is a superset so this works for both bridges too.
-function utilsSyncPlugin() {
+const transformer = new binding.BenchVizeTransformer();
+
+// --- Variant 1a: utils-sync-js (@vue/compiler-sfc, sync hook) ---
+function utilsSyncJsPlugin() {
   return {
-    name: 'vue-bench-utils-sync',
+    name: 'vue-bench-utils-sync-js',
     transform(code, id) {
       if (!id.endsWith('.vue')) return null;
       try {
@@ -113,10 +114,10 @@ function utilsSyncPlugin() {
   };
 }
 
-// --- Variant 2: utils-async (plugin-vue JS, async hook) ---
-function utilsAsyncPlugin() {
+// --- Variant 1b: utils-async-js (@vue/compiler-sfc, async hook) ---
+function utilsAsyncJsPlugin() {
   return {
-    name: 'vue-bench-utils-async',
+    name: 'vue-bench-utils-async-js',
     async transform(code, id) {
       if (!id.endsWith('.vue')) return null;
       try {
@@ -129,9 +130,35 @@ function utilsAsyncPlugin() {
   };
 }
 
-// --- Variants 3 + 4: bridge sync / async (Vize via dlopened cdylib) ---
-const transformer = new binding.BenchVizeTransformer();
+// --- Variant 2a: utils-sync (Vize via napi string args, no handle bridge) ---
+//
+// Pays the JS-string marshalling cost on both the source argument and the
+// returned code — UTF-16↔UTF-8 plus a heap allocation per call. The
+// `BenchVizeTransformer.transformStr` napi method dispatches into the same
+// cdylib as `transformNative` and `defineNativeLibPlugin` would.
+function utilsSyncPlugin() {
+  return {
+    name: 'vue-bench-utils-sync',
+    transform(code, id) {
+      if (!id.endsWith('.vue')) return null;
+      return { code: transformer.transformStr(code, id), moduleType: 'ts' };
+    },
+  };
+}
 
+// --- Variant 2b: utils-async (Vize via napi string args, async hook) ---
+function utilsAsyncPlugin() {
+  return {
+    name: 'vue-bench-utils-async',
+    async transform(code, id) {
+      if (!id.endsWith('.vue')) return null;
+      const out = await transformer.transformStrAsync(code, id);
+      return { code: out, moduleType: 'ts' };
+    },
+  };
+}
+
+// --- Variants 3 + 4: bridge sync / async (Vize via dlopened cdylib + bigint handle) ---
 function bridgeSyncPlugin() {
   return {
     name: 'vue-bench-bridge-sync',
@@ -171,6 +198,12 @@ async function runOnce(variant) {
   let transformPlugin;
 
   switch (variant) {
+    case 'utils-sync-js':
+      transformPlugin = utilsSyncJsPlugin();
+      break;
+    case 'utils-async-js':
+      transformPlugin = utilsAsyncJsPlugin();
+      break;
     case 'utils-sync':
       transformPlugin = utilsSyncPlugin();
       break;
@@ -248,7 +281,7 @@ async function benchVariant(name) {
 
 const variants = (
   process.env.VARIANTS
-    ?? 'utils-sync,utils-async,bridge-sync,bridge-async,native-lib,bridge-parallel'
+    ?? 'utils-sync-js,utils-async-js,utils-sync,utils-async,bridge-sync,bridge-async,native-lib,bridge-parallel'
 )
   .split(',')
   .map((v) => v.trim())
@@ -263,12 +296,13 @@ console.log('\n--- summary (lower is better) ---');
 for (const v of variants) {
   console.log(`${v.padEnd(16)}:`, results[v]);
 }
-const baseline = results['utils-sync'];
+const baseline = results['utils-sync-js'] ?? results['utils-sync'];
+const baselineName = results['utils-sync-js'] ? 'utils-sync-js' : 'utils-sync';
 if (baseline) {
   for (const v of variants) {
-    if (v === 'utils-sync') continue;
+    if (v === baselineName) continue;
     const medX = (baseline.med / results[v].med).toFixed(3);
     const minX = (baseline.min / results[v].min).toFixed(3);
-    console.log(`speedup utils-sync→${v.padEnd(16)} median: ${medX}x  min: ${minX}x`);
+    console.log(`speedup ${baselineName}→${v.padEnd(16)} median: ${medX}x  min: ${minX}x`);
   }
 }

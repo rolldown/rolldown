@@ -77,6 +77,22 @@ impl BenchVizeTransformer {
     Ok(Self { _lib: Arc::new(lib), transform, drop_output })
   }
 
+  /// Plain-string entry: source + id cross napi as JS strings (one
+  /// UTF-16↔UTF-8 round trip each, plus a heap allocation for `source`'s
+  /// owned String). Equivalent to BenchOxcTransformer::transform_str.
+  #[napi]
+  pub fn transform_str(&self, source: String, id: String) -> String {
+    self.invoke_vize(&source, &id).unwrap_or_else(|_| stub_module())
+  }
+
+  /// Async plain-string entry. Yields once before the CPU work so the napi
+  /// async machinery treats it as truly async.
+  #[napi]
+  pub async fn transform_str_async(&self, source: String, id: String) -> String {
+    napi::tokio::task::yield_now().await;
+    self.invoke_vize(&source, &id).unwrap_or_else(|_| stub_module())
+  }
+
   #[napi(
     ts_args_type = "sourceHandle: bigint",
     ts_return_type = "bigint | null"
@@ -98,6 +114,10 @@ impl BenchVizeTransformer {
     let holder = unsafe { NativeStringHolder::handle_as_ref(source_handle) };
     self.transform_inner(holder)
   }
+}
+
+fn stub_module() -> String {
+  "export default {};\n".to_string()
 }
 
 /// Cdylib path baked at compile time. `CARGO_MANIFEST_DIR` is the dir

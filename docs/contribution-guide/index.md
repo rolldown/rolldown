@@ -42,6 +42,10 @@ Please read the [Etiquette](https://developer.mozilla.org/en-US/docs/MDN/Communi
 
 :::
 
+### Draft pull requests
+
+If your pull request is still a work in progress, please open it as a [draft](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/changing-the-stage-of-a-pull-request) and only mark it **Ready for review** once you genuinely want the team to review it. Converting a PR to "Ready for review" notifies reviewers and code owners, so please hold off until your changes are complete and your build passes locally. This keeps maintainers' inboxes focused on PRs that actually need attention.
+
 ### Branch organization
 
 Submit all pull requests directly to the `main` branch. We only use separate branches for upcoming releases / breaking changes, otherwise, everything points to main.

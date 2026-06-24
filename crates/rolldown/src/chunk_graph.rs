@@ -1,7 +1,7 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
-use oxc_str::CompactStr;
 use oxc_index::{IndexVec, index_vec};
+use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
   PostChunkOptimizationOperation, RuntimeHelper, SymbolRef,

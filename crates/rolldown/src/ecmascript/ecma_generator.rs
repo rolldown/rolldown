@@ -12,7 +12,7 @@ use rolldown_common::{
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookAddonArgs;
-use rolldown_sourcemap::Source;
+use rolldown_sourcemap::{Source, SourceJoiner, SourceMap};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -28,6 +28,7 @@ pub struct RenderedModuleSource {
   pub module_id: ModuleId,
   pub exec_order: u32,
   pub sources: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
+  sourcemap: Option<(usize, SourceMap)>,
 }
 
 impl RenderedModuleSource {
@@ -35,9 +36,80 @@ impl RenderedModuleSource {
     module_idx: ModuleIdx,
     module_id: ModuleId,
     exec_order: u32,
-    sources: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
+    mut sources: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
   ) -> Self {
-    Self { module_idx, module_id, exec_order, sources }
+    // Detach maps before `sources` is cloned into `RenderedModule` for plugin hooks.
+    // The source text stays shared through the Arc; chunk rendering owns the maps.
+    let mut detached_sourcemap = None;
+    if let Some(sources) = sources.as_mut() {
+      if let Some(sources) = Arc::get_mut(sources) {
+        for (index, source) in sources.iter_mut().enumerate() {
+          let sourcemap =
+            source.as_mut().take_sourcemap().or_else(|| source.as_ref().sourcemap().cloned());
+          if let Some(sourcemap) = sourcemap {
+            assert!(
+              detached_sourcemap.replace((index, sourcemap)).is_none(),
+              "a rendered module should contain at most one sourcemap"
+            );
+          }
+        }
+      } else {
+        // Custom renderers may already share the source array. Preserve behavior
+        // by cloning those maps; the normal codegen path always takes the branch above.
+        for (index, source) in sources.iter().enumerate() {
+          if let Some(sourcemap) = source.sourcemap().cloned() {
+            assert!(
+              detached_sourcemap.replace((index, sourcemap)).is_none(),
+              "a rendered module should contain at most one sourcemap"
+            );
+          }
+        }
+      }
+    }
+    Self { module_idx, module_id, exec_order, sources, sourcemap: detached_sourcemap }
+  }
+
+  pub fn append_sources(&mut self, source_joiner: &mut SourceJoiner<'_>) {
+    let Some(sources) = &self.sources else {
+      return;
+    };
+
+    for index in 0..sources.len() {
+      let sourcemap = self
+        .sourcemap
+        .take_if(|(source_index, _)| *source_index == index)
+        .map(|(_, sourcemap)| sourcemap);
+      source_joiner.append_source(RenderedChunkSource {
+        sources: Arc::clone(sources),
+        index,
+        sourcemap,
+      });
+    }
+    debug_assert!(self.sourcemap.is_none());
+  }
+}
+
+struct RenderedChunkSource {
+  sources: Arc<[Box<dyn Source + Send + Sync>]>,
+  index: usize,
+  sourcemap: Option<SourceMap>,
+}
+
+impl Source for RenderedChunkSource {
+  fn sourcemap(&self) -> Option<&SourceMap> {
+    self.sourcemap.as_ref()
+  }
+
+  fn take_sourcemap(&mut self) -> Option<SourceMap> {
+    self.sourcemap.take()
+  }
+
+  fn content(&self) -> &str {
+    self.sources[self.index].content()
+  }
+
+  fn lines_count(&self) -> u32 {
+    self.sources[self.index].lines_count()
   }
 }
 
@@ -68,7 +140,7 @@ impl Generator for EcmaGenerator {
       .collect::<Vec<_>>();
 
     let mut sourcemap_broken_warnings: Vec<BuildDiagnostic> = Vec::new();
-    let rendered_module_sources: RenderedModuleSources = rendered_pairs
+    let mut rendered_module_sources: RenderedModuleSources = rendered_pairs
       .into_iter()
       .map(|(source, warnings)| {
         sourcemap_broken_warnings.extend(warnings);
@@ -76,10 +148,12 @@ impl Generator for EcmaGenerator {
       })
       .collect();
 
+    // Maps were detached in `RenderedModuleSource::new`, so this clone shares
+    // only source text with the plugin-facing module view.
     let rendered_modules: FxHashMap<ModuleId, RenderedModule> = rendered_module_sources
       .iter()
       .map(|rendered_module_source| {
-        let RenderedModuleSource { module_idx, module_id, exec_order, sources } =
+        let RenderedModuleSource { module_idx, module_id, exec_order, sources, .. } =
           rendered_module_source;
         let rendered_exports = ctx.link_output.metas[*module_idx]
           .resolved_exports
@@ -95,7 +169,6 @@ impl Generator for EcmaGenerator {
         (module_id.clone(), RenderedModule::new(sources.clone(), rendered_exports, *exec_order))
       })
       .collect();
-
     let rendered_chunk = Arc::new(generate_rendered_chunk(ctx, rendered_modules));
 
     let hashbang = ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table).and_then(
@@ -239,19 +312,22 @@ impl Generator for EcmaGenerator {
       directives: &directives,
     };
     let mut source_joiner = match ctx.options.format {
-      OutputFormat::Esm => render_esm(ctx, addon_render_context, &rendered_module_sources),
+      OutputFormat::Esm => render_esm(ctx, addon_render_context, &mut rendered_module_sources),
       OutputFormat::Cjs => {
-        render_cjs(ctx, addon_render_context, &rendered_module_sources, &mut warnings)
+        render_cjs(ctx, addon_render_context, &mut rendered_module_sources, &mut warnings)
       }
       OutputFormat::Iife => {
-        match render_iife(ctx, addon_render_context, &rendered_module_sources, &mut warnings).await
+        match render_iife(ctx, addon_render_context, &mut rendered_module_sources, &mut warnings)
+          .await
         {
           Ok(source_joiner) => source_joiner,
           Err(errors) => return Ok(Err(errors)),
         }
       }
       OutputFormat::Umd => {
-        match render_umd(ctx, addon_render_context, &rendered_module_sources, &mut warnings).await {
+        match render_umd(ctx, addon_render_context, &mut rendered_module_sources, &mut warnings)
+          .await
+        {
           Ok(source_joiner) => source_joiner,
           Err(errors) => return Ok(Err(errors)),
         }
@@ -308,5 +384,46 @@ impl Generator for EcmaGenerator {
       }],
       warnings,
     }))
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::{borrow::Cow, sync::Arc};
+
+  use rolldown_common::{ModuleIdx, RenderedModule};
+  use rolldown_sourcemap::{Source, SourceJoiner, SourceMap, SourceMapSource};
+
+  use super::RenderedModuleSource;
+
+  #[test]
+  fn rendered_module_keeps_code_while_chunk_takes_its_sourcemap() {
+    let map = SourceMap::new(
+      None,
+      vec![],
+      None,
+      vec![Cow::Borrowed("entry.js")],
+      vec![Some(Cow::Borrowed("entry source"))],
+      Box::new([]),
+      None,
+    );
+    let source: Box<dyn Source + Send + Sync> =
+      Box::new(SourceMapSource::new("entry();".to_string(), map));
+    let sources: Arc<[Box<dyn Source + Send + Sync>]> = vec![source].into();
+
+    let mut rendered_source =
+      RenderedModuleSource::new(ModuleIdx::new(0), "entry.js".into(), 0, Some(sources));
+
+    let plugin_module =
+      RenderedModule::new(rendered_source.sources.clone(), Vec::new(), rendered_source.exec_order);
+    assert_eq!(plugin_module.code().as_deref(), Some("entry();"));
+    assert!(rendered_source.sources.as_ref().unwrap()[0].sourcemap().is_none());
+
+    let mut joiner = SourceJoiner::default();
+    rendered_source.append_sources(&mut joiner);
+    let (_, chunk_map) = joiner.join();
+    let chunk_map = chunk_map.expect("chunk rendering should own the detached map");
+    assert_eq!(chunk_map.get_source(0), Some("entry.js"));
+    assert_eq!(chunk_map.get_source_content(0), Some("entry source"));
   }
 }

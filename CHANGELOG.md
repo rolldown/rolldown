@@ -1,4 +1,79 @@
 
+## [1.1.3] - 2026-06-24
+
+### 🐛 Bug Fixes
+
+- `defer_drop` crashes the browser main thread (#9942) by @shulaoda
+- camel-case: correct camel case for nested values (#9933) by @kb019
+- cli: display --help options in camelCase (#9941) by @IWANABETHATGUY
+- preserve used re-exports under preserveModules (#9122) (#9934) by @IWANABETHATGUY
+- watch: make close reentrant in event callbacks (#9904) by @hyf0
+- git for windows treats symlink files as regular files (#9915) by @AliceLanniste
+- dev: cancel pending full reload on build error (#9903) by @h-a-n-a
+- chunking: pass plugin meta to codeSplitting groups name function (#9267) by @Kyujenius
+- dev: serve assets emitted during HMR/lazy compile (vite#22596) (#9815) by @h-a-n-a
+- release: dry-run step no longer publishes binding packages (#9866) by @Boshen
+
+### 🚜 Refactor
+
+- rolldown_common: model ModuleId as a classified Path/Virtual/Bare enum (#9927) by @Boshen
+- remove unused LegacyModuleIdx (#9872) by @shulaoda
+- remove unused StmtInfos::get_namespace_stmt_info (#9870) by @shulaoda
+- remove unused Module::as_external_mut (#9871) by @shulaoda
+- remove unused EcmaAst::is_body_empty (#9869) by @shulaoda
+- drop dead is_css_module handling in resolve_dependencies (#9867) by @shulaoda
+- drop redundant with_commonjs on cjs source type (#9868) by @shulaoda
+
+### 📚 Documentation
+
+- clarify on drafting PRs (#9952) by @h-a-n-a
+- update contribution guidelines (#9944) by @fubhy
+- note Rust crates don't follow semver in AGENTS.md (#9905) by @IWANABETHATGUY
+- add feedback form (#9159) by @TheAlexLichter
+
+### ⚡ Performance
+
+- utils: avoid allocation in default_sanitize_file_name for clean names (#9928) by @Boshen
+- binding: box once-per-build futures before spawn_future (#9864) by @Boshen
+- utils: avoid wasted allocation in legitimize_identifier_name (#9926) by @Boshen
+- rolldown: fuse the canonical-name dedup and insert in the renamer (#9900) by @Boshen
+- rolldown: probe the name map once in ConflictResolver::resolve (#9899) by @Boshen
+- cut two heap allocations from wrapped ESM init finalize (#9901) by @Boshen
+- rolldown_plugin_vite_reporter: hoist invariant out_dir prefix out of reporter loop (#9873) by @shulaoda
+- drop throwaway Vec in wrapped esm init stmt (#9878) by @shulaoda
+- borrow owner_filename in build-import-analysis AddDeps (#9874) by @shulaoda
+
+### 🧪 Testing
+
+- cover preserveModules named export via namespace re-export (#6010) (#9937) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update napi to v3.9.4 (#9954) by @shulaoda
+- reduce noise from CODEOWNERS for trival changes (#9953) by @h-a-n-a
+- deps: update mimalloc-safe to 0.1.64 (#9950) by @shulaoda
+- deps: update rollup submodule for tests to v4.62.2 (#9931) by @rolldown-guard[bot]
+- deps: test mimalloc-safe upstream-mimalloc switch in CI (#9930) by @shulaoda
+- rolldown_plugin_vite_build_import_analysis: remove unused v2 code path (#9917) by @shulaoda
+- rolldown_plugin_vite_manifest: remove unused is_enable_v2 code path (#9916) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: remove unexposed native vite plugin (#9896) by @shulaoda
+- rolldown_plugin_vite_asset: remove unexposed native vite plugin (#9895) by @shulaoda
+- rolldown_plugin_vite_css_post: remove unexposed native vite plugin (#9894) by @shulaoda
+- rolldown_plugin_vite_css: remove unexposed native vite plugin (#9893) by @shulaoda
+- rolldown_plugin_vite_html_inline_proxy: remove unexposed native vite plugin (#9892) by @shulaoda
+- rolldown_plugin_vite_html: remove unexposed native vite plugin (#9891) by @shulaoda
+- deps: update github actions (#9909) by @renovate[bot]
+- deps: update rust crate oxc_sourcemap to v8.0.2 (#9910) by @renovate[bot]
+- deps: update npm packages (#9912) by @renovate[bot]
+- deps: update github actions to v7 (#9913) by @renovate[bot]
+- deps: update rolldown-plugin-dts to ^0.26.0 (#9897) by @renovate[bot]
+- remove rolldown_filter_analyzer crate (#9865) by @Boshen
+
+### ❤️ New Contributors
+
+* @fubhy made their first contribution in [#9944](https://github.com/rolldown/rolldown/pull/9944)
+
+
 ## [1.1.2] - 2026-06-18
 
 ### 🚀 Features

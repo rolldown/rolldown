@@ -22,13 +22,13 @@ We encourage the use of AI tools to assist with development, but all contributio
 
 ## Reporting a bug
 
-Please report bugs to GitHub only after you have previously searched for the issue and found no results. Be sure to be as descriptive as possible and to include all applicable labels.
+Please open a bug report on GitHub only after searching the existing issues and finding no match. Be as descriptive as possible, and include all applicable labels.
 
-The best way to get your bug fixed is to provide a reduced test case. Please provide a public repository with a runnable example, or a usable code snippet. In the future, we will also provide a REPL that runs in the browser for easier reproductions.
+The best way to get your bug fixed is to include a minimal reproduction — a public repository with a runnable example, a usable code snippet, or a link to our [REPL](https://repl.rolldown.rs/) for a quick in-browser repro.
 
 ## Requesting new functionality
 
-Before requesting new functionality, view [open issues](https://github.com/rolldown/rolldown/issues) as your request may already exist. If it does not exist, submit an issue with the title prefixed with `[request]`. Be sure to be as descriptive as possible and to include all applicable labels.
+Before requesting new functionality, search the [open issues](https://github.com/rolldown/rolldown/issues) — someone may have requested it already. If not, open an issue with the title prefixed with `[request]`. Be as descriptive as possible, and include all applicable labels.
 
 ## Submitting a pull request
 
@@ -71,6 +71,6 @@ If your pull request is still a work in progress, please open it as a [draft](ht
 
 ### Branch organization
 
-Submit all pull requests directly to the `main` branch. We only use separate branches for upcoming releases / breaking changes, otherwise, everything points to main.
+Submit all pull requests directly to the `main` branch. We only use separate branches for upcoming releases or breaking changes; otherwise, everything targets main.
 
 Code that lands in main must be compatible with the latest stable release. It may contain additional features, but no breaking changes. We should be able to release a new minor version from the tip of main at any time.

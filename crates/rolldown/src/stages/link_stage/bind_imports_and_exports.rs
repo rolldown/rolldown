@@ -417,6 +417,45 @@ impl LinkStage<'_> {
     normal_symbol_exports_chain_map: &FxHashMap<SymbolRef, Vec<SymbolRef>>,
   ) {
     let warnings = append_only_vec::AppendOnlyVec::new();
+    let has_json_module = self.module_table.modules.iter().any(|module| {
+      module.as_normal().is_some_and(|module| matches!(module.module_type, ModuleType::Json))
+    });
+    let json_defaults_with_member_write = if has_json_module {
+      // Scan all normal modules when the graph contains JSON: writes can reach the shared JSON
+      // default through non-JSON import records such as `export { default as data } from './x.json'`
+      // followed by `import { data } from './wrapper.js'; data.foo = ...`.
+      #[cfg(not(target_family = "wasm"))]
+      {
+        self
+          .module_table
+          .modules
+          .par_iter()
+          .zip(self.stmt_infos.par_iter())
+          .map(|(module, stmt_infos)| match module {
+            Module::Normal(_) => self.collect_json_default_imports_with_member_write(stmt_infos),
+            Module::External(_) => FxHashSet::default(),
+          })
+          .reduce(FxHashSet::default, |mut acc, written_json_defaults| {
+            acc.extend(written_json_defaults);
+            acc
+          })
+      }
+
+      #[cfg(target_family = "wasm")]
+      {
+        self.module_table.modules.iter().zip(self.stmt_infos.iter()).fold(
+          FxHashSet::default(),
+          |mut acc, (module, stmt_infos)| {
+            if matches!(module, Module::Normal(_)) {
+              acc.extend(self.collect_json_default_imports_with_member_write(stmt_infos));
+            }
+            acc
+          },
+        )
+      }
+    } else {
+      FxHashSet::default()
+    };
     let resolved_meta_data = self
       .module_table
       .modules
@@ -427,8 +466,6 @@ impl LinkStage<'_> {
           let mut resolved_map = FxHashMap::default();
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
-          let json_default_imports_with_member_write =
-            self.collect_json_default_imports_with_member_write(module, stmt_infos);
           stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
@@ -457,7 +494,7 @@ impl LinkStage<'_> {
                 let is_json_import_ns = matches!(canonical_ref_owner.module_type, ModuleType::Json)
                   && member_expr_ref.object_ref_type == MemberExprObjectReferencedType::Default
                   && !member_expr_ref.is_write
-                  && !json_default_imports_with_member_write.contains(&canonical_ref)
+                  && !json_defaults_with_member_write.contains(&canonical_ref)
                   && member_expr_ref
                     .prop_and_span_list
                     .first()
@@ -737,22 +774,10 @@ impl LinkStage<'_> {
 
   fn collect_json_default_imports_with_member_write(
     &self,
-    module: &NormalModule,
     stmt_infos: &StmtInfos,
   ) -> FxHashSet<SymbolRef> {
-    // Skip the per-stmt scan for modules that can't possibly import JSON.
-    let has_json_importee = module.ecma_view.import_records.iter().any(|rec| {
-      rec.resolved_module.is_some_and(|idx| {
-        self.module_table[idx]
-          .as_normal()
-          .is_some_and(|m| matches!(m.module_type, ModuleType::Json))
-      })
-    });
-    if !has_json_importee {
-      return FxHashSet::default();
-    }
-
     let mut written_json_defaults = FxHashSet::default();
+
     for stmt_info in stmt_infos.iter() {
       for symbol_ref in &stmt_info.referenced_symbols {
         let written_default = match symbol_ref {
@@ -780,6 +805,21 @@ impl LinkStage<'_> {
     }
 
     match member_expr_ref.object_ref_type {
+      MemberExprObjectReferencedType::Named => {
+        // Named refs can still point at a JSON default through re-exports, e.g.
+        // `export { default as data } from './x.json'`.
+        let canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
+        let is_json_default =
+          self.module_table[canonical_ref.owner].as_normal().is_some_and(|module| {
+            matches!(module.module_type, ModuleType::Json)
+              && self.metas[canonical_ref.owner].resolved_exports.get("default").is_some_and(
+                |default_export| {
+                  self.symbols.canonical_ref_for(default_export.symbol_ref) == canonical_ref
+                },
+              )
+          });
+        is_json_default.then_some(canonical_ref)
+      }
       MemberExprObjectReferencedType::Default => {
         let canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
         self.module_table[canonical_ref.owner]
@@ -804,7 +844,7 @@ impl LinkStage<'_> {
         }
         self.metas[canonical_ref.owner].resolved_exports.get("default").map(|e| e.symbol_ref)
       }
-      _ => None,
+      MemberExprObjectReferencedType::Namespace => None,
     }
   }
 

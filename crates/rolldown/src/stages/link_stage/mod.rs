@@ -33,6 +33,7 @@ mod create_exports_for_ecma_modules;
 mod cross_module_optimization;
 mod determine_module_exports_kind;
 mod generate_lazy_export;
+mod init_obligations;
 mod patch_module_dependencies;
 mod reference_needed_symbols;
 mod sort_modules;
@@ -239,6 +240,10 @@ impl<'a> LinkStage<'a> {
     let unreachable_import_expression_node_ids = self.cross_module_optimization();
     self.include_statements(&unreachable_import_expression_node_ids);
     self.patch_module_dependencies();
+    // SHADOW-MODE diagnostic (rewrite migration step 2): computes candidate `InitBefore`
+    // obligations and contrasts them with the current model. No-op unless
+    // `ROLLDOWN_DUMP_INIT_OBLIGATIONS` is set; never affects output.
+    self.compute_init_obligations();
 
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 

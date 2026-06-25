@@ -718,6 +718,18 @@ export interface InputOptions {
      * @default true
      */
     lazyBarrel?: boolean;
+    /**
+     * Enable the new side-effect tree-shaking implementation for wrapped ESM modules.
+     *
+     * Prunes wrapped `sideEffects:false` re-export barrels instead of force-including them,
+     * fixing a family of dangling-`init` / over-retention bugs. Applies wherever ESM wrapping
+     * occurs (`strictExecutionOrder`, `require(esm)`, code-splitting / CJS interop), not just
+     * `strictExecutionOrder`.
+     *
+     * @default false
+     * @hidden not ready for public usage yet
+     */
+    wrappedModuleTreeshaking?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.

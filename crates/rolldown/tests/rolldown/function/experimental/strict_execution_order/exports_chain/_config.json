@@ -5,6 +5,10 @@
   "configVariants": [
     {
       "strictExecutionOrder": true
+    },
+    {
+      "strictExecutionOrder": true,
+      "wrappedModuleTreeshaking": true
     }
   ]
 }

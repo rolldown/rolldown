@@ -1033,6 +1033,13 @@
             "boolean",
             "null"
           ]
+        },
+        "wrappedModuleTreeshaking": {
+          "description": "EXPERIMENTAL. Selects the new side-effect tree-shaking implementation for **wrapped ESM\nmodules** (`WrapKind::Esm`, triggered by `strictExecutionOrder`, `require(esm)`,\ncode-splitting / CJS interop, etc. — not just strictExecutionOrder). The legacy impl\nforce-includes a wrapped `sideEffects:false` re-export barrel; the new impl prunes it,\nfixing the #9961 family of dangling-`init` / over-retention bugs across *all* wrap triggers.\nOff by default (legacy). See\n`internal-docs/linking/strict-execution-order-rewrite-proposal.md`.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1876,6 +1883,12 @@
           ]
         },
         "onDemandWrapping": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "wrappedModuleTreeshaking": {
           "type": [
             "boolean",
             "null"

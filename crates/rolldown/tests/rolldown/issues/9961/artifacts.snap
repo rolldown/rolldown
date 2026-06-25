@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region core/setupWorker.js
+function setupWorker(handler) {
+	return { handler };
+}
+//#endregion
+//#region core/http.js
+function http() {
+	return "http";
+}
+//#endregion
+//#region main.js
+var worker;
+//#endregion
+__esmMin((() => {
+	worker = setupWorker(http());
+	console.log(worker);
+}))();
+
+```

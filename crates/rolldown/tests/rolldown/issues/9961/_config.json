@@ -1,0 +1,11 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/9961 — `core` is `sideEffects: false`, calls the imported `checkGlobals()` at module top level, and re-exports setupWorker/http (canonicals in sibling files); `main` imports only setupWorker/http. Under strictExecutionOrder the whole `core` barrel is force-included, so the top-level `checkGlobals()` runs even though plain tree-shaking drops the barrel. `wrappedModuleTreeshaking` prunes the unused `sideEffects:false` barrel — setupWorker/http resolve to their canonical owners and `checkGlobals()` is never emitted — so the bundle executes cleanly. (The default-on lazyBarrel crash layer is a separate loader-invariant fix, deferred to a follow-up PR.)",
+  "config": {
+    "strictExecutionOrder": true,
+    "experimental": {
+      "wrappedModuleTreeshaking": true
+    }
+  },
+  "configVariants": [
+  ]
+}

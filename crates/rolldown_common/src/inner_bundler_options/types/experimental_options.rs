@@ -80,6 +80,14 @@ pub struct ExperimentalOptions {
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<ChunkOptimizationOption>,
   pub lazy_barrel: Option<bool>,
+  /// EXPERIMENTAL. Selects the new side-effect tree-shaking implementation for **wrapped ESM
+  /// modules** (`WrapKind::Esm`, triggered by `strictExecutionOrder`, `require(esm)`,
+  /// code-splitting / CJS interop, etc. — not just strictExecutionOrder). The legacy impl
+  /// force-includes a wrapped `sideEffects:false` re-export barrel; the new impl prunes it,
+  /// fixing the #9961 family of dangling-`init` / over-retention bugs across *all* wrap triggers.
+  /// Off by default (legacy). See
+  /// `internal-docs/linking/strict-execution-order-rewrite-proposal.md`.
+  pub wrapped_module_treeshaking: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -124,5 +132,9 @@ impl ExperimentalOptions {
 
   pub fn is_lazy_barrel_enabled(&self) -> bool {
     self.lazy_barrel.unwrap_or(true)
+  }
+
+  pub fn is_wrapped_module_treeshaking_enabled(&self) -> bool {
+    self.wrapped_module_treeshaking.unwrap_or(false)
   }
 }

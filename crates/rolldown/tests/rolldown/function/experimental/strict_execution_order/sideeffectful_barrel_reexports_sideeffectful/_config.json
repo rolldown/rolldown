@@ -1,0 +1,11 @@
+{
+  "_comment": "Soundness/regression guard for the strictExecutionOrder rewrite (proposal §5/§7). Same shape as `sideeffect_free_barrel_reexports_sideeffectful` but the barrel is NOT sideEffects:false (inherits the root package, side effects not waived). Its `import '../side-effectful.js'` is a real, non-waived side effect. CURRENT strict keeps it (side-effectful.js in the bundle); the obligation rewrite must ALSO keep it — the barrel earns an Ordering obligation (it genuinely has side effects), so it is not pruned (verified via shadow: dropped=0, current==new). If a future step-3/4 change wrongly prunes a side-effectful barrel, this snapshot loses `side-effectful.js` and the guard fires.",
+  "config": {
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "wrappedModuleTreeshaking": true
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "_comment": "Consistency guard for the strictExecutionOrder rewrite (proposal §5/§7). `pkg-barrel` is `sideEffects: false`; its body imports `../side-effectful.js` (a real top-level call). FINDING (verified): current strict ALREADY drops this transitive side effect — a `sideEffects:false` module's side-effect-only imports are waived (Rollup's 'the module and its imports have no side effects'), so `side-effectful.js` is absent from the bundle. This matches default/non-strict mode, and the obligation rewrite keeps it dropped (barrel earns no obligation => pruned). So this shape is NOT a regression risk: current == rewrite == dropped. (Compare `sideeffectful_barrel_reexports_sideeffectful`, where a non-waived barrel keeps the side effect via an Ordering obligation.)",
+  "config": {
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "wrappedModuleTreeshaking": true
+    }
+  ]
+}

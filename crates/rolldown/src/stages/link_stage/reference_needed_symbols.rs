@@ -1,6 +1,6 @@
 use rolldown_common::{
-  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, RuntimeHelper,
-  StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
+  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, OutputFormat,
+  RuntimeHelper, StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -26,6 +26,68 @@ impl LinkStage<'_> {
     let mut symbols_inner = old_symbol_db.into_inner();
     let keep_names = self.options.keep_names;
     let commonjs_treeshake = self.options.treeshake.commonjs();
+    // EXPERIMENTAL wrapped-ESM side-effect tree-shaking (the obligation model, rewrite step 3).
+    // Gated by `experimental.wrappedModuleTreeshaking` (off by default → legacy, byte-identical).
+    // Applies to every `WrapKind::Esm` importee regardless of *why* it is wrapped
+    // (strictExecutionOrder, require(esm), code-splitting / CJS interop), not just strict order.
+    // See `internal-docs/linking/strict-execution-order-rewrite-proposal.md` §4 step 3.
+    let wrapped_module_treeshaking_enabled =
+      self.options.experimental.is_wrapped_module_treeshaking_enabled();
+
+    // Namespace-taint guard for the obligation model (proposal §2 NamespaceInit / §5).
+    //
+    // Skipping a side-effect-free importee's `init` ref is only sound when no namespace object
+    // in the same re-export component is materialized. A star import (`import * as ns`) can
+    // force-include a barrel as a *namespace target* while the skip prunes that barrel's own
+    // body, leaving an included-but-empty wrapped module (panics in code splitting,
+    // `code_splitting.rs` empty-bits assertion). Member resolution (`ns.foo`) also bypasses the
+    // intermediate barrels, so the namespace-ness is transitive and can't be decided per-edge.
+    //
+    // Conservatively: disable the skip for every module in a weakly-connected import component
+    // that contains a star-import edge. #9961's chain is named-import-only (no star edge), so it
+    // still prunes; namespace chains revert to the current eager wrapping (byte-identical to
+    // flag-off), which is correct if verbose. Tightening this to member-resolution-aware
+    // BindingInit/NamespaceInit is future work (proposal §4 steps 4-5).
+    let namespace_tainted: Option<oxc_index::IndexVec<ModuleIdx, bool>> =
+      wrapped_module_treeshaking_enabled.then(|| {
+        let mut adjacency: oxc_index::IndexVec<ModuleIdx, Vec<ModuleIdx>> =
+          oxc_index::index_vec![Vec::new(); self.module_table.modules.len()];
+        let mut taint_stack: Vec<ModuleIdx> = Vec::new();
+        for module in &self.module_table.modules {
+          let Some(importer) = module.as_normal() else { continue };
+          for rec in &importer.import_records {
+            let Some(importee_idx) = rec.state.resolved_module else { continue };
+            if !matches!(self.module_table[importee_idx], Module::Normal(_)) {
+              continue;
+            }
+            adjacency[importer.idx].push(importee_idx);
+            adjacency[importee_idx].push(importer.idx);
+          }
+          // `import * as ns` materializes the importee's namespace object — seed the taint.
+          for named_import in importer.named_imports.values() {
+            if named_import.imported.is_star()
+              && let Some(importee_idx) =
+                importer.import_records[named_import.record_idx].state.resolved_module
+            {
+              taint_stack.push(importer.idx);
+              taint_stack.push(importee_idx);
+            }
+          }
+        }
+        let mut tainted: oxc_index::IndexVec<ModuleIdx, bool> =
+          oxc_index::index_vec![false; self.module_table.modules.len()];
+        while let Some(module_idx) = taint_stack.pop() {
+          if std::mem::replace(&mut tainted[module_idx], true) {
+            continue;
+          }
+          for &neighbor in &adjacency[module_idx] {
+            if !tainted[neighbor] {
+              taint_stack.push(neighbor);
+            }
+          }
+        }
+        tainted
+      });
 
     let defer_update_info_list = self
       .module_table
@@ -176,10 +238,42 @@ impl LinkStage<'_> {
                         // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
                         stmt_info.side_effect =
                           (is_reexport_all || importee.side_effects.has_side_effects()).into();
+                        // Obligation model: a side-effect-free importee imposes no ordering
+                        // obligation, so don't force-include it via its wrapper ref. The used
+                        // binding's canonical owner is still initialized through the normal
+                        // binding-use path (`include_symbol`, which canonical-resolves), and the
+                        // finalizer follows canonical owners when the importee ends up pruned.
+                        // Keep the eager ref for re-export-all, namespace imports (need the
+                        // importee's namespace object), and side-effectful importees.
+                        let importer_uses_star_from_record = importer
+                          .named_imports
+                          .values()
+                          .any(|ni| ni.record_idx == *rec_id && ni.imported.is_star());
+                        // A side-effect-free barrel that re-exports an *external* binding owns the
+                        // external import record itself, so pruning the barrel drops that import
+                        // while downstream uses remain. This is the #9961 shape, but the canonical
+                        // owner is the external module (not `WrapKind::Esm`), so the finalizer's
+                        // canonical-follow can't re-emit it (no `init_*` for an external) — the
+                        // reference silently falls back to an ambient global. Keep any barrel that
+                        // directly imports from an external. (Last `&&` term: short-circuits on the
+                        // env flag, so it costs nothing flag-off.)
+                        let skip_wrapper_ref = wrapped_module_treeshaking_enabled
+                          && !is_reexport_all
+                          && !importee.side_effects.has_side_effects()
+                          && !importer_uses_star_from_record
+                          && !namespace_tainted.as_ref().is_some_and(|t| t[importer_idx])
+                          && !importee.import_records.iter().any(|external_check_rec| {
+                            external_check_rec
+                              .state
+                              .resolved_module
+                              .is_some_and(|m| matches!(self.module_table[m], Module::External(_)))
+                          });
                         // Reference to `init_foo`
-                        stmt_info
-                          .referenced_symbols
-                          .push(importee_linking_info.wrapper_ref.unwrap().into());
+                        if !skip_wrapper_ref {
+                          stmt_info
+                            .referenced_symbols
+                            .push(importee_linking_info.wrapper_ref.unwrap().into());
+                        }
 
                         if is_reexport_all && importee_linking_info.has_dynamic_exports {
                           // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`

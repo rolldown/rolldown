@@ -1,0 +1,11 @@
+{
+  "_comment": "Regression guard for the strictExecutionOrder rewrite (proposal §2 per-binding activation). main imports { used, unused } through a re-export barrel but reads only `used`. The import statement survives for `used`, but `unused` (and its owner unused.js) must NOT be pulled in just because the statement survives — only the used binding activates. The base `strictExecutionOrder` variant locks in current behavior; the `[wrapped_module_treeshaking: true]` variant shows the obligation model (migration step 3) — the side-effect-free barrel is pruned and only `used`'s canonical owner is initialized.",
+  "config": {
+    "strictExecutionOrder": true
+  },
+  "configVariants": [
+    {
+      "wrappedModuleTreeshaking": true
+    }
+  ]
+}

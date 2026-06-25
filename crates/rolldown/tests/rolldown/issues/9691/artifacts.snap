@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'node:https' in lib/dep-a.js
+   ╭─[ lib/dep-a.js:2:19 ]
+   │
+ 2 │ import dep_a from 'node:https';
+   │                   ──────┬─────  
+   │                         ╰─────── Module not found, treating it as an external dependency
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import dep_a from "node:https";
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+//#endregion
+//#region lib/dep-a.js
+var init_dep_a = __esmMin((() => {}));
+//#endregion
+//#region lib/handler-a.js
+var HandlerA;
+//#endregion
+//#region main.js
+__esmMin((() => {
+	init_dep_a();
+	HandlerA = class {
+		constants = dep_a.constants;
+	};
+}))();
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+console.log(HandlerA);
+//#endregion
+
+```

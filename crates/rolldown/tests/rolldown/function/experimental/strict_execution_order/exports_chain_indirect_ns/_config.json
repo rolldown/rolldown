@@ -8,6 +8,10 @@
     },
     {
       "strictExecutionOrder": true,
+      "wrappedModuleTreeshaking": true
+    },
+    {
+      "strictExecutionOrder": true,
       "onDemandWrapping": true
     }
   ]

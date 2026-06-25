@@ -1,0 +1,63 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import nodeAssert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region barrel/used.mjs
+var used;
+var init_used = __esmMin((() => {
+	used = "used-value";
+}));
+//#endregion
+//#region barrel/index.mjs
+var init_barrel = __esmMin((() => {
+	init_used();
+}));
+//#endregion
+//#region consumer.mjs
+var consumer_exports = /* @__PURE__ */ __exportAll({ result: () => result });
+var result;
+//#endregion
+//#region main.js
+const consumer = (__esmMin((() => {
+	init_barrel();
+	result = used;
+}))(), __toCommonJS(consumer_exports));
+nodeAssert.equal(consumer.result, "used-value");
+//#endregion
+
+```
+
+# Variant: [wrapped_module_treeshaking: true]
+
+## Assets
+
+### main.js
+
+```js
+import nodeAssert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region barrel/used.mjs
+var used;
+var init_used = __esmMin((() => {
+	used = "used-value";
+}));
+//#endregion
+//#region consumer.mjs
+var consumer_exports = /* @__PURE__ */ __exportAll({ result: () => result });
+var result;
+//#endregion
+//#region main.js
+const consumer = (__esmMin((() => {
+	init_used();
+	result = used;
+}))(), __toCommonJS(consumer_exports));
+nodeAssert.equal(consumer.result, "used-value");
+//#endregion
+
+```

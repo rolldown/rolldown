@@ -1,0 +1,11 @@
+{
+  "_comment": "Broad-scope regression for wrappedModuleTreeshaking — proves the option is NOT strictExecutionOrder-specific. There is no strictExecutionOrder here: `require('./consumer.mjs')` wraps consumer.mjs (WrapKind::Esm via require(esm)), and the recursive wrap reaches the `sideEffects:false` barrel it named-imports `{ used }` from. The base variant (legacy) keeps the wrapped barrel; the `[wrapped_module_treeshaking: true]` variant prunes it (the re-export resolves to the canonical in used.mjs, and unused.mjs is dropped). Executes (require interop) and asserts consumer.result === 'used-value'.",
+  "config": {
+    "external": ["node:assert"]
+  },
+  "configVariants": [
+    {
+      "wrappedModuleTreeshaking": true
+    }
+  ]
+}

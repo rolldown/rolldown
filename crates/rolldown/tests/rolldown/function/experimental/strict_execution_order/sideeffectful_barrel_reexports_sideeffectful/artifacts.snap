@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region side-effectful.js
+var init_side_effectful = __esmMin((() => {
+	console.log("[side-effectful] ran");
+}));
+//#endregion
+//#region pkg-barrel/used.js
+var used;
+var init_used = __esmMin((() => {
+	used = "used";
+}));
+//#endregion
+//#region pkg-barrel/index.js
+var init_pkg_barrel = __esmMin((() => {
+	init_side_effectful();
+	init_used();
+}));
+//#endregion
+__esmMin((() => {
+	init_pkg_barrel();
+	console.log("used =", used);
+}))();
+
+```
+
+# Variant: [wrapped_module_treeshaking: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region side-effectful.js
+var init_side_effectful = __esmMin((() => {
+	console.log("[side-effectful] ran");
+}));
+//#endregion
+//#region pkg-barrel/used.js
+var used;
+var init_used = __esmMin((() => {
+	used = "used";
+}));
+//#endregion
+//#region pkg-barrel/index.js
+var init_pkg_barrel = __esmMin((() => {
+	init_side_effectful();
+	init_used();
+}));
+//#endregion
+__esmMin((() => {
+	init_pkg_barrel();
+	console.log("used =", used);
+}))();
+
+```

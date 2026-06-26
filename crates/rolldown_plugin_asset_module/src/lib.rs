@@ -1,4 +1,8 @@
-use std::{borrow::Cow, path::Path, sync::Arc};
+use std::{
+  borrow::Cow,
+  path::{Path, PathBuf},
+  sync::Arc,
+};
 
 use memchr::memmem;
 use rolldown_common::{EmittedAsset, ModuleType, StrOrBytes, side_effects::HookSideEffects};
@@ -7,7 +11,7 @@ use rolldown_plugin::{
   HookRenderChunkReturn, HookTransformOutputMap, HookUsage, Plugin, PluginHookMeta, PluginOrder,
   SharedLoadPluginContext,
 };
-use rolldown_utils::url::clean_url;
+use rolldown_utils::{futures::spawn_blocking, url::clean_url};
 use rustc_hash::FxHashSet;
 use string_wizard::{MagicString, SourceMapOptions};
 use sugar_path::SugarPath;
@@ -142,11 +146,13 @@ impl AssetModulePlugin {
       return Ok(None);
     }
 
-    let path = Path::new(clean_id);
+    let path = PathBuf::from(clean_id);
 
     // Read file as binary (use cleaned path for filesystem access)
-    let bytes = tokio::fs::read(clean_id)
+    let read_path = path.clone();
+    let bytes = spawn_blocking(move || std::fs::read(read_path))
       .await
+      .map_err(|e| anyhow::anyhow!("Failed to join asset module read for {clean_id}: {e}"))?
       .map_err(|e| anyhow::anyhow!("Failed to read asset module {clean_id}: {e}"))?;
 
     // Derive name from the cleaned file path
@@ -154,7 +160,7 @@ impl AssetModulePlugin {
 
     // Use relative path for original_file_name to avoid leaking absolute paths
     let original_file_name =
-      path.strip_prefix(ctx.cwd()).unwrap_or(path).to_string_lossy().into_owned();
+      path.strip_prefix(ctx.cwd()).unwrap_or(&path).to_string_lossy().into_owned();
 
     // Emit the file as an asset
     let reference_id = ctx

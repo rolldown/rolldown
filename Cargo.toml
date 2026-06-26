@@ -153,6 +153,7 @@ arcstr = { version = "1.2.0", default-features = false }
 ariadne = { package = "rolldown-ariadne", version = "0.6.0" }
 async-channel = "2.3.1"
 async-scoped = "0.9.0"
+async-task = "4.7.1"
 base-encode = "0.3.1"
 base64-simd = "0.8.0"
 bitflags = "2.13.0"
@@ -239,7 +240,7 @@ syn = { version = "2", default-features = false }
 # napi
 # Keep the `tracing` feature on: `#[napi]` logs every binding call, which helps debug deadlocks
 # (e.g. #7289) by showing which napi function is pending.
-napi = { version = "3", features = ["async", "anyhow", "tracing", "object_indexmap"] }
+napi = { version = "3", features = ["anyhow", "tracing", "object_indexmap"] }
 napi-build = { version = "2" }
 napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
 
@@ -309,3 +310,6 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+[patch.crates-io]
+napi = { git = "https://github.com/napi-rs/napi-rs.git", rev = "ef2226b44e115e396920e3328d5813d6de44803b" }

@@ -25,6 +25,7 @@ use rolldown_error::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_utils::futures::spawn_detached;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
@@ -282,7 +283,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let ctx = Arc::clone(&self.shared_context);
     if resolved_id.external.is_external() {
       let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
-      tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
+      spawn_detached(task.run().instrument(tracing::info_span!("external_module_task")));
     } else {
       let task = ModuleTask::new(
         ctx,
@@ -294,7 +295,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         self.flat_options,
         self.magic_string_tx.clone(),
       );
-      tokio::spawn(task.run().instrument(tracing::info_span!("normal_module_task")));
+      spawn_detached(task.run().instrument(tracing::info_span!("normal_module_task")));
     }
     self.remaining += 1;
     idx
@@ -320,7 +321,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     if let Entry::Vacant(e) = self.cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
       let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
       let task = RuntimeModuleTask::new(idx, Arc::clone(&self.shared_context), self.flat_options);
-      tokio::spawn(task.run().instrument(tracing::info_span!("runtime_module_task")));
+      spawn_detached(task.run().instrument(tracing::info_span!("runtime_module_task")));
       e.insert(VisitState::Seen(idx));
       self.remaining += 1;
     }

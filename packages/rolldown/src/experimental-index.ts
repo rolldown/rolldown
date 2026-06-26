@@ -5,6 +5,13 @@ export { freeExternalMemory, scan } from './api/experimental';
 export {
   type BindingClientHmrUpdate,
   BindingRebuildStrategy,
+  type BindingRuntimeConfig,
+  type BindingRuntimeFlavor,
+  type BindingRuntimeMetrics,
+  type BindingRuntimeOptions,
+  configureAsyncRuntime,
+  getAsyncRuntimeConfig,
+  getAsyncRuntimeMetrics,
   isolatedDeclaration,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,
@@ -13,6 +20,7 @@ export {
   type NapiResolveOptions as ResolveOptions,
   type ResolveResult,
   ResolverFactory,
+  resetAsyncRuntimeMetrics,
 } from './binding.cjs';
 export { resolveTsconfig } from './utils/resolve-tsconfig';
 

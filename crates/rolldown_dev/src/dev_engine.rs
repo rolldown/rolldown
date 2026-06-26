@@ -10,6 +10,7 @@ use rolldown_common::ClientHmrUpdate;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
+use rolldown_utils::futures::spawn;
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
 use tokio::sync::{Mutex, mpsc::unbounded_channel};
@@ -119,7 +120,7 @@ impl DevEngine {
 
     // Spawn the coordinator
     if let Some(coordinator) = coordinator_state.coordinator.take() {
-      let join_handle = tokio::spawn(coordinator.run());
+      let join_handle = spawn(coordinator.run());
       let coordinator_handle = Box::pin(async move {
         join_handle.await.unwrap();
       }) as PinBoxSendStaticFuture;

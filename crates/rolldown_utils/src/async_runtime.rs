@@ -1,0 +1,724 @@
+//! Shared async/CPU/blocking scheduler.
+//! See `internal-docs/async-runtime/implementation.md`.
+
+use std::{
+  any::Any,
+  collections::VecDeque,
+  fmt,
+  future::Future,
+  panic::{AssertUnwindSafe, catch_unwind},
+  pin::Pin,
+  sync::{
+    Arc, LazyLock, Mutex,
+    atomic::{AtomicBool, AtomicU64, Ordering},
+  },
+  task::{Context, Poll},
+};
+
+use async_task::{Runnable, Task};
+use futures::FutureExt;
+
+#[cfg(not(target_family = "wasm"))]
+use futures::channel::oneshot;
+#[cfg(not(target_family = "wasm"))]
+use rayon::{ThreadPool, ThreadPoolBuilder};
+#[cfg(not(target_family = "wasm"))]
+use std::sync::atomic::AtomicUsize;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeFlavor {
+  CurrentThread,
+  MultiThread,
+}
+
+#[derive(Debug, Clone)]
+pub struct RuntimeOptions {
+  pub flavor: RuntimeFlavor,
+  pub worker_threads: usize,
+  pub max_blocking_tasks: usize,
+  pub thread_name_prefix: String,
+}
+
+impl Default for RuntimeOptions {
+  fn default() -> Self {
+    let worker_threads = std::thread::available_parallelism().map_or(1, usize::from);
+    Self {
+      flavor: if cfg!(target_family = "wasm") {
+        RuntimeFlavor::CurrentThread
+      } else {
+        RuntimeFlavor::MultiThread
+      },
+      worker_threads,
+      max_blocking_tasks: worker_threads,
+      thread_name_prefix: "rolldown-runtime".to_string(),
+    }
+  }
+}
+
+impl RuntimeOptions {
+  fn validate(mut self) -> Result<Self, RuntimeConfigError> {
+    if self.worker_threads == 0 {
+      return Err(RuntimeConfigError("worker_threads must be greater than zero".to_string()));
+    }
+    if self.max_blocking_tasks == 0 {
+      return Err(RuntimeConfigError("max_blocking_tasks must be greater than zero".to_string()));
+    }
+    if self.flavor == RuntimeFlavor::CurrentThread {
+      self.worker_threads = 1;
+    }
+    self.max_blocking_tasks = self.max_blocking_tasks.min(self.worker_threads);
+    #[cfg(target_family = "wasm")]
+    if self.flavor == RuntimeFlavor::MultiThread {
+      return Err(RuntimeConfigError(
+        "the multi-thread runtime is unavailable in this WebAssembly build".to_string(),
+      ));
+    }
+    Ok(self)
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct RuntimeConfigError(String);
+
+impl fmt::Display for RuntimeConfigError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.write_str(&self.0)
+  }
+}
+
+impl std::error::Error for RuntimeConfigError {}
+
+#[derive(Debug)]
+pub struct JoinError {
+  message: String,
+}
+
+impl JoinError {
+  fn from_panic(panic: &(dyn Any + Send + 'static)) -> Self {
+    Self {
+      message: if let Some(message) = panic.downcast_ref::<&str>() {
+        (*message).to_string()
+      } else if let Some(message) = panic.downcast_ref::<String>() {
+        message.clone()
+      } else {
+        "async runtime task panicked".to_string()
+      },
+    }
+  }
+}
+
+impl fmt::Display for JoinError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.write_str(&self.message)
+  }
+}
+
+impl std::error::Error for JoinError {}
+
+enum JoinHandleInner<T> {
+  Task(Task<Result<T, JoinError>>),
+  #[cfg(not(target_family = "wasm"))]
+  Blocking(oneshot::Receiver<Result<T, JoinError>>),
+  Ready(Option<Result<T, JoinError>>),
+}
+
+pub struct JoinHandle<T>(JoinHandleInner<T>);
+
+impl<T> Unpin for JoinHandle<T> {}
+
+impl<T> JoinHandle<T> {
+  pub fn detach(self) {
+    if let JoinHandleInner::Task(task) = self.0 {
+      task.detach();
+    }
+  }
+}
+
+impl<T> Future for JoinHandle<T> {
+  type Output = Result<T, JoinError>;
+
+  fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+    match &mut self.get_mut().0 {
+      JoinHandleInner::Task(task) => Pin::new(task).poll(cx),
+      #[cfg(not(target_family = "wasm"))]
+      JoinHandleInner::Blocking(receiver) => match Pin::new(receiver).poll(cx) {
+        Poll::Ready(Ok(result)) => Poll::Ready(result),
+        Poll::Ready(Err(_)) => Poll::Ready(Err(JoinError {
+          message: "async runtime stopped before the blocking task completed".to_string(),
+        })),
+        Poll::Pending => Poll::Pending,
+      },
+      JoinHandleInner::Ready(result) => {
+        Poll::Ready(result.take().expect("JoinHandle polled after completion"))
+      }
+    }
+  }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct RuntimeMetricsSnapshot {
+  pub flavor: RuntimeFlavor,
+  pub worker_threads: usize,
+  pub max_blocking_tasks: usize,
+  pub tasks_spawned: u64,
+  pub tasks_completed: u64,
+  pub tasks_panicked: u64,
+  pub runnable_schedules: u64,
+  pub runnable_polls: u64,
+  pub queued_runnables: u64,
+  pub max_queued_runnables: u64,
+  pub active_runnables: u64,
+  pub max_active_runnables: u64,
+  pub blocking_tasks_started: u64,
+  pub blocking_tasks_completed: u64,
+  pub active_blocking_tasks: u64,
+  pub max_active_blocking_tasks: u64,
+}
+
+#[derive(Default)]
+struct RuntimeMetrics {
+  tasks_spawned: AtomicU64,
+  tasks_completed: AtomicU64,
+  tasks_panicked: AtomicU64,
+  runnable_schedules: AtomicU64,
+  runnable_polls: AtomicU64,
+  queued_runnables: AtomicU64,
+  max_queued_runnables: AtomicU64,
+  active_runnables: AtomicU64,
+  max_active_runnables: AtomicU64,
+  blocking_tasks_started: AtomicU64,
+  blocking_tasks_completed: AtomicU64,
+  active_blocking_tasks: AtomicU64,
+  max_active_blocking_tasks: AtomicU64,
+}
+
+impl RuntimeMetrics {
+  fn runnable_scheduled(&self) {
+    self.runnable_schedules.fetch_add(1, Ordering::Relaxed);
+    let queued = self.queued_runnables.fetch_add(1, Ordering::Relaxed) + 1;
+    self.max_queued_runnables.fetch_max(queued, Ordering::Relaxed);
+  }
+
+  fn runnable_started(&self) -> ActiveRunnableGuard<'_> {
+    self.queued_runnables.fetch_sub(1, Ordering::Relaxed);
+    self.runnable_polls.fetch_add(1, Ordering::Relaxed);
+    let active = self.active_runnables.fetch_add(1, Ordering::Relaxed) + 1;
+    self.max_active_runnables.fetch_max(active, Ordering::Relaxed);
+    ActiveRunnableGuard { metrics: self }
+  }
+
+  fn blocking_started(self: &Arc<Self>) -> ActiveBlockingGuard {
+    self.blocking_tasks_started.fetch_add(1, Ordering::Relaxed);
+    let active = self.active_blocking_tasks.fetch_add(1, Ordering::Relaxed) + 1;
+    self.max_active_blocking_tasks.fetch_max(active, Ordering::Relaxed);
+    ActiveBlockingGuard { metrics: Arc::clone(self) }
+  }
+
+  fn reset(&self) {
+    self.tasks_spawned.store(0, Ordering::Relaxed);
+    self.tasks_completed.store(0, Ordering::Relaxed);
+    self.tasks_panicked.store(0, Ordering::Relaxed);
+    self.runnable_schedules.store(0, Ordering::Relaxed);
+    self.runnable_polls.store(0, Ordering::Relaxed);
+    self.queued_runnables.store(0, Ordering::Relaxed);
+    self.max_queued_runnables.store(0, Ordering::Relaxed);
+    self.active_runnables.store(0, Ordering::Relaxed);
+    self.max_active_runnables.store(0, Ordering::Relaxed);
+    self.blocking_tasks_started.store(0, Ordering::Relaxed);
+    self.blocking_tasks_completed.store(0, Ordering::Relaxed);
+    self.active_blocking_tasks.store(0, Ordering::Relaxed);
+    self.max_active_blocking_tasks.store(0, Ordering::Relaxed);
+  }
+}
+
+struct ActiveRunnableGuard<'a> {
+  metrics: &'a RuntimeMetrics,
+}
+
+impl Drop for ActiveRunnableGuard<'_> {
+  fn drop(&mut self) {
+    self.metrics.active_runnables.fetch_sub(1, Ordering::Relaxed);
+  }
+}
+
+struct ActiveBlockingGuard {
+  metrics: Arc<RuntimeMetrics>,
+}
+
+impl Drop for ActiveBlockingGuard {
+  fn drop(&mut self) {
+    self.metrics.active_blocking_tasks.fetch_sub(1, Ordering::Relaxed);
+    self.metrics.blocking_tasks_completed.fetch_add(1, Ordering::Relaxed);
+  }
+}
+
+fn run_runnable(metrics: &RuntimeMetrics, runnable: Runnable) {
+  let _active = metrics.runnable_started();
+  let _ = catch_unwind(AssertUnwindSafe(|| runnable.run()));
+}
+
+struct CurrentThreadExecutor {
+  queue: Mutex<VecDeque<Runnable>>,
+  draining: AtomicBool,
+  metrics: Arc<RuntimeMetrics>,
+}
+
+impl CurrentThreadExecutor {
+  fn new(metrics: Arc<RuntimeMetrics>) -> Self {
+    Self { queue: Mutex::new(VecDeque::new()), draining: AtomicBool::new(false), metrics }
+  }
+
+  fn schedule(self: &Arc<Self>, runnable: Runnable) {
+    self.metrics.runnable_scheduled();
+    self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push_back(runnable);
+    self.drain();
+  }
+
+  fn drain(self: &Arc<Self>) {
+    if self.draining.compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed).is_err() {
+      return;
+    }
+
+    loop {
+      while self.drain_one() {}
+      self.draining.store(false, Ordering::Release);
+
+      let has_more =
+        !self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty();
+      if !has_more
+        || self
+          .draining
+          .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+          .is_err()
+      {
+        return;
+      }
+    }
+  }
+
+  fn drain_one(&self) -> bool {
+    let runnable = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
+    if let Some(runnable) = runnable {
+      run_runnable(&self.metrics, runnable);
+      true
+    } else {
+      false
+    }
+  }
+
+  fn block_on(self: &Arc<Self>, future: Pin<&mut dyn Future<Output = ()>>) {
+    futures::executor::block_on(DriveCurrentThread { executor: Arc::clone(self), future });
+  }
+}
+
+struct DriveCurrentThread<'a> {
+  executor: Arc<CurrentThreadExecutor>,
+  future: Pin<&'a mut dyn Future<Output = ()>>,
+}
+
+impl Future for DriveCurrentThread<'_> {
+  type Output = ();
+
+  fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+    loop {
+      if self.future.as_mut().poll(cx).is_ready() {
+        return Poll::Ready(());
+      }
+      if !self.executor.drain_one() {
+        return Poll::Pending;
+      }
+    }
+  }
+}
+
+#[cfg(not(target_family = "wasm"))]
+struct MultiThreadExecutor {
+  pool: ThreadPool,
+  queue: Mutex<VecDeque<Runnable>>,
+  blocking_queue: Mutex<VecDeque<Box<dyn FnOnce() + Send + 'static>>>,
+  active_drainers: AtomicUsize,
+  active_blocking: AtomicUsize,
+  max_drainers: usize,
+  max_blocking: usize,
+  metrics: Arc<RuntimeMetrics>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl MultiThreadExecutor {
+  fn new(
+    options: &RuntimeOptions,
+    metrics: Arc<RuntimeMetrics>,
+  ) -> Result<Self, RuntimeConfigError> {
+    let thread_name_prefix = options.thread_name_prefix.clone();
+    let pool = ThreadPoolBuilder::new()
+      .num_threads(options.worker_threads)
+      .thread_name(move |index| format!("{thread_name_prefix}-{index}"))
+      .build()
+      .map_err(|error| RuntimeConfigError(format!("failed to create runtime workers: {error}")))?;
+    Ok(Self {
+      pool,
+      queue: Mutex::new(VecDeque::new()),
+      blocking_queue: Mutex::new(VecDeque::new()),
+      active_drainers: AtomicUsize::new(0),
+      active_blocking: AtomicUsize::new(0),
+      max_drainers: options.worker_threads,
+      max_blocking: options.max_blocking_tasks.min(options.worker_threads),
+      metrics,
+    })
+  }
+
+  fn schedule(self: &Arc<Self>, runnable: Runnable) {
+    self.metrics.runnable_scheduled();
+    self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push_back(runnable);
+    self.ensure_drainer();
+  }
+
+  fn schedule_blocking<F, T>(self: &Arc<Self>, function: F) -> JoinHandle<T>
+  where
+    F: FnOnce() -> T + Send + 'static,
+    T: Send + 'static,
+  {
+    let (sender, receiver) = oneshot::channel();
+    let metrics = Arc::clone(&self.metrics);
+    self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push_back(
+      Box::new(move || {
+        let _active = metrics.blocking_started();
+        let result =
+          catch_unwind(AssertUnwindSafe(function)).map_err(|panic| JoinError::from_panic(&*panic));
+        let _ = sender.send(result);
+      }),
+    );
+    self.ensure_drainer();
+    JoinHandle(JoinHandleInner::Blocking(receiver))
+  }
+
+  fn ensure_drainer(self: &Arc<Self>) {
+    loop {
+      let active = self.active_drainers.load(Ordering::Acquire);
+      if active >= self.max_drainers {
+        return;
+      }
+      if self
+        .active_drainers
+        .compare_exchange_weak(active, active + 1, Ordering::AcqRel, Ordering::Relaxed)
+        .is_ok()
+      {
+        let executor = Arc::clone(self);
+        self.pool.spawn_fifo(move || executor.drain());
+        return;
+      }
+    }
+  }
+
+  fn drain(self: Arc<Self>) {
+    const RUNNABLE_BUDGET: usize = 64;
+
+    for _ in 0..RUNNABLE_BUDGET {
+      let runnable =
+        self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
+      if let Some(runnable) = runnable {
+        run_runnable(&self.metrics, runnable);
+        continue;
+      }
+      if let Some(blocking) = self.take_blocking() {
+        blocking();
+        self.active_blocking.fetch_sub(1, Ordering::Release);
+        continue;
+      }
+      self.finish_draining();
+      return;
+    }
+
+    self.finish_draining();
+  }
+
+  fn finish_draining(self: &Arc<Self>) {
+    self.active_drainers.fetch_sub(1, Ordering::AcqRel);
+    let has_runnable =
+      !self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty();
+    let has_blocking = self.active_blocking.load(Ordering::Acquire) < self.max_blocking
+      && !self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty();
+    if has_runnable || has_blocking {
+      self.ensure_drainer();
+    }
+  }
+
+  fn take_blocking(&self) -> Option<Box<dyn FnOnce() + Send + 'static>> {
+    loop {
+      let active = self.active_blocking.load(Ordering::Acquire);
+      if active >= self.max_blocking {
+        return None;
+      }
+      let mut queue = self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      if queue.is_empty() {
+        return None;
+      }
+      if self
+        .active_blocking
+        .compare_exchange_weak(active, active + 1, Ordering::AcqRel, Ordering::Relaxed)
+        .is_ok()
+      {
+        return queue.pop_front();
+      }
+    }
+  }
+}
+
+#[derive(Clone)]
+enum RuntimeBackend {
+  CurrentThread(Arc<CurrentThreadExecutor>),
+  #[cfg(not(target_family = "wasm"))]
+  MultiThread(Arc<MultiThreadExecutor>),
+}
+
+impl RuntimeBackend {
+  fn new(
+    options: &RuntimeOptions,
+    metrics: Arc<RuntimeMetrics>,
+  ) -> Result<Self, RuntimeConfigError> {
+    match options.flavor {
+      RuntimeFlavor::CurrentThread => {
+        Ok(Self::CurrentThread(Arc::new(CurrentThreadExecutor::new(metrics))))
+      }
+      RuntimeFlavor::MultiThread => {
+        #[cfg(not(target_family = "wasm"))]
+        {
+          Ok(Self::MultiThread(Arc::new(MultiThreadExecutor::new(options, metrics)?)))
+        }
+        #[cfg(target_family = "wasm")]
+        {
+          let _ = metrics;
+          Err(RuntimeConfigError(
+            "the multi-thread runtime is unavailable in this WebAssembly build".to_string(),
+          ))
+        }
+      }
+    }
+  }
+
+  fn schedule(&self, runnable: Runnable) {
+    match self {
+      Self::CurrentThread(executor) => executor.schedule(runnable),
+      #[cfg(not(target_family = "wasm"))]
+      Self::MultiThread(executor) => executor.schedule(runnable),
+    }
+  }
+
+  fn spawn_blocking<F, T>(&self, function: F, metrics: &Arc<RuntimeMetrics>) -> JoinHandle<T>
+  where
+    F: FnOnce() -> T + Send + 'static,
+    T: Send + 'static,
+  {
+    match self {
+      Self::CurrentThread(_) => {
+        let _active = metrics.blocking_started();
+        let result =
+          catch_unwind(AssertUnwindSafe(function)).map_err(|panic| JoinError::from_panic(&*panic));
+        JoinHandle(JoinHandleInner::Ready(Some(result)))
+      }
+      #[cfg(not(target_family = "wasm"))]
+      Self::MultiThread(executor) => {
+        let _ = metrics;
+        executor.schedule_blocking(function)
+      }
+    }
+  }
+
+  fn block_on(&self, future: Pin<&mut dyn Future<Output = ()>>) {
+    match self {
+      Self::CurrentThread(executor) => executor.block_on(future),
+      #[cfg(not(target_family = "wasm"))]
+      Self::MultiThread(_) => futures::executor::block_on(future),
+    }
+  }
+}
+
+struct RuntimeState {
+  options: RuntimeOptions,
+  backend: Option<RuntimeBackend>,
+}
+
+struct RuntimeController {
+  state: Mutex<RuntimeState>,
+  metrics: Arc<RuntimeMetrics>,
+}
+
+impl RuntimeController {
+  fn new() -> Self {
+    Self {
+      state: Mutex::new(RuntimeState { options: RuntimeOptions::default(), backend: None }),
+      metrics: Arc::new(RuntimeMetrics::default()),
+    }
+  }
+
+  fn configure(&self, options: RuntimeOptions) -> Result<(), RuntimeConfigError> {
+    let options = options.validate()?;
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if state.backend.is_some() {
+      return Err(RuntimeConfigError(
+        "the async runtime is already running; configure it before the first async call"
+          .to_string(),
+      ));
+    }
+    state.options = options;
+    Ok(())
+  }
+
+  fn backend(&self) -> RuntimeBackend {
+    let mut state = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if let Some(backend) = &state.backend {
+      return backend.clone();
+    }
+    let backend = RuntimeBackend::new(&state.options, Arc::clone(&self.metrics))
+      .expect("validated async runtime configuration must create a backend");
+    state.backend = Some(backend.clone());
+    backend
+  }
+
+  fn options(&self) -> RuntimeOptions {
+    self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).options.clone()
+  }
+
+  fn shutdown(&self) {
+    let backend =
+      self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).backend.take();
+    drop(backend);
+  }
+}
+
+static RUNTIME: LazyLock<RuntimeController> = LazyLock::new(RuntimeController::new);
+
+pub fn configure(options: RuntimeOptions) -> Result<(), RuntimeConfigError> {
+  RUNTIME.configure(options)
+}
+
+pub fn configured_options() -> RuntimeOptions {
+  RUNTIME.options()
+}
+
+pub fn is_multi_threaded() -> bool {
+  RUNTIME.options().flavor == RuntimeFlavor::MultiThread
+}
+
+pub fn spawn<F, T>(future: F) -> JoinHandle<T>
+where
+  F: Future<Output = T> + Send + 'static,
+  T: Send + 'static,
+{
+  let backend = RUNTIME.backend();
+  let metrics = Arc::clone(&RUNTIME.metrics);
+  metrics.tasks_spawned.fetch_add(1, Ordering::Relaxed);
+  let wrapped = async move {
+    let result =
+      AssertUnwindSafe(future).catch_unwind().await.map_err(|panic| JoinError::from_panic(&*panic));
+    if result.is_ok() {
+      metrics.tasks_completed.fetch_add(1, Ordering::Relaxed);
+    } else {
+      metrics.tasks_panicked.fetch_add(1, Ordering::Relaxed);
+    }
+    result
+  };
+  let scheduler = backend.clone();
+  let (runnable, task) = async_task::spawn(wrapped, move |runnable| {
+    scheduler.schedule(runnable);
+  });
+  backend.schedule(runnable);
+  JoinHandle(JoinHandleInner::Task(task))
+}
+
+pub fn spawn_detached<F>(future: F)
+where
+  F: Future<Output = ()> + Send + 'static,
+{
+  spawn(future).detach();
+}
+
+pub fn spawn_blocking<F, T>(function: F) -> JoinHandle<T>
+where
+  F: FnOnce() -> T + Send + 'static,
+  T: Send + 'static,
+{
+  let backend = RUNTIME.backend();
+  let metrics = Arc::clone(&RUNTIME.metrics);
+  backend.spawn_blocking(function, &metrics)
+}
+
+pub fn block_on<F: Future>(future: F) -> F::Output {
+  let mut output = None;
+  {
+    let mut erased = std::pin::pin!(async {
+      output = Some(future.await);
+    });
+    block_on_dyn(erased.as_mut());
+  }
+  output.expect("async runtime returned before the future completed")
+}
+
+pub fn block_on_dyn(future: Pin<&mut dyn Future<Output = ()>>) {
+  RUNTIME.backend().block_on(future);
+}
+
+pub fn shutdown() {
+  RUNTIME.shutdown();
+}
+
+pub fn reset_metrics() {
+  RUNTIME.metrics.reset();
+}
+
+pub fn metrics() -> RuntimeMetricsSnapshot {
+  let options = RUNTIME.options();
+  RuntimeMetricsSnapshot {
+    flavor: options.flavor,
+    worker_threads: options.worker_threads,
+    max_blocking_tasks: options.max_blocking_tasks,
+    tasks_spawned: RUNTIME.metrics.tasks_spawned.load(Ordering::Relaxed),
+    tasks_completed: RUNTIME.metrics.tasks_completed.load(Ordering::Relaxed),
+    tasks_panicked: RUNTIME.metrics.tasks_panicked.load(Ordering::Relaxed),
+    runnable_schedules: RUNTIME.metrics.runnable_schedules.load(Ordering::Relaxed),
+    runnable_polls: RUNTIME.metrics.runnable_polls.load(Ordering::Relaxed),
+    queued_runnables: RUNTIME.metrics.queued_runnables.load(Ordering::Relaxed),
+    max_queued_runnables: RUNTIME.metrics.max_queued_runnables.load(Ordering::Relaxed),
+    active_runnables: RUNTIME.metrics.active_runnables.load(Ordering::Relaxed),
+    max_active_runnables: RUNTIME.metrics.max_active_runnables.load(Ordering::Relaxed),
+    blocking_tasks_started: RUNTIME.metrics.blocking_tasks_started.load(Ordering::Relaxed),
+    blocking_tasks_completed: RUNTIME.metrics.blocking_tasks_completed.load(Ordering::Relaxed),
+    active_blocking_tasks: RUNTIME.metrics.active_blocking_tasks.load(Ordering::Relaxed),
+    max_active_blocking_tasks: RUNTIME.metrics.max_active_blocking_tasks.load(Ordering::Relaxed),
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn current_thread_executor_drives_spawned_tasks() {
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::new(Arc::clone(&metrics)));
+    let scheduler = Arc::clone(&executor);
+    let (runnable, task) = async_task::spawn(async { 42 }, move |runnable| {
+      scheduler.schedule(runnable);
+    });
+
+    executor.schedule(runnable);
+
+    assert_eq!(futures::executor::block_on(task), 42);
+    assert_eq!(metrics.runnable_polls.load(Ordering::Relaxed), 1);
+    assert_eq!(metrics.active_runnables.load(Ordering::Relaxed), 0);
+  }
+
+  #[test]
+  fn current_thread_blocking_work_completes_inline() {
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let backend =
+      RuntimeBackend::CurrentThread(Arc::new(CurrentThreadExecutor::new(Arc::clone(&metrics))));
+
+    let value = futures::executor::block_on(backend.spawn_blocking(|| 7, &metrics))
+      .expect("blocking task should complete");
+
+    assert_eq!(value, 7);
+    assert_eq!(metrics.blocking_tasks_started.load(Ordering::Relaxed), 1);
+    assert_eq!(metrics.blocking_tasks_completed.load(Ordering::Relaxed), 1);
+  }
+}

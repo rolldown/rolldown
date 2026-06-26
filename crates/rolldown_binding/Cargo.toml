@@ -92,6 +92,9 @@ mimalloc-safe = { workspace = true, features = [
 napi-build = { workspace = true }
 
 [features]
+default = ["tokio-runtime"]
+async-runtime = ["napi/async-runtime", "rolldown/async-runtime", "rolldown_utils/async-runtime"]
 chrome-tracing = ["rolldown_tracing/chrome-tracing"]
 default_global_allocator = []
 disable_panic_hook = []
+tokio-runtime = ["napi/async"]

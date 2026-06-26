@@ -1,3 +1,6 @@
+use std::cmp::Reverse;
+
+use itertools::Itertools;
 use oxc_str::CompactStr;
 
 use crate::{
@@ -141,25 +144,15 @@ pub fn deconflict_chunk_symbols(
     }
   }
 
-  // The renamer relies on `chunk.modules` being in ascending exec_order so that
-  // `.rev()` yields entry-first / descending exec_order — the same priority as
-  // `deconflict_order_key`. Enforce that invariant in debug builds (was only a
-  // prose + pinned-SHA comment before).
-  debug_assert!(
-    chunk
-      .modules
-      .iter()
-      .filter_map(|idx| link_output.module_table[*idx].as_normal().map(|m| m.exec_order))
-      .is_sorted(),
-    "chunk.modules must be in ascending exec_order for deconfliction"
-  );
-
+  // Deconflict in descending exec_order (entry first / highest exec_order), the same
+  // priority as `deconflict_order_key` used for cross-chunk export naming. This is
+  // driven by `exec_order` explicitly rather than by `chunk.modules`'s order, which
+  // under `chunkModulesOrder: "moduleId"` is not exec-order-sorted.
   chunk
     .modules
     .iter()
     .copied()
-    // Starts with entry module
-    .rev()
+    .sorted_by_key(|idx| Reverse(link_output.module_table[*idx].exec_order()))
     .filter_map(|id| link_output.module_table[id].as_normal())
     .for_each(|module| {
       if let Some(hmr_hot_ref) = module.hmr_hot_ref {

@@ -1,0 +1,8 @@
+{
+  "_comment": "Two side-effect-free leaf modules (a.js, z.js) that both declare a top-level `dup`, with id order (a, z) opposite to exec_order (z, a). `chunkModulesOrder: moduleId` renders them by id, but deconfliction must still follow exec_order: the higher-exec_order module (a) keeps `dup`, matching the default ExecOrder mode. Previously this panicked the deconfliction debug_assert; before that (release) it picked the wrong winner.",
+  "config": {
+    "experimental": {
+      "chunkModulesOrder": "moduleId"
+    }
+  }
+}

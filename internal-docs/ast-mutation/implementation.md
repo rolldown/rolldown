@@ -72,16 +72,6 @@ diagnostic locations stay tied to the rewritten source range.
 
 Do not add a cross-pass node side table keyed only by `Span`. If a later pass needs to identify the same AST node, prefer `NodeId`; if records from more than one module can share a table, include `ModuleIdx`.
 
-## Address Use
-
-Oxc `Address` is still acceptable for scratch state inside one live AST traversal, where producer and consumer operate before the traversal returns and no data survives as cross-pass metadata. The current example is:
-
-- `PreProcessor`'s `statement_stack` / `statement_replace_map` in `crates/rolldown/src/utils/tweak_ast_for_scanning.rs`.
-
-`PreProcessor` specifically _cannot_ use `NodeId`: it runs before the final semantic rebuild (`recreate_scoping` in `crates/rolldown/src/utils/pre_process_ecma_ast.rs`), so node ids are not yet assigned to the nodes it creates or moves. `Address` is the only stable per-node identity available at that point, and it is safe because the table never outlives the traversal.
-
-Do not store `Address` in module metadata, entry metadata, or link-stage tables that outlive the traversal that produced it. In the post-semantic scanner, prefer `NodeId` even for same-traversal node identity checks when the compared nodes already have semantic IDs.
-
 ## Pre-Scan Span Handling
 
 `PreProcessor` does not rewrite spans for identity anymore. Pairwise span uniqueness does not back any identity table after the `NodeId` migration, so ordinary duplicate spans are left alone, and nodes created during pre-scan rewrites can keep the reserved synthetic span (`SPAN`, `0..0`).

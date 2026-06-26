@@ -1,6 +1,16 @@
 [workspace]
 members = ["./crates/*", "tasks/*"]
+# `vendor/*` holds patched third-party crates referenced via `[patch.crates-io]`
+# (see the bottom of this file); they must not be treated as workspace members.
+exclude = ["vendor"]
 resolver = "3"
+
+# Vendored json-escape-simd 3.0.2 with a big-endian correctness fix. The upstream
+# portable fallback corrupts JSON string escaping on big-endian targets (s390x);
+# patching here fixes both rolldown's direct use and oxc_sourcemap's transitive
+# use in one place. See rolldown-s390x-big-endian-analysis.md.
+[patch.crates-io]
+json-escape-simd = { path = "vendor/json-escape-simd" }
 
 [workspace.package]
 edition = "2024"

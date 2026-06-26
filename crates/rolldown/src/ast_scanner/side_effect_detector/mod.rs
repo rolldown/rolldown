@@ -84,9 +84,15 @@ impl<'a> SideEffectDetector<'a> {
       return false.into();
     }
     // ES module namespace objects are frozen/sealed by spec — property reads
-    // on them are guaranteed side-effect-free.
+    // on them are guaranteed side-effect-free. A computed key is still evaluated,
+    // though, and may have its own side effects (e.g. `ns[foo()]`).
     if self.is_namespace_member_access(member_expr) == Some(true) {
-      return false.into();
+      return match member_expr {
+        ast::MemberExpression::ComputedMemberExpression(e) => {
+          self.detect_side_effect_of_expr(&e.expression)
+        }
+        _ => false.into(),
+      };
     }
     // Only `import.meta.url` is a spec-defined side-effect-free property read.
     // Other accesses like `import.meta.hot.accept()` may have side effects.

@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## data.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region data.json
+var require_data = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {
+		"foo": "original",
+		"unused": "must remain externally mutable"
+	};
+}));
+//#endregion
+export default require_data();
+export { require_data as t };
+
+```
+
+## reader.js
+
+```js
+import { t as require_data } from "./data.js";
+const value = require_data().foo;
+//#endregion
+export { value };
+
+```

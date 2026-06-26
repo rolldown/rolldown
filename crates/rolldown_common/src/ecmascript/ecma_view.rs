@@ -109,6 +109,9 @@ pub struct EcmaView {
   /// Contains both const and regular enums.
   pub enum_member_value_map: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>>,
   pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
+  /// Top-level `const data = require('./x')` candidates whose references are all static member
+  /// reads. The link stage only uses these when the import record resolves to JSON.
+  pub json_require_binding_import_records: Option<Box<FxHashMap<SymbolRef, ImportRecordIdx>>>,
   /// Use `Box` since it is rarely used also it could reduce the size of `EcmaView`, .
   pub json_module_none_self_reference_included_symbol: Option<Box<FxHashSet<SymbolRef>>>,
   /// Import record indices for `module.exports = require(...)` patterns.

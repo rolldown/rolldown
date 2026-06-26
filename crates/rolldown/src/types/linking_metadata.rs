@@ -77,6 +77,9 @@ pub struct LinkingMetadata {
   /// included reexport symbol from commonjs module
   pub named_import_to_cjs_module: FxHashMap<SymbolRef, ModuleIdx>,
   pub import_record_ns_to_cjs_module: FxHashMap<SymbolRef, ModuleIdx>,
+  /// Validated `const data = require('./x.json')` bindings, keyed by the binding symbol.
+  pub json_require_binding_to_json_module:
+    Option<Box<FxHashMap<SymbolRef, (ModuleIdx, ImportRecordIdx)>>>,
   /// Currently our symbol link system could only link one symbol to another one, but for commonjs
   /// tree shaking, when one symbol was linked it may not only link the namespace ref symbol, and
   /// also need to link the exported facade symbol.

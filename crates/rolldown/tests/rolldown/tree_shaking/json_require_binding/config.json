@@ -1,0 +1,4 @@
+{
+  "mode": "prod",
+  "unused": "can be tree-shaken"
+}

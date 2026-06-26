@@ -1,7 +1,8 @@
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module,
-  OutputFormat, WrapKind,
+  ModuleIdx, ModuleType, OutputFormat, WrapKind,
 };
+use rustc_hash::FxHashSet;
 
 use crate::utils::external_import_interop::import_record_needs_interop;
 
@@ -14,12 +15,43 @@ impl LinkStage<'_> {
     // before mutating an importee's `exports_kind` via `as_normal_mut`. Reads and
     // writes interleave in the same order as the original closure walk, preserving
     // the "earlier importer's promotion is observed by later importers" semantics.
+    let json_require_binding_dce_enabled = self.options.treeshake.is_some();
+    let mut json_require_binding_records = FxHashSet::default();
+    let mut candidate_json_modules = FxHashSet::default();
     let importer_indices: Vec<_> = self
       .module_table
       .modules
       .iter_enumerated()
-      .filter_map(|(idx, m)| matches!(m, Module::Normal(_)).then_some(idx))
+      .filter_map(|(module_idx, module)| {
+        let module = module.as_normal()?;
+        if json_require_binding_dce_enabled
+          && let Some(records) = module.ecma_view.json_require_binding_import_records.as_deref()
+        {
+          for &rec_idx in records.values() {
+            json_require_binding_records.insert((module_idx, rec_idx));
+            let rec = &module.import_records[rec_idx];
+            if let Some(importee_idx) = rec.resolved_module
+              && !self.entries.contains_key(&importee_idx)
+              && self.module_table[importee_idx]
+                .as_normal()
+                .is_some_and(|importee| matches!(importee.module_type, ModuleType::Json))
+            {
+              candidate_json_modules.insert(importee_idx);
+            }
+          }
+        }
+        Some(module_idx)
+      })
       .collect();
+    let json_modules_with_incompatible_import = if candidate_json_modules.is_empty() {
+      FxHashSet::default()
+    } else {
+      self.json_modules_with_incompatible_import(
+        &importer_indices,
+        &json_require_binding_records,
+        &candidate_json_modules,
+      )
+    };
 
     for importer_idx in importer_indices {
       let n_records = match &self.module_table[importer_idx] {
@@ -28,14 +60,17 @@ impl LinkStage<'_> {
       };
 
       for rec_pos in 0..n_records {
+        let rec_idx = ImportRecordIdx::from_usize(rec_pos);
         let (kind, importee_idx) = {
           let Module::Normal(m) = &self.module_table[importer_idx] else { continue };
-          let rec = &m.import_records[ImportRecordIdx::from_usize(rec_pos)];
+          let rec = &m.import_records[rec_idx];
           let Some(importee_idx) = rec.resolved_module else { continue };
           (rec.kind, importee_idx)
         };
-        let (importee_kind, has_lazy) = match &self.module_table[importee_idx] {
-          Module::Normal(m) => (m.exports_kind, m.meta.has_lazy_export()),
+        let (importee_kind, has_lazy, importee_is_json) = match &self.module_table[importee_idx] {
+          Module::Normal(m) => {
+            (m.exports_kind, m.meta.has_lazy_export(), matches!(m.module_type, ModuleType::Json))
+          }
           Module::External(_) => continue,
         };
         match kind {
@@ -55,10 +90,23 @@ impl LinkStage<'_> {
               self.metas[importee_idx].sync_wrap_kind(WrapKind::Cjs);
             }
             ExportsKind::None => {
-              self.metas[importee_idx].sync_wrap_kind(WrapKind::Cjs);
-              // A `require`'d module with `ExportsKind::None` is promoted to `ExportsKind::CommonJs`.
-              if let Some(m) = self.module_table[importee_idx].as_normal_mut() {
-                m.exports_kind = ExportsKind::CommonJs;
+              // Keep JSON in its split ESM shape only when every incoming record is the narrow
+              // DCE-safe require binding form. Any import or ordinary require keeps the old path.
+              if importee_is_json
+                && candidate_json_modules.contains(&importee_idx)
+                && json_require_binding_records.contains(&(importer_idx, rec_idx))
+                && !json_modules_with_incompatible_import.contains(&importee_idx)
+              {
+                self.metas[importee_idx].sync_wrap_kind(WrapKind::Esm);
+                if let Some(m) = self.module_table[importee_idx].as_normal_mut() {
+                  m.exports_kind = ExportsKind::Esm;
+                }
+              } else {
+                self.metas[importee_idx].sync_wrap_kind(WrapKind::Cjs);
+                // A `require`'d module with `ExportsKind::None` is promoted to `ExportsKind::CommonJs`.
+                if let Some(m) = self.module_table[importee_idx].as_normal_mut() {
+                  m.exports_kind = ExportsKind::CommonJs;
+                }
               }
             }
           },
@@ -105,6 +153,30 @@ impl LinkStage<'_> {
         self.metas[importer.idx].sync_wrap_kind(WrapKind::Cjs);
       }
     }
+  }
+
+  fn json_modules_with_incompatible_import(
+    &self,
+    importer_indices: &[ModuleIdx],
+    json_require_binding_records: &FxHashSet<(ModuleIdx, ImportRecordIdx)>,
+    candidate_json_modules: &FxHashSet<ModuleIdx>,
+  ) -> FxHashSet<ModuleIdx> {
+    let mut ret = FxHashSet::default();
+    for &importer_idx in importer_indices {
+      let Module::Normal(importer) = &self.module_table[importer_idx] else { continue };
+      for (rec_idx, rec) in importer.import_records.iter_enumerated() {
+        if rec.kind == ImportKind::Require
+          && json_require_binding_records.contains(&(importer_idx, rec_idx))
+        {
+          continue;
+        }
+        let Some(importee_idx) = rec.resolved_module else { continue };
+        if candidate_json_modules.contains(&importee_idx) {
+          ret.insert(importee_idx);
+        }
+      }
+    }
+    ret
   }
 
   /// Builds the `safely_merge_cjs_ns_map` which groups ESM imports of the same CommonJS module.

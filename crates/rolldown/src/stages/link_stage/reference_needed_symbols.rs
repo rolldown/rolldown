@@ -1,6 +1,6 @@
 use rolldown_common::{
-  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, RuntimeHelper,
-  StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
+  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleType, OutputFormat,
+  RuntimeHelper, StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -193,7 +193,13 @@ impl LinkStage<'_> {
                     }
                   }
                   ImportKind::Require => match importee_linking_info.wrap_kind() {
-                    WrapKind::None => {}
+                    WrapKind::None => {
+                      if matches!(importee.module_type, ModuleType::Json)
+                        && !rec.meta.contains(ImportRecordMeta::IsRequireUnused)
+                      {
+                        stmt_info.referenced_symbols.push(importee.default_export_ref.into());
+                      }
+                    }
                     WrapKind::Cjs => {
                       // something like `require_foo()`
                       // Reference to `require_foo`

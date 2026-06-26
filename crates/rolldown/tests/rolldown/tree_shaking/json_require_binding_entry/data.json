@@ -1,0 +1,4 @@
+{
+  "foo": "original",
+  "unused": "must remain externally mutable"
+}

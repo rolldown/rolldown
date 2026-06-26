@@ -1,0 +1,164 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EVAL
+
+```text
+[EVAL] Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[ eval.js:5:1 ]
+   │
+ 5 │ eval('assert.strictEqual(evalData.other, "visible to eval")');
+   │ ──┬─  
+   │   ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
+//#region eval.json
+var require_eval = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {
+		"mode": "eval",
+		"other": "visible to eval"
+	};
+}));
+//#endregion
+//#region eval.js
+const evalData = require_eval();
+assert.strictEqual(evalData.mode, "eval");
+eval("assert.strictEqual(evalData.other, \"visible to eval\")");
+//#endregion
+//#region imported.json
+var require_imported = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {
+		"mode": "prod",
+		"unused": "kept with imported object"
+	};
+}));
+//#endregion
+//#region ordinary.json
+var require_ordinary = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {
+		"mode": "original",
+		"unused": "kept with ordinary require"
+	};
+}));
+//#endregion
+//#region ordinary.js
+var import_imported = /* @__PURE__ */ __toESM(require_imported());
+const ordinary = require_ordinary();
+//#endregion
+//#region config.json
+var mode$2 = "prod";
+//#endregion
+//#region extra-argument.json
+var require_extra_argument = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {
+		"mode": "extra argument",
+		"unused": "kept with extra require argument"
+	};
+}));
+//#endregion
+//#region array.json
+var array_exports = /* @__PURE__ */ __exportAll({ default: () => array_default });
+var array_default;
+var init_array = __esmMin((() => {
+	array_default = ["first", "second"];
+}));
+//#endregion
+//#region primitive.json
+var primitive_exports = /* @__PURE__ */ __exportAll({ default: () => primitive_default });
+var primitive_default;
+var init_primitive = __esmMin((() => {
+	primitive_default = "primitive";
+}));
+//#endregion
+//#region default-key.json
+var require_default_key = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {
+		"default": "preserved",
+		"unused": "kept with default object"
+	};
+}));
+//#endregion
+//#region mutated.json
+var require_mutated = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {
+		"mode": "prod",
+		"unused": "kept with mutated object"
+	};
+}));
+//#endregion
+//#region escaped.json
+var escaped_default = {
+	mode: "original",
+	unused: "kept with escaped object"
+};
+//#endregion
+//#region missing.json
+var missing_default = {
+	mode: "fallback",
+	unused: "kept with missing property access"
+};
+//#endregion
+//#region lazy.json
+var require_lazy = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = {
+		"mode": "lazy",
+		"unused": "kept with lazy object"
+	};
+}));
+//#endregion
+//#region main.js
+const config = void 0;
+assert.strictEqual(mode$2, "prod");
+const extraArgument = require_extra_argument();
+assert.strictEqual(extraArgument.mode, "extra argument");
+const array = (init_array(), __toCommonJS(array_exports).default);
+assert.strictEqual(array.length, 2);
+const primitive = (init_primitive(), __toCommonJS(primitive_exports).default);
+assert.strictEqual(primitive.length, 9);
+const defaultKey = require_default_key();
+assert.strictEqual(defaultKey.default, "preserved");
+const mutated = require_mutated();
+mutated.mode = "dev";
+assert.strictEqual(mutated.mode, "dev");
+const requiredImported = require_imported();
+import_imported.default.mode = "imported mutation";
+assert.strictEqual(requiredImported.mode, "imported mutation");
+const escaped = escaped_default;
+Reflect.set(escaped.valueOf(), "mode", "escaped mutation");
+assert.strictEqual(escaped.mode, "escaped mutation");
+Object.defineProperty(Object.prototype, "absent", {
+	configurable: true,
+	get() {
+		this.mode = "prototype mutation";
+	}
+});
+const missing = missing_default;
+assert.strictEqual(missing.mode, "fallback");
+assert.strictEqual(missing.absent, void 0);
+const missingReader = missing_default;
+assert.strictEqual(missingReader.mode, "prototype mutation");
+delete Object.prototype.absent;
+const requiredOrdinary = require_ordinary();
+ordinary.mode = "ordinary mutation";
+assert.strictEqual(requiredOrdinary.mode, "ordinary mutation");
+const lazy = require_lazy();
+function readLazy() {
+	return lazy.mode;
+}
+assert.strictEqual(readLazy(), "lazy");
+//#endregion
+
+```

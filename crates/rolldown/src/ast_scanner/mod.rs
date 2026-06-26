@@ -12,7 +12,7 @@ use const_eval::{ConstEvalCtx, try_extract_const_literal};
 use oxc::ast::ast::{BindingPattern, Expression, ImportExpression};
 use oxc::ast::{AstKind, ast};
 use oxc::ast_visit::walk;
-use oxc::semantic::{NodeId, Reference, ScopeFlags, Scoping};
+use oxc::semantic::{NodeId, Reference, ReferenceId, ScopeFlags, Scoping};
 use oxc::span::SPAN;
 use oxc::{
   ast::{
@@ -120,6 +120,7 @@ pub struct ScanResult {
   pub directive_range: Vec<Span>,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
   pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
+  pub json_require_binding_import_records: FxHashMap<SymbolRef, ImportRecordIdx>,
   /// Temporary storage for node IDs of `require()` calls in `module.exports = require(...)` patterns.
   /// Resolved to `cjs_reexport_import_record_ids` after scanning completes.
   pub cjs_reexport_require_node_ids: Vec<NodeId>,
@@ -172,6 +173,11 @@ pub struct AstScanner<'me, 'ast> {
   /// Symbol IDs of namespace imports (`import * as ns from '...'`).
   /// Used to treat property reads on namespace objects as side-effect-free.
   namespace_object_symbol_ids: FxHashSet<SymbolId>,
+  /// Top-level `const data = require('./x')` candidates, resolved to import records after the
+  /// `require()` call is visited.
+  json_require_binding_candidates: FxHashMap<SymbolId, NodeId>,
+  /// Reference IDs for candidate bindings that were observed as static member reads.
+  json_require_binding_member_refs: FxHashSet<ReferenceId>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -230,6 +236,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       constant_export_map: FxHashMap::default(),
       ecma_view_meta: EcmaViewMeta::default(),
       import_attribute_map: FxHashMap::default(),
+      json_require_binding_import_records: FxHashMap::default(),
       cjs_reexport_require_node_ids: Vec::new(),
       cjs_reexport_import_record_ids: Vec::new(),
     };
@@ -268,6 +275,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
       namespace_object_symbol_ids: FxHashSet::default(),
+      json_require_binding_candidates: FxHashMap::default(),
+      json_require_binding_member_refs: FxHashSet::default(),
     }
   }
 
@@ -373,6 +382,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .iter()
       .filter_map(|node_id| self.result.imports.get(node_id).copied())
       .collect();
+    self.result.json_require_binding_import_records =
+      self.valid_json_require_binding_import_records();
 
     // If some commonjs module facade exports was used locally, we need to explicitly mark them as
     // has side effects, so that they should not be removed in linking stage.
@@ -455,6 +466,44 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
     Ok(self.result)
+  }
+
+  fn valid_json_require_binding_import_records(&self) -> FxHashMap<SymbolRef, ImportRecordIdx> {
+    if self.json_require_binding_candidates.is_empty() {
+      return FxHashMap::default();
+    }
+    let scoping = self.result.symbol_ref_db.scoping();
+    let exported_refs =
+      self.result.named_exports.values().map(|export| export.referenced).collect::<FxHashSet<_>>();
+    self
+      .json_require_binding_candidates
+      .iter()
+      .filter_map(|(&symbol_id, &require_call_node_id)| {
+        let symbol_ref = SymbolRef { owner: self.immutable_ctx.idx, symbol: symbol_id };
+
+        if !scoping.symbol_flags(symbol_id).is_const_variable()
+          || !scoping.symbol_redeclarations(symbol_id).is_empty()
+          || self.result.ecma_view_meta.contains(EcmaViewMeta::Eval)
+          || exported_refs.contains(&symbol_ref)
+        {
+          return None;
+        }
+
+        let all_refs_are_static_member_reads =
+          scoping.get_resolved_reference_ids(symbol_id).iter().all(|&reference_id| {
+            let reference = scoping.get_reference(reference_id);
+            !reference.is_write()
+              && !reference.flags().is_member_write_target()
+              && self.json_require_binding_member_refs.contains(&reference_id)
+          });
+        if !all_refs_are_static_member_reads {
+          return None;
+        }
+
+        let import_record_idx = self.result.imports.get(&require_call_node_id).copied()?;
+        Some((symbol_ref, import_record_idx))
+      })
+      .collect()
   }
 
   fn set_esm_export_keyword(&mut self, span: Span) {

@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "data",
+        "import": "./data.json"
+      },
+      {
+        "name": "reader",
+        "import": "./reader.js"
+      }
+    ]
+  }
+}

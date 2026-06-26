@@ -6,10 +6,10 @@ use oxc_str::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprObjectReferencedType, MemberExprRef,
-  MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
-  OutputFormat, ResolvedExport, Specifier, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDb, SymbolRefFlags,
+  EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta, IndexModules,
+  MemberExprObjectReferencedType, MemberExprRef, MemberExprRefResolution, Module, ModuleIdx,
+  ModuleType, NamespaceAlias, NormalModule, OutputFormat, ResolvedExport, Specifier, StmtInfos,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 #[cfg(not(target_family = "wasm"))]
@@ -286,7 +286,7 @@ impl LinkStage<'_> {
       })
       .collect::<FxHashMap<ModuleIdx, RelationWithCommonjs>>();
 
-    let idx_to_symbol_ref_to_module_idx_map = self
+    let mut idx_to_symbol_ref_to_module_idx_map = self
       .module_table
       .par_iter_enumerated()
       .filter_map(|(idx, module)| {
@@ -294,26 +294,114 @@ impl LinkStage<'_> {
         let module = module.as_normal()?;
         let mut named_import_to_cjs_module = FxHashMap::default();
         let mut import_record_ns_to_cjs_module = FxHashMap::default();
+        let mut json_require_binding_to_json_module = FxHashMap::default();
         module.named_imports.iter().for_each(|(_, named_import)| {
           let rec = &module.import_records[named_import.record_idx];
-          if let Some(module_idx) = rec.resolved_module && relation_with_commonjs_map.contains_key(&module_idx) {
+          if let Some(module_idx) = rec.resolved_module
+            && relation_with_commonjs_map.contains_key(&module_idx)
+          {
             named_import_to_cjs_module.insert(named_import.imported_as, module_idx);
           }
         });
         module.import_records.iter().for_each(|item| {
-          if let Some(module_idx) = item.resolved_module && let Some(RelationWithCommonjs::Commonjs) = relation_with_commonjs_map.get(&module_idx) {
+          if let Some(module_idx) = item.resolved_module
+            && let Some(RelationWithCommonjs::Commonjs) =
+              relation_with_commonjs_map.get(&module_idx)
+          {
             import_record_ns_to_cjs_module.insert(item.namespace_ref, module_idx);
           }
         });
-        (!named_import_to_cjs_module.is_empty() || !import_record_ns_to_cjs_module.is_empty()).then_some((idx, (named_import_to_cjs_module, import_record_ns_to_cjs_module)))
+        module
+          .ecma_view
+          .json_require_binding_import_records
+          .as_deref()
+          .into_iter()
+          .flatten()
+          .for_each(|(&binding_ref, &rec_idx)| {
+            let rec = &module.import_records[rec_idx];
+            if let Some(module_idx) = rec.resolved_module
+              && self.module_table[module_idx].as_normal().is_some_and(|importee| {
+                matches!(importee.module_type, ModuleType::Json)
+                  && !importee.exports_kind.is_commonjs()
+              })
+            {
+              json_require_binding_to_json_module.insert(binding_ref, (module_idx, rec_idx));
+            }
+          });
+        (!named_import_to_cjs_module.is_empty()
+          || !import_record_ns_to_cjs_module.is_empty()
+          || !json_require_binding_to_json_module.is_empty())
+        .then_some((
+          idx,
+          (
+            named_import_to_cjs_module,
+            import_record_ns_to_cjs_module,
+            json_require_binding_to_json_module,
+          ),
+        ))
       })
-      .collect::<FxHashMap<ModuleIdx, (FxHashMap<SymbolRef, ModuleIdx>, FxHashMap<SymbolRef, ModuleIdx>)>>();
-    for (k, (named_import_to_cjs_module, import_record_ns_to_cjs_module)) in
-      idx_to_symbol_ref_to_module_idx_map
+      .collect::<FxHashMap<
+        ModuleIdx,
+        (
+          FxHashMap<SymbolRef, ModuleIdx>,
+          FxHashMap<SymbolRef, ModuleIdx>,
+          FxHashMap<SymbolRef, (ModuleIdx, ImportRecordIdx)>,
+        ),
+      >>();
+    let mut invalid_json_modules = FxHashSet::default();
+    for (&importer_idx, (_, _, bindings)) in &idx_to_symbol_ref_to_module_idx_map {
+      self.collect_json_modules_with_non_export_reads(
+        importer_idx,
+        bindings,
+        &mut invalid_json_modules,
+      );
+    }
+    if !invalid_json_modules.is_empty() {
+      for (_, _, bindings) in idx_to_symbol_ref_to_module_idx_map.values_mut() {
+        bindings.retain(|_, (json_module_idx, _)| !invalid_json_modules.contains(json_module_idx));
+      }
+    }
+    for (
+      k,
+      (
+        named_import_to_cjs_module,
+        import_record_ns_to_cjs_module,
+        json_require_binding_to_json_module,
+      ),
+    ) in idx_to_symbol_ref_to_module_idx_map
     {
       let meta = &mut self.metas[k];
       meta.named_import_to_cjs_module = named_import_to_cjs_module;
       meta.import_record_ns_to_cjs_module = import_record_ns_to_cjs_module;
+      meta.json_require_binding_to_json_module = (!json_require_binding_to_json_module.is_empty())
+        .then(|| Box::new(json_require_binding_to_json_module));
+    }
+  }
+
+  fn collect_json_modules_with_non_export_reads(
+    &self,
+    importer_idx: ModuleIdx,
+    bindings: &FxHashMap<SymbolRef, (ModuleIdx, ImportRecordIdx)>,
+    invalid_json_modules: &mut FxHashSet<ModuleIdx>,
+  ) {
+    if bindings.is_empty() {
+      return;
+    }
+    for stmt_info in self.stmt_infos[importer_idx].iter() {
+      for referenced_symbol in &stmt_info.referenced_symbols {
+        let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = referenced_symbol else {
+          continue;
+        };
+        let Some(&(json_module_idx, _)) = bindings.get(&member_expr_ref.object_ref) else {
+          continue;
+        };
+        if member_expr_ref.prop_and_span_list.first().is_none_or(|prop| {
+          prop.name.as_str() == "default"
+            || !self.metas[json_module_idx].resolved_exports.contains_key(&prop.name)
+        }) {
+          invalid_json_modules.insert(json_module_idx);
+        }
+      }
     }
   }
 
@@ -417,6 +505,41 @@ impl LinkStage<'_> {
     normal_symbol_exports_chain_map: &FxHashMap<SymbolRef, Vec<SymbolRef>>,
   ) {
     let warnings = append_only_vec::AppendOnlyVec::new();
+    let has_json_require_binding =
+      self.metas.iter().any(|meta| meta.json_require_binding_to_json_module.is_some());
+    let json_defaults_with_member_write = if has_json_require_binding {
+      #[cfg(not(target_family = "wasm"))]
+      {
+        self
+          .module_table
+          .modules
+          .par_iter()
+          .zip(self.stmt_infos.par_iter())
+          .map(|(module, stmt_infos)| match module {
+            Module::Normal(_) => self.collect_json_defaults_with_member_write(stmt_infos),
+            Module::External(_) => FxHashSet::default(),
+          })
+          .reduce(FxHashSet::default, |mut acc, written_json_defaults| {
+            acc.extend(written_json_defaults);
+            acc
+          })
+      }
+
+      #[cfg(target_family = "wasm")]
+      {
+        self.module_table.modules.iter().zip(self.stmt_infos.iter()).fold(
+          FxHashSet::default(),
+          |mut acc, (module, stmt_infos)| {
+            if matches!(module, Module::Normal(_)) {
+              acc.extend(self.collect_json_defaults_with_member_write(stmt_infos));
+            }
+            acc
+          },
+        )
+      }
+    } else {
+      FxHashSet::default()
+    };
     let resolved_meta_data = self
       .module_table
       .modules
@@ -429,6 +552,7 @@ impl LinkStage<'_> {
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
           let json_default_imports_with_member_write =
             self.collect_json_default_imports_with_member_write(module, stmt_infos);
+          let mut unused_json_require_records = FxHashSet::default();
           stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
@@ -442,6 +566,34 @@ impl LinkStage<'_> {
                     Module::Normal(module) => module,
                     Module::External(_) => return,
                   };
+                let json_require_binding_default =
+                  self.metas[member_expr_ref.object_ref.owner]
+                    .json_require_binding_to_json_module
+                    .as_deref()
+                    .and_then(|bindings| bindings.get(&member_expr_ref.object_ref))
+                    .and_then(|&(json_module_idx, import_record_idx)| {
+                      if member_expr_ref.is_write
+                        || member_expr_ref.object_ref_type
+                          != MemberExprObjectReferencedType::Default
+                        || member_expr_ref
+                          .prop_and_span_list
+                          .first()
+                          .is_none_or(|prop| prop.name.as_str() == "default")
+                      {
+                        return None;
+                      }
+                      let default_ref =
+                        self.metas[json_module_idx].resolved_exports.get("default")?.symbol_ref;
+                      let canonical_default_ref = self.symbols.canonical_ref_for(default_ref);
+                      (!json_defaults_with_member_write.contains(&canonical_default_ref))
+                        .then_some((json_module_idx, import_record_idx, canonical_default_ref))
+                    });
+                if let Some((json_module_idx, _, default_ref)) = json_require_binding_default {
+                  canonical_ref = default_ref;
+                  canonical_ref_owner = self.module_table[json_module_idx]
+                    .as_normal()
+                    .expect("json require binding importee should be a normal module");
+                }
                 // Treat `import data from './x.json'; data.foo` as a namespace access so
                 // it can be optimized to the underlying `foo` export. Skip this for writes
                 // (`data.foo = ...`) since rewriting the write target to a bare identifier
@@ -454,14 +606,19 @@ impl LinkStage<'_> {
                 // itself and silently drop the access. Since JSON resolution is single-level,
                 // gating at setup is sufficient — the loop never re-enters for a JSON module
                 // after the first iteration.
-                let is_json_import_ns = matches!(canonical_ref_owner.module_type, ModuleType::Json)
-                  && member_expr_ref.object_ref_type == MemberExprObjectReferencedType::Default
-                  && !member_expr_ref.is_write
-                  && !json_default_imports_with_member_write.contains(&canonical_ref)
-                  && member_expr_ref
-                    .prop_and_span_list
-                    .first()
-                    .is_none_or(|prop| prop.name.as_str() != "default");
+                let is_json_import_ns = json_require_binding_default.is_some()
+                  || (matches!(canonical_ref_owner.module_type, ModuleType::Json)
+                    && member_expr_ref.object_ref_type == MemberExprObjectReferencedType::Default
+                    && !member_expr_ref.is_write
+                    && !json_default_imports_with_member_write.contains(&canonical_ref)
+                    && member_expr_ref
+                      .prop_and_span_list
+                      .first()
+                      .is_none_or(|prop| prop.name.as_str() != "default"));
+                if let Some((_, import_record_idx, _)) = json_require_binding_default {
+                  unused_json_require_records.insert(import_record_idx);
+                }
+                let is_json_require_binding_read = json_require_binding_default.is_some();
                 let mut is_namespace_ref =
                   canonical_ref_owner.namespace_object_ref == canonical_ref || is_json_import_ns;
                 let mut cursor = 0;
@@ -662,7 +819,7 @@ impl LinkStage<'_> {
                   }
                 }
 
-                if cursor > 0 {
+                if cursor > 0 && !is_json_require_binding_read {
                   // The module namespace might be created in the other module get imported via named import instead of `import * as`.
                   // We need to include the possible export chain.
                   depended_refs.push(member_expr_ref.object_ref);
@@ -690,9 +847,9 @@ impl LinkStage<'_> {
             });
           });
 
-          (resolved_map, side_effects_dependency, written_cjs_exports)
+          (resolved_map, side_effects_dependency, written_cjs_exports, unused_json_require_records)
         }
-        Module::External(_) => (FxHashMap::default(), vec![], vec![]),
+        Module::External(_) => (FxHashMap::default(), vec![], vec![], FxHashSet::default()),
       })
       .collect::<Vec<_>>();
 
@@ -705,7 +862,7 @@ impl LinkStage<'_> {
     // `cjs[name] = value`, or writes through `ns.default`), bail out all CJS exports of the
     // target module since we can't determine which specific property is affected.
     let mut written_cjs_export_symbols: Vec<SymbolRef> = Vec::new();
-    for (meta, (_, _, written_cjs_exports)) in self.metas.iter().zip(resolved_meta_data.iter()) {
+    for (meta, (_, _, written_cjs_exports, _)) in self.metas.iter().zip(resolved_meta_data.iter()) {
       written_cjs_export_symbols.extend(written_cjs_exports);
       for (import_symbol, cjs_module_idx) in
         meta.named_import_to_cjs_module.iter().chain(meta.import_record_ns_to_cjs_module.iter())
@@ -727,8 +884,16 @@ impl LinkStage<'_> {
     for symbol_ref in &written_cjs_export_symbols {
       self.global_constant_symbol_map.remove(symbol_ref);
     }
+    for (module, (_, _, _, unused_json_require_records)) in
+      self.module_table.modules.iter_mut().zip(resolved_meta_data.iter())
+    {
+      let Module::Normal(module) = module else { continue };
+      for &rec_idx in unused_json_require_records {
+        module.import_records[rec_idx].meta.insert(ImportRecordMeta::IsRequireUnused);
+      }
+    }
     self.metas.iter_mut().zip(resolved_meta_data).for_each(
-      |(meta, (resolved_map, side_effects_dependency, _))| {
+      |(meta, (resolved_map, side_effects_dependency, _, _))| {
         meta.resolved_member_expr_refs = resolved_map;
         meta.dependencies.extend(side_effects_dependency);
       },
@@ -752,6 +917,13 @@ impl LinkStage<'_> {
       return FxHashSet::default();
     }
 
+    self.collect_json_defaults_with_member_write(stmt_infos)
+  }
+
+  fn collect_json_defaults_with_member_write(
+    &self,
+    stmt_infos: &StmtInfos,
+  ) -> FxHashSet<SymbolRef> {
     let mut written_json_defaults = FxHashSet::default();
     for stmt_info in stmt_infos.iter() {
       for symbol_ref in &stmt_info.referenced_symbols {
@@ -780,6 +952,19 @@ impl LinkStage<'_> {
     }
 
     match member_expr_ref.object_ref_type {
+      MemberExprObjectReferencedType::Named => {
+        let canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
+        let is_json_default =
+          self.module_table[canonical_ref.owner].as_normal().is_some_and(|module| {
+            matches!(module.module_type, ModuleType::Json)
+              && self.metas[canonical_ref.owner].resolved_exports.get("default").is_some_and(
+                |default_export| {
+                  self.symbols.canonical_ref_for(default_export.symbol_ref) == canonical_ref
+                },
+              )
+          });
+        is_json_default.then_some(canonical_ref)
+      }
       MemberExprObjectReferencedType::Default => {
         let canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
         self.module_table[canonical_ref.owner]
@@ -804,7 +989,7 @@ impl LinkStage<'_> {
         }
         self.metas[canonical_ref.owner].resolved_exports.get("default").map(|e| e.symbol_ref)
       }
-      _ => None,
+      MemberExprObjectReferencedType::Namespace => None,
     }
   }
 

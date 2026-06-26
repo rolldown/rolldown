@@ -18,7 +18,7 @@ use rolldown_common::{
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
-use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
+use rolldown_ecmascript_utils::{CallExpressionExt, ExpressionExt, is_top_level};
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
 
@@ -332,6 +332,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_variable_declaration(&mut self, decl: &ast::VariableDeclaration<'ast>) {
+    self.collect_json_require_binding_candidate(decl);
+
     match decl.declarations.as_slice() {
       [decl] => {
         if let (BindingPattern::BindingIdentifier(binding), Some(init)) = (&decl.id, &decl.init) {
@@ -602,6 +604,30 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         // if the identifier_reference is a NamedImport MemberExpr access, we store it as a `MemberExpr`
         // use this flag to avoid insert it as `Symbol` at the same time.
         let mut is_inserted_before = false;
+        if self.is_top_level
+          && self.json_require_binding_candidates.contains_key(&root_symbol_id.symbol)
+        {
+          if !is_member_write
+            && let Some((node_id, span, props)) =
+              self.try_extract_parent_static_member_expr_chain(2)
+            && !span.is_unspanned()
+            && props.first().is_none_or(|prop| prop.name.as_str() != "default")
+          {
+            is_inserted_before = true;
+            if let Some(reference_id) = ident_ref.reference_id.get() {
+              self.json_require_binding_member_refs.insert(reference_id);
+            }
+            self.add_member_expr_reference(MemberExprRef::new(
+              root_symbol_id,
+              props,
+              node_id,
+              span,
+              MemberExprObjectReferencedType::Default,
+              ident_ref.reference_id.get(),
+              false,
+            ));
+          }
+        }
         if let Some(named_import) = self.result.named_imports.get(&root_symbol_id) {
           let (ty, max_tract_len) = match named_import.imported {
             rolldown_common::Specifier::Star => {
@@ -719,6 +745,39 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
     None
+  }
+
+  fn collect_json_require_binding_candidate(&mut self, decl: &ast::VariableDeclaration<'ast>) {
+    if !self.is_root_scope()
+      || !matches!(decl.kind, ast::VariableDeclarationKind::Const)
+      || decl.declarations.len() != 1
+    {
+      return;
+    }
+
+    let declarator = &decl.declarations[0];
+    let BindingPattern::BindingIdentifier(binding) = &declarator.id else { return };
+    if !self.is_root_symbol(binding.symbol_id()) {
+      return;
+    }
+
+    let Some(Expression::CallExpression(call_expr)) = &declarator.init else { return };
+    if !call_expr.is_global_require_call(&self.result.symbol_ref_db.ast_scopes) {
+      return;
+    }
+    if call_expr.arguments.len() != 1 {
+      return;
+    }
+    let is_static_require_arg = match call_expr.arguments.first() {
+      Some(ast::Argument::StringLiteral(_)) => true,
+      Some(ast::Argument::TemplateLiteral(template)) => template.is_no_substitution_template(),
+      _ => false,
+    };
+    if !is_static_require_arg {
+      return;
+    }
+
+    self.json_require_binding_candidates.insert(binding.symbol_id(), call_expr.node_id());
   }
 
   /// return `bool` represent if it is a global require call

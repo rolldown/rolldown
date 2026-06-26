@@ -1320,11 +1320,28 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
                 // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports).default)`
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                let (wrap_ref_expr, hint) = self.finalized_expr_for_symbol_ref(
-                  importee_linking_info.wrapper_ref.unwrap(),
-                  false,
-                  false,
-                );
+                let Some(wrapper_ref) = importee_linking_info.wrapper_ref else {
+                  return Some(if rec.meta.contains(ImportRecordMeta::IsRequireUnused) {
+                    self.ast_factory.void_0(SPAN)
+                  } else {
+                    self.finalized_expr_for_symbol_ref(importee.default_export_ref, false, false).0
+                  });
+                };
+                let (wrap_ref_expr, hint) =
+                  self.finalized_expr_for_symbol_ref(wrapper_ref, false, false);
+                if rec.meta.contains(ImportRecordMeta::IsRequireUnused) {
+                  return Some(if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
+                    wrap_ref_expr
+                  } else {
+                    ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
+                      SPAN,
+                      wrap_ref_expr,
+                      NONE,
+                      self.ast_factory.vec(),
+                      false,
+                    ))
+                  });
+                }
                 if matches!(importee.exports_kind, ExportsKind::CommonJs) {
                   if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
                     Some(wrap_ref_expr)

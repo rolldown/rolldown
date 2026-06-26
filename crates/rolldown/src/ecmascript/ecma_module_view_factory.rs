@@ -89,6 +89,7 @@ pub async fn create_ecma_view(
     dummy_record_set,
     constant_export_map,
     import_attribute_map,
+    json_require_binding_import_records,
     cjs_reexport_require_node_ids: _,
     cjs_reexport_import_record_ids,
   } = scan_result;
@@ -150,6 +151,8 @@ pub async fn create_ecma_view(
     constant_export_map,
     enum_member_value_map,
     import_attribute_map,
+    json_require_binding_import_records: (!json_require_binding_import_records.is_empty())
+      .then(|| Box::new(json_require_binding_import_records)),
     json_module_none_self_reference_included_symbol: None,
     cjs_reexport_import_record_ids,
   };

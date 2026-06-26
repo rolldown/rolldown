@@ -1,3 +1,5 @@
+#![cfg_attr(all(test, not(feature = "async-runtime")), allow(dead_code))]
+
 #[cfg(feature = "async-runtime")]
 use std::{future::Future, pin::Pin};
 
@@ -146,7 +148,8 @@ pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<(
 
 #[cfg(not(feature = "async-runtime"))]
 #[napi]
-pub fn configure_async_runtime(_: BindingRuntimeOptions) -> napi::Result<()> {
+pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<()> {
+  let _ = options;
   Err(napi::Error::from_reason(
     "This Rolldown binding was built without the `async-runtime` feature",
   ))

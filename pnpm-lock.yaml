@@ -237,6 +237,7 @@ overrides:
 
 patchedDependencies:
   '@emnapi/core@1.11.1': 8dd2a2dae916dfda8b543876ea15ca07916e605c4e540ed8e911fbbfe0c95c15
+  '@napi-rs/cli@3.7.2': 2eb1763eded8764ff4d66951eaa1eed19a5c446a42485715a86b65c19d4ea7a6
 
 importers:
 
@@ -539,7 +540,7 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: 'catalog:'
-        version: 3.7.2(@emnapi/core@1.11.1(patch_hash=8dd2a2dae916dfda8b543876ea15ca07916e605c4e540ed8e911fbbfe0c95c15))(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(supports-color@8.1.1)
+        version: 3.7.2(patch_hash=2eb1763eded8764ff4d66951eaa1eed19a5c446a42485715a86b65c19d4ea7a6)(@emnapi/core@1.11.1(patch_hash=8dd2a2dae916dfda8b543876ea15ca07916e605c4e540ed8e911fbbfe0c95c15))(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(supports-color@8.1.1)
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
         version: 1.1.6(@emnapi/core@1.11.1(patch_hash=8dd2a2dae916dfda8b543876ea15ca07916e605c4e540ed8e911fbbfe0c95c15))(@emnapi/runtime@1.11.1)
@@ -10457,7 +10458,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@napi-rs/cli@3.7.2(@emnapi/core@1.11.1(patch_hash=8dd2a2dae916dfda8b543876ea15ca07916e605c4e540ed8e911fbbfe0c95c15))(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(supports-color@8.1.1)':
+  '@napi-rs/cli@3.7.2(patch_hash=2eb1763eded8764ff4d66951eaa1eed19a5c446a42485715a86b65c19d4ea7a6)(@emnapi/core@1.11.1(patch_hash=8dd2a2dae916dfda8b543876ea15ca07916e605c4e540ed8e911fbbfe0c95c15))(@emnapi/runtime@1.11.1)(@types/node@24.10.3)(supports-color@8.1.1)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@24.10.3)
       '@napi-rs/cross-toolchain': 1.0.3(@emnapi/core@1.11.1(patch_hash=8dd2a2dae916dfda8b543876ea15ca07916e605c4e540ed8e911fbbfe0c95c15))(@emnapi/runtime@1.11.1)(supports-color@8.1.1)

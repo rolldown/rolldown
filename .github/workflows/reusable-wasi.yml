@@ -33,10 +33,13 @@ jobs:
           cache: true
 
       - name: Add WASI target
-        run: rustup target add wasm32-wasip1-threads
+        run: rustup target add wasm32-wasip1-threads wasm32-wasip1
 
-      - name: Build Rolldown with WASI Binding
+      - name: Build Rolldown with threaded WASI binding
         run: just build-rolldown-wasi
+
+      - name: Build Rolldown with non-threaded WASI binding
+        run: just build-rolldown-wasi-single
 
       - name: Stability Test
         run: vp run --filter rolldown-tests test:stability

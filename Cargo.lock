@@ -1295,13 +1295,12 @@ dependencies = [
 [[package]]
 name = "napi-build"
 version = "2.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9c366d2c8c60b86fa632df75f745509b52f9128f91a6bad4c796e44abb505e1"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=3df687da27e019e8bdbe594ea00a1a7abe1fa1d7#3df687da27e019e8bdbe594ea00a1a7abe1fa1d7"
 
 [[package]]
 name = "napi-build"
 version = "2.3.2"
-source = "git+https://github.com/napi-rs/napi-rs.git?rev=3df687da27e019e8bdbe594ea00a1a7abe1fa1d7#3df687da27e019e8bdbe594ea00a1a7abe1fa1d7"
+source = "git+https://github.com/napi-rs/napi-rs.git?rev=66b9e59f90698933f92b40f393dbb5948d46ae1e#66b9e59f90698933f92b40f393dbb5948d46ae1e"
 
 [[package]]
 name = "napi-derive"
@@ -1807,7 +1806,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bed48c494744ac9f2d71984bbc4a880265184f18dcfb963e881d314c7f1a2963"
 dependencies = [
  "napi",
- "napi-build 2.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "napi-build 2.3.2 (git+https://github.com/napi-rs/napi-rs.git?rev=66b9e59f90698933f92b40f393dbb5948d46ae1e)",
  "napi-derive",
  "oxc_allocator",
  "oxc_codegen",
@@ -1827,7 +1826,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d4af8fd024ea7258f46063df867cc32e10d019fdf70ac5ef55576de9e372a58"
 dependencies = [
  "napi",
- "napi-build 2.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "napi-build 2.3.2 (git+https://github.com/napi-rs/napi-rs.git?rev=66b9e59f90698933f92b40f393dbb5948d46ae1e)",
  "napi-derive",
  "oxc_ast",
  "oxc_ast_visit",
@@ -1867,7 +1866,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13ff224951567e9aa7f3edacf860fa599d2bbb7a45a0f3de2973c84f6984d48f"
 dependencies = [
  "napi",
- "napi-build 2.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "napi-build 2.3.2 (git+https://github.com/napi-rs/napi-rs.git?rev=66b9e59f90698933f92b40f393dbb5948d46ae1e)",
  "napi-derive",
  "oxc",
  "oxc_ast_macros",
@@ -1930,7 +1929,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d8423812b86f08eb1f5cfbaa7bd04682f5e3e343788d8ed482d59397c2d9d44"
 dependencies = [
  "napi",
- "napi-build 2.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "napi-build 2.3.2 (git+https://github.com/napi-rs/napi-rs.git?rev=66b9e59f90698933f92b40f393dbb5948d46ae1e)",
  "napi-derive",
  "oxc_resolver",
  "regress",
@@ -1968,7 +1967,7 @@ dependencies = [
  "base64-simd",
  "json-escape-simd",
  "napi",
- "napi-build 2.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "napi-build 2.3.2 (git+https://github.com/napi-rs/napi-rs.git?rev=66b9e59f90698933f92b40f393dbb5948d46ae1e)",
  "napi-derive",
  "rustc-hash",
  "serde",
@@ -2031,7 +2030,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e9182958b8f23692f2c6d3da540be951a705f94e1dcfd9332f77c7d1516fc869"
 dependencies = [
  "napi",
- "napi-build 2.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "napi-build 2.3.2 (git+https://github.com/napi-rs/napi-rs.git?rev=66b9e59f90698933f92b40f393dbb5948d46ae1e)",
  "napi-derive",
  "oxc",
  "oxc_napi",
@@ -2572,7 +2571,7 @@ dependencies = [
  "itertools",
  "mimalloc-safe",
  "napi",
- "napi-build 2.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "napi-build 2.3.2 (git+https://github.com/napi-rs/napi-rs.git?rev=66b9e59f90698933f92b40f393dbb5948d46ae1e)",
  "napi-derive",
  "num_cpus",
  "oxc",

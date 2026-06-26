@@ -5,8 +5,9 @@
 ## Summary
 
 The `async-runtime` Cargo feature installs a Rolldown scheduler into napi-rs,
-and routes Rolldown task creation through `rolldown_utils::futures`. The
-`tokio-runtime` feature remains the default.
+routes Rolldown task creation through `rolldown_utils::futures`, and builds the
+browser artifact for `wasm32-wasip1`. The `tokio-runtime` feature remains the
+default.
 
 ## Components
 
@@ -74,9 +75,27 @@ existing inline sourcemap path remains active.
 
 ### Non-threaded WASI
 
-The current-thread executor is the runtime half of the non-threaded
-`wasm32-wasip1` build. Packaging, generated loaders, and the emnapi
-memory-growth backport are handled in the dependent browser/WASI change.
+The browser build uses:
+
+```text
+wasm32-wasip1
+--no-default-features
+--features async-runtime
+```
+
+The napi-rs CLI changes from napi-rs#3353 link `libemnapi-basic.a`, emit
+unshared `WebAssembly.Memory`, set `asyncWorkPoolSize: 0`, and omit Worker
+imports and factories. `packages/rolldown` keeps the threaded WASI scripts and
+adds `build-binding:wasi-single`; browser-package scripts select the
+single-thread variant. Until those napi-rs CLI changes are published, the
+single-thread build loads the pnpm-patched CLI source from the installed
+package; other build variants use the normal package entry.
+
+Unshared memory growth detaches the previous JavaScript `ArrayBuffer`. The
+emnapi fix in emnapi#220 refreshes TSFN atomic views after event-loop turns and
+refreshes NAPI result DataViews after reentrant JavaScript calls. Rolldown
+applies the equivalent published-package workaround through
+`patches/@emnapi__core@1.11.1.patch`.
 
 ## Metrics And Baseline
 

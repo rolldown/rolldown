@@ -3017,6 +3017,10 @@ export interface NativeError {
   message: string
   /** The id of the file associated with the error */
   id?: string
+  /** The name of the plugin that threw the error */
+  plugin?: string
+  /** Code frame around the error location */
+  frame?: string
   /** The exporter associated with the error (for import/export errors) */
   exporter?: string
   /** Location information (line, column, file) */

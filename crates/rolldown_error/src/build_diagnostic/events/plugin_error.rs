@@ -36,6 +36,14 @@ impl BuildEvent for PluginError {
     EventKind::PluginError
   }
 
+  fn id(&self) -> Option<String> {
+    self.error.downcast_ref::<BuildDiagnostic>().and_then(BuildDiagnostic::id)
+  }
+
+  fn plugin(&self) -> Option<String> {
+    Some(self.plugin.name.to_string())
+  }
+
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     if self.error.downcast_ref::<BuildDiagnostic>().is_some() {
       String::default()

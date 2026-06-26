@@ -403,12 +403,17 @@ impl GenerateStage<'_> {
             self.options,
             module_idx,
           );
+          // Under `preserveModules`, every module is emitted as its own file that must mirror its
+          // full declared export interface, so always emit the entry signature — the
+          // `is_user_defined` / `is_dynamic_imported` / `preserveEntrySignatures` narrowing does not
+          // apply (see the "preserve_entry_signatures has no effect" contract in
+          // `code_splitting.rs`). The synthetic runtime module is the one exception: it is an
+          // internal implementation detail, not a user file imported by path, so its helpers stay
+          // demand-driven (exported only when another chunk imports them), exactly as before.
+          let is_preserved_user_module =
+            self.options.preserve_modules && module_idx != self.link_output.runtime.id();
           let needs_export_entry_signatures = if self.options.preserve_modules {
-            if is_user_defined {
-              !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
-            } else {
-              is_dynamic_imported
-            }
+            is_preserved_user_module || is_dynamic_imported
           } else {
             is_dynamic_imported
               || !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
@@ -416,14 +421,17 @@ impl GenerateStage<'_> {
           if needs_export_entry_signatures {
             // If the entry point is external, we don't need to compute exports.
             let meta = &self.link_output.metas[module_idx];
+            // `preserveModules` emits the complete interface (`UserDefined` kind bypasses the
+            // dynamic-import partial-export trimming); otherwise honor the entry's actual kind.
+            let entry_point_kind = if is_preserved_user_module || is_user_defined {
+              EntryPointKind::UserDefined
+            } else {
+              EntryPointKind::DynamicImport
+            };
             for (name, symbol) in meta
               .referenced_canonical_exports_symbols(
                 module_idx,
-                if is_user_defined {
-                  EntryPointKind::UserDefined
-                } else {
-                  EntryPointKind::DynamicImport
-                },
+                entry_point_kind,
                 &self.link_output.dynamic_import_exports_usage_map,
                 false,
               )

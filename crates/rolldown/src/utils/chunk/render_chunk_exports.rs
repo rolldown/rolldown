@@ -379,7 +379,7 @@ fn must_keep_live_binding(
     return false;
   }
 
-  if canonical_ref.is_not_reassigned(symbol_db).unwrap_or(false) {
+  if canonical_ref.is_not_reassigned(symbol_db) {
     // For unknown case, we consider it as reassigned.
     return false;
   }

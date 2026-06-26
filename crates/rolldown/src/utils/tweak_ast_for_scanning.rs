@@ -20,6 +20,11 @@ pub struct PreProcessor<'ast, 'a> {
   drop_labels: Option<&'a FxHashSet<String>>,
   statement_stack: Vec<Address>,
   statement_replace_map: FxHashMap<Address, Vec<Statement<'ast>>>,
+  /// Set before walking an `ExportNamedDeclaration`'s inner declaration and taken by
+  /// `visit_declaration`, so the export's direct declaration skips the non-export
+  /// multi-declarator split (which would drop the `export` keyword) while nested
+  /// declarations still split. Reset after the walk for exports without a declaration.
+  next_declaration_is_exported: bool,
   /// Spans of `import defer ...` statements / expressions whose `defer` phase
   /// was lowered to a regular import. Read after `visit_program` to emit the
   /// `UNSUPPORTED_FEATURE` warning.
@@ -39,6 +44,7 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
       drop_labels: drop_labels.filter(|set| !set.is_empty()),
       statement_stack: vec![],
       statement_replace_map: FxHashMap::default(),
+      next_declaration_is_exported: false,
       defer_spans: vec![],
     }
   }
@@ -188,9 +194,10 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
   }
 
   fn visit_declaration(&mut self, it: &mut Declaration<'ast>) {
+    let is_exported = std::mem::take(&mut self.next_declaration_is_exported);
     match it {
       Declaration::VariableDeclaration(decl) => {
-        if decl.declarations.len() > 1 && self.keep_names {
+        if !is_exported && decl.declarations.len() > 1 && self.keep_names {
           let stmt_addr = self.statement_stack.last().copied().unwrap();
           let new_stmts = self.split_var_declaration(decl, None);
           self.statement_replace_map.insert(stmt_addr, new_stmts);
@@ -209,7 +216,9 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
   }
 
   fn visit_export_named_declaration(&mut self, named_decl: &mut ast::ExportNamedDeclaration<'ast>) {
+    self.next_declaration_is_exported = true;
     walk_mut::walk_export_named_declaration(self, named_decl);
+    self.next_declaration_is_exported = false;
 
     let Some(Declaration::VariableDeclaration(ref mut var_decl)) = named_decl.declaration else {
       return;

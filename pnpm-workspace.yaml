@@ -39,7 +39,7 @@ catalog:
   '@babel/preset-env': ^7.29.7
   '@babel/preset-typescript': ^7.29.7
   '@napi-rs/cli': ^3.7.2
-  '@napi-rs/wasm-runtime': ^1.1.5
+  '@napi-rs/wasm-runtime': ^1.1.6
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
   '@oxc-project/runtime': '=0.137.0'
@@ -124,7 +124,7 @@ verifyDepsBeforeRun: install
 
 minimumReleaseAgeExclude:
   - '@napi-rs/cli@3.7.2'
-  - '@napi-rs/wasm-runtime@1.1.5'
+  - '@napi-rs/wasm-runtime@1.1.6'
   - '@emnapi/core@1.11.1'
   - '@emnapi/runtime@1.11.1'
   - emnapi@1.11.1

@@ -176,6 +176,65 @@ test.concurrent(
   },
 );
 
+// https://github.com/rolldown/rolldown/issues/9462
+test.concurrent(
+  'watcher.close() can be awaited inside an event callback',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-close-inside-event', retryCount);
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const closeWatcherFn = vi.fn();
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'test closeWatcher',
+          async closeWatcher() {
+            await sleep(10);
+            closeWatcherFn();
+          },
+        },
+      ],
+    });
+
+    const closeFn = vi.fn();
+    watcher.on('close', async () => {
+      // Closing again from the close listener must remain re-entrant as well.
+      await watcher.close();
+      closeFn();
+    });
+
+    const events: string[] = [];
+    await new Promise<void>((resolve, reject) => {
+      watcher.on('event', async (event) => {
+        events.push(event.code);
+        if (event.code !== 'BUNDLE_END') return;
+
+        try {
+          await event.result.close();
+          await watcher.close();
+
+          // close() must not resolve after merely queueing the request. All cleanup and the close
+          // event are complete before its promise settles.
+          expect(closeWatcherFn).toHaveBeenCalledTimes(1);
+          expect(closeFn).toHaveBeenCalledTimes(1);
+          expect(events).not.toContain('END');
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+  },
+);
+
 test.concurrent(
   'watch event',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },

@@ -1,52 +1,47 @@
 import { describe, expect, test } from 'vitest';
-import { page, serverUrl } from '~utils';
+import { page, serverUrl, waitForBuildStable } from '~utils';
 
-// `lazy-init-error.js` is lazily imported and throws while initializing. On the
-// first compile of the lazy chunk (the on-demand `@vite/lazy` response) the real
-// module is inlined into the proxy's `lazyExports` async IIFE, so its init runs
-// *synchronously* inside it:
+// A lazy-compiled module that throws during init must be catchable at the
+// consumer's `await import(...)` — and stay catchable across a page refresh.
 //
-//   var init_lazy_init_error_1 = createEsmInitializer(
-//     "...lazy-init-error.js?rolldown-lazy=1",
-//     (id) => { ...
-//       const lazyExports = (async () => {
-//         await (init_lazy_init_error_0(), Promise.resolve().then(() => loadExports("...lazy-init-error.js")));
-//         return __rolldown_runtime__.loadExports("...lazy-init-error.js");
-//       })();
-//     }, 1);
+// The two loads exercise two different proxy code paths against the SAME dev
+// engine (only the browser page reloads):
+//   1. cold  — first compile, served through the on-demand `@vite/lazy` response
+//   2. warm  — after the engine rebuilds main.js around the now-"fetched" proxy
 //
-// `init_lazy_init_error_0()` throws synchronously, so this `lazyExports` rejects
-// immediately — before any consumer can attach a handler. The init error escapes
-// as an unhandled promise rejection, and the consumer's `await import(...)`
-// resolves as if nothing went wrong.
-//
-// NOTE: `test.fails` — the assertions below describe the DESIRED behavior, which
-// currently fails because the bug is unfixed: the init error should surface at
-// the consumer's `await import(...)` with no unhandled rejection. Once fixed, the
-// body will pass; drop `.fails` to turn this into a normal regression test.
-describe('lazy-init-error', () => {
-  test.fails(
-    'init error in a lazy module should be catchable, not unhandled',
-    { retry: 0 },
-    async () => {
-      // The bug shows on the very first compile of the lazy chunk (the on-demand
-      // `@vite/lazy` response), so navigate + click on a fresh server and do NOT
-      // reload — a rebuild splits the real module into a separate chunk reached
-      // via a real `await import(...)`, which is catchable.
-      await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
-      await page.click('#lazy-init-error-btn');
-      await expect.poll(() => page.textContent('#lazy-init-error-status')).toBe('done');
+// Either way the result is identical: caught at `await import(...)`, with no
+// unhandled rejection. Regression test for vitejs/vite#21626 / rolldown#9975.
+const lines = (text: string | null) => (text ?? '').split('\n').filter(Boolean);
 
-      // Let any pending unhandled-rejection event fire before asserting.
-      await page.waitForTimeout(100);
+async function clickAndExpectCaught() {
+  await page.click('#lazy-init-error-catch-btn');
+  await expect.poll(() => page.textContent('#lazy-init-error-status')).toBe('catch-done');
 
-      // The consumer's try/catch should be the one that sees the init error...
-      const log = (await page.textContent('#lazy-init-error-log')) ?? '';
-      expect(log).toContain('caught: boom during lazy init');
+  // The consumer's try/catch sees the init error...
+  expect(await page.textContent('#lazy-init-error-log')).toContain('caught: boom during lazy init');
 
-      // ...and nothing should escape the lazy proxy as an unhandled rejection.
-      const unhandled = (await page.textContent('#lazy-init-error-unhandled')) ?? '';
-      expect(unhandled).toBe('');
-    },
-  );
+  // ...and because it was handled, NOTHING escapes as an unhandled rejection.
+  // Give any stray rejection a chance to fire before asserting none did.
+  await page.waitForTimeout(100);
+  expect(
+    lines(await page.textContent('#lazy-init-error-unhandled')),
+    'try/catch handled the init error, so no unhandled rejection should fire',
+  ).toEqual([]);
+}
+
+describe('lazy-compilation: lazy-init-error (try/catch)', () => {
+  test('init error is catchable on first compile and after a refresh', async () => {
+    await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
+
+    // 1. Cold: first compile.
+    await clickAndExpectCaught();
+
+    // Let the rebuild triggered by the lazy compile settle, then refresh the
+    // page WITHOUT restarting the dev engine — main.js now uses the fetched proxy.
+    await waitForBuildStable();
+    await page.reload({ waitUntil: 'domcontentloaded' });
+
+    // 2. Warm: fetched-proxy path. Same result.
+    await clickAndExpectCaught();
+  });
 });

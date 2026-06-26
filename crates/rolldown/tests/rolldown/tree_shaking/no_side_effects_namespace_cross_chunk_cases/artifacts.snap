@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-a.js
+
+```js
+import { t as fn } from "./shared.js";
+//#region entry-a.js
+const used = fn();
+console.log(used);
+fn.call(null);
+//#endregion
+
+```
+
+## entry-b.js
+
+```js
+
+```
+
+## shared.js
+
+```js
+//#region shared.js
+/* @__NO_SIDE_EFFECTS__ */
+function fn() {
+	console.log("fn side effect");
+}
+//#endregion
+export { fn as t };
+
+```

@@ -437,7 +437,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             .map(|id| {
               let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.idx, id).into());
               symbol_ref.is_side_effect_free_function(self.ctx.symbol_db, self.ctx.modules)
-                && symbol_ref.is_not_reassigned(self.ctx.symbol_db) == Some(true)
+                && symbol_ref.is_not_reassigned(self.ctx.symbol_db)
             })
             .unwrap_or(false);
           if is_empty_function {

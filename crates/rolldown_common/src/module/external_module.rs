@@ -88,7 +88,7 @@ impl ExternalModule {
     );
     if relative_path.starts_with("..") {
       relative_path.to_slash_lossy().into()
-    } else if relative_path.to_string_lossy().is_empty() {
+    } else if relative_path.as_os_str().is_empty() {
       ".".into()
     } else {
       concat_string!("./", relative_path.to_slash_lossy()).into()

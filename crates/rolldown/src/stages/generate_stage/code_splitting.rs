@@ -692,16 +692,14 @@ impl GenerateStage<'_> {
         if self.options.preserve_modules
           || self.link_output.user_defined_entry_modules.contains(&item.idx)
         {
-          Path::new(item.id.as_ref()).is_absolute().then_some(item.id.as_ref())
+          item.id.is_path().then_some(item.id.as_ref())
         } else {
           None
         }
       }
       Module::External(external_module) => {
         if self.options.preserve_modules {
-          Path::new(external_module.id.as_str())
-            .is_absolute()
-            .then_some(external_module.id.as_ref())
+          external_module.id.is_path().then_some(external_module.id.as_ref())
         } else {
           None
         }
@@ -718,7 +716,8 @@ impl GenerateStage<'_> {
     }
     match modules_count {
       0 => None,
-      1 => ret.and_then(|item| Path::new(&item).parent().map(|p| p.to_string_lossy().to_string())),
+      1 => ret
+        .and_then(|item| Path::new(&item).parent().and_then(Path::to_str).map(ToString::to_string)),
       _ => ret,
     }
   }

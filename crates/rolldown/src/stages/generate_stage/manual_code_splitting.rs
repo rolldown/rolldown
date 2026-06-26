@@ -803,7 +803,8 @@ fn derive_entries_aware_chunk_name(
           let module = &link_output.module_table[entry_point.idx];
           Path::new(module.stable_id().as_str())
             .file_stem()
-            .map(|s| s.to_string_lossy().to_string())
+            .and_then(|s| s.to_str())
+            .map(ToString::to_string)
             .unwrap_or_else(|| module.stable_id().to_string())
         }))
       } else {

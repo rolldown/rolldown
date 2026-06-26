@@ -34,14 +34,22 @@ Plugin APIs like `addWatchFile()` do **no normalization** — they trust the cal
 
 ### ModuleId
 
-`ModuleId` wraps `ArcStr`. Equality is raw string comparison — no path normalization.
+`ModuleId` is backed by an `ArcStr`, classified at construction into one of three kinds so that path operations only run on ids that actually are paths:
 
 ```rust
 // rolldown_common/src/types/module_id.rs
-pub struct ModuleId { inner: ArcStr }
+pub struct ModuleId { repr: Repr }
+
+enum Repr {
+  Path(ArcStr),    // absolute filesystem path — path operations are meaningful
+  Virtual(ArcStr), // virtual id, prefixed with `\0` (Rollup convention)
+  Bare(ArcStr),    // bare specifier (`react`), URL, data URI, relative specifier, …
+}
 ```
 
-The resolver (`oxc_resolver`) returns a `PathBuf`. Rolldown converts it to a string via `full_path().to_str()` and stores it as-is — no separator normalization. On Windows, module IDs contain native `\` separators.
+Equality, ordering, and hashing are still raw string comparison over `as_str()` (the kind discriminant is ignored), so path identity continues to depend on exact string equality, and a `ModuleId` hashes identically to its string — `&str` lookups into `HashMap<ModuleId, _>` keep working. The classification only gates _path_ logic: `as_path()` returns `Some(&Path)` only for the `Path` kind, and helpers like `is_in_node_modules()` / `representative_name()` build on it, so virtual ids and bare specifiers are no longer round-tripped through `Path` / `to_string_lossy`.
+
+The resolver (`oxc_resolver`) returns a `PathBuf`. Rolldown converts it to a string via `full_path().to_str()` and stores it as-is — no separator normalization. On Windows, module IDs contain native `\` separators, and such ids classify as `Path`.
 
 ### Comparison with Rollup
 

@@ -2701,6 +2701,40 @@ export interface BindingResolveOptions {
   yarnPnp?: boolean
 }
 
+export interface BindingRuntimeConfig {
+  flavor: BindingRuntimeFlavor
+  workerThreads: number
+  maxBlockingTasks: number
+}
+
+export type BindingRuntimeFlavor =  'CurrentThread'|
+'MultiThread';
+
+export interface BindingRuntimeMetrics {
+  flavor: BindingRuntimeFlavor
+  workerThreads: number
+  maxBlockingTasks: number
+  tasksSpawned: number
+  tasksCompleted: number
+  tasksPanicked: number
+  runnableSchedules: number
+  runnablePolls: number
+  queuedRunnables: number
+  maxQueuedRunnables: number
+  activeRunnables: number
+  maxActiveRunnables: number
+  blockingTasksStarted: number
+  blockingTasksCompleted: number
+  activeBlockingTasks: number
+  maxActiveBlockingTasks: number
+}
+
+export interface BindingRuntimeOptions {
+  flavor?: BindingRuntimeFlavor
+  workerThreads?: number
+  maxBlockingTasks?: number
+}
+
 export interface BindingSourcemap {
   inner: string | BindingJsonSourcemap
 }
@@ -2935,6 +2969,8 @@ export interface BindingWatchOption {
 
 export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
 
+export declare function configureAsyncRuntime(options: BindingRuntimeOptions): void
+
 export declare function enhancedTransform(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): Promise<BindingEnhancedTransformResult>
 
 export declare function enhancedTransformSync(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingEnhancedTransformResult
@@ -2961,6 +2997,10 @@ export type FilterTokenKind =  'Id'|
 'CleanUrl'|
 'QueryKey'|
 'QueryValue';
+
+export declare function getAsyncRuntimeConfig(): BindingRuntimeConfig
+
+export declare function getAsyncRuntimeMetrics(): BindingRuntimeMetrics
 
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
 
@@ -3024,6 +3064,8 @@ export interface PreRenderedChunk {
 }
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+
+export declare function resetAsyncRuntimeMetrics(): void
 
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 

@@ -63,6 +63,7 @@ use rolldown::{Bundle, BundleFactory, BundleFactoryOptions, BundleHandle, Bundle
 use rolldown_common::BundleMode;
 use rolldown_error::BuildResult;
 use rolldown_plugin::__inner::SharedPluginable;
+use rolldown_utils::futures::spawn_blocking;
 use std::sync::Arc;
 
 pub struct ClassicBundler {
@@ -138,11 +139,10 @@ impl ClassicBundler {
         // All three failure modes (timeout, writer disconnected, blocking task
         // panicked) are surfaced as errors so the documented "logs readable
         // after close()" contract does not silently break.
-        let join_result = napi::tokio::task::spawn_blocking(move || {
-          rx.recv_timeout(std::time::Duration::from_secs(30))
-        })
-        .await
-        .map_err(|err| anyhow::anyhow!("devtools flush task failed to join: {err}"))?;
+        let join_result =
+          spawn_blocking(move || rx.recv_timeout(std::time::Duration::from_secs(30)))
+            .await
+            .map_err(|err| anyhow::anyhow!("devtools flush task failed to join: {err}"))?;
         match join_result {
           Ok(()) => {}
           Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {

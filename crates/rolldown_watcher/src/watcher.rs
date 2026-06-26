@@ -10,6 +10,7 @@ use oxc_index::IndexVec;
 use rolldown::BundlerConfig;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::FsWatcherConfig;
+use rolldown_utils::futures::spawn;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -116,7 +117,7 @@ impl Watcher {
   pub fn run(&self) {
     let mut state = self.coordinator_state.lock().unwrap();
     if let Some(coordinator) = state.coordinator.take() {
-      let join_handle = tokio::spawn(coordinator);
+      let join_handle = spawn(coordinator);
       let handle: Pin<Box<dyn Future<Output = ()> + Send>> = Box::pin(async move {
         let _ = join_handle.await;
       });

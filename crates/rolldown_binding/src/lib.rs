@@ -26,6 +26,8 @@ use std::sync::{
 
 use napi_derive::napi;
 
+mod async_runtime;
+
 #[cfg(all(
   not(target_family = "wasm"),
   not(feature = "default_global_allocator"),
@@ -87,7 +89,11 @@ pub fn start_async_runtime() {
 
 #[napi_derive::module_init]
 fn init() {
-  #[cfg(not(target_family = "wasm"))]
+  #[cfg(all(
+    not(target_family = "wasm"),
+    feature = "tokio-runtime",
+    not(feature = "async-runtime")
+  ))]
   {
     use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
     let max_blocking_threads = std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")

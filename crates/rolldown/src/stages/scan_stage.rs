@@ -1,4 +1,4 @@
-use std::{sync::Arc, thread};
+use std::sync::Arc;
 
 use arcstr::ArcStr;
 use futures::future::join_all;
@@ -15,6 +15,7 @@ use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_utils::futures::{JoinHandle, spawn_blocking};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -27,7 +28,7 @@ use crate::{
 
 type SourcemapChannel = (
   Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
-  Option<thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>>,
+  Option<JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>>,
 );
 
 pub struct ScanStage<Fs: FileSystem + Clone + 'static> {
@@ -195,7 +196,7 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     let mut module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
 
     if let Some(handler) = handler {
-      self.process_sourcemap_handler(handler, &mut module_loader_output);
+      self.process_sourcemap_handler(handler, &mut module_loader_output).await;
     }
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None)?;
@@ -206,11 +207,16 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
   }
 
   fn create_sourcemap_channel(&self) -> SourcemapChannel {
+    #[cfg(feature = "async-runtime")]
+    if !rolldown_utils::async_runtime::is_multi_threaded() {
+      return (None, None);
+    }
+
     if self.options.experimental.is_native_magic_string_enabled()
       && self.options.is_sourcemap_enabled()
     {
       let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
-      let handler = thread::spawn(move || {
+      let handler = spawn_blocking(move || {
         let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();
         while let Ok(msg) = rx.recv() {
           match msg {
@@ -238,12 +244,12 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     }
   }
 
-  fn process_sourcemap_handler(
+  async fn process_sourcemap_handler(
     &self,
-    handler: thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>,
+    handler: JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>,
     module_loader_output: &mut ModuleLoaderOutput,
   ) {
-    let map: FxHashMap<ModuleIdx, Vec<_>> = handler.join().unwrap();
+    let map: FxHashMap<ModuleIdx, Vec<_>> = handler.await.unwrap();
     if !map.is_empty() {
       let transform_plugin_order_map = self
         .plugin_driver

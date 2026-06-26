@@ -140,3 +140,6 @@ minimumReleaseAgeExclude:
   - vite-plus
   - vitepress-plugin-feedback-tracker@0.2.0-alpha.1
   - void
+
+patchedDependencies:
+  '@emnapi/core@1.11.1': patches/@emnapi__core@1.11.1.patch

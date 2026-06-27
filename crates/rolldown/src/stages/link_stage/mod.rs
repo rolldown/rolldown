@@ -294,11 +294,10 @@ impl<'a> LinkStage<'a> {
           // it in the candidate map) guarantees at least one write exists; if `reassigned_stmt_map`
           // has none, our scan missed a write form, so stay conservative and skip. Inline only when
           // every captured writer statement was tree-shaken out.
-          let all_writers_dead = m
-            .ecma_view
-            .reassigned_stmt_map
-            .get(symbol_id)
-            .is_some_and(|stmts| !stmts.is_empty() && stmts.iter().all(|s| !included.has_bit(*s)));
+          let all_writers_dead =
+            m.ecma_view.reassigned_stmt_map.get(symbol_id).is_some_and(|stmts| {
+              !stmts.is_empty() && stmts.iter().all(|s| !included.has_bit(*s))
+            });
           if all_writers_dead {
             newly.push((canonical, meta.clone()));
           }

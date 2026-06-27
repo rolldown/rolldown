@@ -424,35 +424,21 @@ impl LinkStage<'_> {
       // Scan all normal modules when the graph contains JSON: writes can reach the shared JSON
       // default through non-JSON import records such as `export { default as data } from './x.json'`
       // followed by `import { data } from './wrapper.js'; data.foo = ...`.
-      #[cfg(not(target_family = "wasm"))]
-      {
-        self
-          .module_table
-          .modules
-          .par_iter()
-          .zip(self.stmt_infos.par_iter())
-          .map(|(module, stmt_infos)| match module {
-            Module::Normal(_) => self.collect_json_default_imports_with_member_write(stmt_infos),
-            Module::External(_) => FxHashSet::default(),
-          })
-          .reduce(FxHashSet::default, |mut acc, written_json_defaults| {
-            acc.extend(written_json_defaults);
-            acc
-          })
-      }
-
-      #[cfg(target_family = "wasm")]
-      {
-        self.module_table.modules.iter().zip(self.stmt_infos.iter()).fold(
-          FxHashSet::default(),
-          |mut acc, (module, stmt_infos)| {
-            if matches!(module, Module::Normal(_)) {
-              acc.extend(self.collect_json_default_imports_with_member_write(stmt_infos));
-            }
-            acc
-          },
-        )
-      }
+      // `collect::<Vec<_>>()` then `flatten` works on both rayon (native) and the std-iterator
+      // shim (wasm); rayon's two-arg `reduce` has no equivalent on the shim, so avoid it.
+      self
+        .module_table
+        .modules
+        .par_iter()
+        .zip(self.stmt_infos.par_iter())
+        .map(|(module, stmt_infos)| match module {
+          Module::Normal(_) => self.collect_json_default_imports_with_member_write(stmt_infos),
+          Module::External(_) => FxHashSet::default(),
+        })
+        .collect::<Vec<_>>()
+        .into_iter()
+        .flatten()
+        .collect()
     } else {
       FxHashSet::default()
     };

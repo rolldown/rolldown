@@ -35,6 +35,7 @@ export function normalizeBindingError(e: BindingError): Error {
         message: e.field0.message,
         id: e.field0.id,
         exporter: e.field0.exporter,
+        ids: e.field0.ids,
         loc: e.field0.loc,
         pos: e.field0.pos,
         stack: undefined,

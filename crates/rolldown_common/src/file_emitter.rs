@@ -1,7 +1,7 @@
 use crate::{
-  AddEntryModuleMsg, FilenameTemplate, ModuleId, ModuleLoaderMsg, Modules,
-  NormalizedBundlerOptions, Output, OutputAsset, OutputChunk, PreserveEntrySignatures, StrOrBytes,
-  is_path_fragment,
+  AddEntryModuleMsg, FilenameSubstitutionContext, FilenameTemplate, ModuleId, ModuleLoaderMsg,
+  Modules, NormalizedBundlerOptions, Output, OutputAsset, OutputChunk, PreserveEntrySignatures,
+  StrOrBytes, is_path_fragment,
 };
 use anyhow::Context;
 use arcstr::ArcStr;
@@ -297,6 +297,7 @@ impl FileEmitter {
           None,
           Some(extension.unwrap_or_default()),
           Some(|len: Option<usize>| Ok(&hash[..len.map_or(8, |len| len.clamp(1, 21))])),
+          FilenameSubstitutionContext::default(),
         )?
         .into();
 

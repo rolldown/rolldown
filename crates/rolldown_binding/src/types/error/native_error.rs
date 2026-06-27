@@ -10,6 +10,8 @@ pub struct NativeError {
   pub id: Option<String>,
   /// The exporter associated with the error (for import/export errors)
   pub exporter: Option<String>,
+  /// Related module ids (e.g. the modules of the chunk that produced an invalid filename)
+  pub ids: Option<Vec<String>>,
   /// Location information (line, column, file)
   pub loc: Option<BindingLogLocation>,
   /// Position in the source file in UTF-16 code units

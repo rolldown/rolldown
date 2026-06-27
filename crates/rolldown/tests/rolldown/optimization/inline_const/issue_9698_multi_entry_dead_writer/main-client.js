@@ -1,1 +1,3 @@
-export function mount(some, arg){ console.log(some, arg); }
+export function mount(some, arg) {
+  console.log(some, arg);
+}

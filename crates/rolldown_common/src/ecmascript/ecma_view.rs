@@ -185,6 +185,12 @@ pub struct EcmaView {
   pub hmr_hot_ref: Option<SymbolRef>,
   pub hmr_info: HmrInfo,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
+  /// symbol_id -> top-level `StmtInfoIdx`(es) that WRITE (reassign) it. Used post-tree-shaking to
+  /// recover constants whose only writers were dead code (issue #9698).
+  pub reassigned_stmt_map: FxHashMap<SymbolId, Vec<StmtInfoIdx>>,
+  /// Literal-init `let`s dropped from `constant_export_map` because they were syntactically
+  /// mutated; pending a post-tree-shaking dead-writer recheck.
+  pub mutated_constant_candidates: FxHashMap<SymbolId, ConstExportMeta>,
   /// Enum member constant values, keyed by enum name → member name → value.
   /// Used by the finalizer to inline `Direction.Up` style accesses across modules.
   /// Contains both const and regular enums.

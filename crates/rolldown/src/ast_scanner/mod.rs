@@ -127,6 +127,12 @@ pub struct ScanResult {
   pub hmr_hot_ref: Option<SymbolRef>,
   pub directive_range: Vec<Span>,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
+  /// symbol_id -> top-level `StmtInfoIdx`(es) that WRITE (reassign) it. Used after tree-shaking
+  /// to decide whether a `let`'s only writers were all dead code (issue #9698).
+  pub reassigned_stmt_map: FxHashMap<SymbolId, Vec<StmtInfoIdx>>,
+  /// exported/local literal-init `let`s that were dropped from `constant_export_map` because they
+  /// were syntactically mutated; kept pending a post-tree-shaking dead-writer recheck.
+  pub mutated_constant_candidates: FxHashMap<SymbolId, ConstExportMeta>,
   /// Temporary storage for node IDs of `require()` calls in `module.exports = require(...)` patterns.
   /// Resolved to `cjs_reexport_import_record_ids` after scanning completes.
   pub cjs_reexport_require_node_ids: Vec<NodeId>,
@@ -242,6 +248,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       dummy_record_set: FxHashSet::default(),
       commonjs_exports: FxHashMap::default(),
       constant_export_map: FxHashMap::default(),
+      reassigned_stmt_map: FxHashMap::default(),
+      mutated_constant_candidates: FxHashMap::default(),
       ecma_view_meta: EcmaViewMeta::default(),
       cjs_reexport_require_node_ids: Vec::new(),
       cjs_reexport_import_record_ids: Vec::new(),
@@ -1248,10 +1256,23 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
     let scoping = self.result.symbol_ref_db.scoping();
     // A repeated `var` declaration assigns without a write reference.
+    let is_redeclared = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
+      && !scoping.symbol_redeclarations(symbol_id).is_empty();
+    if is_redeclared || eval_can_assign(scoping, symbol_id) {
+      return;
+    }
     let is_mutated = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
-      && (scoping.symbol_is_mutated(symbol_id)
-        || !scoping.symbol_redeclarations(symbol_id).is_empty());
-    if is_mutated || eval_can_assign(scoping, symbol_id) {
+      && scoping.symbol_is_mutated(symbol_id);
+    if is_mutated {
+      // Keep the candidate around: its writer(s) may all be tree-shaken away, in which case the
+      // link stage can recover it as a constant (see `recover_constants_with_dead_writers`).
+      // Only ESM bindings are sound to recover this way: every write to them is a simple-identifier
+      // reassignment captured in `reassigned_stmt_map`. CommonJS exports are written through member
+      // expressions (`exports.x = ...`) which we do not track there, so never treat them as
+      // candidates.
+      if !value.commonjs_export {
+        self.result.mutated_constant_candidates.insert(symbol_id, value);
+      }
       return;
     }
     self.result.constant_export_map.insert(symbol_id, value);

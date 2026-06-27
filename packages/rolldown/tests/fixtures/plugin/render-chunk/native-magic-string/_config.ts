@@ -18,6 +18,11 @@ export default defineTest({
             throw new Error('magicString should be available when nativeMagicString is enabled');
           }
 
+          expect(Object.keys(meta)).toEqual(expect.arrayContaining(['chunks', 'magicString']));
+          const spreadMeta = { ...meta };
+          expect(spreadMeta.chunks).toBe(meta.chunks);
+          expect(spreadMeta.magicString).toBe(meta.magicString);
+
           meta.magicString.replaceAll('name', 'userName');
           // Test 1: Verify that multiple accesses return the same cached instance
           const ref1 = meta.magicString;

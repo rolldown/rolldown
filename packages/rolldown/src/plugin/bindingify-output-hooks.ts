@@ -77,6 +77,7 @@ export function bindingifyRenderChunk(
             magicStringInstance = new RolldownMagicString(code);
             return magicStringInstance;
           },
+          enumerable: true,
           configurable: true,
         });
       }

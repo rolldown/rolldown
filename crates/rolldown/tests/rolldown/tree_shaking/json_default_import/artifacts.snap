@@ -7,6 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert/strict";
+//#region reexport-mutation.json
+var reexport_mutation_default = {
+	a: "original",
+	b: "unused"
+};
+//#endregion
+//#region mutator.js
+reexport_mutation_default.a = "mutated";
+//#endregion
 //#region foo.json
 var a$1 = "used";
 //#endregion
@@ -24,6 +33,7 @@ assert.deepEqual(bailout_default, {
 	a: "bailout_a",
 	b: "bailout_b"
 });
+assert.strictEqual(reexport_mutation_default.a, "mutated");
 //#endregion
 
 ```

@@ -14,6 +14,7 @@ pub struct BindingExperimentalOptions {
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<Either<bool, BindingChunkOptimizationOptions>>,
   pub lazy_barrel: Option<bool>,
+  pub min_chunk_size: Option<f64>,
 }
 
 impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -38,6 +39,7 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
         Either::B(v) => rolldown_common::ChunkOptimizationOption::Options(v.into()),
       }),
       lazy_barrel: value.lazy_barrel,
+      min_chunk_size: value.min_chunk_size,
     })
   }
 }

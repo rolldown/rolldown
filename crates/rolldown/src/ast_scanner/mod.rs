@@ -285,11 +285,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// }
   /// ```
   pub fn is_valid_tla_scope(&self) -> bool {
-    self
-      .scope_stack
-      .iter()
-      .rev()
-      .all(|flag| flag.intersects(ScopeFlags::Top | ScopeFlags::StrictMode) || flag.is_block())
+    self.scope_stack.iter().rev().all(|flag| flag.is_top() || flag.is_block())
   }
 
   pub fn is_root_scope(&self) -> bool {

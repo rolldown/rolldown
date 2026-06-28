@@ -37,6 +37,7 @@ schemars = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 serde_json = { workspace = true, features = ["arbitrary_precision"] }
 simdutf8 = { workspace = true }
+smallvec = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true }

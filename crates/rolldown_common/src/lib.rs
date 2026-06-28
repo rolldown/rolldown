@@ -208,7 +208,9 @@ pub use crate::{
   types::source_mutation::SourceMutation,
   types::sourcemap_chain_element::SourcemapChainElement,
   types::stable_module_id::StableModuleId,
-  types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos},
+  types::stmt_info::{
+    DebugStmtInfoForTreeShaking, DeclaredSymbols, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos,
+  },
   types::str_or_bytes::StrOrBytes,
   types::symbol_or_member_expr_ref::{SymbolOrMemberExprRef, TaggedSymbolRef},
   types::symbol_ref::{SymbolRef, common_debug_symbol_ref},

@@ -20,6 +20,7 @@ use rolldown_utils::{
   indexmap::FxIndexMap,
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
+use smallvec::smallvec;
 
 use super::LinkStage;
 
@@ -282,7 +283,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
     let symbol_ref: SymbolRef = (module_idx, symbol_id).into();
     all_declared_symbols.push(SymbolOrMemberExprRef::from(symbol_ref));
     let stmt_info =
-      StmtInfo::default().with_declared_symbols(vec![TaggedSymbolRef::normal(symbol_ref)]);
+      StmtInfo::default().with_declared_symbols(smallvec![TaggedSymbolRef::normal(symbol_ref)]);
     stmt_infos.add_stmt_info(stmt_info);
     module.named_exports.insert(
       exported.clone(),
@@ -291,7 +292,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   }
   // declare default export statement
   let stmt_info = StmtInfo::default()
-    .with_declared_symbols(vec![TaggedSymbolRef::normal(default_export_ref)])
+    .with_declared_symbols(smallvec![TaggedSymbolRef::normal(default_export_ref)])
     .with_referenced_symbols(all_declared_symbols.clone());
 
   stmt_infos.add_stmt_info(stmt_info);
@@ -304,7 +305,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   module.exports_kind = ExportsKind::Esm;
   stmt_infos.replace_namespace_stmt_info(
     StmtInfo::default()
-      .with_declared_symbols(vec![TaggedSymbolRef::normal(namespace_object_ref)])
+      .with_declared_symbols(smallvec![TaggedSymbolRef::normal(namespace_object_ref)])
       .with_referenced_symbols(all_declared_symbols),
   );
   // for a es json module it did not needs to be wrapped anyway.

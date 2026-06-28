@@ -813,12 +813,33 @@ impl GenerateStage<'_> {
 
       if meta.intersects(ChunkMeta::UserDefinedEntry) {
         if matches!(target_chunk.kind, ChunkKind::Common) {
-          let can_merge = match chunk.preserve_entry_signature {
-            Some(PreserveEntrySignatures::Strict) => {
-              self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules)
-            }
-            _ => true,
-          };
+          // Execution-isolation guard (issue #9463).
+          //
+          // Folding the common chunk *into* this user-defined entry chunk makes the
+          // entry chunk eagerly run this entry's top-level (its `init_*` call)
+          // whenever the chunk is loaded. If the common chunk also holds *another*
+          // user-defined entry's module, that other entry would be forced to import
+          // this entry chunk just to reach its own module — and would then run this
+          // entry's side effects. e.g. loading entry `b` would trigger entry `a`'s
+          // side effects. This happens when manual code splitting (a `codeSplitting`
+          // group, possibly via `entriesAware` subgroup merging) lumps several
+          // entries' modules into one shared chunk.
+          //
+          // Keep the thin facade in that case, so each entry imports the (wrapped)
+          // shared chunk and runs only its own `init_*`. A shared chunk that holds
+          // just this entry's module (plus non-entry deps a sibling genuinely
+          // depends on) is still folded in, preserving the #5726 facade-elimination.
+          let holds_other_user_entry = target_chunk.modules.iter().any(|&module_idx| {
+            module_idx != module
+              && self.link_output.user_defined_entry_modules.contains(&module_idx)
+          });
+          let can_merge = !holds_other_user_entry
+            && match chunk.preserve_entry_signature {
+              Some(PreserveEntrySignatures::Strict) => {
+                self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules)
+              }
+              _ => true,
+            };
           if can_merge {
             // merge all common chunk modules into entry chunk
             // swap original from_chunk_idx and target_chunk_idx

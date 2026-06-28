@@ -61,10 +61,8 @@ impl StmtInfos {
 
   pub fn replace_namespace_stmt_info(&mut self, info: StmtInfo) -> StmtInfoIdx {
     self.infos[Self::NAMESPACE_STMT_IDX] = info;
-    for symbol_ref in self.infos[Self::NAMESPACE_STMT_IDX]
-      .declared_symbols
-      .iter()
-      .filter(|item| matches!(item, TaggedSymbolRef::Normal(_)))
+    for symbol_ref in
+      self.infos[Self::NAMESPACE_STMT_IDX].declared_symbols.iter().filter(|item| item.is_normal())
     {
       self
         .symbol_ref_to_declared_stmt_idx

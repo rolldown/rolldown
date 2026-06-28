@@ -74,7 +74,7 @@ impl LinkStage<'_> {
       // tree-shaking process.
       linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
         let stmt_info = StmtInfo {
-          declared_symbols: vec![TaggedSymbolRef::Normal(*symbol_ref)],
+          declared_symbols: vec![TaggedSymbolRef::normal(*symbol_ref)],
           referenced_symbols: vec![],
           side_effect: false.into(),
           import_records: Vec::new(),
@@ -112,7 +112,7 @@ impl LinkStage<'_> {
                 }
                 referenced_symbols.push(rec.namespace_ref.into());
                 declared_symbols
-                  .push(TaggedSymbolRef::Normal(ecma_module.import_records[rec_idx].namespace_ref));
+                  .push(TaggedSymbolRef::normal(ecma_module.import_records[rec_idx].namespace_ref));
               });
             }
             OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {}
@@ -120,7 +120,7 @@ impl LinkStage<'_> {
         }
         // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
         // Corresponding AST for this statement will be created by the finalizer.
-        declared_symbols.push(TaggedSymbolRef::Normal(ecma_module.namespace_object_ref));
+        declared_symbols.push(TaggedSymbolRef::normal(ecma_module.namespace_object_ref));
         let namespace_stmt_info = StmtInfo {
           declared_symbols,
           referenced_symbols,

@@ -461,14 +461,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self
       .current_stmt_info
       .declared_symbols
-      .push(TaggedSymbolRef::Normal((self.immutable_ctx.idx, id).into()));
+      .push(TaggedSymbolRef::normal((self.immutable_ctx.idx, id).into()));
   }
 
   fn declare_link_only_symbol_ref(&mut self, id: SymbolId) {
     self
       .current_stmt_info
       .declared_symbols
-      .push(TaggedSymbolRef::LinkOnly((self.immutable_ctx.idx, id).into()));
+      .push(TaggedSymbolRef::link_only((self.immutable_ctx.idx, id).into()));
   }
 
   fn get_root_binding(&self, name: &str) -> Option<SymbolId> {
@@ -629,7 +629,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self
       .current_stmt_info
       .declared_symbols
-      .push(rolldown_common::TaggedSymbolRef::Normal(generated_imported_as_ref));
+      .push(rolldown_common::TaggedSymbolRef::normal(generated_imported_as_ref));
     let name_import = NamedImport {
       imported: imported.into(),
       imported_as: generated_imported_as_ref,
@@ -660,7 +660,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self
       .current_stmt_info
       .declared_symbols
-      .push(rolldown_common::TaggedSymbolRef::Normal(generated_imported_as_ref));
+      .push(rolldown_common::TaggedSymbolRef::normal(generated_imported_as_ref));
     let name_import = NamedImport {
       imported: Specifier::Star,
       span_imported: span_for_export_name,

@@ -141,7 +141,7 @@ fn update_module_default_export_info(
     LocalExport { span: SPAN, referenced: default_symbol_ref, came_from_commonjs: false },
   );
   stmt_infos
-    .declare_symbol_for_stmt(FIRST_TOP_LEVEL_STMT_IDX, TaggedSymbolRef::Normal(default_symbol_ref));
+    .declare_symbol_for_stmt(FIRST_TOP_LEVEL_STMT_IDX, TaggedSymbolRef::normal(default_symbol_ref));
 }
 
 /// return true if the json is a ObjectExpression
@@ -282,7 +282,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
     let symbol_ref: SymbolRef = (module_idx, symbol_id).into();
     all_declared_symbols.push(SymbolOrMemberExprRef::from(symbol_ref));
     let stmt_info =
-      StmtInfo::default().with_declared_symbols(vec![TaggedSymbolRef::Normal(symbol_ref)]);
+      StmtInfo::default().with_declared_symbols(vec![TaggedSymbolRef::normal(symbol_ref)]);
     stmt_infos.add_stmt_info(stmt_info);
     module.named_exports.insert(
       exported.clone(),
@@ -291,7 +291,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   }
   // declare default export statement
   let stmt_info = StmtInfo::default()
-    .with_declared_symbols(vec![TaggedSymbolRef::Normal(default_export_ref)])
+    .with_declared_symbols(vec![TaggedSymbolRef::normal(default_export_ref)])
     .with_referenced_symbols(all_declared_symbols.clone());
 
   stmt_infos.add_stmt_info(stmt_info);
@@ -304,7 +304,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   module.exports_kind = ExportsKind::Esm;
   stmt_infos.replace_namespace_stmt_info(
     StmtInfo::default()
-      .with_declared_symbols(vec![TaggedSymbolRef::Normal(namespace_object_ref)])
+      .with_declared_symbols(vec![TaggedSymbolRef::normal(namespace_object_ref)])
       .with_referenced_symbols(all_declared_symbols),
   );
   // for a es json module it did not needs to be wrapped anyway.

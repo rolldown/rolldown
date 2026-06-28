@@ -9,7 +9,7 @@ use crate::{
 };
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, NormalModule, OutputFormat, TaggedSymbolRef, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, NormalModule, OutputFormat, WrapKind,
 };
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -174,11 +174,7 @@ pub fn deconflict_chunk_symbols(
         .iter_enumerated()
         .filter(|(idx, _)| meta.stmt_info_included.has_bit(*idx))
         .for_each(|(_, stmt_info)| {
-          for declared_symbol in stmt_info
-            .declared_symbols
-            .iter()
-            .filter(|item| matches!(item, TaggedSymbolRef::Normal(_)))
-          {
+          for declared_symbol in stmt_info.declared_symbols.iter().filter(|item| item.is_normal()) {
             let symbol_ref = declared_symbol.inner();
             let canonical_ref = link_output.symbol_db.canonical_ref_for(symbol_ref);
             // Import statement declared some symbols that come from other module, those symbol should be skipped

@@ -261,7 +261,7 @@ impl LinkStage<'_> {
         });
 
         symbols_to_be_declared.into_iter().for_each(|(symbol_ref, idx)| {
-          stmt_infos.declare_symbol_for_stmt(idx, TaggedSymbolRef::Normal(symbol_ref));
+          stmt_infos.declare_symbol_for_stmt(idx, TaggedSymbolRef::normal(symbol_ref));
         });
         (importer_idx, DeferUpdateInfo { record_meta_pairs })
       })

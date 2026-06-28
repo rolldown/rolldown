@@ -69,7 +69,7 @@ jobs:
       - name: Was this content already deployed?
         id: deployed
         if: github.ref_name == 'main'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
         with:
           path: .docs-deploy-marker
           key: docs-deploy-${{ steps.fingerprint.outputs.hash }}
@@ -104,7 +104,7 @@ jobs:
         run: touch .docs-deploy-marker
 
       - name: Save deploy marker
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
         with:
           path: .docs-deploy-marker
           key: docs-deploy-${{ needs.docs-validation.outputs.fingerprint }}

@@ -20,15 +20,14 @@ reexport_mutation_default.a = "mutated";
 var a$1 = "used";
 //#endregion
 //#region bailout.json
-var a = "bailout_a";
 var bailout_default = {
-	a,
+	a: "bailout_a",
 	b: "bailout_b"
 };
 //#endregion
 //#region main.js
 assert.strictEqual(a$1, "used");
-assert.strictEqual(a, "bailout_a");
+assert.strictEqual(bailout_default.a, "bailout_a");
 assert.deepEqual(bailout_default, {
 	a: "bailout_a",
 	b: "bailout_b"

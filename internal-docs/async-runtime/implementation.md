@@ -48,6 +48,14 @@ The binding adapter and JS-facing configuration live in
 
 Configuration must happen before the first async binding call.
 
+This API is feature-gated. `configureAsyncRuntime`, `getAsyncRuntimeConfig`, and
+`getAsyncRuntimeMetrics` are exported on every build, but only the
+`async-runtime` build honors them. On the default `tokio-runtime` build
+`configureAsyncRuntime` throws a feature-disabled error (built without the
+`async-runtime` feature), `getAsyncRuntimeConfig` reports values derived from the
+environment variables and built-in defaults, and `getAsyncRuntimeMetrics` always
+returns zeroed counters.
+
 ### Routed work
 
 `rolldown_utils::futures` is the compatibility facade. The following work no
@@ -72,13 +80,14 @@ memory-growth backport are handled in the dependent browser/WASI change.
 
 ## Metrics And Baseline
 
-On a 12-core Apple Silicon host, a late-build sample of `apps/10000` showed 19
-process threads with the new runtime versus 41 with the previous runtime. The
-Rolldown-owned scheduling threads drop from roughly 34 (Tokio async + Tokio
-blocking + Rayon) to 12 shared workers. Comparable warm `/usr/bin/time -l`
-runs measured about 1.26 GB versus 1.31 GB maximum RSS and similar context
-switch counts. Representative Hyperfine results are recorded in the task
-summary rather than committed here because they are host-specific.
+The numbers in this section are illustrative observations from a single
+late-build sample of `apps/10000` on one 12-core Apple Silicon host — not a
+committed or reproducible benchmark. In that sample the new runtime used
+noticeably fewer OS threads than the previous Tokio-async + Tokio-blocking +
+Rayon setup: the Rolldown-owned scheduling threads collapse to a single shared
+pool of workers, at comparable maximum RSS and similar context-switch counts.
+Exact thread counts, RSS, and Hyperfine timings are host-specific and are
+recorded in the task summary rather than committed here.
 
 ## Related
 

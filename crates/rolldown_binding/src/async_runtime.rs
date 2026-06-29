@@ -1,4 +1,11 @@
-#![cfg_attr(all(test, not(feature = "async-runtime")), allow(dead_code))]
+// The public napi surface in this module (the `Binding*` `#[napi(object)]` types and
+// the `configure_async_runtime` / `get_async_runtime_*` / `reset_async_runtime_metrics`
+// `#[napi]` exports) is reachable only from JS. The in-crate unit-test binary never
+// constructs or calls it, so `dead_code` flags it in the TEST profile under every
+// feature combination (the `async-runtime` arms when the feature is on, the stub arms
+// when it is off). Relax dead_code for the TEST profile only: genuinely dead library
+// code is still caught by the non-test (cdylib) clippy gate, which carries no such allow.
+#![cfg_attr(test, allow(dead_code))]
 
 #[cfg(feature = "async-runtime")]
 use std::{future::Future, pin::Pin};

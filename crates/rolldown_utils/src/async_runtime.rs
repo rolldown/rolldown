@@ -1805,7 +1805,6 @@ mod tests {
     use std::time::Duration;
 
     const PRODUCER_COUNT: usize = 8;
-    let expected_sum: usize = (0..PRODUCER_COUNT).sum();
 
     // Schedule PRODUCER_COUNT `Some(i)` producers followed by one `None` terminator,
     // all as detached POOL runnables (`async_task::spawn` + `executor.schedule`) --
@@ -1833,6 +1832,8 @@ mod tests {
       executor.schedule(runnable);
       task.detach();
     }
+
+    let expected_sum: usize = (0..PRODUCER_COUNT).sum();
 
     // ---- Topology A: PRE-FIX shape must DEADLOCK -------------------------------
     // Run on a child thread so the suite can never hang: the child performs the

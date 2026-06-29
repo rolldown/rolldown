@@ -82,6 +82,14 @@ jobs:
 
       - run: just lint-rust
 
+      # `just lint-rust` (and the default `cargo clippy --workspace`) never enables the
+      # `async-runtime` feature, so the entire `rolldown_utils::async_runtime` module and
+      # the async-runtime arms of `rolldown_binding` go unlinted by default. Lint that
+      # feature path explicitly, including the test profile (`--all-targets`), so cfg-gated
+      # dead-code / clippy regressions on it cannot land silently.
+      - name: Clippy (async-runtime feature)
+        run: cargo clippy -p rolldown_utils -p rolldown_binding --features async-runtime --all-targets -- --deny warnings
+
       - name: Check allocations
         run: |
           cargo allocs

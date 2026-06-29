@@ -1110,6 +1110,65 @@ mod tests {
 
   #[cfg(not(target_family = "wasm"))]
   #[test]
+  fn multi_thread_block_on_from_caller_thread_receives_pool_produced_value() {
+    // RD-10: cross-thread liveness guard for the NON-pool (napi-caller) path of
+    // `MultiThreadExecutor::block_on`. The caller thread is not a pool worker, so
+    // `block_on` takes the parking branch (`futures::executor::block_on`) while a
+    // SEPARATELY spawned task runs on a pool worker and produces the awaited value.
+    // This pins ONLY the cross-thread wake path: the pool task completing must wake
+    // the parked caller's waker so `block_on` returns the pool-computed value.
+    //
+    // SCOPE: this is the cross-thread liveness guard only. It does NOT exercise the
+    // caller-is-pool-worker reentrancy case (that is covered by RD-1's own reentrancy
+    // tests); a regression here surfaces as a hang, which the bounded recv_timeout
+    // below turns into a loud failure instead of an infinite block.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "rd10-caller".to_string(),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
+
+      // Spawn a task that is driven on a pool worker (via `schedule` ->
+      // `ensure_drainer`) and produces the value. Its `Task` future is what the
+      // caller thread awaits; completion on the worker wakes the caller's parking
+      // waker across threads.
+      let scheduler = Arc::clone(&executor);
+      let (runnable, task) =
+        async_task::spawn(async { 7usize * 6 }, move |r| scheduler.schedule(r));
+      executor.schedule(runnable);
+
+      // The caller (this child) thread is NOT a pool worker, so `block_on` parks via
+      // `futures::executor::block_on` rather than driving the queue cooperatively.
+      let mut output = None;
+      {
+        let mut future = std::pin::pin!(async {
+          output = Some(task.await);
+        });
+        executor.block_on(future.as_mut());
+      }
+
+      assert_eq!(output, Some(42usize), "block_on must return the pool-computed value");
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "RD-10: non-pool block_on did not receive the pool-produced value ({error}): the cross-thread wake path stalled"
+      ),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
   fn multi_thread_block_on_wakes_parked_driver_after_workers_park() {
     // Regression for RD-1 finding (a): a pool-worker task parks in `block_on`
     // because the work that will wake it has not been scheduled yet. Once every

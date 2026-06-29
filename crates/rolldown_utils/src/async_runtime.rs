@@ -1664,6 +1664,102 @@ mod tests {
     }
   }
 
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_rd2_long_lived_blocking_consumer_does_not_starve_async_producers() {
+    // Regression for RD-2: a long-lived `while let Ok(msg) = rx.recv()` consumer
+    // that DEPENDS on async runnables to feed its channel must live on a dedicated
+    // OS thread, NOT the runtime's blocking pool. On the MultiThread runtime with
+    // `worker_threads == 1` (so `max_blocking == 1`), routing such a consumer
+    // through `schedule_blocking` makes the single drainer take it via
+    // `take_blocking` and block forever in `rx.recv()` while `active_drainers` is
+    // at max -> `ensure_drainer` cannot spawn another worker, the async producers
+    // that would feed the channel never get polled, and `recv()` never returns =>
+    // hard deadlock (the scan_stage native-magic-string sourcemap bug).
+    //
+    // This asserts the correct shape, mirroring the scan_stage fix: with the
+    // long-lived consumer on a DEDICATED thread, the runtime keeps draining the
+    // async producers alongside a concurrent runtime blocking job, so BOTH make
+    // progress for `worker_threads` in {1, 2}. A watchdog turns any regression
+    // (a starved/deadlocked drainer) into a loud failure instead of a hang.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    for worker_threads in [1usize, 2] {
+      let (done_tx, done_rx) = mpsc::channel();
+      let runner = std::thread::spawn(move || {
+        let options = RuntimeOptions {
+          flavor: RuntimeFlavor::MultiThread,
+          worker_threads,
+          max_blocking_tasks: worker_threads,
+          thread_name_prefix: format!("rd2-consumer-{worker_threads}"),
+        };
+        let executor =
+          Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+        const PRODUCER_COUNT: usize = 8;
+
+        // Long-lived blocking consumer on a DEDICATED OS thread (mirrors the
+        // scan_stage sourcemap fix). `None` is the terminate signal.
+        let (tx, rx) = mpsc::channel::<Option<usize>>();
+        let consumer = std::thread::spawn(move || {
+          let mut sum = 0usize;
+          while let Ok(msg) = rx.recv() {
+            match msg {
+              Some(value) => sum += value,
+              None => break,
+            }
+          }
+          sum
+        });
+
+        // A concurrent LONG blocking job that the runtime itself must run (proves
+        // a runtime blocking job and the async producers both make progress). It
+        // is independent of the producers, so it cannot itself create the cycle.
+        let blocking_job = executor.schedule_blocking(|| {
+          let mut acc = 0u64;
+          for i in 0..1_000u64 {
+            acc = acc.wrapping_add(i);
+          }
+          acc
+        });
+
+        // Async producers scheduled on the runtime feed the consumer's channel.
+        let mut tasks = Vec::new();
+        for i in 0..PRODUCER_COUNT {
+          let tx = tx.clone();
+          let body = async move {
+            tx.send(Some(i)).unwrap();
+          };
+          let scheduler = Arc::clone(&executor);
+          let (runnable, task) = async_task::spawn(body, move |r| scheduler.schedule(r));
+          executor.schedule(runnable);
+          tasks.push(task);
+        }
+
+        // Drive the async producers from this non-pool caller thread.
+        for task in tasks {
+          futures::executor::block_on(task);
+        }
+        // The runtime blocking job must also have made progress.
+        assert_eq!(futures::executor::block_on(blocking_job).unwrap(), (0..1_000u64).sum::<u64>());
+
+        // All producers done -> terminate the consumer and collect its result.
+        tx.send(None).unwrap();
+        let sum = consumer.join().unwrap();
+        assert_eq!(sum, (0..PRODUCER_COUNT).sum::<usize>());
+        let _ = done_tx.send(());
+      });
+
+      match done_rx.recv_timeout(Duration::from_secs(10)) {
+        Ok(()) => runner.join().unwrap(),
+        Err(error) => panic!(
+          "RD-2: async producers starved by a long-lived blocking consumer at worker_threads={worker_threads} ({error})"
+        ),
+      }
+    }
+  }
+
   #[test]
   fn current_thread_blocking_work_completes_inline() {
     let metrics = Arc::new(RuntimeMetrics::default());

@@ -218,7 +218,6 @@ export function bindingifyTransform(
             magicStringInstance = new RolldownMagicString(code);
             return magicStringInstance;
           },
-          enumerable: true,
         },
         ast: {
           get() {
@@ -242,7 +241,6 @@ export function bindingifyTransform(
             });
             return astInstance;
           },
-          enumerable: true,
         },
       });
       const transformCtx = new TransformPluginContextImpl(

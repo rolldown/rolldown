@@ -41,6 +41,14 @@ jobs:
       - name: Build Rolldown with non-threaded WASI binding
         run: just build-rolldown-wasi-single
 
+      # Guard that the freshly generated single-thread loaders are threadless
+      # end-to-end (no Worker creation, no shared memory, asyncWorkPoolSize: 0).
+      # Mirrors the napi-rs upstream guard for rolldown's own loaders. Runs
+      # after `build-rolldown-wasi-single` so it inspects the single-thread
+      # output, not the threaded build above.
+      - name: Assert single-thread WASI loaders are threadless
+        run: node scripts/misc/check-wasi-threadless.mjs
+
       - name: Stability Test
         run: vp run --filter rolldown-tests test:stability
 

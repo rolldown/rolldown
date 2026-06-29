@@ -356,6 +356,35 @@ impl Drop for OnPoolWorkerGuard {
   }
 }
 
+// Set while THIS worker is running a counted blocking closure (it owns a slot in
+// `active_blocking`). Only such an owner may run a queued blocking job inline
+// over the cap in a re-entrant `block_on`: it is the only one that can unblock
+// the inner job it awaits, so the genuine nested-blocking deadlock (RD-1 (b))
+// requires the over-cap run. A plain runnable driver does NOT own a slot, so it
+// must respect `max_blocking` and park/drive instead of running extra blocking
+// work over the cap (RD-1 round-2).
+#[cfg(not(target_family = "wasm"))]
+thread_local! {
+  static OWNS_BLOCKING_SLOT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+#[cfg(not(target_family = "wasm"))]
+struct OwnsBlockingSlotGuard(bool);
+
+#[cfg(not(target_family = "wasm"))]
+impl OwnsBlockingSlotGuard {
+  fn enter() -> Self {
+    Self(OWNS_BLOCKING_SLOT.with(|flag| flag.replace(true)))
+  }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Drop for OwnsBlockingSlotGuard {
+  fn drop(&mut self) {
+    OWNS_BLOCKING_SLOT.with(|flag| flag.set(self.0));
+  }
+}
+
 #[cfg(not(target_family = "wasm"))]
 struct MultiThreadExecutor {
   pool: ThreadPool,
@@ -463,7 +492,10 @@ impl MultiThreadExecutor {
         continue;
       }
       if let Some(blocking) = self.take_blocking() {
-        blocking();
+        {
+          let _slot = OwnsBlockingSlotGuard::enter();
+          blocking();
+        }
         self.active_blocking.fetch_sub(1, Ordering::Release);
         continue;
       }
@@ -508,7 +540,10 @@ impl MultiThreadExecutor {
       return true;
     }
     if let Some(blocking) = self.take_blocking() {
-      blocking();
+      {
+        let _slot = OwnsBlockingSlotGuard::enter();
+        blocking();
+      }
       self.active_blocking.fetch_sub(1, Ordering::Release);
       return true;
     }
@@ -523,10 +558,17 @@ impl MultiThreadExecutor {
   /// the awaited future depends on make progress instead of deadlocking when
   /// every slot is held by parked drivers (RD-1 (b)). It therefore does not
   /// touch `active_blocking`.
+  ///
+  /// The caller must already own a counted blocking slot (`OWNS_BLOCKING_SLOT`);
+  /// only such an owner is allowed to exceed the cap, because it is the only one
+  /// that can unblock the inner job it awaits. The inline job runs with the slot
+  /// flag still set so that a further nested `block_on` it performs is likewise
+  /// recognised as a genuine owner.
   fn run_blocking_inline_over_cap(self: &Arc<Self>) -> bool {
     let blocking =
       self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
     if let Some(blocking) = blocking {
+      let _slot = OwnsBlockingSlotGuard::enter();
       blocking();
       true
     } else {
@@ -555,7 +597,11 @@ impl MultiThreadExecutor {
       if self.run_one() {
         continue;
       }
-      if self.run_blocking_inline_over_cap() {
+      // Only a worker that already owns a counted blocking slot may run a queued
+      // blocking job over the cap (the genuine nested-blocking case it must
+      // unblock itself). A plain runnable driver respects `max_blocking` and
+      // parks/drives instead of starting extra blocking work (RD-1 round-2).
+      if OWNS_BLOCKING_SLOT.with(std::cell::Cell::get) && self.run_blocking_inline_over_cap() {
         continue;
       }
       // Nothing runnable right now: wait until new work is scheduled or the
@@ -1091,6 +1137,103 @@ mod tests {
       Ok(()) => runner.join().unwrap(),
       Err(error) => panic!("RD-1 (b): nested spawn_blocking deadlocked while saturated ({error})"),
     }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_block_on_respects_blocking_cap_for_non_owner_driver() {
+    // Regression for RD-1 round-2 finding: a plain pool-worker runnable driver
+    // (one that does NOT own a counted blocking slot) re-entering `block_on`
+    // must NOT run queued blocking jobs over `max_blocking_tasks` via the
+    // cooperative over-cap fallback. Two holder blocking jobs saturate the cap;
+    // two driver tasks then `block_on(spawn_blocking(..))`. With the buggy
+    // over-cap fallback the drivers run their inner blocking jobs immediately
+    // while the holders still occupy both slots, so peak active blocking >= 3
+    // (> cap 2). The cap must be honored AND everything must still complete.
+    use std::sync::{Barrier, mpsc};
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let peak_out = Arc::new(Mutex::new(None));
+    let peak_slot = Arc::clone(&peak_out);
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 4,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "rd1-cap".to_string(),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
+
+      let holder_count = 2usize; // saturates max_blocking_tasks
+      let driver_count = 2usize;
+
+      // Holders signal once they hold a counted slot, then wait to be released.
+      let (held_tx, held_rx) = mpsc::channel();
+      let release = Arc::new(Barrier::new(holder_count + 1));
+
+      let mut holder_handles = Vec::new();
+      for _ in 0..holder_count {
+        let held_tx = held_tx.clone();
+        let release = Arc::clone(&release);
+        let handle = executor.schedule_blocking(move || {
+          held_tx.send(()).unwrap();
+          release.wait();
+          0usize
+        });
+        holder_handles.push(handle);
+      }
+      // Wait until both holders hold their slots (cap fully saturated).
+      for _ in 0..holder_count {
+        held_rx.recv().unwrap();
+      }
+
+      // Driver tasks: plain runnables (NOT blocking-slot owners) that block_on
+      // an inner spawn_blocking.
+      let mut driver_tasks = Vec::new();
+      for _ in 0..driver_count {
+        let exec = Arc::clone(&executor);
+        let body = async move {
+          let inner_exec = Arc::clone(&exec);
+          let mut inner = std::pin::pin!(async move {
+            let v = inner_exec.schedule_blocking(|| 5usize).await.unwrap();
+            assert_eq!(v, 5);
+          });
+          exec.block_on(inner.as_mut());
+        };
+        let scheduler = Arc::clone(&executor);
+        let (runnable, task) = async_task::spawn(body, move |r| scheduler.schedule(r));
+        executor.schedule(runnable);
+        driver_tasks.push(task);
+      }
+
+      // Let the driver tasks reach block_on. Under the buggy over-cap fallback
+      // they run their inner blocking jobs NOW (over cap); under the fix they
+      // park until a holder frees a slot.
+      std::thread::sleep(Duration::from_millis(300));
+
+      // Release the holders so the inner jobs can run within the cap.
+      release.wait();
+
+      for task in driver_tasks {
+        futures::executor::block_on(task);
+      }
+      for handle in holder_handles {
+        assert_eq!(futures::executor::block_on(handle).unwrap(), 0usize);
+      }
+
+      *peak_slot.lock().unwrap() =
+        Some(metrics.max_active_blocking_tasks.load(Ordering::Relaxed));
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("RD-1 cap test deadlocked ({error})"),
+    }
+    let peak = peak_out.lock().unwrap().expect("peak captured");
+    assert!(peak <= 2, "peak active blocking tasks {peak} exceeded max_blocking_tasks 2");
   }
 
   #[test]

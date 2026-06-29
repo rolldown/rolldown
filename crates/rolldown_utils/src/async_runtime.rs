@@ -654,6 +654,23 @@ impl MultiThreadExecutor {
     }
   }
 
+  /// Production seam for the over-cap escape in `cooperative_block_on`: read the
+  /// ambient owner frame, apply the executor-id gate, and (only for a frame of
+  /// THIS executor) attempt the token-matched over-cap run. Returns `true` iff a
+  /// same-executor owned job was run. A foreign-executor token (or no token at
+  /// all) fails the `executor_id` gate and returns `false` WITHOUT touching the
+  /// queue, so `cooperative_block_on` parks/drives instead (RD-1 (B)). Extracted
+  /// as an `&self` helper so the executor-id gate is exercised through the ambient
+  /// thread-local exactly as production reaches it.
+  fn try_owned_blocking_over_cap(self: &Arc<Self>) -> bool {
+    if let Some(token) = BLOCKING_OWNER.with(std::cell::Cell::get) {
+      if token.executor_id == self.id {
+        return self.run_owned_blocking_over_cap(token);
+      }
+    }
+    false
+  }
+
   /// Cooperative `block_on` for a re-entrant call from a pool worker. Instead
   /// of parking the worker (which would freeze one of the pool's fixed OS
   /// threads), it drives the awaited future while servicing queued work. When
@@ -681,10 +698,8 @@ impl MultiThreadExecutor {
       // runnable driver owns no frame; a stale token from another executor fails
       // the `executor_id` check -- both respect `max_blocking` and park/drive
       // instead of starting extra blocking work (RD-1 (B)).
-      if let Some(token) = BLOCKING_OWNER.with(std::cell::Cell::get) {
-        if token.executor_id == self.id && self.run_owned_blocking_over_cap(token) {
-          continue;
-        }
+      if self.try_owned_blocking_over_cap() {
+        continue;
       }
       // Nothing runnable right now: wait until new work is scheduled or the
       // awaited future is woken.
@@ -1523,9 +1538,18 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_over_cap_escape_is_token_and_executor_scoped() {
+    use std::sync::{Barrier, mpsc};
+
     // Regression for RD-1 (B) MEDIUM: the over-cap escape must be both per-frame
-    // (token-scoped) and per-executor (executor-scoped). Single-threaded unit
-    // test exercising the two seams directly.
+    // (token-scoped) and per-executor (executor-scoped). This drives the SAME
+    // production seam `cooperative_block_on` uses -- `try_owned_blocking_over_cap`
+    // -- through the ambient `BLOCKING_OWNER` thread-local, so deleting the
+    // `executor_id` gate inside it FAILS this test (the gate is exercised, not
+    // restated). exec2's blocking cap is kept saturated by parked holders for the
+    // whole test so `take_blocking` always returns None: no background drainer can
+    // pop an injected job before we inspect/escape it, while the over-cap escape
+    // (which bypasses the cap) still runs. This makes every assertion below
+    // deterministic.
     let opts = RuntimeOptions {
       flavor: RuntimeFlavor::MultiThread,
       worker_threads: 2,
@@ -1538,9 +1562,31 @@ mod tests {
       Arc::new(MultiThreadExecutor::new(&opts, Arc::new(RuntimeMetrics::default())).unwrap());
     assert_ne!(exec1.id, exec2.id, "executors must get distinct ids");
 
+    // Saturate exec2's blocking cap with parked holders. Each signals once it holds
+    // a counted slot, then waits on the release barrier (held to the end of test).
+    let holder_count = opts.max_blocking_tasks; // saturates the cap
+    let (held_tx, held_rx) = mpsc::channel();
+    let release = Arc::new(Barrier::new(holder_count + 1));
+    let mut holder_handles = Vec::new();
+    for _ in 0..holder_count {
+      let held_tx = held_tx.clone();
+      let release = Arc::clone(&release);
+      holder_handles.push(exec2.schedule_blocking(move || {
+        held_tx.send(()).unwrap();
+        release.wait();
+        0usize
+      }));
+    }
+    for _ in 0..holder_count {
+      held_rx.recv().unwrap();
+    }
+    // Cap is now fully saturated; `take_blocking` returns None from here on.
+    assert_eq!(exec2.active_blocking.load(Ordering::Acquire), opts.max_blocking_tasks);
+
     // (1) `schedule_blocking` tags ONLY same-executor owners. With exec1's token
-    // ambient, a job scheduled on exec2 is tagged `None` (foreign executor), so
-    // it can never be matched by any over-cap escape.
+    // ambient, a job scheduled on exec2 is a foreign-executor job and must be
+    // tagged `None`, so no over-cap escape can ever match it. The saturated cap
+    // guarantees no drainer pops it before we read its tag.
     let token1 = exec1.fresh_owner_token();
     {
       let _owner = BlockingOwnerGuard::enter(Some(token1));
@@ -1551,32 +1597,71 @@ mod tests {
       None,
       "a job scheduled under a foreign-executor token must be tagged None"
     );
-    // exec2's own token finds no owned job; exec1's token is rejected at the gate.
-    let token2 = exec2.fresh_owner_token();
-    assert!(!exec2.run_owned_blocking_over_cap(token2), "no exec2-owned job is queued");
     exec2.blocking_queue.lock().unwrap().clear();
 
-    // (2) Inject a job tagged with exec1's token directly into exec2's queue, then
-    // confirm the executor gate (`token.executor_id == self.id`) is what isolates
-    // executors: exec2's own token does not match it, and the gate condition for a
-    // foreign token is false -- but the scan itself WOULD run it if the gate were
-    // bypassed, proving the gate (not luck) is load-bearing.
+    // (2) Drive the PRODUCTION executor-id gate through the ambient thread-local.
+    // Inject a job tagged with exec1's FOREIGN token into exec2's queue. With that
+    // SAME foreign token ambient, `try_owned_blocking_over_cap` must fail the
+    // `executor_id` gate and leave the job untouched. Were the gate deleted, the
+    // token-exact scan WOULD match the exec1-tagged job under the exec1 ambient
+    // token and run it -- so this is an honest regression guard for the gate.
     let ran = Arc::new(AtomicBool::new(false));
     let ran_job = Arc::clone(&ran);
     exec2.blocking_queue.lock().unwrap().push_back(QueuedBlocking {
       owner: Some(token1),
       run: Box::new(move || ran_job.store(true, Ordering::SeqCst)),
     });
-    // Gate condition in cooperative_block_on for the foreign token: refuses.
-    assert_ne!(token1.executor_id, exec2.id, "foreign token fails the executor gate");
-    // exec2's own token does not match the exec1-tagged job (token-scoped scan).
-    let token2b = exec2.fresh_owner_token();
-    assert!(!exec2.run_owned_blocking_over_cap(token2b), "exec2 token must not match exec1's job");
+    {
+      let _owner = BlockingOwnerGuard::enter(Some(token1));
+      assert!(
+        !exec2.try_owned_blocking_over_cap(),
+        "a foreign-executor ambient token must fail the executor gate"
+      );
+    }
     assert!(!ran.load(Ordering::SeqCst), "foreign-tagged job must not have run");
-    // Were the gate bypassed, the scan WOULD find and run it -> proves the gate is
-    // the isolation, and leaves the queue empty for a clean drop.
-    assert!(exec2.run_owned_blocking_over_cap(token1), "scan matches the exact token");
-    assert!(ran.load(Ordering::SeqCst));
+    assert_eq!(
+      exec2.blocking_queue.lock().unwrap().len(),
+      1,
+      "the gate-rejected job must be left in exec2's queue"
+    );
+
+    // Per-frame token scan: exec2's OWN token PASSES the executor gate but still
+    // must not match the exec1-tagged job -- the scan is token-exact, not merely
+    // executor-wide.
+    {
+      let _owner = BlockingOwnerGuard::enter(Some(exec2.fresh_owner_token()));
+      assert!(
+        !exec2.try_owned_blocking_over_cap(),
+        "an exec2 token must not match an exec1-tagged job (token-exact scan)"
+      );
+    }
+    assert!(!ran.load(Ordering::SeqCst), "token-mismatched job must not have run");
+    exec2.blocking_queue.lock().unwrap().clear();
+
+    // MATCHING ambient token: a job tagged with exec2's own frame is run by the
+    // production seam (gate passes AND the token-exact scan matches), even over the
+    // saturated cap -- the genuine nested-blocking escape (RD-1 (A)).
+    let token2 = exec2.fresh_owner_token();
+    let ran2 = Arc::new(AtomicBool::new(false));
+    let ran2_job = Arc::clone(&ran2);
+    exec2.blocking_queue.lock().unwrap().push_back(QueuedBlocking {
+      owner: Some(token2),
+      run: Box::new(move || ran2_job.store(true, Ordering::SeqCst)),
+    });
+    {
+      let _owner = BlockingOwnerGuard::enter(Some(token2));
+      assert!(
+        exec2.try_owned_blocking_over_cap(),
+        "a matching same-executor ambient token must run its own queued job over the cap"
+      );
+    }
+    assert!(ran2.load(Ordering::SeqCst), "matching-token job must have run");
+
+    // Release the holders and drain their join handles for a clean teardown.
+    release.wait();
+    for handle in holder_handles {
+      assert_eq!(futures::executor::block_on(handle).unwrap(), 0usize);
+    }
   }
 
   #[test]

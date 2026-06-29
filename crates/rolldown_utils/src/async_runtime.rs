@@ -331,6 +331,31 @@ impl Future for DriveCurrentThread<'_> {
   }
 }
 
+// Set while a pool worker is draining runnables/blocking jobs. Used by
+// `MultiThreadExecutor::block_on` to detect a re-entrant (on-pool) call and
+// drive the queue cooperatively instead of parking the worker (RD-1).
+#[cfg(not(target_family = "wasm"))]
+thread_local! {
+  static ON_POOL_WORKER: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+#[cfg(not(target_family = "wasm"))]
+struct OnPoolWorkerGuard(bool);
+
+#[cfg(not(target_family = "wasm"))]
+impl OnPoolWorkerGuard {
+  fn enter() -> Self {
+    Self(ON_POOL_WORKER.with(|flag| flag.replace(true)))
+  }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Drop for OnPoolWorkerGuard {
+  fn drop(&mut self) {
+    ON_POOL_WORKER.with(|flag| flag.set(self.0));
+  }
+}
+
 #[cfg(not(target_family = "wasm"))]
 struct MultiThreadExecutor {
   pool: ThreadPool,
@@ -413,6 +438,10 @@ impl MultiThreadExecutor {
   fn drain(self: Arc<Self>) {
     const RUNNABLE_BUDGET: usize = 64;
 
+    // Mark this worker so a re-entrant `block_on` (reached from a polled task)
+    // drives the queue cooperatively instead of parking the worker.
+    let _on_pool = OnPoolWorkerGuard::enter();
+
     for _ in 0..RUNNABLE_BUDGET {
       let runnable =
         self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
@@ -443,6 +472,36 @@ impl MultiThreadExecutor {
     }
   }
 
+  fn block_on(self: &Arc<Self>, future: Pin<&mut dyn Future<Output = ()>>) {
+    if ON_POOL_WORKER.with(std::cell::Cell::get) {
+      // Re-entrant call from a pool worker: parking here would freeze a worker
+      // that the awaited future may itself need to make progress. Drive the
+      // queue cooperatively instead (mirrors the CurrentThread drive loop).
+      futures::executor::block_on(DriveMultiThread { executor: Arc::clone(self), future });
+    } else {
+      // Non-pool (e.g. napi caller) thread: keep parking — there is no pool
+      // worker to starve, and other workers continue draining as usual.
+      futures::executor::block_on(future);
+    }
+  }
+
+  /// Run a single unit of queued work (a runnable, else a blocking job).
+  /// Returns `true` if work was performed. Mirrors the body of `drain`.
+  fn run_one(self: &Arc<Self>) -> bool {
+    let runnable =
+      self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
+    if let Some(runnable) = runnable {
+      run_runnable(&self.metrics, runnable);
+      return true;
+    }
+    if let Some(blocking) = self.take_blocking() {
+      blocking();
+      self.active_blocking.fetch_sub(1, Ordering::Release);
+      return true;
+    }
+    false
+  }
+
   fn take_blocking(&self) -> Option<Box<dyn FnOnce() + Send + 'static>> {
     loop {
       let active = self.active_blocking.load(Ordering::Acquire);
@@ -459,6 +518,31 @@ impl MultiThreadExecutor {
         .is_ok()
       {
         return queue.pop_front();
+      }
+    }
+  }
+}
+
+// Cooperative drive loop for a re-entrant `block_on` on a pool worker: polls
+// the awaited future, and whenever it is pending runs one queued unit of work
+// so pool-scheduled jobs the future depends on can still complete.
+#[cfg(not(target_family = "wasm"))]
+struct DriveMultiThread<'a> {
+  executor: Arc<MultiThreadExecutor>,
+  future: Pin<&'a mut dyn Future<Output = ()>>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Future for DriveMultiThread<'_> {
+  type Output = ();
+
+  fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+    loop {
+      if self.future.as_mut().poll(cx).is_ready() {
+        return Poll::Ready(());
+      }
+      if !self.executor.run_one() {
+        return Poll::Pending;
       }
     }
   }
@@ -528,7 +612,7 @@ impl RuntimeBackend {
     match self {
       Self::CurrentThread(executor) => executor.block_on(future),
       #[cfg(not(target_family = "wasm"))]
-      Self::MultiThread(_) => futures::executor::block_on(future),
+      Self::MultiThread(executor) => executor.block_on(future),
     }
   }
 }
@@ -706,6 +790,89 @@ mod tests {
     assert_eq!(futures::executor::block_on(task), 42);
     assert_eq!(metrics.runnable_polls.load(Ordering::Relaxed), 1);
     assert_eq!(metrics.active_runnables.load(Ordering::Relaxed), 0);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_block_on_does_not_park_pool_worker() {
+    // Regression for RD-1: a pool-worker task that calls `block_on` on an inner
+    // future depending on pool-scheduled blocking work must not park its worker.
+    // With `worker_threads` tasks each parking a worker, the blocking jobs they
+    // await can never be picked up by a drainer -> deadlock under the old code.
+    use std::sync::{Barrier, mpsc};
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "rd1-test".to_string(),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
+
+      let task_count = 2usize;
+      // Guarantees every task is being polled on its own pool worker *before*
+      // any of them parks in `block_on`, so the deadlock is deterministic.
+      let barrier = Arc::new(Barrier::new(task_count));
+
+      let mut tasks = Vec::new();
+      for _ in 0..task_count {
+        let exec = Arc::clone(&executor);
+        let barrier = Arc::clone(&barrier);
+        let body = async move {
+          barrier.wait();
+          let inner_exec = Arc::clone(&exec);
+          let mut inner = std::pin::pin!(async move {
+            let value = inner_exec.schedule_blocking(|| 7usize).await.unwrap();
+            assert_eq!(value, 7);
+          });
+          // Synchronous `block_on` from inside a pool-worker task: the vector.
+          exec.block_on(inner.as_mut());
+        };
+        let scheduler = Arc::clone(&executor);
+        let (runnable, task) =
+          async_task::spawn(body, move |runnable| scheduler.schedule(runnable));
+        executor.schedule(runnable);
+        tasks.push(task);
+      }
+
+      for task in tasks {
+        futures::executor::block_on(task);
+      }
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "MultiThread block_on deadlocked ({error}): pool workers parked waiting on pool-scheduled work"
+      ),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_block_on_from_caller_thread_still_parks() {
+    // The non-pool (napi caller) path must keep using the plain parking
+    // `block_on`; here we just assert it drives a ready future to completion.
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 2,
+      thread_name_prefix: "rd1-caller".to_string(),
+    };
+    let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
+
+    let mut output = None;
+    let mut future = std::pin::pin!(async {
+      output = Some(41usize + 1);
+    });
+    executor.block_on(future.as_mut());
+    assert_eq!(output, Some(42));
   }
 
   #[test]

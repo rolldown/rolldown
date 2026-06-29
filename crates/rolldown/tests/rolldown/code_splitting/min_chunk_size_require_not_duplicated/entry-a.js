@@ -1,3 +1,3 @@
-import { getValue } from "./util.js";
+import { getValue } from './util.js';
 
-export const a = getValue() + "-a";
+export const a = getValue() + '-a';

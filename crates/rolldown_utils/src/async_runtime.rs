@@ -2293,4 +2293,74 @@ mod tests {
     let error = result.expect_err("a panicking spawned future must surface as Err(JoinError)");
     assert_eq!(error.to_string(), "x");
   }
+
+  #[test]
+  fn runtime_metrics_reset_zeroes_every_counter() {
+    // RD-11: `reset()` must return EVERY counter to zero. Operates on a LOCALLY
+    // constructed instance only -- it never touches the process-global `RUNTIME`
+    // / `metrics()` snapshot path (that singleton is shared across parallel tests
+    // and would make this flaky). Each field is asserted individually so that a
+    // future-added counter which `reset()` forgets to clear fails here loudly.
+    //
+    // NOTE: adding a counter to `RuntimeMetrics` requires updating BOTH the
+    // drive-non-zero loop and the per-field zero assertions below.
+    let metrics = RuntimeMetrics::default();
+
+    // Drive every counter to a distinct non-zero value so reset() has something
+    // to clear in each field (distinct values also guard against a field being
+    // cleared by clobbering a neighbour).
+    metrics.tasks_spawned.store(1, Ordering::Relaxed);
+    metrics.tasks_completed.store(2, Ordering::Relaxed);
+    metrics.tasks_panicked.store(3, Ordering::Relaxed);
+    metrics.runnable_schedules.store(4, Ordering::Relaxed);
+    metrics.runnable_polls.store(5, Ordering::Relaxed);
+    metrics.queued_runnables.store(6, Ordering::Relaxed);
+    metrics.max_queued_runnables.store(7, Ordering::Relaxed);
+    metrics.active_runnables.store(8, Ordering::Relaxed);
+    metrics.max_active_runnables.store(9, Ordering::Relaxed);
+    metrics.blocking_tasks_started.store(10, Ordering::Relaxed);
+    metrics.blocking_tasks_completed.store(11, Ordering::Relaxed);
+    metrics.active_blocking_tasks.store(12, Ordering::Relaxed);
+    metrics.max_active_blocking_tasks.store(13, Ordering::Relaxed);
+
+    // Sanity: confirm the pre-reset state is genuinely non-zero everywhere, so a
+    // green assertion below cannot be a vacuous "was already zero".
+    assert_ne!(metrics.tasks_spawned.load(Ordering::Relaxed), 0);
+    assert_ne!(metrics.tasks_completed.load(Ordering::Relaxed), 0);
+    assert_ne!(metrics.tasks_panicked.load(Ordering::Relaxed), 0);
+    assert_ne!(metrics.runnable_schedules.load(Ordering::Relaxed), 0);
+    assert_ne!(metrics.runnable_polls.load(Ordering::Relaxed), 0);
+    assert_ne!(metrics.queued_runnables.load(Ordering::Relaxed), 0);
+    assert_ne!(metrics.max_queued_runnables.load(Ordering::Relaxed), 0);
+    assert_ne!(metrics.active_runnables.load(Ordering::Relaxed), 0);
+    assert_ne!(metrics.max_active_runnables.load(Ordering::Relaxed), 0);
+    assert_ne!(metrics.blocking_tasks_started.load(Ordering::Relaxed), 0);
+    assert_ne!(metrics.blocking_tasks_completed.load(Ordering::Relaxed), 0);
+    assert_ne!(metrics.active_blocking_tasks.load(Ordering::Relaxed), 0);
+    assert_ne!(metrics.max_active_blocking_tasks.load(Ordering::Relaxed), 0);
+
+    metrics.reset();
+
+    assert_eq!(metrics.tasks_spawned.load(Ordering::Relaxed), 0, "tasks_spawned");
+    assert_eq!(metrics.tasks_completed.load(Ordering::Relaxed), 0, "tasks_completed");
+    assert_eq!(metrics.tasks_panicked.load(Ordering::Relaxed), 0, "tasks_panicked");
+    assert_eq!(metrics.runnable_schedules.load(Ordering::Relaxed), 0, "runnable_schedules");
+    assert_eq!(metrics.runnable_polls.load(Ordering::Relaxed), 0, "runnable_polls");
+    assert_eq!(metrics.queued_runnables.load(Ordering::Relaxed), 0, "queued_runnables");
+    assert_eq!(metrics.max_queued_runnables.load(Ordering::Relaxed), 0, "max_queued_runnables");
+    assert_eq!(metrics.active_runnables.load(Ordering::Relaxed), 0, "active_runnables");
+    assert_eq!(metrics.max_active_runnables.load(Ordering::Relaxed), 0, "max_active_runnables");
+    assert_eq!(metrics.blocking_tasks_started.load(Ordering::Relaxed), 0, "blocking_tasks_started");
+    assert_eq!(
+      metrics.blocking_tasks_completed.load(Ordering::Relaxed),
+      0,
+      "blocking_tasks_completed"
+    );
+    assert_eq!(metrics.active_blocking_tasks.load(Ordering::Relaxed), 0, "active_blocking_tasks");
+    assert_eq!(
+      metrics.max_active_blocking_tasks.load(Ordering::Relaxed),
+      0,
+      "max_active_blocking_tasks"
+    );
+  }
 }

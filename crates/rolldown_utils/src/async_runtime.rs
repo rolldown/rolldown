@@ -356,61 +356,86 @@ impl Drop for OnPoolWorkerGuard {
   }
 }
 
-// Set while THIS worker is running a counted blocking closure (it owns a slot in
-// `active_blocking`). Only such an owner may run a queued blocking job inline
-// over the cap in a re-entrant `block_on`: it is the only one that can unblock
-// the inner job it awaits, so the genuine nested-blocking deadlock (RD-1 (b))
-// requires the over-cap run. A plain runnable driver does NOT own a slot, so it
-// must respect `max_blocking` and park/drive instead of running extra blocking
-// work over the cap (RD-1 round-2).
+// Identifies one specific counted-blocking owner frame on one specific executor.
+//
+// `executor_id` is assigned once per `MultiThreadExecutor` (so a stale token left
+// on a thread by a shut-down executor can never authorize work on a replacement
+// executor); `frame` is unique per blocking-closure entry (so nested owners on
+// the same thread can never run each other's queued jobs). Only the owner of a
+// frame may run *that frame's own* descendant blocking job over the cap in a
+// re-entrant `block_on` -- it is the only thread that can unblock the inner job
+// it awaits, which is the genuine nested-blocking deadlock (RD-1 (A)). A plain
+// runnable driver owns no frame, so it must respect `max_blocking` and park/drive
+// instead of running extra blocking work over the cap (RD-1 (B)).
+//
+// LOAD-BEARING INVARIANT: no `spawn_blocking` closure in rolldown calls `block_on`
+// today, so the owner over-cap escape below is defensive. If that ever changes,
+// this token machinery (tag at schedule time + token-matched, executor-scoped
+// escape) is what keeps the cap correct and prevents an owner from running an
+// unrelated queued job over the cap.
+#[cfg(not(target_family = "wasm"))]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct BlockingOwnerToken {
+  executor_id: u64,
+  frame: u64,
+}
+
+// Process-global id source for executors (B: executor-scoping) and for owner
+// frames (B: per-frame isolation of the over-cap escape).
+#[cfg(not(target_family = "wasm"))]
+static NEXT_EXECUTOR_ID: AtomicU64 = AtomicU64::new(0);
+#[cfg(not(target_family = "wasm"))]
+static NEXT_BLOCKING_FRAME: AtomicU64 = AtomicU64::new(0);
+
+// The owner frame (if any) currently running a counted blocking closure on THIS
+// thread. Replaces the old ambient `OWNS_BLOCKING_SLOT` bool.
 #[cfg(not(target_family = "wasm"))]
 thread_local! {
-  static OWNS_BLOCKING_SLOT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+  static BLOCKING_OWNER: std::cell::Cell<Option<BlockingOwnerToken>> =
+    const { std::cell::Cell::new(None) };
 }
 
+// Save/replace/restore guard for `BLOCKING_OWNER`. Enter with `Some(token)` while
+// running a counted blocking closure, or with `None` while a cooperative driver
+// runs a plain queued runnable (ownership is LEXICAL to the blocking closure: a
+// runnable an owner happens to drive via `run_one` is a logical non-owner and
+// must not inherit the owner's over-cap privilege). Restored on drop, so the
+// pattern is panic-safe even though `run_runnable` already catches panics.
 #[cfg(not(target_family = "wasm"))]
-struct OwnsBlockingSlotGuard(bool);
+struct BlockingOwnerGuard(Option<BlockingOwnerToken>);
 
 #[cfg(not(target_family = "wasm"))]
-impl OwnsBlockingSlotGuard {
-  fn enter() -> Self {
-    Self(OWNS_BLOCKING_SLOT.with(|flag| flag.replace(true)))
+impl BlockingOwnerGuard {
+  fn enter(token: Option<BlockingOwnerToken>) -> Self {
+    Self(BLOCKING_OWNER.with(|cell| cell.replace(token)))
   }
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl Drop for OwnsBlockingSlotGuard {
+impl Drop for BlockingOwnerGuard {
   fn drop(&mut self) {
-    OWNS_BLOCKING_SLOT.with(|flag| flag.set(self.0));
+    BLOCKING_OWNER.with(|cell| cell.set(self.0));
   }
 }
 
-// Temporarily CLEAR `OWNS_BLOCKING_SLOT` while a cooperative driver runs a plain
-// queued runnable. Blocking-slot ownership is LEXICAL to the blocking closure: a
-// runnable that an owner happens to drive via `run_one` is a logical non-owner and
-// must not inherit the owner's over-cap privilege. Restored on drop (RD-1 round-3).
+// A blocking job queued for the pool, tagged with the owner frame that scheduled
+// it (if it was scheduled while a counted blocking closure of THIS executor was
+// active on the stack). The tag links an owner's awaited inner job to the owner,
+// so the over-cap escape can run THAT job and only that job (RD-1 (B)).
 #[cfg(not(target_family = "wasm"))]
-struct ClearOwnsBlockingSlotGuard(bool);
-
-#[cfg(not(target_family = "wasm"))]
-impl ClearOwnsBlockingSlotGuard {
-  fn enter() -> Self {
-    Self(OWNS_BLOCKING_SLOT.with(|flag| flag.replace(false)))
-  }
-}
-
-#[cfg(not(target_family = "wasm"))]
-impl Drop for ClearOwnsBlockingSlotGuard {
-  fn drop(&mut self) {
-    OWNS_BLOCKING_SLOT.with(|flag| flag.set(self.0));
-  }
+struct QueuedBlocking {
+  owner: Option<BlockingOwnerToken>,
+  run: Box<dyn FnOnce() + Send + 'static>,
 }
 
 #[cfg(not(target_family = "wasm"))]
 struct MultiThreadExecutor {
+  // Stable per-executor id; tags owner tokens so a stale token from a shut-down
+  // executor can never authorize an over-cap escape on a replacement (RD-1 (B)).
+  id: u64,
   pool: ThreadPool,
   queue: Mutex<VecDeque<Runnable>>,
-  blocking_queue: Mutex<VecDeque<Box<dyn FnOnce() + Send + 'static>>>,
+  blocking_queue: Mutex<VecDeque<QueuedBlocking>>,
   active_drainers: AtomicUsize,
   active_blocking: AtomicUsize,
   // Wakes pool workers that are parked inside a re-entrant cooperative
@@ -437,6 +462,7 @@ impl MultiThreadExecutor {
       .build()
       .map_err(|error| RuntimeConfigError(format!("failed to create runtime workers: {error}")))?;
     Ok(Self {
+      id: NEXT_EXECUTOR_ID.fetch_add(1, Ordering::Relaxed),
       pool,
       queue: Mutex::new(VecDeque::new()),
       blocking_queue: Mutex::new(VecDeque::new()),
@@ -465,13 +491,24 @@ impl MultiThreadExecutor {
   {
     let (sender, receiver) = oneshot::channel();
     let metrics = Arc::clone(&self.metrics);
+    // Tag the job with the current owner frame, but ONLY if that frame belongs to
+    // THIS executor. The inner job an owner awaits is scheduled while the owner
+    // frame is active on the stack, so it inherits the owner's exact token and is
+    // the one job the over-cap escape is allowed to run. A job scheduled by a
+    // non-owner -- or under a stale token from a different executor -- is an
+    // ordinary capped job (`None`) (RD-1 (B)).
+    let owner =
+      BLOCKING_OWNER.with(std::cell::Cell::get).filter(|token| token.executor_id == self.id);
     self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push_back(
-      Box::new(move || {
-        let _active = metrics.blocking_started();
-        let result =
-          catch_unwind(AssertUnwindSafe(function)).map_err(|panic| JoinError::from_panic(&*panic));
-        let _ = sender.send(result);
-      }),
+      QueuedBlocking {
+        owner,
+        run: Box::new(move || {
+          let _active = metrics.blocking_started();
+          let result = catch_unwind(AssertUnwindSafe(function))
+            .map_err(|panic| JoinError::from_panic(&*panic));
+          let _ = sender.send(result);
+        }),
+      },
     );
     // Wake a parked cooperative driver so it can run this blocking job inline if
     // every blocking slot is held by parked drivers (RD-1 (b)).
@@ -514,7 +551,7 @@ impl MultiThreadExecutor {
       }
       if let Some(blocking) = self.take_blocking() {
         {
-          let _slot = OwnsBlockingSlotGuard::enter();
+          let _owner = BlockingOwnerGuard::enter(Some(self.fresh_owner_token()));
           blocking();
         }
         self.active_blocking.fetch_sub(1, Ordering::Release);
@@ -525,6 +562,16 @@ impl MultiThreadExecutor {
     }
 
     self.finish_draining();
+  }
+
+  /// Mint a fresh owner token for a counted blocking closure entering on this
+  /// executor. Each entry gets a unique `frame` so nested owners on the same
+  /// thread can never run each other's queued jobs over the cap (RD-1 (B)).
+  fn fresh_owner_token(&self) -> BlockingOwnerToken {
+    BlockingOwnerToken {
+      executor_id: self.id,
+      frame: NEXT_BLOCKING_FRAME.fetch_add(1, Ordering::Relaxed),
+    }
   }
 
   fn finish_draining(self: &Arc<Self>) {
@@ -554,21 +601,20 @@ impl MultiThreadExecutor {
   /// Run a single unit of queued work (a runnable, else a blocking job).
   /// Returns `true` if work was performed. Mirrors the body of `drain`.
   fn run_one(self: &Arc<Self>) -> bool {
-    let runnable =
-      self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
+    let runnable = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
     if let Some(runnable) = runnable {
-      // Ownership is lexical to the blocking closure: clear `OWNS_BLOCKING_SLOT`
-      // for the duration of this runnable so a nested `block_on` inside it is
-      // treated as a non-owner and cannot borrow the driving owner's over-cap
-      // privilege (RD-1 round-3). `run_runnable` catches panics; the guard also
-      // restores the flag on drop, so this is panic-safe regardless.
-      let _non_owner = ClearOwnsBlockingSlotGuard::enter();
+      // Ownership is lexical to the blocking closure: clear the owner frame for
+      // the duration of this runnable so a nested `block_on` inside it is treated
+      // as a non-owner and cannot borrow the driving owner's over-cap privilege
+      // (RD-1 (B)). `run_runnable` catches panics; the guard also restores the
+      // previous owner on drop, so this is panic-safe regardless.
+      let _non_owner = BlockingOwnerGuard::enter(None);
       run_runnable(&self.metrics, runnable);
       return true;
     }
     if let Some(blocking) = self.take_blocking() {
       {
-        let _slot = OwnsBlockingSlotGuard::enter();
+        let _owner = BlockingOwnerGuard::enter(Some(self.fresh_owner_token()));
         blocking();
       }
       self.active_blocking.fetch_sub(1, Ordering::Release);
@@ -577,26 +623,31 @@ impl MultiThreadExecutor {
     false
   }
 
-  /// Cooperative-only fallback for a re-entrant `block_on` that is about to
-  /// park: run one queued blocking job inline even though `max_blocking` is
-  /// saturated. This does not add a new concurrent blocking OS thread (the
-  /// current worker would otherwise be parked, doing nothing), so it cannot
-  /// over-subscribe real parallelism; it only lets a nested `spawn_blocking`
-  /// the awaited future depends on make progress instead of deadlocking when
-  /// every slot is held by parked drivers (RD-1 (b)). It therefore does not
-  /// touch `active_blocking`.
+  /// Token-matched, cooperative-only fallback for a re-entrant `block_on` that is
+  /// about to park: run the queued blocking job that the given owner frame `token`
+  /// scheduled, even though `max_blocking` is saturated. It scans for the FIRST
+  /// job tagged `Some(token)` and runs ONLY that job -- never an unrelated queued
+  /// job (RD-1 (B)): an owner may exceed the cap only to unblock the inner job it
+  /// itself awaits, which is the genuine nested-blocking deadlock it must break
+  /// (RD-1 (A)). If no job matches it returns `false` WITHOUT touching the queue,
+  /// so the caller parks instead.
   ///
-  /// The caller must already own a counted blocking slot (`OWNS_BLOCKING_SLOT`);
-  /// only such an owner is allowed to exceed the cap, because it is the only one
-  /// that can unblock the inner job it awaits. The inline job runs with the slot
-  /// flag still set so that a further nested `block_on` it performs is likewise
-  /// recognised as a genuine owner.
-  fn run_blocking_inline_over_cap(self: &Arc<Self>) -> bool {
-    let blocking =
-      self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
-    if let Some(blocking) = blocking {
-      let _slot = OwnsBlockingSlotGuard::enter();
-      blocking();
+  /// This does not add a new concurrent blocking OS thread (the current worker
+  /// would otherwise be parked, doing nothing), so it cannot over-subscribe real
+  /// parallelism; it therefore does not touch `active_blocking`. The inline job
+  /// runs under its OWN fresh owner frame so that a further nested `block_on` it
+  /// performs tags its descendants correctly.
+  fn run_owned_blocking_over_cap(self: &Arc<Self>, token: BlockingOwnerToken) -> bool {
+    let job = {
+      let mut queue = self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      match queue.iter().position(|queued| queued.owner == Some(token)) {
+        Some(index) => queue.remove(index),
+        None => None,
+      }
+    };
+    if let Some(job) = job {
+      let _owner = BlockingOwnerGuard::enter(Some(self.fresh_owner_token()));
+      (job.run)();
       true
     } else {
       false
@@ -624,12 +675,16 @@ impl MultiThreadExecutor {
       if self.run_one() {
         continue;
       }
-      // Only a worker that already owns a counted blocking slot may run a queued
-      // blocking job over the cap (the genuine nested-blocking case it must
-      // unblock itself). A plain runnable driver respects `max_blocking` and
-      // parks/drives instead of starting extra blocking work (RD-1 round-2).
-      if OWNS_BLOCKING_SLOT.with(std::cell::Cell::get) && self.run_blocking_inline_over_cap() {
-        continue;
+      // Only a worker that owns a counted blocking frame OF THIS EXECUTOR may run
+      // a queued blocking job over the cap, and only the job that frame itself
+      // scheduled (the genuine nested-blocking case it must unblock). A plain
+      // runnable driver owns no frame; a stale token from another executor fails
+      // the `executor_id` check -- both respect `max_blocking` and park/drive
+      // instead of starting extra blocking work (RD-1 (B)).
+      if let Some(token) = BLOCKING_OWNER.with(std::cell::Cell::get) {
+        if token.executor_id == self.id && self.run_owned_blocking_over_cap(token) {
+          continue;
+        }
       }
       // Nothing runnable right now: wait until new work is scheduled or the
       // awaited future is woken.
@@ -637,6 +692,9 @@ impl MultiThreadExecutor {
     }
   }
 
+  /// Pop the next queued blocking job FIFO within the cap, ignoring its owner tag
+  /// (any worker may run any job *within* `max_blocking`; only the over-cap escape
+  /// is tag-restricted). Returns the runnable closure, dropping the tag.
   fn take_blocking(&self) -> Option<Box<dyn FnOnce() + Send + 'static>> {
     loop {
       let active = self.active_blocking.load(Ordering::Acquire);
@@ -652,7 +710,7 @@ impl MultiThreadExecutor {
         .compare_exchange_weak(active, active + 1, Ordering::AcqRel, Ordering::Relaxed)
         .is_ok()
       {
-        return queue.pop_front();
+        return queue.pop_front().map(|queued| queued.run);
       }
     }
   }
@@ -691,8 +749,7 @@ impl CoopSignal {
   fn wait_if_unchanged(&self, observed: u64) {
     let generation = self.generation.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     if *generation == observed {
-      let guard =
-        self.condvar.wait(generation).unwrap_or_else(std::sync::PoisonError::into_inner);
+      let guard = self.condvar.wait(generation).unwrap_or_else(std::sync::PoisonError::into_inner);
       drop(guard);
     }
   }
@@ -1250,8 +1307,7 @@ mod tests {
         assert_eq!(futures::executor::block_on(handle).unwrap(), 0usize);
       }
 
-      *peak_slot.lock().unwrap() =
-        Some(metrics.max_active_blocking_tasks.load(Ordering::Relaxed));
+      *peak_slot.lock().unwrap() = Some(metrics.max_active_blocking_tasks.load(Ordering::Relaxed));
       let _ = done_tx.send(());
     });
 
@@ -1271,7 +1327,7 @@ mod tests {
     // runnable must NOT inherit the owner's over-cap blocking privilege. If the
     // runnable itself re-enters `block_on` awaiting a `spawn_blocking` while the cap
     // is saturated, the inner job must respect `max_blocking_tasks` (park until a
-    // slot frees), not run over cap by borrowing the owner's `OWNS_BLOCKING_SLOT`.
+    // slot frees), not run over cap by borrowing the owner's blocking-owner token.
     //
     // Setup (worker_threads=2, max_blocking=2): owner O (a counted blocking closure)
     // holds slot 1; holder H2 holds slot 2 -> cap saturated. O spawns a plain task R
@@ -1345,8 +1401,7 @@ mod tests {
       assert_eq!(futures::executor::block_on(o).unwrap(), 1usize);
       assert_eq!(futures::executor::block_on(h2).unwrap(), 0usize);
 
-      *peak_slot.lock().unwrap() =
-        Some(metrics.max_active_blocking_tasks.load(Ordering::Relaxed));
+      *peak_slot.lock().unwrap() = Some(metrics.max_active_blocking_tasks.load(Ordering::Relaxed));
       let _ = done_tx.send(());
     });
 
@@ -1356,6 +1411,172 @@ mod tests {
     }
     let peak = peak_out.lock().unwrap().expect("peak captured");
     assert!(peak <= 2, "peak active blocking tasks {peak} exceeded max_blocking_tasks 2");
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_over_cap_escape_runs_only_owner_job_not_unrelated() {
+    // Regression for RD-1 (B) HIGH: the old over-cap fallback blind-popped the
+    // FRONT of the shared blocking queue, so an owner re-entering `block_on`
+    // could run an ARBITRARY unrelated job over the cap. The token-matched escape
+    // must run ONLY the owner frame's own descendant job.
+    //
+    // Setup (worker_threads=2, max_blocking=2): owner O is a counted blocking
+    // closure (slot 1); holder H holds slot 2 -> cap saturated. An UNRELATED job
+    // U (scheduled by the main thread, so tagged `None`) is queued AHEAD of O's
+    // descendant D. O re-enters `block_on` awaiting D (tagged with O's frame).
+    // The escape must skip U and run D. Because U can only run once a REAL slot
+    // frees (O completing, after D runs), D STRICTLY precedes U under the fix.
+    // The old front-pop ran U first -> order ["U", "D"], which this asserts away.
+    use std::sync::{Barrier, mpsc};
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let order_out = Arc::new(Mutex::new(Vec::<&'static str>::new()));
+    let order_read = Arc::clone(&order_out);
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "rd1-unrelated".to_string(),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
+
+      // O and H signal once they each hold a counted slot (cap saturated), then
+      // wait so U is queued before O nests. H stays held until the very end.
+      let (held_tx, held_rx) = mpsc::channel();
+      let u_ready = Arc::new(Barrier::new(2)); // O <-> main: U is queued
+      let h_release = Arc::new(Barrier::new(2)); // H <-> main: end of test
+
+      // Holder H: holds slot 2 for the whole test.
+      let h_held = held_tx.clone();
+      let h_rel = Arc::clone(&h_release);
+      let h = executor.schedule_blocking(move || {
+        h_held.send(()).unwrap();
+        h_rel.wait();
+        0usize
+      });
+
+      // Owner O: holds slot 1, then (once U is queued) nests `block_on` awaiting
+      // its OWN descendant D.
+      let o_exec = Arc::clone(&executor);
+      let o_ready = Arc::clone(&u_ready);
+      let o_order = Arc::clone(&order_out);
+      let o = executor.schedule_blocking(move || {
+        held_tx.send(()).unwrap();
+        o_ready.wait(); // wait until U is queued ahead of D
+        let inner_exec = Arc::clone(&o_exec);
+        let d_order = Arc::clone(&o_order);
+        let mut inner = std::pin::pin!(async move {
+          let v = inner_exec
+            .schedule_blocking(move || {
+              d_order.lock().unwrap().push("D");
+              5usize
+            })
+            .await
+            .unwrap();
+          assert_eq!(v, 5);
+        });
+        o_exec.block_on(inner.as_mut());
+        1usize
+      });
+
+      // Wait until BOTH O and H hold their slots -> cap saturated.
+      held_rx.recv().unwrap();
+      held_rx.recv().unwrap();
+
+      // Now queue U (tagged None: scheduled by a non-owner main thread). It sits
+      // ahead of D and must NOT be run over the cap by O's escape.
+      let u_order = Arc::clone(&order_out);
+      let u = executor.schedule_blocking(move || {
+        u_order.lock().unwrap().push("U");
+        2usize
+      });
+
+      // Release O to nest now that U is queued ahead of D.
+      u_ready.wait();
+
+      // O makes progress by running D over cap; U only runs after O frees a slot.
+      assert_eq!(futures::executor::block_on(o).unwrap(), 1usize);
+      assert_eq!(futures::executor::block_on(u).unwrap(), 2usize);
+
+      // Release H and finish.
+      h_release.wait();
+      assert_eq!(futures::executor::block_on(h).unwrap(), 0usize);
+
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(std::time::Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("RD-1 (B) unrelated-job escape test deadlocked ({error})"),
+    }
+    let order = order_read.lock().unwrap().clone();
+    assert_eq!(
+      order,
+      vec!["D", "U"],
+      "owner must run its OWN descendant D over cap; unrelated U must wait for a real slot"
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_over_cap_escape_is_token_and_executor_scoped() {
+    // Regression for RD-1 (B) MEDIUM: the over-cap escape must be both per-frame
+    // (token-scoped) and per-executor (executor-scoped). Single-threaded unit
+    // test exercising the two seams directly.
+    let opts = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 2,
+      thread_name_prefix: "rd1-scope".to_string(),
+    };
+    let exec1 =
+      Arc::new(MultiThreadExecutor::new(&opts, Arc::new(RuntimeMetrics::default())).unwrap());
+    let exec2 =
+      Arc::new(MultiThreadExecutor::new(&opts, Arc::new(RuntimeMetrics::default())).unwrap());
+    assert_ne!(exec1.id, exec2.id, "executors must get distinct ids");
+
+    // (1) `schedule_blocking` tags ONLY same-executor owners. With exec1's token
+    // ambient, a job scheduled on exec2 is tagged `None` (foreign executor), so
+    // it can never be matched by any over-cap escape.
+    let token1 = exec1.fresh_owner_token();
+    {
+      let _owner = BlockingOwnerGuard::enter(Some(token1));
+      let _h = exec2.schedule_blocking(|| 0usize);
+    }
+    assert_eq!(
+      exec2.blocking_queue.lock().unwrap().front().unwrap().owner,
+      None,
+      "a job scheduled under a foreign-executor token must be tagged None"
+    );
+    // exec2's own token finds no owned job; exec1's token is rejected at the gate.
+    let token2 = exec2.fresh_owner_token();
+    assert!(!exec2.run_owned_blocking_over_cap(token2), "no exec2-owned job is queued");
+    exec2.blocking_queue.lock().unwrap().clear();
+
+    // (2) Inject a job tagged with exec1's token directly into exec2's queue, then
+    // confirm the executor gate (`token.executor_id == self.id`) is what isolates
+    // executors: exec2's own token does not match it, and the gate condition for a
+    // foreign token is false -- but the scan itself WOULD run it if the gate were
+    // bypassed, proving the gate (not luck) is load-bearing.
+    let ran = Arc::new(AtomicBool::new(false));
+    let ran_job = Arc::clone(&ran);
+    exec2.blocking_queue.lock().unwrap().push_back(QueuedBlocking {
+      owner: Some(token1),
+      run: Box::new(move || ran_job.store(true, Ordering::SeqCst)),
+    });
+    // Gate condition in cooperative_block_on for the foreign token: refuses.
+    assert_ne!(token1.executor_id, exec2.id, "foreign token fails the executor gate");
+    // exec2's own token does not match the exec1-tagged job (token-scoped scan).
+    let token2b = exec2.fresh_owner_token();
+    assert!(!exec2.run_owned_blocking_over_cap(token2b), "exec2 token must not match exec1's job");
+    assert!(!ran.load(Ordering::SeqCst), "foreign-tagged job must not have run");
+    // Were the gate bypassed, the scan WOULD find and run it -> proves the gate is
+    // the isolation, and leaves the queue empty for a clean drop.
+    assert!(exec2.run_owned_blocking_over_cap(token1), "scan matches the exact token");
+    assert!(ran.load(Ordering::SeqCst));
   }
 
   #[test]

@@ -141,4 +141,5 @@ minimumReleaseAgeExclude:
 
 patchedDependencies:
   '@emnapi/core@1.11.1': patches/@emnapi__core@1.11.1.patch
+  # TEMP: vendors napi-rs#3353 (wasm32-wasip1 single-thread support); remove once @napi-rs/cli ships it upstream
   '@napi-rs/cli@3.7.2': patches/@napi-rs__cli@3.7.2.patch

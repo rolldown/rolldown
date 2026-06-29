@@ -139,6 +139,11 @@ fn saturating_u32(value: u64) -> u32 {
 
 #[cfg(feature = "async-runtime")]
 #[napi]
+/// Override the shared async runtime's flavor and thread counts.
+///
+/// Must be called before the first async binding call. On the default
+/// `tokio-runtime` build this throws a feature-disabled error; only the
+/// `async-runtime` build honors it.
 pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<()> {
   let mut current = configured_options();
   if let Some(flavor) = options.flavor {
@@ -155,6 +160,11 @@ pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<(
 
 #[cfg(not(feature = "async-runtime"))]
 #[napi]
+/// Override the shared async runtime's flavor and thread counts.
+///
+/// Must be called before the first async binding call. On the default
+/// `tokio-runtime` build this throws a feature-disabled error; only the
+/// `async-runtime` build honors it.
 pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<()> {
   let _ = options;
   Err(napi::Error::from_reason(
@@ -164,12 +174,20 @@ pub fn configure_async_runtime(options: BindingRuntimeOptions) -> napi::Result<(
 
 #[cfg(feature = "async-runtime")]
 #[napi]
+/// Return the effective async runtime configuration.
+///
+/// On the default `tokio-runtime` build the values are derived from the
+/// environment variables and built-in defaults.
 pub fn get_async_runtime_config() -> BindingRuntimeConfig {
   configured_options().into()
 }
 
 #[cfg(not(feature = "async-runtime"))]
 #[napi]
+/// Return the effective async runtime configuration.
+///
+/// On the default `tokio-runtime` build the values are derived from the
+/// environment variables and built-in defaults.
 pub fn get_async_runtime_config() -> BindingRuntimeConfig {
   let worker_threads = std::env::var("ROLLDOWN_WORKER_THREADS")
     .ok()
@@ -188,12 +206,18 @@ pub fn get_async_runtime_config() -> BindingRuntimeConfig {
 
 #[cfg(feature = "async-runtime")]
 #[napi]
+/// Return a snapshot of the shared async runtime's task and scheduler counters.
+///
+/// On the default `tokio-runtime` build every counter is zero.
 pub fn get_async_runtime_metrics() -> BindingRuntimeMetrics {
   metrics().into()
 }
 
 #[cfg(not(feature = "async-runtime"))]
 #[napi]
+/// Return a snapshot of the shared async runtime's task and scheduler counters.
+///
+/// On the default `tokio-runtime` build every counter is zero.
 pub fn get_async_runtime_metrics() -> BindingRuntimeMetrics {
   let config = get_async_runtime_config();
   BindingRuntimeMetrics {
@@ -218,12 +242,18 @@ pub fn get_async_runtime_metrics() -> BindingRuntimeMetrics {
 
 #[cfg(feature = "async-runtime")]
 #[napi]
+/// Reset the async runtime metrics counters to zero.
+///
+/// A no-op on the default `tokio-runtime` build.
 pub fn reset_async_runtime_metrics() {
   reset_metrics();
 }
 
 #[cfg(not(feature = "async-runtime"))]
 #[napi]
+/// Reset the async runtime metrics counters to zero.
+///
+/// A no-op on the default `tokio-runtime` build.
 pub fn reset_async_runtime_metrics() {}
 
 #[cfg(feature = "async-runtime")]

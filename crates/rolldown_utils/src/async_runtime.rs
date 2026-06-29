@@ -1903,6 +1903,9 @@ mod tests {
     assert_eq!(validated.max_blocking_tasks, 1);
   }
 
+  // Native-only: `validate()` rejects `MultiThread` under `cfg(target_family = "wasm")`
+  // (after applying the clamp), so this success assertion is valid off-wasm only.
+  #[cfg(not(target_family = "wasm"))]
   #[test]
   fn validate_clamps_max_blocking_tasks_to_worker_threads() {
     // MultiThread keeps `worker_threads`; `max_blocking_tasks` is clamped down to

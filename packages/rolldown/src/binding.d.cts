@@ -2978,6 +2978,13 @@ export interface BindingWatchOption {
 
 export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
 
+/**
+ * Override the shared async runtime's flavor and thread counts.
+ *
+ * Must be called before the first async binding call. On the default
+ * `tokio-runtime` build this throws a feature-disabled error; only the
+ * `async-runtime` build honors it.
+ */
 export declare function configureAsyncRuntime(options: BindingRuntimeOptions): void
 
 export declare function enhancedTransform(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): Promise<BindingEnhancedTransformResult>
@@ -3007,8 +3014,19 @@ export type FilterTokenKind =  'Id'|
 'QueryKey'|
 'QueryValue';
 
+/**
+ * Return the effective async runtime configuration.
+ *
+ * On the default `tokio-runtime` build the values are derived from the
+ * environment variables and built-in defaults.
+ */
 export declare function getAsyncRuntimeConfig(): BindingRuntimeConfig
 
+/**
+ * Return a snapshot of the shared async runtime's task and scheduler counters.
+ *
+ * On the default `tokio-runtime` build every counter is zero.
+ */
 export declare function getAsyncRuntimeMetrics(): BindingRuntimeMetrics
 
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
@@ -3073,6 +3091,11 @@ export interface PreRenderedChunk {
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
+/**
+ * Reset the async runtime metrics counters to zero.
+ *
+ * A no-op on the default `tokio-runtime` build.
+ */
 export declare function resetAsyncRuntimeMetrics(): void
 
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null

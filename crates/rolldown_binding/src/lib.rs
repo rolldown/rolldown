@@ -27,6 +27,7 @@ use std::sync::{
 use napi_derive::napi;
 
 mod async_runtime;
+mod env_config;
 
 #[cfg(all(
   not(target_family = "wasm"),
@@ -96,20 +97,20 @@ fn init() {
   ))]
   {
     use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
-    let max_blocking_threads = std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
-      .ok()
-      .and_then(|v| v.parse::<usize>().ok())
+    let max_blocking_threads = crate::env_config::resolve_thread_count(
+      std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS").ok(),
       // default value in tokio implementation is **512**
       // it's too high for us
       // we don't have that many `blocking` tasks to run at this moment
-      .unwrap_or(4);
-    let worker_threads = std::env::var("ROLLDOWN_WORKER_THREADS")
-      .ok()
-      .and_then(|v| v.parse::<usize>().ok())
+      4,
+    );
+    let worker_threads = crate::env_config::resolve_thread_count(
+      std::env::var("ROLLDOWN_WORKER_THREADS").ok(),
       // unlike the web server scenario
       // rolldown puts a lot of blocking tasks in the worker threads rather than blocking_threads
       // so we need to increase the worker threads rather than the blocking_threads
-      .unwrap_or(num_cpus::get_physical() * 3 / 2);
+      num_cpus::get_physical() * 3 / 2,
+    );
     let mut builder = tokio::runtime::Builder::new_multi_thread();
 
     let rt = builder

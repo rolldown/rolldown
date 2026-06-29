@@ -363,6 +363,12 @@ struct MultiThreadExecutor {
   blocking_queue: Mutex<VecDeque<Box<dyn FnOnce() + Send + 'static>>>,
   active_drainers: AtomicUsize,
   active_blocking: AtomicUsize,
+  // Wakes pool workers that are parked inside a re-entrant cooperative
+  // `block_on` when new queue work is scheduled or an awaited future is woken.
+  // The pool has a fixed number of OS threads, so a parked worker cannot rely
+  // on `ensure_drainer` spawning a replacement (there is no free thread to run
+  // it) -- it must wake and run the work itself (RD-1).
+  coop_signal: Arc<CoopSignal>,
   max_drainers: usize,
   max_blocking: usize,
   metrics: Arc<RuntimeMetrics>,
@@ -386,6 +392,7 @@ impl MultiThreadExecutor {
       blocking_queue: Mutex::new(VecDeque::new()),
       active_drainers: AtomicUsize::new(0),
       active_blocking: AtomicUsize::new(0),
+      coop_signal: Arc::new(CoopSignal::default()),
       max_drainers: options.worker_threads,
       max_blocking: options.max_blocking_tasks.min(options.worker_threads),
       metrics,
@@ -395,6 +402,9 @@ impl MultiThreadExecutor {
   fn schedule(self: &Arc<Self>, runnable: Runnable) {
     self.metrics.runnable_scheduled();
     self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push_back(runnable);
+    // Wake any cooperative `block_on` driver that is parked waiting for work,
+    // then make sure a (fresh) drainer exists for the normal case (RD-1).
+    self.coop_signal.notify();
     self.ensure_drainer();
   }
 
@@ -413,6 +423,9 @@ impl MultiThreadExecutor {
         let _ = sender.send(result);
       }),
     );
+    // Wake a parked cooperative driver so it can run this blocking job inline if
+    // every blocking slot is held by parked drivers (RD-1 (b)).
+    self.coop_signal.notify();
     self.ensure_drainer();
     JoinHandle(JoinHandleInner::Blocking(receiver))
   }
@@ -477,7 +490,7 @@ impl MultiThreadExecutor {
       // Re-entrant call from a pool worker: parking here would freeze a worker
       // that the awaited future may itself need to make progress. Drive the
       // queue cooperatively instead (mirrors the CurrentThread drive loop).
-      futures::executor::block_on(DriveMultiThread { executor: Arc::clone(self), future });
+      self.cooperative_block_on(future);
     } else {
       // Non-pool (e.g. napi caller) thread: keep parking — there is no pool
       // worker to starve, and other workers continue draining as usual.
@@ -502,6 +515,55 @@ impl MultiThreadExecutor {
     false
   }
 
+  /// Cooperative-only fallback for a re-entrant `block_on` that is about to
+  /// park: run one queued blocking job inline even though `max_blocking` is
+  /// saturated. This does not add a new concurrent blocking OS thread (the
+  /// current worker would otherwise be parked, doing nothing), so it cannot
+  /// over-subscribe real parallelism; it only lets a nested `spawn_blocking`
+  /// the awaited future depends on make progress instead of deadlocking when
+  /// every slot is held by parked drivers (RD-1 (b)). It therefore does not
+  /// touch `active_blocking`.
+  fn run_blocking_inline_over_cap(self: &Arc<Self>) -> bool {
+    let blocking =
+      self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
+    if let Some(blocking) = blocking {
+      blocking();
+      true
+    } else {
+      false
+    }
+  }
+
+  /// Cooperative `block_on` for a re-entrant call from a pool worker. Instead
+  /// of parking the worker (which would freeze one of the pool's fixed OS
+  /// threads), it drives the awaited future while servicing queued work. When
+  /// nothing is immediately runnable it parks on `coop_signal`, which is woken
+  /// both by the awaited future's waker and by `schedule`/`schedule_blocking`,
+  /// so a later wake reaches this worker even when every worker is parked and
+  /// `ensure_drainer` has no free thread to spawn a replacement (RD-1).
+  fn cooperative_block_on(self: &Arc<Self>, mut future: Pin<&mut dyn Future<Output = ()>>) {
+    let signal = Arc::clone(&self.coop_signal);
+    let waker = std::task::Waker::from(Arc::clone(&signal));
+    let mut cx = Context::from_waker(&waker);
+    loop {
+      // Capture the wake generation *before* polling/draining so a wake that
+      // races with this iteration is observed and we do not park stale.
+      let generation = signal.generation();
+      if future.as_mut().poll(&mut cx).is_ready() {
+        return;
+      }
+      if self.run_one() {
+        continue;
+      }
+      if self.run_blocking_inline_over_cap() {
+        continue;
+      }
+      // Nothing runnable right now: wait until new work is scheduled or the
+      // awaited future is woken.
+      signal.wait_if_unchanged(generation);
+    }
+  }
+
   fn take_blocking(&self) -> Option<Box<dyn FnOnce() + Send + 'static>> {
     loop {
       let active = self.active_blocking.load(Ordering::Acquire);
@@ -523,28 +585,54 @@ impl MultiThreadExecutor {
   }
 }
 
-// Cooperative drive loop for a re-entrant `block_on` on a pool worker: polls
-// the awaited future, and whenever it is pending runs one queued unit of work
-// so pool-scheduled jobs the future depends on can still complete.
+// Wake primitive for cooperative re-entrant `block_on` drivers parked on a pool
+// worker. `notify` bumps a generation counter and wakes every parked driver,
+// which then re-polls its future and re-checks the queue. Used both as the
+// awaited future's `Waker` and as the signal raised by `schedule` /
+// `schedule_blocking` so newly queued work reaches a parked worker (RD-1).
 #[cfg(not(target_family = "wasm"))]
-struct DriveMultiThread<'a> {
-  executor: Arc<MultiThreadExecutor>,
-  future: Pin<&'a mut dyn Future<Output = ()>>,
+#[derive(Default)]
+struct CoopSignal {
+  generation: Mutex<u64>,
+  condvar: std::sync::Condvar,
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl Future for DriveMultiThread<'_> {
-  type Output = ();
+impl CoopSignal {
+  fn generation(&self) -> u64 {
+    *self.generation.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+  }
 
-  fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-    loop {
-      if self.future.as_mut().poll(cx).is_ready() {
-        return Poll::Ready(());
-      }
-      if !self.executor.run_one() {
-        return Poll::Pending;
-      }
+  fn notify(&self) {
+    {
+      let mut generation =
+        self.generation.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      *generation = generation.wrapping_add(1);
     }
+    self.condvar.notify_all();
+  }
+
+  /// Park until the generation moves past `observed`. If a `notify` already
+  /// raced ahead (generation changed) this returns immediately, preventing a
+  /// lost wakeup between the caller's last queue check and this park.
+  fn wait_if_unchanged(&self, observed: u64) {
+    let generation = self.generation.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if *generation == observed {
+      let guard =
+        self.condvar.wait(generation).unwrap_or_else(std::sync::PoisonError::into_inner);
+      drop(guard);
+    }
+  }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl std::task::Wake for CoopSignal {
+  fn wake(self: Arc<Self>) {
+    self.notify();
+  }
+
+  fn wake_by_ref(self: &Arc<Self>) {
+    self.notify();
   }
 }
 
@@ -873,6 +961,136 @@ mod tests {
     });
     executor.block_on(future.as_mut());
     assert_eq!(output, Some(42));
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_block_on_wakes_parked_driver_after_workers_park() {
+    // Regression for RD-1 finding (a): a pool-worker task parks in `block_on`
+    // because the work that will wake it has not been scheduled yet. Once every
+    // pool worker is parked this way, a later async wake routes through
+    // `schedule()` -> `ensure_drainer`, which (under the old code) refuses to
+    // spawn a replacement because the parked workers are still counted as active
+    // drainers -> the enqueued runnable never runs -> deadlock.
+    use std::sync::{Barrier, mpsc};
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "rd1-park".to_string(),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
+
+      let task_count = 2usize;
+      let barrier = Arc::new(Barrier::new(task_count));
+
+      let mut senders = Vec::new();
+      let mut tasks = Vec::new();
+      for _ in 0..task_count {
+        let (tx, rx) = oneshot::channel::<usize>();
+        senders.push(tx);
+        let exec = Arc::clone(&executor);
+        let barrier = Arc::clone(&barrier);
+        let body = async move {
+          // Make sure both pool workers are occupied before either parks.
+          barrier.wait();
+          // Child task whose wake routes through `schedule()`: the oneshot
+          // receiver's waker -> child runnable -> `schedule` -> `ensure_drainer`.
+          let child_exec = Arc::clone(&exec);
+          let (child_runnable, child_task) =
+            async_task::spawn(async move { rx.await.unwrap() }, move |r| child_exec.schedule(r));
+          exec.schedule(child_runnable);
+          let mut inner = std::pin::pin!(async move {
+            assert_eq!(child_task.await, 9usize);
+          });
+          exec.block_on(inner.as_mut());
+        };
+        let scheduler = Arc::clone(&executor);
+        let (runnable, task) = async_task::spawn(body, move |r| scheduler.schedule(r));
+        executor.schedule(runnable);
+        tasks.push(task);
+      }
+
+      // Give both workers time to poll their child Pending and park in block_on.
+      std::thread::sleep(Duration::from_millis(200));
+      for tx in senders {
+        let _ = tx.send(9usize);
+      }
+
+      for task in tasks {
+        futures::executor::block_on(task);
+      }
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "RD-1 (a): parked pool drivers were not woken after a post-park schedule() ({error})"
+      ),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_nested_spawn_blocking_does_not_deadlock_when_saturated() {
+    // Regression for RD-1 finding (b): a blocking closure re-enters `block_on`
+    // and awaits another `spawn_blocking` while `max_blocking_tasks` is already
+    // saturated by the outer blocking jobs. Under the old code the driver parks
+    // (take_blocking returns None) while still holding its blocking slot, so the
+    // inner job can never run -> deadlock.
+    use std::sync::{Barrier, mpsc};
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "rd1-nested-blk".to_string(),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
+
+      let outer_count = 2usize; // saturates max_blocking_tasks
+      let barrier = Arc::new(Barrier::new(outer_count));
+
+      let mut handles = Vec::new();
+      for _ in 0..outer_count {
+        let exec = Arc::clone(&executor);
+        let barrier = Arc::clone(&barrier);
+        let handle = executor.schedule_blocking(move || {
+          // Both outer blocking jobs hold a slot before either nests.
+          barrier.wait();
+          let inner_exec = Arc::clone(&exec);
+          let mut value = 0usize;
+          {
+            let mut inner = std::pin::pin!(async {
+              value = inner_exec.schedule_blocking(|| 5usize).await.unwrap();
+            });
+            exec.block_on(inner.as_mut());
+          }
+          value
+        });
+        handles.push(handle);
+      }
+
+      for handle in handles {
+        assert_eq!(futures::executor::block_on(handle).unwrap(), 5usize);
+      }
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("RD-1 (b): nested spawn_blocking deadlocked while saturated ({error})"),
+    }
   }
 
   #[test]

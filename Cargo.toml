@@ -170,7 +170,7 @@ glob = "0.3.2"
 heck = "0.5.0"
 # Pinned to the no-ICU 1.0.0 backend to keep IDNA support turned off.
 # See crates/rolldown_plugin_vite_resolve/Cargo.toml for the full rationale.
-idna_adapter = "=1.2.2"
+idna_adapter = "=1.0.0"
 ignore = "0.4.23"
 indexmap = "2.9.0"
 infer = { version = "0.19.0", default-features = false }

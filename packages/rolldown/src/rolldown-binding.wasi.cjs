@@ -6,8 +6,11 @@
 const __nodeFs = require('node:fs')
 const __nodePath = require('node:path')
 const { WASI: __nodeWASI } = require('node:wasi')
+const { Worker } = require('node:worker_threads')
+
 
 const {
+  createOnMessage: __wasmCreateOnMessageForFsProxy,
   getDefaultContext: __emnapiGetDefaultContext,
   instantiateNapiModuleSync: __emnapiInstantiateNapiModuleSync,
 } = require('@napi-rs/wasm-runtime')
@@ -24,9 +27,10 @@ const __wasi = new __nodeWASI({
 
 const __emnapiContext = __emnapiGetDefaultContext()
 
-const __wasmMemory = new WebAssembly.Memory({
+const __sharedMemory = new WebAssembly.Memory({
   initial: 16384,
   maximum: 65536,
+  shared: true,
 })
 
 let __wasmFilePath = __nodePath.join(__dirname, 'rolldown-binding.wasm32-wasi.wasm')
@@ -44,14 +48,55 @@ if (__nodeFs.existsSync(__wasmDebugFilePath)) {
 
 const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule } = __emnapiInstantiateNapiModuleSync(__nodeFs.readFileSync(__wasmFilePath), {
   context: __emnapiContext,
-  asyncWorkPoolSize: 0,
+  asyncWorkPoolSize: (function() {
+    const threadsSizeFromEnv = Number(process.env.NAPI_RS_ASYNC_WORK_POOL_SIZE ?? process.env.UV_THREADPOOL_SIZE)
+    // NaN > 0 is false
+    if (threadsSizeFromEnv > 0) {
+      return threadsSizeFromEnv
+    } else {
+      return 4
+    }
+  })(),
+  reuseWorker: true,
   wasi: __wasi,
+  onCreateWorker() {
+    const worker = new Worker(__nodePath.join(__dirname, 'wasi-worker.mjs'), {
+      env: process.env,
+    })
+    worker.onmessage = ({ data }) => {
+      __wasmCreateOnMessageForFsProxy(__nodeFs)(data)
+    }
+
+    // The main thread of Node.js waits for all the active handles before exiting.
+    // But Rust threads are never waited without `thread::join`.
+    // So here we hack the code of Node.js to prevent the workers from being referenced (active).
+    // According to https://github.com/nodejs/node/blob/19e0d472728c79d418b74bddff588bea70a403d0/lib/internal/worker.js#L415,
+    // a worker is consist of two handles: kPublicPort and kHandle.
+    {
+      const kPublicPort = Object.getOwnPropertySymbols(worker).find(s =>
+        s.toString().includes("kPublicPort")
+      );
+      if (kPublicPort) {
+        worker[kPublicPort].ref = () => {};
+      }
+
+      const kHandle = Object.getOwnPropertySymbols(worker).find(s =>
+        s.toString().includes("kHandle")
+      );
+      if (kHandle) {
+        worker[kHandle].ref = () => {};
+      }
+
+      worker.unref();
+    }
+    return worker
+  },
   overwriteImports(importObject) {
     importObject.env = {
       ...importObject.env,
       ...importObject.napi,
       ...importObject.emnapi,
-      memory: __wasmMemory,
+      memory: __sharedMemory,
     }
     return importObject
   },

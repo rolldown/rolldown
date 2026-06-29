@@ -1667,96 +1667,178 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_rd2_long_lived_blocking_consumer_does_not_starve_async_producers() {
-    // Regression for RD-2: a long-lived `while let Ok(msg) = rx.recv()` consumer
-    // that DEPENDS on async runnables to feed its channel must live on a dedicated
-    // OS thread, NOT the runtime's blocking pool. On the MultiThread runtime with
-    // `worker_threads == 1` (so `max_blocking == 1`), routing such a consumer
-    // through `schedule_blocking` makes the single drainer take it via
-    // `take_blocking` and block forever in `rx.recv()` while `active_drainers` is
-    // at max -> `ensure_drainer` cannot spawn another worker, the async producers
-    // that would feed the channel never get polled, and `recv()` never returns =>
-    // hard deadlock (the scan_stage native-magic-string sourcemap bug).
+    // Regression for RD-2 (the scan_stage native-magic-string sourcemap bug): a
+    // long-lived `while let Ok(msg) = rx.recv()` consumer that DEPENDS on async
+    // runnables to feed its channel must live on a dedicated OS thread, NOT the
+    // runtime's blocking pool.
     //
-    // This asserts the correct shape, mirroring the scan_stage fix: with the
-    // long-lived consumer on a DEDICATED thread, the runtime keeps draining the
-    // async producers alongside a concurrent runtime blocking job, so BOTH make
-    // progress for `worker_threads` in {1, 2}. A watchdog turns any regression
-    // (a starved/deadlocked drainer) into a loud failure instead of a hang.
+    // This is a TWO-TOPOLOGY guard. With `worker_threads == 1` there is exactly one
+    // pool worker, so `max_drainers == max_blocking == 1`:
+    //
+    //   Topology A (PRE-FIX, the hazard): the consumer recv-loop is routed through
+    //   `schedule_blocking`. The sole drainer takes it via `take_blocking` and then
+    //   blocks forever in `rx.recv()`. `active_drainers` is now at `max_drainers`,
+    //   so `ensure_drainer` cannot spawn a replacement; the pool-scheduled async
+    //   producers (and their terminate signal) never get polled, the channel is
+    //   never fed, and `recv()` never returns => hard deadlock. We OBSERVE the
+    //   consumer fail to complete within a short bound. This is NOT a timing race:
+    //   the producers are genuinely unreachable, so no extra time lets A complete --
+    //   the bound only sets how long we wait before declaring the deadlock real.
+    //   Reverting scan_stage to the `spawn_blocking` shape is exactly what A models
+    //   as broken.
+    //
+    //   Topology B (FIXED, mirrors the scan_stage fix): the SAME workload, but the
+    //   consumer recv-loop runs on a DEDICATED `std::thread::spawn`. The sole drainer
+    //   is then free to poll the producers, which feed the channel; the consumer sums
+    //   them and terminates on `None`. Everything COMPLETES and the sum is correct.
+    //
+    // The test passes ONLY when A is observed stuck AND B completes.
     use std::sync::mpsc;
     use std::time::Duration;
 
-    for worker_threads in [1usize, 2] {
-      let (done_tx, done_rx) = mpsc::channel();
-      let runner = std::thread::spawn(move || {
-        let options = RuntimeOptions {
-          flavor: RuntimeFlavor::MultiThread,
-          worker_threads,
-          max_blocking_tasks: worker_threads,
-          thread_name_prefix: format!("rd2-consumer-{worker_threads}"),
-        };
-        let executor =
-          Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+    const PRODUCER_COUNT: usize = 8;
+    let expected_sum: usize = (0..PRODUCER_COUNT).sum();
 
-        const PRODUCER_COUNT: usize = 8;
+    // Schedule PRODUCER_COUNT `Some(i)` producers followed by one `None` terminator,
+    // all as detached POOL runnables (`async_task::spawn` + `executor.schedule`) --
+    // NOT driven from the caller thread. FIFO scheduling on a single worker keeps
+    // every `Some` ahead of the `None`, so a consumer that actually drains the
+    // channel observes the full sum before terminating. `detach` keeps each future
+    // (and its `tx` clone) alive on the queue instead of cancelling it.
+    fn schedule_pool_workload(
+      executor: &Arc<MultiThreadExecutor>,
+      tx: &mpsc::Sender<Option<usize>>,
+      count: usize,
+    ) {
+      for i in 0..count {
+        let tx = tx.clone();
+        let scheduler = Arc::clone(executor);
+        let (runnable, task) =
+          async_task::spawn(async move { tx.send(Some(i)).unwrap() }, move |r| scheduler.schedule(r));
+        executor.schedule(runnable);
+        task.detach();
+      }
+      let tx = tx.clone();
+      let scheduler = Arc::clone(executor);
+      let (runnable, task) =
+        async_task::spawn(async move { tx.send(None).unwrap() }, move |r| scheduler.schedule(r));
+      executor.schedule(runnable);
+      task.detach();
+    }
 
-        // Long-lived blocking consumer on a DEDICATED OS thread (mirrors the
-        // scan_stage sourcemap fix). `None` is the terminate signal.
-        let (tx, rx) = mpsc::channel::<Option<usize>>();
-        let consumer = std::thread::spawn(move || {
-          let mut sum = 0usize;
-          while let Ok(msg) = rx.recv() {
-            match msg {
-              Some(value) => sum += value,
-              None => break,
-            }
+    // ---- Topology A: PRE-FIX shape must DEADLOCK -------------------------------
+    // Run on a child thread so the suite can never hang: the child performs the
+    // bounded deadlock observation itself and reports the outcome over a channel.
+    // The pool worker it leaves wedged in `rx.recv()` is deliberately abandoned
+    // (see the `forget` below) -- we must never join a genuinely-deadlocked thread.
+    let (a_report_tx, a_report_rx) = mpsc::channel::<bool>();
+    std::thread::spawn(move || {
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "rd2-pre-fix".to_string(),
+      };
+      let executor =
+        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+      let (tx, rx) = mpsc::channel::<Option<usize>>();
+      let (started_tx, started_rx) = mpsc::channel::<()>();
+      let (done_tx, done_rx) = mpsc::channel::<()>();
+
+      // The long-lived consumer routed through the BLOCKING pool (the hazard). It
+      // signals the moment it occupies the sole drainer, then loops on `recv()`.
+      let handle = executor.schedule_blocking(move || {
+        started_tx.send(()).unwrap();
+        let mut sum = 0usize;
+        while let Ok(msg) = rx.recv() {
+          match msg {
+            Some(value) => sum += value,
+            None => break,
           }
-          sum
-        });
+        }
+        done_tx.send(()).unwrap();
+        sum
+      });
+      // Never await this handle (`recv()` would block forever); the consumer
+      // reports liveness via the channels above. Dropping it just discards the
+      // unused result receiver.
+      drop(handle);
 
-        // A concurrent LONG blocking job that the runtime itself must run (proves
-        // a runtime blocking job and the async producers both make progress). It
-        // is independent of the producers, so it cannot itself create the cycle.
-        let blocking_job = executor.schedule_blocking(|| {
-          let mut acc = 0u64;
-          for i in 0..1_000u64 {
-            acc = acc.wrapping_add(i);
+      // Wait until the consumer is CONFIRMED to occupy the sole drainer, THEN
+      // schedule the producers. They can only run if a second drainer exists --
+      // which it cannot (`active_drainers == max_drainers == 1`) -- so they starve.
+      started_rx.recv().unwrap();
+      schedule_pool_workload(&executor, &tx, PRODUCER_COUNT);
+      // Keep the producer channel open forever so `rx.recv()` blocks (rather than
+      // returning Err on disconnect) even after this harness thread exits -- the
+      // modeled hazard is starvation, not channel closure.
+      std::mem::forget(tx);
+
+      // Bounded observation: under the hazard the consumer never receives `None`,
+      // so this times out. Not a race -- the producers are unreachable.
+      let completed = done_rx.recv_timeout(Duration::from_millis(1500)).is_ok();
+
+      // Deliberately abandon the executor: its sole pool worker is wedged forever
+      // in `rx.recv()`, so dropping the pool (which may wait on its workers) could
+      // hang. Leak it instead of joining a deadlocked thread.
+      std::mem::forget(executor);
+      let _ = a_report_tx.send(completed);
+    });
+
+    let a_completed = a_report_rx
+      .recv_timeout(Duration::from_secs(10))
+      .expect("Topology A harness did not report (unexpected hang outside the modeled deadlock)");
+    assert!(
+      !a_completed,
+      "Topology A (pre-fix `schedule_blocking` consumer) was expected to DEADLOCK: the recv-loop \
+       occupies the sole drainer and starves the pool-scheduled async producers, so the consumer \
+       never receives its terminate signal. It completed instead -- this test no longer models the \
+       RD-2 hazard."
+    );
+
+    // ---- Topology B: FIXED shape must COMPLETE ---------------------------------
+    let (b_done_tx, b_done_rx) = mpsc::channel::<usize>();
+    let b_runner = std::thread::spawn(move || {
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "rd2-fixed".to_string(),
+      };
+      let executor =
+        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+      let (tx, rx) = mpsc::channel::<Option<usize>>();
+
+      // The SAME consumer recv-loop, now on a DEDICATED OS thread (the scan_stage
+      // fix). It does not occupy a drainer, so the sole drainer is free to feed it.
+      let consumer = std::thread::spawn(move || {
+        let mut sum = 0usize;
+        while let Ok(msg) = rx.recv() {
+          match msg {
+            Some(value) => sum += value,
+            None => break,
           }
-          acc
-        });
-
-        // Async producers scheduled on the runtime feed the consumer's channel.
-        let mut tasks = Vec::new();
-        for i in 0..PRODUCER_COUNT {
-          let tx = tx.clone();
-          let body = async move {
-            tx.send(Some(i)).unwrap();
-          };
-          let scheduler = Arc::clone(&executor);
-          let (runnable, task) = async_task::spawn(body, move |r| scheduler.schedule(r));
-          executor.schedule(runnable);
-          tasks.push(task);
         }
-
-        // Drive the async producers from this non-pool caller thread.
-        for task in tasks {
-          futures::executor::block_on(task);
-        }
-        // The runtime blocking job must also have made progress.
-        assert_eq!(futures::executor::block_on(blocking_job).unwrap(), (0..1_000u64).sum::<u64>());
-
-        // All producers done -> terminate the consumer and collect its result.
-        tx.send(None).unwrap();
-        let sum = consumer.join().unwrap();
-        assert_eq!(sum, (0..PRODUCER_COUNT).sum::<usize>());
-        let _ = done_tx.send(());
+        sum
       });
 
-      match done_rx.recv_timeout(Duration::from_secs(10)) {
-        Ok(()) => runner.join().unwrap(),
-        Err(error) => panic!(
-          "RD-2: async producers starved by a long-lived blocking consumer at worker_threads={worker_threads} ({error})"
-        ),
+      schedule_pool_workload(&executor, &tx, PRODUCER_COUNT);
+
+      let sum = consumer.join().unwrap();
+      b_done_tx.send(sum).unwrap();
+    });
+
+    match b_done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(sum) => {
+        b_runner.join().unwrap();
+        assert_eq!(sum, expected_sum, "Topology B (dedicated-thread consumer) produced the wrong sum");
       }
+      Err(error) => panic!(
+        "Topology B (fixed shape) failed to complete within the bound ({error}): a dedicated-thread \
+         consumer must let the sole drainer feed the async producers"
+      ),
     }
   }
 

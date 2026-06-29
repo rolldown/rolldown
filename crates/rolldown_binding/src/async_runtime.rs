@@ -219,21 +219,35 @@ pub fn reset_async_runtime_metrics() {
 #[napi]
 pub fn reset_async_runtime_metrics() {}
 
+/// Resolve an env-derived thread count: parse the raw value, treat a missing,
+/// non-numeric, OR zero value as "unset" and fall back to `default`. A `0` must
+/// never survive here because `RuntimeOptions::validate()` rejects a `0` thread
+/// count, which would panic the `expect()` in `register_async_runtime` during
+/// addon load (module_init). Behaviour-identical to the previous inline
+/// `.parse::<usize>().ok().unwrap_or(default)` for every non-zero numeric input.
+#[cfg(feature = "async-runtime")]
+fn resolve_thread_count(raw: Option<String>, default: usize) -> usize {
+  raw
+    .and_then(|value| value.parse::<usize>().ok())
+    .filter(|&value| value != 0)
+    .unwrap_or(default)
+}
+
 #[cfg(feature = "async-runtime")]
 #[napi_derive::module_init]
 fn register_async_runtime() {
   let mut options = RuntimeOptions::default();
   #[cfg(not(target_family = "wasm"))]
   {
-    options.worker_threads = std::env::var("ROLLDOWN_WORKER_THREADS")
-      .ok()
-      .and_then(|value| value.parse::<usize>().ok())
-      .unwrap_or_else(num_cpus::get_physical);
+    options.worker_threads = resolve_thread_count(
+      std::env::var("ROLLDOWN_WORKER_THREADS").ok(),
+      num_cpus::get_physical(),
+    );
   }
-  options.max_blocking_tasks = std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
-    .ok()
-    .and_then(|value| value.parse::<usize>().ok())
-    .unwrap_or(options.worker_threads);
+  options.max_blocking_tasks = resolve_thread_count(
+    std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS").ok(),
+    options.worker_threads,
+  );
   if let Ok(flavor) = std::env::var("ROLLDOWN_RUNTIME") {
     options.flavor = match flavor.as_str() {
       "current" | "current-thread" | "single" | "single-thread" => RuntimeFlavor::CurrentThread,
@@ -243,4 +257,23 @@ fn register_async_runtime() {
   }
   configure(options).expect("Failed to configure the Rolldown async runtime");
   create_custom_async_runtime(RolldownAsyncRuntime);
+}
+
+#[cfg(all(test, feature = "async-runtime"))]
+mod tests {
+  use super::resolve_thread_count;
+
+  #[test]
+  fn resolve_thread_count_handles_env_inputs() {
+    const DEFAULT: usize = 8;
+    // RD-3: a `0` typo must be treated as unset, never fed to validate() (which
+    // rejects 0 and would panic the module_init `expect`).
+    assert_eq!(resolve_thread_count(Some("0".to_string()), DEFAULT), DEFAULT);
+    // Valid positive numbers pass through unchanged.
+    assert_eq!(resolve_thread_count(Some("4".to_string()), DEFAULT), 4);
+    // Non-numeric values fall back gracefully (unchanged behaviour).
+    assert_eq!(resolve_thread_count(Some("abc".to_string()), DEFAULT), DEFAULT);
+    // Unset falls back to the default.
+    assert_eq!(resolve_thread_count(None, DEFAULT), DEFAULT);
+  }
 }

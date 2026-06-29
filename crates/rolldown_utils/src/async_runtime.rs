@@ -1957,17 +1957,28 @@ mod tests {
   #[cfg(not(target_family = "wasm"))]
   #[test]
   fn multi_thread_blocking_active_never_exceeds_max_blocking() {
-    // The native default backend enforces `active_blocking < max_blocking` in
-    // `take_blocking` before it pops/runs a blocking job. Scheduling MORE blocking
-    // closures than the cap must therefore keep the recorded peak concurrent
-    // blocking tasks at or below `max_blocking_tasks`, while every closure still
-    // runs and returns its correct result.
+    // Regression guard for the `take_blocking` cap check: it refuses to pop/run a
+    // queued blocking job while `active_blocking >= max_blocking`. The guard is
+    // exercised deterministically (no sleeps, no incidental worker overlap):
     //
-    // Per the verifier guardrail we do NOT force N-way concurrency with an
-    // over-cap barrier (that self-deadlocks); we let the closures run and assert
-    // the peak the runtime recorded (`max_active_blocking_tasks`, a monotonic
-    // fetch_max set at job entry, before the result is sent) plus completion.
-    use std::sync::mpsc;
+    //   1. EXACTLY `max_blocking_tasks` HELD holders saturate the cap. Each holder
+    //      occupies a counted slot (`take_blocking` increments `active_blocking`
+    //      BEFORE running the closure), signals `held`, then parks on a release
+    //      barrier -- so all slots are provably occupied before we proceed.
+    //   2. While the cap is saturated, we queue MORE blocking jobs ("extras").
+    //      With the cap intact `take_blocking` returns `None` for them, so the
+    //      idle workers cannot pop them: no extra may signal `extra_started`.
+    //   3. We release the holders, then assert EVERY job (holders + extras)
+    //      completes with the right result and the recorded peak never exceeded
+    //      the cap.
+    //
+    // Decisive property: if the `active >= self.max_blocking` guard were removed,
+    // the two idle workers would pop the extras while both holders are still
+    // parked, driving the recorded peak (`max_active_blocking_tasks`, a monotonic
+    // fetch_max set at job entry) above the cap -- so this test fails on EVERY run.
+    // The release barrier is sized `holder_count + 1` (<= max_blocking + 1), so it
+    // can never self-deadlock on the over-cap extras.
+    use std::sync::{Barrier, mpsc};
     use std::time::Duration;
 
     let (done_tx, done_rx) = mpsc::channel();
@@ -1983,23 +1994,63 @@ mod tests {
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
 
-      let job_count = 8usize; // far more than max_blocking_tasks (2)
-      let mut handles = Vec::new();
-      for i in 0..job_count {
-        handles.push(executor.schedule_blocking(move || i * 2));
+      let holder_count = options.max_blocking_tasks; // saturates the cap exactly
+      let extra_count = 4usize; // beyond-cap jobs that must NOT run while held
+
+      // Holders: signal once they hold a counted slot, then park until released.
+      let (held_tx, held_rx) = mpsc::channel();
+      let release = Arc::new(Barrier::new(holder_count + 1));
+      let mut holder_handles = Vec::new();
+      for _ in 0..holder_count {
+        let held_tx = held_tx.clone();
+        let release = Arc::clone(&release);
+        holder_handles.push(executor.schedule_blocking(move || {
+          held_tx.send(()).unwrap();
+          release.wait();
+          0usize
+        }));
+      }
+      // Wait until every slot is provably occupied (cap fully saturated).
+      for _ in 0..holder_count {
+        held_rx.recv().unwrap();
+      }
+
+      // Queue the beyond-cap extras. Each signals the instant it begins running.
+      let (extra_started_tx, extra_started_rx) = mpsc::channel();
+      let mut extra_handles = Vec::new();
+      for i in 0..extra_count {
+        let extra_started_tx = extra_started_tx.clone();
+        extra_handles.push(executor.schedule_blocking(move || {
+          extra_started_tx.send(i).unwrap();
+          i * 2
+        }));
+      }
+
+      // With the cap intact, `take_blocking` returns `None` while both slots are
+      // held, so no extra can have started running yet.
+      assert!(
+        matches!(extra_started_rx.try_recv(), Err(mpsc::TryRecvError::Empty)),
+        "a beyond-cap blocking job ran before the cap was released (cap check broken)"
+      );
+
+      // Release the holders so the queued extras can run within the cap.
+      release.wait();
+
+      for handle in holder_handles {
+        assert_eq!(futures::executor::block_on(handle).unwrap(), 0usize);
       }
       // Each handle owns its own oneshot receiver, so awaiting in order returns
-      // each job's own result regardless of the order the pool ran them.
-      for (i, handle) in handles.into_iter().enumerate() {
+      // each extra's own result regardless of the order the pool ran them.
+      for (i, handle) in extra_handles.into_iter().enumerate() {
         assert_eq!(futures::executor::block_on(handle).unwrap(), i * 2);
       }
 
-      // `blocking_tasks_started` is incremented at job entry (before the result is
-      // sent), so once every result is in, all `job_count` starts are recorded.
-      // (We deliberately do NOT assert `blocking_tasks_completed`/
-      // `active_blocking_tasks` here: those decrement in the guard's Drop which
-      // runs *after* the result is sent, so they can lag the awaited result.)
-      assert_eq!(metrics.blocking_tasks_started.load(Ordering::Relaxed), job_count as u64);
+      // `blocking_tasks_started` is incremented at job entry, so once every result
+      // is in, all holder + extra starts are recorded.
+      assert_eq!(
+        metrics.blocking_tasks_started.load(Ordering::Relaxed),
+        (holder_count + extra_count) as u64
+      );
 
       *peak_slot.lock().unwrap_or_else(std::sync::PoisonError::into_inner) =
         Some(metrics.max_active_blocking_tasks.load(Ordering::Relaxed));

@@ -1947,4 +1947,191 @@ mod tests {
       "the async runtime is already running; configure it before the first async call"
     );
   }
+
+  // ---- RD-9: MultiThread blocking cap + RUNNABLE_BUDGET drain + panic->JoinError --
+  // All three construct a `MultiThreadExecutor`/`RuntimeMetrics` LOCALLY (never the
+  // global `RUNTIME`) and run the workload on a child thread guarded by a
+  // `recv_timeout`, so a regression that hangs is reported as a failure instead of
+  // wedging the whole suite.
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_blocking_active_never_exceeds_max_blocking() {
+    // The native default backend enforces `active_blocking < max_blocking` in
+    // `take_blocking` before it pops/runs a blocking job. Scheduling MORE blocking
+    // closures than the cap must therefore keep the recorded peak concurrent
+    // blocking tasks at or below `max_blocking_tasks`, while every closure still
+    // runs and returns its correct result.
+    //
+    // Per the verifier guardrail we do NOT force N-way concurrency with an
+    // over-cap barrier (that self-deadlocks); we let the closures run and assert
+    // the peak the runtime recorded (`max_active_blocking_tasks`, a monotonic
+    // fetch_max set at job entry, before the result is sent) plus completion.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let peak_out = Arc::new(Mutex::new(None));
+    let peak_slot = Arc::clone(&peak_out);
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 4,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "rd9-blk-cap".to_string(),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
+
+      let job_count = 8usize; // far more than max_blocking_tasks (2)
+      let mut handles = Vec::new();
+      for i in 0..job_count {
+        handles.push(executor.schedule_blocking(move || i * 2));
+      }
+      // Each handle owns its own oneshot receiver, so awaiting in order returns
+      // each job's own result regardless of the order the pool ran them.
+      for (i, handle) in handles.into_iter().enumerate() {
+        assert_eq!(futures::executor::block_on(handle).unwrap(), i * 2);
+      }
+
+      // `blocking_tasks_started` is incremented at job entry (before the result is
+      // sent), so once every result is in, all `job_count` starts are recorded.
+      // (We deliberately do NOT assert `blocking_tasks_completed`/
+      // `active_blocking_tasks` here: those decrement in the guard's Drop which
+      // runs *after* the result is sent, so they can lag the awaited result.)
+      assert_eq!(metrics.blocking_tasks_started.load(Ordering::Relaxed), job_count as u64);
+
+      *peak_slot.lock().unwrap_or_else(std::sync::PoisonError::into_inner) =
+        Some(metrics.max_active_blocking_tasks.load(Ordering::Relaxed));
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("RD-9 blocking-cap test did not complete ({error})"),
+    }
+    let peak =
+      peak_out.lock().unwrap_or_else(std::sync::PoisonError::into_inner).expect("peak captured");
+    assert!(peak >= 1, "at least one blocking job must have run (peak {peak})");
+    assert!(peak <= 2, "peak active blocking tasks {peak} exceeded max_blocking_tasks 2");
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_drain_budget_completes_large_runnable_batch() {
+    // `drain` processes at most `RUNNABLE_BUDGET` (64) runnables per pass, then
+    // yields and re-drains via `finish_draining` -> `ensure_drainer`. A batch of
+    // MORE than 64 runnables must therefore exercise the budget yield/re-drain and
+    // still complete every task, with the runnable counters settling back to 0.
+    use std::sync::mpsc;
+    use std::time::{Duration, Instant};
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "rd9-budget".to_string(),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
+
+      let task_count = 200usize; // > RUNNABLE_BUDGET (64): forces budget re-drain
+      let completed = Arc::new(AtomicU64::new(0));
+      let mut tasks = Vec::new();
+      for _ in 0..task_count {
+        let completed = Arc::clone(&completed);
+        let scheduler = Arc::clone(&executor);
+        let (runnable, task) = async_task::spawn(
+          async move {
+            completed.fetch_add(1, Ordering::Relaxed);
+          },
+          move |r| scheduler.schedule(r),
+        );
+        executor.schedule(runnable);
+        tasks.push(task);
+      }
+      for task in tasks {
+        futures::executor::block_on(task);
+      }
+
+      // Every immediately-ready future is polled exactly once; `runnable_polls`
+      // (incremented at poll entry, before completion) is therefore exact here.
+      assert_eq!(completed.load(Ordering::Relaxed), task_count as u64);
+      assert_eq!(metrics.runnable_polls.load(Ordering::Relaxed), task_count as u64);
+
+      // The active-runnable guard for the LAST task drops just after its Task
+      // resolves (i.e. just after `block_on` returns), so give the counters a
+      // brief, bounded moment to settle to 0 rather than asserting them racily.
+      let deadline = Instant::now() + Duration::from_secs(5);
+      loop {
+        let active = metrics.active_runnables.load(Ordering::Relaxed);
+        let queued = metrics.queued_runnables.load(Ordering::Relaxed);
+        if active == 0 && queued == 0 {
+          break;
+        }
+        assert!(
+          Instant::now() < deadline,
+          "runnable counters did not settle to 0: active={active} queued={queued}"
+        );
+        std::thread::yield_now();
+      }
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(15)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("RD-9 drain-budget test did not complete ({error})"),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_spawned_panic_surfaces_as_join_error() {
+    // A panicking spawned future must surface as `Err(JoinError)` carrying the
+    // panic payload's message. We mirror the production `spawn` wrapper LOCALLY
+    // (catch_unwind the future, map the panic via `JoinError::from_panic`) and
+    // drive the resulting `JoinHandle` on this executor -- without touching the
+    // global `RUNTIME`. `JoinError::from_panic` downcasts a `&str` payload, so the
+    // `panic!("x")` message round-trips as `"x"`.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "rd9-panic".to_string(),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
+
+      let scheduler = Arc::clone(&executor);
+      let wrapped = async {
+        AssertUnwindSafe(async { panic!("x") })
+          .catch_unwind()
+          .await
+          .map_err(|panic| JoinError::from_panic(&*panic))
+      };
+      let (runnable, task) = async_task::spawn(wrapped, move |r| scheduler.schedule(r));
+      executor.schedule(runnable);
+
+      let result: Result<(), JoinError> =
+        futures::executor::block_on(JoinHandle(JoinHandleInner::Task(task)));
+      let _ = done_tx.send(result);
+    });
+
+    let result = match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(result) => {
+        runner.join().unwrap();
+        result
+      }
+      Err(error) => panic!("RD-9 panic->JoinError test did not complete ({error})"),
+    };
+    let error = result.expect_err("a panicking spawned future must surface as Err(JoinError)");
+    assert_eq!(error.to_string(), "x");
+  }
 }

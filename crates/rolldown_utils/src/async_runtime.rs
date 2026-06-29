@@ -331,21 +331,33 @@ impl Future for DriveCurrentThread<'_> {
   }
 }
 
-// Set while a pool worker is draining runnables/blocking jobs. Used by
-// `MultiThreadExecutor::block_on` to detect a re-entrant (on-pool) call and
-// drive the queue cooperatively instead of parking the worker (RD-1).
+// Identifies the executor whose pool worker is currently draining runnables /
+// blocking jobs on THIS thread (or `None` when not on a pool worker). Used by
+// `MultiThreadExecutor::block_on` to detect a re-entrant (on-pool) call OF THE
+// SAME EXECUTOR and drive the queue cooperatively instead of parking the worker
+// (RD-1). Carrying the executor id (not a bare bool) keeps this marker scoped
+// exactly like `BlockingOwnerToken.executor_id`: a worker of executor A that
+// re-enters `block_on` on executor B must NOT be treated as B's on-pool driver
+// -- it owns none of B's accounting, so it parks like any foreign-thread caller
+// rather than driving B's queues as an unaccounted within-cap driver. Under the
+// single global executor used in production these ids always match, so this is a
+// defensive scoping gate (consistent with the blocking-owner machinery), not a
+// reachable production change.
 #[cfg(not(target_family = "wasm"))]
 thread_local! {
-  static ON_POOL_WORKER: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+  static ON_POOL_WORKER: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
 }
 
 #[cfg(not(target_family = "wasm"))]
-struct OnPoolWorkerGuard(bool);
+struct OnPoolWorkerGuard(Option<u64>);
 
 #[cfg(not(target_family = "wasm"))]
 impl OnPoolWorkerGuard {
-  fn enter() -> Self {
-    Self(ON_POOL_WORKER.with(|flag| flag.replace(true)))
+  // Save the previous marker and install `id`, so nested/re-entrant drains
+  // (possibly from different executors on the same thread) restore the exact
+  // prior executor id on drop instead of unconditionally clearing it.
+  fn enter(id: u64) -> Self {
+    Self(ON_POOL_WORKER.with(|flag| flag.replace(Some(id))))
   }
 }
 
@@ -540,7 +552,7 @@ impl MultiThreadExecutor {
 
     // Mark this worker so a re-entrant `block_on` (reached from a polled task)
     // drives the queue cooperatively instead of parking the worker.
-    let _on_pool = OnPoolWorkerGuard::enter();
+    let _on_pool = OnPoolWorkerGuard::enter(self.id);
 
     for _ in 0..RUNNABLE_BUDGET {
       let runnable =
@@ -586,14 +598,19 @@ impl MultiThreadExecutor {
   }
 
   fn block_on(self: &Arc<Self>, future: Pin<&mut dyn Future<Output = ()>>) {
-    if ON_POOL_WORKER.with(std::cell::Cell::get) {
-      // Re-entrant call from a pool worker: parking here would freeze a worker
-      // that the awaited future may itself need to make progress. Drive the
-      // queue cooperatively instead (mirrors the CurrentThread drive loop).
+    if ON_POOL_WORKER.with(std::cell::Cell::get) == Some(self.id) {
+      // Re-entrant call from a pool worker OF THIS EXECUTOR: parking here would
+      // freeze a worker that the awaited future may itself need to make
+      // progress. Drive the queue cooperatively instead (mirrors the
+      // CurrentThread drive loop). The id check mirrors the
+      // `BlockingOwnerToken.executor_id` gate: a worker of a DIFFERENT executor
+      // owns none of this executor's accounting, so it must take the parking
+      // path below rather than drive these queues as an unaccounted driver.
       self.cooperative_block_on(future);
     } else {
-      // Non-pool (e.g. napi caller) thread: keep parking — there is no pool
-      // worker to starve, and other workers continue draining as usual.
+      // Non-pool (e.g. napi caller) thread, or a pool worker of another
+      // executor: keep parking — there is no pool worker of THIS executor to
+      // starve, and other workers continue draining as usual.
       futures::executor::block_on(future);
     }
   }
@@ -1770,6 +1787,113 @@ mod tests {
     for handle in holder_handles {
       assert_eq!(futures::executor::block_on(handle).unwrap(), 0usize);
     }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_block_on_cooperative_branch_is_executor_scoped() {
+    // Regression for the pool-worker-marker scoping gate: `block_on` may take the
+    // cooperative (queue-driving) branch ONLY for a re-entrant call OF THE SAME
+    // executor whose worker set the marker. A worker of executor A that re-enters
+    // `block_on` on executor B must take the PARKING branch instead -- it owns
+    // none of B's accounting, so driving B's queue would make it an unaccounted
+    // within-cap driver. This mirrors the `BlockingOwnerToken.executor_id` gate.
+    //
+    // Fully deterministic, no sleeps/threads: we set the ambient pool-worker
+    // marker to exec1's id by entering the REAL `OnPoolWorkerGuard`, then call
+    // `block_on` on each executor with the SAME probe shape and observe whether
+    // the cooperative `run_one` driver actually ran a queued runnable.
+    //
+    // The probe future returns `Pending` once (self-waking so the parking branch
+    // also makes progress) then `Ready`, guaranteeing the cooperative loop reaches
+    // `run_one` at least once before the future completes. A single runnable is
+    // pushed DIRECTLY onto the target executor's queue (bypassing `schedule`, so
+    // no background drainer is ever spawned to steal it). After `block_on`
+    // returns: the cooperative branch will have driven that runnable
+    // (`runnable_polls == 1`, queue empty); the parking branch leaves it untouched
+    // (`runnable_polls == 0`, still queued).
+    struct PendThenReady {
+      polls: usize,
+    }
+    impl Future for PendThenReady {
+      type Output = ();
+      fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
+        self.polls += 1;
+        if self.polls >= 2 {
+          Poll::Ready(())
+        } else {
+          // Self-wake so the parking branch (`futures::executor::block_on`)
+          // re-polls to completion without any external waker; the cooperative
+          // branch re-polls unconditionally each loop iteration regardless.
+          cx.waker().wake_by_ref();
+          Poll::Pending
+        }
+      }
+    }
+
+    // Push one already-resolvable runnable directly onto `target`'s queue (no
+    // `schedule`, so no drainer is spawned) and detach its task.
+    fn enqueue_runnable(target: &Arc<MultiThreadExecutor>) {
+      let scheduler = Arc::clone(target);
+      let (runnable, task) = async_task::spawn(async {}, move |r| scheduler.schedule(r));
+      target.queue.lock().unwrap().push_back(runnable);
+      task.detach();
+    }
+
+    let opts = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 2,
+      thread_name_prefix: "rd-onpool-scope".to_string(),
+    };
+    let exec1 =
+      Arc::new(MultiThreadExecutor::new(&opts, Arc::new(RuntimeMetrics::default())).unwrap());
+    let exec2 =
+      Arc::new(MultiThreadExecutor::new(&opts, Arc::new(RuntimeMetrics::default())).unwrap());
+    assert_ne!(exec1.id, exec2.id, "executors must get distinct ids");
+
+    // Simulate being on exec1's pool worker for the whole scenario.
+    let _on_pool = OnPoolWorkerGuard::enter(exec1.id);
+
+    // FOREIGN call: on exec1's worker, drive exec2.block_on. The marker
+    // (Some(exec1.id)) does NOT equal exec2.id, so exec2 must PARK and never
+    // touch its queue.
+    enqueue_runnable(&exec2);
+    {
+      let mut probe = std::pin::pin!(PendThenReady { polls: 0 });
+      exec2.block_on(probe.as_mut());
+    }
+    assert_eq!(
+      exec2.metrics.runnable_polls.load(Ordering::Relaxed),
+      0,
+      "a foreign-executor on-pool marker must NOT drive exec2's queue (must park)"
+    );
+    assert_eq!(
+      exec2.queue.lock().unwrap().len(),
+      1,
+      "the foreign call must leave exec2's runnable untouched on its queue"
+    );
+
+    // CONTROL call: on exec1's worker, drive exec1.block_on. The marker equals
+    // exec1.id, so exec1 takes the COOPERATIVE branch and drives its queued
+    // runnable via `run_one`.
+    enqueue_runnable(&exec1);
+    {
+      let mut probe = std::pin::pin!(PendThenReady { polls: 0 });
+      exec1.block_on(probe.as_mut());
+    }
+    assert_eq!(
+      exec1.metrics.runnable_polls.load(Ordering::Relaxed),
+      1,
+      "a same-executor on-pool marker MUST drive exec1's queue cooperatively"
+    );
+    assert!(
+      exec1.queue.lock().unwrap().is_empty(),
+      "the cooperative branch must have drained exec1's queued runnable"
+    );
+
+    // Tidy: drop the untouched exec2 runnable so its task does not leak a waker.
+    exec2.queue.lock().unwrap().clear();
   }
 
   #[cfg(not(target_family = "wasm"))]

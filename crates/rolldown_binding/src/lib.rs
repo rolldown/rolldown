@@ -97,20 +97,15 @@ fn init() {
   ))]
   {
     use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
-    let max_blocking_threads = crate::env_config::resolve_thread_count(
-      std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS").ok(),
-      // default value in tokio implementation is **512**
-      // it's too high for us
-      // we don't have that many `blocking` tasks to run at this moment
-      4,
-    );
-    let worker_threads = crate::env_config::resolve_thread_count(
-      std::env::var("ROLLDOWN_WORKER_THREADS").ok(),
-      // unlike the web server scenario
-      // rolldown puts a lot of blocking tasks in the worker threads rather than blocking_threads
-      // so we need to increase the worker threads rather than the blocking_threads
-      num_cpus::get_physical() * 3 / 2,
-    );
+    // Single source of truth for the native default thread counts: the SAME
+    // resolution the diagnostics reporter snapshots, so the reported config
+    // always matches the runtime actually built here.
+    // - max_blocking_threads default is **512** in tokio; that is too high for
+    //   us (we don't have that many `blocking` tasks), so we default to 4.
+    // - rolldown puts a lot of blocking work on the worker threads rather than
+    //   the blocking pool, so we scale worker threads up (physical * 3 / 2).
+    let (worker_threads, max_blocking_threads) =
+      crate::async_runtime::resolve_default_runtime_threads();
     let mut builder = tokio::runtime::Builder::new_multi_thread();
 
     let rt = builder
@@ -121,6 +116,9 @@ fn init() {
       .build()
       .expect("Failed to create tokio runtime");
     create_custom_tokio_runtime(rt);
+    // Record what the runtime was ACTUALLY built with so the diagnostics
+    // reporter (`get_async_runtime_config`) does not re-read a later-mutated env.
+    crate::async_runtime::snapshot_default_runtime_config(worker_threads, max_blocking_threads);
   }
 
   #[cfg(not(feature = "disable_panic_hook"))]

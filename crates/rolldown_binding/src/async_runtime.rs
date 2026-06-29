@@ -182,25 +182,144 @@ pub fn get_async_runtime_config() -> BindingRuntimeConfig {
   configured_options().into()
 }
 
-#[cfg(not(feature = "async-runtime"))]
-#[napi]
-/// Return the effective async runtime configuration.
-///
-/// On the default `tokio-runtime` build the values are derived from the
-/// environment variables and built-in defaults.
-pub fn get_async_runtime_config() -> BindingRuntimeConfig {
-  use crate::env_config::resolve_thread_count;
+// Snapshot of the thread counts the NATIVE default (`tokio-runtime`) runtime was
+// ACTUALLY built with at addon load (lib.rs `init`). `get_async_runtime_config`
+// reports this snapshot rather than re-reading the environment on every call, so
+// a later `process.env` mutation can no longer make the reported config diverge
+// from the runtime that already exists (Finding A: diagnostics-accuracy; the
+// runtime itself was always built once at init). Stored as resolved `u32`
+// (worker_threads, max_blocking_tasks) -- the values fed to the tokio builder.
+#[cfg(all(not(feature = "async-runtime"), not(target_family = "wasm")))]
+static DEFAULT_RUNTIME_CONFIG: std::sync::OnceLock<(u32, u32)> = std::sync::OnceLock::new();
 
+/// Resolve the native default runtime thread counts from the environment, using
+/// the SAME variables and defaults the native tokio runtime is built with in
+/// lib.rs `init`. Single source of truth so the snapshot stored at init exactly
+/// matches the runtime that was constructed.
+#[cfg(all(not(feature = "async-runtime"), not(target_family = "wasm")))]
+pub fn resolve_default_runtime_threads() -> (usize, usize) {
+  use crate::env_config::resolve_thread_count;
   let worker_threads = resolve_thread_count(
     std::env::var("ROLLDOWN_WORKER_THREADS").ok(),
     num_cpus::get_physical() * 3 / 2,
   );
   let max_blocking_tasks =
     resolve_thread_count(std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS").ok(), 4);
+  (worker_threads, max_blocking_tasks)
+}
+
+/// Record the resolved thread counts the native default runtime was built with.
+/// Called once from lib.rs `init` after the tokio runtime is constructed. A
+/// no-op if already set (the runtime is built exactly once per process).
+#[cfg(all(not(feature = "async-runtime"), not(target_family = "wasm")))]
+pub fn snapshot_default_runtime_config(worker_threads: usize, max_blocking_tasks: usize) {
+  let _ = DEFAULT_RUNTIME_CONFIG
+    .set((saturating_u32(worker_threads as u64), saturating_u32(max_blocking_tasks as u64)));
+}
+
+// Pure assembly of the native default reporter: prefer the init-time `snapshot`;
+// only when it is absent (e.g. a build without the tokio runtime, or a unit test
+// before init ran) fall back to resolving the env defaults. Split out so the
+// snapshot-wins-over-later-env behaviour is unit-testable without touching
+// process-global env or the `OnceLock`.
+#[cfg(all(not(feature = "async-runtime"), not(target_family = "wasm")))]
+fn default_runtime_config_from(
+  snapshot: Option<(u32, u32)>,
+  worker_threads_env: Option<String>,
+  max_blocking_threads_env: Option<String>,
+) -> BindingRuntimeConfig {
+  use crate::env_config::resolve_thread_count;
+  let (worker_threads, max_blocking_tasks) = match snapshot {
+    Some((worker_threads, max_blocking_tasks)) => (worker_threads, max_blocking_tasks),
+    None => {
+      let worker_threads =
+        resolve_thread_count(worker_threads_env, num_cpus::get_physical() * 3 / 2);
+      let max_blocking_tasks = resolve_thread_count(max_blocking_threads_env, 4);
+      (saturating_u32(worker_threads as u64), saturating_u32(max_blocking_tasks as u64))
+    }
+  };
   BindingRuntimeConfig {
     flavor: BindingRuntimeFlavor::MultiThread,
-    worker_threads: saturating_u32(worker_threads as u64),
-    max_blocking_tasks: saturating_u32(max_blocking_tasks as u64),
+    worker_threads,
+    max_blocking_tasks,
+  }
+}
+
+// The size of the async work pool the napi-rs WASI loader actually creates on the
+// threaded WASI artifact. Mirrors `packages/rolldown/src/rolldown-binding.wasi.cjs`:
+//   Number(NAPI_RS_ASYNC_WORK_POOL_SIZE ?? UV_THREADPOOL_SIZE), used when `> 0`,
+//   otherwise 4.
+// `napi.or(uv)` reproduces the `??` precedence (the first key wins whenever it is
+// present, even if empty/zero -- both then resolve to 4 on either side), and
+// `resolve_thread_count` reproduces the loader's "non-positive / non-numeric =>
+// default 4" guard for plain decimal integers (surrounding whitespace tolerated, to
+// match `Number(" 5 ") == 5`). Exotic `Number` forms (scientific "1e2", hex "0x10",
+// floats "1.5") are intentionally NOT mirrored: the loader's `Number()` and libuv's
+// own `atoi` already disagree on them (atoi("1e2")=1, atoi("0x10")=0), so there is no
+// single ground truth, nobody sets a thread-pool size that way, and this value is
+// reported for diagnostics only -- the real pool is sized by the loader regardless.
+// Compiled only where it is used (wasm) or tested (test), so the native cdylib build
+// sees no dead code.
+#[cfg(all(not(feature = "async-runtime"), any(target_family = "wasm", test)))]
+fn wasm_async_work_pool_size(
+  napi_async_work_pool_size_env: Option<String>,
+  uv_threadpool_size_env: Option<String>,
+) -> usize {
+  use crate::env_config::resolve_thread_count;
+  let selected =
+    napi_async_work_pool_size_env.or(uv_threadpool_size_env).map(|value| value.trim().to_string());
+  resolve_thread_count(selected, 4)
+}
+
+// wasm default reporter: there is no native tokio runtime on wasm (lib.rs `init`'s
+// native arm is `not(target_family = "wasm")`), so no snapshot exists. The real
+// async work pool is sized by the WASI loader from
+// NAPI_RS_ASYNC_WORK_POOL_SIZE / UV_THREADPOOL_SIZE. Report that single pool
+// honestly: the threaded WASI artifact is multi-thread, and both the worker and
+// the blocking work run on that same loader-sized pool (there is no separate,
+// Rust-controlled blocking pool to report a distinct number for).
+#[cfg(all(not(feature = "async-runtime"), target_family = "wasm"))]
+fn wasm_runtime_config() -> BindingRuntimeConfig {
+  let pool = saturating_u32(wasm_async_work_pool_size(
+    std::env::var("NAPI_RS_ASYNC_WORK_POOL_SIZE").ok(),
+    std::env::var("UV_THREADPOOL_SIZE").ok(),
+  ) as u64);
+  BindingRuntimeConfig {
+    flavor: BindingRuntimeFlavor::MultiThread,
+    worker_threads: pool,
+    max_blocking_tasks: pool,
+  }
+}
+
+#[cfg(not(feature = "async-runtime"))]
+#[napi]
+/// Return the effective async runtime configuration.
+///
+/// On the native default `tokio-runtime` build this reports the thread counts the
+/// runtime was ACTUALLY built with at addon load (snapshotted in lib.rs `init`),
+/// so a later `process.env` change cannot make the report diverge from the live
+/// runtime. On the threaded WASI build it reports the napi-rs WASI loader's async
+/// work pool size (NAPI_RS_ASYNC_WORK_POOL_SIZE / UV_THREADPOOL_SIZE).
+///
+/// Scope: the snapshot is taken once per process (the runtime is built once in
+/// `init`). If a host tears the env down and recreates it in the same process (an
+/// Electron-style reload), napi-rs rebuilds its runtime with its OWN defaults and
+/// the snapshot is not refreshed -- the same once-per-process lifecycle as napi's
+/// env-cleanup hook. This is unchanged from before the snapshot (the prior
+/// env-reading reporter could not reflect that napi-default runtime either); the
+/// field is diagnostics-only, so it is left as-is rather than chasing the reload.
+pub fn get_async_runtime_config() -> BindingRuntimeConfig {
+  #[cfg(not(target_family = "wasm"))]
+  {
+    default_runtime_config_from(
+      DEFAULT_RUNTIME_CONFIG.get().copied(),
+      std::env::var("ROLLDOWN_WORKER_THREADS").ok(),
+      std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS").ok(),
+    )
+  }
+  #[cfg(target_family = "wasm")]
+  {
+    wasm_runtime_config()
   }
 }
 
@@ -282,4 +401,82 @@ fn register_async_runtime() {
   }
   configure(options).expect("Failed to configure the Rolldown async runtime");
   create_custom_async_runtime(RolldownAsyncRuntime);
+}
+
+#[cfg(all(test, not(feature = "async-runtime")))]
+mod tests {
+  // Finding A: the native default reporter must report the INIT-TIME snapshot,
+  // not whatever the environment says at call time.
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn default_config_reports_init_snapshot_over_later_env() {
+    use super::default_runtime_config_from;
+
+    // With a snapshot present, the env values are IGNORED even though they ask
+    // for completely different counts -- this is exactly the post-init reporter
+    // path, which under the bug would re-read these mutated env values.
+    let snapshot =
+      default_runtime_config_from(Some((9, 3)), Some("99".to_string()), Some("88".to_string()));
+    assert_eq!(
+      (snapshot.worker_threads, snapshot.max_blocking_tasks),
+      (9, 3),
+      "the init-time snapshot must win over a later env mutation"
+    );
+
+    // Without a snapshot (pre-init / non-tokio build), the env IS honored. This
+    // proves the env arguments are wired through and the assertion above is not
+    // vacuous: absent the snapshot, the same env would change the output.
+    let from_env = default_runtime_config_from(None, Some("7".to_string()), Some("5".to_string()));
+    assert_eq!(
+      (from_env.worker_threads, from_env.max_blocking_tasks),
+      (7, 5),
+      "without a snapshot the reporter resolves the env (so the snapshot truly overrides it)"
+    );
+  }
+
+  // Finding B: the wasm reporter must size the pool from the SAME env keys and
+  // precedence the napi-rs WASI loader uses, not a physical-cpu number.
+  #[test]
+  fn wasm_pool_size_matches_loader_env_precedence() {
+    use super::wasm_async_work_pool_size;
+
+    // NAPI_RS_ASYNC_WORK_POOL_SIZE wins when present (the `??` first operand).
+    assert_eq!(
+      wasm_async_work_pool_size(Some("6".to_string()), Some("2".to_string())),
+      6,
+      "NAPI_RS_ASYNC_WORK_POOL_SIZE must take precedence over UV_THREADPOOL_SIZE"
+    );
+    // Falls back to UV_THREADPOOL_SIZE when the first key is absent.
+    assert_eq!(
+      wasm_async_work_pool_size(None, Some("2".to_string())),
+      2,
+      "UV_THREADPOOL_SIZE must be used when NAPI_RS_ASYNC_WORK_POOL_SIZE is unset"
+    );
+    // Default of 4 when neither key is set (loader's else branch).
+    assert_eq!(wasm_async_work_pool_size(None, None), 4, "default pool size is 4");
+    // Non-positive / non-numeric values resolve to the default 4, mirroring the
+    // loader's `Number(...) > 0 ? ... : 4` guard. A present-but-zero first key
+    // still "wins" the `??` and then falls to 4 (never the UV value).
+    assert_eq!(wasm_async_work_pool_size(Some("0".to_string()), Some("9".to_string())), 4);
+    assert_eq!(wasm_async_work_pool_size(Some("abc".to_string()), None), 4);
+    // Surrounding whitespace is tolerated to match the loader's `Number(" 5 ") == 5`.
+    assert_eq!(
+      wasm_async_work_pool_size(Some(" 5 ".to_string()), None),
+      5,
+      "a decimal value with surrounding whitespace must size the pool, matching Number()"
+    );
+    // Exotic `Number` forms are intentionally NOT mirrored (see the helper doc): the
+    // loader's `Number()` would yield 100 / 16 here, but libuv's `atoi` disagrees and
+    // nobody sets a pool size this way, so the diagnostics reporter pins them to 4.
+    assert_eq!(
+      wasm_async_work_pool_size(Some("1e2".to_string()), None),
+      4,
+      "scientific notation is not mirrored (documented limitation)"
+    );
+    assert_eq!(
+      wasm_async_work_pool_size(Some("0x10".to_string()), None),
+      4,
+      "hex is not mirrored (documented limitation)"
+    );
+  }
 }

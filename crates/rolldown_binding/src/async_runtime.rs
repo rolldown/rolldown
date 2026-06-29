@@ -189,14 +189,14 @@ pub fn get_async_runtime_config() -> BindingRuntimeConfig {
 /// On the default `tokio-runtime` build the values are derived from the
 /// environment variables and built-in defaults.
 pub fn get_async_runtime_config() -> BindingRuntimeConfig {
-  let worker_threads = std::env::var("ROLLDOWN_WORKER_THREADS")
-    .ok()
-    .and_then(|value| value.parse::<usize>().ok())
-    .unwrap_or_else(|| num_cpus::get_physical() * 3 / 2);
-  let max_blocking_tasks = std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
-    .ok()
-    .and_then(|value| value.parse::<usize>().ok())
-    .unwrap_or(4);
+  use crate::env_config::resolve_thread_count;
+
+  let worker_threads = resolve_thread_count(
+    std::env::var("ROLLDOWN_WORKER_THREADS").ok(),
+    num_cpus::get_physical() * 3 / 2,
+  );
+  let max_blocking_tasks =
+    resolve_thread_count(std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS").ok(), 4);
   BindingRuntimeConfig {
     flavor: BindingRuntimeFlavor::MultiThread,
     worker_threads: saturating_u32(worker_threads as u64),

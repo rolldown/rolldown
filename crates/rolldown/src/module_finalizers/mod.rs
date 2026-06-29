@@ -319,7 +319,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     rec_idx: ImportRecordIdx,
   ) -> bool {
     let rec = &self.ctx.module.import_records[rec_idx];
-    let Some(resolved_module_idx) = rec.resolved_module else { return true };
+    let Some(resolved_module_idx) = rec.resolved_module else {
+      return !stmt.is_import_declaration();
+    };
     let Module::Normal(importee) = &self.ctx.modules[resolved_module_idx] else {
       return true;
     };

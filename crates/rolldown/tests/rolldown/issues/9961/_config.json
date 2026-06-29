@@ -6,6 +6,5 @@
       "wrappedModuleTreeshaking": true
     }
   },
-  "configVariants": [
-  ]
+  "configVariants": []
 }

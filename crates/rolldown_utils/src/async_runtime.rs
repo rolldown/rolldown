@@ -385,6 +385,27 @@ impl Drop for OwnsBlockingSlotGuard {
   }
 }
 
+// Temporarily CLEAR `OWNS_BLOCKING_SLOT` while a cooperative driver runs a plain
+// queued runnable. Blocking-slot ownership is LEXICAL to the blocking closure: a
+// runnable that an owner happens to drive via `run_one` is a logical non-owner and
+// must not inherit the owner's over-cap privilege. Restored on drop (RD-1 round-3).
+#[cfg(not(target_family = "wasm"))]
+struct ClearOwnsBlockingSlotGuard(bool);
+
+#[cfg(not(target_family = "wasm"))]
+impl ClearOwnsBlockingSlotGuard {
+  fn enter() -> Self {
+    Self(OWNS_BLOCKING_SLOT.with(|flag| flag.replace(false)))
+  }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Drop for ClearOwnsBlockingSlotGuard {
+  fn drop(&mut self) {
+    OWNS_BLOCKING_SLOT.with(|flag| flag.set(self.0));
+  }
+}
+
 #[cfg(not(target_family = "wasm"))]
 struct MultiThreadExecutor {
   pool: ThreadPool,
@@ -536,6 +557,12 @@ impl MultiThreadExecutor {
     let runnable =
       self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
     if let Some(runnable) = runnable {
+      // Ownership is lexical to the blocking closure: clear `OWNS_BLOCKING_SLOT`
+      // for the duration of this runnable so a nested `block_on` inside it is
+      // treated as a non-owner and cannot borrow the driving owner's over-cap
+      // privilege (RD-1 round-3). `run_runnable` catches panics; the guard also
+      // restores the flag on drop, so this is panic-safe regardless.
+      let _non_owner = ClearOwnsBlockingSlotGuard::enter();
       run_runnable(&self.metrics, runnable);
       return true;
     }
@@ -1231,6 +1258,101 @@ mod tests {
     match done_rx.recv_timeout(Duration::from_secs(10)) {
       Ok(()) => runner.join().unwrap(),
       Err(error) => panic!("RD-1 cap test deadlocked ({error})"),
+    }
+    let peak = peak_out.lock().unwrap().expect("peak captured");
+    assert!(peak <= 2, "peak active blocking tasks {peak} exceeded max_blocking_tasks 2");
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_block_on_runnable_driven_by_owner_respects_cap() {
+    // Regression for RD-1 round-3 finding: a counted blocking OWNER that re-enters
+    // cooperative `block_on` can drive a plain queued runnable via `run_one`. That
+    // runnable must NOT inherit the owner's over-cap blocking privilege. If the
+    // runnable itself re-enters `block_on` awaiting a `spawn_blocking` while the cap
+    // is saturated, the inner job must respect `max_blocking_tasks` (park until a
+    // slot frees), not run over cap by borrowing the owner's `OWNS_BLOCKING_SLOT`.
+    //
+    // Setup (worker_threads=2, max_blocking=2): owner O (a counted blocking closure)
+    // holds slot 1; holder H2 holds slot 2 -> cap saturated. O spawns a plain task R
+    // and drives it via cooperative `block_on`. With only 2 workers and 2 active
+    // drainers, no replacement drainer can be spawned, so O itself runs R via
+    // `run_one`. R re-enters `block_on` awaiting an inner `spawn_blocking` J. Under
+    // the bug, R inherits O's slot flag and runs J over cap -> peak metric 3 (> 2).
+    // Under the fix, R is a non-owner and parks until H2 frees a slot, so J runs
+    // within the cap -> peak 2. Everything must still complete (no deadlock).
+    use std::sync::{Barrier, mpsc};
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let peak_out = Arc::new(Mutex::new(None));
+    let peak_slot = Arc::clone(&peak_out);
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "rd1-owner-runnable".to_string(),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
+
+      let saturated = Arc::new(Barrier::new(2));
+      let release = Arc::new(Barrier::new(2));
+
+      // Holder H2: holds the second counted slot until released. Not the driver.
+      let h2_saturated = Arc::clone(&saturated);
+      let h2_release = Arc::clone(&release);
+      let h2 = executor.schedule_blocking(move || {
+        h2_saturated.wait();
+        h2_release.wait();
+        0usize
+      });
+
+      // Owner O: a counted blocking closure (slot 1). Once the cap is saturated it
+      // spawns plain runnable R and drives it cooperatively via `block_on`.
+      let o_exec = Arc::clone(&executor);
+      let o_saturated = Arc::clone(&saturated);
+      let o = executor.schedule_blocking(move || {
+        o_saturated.wait(); // both slots held -> cap saturated
+
+        let r_exec = Arc::clone(&o_exec);
+        let body = async move {
+          let inner_exec = Arc::clone(&r_exec);
+          let mut inner = std::pin::pin!(async move {
+            let v = inner_exec.schedule_blocking(|| 5usize).await.unwrap();
+            assert_eq!(v, 5);
+          });
+          r_exec.block_on(inner.as_mut());
+        };
+        let sched = Arc::clone(&o_exec);
+        let (runnable, task) = async_task::spawn(body, move |r| sched.schedule(r));
+        o_exec.schedule(runnable);
+
+        let mut wait_r = std::pin::pin!(async move {
+          task.await;
+        });
+        o_exec.block_on(wait_r.as_mut());
+        1usize
+      });
+
+      // Give O time to drive R into its inner `block_on`. Under the bug R already
+      // ran its inner job over cap; under the fix R is parked waiting for a slot.
+      std::thread::sleep(Duration::from_millis(300));
+      // Release H2 so the inner job can run within the cap (fix path).
+      release.wait();
+
+      assert_eq!(futures::executor::block_on(o).unwrap(), 1usize);
+      assert_eq!(futures::executor::block_on(h2).unwrap(), 0usize);
+
+      *peak_slot.lock().unwrap() =
+        Some(metrics.max_active_blocking_tasks.load(Ordering::Relaxed));
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("RD-1 round-3 owner-driven-runnable cap test deadlocked ({error})"),
     }
     let peak = peak_out.lock().unwrap().expect("peak captured");
     assert!(peak <= 2, "peak active blocking tasks {peak} exceeded max_blocking_tasks 2");

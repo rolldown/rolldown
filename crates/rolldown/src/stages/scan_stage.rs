@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, thread};
 
 use arcstr::ArcStr;
 use futures::future::join_all;
@@ -15,7 +15,6 @@ use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_utils::futures::{JoinHandle, spawn_blocking};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -28,7 +27,7 @@ use crate::{
 
 type SourcemapChannel = (
   Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
-  Option<JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>>,
+  Option<thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>>,
 );
 
 pub struct ScanStage<Fs: FileSystem + Clone + 'static> {
@@ -196,7 +195,7 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     let mut module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
 
     if let Some(handler) = handler {
-      self.process_sourcemap_handler(handler, &mut module_loader_output).await;
+      self.process_sourcemap_handler(handler, &mut module_loader_output);
     }
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None)?;
@@ -216,7 +215,13 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
       && self.options.is_sourcemap_enabled()
     {
       let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
-      let handler = spawn_blocking(move || {
+      // A long-lived `while let Ok(..) = rx.recv()` consumer must live on a
+      // dedicated OS thread, NOT a runtime `spawn_blocking`. On the MultiThread
+      // runtime with `worker_threads == 1`, a `spawn_blocking` consumer is run
+      // inline by the single drainer (`take_blocking`), which then blocks in
+      // `rx.recv()` forever while `active_drainers` is at max -- so the module
+      // runnables that feed this channel never get polled -> hard deadlock.
+      let handler = thread::spawn(move || {
         let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();
         while let Ok(msg) = rx.recv() {
           match msg {
@@ -244,12 +249,12 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     }
   }
 
-  async fn process_sourcemap_handler(
+  fn process_sourcemap_handler(
     &self,
-    handler: JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>,
+    handler: thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>,
     module_loader_output: &mut ModuleLoaderOutput,
   ) {
-    let map: FxHashMap<ModuleIdx, Vec<_>> = handler.await.unwrap();
+    let map: FxHashMap<ModuleIdx, Vec<_>> = handler.join().unwrap();
     if !map.is_empty() {
       let transform_plugin_order_map = self
         .plugin_driver

@@ -1855,4 +1855,93 @@ mod tests {
     assert_eq!(metrics.blocking_tasks_started.load(Ordering::Relaxed), 1);
     assert_eq!(metrics.blocking_tasks_completed.load(Ordering::Relaxed), 1);
   }
+
+  // ---- RD-8: validate() gatekeeping + configure() immutability --------------
+  // These build `RuntimeOptions`/`RuntimeController` LOCALLY and never touch the
+  // global `RUNTIME` singleton, so they stay deterministic and order-independent.
+
+  #[test]
+  fn validate_rejects_zero_worker_threads() {
+    let error = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 0,
+      max_blocking_tasks: 1,
+      thread_name_prefix: "rd8".to_string(),
+    }
+    .validate()
+    .expect_err("worker_threads == 0 must be rejected");
+    assert_eq!(error.to_string(), "worker_threads must be greater than zero");
+  }
+
+  #[test]
+  fn validate_rejects_zero_max_blocking_tasks() {
+    let error = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 0,
+      thread_name_prefix: "rd8".to_string(),
+    }
+    .validate()
+    .expect_err("max_blocking_tasks == 0 must be rejected");
+    assert_eq!(error.to_string(), "max_blocking_tasks must be greater than zero");
+  }
+
+  #[test]
+  fn validate_current_thread_coerces_worker_threads_to_one() {
+    // CurrentThread forces `worker_threads` to 1; `max_blocking_tasks` is then
+    // clamped to `.min(worker_threads)` == 1.
+    let validated = RuntimeOptions {
+      flavor: RuntimeFlavor::CurrentThread,
+      worker_threads: 8,
+      max_blocking_tasks: 8,
+      thread_name_prefix: "rd8".to_string(),
+    }
+    .validate()
+    .expect("CurrentThread options must validate");
+    assert_eq!(validated.flavor, RuntimeFlavor::CurrentThread);
+    assert_eq!(validated.worker_threads, 1);
+    assert_eq!(validated.max_blocking_tasks, 1);
+  }
+
+  #[test]
+  fn validate_clamps_max_blocking_tasks_to_worker_threads() {
+    // MultiThread keeps `worker_threads`; `max_blocking_tasks` is clamped down to
+    // it via `.min(worker_threads)` when it exceeds the worker count.
+    let validated = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 8,
+      thread_name_prefix: "rd8".to_string(),
+    }
+    .validate()
+    .expect("MultiThread options must validate");
+    assert_eq!(validated.worker_threads, 2);
+    assert_eq!(validated.max_blocking_tasks, 2);
+  }
+
+  #[test]
+  fn configure_after_backend_started_is_rejected() {
+    // A local controller, not the global `RUNTIME`. Use a CurrentThread backend
+    // so starting it is cheap and spawns no OS threads.
+    let controller = RuntimeController::new();
+    controller
+      .configure(RuntimeOptions {
+        flavor: RuntimeFlavor::CurrentThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "rd8".to_string(),
+      })
+      .expect("first configure before the backend exists must succeed");
+
+    // Materialize the backend; further configuration must now be refused.
+    let _backend = controller.backend();
+
+    let error = controller
+      .configure(RuntimeOptions::default())
+      .expect_err("configure after the backend started must be rejected");
+    assert_eq!(
+      error.to_string(),
+      "the async runtime is already running; configure it before the first async call"
+    );
+  }
 }

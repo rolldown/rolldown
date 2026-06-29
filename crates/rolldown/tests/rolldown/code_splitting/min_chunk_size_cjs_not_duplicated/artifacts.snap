@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-a.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+//#region entry-a.js
+const a = require("./util.js").getValue() + "-a";
+//#endregion
+exports.a = a;
+
+```
+
+## entry-b.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_util = require("./util.js");
+//#region entry-b.js
+const b = require_util.getValue() + require_util.value + "-b";
+//#endregion
+exports.b = b;
+
+```
+
+## util.js
+
+```js
+//#region util.js
+const value = "shared-value";
+function getValue() {
+	return value;
+}
+//#endregion
+Object.defineProperty(exports, "getValue", {
+	enumerable: true,
+	get: function() {
+		return getValue;
+	}
+});
+Object.defineProperty(exports, "value", {
+	enumerable: true,
+	get: function() {
+		return value;
+	}
+});
+
+```

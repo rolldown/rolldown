@@ -29,9 +29,9 @@ export default defineTest({
     for (const c of chunks) {
       expect(c.imports.length).toBe(0);
     }
-    const e1 = await import('./dist/e1.js');
-    const e2 = await import('./dist/e2.js');
-    const e3 = await import('./dist/e3.js');
+    const e1 = await import('./dist/e1.js' as string);
+    const e2 = await import('./dist/e2.js' as string);
+    const e3 = await import('./dist/e3.js' as string);
     expect(e1.r1).toBe('A1');
     expect(e2.r2).toBe('B2');
     expect(e3.r3).toBe('AB3');

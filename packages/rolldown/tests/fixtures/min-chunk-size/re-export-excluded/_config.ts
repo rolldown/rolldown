@@ -25,8 +25,8 @@ export default defineTest({
     // util.js was NOT duplicated (it is re-exported) -> present in exactly one chunk.
     expect(chunksWithUtil.length).toBe(1);
     // Runtime stays correct for both the direct importer and the re-export chain.
-    const a = await import('./dist/a.js');
-    const b = await import('./dist/b.js');
+    const a = await import('./dist/a.js' as string);
+    const b = await import('./dist/b.js' as string);
     expect(a.a).toBe('Ka');
     expect(b.b).toBe('Kb');
   },

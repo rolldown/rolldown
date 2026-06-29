@@ -116,15 +116,38 @@ is typically tree-shaken (`is_included == false`) yet a consumer can still
 reference the leaf through it. The `re-export-excluded` fixture pins this: it
 failed with `ReferenceError: k is not defined` before the all-modules scan.
 
+### Note: ESM-only eligibility (learned post-S4 review)
+
+The "local everywhere" rule was only wired into the **ESM** finalizer and
+`compute_cross_chunk_links` paths. The CJS/IIFE/UMD reference-resolution paths
+(`module_finalizers::ScopeHoistingFinalizer` CJS branch and `types/generator.rs`)
+still classify a duplicated leaf living in a non-primary chunk as cross-chunk and
+index a require binding that `compute_cross_chunk_links` deliberately never
+populated for the leaf — a hard `panic!("no entry found for key")` at
+`module_finalizers/mod.rs`. Reproduced with a 2-entry shared side-effect-free leaf
+and `format: "cjs"`.
+
+`merge_small_common_leaf_chunks` therefore **early-returns unless the output
+format is ESM** (`OutputFormat::is_esm()`); the `min_chunk_size_cjs_not_duplicated`
+fixture pins that the leaf stays a standalone shared chunk under CJS. Lifting this
+gate requires teaching those non-ESM reference paths the same
+`duplicated_leaf_modules` carve-out.
+
+`require()`d and otherwise wrapped leaves are already excluded by the existing
+`import_records.is_empty()` leaf check — wrapping introduces a runtime import
+record, so a wrapped leaf is never a "leaf" for this pass (verified by the
+`min_chunk_size_require_not_duplicated` fixture: the required leaf stays a wrapped
+shared chunk).
+
 ## Risks / edge cases
 
-CJS-wrapped leaves and IIFE/UMD factory-param capture (exclude CJS for v1), HMR
-`hot` refs, external-namespace symbols, a leaf shared by 3+ chunks, a leaf that is
-also a dynamic-import target/entry (excluded — those are `EntryPoint`, not
-`Common`), `preserveModules`/manual chunks (excluded). The full
-`crates/rolldown/tests` + `packages/rolldown-tests` suites must stay green with the
-option OFF, and the ON fixtures must execute correctly (no duplicate-symbol /
-ReferenceError) before considering default-on.
+CJS/IIFE/UMD output is gated off entirely (see the ESM-only note above); within ESM,
+wrapped leaves and dynamic-import targets/entries are already excluded (`EntryPoint`,
+not `Common`). Remaining edge cases to validate before default-on: HMR `hot` refs,
+external-namespace symbols, a leaf shared by 3+ chunks, `preserveModules`/manual
+chunks (excluded). The full `crates/rolldown/tests` + `packages/rolldown-tests`
+suites must stay green with the option OFF, and the ON fixtures must execute
+correctly (no duplicate-symbol / ReferenceError) before considering default-on.
 
 ## Rejected alternatives
 

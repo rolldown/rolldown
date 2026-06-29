@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      { "name": "entry-a", "import": "entry-a.js" },
+      { "name": "entry-b", "import": "entry-b.js" }
+    ],
+    "format": "cjs",
+    "experimental": {
+      "minChunkSize": 100000
+    }
+  }
+}

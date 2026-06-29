@@ -10,7 +10,7 @@ use crate::{
 use arcstr::ArcStr;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleIdx, NormalModule, OutputFormat, SymbolRef,
-  TaggedSymbolRef, WrapKind,
+  WrapKind,
 };
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};

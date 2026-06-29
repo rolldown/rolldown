@@ -20,7 +20,7 @@
 
 use rolldown_common::{
   ChunkIdx, ChunkKind, EcmaViewMeta, ImportKind, ImportRecordMeta, ModuleIdx,
-  PostChunkOptimizationOperation, SymbolRef, TaggedSymbolRef,
+  PostChunkOptimizationOperation, SymbolRef,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -33,6 +33,20 @@ impl GenerateStage<'_> {
     let Some(min_size) = self.options.experimental.min_chunk_size() else {
       return;
     };
+
+    // The duplicated-leaf "local everywhere" rule is only wired into the ESM
+    // finalizer and `compute_cross_chunk_links` paths. The CJS/IIFE/UMD
+    // reference-resolution paths (the `module_finalizers` CJS branch and
+    // `types/generator.rs`) still classify a duplicated leaf living in a
+    // non-primary chunk as cross-chunk, which mis-resolves or panics indexing a
+    // require binding that was deliberately never populated for the leaf.
+    // Restrict the optimization to ESM output until those paths honor
+    // `duplicated_leaf_modules`. (Wrapped / `require()`d leaves carry a runtime
+    // import record, so the `import_records.is_empty()` leaf check below already
+    // excludes them.)
+    if !self.options.format.is_esm() {
+      return;
+    }
 
     // 1. Modules re-exported anywhere are conservatively excluded: their symbols
     //    may be referenced through cross-chunk re-export chains that the direct
@@ -241,9 +255,10 @@ impl GenerateStage<'_> {
         continue;
       }
       for declared in &stmt_info.declared_symbols {
-        if let TaggedSymbolRef::Normal(sym) = declared {
+        if declared.is_normal() {
+          let sym = declared.inner();
           if sym.owner == module_idx {
-            out.insert(*sym);
+            out.insert(sym);
           }
         }
       }

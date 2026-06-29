@@ -30,8 +30,8 @@ export default defineTest({
       expect(c.imports.length).toBe(0);
     }
     // Runtime correctness: the duplicated leaf's bindings resolve in each chunk.
-    const a = await import('./dist/entry-a.js');
-    const b = await import('./dist/entry-b.js');
+    const a = await import('./dist/entry-a.js' as string);
+    const b = await import('./dist/entry-b.js' as string);
     expect(a.a).toBe('shared-value-a');
     expect(b.b).toBe('shared-valueshared-value-b');
   },

@@ -252,7 +252,7 @@ importers:
         specifier: ^2.1.0
         version: 2.2.0
       knip:
-        specifier: ^6.13.1
+        specifier: ^6.20.0
         version: 6.20.0
       playwright-chromium:
         specifier: ^1.60.0
@@ -870,7 +870,7 @@ importers:
         specifier: 'catalog:'
         version: 0.1.0
       '@oxlint/plugins':
-        specifier: ^1.69.0
+        specifier: ^1.71.0
         version: 1.71.0
       acorn:
         specifier: 'catalog:'

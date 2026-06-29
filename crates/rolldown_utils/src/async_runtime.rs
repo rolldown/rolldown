@@ -1118,12 +1118,47 @@ mod tests {
     // This pins ONLY the cross-thread wake path: the pool task completing must wake
     // the parked caller's waker so `block_on` returns the pool-computed value.
     //
+    // HONEST ORDERING (no sleeps): the awaited pool task is GATED on a oneshot and
+    // therefore returns `Pending` on its first poll. A `CallerProbe` future wraps the
+    // task and, ONLY after the task poll returns `Pending` (i.e. AFTER `block_on`'s
+    // parking waker is registered on the task), signals "caller parked" to a releaser
+    // thread. The releaser then -- and only then -- releases the gate, so the pool
+    // task completes strictly AFTER the caller registered its waker. This forecloses
+    // the "already-ready before await" interleaving: the task cannot be `Ready` on the
+    // caller's first poll, because its gate is opened only in response to that first
+    // `Pending` poll. The completion is thus forced to travel the real cross-thread
+    // wake (pool worker completes task -> wakes parked caller -> `block_on` returns);
+    // if that wake is broken the caller parks forever and the bounded recv_timeout
+    // below fails loudly instead of hanging the suite.
+    //
     // SCOPE: this is the cross-thread liveness guard only. It does NOT exercise the
     // caller-is-pool-worker reentrancy case (that is covered by RD-1's own reentrancy
-    // tests); a regression here surfaces as a hang, which the bounded recv_timeout
-    // below turns into a loud failure instead of an infinite block.
+    // tests).
     use std::sync::mpsc;
     use std::time::Duration;
+
+    // Wraps the pool task so the caller's FIRST poll registers `block_on`'s waker on
+    // the task and, only when that poll is `Pending`, hands the "caller parked" signal
+    // to the releaser. Sending strictly after the `Pending` poll guarantees the waker
+    // is already registered before the gate can open.
+    struct CallerProbe {
+      task: Task<usize>,
+      parked_tx: Option<mpsc::Sender<()>>,
+    }
+    impl Future for CallerProbe {
+      type Output = usize;
+      fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<usize> {
+        // `Task` is `Unpin`; poll it through a fresh `Pin`.
+        let poll = Pin::new(&mut self.task).poll(cx);
+        if poll.is_pending() {
+          if let Some(tx) = self.parked_tx.take() {
+            // Waker is now registered on `task`; release the gate is safe.
+            let _ = tx.send(());
+          }
+        }
+        poll
+      }
+    }
 
     let (done_tx, done_rx) = mpsc::channel();
     let runner = std::thread::spawn(move || {
@@ -1136,25 +1171,39 @@ mod tests {
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
 
-      // Spawn a task that is driven on a pool worker (via `schedule` ->
-      // `ensure_drainer`) and produces the value. Its `Task` future is what the
-      // caller thread awaits; completion on the worker wakes the caller's parking
-      // waker across threads.
+      // The pool task's inner future is GATED on a oneshot: its first poll on a pool
+      // worker registers the gate waker and returns `Pending`. When the releaser sends
+      // on `gate_tx`, the gate's wake reschedules the task (via `schedule` ->
+      // `ensure_drainer`) onto a pool worker, where it resolves to 42.
+      let (gate_tx, gate_rx) = oneshot::channel::<usize>();
       let scheduler = Arc::clone(&executor);
-      let (runnable, task) =
-        async_task::spawn(async { 7usize * 6 }, move |r| scheduler.schedule(r));
+      let (runnable, task) = async_task::spawn(
+        async move { gate_rx.await.expect("gate sender dropped") },
+        move |r| scheduler.schedule(r),
+      );
       executor.schedule(runnable);
+
+      // Releaser thread: opens the gate ONLY after the caller has parked (registered
+      // its waker on the task). This enforces caller-parked HAPPENS-BEFORE pool-task
+      // completes, so completion must travel the cross-thread wake path.
+      let (parked_tx, parked_rx) = mpsc::channel::<()>();
+      let releaser = std::thread::spawn(move || {
+        if parked_rx.recv().is_ok() {
+          let _ = gate_tx.send(42usize);
+        }
+      });
 
       // The caller (this child) thread is NOT a pool worker, so `block_on` parks via
       // `futures::executor::block_on` rather than driving the queue cooperatively.
       let mut output = None;
       {
         let mut future = std::pin::pin!(async {
-          output = Some(task.await);
+          output = Some(CallerProbe { task, parked_tx: Some(parked_tx) }.await);
         });
         executor.block_on(future.as_mut());
       }
 
+      releaser.join().unwrap();
       assert_eq!(output, Some(42usize), "block_on must return the pool-computed value");
       let _ = done_tx.send(());
     });

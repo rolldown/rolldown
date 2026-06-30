@@ -1,8 +1,12 @@
+use oxc::allocator::GetAllocator;
 use oxc::{
   allocator::CloneIn as _,
   ast::{
     NONE,
-    ast::{BindingPattern, Expression, ImportOrExportKind, Statement, VariableDeclaration},
+    ast::{
+      BindingPattern, Expression, ImportDeclarationSpecifier, ImportOrExportKind,
+      ModuleDeclaration, ModuleExportName, Statement, StringLiteral, VariableDeclaration,
+    },
   },
   ast_visit::{VisitMut, walk_mut},
   semantic::ScopeFlags,
@@ -30,20 +34,23 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   fn visit_program(&mut self, it: &mut oxc::ast::ast::Program<'a>) {
     walk_mut::walk_program(self, it);
     if self.need_prepend_helper && self.insert_preload && !self.has_inserted_helper {
-      it.body.push(Statement::from(self.ast_factory.module_declaration_import_declaration(
+      it.body.push(Statement::from(ModuleDeclaration::new_import_declaration(
         SPAN,
-        Some(self.ast_factory.vec1(
-          self.ast_factory.import_declaration_specifier_import_specifier(
+        Some(oxc::allocator::Vec::from_value_in(
+          ImportDeclarationSpecifier::new_import_specifier(
             SPAN,
-            self.ast_factory.module_export_name_identifier_name(SPAN, PRELOAD_METHOD),
+            ModuleExportName::new_identifier_name(SPAN, PRELOAD_METHOD, &self.ast_factory),
             self.ast_factory.make_id(SPAN, PRELOAD_METHOD),
             ImportOrExportKind::Value,
+            &self.ast_factory,
           ),
+          &self.ast_factory,
         )),
-        self.ast_factory.string_literal(SPAN, PRELOAD_HELPER_ID, None),
+        StringLiteral::new(SPAN, PRELOAD_HELPER_ID, None, &self.ast_factory),
         None,
         NONE,
         ImportOrExportKind::Value,
+        &self.ast_factory,
       )));
     }
   }
@@ -78,12 +85,13 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
             Some(Expression::AwaitExpression(expr)) if matches!(expr.argument, Expression::ImportExpression(_))
           )
         {
-          decl.init = Some(self.ast_factory.expression_await(
+          decl.init = Some(Expression::new_await_expression(
             SPAN,
             self.construct_vite_preload_call(
-              decl.id.clone_in(self.ast_factory.allocator),
+              decl.id.clone_in(self.ast_factory.allocator()),
               decl.init.take().unwrap(),
             ),
+            &self.ast_factory,
           ));
           self.need_prepend_helper = true;
         } else {

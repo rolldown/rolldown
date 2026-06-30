@@ -71,9 +71,11 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     let canonical_name = self.canonical_name_for(canonical_ref);
     if id_ref.name != canonical_name {
       return Some(ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(
-        self
-          .ast_factory
-          .alloc_identifier_reference(id_ref.span, self.ast_factory.str(canonical_name)),
+        ast::IdentifierReference::boxed(
+          id_ref.span,
+          oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_factory),
+          &self.ast_factory,
+        ),
       ));
     }
 
@@ -121,7 +123,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         } else {
           let canonical_name = self.canonical_name_for(canonical_ref);
           if target_id_ref.name != canonical_name {
-            target_id_ref.name = self.ast_factory.str(canonical_name).into();
+            target_id_ref.name =
+              oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_factory).into();
           }
           target_id_ref.reference_id.take();
         }
@@ -150,7 +153,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           if let Some(symbol_id) = ident.symbol_id.get() {
             let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name {
-              ident.name = self.ast_factory.str(canonical_name).into();
+              ident.name =
+                oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_factory).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();
@@ -165,7 +169,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           if let Some(symbol_id) = ident.symbol_id.get() {
             let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name {
-              ident.name = self.ast_factory.str(canonical_name).into();
+              ident.name =
+                oxc::ast::ast::Str::from_str_in(canonical_name, &self.ast_factory).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();

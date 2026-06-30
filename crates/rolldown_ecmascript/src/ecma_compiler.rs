@@ -3,7 +3,10 @@ use std::path::PathBuf;
 use arcstr::ArcStr;
 use oxc::{
   allocator::Allocator,
-  ast::AstBuilder,
+  ast::{
+    AstBuilder,
+    ast::{Program, Statement},
+  },
   codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions, LegalComment},
   minifier::{Minifier, MinifierOptions},
   parser::{ParseOptions, Parser},
@@ -58,14 +61,18 @@ impl EcmaCompiler {
         let ret = parser.parse_expression();
         match ret {
           Ok(expr) => {
-            let program = builder.program(
+            let program = Program::new(
               SPAN,
               SourceType::default().with_module(true),
               owner.source.as_str(),
-              builder.vec(),
+              oxc::allocator::Vec::new_in(&builder),
               None,
-              builder.vec(),
-              builder.vec1(builder.statement_expression(SPAN, expr)),
+              oxc::allocator::Vec::new_in(&builder),
+              oxc::allocator::Vec::from_value_in(
+                Statement::new_expression_statement(SPAN, expr, &builder),
+                &builder,
+              ),
+              &builder,
             );
             Ok(ProgramCellDependent { program })
           }

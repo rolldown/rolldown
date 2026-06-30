@@ -1,8 +1,11 @@
+use oxc::allocator::GetAllocator;
 use oxc::{
   allocator::TakeIn as _,
   ast::ast::{
-    ArrayExpressionElement, AssignmentTarget, AssignmentTargetMaybeDefault, BindingPattern,
-    Expression, ObjectPropertyKind, PropertyKind,
+    ArrayAssignmentTarget, ArrayExpression, ArrayExpressionElement, AssignmentTarget,
+    AssignmentTargetMaybeDefault, AssignmentTargetRest, AssignmentTargetWithDefault,
+    BindingPattern, Elision, Expression, IdentifierReference, ObjectAssignmentTarget,
+    ObjectExpression, ObjectProperty, ObjectPropertyKind, PropertyKind, SpreadElement,
   },
   span::SPAN,
 };
@@ -22,42 +25,50 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
     match self {
       // Turn `var a = 1` into `a = 1`
       BindingPattern::BindingIdentifier(id) => AssignmentTarget::AssignmentTargetIdentifier(
-        ast_factory.alloc_identifier_reference(id.span, id.name),
+        IdentifierReference::boxed(id.span, id.name, ast_factory),
       ),
       // Turn `var { a, b = 2 } = ...` to `{a, b = 2} = ...`
       BindingPattern::ObjectPattern(mut obj_pat) => {
         let rest = obj_pat.rest.take().map(|rest| {
-          ast_factory.alloc_assignment_target_rest(
+          AssignmentTargetRest::boxed(
             rest.span,
             rest.unbox().argument.into_assignment_target(ast_factory),
+            ast_factory,
           )
         });
-        let mut properties = ast_factory.vec_with_capacity(obj_pat.properties.len());
-        obj_pat.properties.take_in(ast_factory.allocator).into_iter().for_each(|binding_prop| {
+        let mut properties =
+          oxc::allocator::Vec::with_capacity_in(obj_pat.properties.len(), ast_factory);
+        obj_pat.properties.take_in(&ast_factory.allocator()).into_iter().for_each(|binding_prop| {
           properties.push(binding_prop.into_assignment_target_property(ast_factory));
         });
-        AssignmentTarget::ObjectAssignmentTarget(
-          ast_factory.alloc_object_assignment_target(SPAN, properties, rest),
-        )
+        AssignmentTarget::ObjectAssignmentTarget(ObjectAssignmentTarget::boxed(
+          SPAN,
+          properties,
+          rest,
+          ast_factory,
+        ))
       }
       // Turn `var [a, ,c = 1] = ...` to `[a, ,c = 1] = ...`
       BindingPattern::ArrayPattern(mut arr_pat) => {
         let rest = arr_pat.rest.take().map(|rest| {
-          ast_factory.alloc_assignment_target_rest(
+          AssignmentTargetRest::boxed(
             rest.span,
             rest.unbox().argument.into_assignment_target(ast_factory),
+            ast_factory,
           )
         });
-        let mut elements = ast_factory.vec_with_capacity(arr_pat.elements.len());
-        arr_pat.elements.take_in(ast_factory.allocator).into_iter().for_each(|binding_pat| {
+        let mut elements =
+          oxc::allocator::Vec::with_capacity_in(arr_pat.elements.len(), ast_factory);
+        arr_pat.elements.take_in(&ast_factory.allocator()).into_iter().for_each(|binding_pat| {
           elements.push(binding_pat.map(|binding_pat| match binding_pat {
             BindingPattern::AssignmentPattern(assign_pat) => {
               let assign_pat = assign_pat.unbox();
               AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
-                ast_factory.alloc_assignment_target_with_default(
+                AssignmentTargetWithDefault::boxed(
                   assign_pat.span,
                   assign_pat.left.into_assignment_target(ast_factory),
                   assign_pat.right,
+                  ast_factory,
                 ),
               )
             }
@@ -66,10 +77,11 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
             }
           }));
         });
-        AssignmentTarget::ArrayAssignmentTarget(ast_factory.alloc_array_assignment_target(
+        AssignmentTarget::ArrayAssignmentTarget(ArrayAssignmentTarget::boxed(
           arr_pat.span,
           elements,
           rest,
+          ast_factory,
         ))
       }
       BindingPattern::AssignmentPattern(_) => {
@@ -80,12 +92,14 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
 
   fn into_expression(self, ast_factory: &AstFactory<'ast>) -> Expression<'ast> {
     match self {
-      BindingPattern::BindingIdentifier(id) => ast_factory.expression_identifier(SPAN, id.name),
+      BindingPattern::BindingIdentifier(id) => {
+        Expression::new_identifier(SPAN, id.name, ast_factory)
+      }
       BindingPattern::ObjectPattern(mut obj_pat) => {
         let capacity = obj_pat.properties.len() + usize::from(obj_pat.rest.is_some());
-        let mut properties = ast_factory.vec_with_capacity(capacity);
-        obj_pat.properties.take_in(ast_factory.allocator).into_iter().for_each(|binding_prop| {
-          properties.push(ObjectPropertyKind::ObjectProperty(ast_factory.alloc_object_property(
+        let mut properties = oxc::allocator::Vec::with_capacity_in(capacity, ast_factory);
+        obj_pat.properties.take_in(&ast_factory.allocator()).into_iter().for_each(|binding_prop| {
+          properties.push(ObjectPropertyKind::ObjectProperty(ObjectProperty::boxed(
             SPAN,
             PropertyKind::Init,
             binding_prop.key,
@@ -93,35 +107,38 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
             false,
             binding_prop.shorthand,
             binding_prop.computed,
+            ast_factory,
           )));
         });
         if let Some(rest) = obj_pat.rest.take() {
-          properties.push(ObjectPropertyKind::SpreadProperty(
-            ast_factory
-              .alloc_spread_element(SPAN, rest.unbox().argument.into_expression(ast_factory)),
-          ));
+          properties.push(ObjectPropertyKind::SpreadProperty(SpreadElement::boxed(
+            SPAN,
+            rest.unbox().argument.into_expression(ast_factory),
+            ast_factory,
+          )));
         }
-        Expression::ObjectExpression(ast_factory.alloc_object_expression(SPAN, properties))
+        Expression::ObjectExpression(ObjectExpression::boxed(SPAN, properties, ast_factory))
       }
       BindingPattern::ArrayPattern(mut arg_pat) => {
         let capacity = arg_pat.elements.len() + usize::from(arg_pat.rest.is_some());
-        let mut elements = ast_factory.vec_with_capacity(capacity);
-        arg_pat.elements.take_in(ast_factory.allocator).into_iter().for_each(|binding_pat| {
+        let mut elements = oxc::allocator::Vec::with_capacity_in(capacity, ast_factory);
+        arg_pat.elements.take_in(&ast_factory.allocator()).into_iter().for_each(|binding_pat| {
           elements.push(binding_pat.map_or(
-            ArrayExpressionElement::Elision(ast_factory.alloc_elision(SPAN)),
+            ArrayExpressionElement::Elision(Elision::boxed(SPAN, ast_factory)),
             |binding_pat| ArrayExpressionElement::from(binding_pat.into_expression(ast_factory)),
           ));
         });
         if let Some(rest) = arg_pat.rest.take() {
-          elements.push(ArrayExpressionElement::SpreadElement(
-            ast_factory
-              .alloc_spread_element(SPAN, rest.unbox().argument.into_expression(ast_factory)),
-          ));
+          elements.push(ArrayExpressionElement::SpreadElement(SpreadElement::boxed(
+            SPAN,
+            rest.unbox().argument.into_expression(ast_factory),
+            ast_factory,
+          )));
         }
-        Expression::ArrayExpression(ast_factory.alloc_array_expression(SPAN, elements))
+        Expression::ArrayExpression(ArrayExpression::boxed(SPAN, elements, ast_factory))
       }
       BindingPattern::AssignmentPattern(mut assign_pat) => {
-        assign_pat.left.take_in(ast_factory.allocator).into_expression(ast_factory)
+        assign_pat.left.take_in(&ast_factory.allocator()).into_expression(ast_factory)
       }
     }
   }

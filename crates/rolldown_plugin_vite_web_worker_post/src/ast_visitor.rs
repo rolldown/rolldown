@@ -1,4 +1,10 @@
-use oxc::{ast::ast::Expression, ast_visit::VisitMut, span::SPAN};
+use oxc::{
+  ast::ast::{
+    Expression, IdentifierName, ObjectExpression, ObjectPropertyKind, StaticMemberExpression,
+  },
+  ast_visit::VisitMut,
+  span::SPAN,
+};
 use rolldown_ecmascript_utils::{AstFactory, ExpressionExt as _};
 
 pub struct WebWorkerPostVisitor<'ast> {
@@ -13,16 +19,18 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
 
   #[inline]
   fn create_self_location_href_expr(&self) -> Expression<'ast> {
-    Expression::StaticMemberExpression(self.ast_factory.alloc_static_member_expression(
+    Expression::StaticMemberExpression(StaticMemberExpression::boxed(
       SPAN,
-      Expression::StaticMemberExpression(self.ast_factory.alloc_static_member_expression(
+      Expression::StaticMemberExpression(StaticMemberExpression::boxed(
         SPAN,
         self.ast_factory.make_id_ref_expr(SPAN, "self"),
         self.ast_factory.make_id_name(SPAN, "location"),
         false,
+        &self.ast_factory,
       )),
       self.ast_factory.make_id_name(SPAN, "href"),
       false,
+      &self.ast_factory,
     ))
   }
 
@@ -30,19 +38,26 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
   fn create_import_meta_object_decl(&self) -> oxc::ast::ast::Statement<'ast> {
     self.ast_factory.make_var_decl(
       "_vite_importMeta",
-      Expression::ObjectExpression(self.ast_factory.alloc_object_expression(
+      Expression::ObjectExpression(ObjectExpression::boxed(
         SPAN,
-        self.ast_factory.vec1(self.ast_factory.object_property_kind_object_property(
-          SPAN,
-          oxc::ast::ast::PropertyKind::Init,
-          oxc::ast::ast::PropertyKey::StaticIdentifier(
-            self.ast_factory.alloc_identifier_name(SPAN, self.ast_factory.str("url")),
+        oxc::allocator::Vec::from_value_in(
+          ObjectPropertyKind::new_object_property(
+            SPAN,
+            oxc::ast::ast::PropertyKind::Init,
+            oxc::ast::ast::PropertyKey::StaticIdentifier(IdentifierName::boxed(
+              SPAN,
+              oxc::ast::ast::Str::from_str_in("url", &self.ast_factory),
+              &self.ast_factory,
+            )),
+            self.create_self_location_href_expr(),
+            false,
+            false,
+            false,
+            &self.ast_factory,
           ),
-          self.create_self_location_href_expr(),
-          false,
-          false,
-          false,
-        )),
+          &self.ast_factory,
+        ),
+        &self.ast_factory,
       )),
     )
   }

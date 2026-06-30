@@ -21,7 +21,7 @@
 use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, EcmaViewMeta, ImportKind, ImportRecordMeta, ModuleIdx,
-  PostChunkOptimizationOperation, SymbolRef,
+  PostChunkOptimizationOperation, SymbolRef, TaggedSymbolRef,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -299,13 +299,16 @@ impl GenerateStage<'_> {
   }
 
   fn collect_declared_symbols(&self, module_idx: ModuleIdx, out: &mut FxHashSet<SymbolRef>) {
+    let Some(normal) = self.link_output.module_table[module_idx].as_normal() else {
+      return;
+    };
     let meta = &self.link_output.metas[module_idx];
-    for (stmt_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
+    for (stmt_idx, stmt_info) in normal.stmt_infos.iter_enumerated() {
       if !meta.stmt_info_included.has_bit(stmt_idx) {
         continue;
       }
       for declared in &stmt_info.declared_symbols {
-        if declared.is_normal() {
+        if matches!(declared, TaggedSymbolRef::Normal(_)) {
           let sym = declared.inner();
           if sym.owner == module_idx {
             out.insert(sym);

@@ -428,3 +428,48 @@ mod misc {
     assert!(s.has_changed());
   }
 }
+
+mod last_line {
+  use super::*;
+
+  #[test]
+  fn returns_content_after_the_last_newline() {
+    assert_eq!(MagicString::new("abc\ndef").last_line(), "def");
+    assert_eq!(MagicString::new("abc").last_line(), "abc");
+    assert_eq!(MagicString::new("abc\n").last_line(), "");
+  }
+
+  #[test]
+  fn keeps_outro_fragments_after_a_newline_fragment() {
+    // outro = ["pre", "a\nb", "c"]: the newline is in the middle fragment, so "pre" is
+    // dropped and "c" (after it) is kept
+    let mut s = MagicString::new("x");
+    s.append("pre");
+    s.append("a\nb");
+    s.append("c");
+    assert_eq!(s.to_string(), "xprea\nbc");
+    assert_eq!(s.last_line(), "bc");
+  }
+
+  #[test]
+  fn keeps_intro_fragments_after_a_newline_fragment() {
+    // intro = ["pre", "p\nq", "r"]: the newline is in the middle fragment, so "pre" is
+    // dropped and "r" (after it) is kept
+    let mut s = MagicString::new("x");
+    s.prepend("r");
+    s.prepend("p\nq");
+    s.prepend("pre");
+    assert_eq!(s.to_string(), "prep\nqrx");
+    assert_eq!(s.last_line(), "qrx");
+  }
+
+  #[test]
+  fn joins_content_tail_with_trailing_outro_fragments() {
+    // newline is in the source; the outro fragments after it are all part of the last line
+    let mut s = MagicString::new("a\nb");
+    s.append("c");
+    s.append("d");
+    assert_eq!(s.to_string(), "a\nbcd");
+    assert_eq!(s.last_line(), "bcd");
+  }
+}

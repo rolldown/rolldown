@@ -17,7 +17,7 @@ assert.equal(namespace.answer, 42);
 assert.deepEqual(namespace.nested, { ok: true });
 assert.deepEqual(namespace.default, expectedDefault);
 
-console.log(`data.dataModule: `, dataModule)
+console.log(`data.dataModule: `, dataModule);
 assert.equal(dataModule.answer, 42);
 assert.deepEqual(dataModule.nested, { ok: true });
 assert.deepEqual(dataModule.default, expectedDefault);

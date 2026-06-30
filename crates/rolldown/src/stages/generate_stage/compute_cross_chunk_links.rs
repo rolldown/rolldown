@@ -437,6 +437,24 @@ impl GenerateStage<'_> {
               )
               .map(|(name, export)| (name, export.symbol_ref))
             {
+              // `preserveModules` emits a module's complete declared interface (#9934). A JSON
+              // module synthesizes a named export per top-level key, but a key that is reached
+              // only through its own default-export object has its `var` binding folded into that
+              // object by the finalizer's `try_inline_json_module_prop`, leaving no standalone
+              // declaration. Listing such a key here produces an `export { key }` with no binding
+              // -> `SyntaxError: Export 'x' is not defined in module` (#10020).
+              //
+              // `json_module_none_self_reference_included_symbol` holds the JSON keys included for
+              // a non-self-reference reason (named import, entry export) — the keys the finalizer
+              // keeps materialized. Skip any key absent from it.
+              if let Module::Normal(normal_module) = &self.link_output.module_table[module_idx]
+                && let Some(none_self_referenced) =
+                  normal_module.json_module_none_self_reference_included_symbol.as_deref()
+                && !none_self_referenced
+                  .contains(&self.link_output.symbol_db.canonical_ref_for(symbol))
+              {
+                continue;
+              }
               index_chunk_exported_symbols[chunk_id].entry(symbol).or_default().push(name.clone());
             }
           }

@@ -38,16 +38,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
-name = "anes"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc43e46599f3d77fcf2f2ca89e4d962910b0c19c44e7b58679cbbdfd1820a662"
-
-[[package]]
 name = "anyhow"
-version = "1.0.102"
+version = "1.0.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
+checksum = "2a4385e2e34eb35d6b3efe798b9eb88096925d87726c0798709bf56d9ed84af3"
 
 [[package]]
 name = "append-only-vec"
@@ -344,7 +338,7 @@ version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -432,11 +426,10 @@ dependencies = [
 
 [[package]]
 name = "criterion2"
-version = "3.0.3"
+version = "3.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "861a56bb48e3ba7a2a38580a91577e17d90db946649f5c342fd74ba864180def"
+checksum = "b961b72d7eaf7444d1eb98d353d5c2aa08e2443d77fef6bff0e6e97064162482"
 dependencies = [
- "anes",
  "bpaf",
  "cast",
  "ciborium",
@@ -447,7 +440,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "walkdir",
 ]
 
 [[package]]
@@ -599,7 +591,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1073,6 +1065,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b4baf93f58d4425749ca49a51c50ebab072c5df6994d08fed93541c331481dc"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1107,9 +1108,9 @@ dependencies = [
 
 [[package]]
 name = "jsonschema"
-version = "0.46.5"
+version = "0.46.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a5fe5206f06e589caf25e79fc05ccdf91fca745685fe9fe1a13bbdfb479a631"
+checksum = "8374249b1bdce1c1773a09fa294347e19e4bfeb86d845c2d8ebaf8a8dbf11233"
 dependencies = [
  "ahash",
  "bytecount",
@@ -1391,7 +1392,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1626,7 +1627,7 @@ version = "0.137.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3706e193b659865e03155a44e443f0447abf6789f9a3eb436ae10e557afab899"
 dependencies = [
- "phf",
+ "phf 0.13.1",
  "proc-macro2",
  "quote",
  "syn",
@@ -1761,7 +1762,7 @@ version = "0.137.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bf6fc583affb70dcc496a185bb4f6d47bc7d921a06a8c03baaa2c185082bd8e3"
 dependencies = [
- "itertools",
+ "itertools 0.14.0",
  "oxc_allocator",
  "oxc_ast",
  "oxc_data_structures",
@@ -1888,7 +1889,7 @@ dependencies = [
  "oxc_diagnostics",
  "oxc_span",
  "oxc_str",
- "phf",
+ "phf 0.13.1",
  "rustc-hash",
  "unicode-id-start",
 ]
@@ -1940,7 +1941,7 @@ version = "0.137.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de31d2015099e33ecdc23ad59730b768a141a0b2941d43970a26ba50de003e10"
 dependencies = [
- "itertools",
+ "itertools 0.14.0",
  "memchr",
  "oxc_allocator",
  "oxc_ast",
@@ -2017,7 +2018,7 @@ dependencies = [
  "oxc_index",
  "oxc_span",
  "oxc_str",
- "phf",
+ "phf 0.13.1",
  "serde",
  "unicode-id-start",
 ]
@@ -2177,8 +2178,19 @@ version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1562dc717473dbaa4c1f85a36410e03c047b2e7df7f45ee938fbef64ae7fadf"
 dependencies = [
- "phf_macros",
- "phf_shared",
+ "phf_macros 0.13.1",
+ "phf_shared 0.13.1",
+ "serde",
+]
+
+[[package]]
+name = "phf"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "010378780309880b08997fae13be7834dba947d36393bd372f2b1556deb2a2f6"
+dependencies = [
+ "phf_macros 0.14.0",
+ "phf_shared 0.14.0",
  "serde",
 ]
 
@@ -2189,7 +2201,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "135ace3a761e564ec88c03a77317a7c6b80bb7f7135ef2544dbe054243b89737"
 dependencies = [
  "fastrand",
- "phf_shared",
+ "phf_shared 0.13.1",
+]
+
+[[package]]
+name = "phf_generator"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aeb62e0959d5a1bebc965f4d15d9e2b7cea002b6b0f5ba8cde6cc26738467100"
+dependencies = [
+ "fastrand",
+ "phf_shared 0.14.0",
 ]
 
 [[package]]
@@ -2198,8 +2220,21 @@ version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "812f032b54b1e759ccd5f8b6677695d5268c588701effba24601f6932f8269ef"
 dependencies = [
- "phf_generator",
- "phf_shared",
+ "phf_generator 0.13.1",
+ "phf_shared 0.13.1",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "phf_macros"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5fa8d0ca26d424d27630da600c6624696e7dec8bf7b3b492b383c5dc49e5e085"
+dependencies = [
+ "phf_generator 0.14.0",
+ "phf_shared 0.14.0",
  "proc-macro2",
  "quote",
  "syn",
@@ -2210,6 +2245,15 @@ name = "phf_shared"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e57fef6bc5981e38c2ce2d63bfa546861309f875b8a75f092d1d54ae2d64f266"
+dependencies = [
+ "siphasher",
+]
+
+[[package]]
+name = "phf_shared"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6fd9027e2d9319be6349febd1db4e8d02aa544921200c9b777720ac34a3aa89"
 dependencies = [
  "siphasher",
 ]
@@ -2293,9 +2337,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.45"
+version = "1.0.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924"
+checksum = "dfbc457d0c7a0759a614551b11a6409e5951f6c7537be1f1b7682b9ae9230368"
 dependencies = [
  "proc-macro2",
 ]
@@ -2373,9 +2417,9 @@ dependencies = [
 
 [[package]]
 name = "referencing"
-version = "0.46.5"
+version = "0.46.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69e4e17ef386c5383591d07623d3de49cbc601156e7582973e6db98d66a57de2"
+checksum = "65a910f9d63351f9c9d7dc3053d02b214ea3a005917140c70087d7b59cbc5bb1"
 dependencies = [
  "ahash",
  "fluent-uri",
@@ -2447,7 +2491,7 @@ dependencies = [
  "futures",
  "indexmap",
  "insta",
- "itertools",
+ "itertools 0.15.0",
  "itoa",
  "json-escape-simd",
  "memchr",
@@ -2509,18 +2553,18 @@ dependencies = [
 
 [[package]]
 name = "rolldown-file-id"
-version = "0.2.8"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30c2b9e1a332d7c2f9783cb04178afffba89c77a7234ce6b0a6c2c12168e844f"
+checksum = "6c101dead332133e83cb399900f7af2e4d976148715015c486a88d137707dcdf"
 dependencies = [
  "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "rolldown-notify"
-version = "10.4.0"
+version = "10.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eea69b44c6dd54d44707348cee957ca060b4b112e4dfea03bb6400cb1201eace"
+checksum = "bbdb6c618eba52de46274b8651edc434494bf0543c6f0153c4f795a1b6d1a1e6"
 dependencies = [
  "bitflags",
  "inotify",
@@ -2538,9 +2582,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify-debouncer-full"
-version = "0.7.8"
+version = "0.7.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a45c562d5494c346f1d66e8efbdd72afb04184ffc8968158b52fc8be731229b6"
+checksum = "5e21d88cf19e720560d71bb46cc3b5c7c54f41970fa8f3bd22e3df29645916e8"
 dependencies = [
  "rolldown-file-id",
  "rolldown-notify",
@@ -2567,7 +2611,7 @@ dependencies = [
  "derive_more",
  "futures",
  "indexmap",
- "itertools",
+ "itertools 0.15.0",
  "mimalloc-safe",
  "napi",
  "napi-build",
@@ -2632,7 +2676,7 @@ dependencies = [
  "derive_more",
  "fast-glob",
  "insta",
- "itertools",
+ "itertools 0.15.0",
  "num-bigint",
  "oxc",
  "oxc_ecmascript",
@@ -2917,7 +2961,7 @@ name = "rolldown_plugin_oxc_runtime"
 version = "1.1.3"
 dependencies = [
  "arcstr",
- "phf",
+ "phf 0.14.0",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",
@@ -2948,7 +2992,7 @@ dependencies = [
  "cow-utils",
  "dashmap",
  "derive_more",
- "itertools",
+ "itertools 0.15.0",
  "memchr",
  "percent-encoding",
  "regex",
@@ -3129,7 +3173,7 @@ name = "rolldown_plugin_vite_transform"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "itertools",
+ "itertools 0.15.0",
  "memchr",
  "oxc",
  "oxc_resolver",
@@ -3156,7 +3200,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "dashmap",
- "itertools",
+ "itertools 0.15.0",
  "oxc_resolver",
  "rolldown_common",
  "rolldown_fs",
@@ -3325,7 +3369,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3535,9 +3579,9 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
 name = "smallvec"
-version = "1.15.1"
+version = "1.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
+checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
 dependencies = [
  "serde",
 ]
@@ -3604,9 +3648,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.117"
+version = "2.0.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e665b8803e7b1d2a727f4023456bbbbe74da67099c585258af0ad9c5013b9b99"
+checksum = "1b9ae57f904213ebb649ce6895b8a66c66f0203b9319718f69a5612a065b1422"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3623,7 +3667,7 @@ dependencies = [
  "getrandom 0.4.2",
  "once_cell",
  "rustix",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3642,7 +3686,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
 dependencies = [
  "rustix",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3912,9 +3956,9 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "uuid"
-version = "1.23.3"
+version = "1.23.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "144d6b123cef80b301b8f72a9e2ca4370ddec21950d0a103dd22c437006d2db7"
+checksum = "bf80a72845275afea99e7f2b434723d3bc7e38470fcd1c7ed39a599c73319a53"
 dependencies = [
  "getrandom 0.4.2",
  "js-sys",
@@ -4089,7 +4133,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

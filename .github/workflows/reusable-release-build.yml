@@ -231,7 +231,7 @@ jobs:
           save-cache: false
 
       - name: Add WASI target
-        run: rustup target add wasm32-wasip1-threads
+        run: rustup target add wasm32-wasip1-threads wasm32-wasip1
 
       - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
         with:

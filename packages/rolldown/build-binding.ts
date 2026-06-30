@@ -9,6 +9,22 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const args = process.argv.slice(2);
 
+// EXPERIMENT: share generic instantiations across crates in release builds to cut
+// binary size. Without this, generics like the oxc_resolver methods are monomorphized
+// once per crate that uses them (cross-crate instantiations aren't shared in optimized
+// builds and fat-LTO doesn't merge them), so they're emitted ~8x.
+//
+// `-Zshare-generics` is unstable, so opt into it via RUSTC_BOOTSTRAP on the pinned stable
+// toolchain. Use CARGO_BUILD_RUSTFLAGS (lowest-priority rustflags source) instead of
+// RUSTFLAGS so it does NOT clobber the per-target rustflags in .cargo/config.toml
+// (crt-static on windows, simd128 on wasm) — those targets keep their flags and build
+// unchanged; every other target additionally gets generic sharing.
+if (args.includes('--release')) {
+  process.env.RUSTC_BOOTSTRAP = '1';
+  process.env.CARGO_BUILD_RUSTFLAGS =
+    `${process.env.CARGO_BUILD_RUSTFLAGS ?? ''} -Zshare-generics=yes`.trim();
+}
+
 const napiCli = new NapiCli();
 const buildCommand = createBuildCommand(args);
 

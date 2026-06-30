@@ -186,12 +186,6 @@ impl Diagnostic {
     self.convert_to_string(true)
   }
 
-  #[must_use]
-  pub fn with_kind(mut self, kind: String) -> Self {
-    self.kind = kind;
-    self
-  }
-
   /// Get the primary location information from the first label if available
   /// Returns (file_path, line, column, utf16_position)
   pub fn get_primary_location(&self) -> Option<(String, usize, usize, usize)> {

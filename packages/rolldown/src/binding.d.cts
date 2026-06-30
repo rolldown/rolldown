@@ -2247,10 +2247,6 @@ export interface BindingGeneratedCodeOptions {
   preset?: string
 }
 
-export type BindingGenerateHmrPatchReturn =
-  | { type: 'Ok', field0: Array<BindingHmrUpdate> }
-  | { type: 'Error', field0: Array<BindingError> }
-
 export interface BindingHmrBoundaryOutput {
   boundary: string
   acceptedVia: string

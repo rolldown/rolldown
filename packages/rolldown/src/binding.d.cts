@@ -2133,6 +2133,7 @@ export interface BindingExperimentalOptions {
   nativeMagicString?: boolean
   chunkOptimization?: boolean
   lazyBarrel?: boolean
+  minChunkSize?: number
 }
 
 export interface BindingFilterToken {

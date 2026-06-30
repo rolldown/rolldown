@@ -10,6 +10,7 @@ use std::{
   time::{SystemTime, UNIX_EPOCH},
 };
 
+use rolldown_devtools_metrics::{MetricsAggregator, MetricsConfig};
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::ser::{SerializeMap, Serializer as _};
 
@@ -23,6 +24,9 @@ pub enum LogCommand {
   /// flushed to the OS, so callers can establish a happens-before relationship
   /// between "build finished" and "log file is readable".
   CloseSession { session_id: String, ack: Option<Sender<()>> },
+  /// Mark a session as metrics-mode: subsequent `Write`s are folded into an in-memory
+  /// aggregator (no log file) and a markdown report is rendered on `CloseSession`.
+  OpenMetricsSession { session_id: String, config: MetricsConfig },
 }
 
 static LOG_WRITER_TX: LazyLock<Sender<LogCommand>> = LazyLock::new(|| {
@@ -58,18 +62,31 @@ pub fn flush_session(session_id: String) -> std::sync::mpsc::Receiver<()> {
   rx
 }
 
+/// Register a metrics-mode session before its build emits events. Must be sent before any
+/// `Write` for this session so the writer aggregates (rather than writes files) those events.
+pub fn open_metrics_session(session_id: String, config: MetricsConfig) {
+  send(LogCommand::OpenMetricsSession { session_id, config });
+}
+
 #[derive(Default)]
 struct WriterState {
   files: FxHashMap<Arc<str>, BufWriter<File>>,
   files_by_session: FxHashMap<String, FxHashSet<Arc<str>>>,
   exist_hash_by_session: FxHashMap<String, FxHashSet<String>>,
   dir_ensured: FxHashSet<String>,
+  /// Sessions opened in metrics mode: events are aggregated here instead of written to disk.
+  metrics: FxHashMap<String, MetricsAggregator>,
 }
 
 impl WriterState {
   fn handle(&mut self, cmd: LogCommand) {
     match cmd {
       LogCommand::Write { session_id, filename, action_value } => {
+        // Metrics-mode sessions aggregate in-memory and never touch disk.
+        if let Some(aggregator) = self.metrics.get_mut(&session_id) {
+          aggregator.fold(&action_value);
+          return;
+        }
         if self.dir_ensured.insert(session_id.clone()) {
           if let Some(parent) = Path::new(filename.as_ref()).parent() {
             let _ = std::fs::create_dir_all(parent);
@@ -87,7 +104,15 @@ impl WriterState {
         let hashes = self.exist_hash_by_session.entry(session_id).or_default();
         let _ = write_event(file, &action_value, hashes);
       }
+      LogCommand::OpenMetricsSession { session_id, config } => {
+        self.metrics.insert(session_id, MetricsAggregator::new(config));
+      }
       LogCommand::CloseSession { session_id, ack } => {
+        // Metrics mode: render the markdown report before acking, so the report is on disk
+        // by the time `bundle.close()` resolves (same contract as the log-file path).
+        if let Some(aggregator) = self.metrics.remove(&session_id) {
+          let _ = aggregator.render();
+        }
         if let Some(files) = self.files_by_session.remove(&session_id) {
           for fname in files {
             if let Some(mut w) = self.files.remove(&fname) {

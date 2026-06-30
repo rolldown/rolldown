@@ -763,14 +763,30 @@ export interface InputOptions {
   /**
    * Devtools integration options.
    *
-   * When enabled, Rolldown writes JSON-lines devtools output under
+   * In the default `'full'` mode, Rolldown writes JSON-lines devtools output under
    * `node_modules/.rolldown/{session_id}/`. Consumers can parse the output with
    * `@rolldown/debug` after `await bundle.close()` resolves.
+   *
+   * In `'metrics'` mode, Rolldown aggregates the same internal event stream in-memory and
+   * writes a small, agent-readable markdown report (progressive `entry.md` + on-demand
+   * detail files) under `metricsDir` instead of the multi-GB `logs.json`.
    *
    * @experimental
    */
   devtools?: {
     sessionId?: string;
+    /**
+     * `'full'` (default): write JSON-lines devtools logs.
+     * `'metrics'`: aggregate the same event stream in-memory and emit an agent-readable
+     * markdown report instead.
+     */
+    mode?: 'full' | 'metrics';
+    /** Metrics mode: output directory, relative to cwd (default `node_modules/.rolldown/metrics`). */
+    metricsDir?: string;
+    /** Metrics mode: upper bound for every "top-N" list (default `20`). */
+    metricsTopN?: number;
+    /** Metrics mode: emit a build-over-build delta (default `true`). */
+    metricsDelta?: boolean;
   };
   /**
    * Controls how entry chunk exports are preserved.

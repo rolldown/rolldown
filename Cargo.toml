@@ -309,3 +309,9 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+# Use the oxc-resolver build with Node.js package maps support.
+# See https://nodejs.org/docs/latest/api/packages.html#package-maps
+[patch.crates-io]
+oxc_resolver = { git = "https://github.com/oxc-project/oxc-resolver.git", rev = "0faca8aeab47c554341b7a55d4279df6096ac46f" }
+oxc_resolver_napi = { git = "https://github.com/oxc-project/oxc-resolver.git", rev = "0faca8aeab47c554341b7a55d4279df6096ac46f" }

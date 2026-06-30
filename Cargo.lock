@@ -1888,8 +1888,7 @@ dependencies = [
 [[package]]
 name = "oxc_resolver"
 version = "11.21.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b5400dea5053fe933683bcfc63cfd6025a9826748a9ecf2da37892d2993da57"
+source = "git+https://github.com/oxc-project/oxc-resolver.git?rev=0faca8aeab47c554341b7a55d4279df6096ac46f#0faca8aeab47c554341b7a55d4279df6096ac46f"
 dependencies = [
  "cfg-if",
  "compact_str",
@@ -1897,6 +1896,7 @@ dependencies = [
  "fast-glob",
  "indexmap",
  "json-strip-comments",
+ "memchr",
  "nodejs-built-in-modules",
  "once_cell",
  "percent-encoding",
@@ -1916,8 +1916,7 @@ dependencies = [
 [[package]]
 name = "oxc_resolver_napi"
 version = "11.21.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e3561cdc54c4a3c7391499cd9971fbcde281ca989e85f591fff5b3495605187"
+source = "git+https://github.com/oxc-project/oxc-resolver.git?rev=0faca8aeab47c554341b7a55d4279df6096ac46f#0faca8aeab47c554341b7a55d4279df6096ac46f"
 dependencies = [
  "napi",
  "napi-build",

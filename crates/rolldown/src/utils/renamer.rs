@@ -99,8 +99,8 @@ impl<'name> Renamer<'name> {
   /// duplicated leaf symbol the same globally-pinned name in every chunk it is
   /// copied into. Must be called before the normal deconfliction pass so the
   /// reservation wins over author symbols (including entry-module symbols, which
-  /// otherwise bypass `accept` — `ConflictResolver::resolve` still checks the
-  /// reserved `used` set first).
+  /// otherwise take their original name only when it is not already in the
+  /// reserved `used_canonical_names` set).
   pub fn pin_name(&mut self, symbol_ref: SymbolRef, name: CompactStr) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     self.reserve(name.clone());

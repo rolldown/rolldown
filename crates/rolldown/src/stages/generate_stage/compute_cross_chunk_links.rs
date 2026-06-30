@@ -438,18 +438,25 @@ impl GenerateStage<'_> {
               .map(|(name, export)| (name, export.symbol_ref))
             {
               // `preserveModules` emits a module's complete declared interface (#9934). A JSON
-              // module synthesizes a named export per top-level key, but a key that is reached
-              // only through its own default-export object has its `var` binding folded into that
-              // object by the finalizer's `try_inline_json_module_prop`, leaving no standalone
-              // declaration. Listing such a key here produces an `export { key }` with no binding
-              // -> `SyntaxError: Export 'x' is not defined in module` (#10020).
+              // module synthesizes a named export per top-level key, but the finalizer
+              // (`try_inline_json_module_prop`) may fold a key's `var` binding into the
+              // self-contained default-export object, leaving no standalone declaration. Listing
+              // such a key here produces an `export { key }` with no binding ->
+              // `SyntaxError: Export 'x' is not defined in module` (#10020).
               //
-              // `json_module_none_self_reference_included_symbol` holds the JSON keys included for
-              // a non-self-reference reason (named import, entry export) — the keys the finalizer
-              // keeps materialized. Skip any key absent from it.
+              // Drop a key iff the finalizer inlines it away. That decision is gated on
+              // `need_inline_json_prop` (see `finalizer_context.rs`): JSON, ESM exports, and the
+              // module namespace object NOT included; and within that, a key is inlined iff it is
+              // absent from `json_module_none_self_reference_included_symbol` (i.e. not reached by
+              // a named import, entry export, or — keeping every key materialized — a namespace
+              // import). Mirror that full condition so the export interface never lists an
+              // inlined-away key, while a namespace-imported JSON chunk still exports its complete
+              // interface (every key keeps its binding).
               if let Module::Normal(normal_module) = &self.link_output.module_table[module_idx]
                 && let Some(none_self_referenced) =
                   normal_module.json_module_none_self_reference_included_symbol.as_deref()
+                && !normal_module.exports_kind.is_commonjs()
+                && !self.link_output.used_symbol_refs.contains(&normal_module.namespace_object_ref)
                 && !none_self_referenced
                   .contains(&self.link_output.symbol_db.canonical_ref_for(symbol))
               {

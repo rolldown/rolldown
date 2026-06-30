@@ -38,7 +38,7 @@ pub struct BindingViteResolvePluginConfig {
   )]
   pub finalize_bare_specifier:
     Option<JsCallback<FnArgs<(String, String, Option<String>)>, Option<String>>>,
-  #[debug("{}", if finalize_bare_specifier.is_some() { "Some(<finalize_other_specifiers>)" } else { "None" })]
+  #[debug("{}", if finalize_other_specifiers.is_some() { "Some(<finalize_other_specifiers>)" } else { "None" })]
   #[napi(ts_type = "(resolvedId: string, rawId: string) => VoidNullable<string>")]
   pub finalize_other_specifiers: Option<JsCallback<FnArgs<(String, String)>, Option<String>>>,
   #[debug("Some(<resolve_subpath_imports>)")]

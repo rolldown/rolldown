@@ -43,9 +43,7 @@ const FORBIDDEN = [/new Worker\b/, /onCreateWorker\b/, /shared:\s*true\b/];
 //     intact. The generated napi-rs loaders carry no `//`-in-string today; this
 //     heuristic just keeps the guard from misfiring if one ever appears.
 const stripComments = (source) =>
-  source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|\s)\/\/[^\n]*/g, '$1');
+  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/[^\n]*/g, '$1');
 
 const failures = [];
 

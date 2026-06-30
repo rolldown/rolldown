@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region dependency.js
+var sharedValue;
+var init_dependency = __esmMin((() => {
+	sharedValue = ((value) => {
+		value.EventMatch = "event_match";
+		return value;
+	})(sharedValue || {});
+}));
+//#endregion
+//#region main.js
+var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	init_dependency();
+	var freeModule = typeof exports == "object" && exports && !exports.nodeType && exports && typeof module == "object" && module && !module.nodeType && module;
+	var eventKind = sharedValue.EventMatch;
+	var sharedValue$2 = class {};
+	var sharedValue$1 = class {};
+	console.log(eventKind, sharedValue$2, sharedValue$1, freeModule);
+}));
+//#endregion
+export default require_main();
+
+```

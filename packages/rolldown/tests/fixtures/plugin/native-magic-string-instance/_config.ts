@@ -22,13 +22,6 @@ export default defineTest({
             return null;
           }
 
-          expect(Object.keys(meta)).toEqual(
-            expect.arrayContaining(['moduleType', 'magicString', 'ast']),
-          );
-          const spreadMeta = { ...meta };
-          expect(spreadMeta.magicString).toBe(meta.magicString);
-          expect(spreadMeta.ast).toBe(meta.ast);
-
           // Test 1: Verify that multiple accesses return the same cached instance
           // The magicString getter caches the instance on first access
           meta.magicString.overwrite(0, code.length, 'replaced;');

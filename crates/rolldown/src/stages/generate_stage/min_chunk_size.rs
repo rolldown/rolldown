@@ -39,8 +39,8 @@ impl GenerateStage<'_> {
     // finalizer and `compute_cross_chunk_links` paths. The CJS/IIFE/UMD
     // reference-resolution paths (the `module_finalizers` CJS branch and
     // `types/generator.rs`) still classify a duplicated leaf living in a
-    // non-primary chunk as cross-chunk, which mis-resolves or panics indexing a
-    // require binding that was deliberately never populated for the leaf.
+    // non-primary chunk as cross-chunk, which resolves incorrectly or panics
+    // indexing a require binding that was deliberately never populated for the leaf.
     // Restrict the optimization to ESM output until those paths honor
     // `duplicated_leaf_modules`. (Wrapped / `require()`d leaves carry a runtime
     // import record, so the `import_records.is_empty()` leaf check below already

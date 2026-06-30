@@ -142,7 +142,7 @@ shared chunk).
 ### Note: leaf-name vs importer global shadowing (guarded)
 
 A duplicated-leaf symbol is pinned to its own name and force-reserved in every
-importer chunk *before* that chunk's unresolved (free) globals are reserved, and a
+importer chunk _before_ that chunk's unresolved (free) globals are reserved, and a
 free reference is never renamed. So a leaf-declared name that also appears as an
 unresolved global in an importer chunk would have its global reference silently
 captured by the copied declaration — wrong runtime value, no error (e.g. a leaf

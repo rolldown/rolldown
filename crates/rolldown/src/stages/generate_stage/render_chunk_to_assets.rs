@@ -81,7 +81,6 @@ impl GenerateStage<'_> {
     Self::trace_action_assets_ready(&assets);
 
     let mut output = Vec::with_capacity(assets.len());
-    let mut output_assets: Vec<Output> = vec![];
     for Asset { map, meta: rendered_chunk, content: code, filename, .. } in assets {
       match rendered_chunk {
         InstantiationKind::Ecma(ecma_meta) => {
@@ -123,10 +122,6 @@ impl GenerateStage<'_> {
       }
     }
 
-    // Make sure order of assets are deterministic
-    // TODO: use `preliminary_filename` on `Output::Asset` instead
-    output_assets.sort_unstable_by(|a, b| a.filename().cmp(b.filename()));
-
     // The chunks order make sure the entry chunk at first, the assets at last, see https://github.com/rollup/rollup/blob/master/src/rollup/rollup.ts#L266
     output.sort_unstable_by(|a, b| {
       let a_type = get_sorting_file_type(a) as u8;
@@ -136,8 +131,6 @@ impl GenerateStage<'_> {
       }
       a_type.cmp(&b_type)
     });
-
-    output.extend(output_assets);
 
     if !errors.is_empty() {
       return Err(errors.into());

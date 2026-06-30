@@ -859,8 +859,6 @@ fn add_module_and_dependencies_to_group_recursively(
     return;
   }
 
-  visited.insert(module_idx);
-
   module_group.add_module(module_idx, module_table);
   if recursively {
     for dep in &module_metas[module_idx].dependencies {

@@ -66,26 +66,16 @@ impl PartialEq for MatchImportKindNormal {
 #[derive(Debug, PartialEq, Eq)]
 #[expect(clippy::box_collection)]
 pub enum MatchImportKind {
-  /// The import is either external or not defined.
-  _Ignore,
   // "sourceIndex" and "ref" are in use
   Normal(MatchImportKindNormal),
   // "namespaceRef" and "alias" are in use
-  Namespace {
-    namespace_ref: SymbolRef,
-  },
+  Namespace { namespace_ref: SymbolRef },
   // Both "matchImportNormal" and "matchImportNamespace"
-  NormalAndNamespace {
-    namespace_ref: SymbolRef,
-    alias: CompactStr,
-  },
+  NormalAndNamespace { namespace_ref: SymbolRef, alias: CompactStr },
   // The import could not be evaluated due to a cycle
   Cycle,
   // The import resolved to multiple symbols via "export * from"
-  Ambiguous {
-    symbol_ref: SymbolRef,
-    potentially_ambiguous_symbol_refs: Box<Vec<SymbolRef>>,
-  },
+  Ambiguous { symbol_ref: SymbolRef, potentially_ambiguous_symbol_refs: Box<Vec<SymbolRef>> },
   NoMatch,
 }
 
@@ -928,7 +918,7 @@ impl BindImportsAndExportsContext<'_> {
       );
       tracing::trace!("Got match result {:?}", ret);
       match ret {
-        MatchImportKind::_Ignore | MatchImportKind::Cycle => {}
+        MatchImportKind::Cycle => {}
         MatchImportKind::Ambiguous { symbol_ref, potentially_ambiguous_symbol_refs } => {
           let importee = self.index_modules[resolved_module_idx].stable_id().to_string();
 

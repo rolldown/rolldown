@@ -1842,11 +1842,6 @@ export declare class ParallelJsPluginRegistry {
   constructor(workerCount: number)
 }
 
-export declare class ScheduledBuild {
-  wait(): Promise<void>
-  alreadyScheduled(): boolean
-}
-
 export declare class TraceSubscriberGuard {
   close(): void
 }

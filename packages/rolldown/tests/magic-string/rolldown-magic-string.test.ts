@@ -261,3 +261,31 @@ describe('regex replace', () => {
     assert.strictEqual(regex.lastIndex, 3);
   });
 });
+
+describe('lastLine', () => {
+  it('returns the content after the last newline', () => {
+    assert.strictEqual(new MagicString('abc\ndef').lastLine(), 'def');
+    assert.strictEqual(new MagicString('abc').lastLine(), 'abc');
+    assert.strictEqual(new MagicString('abc\n').lastLine(), '');
+  });
+
+  describe('keeps fragments after the newline fragment (#10023)', () => {
+    it('keeps outro fragments appended after a newline fragment', () => {
+      const s = new MagicString('x');
+      s.append('pre');
+      s.append('a\nb');
+      s.append('c');
+      assert.strictEqual(s.toString(), 'xprea\nbc');
+      assert.strictEqual(s.lastLine(), 'bc');
+    });
+
+    it('keeps intro fragments prepended after a newline fragment', () => {
+      const s = new MagicString('x');
+      s.prepend('r');
+      s.prepend('p\nq');
+      s.prepend('pre');
+      assert.strictEqual(s.toString(), 'prep\nqrx');
+      assert.strictEqual(s.lastLine(), 'qrx');
+    });
+  });
+});

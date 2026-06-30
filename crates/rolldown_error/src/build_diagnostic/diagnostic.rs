@@ -26,12 +26,6 @@ impl From<ArcStr> for DiagnosticFileId {
 #[derive(Debug, Clone)]
 pub struct RolldownLabelSpan(DiagnosticFileId, Range<usize>);
 
-impl From<(DiagnosticFileId, Range<usize>)> for RolldownLabelSpan {
-  fn from((id, range): (DiagnosticFileId, Range<usize>)) -> Self {
-    Self(id, range)
-  }
-}
-
 impl ariadne::Span for RolldownLabelSpan {
   type SourceId = DiagnosticFileId;
 

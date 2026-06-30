@@ -750,12 +750,7 @@ impl GenerateStage<'_> {
         && module_meta.wrapper_ref.is_some()
       {
         // Cheaper check first: a HashMap lookup + len comparison.
-        if self
-          .link_output
-          .entries
-          .get(&module_idx)
-          .is_some_and(|eps| eps.len() > 1)
-        {
+        if self.link_output.entries.get(&module_idx).is_some_and(|eps| eps.len() > 1) {
           return false;
         }
         // More expensive check: iterate importers and do set lookups.

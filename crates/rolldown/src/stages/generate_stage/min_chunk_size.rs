@@ -18,6 +18,7 @@
 //!
 //! This pass runs after chunk formation and before `compute_cross_chunk_links`.
 
+use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, EcmaViewMeta, ImportKind, ImportRecordMeta, ModuleIdx,
   PostChunkOptimizationOperation, SymbolRef,
@@ -100,6 +101,18 @@ impl GenerateStage<'_> {
       let primary = importer_chunks[0];
 
       let s_modules = chunk_graph.chunk_table[s].modules.clone();
+
+      // A duplicated-leaf symbol is pinned to its own name and force-reserved in
+      // every importer chunk *before* that chunk's unresolved (free) globals are
+      // reserved, and a free reference is never renamed. So if a leaf-declared name
+      // also appears as an unresolved global reference in an importer chunk, the
+      // copied declaration would silently shadow that global (wrong runtime value,
+      // no error). Leaving the leaf as a standalone shared chunk is always correct,
+      // so skip duplicating it in that case.
+      if self.leaf_name_shadows_importer_global(&s_modules, &importer_chunks, chunk_graph) {
+        continue;
+      }
+
       let s_runtime_helper = chunk_graph.chunk_table[s].depended_runtime_helper;
       for &c in &importer_chunks {
         for &m in &s_modules {
@@ -191,6 +204,43 @@ impl GenerateStage<'_> {
       }
     }
     reexported
+  }
+
+  /// True if any symbol declared by the candidate leaf has a name that also
+  /// appears as an unresolved (free) global reference in one of its importer
+  /// chunks. Duplicating such a leaf would shadow the importer's global, so the
+  /// caller keeps it as a standalone shared chunk instead (always correct; at
+  /// worst a missed optimization). Conservative: it tests the leaf symbols' own
+  /// names, which is what they are pinned to (a within-leaf-set suffix only moves
+  /// the pinned name further away from the global, never toward it).
+  fn leaf_name_shadows_importer_global(
+    &self,
+    leaf_modules: &[ModuleIdx],
+    importer_chunks: &[ChunkIdx],
+    chunk_graph: &ChunkGraph,
+  ) -> bool {
+    let mut leaf_symbols: FxHashSet<SymbolRef> = FxHashSet::default();
+    for &m in leaf_modules {
+      self.collect_declared_symbols(m, &mut leaf_symbols);
+    }
+    let leaf_names: FxHashSet<CompactStr> = leaf_symbols
+      .iter()
+      .map(|sym| CompactStr::new(sym.name(&self.link_output.symbol_db)))
+      .collect();
+    if leaf_names.is_empty() {
+      return false;
+    }
+    importer_chunks.iter().any(|&c| {
+      chunk_graph.chunk_table[c].modules.iter().any(|&idx| {
+        self.link_output.symbol_db[idx].as_ref().is_some_and(|db| {
+          db.ast_scopes
+            .scoping()
+            .root_unresolved_references()
+            .keys()
+            .any(|name| leaf_names.contains(&CompactStr::new(name)))
+        })
+      })
+    })
   }
 
   #[expect(clippy::cast_precision_loss)] // module byte sizes are well within f64 range

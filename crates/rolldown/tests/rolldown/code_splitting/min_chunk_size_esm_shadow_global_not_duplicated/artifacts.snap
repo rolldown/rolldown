@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-a.js
+
+```js
+import { t as getProc } from "./util.js";
+//#region entry-a.js
+const a = getProc();
+//#endregion
+export { a };
+
+```
+
+## entry-b.js
+
+```js
+//#region entry-b.js
+const b = typeof process;
+//#endregion
+export { b };
+
+```
+
+## util.js
+
+```js
+function getProc() {
+	return 42;
+}
+//#endregion
+export { getProc as t };
+
+```

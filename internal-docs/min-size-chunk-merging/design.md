@@ -139,6 +139,23 @@ record, so a wrapped leaf is never a "leaf" for this pass (verified by the
 `min_chunk_size_require_not_duplicated` fixture: the required leaf stays a wrapped
 shared chunk).
 
+### Note: leaf-name vs importer global shadowing (guarded)
+
+A duplicated-leaf symbol is pinned to its own name and force-reserved in every
+importer chunk *before* that chunk's unresolved (free) globals are reserved, and a
+free reference is never renamed. So a leaf-declared name that also appears as an
+unresolved global in an importer chunk would have its global reference silently
+captured by the copied declaration — wrong runtime value, no error (e.g. a leaf
+exporting `process` shadows an importer's `typeof process`). Built-in globals are
+safe (the renamer reserves `GLOBAL_OBJECTS`), but Node globals, bundler-injected /
+`provide`d globals, etc. are not.
+
+`merge_small_common_leaf_chunks` therefore **skips duplicating a leaf when any of
+its declared names collides with an unresolved global of one of its importer
+chunks** (`leaf_name_shadows_importer_global`); the leaf stays a standalone shared
+chunk — always correct, at worst a missed optimization. Pinned by the
+`min_chunk_size_esm_shadow_global_not_duplicated` fixture.
+
 ## Risks / edge cases
 
 CJS/IIFE/UMD output is gated off entirely (see the ESM-only note above); within ESM,

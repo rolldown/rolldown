@@ -1487,14 +1487,10 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     module_table: &ModuleTable,
   ) -> bool {
+    let reachable =
+      Self::chunks_reachable_via_static_import(target_chunk_idx, chunk_graph, module_table);
     consumer_chunks.iter().any(|&consumer_chunk_idx| {
-      consumer_chunk_idx != target_chunk_idx
-        && Self::chunk_reaches_via_static_import(
-          target_chunk_idx,
-          consumer_chunk_idx,
-          chunk_graph,
-          module_table,
-        )
+      consumer_chunk_idx != target_chunk_idx && reachable.contains(&consumer_chunk_idx)
     })
   }
 
@@ -1511,16 +1507,22 @@ impl GenerateStage<'_> {
     if consumers.len() <= 1 {
       return consumers.iter().copied().next();
     }
-    consumers.iter().copied().find(|&candidate| {
-      consumers.iter().all(|&other| {
-        other == candidate
-          || Self::chunk_reaches_via_static_import(other, candidate, chunk_graph, module_table)
+    // Compute each consumer's static-import reachable set once instead of
+    // re-running the same source BFS for every candidate.
+    let reachable = consumers
+      .iter()
+      .map(|&other| {
+        (other, Self::chunks_reachable_via_static_import(other, chunk_graph, module_table))
       })
+      .collect::<FxHashMap<_, _>>();
+    consumers.iter().copied().find(|&candidate| {
+      consumers.iter().all(|&other| other == candidate || reachable[&other].contains(&candidate))
     })
   }
 
-  /// BFS from `from` across chunks, following only import records that become
-  /// static chunk-loading edges through still-live target chunks.
+  /// BFS from `from` across chunks, returning every chunk reachable through
+  /// static forward chunk-loading edges (the returned set always includes
+  /// `from` itself).
   ///
   /// Edge filtering rationale:
   /// - Dynamic imports are not followed. Static imports and `require()` can
@@ -1532,20 +1534,16 @@ impl GenerateStage<'_> {
   ///   post-optimization graph.
   /// - Self-edges (`target_chunk == current`) are skipped — an intra-chunk
   ///   import can't form an inter-chunk cycle.
-  fn chunk_reaches_via_static_import(
+  fn chunks_reachable_via_static_import(
     from: ChunkIdx,
-    to: ChunkIdx,
     chunk_graph: &ChunkGraph,
     module_table: &ModuleTable,
-  ) -> bool {
+  ) -> FxHashSet<ChunkIdx> {
     let mut visited = FxHashSet::default();
     let mut queue = VecDeque::from([from]);
     while let Some(current) = queue.pop_front() {
       if !visited.insert(current) {
         continue;
-      }
-      if current == to {
-        return true;
       }
       for &module_idx in &chunk_graph.chunk_table[current].modules {
         let Some(module) = module_table[module_idx].as_normal() else {
@@ -1564,7 +1562,7 @@ impl GenerateStage<'_> {
         );
       }
     }
-    false
+    visited
   }
 
   /// Move modules from common chunks into facade entry chunks, then retarget

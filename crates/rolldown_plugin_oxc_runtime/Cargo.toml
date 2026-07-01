@@ -15,7 +15,7 @@ test = false
 
 [dependencies]
 arcstr = { workspace = true }
-phf = { workspace = true }
+phf = { workspace = true, features = ["macros"] }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_utils = { workspace = true }

@@ -1,4 +1,5 @@
 use indexmap::map::Entry;
+use oxc::allocator::GetAllocator;
 use oxc::{
   allocator::{Allocator, TakeIn},
   ast::ast::{self, Expression},
@@ -109,7 +110,9 @@ fn replace_first_expr_stmt(ecma_ast: &mut EcmaAst, kind: LazyExportWrap) {
     let ast_factory = AstFactory::new(fields.allocator);
     let Some(stmt) = fields.program.body.first_mut() else { unreachable!() };
     let expr = match stmt {
-      ast::Statement::ExpressionStatement(stmt) => stmt.expression.take_in(ast_factory.allocator),
+      ast::Statement::ExpressionStatement(stmt) => {
+        stmt.expression.take_in(&ast_factory.allocator())
+      }
       _ => unreachable!(),
     };
     *stmt = match kind {
@@ -125,9 +128,9 @@ fn take_without_parentheses<'ast>(
   expr: &mut Expression<'ast>,
   allocator: &'ast Allocator,
 ) -> Expression<'ast> {
-  let mut inner_expr = expr.take_in(allocator);
+  let mut inner_expr = expr.take_in(&allocator);
   while let Expression::ParenthesizedExpression(mut paren_expr) = inner_expr {
-    inner_expr = paren_expr.expression.take_in(allocator);
+    inner_expr = paren_expr.expression.take_in(&allocator);
   }
   inner_expr
 }
@@ -171,7 +174,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
       return false;
     }
     let Expression::ObjectExpression(mut obj_expr) =
-      take_without_parentheses(expr, ast_factory.allocator)
+      take_without_parentheses(expr, ast_factory.allocator())
     else {
       unreachable!();
     };
@@ -205,9 +208,11 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
             property.computed = true;
           } else if is_legal_ident {
             property.shorthand = is_legal_ident;
-            property.key = ast::PropertyKey::StaticIdentifier(
-              ast_factory.alloc_identifier_name(SPAN, ast_factory.str(legitimized_ident.as_ref())),
-            );
+            property.key = ast::PropertyKey::StaticIdentifier(ast::IdentifierName::boxed(
+              SPAN,
+              oxc::ast::ast::Str::from_str_in(legitimized_ident.as_ref(), &ast_factory),
+              &ast_factory,
+            ));
           }
           match index_map.entry(legitimized_ident) {
             Entry::Occupied(mut occ) => {

@@ -49,7 +49,6 @@ pub struct LinkingMetadata {
   wrap_kind: WrapKind,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<CompactStr, ResolvedExport>,
-  // pub re_export_all_names: FxHashSet<CompactStr>,
   /// Store the names of exclude ambiguous resolved exports.
   /// It will be used to generate chunk exports and module namespace binding.
   /// The second element means if the export is came from commonjs module.

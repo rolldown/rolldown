@@ -175,7 +175,7 @@ ignore = "0.4.23"
 indexmap = "2.9.0"
 infer = { version = "0.19.0", default-features = false }
 insta = "1.48.0"
-itertools = "0.14.0"
+itertools = "0.15.0"
 itoa = "1.0.15"
 json-escape-simd = "3"
 json-strip-comments = "3"
@@ -192,7 +192,7 @@ parking_lot = "0.12.5"
 path-posix = "0.0.1"
 percent-encoding = "2.3.1"
 petgraph = "0.8.1"
-phf = "0.13.0"
+phf = { version = "0.14.0", features = ["macros"] }
 pnp = "0.12.9"
 rayon = "1.10.0"
 # Default features drop the `\p{…}` Unicode property tables (gencat/script/age/bool/segment),
@@ -244,7 +244,7 @@ napi-build = { version = "2" }
 napi-derive = { version = "3", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.137.0", features = [
+oxc = { version = "0.138.0", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -255,14 +255,14 @@ oxc = { version = "0.137.0", features = [
   "isolated_declarations",
   "regular_expression",
 ] }
-oxc_allocator = { version = "0.137.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.137.0" }
-oxc_napi = { version = "0.137.0" }
-oxc_str = { version = "0.137.0" }
-oxc_minify_napi = { version = "0.137.0" }
-oxc_parser_napi = { version = "0.137.0" }
-oxc_transform_napi = { version = "0.137.0" }
-oxc_traverse = { version = "0.137.0" }
+oxc_allocator = { version = "0.138.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.138.0" }
+oxc_napi = { version = "0.138.0" }
+oxc_str = { version = "0.138.0" }
+oxc_minify_napi = { version = "0.138.0" }
+oxc_parser_napi = { version = "0.138.0" }
+oxc_transform_napi = { version = "0.138.0" }
+oxc_traverse = { version = "0.138.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
@@ -271,10 +271,10 @@ oxc_index = { version = "5", features = [
   "rayon",
   "serde",
 ] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver = { version = "11.21.3", features = [
+oxc_resolver = { version = "11.22.0", features = [
   "yarn_pnp",
 ] } # https://github.com/oxc-project/oxc-resolver
-oxc_resolver_napi = { version = "11.21.3", default-features = false, features = ["yarn_pnp"] }
+oxc_resolver_napi = { version = "11.22.0", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "8.0.1" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]

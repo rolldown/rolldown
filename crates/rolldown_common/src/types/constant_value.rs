@@ -67,18 +67,21 @@ impl ConstantValue {
   pub fn to_expression<'ast>(&self, ast: oxc::ast::AstBuilder<'ast>) -> Expression<'ast> {
     match self {
       ConstantValue::Number(n) => {
-        ast.expression_numeric_literal(SPAN, *n, None, oxc::ast::ast::NumberBase::Decimal)
+        Expression::new_numeric_literal(SPAN, *n, None, oxc::ast::ast::NumberBase::Decimal, &ast)
       }
-      ConstantValue::BigInt(b) => ast.expression_big_int_literal(
+      ConstantValue::BigInt(b) => Expression::new_big_int_literal(
         SPAN,
-        ast.str(&b.to_string()),
+        oxc::ast::ast::Str::from_str_in(&b.to_string(), &ast),
         None,
         oxc::ast::ast::BigintBase::Decimal,
+        &ast,
       ),
-      ConstantValue::String(s) => ast.expression_string_literal(SPAN, ast.str(s), None),
-      ConstantValue::Boolean(b) => ast.expression_boolean_literal(SPAN, *b),
-      ConstantValue::Undefined => ast.void_0(SPAN),
-      ConstantValue::Null => ast.expression_null_literal(SPAN),
+      ConstantValue::String(s) => {
+        Expression::new_string_literal(SPAN, oxc::ast::ast::Str::from_str_in(s, &ast), None, &ast)
+      }
+      ConstantValue::Boolean(b) => Expression::new_boolean_literal(SPAN, *b, &ast),
+      ConstantValue::Undefined => Expression::new_void_0(SPAN, &ast),
+      ConstantValue::Null => Expression::new_null_literal(SPAN, &ast),
     }
   }
 }

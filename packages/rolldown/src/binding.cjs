@@ -634,7 +634,6 @@ module.exports.BindingWatcherBundler = nativeBinding.BindingWatcherBundler
 module.exports.BindingWatcherChangeData = nativeBinding.BindingWatcherChangeData
 module.exports.BindingWatcherEvent = nativeBinding.BindingWatcherEvent
 module.exports.ParallelJsPluginRegistry = nativeBinding.ParallelJsPluginRegistry
-module.exports.ScheduledBuild = nativeBinding.ScheduledBuild
 module.exports.TraceSubscriberGuard = nativeBinding.TraceSubscriberGuard
 module.exports.TsconfigCache = nativeBinding.TsconfigCache
 module.exports.BindingAttachDebugInfo = nativeBinding.BindingAttachDebugInfo

@@ -272,9 +272,14 @@ pub fn prepare_build_context(
       .unwrap_or_default(),
   );
 
+  let mut raw_treeshake = raw_options.treeshake;
   let mut experimental = raw_options.experimental.unwrap_or_default();
   if experimental.dev_mode.is_some() {
     experimental.incremental_build = Some(true);
+    // Dev mode requires treeshaking to be disabled, and lazy barrel relies on
+    // treeshaking, so it must be disabled as well.
+    raw_treeshake = TreeshakeOptions::Boolean(false);
+    experimental.lazy_barrel = Some(false);
   }
 
   if experimental.attach_debug_info.is_none() {
@@ -299,12 +304,6 @@ pub fn prepare_build_context(
   );
   let cwd =
     raw_options.cwd.unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
-
-  let mut raw_treeshake = raw_options.treeshake;
-  if experimental.dev_mode.is_some() {
-    // Dev mode requires treeshaking to be disabled
-    raw_treeshake = TreeshakeOptions::Boolean(false);
-  }
 
   let tsconfig = raw_options.tsconfig.map(|tsconfig| tsconfig.with_base(&cwd)).unwrap_or_default();
   let yarn_pnp = raw_resolve.yarn_pnp.unwrap_or(false);

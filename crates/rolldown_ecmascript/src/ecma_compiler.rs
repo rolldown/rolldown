@@ -29,6 +29,7 @@ impl EcmaCompiler {
       ProgramCell::try_new(ProgramCellOwner { source: source.clone(), allocator }, |owner| {
         let parser = Parser::new(&owner.allocator, &owner.source, ty).with_options(ParseOptions {
           allow_return_outside_function: true,
+          preserve_parens: false,
           ..ParseOptions::default()
         });
         let ret = parser.parse();
@@ -57,7 +58,8 @@ impl EcmaCompiler {
     let inner =
       ProgramCell::try_new(ProgramCellOwner { source: source.clone(), allocator }, |owner| {
         let builder = AstBuilder::new(&owner.allocator);
-        let parser = Parser::new(&owner.allocator, &owner.source, ty);
+        let parser = Parser::new(&owner.allocator, &owner.source, ty)
+          .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() });
         let ret = parser.parse_expression();
         match ret {
           Ok(expr) => {
@@ -116,7 +118,10 @@ impl EcmaCompiler {
     minify_options: MinifierOptions,
     codegen_options: CodegenOptions,
   ) -> (String, Option<SourceMap<'static>>) {
-    let mut program = Parser::new(allocator, source_text, source_type).parse().program;
+    let mut program = Parser::new(allocator, source_text, source_type)
+      .with_options(ParseOptions { preserve_parens: false, ..ParseOptions::default() })
+      .parse()
+      .program;
     let minifier = Minifier::new(minify_options);
     let ret = if compress {
       minifier.minify(allocator, &mut program)

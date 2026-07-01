@@ -1,0 +1,16 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/10048 — with `experimental.lazyBarrel` + `strictExecutionOrder`, a module (theming.js) that imports the esbuild interop helpers `__commonJS` / `__toESM` from a helper-only module (helpers.js) and calls them at the top level, while it also re-exports a passthrough (`themes`, which does NOT depend on the helpers) from another module (data.js). The entry uses only that passthrough. The lazy-barrel/strictExecutionOrder tree shaking keeps theming.js's body (so the helper calls survive) but drops helpers.js because `themes` doesn't need it, leaving `__commonJS(...)` / `__toESM(...)` called with no top-level binding -> `ReferenceError: __commonJS is not defined` at load. This is the unresolved `strictExecutionOrder` tree-shaking issue noted in #10071 (which is why lazyBarrel was turned off by default). Executing the compiled entry (via `_test.mjs`) must not throw.",
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      }
+    ],
+    "format": "esm",
+    "strictExecutionOrder": true,
+    "experimental": {
+      "wrappedModuleTreeshaking": true
+    }
+  }
+}

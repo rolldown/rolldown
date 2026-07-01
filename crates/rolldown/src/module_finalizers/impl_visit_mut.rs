@@ -9,7 +9,6 @@ use oxc::{
     match_member_expression,
   },
   ast_visit::{VisitMut, walk_mut},
-  semantic::ScopeFlags,
   span::{SPAN, Span},
 };
 use oxc_str::CompactStr;
@@ -143,18 +142,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       }
     });
 
-    self.enter_scope(
-      {
-        let mut flags = ScopeFlags::Top;
-        if program.source_type.is_strict() || program.has_use_strict_directive() {
-          flags |= ScopeFlags::StrictMode;
-        }
-        flags
-      },
-      &program.scope_id,
-    );
     walk_mut::walk_program(self, program);
-    self.leave_scope();
 
     // Insert keep_name statements for top-level declarations
     self.insert_keep_name_statements(&mut program.body);

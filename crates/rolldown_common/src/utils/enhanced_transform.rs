@@ -324,7 +324,11 @@ pub fn enhanced_transform(
 
   let allocator = Allocator::default();
   let parse_ret = Parser::new(&allocator, &source, source_type)
-    .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
+    .with_options(ParseOptions {
+      allow_return_outside_function: true,
+      preserve_parens: false,
+      ..Default::default()
+    })
     .parse();
   if parse_ret.panicked || !parse_ret.diagnostics.is_empty() {
     append_oxc_diagnostics(parse_ret.diagnostics, &source, filename, &mut warnings, &mut errors);

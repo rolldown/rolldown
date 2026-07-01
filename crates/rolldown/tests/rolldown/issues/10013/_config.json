@@ -1,0 +1,18 @@
+{
+  "_comment": "Regression test for https://github.com/rolldown/rolldown/issues/10013 — two entries both import the re-exported `other` from `leaf`. `other`'s canonical lives in `helper.js`, so it bypasses `leaf` entirely, and `leaf`'s own `value = first(second)` is never used. Without `wrappedModuleTreeshaking`, under `strictExecutionOrder` the shared chunk kept `leaf`'s dead `value = first(second)` inside its `__esmMin` wrapper but dropped the `import { first, second } from \"dep\"` declaration, leaving `first`/`second` as free external bindings (the bug). With `wrappedModuleTreeshaking`, the unused `sideEffects: false` `leaf` module is pruned entirely — the dead `first(second)` call and its `dep` import both disappear — so the shared chunk is just `helper.js` and no free identifiers remain. `dep` is external/unresolvable, so the output is not executed.",
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      { "name": "a", "import": "./entry-a.js" },
+      { "name": "b", "import": "./entry-b.js" }
+    ],
+    "external": ["dep"],
+    "strictExecutionOrder": true,
+    "experimental": {
+      "wrappedModuleTreeshaking": true
+    },
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  }
+}

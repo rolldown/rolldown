@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as other, r as __esmMin, t as init_helper } from "./helper.js";
+//#endregion
+__esmMin((() => {
+	init_helper();
+	console.log(other);
+}))();
+
+```
+
+## b.js
+
+```js
+import { n as other, r as __esmMin, t as init_helper } from "./helper.js";
+//#endregion
+__esmMin((() => {
+	init_helper();
+	console.log(other);
+}))();
+
+```
+
+## helper.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region helper.js
+var other;
+var init_helper = __esmMin((() => {
+	other = "other";
+}));
+//#endregion
+export { other as n, __esmMin as r, init_helper as t };
+
+```

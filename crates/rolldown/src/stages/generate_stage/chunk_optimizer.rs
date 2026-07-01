@@ -1020,6 +1020,7 @@ impl GenerateStage<'_> {
       module_namespace_included_reason: &mut module_namespace_reason_vec,
       inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
+      modules_used_via_own_binding: FxHashSet::default(),
     };
 
     let mut runtime_dependent_chunks = FxHashSet::default();

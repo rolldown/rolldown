@@ -78,6 +78,8 @@ pub struct IncludeContext<'a> {
   pub module_inclusion_changed: bool,
   pub module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
   pub json_module_none_self_reference_included_symbol: FxHashMap<ModuleIdx, FxHashSet<SymbolRef>>,
+  /// Modules reached through a genuine *non-facade* own binding (or as an entry root).
+  pub modules_used_via_own_binding: FxHashSet<ModuleIdx>,
 }
 
 impl<'a> IncludeContext<'a> {
@@ -114,6 +116,7 @@ impl<'a> IncludeContext<'a> {
       module_inclusion_changed: false,
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
+      modules_used_via_own_binding: FxHashSet::default(),
     }
   }
 }
@@ -253,6 +256,10 @@ impl LinkStage<'_> {
         .into_values()
         .flatten()
         .partition(|item| item.kind.is_user_defined());
+    // Entry modules are roots: their own side effects always run. Seed them into
+    // `modules_used_via_own_binding` so they are exempt from the `wrappedModuleTreeshaking` defer
+    // in `include_module` (issue #9806) even when they are themselves `sideEffects: false`.
+    context.modules_used_via_own_binding.extend(user_defined_entries.iter().map(|entry| entry.idx));
     user_defined_entries.iter().filter(|entry| entry.kind.is_user_defined()).for_each(|entry| {
       let module = match &self.module_table[entry.idx] {
         Module::Normal(module) => module,
@@ -717,6 +724,28 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
     return;
   }
 
+  // Under `wrappedModuleTreeshaking`, a `sideEffects: false` module that has only been reached
+  // through a re-export/interop facade (not a genuine own binding) is structurally included to
+  // resolve that facade, but running its own top-level side-effect statements would keep code that
+  // may reference lazyBarrel-dropped imports (issue #9806). `include_symbol` records the module in
+  // `modules_used_via_own_binding` *before* calling `include_module` once a real own binding is
+  // used, so genuinely-used modules never reach this early return and take the normal path.
+  //
+  // Applies to `WrapKind::None` and `WrapKind::Esm`, but NOT `WrapKind::Cjs`. An ESM module's
+  // statements are its top-level body whether hoisted (`None`) or wrapped in an `init_*` closure
+  // (`Esm`, e.g. under `strictExecutionOrder`); its genuinely-needed bindings (like an interop
+  // `import_x = __toESM(...)`) come in via symbol references, so deferring only the side-effect
+  // loop drops just the dead statements (e.g. `Foo.Bar;`). A CJS module is different: its closure
+  // body IS the value produced by `require_*()` (`module.exports = ...`, a side-effect statement),
+  // so deferring it would wrongly empty that closure.
+  if ctx.options.experimental.is_wrapped_module_treeshaking_enabled()
+    && matches!(module.side_effects, DeterminedSideEffects::UserDefined(false))
+    && matches!(ctx.metas[module.idx].wrap_kind(), WrapKind::None | WrapKind::Esm)
+    && !ctx.modules_used_via_own_binding.contains(&module.idx)
+  {
+    return;
+  }
+
   let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
   if ctx.tree_shaking && !forced_no_treeshake {
     ctx.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt().for_each(
@@ -865,6 +894,13 @@ pub fn include_symbol(
 
   ctx.used_symbol_refs.insert(canonical_ref);
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
+    // If the resolved canonical is a genuine (non-facade) own binding, this module is reached
+    // through its own binding. Re-export/interop facades (e.g. `__toESM(require(...))`) and the
+    // namespace object are facades, so referencing only those does not mark the module as used
+    // via its own binding (issue #9806).
+    if !ctx.symbols.is_facade_symbol(canonical_ref) {
+      ctx.modules_used_via_own_binding.insert(canonical_ref.owner);
+    }
     let wrapper_ref = {
       let meta = &ctx.metas[canonical_ref.owner];
       matches!(meta.wrap_kind(), WrapKind::Esm)

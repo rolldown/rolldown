@@ -1,0 +1,14 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/9806 — with experimental.lazyBarrel (default ON), a sideEffects:false barrel has an own derived statement `const Bar = Foo.Bar;` reading a property off a default-imported CJS submodule. The entry imports ONLY an unrelated re-export (`Other`), so lazyBarrel defers `./foo.cjs` (its exports aren't requested) and the `Foo` import record gets resolved_module=None. But `Foo.Bar` survives tree-shaking as a side-effectful property read, and the finalizer drops the unresolved import while the reading statement remains => `ReferenceError: Foo is not defined` at eval. Executes to assert the bundle runs (Other === 'other-value'); fails with the bug, passes once the loader stops deferring records referenced by retained barrel-own statements.",
+  "config": {
+    "external": ["node:assert"],
+    "experimental": {
+      "wrappedModuleTreeshaking": true
+    }
+  },
+  "configVariants": [
+    {
+      "strictExecutionOrder": true
+    }
+  ]
+}

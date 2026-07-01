@@ -1,0 +1,9 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/9964 — a pure-CJS `entry.cjs` requires the ESM consumer `story.js`, wrapping it (`WrapKind::Esm` via require(esm)). The consumer imports ONLY `objectKeys` (a local export of the barrel `lib/index.js`); the barrel `export *`s a SEPARATE `sideEffects:false` module `account.js` (derived initializers `eg.object(...)` reading the imported `eg`) whose exports are never used. Legacy: the wrap force-includes `account.js` while lazyBarrel drops its `./eg.js` import => `ReferenceError: eg is not defined`. `wrappedModuleTreeshaking` gives an unused `sideEffects:false` `export *` source no Ordering obligation, so `account.js` (and its only descendant `eg.js`) is pruned entirely — the bundle is just the consumed `objectKeys`. Executes (require interop) and asserts run() === 'ok'.",
+  "config": {
+    "input": [{ "name": "entry", "import": "./entry.cjs" }],
+    "experimental": {
+      "wrappedModuleTreeshaking": true
+    }
+  }
+}

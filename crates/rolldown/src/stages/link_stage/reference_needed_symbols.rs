@@ -235,30 +235,42 @@ impl LinkStage<'_> {
                         }
                       }
                       WrapKind::Esm => {
-                        // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
-                        stmt_info.side_effect =
-                          (is_reexport_all || importee.side_effects.has_side_effects()).into();
-                        // Obligation model: a side-effect-free importee imposes no ordering
+                        // Turn `import ... from 'bar_esm'` into `init_bar_esm()`.
+                        //
+                        // Obligation model: a side-effect-free importee imposes no *Ordering*
                         // obligation, so don't force-include it via its wrapper ref. The used
                         // binding's canonical owner is still initialized through the normal
                         // binding-use path (`include_symbol`, which canonical-resolves), and the
-                        // finalizer follows canonical owners when the importee ends up pruned.
-                        // Keep the eager ref for re-export-all, namespace imports (need the
-                        // importee's namespace object), and side-effectful importees.
-                        let importer_uses_star_from_record = importer
-                          .named_imports
-                          .values()
-                          .any(|ni| ni.record_idx == *rec_id && ni.imported.is_star());
-                        // A side-effect-free barrel that re-exports an *external* binding owns the
-                        // external import record itself, so pruning the barrel drops that import
-                        // while downstream uses remain. This is the #9961 shape, but the canonical
-                        // owner is the external module (not `WrapKind::Esm`), so the finalizer's
-                        // canonical-follow can't re-emit it (no `init_*` for an external) — the
-                        // reference silently falls back to an ambient global. Keep any barrel that
-                        // directly imports from an external. (Last `&&` term: short-circuits on the
-                        // env flag, so it costs nothing flag-off.)
+                        // finalizer re-creates `init_*()` at the statement position when the
+                        // importee ends up included (`generate_transitive_esm_init`).
+                        //
+                        // This applies uniformly to named re-exports AND `export *` (#9964): an
+                        // `export *` of a side-effect-free, statically-mappable star source (no
+                        // dynamic exports / TLA) whose namespace isn't observed carries no
+                        // Ordering / NamespaceInit obligation, so a fully-unused such source is
+                        // tree-shaken instead of force-included. Keep the eager ref for: real side
+                        // effects (Ordering); `import * as` of this record (namespace object);
+                        // namespace-tainted components; dynamic-export / TLA `export *`
+                        // (NamespaceInit must materialize eagerly); and barrels that re-export an
+                        // *external* binding — its canonical owner is external (not
+                        // `WrapKind::Esm`), so the finalizer can't re-emit it and the reference
+                        // would silently fall back to an ambient global. (`skip_wrapper_ref`
+                        // short-circuits on the env flag, so it costs nothing flag-off.)
+                        // `export *` registers an internal star import to bind the re-export, but
+                        // a *static* `export *` never materializes the importer's namespace object
+                        // — only a real `import * as ns` does (and that is also caught by the
+                        // namespace-taint guard below). Don't let the re-export's own internal star
+                        // block the skip, or the `export *` prune is defeated.
+                        let importer_uses_star_from_record = !is_reexport_all
+                          && importer
+                            .named_imports
+                            .values()
+                            .any(|ni| ni.record_idx == *rec_id && ni.imported.is_star());
+                        let reexport_all_has_namespace_obligation = is_reexport_all
+                          && (importee_linking_info.has_dynamic_exports
+                            || importee_linking_info.is_tla_or_contains_tla_dependency);
                         let skip_wrapper_ref = wrapped_module_treeshaking_enabled
-                          && !is_reexport_all
+                          && !reexport_all_has_namespace_obligation
                           && !importee.side_effects.has_side_effects()
                           && !importer_uses_star_from_record
                           && !namespace_tainted.as_ref().is_some_and(|t| t[importer_idx])
@@ -268,6 +280,12 @@ impl LinkStage<'_> {
                               .resolved_module
                               .is_some_and(|m| matches!(self.module_table[m], Module::External(_)))
                           });
+                        // `export *` is force-included (Ordering) unless we skip it above; a real
+                        // side effect always forces it. Flag-off ⇒ `skip_wrapper_ref` is false ⇒
+                        // this is byte-identical to `is_reexport_all || has_side_effects`.
+                        stmt_info.side_effect = ((is_reexport_all && !skip_wrapper_ref)
+                          || importee.side_effects.has_side_effects())
+                        .into();
                         // Reference to `init_foo`
                         if !skip_wrapper_ref {
                           stmt_info

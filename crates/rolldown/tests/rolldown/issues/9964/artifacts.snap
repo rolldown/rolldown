@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib/index.js
+var objectKeys;
+var init_lib = __esmMin((() => {
+	objectKeys = (o) => Object.keys(o);
+}));
+//#endregion
+//#region story.js
+var story_exports = /* @__PURE__ */ __exportAll({ run: () => run });
+var run;
+var init_story = __esmMin((() => {
+	init_lib();
+	run = () => objectKeys ? "ok" : "no";
+}));
+//#endregion
+//#region entry.cjs
+var require_entry = /* @__PURE__ */ __commonJSMin((() => {
+	const { run } = (init_story(), __toCommonJS(story_exports));
+	if (run() !== "ok") throw new Error("REPRO FAILED: run() returned " + run());
+}));
+//#endregion
+export default require_entry();
+
+```

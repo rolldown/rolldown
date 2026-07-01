@@ -44,6 +44,9 @@ impl GenerateStage<'_> {
     let mut index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
 
+    //used for facade chunk_id shared entry_module with entry_chunk
+    let mut facade_entry_map: FxHashMap<ChunkIdx, ChunkIdx> = FxHashMap::default();
+
     self.collect_depended_symbols(
       chunk_graph,
       &mut index_chunk_depended_symbols,
@@ -59,6 +62,7 @@ impl GenerateStage<'_> {
       &mut index_cross_chunk_imports,
       &mut index_imports_from_other_chunks,
       &mut index_chunk_indirect_imports_from_external_modules,
+      &mut facade_entry_map,
     );
     self.deconflict_exported_names(chunk_graph, &index_chunk_exported_symbols);
 
@@ -137,6 +141,127 @@ impl GenerateStage<'_> {
         chunk.import_symbol_from_external_modules = chunk_indirect_imports_from_external_modules;
       },
     );
+
+    self.remove_unnecessary_facade_imports(chunk_graph, &facade_entry_map);
+  }
+
+  fn remove_unnecessary_facade_imports(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    facade_entry_map: &FxHashMap<ChunkIdx, ChunkIdx>,
+  ) {
+    for (&facade_chunk_id, &entry_chunk_id) in facade_entry_map {
+      let entry_chunk = &chunk_graph.chunk_table[entry_chunk_id];
+
+      // Condition 1: Fast path - no entry-level external re-export
+      if entry_chunk.entry_level_external_module_idx.is_empty() {
+        continue;
+      }
+      // Condition 2: The entry module of the entry chunk must be ExportsKind::Esm
+      let Some(entry_module_idx) = entry_chunk.entry_module_idx() else {
+        continue;
+      };
+      let Some(entry_module) = self.link_output.module_table[entry_module_idx].as_normal() else {
+        continue;
+      };
+      if !matches!(entry_module.exports_kind, ExportsKind::Esm) {
+        continue;
+      }
+
+      let runtime_idx = self.link_output.runtime.id();
+      // Condition 3: All modules in the entry chunk (except runtime and entry_module) must be ESM format
+      // CJS modules mean runtime intervention, making it impossible to skip facade import
+      let all_esm =
+        entry_chunk.modules.iter().filter(|&&m| m != runtime_idx || m != entry_module_idx).all(
+          |&m| {
+            let module = &self.link_output.module_table[m];
+            match module {
+              Module::External(_) => true,
+              Module::Normal(normal) => {
+                matches!(normal.exports_kind, ExportsKind::Esm)
+              }
+            }
+          },
+        );
+
+      if !all_esm {
+        continue;
+      }
+
+      let filter_runtim_modules: Vec<&ModuleIdx> =
+        entry_chunk.modules.iter().filter(|&&m| m != runtime_idx).collect::<Vec<_>>();
+
+      if self.modules_are_all_external_reexport_only(
+        &filter_runtim_modules,
+        entry_chunk_id,
+        chunk_graph,
+      ) {
+        let facade_chunk = &mut chunk_graph.chunk_table[facade_chunk_id];
+        facade_chunk.imports_from_other_chunks.shift_remove(&entry_chunk_id);
+        facade_chunk.cross_chunk_imports.retain(|&idx| idx != entry_chunk_id);
+      }
+    }
+  }
+
+  fn modules_are_all_external_reexport_only(
+    &self,
+    modules: &[&ModuleIdx],
+    entry_chunk_id: ChunkIdx,
+    chunk_graph: &ChunkGraph,
+  ) -> bool {
+    fn check_module(
+      ctx: &GenerateStage,
+      module_idx: ModuleIdx,
+      chunk_idx: ChunkIdx,
+      chunk_graph: &ChunkGraph,
+      visited: &mut FxHashSet<ModuleIdx>,
+    ) -> bool {
+      if !visited.insert(module_idx) {
+        return true;
+      }
+      let Some(normal_module) = ctx.link_output.module_table[module_idx].as_normal() else {
+        return true;
+      };
+
+      let stmt_infos = &ctx.link_output.stmt_infos[module_idx];
+      let linking_info = &ctx.link_output.metas[module_idx];
+
+      if !linking_info.is_included {
+        return false;
+      }
+
+      stmt_infos.iter_enumerated_without_namespace_stmt().all(|(_, stmt_info)| {
+        if stmt_info.import_records.is_empty() {
+          return false;
+        }
+
+        stmt_info.import_records.iter().all(|&rec_idx| {
+          let record = &normal_module.import_records[rec_idx];
+
+          //  match  export * from 'external'
+          if record.meta.contains(ImportRecordMeta::IsExportStar)
+            && record.meta.contains(ImportRecordMeta::EntryLevelExternal)
+          {
+            return true;
+          }
+          //match  export * from 'normal'
+          if record.meta.contains(ImportRecordMeta::IsExportStar) {
+            if let Some(resolved) = record.resolved_module {
+              if chunk_graph.module_to_chunk[resolved] == Some(chunk_idx) {
+                return check_module(ctx, resolved, chunk_idx, chunk_graph, visited);
+              }
+            }
+          }
+
+          false
+        })
+      })
+    }
+    let mut visited: FxHashSet<ModuleIdx> = FxHashSet::default();
+
+    modules
+      .iter()
+      .all(|&module_idx| check_module(self, *module_idx, entry_chunk_id, chunk_graph, &mut visited))
   }
 
   /// - Assign each symbol to the chunk it belongs to
@@ -348,6 +473,7 @@ impl GenerateStage<'_> {
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
     index_chunk_indirect_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
+    facade_entry_map: &mut FxHashMap<ChunkIdx, ChunkIdx>,
   ) {
     // For each module that has been absorbed as a facade namespace, we need to know
     // which other modules dynamically import it so we can tell whether the absorbed
@@ -587,6 +713,7 @@ impl GenerateStage<'_> {
           // code would never execute.
           if let Some(entry_chunk_idx) = chunk_graph.module_to_chunk[*entry_module_idx] {
             if entry_chunk_idx != chunk_id {
+              facade_entry_map.insert(chunk_id, entry_chunk_idx);
               index_cross_chunk_imports[chunk_id].insert(entry_chunk_idx);
               let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
               imports_from_other_chunks.entry(entry_chunk_idx).or_default();

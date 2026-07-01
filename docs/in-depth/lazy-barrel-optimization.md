@@ -314,6 +314,10 @@ export default {
 };
 ```
 
+::: note
+[`treeshake.pureTopLevelCalls`](/reference/InputOptions.treeshake#puretoplevelcalls) can help remove unused top-level call initializers inside a module, but it does not mark the module itself as side-effect-free. Lazy barrel optimization still requires `moduleSideEffects: false` through one of the mechanisms above.
+:::
+
 ## When to use
 
 Lazy barrel optimization is particularly beneficial when:

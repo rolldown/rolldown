@@ -528,6 +528,7 @@ const TreeshakingOptionsSchema = v.strictObject({
   manualPureFunctions: v.optional(
     v.custom<readonly string[]>((input) => v.is(v.array(v.string()), input), 'string array'),
   ),
+  pureTopLevelCalls: v.optional(v.any()),
   unknownGlobalSideEffects: v.optional(v.boolean()),
   invalidImportSideEffects: v.optional(v.boolean()),
   commonjs: v.optional(v.boolean()),

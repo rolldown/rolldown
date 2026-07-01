@@ -120,6 +120,64 @@ const input = createComponent('input');
 
 This can be more convenient than adding `@__PURE__` to every call site when you know the function itself is always pure.
 
+### `treeshake.pureTopLevelCalls`
+
+Some libraries create many module-level constants by calling factory functions during module initialization:
+
+```js
+const Button = makeComponent('button');
+const Card = makeComponent('card');
+```
+
+Rolldown normally keeps these calls when it cannot prove they are side-effect-free. If you know that these initializer calls are safe to remove when their results are unused, you can enable [`treeshake.pureTopLevelCalls`](/reference/InputOptions.treeshake#puretoplevelcalls) for trusted modules.
+
+When enabled for a module, Rolldown treats call and `new` expressions as side-effect-free only when they are executed during module initialization and appear in assignment-like contexts:
+
+```js
+// Removed if Button is unused
+const Button = makeComponent('button');
+
+// Removed if Widget is unused
+const Widget = new Component('widget');
+
+// Nested argument calls are covered in the same initializer context
+const Route = defineRoute(loadData());
+
+// Not affected: standalone expression statements are still preserved
+registerGlobalHandler();
+```
+
+You should scope this option narrowly:
+
+```js [rolldown.config.js]
+export default {
+  treeshake: {
+    pureTopLevelCalls: /\/src\/generated\//,
+  },
+};
+```
+
+For more control, use rules. Rules are evaluated in order, and the first matching rule decides whether the behavior applies:
+
+```js [rolldown.config.js]
+export default {
+  treeshake: {
+    pureTopLevelCalls: [
+      { test: /\/src\/generated\//, pure: true },
+      { test: /\/src\/generated\/polyfills\//, pure: false },
+    ],
+  },
+};
+```
+
+:::: warning Use with care
+
+`treeshake.pureTopLevelCalls` can remove real side effects. Only enable it for code where top-level call/new initializers are intentionally side-effect-free.
+
+It is different from marking an entire module as side-effect-free with `moduleSideEffects: false`: modules can still execute and keep other top-level side effects. This option only changes how matching call/new initializer expressions are analyzed.
+
+::::
+
 ## Marking Entire Modules as Side-Effect-Free
 
 While you can mark individual expressions or functions, you can also mark entire modules as side-effect-free. If you mark a module as side-effect-free, Rolldown will treat every statement in that module as side-effect-free when none of its exports are used.

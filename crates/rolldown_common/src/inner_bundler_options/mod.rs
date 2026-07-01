@@ -340,6 +340,7 @@ where
         module_side_effects: types::treeshake::ModuleSideEffects::Boolean(true),
         annotations: Some(true),
         manual_pure_functions: None,
+        pure_top_level_calls: None,
         unknown_global_side_effects: None,
         commonjs: Some(true),
         property_read_side_effects: None,
@@ -400,6 +401,23 @@ where
           _ => Err(serde::de::Error::custom("manualPureFunctions should be a `Vec<String>`")),
         },
       )?;
+      let pure_top_level_calls = obj.get("pureTopLevelCalls").map_or_else(
+        || Ok(None),
+        |v| match v {
+          Value::Bool(value) => Ok(Some(types::treeshake::PureTopLevelCalls::Boolean(*value))),
+          Value::Array(v) => Ok(Some(types::treeshake::PureTopLevelCalls::Patterns(
+            v.iter()
+              .map(|item| {
+                item.as_str().expect("pureTopLevelCalls should be a `Vec<String>`").to_string()
+              })
+              .map(rolldown_utils::pattern_filter::StringOrRegex::String)
+              .collect::<Vec<_>>(),
+          ))),
+          _ => Err(serde::de::Error::custom(
+            "pureTopLevelCalls should be a `true`, `false`, or `Vec<String>`",
+          )),
+        },
+      )?;
       // Use string to make deserialization logic easier
       let property_read_side_effects = obj.get("propertyReadSideEffects").map_or_else(
         || Ok(None),
@@ -433,6 +451,7 @@ where
         module_side_effects,
         annotations,
         manual_pure_functions: Some(manual_pure_functions),
+        pure_top_level_calls,
         unknown_global_side_effects,
         commonjs,
         property_read_side_effects,

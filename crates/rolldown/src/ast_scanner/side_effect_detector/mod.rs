@@ -25,6 +25,26 @@ pub struct SideEffectDetector<'a> {
   namespace_object_symbol_ids: Option<&'a FxHashSet<SymbolId>>,
 }
 
+#[derive(Clone, Copy, Default)]
+struct ExprSideEffectContext {
+  assignment_context: bool,
+  in_callee: bool,
+}
+
+impl ExprSideEffectContext {
+  fn assignment_context(self) -> Self {
+    Self { assignment_context: true, ..self }
+  }
+
+  fn callee(self) -> Self {
+    Self { in_callee: true, ..self }
+  }
+
+  fn argument(self) -> Self {
+    Self { in_callee: false, ..self }
+  }
+}
+
 impl<'a> SideEffectDetector<'a> {
   pub fn new(
     scope: &'a AstScopes,
@@ -136,36 +156,46 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_call_expr(&self, expr: &CallExpression) -> SideEffectDetail {
+  fn detect_side_effect_of_call_expr(
+    &self,
+    expr: &CallExpression,
+    context: ExprSideEffectContext,
+  ) -> SideEffectDetail {
     let is_pure_annotated =
       !self.flat_options.ignore_annotations() && (expr.pure || self.is_call_expr_marked_pure(expr));
+    let is_pure_top_level_call =
+      self.flat_options.pure_top_level_calls() && context.assignment_context && !context.in_callee;
+    let is_pure_call = is_pure_annotated || is_pure_top_level_call;
 
     // For pure-annotated calls, the call itself is side-effect-free.
     // We must check args via Rolldown's detector (not Oxc's) because Rolldown
     // has bundler-specific overrides (e.g. import.meta.url is side-effect-free).
     // Oxc's pure-call handling would still check args via its own may_have_side_effects,
     // which doesn't know about these overrides.
-    let has_side_effect = if is_pure_annotated { false } else { expr.may_have_side_effects(self) };
+    let has_side_effect = if is_pure_call { false } else { expr.may_have_side_effects(self) };
 
     let is_global_call = !has_side_effect
       && matches!(&expr.callee, Expression::Identifier(id) if self.is_unresolved_reference(id));
 
     let mut detail = SideEffectDetail::from(has_side_effect);
-    detail.set(SideEffectDetail::PureAnnotation, is_pure_annotated);
+    detail.set(SideEffectDetail::PureAnnotation, is_pure_call);
     detail.set(SideEffectDetail::GlobalVarAccess, is_global_call);
 
     if !has_side_effect {
       // Strip the Unknown flag from callee since the call itself is known-pure/safe.
-      detail |= self.detect_side_effect_of_expr(&expr.callee) - SideEffectDetail::Unknown;
+      detail |= self.detect_side_effect_of_expr_with_context(&expr.callee, context.callee())
+        - SideEffectDetail::Unknown;
 
-      if is_pure_annotated {
+      if is_pure_call {
         // Pure-annotated calls bypass Oxc's arg checking, so we must check args
         // through Rolldown's detector which has bundler-specific overrides
         // (e.g. import.meta.url is side-effect-free).
         for arg in &expr.arguments {
           detail |= match arg {
             Argument::SpreadElement(_) => true.into(),
-            _ => self.detect_side_effect_of_expr(arg.to_expression()),
+            _ => {
+              self.detect_side_effect_of_expr_with_context(arg.to_expression(), context.argument())
+            }
           };
           if detail.has_side_effect() {
             break;
@@ -177,8 +207,9 @@ impl<'a> SideEffectDetector<'a> {
           if let Argument::SpreadElement(_) = arg {
             break;
           }
-          detail |=
-            self.detect_side_effect_of_expr(arg.to_expression()) - SideEffectDetail::Unknown;
+          detail |= self
+            .detect_side_effect_of_expr_with_context(arg.to_expression(), context.argument())
+            - SideEffectDetail::Unknown;
         }
       }
     }
@@ -195,6 +226,14 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_expr(&self, expr: &Expression) -> SideEffectDetail {
+    self.detect_side_effect_of_expr_with_context(expr, ExprSideEffectContext::default())
+  }
+
+  fn detect_side_effect_of_expr_with_context(
+    &self,
+    expr: &Expression,
+    context: ExprSideEffectContext,
+  ) -> SideEffectDetail {
     // Peel transparent wrappers (`(x)`, `x as T`, `x satisfies T`, `x!`, `<T>x`, `x<T>`)
     // — they add no runtime semantics, so we recurse into the inner expression.
     let expr = expr.get_inner_expression();
@@ -208,7 +247,20 @@ impl<'a> SideEffectDetector<'a> {
         // Bundler-specific: CJS `exports.foo = ...` must be checked before Oxc,
         // because Oxc would see a write to an unresolved global and return true.
         if let Some(pure_cjs) = check_pure_cjs_export(self.scope, &assign_expr.left) {
-          return pure_cjs | self.detect_side_effect_of_expr(&assign_expr.right);
+          return pure_cjs
+            | self.detect_side_effect_of_expr_with_context(
+              &assign_expr.right,
+              context.assignment_context(),
+            );
+        }
+        if self.flat_options.pure_top_level_calls()
+          && let AssignmentTarget::AssignmentTargetIdentifier(ident) = &assign_expr.left
+          && !self.is_unresolved_reference(ident)
+        {
+          return self.detect_side_effect_of_expr_with_context(
+            &assign_expr.right,
+            context.assignment_context(),
+          );
         }
         if assign_expr.may_have_side_effects(self) {
           return true.into();
@@ -218,9 +270,11 @@ impl<'a> SideEffectDetector<'a> {
       }
 
       Expression::ChainExpression(chain_expr) => match &chain_expr.expression {
-        ChainElement::CallExpression(call_expr) => self.detect_side_effect_of_call_expr(call_expr),
+        ChainElement::CallExpression(call_expr) => {
+          self.detect_side_effect_of_call_expr(call_expr, context)
+        }
         ChainElement::TSNonNullExpression(ts_expr) => {
-          self.detect_side_effect_of_expr(&ts_expr.expression)
+          self.detect_side_effect_of_expr_with_context(&ts_expr.expression, context)
         }
         match_member_expression!(ChainElement) => {
           self.detect_side_effect_of_member_expr(chain_expr.expression.to_member_expression())
@@ -234,31 +288,44 @@ impl<'a> SideEffectDetector<'a> {
         self.collect_write_target_metadata(&update_expr.argument)
       }
       Expression::NewExpression(expr) => {
-        let has_side_effect = expr.may_have_side_effects(self);
+        let is_pure_top_level_call = self.flat_options.pure_top_level_calls()
+          && context.assignment_context
+          && !context.in_callee;
+        let has_side_effect =
+          if is_pure_top_level_call { false } else { expr.may_have_side_effects(self) };
 
         // METADATA: GlobalVarAccess — constructor is a known global
         let is_global_constructor = !has_side_effect
           && matches!(&expr.callee, Expression::Identifier(id) if self.is_unresolved_reference(id));
         // METADATA: PureAnnotation — marked with /*@__PURE__*/
-        let is_pure_annotated = !self.flat_options.ignore_annotations() && expr.pure;
+        let is_pure_annotated =
+          (!self.flat_options.ignore_annotations() && expr.pure) || is_pure_top_level_call;
 
         let mut detail = SideEffectDetail::from(has_side_effect);
         detail.set(SideEffectDetail::GlobalVarAccess, is_global_constructor);
         detail.set(SideEffectDetail::PureAnnotation, is_pure_annotated);
 
         if !has_side_effect {
+          detail |= self.detect_side_effect_of_expr_with_context(&expr.callee, context.callee())
+            - SideEffectDetail::Unknown;
           // Oxc already verified args are side-effect-free; only collect metadata flags.
           for arg in &expr.arguments {
             if let Argument::SpreadElement(_) = arg {
+              detail |= true.into();
               break;
             }
-            detail |=
-              self.detect_side_effect_of_expr(arg.to_expression()) - SideEffectDetail::Unknown;
+            let arg_detail =
+              self.detect_side_effect_of_expr_with_context(arg.to_expression(), context.argument());
+            detail |= if is_pure_top_level_call {
+              arg_detail
+            } else {
+              arg_detail - SideEffectDetail::Unknown
+            };
           }
         }
         detail
       }
-      Expression::CallExpression(expr) => self.detect_side_effect_of_call_expr(expr),
+      Expression::CallExpression(expr) => self.detect_side_effect_of_call_expr(expr, context),
 
       // Transparent wrappers: oxc validates the boolean side-effect status,
       // we then recurse children to harvest metadata flags
@@ -281,6 +348,7 @@ impl<'a> SideEffectDetector<'a> {
             ast::ObjectPropertyKind::SpreadProperty(s) => [Some(&s.argument), None],
           })
           .flatten(),
+        context,
       ),
       Expression::ArrayExpression(arr) => self.fold_compound(
         expr,
@@ -289,15 +357,16 @@ impl<'a> SideEffectDetector<'a> {
           ast::ArrayExpressionElement::Elision(_) => None,
           e => Some(e.to_expression()),
         }),
+        context,
       ),
-      Expression::SequenceExpression(s) => self.fold_compound(expr, &s.expressions),
-      Expression::TemplateLiteral(t) => self.fold_compound(expr, &t.expressions),
+      Expression::SequenceExpression(s) => self.fold_compound(expr, &s.expressions, context),
+      Expression::TemplateLiteral(t) => self.fold_compound(expr, &t.expressions, context),
       Expression::ConditionalExpression(c) => {
-        self.fold_compound(expr, [&c.test, &c.consequent, &c.alternate])
+        self.fold_compound(expr, [&c.test, &c.consequent, &c.alternate], context)
       }
-      Expression::LogicalExpression(e) => self.fold_compound(expr, [&e.left, &e.right]),
-      Expression::BinaryExpression(e) => self.fold_compound(expr, [&e.left, &e.right]),
-      Expression::UnaryExpression(e) => self.fold_compound(expr, [&e.argument]),
+      Expression::LogicalExpression(e) => self.fold_compound(expr, [&e.left, &e.right], context),
+      Expression::BinaryExpression(e) => self.fold_compound(expr, [&e.left, &e.right], context),
+      Expression::UnaryExpression(e) => self.fold_compound(expr, [&e.argument], context),
 
       // Everything else: delegate entirely to Oxc.
       // Covers literals, function/arrow/class expressions (bodies not evaluated
@@ -322,18 +391,21 @@ impl<'a> SideEffectDetector<'a> {
     &self,
     expr: &Expression,
     children: impl IntoIterator<Item = &'e Expression<'e>>,
+    context: ExprSideEffectContext,
   ) -> SideEffectDetail {
-    if expr.may_have_side_effects(self) {
+    let use_custom_child_detection =
+      self.flat_options.pure_top_level_calls() && context.assignment_context;
+    if !use_custom_child_detection && expr.may_have_side_effects(self) {
       return true.into();
     }
     let mut detail = SideEffectDetail::empty();
     for child in children {
-      detail |= self.detect_side_effect_of_expr(child);
+      detail |= self.detect_side_effect_of_expr_with_context(child, context);
       if detail.has_side_effect() {
         break;
       }
     }
-    detail - SideEffectDetail::Unknown
+    if use_custom_child_detection { detail } else { detail - SideEffectDetail::Unknown }
   }
 
   fn detect_side_effect_of_var_decl(
@@ -362,7 +434,12 @@ impl<'a> SideEffectDetector<'a> {
             _ => declarator
               .init
               .as_ref()
-              .map(|init| self.detect_side_effect_of_expr(init))
+              .map(|init| {
+                self.detect_side_effect_of_expr_with_context(
+                  init,
+                  ExprSideEffectContext::default().assignment_context(),
+                )
+              })
               .unwrap_or(false.into()),
           };
         }
@@ -438,9 +515,11 @@ impl<'a> SideEffectDetector<'a> {
       ast::ModuleDeclaration::ExportDefaultDeclaration(default_decl) => {
         use oxc::ast::ast::ExportDefaultDeclarationKind;
         match &default_decl.declaration {
-          decl @ oxc::ast::match_expression!(ExportDefaultDeclarationKind) => {
-            self.detect_side_effect_of_expr(decl.to_expression())
-          }
+          decl @ oxc::ast::match_expression!(ExportDefaultDeclarationKind) => self
+            .detect_side_effect_of_expr_with_context(
+              decl.to_expression(),
+              ExprSideEffectContext::default().assignment_context(),
+            ),
           ast::ExportDefaultDeclarationKind::FunctionDeclaration(_) => false.into(),
           ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
             decl.may_have_side_effects(self).into()
@@ -655,6 +734,13 @@ mod test {
   use rolldown_common::FlatOptions;
 
   fn get_statements_side_effect(code: &str) -> bool {
+    get_statements_side_effect_with_pure_top_level_calls(code, false)
+  }
+
+  fn get_statements_side_effect_with_pure_top_level_calls(
+    code: &str,
+    pure_top_level_calls: bool,
+  ) -> bool {
     let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let semantic = EcmaAst::make_semantic(ast.program());
@@ -662,7 +748,8 @@ mod test {
     let ast_scopes = AstScopes::new(scoping);
 
     let options = Arc::new(NormalizedBundlerOptions::default());
-    let flags = FlatOptions::from_shared_options(&options);
+    let mut flags = FlatOptions::from_shared_options(&options);
+    flags.set(FlatOptions::PureTopLevelCalls, pure_top_level_calls);
     ast.program().body.iter().any(|stmt| {
       SideEffectDetector::new(&ast_scopes, flags, &options, None, None)
         .detect_side_effect_of_stmt(stmt)
@@ -688,6 +775,35 @@ mod test {
           .detect_side_effect_of_stmt(stmt)
       })
       .collect_vec()
+  }
+
+  #[test]
+  fn test_pure_top_level_calls() {
+    assert!(get_statements_side_effect("const a = fn()"));
+    assert!(!get_statements_side_effect_with_pure_top_level_calls("const a = fn()", true));
+
+    assert!(get_statements_side_effect("const a = fn(arg())"));
+    assert!(!get_statements_side_effect_with_pure_top_level_calls("const a = fn(arg())", true,));
+
+    assert!(get_statements_side_effect("fn(arg())"));
+    assert!(get_statements_side_effect_with_pure_top_level_calls("fn(arg())", true));
+
+    assert!(get_statements_side_effect_with_pure_top_level_calls(
+      "(() => console.log('side effect'))()",
+      true,
+    ));
+
+    assert!(get_statements_side_effect("export default fn(arg())"));
+    assert!(!get_statements_side_effect_with_pure_top_level_calls(
+      "export default fn(arg())",
+      true,
+    ));
+
+    assert!(get_statements_side_effect("const a = fn(arg1())(arg2())(arg3())"));
+    assert!(!get_statements_side_effect_with_pure_top_level_calls(
+      "const a = fn(arg1())(arg2())(arg3())",
+      true,
+    ));
   }
 
   #[test]

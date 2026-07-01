@@ -2,6 +2,7 @@ use std::{future::Future, ops::Deref, pin::Pin, sync::Arc};
 
 use derive_more::Debug;
 use rolldown_utils::js_regex::HybridRegex;
+use rolldown_utils::pattern_filter::StringOrRegex;
 use rustc_hash::FxHashSet;
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
@@ -98,6 +99,10 @@ impl NormalizedTreeshakeOptions {
   pub fn manual_pure_functions(&self) -> Option<&FxHashSet<String>> {
     self.as_ref().and_then(|item| item.manual_pure_functions.as_ref())
   }
+
+  pub fn pure_top_level_calls(&self) -> Option<&PureTopLevelCalls> {
+    self.as_ref().and_then(|item| item.pure_top_level_calls.as_ref())
+  }
 }
 
 impl Default for TreeshakeOptions {
@@ -119,6 +124,26 @@ pub enum ModuleSideEffects {
   Function(Arc<ModuleSideEffectsFn>),
 }
 
+#[derive(Clone, Debug)]
+pub enum PureTopLevelCalls {
+  #[debug("Rules({_0:?})")]
+  Rules(Vec<PureTopLevelCallsRule>),
+  #[debug("Boolean({_0})")]
+  Boolean(bool),
+  #[debug("Patterns({_0:?})")]
+  Patterns(Vec<StringOrRegex>),
+  #[debug("Function")]
+  Function(Arc<PureTopLevelCallsFn>),
+}
+
+type PureTopLevelCallsFn = dyn Fn(
+    &str, // id
+    bool, // external
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static>>
+  + Send
+  + Sync
+  + 'static;
+
 type ModuleSideEffectsFn = dyn Fn(
     &str, // id
     bool, // external
@@ -132,6 +157,13 @@ pub struct ModuleSideEffectsRule {
   pub test: Option<HybridRegex>,
   pub external: Option<bool>,
   pub side_effects: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct PureTopLevelCallsRule {
+  pub test: Option<HybridRegex>,
+  pub external: Option<bool>,
+  pub pure: bool,
 }
 
 impl ModuleSideEffects {
@@ -177,6 +209,45 @@ impl ModuleSideEffects {
   }
 }
 
+impl PureTopLevelCalls {
+  pub fn is_fn(&self) -> bool {
+    matches!(self, PureTopLevelCalls::Function(_))
+  }
+
+  pub fn native_resolve(&self, path: &str, is_external: bool) -> Option<bool> {
+    match self {
+      PureTopLevelCalls::Rules(rules) => {
+        for PureTopLevelCallsRule { test, external, pure } in rules {
+          let is_match_rule = match (test, external) {
+            (Some(test), Some(external)) => test.matches(path) && *external == is_external,
+            (None, Some(external)) => *external == is_external,
+            (Some(test), None) => test.matches(path),
+            // At least one of `test` or `external` should be defined.
+            (None, None) => unreachable!(),
+          };
+          if is_match_rule {
+            return Some(*pure);
+          }
+        }
+        None
+      }
+      PureTopLevelCalls::Boolean(value) => Some(*value),
+      PureTopLevelCalls::Patterns(patterns) => Some(patterns.iter().any(|pattern| match pattern {
+        StringOrRegex::String(value) => value == path,
+        StringOrRegex::Regex(value) => value.matches(path),
+      })),
+      PureTopLevelCalls::Function(_) => unreachable!(),
+    }
+  }
+
+  pub async fn ffi_resolve(&self, path: &str, is_external: bool) -> anyhow::Result<Option<bool>> {
+    match self {
+      PureTopLevelCalls::Function(f) => Ok(f(path, is_external).await?),
+      _ => unreachable!(),
+    }
+  }
+}
+
 impl TreeshakeOptions {
   pub fn enabled(&self) -> bool {
     matches!(self, TreeshakeOptions::Option(_))
@@ -206,6 +277,8 @@ pub struct InnerOptions {
   pub module_side_effects: ModuleSideEffects,
   pub annotations: Option<bool>,
   pub manual_pure_functions: Option<FxHashSet<String>>,
+  #[cfg_attr(feature = "deserialize_bundler_options", serde(skip), schemars(skip))]
+  pub pure_top_level_calls: Option<PureTopLevelCalls>,
   pub unknown_global_side_effects: Option<bool>,
   pub commonjs: Option<bool>,
   pub property_read_side_effects: Option<PropertyReadSideEffects>,
@@ -219,6 +292,7 @@ impl Default for InnerOptions {
       module_side_effects: ModuleSideEffects::Boolean(true),
       annotations: Some(true),
       manual_pure_functions: None,
+      pure_top_level_calls: None,
       unknown_global_side_effects: None,
       commonjs: None,
       property_read_side_effects: None,
@@ -259,5 +333,47 @@ impl From<&NormalizedTreeshakeOptions> for oxc::minifier::TreeShakeOptions {
       unknown_global_side_effects: value.unknown_global_side_effects(),
       invalid_import_side_effects: value.invalid_import_side_effects(),
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn pure_top_level_calls_patterns_match_module_ids() {
+    let config = PureTopLevelCalls::Patterns(vec![
+      StringOrRegex::String("/project/src/index.js".to_string()),
+      StringOrRegex::Regex(HybridRegex::new(r"/generated/").unwrap()),
+    ]);
+
+    assert_eq!(config.native_resolve("/project/src/index.js", false), Some(true));
+    assert_eq!(config.native_resolve("/project/src/generated/schema.js", false), Some(true));
+    assert_eq!(config.native_resolve("/project/src/other.js", false), Some(false));
+  }
+
+  #[test]
+  fn pure_top_level_calls_rules_match_in_order() {
+    let config = PureTopLevelCalls::Rules(vec![
+      PureTopLevelCallsRule {
+        test: Some(HybridRegex::new(r"/generated/unsafe/").unwrap()),
+        external: None,
+        pure: false,
+      },
+      PureTopLevelCallsRule {
+        test: Some(HybridRegex::new(r"/generated/").unwrap()),
+        external: Some(false),
+        pure: true,
+      },
+      PureTopLevelCallsRule { test: None, external: Some(true), pure: false },
+    ]);
+
+    assert_eq!(config.native_resolve("/project/src/generated/schema.js", false), Some(true));
+    assert_eq!(
+      config.native_resolve("/project/src/generated/unsafe/polyfill.js", false),
+      Some(false)
+    );
+    assert_eq!(config.native_resolve("external-package", true), Some(false));
+    assert_eq!(config.native_resolve("/project/src/other.js", false), None);
   }
 }

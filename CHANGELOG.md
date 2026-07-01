@@ -1,4 +1,99 @@
 
+## [1.1.4] - 2026-07-01
+
+### 🚀 Features
+
+- disable `experimental.lazyBarrel` by default (#10071) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- dev: disable lazy barrel in dev mode (#10060) by @shulaoda
+- generate: keep full JSON interface under preserveModules namespa… (#10056) by @IWANABETHATGUY
+- check finalize_other_specifiers in its own Debug attribute (#10032) by @shulaoda
+- serialize the KeepAssign unused minify option as "keep_assign" (#10031) by @shulaoda
+- keep fragments after the newline fragment in MagicString::last_line (#10023) by @shulaoda
+- generate: undeclared JSON named exports under preserveModules (#10020) (#10027) by @IWANABETHATGUY
+- deconflict: rename CJS-wrapped locals that shadow chunk-root bindings (#9921) by @IWANABETHATGUY
+- rolldown: keep entry facade when a shared chunk holds another entry's module (#9997) by @hyf0
+- treeshake: also bail JSON default split when the object escapes (#9996) by @IWANABETHATGUY
+- don't classify await in a strict-mode function as top-level await (#9987) by @shulaoda
+- avoid spurious leading newline in addon hooks (banner/footer/intro/outro) (#9989) by @shulaoda
+- handle JSON default mutation bailouts (#9972) by @TheAlexLichter
+- plugin: make lazy hook metadata enumerable (#9991) by @TheAlexLichter
+- dev: make init errors in lazy-compiled modules catchable (#9981) by @h-a-n-a
+- treeshake: keep computed-key side effects on namespace member access (#9986) by @shulaoda
+- binding: validate replace plugin delimiters length instead of panicking (#9984) by @shulaoda
+- reconstruct nested rest patterns in into_expression (#9980) by @IWANABETHATGUY
+- reconstruct rest patterns as spread in into_expression (#9976) by @shulaoda
+- preserve export keyword on multi-declarator exports under keepNames (#9974) by @shulaoda
+- deterministically keep the shortest name for deduplicated assets (#9948) by @x1024
+- treeshake: apply @__NO_SIDE_EFFECTS__ to cross-chunk namespace calls (#9960) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- drop redundant program scope enter/leave in finalizer (#10049) by @shulaoda
+- deconflict: extract collect_chunk_scope_captured_names (#10006) by @IWANABETHATGUY
+- unify pre-scan multi-declarator split into one decision site (#9982) by @IWANABETHATGUY
+- common: return bool from SymbolRef::is_not_reassigned (#9962) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- rolldown: remove outdated comment for removing parenthesized expression (#10062) by @Dunqing
+- use GitHub-flavored alert for Etiquette note in contribution guide (#10012) by @IWANABETHATGUY
+- replace: explain the delimiters left and right boundaries (#9985) by @shulaoda
+- ast-mutation: remove stale Address Use section after pre-scan refactor (#9983) by @IWANABETHATGUY
+- remove fathom (#9968) by @mdong1909
+- contribution-guide: code-format main branch references (#9966) by @IWANABETHATGUY
+- contribution-guide: fix stale REPL note and tidy wording (#9957) by @hyf0
+- contribution-guide: clarify when to discuss before opening a PR (#9955) by @hyf0
+
+### ⚡ Performance
+
+- disable preserve_parens across all parse paths (#10057) by @Dunqing
+- common: inline declared_symbols with SmallVec (#9920) by @IWANABETHATGUY
+- common: pack TaggedSymbolRef into 8 bytes (#9919) by @IWANABETHATGUY
+- sourcemap: skip newline scan on the no-sourcemap join fast path (#9936) by @Boshen
+
+### 🧪 Testing
+
+- dev: error in lazy module should be catchable (#9975) by @sapphi-red
+- dev: reject unknown lazy compile modules (#9969) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update actions/cache action to v6 (#10001) by @renovate[bot]
+- trigger vite ecosystem-ci from PR comments (#10058) by @shulaoda
+- deps: update napi to v3.10.0 (#10063) by @renovate[bot]
+- remove unused From impl for RolldownLabelSpan (#10055) by @shulaoda
+- remove dead Diagnostic::with_kind method (#10054) by @shulaoda
+- remove unused StatementExt methods (#10053) by @shulaoda
+- remove unused ExpressionExt methods (#10052) by @shulaoda
+- remove commented-out re_export_all_names field (#10051) by @shulaoda
+- deps: update pnpm to v11.9.0 (#10047) by @renovate[bot]
+- remove the unused BindingGenerateHmrPatchReturn napi type (#10034) by @shulaoda
+- remove the dead inline_entry_chunk_wrapping scaffolding (#10037) by @shulaoda
+- deps: bump oxc_resolver to 11.22.0 (#10045) by @Boshen
+- remove never-constructed MatchImportKind::_Ignore variant (#10041) by @shulaoda
+- remove the unused ScheduledBuild napi struct (#10033) by @shulaoda
+- remove dead compute_hmr_update_single method (#10040) by @shulaoda
+- drop the redundant visited.insert in manual code splitting (#10038) by @shulaoda
+- remove the dead output_assets vector in render_chunk_to_assets (#10036) by @shulaoda
+- remove the unused From<String>/Display impls for BindingLogLevel (#10035) by @shulaoda
+- deps: upgrade oxc to 0.138.0 and migrate to per-type AST construction (#10018) by @shulaoda
+- deps: update rust crates (#9911) by @renovate[bot]
+- deps: update test262 submodule for tests (#10016) by @rolldown-guard[bot]
+- deps: update github actions (#9999) by @renovate[bot]
+- deps: update npm packages (#10000) by @renovate[bot]
+
+### ◀️ Revert
+
+- "fix(plugin): make lazy hook metadata enumerable (#9991)" (#10005) by @shulaoda
+
+### ❤️ New Contributors
+
+* @x1024 made their first contribution in [#9948](https://github.com/rolldown/rolldown/pull/9948)
+
+
 ## [1.1.3] - 2026-06-24
 
 ### 🐛 Bug Fixes

@@ -9,7 +9,7 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolRef, WrapKind,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolRef, UsedSymbolRefs, WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -28,7 +28,11 @@ type IndexImportsFromOtherChunks =
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn compute_cross_chunk_links(&mut self, chunk_graph: &mut ChunkGraph) {
+  pub fn compute_cross_chunk_links(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+    used_symbol_refs: &UsedSymbolRefs,
+  ) {
     let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
       index_vec![FxIndexSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
@@ -59,8 +63,9 @@ impl GenerateStage<'_> {
       &mut index_cross_chunk_imports,
       &mut index_imports_from_other_chunks,
       &mut index_chunk_indirect_imports_from_external_modules,
+      used_symbol_refs,
     );
-    self.deconflict_exported_names(chunk_graph, &index_chunk_exported_symbols);
+    self.deconflict_exported_names(chunk_graph, &index_chunk_exported_symbols, used_symbol_refs);
 
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
       .par_iter_enumerated()
@@ -348,6 +353,7 @@ impl GenerateStage<'_> {
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
     index_chunk_indirect_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
+    used_symbol_refs: &UsedSymbolRefs,
   ) {
     // For each module that has been absorbed as a facade namespace, we need to know
     // which other modules dynamically import it so we can tell whether the absorbed
@@ -525,11 +531,19 @@ impl GenerateStage<'_> {
 
         let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
         for import_ref in chunk_meta_imports.iter().copied() {
-          // Depended symbols are over-collected; this drops refs the inclusion fixpoint
-          // never marked live: constants that get inlined (never inserted — constants kept
-          // as bindings, e.g. entry exports, stay in the set), namespace objects the
-          // generate stage eliminated, and dead collected refs.
-          if !self.link_output.used_symbol_refs.contains(&import_ref) {
+          // Depended symbols are over-collected; drop refs that are not live. A normal
+          // module's namespace ref answers to the namespace decision; everything else to
+          // the inclusion fixpoint (whose dead refs here are constants that got inlined —
+          // constants kept as bindings, e.g. entry exports, stay live — and over-collected
+          // refs).
+          let is_live = if let Some(m) = self.link_output.module_table[import_ref.owner].as_normal()
+            && m.namespace_object_ref == import_ref
+          {
+            self.link_output.metas[import_ref.owner].namespace_included
+          } else {
+            used_symbol_refs.contains(&import_ref)
+          };
+          if !is_live {
             continue;
           }
           // If the symbol from external module and the format is commonjs, we might need to insert runtime
@@ -677,6 +691,7 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &mut ChunkGraph,
     index_chunk_exported_symbols: &IndexChunkExportedSymbols,
+    used_symbol_refs: &UsedSymbolRefs,
   ) {
     let is_preserve_modules_enabled = self.options.preserve_modules;
     let allow_to_minify_internal_exports =
@@ -777,10 +792,16 @@ impl GenerateStage<'_> {
           )
         })
       {
-        // Same filter as the cross-chunk import loop above: exported-symbol candidates
-        // include inlined constants, eliminated namespace objects (dynamic entries register
-        // their namespace refs here), and refs the inclusion fixpoint left dead.
-        if !self.link_output.used_symbol_refs.contains(chunk_export) {
+        // Same liveness rule as the cross-chunk import loop above (dynamic entries
+        // register their namespace refs among the exported-symbol candidates).
+        let is_live = if let Some(m) = self.link_output.module_table[chunk_export.owner].as_normal()
+          && m.namespace_object_ref == *chunk_export
+        {
+          self.link_output.metas[chunk_export.owner].namespace_included
+        } else {
+          used_symbol_refs.contains(chunk_export)
+        };
+        if !is_live {
           continue;
         }
         let original_name: CompactStr = match predefined_names.as_slice() {

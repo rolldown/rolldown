@@ -7,7 +7,7 @@ use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
   ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, EntryPointKind, FlatOptions, ImportKind,
   ModuleIdx, ModuleTable, PreserveEntrySignatures, RetainedExportSymbols, RuntimeModuleBrief,
-  SymbolRef, SymbolRefDb, UsedExternalSymbols, UsedSymbolRefs,
+  SymbolRef, SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
@@ -69,7 +69,6 @@ pub struct LinkStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
-  pub used_symbol_refs: UsedSymbolRefs,
   pub used_external_symbols: UsedExternalSymbols,
   /// See [`RetainedExportSymbols`]; empty until the generate stage projects it.
   pub retained_export_symbols: RetainedExportSymbols,
@@ -111,7 +110,7 @@ pub struct LinkStage<'a> {
   pub errors: Vec<BuildDiagnostic>,
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
-  pub used_symbol_refs: UsedSymbolRefs,
+  pub used_symbol_refs: UsedSymbolRefsBuilder,
   pub used_external_symbols: UsedExternalSymbols,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
@@ -215,7 +214,7 @@ impl<'a> LinkStage<'a> {
       ast_table: scan_stage_output.index_ecma_ast,
       dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
-      used_symbol_refs: UsedSymbolRefs::default(),
+      used_symbol_refs: UsedSymbolRefsBuilder::default(),
       used_external_symbols: UsedExternalSymbols::default(),
       safely_merge_cjs_ns_map: FxHashMap::default(),
       normal_symbol_exports_chain_map: FxHashMap::default(),
@@ -232,7 +231,7 @@ impl<'a> LinkStage<'a> {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst) {
+  pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
     self.sort_modules();
     self.compute_tla();
     self.determine_module_exports_kind();
@@ -260,7 +259,6 @@ impl<'a> LinkStage<'a> {
         runtime: self.runtime,
         warnings: self.warnings,
         errors: self.errors,
-        used_symbol_refs: self.used_symbol_refs,
         used_external_symbols: self.used_external_symbols,
         retained_export_symbols: RetainedExportSymbols::default(),
         dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
@@ -274,6 +272,7 @@ impl<'a> LinkStage<'a> {
         has_enum_inlining: self.has_enum_inlining,
       },
       self.ast_table,
+      self.used_symbol_refs,
     )
   }
 

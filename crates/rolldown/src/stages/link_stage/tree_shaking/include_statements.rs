@@ -93,6 +93,10 @@ pub struct IncludeContext<'a> {
   /// [`side_effects_included_on_demand`]). Entries are drained by
   /// [`include_symbol`] as their key becomes used.
   pub on_demand_side_effect_stmts: &'a mut FxHashMap<SymbolRef, Vec<(ModuleIdx, StmtInfoIdx)>>,
+  /// Work queue of the inclusion engine (see [`drain_work_items`]). Edge producers push typed
+  /// work items here instead of recursing; the public `include_*` entry points drain it to
+  /// empty before returning. Always empty between engine invocations.
+  pub pending: Vec<WorkItem>,
 }
 
 impl<'a> IncludeContext<'a> {
@@ -135,6 +139,36 @@ impl<'a> IncludeContext<'a> {
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
       entry_module_idxs,
       on_demand_side_effect_stmts,
+      pending: Vec::new(),
+    }
+  }
+}
+
+/// A unit of inclusion work. Edge producers push these instead of recursing, which keeps the
+/// engine iterative (no stack-depth limit on deep graphs) and makes the traversal a visible
+/// queue rather than an implicit call stack.
+#[derive(Debug, Clone, Copy)]
+pub enum WorkItem {
+  /// Structurally include a module: sweep its side-effect statements and evaluate its
+  /// side-effectful dependencies.
+  Module(ModuleIdx),
+  /// A symbol became used: retain its declaration, wrapper, and owner module.
+  Symbol(SymbolRef, SymbolIncludeReason),
+  /// Include one statement and follow everything it references.
+  Statement(ModuleIdx, StmtInfoIdx),
+}
+
+/// Drain the work queue to empty. LIFO order mirrors the depth-first shape of the recursion this
+/// engine replaced; the final inclusion sets are a monotone closure over the pushed edges, so
+/// drain order affects only traversal order, never the result.
+fn drain_work_items(ctx: &mut IncludeContext) {
+  while let Some(item) = ctx.pending.pop() {
+    match item {
+      WorkItem::Module(module_idx) => handle_include_module(ctx, module_idx),
+      WorkItem::Symbol(symbol_ref, reason) => handle_include_symbol(ctx, symbol_ref, reason),
+      WorkItem::Statement(module_idx, stmt_info_idx) => {
+        handle_include_statement(ctx, module_idx, stmt_info_idx);
+      }
     }
   }
 }
@@ -149,7 +183,19 @@ pub(super) fn include_symbol_and_check_cjs_bailout(
   symbol_ref: SymbolRef,
   include_reason: SymbolIncludeReason,
 ) {
-  include_symbol(ctx, symbol_ref, include_reason);
+  push_symbol_and_check_cjs_bailout(ctx, symbol_ref, include_reason);
+  drain_work_items(ctx);
+}
+
+/// Engine-internal variant of [`include_symbol_and_check_cjs_bailout`]: enqueues the symbol and
+/// runs the (order-independent) bailout check immediately, without draining. Handlers and edge
+/// producers must use this — only the public entry points drain.
+fn push_symbol_and_check_cjs_bailout(
+  ctx: &mut IncludeContext,
+  symbol_ref: SymbolRef,
+  include_reason: SymbolIncludeReason,
+) {
+  ctx.pending.push(WorkItem::Symbol(symbol_ref, include_reason));
   check_cjs_bailout(ctx, symbol_ref);
 }
 
@@ -422,20 +468,28 @@ impl LinkStage<'_> {
   }
 }
 
-/// Include every statement that declares `symbol_ref` in its owner module (no-op for external
+/// Enqueue every statement that declares `symbol_ref` in its owner module (no-op for external
 /// owners). This is the "a used binding keeps its declaration" edge, applied at every reference
 /// site.
 pub(super) fn include_declaring_statements(ctx: &mut IncludeContext, symbol_ref: &SymbolRef) {
-  if let Module::Normal(module) = &ctx.modules[symbol_ref.owner] {
+  if let Module::Normal(_) = &ctx.modules[symbol_ref.owner] {
     ctx.stmt_infos[symbol_ref.owner].declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
       |stmt_info_id| {
-        include_statement(ctx, module, stmt_info_id);
+        ctx.pending.push(WorkItem::Statement(symbol_ref.owner, stmt_info_id));
       },
     );
   }
 }
 
 pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
+  ctx.pending.push(WorkItem::Module(module.idx));
+  drain_work_items(ctx);
+}
+
+fn handle_include_module(ctx: &mut IncludeContext, module_idx: ModuleIdx) {
+  let Module::Normal(module) = &ctx.modules[module_idx] else {
+    return;
+  };
   if !ctx.is_module_included_vec.set_bit(module.idx) {
     return;
   }
@@ -458,12 +512,12 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
   if module.meta.has_eval() && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
     // `eval` can observe any module-level binding, so every import must survive.
     module.named_imports.keys().for_each(|symbol| {
-      include_symbol_and_check_cjs_bailout(ctx, *symbol, SymbolIncludeReason::Normal);
+      push_symbol_and_check_cjs_bailout(ctx, *symbol, SymbolIncludeReason::Normal);
     });
   }
 
   ctx.metas[module.idx].included_commonjs_export_symbol.iter().for_each(|symbol_ref| {
-    include_symbol_and_check_cjs_bailout(ctx, *symbol_ref, SymbolIncludeReason::Normal);
+    push_symbol_and_check_cjs_bailout(ctx, *symbol_ref, SymbolIncludeReason::Normal);
   });
 
   // With enabling HMR, rolldown will register included esm module's namespace object to the runtime.
@@ -471,7 +525,7 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
     && module.idx != ctx.runtime_idx
     && matches!(module.exports_kind, ExportsKind::Esm)
   {
-    include_statement(ctx, module, StmtInfos::NAMESPACE_STMT_IDX);
+    ctx.pending.push(WorkItem::Statement(module.idx, StmtInfos::NAMESPACE_STMT_IDX));
     ctx.module_namespace_included_reason[module.idx].insert(ModuleNamespaceIncludedReason::Unknown);
   }
 }
@@ -501,7 +555,7 @@ fn sweep_side_effect_statements(ctx: &mut IncludeContext, module: &NormalModule)
       if (has_side_effects && !(on_demand_side_effects && is_gated_side_effect_stmt(stmt_info)))
         || bail_eval
       {
-        include_statement(ctx, module, stmt_info_id);
+        ctx.pending.push(WorkItem::Statement(module.idx, stmt_info_id));
       }
     },
   );
@@ -518,10 +572,10 @@ fn include_statements_without_treeshaking(ctx: &mut IncludeContext, module: &Nor
         if stmt_info.eval_flags.has_side_effect_for_tree_shaking() {
           // If `force_tree_shaking` is true, the statement should be included either by itself having side effects
           // or by other statements referencing it.
-          include_statement(ctx, module, stmt_info_id);
+          ctx.pending.push(WorkItem::Statement(module.idx, stmt_info_id));
         }
       } else {
-        include_statement(ctx, module, stmt_info_id);
+        ctx.pending.push(WorkItem::Statement(module.idx, stmt_info_id));
       }
     },
   );
@@ -542,7 +596,7 @@ fn include_side_effectful_dependencies(ctx: &mut IncludeContext, module: &Normal
     match &ctx.modules[dependency_idx] {
       Module::Normal(importee) => {
         if !ctx.tree_shaking || importee.side_effects.has_side_effects() {
-          include_module(ctx, importee);
+          ctx.pending.push(WorkItem::Module(importee.idx));
         }
       }
       Module::External(_) => {}
@@ -556,6 +610,15 @@ fn include_side_effectful_dependencies(ctx: &mut IncludeContext, module: &Normal
 }
 
 pub fn include_symbol(
+  ctx: &mut IncludeContext,
+  symbol_ref: SymbolRef,
+  include_reason: SymbolIncludeReason,
+) {
+  ctx.pending.push(WorkItem::Symbol(symbol_ref, include_reason));
+  drain_work_items(ctx);
+}
+
+fn handle_include_symbol(
   ctx: &mut IncludeContext,
   symbol_ref: SymbolRef,
   include_reason: SymbolIncludeReason,
@@ -591,7 +654,7 @@ pub fn include_symbol(
     note_json_self_reference(ctx, module, canonical_ref, include_reason);
     include_declaring_statements(ctx, &canonical_ref);
     if !is_simulated_facade_chunk {
-      include_module(ctx, module);
+      ctx.pending.push(WorkItem::Module(module.idx));
     }
   }
 
@@ -629,8 +692,8 @@ fn is_bypassed_inlined_constant(
 fn drain_body_demand_stmts(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
   if let Some(stmts) = ctx.on_demand_side_effect_stmts.remove(&canonical_ref) {
     for (module_idx, stmt_info_idx) in stmts {
-      if let Module::Normal(module) = &ctx.modules[module_idx] {
-        include_statement(ctx, module, stmt_info_idx);
+      if let Module::Normal(_) = &ctx.modules[module_idx] {
+        ctx.pending.push(WorkItem::Statement(module_idx, stmt_info_idx));
       }
     }
   }
@@ -659,7 +722,7 @@ fn follow_cjs_namespace_alias(ctx: &mut IncludeContext, canonical_ref: &mut Symb
           return;
         };
         if namespace_alias.property_name.as_str() != "default" {
-          include_symbol(ctx, export_symbol.symbol_ref, SymbolIncludeReason::Normal);
+          ctx.pending.push(WorkItem::Symbol(export_symbol.symbol_ref, SymbolIncludeReason::Normal));
         }
       });
     }
@@ -702,7 +765,7 @@ fn demand_esm_init_wrapper(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
       .filter(|wrapper_ref| *wrapper_ref != canonical_ref)
   };
   if let Some(wrapper_ref) = wrapper_ref {
-    include_symbol(ctx, wrapper_ref, SymbolIncludeReason::Normal);
+    ctx.pending.push(WorkItem::Symbol(wrapper_ref, SymbolIncludeReason::Normal));
   }
 }
 
@@ -732,19 +795,16 @@ fn include_property_write_referencing_stmts(ctx: &mut IncludeContext, symbol_ref
     ctx.options.treeshake.property_write_side_effects(),
     rolldown_common::PropertyWriteSideEffects::False
   ) {
-    ctx.modules[symbol_ref.owner].as_normal().inspect(|module| {
-      ctx.stmt_infos[symbol_ref.owner]
-        .symbol_ref_to_referenced_stmt_idx()
-        .get(&symbol_ref)
-        .as_ref()
-        .map(|item| item.as_slice())
-        .unwrap_or(&[])
-        .iter()
-        .copied()
-        .for_each(|stmt_info_id| {
-          include_statement(ctx, module, stmt_info_id);
-        });
-    });
+    let stmt_ids: &[StmtInfoIdx] = ctx.stmt_infos[symbol_ref.owner]
+      .symbol_ref_to_referenced_stmt_idx()
+      .get(&symbol_ref)
+      .map(Vec::as_slice)
+      .unwrap_or(&[]);
+    if ctx.modules[symbol_ref.owner].as_normal().is_some() {
+      for stmt_info_id in stmt_ids.iter().copied() {
+        ctx.pending.push(WorkItem::Statement(symbol_ref.owner, stmt_info_id));
+      }
+    }
   }
 }
 
@@ -753,6 +813,18 @@ pub fn include_statement(
   module: &NormalModule,
   stmt_info_idx: StmtInfoIdx,
 ) {
+  ctx.pending.push(WorkItem::Statement(module.idx, stmt_info_idx));
+  drain_work_items(ctx);
+}
+
+fn handle_include_statement(
+  ctx: &mut IncludeContext,
+  module_idx: ModuleIdx,
+  stmt_info_idx: StmtInfoIdx,
+) {
+  let Module::Normal(module) = &ctx.modules[module_idx] else {
+    return;
+  };
   // include the statement itself
   if !ctx.is_included_vec[module.idx].set_bit(stmt_info_idx) {
     return;
@@ -787,7 +859,7 @@ pub fn include_statement(
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
           include_declaring_statements(ctx, sym_ref);
         });
-        include_symbol(ctx, resolved_ref, include_kind);
+        ctx.pending.push(WorkItem::Symbol(resolved_ref, include_kind));
         // When the member expression resolves to a specific CJS export property
         // (e.g., `ns.x`), we skip the bailout check — we know the access is partial
         // and CJS tree-shaking can work. Otherwise, the full namespace may be used
@@ -815,7 +887,7 @@ pub fn include_statement(
         .for_each(|sym_ref| {
           include_declaring_statements(ctx, sym_ref);
         });
-      include_symbol_and_check_cjs_bailout(ctx, *original_ref, include_kind);
+      push_symbol_and_check_cjs_bailout(ctx, *original_ref, include_kind);
     }
   });
 }

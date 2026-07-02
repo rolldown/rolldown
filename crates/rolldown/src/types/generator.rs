@@ -2,7 +2,7 @@ use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, OutputExports,
-  PathsOutputOption, SymbolRef,
+  PathsOutputOption, SymbolRef, UsedSymbolRefs,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
@@ -16,6 +16,8 @@ pub struct GenerateContext<'a> {
   pub chunk: &'a Chunk,
   pub options: &'a NormalizedBundlerOptions,
   pub link_output: &'a LinkStageOutput,
+  /// Sealed record of inclusion-fixpoint liveness; see [`UsedSymbolRefs`].
+  pub used_symbol_refs: &'a UsedSymbolRefs,
   pub chunk_graph: &'a ChunkGraph,
   pub plugin_driver: &'a SharedPluginDriver,
   pub module_id_to_codegen_ret: Vec<Option<ModuleRenderOutput>>,

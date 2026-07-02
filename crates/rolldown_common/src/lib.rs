@@ -219,7 +219,7 @@ pub use crate::{
     GetLocalDb, GetLocalDbMut, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags,
   },
   types::used_external_symbols::UsedExternalSymbols,
-  types::used_symbol_refs::UsedSymbolRefs,
+  types::used_symbol_refs::{UsedSymbolRefs, UsedSymbolRefsBuilder},
   types::watch::WatcherChangeKind,
   types::wrap_kind::WrapKind,
 };

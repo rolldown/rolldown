@@ -10,8 +10,8 @@ use rolldown_common::{
   ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
   RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, StmtEvalFlags,
   StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  UsedExternalSymbols, UsedSymbolRefs, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
-  side_effects::DeterminedSideEffects,
+  UsedExternalSymbols, UsedSymbolRefsBuilder, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -66,7 +66,7 @@ pub struct IncludeContext<'a> {
   pub inline_const_smart: bool,
   pub runtime_idx: ModuleIdx,
   pub metas: &'a LinkingMetadataVec,
-  pub used_symbol_refs: &'a mut UsedSymbolRefs,
+  pub used_symbol_refs: &'a mut UsedSymbolRefsBuilder,
   pub used_external_symbols: &'a mut UsedExternalSymbols,
   pub constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
   pub options: &'a NormalizedBundlerOptions,
@@ -100,7 +100,7 @@ impl<'a> IncludeContext<'a> {
     is_module_included_vec: &'a mut ModuleInclusionVec,
     runtime_idx: ModuleIdx,
     metas: &'a LinkingMetadataVec,
-    used_symbol_refs: &'a mut UsedSymbolRefs,
+    used_symbol_refs: &'a mut UsedSymbolRefsBuilder,
     used_external_symbols: &'a mut UsedExternalSymbols,
     constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
     options: &'a NormalizedBundlerOptions,
@@ -357,7 +357,7 @@ impl LinkStage<'_> {
         m.as_normal().map_or(IndexBitSet::default(), |_| IndexBitSet::new(stmt_infos.len()))
       })
       .collect::<IndexVec<ModuleIdx, _>>();
-    let mut used_symbol_refs = UsedSymbolRefs::default();
+    let mut used_symbol_refs = UsedSymbolRefsBuilder::default();
     let mut used_external_symbols = UsedExternalSymbols::default();
     let mut is_module_included_vec: ModuleInclusionVec =
       IndexBitSet::new(self.module_table.modules.len());

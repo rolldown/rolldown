@@ -59,6 +59,7 @@ pub mod str_or_bytes;
 pub mod symbol_or_member_expr_ref;
 pub mod symbol_ref;
 pub mod symbol_ref_db;
+pub mod used_external_symbols;
 pub mod used_symbol_refs;
 pub mod watch;
 pub mod wrap_kind;

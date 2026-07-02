@@ -456,7 +456,7 @@ impl GenerateStage<'_> {
                 && let Some(none_self_referenced) =
                   normal_module.json_module_none_self_reference_included_symbol.as_deref()
                 && !normal_module.exports_kind.is_commonjs()
-                && !self.link_output.used_symbol_refs.contains(&normal_module.namespace_object_ref)
+                && !self.link_output.metas[module_idx].namespace_included
                 && !none_self_referenced
                   .contains(&self.link_output.symbol_db.canonical_ref_for(symbol))
               {

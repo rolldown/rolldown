@@ -560,10 +560,15 @@ impl GenerateStage<'_> {
         } else {
           false
         };
-        Some((m.namespace_object_ref, is_namespace_referenced))
+        Some((module_idx, m.namespace_object_ref, is_namespace_referenced))
       })
       .collect_vec();
-    for (namespace_ref, flag) in to_eliminate {
+    for (module_idx, namespace_ref, flag) in to_eliminate {
+      self.link_output.metas[module_idx].namespace_included = flag;
+      // Mirror the decision into `used_symbol_refs` because generic symbol-usage queries can
+      // receive a namespace ref (e.g. a `resolved_export.symbol_ref` produced by
+      // `export * as ns from '...'`). Dedicated namespace readers consult
+      // `meta.namespace_included` instead of the set.
       if flag {
         self.link_output.used_symbol_refs.insert(namespace_ref);
       } else {

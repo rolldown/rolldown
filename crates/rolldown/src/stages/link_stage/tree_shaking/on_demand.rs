@@ -2,8 +2,8 @@
 //! side-effect-free modules. See [`side_effects_included_on_demand`] for the model.
 
 use rolldown_common::{
-  ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, StmtInfo, StmtInfoIdx, SymbolRef,
-  SymbolRefDb, side_effects::DeterminedSideEffects,
+  ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, StmtInfo, SymbolRef, SymbolRefDb,
+  side_effects::DeterminedSideEffects,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -28,7 +28,7 @@ use crate::{stages::link_stage::LinkStage, type_alias::IndexStmtInfos};
 ///
 /// Instead such statements join when the module's *body* is demanded: one of
 /// its own (non-re-export) exports or its namespace object becomes used (via
-/// `on_demand_side_effect_stmts`) — e.g. `foo.bar = 1` stays once `foo` is
+/// `body_demand_keys`) — e.g. `foo.bar = 1` stays once `foo` is
 /// demanded, `#7597`'s top-level asserts stay because the entry imports the
 /// module's own `Modal`. This mirrors the lazy-barrel loader exactly: body
 /// demand is its `has_local_export`/`All` case, in which it loads every plain
@@ -56,21 +56,27 @@ pub(super) fn side_effects_included_on_demand(
 
 /// Build the demand edges for modules whose side-effectful statements are
 /// included on demand (see [`side_effects_included_on_demand`]): body-demand
-/// key -> the module's gated side-effect statements.
+/// key -> the module whose gated side-effect statements it demands.
 ///
 /// A module's body counts as demanded when one of its *own* exports (an export
 /// that doesn't re-export an import) or its namespace object becomes used —
 /// mirroring the lazy-barrel loader's `local` classification, which loads every
 /// plain import record of the module exactly in those cases. Demand through
 /// pure re-exports leaves the body dropped.
-pub fn compute_on_demand_side_effect_stmts(
+///
+/// The gated statements themselves are enumerated at demand time (they are a pure
+/// function of the immutable `stmt_infos`); this map only answers "whose body does
+/// using this symbol demand?". Every key's canonical is owned by the module itself
+/// (own exports and namespace refs never link across modules), so the map is
+/// one-to-one per module.
+pub fn compute_body_demand_keys(
   modules: &IndexModules,
   stmt_infos: &IndexStmtInfos,
   symbols: &SymbolRefDb,
   treeshake_enabled: bool,
   entry_module_idxs: &FxHashSet<ModuleIdx>,
-) -> FxHashMap<SymbolRef, Vec<(ModuleIdx, StmtInfoIdx)>> {
-  let mut map: FxHashMap<SymbolRef, Vec<(ModuleIdx, StmtInfoIdx)>> = FxHashMap::default();
+) -> FxHashMap<SymbolRef, ModuleIdx> {
+  let mut map: FxHashMap<SymbolRef, ModuleIdx> = FxHashMap::default();
   if !treeshake_enabled {
     return map;
   }
@@ -78,12 +84,10 @@ pub fn compute_on_demand_side_effect_stmts(
     if !side_effects_included_on_demand(module, entry_module_idxs) {
       continue;
     }
-    let gated: Vec<(ModuleIdx, StmtInfoIdx)> = stmt_infos[module.idx]
+    let has_gated_stmts = stmt_infos[module.idx]
       .iter_enumerated_without_namespace_stmt()
-      .filter(|(_, stmt_info)| is_gated_side_effect_stmt(stmt_info))
-      .map(|(stmt_idx, _)| (module.idx, stmt_idx))
-      .collect();
-    if gated.is_empty() {
+      .any(|(_, stmt_info)| is_gated_side_effect_stmt(stmt_info));
+    if !has_gated_stmts {
       continue;
     }
     let body_demand_keys = module
@@ -93,7 +97,11 @@ pub fn compute_on_demand_side_effect_stmts(
       .map(|local_export| symbols.canonical_ref_for(local_export.referenced))
       .chain(std::iter::once(module.namespace_object_ref));
     for key in body_demand_keys {
-      map.entry(key).or_default().extend(gated.iter().copied());
+      let previous = map.insert(key, module.idx);
+      debug_assert!(
+        previous.is_none_or(|prev| prev == module.idx),
+        "a body-demand key must belong to exactly one module"
+      );
     }
   }
   map

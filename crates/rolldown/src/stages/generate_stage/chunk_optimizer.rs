@@ -1056,6 +1056,7 @@ impl GenerateStage<'_> {
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
       entry_module_idxs: &self.link_output.user_defined_entry_modules,
       on_demand_side_effect_stmts: &mut on_demand_side_effect_stmts,
+      pending: Vec::new(),
     };
 
     let mut runtime_dependent_chunks = FxHashSet::default();

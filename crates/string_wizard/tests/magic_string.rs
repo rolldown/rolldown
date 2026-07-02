@@ -323,6 +323,16 @@ mod indent {
   }
 
   #[test]
+  fn excludes_edited_chunks_by_their_own_start() {
+    // Two adjacent edited chunks; only the first is excluded.
+    let mut s = MagicString::new("AB");
+    s.overwrite(0, 1, "x\n");
+    s.overwrite(1, 2, "y\n");
+    s.indent_with(IndentOptions { indentor: Some("  "), exclude: &[(0, 1)] });
+    assert_eq!(s.to_string(), "x\n  y\n");
+  }
+
+  #[test]
   fn should_not_add_characters_to_empty_lines() {
     // should indent content using the empty string if specified (i.e. noop)
     let mut s = MagicString::new("\n\nabc\ndef\n\nghi\njkl");

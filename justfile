@@ -106,34 +106,22 @@ test-vite: # We don't use `test-node-vite` because it's not expected to run in `
 # Run the scheduler unit tests plus the node suite on both flavors of the
 # shared async runtime. Requires `just build-rolldown-async-runtime` first.
 #
-# The single-thread (`ROLLDOWN_RUNTIME=single`) lane runs under an EXTERNAL
-# watchdog: when the CurrentThread executor's block_on-over-JS hazard fires
-# (a `block_on` that transitively awaits a JS continuation deadlocks the
-# thread it parks — see rolldown_utils::async_runtime), the whole JS event
-# loop freezes, so vitest's own test timeouts can never fire. Without the
-# watchdog a hazard regression would hang CI until the job-level timeout.
-# GNU `timeout` is guaranteed on ubuntu runners (coreutils); on macOS it may
-# be absent or spelled `gtimeout` (brew coreutils), so local runs fall back
-# to no watchdog instead of failing the recipe.
+# The single-thread (`ROLLDOWN_RUNTIME=single`) lane arms the runtime's OWN
+# deadlock detection instead of the old external GNU-timeout watchdog: when
+# the CurrentThread executor's block_on-over-JS hazard fires (a `block_on`
+# that transitively awaits a JS continuation deadlocks the thread it parks),
+# the whole JS event loop freezes, so vitest's own test timeouts can never
+# fire. `ROLLDOWN_PARK_DEADLINE_MS` bounds every runtime-owned park (with
+# progress-based reset, so a legitimately busy build never trips it) and
+# panics with the typed `BlockOnDeadlock` diagnostic naming the offending
+# park — the lane fails fast and loud instead of hanging until a job-level
+# timeout. See rolldown_utils::async_runtime::BlockOnDeadlock.
 [unix]
 test-async-runtime:
   #!/usr/bin/env bash
   set -euo pipefail
   cargo test -p rolldown_utils --features async-runtime
-  watchdog=""
-  if command -v timeout >/dev/null 2>&1; then
-    watchdog="timeout --kill-after=60 1200"
-  elif command -v gtimeout >/dev/null 2>&1; then
-    watchdog="gtimeout --kill-after=60 1200"
-  else
-    echo "warning: GNU timeout not found; running the single-thread lane without a hazard watchdog" >&2
-  fi
-  status=0
-  ROLLDOWN_RUNTIME=single $watchdog vp run --filter rolldown-tests test:main || status=$?
-  if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
-    echo "error: single-thread lane killed by the 20min watchdog — this is the signature of the block_on-over-JS hazard (frozen JS event loop; vitest timeouts cannot fire). Look for a new block_on site that awaits a JS callback on the CurrentThread flavor." >&2
-  fi
-  [ "$status" -eq 0 ] || exit "$status"
+  ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:main
   vp run --filter rolldown-tests test:main
 
 # --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.

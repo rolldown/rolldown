@@ -10,9 +10,10 @@ use std::{
   pin::Pin,
   sync::{
     Arc, LazyLock, Mutex,
-    atomic::{AtomicBool, AtomicU64, Ordering},
+    atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
   },
   task::{Context, Poll},
+  time::{Duration, Instant},
 };
 
 use async_task::{Runnable, Task};
@@ -22,8 +23,6 @@ use futures::FutureExt;
 use futures::channel::oneshot;
 #[cfg(not(target_family = "wasm"))]
 use rayon::{ThreadPool, ThreadPoolBuilder};
-#[cfg(not(target_family = "wasm"))]
-use std::sync::atomic::AtomicUsize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuntimeFlavor {
@@ -37,6 +36,17 @@ pub struct RuntimeOptions {
   pub worker_threads: usize,
   pub max_blocking_tasks: usize,
   pub thread_name_prefix: String,
+  /// Deadline-based `block_on` deadlock detection (wake-path §6(d)): bounds
+  /// how long a runtime-owned park (the CurrentThread `block_on` parker and
+  /// MultiThread COOPERATIVE driver parks -- never the foreign/napi
+  /// whole-build park, see §8.5) may sleep with ZERO runtime progress before
+  /// panicking with the typed [`BlockOnDeadlock`] diagnostic. `None` (the
+  /// default) disables deadline detection unless the
+  /// [`PARK_DEADLINE_ENV`] environment variable is set at executor
+  /// construction: a legitimately long park (e.g. awaiting a slow JS plugin)
+  /// must never panic a production build. The threadless-wasm CERTAIN
+  /// deadlock check is independent of this knob and always on.
+  pub park_deadline: Option<Duration>,
 }
 
 impl Default for RuntimeOptions {
@@ -51,6 +61,7 @@ impl Default for RuntimeOptions {
       worker_threads,
       max_blocking_tasks: worker_threads,
       thread_name_prefix: "rolldown-runtime".to_string(),
+      park_deadline: None,
     }
   }
 }
@@ -77,6 +88,38 @@ impl RuntimeOptions {
   }
 }
 
+/// Environment variable that arms deadline-based `block_on` deadlock
+/// detection: milliseconds a runtime-owned park may sleep with zero runtime
+/// progress before panicking (see [`RuntimeOptions::park_deadline`], which
+/// takes precedence when set). Missing, non-numeric or `0` all mean
+/// "disabled".
+pub const PARK_DEADLINE_ENV: &str = "ROLLDOWN_PARK_DEADLINE_MS";
+
+/// Parse a raw [`PARK_DEADLINE_ENV`] value; unusable values (unset,
+/// non-numeric, `0`) disable deadline detection rather than erroring, the
+/// same treatment `env_config::resolve_thread_count` gives the thread-count
+/// variables.
+fn parse_park_deadline(raw: Option<String>) -> Option<Duration> {
+  let millis = raw?.parse::<u64>().ok().filter(|&millis| millis != 0)?;
+  Some(Duration::from_millis(millis))
+}
+
+/// Read [`PARK_DEADLINE_ENV`] at executor construction (wake-path §6(d)); an
+/// explicit `RuntimeOptions::park_deadline` takes precedence over it.
+fn park_deadline_from_env() -> Option<Duration> {
+  parse_park_deadline(std::env::var(PARK_DEADLINE_ENV).ok())
+}
+
+/// True on builds where no second thread can EVER deliver a wake to a parked
+/// `block_on`: wasm without the `atomics` target feature (the single-thread
+/// `wasm32-wasip1` build and `wasm32-unknown-unknown`). On such a build a
+/// CurrentThread park decision with an empty queue and no pending wake token
+/// is a PROVABLE deadlock (R2). The threaded wasi build
+/// (`wasm32-wasip1-threads`) has real OS threads, so its parks are not
+/// provably dead and fall under the optional deadline detection instead, like
+/// native builds.
+const THREADLESS_BUILD: bool = cfg!(all(target_family = "wasm", not(target_feature = "atomics")));
+
 #[derive(Debug, Clone)]
 pub struct RuntimeConfigError(String);
 
@@ -88,6 +131,96 @@ impl fmt::Display for RuntimeConfigError {
 
 impl std::error::Error for RuntimeConfigError {}
 
+/// Which self-detected `block_on` deadlock class fired (wake-path §6(d)).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BlockOnDeadlockKind {
+  /// CurrentThread on a threadless build: the park decision found an empty
+  /// queue and no pending wake token, and no other thread exists that could
+  /// ever deliver one -- a PROVABLE deadlock, detected unconditionally (not
+  /// timing-based).
+  CurrentThreadCertain,
+  /// Threaded CurrentThread: a `block_on` park outlived the configured
+  /// deadline with zero runtime progress.
+  CurrentThreadDeadline,
+  /// MultiThread: a cooperative pool driver's re-entrant `block_on` park
+  /// outlived the configured deadline with zero executor progress. The
+  /// foreign/napi whole-build park is exempt by design (§8.5).
+  MultiThreadCooperativeDeadline,
+}
+
+/// Typed panic payload for a self-detected `block_on` deadlock. Thrown with
+/// `std::panic::panic_any` at the park DECISION (never merely on a `Pending`
+/// return -- a self-waking future is not a deadlock, intel §8.6), so the
+/// runtime fails loudly instead of freezing the thread (and, in the
+/// CurrentThread-on-JS-thread case, the whole JS event loop, where not even
+/// test-harness timeouts can fire). When the panic unwinds out of a spawned
+/// task's poll, `JoinError::from_panic` preserves this diagnostic's message.
+#[derive(Debug, Clone)]
+pub struct BlockOnDeadlock {
+  pub kind: BlockOnDeadlockKind,
+  /// The armed deadline for the deadline-based kinds; `None` for the provable
+  /// threadless case.
+  pub park_deadline: Option<Duration>,
+}
+
+impl BlockOnDeadlock {
+  fn current_thread_certain() -> Self {
+    Self { kind: BlockOnDeadlockKind::CurrentThreadCertain, park_deadline: None }
+  }
+
+  fn current_thread_deadline(deadline: Duration) -> Self {
+    Self { kind: BlockOnDeadlockKind::CurrentThreadDeadline, park_deadline: Some(deadline) }
+  }
+
+  // The MultiThread executor (and thus this constructor's caller) does not
+  // exist on wasm builds.
+  #[cfg(not(target_family = "wasm"))]
+  fn multi_thread_cooperative(deadline: Duration) -> Self {
+    Self {
+      kind: BlockOnDeadlockKind::MultiThreadCooperativeDeadline,
+      park_deadline: Some(deadline),
+    }
+  }
+}
+
+impl fmt::Display for BlockOnDeadlock {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    let deadline_ms = self.park_deadline.map_or(0, |deadline| deadline.as_millis());
+    match self.kind {
+      BlockOnDeadlockKind::CurrentThreadCertain => f.write_str(
+        "provable async-runtime deadlock: `block_on` on the CurrentThread flavor is about to \
+         park with an empty task queue and no pending wake on a threadless build -- no other \
+         thread exists that could ever deliver the wake, so this park would never end. This is \
+         the block_on-awaiting-JS hazard: native code called `block_on` on a future that \
+         (transitively) awaits a JS continuation (e.g. a threadsafe-function callback, like the \
+         dynamic-import-vars plugin's `resolver`), but the only thread that could run that \
+         continuation is the one now parking.",
+      ),
+      BlockOnDeadlockKind::CurrentThreadDeadline => write!(
+        f,
+        "suspected async-runtime deadlock: `block_on` on the CurrentThread flavor parked for \
+         {deadline_ms}ms ({PARK_DEADLINE_ENV} / RuntimeOptions::park_deadline) with an empty \
+         task queue, no pending wake and ZERO runtime progress across the whole window. This is \
+         the signature of the block_on-awaiting-JS hazard: a `block_on` on the JS thread \
+         awaiting a JS continuation (e.g. a threadsafe-function callback) that can only run \
+         once this thread returns to the event loop. If this park is legitimate, raise or unset \
+         the deadline.",
+      ),
+      BlockOnDeadlockKind::MultiThreadCooperativeDeadline => write!(
+        f,
+        "suspected async-runtime deadlock: a cooperative pool driver's re-entrant `block_on` \
+         parked for {deadline_ms}ms ({PARK_DEADLINE_ENV} / RuntimeOptions::park_deadline) with \
+         no runnable or blocking work available and ZERO executor progress across the whole \
+         window -- the awaited future's wake (often a JS continuation) can no longer arrive. \
+         The foreign-thread whole-build `block_on` park is exempt from this deadline by design. \
+         If this park is legitimate, raise or unset the deadline.",
+      ),
+    }
+  }
+}
+
+impl std::error::Error for BlockOnDeadlock {}
+
 #[derive(Debug)]
 pub struct JoinError {
   message: String,
@@ -96,7 +229,12 @@ pub struct JoinError {
 impl JoinError {
   fn from_panic(panic: &(dyn Any + Send + 'static)) -> Self {
     Self {
-      message: if let Some(message) = panic.downcast_ref::<&str>() {
+      // The typed deadlock diagnostic first: a deadline firing inside a
+      // spawned task's poll unwinds into the spawn wrapper's catch_unwind and
+      // surfaces here -- the diagnostic text must survive the trip.
+      message: if let Some(deadlock) = panic.downcast_ref::<BlockOnDeadlock>() {
+        deadlock.to_string()
+      } else if let Some(message) = panic.downcast_ref::<&str>() {
         (*message).to_string()
       } else if let Some(message) = panic.downcast_ref::<String>() {
         message.clone()
@@ -186,6 +324,13 @@ struct RuntimeMetrics {
   max_queued_runnables: AtomicU64,
   active_runnables: AtomicU64,
   max_active_runnables: AtomicU64,
+  // Bumped at ENQUEUE time (before the queue push), the blocking-side twin of
+  // `runnable_schedules`. Internal-only (not exported in the public snapshot):
+  // it exists so the deadlock detector's progress fingerprint can observe a
+  // blocking submission the moment it is made -- `blocking_tasks_started`
+  // only advances once a worker RUNS the job, which may be arbitrarily later
+  // (Codex round-2 finding).
+  blocking_tasks_scheduled: AtomicU64,
   blocking_tasks_started: AtomicU64,
   blocking_tasks_completed: AtomicU64,
   active_blocking_tasks: AtomicU64,
@@ -207,11 +352,38 @@ impl RuntimeMetrics {
     ActiveRunnableGuard { metrics: self }
   }
 
+  /// Enqueue-time twin of [`Self::runnable_scheduled`] for blocking work:
+  /// called BEFORE the blocking-queue push, so the deadlock detector's
+  /// fingerprint sees a submission even when no worker has started the job
+  /// yet (Codex round-2).
+  fn blocking_scheduled(&self) {
+    self.blocking_tasks_scheduled.fetch_add(1, Ordering::Relaxed);
+  }
+
   fn blocking_started(self: &Arc<Self>) -> ActiveBlockingGuard {
     self.blocking_tasks_started.fetch_add(1, Ordering::Relaxed);
     let active = self.active_blocking_tasks.fetch_add(1, Ordering::Relaxed) + 1;
     self.max_active_blocking_tasks.fetch_max(active, Ordering::Relaxed);
     ActiveBlockingGuard { metrics: Arc::clone(self) }
+  }
+
+  /// Coarse liveness fingerprint for deadline-based deadlock detection (wake
+  /// -path §8.5): any of these counters advancing between two reads means the
+  /// runtime did SOMETHING (scheduled or polled a runnable, completed a task,
+  /// scheduled, started or finished a blocking job), so a parked driver
+  /// observing an advance re-arms its deadline instead of firing. Both ENQUEUE
+  /// counters (`runnable_schedules`, `blocking_tasks_scheduled`) are included
+  /// so a submission is progress the moment it is made -- not only once a
+  /// worker gets to run it (Codex round-2).
+  fn progress_fingerprint(&self) -> ProgressFingerprint {
+    ProgressFingerprint {
+      runnable_schedules: self.runnable_schedules.load(Ordering::Relaxed),
+      runnable_polls: self.runnable_polls.load(Ordering::Relaxed),
+      tasks_completed: self.tasks_completed.load(Ordering::Relaxed),
+      blocking_tasks_scheduled: self.blocking_tasks_scheduled.load(Ordering::Relaxed),
+      blocking_tasks_started: self.blocking_tasks_started.load(Ordering::Relaxed),
+      blocking_tasks_completed: self.blocking_tasks_completed.load(Ordering::Relaxed),
+    }
   }
 
   fn reset(&self) {
@@ -222,6 +394,7 @@ impl RuntimeMetrics {
     self.runnable_polls.store(0, Ordering::Relaxed);
     self.queued_runnables.store(0, Ordering::Relaxed);
     self.max_queued_runnables.store(0, Ordering::Relaxed);
+    self.blocking_tasks_scheduled.store(0, Ordering::Relaxed);
     self.active_runnables.store(0, Ordering::Relaxed);
     self.max_active_runnables.store(0, Ordering::Relaxed);
     self.blocking_tasks_started.store(0, Ordering::Relaxed);
@@ -229,6 +402,17 @@ impl RuntimeMetrics {
     self.active_blocking_tasks.store(0, Ordering::Relaxed);
     self.max_active_blocking_tasks.store(0, Ordering::Relaxed);
   }
+}
+
+/// See [`RuntimeMetrics::progress_fingerprint`].
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct ProgressFingerprint {
+  runnable_schedules: u64,
+  runnable_polls: u64,
+  tasks_completed: u64,
+  blocking_tasks_scheduled: u64,
+  blocking_tasks_started: u64,
+  blocking_tasks_completed: u64,
 }
 
 struct ActiveRunnableGuard<'a> {
@@ -261,11 +445,43 @@ struct CurrentThreadExecutor {
   queue: Mutex<VecDeque<Runnable>>,
   draining: AtomicBool,
   metrics: Arc<RuntimeMetrics>,
+  // Deadlock detection (wake-path §6(d)). `threadless`: no second thread can
+  // EVER deliver a wake to a parked `block_on`, so a park decision with an
+  // empty queue and no pending wake token is a PROVABLE deadlock (panic
+  // immediately, no timing involved). `park_deadline`: on threaded builds,
+  // the optional bound for a park with zero runtime progress -- off unless
+  // configured, because a legitimately long park must never panic a
+  // production build.
+  threadless: bool,
+  park_deadline: Option<Duration>,
 }
 
 impl CurrentThreadExecutor {
+  /// Build-default construction, kept for the pre-existing unit tests
+  /// (production goes through [`Self::with_detection`] in
+  /// `RuntimeBackend::new`, which also resolves the env deadline).
+  #[cfg(test)]
   fn new(metrics: Arc<RuntimeMetrics>) -> Self {
-    Self { queue: Mutex::new(VecDeque::new()), draining: AtomicBool::new(false), metrics }
+    Self::with_detection(metrics, THREADLESS_BUILD, None)
+  }
+
+  /// Full constructor for the deadlock-detection knobs: `new` fixes
+  /// `threadless` to the build's [`THREADLESS_BUILD`] with the deadline off;
+  /// `RuntimeBackend::new` resolves the deadline from
+  /// `RuntimeOptions::park_deadline` / [`PARK_DEADLINE_ENV`]; tests inject a
+  /// native `threadless` stand-in and short deadlines through it.
+  fn with_detection(
+    metrics: Arc<RuntimeMetrics>,
+    threadless: bool,
+    park_deadline: Option<Duration>,
+  ) -> Self {
+    Self {
+      queue: Mutex::new(VecDeque::new()),
+      draining: AtomicBool::new(false),
+      metrics,
+      threadless,
+      park_deadline,
+    }
   }
 
   fn schedule(self: &Arc<Self>, runnable: Runnable) {
@@ -306,26 +522,65 @@ impl CurrentThreadExecutor {
     }
   }
 
-  fn block_on(self: &Arc<Self>, future: Pin<&mut dyn Future<Output = ()>>) {
-    futures::executor::block_on(DriveCurrentThread { executor: Arc::clone(self), future });
-  }
-}
-
-struct DriveCurrentThread<'a> {
-  executor: Arc<CurrentThreadExecutor>,
-  future: Pin<&'a mut dyn Future<Output = ()>>,
-}
-
-impl Future for DriveCurrentThread<'_> {
-  type Output = ();
-
-  fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+  /// Drive `future` to completion on this thread, draining queued runnables
+  /// between polls (the old `DriveCurrentThread` wrapper, folded in). This
+  /// loop OWNS its park site (wake-path §6(d)): the future is polled with
+  /// this frame's own [`DriverParker`] as its waker, so the park DECISION can
+  /// inspect the wake token directly instead of handing it to
+  /// `futures::executor::block_on`'s opaque parker:
+  ///
+  ///   * `Pending` + queue empty + wake token pending: a self-waking future
+  ///     (the `PendThenReady` shape) -- consume the token and re-poll. NOT a
+  ///     park, NOT a deadlock; intel §8.6 pins panic-at-park-decision, never
+  ///     at Pending-return.
+  ///   * `Pending` + queue empty + NO token, threadless build: PROVABLE
+  ///     deadlock -- no other thread exists that could ever deliver the wake
+  ///     (the block_on-awaiting-JS class, R2). Panic immediately with the
+  ///     typed [`BlockOnDeadlock`] diagnostic.
+  ///   * `Pending` + queue empty + NO token, threaded build: park. When a
+  ///     `park_deadline` is armed, the park is bounded with progress-based
+  ///     reset (see [`park_with_deadline`]) and panics typed if a full
+  ///     window passes with zero runtime progress.
+  fn block_on(self: &Arc<Self>, mut future: Pin<&mut dyn Future<Output = ()>>) {
+    let parker = Arc::new(DriverParker::default());
+    let waker = std::task::Waker::from(Arc::clone(&parker));
+    let mut cx = Context::from_waker(&waker);
     loop {
-      if self.future.as_mut().poll(cx).is_ready() {
-        return Poll::Ready(());
+      if future.as_mut().poll(&mut cx).is_ready() {
+        return;
       }
-      if !self.executor.drain_one() {
-        return Poll::Pending;
+      if self.drain_one() {
+        continue;
+      }
+      // PARK DECISION: the future is Pending and the queue is empty. A token
+      // stored during the poll (or by a racing thread) means a wake is
+      // already pending: consume it and re-poll instead of parking.
+      if parker.consume_permit() {
+        continue;
+      }
+      if self.threadless {
+        std::panic::panic_any(BlockOnDeadlock::current_thread_certain());
+      }
+      match self.park_deadline {
+        // A wake landing between `consume_permit` above and the park is
+        // stored as the parker's permit, so `park` returns immediately --
+        // never lost.
+        None => parker.park(),
+        Some(deadline) => match park_with_deadline(&parker, deadline, &self.metrics) {
+          DeadlineParkOutcome::Woken => {}
+          DeadlineParkOutcome::Expired(armed) => {
+            // EXPIRY DECISION (Codex round-1, CT analog -- no registry
+            // here): a wake can land in the instructions after the window
+            // closed, and the fingerprint read inside `park_with_deadline`
+            // is stale by now. Re-check both before declaring death; a hit
+            // means the park was healthy -- continue the loop (re-poll,
+            // drain, fresh full window on the next park).
+            if parker.consume_permit() || self.metrics.progress_fingerprint() != armed {
+              continue;
+            }
+            std::panic::panic_any(BlockOnDeadlock::current_thread_deadline(deadline));
+          }
+        },
       }
     }
   }
@@ -482,6 +737,12 @@ struct MultiThreadExecutor {
   parked_drivers: ParkedDrivers,
   max_drainers: usize,
   max_blocking: usize,
+  // Deadline-based deadlock detection for COOPERATIVE driver parks ONLY
+  // (wake-path §6(d)); the foreign/napi whole-build park in `block_on`'s
+  // else-branch is exempt by design (§8.5) -- it parks for entire builds and
+  // a deadline there would panic healthy production runs. Off unless
+  // configured via `RuntimeOptions::park_deadline` / `PARK_DEADLINE_ENV`.
+  park_deadline: Option<Duration>,
   metrics: Arc<RuntimeMetrics>,
 }
 
@@ -513,6 +774,7 @@ impl MultiThreadExecutor {
       parked_drivers: ParkedDrivers::default(),
       max_drainers: options.worker_threads,
       max_blocking: options.max_blocking_tasks.min(options.worker_threads),
+      park_deadline: options.park_deadline.or_else(park_deadline_from_env),
       metrics,
     })
   }
@@ -599,6 +861,11 @@ impl MultiThreadExecutor {
   {
     let (sender, receiver) = oneshot::channel();
     let metrics = Arc::clone(&self.metrics);
+    // Enqueue-time progress signal, BEFORE the queue push/wake (Codex
+    // round-2): the deadlock detector's fingerprint must be able to observe
+    // this submission even while the job merely sits queued -- symmetric with
+    // `runnable_scheduled` on the runnable path.
+    self.metrics.blocking_scheduled();
     // Tag the job with the current owner frame, but ONLY if that frame belongs to
     // THIS executor. The inner job an owner awaits is scheduled while the owner
     // frame is active on the stack, so it inherits the owner's exact token and is
@@ -937,7 +1204,64 @@ impl MultiThreadExecutor {
         self.parked_drivers.deregister(&parker);
         continue;
       }
-      parker.park();
+      match self.park_deadline {
+        None => parker.park(),
+        Some(deadline) => {
+          // Deadline-bounded cooperative park (wake-path §6(d)) with
+          // PROGRESS-BASED reset (§8.5): a candidate deadlock only when a
+          // FULL deadline window passes with zero executor progress. The
+          // foreign-thread whole-build park in `block_on`'s else-branch is
+          // exempt by design.
+          match park_with_deadline(&parker, deadline, &self.metrics) {
+            DeadlineParkOutcome::Woken => {}
+            DeadlineParkOutcome::Expired(armed) => {
+              #[cfg(test)]
+              run_deadline_expiry_test_hook();
+              // EXPIRY DECISION (Codex rounds 1+2). While this parker was
+              // registered, a racing `wake_one` may have popped it, stored
+              // its permit and reported the wake as DELIVERED (so the
+              // scheduler spawned no drainer) -- panicking now would swallow
+              // a healthy wake and kill a live build. Deregister FIRST so no
+              // FURTHER wake can be counted against this parker, then
+              // re-check every way a wake could have landed around the
+              // expiry:
+              //   * permit: a `wake_one` (or direct future-wake) that landed
+              //     while still registered MUST be acted on;
+              //   * queued work: the work behind such a wake was pushed
+              //     under the queue mutex BEFORE `wake_one` popped us, so
+              //     even if its `unpark` is still in flight the queue
+              //     re-check observes it;
+              //   * fingerprint: §8.5's premise is ZERO progress, and the
+              //     read inside `park_with_deadline` is stale by the time we
+              //     get here -- re-read as the LAST step. Both ENQUEUE
+              //     counters are in the fingerprint (`runnable_schedules`,
+              //     and since Codex round-2 `blocking_tasks_scheduled`,
+              //     bumped before the push), so a submission of EITHER kind
+              //     landing after the queue re-check above is still caught
+              //     here.
+              // Any hit => not a deadlock: continue the cooperative loop
+              // (fresh future poll, `run_one` picks up the work, and the
+              // next park arms a fresh FULL deadline window). The residue is
+              // exactly a BARE direct future-wake -- no queue push, no
+              // counter movement -- landing in the few instructions after
+              // these re-checks: the inherent, unclosable residue of any
+              // timing-based detector, one reason the deadline is opt-in.
+              self.parked_drivers.deregister(&parker);
+              if parker.consume_permit() || self.has_queued_work() {
+                continue;
+              }
+              // Test-only seam (Codex round-2 regression): between the
+              // permit/queued-work re-checks and the fingerprint verdict.
+              #[cfg(test)]
+              run_deadline_verdict_test_hook();
+              if self.metrics.progress_fingerprint() != armed {
+                continue;
+              }
+              std::panic::panic_any(BlockOnDeadlock::multi_thread_cooperative(deadline));
+            }
+          }
+        }
+      }
       // `wake_one` removes the parkers it pops; a direct future-wake does
       // not. Deregister-if-present covers both.
       self.parked_drivers.deregister(&parker);
@@ -1018,23 +1342,21 @@ impl Drop for LifoSlotFlushGuard<'_> {
 //     is parked, and an absorbed wake is handed on at `cooperative_block_on`
 //     exit (miss compensation).
 // Foreign-thread (napi caller) parks in `block_on` use
-// `futures::executor::block_on`'s own parker and are OUTSIDE this mechanism,
-// as is the CurrentThread flavor.
+// `futures::executor::block_on`'s own parker and are OUTSIDE this mechanism.
+// The CurrentThread flavor's `block_on` reuses `DriverParker` (one per
+// frame, no registry) so it too OWNS its park site for deadlock detection
+// (wake-path §6(d)); `ParkedDrivers` remains MultiThread-only.
 
 /// No permit; the driver is running (or consumed its last permit).
-#[cfg(not(target_family = "wasm"))]
 const PARKER_EMPTY: usize = 0;
 /// A wake permit is stored; the next `park` consumes it without sleeping.
-#[cfg(not(target_family = "wasm"))]
 const PARKER_NOTIFIED: usize = 1;
 /// The driver is sleeping on the condvar (or committing to sleep under `lock`).
-#[cfg(not(target_family = "wasm"))]
 const PARKER_SLEEPING: usize = 2;
 
-/// One cooperative driver's private parker: a saturating one-permit token
-/// plus a condvar to sleep on when no permit is stored. Also the `Waker` for
-/// the future that driver's `cooperative_block_on` frame awaits.
-#[cfg(not(target_family = "wasm"))]
+/// One driver's private parker: a saturating one-permit token plus a condvar
+/// to sleep on when no permit is stored. Also the `Waker` for the future that
+/// driver's `cooperative_block_on` / CurrentThread `block_on` frame awaits.
 #[derive(Default)]
 struct DriverParker {
   state: AtomicUsize,
@@ -1042,7 +1364,6 @@ struct DriverParker {
   condvar: std::sync::Condvar,
 }
 
-#[cfg(not(target_family = "wasm"))]
 impl DriverParker {
   /// Grant the wake permit. Wakes the driver if it is sleeping; otherwise the
   /// permit is stored and the driver's next [`Self::park`] returns
@@ -1061,16 +1382,23 @@ impl DriverParker {
     }
   }
 
+  /// Consume a stored wake permit if one is present, without ever sleeping.
+  /// This is the park DECISION's token check (wake-path §6(d)): a `true`
+  /// return means a wake is already pending, so the caller must re-poll
+  /// instead of parking (or panicking).
+  fn consume_permit(&self) -> bool {
+    self
+      .state
+      .compare_exchange(PARKER_NOTIFIED, PARKER_EMPTY, Ordering::SeqCst, Ordering::SeqCst)
+      .is_ok()
+  }
+
   /// Block until the permit is granted, consuming it. Returns immediately if
   /// a permit is already stored. Only the owning driver calls `park`, so at
   /// most one thread ever sleeps here.
   fn park(&self) {
     // Fast path: consume a stored permit without touching the lock.
-    if self
-      .state
-      .compare_exchange(PARKER_NOTIFIED, PARKER_EMPTY, Ordering::SeqCst, Ordering::SeqCst)
-      .is_ok()
-    {
+    if self.consume_permit() {
       return;
     }
     let mut guard = self.lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
@@ -1101,9 +1429,71 @@ impl DriverParker {
       // Spurious wakeup (state still PARKER_SLEEPING): keep waiting.
     }
   }
+
+  /// Like [`Self::park`], but bounded: returns `true` when woken by a permit
+  /// (consumed) and `false` when `timeout` elapsed with no permit granted.
+  /// A `false` return has retracted the SLEEPING claim and left the parker
+  /// EMPTY, so the caller may park again. Used by the deadline-based deadlock
+  /// detection (wake-path §6(d)).
+  fn park_timeout(&self, timeout: Duration) -> bool {
+    if self.consume_permit() {
+      return true;
+    }
+    let mut guard = self.lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    match self.state.compare_exchange(
+      PARKER_EMPTY,
+      PARKER_SLEEPING,
+      Ordering::SeqCst,
+      Ordering::SeqCst,
+    ) {
+      Ok(_) => {}
+      // The permit arrived between the fast path and here: consume it. (Only
+      // this thread stores PARKER_SLEEPING, so the observed value can only be
+      // PARKER_NOTIFIED.)
+      Err(_) => {
+        self.state.store(PARKER_EMPTY, Ordering::SeqCst);
+        return true;
+      }
+    }
+    let deadline = Instant::now() + timeout;
+    loop {
+      if self
+        .state
+        .compare_exchange(PARKER_NOTIFIED, PARKER_EMPTY, Ordering::SeqCst, Ordering::SeqCst)
+        .is_ok()
+      {
+        return true;
+      }
+      let now = Instant::now();
+      if now >= deadline {
+        // Timed out: retract the SLEEPING claim -- unless a permit landed in
+        // the meantime (an `unpark` that already saw SLEEPING may be waiting
+        // on `lock` to notify; consuming its permit here IS the wake it
+        // intended to deliver, so report "woken", not "timed out").
+        return match self.state.compare_exchange(
+          PARKER_SLEEPING,
+          PARKER_EMPTY,
+          Ordering::SeqCst,
+          Ordering::SeqCst,
+        ) {
+          Ok(_) => false,
+          Err(_) => {
+            self.state.store(PARKER_EMPTY, Ordering::SeqCst);
+            true
+          }
+        };
+      }
+      let (returned_guard, _timed_out) = self
+        .condvar
+        .wait_timeout(guard, deadline - now)
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+      guard = returned_guard;
+      // Loop re-checks the permit first, then the deadline (spurious wakeups
+      // simply wait out the remaining time).
+    }
+  }
 }
 
-#[cfg(not(target_family = "wasm"))]
 impl std::task::Wake for DriverParker {
   fn wake(self: Arc<Self>) {
     self.unpark();
@@ -1111,6 +1501,87 @@ impl std::task::Wake for DriverParker {
 
   fn wake_by_ref(self: &Arc<Self>) {
     self.unpark();
+  }
+}
+
+/// Outcome of [`park_with_deadline`].
+enum DeadlineParkOutcome {
+  /// Woken by a permit (consumed); the park was healthy.
+  Woken,
+  /// A full deadline window elapsed with zero observed progress. Carries the
+  /// fingerprint captured when that window was ARMED so the caller can make
+  /// the final expiry DECISION against a fresh read -- expiry alone is NOT a
+  /// verdict: a wake can land in the instructions after the window closes
+  /// (Codex round-1), and for MultiThread a `wake_one` can still pop the
+  /// still-registered parker and count its wake as DELIVERED. Callers must
+  /// deregister (MT), then re-check permit / queued work / fingerprint before
+  /// panicking.
+  Expired(ProgressFingerprint),
+}
+
+/// Deadline-bounded park with PROGRESS-BASED reset (wake-path §6(d), §8.5).
+/// Every time `deadline` elapses without a wake, the runtime's progress
+/// fingerprint is compared against the value captured when the deadline was
+/// ARMED: any advance re-arms the deadline instead of firing, because a
+/// legitimately long park -- e.g. awaiting a slow JS plugin while other work
+/// proceeds -- must never be declared dead. `Expired` is a *candidate*
+/// deadlock only; the panic decision lives with the caller (see
+/// [`DeadlineParkOutcome`]).
+fn park_with_deadline(
+  parker: &DriverParker,
+  deadline: Duration,
+  metrics: &RuntimeMetrics,
+) -> DeadlineParkOutcome {
+  let mut armed = metrics.progress_fingerprint();
+  loop {
+    if parker.park_timeout(deadline) {
+      return DeadlineParkOutcome::Woken;
+    }
+    let current = metrics.progress_fingerprint();
+    if current != armed {
+      armed = current;
+      continue;
+    }
+    return DeadlineParkOutcome::Expired(armed);
+  }
+}
+
+// Test-only injection seam for the deadline-expiry race (Codex round-1
+// regression test): fired on the driver thread immediately after
+// `park_with_deadline` reports `Expired`, while the parker is STILL
+// REGISTERED in `parked_drivers` and before the expiry decision runs -- the
+// exact window in which a racing `wake_one` can pop the parker, store its
+// permit and report the wake as delivered. Lets a test interleave that race
+// deterministically instead of wall-clock lottery.
+#[cfg(all(test, not(target_family = "wasm")))]
+thread_local! {
+  static DEADLINE_EXPIRY_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_deadline_expiry_test_hook() {
+  if let Some(hook) = DEADLINE_EXPIRY_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
+  }
+}
+
+// Second test-only injection seam (Codex round-2 regression test): fired
+// AFTER the expiry decision's permit and queued-work re-checks both came up
+// empty (parker already deregistered) and BEFORE the final fingerprint
+// verdict -- the window in which an enqueue is invisible to every earlier
+// re-check and only its ENQUEUE counter in the fingerprint can prevent a
+// false BlockOnDeadlock.
+#[cfg(all(test, not(target_family = "wasm")))]
+thread_local! {
+  static DEADLINE_VERDICT_TEST_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+fn run_deadline_verdict_test_hook() {
+  if let Some(hook) = DEADLINE_VERDICT_TEST_HOOK.with(|slot| slot.borrow_mut().take()) {
+    hook();
   }
 }
 
@@ -1205,7 +1676,11 @@ impl RuntimeBackend {
   ) -> Result<Self, RuntimeConfigError> {
     match options.flavor {
       RuntimeFlavor::CurrentThread => {
-        Ok(Self::CurrentThread(Arc::new(CurrentThreadExecutor::new(metrics))))
+        Ok(Self::CurrentThread(Arc::new(CurrentThreadExecutor::with_detection(
+          metrics,
+          THREADLESS_BUILD,
+          options.park_deadline.or_else(park_deadline_from_env),
+        ))))
       }
       RuntimeFlavor::MultiThread => {
         #[cfg(not(target_family = "wasm"))]
@@ -1238,6 +1713,9 @@ impl RuntimeBackend {
   {
     match self {
       Self::CurrentThread(_) => {
+        // Same submitted-counter semantics as the MultiThread path (the job
+        // just also runs inline immediately here).
+        metrics.blocking_scheduled();
         let _active = metrics.blocking_started();
         let result =
           catch_unwind(AssertUnwindSafe(function)).map_err(|panic| JoinError::from_panic(&*panic));
@@ -1453,6 +1931,7 @@ mod tests {
         worker_threads: 2,
         max_blocking_tasks: 2,
         thread_name_prefix: "rd1-test".to_string(),
+        park_deadline: None,
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
 
@@ -1507,6 +1986,7 @@ mod tests {
       worker_threads: 2,
       max_blocking_tasks: 2,
       thread_name_prefix: "rd1-caller".to_string(),
+      park_deadline: None,
     };
     let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
 
@@ -1578,6 +2058,7 @@ mod tests {
         worker_threads: 2,
         max_blocking_tasks: 2,
         thread_name_prefix: "rd10-caller".to_string(),
+        park_deadline: None,
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
 
@@ -1646,6 +2127,7 @@ mod tests {
         worker_threads: 2,
         max_blocking_tasks: 2,
         thread_name_prefix: "rd1-park".to_string(),
+        park_deadline: None,
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
 
@@ -1876,6 +2358,7 @@ mod tests {
         worker_threads: 2,
         max_blocking_tasks: 2,
         thread_name_prefix: "wake-target".to_string(),
+        park_deadline: None,
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
 
@@ -1971,6 +2454,7 @@ mod tests {
         worker_threads: 1,
         max_blocking_tasks: 1,
         thread_name_prefix: "wake-compensate".to_string(),
+        park_deadline: None,
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
 
@@ -2103,6 +2587,7 @@ mod tests {
       worker_threads: 2,
       max_blocking_tasks: 2,
       thread_name_prefix: "lifo-order".to_string(),
+      park_deadline: None,
     };
     let executor =
       Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -2167,6 +2652,7 @@ mod tests {
         worker_threads: 1,
         max_blocking_tasks: 1,
         thread_name_prefix: "lifo-drain".to_string(),
+        park_deadline: None,
       };
       let executor =
         Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -2244,6 +2730,7 @@ mod tests {
       worker_threads: 2,
       max_blocking_tasks: 2,
       thread_name_prefix: "lifo-displace".to_string(),
+      park_deadline: None,
     };
     let executor =
       Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -2292,6 +2779,7 @@ mod tests {
       worker_threads: 2,
       max_blocking_tasks: 2,
       thread_name_prefix: "lifo-scope".to_string(),
+      park_deadline: None,
     };
     let exec1 =
       Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -2392,6 +2880,7 @@ mod tests {
         worker_threads: 1,
         max_blocking_tasks: 1,
         thread_name_prefix: "lifo-budget".to_string(),
+        park_deadline: None,
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
 
@@ -2430,6 +2919,7 @@ mod tests {
       worker_threads: 2,
       max_blocking_tasks: 2,
       thread_name_prefix: "lifo-flush".to_string(),
+      park_deadline: None,
     };
     let executor =
       Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -2473,6 +2963,7 @@ mod tests {
       worker_threads: 2,
       max_blocking_tasks: 2,
       thread_name_prefix: "lifo-owner".to_string(),
+      park_deadline: None,
     };
     let executor =
       Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -2590,6 +3081,7 @@ mod tests {
         worker_threads: 1,
         max_blocking_tasks: 1,
         thread_name_prefix: "lifo-streak".to_string(),
+        park_deadline: None,
       };
       let executor =
         Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -2662,6 +3154,7 @@ mod tests {
         worker_threads: 1,
         max_blocking_tasks: 1,
         thread_name_prefix: "lifo-blocking".to_string(),
+        park_deadline: None,
       };
       let executor =
         Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -2740,6 +3233,7 @@ mod tests {
         worker_threads: 2,
         max_blocking_tasks: 2,
         thread_name_prefix: "exit-flush".to_string(),
+        park_deadline: None,
       };
       let executor =
         Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -2814,6 +3308,7 @@ mod tests {
         worker_threads: 1,
         max_blocking_tasks: 1,
         thread_name_prefix: "coop-budget".to_string(),
+        park_deadline: None,
       };
       let executor =
         Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -2889,6 +3384,7 @@ mod tests {
         worker_threads: 2,
         max_blocking_tasks: 2,
         thread_name_prefix: "blk-spawn-wait".to_string(),
+        park_deadline: None,
       };
       let executor =
         Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -2961,6 +3457,7 @@ mod tests {
         worker_threads: 2,
         max_blocking_tasks: 2,
         thread_name_prefix: "rd1-nested-blk".to_string(),
+        park_deadline: None,
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
 
@@ -3023,6 +3520,7 @@ mod tests {
         worker_threads: 4,
         max_blocking_tasks: 2,
         thread_name_prefix: "rd1-cap".to_string(),
+        park_deadline: None,
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
 
@@ -3126,6 +3624,7 @@ mod tests {
         worker_threads: 2,
         max_blocking_tasks: 2,
         thread_name_prefix: "rd1-owner-runnable".to_string(),
+        park_deadline: None,
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
 
@@ -3216,6 +3715,7 @@ mod tests {
         worker_threads: 2,
         max_blocking_tasks: 2,
         thread_name_prefix: "rd1-unrelated".to_string(),
+        park_deadline: None,
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
 
@@ -3316,6 +3816,7 @@ mod tests {
       worker_threads: 2,
       max_blocking_tasks: 2,
       thread_name_prefix: "rd1-scope".to_string(),
+      park_deadline: None,
     };
     let exec1 =
       Arc::new(MultiThreadExecutor::new(&opts, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -3481,6 +3982,7 @@ mod tests {
       worker_threads: 2,
       max_blocking_tasks: 2,
       thread_name_prefix: "rd-onpool-scope".to_string(),
+      park_deadline: None,
     };
     let exec1 =
       Arc::new(MultiThreadExecutor::new(&opts, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -3609,6 +4111,7 @@ mod tests {
         worker_threads: 1,
         max_blocking_tasks: 1,
         thread_name_prefix: "rd2-pre-fix".to_string(),
+        park_deadline: None,
       };
       let executor =
         Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -3676,6 +4179,7 @@ mod tests {
         worker_threads: 1,
         max_blocking_tasks: 1,
         thread_name_prefix: "rd2-fixed".to_string(),
+        park_deadline: None,
       };
       let executor =
         Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
@@ -3741,6 +4245,7 @@ mod tests {
       worker_threads: 0,
       max_blocking_tasks: 1,
       thread_name_prefix: "rd8".to_string(),
+      park_deadline: None,
     }
     .validate()
     .expect_err("worker_threads == 0 must be rejected");
@@ -3754,6 +4259,7 @@ mod tests {
       worker_threads: 2,
       max_blocking_tasks: 0,
       thread_name_prefix: "rd8".to_string(),
+      park_deadline: None,
     }
     .validate()
     .expect_err("max_blocking_tasks == 0 must be rejected");
@@ -3769,6 +4275,7 @@ mod tests {
       worker_threads: 8,
       max_blocking_tasks: 8,
       thread_name_prefix: "rd8".to_string(),
+      park_deadline: None,
     }
     .validate()
     .expect("CurrentThread options must validate");
@@ -3789,6 +4296,7 @@ mod tests {
       worker_threads: 2,
       max_blocking_tasks: 8,
       thread_name_prefix: "rd8".to_string(),
+      park_deadline: None,
     }
     .validate()
     .expect("MultiThread options must validate");
@@ -3807,6 +4315,7 @@ mod tests {
         worker_threads: 1,
         max_blocking_tasks: 1,
         thread_name_prefix: "rd8".to_string(),
+        park_deadline: None,
       })
       .expect("first configure before the backend exists must succeed");
 
@@ -3865,6 +4374,7 @@ mod tests {
         worker_threads: 4,
         max_blocking_tasks: 2,
         thread_name_prefix: "rd9-blk-cap".to_string(),
+        park_deadline: None,
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
 
@@ -3959,6 +4469,7 @@ mod tests {
         worker_threads: 2,
         max_blocking_tasks: 2,
         thread_name_prefix: "rd9-budget".to_string(),
+        park_deadline: None,
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
 
@@ -4031,6 +4542,7 @@ mod tests {
         worker_threads: 2,
         max_blocking_tasks: 2,
         thread_name_prefix: "rd9-panic".to_string(),
+        park_deadline: None,
       };
       let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
 
@@ -4084,6 +4596,7 @@ mod tests {
     metrics.max_queued_runnables.store(7, Ordering::Relaxed);
     metrics.active_runnables.store(8, Ordering::Relaxed);
     metrics.max_active_runnables.store(9, Ordering::Relaxed);
+    metrics.blocking_tasks_scheduled.store(14, Ordering::Relaxed);
     metrics.blocking_tasks_started.store(10, Ordering::Relaxed);
     metrics.blocking_tasks_completed.store(11, Ordering::Relaxed);
     metrics.active_blocking_tasks.store(12, Ordering::Relaxed);
@@ -4100,6 +4613,7 @@ mod tests {
     assert_ne!(metrics.max_queued_runnables.load(Ordering::Relaxed), 0);
     assert_ne!(metrics.active_runnables.load(Ordering::Relaxed), 0);
     assert_ne!(metrics.max_active_runnables.load(Ordering::Relaxed), 0);
+    assert_ne!(metrics.blocking_tasks_scheduled.load(Ordering::Relaxed), 0);
     assert_ne!(metrics.blocking_tasks_started.load(Ordering::Relaxed), 0);
     assert_ne!(metrics.blocking_tasks_completed.load(Ordering::Relaxed), 0);
     assert_ne!(metrics.active_blocking_tasks.load(Ordering::Relaxed), 0);
@@ -4116,6 +4630,11 @@ mod tests {
     assert_eq!(metrics.max_queued_runnables.load(Ordering::Relaxed), 0, "max_queued_runnables");
     assert_eq!(metrics.active_runnables.load(Ordering::Relaxed), 0, "active_runnables");
     assert_eq!(metrics.max_active_runnables.load(Ordering::Relaxed), 0, "max_active_runnables");
+    assert_eq!(
+      metrics.blocking_tasks_scheduled.load(Ordering::Relaxed),
+      0,
+      "blocking_tasks_scheduled"
+    );
     assert_eq!(metrics.blocking_tasks_started.load(Ordering::Relaxed), 0, "blocking_tasks_started");
     assert_eq!(
       metrics.blocking_tasks_completed.load(Ordering::Relaxed),
@@ -4128,5 +4647,555 @@ mod tests {
       0,
       "max_active_blocking_tasks"
     );
+  }
+
+  // ---- Wake-path §6(d): self-detecting block_on deadlocks -------------------
+  // The five shapes pinned by the task-4 brief: (1) a threadless CurrentThread
+  // park decision with no pending wake panics with the typed diagnostic; (2) a
+  // self-waking future (the PendThenReady shape) must NOT panic -- the panic
+  // lives at the PARK DECISION, not at Pending-return (intel §8.6); (3) an
+  // armed deadline fires on a genuinely dead cooperative MT park; (4) runtime
+  // progress RESETS the deadline instead of firing (intel §8.5); (5) the
+  // foreign/napi whole-build park is excluded from the deadline entirely.
+
+  /// A future that never completes and never wakes anyone: once its driver
+  /// parks, no wake can ever arrive. The deadlock-detection probe shape.
+  struct NeverReady;
+  impl Future for NeverReady {
+    type Output = ();
+    fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<()> {
+      Poll::Pending
+    }
+  }
+
+  #[test]
+  fn current_thread_threadless_park_with_no_pending_wake_panics_with_typed_diagnostic() {
+    // Shape (1): on a threadless build a CT park decision with an empty queue
+    // and no wake token pending is a PROVABLE deadlock (no other thread exists
+    // to deliver the wake) -- `block_on` must panic immediately with the typed
+    // `BlockOnDeadlock` diagnostic instead of parking forever. The workload
+    // runs on a child thread bounded by recv_timeout so a missing detection
+    // (a hang) fails the test rather than wedging the suite.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      // Native stand-in for the threadless wasm build (intel §7(d)); no
+      // deadline -- the certain case is not timing-based.
+      let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, true, None));
+
+      let payload = catch_unwind(AssertUnwindSafe(|| {
+        let mut future = std::pin::pin!(NeverReady);
+        executor.block_on(future.as_mut());
+      }))
+      .expect_err("a threadless park with an empty queue and no pending wake must panic");
+      let diagnostic = payload
+        .downcast_ref::<BlockOnDeadlock>()
+        .expect("the panic payload must be the typed BlockOnDeadlock diagnostic");
+      assert_eq!(diagnostic.kind, BlockOnDeadlockKind::CurrentThreadCertain);
+      assert_eq!(diagnostic.park_deadline, None, "the certain case carries no deadline");
+      let message = diagnostic.to_string();
+      assert!(
+        message.contains("block_on") && message.contains("JS"),
+        "the diagnostic must name the block_on-awaiting-JS hazard, got: {message}"
+      );
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "threadless CurrentThread park did not self-detect ({error}): block_on parked (or failed) instead of panicking with the diagnostic"
+      ),
+    }
+  }
+
+  #[test]
+  fn current_thread_threadless_self_waking_pending_future_does_not_panic() {
+    // Shape (2), pinning panic-at-PARK-DECISION (intel §8.6): a future that
+    // returns `Pending` but wakes itself synchronously during the poll leaves
+    // a wake token pending, so the loop must consume the token and re-poll --
+    // NOT panic -- even on a threadless build. "Pending returned" alone is
+    // never a deadlock.
+    use std::sync::mpsc;
+
+    struct PendThenReady {
+      polls: usize,
+    }
+    impl Future for PendThenReady {
+      type Output = ();
+      fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
+        self.polls += 1;
+        if self.polls >= 2 {
+          Poll::Ready(())
+        } else {
+          cx.waker().wake_by_ref();
+          Poll::Pending
+        }
+      }
+    }
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, true, None));
+      let mut future = std::pin::pin!(PendThenReady { polls: 0 });
+      executor.block_on(future.as_mut());
+      assert_eq!(future.polls, 2, "the self-woken future must have been re-polled to completion");
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "a self-waking Pending future must complete without panicking on a threadless build ({error})"
+      ),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_native_park_deadline_fires_with_typed_diagnostic() {
+    // Threaded CT is NOT provably dead at the park decision (another OS thread
+    // could deliver a wake later), so detection there is deadline-based and
+    // opt-in. A park that outlives the armed deadline with ZERO runtime
+    // progress must panic with the typed diagnostic.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let executor = Arc::new(CurrentThreadExecutor::with_detection(
+        metrics,
+        false,
+        Some(Duration::from_millis(50)),
+      ));
+
+      let payload = catch_unwind(AssertUnwindSafe(|| {
+        let mut future = std::pin::pin!(NeverReady);
+        executor.block_on(future.as_mut());
+      }))
+      .expect_err("a dead native CT park must fire the armed deadline");
+      let diagnostic = payload.downcast_ref::<BlockOnDeadlock>().expect("typed payload");
+      assert_eq!(diagnostic.kind, BlockOnDeadlockKind::CurrentThreadDeadline);
+      assert_eq!(diagnostic.park_deadline, Some(Duration::from_millis(50)));
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("native CurrentThread park deadline did not fire ({error})"),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_native_park_deadline_resets_on_runtime_progress() {
+    // PROGRESS-BASED RESET (intel §8.5), CT side: metrics advancing while
+    // parked means the runtime is alive (e.g. a slow JS plugin with other
+    // work proceeding), so the deadline must re-arm instead of firing.
+    // Progress is injected by advancing the very counter the reset reads --
+    // the exact seam, isolated from wake delivery (production advances it via
+    // real runnable polls).
+    use std::sync::mpsc;
+
+    let deadline = Duration::from_millis(60);
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor =
+      Arc::new(CurrentThreadExecutor::with_detection(Arc::clone(&metrics), false, Some(deadline)));
+
+    let (value_tx, value_rx) = oneshot::channel::<usize>();
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let mut output = None;
+      {
+        let mut future = std::pin::pin!(async {
+          output = Some(value_rx.await.unwrap());
+        });
+        executor.block_on(future.as_mut());
+      }
+      assert_eq!(output, Some(9));
+      let _ = done_tx.send(());
+    });
+
+    // Hold the park across several full deadline windows, each containing an
+    // injected progress tick, then deliver the (legitimately late) wake.
+    for _ in 0..8 {
+      std::thread::sleep(Duration::from_millis(30));
+      metrics.runnable_polls.fetch_add(1, Ordering::Relaxed);
+    }
+    value_tx.send(9).unwrap();
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "a CT park with ongoing runtime progress fired its deadline or lost its wake ({error})"
+      ),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_cooperative_park_past_deadline_with_no_progress_panics_with_typed_diagnostic() {
+    // Shape (3): the MT deadline lives on the Task-3 DriverParker park inside
+    // `cooperative_block_on`. Drive the cooperative branch directly on this
+    // thread via the fake on-pool marker (the 1793 technique) so the panic is
+    // observable as a typed payload without rayon in between.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "deadline-fire".to_string(),
+        park_deadline: Some(Duration::from_millis(50)),
+      };
+      let executor =
+        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+      let payload = {
+        let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+        catch_unwind(AssertUnwindSafe(|| {
+          let mut future = std::pin::pin!(NeverReady);
+          executor.block_on(future.as_mut());
+        }))
+        .expect_err("a dead cooperative park must fire the armed deadline")
+      };
+      let diagnostic = payload.downcast_ref::<BlockOnDeadlock>().expect("typed payload");
+      assert_eq!(diagnostic.kind, BlockOnDeadlockKind::MultiThreadCooperativeDeadline);
+      assert_eq!(diagnostic.park_deadline, Some(Duration::from_millis(50)));
+      let message = diagnostic.to_string();
+      assert!(message.contains("block_on"), "diagnostic must name the hazard, got: {message}");
+      assert_eq!(
+        executor.parked_drivers.count.load(Ordering::SeqCst),
+        0,
+        "the firing driver must deregister itself before panicking"
+      );
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("MT cooperative park deadline did not fire ({error})"),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_cooperative_park_deadline_resets_on_executor_progress() {
+    // Shape (4), MT side of the progress reset (intel §8.5): a legitimately
+    // slow wake under an armed deadline must NOT fire while the executor's
+    // metrics keep advancing. Topology: the sole worker is parked as a
+    // cooperative driver (real pool thread, real DriverParker park); the test
+    // injects progress ticks across several full deadline windows, then
+    // delivers the late wake.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let deadline = Duration::from_millis(60);
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "deadline-reset".to_string(),
+        park_deadline: Some(deadline),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
+
+      // Park the sole worker as a cooperative driver awaiting a gate (same
+      // topology as the miss-compensation test).
+      let (gate_tx, gate_rx) = oneshot::channel::<usize>();
+      let td_exec = Arc::clone(&executor);
+      let completed = Arc::new(AtomicBool::new(false));
+      let td_flag = Arc::clone(&completed);
+      let td_body = async move {
+        let mut inner = std::pin::pin!(async move {
+          assert_eq!(gate_rx.await.unwrap(), 9);
+        });
+        td_exec.block_on(inner.as_mut());
+        td_flag.store(true, Ordering::SeqCst);
+      };
+      let sched = Arc::clone(&executor);
+      let (td_runnable, td_task) = async_task::spawn(td_body, move |r| sched.schedule(r));
+      executor.schedule(td_runnable);
+      wait_until("the sole driver parked", || {
+        executor.parked_drivers.count.load(Ordering::SeqCst) == 1
+      });
+
+      // Outlive the armed deadline several times over, with every window
+      // containing an injected progress tick (the counter the reset reads).
+      for _ in 0..8 {
+        std::thread::sleep(Duration::from_millis(30));
+        metrics.runnable_polls.fetch_add(1, Ordering::Relaxed);
+      }
+      assert!(
+        !completed.load(Ordering::SeqCst),
+        "the driver must still be parked awaiting its late wake"
+      );
+      gate_tx.send(9).unwrap();
+      futures::executor::block_on(td_task);
+      assert!(completed.load(Ordering::SeqCst), "the late wake must complete the parked driver");
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(15)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "an MT cooperative park with ongoing executor progress fired its deadline or lost its wake ({error})"
+      ),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_foreign_block_on_long_park_is_excluded_from_deadline() {
+    // Shape (5), intel §8.5 (binding): the foreign/napi caller thread parks in
+    // `futures::executor::block_on` for the ENTIRE build -- the normal
+    // production shape. Even with an aggressively short deadline armed and
+    // ZERO executor progress for many windows, that park must never fire.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "foreign-exempt".to_string(),
+        park_deadline: Some(Duration::from_millis(40)),
+      };
+      let executor =
+        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+      let (value_tx, value_rx) = oneshot::channel::<usize>();
+      let waker_thread = std::thread::spawn(move || {
+        // Well past several deadline windows, with zero executor progress.
+        std::thread::sleep(Duration::from_millis(300));
+        let _ = value_tx.send(7);
+      });
+
+      let started = Instant::now();
+      let mut output = None;
+      {
+        let mut future = std::pin::pin!(async {
+          output = Some(value_rx.await.unwrap());
+        });
+        // This (non-pool) thread takes the parking branch: exempt by design.
+        executor.block_on(future.as_mut());
+      }
+      assert_eq!(output, Some(7));
+      assert!(
+        started.elapsed() >= Duration::from_millis(250),
+        "the park must genuinely have outlived the 40ms deadline many times over"
+      );
+      waker_thread.join().unwrap();
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => {
+        panic!("the exempt foreign-thread whole-build park fired or lost its wake ({error})")
+      }
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_wake_delivered_at_deadline_expiry_edge_is_not_reported_as_deadlock() {
+    // Codex round-1 (confirmed race), pinned DETERMINISTICALLY via the
+    // expiry test hook instead of a wall-clock lottery. Interleaving:
+    //   (1) the cooperative park's deadline expires with genuinely zero
+    //       progress (nothing else touches the executor before the park);
+    //   (2) BEFORE the driver's expiry decision runs -- parker STILL
+    //       REGISTERED -- a scheduler queues a blocking job; its `wake_one`
+    //       pops this parker, stores the permit and reports the wake as
+    //       DELIVERED (so no drainer is spawned). The wake was counted as
+    //       delivered TO US, so the post-deregister permit re-check is the
+    //       first-line catch this test pins (queued-work and, since the
+    //       round-2 fix, the enqueue counter in the fingerprint are the
+    //       further backstops);
+    //   (3) the expiry decision runs. Pre-fix it deregistered and panicked
+    //       `BlockOnDeadlock`, swallowing the delivered wake and killing a
+    //       healthy build; it must instead treat the park as woken, run the
+    //       job (which sends the gate) and complete the awaited future.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "edge-wake".to_string(),
+        park_deadline: Some(Duration::from_millis(40)),
+      };
+      let executor =
+        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+      // Until the racing job sends this gate, the awaited future is Pending.
+      let (gate_tx, gate_rx) = oneshot::channel::<usize>();
+      // (registered_before_wake, registered_after_wake) observed by the hook.
+      let (hook_saw_tx, hook_saw_rx) = mpsc::channel::<(usize, usize)>();
+
+      let hook_exec = Arc::clone(&executor);
+      DEADLINE_EXPIRY_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          let before = hook_exec.parked_drivers.count.load(Ordering::SeqCst);
+          // The racing schedule: pushes the job, then `wake_one` pops the
+          // still-registered parker (permit stored, wake counted as
+          // delivered, no drainer).
+          let handle = hook_exec.schedule_blocking(move || {
+            let _ = gate_tx.send(5usize);
+            0usize
+          });
+          drop(handle); // result unobserved; the gate send is the signal
+          let after = hook_exec.parked_drivers.count.load(Ordering::SeqCst);
+          hook_saw_tx.send((before, after)).unwrap();
+        }));
+      });
+
+      // Fake on-pool marker (1793 technique): the cooperative branch -- and
+      // therefore the thread-local hook -- runs on THIS thread.
+      let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+      let mut output = None;
+      {
+        let mut future = std::pin::pin!(async {
+          output = Some(gate_rx.await.unwrap());
+        });
+        executor.block_on(future.as_mut());
+      }
+      assert_eq!(
+        output,
+        Some(5),
+        "the edge-delivered wake's job must have run and completed the future"
+      );
+
+      let (before, after) = hook_saw_rx.recv().expect("the expiry hook must have fired");
+      assert_eq!(before, 1, "the hook must observe the parker STILL registered (race window)");
+      assert_eq!(after, 0, "the racing wake_one must have popped the parker (wake DELIVERED)");
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "a wake delivered at the deadline-expiry edge was reported as a deadlock or lost ({error})"
+      ),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_blocking_enqueue_between_queue_recheck_and_verdict_is_not_reported_as_deadlock() {
+    // Codex round-2 (confirmed asymmetry): `runnable_schedules` is bumped at
+    // ENQUEUE, so a runnable scheduled after the expiry decision's
+    // `has_queued_work()` re-check is still caught by the final fingerprint
+    // read -- but blocking work only advanced counters when a job STARTED, so
+    // a `schedule_blocking` landing in that same window was completely
+    // invisible: queue push done (deliverable work exists), wake gone out to
+    // an EMPTY registry (we are deregistered; `ensure_drainer` is the only
+    // fallback), and the pre-fix verdict panicked `BlockOnDeadlock` anyway.
+    // Deterministic pinning via DEADLINE_VERDICT_TEST_HOOK (fires between the
+    // queued-work re-check and the fingerprint verdict, on the driver thread
+    // itself, so the enqueue is sequenced-before the verdict read):
+    //   * `active_drainers` is saturated so `ensure_drainer` cannot start the
+    //     job on the real worker -- `blocking_tasks_started` provably cannot
+    //     advance behind our back, and pre-fix the verdict is DETERMINISTICALLY
+    //     blind (panics every run); post-fix only the new enqueue counter
+    //     (`blocking_tasks_scheduled`) can and must save the park.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "verdict-blocking".to_string(),
+        park_deadline: Some(Duration::from_millis(40)),
+      };
+      let executor =
+        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+      executor.active_drainers.store(executor.max_drainers, Ordering::SeqCst);
+
+      // Until the racing job sends this gate, the awaited future is Pending.
+      let (gate_tx, gate_rx) = oneshot::channel::<usize>();
+      // Registry size observed by the hook (must be 0: already deregistered,
+      // so no permit can possibly be delivered for this enqueue).
+      let (hook_saw_tx, hook_saw_rx) = mpsc::channel::<usize>();
+
+      let hook_exec = Arc::clone(&executor);
+      DEADLINE_VERDICT_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          let handle = hook_exec.schedule_blocking(move || {
+            let _ = gate_tx.send(11usize);
+            0usize
+          });
+          drop(handle); // result unobserved; the gate send is the signal
+          hook_saw_tx.send(hook_exec.parked_drivers.count.load(Ordering::SeqCst)).unwrap();
+        }));
+      });
+
+      // Fake on-pool marker (1793 technique): the cooperative branch -- and
+      // therefore the thread-local hook -- runs on THIS thread.
+      let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+      let mut output = None;
+      {
+        let mut future = std::pin::pin!(async {
+          output = Some(gate_rx.await.unwrap());
+        });
+        executor.block_on(future.as_mut());
+      }
+      assert_eq!(
+        output,
+        Some(11),
+        "the enqueued job must have been run by the surviving driver via run_one"
+      );
+
+      let registered_at_hook = hook_saw_rx.recv().expect("the verdict hook must have fired");
+      assert_eq!(
+        registered_at_hook, 0,
+        "the hook fires post-deregister: no permit can be delivered, only the fingerprint's          enqueue counter can catch this submission"
+      );
+      executor.active_drainers.store(0, Ordering::SeqCst);
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "a blocking enqueue landing between the queue re-check and the verdict was reported as a deadlock or lost ({error})"
+      ),
+    }
+  }
+
+  #[test]
+  fn park_deadline_env_parsing_treats_unset_zero_and_garbage_as_disabled() {
+    // The env knob mirrors `resolve_thread_count`'s treatment of unusable
+    // values: never panic module init over a typo, just disable detection.
+    assert_eq!(parse_park_deadline(None), None);
+    assert_eq!(parse_park_deadline(Some("0".to_string())), None);
+    assert_eq!(parse_park_deadline(Some("abc".to_string())), None);
+    assert_eq!(parse_park_deadline(Some("-5".to_string())), None);
+    assert_eq!(parse_park_deadline(Some(String::new())), None);
+    assert_eq!(parse_park_deadline(Some("1500".to_string())), Some(Duration::from_millis(1500)));
+  }
+
+  #[test]
+  fn block_on_deadlock_panic_payload_surfaces_through_join_error() {
+    // A deadline firing inside a spawned task's poll unwinds into the spawn
+    // wrapper's catch_unwind and becomes a JoinError; the typed diagnostic's
+    // message must survive that trip (JoinError::from_panic downcasts it), or
+    // the build error would read "async runtime task panicked" with no clue.
+    let diagnostic = BlockOnDeadlock::multi_thread_cooperative(Duration::from_millis(75));
+    let expected = diagnostic.to_string();
+    let payload: Box<dyn Any + Send> = Box::new(diagnostic);
+    assert_eq!(JoinError::from_panic(&*payload).to_string(), expected);
   }
 }

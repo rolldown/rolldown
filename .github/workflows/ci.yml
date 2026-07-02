@@ -192,10 +192,12 @@ jobs:
 
       # Runs (1) the scheduler unit tests (their only CI home), then the node
       # suite under (2) ROLLDOWN_RUNTIME=single and (3) the default
-      # multi-thread flavor. The single lane carries a 20min external watchdog
-      # inside the recipe: a block_on-over-JS hazard hang freezes the JS event
-      # loop so vitest timeouts can never fire — without it a regression would
-      # eat the runner until the job timeout above.
+      # multi-thread flavor. The single lane arms the runtime's own deadlock
+      # detection (ROLLDOWN_PARK_DEADLINE_MS inside the recipe): a
+      # block_on-over-JS hazard hang freezes the JS event loop so vitest
+      # timeouts can never fire, but the runtime now panics with a typed
+      # BlockOnDeadlock diagnostic instead of hanging — a regression fails
+      # fast rather than eating the runner until the job timeout above.
       - name: Scheduler unit tests + node suite (single- and multi-thread flavors)
         run: just test-async-runtime
 

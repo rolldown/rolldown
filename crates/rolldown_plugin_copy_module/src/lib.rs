@@ -1,4 +1,8 @@
-use std::{borrow::Cow, path::Path, sync::Arc};
+use std::{
+  borrow::Cow,
+  path::{Path, PathBuf},
+  sync::Arc,
+};
 
 use arcstr::ArcStr;
 use memchr::memmem;
@@ -8,7 +12,7 @@ use rolldown_plugin::{
   HookResolveIdOutput, HookResolveIdReturn, HookTransformOutputMap, HookUsage, Plugin,
   PluginContext, PluginHookMeta, PluginOrder,
 };
-use rolldown_utils::url::clean_url;
+use rolldown_utils::{futures::spawn_blocking, url::clean_url};
 use rustc_hash::FxHashSet;
 use string_wizard::{MagicString, SourceMapOptions};
 use sugar_path::SugarPath;
@@ -86,7 +90,7 @@ impl Plugin for CopyModulePlugin {
 
     // Strip query/fragment (e.g. `file.txt?url`) before extension check and file read
     let clean_id = clean_url(resolved_id.id.as_str());
-    let resolved_path = Path::new(clean_id);
+    let resolved_path = PathBuf::from(clean_id);
 
     // Check if the resolved path has a copy extension
     let ext = match resolved_path.extension().and_then(|e| e.to_str()) {
@@ -98,9 +102,10 @@ impl Plugin for CopyModulePlugin {
       return Ok(None);
     }
 
-    // Read the file bytes asynchronously to avoid blocking the tokio worker thread
-    let bytes = tokio::fs::read(clean_id)
+    let read_path = resolved_path.clone();
+    let bytes = spawn_blocking(move || std::fs::read(read_path))
       .await
+      .map_err(|e| anyhow::anyhow!("Failed to join copy module read {}: {e}", resolved_id.id))?
       .map_err(|e| anyhow::anyhow!("Failed to read copy module {}: {e}", resolved_id.id))?;
 
     // Derive a name from the file path
@@ -108,8 +113,11 @@ impl Plugin for CopyModulePlugin {
       resolved_path.file_name().and_then(|n| n.to_str()).unwrap_or("asset").to_string();
 
     // Use relative path for original_file_name to avoid leaking absolute paths into output
-    let original_file_name =
-      resolved_path.strip_prefix(ctx.cwd()).unwrap_or(resolved_path).to_string_lossy().into_owned();
+    let original_file_name = resolved_path
+      .strip_prefix(ctx.cwd())
+      .unwrap_or(&resolved_path)
+      .to_string_lossy()
+      .into_owned();
 
     // Emit the file as an asset
     let reference_id = ctx

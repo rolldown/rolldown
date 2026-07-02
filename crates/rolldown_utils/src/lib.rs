@@ -1,5 +1,7 @@
 // We keep some standalone utilities here
 
+#[cfg(feature = "async-runtime")]
+pub mod async_runtime;
 pub mod base64;
 mod bitset;
 pub mod dashmap;

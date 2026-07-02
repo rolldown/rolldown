@@ -1,4 +1,5 @@
 import { getDevWatchOptionsForCi } from '@rolldown/test-dev-server';
+import { isSingleThread } from '@tests/runtime-flavor';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -29,7 +30,9 @@ function dev(
 // must therefore be rejected rather than read from disk. This pins the
 // error-path behavior so the gate in `compile_lazy_entry`
 // (crates/rolldown/src/hmr/hmr_stage.rs) can't silently regress.
-test(
+// Dev mode spawns the BindingDevEngine, which is out of scope for the
+// single-thread (CurrentThread) runtime flavor.
+test.skipIf(isSingleThread)(
   'compileEntry rejects an unknown module id instead of bundling it',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

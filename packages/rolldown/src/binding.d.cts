@@ -2710,6 +2710,40 @@ export interface BindingResolveOptions {
   yarnPnp?: boolean
 }
 
+export interface BindingRuntimeConfig {
+  flavor: BindingRuntimeFlavor
+  workerThreads: number
+  maxBlockingTasks: number
+}
+
+export type BindingRuntimeFlavor =  'CurrentThread'|
+'MultiThread';
+
+export interface BindingRuntimeMetrics {
+  flavor: BindingRuntimeFlavor
+  workerThreads: number
+  maxBlockingTasks: number
+  tasksSpawned: number
+  tasksCompleted: number
+  tasksPanicked: number
+  runnableSchedules: number
+  runnablePolls: number
+  queuedRunnables: number
+  maxQueuedRunnables: number
+  activeRunnables: number
+  maxActiveRunnables: number
+  blockingTasksStarted: number
+  blockingTasksCompleted: number
+  activeBlockingTasks: number
+  maxActiveBlockingTasks: number
+}
+
+export interface BindingRuntimeOptions {
+  flavor?: BindingRuntimeFlavor
+  workerThreads?: number
+  maxBlockingTasks?: number
+}
+
 export interface BindingSourcemap {
   inner: string | BindingJsonSourcemap
 }
@@ -2944,6 +2978,15 @@ export interface BindingWatchOption {
 
 export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
 
+/**
+ * Override the shared async runtime's flavor and thread counts.
+ *
+ * Must be called before the first async binding call. On the default
+ * `tokio-runtime` build this throws a feature-disabled error; only the
+ * `async-runtime` build honors it.
+ */
+export declare function configureAsyncRuntime(options: BindingRuntimeOptions): void
+
 export declare function enhancedTransform(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): Promise<BindingEnhancedTransformResult>
 
 export declare function enhancedTransformSync(filename: string, sourceText: string, options: BindingEnhancedTransformOptions | undefined | null, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingEnhancedTransformResult
@@ -2970,6 +3013,32 @@ export type FilterTokenKind =  'Id'|
 'CleanUrl'|
 'QueryKey'|
 'QueryValue';
+
+/**
+ * Return the effective async runtime configuration.
+ *
+ * On the native default `tokio-runtime` build this reports the thread counts the
+ * runtime was ACTUALLY built with at addon load (snapshotted in lib.rs `init`),
+ * so a later `process.env` change cannot make the report diverge from the live
+ * runtime. On the threaded WASI build it reports the napi-rs WASI loader's async
+ * work pool size (NAPI_RS_ASYNC_WORK_POOL_SIZE / UV_THREADPOOL_SIZE).
+ *
+ * Scope: the snapshot is taken once per process (the runtime is built once in
+ * `init`). If a host tears the env down and recreates it in the same process (an
+ * Electron-style reload), napi-rs rebuilds its runtime with its OWN defaults and
+ * the snapshot is not refreshed -- the same once-per-process lifecycle as napi's
+ * env-cleanup hook. This is unchanged from before the snapshot (the prior
+ * env-reading reporter could not reflect that napi-default runtime either); the
+ * field is diagnostics-only, so it is left as-is rather than chasing the reload.
+ */
+export declare function getAsyncRuntimeConfig(): BindingRuntimeConfig
+
+/**
+ * Return a snapshot of the shared async runtime's task and scheduler counters.
+ *
+ * On the default `tokio-runtime` build every counter is zero.
+ */
+export declare function getAsyncRuntimeMetrics(): BindingRuntimeMetrics
 
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
 
@@ -3032,6 +3101,13 @@ export interface PreRenderedChunk {
 }
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+
+/**
+ * Reset the async runtime metrics counters to zero.
+ *
+ * A no-op on the default `tokio-runtime` build.
+ */
+export declare function resetAsyncRuntimeMetrics(): void
 
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 

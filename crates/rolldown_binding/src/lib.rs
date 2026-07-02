@@ -22,6 +22,9 @@ use std::sync::{
 
 use napi_derive::napi;
 
+mod async_runtime;
+mod env_config;
+
 #[cfg(all(
   not(target_family = "wasm"),
   not(feature = "default_global_allocator"),
@@ -83,23 +86,22 @@ pub fn start_async_runtime() {
 
 #[napi_derive::module_init]
 fn init() {
-  #[cfg(not(target_family = "wasm"))]
+  #[cfg(all(
+    not(target_family = "wasm"),
+    feature = "tokio-runtime",
+    not(feature = "async-runtime")
+  ))]
   {
     use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
-    let max_blocking_threads = std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
-      .ok()
-      .and_then(|v| v.parse::<usize>().ok())
-      // default value in tokio implementation is **512**
-      // it's too high for us
-      // we don't have that many `blocking` tasks to run at this moment
-      .unwrap_or(4);
-    let worker_threads = std::env::var("ROLLDOWN_WORKER_THREADS")
-      .ok()
-      .and_then(|v| v.parse::<usize>().ok())
-      // unlike the web server scenario
-      // rolldown puts a lot of blocking tasks in the worker threads rather than blocking_threads
-      // so we need to increase the worker threads rather than the blocking_threads
-      .unwrap_or(num_cpus::get_physical() * 3 / 2);
+    // Single source of truth for the native default thread counts: the SAME
+    // resolution the diagnostics reporter snapshots, so the reported config
+    // always matches the runtime actually built here.
+    // - max_blocking_threads default is **512** in tokio; that is too high for
+    //   us (we don't have that many `blocking` tasks), so we default to 4.
+    // - rolldown puts a lot of blocking work on the worker threads rather than
+    //   the blocking pool, so we scale worker threads up (physical * 3 / 2).
+    let (worker_threads, max_blocking_threads) =
+      crate::async_runtime::resolve_default_runtime_threads();
     let mut builder = tokio::runtime::Builder::new_multi_thread();
 
     let rt = builder
@@ -110,6 +112,9 @@ fn init() {
       .build()
       .expect("Failed to create tokio runtime");
     create_custom_tokio_runtime(rt);
+    // Record what the runtime was ACTUALLY built with so the diagnostics
+    // reporter (`get_async_runtime_config`) does not re-read a later-mutated env.
+    crate::async_runtime::snapshot_default_runtime_config(worker_threads, max_blocking_threads);
   }
 
   #[cfg(not(feature = "disable_panic_hook"))]

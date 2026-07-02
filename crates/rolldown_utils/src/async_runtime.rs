@@ -1196,7 +1196,7 @@ mod tests {
       let scheduler = Arc::clone(&executor);
       let (runnable, task) =
         async_task::spawn(async move { gate_rx.await.expect("gate sender dropped") }, move |r| {
-          scheduler.schedule(r)
+          scheduler.schedule(r);
         });
       executor.schedule(runnable);
 
@@ -1946,7 +1946,7 @@ mod tests {
         let scheduler = Arc::clone(executor);
         let (runnable, task) =
           async_task::spawn(async move { tx.send(Some(i)).unwrap() }, move |r| {
-            scheduler.schedule(r)
+            scheduler.schedule(r);
           });
         executor.schedule(runnable);
         task.detach();

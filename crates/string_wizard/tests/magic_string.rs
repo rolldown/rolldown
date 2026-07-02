@@ -438,3 +438,27 @@ mod misc {
     assert!(s.has_changed());
   }
 }
+
+mod trim {
+  use super::*;
+
+  #[test]
+  fn trim_start_aborts_at_an_emptied_chunks_outro() {
+    // chunk[0,1] is emptied but its outro "X" follows it; the space after is not leading.
+    let mut s = MagicString::new("A B");
+    s.remove(0, 1).unwrap();
+    s.append_left(1, "X");
+    s.trim_start(None);
+    assert_eq!(s.to_string(), "X B");
+  }
+
+  #[test]
+  fn trim_end_aborts_at_an_emptied_chunks_intro() {
+    // chunk[2,3] is emptied but its intro "X" precedes it; the space before is not trailing.
+    let mut s = MagicString::new("A B");
+    s.remove(2, 3).unwrap();
+    s.prepend_right(2, "X");
+    s.trim_end(None);
+    assert_eq!(s.to_string(), "A X");
+  }
+}

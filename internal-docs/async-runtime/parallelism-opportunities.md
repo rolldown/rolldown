@@ -34,21 +34,21 @@ mixed across runs or fixtures.
 
 apps/10000 (median profiled run, wall 422.5 ms):
 
-| phase | wall ms | busy cores (phase work) | scheduler occupancy | dominant cost |
-| --- | ---: | ---: | ---: | --- |
-| scan | 220 | 15.5 | 0.93 | `__open` 2308 ms kernel CPU (68% of phase CPU) |
-| link | 47.5 | 0.92 | 0.056 (= 1/18) | tree-shaking include, bind imports |
-| generate | 147.5 | 1.29 | 0.056 | minify pipeline + sourcemap on one thread |
-| write | 10 | 0.23 | 0.056 | 2 files, 19.2 MB |
+| phase    | wall ms | busy cores (phase work) | scheduler occupancy | dominant cost                                  |
+| -------- | ------: | ----------------------: | ------------------: | ---------------------------------------------- |
+| scan     |     220 |                    15.5 |                0.93 | `__open` 2308 ms kernel CPU (68% of phase CPU) |
+| link     |    47.5 |                    0.92 |      0.056 (= 1/18) | tree-shaking include, bind imports             |
+| generate |   147.5 |                    1.29 |               0.056 | minify pipeline + sourcemap on one thread      |
+| write    |      10 |                    0.23 |               0.056 | 2 files, 19.2 MB                               |
 
 apps/three10x (median profiled run, wall 330.9 ms):
 
-| phase | wall ms | busy cores (phase work) | occupancy | dominant cost |
-| --- | ---: | ---: | ---: | --- |
-| scan | 50 | 12.0 | 0.87 | `__open` 282 ms kernel CPU |
-| link | 15 | 0.77 | 0.056 | — |
-| generate | 262.5 | 1.18 | 0.056 | single-chunk minify of a 6 MB bundle |
-| write | 7.5 | 0.36 | 0.056 | 25.2 MB |
+| phase    | wall ms | busy cores (phase work) | occupancy | dominant cost                        |
+| -------- | ------: | ----------------------: | --------: | ------------------------------------ |
+| scan     |      50 |                    12.0 |      0.87 | `__open` 282 ms kernel CPU           |
+| link     |      15 |                    0.77 |     0.056 | —                                    |
+| generate |   262.5 |                    1.18 |     0.056 | single-chunk minify of a 6 MB bundle |
+| write    |     7.5 |                    0.36 |     0.056 | 25.2 MB                              |
 
 Two facts dominate everything below:
 
@@ -66,30 +66,30 @@ Two facts dominate everything below:
 Generate-window CPU by bucket (leaf-first stack classification,
 `subattr.mjs`; window CPU: 249.3 ms / 367.4 ms):
 
-| bucket | apps/10000 (ms) | apps/three10x (ms) |
-| --- | ---: | ---: |
-| minify: compress | 22.9 | 82.5 |
-| minify: re-parse of rendered chunk | 14.5 | 37.3 |
-| minify: semantic rebuild | 12.9 | 52.9 |
-| minify: codegen | 11.5 | 21.9 |
-| minify: sourcemap | 10.7 | 25.7 |
-| minify: unclassified | 0.5 | — |
-| **minify total** | **73.0 (17.3% of wall)** | **220.3 (66.6% of wall)** |
-| sourcemap, non-minify (collapse, map→JSON, `add_source_mapping`) | 25.1 | 37.8 |
-| finalize-modules (already parallel — the ~5-core blip) | 28.6 | 7.1 |
-| deconflict/renamer | 18.8 | 6.8 |
-| render codegen + concat | 29.8 | 35.7 |
-| chunk graph | 11.1 | 1.9 |
-| idle-worker wake churn + unclassified | 63.1 | 57.8 |
+| bucket                                                           |          apps/10000 (ms) |        apps/three10x (ms) |
+| ---------------------------------------------------------------- | -----------------------: | ------------------------: |
+| minify: compress                                                 |                     22.9 |                      82.5 |
+| minify: re-parse of rendered chunk                               |                     14.5 |                      37.3 |
+| minify: semantic rebuild                                         |                     12.9 |                      52.9 |
+| minify: codegen                                                  |                     11.5 |                      21.9 |
+| minify: sourcemap                                                |                     10.7 |                      25.7 |
+| minify: unclassified                                             |                      0.5 |                         — |
+| **minify total**                                                 | **73.0 (17.3% of wall)** | **220.3 (66.6% of wall)** |
+| sourcemap, non-minify (collapse, map→JSON, `add_source_mapping`) |                     25.1 |                      37.8 |
+| finalize-modules (already parallel — the ~5-core blip)           |                     28.6 |                       7.1 |
+| deconflict/renamer                                               |                     18.8 |                       6.8 |
+| render codegen + concat                                          |                     29.8 |                      35.7 |
+| chunk graph                                                      |                     11.1 |                       1.9 |
+| idle-worker wake churn + unclassified                            |                     63.1 |                      57.8 |
 
 Scan-window syscall CPU by caller (apps/10000: 2597 ms syscall-leaf CPU of
 3612 ms scan-window CPU = 71.9%):
 
-| caller | syscall CPU |
-| --- | ---: |
+| caller                                                                                                                        |                                    syscall CPU |
+| ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------: |
 | module-source reads — `load_source` → `spawn_blocking(fs.read_to_string)` (`crates/rolldown/src/utils/load_source.rs:67,120`) | 2384 ms (`__open` 2305, `read` 54, `close` 25) |
-| resolver metadata — oxc_resolver `Cache::followed_metadata` | 210 ms (`lstat`) |
-| resolver `package.json` reads — `Cache::find_package_json` | 3 ms |
+| resolver metadata — oxc_resolver `Cache::followed_metadata`                                                                   |                               210 ms (`lstat`) |
+| resolver `package.json` reads — `Cache::find_package_json`                                                                    |                                           3 ms |
 
 (`rolldown_fs::OsFileSystem` wraps `oxc_resolver::FileSystemOs` —
 `crates/rolldown_fs/src/os.rs:13` — which is why module reads and resolver
@@ -139,7 +139,10 @@ prior guesses are corrected where the profile disagrees.
   failure mode — and that is what the A/B found (below).
 - **Verdict**: contention is real and reducible (sys-time −24% measured),
   but the naive dedicated pool **loses 9.1% wall** on apps/10000. The wake
-  path is the blocker, not the idea — see the A/B section.
+  path is the blocker, not the idea — see the A/B section. **Re-tested
+  after the Task-3 wake-path rewrite (Task 8): still loses, harder (+15.7%
+  wall) — "the wake path is the blocker" was an incomplete diagnosis; see
+  the re-test subsection below. REJECTED, no longer conditional.**
 
 ### 2. Intra-chunk minify parallelism — top remaining opportunity (upstream)
 
@@ -248,7 +251,11 @@ prior guesses are corrected where the profile disagrees.
   wall-neutral on an idle machine.
 - **Rejected as a standalone wall lever** — however, the fs-read-pool A/B
   below implicates this wake path as the reason IO-shaping experiments
-  fail, which promotes it from "hygiene" to "prerequisite".
+  fail, which promotes it from "hygiene" to "prerequisite". (The
+  prerequisite was subsequently built — Task 3's targeted-wake + LIFO-slot
+  rewrite, certified in [benchmarks.md](./benchmarks.md) — and the Task-8
+  re-test below shows it does NOT rescue the pool: the implication was
+  wrong.)
 
 ## Prototype decision rule, applied
 
@@ -292,10 +299,10 @@ first 2 pairs discarded as warmup, per-pair deltas — which cancels ambient
 drift by construction. Raw data:
 `/tmp/parallelism-profiles/ab-fs-read-pool/`.
 
-| fixture (14 pairs) | off median | on (4 threads) median | paired delta median | pairs won by on |
-| --- | ---: | ---: | ---: | ---: |
-| apps/10000 | 434.1 ms | 478.3 ms | **+39.4 ms (+9.1% — loss)** | 2/14 |
-| apps/three10x | 313.5 ms | 317.6 ms | +5.9 ms (+1.9% — loss) | 4/14 |
+| fixture (14 pairs) | off median | on (4 threads) median |         paired delta median | pairs won by on |
+| ------------------ | ---------: | --------------------: | --------------------------: | --------------: |
+| apps/10000         |   434.1 ms |              478.3 ms | **+39.4 ms (+9.1% — loss)** |            2/14 |
+| apps/three10x      |   313.5 ms |              317.6 ms |      +5.9 ms (+1.9% — loss) |            4/14 |
 
 Per-process counters, apps/10000. user/sys are the hyperfine block means
 (12 runs/side — robust); instructions and context switches come from
@@ -303,12 +310,12 @@ Per-process counters, apps/10000. user/sys are the hyperfine block means
 session — its own 3-sample sys medians go the other way, 2.76 → 2.94 s,
 which is why the 12-run means are quoted for time):
 
-| metric | flag off | flag on (4 threads) |
-| --- | ---: | ---: |
-| sys time (12-run means) | 2.50 s | **1.90 s (−24%)** |
-| user time (12-run means) | 1.11 s | 1.27 s (+15%) |
-| instructions retired (median of 3) | 14.38e9 | 20.23e9 (**+41%**) |
-| involuntary context switches (median of 3) | 19.8k | 201.8k (**10×**) |
+| metric                                     | flag off | flag on (4 threads) |
+| ------------------------------------------ | -------: | ------------------: |
+| sys time (12-run means)                    |   2.50 s |   **1.90 s (−24%)** |
+| user time (12-run means)                   |   1.11 s |       1.27 s (+15%) |
+| instructions retired (median of 3)         |  14.38e9 |  20.23e9 (**+41%**) |
+| involuntary context switches (median of 3) |    19.8k |    201.8k (**10×**) |
 
 A width probe (2 vs 8 reader threads, 6 runs each, blocked design —
 indicative only) ordered 8 > 4 > 2, i.e. the closer the pool gets to the
@@ -332,6 +339,60 @@ slot) price instead, which is why it won there.
 **Verdict: rejected as implemented.** The experiment branch stays in place
 (unpushed) for re-measurement if the wake path gets cheaper.
 
+### Re-test on the new wake path (Task 8, 2026-07-03): still loses — REJECTED
+
+The wake path DID get cheaper: Task 3 replaced the `notify_all` fan-out
+with a SeqCst no-waiter fast path, targeted per-driver wakes and a LIFO
+slot, certified at head with invol ctx switches −11…−12% and instructions
+−0.4…−0.6% (pooled pair-delta medians) on the apps fixtures
+([benchmarks.md](./benchmarks.md), wake-path certification). This was
+exactly the "prerequisite experiment" the verdict above asked for, so the
+pool was re-measured.
+
+**Setup**: `04bfaf4db` cherry-picked onto head `c6baf0beb` → local branch
+`experiment/fs-read-pool-rebased` (`fd798e400`; clean pick — the
+experiment hooks `load_source`'s `spawn_blocking` call sites, whose API the
+rewrite kept; what changed underneath is what its completions now pay:
+reader thread → oneshot → `schedule()` now takes the targeted-wake path,
+not `notify_all`). Re-verified on the rebased branch: release build green,
+rolldown_utils async-runtime lib tests 124/124, flag-off/flag-on
+`dist-rolldown` byte-identical (shasum), 4 `rolldown-fs-read` threads
+observed under the flag (`sample`). Same paired interleaved design (16
+pairs, first 2 discarded, per-pair `/usr/bin/time -l`), one release
+binding, sides selected by env var only, clean measurement windows this
+time (side σ 1.2–4.1%, one A-side burst run in apps/10000 pair 13 — not
+excluded). Raw: `.superpowers/sdd/arch-task-8-artifacts/fsrp/`.
+
+| metric (14 pairs)   | apps/10000 off → on |                      pair Δ | three10x off → on |           pair Δ |
+| ------------------- | ------------------: | --------------------------: | ----------------: | ---------------: |
+| wall median (ms)    |       352.5 → 411.1 | **+15.7% (0/14 won by on)** |     293.8 → 301.8 | **+2.6% (1/14)** |
+| instructions        |   13.20e9 → 18.22e9 |               +37.5% (0/14) |   8.73e9 → 9.28e9 |     +6.3% (0/14) |
+| invol. ctx switches |    13,540 → 124,437 |                +824% (0/14) |    4,314 → 18,167 |     +318% (0/14) |
+| user time (s)       |         1.03 → 1.38 |                 +33% (0/14) |       0.62 → 0.66 |     +6.5% (0/14) |
+| sys time (s)        |         2.26 → 2.64 |           **+16.4%** (1/14) |       0.43 → 0.47 |     +9.3% (0/14) |
+
+**Reading — the original diagnosis was incomplete.** The prediction was
+that the loss came from `notify_all` wake amplification and would shrink
+once wakes were targeted. It did shrink — flag-on's absolute churn dropped
+(invol ctx 201.8k → 124.4k, instructions +41% → +37.5% over baseline) —
+but the loss **grew** (+9.1% → +15.7% wall), and this time even the
+kernel-contention win did not reproduce: sys time is +16.4% WORSE with the
+pool, versus −24% better in the original (contaminated-window) round.
+What remains is intrinsic to the funnel, not to how pool workers are
+woken: ~10k read completions each pay a cross-thread wake into the
+scheduler (oneshot send → waker → `schedule()` from a foreign thread —
+the targeted wake still costs a syscall when workers are parked), the 4
+reader threads contend on one `Mutex<mpsc::Receiver>`, and 4 readers'
+time-sliced open(2) concurrency no longer beats the 18-wide blocking
+lane's on this scheduler. Wake-path cost was A cause, not THE cause; with
+it fixed, the pool's own overheads are the floor, and that floor is above
+baseline.
+
+**Verdict: REJECTED, unconditionally** (was: rejected-as-implemented,
+pending a cheaper wake path — that condition has now been met and spent).
+`experiment/fs-read-pool-rebased` stays local for the record; the original
+`experiment/fs-read-pool` branch ref is untouched.
+
 ## What to do with this
 
 1. **The tail is an oxc conversation, not a rolldown one.** Minify
@@ -340,11 +401,16 @@ slot) price instead, which is why it won there.
    `oxc_semantic` / `oxc_codegen` / oxc_sourcemap. Function-level parallel
    compression and parallel sourcemap emission upstream are the only moves
    that touch double-digit shares.
-2. **Scan IO shaping is gated on a cheaper wake path.** The contention is
-   confirmed (sys −24% with 4 openers) but uncapturable while each read
-   completion costs a `notify_all` fan-out. Targeted wake / a LIFO slot in
+2. **Scan IO shaping is dead, not gated.** ~~The contention is confirmed
+   (sys −24% with 4 openers) but uncapturable while each read completion
+   costs a `notify_all` fan-out. Targeted wake / a LIFO slot in
    `MultiThreadExecutor` is the prerequisite experiment; re-run
-   `experiment/fs-read-pool` after it.
+   `experiment/fs-read-pool` after it.~~ Done both (Task 3 built the wake
+   path, Task 8 re-ran the experiment): the pool loses **worse** on the new
+   scheduler (+15.7% wall on apps/10000) and the sys-time win did not
+   reproduce. The wake-fan-out explanation was incomplete; the funnel's
+   cross-thread completion cost is intrinsic. See the re-test subsection
+   above.
 3. **Everything else measured below the 5% bar**: include-marking 3.6%,
    renamer 4.4%, write overlap 2.4%, dispatcher ≤3.6%, metric RMWs sub-ms.
    The plan's prior first pick (write overlap) is dead on the numbers.

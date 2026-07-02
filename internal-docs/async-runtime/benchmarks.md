@@ -131,3 +131,124 @@ and +4.4e9-instruction signature above). No Rust change was made
 - Results directories are intentionally not committed
   (`scripts/misc/bench-async-runtime/.gitignore`); the tables above are the
   committed record.
+
+## Wake-path certification: pre-Task-3 vs head (2026-07-03)
+
+The formal re-certification Task 3 deferred: its round-0 A/B certified the
+wake-path rewrite (SeqCst no-waiter fast path + targeted per-driver wakes +
+LIFO slot) on all fixtures, but the round-1 LIFO-slot fixes (Ready-exit
+flush, coop streak cap, blocking-closure slot bypass) only got an
+ambient-contaminated spot re-gate. This round certifies the shipped code.
+
+- **Date**: 2026-07-03, same host and fixtures as above, Node v24.12.0
+- **A (pre)**: shared release binding + dist glue built from `aa58a088a`
+  (the branch point before Task 3), sha256 `8d0c72b3…`, 16,095,680 B
+- **B (head)**: shared release binding + dist glue built from `c6baf0beb`
+  (Tasks 3–7 + the wasi-threads cfg fix), sha256 `26e1f474…`, 16,079,136 B
+- Both sides rebuilt fresh for this round; the stale `/tmp/bench-shared.node`
+  left by an earlier session (sha `05760d58…`) was verified different and not
+  used.
+
+**Method.** Paired interleaved A/B per fixture: 16 alternating A/B pairs
+per window, runs 1–2 (pair 1–2) discarded as warmup, 14 kept; per-run wall
+is `direct.mjs`'s own in-process build ms (excludes node boot — hence lower
+absolute numbers than the hyperfine whole-process walls above); counters
+come from `/usr/bin/time -l` wrapped around **every** run.
+
+**Decision rule (as actually applied — every step checkable from the raw
+logs).** The unit of inference is the interleaved pair, and the estimator
+is the **median of per-pair relative deltas, pooled over every kept pair
+of every window run for that fixture**. Nothing is excluded: no run, no
+pair, no window. This host's ambient noise arrives as +150–450 ms bursts
+hitting 1–3 runs of a 32-run window (see the Anomalies section above —
+same machine, same behavior); the paired design absorbs them two ways: a
+burst spanning both runs of a pair cancels inside that pair's delta, and a
+one-sided burst corrupts only that single pair's delta, which the median
+tolerates (worst case below: 2 corrupted pairs of 14). A kept-run wall σ
+
+> 5% of the side median was the pre-registered trigger to run an
+> **additional** window (it fired for apps/5000 and apps/10000; both got 3
+> windows, all published below). As an _acceptance_ criterion that σ bar is
+> unsatisfiable on this machine — three windows at different hours,
+> including one at the calmest ambient observed (load ~2.0), each contain at
+> least one burst, and only apps/1000 meets it — so **the PASS below is NOT
+> claimed on σ**. It is claimed on: (1) the pooled pair-delta median vs the
+> 1% bar, (2) agreement of the per-window medians (window-selection
+> insensitivity), (3) pair-sign counts.
+
+**Scope disclosure.** The two sides load their own checkout's dist glue —
+head glue cannot drive the old binding (`registerTimerHost`, added in
+Task 5, is called at import). The delta therefore spans everything Tasks
+3–7 landed (wake path, deadlock detection, timer facility, wasi naming,
+config pipeline), of which the wake path is the only change aimed at this
+hot path. A/B ran with default env: MultiThread, 18 workers.
+
+**Ambient + burst disclosure (from the logs; run numbers are the raw 1–16
+indices, kept = 3–16).** Time Machine idle all windows (`tmutil` Running=0);
+Spotlight churn at session start (load 6.7 → ~2.0); apps/10000 window 3 ran
+at the calmest ambient of the session (load ~2.06, no processes above 40%
+CPU). Burst inventory per window:
+
+- apps/1000: none — the only window meeting the 5% σ bar (A/B σ 1.9%/1.8%).
+- apps/5000 w1: bursts hit BOTH sides at runs 13–14 (A 347.9/371.2 vs
+  B 362.6/364.8) — paired, so they largely cancel; σ 35.2%/34.6%.
+- apps/5000 w2: one-sided B burst at run 12 (A 187.9 vs B 327.6), both
+  sides at run 13 (358.7/391.4), A-heavier at run 14 (345.4/226.4);
+  σ 33.8%/36.5%.
+- apps/5000 w3: single one-sided B burst at run 16 (183.8 vs 362.6);
+  σ 1.6%/27.2%.
+- apps/10000 w1: one-sided bursts on each side at different runs — A run 7
+  (402.1), B runs 3 (405.7) and 16 (645.4); σ 3.3%/21.3%.
+- apps/10000 w2: both sides at run 14 (483.1/819.3), one-sided A run 15
+  (613.0), mild B run 4 (410.5); σ 20.5%/34.8%.
+- apps/10000 w3: both sides at run 13 (683.4/809.7), one-sided A run 14
+  (441.9), mild B run 16 (362.6); σ 26.4%/35.8%.
+- apps/three10x: both sides at run 16 (428.5/472.5); σ 11.7%/15.7%.
+
+(An earlier revision of this section misdescribed apps/5000 w1 as
+"one-sided A bursts, rejected" and w2 as purely paired; the inventory above
+is recomputed from the raw logs, and no window is rejected — all pool.)
+For apps/10000 window 3 the A-side dist glue was rebuilt from `aa58a088a`
+(deterministic; binding bytes sha-identical to window 1–2's). Raw logs:
+`.superpowers/sdd/arch-task-8-artifacts/cert/<fixture>[-windowN]/`
+(gitignored scratch; the tables here are the committed record).
+
+Pooled results (side values are pooled medians; deltas are pair-delta
+medians; "won" = pairs where B is lower):
+
+| fixture       | windows × pairs | wall A → B (ms) |        pair-Δ wall | instructions A → B |       pair-Δ instr | invol. ctx A → B |        pair-Δ ictx |
+| ------------- | --------------- | --------------: | -----------------: | -----------------: | -----------------: | ---------------: | -----------------: |
+| apps/1000     | 1 × 14          |     60.4 → 59.8 |  **−0.50%** (8/14) |  2.630e9 → 2.614e9 | **−0.63%** (12/14) |    3,904 → 3,372 | **−10.9%** (12/14) |
+| apps/5000     | 3 × 14          |   181.9 → 181.1 | **−0.33%** (22/42) |  7.008e9 → 6.976e9 | **−0.36%** (31/42) |    9,420 → 8,286 | **−11.7%** (34/42) |
+| apps/10000    | 3 × 14          |   356.8 → 354.6 | **−0.09%** (23/42) |  13.27e9 → 13.19e9 | **−0.39%** (34/42) |  15,450 → 13,385 | **−11.8%** (36/42) |
+| apps/three10x | 1 × 14          |   298.4 → 298.5 |      +0.37% (5/14) |  8.745e9 → 8.741e9 |      −0.03% (7/14) |    4,654 → 4,734 |      +2.78% (6/14) |
+
+Per-window pair-delta medians (window-selection insensitivity — criterion
+2 of the decision rule):
+
+| window | apps/5000 wall / instr / ictx   | apps/10000 wall / instr / ictx  |
+| ------ | ------------------------------- | ------------------------------- |
+| w1     | +0.94% (5/14) / −0.18% / −6.8%  | −0.46% (8/14) / −0.63% / −17.3% |
+| w2     | −0.61% (9/14) / −0.54% / −16.2% | +0.57% (6/14) / −0.38% / −11.0% |
+| w3     | −0.72% (8/14) / −0.45% / −11.7% | −0.09% (9/14) / −0.39% / −10.3% |
+
+**Verdict under the stated criteria: PASS** (bar: no fixture's pooled
+pair-delta wall median regresses > 1%).
+
+- **Wall**: parity on every fixture — pooled medians −0.50% / −0.33% /
+  −0.09% / +0.37%, all within ±0.5%; per-window wall medians stay inside a
+  ±1.0 pp band and straddle zero on both multi-window fixtures, i.e. the
+  wall delta is indistinguishable from zero and far from the −1% bar.
+- **Instructions**: the round-0 instruction win **survives at head** on
+  the apps fixtures (pooled −0.36…−0.63%; sign consistent in all six
+  windows; 34/42 pairs on apps/10000) — the round-1 blocking-closure slot
+  bypass did not permanently give it back, answering the question the
+  contaminated fix-round re-gate left open.
+- **Involuntary context switches**: pooled −10.9…−11.8% on the apps
+  fixtures, sign consistent in all six windows (36/42 pairs on
+  apps/10000). Round-0 measured −26…−33% for the wake-path change alone;
+  this round measures a different span (through Task 7, in-process window,
+  per-pair medians), so the magnitudes are not directly comparable — the
+  direction and pair-sign significance are.
+- three10x is parity on all three axes, consistent with round-0's smallest
+  win (−0.42% wall) sitting below this host's noise.

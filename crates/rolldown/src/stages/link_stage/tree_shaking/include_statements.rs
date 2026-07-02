@@ -8,7 +8,7 @@ use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind,
   ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
-  RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, SideEffectDetail,
+  RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, StmtEvalFlags,
   StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   UsedSymbolRefs, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
   side_effects::DeterminedSideEffects,
@@ -728,9 +728,9 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
         let has_side_effects = if module.meta.contains(EcmaViewMeta::SafelyTreeshakeCommonjs)
           && ctx.options.treeshake.commonjs()
         {
-          stmt_info.side_effect.contains(SideEffectDetail::Unknown)
+          stmt_info.eval_flags.contains(StmtEvalFlags::UnknownSideEffect)
         } else {
-          stmt_info.side_effect.has_side_effect()
+          stmt_info.eval_flags.has_side_effect_for_tree_shaking()
         };
         if has_side_effects || bail_eval {
           include_statement(ctx, module, stmt_info_id);
@@ -742,7 +742,7 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
     ctx.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt().for_each(
       |(stmt_info_id, stmt_info)| {
         if stmt_info.force_tree_shaking {
-          if stmt_info.side_effect.has_side_effect() {
+          if stmt_info.eval_flags.has_side_effect_for_tree_shaking() {
             // If `force_tree_shaking` is true, the statement should be included either by itself having side effects
             // or by other statements referencing it.
             include_statement(ctx, module, stmt_info_id);

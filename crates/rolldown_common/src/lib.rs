@@ -203,11 +203,11 @@ pub use crate::{
   types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,
   types::scan_mode::ScanMode,
-  types::side_effect_detail::SideEffectDetail,
   types::side_effects,
   types::source_mutation::SourceMutation,
   types::sourcemap_chain_element::SourcemapChainElement,
   types::stable_module_id::StableModuleId,
+  types::stmt_eval_flags::StmtEvalFlags,
   types::stmt_info::{
     DebugStmtInfoForTreeShaking, DeclaredSymbols, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos,
   },

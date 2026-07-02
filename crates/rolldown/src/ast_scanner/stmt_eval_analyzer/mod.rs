@@ -8,12 +8,14 @@ use oxc_ecmascript::GlobalContext;
 use oxc_ecmascript::side_effects::{
   MayHaveSideEffects, MayHaveSideEffectsContext, PropertyReadSideEffects,
 };
-use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, SideEffectDetail};
+use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, StmtEvalFlags};
 use rolldown_ecmascript_utils::ExpressionExt;
 use rustc_hash::FxHashSet;
 
-/// Detect if a statement "may" have side effect.
-pub struct SideEffectDetector<'a> {
+/// Collect facts about evaluating a statement.
+///
+/// The returned flags feed both tree shaking and execution-order-sensitive wrapper decisions.
+pub struct StmtEvalAnalyzer<'a> {
   scope: &'a AstScopes,
   options: &'a SharedNormalizedBundlerOptions,
   flat_options: FlatOptions,
@@ -25,7 +27,7 @@ pub struct SideEffectDetector<'a> {
   namespace_object_symbol_ids: Option<&'a FxHashSet<SymbolId>>,
 }
 
-impl<'a> SideEffectDetector<'a> {
+impl<'a> StmtEvalAnalyzer<'a> {
   pub fn new(
     scope: &'a AstScopes,
     flat_options: FlatOptions,
@@ -76,10 +78,7 @@ impl<'a> SideEffectDetector<'a> {
     Some(namespace_ids.contains(&symbol_id))
   }
 
-  fn detect_side_effect_of_member_expr(
-    &self,
-    member_expr: &ast::MemberExpression,
-  ) -> SideEffectDetail {
+  fn analyze_member_expr(&self, member_expr: &ast::MemberExpression) -> StmtEvalFlags {
     if self.is_expr_manual_pure_functions(member_expr.object()) {
       return false.into();
     }
@@ -88,9 +87,7 @@ impl<'a> SideEffectDetector<'a> {
     // though, and may have its own side effects (e.g. `ns[foo()]`).
     if self.is_namespace_member_access(member_expr) == Some(true) {
       return match member_expr {
-        ast::MemberExpression::ComputedMemberExpression(e) => {
-          self.detect_side_effect_of_expr(&e.expression)
-        }
+        ast::MemberExpression::ComputedMemberExpression(e) => self.analyze_expr(&e.expression),
         _ => false.into(),
       };
     }
@@ -105,43 +102,36 @@ impl<'a> SideEffectDetector<'a> {
     }
     let is_global = self.is_member_expr_root_global(member_expr);
     let has_side_effect = member_expr.may_have_side_effects(self);
-    let mut detail = SideEffectDetail::from(has_side_effect);
-    detail.set(SideEffectDetail::GlobalVarAccess, is_global);
+    let mut detail = StmtEvalFlags::from(has_side_effect);
+    detail.set(StmtEvalFlags::GlobalVarAccess, is_global);
     detail
   }
 
   /// Collect `GlobalVarAccess` metadata from a member-like write target.
   /// Called after Oxc has determined the expression is side-effect-free.
   /// Writing to a property of an unresolved global mutates shared state.
-  fn collect_write_target_metadata(
-    &self,
-    target: &ast::SimpleAssignmentTarget,
-  ) -> SideEffectDetail {
+  fn collect_write_target_metadata(&self, target: &ast::SimpleAssignmentTarget) -> StmtEvalFlags {
     let object_detail = match target {
-      ast::SimpleAssignmentTarget::StaticMemberExpression(e) => {
-        self.detect_side_effect_of_expr(&e.object)
-      }
+      ast::SimpleAssignmentTarget::StaticMemberExpression(e) => self.analyze_expr(&e.object),
       ast::SimpleAssignmentTarget::ComputedMemberExpression(e) => {
-        self.detect_side_effect_of_expr(&e.object) | self.detect_side_effect_of_expr(&e.expression)
+        self.analyze_expr(&e.object) | self.analyze_expr(&e.expression)
       }
-      ast::SimpleAssignmentTarget::PrivateFieldExpression(e) => {
-        self.detect_side_effect_of_expr(&e.object)
-      }
+      ast::SimpleAssignmentTarget::PrivateFieldExpression(e) => self.analyze_expr(&e.object),
       _ => return false.into(),
     };
-    if object_detail.contains(SideEffectDetail::GlobalVarAccess) {
+    if object_detail.contains(StmtEvalFlags::GlobalVarAccess) {
       object_detail | true.into()
     } else {
       object_detail
     }
   }
 
-  fn detect_side_effect_of_call_expr(&self, expr: &CallExpression) -> SideEffectDetail {
+  fn analyze_call_expr(&self, expr: &CallExpression) -> StmtEvalFlags {
     let is_pure_annotated =
       !self.flat_options.ignore_annotations() && (expr.pure || self.is_call_expr_marked_pure(expr));
 
     // For pure-annotated calls, the call itself is side-effect-free.
-    // We must check args via Rolldown's detector (not Oxc's) because Rolldown
+    // We must check args via Rolldown's analyzer (not Oxc's) because Rolldown
     // has bundler-specific overrides (e.g. import.meta.url is side-effect-free).
     // Oxc's pure-call handling would still check args via its own may_have_side_effects,
     // which doesn't know about these overrides.
@@ -150,24 +140,24 @@ impl<'a> SideEffectDetector<'a> {
     let is_global_call = !has_side_effect
       && matches!(&expr.callee, Expression::Identifier(id) if self.is_unresolved_reference(id));
 
-    let mut detail = SideEffectDetail::from(has_side_effect);
-    detail.set(SideEffectDetail::PureAnnotation, is_pure_annotated);
-    detail.set(SideEffectDetail::GlobalVarAccess, is_global_call);
+    let mut detail = StmtEvalFlags::from(has_side_effect);
+    detail.set(StmtEvalFlags::PureAnnotation, is_pure_annotated);
+    detail.set(StmtEvalFlags::GlobalVarAccess, is_global_call);
 
     if !has_side_effect {
-      // Strip the Unknown flag from callee since the call itself is known-pure/safe.
-      detail |= self.detect_side_effect_of_expr(&expr.callee) - SideEffectDetail::Unknown;
+      // Strip the UnknownSideEffect flag from callee since the call itself is known-pure/safe.
+      detail |= self.analyze_expr(&expr.callee) - StmtEvalFlags::UnknownSideEffect;
 
       if is_pure_annotated {
         // Pure-annotated calls bypass Oxc's arg checking, so we must check args
-        // through Rolldown's detector which has bundler-specific overrides
+        // through Rolldown's analyzer which has bundler-specific overrides
         // (e.g. import.meta.url is side-effect-free).
         for arg in &expr.arguments {
           detail |= match arg {
             Argument::SpreadElement(_) => true.into(),
-            _ => self.detect_side_effect_of_expr(arg.to_expression()),
+            _ => self.analyze_expr(arg.to_expression()),
           };
-          if detail.has_side_effect() {
+          if detail.has_side_effect_for_tree_shaking() {
             break;
           }
         }
@@ -177,8 +167,7 @@ impl<'a> SideEffectDetector<'a> {
           if let Argument::SpreadElement(_) = arg {
             break;
           }
-          detail |=
-            self.detect_side_effect_of_expr(arg.to_expression()) - SideEffectDetail::Unknown;
+          detail |= self.analyze_expr(arg.to_expression()) - StmtEvalFlags::UnknownSideEffect;
         }
       }
     }
@@ -194,21 +183,21 @@ impl<'a> SideEffectDetector<'a> {
       .is_some_and(|first| manual_pure_functions.contains(first))
   }
 
-  fn detect_side_effect_of_expr(&self, expr: &Expression) -> SideEffectDetail {
+  fn analyze_expr(&self, expr: &Expression) -> StmtEvalFlags {
     // Peel transparent wrappers (`(x)`, `x as T`, `x satisfies T`, `x!`, `<T>x`, `x<T>`)
     // — they add no runtime semantics, so we recurse into the inner expression.
     let expr = expr.get_inner_expression();
     match expr {
       // --- Bundler-specific overrides (metadata or custom logic) ---
       oxc::ast::match_member_expression!(Expression) => {
-        self.detect_side_effect_of_member_expr(expr.to_member_expression())
+        self.analyze_member_expr(expr.to_member_expression())
       }
-      Expression::Identifier(ident) => self.detect_side_effect_of_identifier(ident),
+      Expression::Identifier(ident) => self.analyze_identifier(ident),
       Expression::AssignmentExpression(assign_expr) => {
         // Bundler-specific: CJS `exports.foo = ...` must be checked before Oxc,
         // because Oxc would see a write to an unresolved global and return true.
         if let Some(pure_cjs) = check_pure_cjs_export(self.scope, &assign_expr.left) {
-          return pure_cjs | self.detect_side_effect_of_expr(&assign_expr.right);
+          return pure_cjs | self.analyze_expr(&assign_expr.right);
         }
         if assign_expr.may_have_side_effects(self) {
           return true.into();
@@ -218,12 +207,10 @@ impl<'a> SideEffectDetector<'a> {
       }
 
       Expression::ChainExpression(chain_expr) => match &chain_expr.expression {
-        ChainElement::CallExpression(call_expr) => self.detect_side_effect_of_call_expr(call_expr),
-        ChainElement::TSNonNullExpression(ts_expr) => {
-          self.detect_side_effect_of_expr(&ts_expr.expression)
-        }
+        ChainElement::CallExpression(call_expr) => self.analyze_call_expr(call_expr),
+        ChainElement::TSNonNullExpression(ts_expr) => self.analyze_expr(&ts_expr.expression),
         match_member_expression!(ChainElement) => {
-          self.detect_side_effect_of_member_expr(chain_expr.expression.to_member_expression())
+          self.analyze_member_expr(chain_expr.expression.to_member_expression())
         }
       },
       Expression::UpdateExpression(update_expr) => {
@@ -242,9 +229,9 @@ impl<'a> SideEffectDetector<'a> {
         // METADATA: PureAnnotation — marked with /*@__PURE__*/
         let is_pure_annotated = !self.flat_options.ignore_annotations() && expr.pure;
 
-        let mut detail = SideEffectDetail::from(has_side_effect);
-        detail.set(SideEffectDetail::GlobalVarAccess, is_global_constructor);
-        detail.set(SideEffectDetail::PureAnnotation, is_pure_annotated);
+        let mut detail = StmtEvalFlags::from(has_side_effect);
+        detail.set(StmtEvalFlags::GlobalVarAccess, is_global_constructor);
+        detail.set(StmtEvalFlags::PureAnnotation, is_pure_annotated);
 
         if !has_side_effect {
           // Oxc already verified args are side-effect-free; only collect metadata flags.
@@ -252,13 +239,12 @@ impl<'a> SideEffectDetector<'a> {
             if let Argument::SpreadElement(_) = arg {
               break;
             }
-            detail |=
-              self.detect_side_effect_of_expr(arg.to_expression()) - SideEffectDetail::Unknown;
+            detail |= self.analyze_expr(arg.to_expression()) - StmtEvalFlags::UnknownSideEffect;
           }
         }
         detail
       }
-      Expression::CallExpression(expr) => self.detect_side_effect_of_call_expr(expr),
+      Expression::CallExpression(expr) => self.analyze_call_expr(expr),
 
       // Transparent wrappers: oxc validates the boolean side-effect status,
       // we then recurse children to harvest metadata flags
@@ -312,41 +298,36 @@ impl<'a> SideEffectDetector<'a> {
   /// computed keys / spread reads / etc.), and if not, fold metadata flags
   /// (`PureAnnotation`, `GlobalVarAccess`) from the child expressions.
   ///
-  /// The trailing `- Unknown` is load-bearing: rolldown's detector can be
+  /// The trailing `- UnknownSideEffect` is load-bearing: rolldown's analyzer can be
   /// more conservative than oxc for some sub-expressions (e.g. CJS-export
   /// assignments via [`check_pure_cjs_export`], or future bundler-specific
   /// overrides). Once oxc has certified the parent side-effect-free at the
-  /// gate, we trust that judgment for the parent and strip any `Unknown`
+  /// gate, we trust that judgment for the parent and strip any `UnknownSideEffect`
   /// that a child contributed — only metadata bits should propagate.
   fn fold_compound<'e>(
     &self,
     expr: &Expression,
     children: impl IntoIterator<Item = &'e Expression<'e>>,
-  ) -> SideEffectDetail {
+  ) -> StmtEvalFlags {
     if expr.may_have_side_effects(self) {
       return true.into();
     }
-    let mut detail = SideEffectDetail::empty();
+    let mut detail = StmtEvalFlags::empty();
     for child in children {
-      detail |= self.detect_side_effect_of_expr(child);
-      if detail.has_side_effect() {
+      detail |= self.analyze_expr(child);
+      if detail.has_side_effect_for_tree_shaking() {
         break;
       }
     }
-    detail - SideEffectDetail::Unknown
+    detail - StmtEvalFlags::UnknownSideEffect
   }
 
-  fn detect_side_effect_of_var_decl(
-    &self,
-    var_decl: &ast::VariableDeclaration,
-  ) -> SideEffectDetail {
+  fn analyze_var_decl(&self, var_decl: &ast::VariableDeclaration) -> StmtEvalFlags {
     match var_decl.kind {
       VariableDeclarationKind::AwaitUsing => true.into(),
-      VariableDeclarationKind::Using => {
-        self.detect_side_effect_of_using_declarators(&var_decl.declarations)
-      }
+      VariableDeclarationKind::Using => self.analyze_using_declarators(&var_decl.declarations),
       _ => {
-        let mut detail = SideEffectDetail::empty();
+        let mut detail = StmtEvalFlags::empty();
         for declarator in &var_decl.declarations {
           detail |= match &declarator.id {
             BindingPattern::ObjectPattern(_) if self.flat_options.property_read_side_effects() => {
@@ -359,11 +340,9 @@ impl<'a> SideEffectDetector<'a> {
             {
               true.into()
             }
-            _ => declarator
-              .init
-              .as_ref()
-              .map(|init| self.detect_side_effect_of_expr(init))
-              .unwrap_or(false.into()),
+            _ => {
+              declarator.init.as_ref().map(|init| self.analyze_expr(init)).unwrap_or(false.into())
+            }
           };
         }
         detail
@@ -371,20 +350,15 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_decl(&self, decl: &ast::Declaration) -> SideEffectDetail {
+  fn analyze_decl(&self, decl: &ast::Declaration) -> StmtEvalFlags {
     match decl {
-      ast::Declaration::VariableDeclaration(var_decl) => {
-        self.detect_side_effect_of_var_decl(var_decl)
-      }
+      ast::Declaration::VariableDeclaration(var_decl) => self.analyze_var_decl(var_decl),
       _ => decl.may_have_side_effects(self).into(),
     }
   }
 
-  fn detect_side_effect_of_using_declarators(
-    &self,
-    declarators: &[ast::VariableDeclarator],
-  ) -> SideEffectDetail {
-    let mut detail = SideEffectDetail::empty();
+  fn analyze_using_declarators(&self, declarators: &[ast::VariableDeclarator]) -> StmtEvalFlags {
+    let mut detail = StmtEvalFlags::empty();
     for decl in declarators {
       detail |= decl
         .init
@@ -397,25 +371,25 @@ impl<'a> SideEffectDetector<'a> {
             (!(id.name == "undefined" && self.is_unresolved_reference(id))).into()
           }
           Expression::UnaryExpression(expr) if matches!(expr.operator, UnaryOperator::Void) => {
-            self.detect_side_effect_of_expr(&expr.argument)
+            self.analyze_expr(&expr.argument)
           }
           _ => true.into(),
         })
-        .unwrap_or(SideEffectDetail::empty());
-      if detail.has_side_effect() {
+        .unwrap_or(StmtEvalFlags::empty());
+      if detail.has_side_effect_for_tree_shaking() {
         break;
       }
     }
     detail
   }
 
-  fn detect_side_effect_of_identifier(&self, ident_ref: &IdentifierReference) -> SideEffectDetail {
+  fn analyze_identifier(&self, ident_ref: &IdentifierReference) -> StmtEvalFlags {
     let is_global = self.is_unresolved_reference(ident_ref);
     // Delegate side-effect bool to Oxc (checks known globals, unknown_global_side_effects)
     let has_side_effect = ident_ref.may_have_side_effects(self);
-    let mut detail = SideEffectDetail::from(has_side_effect);
+    let mut detail = StmtEvalFlags::from(has_side_effect);
     // METADATA: GlobalVarAccess
-    detail.set(SideEffectDetail::GlobalVarAccess, is_global);
+    detail.set(StmtEvalFlags::GlobalVarAccess, is_global);
     detail
   }
 
@@ -424,10 +398,7 @@ impl<'a> SideEffectDetector<'a> {
   /// - import/export-all/re-export: side-effect-free (bundler handles them)
   /// - export default: recurse into declaration
   /// - export named with source: side-effect-free
-  fn detect_side_effect_of_module_declaration(
-    &self,
-    decl: &ast::ModuleDeclaration,
-  ) -> SideEffectDetail {
+  fn analyze_module_declaration(&self, decl: &ast::ModuleDeclaration) -> StmtEvalFlags {
     match decl {
       ast::ModuleDeclaration::ExportAllDeclaration(_)
       | ast::ModuleDeclaration::ImportDeclaration(_) => {
@@ -439,7 +410,7 @@ impl<'a> SideEffectDetector<'a> {
         use oxc::ast::ast::ExportDefaultDeclarationKind;
         match &default_decl.declaration {
           decl @ oxc::ast::match_expression!(ExportDefaultDeclarationKind) => {
-            self.detect_side_effect_of_expr(decl.to_expression())
+            self.analyze_expr(decl.to_expression())
           }
           ast::ExportDefaultDeclarationKind::FunctionDeclaration(_) => false.into(),
           ast::ExportDefaultDeclarationKind::ClassDeclaration(decl) => {
@@ -455,7 +426,7 @@ impl<'a> SideEffectDetector<'a> {
           named_decl
             .declaration
             .as_ref()
-            .map(|decl| self.detect_side_effect_of_decl(decl))
+            .map(|decl| self.analyze_decl(decl))
             .unwrap_or(false.into())
         }
       }
@@ -464,72 +435,60 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  pub fn detect_side_effect_of_stmt(&self, stmt: &ast::Statement) -> SideEffectDetail {
+  pub fn analyze_stmt(&self, stmt: &ast::Statement) -> StmtEvalFlags {
     use oxc::ast::ast::Statement;
     match stmt {
       // Bundler-specific: module declarations
       oxc::ast::match_module_declaration!(Statement) => {
-        self.detect_side_effect_of_module_declaration(stmt.to_module_declaration())
+        self.analyze_module_declaration(stmt.to_module_declaration())
       }
       // Language-level: everything else
-      oxc::ast::match_declaration!(Statement) => {
-        self.detect_side_effect_of_decl(stmt.to_declaration())
-      }
-      Statement::ExpressionStatement(expr) => self.detect_side_effect_of_expr(&expr.expression),
-      Statement::BlockStatement(block) => self.detect_side_effect_of_block(block),
+      oxc::ast::match_declaration!(Statement) => self.analyze_decl(stmt.to_declaration()),
+      Statement::ExpressionStatement(expr) => self.analyze_expr(&expr.expression),
+      Statement::BlockStatement(block) => self.analyze_block(block),
       Statement::DoWhileStatement(do_while) => {
-        self.detect_side_effect_of_stmt(&do_while.body)
-          | self.detect_side_effect_of_expr(&do_while.test)
+        self.analyze_stmt(&do_while.body) | self.analyze_expr(&do_while.test)
       }
       Statement::WhileStatement(while_stmt) => {
-        self.detect_side_effect_of_expr(&while_stmt.test)
-          | self.detect_side_effect_of_stmt(&while_stmt.body)
+        self.analyze_expr(&while_stmt.test) | self.analyze_stmt(&while_stmt.body)
       }
       Statement::IfStatement(if_stmt) => {
-        self.detect_side_effect_of_expr(&if_stmt.test)
-          | self.detect_side_effect_of_stmt(&if_stmt.consequent)
-          | if_stmt
-            .alternate
-            .as_ref()
-            .map(|s| self.detect_side_effect_of_stmt(s))
-            .unwrap_or(false.into())
+        self.analyze_expr(&if_stmt.test)
+          | self.analyze_stmt(&if_stmt.consequent)
+          | if_stmt.alternate.as_ref().map(|s| self.analyze_stmt(s)).unwrap_or(false.into())
       }
-      Statement::ReturnStatement(ret_stmt) => ret_stmt
-        .argument
-        .as_ref()
-        .map(|expr| self.detect_side_effect_of_expr(expr))
-        .unwrap_or(false.into()),
-      Statement::LabeledStatement(labeled_stmt) => {
-        self.detect_side_effect_of_stmt(&labeled_stmt.body)
+      Statement::ReturnStatement(ret_stmt) => {
+        ret_stmt.argument.as_ref().map(|expr| self.analyze_expr(expr)).unwrap_or(false.into())
       }
+      Statement::LabeledStatement(labeled_stmt) => self.analyze_stmt(&labeled_stmt.body),
       Statement::TryStatement(try_stmt) => {
-        let mut detail = self.detect_side_effect_of_block(&try_stmt.block);
+        let mut detail = self.analyze_block(&try_stmt.block);
         detail |= try_stmt
           .handler
           .as_ref()
-          .map(|handler| self.detect_side_effect_of_block(&handler.body))
-          .unwrap_or(SideEffectDetail::empty());
+          .map(|handler| self.analyze_block(&handler.body))
+          .unwrap_or(StmtEvalFlags::empty());
         detail |= try_stmt
           .finalizer
           .as_ref()
-          .map(|finalizer| self.detect_side_effect_of_block(finalizer))
-          .unwrap_or(SideEffectDetail::empty());
+          .map(|finalizer| self.analyze_block(finalizer))
+          .unwrap_or(StmtEvalFlags::empty());
         detail
       }
       Statement::SwitchStatement(switch_stmt) => {
-        let mut detail = self.detect_side_effect_of_expr(&switch_stmt.discriminant);
-        if detail.has_side_effect() {
+        let mut detail = self.analyze_expr(&switch_stmt.discriminant);
+        if detail.has_side_effect_for_tree_shaking() {
           return detail;
         }
         'outer: for case in &switch_stmt.cases {
           detail |= case
             .test
             .as_ref()
-            .map(|expr| self.detect_side_effect_of_expr(expr))
-            .unwrap_or(SideEffectDetail::empty());
+            .map(|expr| self.analyze_expr(expr))
+            .unwrap_or(StmtEvalFlags::empty());
           for stmt in &case.consequent {
-            detail |= self.detect_side_effect_of_stmt(stmt);
-            if detail.has_side_effect() {
+            detail |= self.analyze_stmt(stmt);
+            if detail.has_side_effect_for_tree_shaking() {
               break 'outer;
             }
           }
@@ -542,11 +501,11 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_block(&self, block: &ast::BlockStatement) -> SideEffectDetail {
-    let mut detail = SideEffectDetail::empty();
+  fn analyze_block(&self, block: &ast::BlockStatement) -> StmtEvalFlags {
+    let mut detail = StmtEvalFlags::empty();
     for stmt in &block.body {
-      detail |= self.detect_side_effect_of_stmt(stmt);
-      if detail.has_side_effect() {
+      detail |= self.analyze_stmt(stmt);
+      if detail.has_side_effect_for_tree_shaking() {
         break;
       }
     }
@@ -556,7 +515,7 @@ impl<'a> SideEffectDetector<'a> {
 
 /// Bundler-specific: detect `exports.staticProp = ...` CJS export pattern.
 /// Returns `Some(PureCjs)` if the target matches, `None` otherwise.
-fn check_pure_cjs_export(scope: &AstScopes, target: &AssignmentTarget) -> Option<SideEffectDetail> {
+fn check_pure_cjs_export(scope: &AstScopes, target: &AssignmentTarget) -> Option<StmtEvalFlags> {
   match target {
     AssignmentTarget::ComputedMemberExpression(_) | AssignmentTarget::StaticMemberExpression(_) => {
       let member_expr = target.to_member_expression();
@@ -565,7 +524,7 @@ fn check_pure_cjs_export(scope: &AstScopes, target: &AssignmentTarget) -> Option
           && member_expr.static_property_name().is_some()
           && ident.reference_id.get().is_some_and(|ref_id| scope.is_unresolved(ref_id))
         {
-          return Some(SideEffectDetail::PureCjs);
+          return Some(StmtEvalFlags::PureCjs);
         }
       }
       None
@@ -575,8 +534,8 @@ fn check_pure_cjs_export(scope: &AstScopes, target: &AssignmentTarget) -> Option
 }
 
 /// Extract the first (leftmost) identifier name from a member expression chain.
-/// Used by both `SideEffectDetector::is_expr_manual_pure_functions` and
-/// `SideEffectDetector::manual_pure_functions`.
+/// Used by both `StmtEvalAnalyzer::is_expr_manual_pure_functions` and
+/// `StmtEvalAnalyzer::manual_pure_functions`.
 fn extract_first_part_of_member_expr_like<'a>(expr: &'a Expression) -> Option<&'a str> {
   let mut cur = expr;
   loop {
@@ -610,13 +569,13 @@ fn extract_first_part_of_member_expr_like<'a>(expr: &'a Expression) -> Option<&'
   }
 }
 
-impl GlobalContext<'_> for SideEffectDetector<'_> {
+impl GlobalContext<'_> for StmtEvalAnalyzer<'_> {
   fn is_global_reference(&self, reference: &IdentifierReference<'_>) -> bool {
     self.is_unresolved_reference(reference)
   }
 }
 
-impl MayHaveSideEffectsContext<'_> for SideEffectDetector<'_> {
+impl MayHaveSideEffectsContext<'_> for StmtEvalAnalyzer<'_> {
   fn annotations(&self) -> bool {
     !self.flat_options.ignore_annotations()
   }
@@ -648,13 +607,13 @@ mod test {
 
   use itertools::Itertools;
   use oxc::{parser::Parser, span::SourceType};
-  use rolldown_common::{AstScopes, NormalizedBundlerOptions, SideEffectDetail};
+  use rolldown_common::{AstScopes, NormalizedBundlerOptions, StmtEvalFlags};
   use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
-  use super::SideEffectDetector;
+  use super::StmtEvalAnalyzer;
   use rolldown_common::FlatOptions;
 
-  fn get_statements_side_effect(code: &str) -> bool {
+  fn has_side_effect_for_tree_shaking(code: &str) -> bool {
     let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let semantic = EcmaAst::make_semantic(ast.program());
@@ -664,13 +623,13 @@ mod test {
     let options = Arc::new(NormalizedBundlerOptions::default());
     let flags = FlatOptions::from_shared_options(&options);
     ast.program().body.iter().any(|stmt| {
-      SideEffectDetector::new(&ast_scopes, flags, &options, None, None)
-        .detect_side_effect_of_stmt(stmt)
-        .has_side_effect()
+      StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None)
+        .analyze_stmt(stmt)
+        .has_side_effect_for_tree_shaking()
     })
   }
 
-  fn get_statements_side_effect_details(code: &str) -> Vec<SideEffectDetail> {
+  fn get_stmt_eval_flags(code: &str) -> Vec<StmtEvalFlags> {
     let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let semantic = EcmaAst::make_semantic(ast.program());
@@ -684,17 +643,16 @@ mod test {
       .body
       .iter()
       .map(|stmt| {
-        SideEffectDetector::new(&ast_scopes, flags, &options, None, None)
-          .detect_side_effect_of_stmt(stmt)
+        StmtEvalAnalyzer::new(&ast_scopes, flags, &options, None, None).analyze_stmt(stmt)
       })
       .collect_vec()
   }
 
   #[test]
-  fn test_side_effect() {
-    assert!(!get_statements_side_effect("export { a }"));
-    assert!(!get_statements_side_effect("const a = {}"));
-    assert!(!get_statements_side_effect(
+  fn test_side_effect_for_tree_shaking() {
+    assert!(!has_side_effect_for_tree_shaking("export { a }"));
+    assert!(!has_side_effect_for_tree_shaking("const a = {}"));
+    assert!(!has_side_effect_for_tree_shaking(
       "const PatchFlags = {
         'TEXT':1,
         '1':'TEXT',
@@ -730,168 +688,168 @@ mod test {
 
   #[test]
   fn test_template_literal() {
-    assert!(!get_statements_side_effect("`hello`"));
-    assert!(get_statements_side_effect("const foo = ''; `hello${foo}`"));
+    assert!(!has_side_effect_for_tree_shaking("`hello`"));
+    assert!(has_side_effect_for_tree_shaking("const foo = ''; `hello${foo}`"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("`hello${foo}`"));
-    assert!(get_statements_side_effect("const foo = {}; `hello${foo.bar}`"));
-    assert!(get_statements_side_effect("tag`hello`"));
+    assert!(has_side_effect_for_tree_shaking("`hello${foo}`"));
+    assert!(has_side_effect_for_tree_shaking("const foo = {}; `hello${foo.bar}`"));
+    assert!(has_side_effect_for_tree_shaking("tag`hello`"));
   }
 
   #[test]
   fn test_logical_expression() {
-    assert!(!get_statements_side_effect("true && false"));
-    assert!(!get_statements_side_effect("null ?? true"));
+    assert!(!has_side_effect_for_tree_shaking("true && false"));
+    assert!(!has_side_effect_for_tree_shaking("null ?? true"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("true && bar"));
-    assert!(get_statements_side_effect("foo ?? true"));
+    assert!(has_side_effect_for_tree_shaking("true && bar"));
+    assert!(has_side_effect_for_tree_shaking("foo ?? true"));
   }
 
   #[test]
   fn test_parenthesized_expression() {
-    assert!(!get_statements_side_effect("(true)"));
-    assert!(!get_statements_side_effect("(null)"));
+    assert!(!has_side_effect_for_tree_shaking("(true)"));
+    assert!(!has_side_effect_for_tree_shaking("(null)"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("(bar)"));
-    assert!(get_statements_side_effect("(foo)"));
+    assert!(has_side_effect_for_tree_shaking("(bar)"));
+    assert!(has_side_effect_for_tree_shaking("(foo)"));
   }
 
   #[test]
   fn test_sequence_expression() {
-    assert!(!get_statements_side_effect("true, false"));
-    assert!(!get_statements_side_effect("null, true"));
+    assert!(!has_side_effect_for_tree_shaking("true, false"));
+    assert!(!has_side_effect_for_tree_shaking("null, true"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("true, bar"));
-    assert!(get_statements_side_effect("foo, true"));
+    assert!(has_side_effect_for_tree_shaking("true, bar"));
+    assert!(has_side_effect_for_tree_shaking("foo, true"));
   }
 
   #[test]
   fn test_conditional_expression() {
-    assert!(!get_statements_side_effect("true ? false : true"));
-    assert!(!get_statements_side_effect("null ? true : false"));
+    assert!(!has_side_effect_for_tree_shaking("true ? false : true"));
+    assert!(!has_side_effect_for_tree_shaking("null ? true : false"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("true ? bar : true"));
-    assert!(get_statements_side_effect("foo ? true : false"));
-    assert!(get_statements_side_effect("true ? bar : true"));
+    assert!(has_side_effect_for_tree_shaking("true ? bar : true"));
+    assert!(has_side_effect_for_tree_shaking("foo ? true : false"));
+    assert!(has_side_effect_for_tree_shaking("true ? bar : true"));
   }
 
   #[test]
   fn test_block_statement() {
-    assert!(!get_statements_side_effect("{ }"));
-    assert!(!get_statements_side_effect("{ const a = 1; }"));
-    assert!(!get_statements_side_effect("{ const a = 1; const b = 2; }"));
+    assert!(!has_side_effect_for_tree_shaking("{ }"));
+    assert!(!has_side_effect_for_tree_shaking("{ const a = 1; }"));
+    assert!(!has_side_effect_for_tree_shaking("{ const a = 1; const b = 2; }"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("{ const a = 1; bar; }"));
+    assert!(has_side_effect_for_tree_shaking("{ const a = 1; bar; }"));
   }
 
   #[test]
   fn test_do_while_statement() {
-    assert!(!get_statements_side_effect("do { } while (true)"));
-    assert!(!get_statements_side_effect("do { const a = 1; } while (true)"));
+    assert!(!has_side_effect_for_tree_shaking("do { } while (true)"));
+    assert!(!has_side_effect_for_tree_shaking("do { const a = 1; } while (true)"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("do { const a = 1; } while (bar)"));
-    assert!(get_statements_side_effect("do { const a = 1; bar; } while (true)"));
-    assert!(get_statements_side_effect("do { bar; } while (true)"));
+    assert!(has_side_effect_for_tree_shaking("do { const a = 1; } while (bar)"));
+    assert!(has_side_effect_for_tree_shaking("do { const a = 1; bar; } while (true)"));
+    assert!(has_side_effect_for_tree_shaking("do { bar; } while (true)"));
   }
 
   #[test]
   fn test_while_statement() {
-    assert!(!get_statements_side_effect("while (true) { }"));
-    assert!(!get_statements_side_effect("while (true) { const a = 1; }"));
+    assert!(!has_side_effect_for_tree_shaking("while (true) { }"));
+    assert!(!has_side_effect_for_tree_shaking("while (true) { const a = 1; }"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("while (bar) { const a = 1; }"));
-    assert!(get_statements_side_effect("while (true) { const a = 1; bar; }"));
-    assert!(get_statements_side_effect("while (true) { bar; }"));
+    assert!(has_side_effect_for_tree_shaking("while (bar) { const a = 1; }"));
+    assert!(has_side_effect_for_tree_shaking("while (true) { const a = 1; bar; }"));
+    assert!(has_side_effect_for_tree_shaking("while (true) { bar; }"));
   }
 
   #[test]
   fn test_if_statement() {
-    assert!(!get_statements_side_effect("if (true) { }"));
-    assert!(!get_statements_side_effect("if (true) { const a = 1; }"));
+    assert!(!has_side_effect_for_tree_shaking("if (true) { }"));
+    assert!(!has_side_effect_for_tree_shaking("if (true) { const a = 1; }"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("if (bar) { const a = 1; }"));
-    assert!(get_statements_side_effect("if (true) { const a = 1; bar; }"));
-    assert!(get_statements_side_effect("if (true) { bar; }"));
+    assert!(has_side_effect_for_tree_shaking("if (bar) { const a = 1; }"));
+    assert!(has_side_effect_for_tree_shaking("if (true) { const a = 1; bar; }"));
+    assert!(has_side_effect_for_tree_shaking("if (true) { bar; }"));
   }
 
   #[test]
   fn test_empty_statement() {
-    assert!(!get_statements_side_effect(";"));
-    assert!(!get_statements_side_effect(";;"));
+    assert!(!has_side_effect_for_tree_shaking(";"));
+    assert!(!has_side_effect_for_tree_shaking(";;"));
   }
 
   #[test]
   fn test_continue_statement() {
-    assert!(!get_statements_side_effect("continue;"));
+    assert!(!has_side_effect_for_tree_shaking("continue;"));
   }
 
   #[test]
   fn test_break_statement() {
-    assert!(!get_statements_side_effect("break;"));
+    assert!(!has_side_effect_for_tree_shaking("break;"));
   }
 
   #[test]
   fn test_return_statement() {
-    assert!(!get_statements_side_effect("return;"));
-    assert!(!get_statements_side_effect("return 1;"));
+    assert!(!has_side_effect_for_tree_shaking("return;"));
+    assert!(!has_side_effect_for_tree_shaking("return 1;"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("return bar;"));
+    assert!(has_side_effect_for_tree_shaking("return bar;"));
   }
 
   #[test]
   fn test_labeled_statement() {
-    assert!(!get_statements_side_effect("label: { }"));
-    assert!(!get_statements_side_effect("label: { const a = 1; }"));
+    assert!(!has_side_effect_for_tree_shaking("label: { }"));
+    assert!(!has_side_effect_for_tree_shaking("label: { const a = 1; }"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("label: { const a = 1; bar; }"));
-    assert!(get_statements_side_effect("label: { bar; }"));
+    assert!(has_side_effect_for_tree_shaking("label: { const a = 1; bar; }"));
+    assert!(has_side_effect_for_tree_shaking("label: { bar; }"));
   }
 
   #[test]
   fn test_try_statement() {
-    assert!(!get_statements_side_effect("try { } catch (e) { }"));
-    assert!(!get_statements_side_effect("try { const a = 1; } catch (e) { }"));
-    assert!(!get_statements_side_effect("try { } catch (e) { const a = 1; }"));
-    assert!(!get_statements_side_effect("try { const a = 1; } catch (e) { const a = 1; }"));
-    assert!(!get_statements_side_effect("try { const a = 1; } finally { }"));
-    assert!(!get_statements_side_effect("try { } catch (e) { const a = 1; } finally { }"));
-    assert!(!get_statements_side_effect("try { } catch (e) { } finally { const a = 1; }"));
-    assert!(!get_statements_side_effect(
+    assert!(!has_side_effect_for_tree_shaking("try { } catch (e) { }"));
+    assert!(!has_side_effect_for_tree_shaking("try { const a = 1; } catch (e) { }"));
+    assert!(!has_side_effect_for_tree_shaking("try { } catch (e) { const a = 1; }"));
+    assert!(!has_side_effect_for_tree_shaking("try { const a = 1; } catch (e) { const a = 1; }"));
+    assert!(!has_side_effect_for_tree_shaking("try { const a = 1; } finally { }"));
+    assert!(!has_side_effect_for_tree_shaking("try { } catch (e) { const a = 1; } finally { }"));
+    assert!(!has_side_effect_for_tree_shaking("try { } catch (e) { } finally { const a = 1; }"));
+    assert!(!has_side_effect_for_tree_shaking(
       "try { const a = 1; } catch (e) { const a = 1; } finally { const a = 1; }"
     ));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("try { const a = 1; bar; } catch (e) { }"));
-    assert!(get_statements_side_effect("try { } catch (e) { const a = 1; bar; }"));
-    assert!(get_statements_side_effect("try { } catch (e) { bar; }"));
-    assert!(get_statements_side_effect("try { const a = 1; } catch (e) { bar; }"));
-    assert!(get_statements_side_effect("try { bar; } finally { }"));
-    assert!(get_statements_side_effect("try { } catch (e) { bar; } finally { }"));
-    assert!(get_statements_side_effect("try { } catch (e) { } finally { bar; }"));
-    assert!(get_statements_side_effect("try { bar; } catch (e) { bar; } finally { bar; }"));
+    assert!(has_side_effect_for_tree_shaking("try { const a = 1; bar; } catch (e) { }"));
+    assert!(has_side_effect_for_tree_shaking("try { } catch (e) { const a = 1; bar; }"));
+    assert!(has_side_effect_for_tree_shaking("try { } catch (e) { bar; }"));
+    assert!(has_side_effect_for_tree_shaking("try { const a = 1; } catch (e) { bar; }"));
+    assert!(has_side_effect_for_tree_shaking("try { bar; } finally { }"));
+    assert!(has_side_effect_for_tree_shaking("try { } catch (e) { bar; } finally { }"));
+    assert!(has_side_effect_for_tree_shaking("try { } catch (e) { } finally { bar; }"));
+    assert!(has_side_effect_for_tree_shaking("try { bar; } catch (e) { bar; } finally { bar; }"));
   }
 
   #[test]
   fn test_switch_statement() {
-    assert!(!get_statements_side_effect("switch (true) { }"));
-    assert!(!get_statements_side_effect("switch (true) { case 1: break; }"));
-    assert!(!get_statements_side_effect("switch (true) { case 1: break; default: break; }"));
+    assert!(!has_side_effect_for_tree_shaking("switch (true) { }"));
+    assert!(!has_side_effect_for_tree_shaking("switch (true) { case 1: break; }"));
+    assert!(!has_side_effect_for_tree_shaking("switch (true) { case 1: break; default: break; }"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("switch (bar) { case 1: break; }"));
-    assert!(get_statements_side_effect("switch (true) { case 1: bar; }"));
-    assert!(get_statements_side_effect("switch (true) { case bar: break; }"));
-    assert!(get_statements_side_effect("switch (true) { case 1: bar; default: bar; }"));
+    assert!(has_side_effect_for_tree_shaking("switch (bar) { case 1: break; }"));
+    assert!(has_side_effect_for_tree_shaking("switch (true) { case 1: bar; }"));
+    assert!(has_side_effect_for_tree_shaking("switch (true) { case bar: break; }"));
+    assert!(has_side_effect_for_tree_shaking("switch (true) { case 1: bar; default: bar; }"));
   }
 
   #[test]
   fn test_binary_expression() {
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("1 + foo"));
-    assert!(get_statements_side_effect("2 + bar"));
+    assert!(has_side_effect_for_tree_shaking("1 + foo"));
+    assert!(has_side_effect_for_tree_shaking("2 + bar"));
     // Oxc correctly recognizes primitive literal operands as side-effect-free
-    assert!(!get_statements_side_effect("1 + 1"));
+    assert!(!has_side_effect_for_tree_shaking("1 + 1"));
     // Oxc doesn't do constant propagation through variables, so `a + b` is
     // conservatively treated as potentially side-effectful (ToPrimitive)
-    assert!(get_statements_side_effect("const a = 1; const b = 2; a + b"));
+    assert!(has_side_effect_for_tree_shaking("const a = 1; const b = 2; a + b"));
   }
 
   #[test]
@@ -899,316 +857,316 @@ mod test {
     // Oxc checks that the RHS is known to be an object; `this` and local
     // variables with unknown value type are conservatively treated as
     // potentially non-object, so `#x in this` / `#x in obj` may throw.
-    assert!(get_statements_side_effect("#privateField in this"));
-    assert!(get_statements_side_effect("const obj = {}; #privateField in obj"));
+    assert!(has_side_effect_for_tree_shaking("#privateField in this"));
+    assert!(has_side_effect_for_tree_shaking("const obj = {}; #privateField in obj"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("#privateField in bar"));
-    assert!(get_statements_side_effect("#privateField in foo"));
+    assert!(has_side_effect_for_tree_shaking("#privateField in bar"));
+    assert!(has_side_effect_for_tree_shaking("#privateField in foo"));
   }
 
   #[test]
   fn test_this_expression() {
     // In oxc 0.125.0, `this` is now considered to potentially have side effects
     // because it may be used in contexts where accessing `this` could throw
-    assert!(get_statements_side_effect("this"));
-    assert!(get_statements_side_effect("this.a"));
-    assert!(get_statements_side_effect("this.a + this.b"));
-    assert!(get_statements_side_effect("this.a = 10"));
+    assert!(has_side_effect_for_tree_shaking("this"));
+    assert!(has_side_effect_for_tree_shaking("this.a"));
+    assert!(has_side_effect_for_tree_shaking("this.a + this.b"));
+    assert!(has_side_effect_for_tree_shaking("this.a = 10"));
   }
 
   #[test]
   fn test_meta_property_expression() {
-    assert!(!get_statements_side_effect("import.meta"));
-    assert!(!get_statements_side_effect("const meta = import.meta"));
-    assert!(!get_statements_side_effect("import.meta.url"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta"));
+    assert!(!has_side_effect_for_tree_shaking("const meta = import.meta"));
+    assert!(!has_side_effect_for_tree_shaking("import.meta.url"));
     // Other import.meta properties are not spec-defined as side-effect-free
-    assert!(get_statements_side_effect("import.meta.hot"));
+    assert!(has_side_effect_for_tree_shaking("import.meta.hot"));
     // Deeper chains may throw (e.g. import.meta.nonExisting is undefined, .foo throws TypeError)
-    assert!(get_statements_side_effect("import.meta.nonExisting.foo"));
-    assert!(get_statements_side_effect("const { url } = import.meta"));
-    assert!(get_statements_side_effect("import.meta.url = 'test'"));
+    assert!(has_side_effect_for_tree_shaking("import.meta.nonExisting.foo"));
+    assert!(has_side_effect_for_tree_shaking("const { url } = import.meta"));
+    assert!(has_side_effect_for_tree_shaking("import.meta.url = 'test'"));
   }
 
   #[test]
   fn test_assignment_expression() {
     // Destructuring assignments are side-effectful (GetIterator / RequireObjectCoercible).
-    assert!(get_statements_side_effect("let a; [] = a"));
-    assert!(get_statements_side_effect("({} = a)"));
-    assert!(get_statements_side_effect("let a; a = 1"));
-    assert!(get_statements_side_effect("let a, b; a = b; a = b = 1"));
+    assert!(has_side_effect_for_tree_shaking("let a; [] = a"));
+    assert!(has_side_effect_for_tree_shaking("({} = a)"));
+    assert!(has_side_effect_for_tree_shaking("let a; a = 1"));
+    assert!(has_side_effect_for_tree_shaking("let a, b; a = b; a = b = 1"));
     // accessing global variable may have side effect
-    assert!(get_statements_side_effect("b = 1"));
-    assert!(get_statements_side_effect("[] = b"));
-    assert!(get_statements_side_effect("let a; a = b"));
-    assert!(get_statements_side_effect("let a; a.b = 1"));
-    assert!(get_statements_side_effect("let a; a['b'] = 1"));
-    assert!(get_statements_side_effect("let a; a = a.b"));
-    assert!(get_statements_side_effect("let a, b; ({ a } = b)"));
-    assert!(get_statements_side_effect("let a, b; ({ ...a } = b)"));
-    assert!(get_statements_side_effect("let a, b; [ a ] = b"));
-    assert!(get_statements_side_effect("let a, b; [ ...a ] = b"));
+    assert!(has_side_effect_for_tree_shaking("b = 1"));
+    assert!(has_side_effect_for_tree_shaking("[] = b"));
+    assert!(has_side_effect_for_tree_shaking("let a; a = b"));
+    assert!(has_side_effect_for_tree_shaking("let a; a.b = 1"));
+    assert!(has_side_effect_for_tree_shaking("let a; a['b'] = 1"));
+    assert!(has_side_effect_for_tree_shaking("let a; a = a.b"));
+    assert!(has_side_effect_for_tree_shaking("let a, b; ({ a } = b)"));
+    assert!(has_side_effect_for_tree_shaking("let a, b; ({ ...a } = b)"));
+    assert!(has_side_effect_for_tree_shaking("let a, b; [ a ] = b"));
+    assert!(has_side_effect_for_tree_shaking("let a, b; [ ...a ] = b"));
   }
 
   #[test]
   fn test_chain_expression() {
-    assert!(!get_statements_side_effect("Object.create"));
-    assert!(!get_statements_side_effect("Object?.create"));
-    assert!(!get_statements_side_effect("let a; /*#__PURE__*/ a?.()"));
-    assert!(get_statements_side_effect("let a; a?.b"));
-    assert!(get_statements_side_effect("let a; a?.()"));
-    assert!(get_statements_side_effect("let a; a?.[a]"));
+    assert!(!has_side_effect_for_tree_shaking("Object.create"));
+    assert!(!has_side_effect_for_tree_shaking("Object?.create"));
+    assert!(!has_side_effect_for_tree_shaking("let a; /*#__PURE__*/ a?.()"));
+    assert!(has_side_effect_for_tree_shaking("let a; a?.b"));
+    assert!(has_side_effect_for_tree_shaking("let a; a?.()"));
+    assert!(has_side_effect_for_tree_shaking("let a; a?.[a]"));
   }
 
   #[test]
   fn test_other_statements() {
-    assert!(get_statements_side_effect("debugger;"));
-    assert!(get_statements_side_effect("for (const k in {}) { }"));
-    assert!(get_statements_side_effect("let a; for (const v of []) { a++ }"));
-    assert!(get_statements_side_effect("for (;;) { }"));
-    assert!(get_statements_side_effect("throw 1;"));
-    assert!(get_statements_side_effect("with(a) { }"));
-    assert!(get_statements_side_effect("await 1"));
-    assert!(get_statements_side_effect("import('foo')"));
-    assert!(get_statements_side_effect("let a; a``"));
-    assert!(get_statements_side_effect("let a; a++"));
+    assert!(has_side_effect_for_tree_shaking("debugger;"));
+    assert!(has_side_effect_for_tree_shaking("for (const k in {}) { }"));
+    assert!(has_side_effect_for_tree_shaking("let a; for (const v of []) { a++ }"));
+    assert!(has_side_effect_for_tree_shaking("for (;;) { }"));
+    assert!(has_side_effect_for_tree_shaking("throw 1;"));
+    assert!(has_side_effect_for_tree_shaking("with(a) { }"));
+    assert!(has_side_effect_for_tree_shaking("await 1"));
+    assert!(has_side_effect_for_tree_shaking("import('foo')"));
+    assert!(has_side_effect_for_tree_shaking("let a; a``"));
+    assert!(has_side_effect_for_tree_shaking("let a; a++"));
   }
 
   #[test]
   fn test_new_expr() {
-    assert!(!get_statements_side_effect("new Map()"));
-    assert!(!get_statements_side_effect("new Set()"));
-    assert!(!get_statements_side_effect("new Map([[1, 2], [3, 4]]);"));
-    assert!(get_statements_side_effect("new Regex()"));
-    assert!(!get_statements_side_effect(
+    assert!(!has_side_effect_for_tree_shaking("new Map()"));
+    assert!(!has_side_effect_for_tree_shaking("new Set()"));
+    assert!(!has_side_effect_for_tree_shaking("new Map([[1, 2], [3, 4]]);"));
+    assert!(has_side_effect_for_tree_shaking("new Regex()"));
+    assert!(!has_side_effect_for_tree_shaking(
       "new Date(); new Date(''); new Date(null); new Date(false); new Date(undefined)"
     ));
 
     // TypedArray constructors should be side-effect free with no args, null, or undefined
-    assert!(!get_statements_side_effect("new Uint8Array()"));
-    assert!(!get_statements_side_effect("new Uint8Array(null)"));
-    assert!(!get_statements_side_effect("new Uint8Array(undefined)"));
-    assert!(!get_statements_side_effect("new Int8Array()"));
-    assert!(!get_statements_side_effect("new Uint16Array()"));
-    assert!(!get_statements_side_effect("new Uint32Array()"));
-    assert!(!get_statements_side_effect("new Float64Array()"));
-    assert!(!get_statements_side_effect("new BigUint64Array()"));
+    assert!(!has_side_effect_for_tree_shaking("new Uint8Array()"));
+    assert!(!has_side_effect_for_tree_shaking("new Uint8Array(null)"));
+    assert!(!has_side_effect_for_tree_shaking("new Uint8Array(undefined)"));
+    assert!(!has_side_effect_for_tree_shaking("new Int8Array()"));
+    assert!(!has_side_effect_for_tree_shaking("new Uint16Array()"));
+    assert!(!has_side_effect_for_tree_shaking("new Uint32Array()"));
+    assert!(!has_side_effect_for_tree_shaking("new Float64Array()"));
+    assert!(!has_side_effect_for_tree_shaking("new BigUint64Array()"));
 
     // TypedArray constructors with numeric args are side-effect free
     // (memory allocation is not an observable side effect for tree-shaking)
-    assert!(!get_statements_side_effect("new Uint8Array(10)"));
-    assert!(!get_statements_side_effect("new Int16Array(5)"));
-    assert!(!get_statements_side_effect("new Int32Array(100)"));
-    assert!(!get_statements_side_effect("new Float32Array(20)"));
-    assert!(!get_statements_side_effect("new BigInt64Array(8)"));
-    assert!(!get_statements_side_effect("new Uint8ClampedArray(256)"));
+    assert!(!has_side_effect_for_tree_shaking("new Uint8Array(10)"));
+    assert!(!has_side_effect_for_tree_shaking("new Int16Array(5)"));
+    assert!(!has_side_effect_for_tree_shaking("new Int32Array(100)"));
+    assert!(!has_side_effect_for_tree_shaking("new Float32Array(20)"));
+    assert!(!has_side_effect_for_tree_shaking("new BigInt64Array(8)"));
+    assert!(!has_side_effect_for_tree_shaking("new Uint8ClampedArray(256)"));
 
     // Symbol is not a constructor - using 'new' throws TypeError
     // All of these should have side effects (they throw errors)
-    assert!(get_statements_side_effect("new Symbol()"));
-    assert!(get_statements_side_effect("new Symbol('string')"));
-    assert!(get_statements_side_effect("new Symbol(null)"));
-    assert!(get_statements_side_effect("new Symbol(undefined)"));
-    assert!(get_statements_side_effect("new Symbol({ toString() { throw new Error() } })"));
-    assert!(get_statements_side_effect("let unknownVariable; new Symbol(unknownVariable)"));
+    assert!(has_side_effect_for_tree_shaking("new Symbol()"));
+    assert!(has_side_effect_for_tree_shaking("new Symbol('string')"));
+    assert!(has_side_effect_for_tree_shaking("new Symbol(null)"));
+    assert!(has_side_effect_for_tree_shaking("new Symbol(undefined)"));
+    assert!(has_side_effect_for_tree_shaking("new Symbol({ toString() { throw new Error() } })"));
+    assert!(has_side_effect_for_tree_shaking("let unknownVariable; new Symbol(unknownVariable)"));
 
     // Symbol() as a function call (without 'new') is side-effect-free with primitives
-    assert!(!get_statements_side_effect("Symbol()"));
-    assert!(!get_statements_side_effect("Symbol('string')"));
-    assert!(!get_statements_side_effect("Symbol(null)"));
-    assert!(!get_statements_side_effect("Symbol(undefined)"));
-    assert!(!get_statements_side_effect("Symbol(123)"));
-    assert!(!get_statements_side_effect("Symbol(true)"));
+    assert!(!has_side_effect_for_tree_shaking("Symbol()"));
+    assert!(!has_side_effect_for_tree_shaking("Symbol('string')"));
+    assert!(!has_side_effect_for_tree_shaking("Symbol(null)"));
+    assert!(!has_side_effect_for_tree_shaking("Symbol(undefined)"));
+    assert!(!has_side_effect_for_tree_shaking("Symbol(123)"));
+    assert!(!has_side_effect_for_tree_shaking("Symbol(true)"));
 
     // Symbol() with object argument has side effects (could call toString)
-    assert!(get_statements_side_effect("Symbol({ toString() { throw new Error() } })"));
+    assert!(has_side_effect_for_tree_shaking("Symbol({ toString() { throw new Error() } })"));
 
     // Symbol() with unknown variable has side effects (could be an object)
-    assert!(get_statements_side_effect("let unknownVariable; Symbol(unknownVariable)"));
+    assert!(has_side_effect_for_tree_shaking("let unknownVariable; Symbol(unknownVariable)"));
 
     // Test fallback logic for global constructors with primitive arguments
     // String, Number, Boolean, Object constructors are side-effect-free with primitives
-    assert!(!get_statements_side_effect("new String()"));
+    assert!(!has_side_effect_for_tree_shaking("new String()"));
 
-    assert!(!get_statements_side_effect("new Number()"));
+    assert!(!has_side_effect_for_tree_shaking("new Number()"));
 
-    assert!(!get_statements_side_effect("new Boolean()"));
+    assert!(!has_side_effect_for_tree_shaking("new Boolean()"));
 
-    assert!(!get_statements_side_effect("new Object()"));
+    assert!(!has_side_effect_for_tree_shaking("new Object()"));
 
-    assert!(get_statements_side_effect("new BigInt(123)"));
+    assert!(has_side_effect_for_tree_shaking("new BigInt(123)"));
   }
 
   #[test]
   fn test_primitive_global_function_calls() {
     // String() - side-effect-free with primitive arguments only
     // Object conversion can call valueOf/toString with side effects
-    assert!(!get_statements_side_effect("String()"));
-    assert!(!get_statements_side_effect("String('hello')"));
-    assert!(!get_statements_side_effect("String(123)"));
-    assert!(!get_statements_side_effect("String(null)"));
-    assert!(!get_statements_side_effect("String(undefined)"));
-    assert!(!get_statements_side_effect("String(true)"));
+    assert!(!has_side_effect_for_tree_shaking("String()"));
+    assert!(!has_side_effect_for_tree_shaking("String('hello')"));
+    assert!(!has_side_effect_for_tree_shaking("String(123)"));
+    assert!(!has_side_effect_for_tree_shaking("String(null)"));
+    assert!(!has_side_effect_for_tree_shaking("String(undefined)"));
+    assert!(!has_side_effect_for_tree_shaking("String(true)"));
 
     // String() with any value: Oxc's "coercion methods are pure" assumption
     // treats toString()/valueOf() as side-effect-free. String(Symbol()) is also
     // safe per spec (returns "Symbol()" without throwing).
-    assert!(!get_statements_side_effect("String({})"));
-    assert!(!get_statements_side_effect("String([1, 2, 3])"));
-    assert!(!get_statements_side_effect("let obj; String(obj)"));
+    assert!(!has_side_effect_for_tree_shaking("String({})"));
+    assert!(!has_side_effect_for_tree_shaking("String([1, 2, 3])"));
+    assert!(!has_side_effect_for_tree_shaking("let obj; String(obj)"));
 
     // Number() - side-effect-free with primitive arguments only
-    assert!(!get_statements_side_effect("Number()"));
-    assert!(!get_statements_side_effect("Number('123')"));
-    assert!(!get_statements_side_effect("Number(456)"));
-    assert!(!get_statements_side_effect("Number(null)"));
-    assert!(!get_statements_side_effect("Number(undefined)"));
-    assert!(!get_statements_side_effect("Number(true)"));
+    assert!(!has_side_effect_for_tree_shaking("Number()"));
+    assert!(!has_side_effect_for_tree_shaking("Number('123')"));
+    assert!(!has_side_effect_for_tree_shaking("Number(456)"));
+    assert!(!has_side_effect_for_tree_shaking("Number(null)"));
+    assert!(!has_side_effect_for_tree_shaking("Number(undefined)"));
+    assert!(!has_side_effect_for_tree_shaking("Number(true)"));
 
     // Number() with object literals: Oxc checks ToPrimitive/ToNumeric.
     // {} has known valueOf/toString, so ToNumeric({}) = NaN (no throw).
-    assert!(!get_statements_side_effect("Number({})"));
-    assert!(get_statements_side_effect("let val; Number(val)"));
+    assert!(!has_side_effect_for_tree_shaking("Number({})"));
+    assert!(has_side_effect_for_tree_shaking("let val; Number(val)"));
 
     // Boolean() - always side-effect free (no type conversion needed)
-    assert!(!get_statements_side_effect("Boolean()"));
-    assert!(!get_statements_side_effect("Boolean(true)"));
-    assert!(!get_statements_side_effect("Boolean('text')"));
-    assert!(!get_statements_side_effect("Boolean(0)"));
-    assert!(!get_statements_side_effect("Boolean(null)"));
-    assert!(!get_statements_side_effect("Boolean(undefined)"));
+    assert!(!has_side_effect_for_tree_shaking("Boolean()"));
+    assert!(!has_side_effect_for_tree_shaking("Boolean(true)"));
+    assert!(!has_side_effect_for_tree_shaking("Boolean('text')"));
+    assert!(!has_side_effect_for_tree_shaking("Boolean(0)"));
+    assert!(!has_side_effect_for_tree_shaking("Boolean(null)"));
+    assert!(!has_side_effect_for_tree_shaking("Boolean(undefined)"));
 
     // Boolean() with any value is side-effect free (just checks truthiness)
-    assert!(!get_statements_side_effect("Boolean({})"));
-    assert!(!get_statements_side_effect("let val; Boolean(val)"));
+    assert!(!has_side_effect_for_tree_shaking("Boolean({})"));
+    assert!(!has_side_effect_for_tree_shaking("let val; Boolean(val)"));
 
     // BigInt() - side-effect-free only with proven-safe arguments
     // BigInt() with no arguments throws TypeError
-    assert!(get_statements_side_effect("BigInt()"));
+    assert!(has_side_effect_for_tree_shaking("BigInt()"));
     // Integer literals are safe
-    assert!(!get_statements_side_effect("BigInt(123)"));
-    assert!(!get_statements_side_effect("BigInt(0)"));
-    assert!(!get_statements_side_effect("BigInt(-1)"));
-    assert!(!get_statements_side_effect("BigInt(+1)"));
+    assert!(!has_side_effect_for_tree_shaking("BigInt(123)"));
+    assert!(!has_side_effect_for_tree_shaking("BigInt(0)"));
+    assert!(!has_side_effect_for_tree_shaking("BigInt(-1)"));
+    assert!(!has_side_effect_for_tree_shaking("BigInt(+1)"));
     // Boolean literals are safe
-    assert!(!get_statements_side_effect("BigInt(true)"));
-    assert!(!get_statements_side_effect("BigInt(false)"));
+    assert!(!has_side_effect_for_tree_shaking("BigInt(true)"));
+    assert!(!has_side_effect_for_tree_shaking("BigInt(false)"));
     // BigInt literals are safe
-    assert!(!get_statements_side_effect("BigInt(123n)"));
+    assert!(!has_side_effect_for_tree_shaking("BigInt(123n)"));
 
     // BigInt() with strings: Oxc can statically validate integer strings.
     // BigInt("123") works, BigInt("abc") or BigInt("1.5") throws.
-    assert!(!get_statements_side_effect("BigInt('456')"));
-    assert!(get_statements_side_effect("BigInt('abc')"));
+    assert!(!has_side_effect_for_tree_shaking("BigInt('456')"));
+    assert!(has_side_effect_for_tree_shaking("BigInt('abc')"));
 
     // BigInt() with non-integer numbers throws RangeError
-    assert!(get_statements_side_effect("BigInt(1.5)"));
-    assert!(get_statements_side_effect("BigInt(NaN)"));
-    assert!(get_statements_side_effect("BigInt(Infinity)"));
-    assert!(get_statements_side_effect("BigInt(-Infinity)"));
+    assert!(has_side_effect_for_tree_shaking("BigInt(1.5)"));
+    assert!(has_side_effect_for_tree_shaking("BigInt(NaN)"));
+    assert!(has_side_effect_for_tree_shaking("BigInt(Infinity)"));
+    assert!(has_side_effect_for_tree_shaking("BigInt(-Infinity)"));
 
     // BigInt() with undefined/null throws TypeError
-    assert!(get_statements_side_effect("BigInt(undefined)"));
-    assert!(get_statements_side_effect("BigInt(null)"));
+    assert!(has_side_effect_for_tree_shaking("BigInt(undefined)"));
+    assert!(has_side_effect_for_tree_shaking("BigInt(null)"));
 
     // BigInt() with unknown or object arguments has side effects
-    assert!(get_statements_side_effect("let val; BigInt(val)"));
-    assert!(get_statements_side_effect("BigInt({})"));
+    assert!(has_side_effect_for_tree_shaking("let val; BigInt(val)"));
+    assert!(has_side_effect_for_tree_shaking("BigInt({})"));
 
     // BigInt() with spread elements has side effects
-    assert!(get_statements_side_effect("let args; BigInt(...args)"));
+    assert!(has_side_effect_for_tree_shaking("let args; BigInt(...args)"));
 
     // Spread elements should have side effects
-    assert!(get_statements_side_effect("let args; String(...args)"));
-    assert!(get_statements_side_effect("let args; Number(...args)"));
-    assert!(get_statements_side_effect("let args; Boolean(...args)"));
+    assert!(has_side_effect_for_tree_shaking("let args; String(...args)"));
+    assert!(has_side_effect_for_tree_shaking("let args; Number(...args)"));
+    assert!(has_side_effect_for_tree_shaking("let args; Boolean(...args)"));
   }
 
   #[test]
   fn test_regexp_constructor() {
     // RegExp() and new RegExp() with valid patterns/flags are side-effect-free
     // Valid patterns
-    assert!(!get_statements_side_effect("RegExp()"));
-    assert!(!get_statements_side_effect("new RegExp()"));
-    assert!(!get_statements_side_effect("RegExp('abc')"));
-    assert!(!get_statements_side_effect("new RegExp('abc')"));
-    assert!(!get_statements_side_effect("RegExp('abc', 'g')"));
-    assert!(!get_statements_side_effect("new RegExp('abc', 'g')"));
-    assert!(!get_statements_side_effect("RegExp('abc', 'gi')"));
-    assert!(!get_statements_side_effect("new RegExp('abc', 'gimsuy')"));
+    assert!(!has_side_effect_for_tree_shaking("RegExp()"));
+    assert!(!has_side_effect_for_tree_shaking("new RegExp()"));
+    assert!(!has_side_effect_for_tree_shaking("RegExp('abc')"));
+    assert!(!has_side_effect_for_tree_shaking("new RegExp('abc')"));
+    assert!(!has_side_effect_for_tree_shaking("RegExp('abc', 'g')"));
+    assert!(!has_side_effect_for_tree_shaking("new RegExp('abc', 'g')"));
+    assert!(!has_side_effect_for_tree_shaking("RegExp('abc', 'gi')"));
+    assert!(!has_side_effect_for_tree_shaking("new RegExp('abc', 'gimsuy')"));
     // RegExp with a RegExp literal argument is valid
-    assert!(!get_statements_side_effect("RegExp(/foo/)"));
-    assert!(!get_statements_side_effect("new RegExp(/foo/)"));
+    assert!(!has_side_effect_for_tree_shaking("RegExp(/foo/)"));
+    assert!(!has_side_effect_for_tree_shaking("new RegExp(/foo/)"));
 
     // Invalid patterns throw SyntaxError - these have side effects
-    assert!(get_statements_side_effect("RegExp('[')"));
-    assert!(get_statements_side_effect("new RegExp('[')"));
-    assert!(get_statements_side_effect("RegExp('\\\\')"));
-    assert!(get_statements_side_effect("new RegExp('\\\\')"));
+    assert!(has_side_effect_for_tree_shaking("RegExp('[')"));
+    assert!(has_side_effect_for_tree_shaking("new RegExp('[')"));
+    assert!(has_side_effect_for_tree_shaking("RegExp('\\\\')"));
+    assert!(has_side_effect_for_tree_shaking("new RegExp('\\\\')"));
 
     // Invalid flags throw SyntaxError - these have side effects
-    assert!(get_statements_side_effect("RegExp('a', 'xyz')"));
-    assert!(get_statements_side_effect("new RegExp('a', 'xyz')"));
-    assert!(get_statements_side_effect("RegExp('a', 'gg')"));
-    assert!(get_statements_side_effect("new RegExp('a', 'gg')"));
+    assert!(has_side_effect_for_tree_shaking("RegExp('a', 'xyz')"));
+    assert!(has_side_effect_for_tree_shaking("new RegExp('a', 'xyz')"));
+    assert!(has_side_effect_for_tree_shaking("RegExp('a', 'gg')"));
+    assert!(has_side_effect_for_tree_shaking("new RegExp('a', 'gg')"));
 
     // Non-literal arguments have side effects (can't statically validate)
-    assert!(get_statements_side_effect("let p; RegExp(p)"));
-    assert!(get_statements_side_effect("let p; new RegExp(p)"));
-    assert!(get_statements_side_effect("let f; RegExp('a', f)"));
-    assert!(get_statements_side_effect("let f; new RegExp('a', f)"));
+    assert!(has_side_effect_for_tree_shaking("let p; RegExp(p)"));
+    assert!(has_side_effect_for_tree_shaking("let p; new RegExp(p)"));
+    assert!(has_side_effect_for_tree_shaking("let f; RegExp('a', f)"));
+    assert!(has_side_effect_for_tree_shaking("let f; new RegExp('a', f)"));
 
     // RegExp literals are side-effect-free (they're validated at parse time)
-    assert!(!get_statements_side_effect("/abc/"));
-    assert!(!get_statements_side_effect("/abc/g"));
+    assert!(!has_side_effect_for_tree_shaking("/abc/"));
+    assert!(!has_side_effect_for_tree_shaking("/abc/g"));
   }
 
   #[test]
   fn test_side_effects_of_global_variable_access() {
-    assert!(!get_statements_side_effect("let a = undefined"));
-    assert!(!get_statements_side_effect("let a = void 0"));
-    assert!(!get_statements_side_effect("using undef_remove = void 0;"));
-    assert!(get_statements_side_effect("using undef_keep = void test();"));
-    assert!(!get_statements_side_effect("let a = NaN"));
-    assert!(!get_statements_side_effect("let a = String"));
-    assert!(!get_statements_side_effect("let a = Object.assign"));
-    assert!(!get_statements_side_effect("let a = Object.prototype.propertyIsEnumerable"));
-    assert!(!get_statements_side_effect("let a = Symbol.asyncDispose"));
-    assert!(!get_statements_side_effect("let a = Math.E"));
-    assert!(!get_statements_side_effect("let a = Reflect.apply"));
-    assert!(!get_statements_side_effect("let a = JSON.stringify"));
-    assert!(!get_statements_side_effect("let a = Proxy"));
+    assert!(!has_side_effect_for_tree_shaking("let a = undefined"));
+    assert!(!has_side_effect_for_tree_shaking("let a = void 0"));
+    assert!(!has_side_effect_for_tree_shaking("using undef_remove = void 0;"));
+    assert!(has_side_effect_for_tree_shaking("using undef_keep = void test();"));
+    assert!(!has_side_effect_for_tree_shaking("let a = NaN"));
+    assert!(!has_side_effect_for_tree_shaking("let a = String"));
+    assert!(!has_side_effect_for_tree_shaking("let a = Object.assign"));
+    assert!(!has_side_effect_for_tree_shaking("let a = Object.prototype.propertyIsEnumerable"));
+    assert!(!has_side_effect_for_tree_shaking("let a = Symbol.asyncDispose"));
+    assert!(!has_side_effect_for_tree_shaking("let a = Math.E"));
+    assert!(!has_side_effect_for_tree_shaking("let a = Reflect.apply"));
+    assert!(!has_side_effect_for_tree_shaking("let a = JSON.stringify"));
+    assert!(!has_side_effect_for_tree_shaking("let a = Proxy"));
 
     assert_eq!(
-      get_statements_side_effect_details("let a = Proxy; let a = JSON.stringify"),
-      vec![SideEffectDetail::GlobalVarAccess, SideEffectDetail::GlobalVarAccess]
+      get_stmt_eval_flags("let a = Proxy; let a = JSON.stringify"),
+      vec![StmtEvalFlags::GlobalVarAccess, StmtEvalFlags::GlobalVarAccess]
     );
     // should have side effects other global member expr access
-    assert!(get_statements_side_effect("let a = Object.test"));
-    assert!(get_statements_side_effect("let a = Object.prototype.two"));
-    assert!(get_statements_side_effect("let a = Reflect.something"));
+    assert!(has_side_effect_for_tree_shaking("let a = Object.test"));
+    assert!(has_side_effect_for_tree_shaking("let a = Object.prototype.two"));
+    assert!(has_side_effect_for_tree_shaking("let a = Reflect.something"));
 
     assert_eq!(
-      get_statements_side_effect_details("let a = Reflect.something"),
-      vec![SideEffectDetail::Unknown | SideEffectDetail::GlobalVarAccess]
+      get_stmt_eval_flags("let a = Reflect.something"),
+      vec![StmtEvalFlags::UnknownSideEffect | StmtEvalFlags::GlobalVarAccess]
     );
 
     // sideEffectful Global variable access with pure annotation
     assert_eq!(
-      get_statements_side_effect_details("let a = /*@__PURE__ */ Reflect.something()"),
-      vec![SideEffectDetail::GlobalVarAccess | SideEffectDetail::PureAnnotation]
+      get_stmt_eval_flags("let a = /*@__PURE__ */ Reflect.something()"),
+      vec![StmtEvalFlags::GlobalVarAccess | StmtEvalFlags::PureAnnotation]
     );
   }
 
   #[test]
   fn test_object_expression() {
-    assert!(!get_statements_side_effect("const of = { [1]: 'hi'}"));
-    assert!(!get_statements_side_effect("const of = { [-1]: 'hi'}"));
-    assert!(!get_statements_side_effect("const of = { [+1]: 'hi'}"));
-    assert!(!get_statements_side_effect("let remove = { [void 0]: 'x' };"));
-    assert!(get_statements_side_effect("let keep = { [void test()]: 'x' };"));
+    assert!(!has_side_effect_for_tree_shaking("const of = { [1]: 'hi'}"));
+    assert!(!has_side_effect_for_tree_shaking("const of = { [-1]: 'hi'}"));
+    assert!(!has_side_effect_for_tree_shaking("const of = { [+1]: 'hi'}"));
+    assert!(!has_side_effect_for_tree_shaking("let remove = { [void 0]: 'x' };"));
+    assert!(has_side_effect_for_tree_shaking("let keep = { [void test()]: 'x' };"));
     // Oxc is more permissive about computed property keys (ignores ToPrimitive side effects).
     // `{}` has a known toString(), so Oxc considers this side-effect-free.
-    assert!(!get_statements_side_effect("const of = { [{}]: 'hi'}"));
+    assert!(!has_side_effect_for_tree_shaking("const of = { [{}]: 'hi'}"));
   }
 
   // https://github.com/rolldown/rolldown/issues/9425
@@ -1223,93 +1181,76 @@ mod test {
   #[test]
   fn test_pure_annotation_propagates_through_compound_expr() {
     assert_eq!(
-      get_statements_side_effect_details(
-        "export default { foo: /* @__PURE__ */ (() => globalValue)() }"
-      ),
-      vec![SideEffectDetail::PureAnnotation]
+      get_stmt_eval_flags("export default { foo: /* @__PURE__ */ (() => globalValue)() }"),
+      vec![StmtEvalFlags::PureAnnotation]
     );
     assert_eq!(
-      get_statements_side_effect_details("export default [/* @__PURE__ */ (() => globalValue)()]"),
-      vec![SideEffectDetail::PureAnnotation]
+      get_stmt_eval_flags("export default [/* @__PURE__ */ (() => globalValue)()]"),
+      vec![StmtEvalFlags::PureAnnotation]
     );
     assert_eq!(
-      get_statements_side_effect_details(
-        "export default (0, /* @__PURE__ */ (() => globalValue)())"
-      ),
-      vec![SideEffectDetail::PureAnnotation]
+      get_stmt_eval_flags("export default (0, /* @__PURE__ */ (() => globalValue)())"),
+      vec![StmtEvalFlags::PureAnnotation]
     );
     assert_eq!(
-      get_statements_side_effect_details(
-        "export default true ? /* @__PURE__ */ (() => globalValue)() : null"
-      ),
-      vec![SideEffectDetail::PureAnnotation]
+      get_stmt_eval_flags("export default true ? /* @__PURE__ */ (() => globalValue)() : null"),
+      vec![StmtEvalFlags::PureAnnotation]
     );
     assert_eq!(
-      get_statements_side_effect_details(
-        "export default true && /* @__PURE__ */ (() => globalValue)()"
-      ),
-      vec![SideEffectDetail::PureAnnotation]
+      get_stmt_eval_flags("export default true && /* @__PURE__ */ (() => globalValue)()"),
+      vec![StmtEvalFlags::PureAnnotation]
     );
     // BinaryExpression `===` does not ToPrimitive-coerce, so oxc returns
     // no own side effect and the metadata harvest can propagate.
     assert_eq!(
-      get_statements_side_effect_details("export default /* @__PURE__ */ (() => 2)() === 1"),
-      vec![SideEffectDetail::PureAnnotation]
+      get_stmt_eval_flags("export default /* @__PURE__ */ (() => 2)() === 1"),
+      vec![StmtEvalFlags::PureAnnotation]
     );
     // `typeof` never has side effects per spec.
     assert_eq!(
-      get_statements_side_effect_details("export default typeof /* @__PURE__ */ (() => true)()"),
-      vec![SideEffectDetail::PureAnnotation]
+      get_stmt_eval_flags("export default typeof /* @__PURE__ */ (() => true)()"),
+      vec![StmtEvalFlags::PureAnnotation]
     );
     // Computed key with a pure-annotated call must propagate too.
     assert_eq!(
-      get_statements_side_effect_details("export default { [/* @__PURE__ */ (() => 'k')()]: 1 }"),
-      vec![SideEffectDetail::PureAnnotation]
+      get_stmt_eval_flags("export default { [/* @__PURE__ */ (() => 'k')()]: 1 }"),
+      vec![StmtEvalFlags::PureAnnotation]
     );
     // GlobalVarAccess on a bare member-expr buried in a compound wrapper
     // must also propagate (same mechanism, different flag).
+    assert_eq!(get_stmt_eval_flags("let a = { x: Proxy }"), vec![StmtEvalFlags::GlobalVarAccess]);
     assert_eq!(
-      get_statements_side_effect_details("let a = { x: Proxy }"),
-      vec![SideEffectDetail::GlobalVarAccess]
-    );
-    assert_eq!(
-      get_statements_side_effect_details("let a = [JSON.stringify]"),
-      vec![SideEffectDetail::GlobalVarAccess]
+      get_stmt_eval_flags("let a = [JSON.stringify]"),
+      vec![StmtEvalFlags::GlobalVarAccess]
     );
     // Nested compound: array inside object inside object — propagation must
     // walk through every layer.
     assert_eq!(
-      get_statements_side_effect_details(
-        "export default { a: { b: [/* @__PURE__ */ (() => globalValue)()] } }"
-      ),
-      vec![SideEffectDetail::PureAnnotation]
+      get_stmt_eval_flags("export default { a: { b: [/* @__PURE__ */ (() => globalValue)()] } }"),
+      vec![StmtEvalFlags::PureAnnotation]
     );
     // TS wrapper passthroughs (`SourceType::tsx()` in test helper).
     assert_eq!(
-      get_statements_side_effect_details(
-        "export default (/* @__PURE__ */ (() => globalValue)() as string)"
-      ),
-      vec![SideEffectDetail::PureAnnotation]
+      get_stmt_eval_flags("export default (/* @__PURE__ */ (() => globalValue)() as string)"),
+      vec![StmtEvalFlags::PureAnnotation]
     );
     assert_eq!(
-      get_statements_side_effect_details(
+      get_stmt_eval_flags(
         "export default (/* @__PURE__ */ (() => globalValue)() satisfies string)"
       ),
-      vec![SideEffectDetail::PureAnnotation]
+      vec![StmtEvalFlags::PureAnnotation]
     );
     assert_eq!(
-      get_statements_side_effect_details("export default /* @__PURE__ */ (() => globalValue)()!"),
-      vec![SideEffectDetail::PureAnnotation]
+      get_stmt_eval_flags("export default /* @__PURE__ */ (() => globalValue)()!"),
+      vec![StmtEvalFlags::PureAnnotation]
     );
     // TSInstantiationExpression `f<T>` — must be peeled like the other TS
     // wrappers. (`<T>x` TSTypeAssertion is ambiguous with JSX under tsx()
     // and can't be expressed in this harness; `get_inner_expression()`
     // peels it identically in non-tsx contexts.)
     assert_eq!(
-      get_statements_side_effect_details(
-        "export default /* @__PURE__ */ ((() => globalValue) as any)<string>()"
-      ),
-      vec![SideEffectDetail::PureAnnotation]
+      get_stmt_eval_flags("export default /* @__PURE__ */ ((() => globalValue) as any)<string>()"),
+      vec![StmtEvalFlags::PureAnnotation]
     );
   }
 
@@ -1318,14 +1259,12 @@ mod test {
   #[test]
   fn test_pure_annotation_not_propagated_through_function_body() {
     assert_eq!(
-      get_statements_side_effect_details("export default () => /* @__PURE__ */ pureCall()"),
-      vec![SideEffectDetail::empty()]
+      get_stmt_eval_flags("export default () => /* @__PURE__ */ pureCall()"),
+      vec![StmtEvalFlags::empty()]
     );
     assert_eq!(
-      get_statements_side_effect_details(
-        "export default { foo: () => /* @__PURE__ */ pureCall() }"
-      ),
-      vec![SideEffectDetail::empty()]
+      get_stmt_eval_flags("export default { foo: () => /* @__PURE__ */ pureCall() }"),
+      vec![StmtEvalFlags::empty()]
     );
   }
 
@@ -1333,23 +1272,21 @@ mod test {
   // Unknown — the new metadata-propagation arms must not weaken this.
   #[test]
   fn test_compound_expr_side_effectful_operand_still_unknown() {
-    assert!(get_statements_side_effect("let a = { foo: globalCall() }"));
-    assert!(get_statements_side_effect("let a = [globalCall()]"));
-    assert!(get_statements_side_effect("let a = (globalCall(), 1)"));
-    assert!(get_statements_side_effect("let a = true ? globalCall() : null"));
+    assert!(has_side_effect_for_tree_shaking("let a = { foo: globalCall() }"));
+    assert!(has_side_effect_for_tree_shaking("let a = [globalCall()]"));
+    assert!(has_side_effect_for_tree_shaking("let a = (globalCall(), 1)"));
+    assert!(has_side_effect_for_tree_shaking("let a = true ? globalCall() : null"));
   }
 
   #[test]
   fn test_cjs_pattern() {
     assert_eq!(
-      get_statements_side_effect_details(
-        "Object.defineProperty(exports, \"__esModule\", { value: true })"
-      ),
-      vec![SideEffectDetail::Unknown]
+      get_stmt_eval_flags("Object.defineProperty(exports, \"__esModule\", { value: true })"),
+      vec![StmtEvalFlags::UnknownSideEffect]
     );
 
     assert_eq!(
-      get_statements_side_effect_details(
+      get_stmt_eval_flags(
         r"
       exports.a = function test() {};
       exports['b'] = function () {
@@ -1357,33 +1294,33 @@ mod test {
       };
       "
       ),
-      vec![SideEffectDetail::PureCjs, SideEffectDetail::PureCjs]
+      vec![StmtEvalFlags::PureCjs, StmtEvalFlags::PureCjs]
     );
 
     assert_eq!(
-      get_statements_side_effect_details("exports.a = global()"),
-      vec![SideEffectDetail::Unknown | SideEffectDetail::PureCjs]
+      get_stmt_eval_flags("exports.a = global()"),
+      vec![StmtEvalFlags::UnknownSideEffect | StmtEvalFlags::PureCjs]
     );
 
     assert_eq!(
-      get_statements_side_effect_details("exports[test()] = true"),
-      vec![SideEffectDetail::Unknown]
+      get_stmt_eval_flags("exports[test()] = true"),
+      vec![StmtEvalFlags::UnknownSideEffect]
     );
 
     assert_eq!(
-      get_statements_side_effect_details(
+      get_stmt_eval_flags(
         r"
       let a = {};
       Object.defineProperty(a, '__esModule', { value: true });
       "
       ),
-      vec![SideEffectDetail::empty(), SideEffectDetail::Unknown]
+      vec![StmtEvalFlags::empty(), StmtEvalFlags::UnknownSideEffect]
     );
   }
 
   #[test]
   fn test_class_expr() {
-    assert!(!get_statements_side_effect(
+    assert!(!has_side_effect_for_tree_shaking(
       r"
 let remove14 = class {
 	static [undefined] = 'x';
@@ -1402,12 +1339,14 @@ let remove15 = class {
 
   #[test]
   fn test_class_decorators() {
-    assert!(get_statements_side_effect("function fn() {} @fn class Class {}"));
-    assert!(get_statements_side_effect("function fn() {} var MyClass = @fn class {}"));
-    assert!(get_statements_side_effect("function fn() {} class MyClass { @fn accessor x }"));
-    assert!(get_statements_side_effect("function fn() {} class MyClass { @fn static accessor x }"));
-    assert!(get_statements_side_effect("function fn() {} class MyClass { @fn method() {} }"));
-    assert!(get_statements_side_effect("function fn() {} class MyClass { @fn field }"));
+    assert!(has_side_effect_for_tree_shaking("function fn() {} @fn class Class {}"));
+    assert!(has_side_effect_for_tree_shaking("function fn() {} var MyClass = @fn class {}"));
+    assert!(has_side_effect_for_tree_shaking("function fn() {} class MyClass { @fn accessor x }"));
+    assert!(has_side_effect_for_tree_shaking(
+      "function fn() {} class MyClass { @fn static accessor x }"
+    ));
+    assert!(has_side_effect_for_tree_shaking("function fn() {} class MyClass { @fn method() {} }"));
+    assert!(has_side_effect_for_tree_shaking("function fn() {} class MyClass { @fn field }"));
   }
 
   #[test]

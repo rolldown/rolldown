@@ -26,7 +26,9 @@
 use std::fmt::Write as _;
 use std::sync::OnceLock;
 
-use rolldown_common::{Module, ModuleType, NormalModule, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef};
+use rolldown_common::{
+  Module, ModuleType, NormalModule, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
+};
 
 use crate::stages::link_stage::LinkStage;
 
@@ -112,9 +114,7 @@ pub fn validate_statement_inclusion(link_stage: &LinkStage<'_>) {
       for reference in &stmt_info.referenced_symbols {
         match reference {
           SymbolOrMemberExprRef::MemberExpr(member_expr_ref) => {
-            if let Some(resolution) =
-              member_expr_ref.resolution(&meta.resolved_member_expr_refs)
-            {
+            if let Some(resolution) = member_expr_ref.resolution(&meta.resolved_member_expr_refs) {
               // `resolved == None` is rewritten to `void 0`; nothing to validate.
               if let Some(resolved) = resolution.resolved {
                 check_symbol(link_stage, module, stmt_idx, resolved, &mut violations);

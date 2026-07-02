@@ -28,6 +28,8 @@ use crate::{
   types::linking_metadata::LinkingMetadataVec,
 };
 
+use super::policy::{member_is_inlined_enum, symbol_is_inlined_const};
+
 pub type StmtInclusionVec = IndexVec<ModuleIdx, IndexBitSet<StmtInfoIdx>>;
 pub type ModuleInclusionVec = IndexBitSet<ModuleIdx>;
 pub type ModuleNamespaceReasonVec = IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>;
@@ -955,15 +957,9 @@ pub fn include_symbol(
 ) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
-  if let Some(v) = ctx.constant_symbol_map.get(&canonical_ref)
-    && !include_reason.contains(SymbolIncludeReason::EntryExport)
-    && (!ctx.inline_const_smart || v.safe_to_inline)
-    && !v.commonjs_export
-  {
-    // If the symbol is a constant value and it is not a commonjs module export, we don't need to include it since it would be always inlined.
-    // In smart mode, we only skip if `safe_to_inline` is true (meaning it will be inlined regardless of context).
-    // We don't need to add any flag since if `inlineConst` is disabled, the test expr will always
-    // return `false`
+  // A symbol that will be inlined at its use sites (an inlinable constant) needs no
+  // declaration; see `policy::symbol_is_inlined_const`.
+  if symbol_is_inlined_const(ctx, canonical_ref, include_reason) {
     return;
   }
 
@@ -1181,33 +1177,12 @@ pub fn include_statement(
         // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
       }
     } else {
-      // For enum member accesses (e.g., `B.member`), check if the member will be inlined
-      // by the finalizer. If so, skip including the enum's declaration — it's dead code
-      // after inlining. This mirrors the `constant_symbol_map` bypass in `include_symbol`.
-      //
-      // This applies to both const and regular enums. The member access will be replaced
-      // by a literal, so the reference no longer needs the declaration. If the enum is
-      // also referenced as a bare symbol (e.g., `typeof E`, `console.log(E)`), that
-      // separate reference will independently include the declaration via `include_symbol`.
-      // Regular enum IIFEs are `@__PURE__`, so they'll be tree-shaken if truly unused.
-      if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = reference_ref {
-        let canonical_ref = ctx.symbols.canonical_ref_for(member_expr_ref.object_ref);
-        if let Some(Module::Normal(owner_module)) = ctx.modules.get(canonical_ref.owner) {
-          let symbol_name = canonical_ref.name(ctx.symbols);
-          if let Some(members) = owner_module.ecma_view.enum_member_value_map.get(symbol_name) {
-            // Only bypass for simple member accesses (e.g., `E.member`), not deep chains
-            // like `E.member.something` which wouldn't be inlined.
-            if !member_expr_ref.is_write
-              && let [prop] = member_expr_ref.prop_and_span_list.as_slice()
-              && members.contains_key(prop.name.as_str())
-            {
-              // This member access will be inlined — don't include the enum declaration.
-              // Enum inlining is unconditional (not gated by inlineConst mode) because
-              // it implements TypeScript's const enum semantics, which mandate replacement.
-              return;
-            }
-          }
-        }
+      // An enum member access the finalizer will inline to a literal needs no enum
+      // declaration for this reference; see `policy::member_is_inlined_enum`.
+      if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = reference_ref
+        && member_is_inlined_enum(ctx, member_expr_ref)
+      {
+        return;
       }
       let original_ref = reference_ref.symbol_ref();
       std::iter::once(original_ref)

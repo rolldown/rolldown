@@ -598,6 +598,21 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       super::IdentifierReferenceKind::Root(root_symbol_id) => {
         let is_member_write = self.is_member_write_target(ident_ref);
 
+        // Record direct reassignments (`X = ...`, `X += 1`, `X++`, `[X] = ...`) of a top-level
+        // binding, tagged by the enclosing top-level statement. NOT `is_member_write` (`X.foo = 1`
+        // is a READ of X). Used post-tree-shaking to recover constants whose writers are all dead.
+        if let Some(ref_id) = ident_ref.reference_id.get() {
+          let is_write = self.result.symbol_ref_db.scoping().get_reference(ref_id).is_write();
+          if is_write {
+            self
+              .result
+              .reassigned_stmt_map
+              .entry(root_symbol_id.symbol)
+              .or_default()
+              .push(self.current_stmt_idx);
+          }
+        }
+
         // if the identifier_reference is a NamedImport MemberExpr access, we store it as a `MemberExpr`
         // use this flag to avoid insert it as `Symbol` at the same time.
         let mut is_inserted_before = false;

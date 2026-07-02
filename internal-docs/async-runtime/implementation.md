@@ -80,17 +80,18 @@ memory-growth backport are handled in the dependent browser/WASI change.
 
 ## Metrics And Baseline
 
-The numbers in this section are illustrative observations from a single
-late-build sample of `apps/10000` on one 12-core Apple Silicon host — not a
-committed or reproducible benchmark. In that sample the new runtime used
-noticeably fewer OS threads than the previous Tokio-async + Tokio-blocking +
-Rayon setup: the Rolldown-owned scheduling threads collapse to a single shared
-pool of workers, at comparable maximum RSS and similar context-switch counts.
-Exact thread counts, RSS, and Hyperfine timings are host-specific and are
-recorded in the task summary rather than committed here.
+Superseded: committed, reproducible measurements now live in
+[benchmarks.md](./benchmarks.md) (harness:
+`scripts/misc/bench-async-runtime/`). They confirm the earlier illustrative
+observation — the Tokio-async + Tokio-blocking + Rayon thread population
+collapses to a single shared pool (56 → 25 peak threads on the measured host)
+— and add wall-time, instruction, RSS, and context-switch comparisons across
+four fixtures, plus the blocking-cap A/B that validated keeping the
+`max_blocking_tasks = worker_threads` default.
 
 ## Related
 
+- [benchmarks.md](./benchmarks.md) - committed tokio-vs-shared measurements
 - [design.md](./design.md) - goals and trade-offs
 - [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md) -
   deferred-drop interaction with Rayon

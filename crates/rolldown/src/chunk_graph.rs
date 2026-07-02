@@ -1,6 +1,7 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
+use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
   PostChunkOptimizationOperation, RuntimeHelper, SymbolRef,
@@ -32,6 +33,16 @@ pub struct ChunkGraph {
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
   pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
+  /// Modules that `experimental.minChunkSize` duplicated out of a small common
+  /// "leaf" chunk into each importing chunk. A duplicated leaf is treated as
+  /// **local to every chunk that references it** (it is copied into all of them),
+  /// so cross-chunk imports for its symbols are skipped.
+  /// See `internal-docs/min-size-chunk-merging/design.md`.
+  pub duplicated_leaf_modules: FxHashSet<ModuleIdx>,
+  /// Globally-unique pinned name for every declared symbol of a duplicated leaf.
+  /// The same name is used in every chunk the leaf is duplicated into, so the
+  /// single finalized AST stays valid everywhere. Keys are canonical symbol refs.
+  pub duplicated_leaf_pinned_names: FxHashMap<SymbolRef, CompactStr>,
 }
 
 impl ChunkGraph {
@@ -46,6 +57,8 @@ impl ChunkGraph {
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
+      duplicated_leaf_modules: FxHashSet::default(),
+      duplicated_leaf_pinned_names: FxHashMap::default(),
     }
   }
 

@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-a.js
+
+```js
+//#region util.js
+const value = "shared-value";
+function getValue() {
+	return value;
+}
+//#endregion
+//#region entry-a.js
+const a = getValue() + "-a";
+//#endregion
+export { a };
+
+```
+
+## entry-b.js
+
+```js
+//#region util.js
+const value = "shared-value";
+function getValue() {
+	return value;
+}
+//#endregion
+//#region entry-b.js
+const b = getValue() + "shared-value-b";
+//#endregion
+export { b };
+
+```

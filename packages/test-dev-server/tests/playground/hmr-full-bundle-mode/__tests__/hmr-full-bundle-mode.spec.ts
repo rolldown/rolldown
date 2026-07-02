@@ -1,7 +1,16 @@
 import { setTimeout } from 'node:timers/promises';
 import type { Response } from 'playwright';
 import { describe, expect, test } from 'vitest';
-import { addFile, editFile, page, readFile, serverLogs, waitForBuildStable } from '~utils';
+import {
+  addFile,
+  editFile,
+  errorOverlay,
+  errorOverlayText,
+  page,
+  readFile,
+  serverLogs,
+  waitForBuildStable,
+} from '~utils';
 
 // This playground's scenarios all exercise ONE shared full-bundle (index.html
 // renders every div, main.js imports every sub-module), so they must run on one
@@ -72,18 +81,17 @@ describe('hmr-full-bundle-mode', () => {
     await expect.poll(() => page.textContent('.hmr')).toBe('hello');
   });
 
-  // The dev server injects its own error overlay (`#rolldown-error-overlay`)
-  // into the served HTML. It should appear when the build breaks and clear
-  // when the file is fixed.
+  // Build errors render in Vite's error overlay (`<vite-error-overlay>`). It
+  // should appear when the build breaks and clear when the file is fixed.
   test('shows build-error overlay and recovers on fix', async () => {
     await waitForBuildStable();
 
     // Break the file with a syntax error (unterminated string).
     editFile('hmr.js', (code) => code.replace("const foo = 'hello'", "const foo = 'hello"));
 
-    const overlay = page.locator('#rolldown-error-overlay');
+    const overlay = errorOverlay();
     await expect.poll(() => overlay.count(), { timeout: 15_000 }).toBe(1);
-    expect(await overlay.textContent()).toMatch(/Unterminated|PARSE_ERROR|error/i);
+    expect(await errorOverlayText()).toMatch(/Unterminated|PARSE_ERROR|error/i);
 
     // Fix it: the overlay clears and the app renders again.
     editFile('hmr.js', (code) => code.replace("const foo = 'hello", "const foo = 'hello'"));
@@ -171,7 +179,7 @@ describe('hmr-full-bundle-mode: HMR-stage failure', () => {
     // Break the file with a syntax error; the HMR update fails.
     editFile('hmr-error/module.js', (code) => code.replace(SLOT, BREAK));
 
-    const overlay = page.locator('#rolldown-error-overlay');
+    const overlay = errorOverlay();
     await expect.poll(() => overlay.count(), { timeout: 15_000 }).toBe(1);
     // The page still runs the last good bundle.
     expect(await page.textContent('.hmr-error')).toBe('hmr-error: ok');
@@ -242,9 +250,9 @@ describe('hmr-full-bundle-mode: rebuild-stage failure', () => {
       code.replace("'rebuild-error: ok'", "'rebuild-error: updated'"),
     );
 
-    const overlay = page.locator('#rolldown-error-overlay');
+    const overlay = errorOverlay();
     await expect.poll(() => overlay.count(), { timeout: 15_000 }).toBe(1);
-    expect(await overlay.textContent()).toContain('generateBundle broken by flag: broken-1');
+    expect(await errorOverlayText()).toContain('generateBundle broken by flag: broken-1');
     // The failed rebuild did not reload the page; it still runs the old bundle.
     expect(await page.textContent('.rebuild-error')).toBe('rebuild-error: ok');
     // Build errors also reach the terminal.
@@ -268,7 +276,7 @@ describe('hmr-full-bundle-mode: rebuild-stage failure', () => {
       code.replace("'rebuild-error: updated'", "'rebuild-error: updated-2'"),
     );
     await expect
-      .poll(() => overlay.textContent({ timeout: 500 }).catch(() => ''), { timeout: 15_000 })
+      .poll(() => errorOverlayText().catch(() => ''), { timeout: 15_000 })
       .toContain('generateBundle broken by flag: broken-2');
 
     // Design Principle 3: a file change recovers. Disarm the flag, then

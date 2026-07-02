@@ -17,13 +17,15 @@
   "scripts": {
     "build": "tsc -b",
     "dev": "tsc -b --watch",
-    "test": "pnpm run --filter @rolldown/test-dev-server-tests test"
+    "test": "pnpm run --filter @rolldown/test-dev-server-tests test",
+    "setup-vite": "node ./scripts/setup-vite.mjs"
   },
   "dependencies": {
     "@types/ws": "catalog:",
     "connect": "catalog:",
     "rolldown": "workspace:*",
     "serve-static": "catalog:",
+    "vite": "link:./vite/packages/vite",
     "ws": "catalog:"
   },
   "devDependencies": {

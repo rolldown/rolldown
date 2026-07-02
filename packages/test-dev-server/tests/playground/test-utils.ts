@@ -4,7 +4,7 @@
 
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';
-import type { ConsoleMessage } from 'playwright';
+import type { ConsoleMessage, Locator } from 'playwright';
 import { expect } from 'vitest';
 import {
   type DevStatus,
@@ -47,6 +47,24 @@ export function addFile(filename: string, content: string): void {
 
 export function removeFile(filename: string): void {
   nodeFs.unlinkSync(nodePath.resolve(testDir, filename));
+}
+
+// --- Vite error overlay helpers ----------------------------------------------
+// The browser platform runs on Vite's full bundle mode, so build errors render
+// in Vite's own `<vite-error-overlay>` custom element (shadow DOM).
+
+/** Locator for Vite's error overlay element. */
+export function errorOverlay(): Locator {
+  return page.locator('vite-error-overlay');
+}
+
+/** Text inside the overlay's shadow DOM (`''` while no overlay is shown). */
+export async function errorOverlayText(): Promise<string> {
+  const overlay = page.locator('vite-error-overlay');
+  if ((await overlay.count()) === 0) {
+    return '';
+  }
+  return overlay.evaluate((node) => node.shadowRoot?.textContent ?? '');
 }
 
 // --- `/_dev/status` helpers, defaulting to the current spec's server --------

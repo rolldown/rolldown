@@ -34,21 +34,21 @@ mixed across runs or fixtures.
 
 apps/10000 (median profiled run, wall 422.5 ms):
 
-| phase | wall ms | busy cores (phase work) | scheduler occupancy | dominant cost |
-| --- | ---: | ---: | ---: | --- |
-| scan | 220 | 15.5 | 0.93 | `__open` 2308 ms kernel CPU (68% of phase CPU) |
-| link | 47.5 | 0.92 | 0.056 (= 1/18) | tree-shaking include, bind imports |
-| generate | 147.5 | 1.29 | 0.056 | minify pipeline + sourcemap on one thread |
-| write | 10 | 0.23 | 0.056 | 2 files, 19.2 MB |
+| phase    | wall ms | busy cores (phase work) | scheduler occupancy | dominant cost                                  |
+| -------- | ------: | ----------------------: | ------------------: | ---------------------------------------------- |
+| scan     |     220 |                    15.5 |                0.93 | `__open` 2308 ms kernel CPU (68% of phase CPU) |
+| link     |    47.5 |                    0.92 |      0.056 (= 1/18) | tree-shaking include, bind imports             |
+| generate |   147.5 |                    1.29 |               0.056 | minify pipeline + sourcemap on one thread      |
+| write    |      10 |                    0.23 |               0.056 | 2 files, 19.2 MB                               |
 
 apps/three10x (median profiled run, wall 330.9 ms):
 
-| phase | wall ms | busy cores (phase work) | occupancy | dominant cost |
-| --- | ---: | ---: | ---: | --- |
-| scan | 50 | 12.0 | 0.87 | `__open` 282 ms kernel CPU |
-| link | 15 | 0.77 | 0.056 | — |
-| generate | 262.5 | 1.18 | 0.056 | single-chunk minify of a 6 MB bundle |
-| write | 7.5 | 0.36 | 0.056 | 25.2 MB |
+| phase    | wall ms | busy cores (phase work) | occupancy | dominant cost                        |
+| -------- | ------: | ----------------------: | --------: | ------------------------------------ |
+| scan     |      50 |                    12.0 |      0.87 | `__open` 282 ms kernel CPU           |
+| link     |      15 |                    0.77 |     0.056 | —                                    |
+| generate |   262.5 |                    1.18 |     0.056 | single-chunk minify of a 6 MB bundle |
+| write    |     7.5 |                    0.36 |     0.056 | 25.2 MB                              |
 
 Two facts dominate everything below:
 
@@ -66,30 +66,30 @@ Two facts dominate everything below:
 Generate-window CPU by bucket (leaf-first stack classification,
 `subattr.mjs`; window CPU: 249.3 ms / 367.4 ms):
 
-| bucket | apps/10000 (ms) | apps/three10x (ms) |
-| --- | ---: | ---: |
-| minify: compress | 22.9 | 82.5 |
-| minify: re-parse of rendered chunk | 14.5 | 37.3 |
-| minify: semantic rebuild | 12.9 | 52.9 |
-| minify: codegen | 11.5 | 21.9 |
-| minify: sourcemap | 10.7 | 25.7 |
-| minify: unclassified | 0.5 | — |
-| **minify total** | **73.0 (17.3% of wall)** | **220.3 (66.6% of wall)** |
-| sourcemap, non-minify (collapse, map→JSON, `add_source_mapping`) | 25.1 | 37.8 |
-| finalize-modules (already parallel — the ~5-core blip) | 28.6 | 7.1 |
-| deconflict/renamer | 18.8 | 6.8 |
-| render codegen + concat | 29.8 | 35.7 |
-| chunk graph | 11.1 | 1.9 |
-| idle-worker wake churn + unclassified | 63.1 | 57.8 |
+| bucket                                                           |          apps/10000 (ms) |        apps/three10x (ms) |
+| ---------------------------------------------------------------- | -----------------------: | ------------------------: |
+| minify: compress                                                 |                     22.9 |                      82.5 |
+| minify: re-parse of rendered chunk                               |                     14.5 |                      37.3 |
+| minify: semantic rebuild                                         |                     12.9 |                      52.9 |
+| minify: codegen                                                  |                     11.5 |                      21.9 |
+| minify: sourcemap                                                |                     10.7 |                      25.7 |
+| minify: unclassified                                             |                      0.5 |                         — |
+| **minify total**                                                 | **73.0 (17.3% of wall)** | **220.3 (66.6% of wall)** |
+| sourcemap, non-minify (collapse, map→JSON, `add_source_mapping`) |                     25.1 |                      37.8 |
+| finalize-modules (already parallel — the ~5-core blip)           |                     28.6 |                       7.1 |
+| deconflict/renamer                                               |                     18.8 |                       6.8 |
+| render codegen + concat                                          |                     29.8 |                      35.7 |
+| chunk graph                                                      |                     11.1 |                       1.9 |
+| idle-worker wake churn + unclassified                            |                     63.1 |                      57.8 |
 
 Scan-window syscall CPU by caller (apps/10000: 2597 ms syscall-leaf CPU of
 3612 ms scan-window CPU = 71.9%):
 
-| caller | syscall CPU |
-| --- | ---: |
+| caller                                                                                                                        |                                    syscall CPU |
+| ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------: |
 | module-source reads — `load_source` → `spawn_blocking(fs.read_to_string)` (`crates/rolldown/src/utils/load_source.rs:67,120`) | 2384 ms (`__open` 2305, `read` 54, `close` 25) |
-| resolver metadata — oxc_resolver `Cache::followed_metadata` | 210 ms (`lstat`) |
-| resolver `package.json` reads — `Cache::find_package_json` | 3 ms |
+| resolver metadata — oxc_resolver `Cache::followed_metadata`                                                                   |                               210 ms (`lstat`) |
+| resolver `package.json` reads — `Cache::find_package_json`                                                                    |                                           3 ms |
 
 (`rolldown_fs::OsFileSystem` wraps `oxc_resolver::FileSystemOs` —
 `crates/rolldown_fs/src/os.rs:13` — which is why module reads and resolver
@@ -292,10 +292,10 @@ first 2 pairs discarded as warmup, per-pair deltas — which cancels ambient
 drift by construction. Raw data:
 `/tmp/parallelism-profiles/ab-fs-read-pool/`.
 
-| fixture (14 pairs) | off median | on (4 threads) median | paired delta median | pairs won by on |
-| --- | ---: | ---: | ---: | ---: |
-| apps/10000 | 434.1 ms | 478.3 ms | **+39.4 ms (+9.1% — loss)** | 2/14 |
-| apps/three10x | 313.5 ms | 317.6 ms | +5.9 ms (+1.9% — loss) | 4/14 |
+| fixture (14 pairs) | off median | on (4 threads) median |         paired delta median | pairs won by on |
+| ------------------ | ---------: | --------------------: | --------------------------: | --------------: |
+| apps/10000         |   434.1 ms |              478.3 ms | **+39.4 ms (+9.1% — loss)** |            2/14 |
+| apps/three10x      |   313.5 ms |              317.6 ms |      +5.9 ms (+1.9% — loss) |            4/14 |
 
 Per-process counters, apps/10000. user/sys are the hyperfine block means
 (12 runs/side — robust); instructions and context switches come from
@@ -303,12 +303,12 @@ Per-process counters, apps/10000. user/sys are the hyperfine block means
 session — its own 3-sample sys medians go the other way, 2.76 → 2.94 s,
 which is why the 12-run means are quoted for time):
 
-| metric | flag off | flag on (4 threads) |
-| --- | ---: | ---: |
-| sys time (12-run means) | 2.50 s | **1.90 s (−24%)** |
-| user time (12-run means) | 1.11 s | 1.27 s (+15%) |
-| instructions retired (median of 3) | 14.38e9 | 20.23e9 (**+41%**) |
-| involuntary context switches (median of 3) | 19.8k | 201.8k (**10×**) |
+| metric                                     | flag off | flag on (4 threads) |
+| ------------------------------------------ | -------: | ------------------: |
+| sys time (12-run means)                    |   2.50 s |   **1.90 s (−24%)** |
+| user time (12-run means)                   |   1.11 s |       1.27 s (+15%) |
+| instructions retired (median of 3)         |  14.38e9 |  20.23e9 (**+41%**) |
+| involuntary context switches (median of 3) |    19.8k |    201.8k (**10×**) |
 
 A width probe (2 vs 8 reader threads, 6 runs each, blocked design —
 indicative only) ordered 8 > 4 > 2, i.e. the closer the pool gets to the

@@ -95,8 +95,11 @@ pub struct IncludeContext<'a> {
   pub on_demand_side_effect_stmts: &'a mut FxHashMap<SymbolRef, Vec<(ModuleIdx, StmtInfoIdx)>>,
   /// Work queue of the inclusion engine (see [`drain_work_items`]). Edge producers push typed
   /// work items here instead of recursing; the public `include_*` entry points drain it to
-  /// empty before returning. Always empty between engine invocations.
-  pub pending: Vec<WorkItem>,
+  /// empty before returning. Invariant (debug-asserted at every public entry point): empty
+  /// whenever control is outside the engine. Visible outside this module only because
+  /// `chunk_optimizer` constructs `IncludeContext` with a struct literal; nothing outside this
+  /// module should touch it.
+  pub(in crate::stages) pending: Vec<WorkItem>,
 }
 
 impl<'a> IncludeContext<'a> {
@@ -146,9 +149,10 @@ impl<'a> IncludeContext<'a> {
 
 /// A unit of inclusion work. Edge producers push these instead of recursing, which keeps the
 /// engine iterative (no stack-depth limit on deep graphs) and makes the traversal a visible
-/// queue rather than an implicit call stack.
+/// queue rather than an implicit call stack. Visible outside this module only as the `pending`
+/// field's type; not part of the module's API.
 #[derive(Debug, Clone, Copy)]
-pub enum WorkItem {
+pub(in crate::stages) enum WorkItem {
   /// Structurally include a module: sweep its side-effect statements and evaluate its
   /// side-effectful dependencies.
   Module(ModuleIdx),
@@ -183,8 +187,10 @@ pub(super) fn include_symbol_and_check_cjs_bailout(
   symbol_ref: SymbolRef,
   include_reason: SymbolIncludeReason,
 ) {
+  debug_assert!(ctx.pending.is_empty(), "engine queue must be empty between public entry points");
   push_symbol_and_check_cjs_bailout(ctx, symbol_ref, include_reason);
   drain_work_items(ctx);
+  debug_assert!(ctx.pending.is_empty(), "public entry points must drain the queue to empty");
 }
 
 /// Engine-internal variant of [`include_symbol_and_check_cjs_bailout`]: enqueues the symbol and
@@ -468,10 +474,21 @@ impl LinkStage<'_> {
   }
 }
 
+/// Public-entry variant of [`enqueue_declaring_statements`]: include every statement that
+/// declares `symbol_ref` in its owner module, draining the queue like the other `include_*`
+/// entry points. Use this from outside the engine (driver, dynamic entries); handlers use the
+/// enqueue-only variant.
+pub(super) fn include_declaring_statements(ctx: &mut IncludeContext, symbol_ref: &SymbolRef) {
+  debug_assert!(ctx.pending.is_empty(), "engine queue must be empty between public entry points");
+  enqueue_declaring_statements(ctx, symbol_ref);
+  drain_work_items(ctx);
+  debug_assert!(ctx.pending.is_empty(), "public entry points must drain the queue to empty");
+}
+
 /// Enqueue every statement that declares `symbol_ref` in its owner module (no-op for external
 /// owners). This is the "a used binding keeps its declaration" edge, applied at every reference
-/// site.
-pub(super) fn include_declaring_statements(ctx: &mut IncludeContext, symbol_ref: &SymbolRef) {
+/// site. Engine-internal: enqueues without draining.
+fn enqueue_declaring_statements(ctx: &mut IncludeContext, symbol_ref: &SymbolRef) {
   if let Module::Normal(_) = &ctx.modules[symbol_ref.owner] {
     ctx.stmt_infos[symbol_ref.owner].declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
       |stmt_info_id| {
@@ -482,8 +499,10 @@ pub(super) fn include_declaring_statements(ctx: &mut IncludeContext, symbol_ref:
 }
 
 pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
+  debug_assert!(ctx.pending.is_empty(), "engine queue must be empty between public entry points");
   ctx.pending.push(WorkItem::Module(module.idx));
   drain_work_items(ctx);
+  debug_assert!(ctx.pending.is_empty(), "public entry points must drain the queue to empty");
 }
 
 fn handle_include_module(ctx: &mut IncludeContext, module_idx: ModuleIdx) {
@@ -614,8 +633,10 @@ pub fn include_symbol(
   symbol_ref: SymbolRef,
   include_reason: SymbolIncludeReason,
 ) {
+  debug_assert!(ctx.pending.is_empty(), "engine queue must be empty between public entry points");
   ctx.pending.push(WorkItem::Symbol(symbol_ref, include_reason));
   drain_work_items(ctx);
+  debug_assert!(ctx.pending.is_empty(), "public entry points must drain the queue to empty");
 }
 
 fn handle_include_symbol(
@@ -652,7 +673,7 @@ fn handle_include_symbol(
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
     demand_esm_init_wrapper(ctx, canonical_ref);
     note_json_self_reference(ctx, module, canonical_ref, include_reason);
-    include_declaring_statements(ctx, &canonical_ref);
+    enqueue_declaring_statements(ctx, &canonical_ref);
     if !is_simulated_facade_chunk {
       ctx.pending.push(WorkItem::Module(module.idx));
     }
@@ -813,8 +834,10 @@ pub fn include_statement(
   module: &NormalModule,
   stmt_info_idx: StmtInfoIdx,
 ) {
+  debug_assert!(ctx.pending.is_empty(), "engine queue must be empty between public entry points");
   ctx.pending.push(WorkItem::Statement(module.idx, stmt_info_idx));
   drain_work_items(ctx);
+  debug_assert!(ctx.pending.is_empty(), "public entry points must drain the queue to empty");
 }
 
 fn handle_include_statement(
@@ -857,7 +880,7 @@ fn handle_include_statement(
       // it means this member expr definitely contains module namespace ref.
       if let Some(resolved_ref) = member_expr_resolution.resolved {
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
-          include_declaring_statements(ctx, sym_ref);
+          enqueue_declaring_statements(ctx, sym_ref);
         });
         ctx.pending.push(WorkItem::Symbol(resolved_ref, include_kind));
         // When the member expression resolves to a specific CJS export property
@@ -885,7 +908,7 @@ fn handle_include_statement(
           ctx.normal_symbol_exports_chain_map.get(original_ref).map(Vec::as_slice).unwrap_or(&[]),
         )
         .for_each(|sym_ref| {
-          include_declaring_statements(ctx, sym_ref);
+          enqueue_declaring_statements(ctx, sym_ref);
         });
       push_symbol_and_check_cjs_bailout(ctx, *original_ref, include_kind);
     }

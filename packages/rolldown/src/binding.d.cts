@@ -3008,8 +3008,19 @@ export type FilterTokenKind =  'Id'|
 /**
  * Return the effective async runtime configuration.
  *
- * On the default `tokio-runtime` build the values are derived from the
- * environment variables and built-in defaults.
+ * On the native default `tokio-runtime` build this reports the thread counts the
+ * runtime was ACTUALLY built with at addon load (snapshotted in lib.rs `init`),
+ * so a later `process.env` change cannot make the report diverge from the live
+ * runtime. On the threaded WASI build it reports the napi-rs WASI loader's async
+ * work pool size (NAPI_RS_ASYNC_WORK_POOL_SIZE / UV_THREADPOOL_SIZE).
+ *
+ * Scope: the snapshot is taken once per process (the runtime is built once in
+ * `init`). If a host tears the env down and recreates it in the same process (an
+ * Electron-style reload), napi-rs rebuilds its runtime with its OWN defaults and
+ * the snapshot is not refreshed -- the same once-per-process lifecycle as napi's
+ * env-cleanup hook. This is unchanged from before the snapshot (the prior
+ * env-reading reporter could not reflect that napi-default runtime either); the
+ * field is diagnostics-only, so it is left as-is rather than chasing the reload.
  */
 export declare function getAsyncRuntimeConfig(): BindingRuntimeConfig
 

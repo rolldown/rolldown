@@ -32,6 +32,11 @@ use crate::{
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
 
+/// `PluginContext::{info,warn,debug}` are sync but the user's `onLog` callback
+/// is async, so each call spawns a detached task. The join handles are kept here
+/// so the build can await them at a barrier and report errors the callback produced
+pub type SharedLogHookTasks = Arc<Mutex<Vec<tokio::task::JoinHandle<anyhow::Result<()>>>>>;
+
 pub struct PluginDriver {
   plugins: IndexPluginable,
   contexts: IndexPluginContext,
@@ -45,6 +50,8 @@ pub struct PluginDriver {
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   /// Timing collector for plugin hooks (None if plugin timing is disabled)
   pub hook_timing_collector: Option<Arc<HookTimingCollector>>,
+  /// Pending `onLog` callback tasks spawned by `PluginContext::{info,warn,debug}`.
+  pub(crate) log_hook_tasks: SharedLogHookTasks,
 }
 
 impl PluginDriver {
@@ -58,6 +65,24 @@ impl PluginDriver {
     if let Some(collector) = &self.hook_timing_collector {
       collector.clear();
     }
+  }
+
+  /// Await all pending `onLog` callback tasks and return the errors they produced.
+  /// Drains the collector, so it is safe to call more than once
+  pub async fn await_log_hook_tasks(&self) -> Vec<anyhow::Error> {
+    let handles = {
+      let mut guard = self.log_hook_tasks.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      std::mem::take(&mut *guard)
+    };
+    let mut errors = Vec::new();
+    for handle in handles {
+      match handle.await {
+        Ok(Ok(())) => {}
+        Ok(Err(err)) => errors.push(err),
+        Err(join_err) => errors.push(anyhow::anyhow!("`onLog` hook task failed: {join_err}")),
+      }
+    }
+    errors
   }
 
   pub fn set_module_info(&self, module_id: &ModuleId, module_info: Arc<ModuleInfo>) {

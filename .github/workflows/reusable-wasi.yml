@@ -52,6 +52,12 @@ jobs:
       - name: Stability Test
         run: vp run --filter rolldown-tests test:stability
 
+      # dev/*.test.ts files import this workspace package at module scope, so
+      # collection fails without its dist/ even though the dev tests themselves
+      # are skipped on this lane.
+      - name: Build `@rolldown/test-dev-server`
+        run: vp run --filter '@rolldown/test-dev-server' build
+
       # Full node suite against the single-thread WASI binding (the dist is
       # still wired to the wasi-single build from the step above). The wasm
       # binding reports the CurrentThread flavor, so all `isSingleThread`

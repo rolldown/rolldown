@@ -97,6 +97,40 @@ refreshes NAPI result DataViews after reentrant JavaScript calls. Rolldown
 applies the equivalent published-package workaround through
 `patches/@emnapi__core@1.11.1.patch`.
 
+### Committed WASI loaders and codegen checks
+
+The committed loader set in `packages/rolldown/src` is intentionally mixed
+(RD-14): `rolldown-binding.wasi.cjs` is the THREADED variant (the node wasi
+fallback shipped next to the threaded wasm artifact), while
+`rolldown-binding.wasi-browser.js` is the SINGLE-THREAD variant that
+`@rolldown/browser` ships. No single regeneration mode reproduces both files,
+so the codegen checks are arranged as follows:
+
+- The vendored CLI patch (`patches/@napi-rs__cli@3.7.2.patch`) extends
+  napi-rs#3353: for a build whose target is NOT wasi, `writeWasiBinding`
+  resolves `hasThreads` from the wasi target declared in the package's napi
+  `targets` config (`wasm32-wasip1-threads`, i.e. threaded) instead of the
+  current build triple. Loader regeneration on native builds is therefore
+  deterministic (threaded) on every host. Actual wasi builds keep deriving
+  `hasThreads` from the build triple, so the single-thread pipeline still
+  emits threadless loaders.
+- `just build-rolldown` restores `rolldown-binding.wasi-browser.js` after the
+  build (its committed copy is deliberately the single-thread variant), so
+  native builds leave a clean tree and CI's "Check no diff" in
+  `reusable-native-build.yml` keeps full coverage of everything else,
+  including the threaded node loader.
+- The Node Validation job in `ci.yml` restores `packages/rolldown/src` after
+  `just build-browser` (a single-thread build that regenerates threadless
+  loaders plus a feature-gated `binding.d.cts` by design) before its
+  `git diff --exit-code`, which guards the `@rolldown/debug` generated code.
+- The threadless-ness of the single-thread loaders themselves is guarded by
+  `scripts/misc/check-wasi-threadless.mjs` in the WASI workflow, right after
+  `just build-rolldown-wasi-single`.
+
+Published artifacts never depend on the committed copies: every release
+pipeline regenerates the loaders for its own target right before bundling
+(threaded for the node/wasi packages, threadless for `@rolldown/browser`).
+
 ## Metrics And Baseline
 
 Superseded: committed, reproducible measurements now live in

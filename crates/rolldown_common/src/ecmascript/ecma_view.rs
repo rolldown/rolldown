@@ -62,6 +62,37 @@ impl EcmaViewMeta {
   }
 }
 
+/// Where a named export's value comes from: the module's own declaration, or a re-export of an
+/// import.
+///
+/// This classification is the contract between the lazy-barrel loader and tree shaking's
+/// body-demand gating, and the two sides MUST agree: the loader loads every plain import record
+/// of a barrel as soon as one of its *own* exports is requested (`BarrelInfo::local` in
+/// `take_needed_records`), and tree shaking includes the module's gated side-effect statements as
+/// soon as one of its *own* exports is used (`compute_body_demand_keys`). If they classified an
+/// export differently, a retained statement could reference an import record that was never
+/// loaded — a free identifier at runtime (the #9806 bug family). Keeping the classification in
+/// one place makes that agreement hold by construction.
+pub enum ExportOrigin<'a> {
+  /// Declared by the module itself: `export const a = ...`, `export function f() {}`, or a plain
+  /// `export { local }` of a local binding.
+  Own,
+  /// Re-exports an import: `export { a } from './x'`, `export * as ns from './x'`, or
+  /// `import { a } from './x'; export { a }`.
+  ReExport(&'a NamedImport),
+}
+
+impl EcmaView {
+  /// Classify a named export as the module's own declaration or a re-export of an import.
+  /// See [`ExportOrigin`] for why this must stay the single source of truth.
+  pub fn classify_export(&self, local_export: &LocalExport) -> ExportOrigin<'_> {
+    match self.named_imports.get(&local_export.referenced) {
+      Some(named_import) => ExportOrigin::ReExport(named_import),
+      None => ExportOrigin::Own,
+    }
+  }
+}
+
 #[derive(Debug, Clone)]
 pub struct EcmaView {
   pub dummy_record_set: FxHashSet<NodeId>,

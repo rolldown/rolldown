@@ -2,8 +2,8 @@
 //! side-effect-free modules. See [`side_effects_included_on_demand`] for the model.
 
 use rolldown_common::{
-  ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, StmtInfo, SymbolRef, SymbolRefDb,
-  side_effects::DeterminedSideEffects,
+  ExportOrigin, ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, StmtInfo, SymbolRef,
+  SymbolRefDb, side_effects::DeterminedSideEffects,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -93,7 +93,7 @@ pub fn compute_body_demand_keys(
     let body_demand_keys = module
       .named_exports
       .values()
-      .filter(|local_export| !module.named_imports.contains_key(&local_export.referenced))
+      .filter(|local_export| matches!(module.classify_export(local_export), ExportOrigin::Own))
       .map(|local_export| symbols.canonical_ref_for(local_export.referenced))
       .chain(std::iter::once(module.namespace_object_ref));
     for key in body_demand_keys {

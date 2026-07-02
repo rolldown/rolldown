@@ -221,6 +221,12 @@ build-browser-release:
 build-test-dev-server:
   vp run --filter @rolldown/test-dev-server build
 
+# Set up the vendored Vite submodule for `@rolldown/test-dev-server` (init the
+# submodule, link the workspace rolldown into it, install + build vite).
+# Requires `just build-rolldown` first.
+setup-test-dev-server-vite:
+  vp run --filter @rolldown/test-dev-server setup-vite
+
 # --- `bench` series commands aim to provide a easy way to run benchmarks.
 
 bench-rust:

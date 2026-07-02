@@ -8,6 +8,7 @@ const __nodePath = require('node:path')
 const { WASI: __nodeWASI } = require('node:wasi')
 const { Worker } = require('node:worker_threads')
 
+
 const {
   createOnMessage: __wasmCreateOnMessageForFsProxy,
   getDefaultContext: __emnapiGetDefaultContext,

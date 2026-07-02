@@ -363,10 +363,49 @@ jobs:
           path: packages/rolldown/dist
 
       - name: Add WASI target
-        run: rustup target add wasm32-wasip1-threads
+        run: rustup target add wasm32-wasip1-threads wasm32-wasip1
 
       - name: Build @rolldown/browser
         run: just build-browser
+
+      # `just build-browser` runs the single-thread (wasm32-wasip1) binding
+      # build, which by design regenerates exactly two committed files in
+      # packages/rolldown/src: rolldown-binding.wasi.cjs (threadless regen of
+      # the committed THREADED node loader) and binding.d.cts (feature-gated
+      # doc-comment drift). Assert that ONLY those allowlisted files changed —
+      # any other packages/rolldown/src drift is unexpected browser-build
+      # codegen drift and must fail here instead of being silently restored —
+      # then restore just the allowlisted files so the `git diff --exit-code`
+      # below keeps guarding the @rolldown/debug (and other) generated code.
+      # Threadless-ness of the single-thread loaders is separately guarded by
+      # scripts/misc/check-wasi-threadless.mjs in the WASI workflow.
+      # See internal-docs/async-runtime/implementation.md.
+      - name: Assert browser-build drift allowlist and restore expected WASI loader regen
+        run: |
+          set -euo pipefail
+          changed=()
+          while IFS= read -r file; do
+            changed+=("$file")
+          done < <(git diff --name-only -- packages/rolldown/src)
+          unexpected=()
+          for file in "${changed[@]}"; do
+            case "$file" in
+              packages/rolldown/src/binding.d.cts) ;;
+              packages/rolldown/src/rolldown-binding.wasi.cjs) ;;
+              *) unexpected+=("$file") ;;
+            esac
+          done
+          if (( ${#unexpected[@]} > 0 )); then
+            echo "::error::Unexpected packages/rolldown/src drift from 'just build-browser' (not in the allowlist):" >&2
+            printf ' - %s\n' "${unexpected[@]}" >&2
+            git --no-pager diff -- "${unexpected[@]}"
+            exit 1
+          fi
+          if (( ${#changed[@]} > 0 )); then
+            echo "Restoring expected browser-build regeneration:"
+            printf ' - %s\n' "${changed[@]}"
+            git checkout -- "${changed[@]}"
+          fi
 
       - name: Build @rolldown/debug
         run: just build-rolldown-debug

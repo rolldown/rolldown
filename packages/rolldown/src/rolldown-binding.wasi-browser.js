@@ -1,5 +1,4 @@
 import {
-  createOnMessage as __wasmCreateOnMessageForFsProxy,
   getDefaultContext as __emnapiGetDefaultContext,
   instantiateNapiModule as __emnapiInstantiateNapiModule,
   WASI as __WASI,
@@ -21,10 +20,9 @@ const __wasmUrl = new URL('./rolldown-binding.wasm32-wasi.wasm', import.meta.url
 const __emnapiContext = __emnapiGetDefaultContext()
 
 
-const __sharedMemory = new WebAssembly.Memory({
+const __wasmMemory = new WebAssembly.Memory({
   initial: 16384,
   maximum: 65536,
-  shared: true,
 })
 
 const __wasmFile = await fetch(__wasmUrl).then((res) => res.arrayBuffer())
@@ -35,28 +33,14 @@ const {
   napiModule: __napiModule,
 } = await __emnapiInstantiateNapiModule(__wasmFile, {
   context: __emnapiContext,
-  asyncWorkPoolSize: 4,
+  asyncWorkPoolSize: 0,
   wasi: __wasi,
-  onCreateWorker() {
-    const worker = new Worker(new URL('./wasi-worker-browser.mjs', import.meta.url), {
-      type: 'module',
-    })
-    worker.addEventListener('message', __wasmCreateOnMessageForFsProxy(__fs))
-
-    worker.addEventListener('message', (event) => {
-      if (event.data && typeof event.data === 'object' && event.data.type === 'error') {
-        window.dispatchEvent(new CustomEvent('napi-rs-worker-error', { detail: event.data }))
-      }
-    })
-
-    return worker
-  },
   overwriteImports(importObject) {
     importObject.env = {
       ...importObject.env,
       ...importObject.napi,
       ...importObject.emnapi,
-      memory: __sharedMemory,
+      memory: __wasmMemory,
     }
     return importObject
   },

@@ -220,8 +220,22 @@ build-rolldown-binding:
   vp run --filter rolldown build-binding
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding.
+#
+# The committed WASI loader set is intentionally mixed: the node loader
+# (`rolldown-binding.wasi.cjs`) is the THREADED variant (the wasi fallback
+# shipped next to the threaded wasm), while the browser loader
+# (`rolldown-binding.wasi-browser.js`) is the SINGLE-THREAD variant that
+# `@rolldown/browser` ships (RD-14). Non-wasi builds regenerate both loaders
+# deterministically for the config's declared wasi target
+# (wasm32-wasip1-threads, i.e. threaded — see patches/@napi-rs__cli@3.7.2.patch),
+# so the regenerated browser loader legitimately differs from its committed
+# single-thread copy: restore it so native builds leave a clean tree (CI's
+# "Check no diff" relies on this). The single-thread loaders are guarded by
+# scripts/misc/check-wasi-threadless.mjs in the WASI workflow. See
+# internal-docs/async-runtime/implementation.md.
 build-rolldown:
   vp run --filter rolldown build-native:debug
+  git checkout -- packages/rolldown/src/rolldown-binding.wasi-browser.js
 
 # Build `@rolldown/test-dev-server` itself.
 build-rolldown-test-dev-server:
@@ -241,6 +255,11 @@ build-rolldown-async-runtime:
   vp run --filter rolldown build-binding --no-default-features --features async-runtime
   vp run --filter rolldown build-js-glue
   git checkout -- packages/rolldown/src/binding.d.cts packages/rolldown/src/rolldown-binding.wasi-browser.js
+
+# Build `rolldown` with the non-threaded `.wasm` binding.
+build-rolldown-wasi-single:
+  cd packages/rolldown && ./node_modules/.bin/oxnode ./build-binding.ts --target wasm32-wasip1 --no-default-features --features async-runtime
+  cd packages/rolldown && TARGET='rolldown-wasi' node --enable-source-maps --import @oxc-node/core/register -C dev ./build.ts
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in release mode.
 build-rolldown-release:

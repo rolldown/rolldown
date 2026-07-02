@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+export * from "external";
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+//#endregion
+//#region esm_dyn.js
+var import_cjs_re = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.c = "c";
+})))();
+const e = "e";
+//#endregion
+//#region entry.js
+const own = "own";
+const cVal = import_cjs_re.c;
+//#endregion
+export { cVal, e, own };
+
+```

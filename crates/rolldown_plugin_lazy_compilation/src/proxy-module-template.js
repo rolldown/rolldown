@@ -7,9 +7,12 @@ const lazyExports = (async () => {
   await import(
     /* @vite-ignore */ `/@vite/lazy?id=${encodeURIComponent($PROXY_MODULE_ID)}&clientId=${__rolldown_runtime__.clientId}`
   );
-  // After the module code is loaded, we can get its exports from the runtime.
-  // The actual module registers with $STABLE_MODULE_ID (the stable/relative path).
-  return __rolldown_runtime__.loadExports($STABLE_MODULE_ID);
+  // Loading the chunk re-registers this proxy id, exposing the real module's
+  // initializer as its own `rolldown:exports` promise. Await that promise (don't
+  // just hand back the namespace) so an error thrown while the real module
+  // initializes rejects `lazyExports` too, surfacing at the consumer's
+  // `await import(...)` (catchable) instead of escaping as an unhandled rejection.
+  return await __rolldown_runtime__.loadExports($STABLE_PROXY_MODULE_ID)['rolldown:exports'];
 })();
 
 export { lazyExports as 'rolldown:exports' };

@@ -1,9 +1,10 @@
 use rolldown_common::{
-  EntryPoint, ExportsKind, ImportRecordMeta, ModuleIdx, OutputFormat, PreserveEntrySignatures,
-  SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, TaggedSymbolRef, WrapKind,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  DeclaredSymbols, EntryPoint, ExportsKind, ImportRecordMeta, ModuleIdx, OutputFormat,
+  PreserveEntrySignatures, SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, TaggedSymbolRef,
+  WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rustc_hash::FxHashMap;
+use smallvec::smallvec;
 
 use crate::{
   types::linking_metadata::LinkingMetadata, utils::chunk::normalize_preserve_entry_signature,
@@ -74,9 +75,9 @@ impl LinkStage<'_> {
       // tree-shaking process.
       linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
         let stmt_info = StmtInfo {
-          declared_symbols: vec![TaggedSymbolRef::Normal(*symbol_ref)],
+          declared_symbols: smallvec![TaggedSymbolRef::normal(*symbol_ref)],
           referenced_symbols: vec![],
-          side_effect: false.into(),
+          eval_flags: false.into(),
           import_records: Vec::new(),
           #[cfg(debug_assertions)]
           debug_label: None,
@@ -95,7 +96,7 @@ impl LinkStage<'_> {
       if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
         let meta = &mut self.metas[ecma_module.idx];
         let mut referenced_symbols = vec![];
-        let mut declared_symbols = vec![];
+        let mut declared_symbols: DeclaredSymbols = smallvec![];
         if !meta.is_canonical_exports_empty() || self.options.generated_code.symbols {
           referenced_symbols.push(self.runtime.resolve_symbol("__exportAll").into());
           referenced_symbols
@@ -112,7 +113,7 @@ impl LinkStage<'_> {
                 }
                 referenced_symbols.push(rec.namespace_ref.into());
                 declared_symbols
-                  .push(TaggedSymbolRef::Normal(ecma_module.import_records[rec_idx].namespace_ref));
+                  .push(TaggedSymbolRef::normal(ecma_module.import_records[rec_idx].namespace_ref));
               });
             }
             OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {}
@@ -120,11 +121,11 @@ impl LinkStage<'_> {
         }
         // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
         // Corresponding AST for this statement will be created by the finalizer.
-        declared_symbols.push(TaggedSymbolRef::Normal(ecma_module.namespace_object_ref));
+        declared_symbols.push(TaggedSymbolRef::normal(ecma_module.namespace_object_ref));
         let namespace_stmt_info = StmtInfo {
           declared_symbols,
           referenced_symbols,
-          side_effect: false.into(),
+          eval_flags: false.into(),
           import_records: Vec::new(),
           #[cfg(debug_assertions)]
           debug_label: None,

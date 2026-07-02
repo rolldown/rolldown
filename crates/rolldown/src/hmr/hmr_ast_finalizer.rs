@@ -1,3 +1,4 @@
+use oxc::allocator::GetAllocator;
 use oxc::ast::ast::Str;
 use oxc::{
   allocator::{Box as ArenaBox, IntoIn, TakeIn},
@@ -161,23 +162,25 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                           match &specifier.local {
                             ast::ModuleExportName::IdentifierName(ident) => {
                               Expression::StaticMemberExpression(
-                                self.ast_factory.alloc_static_member_expression(
+                                ast::StaticMemberExpression::boxed(
                                   SPAN,
                                   self.ast_factory.make_id_ref_expr(SPAN, &binding_name),
-                                  self.ast_factory.identifier_name(SPAN, ident.name.as_str()),
+                                  ast::IdentifierName::new(SPAN, ident.name.as_str(), &self.ast_factory),
                                   false,
+                                  &self.ast_factory,
                                 ),
                               )
                             }
                             ast::ModuleExportName::StringLiteral(str) => {
                               Expression::ComputedMemberExpression(
-                                self.ast_factory.alloc_computed_member_expression(
+                                ast::ComputedMemberExpression::boxed(
                                   SPAN,
                                   self.ast_factory.make_id_ref_expr(SPAN, &binding_name),
-                                  self.ast_factory.expression_string_literal(
-                                    SPAN, str.value.as_str(), None
+                                  ast::Expression::new_string_literal(
+                                    SPAN, str.value.as_str(), None, &self.ast_factory
                                   ),
                                   false,
+                                  &self.ast_factory,
                                 ),
                               )
                             }
@@ -230,7 +233,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                 }
                 _ => unreachable!("doesn't support ts now"),
               }
-              program_body.push(ast::Statement::from(decl.take_in(self.ast_factory.allocator)));
+              program_body.push(ast::Statement::from(decl.take_in(&self.ast_factory.allocator())));
             } else {
               // export { foo, bar as bar2 }
               decl.specifiers.iter().for_each(|specifier| {
@@ -261,8 +264,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                 ));
               }
               program_body.push(ast::Statement::FunctionDeclaration(ArenaBox::new_in(
-                function.as_mut().take_in(self.ast_factory.allocator),
-                self.ast_factory.allocator,
+                function.as_mut().take_in(&self.ast_factory.allocator()),
+                &self.ast_factory.allocator(),
               )));
             }
             ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
@@ -281,18 +284,17 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                 ));
               }
               program_body.push(ast::Statement::ClassDeclaration(ArenaBox::new_in(
-                class.as_mut().take_in(self.ast_factory.allocator),
-                self.ast_factory.allocator,
+                class.as_mut().take_in(&self.ast_factory.allocator()),
+                &self.ast_factory.allocator(),
               )));
             }
             expr @ ast::match_expression!(ExportDefaultDeclarationKind) => {
               let expr = expr.to_expression_mut();
               // Transform `export default [expression]` => `var __rolldown_default__ = [expression]`
-              program_body.push(
-                self
-                  .ast_factory
-                  .make_var_decl("__rolldown_default__", expr.take_in(self.ast_factory.allocator)),
-              );
+              program_body.push(self.ast_factory.make_var_decl(
+                "__rolldown_default__",
+                expr.take_in(&self.ast_factory.allocator()),
+              ));
               self.exports.push(self.ast_factory.make_lazy_export_property(
                 "default",
                 self.ast_factory.make_id_ref_expr(SPAN, "__rolldown_default__"),
@@ -391,7 +393,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           [self.module.hmr_info.module_request_to_import_record_idx[string_literal.value.as_str()]];
         let Some(module_idx) = import_record.resolved_module else { return };
         // Use stable module ID for consistent runtime lookup
-        string_literal.value = self.ast_factory.str(self.modules[module_idx].stable_id());
+        string_literal.value =
+          Str::from_str_in(self.modules[module_idx].stable_id(), &self.ast_factory);
       }
       ast::Argument::ArrayExpression(array_expression) => {
         // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
@@ -402,7 +405,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                 [string_literal.value.as_str()]];
             let Some(module_idx) = import_record.resolved_module else { return };
             // Use stable module ID for consistent runtime lookup
-            string_literal.value = self.ast_factory.str(self.modules[module_idx].stable_id());
+            string_literal.value =
+              Str::from_str_in(self.modules[module_idx].stable_id(), &self.ast_factory);
           }
         });
       }
@@ -436,34 +440,42 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     };
     let call_expr = self.ast_factory.make_call_with_arg(
       self.ast_factory.make_member_access_expr("__rolldown_runtime__", "loadExports"),
-      self.ast_factory.expression_string_literal(SPAN, self.ast_factory.str(id), None),
+      ast::Expression::new_string_literal(
+        SPAN,
+        Str::from_str_in(id, &self.ast_factory),
+        None,
+        &self.ast_factory,
+      ),
       false,
     );
 
     // var [binding_name] = [__toESM-wrapped loadExports call];
-    let stmt = Statement::from(
-      self.ast_factory.declaration_variable(
-        span,
-        ast::VariableDeclarationKind::Var,
-        self.ast_factory.vec1(
-          self.ast_factory.variable_declarator(
+    let stmt = Statement::from(ast::Declaration::new_variable_declaration(
+      span,
+      ast::VariableDeclarationKind::Var,
+      oxc::allocator::Vec::from_value_in(
+        ast::VariableDeclarator::new(
+          SPAN,
+          ast::VariableDeclarationKind::Var,
+          ast::BindingPattern::new_binding_identifier(
             SPAN,
-            ast::VariableDeclarationKind::Var,
-            self
-              .ast_factory
-              .binding_pattern_binding_identifier(SPAN, self.ast_factory.str(binding_name)),
-            NONE,
-            Some(self.ast_factory.make_to_esm_call_with_interop(
-              "__rolldown_runtime__.__toESM",
-              call_expr,
-              interop,
-            )),
-            false,
+            Str::from_str_in(binding_name, &self.ast_factory),
+            &self.ast_factory,
           ),
+          NONE,
+          Some(self.ast_factory.make_to_esm_call_with_interop(
+            "__rolldown_runtime__.__toESM",
+            call_expr,
+            interop,
+          )),
+          false,
+          &self.ast_factory,
         ),
-        false,
+        &self.ast_factory,
       ),
-    );
+      false,
+      &self.ast_factory,
+    ));
     Some(stmt)
   }
 
@@ -498,20 +510,26 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     let self_exports = self.module_exports_name();
 
-    let call_expr = self.ast_factory.expression_call(
+    let call_expr = ast::Expression::new_call_expression(
       SPAN,
       self.ast_factory.make_member_access_expr("__rolldown_runtime__", "__reExport"),
       NONE,
-      self.ast_factory.vec_from_iter([
-        ast::Argument::from(self.ast_factory.make_id_ref_expr(SPAN, self_exports)),
-        ast::Argument::from(self.ast_factory.make_id_ref_expr(SPAN, binding_name)),
-      ]),
+      oxc::allocator::Vec::from_iter_in(
+        [
+          ast::Argument::from(self.ast_factory.make_id_ref_expr(SPAN, self_exports)),
+          ast::Argument::from(self.ast_factory.make_id_ref_expr(SPAN, binding_name)),
+        ],
+        &self.ast_factory,
+      ),
       false,
+      &self.ast_factory,
     );
 
-    Some(ast::Statement::ExpressionStatement(
-      self.ast_factory.alloc_expression_statement(span, call_expr),
-    ))
+    Some(ast::Statement::ExpressionStatement(ast::ExpressionStatement::boxed(
+      span,
+      call_expr,
+      &self.ast_factory,
+    )))
   }
 
   fn generate_declaration_of_module_namespace_object(
@@ -522,9 +540,11 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     // TODO reexport external module
 
     // construct `{ prop_name: () => returned, ... }`
-    let mut arg_obj_expr = self
-      .ast_factory
-      .alloc_object_expression(SPAN, self.ast_factory.vec_with_capacity(self.exports.len()));
+    let mut arg_obj_expr = ast::ObjectExpression::boxed(
+      SPAN,
+      oxc::allocator::Vec::with_capacity_in(self.exports.len(), &self.ast_factory),
+      &self.ast_factory,
+    );
     arg_obj_expr.properties.extend(self.exports.drain(..));
     arg_obj_expr.properties.extend(self.named_exports.iter().map(|(exported, named_export)| {
       let expr = if let Some(local_binding) = self.import_bindings.get(&named_export.local_binding)
@@ -540,14 +560,16 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     }));
 
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
-    let export_call_expr = self.ast_factory.expression_call(
+    let export_call_expr = ast::Expression::new_call_expression(
       SPAN,
       self.ast_factory.make_id_ref_expr(SPAN, "__rolldown_runtime__.__exportAll"),
       NONE,
-      self.ast_factory.vec_from_array([ast::Argument::ObjectExpression(
-        arg_obj_expr.into_in(self.ast_factory.allocator),
-      )]),
+      oxc::allocator::Vec::from_array_in(
+        [ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.ast_factory.allocator()))],
+        &self.ast_factory,
+      ),
       false,
+      &self.ast_factory,
     );
 
     // construct `var [binding_name_for_namespace_object_ref] = __exportAll({ prop_name: () => returned, ... })`
@@ -597,102 +619,135 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     // TODO: hyf0 should switch to a more robust way to identify lazy proxy modules
     if importee.id.contains("?rolldown-lazy=1") {
       // Build: encodeURIComponent(importee.id)
-      let encode_call =
-        ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
-          SPAN,
-          self.ast_factory.make_id_ref_expr(SPAN, "encodeURIComponent"),
-          NONE,
-          self.ast_factory.vec1(ast::Argument::StringLiteral(
-            self.ast_factory.alloc_string_literal(SPAN, self.ast_factory.str(&importee.id), None),
+      let encode_call = ast::Expression::CallExpression(ast::CallExpression::boxed(
+        SPAN,
+        self.ast_factory.make_id_ref_expr(SPAN, "encodeURIComponent"),
+        NONE,
+        oxc::allocator::Vec::from_value_in(
+          ast::Argument::StringLiteral(ast::StringLiteral::boxed(
+            SPAN,
+            Str::from_str_in(&importee.id, &self.ast_factory),
+            None,
+            &self.ast_factory,
           )),
-          false,
-        ));
+          &self.ast_factory,
+        ),
+        false,
+        &self.ast_factory,
+      ));
 
       // Build template literal: `/@vite/lazy?id=${encodeURIComponent(importee.id)}&clientId=${__rolldown_runtime__.clientId}`
       let url_expr = {
-        let quasis = self.ast_factory.vec_from_iter([
-          self.ast_factory.template_element(
-            SPAN,
-            ast::TemplateElementValue {
-              raw: self.ast_factory.str("/@vite/lazy?id="),
-              cooked: None,
-            },
-            false,
-          ),
-          self.ast_factory.template_element(
-            SPAN,
-            ast::TemplateElementValue { raw: self.ast_factory.str("&clientId="), cooked: None },
-            false,
-          ),
-          self.ast_factory.template_element(
-            SPAN,
-            ast::TemplateElementValue { raw: self.ast_factory.str(""), cooked: None },
-            true,
-          ),
-        ]);
-        let expressions = self.ast_factory.vec_from_iter([
-          encode_call,
-          self.ast_factory.make_member_access_expr("__rolldown_runtime__", "clientId"),
-        ]);
-        self.ast_factory.expression_template_literal(SPAN, quasis, expressions)
+        let quasis = oxc::allocator::Vec::from_iter_in(
+          [
+            ast::TemplateElement::new(
+              SPAN,
+              ast::TemplateElementValue {
+                raw: Str::from_str_in("/@vite/lazy?id=", &self.ast_factory),
+                cooked: None,
+              },
+              false,
+              &self.ast_factory,
+            ),
+            ast::TemplateElement::new(
+              SPAN,
+              ast::TemplateElementValue {
+                raw: Str::from_str_in("&clientId=", &self.ast_factory),
+                cooked: None,
+              },
+              false,
+              &self.ast_factory,
+            ),
+            ast::TemplateElement::new(
+              SPAN,
+              ast::TemplateElementValue {
+                raw: Str::from_str_in("", &self.ast_factory),
+                cooked: None,
+              },
+              true,
+              &self.ast_factory,
+            ),
+          ],
+          &self.ast_factory,
+        );
+        let expressions = oxc::allocator::Vec::from_iter_in(
+          [
+            encode_call,
+            self.ast_factory.make_member_access_expr("__rolldown_runtime__", "clientId"),
+          ],
+          &self.ast_factory,
+        );
+        ast::Expression::new_template_literal(SPAN, quasis, expressions, &self.ast_factory)
       };
 
       // Build: import(`/@vite/lazy?id=...&clientId=...`)
-      let import_expr = self.ast_factory.expression_import(SPAN, url_expr, None, None);
+      let import_expr =
+        ast::Expression::new_import_expression(SPAN, url_expr, None, None, &self.ast_factory);
 
       // Build: __rolldown_runtime__.loadExports("<stable_proxy_id>")
-      let load_exports_call =
-        ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
-          SPAN,
-          self.ast_factory.make_id_ref_expr(SPAN, "__rolldown_runtime__.loadExports"),
-          NONE,
-          self.ast_factory.vec1(ast::Argument::StringLiteral(
-            self.ast_factory.alloc_string_literal(
-              SPAN,
-              self.ast_factory.str(&importee.stable_id),
-              None,
-            ),
+      let load_exports_call = ast::Expression::CallExpression(ast::CallExpression::boxed(
+        SPAN,
+        self.ast_factory.make_id_ref_expr(SPAN, "__rolldown_runtime__.loadExports"),
+        NONE,
+        oxc::allocator::Vec::from_value_in(
+          ast::Argument::StringLiteral(ast::StringLiteral::boxed(
+            SPAN,
+            Str::from_str_in(&importee.stable_id, &self.ast_factory),
+            None,
+            &self.ast_factory,
           )),
-          false,
-        ));
+          &self.ast_factory,
+        ),
+        false,
+        &self.ast_factory,
+      ));
 
       // Build: () => __rolldown_runtime__.loadExports("<stable_proxy_id>")
-      let arrow_fn = self.ast_factory.expression_arrow_function(
+      let arrow_fn = ast::Expression::new_arrow_function_expression(
         SPAN,
         /* expression */ true,
         /* async */ false,
         NONE,
-        self.ast_factory.formal_parameters(
+        ast::FormalParameters::new(
           SPAN,
           ast::FormalParameterKind::ArrowFormalParameters,
-          self.ast_factory.vec(),
+          oxc::allocator::Vec::new_in(&self.ast_factory),
           NONE,
+          &self.ast_factory,
         ),
         NONE,
-        self.ast_factory.function_body(
+        ast::FunctionBody::new(
           SPAN,
-          self.ast_factory.vec(),
-          self.ast_factory.vec1(ast::Statement::ExpressionStatement(
-            self.ast_factory.alloc_expression_statement(SPAN, load_exports_call),
-          )),
+          oxc::allocator::Vec::new_in(&self.ast_factory),
+          oxc::allocator::Vec::from_value_in(
+            ast::Statement::ExpressionStatement(ast::ExpressionStatement::boxed(
+              SPAN,
+              load_exports_call,
+              &self.ast_factory,
+            )),
+            &self.ast_factory,
+          ),
+          &self.ast_factory,
         ),
+        &self.ast_factory,
       );
 
       // Build: import(...).then(() => __rolldown_runtime__.loadExports("..."))
-      let then_callee =
-        Expression::StaticMemberExpression(self.ast_factory.alloc_static_member_expression(
-          SPAN,
-          import_expr,
-          self.ast_factory.identifier_name(SPAN, "then"),
-          false,
-        ));
+      let then_callee = Expression::StaticMemberExpression(ast::StaticMemberExpression::boxed(
+        SPAN,
+        import_expr,
+        ast::IdentifierName::new(SPAN, "then", &self.ast_factory),
+        false,
+        &self.ast_factory,
+      ));
 
-      *it = self.ast_factory.expression_call(
+      *it = ast::Expression::new_call_expression(
         SPAN,
         then_callee,
         NONE,
-        self.ast_factory.vec1(ast::Argument::from(arrow_fn)),
+        oxc::allocator::Vec::from_value_in(ast::Argument::from(arrow_fn), &self.ast_factory),
         false,
+        &self.ast_factory,
       );
       return;
     }
@@ -702,39 +757,48 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     // __rolldown_runtime__.loadExports('./foo.js')
     // Use stable module ID for consistent runtime lookup
-    let mut load_exports_call_expr =
-      ast::Expression::CallExpression(self.ast_factory.alloc_call_expression(
-        SPAN,
-        self.ast_factory.make_id_ref_expr(SPAN, "__rolldown_runtime__.loadExports"),
-        NONE,
-        self.ast_factory.vec1(ast::Argument::StringLiteral(self.ast_factory.alloc_string_literal(
+    let mut load_exports_call_expr = ast::Expression::CallExpression(ast::CallExpression::boxed(
+      SPAN,
+      self.ast_factory.make_id_ref_expr(SPAN, "__rolldown_runtime__.loadExports"),
+      NONE,
+      oxc::allocator::Vec::from_value_in(
+        ast::Argument::StringLiteral(ast::StringLiteral::boxed(
           SPAN,
-          self.ast_factory.str(&importee.stable_id),
+          Str::from_str_in(&importee.stable_id, &self.ast_factory),
           None,
-        ))),
-        false,
-      ));
+          &self.ast_factory,
+        )),
+        &self.ast_factory,
+      ),
+      false,
+      &self.ast_factory,
+    ));
 
     if is_importee_cjs {
       let is_node_cjs = importee.def_format.is_commonjs();
 
-      let mut args = self.ast_factory.vec1(ast::Argument::from(load_exports_call_expr));
+      let mut args = oxc::allocator::Vec::from_value_in(
+        ast::Argument::from(load_exports_call_expr),
+        &self.ast_factory,
+      );
       if is_node_cjs {
-        args.push(ast::Argument::from(self.ast_factory.expression_numeric_literal(
+        args.push(ast::Argument::from(ast::Expression::new_numeric_literal(
           SPAN,
           1.0,
           None,
           ast::NumberBase::Decimal,
+          &self.ast_factory,
         )));
       }
 
       // __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports('./foo.js'), node_mode)
-      load_exports_call_expr = self.ast_factory.expression_call(
+      load_exports_call_expr = ast::Expression::new_call_expression(
         SPAN,
         self.ast_factory.make_id_ref_expr(SPAN, "__rolldown_runtime__.__toDynamicImportESM"),
         NONE,
         args,
         false,
+        &self.ast_factory,
       );
     }
 
@@ -743,12 +807,13 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       // Turn `import('./foo.js')` into `(init_foo(), Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js')))`
 
       // init_foo()
-      let init_fn_call = self.ast_factory.alloc_call_expression(
+      let init_fn_call = ast::CallExpression::boxed(
         SPAN,
         self.ast_factory.make_id_ref_expr(SPAN, init_fn_name),
         NONE,
-        self.ast_factory.vec(),
+        oxc::allocator::Vec::new_in(&self.ast_factory),
         false,
+        &self.ast_factory,
       );
 
       // Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js'))
@@ -756,14 +821,14 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         self.ast_factory.make_promise_resolve_then(load_exports_call_expr);
 
       // (init_foo(), Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js')))
-      let ret_expr =
-        ast::Expression::SequenceExpression(self.ast_factory.alloc_sequence_expression(
-          SPAN,
-          self.ast_factory.vec_from_array([
-            ast::Expression::CallExpression(init_fn_call),
-            promise_resolve_then_load_exports,
-          ]),
-        ));
+      let ret_expr = ast::Expression::SequenceExpression(ast::SequenceExpression::boxed(
+        SPAN,
+        oxc::allocator::Vec::from_array_in(
+          [ast::Expression::CallExpression(init_fn_call), promise_resolve_then_load_exports],
+          &self.ast_factory,
+        ),
+        &self.ast_factory,
+      ));
       *it = ret_expr;
     } else {
       // Turn `import('./foo.js')` into `Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js'))`
@@ -821,10 +886,11 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     // Use stable module ID for consistent runtime lookup
     let load_exports_call = self.ast_factory.make_call_with_arg(
       self.ast_factory.make_member_access_expr("__rolldown_runtime__", "loadExports"),
-      self.ast_factory.expression_string_literal(
+      ast::Expression::new_string_literal(
         SPAN,
-        self.ast_factory.str(&importee.stable_id),
+        Str::from_str_in(&importee.stable_id, &self.ast_factory),
         None,
+        &self.ast_factory,
       ),
       false,
     );
@@ -861,11 +927,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         load_exports_call,
         false,
       );
-      Expression::from(self.ast_factory.member_expression_static(
+      Expression::from(ast::MemberExpression::new_static_member_expression(
         SPAN,
         to_commonjs_call,
         self.ast_factory.make_id_name(SPAN, "default"),
         false,
+        &self.ast_factory,
       ))
     } else {
       self.ast_factory.make_call_with_arg(
@@ -879,12 +946,13 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       // If the importee is in the current patch, call init before loading exports
       // Turn `require('./foo.js')` into `(init_foo(), __rolldown_runtime__.loadExports('./foo.js'))`
       *it = self.ast_factory.make_seq_in_parens(
-        self.ast_factory.expression_call(
+        ast::Expression::new_call_expression(
           SPAN,
           self.ast_factory.make_id_ref_expr(SPAN, init_fn_name),
           NONE,
-          self.ast_factory.vec(),
+          oxc::allocator::Vec::new_in(&self.ast_factory),
           false,
+          &self.ast_factory,
         ),
         load_exports_expr,
       );

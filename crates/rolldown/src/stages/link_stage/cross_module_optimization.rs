@@ -11,8 +11,8 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, ConstExportMeta, EcmaViewMeta, FlatOptions, GetLocalDb, IndexModules,
-  MemberExprRefResolutionMap, ModuleIdx, SharedNormalizedBundlerOptions, SideEffectDetail,
-  Specifier, StmtInfoIdx, SymbolRef, SymbolRefDb, SymbolRefFlags,
+  MemberExprRefResolutionMap, ModuleIdx, SharedNormalizedBundlerOptions, Specifier, StmtEvalFlags,
+  StmtInfoIdx, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -20,13 +20,13 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::ast_scanner::{
   const_eval::{ConstEvalCtx, try_extract_const_literal},
-  side_effect_detector::SideEffectDetector,
+  stmt_eval_analyzer::StmtEvalAnalyzer,
 };
 
 use super::LinkStage;
 
 type MutationResult = (
-  Option<(ModuleIdx, FxHashMap<StmtInfoIdx, SideEffectDetail>)>,
+  Option<(ModuleIdx, FxHashMap<StmtInfoIdx, StmtEvalFlags>)>,
   FxHashMap<SymbolRef, ConstExportMeta>,
   FxHashSet<(ModuleIdx, NodeId)>,
 );
@@ -194,7 +194,7 @@ impl LinkStage<'_> {
               .get(&module_idx)
               .unwrap_or(&default_stmt_idx_to_dynamic_import_expr_node_ids);
           // Local symbols of `import * as ns` bindings. Property reads on ES module namespace
-          // objects are side-effect-free, so the `SideEffectDetector` re-run below must know
+          // objects are side-effect-free, so the `StmtEvalAnalyzer` re-run below must know
           // about them to drop `ns.fn()` calls to `@__NO_SIDE_EFFECTS__` functions. The scanner
           // builds the same set (see `add_star_import`), but it isn't persisted, so reconstruct
           // it here from the persisted named imports.
@@ -207,7 +207,7 @@ impl LinkStage<'_> {
             .collect();
           let mut ctx = CrossModuleOptimizationRunnerContext {
             local_constant_symbol_map: FxHashMap::default(),
-            side_effect_detail_mutations: FxHashMap::default(),
+            stmt_eval_flags_mutations: FxHashMap::default(),
             side_effect_free_call_expr_node_ids: FxHashSet::default(),
             immutable_ctx: CrossModuleOptimizationImmutableCtx {
               eval_ctx: &eval_ctx,
@@ -231,19 +231,19 @@ impl LinkStage<'_> {
           };
           ctx.visit_program(&dep.program);
 
-          let side_effect_mutations = if ctx.side_effect_detail_mutations.is_empty() {
+          let eval_flags_mutations = if ctx.stmt_eval_flags_mutations.is_empty() {
             None
           } else {
-            Some((module_idx, ctx.side_effect_detail_mutations))
+            Some((module_idx, ctx.stmt_eval_flags_mutations))
           };
-          if side_effect_mutations.is_none()
+          if eval_flags_mutations.is_none()
             && ctx.local_constant_symbol_map.is_empty()
             && ctx.unreachable_import_expression_node_ids.is_empty()
           {
             return None;
           }
           Some((
-            side_effect_mutations,
+            eval_flags_mutations,
             ctx.local_constant_symbol_map,
             ctx
               .unreachable_import_expression_node_ids
@@ -256,12 +256,12 @@ impl LinkStage<'_> {
       .collect();
 
     let mut new_constant_refs = FxHashSet::default();
-    for (side_effect_mutations, local_constants, unreachable_node_ids) in mutation_result {
-      if let Some((module_idx, mutations)) = side_effect_mutations
+    for (eval_flags_mutations, local_constants, unreachable_node_ids) in mutation_result {
+      if let Some((module_idx, mutations)) = eval_flags_mutations
         && self.module_table[module_idx].as_normal().is_some()
       {
-        for (stmt_info_idx, side_effect_detail) in mutations {
-          self.stmt_infos[module_idx][stmt_info_idx].side_effect = side_effect_detail;
+        for (stmt_info_idx, stmt_eval_flags) in mutations {
+          self.stmt_infos[module_idx][stmt_info_idx].eval_flags = stmt_eval_flags;
         }
       }
 
@@ -299,7 +299,7 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
 
 struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
   local_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
-  side_effect_detail_mutations: FxHashMap<StmtInfoIdx, SideEffectDetail>,
+  stmt_eval_flags_mutations: FxHashMap<StmtInfoIdx, StmtEvalFlags>,
   side_effect_free_call_expr_node_ids: FxHashSet<NodeId>,
   immutable_ctx: CrossModuleOptimizationImmutableCtx<'a, 'ast>,
   toplevel_stmt_idx: StmtInfoIdx,
@@ -368,15 +368,15 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
       self.visit_statement(stmt);
       if pre_node_id_len != self.side_effect_free_call_expr_node_ids.len() {
         let stmt_info_idx = StmtInfoIdx::new(idx + 1);
-        let side_effect_detail = SideEffectDetector::new(
+        let stmt_eval_flags = StmtEvalAnalyzer::new(
           self.immutable_ctx.ast_scope,
           self.immutable_ctx.flat_options,
           self.immutable_ctx.options,
           Some(&self.side_effect_free_call_expr_node_ids),
           Some(self.immutable_ctx.namespace_object_symbol_ids),
         )
-        .detect_side_effect_of_stmt(stmt);
-        self.side_effect_detail_mutations.insert(stmt_info_idx, side_effect_detail);
+        .analyze_stmt(stmt);
+        self.stmt_eval_flags_mutations.insert(stmt_info_idx, stmt_eval_flags);
       }
       self.toplevel_stmt_idx += 1;
     }

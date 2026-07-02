@@ -76,6 +76,8 @@ impl<'a> SourcemapBuilder<'a> {
             loc.bump_line();
             self.bump_line();
             new_line = true;
+            // A newline ends the current word run.
+            char_in_hires_boundary = false;
           }
           _ => {
             if new_line || !matches!(self.hires, Hires::False) {

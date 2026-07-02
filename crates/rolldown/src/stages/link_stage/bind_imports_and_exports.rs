@@ -6,7 +6,7 @@ use oxc_str::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprObjectReferencedType, MemberExprRef,
+  EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprObjectReferencedType,
   MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
   OutputFormat, ResolvedExport, Specifier, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
   SymbolRefDb, SymbolRefFlags,
@@ -66,26 +66,16 @@ impl PartialEq for MatchImportKindNormal {
 #[derive(Debug, PartialEq, Eq)]
 #[expect(clippy::box_collection)]
 pub enum MatchImportKind {
-  /// The import is either external or not defined.
-  _Ignore,
   // "sourceIndex" and "ref" are in use
   Normal(MatchImportKindNormal),
   // "namespaceRef" and "alias" are in use
-  Namespace {
-    namespace_ref: SymbolRef,
-  },
+  Namespace { namespace_ref: SymbolRef },
   // Both "matchImportNormal" and "matchImportNamespace"
-  NormalAndNamespace {
-    namespace_ref: SymbolRef,
-    alias: CompactStr,
-  },
+  NormalAndNamespace { namespace_ref: SymbolRef, alias: CompactStr },
   // The import could not be evaluated due to a cycle
   Cycle,
   // The import resolved to multiple symbols via "export * from"
-  Ambiguous {
-    symbol_ref: SymbolRef,
-    potentially_ambiguous_symbol_refs: Box<Vec<SymbolRef>>,
-  },
+  Ambiguous { symbol_ref: SymbolRef, potentially_ambiguous_symbol_refs: Box<Vec<SymbolRef>> },
   NoMatch,
 }
 
@@ -417,6 +407,32 @@ impl LinkStage<'_> {
     normal_symbol_exports_chain_map: &FxHashMap<SymbolRef, Vec<SymbolRef>>,
   ) {
     let warnings = append_only_vec::AppendOnlyVec::new();
+    // A JSON default object whose `data.key` accesses get rewritten to the statically split
+    // per-key exports must stay un-split once it is mutated or escapes (see
+    // `collect_non_splittable_json_defaults`). Such a mutation/escape in one module invalidates
+    // the optimization for reads of the same JSON default in *any* module (e.g. when the default
+    // is mutated through a re-exporting wrapper), so the non-splittable set must be unioned across
+    // the whole graph before any read is resolved below. Only pay for the scan when JSON exists.
+    let has_json_module = self.module_table.modules.iter().any(|module| {
+      module.as_normal().is_some_and(|module| matches!(module.module_type, ModuleType::Json))
+    });
+    let non_splittable_json_defaults: FxHashSet<SymbolRef> = if has_json_module {
+      self
+        .module_table
+        .modules
+        .par_iter()
+        .zip(self.stmt_infos.par_iter())
+        .map(|(module, stmt_infos)| match module {
+          Module::Normal(_) => self.collect_non_splittable_json_defaults(stmt_infos),
+          Module::External(_) => FxHashSet::default(),
+        })
+        .collect::<Vec<_>>()
+        .into_iter()
+        .flatten()
+        .collect()
+    } else {
+      FxHashSet::default()
+    };
     let resolved_meta_data = self
       .module_table
       .modules
@@ -427,8 +443,6 @@ impl LinkStage<'_> {
           let mut resolved_map = FxHashMap::default();
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
-          let json_default_imports_with_member_write =
-            self.collect_json_default_imports_with_member_write(module, stmt_infos);
           stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
@@ -446,8 +460,9 @@ impl LinkStage<'_> {
                 // it can be optimized to the underlying `foo` export. Skip this for writes
                 // (`data.foo = ...`) since rewriting the write target to a bare identifier
                 // (or worse, an inlined constant) is unsound and would crash the finalizer.
-                // Also skip all reads from a JSON default object that has any member write,
-                // because the split `foo` export no longer reflects `data.foo` after mutation.
+                // Also skip all reads from a JSON default object that is non-splittable, i.e. it
+                // is mutated or escapes anywhere in the graph (`collect_non_splittable_json_defaults`),
+                // because then the split `foo` export no longer reflects the live `data.foo`.
                 // Finally, skip when the first prop is `"default"`: `data` is already the
                 // default export value, and the JSON module's `"default"` named export points
                 // to that same symbol, so the optimization would resolve `.default` to `data`
@@ -457,7 +472,7 @@ impl LinkStage<'_> {
                 let is_json_import_ns = matches!(canonical_ref_owner.module_type, ModuleType::Json)
                   && member_expr_ref.object_ref_type == MemberExprObjectReferencedType::Default
                   && !member_expr_ref.is_write
-                  && !json_default_imports_with_member_write.contains(&canonical_ref)
+                  && !non_splittable_json_defaults.contains(&canonical_ref)
                   && member_expr_ref
                     .prop_and_span_list
                     .first()
@@ -735,92 +750,95 @@ impl LinkStage<'_> {
     );
   }
 
-  fn collect_json_default_imports_with_member_write(
-    &self,
-    module: &NormalModule,
-    stmt_infos: &StmtInfos,
-  ) -> FxHashSet<SymbolRef> {
-    // Skip the per-stmt scan for modules that can't possibly import JSON.
-    let has_json_importee = module.ecma_view.import_records.iter().any(|rec| {
-      rec.resolved_module.is_some_and(|idx| {
-        self.module_table[idx]
-          .as_normal()
-          .is_some_and(|m| matches!(m.module_type, ModuleType::Json))
-      })
-    });
-    if !has_json_importee {
-      return FxHashSet::default();
-    }
-
-    let mut written_json_defaults = FxHashSet::default();
+  /// Collect the JSON-module default exports in `stmt_infos` that must NOT be split into their
+  /// per-key named exports, because the live default object is observably mutated or escapes.
+  ///
+  /// The `data.foo` → split-`foo`-export rewrite (see `resolve_member_expr_refs`) is only sound
+  /// while every reference to the default object is a plain `data.<key>` read. Once the object is
+  /// mutated (`data.foo = ...`) or escapes — aliased (`const o = data`), passed to a function
+  /// (`f(data)`), indexed dynamically (`data[k]`), returned, ... — the split exports may diverge
+  /// from the live object, so the whole default has to stay materialized and the access left as-is.
+  ///
+  /// This scans a single module; the caller unions the results across the whole graph, since a
+  /// mutation/escape in one module invalidates the optimization for reads of the same JSON default
+  /// in any other module (e.g. through a re-exporting wrapper).
+  fn collect_non_splittable_json_defaults(&self, stmt_infos: &StmtInfos) -> FxHashSet<SymbolRef> {
+    let mut non_splittable = FxHashSet::default();
     for stmt_info in stmt_infos.iter() {
-      for symbol_ref in &stmt_info.referenced_symbols {
-        let written_default = match symbol_ref {
-          SymbolOrMemberExprRef::MemberExpr(member_expr_ref) => {
-            self.json_default_ref_for_member_write(member_expr_ref)
-          }
-          SymbolOrMemberExprRef::Symbol(symbol_ref) => {
-            self.json_default_ref_for_computed_member_write(*symbol_ref)
-          }
-        };
-        if let Some(written_default) = written_default {
-          written_json_defaults.insert(written_default);
+      for reference in &stmt_info.referenced_symbols {
+        if let Some(json_default) = self.json_default_made_non_splittable_by(reference) {
+          non_splittable.insert(json_default);
         }
       }
     }
-    written_json_defaults
+    non_splittable
   }
 
-  fn json_default_ref_for_member_write(
+  /// If `reference` makes a JSON default non-splittable (mutation or escape, see
+  /// [`Self::collect_non_splittable_json_defaults`]), return that default's canonical `SymbolRef`.
+  fn json_default_made_non_splittable_by(
     &self,
-    member_expr_ref: &MemberExprRef,
+    reference: &SymbolOrMemberExprRef,
   ) -> Option<SymbolRef> {
-    if !member_expr_ref.is_write {
-      return None;
-    }
-
-    match member_expr_ref.object_ref_type {
-      MemberExprObjectReferencedType::Default => {
-        let canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
-        self.module_table[canonical_ref.owner]
-          .as_normal()
-          .is_some_and(|module| matches!(module.module_type, ModuleType::Json))
-          .then_some(canonical_ref)
-      }
-      MemberExprObjectReferencedType::Namespace
-        if member_expr_ref
-          .prop_and_span_list
-          .first()
-          .is_some_and(|prop| prop.name.as_str() == "default") =>
-      {
-        let canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
-        let is_json_namespace =
-          self.module_table[canonical_ref.owner].as_normal().is_some_and(|module| {
-            matches!(module.module_type, ModuleType::Json)
-              && module.namespace_object_ref == canonical_ref
-          });
-        if !is_json_namespace {
+    match reference {
+      // A bare reference to the binding (anything other than a static `x.key` access) means the
+      // default object flows somewhere we can't track: an alias (`const o = data`), a call
+      // argument (`f(data)`), a dynamic index (`data[k]`, which also covers computed writes
+      // `data[k] = ...`), a `return`, etc. Any of these may mutate or alias it, so bail. Static
+      // `data.key` accesses are recorded as `MemberExpr` (below), never as a bare `Symbol`, so
+      // this does not disable the optimization for the case it targets.
+      SymbolOrMemberExprRef::Symbol(symbol_ref) => self.json_default_canonical_ref(*symbol_ref),
+      SymbolOrMemberExprRef::MemberExpr(member_expr_ref) => {
+        // Reads (`data.key`) are exactly the optimizable use — never bail on them.
+        if !member_expr_ref.is_write {
           return None;
         }
-        self.metas[canonical_ref.owner].resolved_exports.get("default").map(|e| e.symbol_ref)
+        match member_expr_ref.object_ref_type {
+          // `data.key = ...` where `data` is a default-imported JSON object, possibly reached
+          // through a named re-export (`export { default as data } from './x.json'`).
+          MemberExprObjectReferencedType::Default | MemberExprObjectReferencedType::Named => {
+            self.json_default_canonical_ref(member_expr_ref.object_ref)
+          }
+          // `ns.default.key = ...` — the mutated object is the namespace's default export.
+          MemberExprObjectReferencedType::Namespace
+            if member_expr_ref
+              .prop_and_span_list
+              .first()
+              .is_some_and(|prop| prop.name.as_str() == "default") =>
+          {
+            let canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
+            let is_json_namespace =
+              self.module_table[canonical_ref.owner].as_normal().is_some_and(|module| {
+                matches!(module.module_type, ModuleType::Json)
+                  && module.namespace_object_ref == canonical_ref
+              });
+            if !is_json_namespace {
+              return None;
+            }
+            self.metas[canonical_ref.owner]
+              .resolved_exports
+              .get("default")
+              .map(|export| self.symbols.canonical_ref_for(export.symbol_ref))
+          }
+          MemberExprObjectReferencedType::Namespace => None,
+        }
       }
-      _ => None,
     }
   }
 
-  fn json_default_ref_for_computed_member_write(&self, symbol_ref: SymbolRef) -> Option<SymbolRef> {
-    if !symbol_ref
-      .flags(&self.symbols)
-      .is_some_and(|flags| flags.contains(SymbolRefFlags::HasComputedMemberWrite))
-    {
-      return None;
-    }
-
+  /// Canonicalize `symbol_ref` and return it iff it resolves to a JSON module's `default` export.
+  fn json_default_canonical_ref(&self, symbol_ref: SymbolRef) -> Option<SymbolRef> {
     let canonical_ref = self.symbols.canonical_ref_for(symbol_ref);
-    self.module_table[canonical_ref.owner]
-      .as_normal()
-      .is_some_and(|module| matches!(module.module_type, ModuleType::Json))
-      .then_some(canonical_ref)
+    let is_json_default =
+      self.module_table[canonical_ref.owner].as_normal().is_some_and(|module| {
+        matches!(module.module_type, ModuleType::Json)
+          && self.metas[canonical_ref.owner].resolved_exports.get("default").is_some_and(
+            |default_export| {
+              self.symbols.canonical_ref_for(default_export.symbol_ref) == canonical_ref
+            },
+          )
+      });
+    is_json_default.then_some(canonical_ref)
   }
 }
 
@@ -900,7 +918,7 @@ impl BindImportsAndExportsContext<'_> {
       );
       tracing::trace!("Got match result {:?}", ret);
       match ret {
-        MatchImportKind::_Ignore | MatchImportKind::Cycle => {}
+        MatchImportKind::Cycle => {}
         MatchImportKind::Ambiguous { symbol_ref, potentially_ambiguous_symbol_refs } => {
           let importee = self.index_modules[resolved_module_idx].stable_id().to_string();
 

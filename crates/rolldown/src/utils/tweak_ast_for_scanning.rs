@@ -1,11 +1,12 @@
 use itertools::Itertools;
-use oxc::allocator::{Address, Allocator, GetAddress, TakeIn};
+use oxc::allocator::GetAllocator;
+use oxc::allocator::{Allocator, TakeIn};
 use oxc::ast::NONE;
 use oxc::ast::ast::{self, BindingPattern, Declaration, ImportOrExportKind, Statement};
 use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{SPAN, Span};
 use rolldown_ecmascript_utils::{AstFactory, StatementExt};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
 pub struct PreProcessor<'ast, 'a> {
@@ -18,13 +19,6 @@ pub struct PreProcessor<'ast, 'a> {
   /// so dynamic imports nested inside the dropped block never enter the
   /// module graph.
   drop_labels: Option<&'a FxHashSet<String>>,
-  statement_stack: Vec<Address>,
-  statement_replace_map: FxHashMap<Address, Vec<Statement<'ast>>>,
-  /// Set before walking an `ExportNamedDeclaration`'s inner declaration and taken by
-  /// `visit_declaration`, so the export's direct declaration skips the non-export
-  /// multi-declarator split (which would drop the `export` keyword) while nested
-  /// declarations still split. Reset after the walk for exports without a declaration.
-  next_declaration_is_exported: bool,
   /// Spans of `import defer ...` statements / expressions whose `defer` phase
   /// was lowered to a regular import. Read after `visit_program` to emit the
   /// `UNSUPPORTED_FEATURE` warning.
@@ -42,9 +36,6 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
       top_level_stmt_temp_storage: vec![],
       keep_names,
       drop_labels: drop_labels.filter(|set| !set.is_empty()),
-      statement_stack: vec![],
-      statement_replace_map: FxHashMap::default(),
-      next_declaration_is_exported: false,
       defer_spans: vec![],
     }
   }
@@ -61,7 +52,7 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
     if let Statement::LabeledStatement(stmt) = it
       && labels.contains(stmt.label.name.as_str())
     {
-      *it = self.ast_factory.statement_empty(stmt.span);
+      *it = ast::Statement::new_empty_statement(stmt.span, &self.ast_factory);
       return true;
     }
     false
@@ -75,31 +66,69 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
   ) -> Vec<Statement<'ast>> {
     var_decl
       .declarations
-      .take_in(self.ast_factory.allocator)
+      .take_in(&self.ast_factory.allocator())
       .into_iter()
       .enumerate()
       .map(|(i, declarator)| {
-        let new_decl = self.ast_factory.alloc_variable_declaration(
+        let new_decl = ast::VariableDeclaration::boxed(
           SPAN,
           var_decl.kind,
-          self.ast_factory.vec_from_iter([declarator]),
+          oxc::allocator::Vec::from_iter_in([declarator], &self.ast_factory),
           var_decl.declare,
+          &self.ast_factory,
         );
         if let Some(named_decl_span) = named_decl_span {
-          Statement::ExportNamedDeclaration(self.ast_factory.alloc_export_named_declaration(
+          Statement::ExportNamedDeclaration(ast::ExportNamedDeclaration::boxed(
             if i == 0 { named_decl_span } else { SPAN },
             Some(Declaration::VariableDeclaration(new_decl)),
-            self.ast_factory.vec(),
+            oxc::allocator::Vec::new_in(&self.ast_factory),
             // Since it is `export a = 1, b = 2;`, source should be `None`
             None,
             ImportOrExportKind::Value,
             NONE,
+            &self.ast_factory,
           ))
         } else {
           Statement::VariableDeclaration(new_decl)
         }
       })
       .collect_vec()
+  }
+
+  /// Decide whether a single statement should be split into one statement per
+  /// declarator, and if so produce the replacement statements.
+  ///
+  /// The decision is made here — at the statement level, where the full
+  /// statement (export wrapper included) is visible — so every statement is
+  /// inspected exactly once by exactly one caller. There is no deferred
+  /// replacement map and no exported-vs-bare ambiguity, which is what made the
+  /// previous two-visitor approach (and its `next_declaration_is_exported`
+  /// referee flag) fragile.
+  ///
+  /// - `export var a = 1, b = 2;` -> `export var a = 1; export var b = 2;` (always; per-export tree-shaking)
+  /// - `var a = 1, b = 2;`        -> `var a = 1; var b = 2;`               (only under `keepNames`)
+  fn split_multi_declarator(&self, stmt: &mut Statement<'ast>) -> Option<Vec<Statement<'ast>>> {
+    match stmt {
+      Statement::ExportNamedDeclaration(named_decl) => {
+        let named_decl_span = named_decl.span;
+        let Some(Declaration::VariableDeclaration(var_decl)) = named_decl.declaration.as_mut()
+        else {
+          return None;
+        };
+        (var_decl.declarations.len() > 1
+          && var_decl
+            .declarations
+            .iter()
+            // TODO: support nested destructuring tree shake, `export const {a, b} = obj; export
+            // const [a, b] = arr;`
+            .any(|declarator| matches!(declarator.id, BindingPattern::BindingIdentifier(_))))
+        .then(|| self.split_var_declaration(var_decl, Some(named_decl_span)))
+      }
+      Statement::VariableDeclaration(var_decl) => (self.keep_names
+        && var_decl.declarations.len() > 1)
+        .then(|| self.split_var_declaration(var_decl, None)),
+      _ => None,
+    }
   }
 }
 
@@ -113,7 +142,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
   }
 
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
-    let original_body = program.body.take_in(self.ast_factory.allocator);
+    let original_body = program.body.take_in(&self.ast_factory.allocator());
     program.body.reserve_exact(original_body.len());
     self.top_level_stmt_temp_storage = Vec::with_capacity(
       original_body.iter().filter(|stmt| !stmt.is_module_declaration_with_source()).count(),
@@ -124,12 +153,9 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
         self.top_level_stmt_temp_storage.push(stmt);
         continue;
       }
-      let stmt_addr = stmt.address();
-      self.statement_stack.push(stmt_addr);
       walk_mut::walk_statement(self, &mut stmt);
-      self.statement_stack.pop();
-      if let Some(stmts) = self.statement_replace_map.remove(&stmt_addr) {
-        self.top_level_stmt_temp_storage.extend(stmts);
+      if let Some(split) = self.split_multi_declarator(&mut stmt) {
+        self.top_level_stmt_temp_storage.extend(split);
       } else if stmt.is_module_declaration_with_source() {
         program.body.push(stmt);
       } else {
@@ -139,101 +165,44 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
     program.body.extend(std::mem::take(&mut self.top_level_stmt_temp_storage));
   }
 
-  /// Some declaration like:
-  /// ```js
-  /// if var a = function() {}
-  /// else {
-  ///   somethingElse();
-  /// }
-  /// ```
-  /// Will not reach `visit_statements`, so we need to handle it separately.
-  /// Since we already intercept `visit_statements`, these two visitor now are mutually exclusive.
+  /// Single-statement slots (e.g. a braceless `if (cond) var a = fn, b = fn;`)
+  /// don't go through `visit_statements`, so the split is handled here too.
+  /// Because the split yields several statements that can't occupy a single
+  /// slot, the result is wrapped in a block.
   fn visit_statement(&mut self, it: &mut Statement<'ast>) {
     if self.try_drop_labeled(it) {
       return;
     }
-    if self.keep_names {
-      let stmt_addr = it.address();
-      self.statement_stack.push(stmt_addr);
-      walk_mut::walk_statement(self, it);
-      self.statement_stack.pop();
-
-      if let Some(stmts) = self.statement_replace_map.remove(&stmt_addr) {
-        *it = Statement::BlockStatement(
-          self.ast_factory.alloc_block_statement(SPAN, self.ast_factory.vec_from_iter(stmts)),
-        );
-      }
-    } else {
-      walk_mut::walk_statement(self, it);
+    walk_mut::walk_statement(self, it);
+    if let Some(split) = self.split_multi_declarator(it) {
+      *it = Statement::BlockStatement(ast::BlockStatement::boxed(
+        SPAN,
+        oxc::allocator::Vec::from_iter_in(split, &self.ast_factory),
+        &self.ast_factory,
+      ));
     }
   }
 
-  /// If `keep_names` is true, we will keep the names of (function/class) variable declarations even it is not top level.
+  /// If `keep_names` is true, we keep the names of (function/class) variable
+  /// declarations even when they are not top level, by splitting multi-declarator
+  /// `var`s here so each binding becomes independently tree-shakeable.
   fn visit_statements(&mut self, it: &mut oxc::allocator::Vec<'ast, Statement<'ast>>) {
-    if self.keep_names {
-      let stmts = it.take_in(self.ast_factory.allocator);
-      for mut stmt in stmts {
-        if self.try_drop_labeled(&mut stmt) {
-          it.push(stmt);
-          continue;
-        }
-        let stmt_addr = stmt.address();
-        self.statement_stack.push(stmt_addr);
-        walk_mut::walk_statement(self, &mut stmt);
-        self.statement_stack.pop();
-
-        if let Some(stmts) = self.statement_replace_map.remove(&stmt_addr) {
-          it.extend(stmts);
-        } else {
-          it.push(stmt);
-        }
-      }
-    } else {
+    if !self.keep_names {
       walk_mut::walk_statements(self, it);
-    }
-  }
-
-  fn visit_declaration(&mut self, it: &mut Declaration<'ast>) {
-    let is_exported = std::mem::take(&mut self.next_declaration_is_exported);
-    match it {
-      Declaration::VariableDeclaration(decl) => {
-        if !is_exported && decl.declarations.len() > 1 && self.keep_names {
-          let stmt_addr = self.statement_stack.last().copied().unwrap();
-          let new_stmts = self.split_var_declaration(decl, None);
-          self.statement_replace_map.insert(stmt_addr, new_stmts);
-        }
-      }
-      Declaration::FunctionDeclaration(_)
-      | Declaration::ClassDeclaration(_)
-      | Declaration::TSTypeAliasDeclaration(_)
-      | Declaration::TSInterfaceDeclaration(_)
-      | Declaration::TSEnumDeclaration(_)
-      | Declaration::TSModuleDeclaration(_)
-      | Declaration::TSImportEqualsDeclaration(_)
-      | Declaration::TSGlobalDeclaration(_) => {}
-    }
-    walk_mut::walk_declaration(self, it);
-  }
-
-  fn visit_export_named_declaration(&mut self, named_decl: &mut ast::ExportNamedDeclaration<'ast>) {
-    self.next_declaration_is_exported = true;
-    walk_mut::walk_export_named_declaration(self, named_decl);
-    self.next_declaration_is_exported = false;
-
-    let Some(Declaration::VariableDeclaration(ref mut var_decl)) = named_decl.declaration else {
       return;
-    };
-
-    if var_decl.declarations.len() > 1
-      && var_decl
-        .declarations
-        .iter()
-        // TODO: support nested destructuring tree shake, `export const {a, b} = obj; export const
-        // [a, b] = arr;`
-        .any(|declarator| matches!(declarator.id, BindingPattern::BindingIdentifier(_)))
-    {
-      let rewritten = self.split_var_declaration(var_decl, Some(named_decl.span));
-      self.statement_replace_map.insert(self.statement_stack.last().copied().unwrap(), rewritten);
+    }
+    let stmts = it.take_in(&self.ast_factory.allocator());
+    for mut stmt in stmts {
+      if self.try_drop_labeled(&mut stmt) {
+        it.push(stmt);
+        continue;
+      }
+      walk_mut::walk_statement(self, &mut stmt);
+      if let Some(split) = self.split_multi_declarator(&mut stmt) {
+        it.extend(split);
+      } else {
+        it.push(stmt);
+      }
     }
   }
 
@@ -256,26 +225,35 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
           ast::Expression::ConditionalExpression(cond) => Some(cond),
           _ => None,
         }) {
-          let test = cond_expr.test.take_in(self.ast_factory.allocator);
-          let consequent = cond_expr.consequent.take_in(self.ast_factory.allocator);
-          let alternative = cond_expr.alternate.take_in(self.ast_factory.allocator);
-          let new_cond_expr = self.ast_factory.alloc_conditional_expression(
+          let test = cond_expr.test.take_in(&self.ast_factory.allocator());
+          let consequent = cond_expr.consequent.take_in(&self.ast_factory.allocator());
+          let alternative = cond_expr.alternate.take_in(&self.ast_factory.allocator());
+          let new_cond_expr = ast::ConditionalExpression::boxed(
             SPAN,
             test,
-            self.ast_factory.expression_call(
+            ast::Expression::new_call_expression(
               SPAN,
-              self.ast_factory.expression_identifier(SPAN, "require"),
+              ast::Expression::new_identifier(SPAN, "require", &self.ast_factory),
               NONE,
-              self.ast_factory.vec1(ast::Argument::from(consequent)),
+              oxc::allocator::Vec::from_value_in(
+                ast::Argument::from(consequent),
+                &self.ast_factory,
+              ),
               false,
+              &self.ast_factory,
             ),
-            self.ast_factory.expression_call(
+            ast::Expression::new_call_expression(
               SPAN,
-              self.ast_factory.expression_identifier(SPAN, "require"),
+              ast::Expression::new_identifier(SPAN, "require", &self.ast_factory),
               NONE,
-              self.ast_factory.vec1(ast::Argument::from(alternative)),
+              oxc::allocator::Vec::from_value_in(
+                ast::Argument::from(alternative),
+                &self.ast_factory,
+              ),
               false,
+              &self.ast_factory,
             ),
+            &self.ast_factory,
           );
 
           Some(ast::Expression::ConditionalExpression(new_cond_expr))
@@ -288,15 +266,28 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast, '_> {
         let source = &mut expr.source;
         match source {
           ast::Expression::ConditionalExpression(cond_expr) => {
-            let test = cond_expr.test.take_in(self.ast_factory.allocator);
-            let consequent = cond_expr.consequent.take_in(self.ast_factory.allocator);
-            let alternative = cond_expr.alternate.take_in(self.ast_factory.allocator);
+            let test = cond_expr.test.take_in(&self.ast_factory.allocator());
+            let consequent = cond_expr.consequent.take_in(&self.ast_factory.allocator());
+            let alternative = cond_expr.alternate.take_in(&self.ast_factory.allocator());
 
-            let new_cond_expr = self.ast_factory.expression_conditional(
+            let new_cond_expr = ast::Expression::new_conditional_expression(
               SPAN,
               test,
-              self.ast_factory.expression_import(SPAN, consequent, None, None),
-              self.ast_factory.expression_import(SPAN, alternative, None, None),
+              ast::Expression::new_import_expression(
+                SPAN,
+                consequent,
+                None,
+                None,
+                &self.ast_factory,
+              ),
+              ast::Expression::new_import_expression(
+                SPAN,
+                alternative,
+                None,
+                None,
+                &self.ast_factory,
+              ),
+              &self.ast_factory,
             );
 
             Some(new_cond_expr)

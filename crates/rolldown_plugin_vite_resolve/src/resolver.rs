@@ -416,6 +416,9 @@ impl Resolver {
         }
         Ok(None)
       }
+      // A module mapped to `false` in the `browser` field. It resolves to a bare
+      // `__vite-browser-external` id (no `:name` suffix, unlike externalized `node:*` builtins),
+      // which the load hook turns into an empty module per the browser field spec.
       Err(oxc_resolver::ResolveError::Ignored(_)) => Ok(Some(HookResolveIdOutput {
         id: arcstr::literal!(BROWSER_EXTERNAL_ID),
         ..Default::default()

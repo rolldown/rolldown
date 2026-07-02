@@ -1,4 +1,5 @@
 use indexmap::map::Entry;
+use oxc::allocator::GetAllocator;
 use oxc::{
   allocator::{Allocator, TakeIn},
   ast::ast::{self, Expression},
@@ -20,6 +21,7 @@ use rolldown_utils::{
   indexmap::FxIndexMap,
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
+use smallvec::smallvec;
 
 use super::LinkStage;
 
@@ -58,7 +60,7 @@ impl LinkStage<'_> {
         // generate `module.exports = expr`
         if module.exports_kind == ExportsKind::CommonJs {
           // since the wrap arguments are generate on demand, we need to insert the module ref usage here.
-          stmt_infos.infos[FIRST_TOP_LEVEL_STMT_IDX].side_effect = true.into();
+          stmt_infos.infos[FIRST_TOP_LEVEL_STMT_IDX].eval_flags = true.into();
           module.ecma_view.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
         }
       });
@@ -108,7 +110,9 @@ fn replace_first_expr_stmt(ecma_ast: &mut EcmaAst, kind: LazyExportWrap) {
     let ast_factory = AstFactory::new(fields.allocator);
     let Some(stmt) = fields.program.body.first_mut() else { unreachable!() };
     let expr = match stmt {
-      ast::Statement::ExpressionStatement(stmt) => stmt.expression.take_in(ast_factory.allocator),
+      ast::Statement::ExpressionStatement(stmt) => {
+        stmt.expression.take_in(&ast_factory.allocator())
+      }
       _ => unreachable!(),
     };
     *stmt = match kind {
@@ -124,9 +128,9 @@ fn take_without_parentheses<'ast>(
   expr: &mut Expression<'ast>,
   allocator: &'ast Allocator,
 ) -> Expression<'ast> {
-  let mut inner_expr = expr.take_in(allocator);
+  let mut inner_expr = expr.take_in(&allocator);
   while let Expression::ParenthesizedExpression(mut paren_expr) = inner_expr {
-    inner_expr = paren_expr.expression.take_in(allocator);
+    inner_expr = paren_expr.expression.take_in(&allocator);
   }
   inner_expr
 }
@@ -141,7 +145,7 @@ fn update_module_default_export_info(
     LocalExport { span: SPAN, referenced: default_symbol_ref, came_from_commonjs: false },
   );
   stmt_infos
-    .declare_symbol_for_stmt(FIRST_TOP_LEVEL_STMT_IDX, TaggedSymbolRef::Normal(default_symbol_ref));
+    .declare_symbol_for_stmt(FIRST_TOP_LEVEL_STMT_IDX, TaggedSymbolRef::normal(default_symbol_ref));
 }
 
 /// return true if the json is a ObjectExpression
@@ -170,7 +174,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
       return false;
     }
     let Expression::ObjectExpression(mut obj_expr) =
-      take_without_parentheses(expr, ast_factory.allocator)
+      take_without_parentheses(expr, ast_factory.allocator())
     else {
       unreachable!();
     };
@@ -204,9 +208,11 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
             property.computed = true;
           } else if is_legal_ident {
             property.shorthand = is_legal_ident;
-            property.key = ast::PropertyKey::StaticIdentifier(
-              ast_factory.alloc_identifier_name(SPAN, ast_factory.str(legitimized_ident.as_ref())),
-            );
+            property.key = ast::PropertyKey::StaticIdentifier(ast::IdentifierName::boxed(
+              SPAN,
+              oxc::ast::ast::Str::from_str_in(legitimized_ident.as_ref(), &ast_factory),
+              &ast_factory,
+            ));
           }
           match index_map.entry(legitimized_ident) {
             Entry::Occupied(mut occ) => {
@@ -282,7 +288,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
     let symbol_ref: SymbolRef = (module_idx, symbol_id).into();
     all_declared_symbols.push(SymbolOrMemberExprRef::from(symbol_ref));
     let stmt_info =
-      StmtInfo::default().with_declared_symbols(vec![TaggedSymbolRef::Normal(symbol_ref)]);
+      StmtInfo::default().with_declared_symbols(smallvec![TaggedSymbolRef::normal(symbol_ref)]);
     stmt_infos.add_stmt_info(stmt_info);
     module.named_exports.insert(
       exported.clone(),
@@ -291,7 +297,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   }
   // declare default export statement
   let stmt_info = StmtInfo::default()
-    .with_declared_symbols(vec![TaggedSymbolRef::Normal(default_export_ref)])
+    .with_declared_symbols(smallvec![TaggedSymbolRef::normal(default_export_ref)])
     .with_referenced_symbols(all_declared_symbols.clone());
 
   stmt_infos.add_stmt_info(stmt_info);
@@ -304,7 +310,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   module.exports_kind = ExportsKind::Esm;
   stmt_infos.replace_namespace_stmt_info(
     StmtInfo::default()
-      .with_declared_symbols(vec![TaggedSymbolRef::Normal(namespace_object_ref)])
+      .with_declared_symbols(smallvec![TaggedSymbolRef::normal(namespace_object_ref)])
       .with_referenced_symbols(all_declared_symbols),
   );
   // for a es json module it did not needs to be wrapped anyway.

@@ -15,7 +15,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   chunk_graph::ChunkGraph,
   stages::link_stage::{
-    IncludeContext, SymbolIncludeReason, include_runtime_symbol, include_symbol,
+    IncludeContext, SymbolIncludeReason, compute_on_demand_side_effect_stmts,
+    include_runtime_symbol, include_symbol,
   },
   types::linking_metadata::{
     LinkingMetadata, LinkingMetadataVec, included_info_to_linking_metadata_vec,
@@ -813,12 +814,33 @@ impl GenerateStage<'_> {
 
       if meta.intersects(ChunkMeta::UserDefinedEntry) {
         if matches!(target_chunk.kind, ChunkKind::Common) {
-          let can_merge = match chunk.preserve_entry_signature {
-            Some(PreserveEntrySignatures::Strict) => {
-              self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules)
-            }
-            _ => true,
-          };
+          // Execution-isolation guard (issue #9463).
+          //
+          // Folding the common chunk *into* this user-defined entry chunk makes the
+          // entry chunk eagerly run this entry's top-level (its `init_*` call)
+          // whenever the chunk is loaded. If the common chunk also holds *another*
+          // user-defined entry's module, that other entry would be forced to import
+          // this entry chunk just to reach its own module — and would then run this
+          // entry's side effects. e.g. loading entry `b` would trigger entry `a`'s
+          // side effects. This happens when manual code splitting (a `codeSplitting`
+          // group, possibly via `entriesAware` subgroup merging) lumps several
+          // entries' modules into one shared chunk.
+          //
+          // Keep the thin facade in that case, so each entry imports the (wrapped)
+          // shared chunk and runs only its own `init_*`. A shared chunk that holds
+          // just this entry's module (plus non-entry deps a sibling genuinely
+          // depends on) is still folded in, preserving the #5726 facade-elimination.
+          let holds_other_user_entry = target_chunk.modules.iter().any(|&module_idx| {
+            module_idx != module
+              && self.link_output.user_defined_entry_modules.contains(&module_idx)
+          });
+          let can_merge = !holds_other_user_entry
+            && match chunk.preserve_entry_signature {
+              Some(PreserveEntrySignatures::Strict) => {
+                self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules)
+              }
+              _ => true,
+            };
           if can_merge {
             // merge all common chunk modules into entry chunk
             // swap original from_chunk_idx and target_chunk_idx
@@ -1001,6 +1023,17 @@ impl GenerateStage<'_> {
     let (mut stmt_info_included_vec, mut module_included_vec, mut module_namespace_reason_vec) =
       linking_metadata_vec_to_included_info(&mut self.link_output.metas);
 
+    // Replay the link-stage inclusion semantics: side-effectful statements of
+    // user-declared side-effect-free modules join only through body demand.
+    // Already-included statements make the replayed edges no-ops.
+    let mut on_demand_side_effect_stmts = compute_on_demand_side_effect_stmts(
+      &self.link_output.module_table.modules,
+      &self.link_output.stmt_infos,
+      &self.link_output.symbol_db,
+      self.options.treeshake.is_some(),
+      &self.link_output.user_defined_entry_modules,
+    );
+
     let runtime = &self.link_output.runtime;
     let context = &mut IncludeContext {
       modules: &self.link_output.module_table.modules,
@@ -1012,6 +1045,7 @@ impl GenerateStage<'_> {
       runtime_idx: self.link_output.runtime.id(),
       metas: &self.link_output.metas,
       used_symbol_refs: &mut self.link_output.used_symbol_refs,
+      used_external_symbols: &mut self.link_output.used_external_symbols,
       constant_symbol_map: &self.link_output.global_constant_symbol_map,
       options: self.options,
       normal_symbol_exports_chain_map: &self.link_output.normal_symbol_exports_chain_map,
@@ -1020,6 +1054,8 @@ impl GenerateStage<'_> {
       module_namespace_included_reason: &mut module_namespace_reason_vec,
       inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
+      entry_module_idxs: &self.link_output.user_defined_entry_modules,
+      on_demand_side_effect_stmts: &mut on_demand_side_effect_stmts,
     };
 
     let mut runtime_dependent_chunks = FxHashSet::default();

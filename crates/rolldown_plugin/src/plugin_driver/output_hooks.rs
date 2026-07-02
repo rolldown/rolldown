@@ -45,7 +45,9 @@ impl PluginDriver {
       let result = plugin.call_banner(ctx, &args).await;
       self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
-        banner.push('\n');
+        if !banner.is_empty() {
+          banner.push('\n');
+        }
         banner.push_str(r.as_str());
       }
     }
@@ -68,7 +70,9 @@ impl PluginDriver {
       let result = plugin.call_footer(ctx, &args).await;
       self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
-        footer.push('\n');
+        if !footer.is_empty() {
+          footer.push('\n');
+        }
         footer.push_str(r.as_str());
       }
     }
@@ -91,7 +95,9 @@ impl PluginDriver {
       let result = plugin.call_intro(ctx, &args).await;
       self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
-        intro.push('\n');
+        if !intro.is_empty() {
+          intro.push('\n');
+        }
         intro.push_str(r.as_str());
       }
     }
@@ -114,7 +120,9 @@ impl PluginDriver {
       let result = plugin.call_outro(ctx, &args).await;
       self.record_timing(plugin_idx, start);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
-        outro.push('\n');
+        if !outro.is_empty() {
+          outro.push('\n');
+        }
         outro.push_str(r.as_str());
       }
     }

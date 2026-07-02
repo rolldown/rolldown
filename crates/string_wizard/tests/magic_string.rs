@@ -323,6 +323,16 @@ mod indent {
   }
 
   #[test]
+  fn excludes_edited_chunks_by_their_own_start() {
+    // Two adjacent edited chunks; only the first is excluded.
+    let mut s = MagicString::new("AB");
+    s.overwrite(0, 1, "x\n");
+    s.overwrite(1, 2, "y\n");
+    s.indent_with(IndentOptions { indentor: Some("  "), exclude: &[(0, 1)] });
+    assert_eq!(s.to_string(), "x\n  y\n");
+  }
+
+  #[test]
   fn should_not_add_characters_to_empty_lines() {
     // should indent content using the empty string if specified (i.e. noop)
     let mut s = MagicString::new("\n\nabc\ndef\n\nghi\njkl");
@@ -426,5 +436,29 @@ mod misc {
     assert!(s.clone().remove(1, 6).unwrap().has_changed());
     s.indent();
     assert!(s.has_changed());
+  }
+}
+
+mod trim {
+  use super::*;
+
+  #[test]
+  fn trim_start_aborts_at_an_emptied_chunks_outro() {
+    // chunk[0,1] is emptied but its outro "X" follows it; the space after is not leading.
+    let mut s = MagicString::new("A B");
+    s.remove(0, 1).unwrap();
+    s.append_left(1, "X");
+    s.trim_start(None);
+    assert_eq!(s.to_string(), "X B");
+  }
+
+  #[test]
+  fn trim_end_aborts_at_an_emptied_chunks_intro() {
+    // chunk[2,3] is emptied but its intro "X" precedes it; the space before is not trailing.
+    let mut s = MagicString::new("A B");
+    s.remove(2, 3).unwrap();
+    s.prepend_right(2, "X");
+    s.trim_end(None);
+    assert_eq!(s.to_string(), "A X");
   }
 }

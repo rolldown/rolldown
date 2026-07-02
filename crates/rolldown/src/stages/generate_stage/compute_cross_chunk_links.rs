@@ -437,6 +437,31 @@ impl GenerateStage<'_> {
               )
               .map(|(name, export)| (name, export.symbol_ref))
             {
+              // `preserveModules` emits a module's complete declared interface (#9934). A JSON
+              // module synthesizes a named export per top-level key, but the finalizer
+              // (`try_inline_json_module_prop`) may fold a key's `var` binding into the
+              // self-contained default-export object, leaving no standalone declaration. Listing
+              // such a key here produces an `export { key }` with no binding ->
+              // `SyntaxError: Export 'x' is not defined in module` (#10020).
+              //
+              // Drop a key iff the finalizer inlines it away. That decision is gated on
+              // `need_inline_json_prop` (see `finalizer_context.rs`): JSON, ESM exports, and the
+              // module namespace object NOT included; and within that, a key is inlined iff it is
+              // absent from `json_module_none_self_reference_included_symbol` (i.e. not reached by
+              // a named import, entry export, or — keeping every key materialized — a namespace
+              // import). Mirror that full condition so the export interface never lists an
+              // inlined-away key, while a namespace-imported JSON chunk still exports its complete
+              // interface (every key keeps its binding).
+              if let Module::Normal(normal_module) = &self.link_output.module_table[module_idx]
+                && let Some(none_self_referenced) =
+                  normal_module.json_module_none_self_reference_included_symbol.as_deref()
+                && !normal_module.exports_kind.is_commonjs()
+                && !self.link_output.metas[module_idx].namespace_included
+                && !none_self_referenced
+                  .contains(&self.link_output.symbol_db.canonical_ref_for(symbol))
+              {
+                continue;
+              }
               index_chunk_exported_symbols[chunk_id].entry(symbol).or_default().push(name.clone());
             }
           }
@@ -500,6 +525,10 @@ impl GenerateStage<'_> {
 
         let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
         for import_ref in chunk_meta_imports.iter().copied() {
+          // Depended symbols are over-collected; this drops refs the inclusion fixpoint
+          // never marked live: constants that get inlined (never inserted — constants kept
+          // as bindings, e.g. entry exports, stay in the set), namespace objects the
+          // generate stage eliminated, and dead collected refs.
           if !self.link_output.used_symbol_refs.contains(&import_ref) {
             continue;
           }
@@ -671,7 +700,7 @@ impl GenerateStage<'_> {
           entry_module.canonical_exports(false).for_each(|(name, export)| {
             let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
             if !exported_chunk_symbols.contains_key(&export.symbol_ref)
-              || !self.link_output.used_symbol_refs.contains(&export.symbol_ref)
+              || !self.link_output.retained_export_symbols.contains(&export.symbol_ref)
             {
               // Rolldown supports tree-shaking on dynamic entries, so not all exports are used.
               return;
@@ -690,7 +719,7 @@ impl GenerateStage<'_> {
               let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
               // Use canonical ref for lookup since that's the key in exported_chunk_symbols
               if !exported_chunk_symbols.contains_key(&export_ref)
-                || !self.link_output.used_symbol_refs.contains(&export_ref)
+                || !self.link_output.retained_export_symbols.contains(&export_ref)
               {
                 return;
               }
@@ -748,6 +777,9 @@ impl GenerateStage<'_> {
           )
         })
       {
+        // Same filter as the cross-chunk import loop above: exported-symbol candidates
+        // include inlined constants, eliminated namespace objects (dynamic entries register
+        // their namespace refs here), and refs the inclusion fixpoint left dead.
         if !self.link_output.used_symbol_refs.contains(chunk_export) {
           continue;
         }

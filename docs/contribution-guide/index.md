@@ -36,11 +36,8 @@ We welcome pull requests for bugs, fixes, improvements, and new features. Before
 
 For setting up the project's development environment, see [Project Setup](../development-guide/setup-the-project.md).
 
-:::info
-
-Please read the [Etiquette](https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette) chapter before submitting a pull request.
-
-:::
+> [!NOTE]
+> Please read the [Etiquette](https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette) chapter before submitting a pull request.
 
 ### Send a pull request directly
 

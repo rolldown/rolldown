@@ -1,3 +1,4 @@
+use oxc::allocator::GetAllocator;
 use oxc::{
   allocator::TakeIn,
   ast::{NONE, ast},
@@ -20,7 +21,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node: &mut ast::Program<'ast>,
     ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
-    let taken_body = node.body.take_in(self.ast_factory.allocator);
+    let taken_body = node.body.take_in(&self.ast_factory.allocator());
     node.body.reserve_exact(taken_body.len());
     taken_body.into_iter().for_each(|top_level_stmt| {
       self.handle_top_level_stmt(&mut node.body, top_level_stmt, ctx.scoping());
@@ -32,21 +33,26 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node: &mut ast::Program<'ast>,
     ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
-    let mut try_block = self.ast_factory.alloc_block_statement(SPAN, self.ast_factory.vec());
+    let mut try_block = ast::BlockStatement::boxed(
+      SPAN,
+      oxc::allocator::Vec::new_in(&self.ast_factory),
+      &self.ast_factory,
+    );
 
     let dependencies_init_fn_stmts: Vec<_> = self
       .dependencies
       .iter()
       .filter_map(|dep| self.affected_module_idx_to_init_fn_name.get(dep))
       .map(|fn_name| {
-        let call_expr = self.ast_factory.expression_call(
+        let call_expr = ast::Expression::new_call_expression(
           SPAN,
           self.ast_factory.make_id_ref_expr(SPAN, fn_name),
           NONE,
-          self.ast_factory.vec(),
+          oxc::allocator::Vec::new_in(&self.ast_factory),
           false,
+          &self.ast_factory,
         );
-        self.ast_factory.statement_expression(SPAN, call_expr)
+        ast::Statement::new_expression_statement(SPAN, call_expr, &self.ast_factory)
       })
       .collect();
 
@@ -58,15 +64,20 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     try_block.body.extend(runtime_module_register);
     try_block.body.extend(dependencies_init_fn_stmts);
     try_block.body.push(self.create_module_hot_context_initializer_stmt());
-    try_block.body.extend(node.body.take_in(self.ast_factory.allocator));
+    try_block.body.extend(node.body.take_in(&self.ast_factory.allocator()));
 
     node
       .body
       .extend(std::mem::take(&mut self.generated_static_import_stmts_from_external).into_values());
 
-    let final_block = self.ast_factory.alloc_block_statement(SPAN, self.ast_factory.vec());
+    let final_block = ast::BlockStatement::boxed(
+      SPAN,
+      oxc::allocator::Vec::new_in(&self.ast_factory),
+      &self.ast_factory,
+    );
 
-    let try_stmt = self.ast_factory.alloc_try_statement(SPAN, try_block, NONE, Some(final_block));
+    let try_stmt =
+      ast::TryStatement::boxed(SPAN, try_block, NONE, Some(final_block), &self.ast_factory);
 
     let init_fn_name = &self.affected_module_idx_to_init_fn_name[&self.module.idx];
 
@@ -74,59 +85,70 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // with the module's stable id as an extra argument, so it's available inside the body
     // as `__rolldown_module_id__`. This lets registerModule / createModuleHotContext reference
     // the id by identifier instead of duplicating the string literal.
-    let module_id_param = self.ast_factory.formal_parameter(
+    let module_id_param = ast::FormalParameter::new(
       SPAN,
-      self.ast_factory.vec(),
-      self.ast_factory.binding_pattern_binding_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR),
+      oxc::allocator::Vec::new_in(&self.ast_factory),
+      ast::BindingPattern::new_binding_identifier(SPAN, MODULE_ID_PARAM_FOR_HMR, &self.ast_factory),
       NONE,
       NONE,
       false,
       None,
       false,
       false,
+      &self.ast_factory,
     );
-    let params = self.ast_factory.formal_parameters(
+    let params = ast::FormalParameters::new(
       SPAN,
       ast::FormalParameterKind::Signature,
       {
         if self.module.exports_kind.is_commonjs() {
-          self.ast_factory.vec_from_array([
-            self.ast_factory.formal_parameter(
-              SPAN,
-              self.ast_factory.vec(),
-              self
-                .ast_factory
-                .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_REF_IDENT),
-              NONE,
-              NONE,
-              false,
-              None,
-              false,
-              false,
-            ),
-            self.ast_factory.formal_parameter(
-              SPAN,
-              self.ast_factory.vec(),
-              self
-                .ast_factory
-                .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_REF_IDENT),
-              NONE,
-              NONE,
-              false,
-              None,
-              false,
-              false,
-            ),
-            module_id_param,
-          ])
+          oxc::allocator::Vec::from_array_in(
+            [
+              ast::FormalParameter::new(
+                SPAN,
+                oxc::allocator::Vec::new_in(&self.ast_factory),
+                ast::BindingPattern::new_binding_identifier(
+                  SPAN,
+                  CJS_ROLLDOWN_EXPORTS_REF_IDENT,
+                  &self.ast_factory,
+                ),
+                NONE,
+                NONE,
+                false,
+                None,
+                false,
+                false,
+                &self.ast_factory,
+              ),
+              ast::FormalParameter::new(
+                SPAN,
+                oxc::allocator::Vec::new_in(&self.ast_factory),
+                ast::BindingPattern::new_binding_identifier(
+                  SPAN,
+                  CJS_ROLLDOWN_MODULE_REF_IDENT,
+                  &self.ast_factory,
+                ),
+                NONE,
+                NONE,
+                false,
+                None,
+                false,
+                false,
+                &self.ast_factory,
+              ),
+              module_id_param,
+            ],
+            &self.ast_factory,
+          )
         } else {
-          self.ast_factory.vec1(module_id_param)
+          oxc::allocator::Vec::from_value_in(module_id_param, &self.ast_factory)
         }
       },
       NONE,
+      &self.ast_factory,
     );
     // function () { [user code] }
-    let mut user_code_wrapper = self.ast_factory.alloc_function(
+    let mut user_code_wrapper = ast::Function::boxed(
       SPAN,
       ast::FunctionType::FunctionExpression,
       None,
@@ -137,11 +159,16 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       NONE,
       params,
       NONE,
-      Some(self.ast_factory.function_body(
+      Some(ast::FunctionBody::new(
         SPAN,
-        self.ast_factory.vec(),
-        self.ast_factory.vec1(ast::Statement::TryStatement(try_stmt)),
+        oxc::allocator::Vec::new_in(&self.ast_factory),
+        oxc::allocator::Vec::from_value_in(
+          ast::Statement::TryStatement(try_stmt),
+          &self.ast_factory,
+        ),
+        &self.ast_factory,
       )),
+      &self.ast_factory,
     );
     // mark the callback as PIFE because the callback is executed when this chunk is loaded
     user_code_wrapper.pife = self.use_pife_for_module_wrappers;
@@ -150,20 +177,22 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // chunks we append a truthy dedup flag so the runtime short-circuits re-execution
     // when another lazy blob has already registered this module. HMR patches omit the
     // flag so the runtime always re-executes the body to publish new exports.
-    let mut initializer_args = self.ast_factory.vec_with_capacity(3);
-    initializer_args.push(ast::Argument::StringLiteral(self.ast_factory.alloc_string_literal(
+    let mut initializer_args = oxc::allocator::Vec::with_capacity_in(3, &self.ast_factory);
+    initializer_args.push(ast::Argument::StringLiteral(ast::StringLiteral::boxed(
       SPAN,
-      self.ast_factory.str(&self.module.stable_id),
+      oxc::ast::ast::Str::from_str_in(&self.module.stable_id, &self.ast_factory),
       None,
+      &self.ast_factory,
     )));
     initializer_args
       .push(ast::Argument::from(ast::Expression::FunctionExpression(user_code_wrapper)));
     if self.dedup_module_initializer {
-      initializer_args.push(ast::Argument::from(self.ast_factory.expression_numeric_literal(
+      initializer_args.push(ast::Argument::from(ast::Expression::new_numeric_literal(
         SPAN,
         1.0,
         None,
         ast::NumberBase::Decimal,
+        &self.ast_factory,
       )));
     }
 
@@ -174,31 +203,37 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       // __rolldown__runtime.createEsmInitializer(stable_id, (function () { [user code] })[, 1])
       "__rolldown_runtime__.createEsmInitializer"
     };
-    let initializer_call = self.ast_factory.alloc_call_expression(
+    let initializer_call = ast::CallExpression::boxed(
       SPAN,
       self.ast_factory.make_id_ref_expr(SPAN, initializer_callee),
       NONE,
       initializer_args,
       false,
+      &self.ast_factory,
     );
 
     // var init_foo = __rolldown__runtime.createEsmInitializer((function () { [user code] }))
-    let var_decl = self.ast_factory.alloc_variable_declaration(
+    let var_decl = ast::VariableDeclaration::boxed(
       SPAN,
       ast::VariableDeclarationKind::Var,
-      self.ast_factory.vec1(
-        self.ast_factory.variable_declarator(
+      oxc::allocator::Vec::from_value_in(
+        ast::VariableDeclarator::new(
           SPAN,
           ast::VariableDeclarationKind::Var,
-          self
-            .ast_factory
-            .binding_pattern_binding_identifier(SPAN, self.ast_factory.str(init_fn_name)),
+          ast::BindingPattern::new_binding_identifier(
+            SPAN,
+            oxc::ast::ast::Str::from_str_in(init_fn_name, &self.ast_factory),
+            &self.ast_factory,
+          ),
           NONE,
           Some(ast::Expression::CallExpression(initializer_call)),
           false,
+          &self.ast_factory,
         ),
+        &self.ast_factory,
       ),
       false,
+      &self.ast_factory,
     );
 
     node.body.push(ast::Statement::VariableDeclaration(var_decl));
@@ -256,7 +291,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let reference = ctx.scoping().get_reference(reference_id);
     if let Some(symbol_id) = reference.symbol_id() {
       if let Some(binding_name) = self.import_bindings.get(&symbol_id) {
-        ident.name = self.ast_factory.str(binding_name.as_str()).into();
+        ident.name =
+          oxc::ast::ast::Str::from_str_in(binding_name.as_str(), &self.ast_factory).into();
       }
     } else if ident.name == CJS_EXPORTS_REF_STR {
       ident.name = CJS_ROLLDOWN_EXPORTS_REF_IDENT;

@@ -6,8 +6,9 @@ use oxc_index::IndexVec;
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
   ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, EntryPointKind, FlatOptions, ImportKind,
-  ModuleIdx, ModuleTable, PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
-  UsedSymbolRefs, dynamic_import_usage::DynamicImportExportsUsage,
+  ModuleIdx, ModuleTable, PreserveEntrySignatures, RetainedExportSymbols, RuntimeModuleBrief,
+  SymbolRef, SymbolRefDb, UsedExternalSymbols, UsedSymbolRefs,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 #[cfg(target_family = "wasm")]
@@ -41,7 +42,8 @@ mod tree_shaking;
 pub use tree_shaking::{
   ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec,
   include_statements::{
-    IncludeContext, SymbolIncludeReason, include_runtime_symbol, include_symbol,
+    IncludeContext, SymbolIncludeReason, compute_on_demand_side_effect_stmts,
+    include_runtime_symbol, include_symbol,
   },
 };
 mod wrapping;
@@ -68,6 +70,9 @@ pub struct LinkStageOutput {
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
   pub used_symbol_refs: UsedSymbolRefs,
+  pub used_external_symbols: UsedExternalSymbols,
+  /// See [`RetainedExportSymbols`]; empty until the generate stage projects it.
+  pub retained_export_symbols: RetainedExportSymbols,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
@@ -107,6 +112,7 @@ pub struct LinkStage<'a> {
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
   pub used_symbol_refs: UsedSymbolRefs,
+  pub used_external_symbols: UsedExternalSymbols,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -210,6 +216,7 @@ impl<'a> LinkStage<'a> {
       dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
       used_symbol_refs: UsedSymbolRefs::default(),
+      used_external_symbols: UsedExternalSymbols::default(),
       safely_merge_cjs_ns_map: FxHashMap::default(),
       normal_symbol_exports_chain_map: FxHashMap::default(),
       external_import_namespace_merger: FxHashMap::default(),
@@ -254,6 +261,8 @@ impl<'a> LinkStage<'a> {
         warnings: self.warnings,
         errors: self.errors,
         used_symbol_refs: self.used_symbol_refs,
+        used_external_symbols: self.used_external_symbols,
+        retained_export_symbols: RetainedExportSymbols::default(),
         dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
         safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
         external_import_namespace_merger: self.external_import_namespace_merger,

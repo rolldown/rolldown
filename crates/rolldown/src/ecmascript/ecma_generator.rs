@@ -85,7 +85,7 @@ impl Generator for EcmaGenerator {
           .resolved_exports
           .iter()
           .filter_map(|(key, export)| {
-            if ctx.link_output.used_symbol_refs.contains(&export.symbol_ref) {
+            if ctx.link_output.retained_export_symbols.contains(&export.symbol_ref) {
               Some(key.clone())
             } else {
               None

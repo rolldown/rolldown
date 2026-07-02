@@ -13,7 +13,7 @@ use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTag,
   ModuleTagBitSet, ModuleTagRegistry, PostChunkOptimizationOperation, PreserveEntrySignatures,
-  SymbolRef, WrapKind,
+  RetainedExportSymbols, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
@@ -560,16 +560,41 @@ impl GenerateStage<'_> {
         } else {
           false
         };
-        Some((m.namespace_object_ref, is_namespace_referenced))
+        Some((module_idx, m.namespace_object_ref, is_namespace_referenced))
       })
       .collect_vec();
-    for (namespace_ref, flag) in to_eliminate {
+    for (module_idx, namespace_ref, flag) in to_eliminate {
+      self.link_output.metas[module_idx].namespace_included = flag;
+      // Mirror the decision into `used_symbol_refs` because generic symbol-usage queries can
+      // receive a namespace ref (e.g. a `resolved_export.symbol_ref` produced by
+      // `export * as ns from '...'`). Dedicated namespace readers consult
+      // `meta.namespace_included` instead of the set.
       if flag {
         self.link_output.used_symbol_refs.insert(namespace_ref);
       } else {
         self.link_output.used_symbol_refs.remove(&namespace_ref);
       }
     }
+  }
+
+  /// Projects `used_symbol_refs` onto the export domain: for every module's resolved export,
+  /// record the export's symbol ref and its canonical form when used. Must run after
+  /// [`Self::finalized_module_namespace_ref_usage`] so the namespace decision is folded in
+  /// (an `export * as ns` export resolves to a namespace ref).
+  pub fn compute_retained_export_symbols(&mut self) {
+    let mut retained = RetainedExportSymbols::default();
+    for meta in &self.link_output.metas {
+      for export in meta.resolved_exports.values() {
+        if self.link_output.used_symbol_refs.contains(&export.symbol_ref) {
+          retained.insert(export.symbol_ref);
+        }
+        let canonical_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
+        if self.link_output.used_symbol_refs.contains(&canonical_ref) {
+          retained.insert(canonical_ref);
+        }
+      }
+    }
+    self.link_output.retained_export_symbols = retained;
   }
 
   /// Find all entry level external modules, and re propagate `has_dynamic_exports` for affected modules.

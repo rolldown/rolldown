@@ -155,7 +155,6 @@ module.exports.BindingWatcherBundler = __napiModule.exports.BindingWatcherBundle
 module.exports.BindingWatcherChangeData = __napiModule.exports.BindingWatcherChangeData
 module.exports.BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
-module.exports.ScheduledBuild = __napiModule.exports.ScheduledBuild
 module.exports.TraceSubscriberGuard = __napiModule.exports.TraceSubscriberGuard
 module.exports.TsconfigCache = __napiModule.exports.TsconfigCache
 module.exports.BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo

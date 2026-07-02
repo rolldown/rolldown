@@ -232,9 +232,10 @@ impl NormalModule {
             source: Arc::clone(&original_code),
             ..Default::default()
           });
-          let map = render_output
-            .map
-            .map(|original| collapse_sourcemaps(&[&original.into_owned(), &mutated_map]));
+          // `original` borrows the module source; `collapse_sourcemaps` copies what it
+          // keeps from it, so no `into_owned` detach is needed.
+          let map =
+            render_output.map.map(|original| collapse_sourcemaps(&[&original, &mutated_map]));
           return ModuleRenderOutput { code, map };
         }
         ModuleRenderOutput {

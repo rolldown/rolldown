@@ -1,5 +1,6 @@
 import { rolldown } from 'rolldown';
 
+import { isWasiTest } from '@tests/runtime-flavor';
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from 'vitest';
@@ -16,7 +17,10 @@ function expectPathToEndWith(path, suffix) {
   expect(normalizePath(path).endsWith(suffix)).toBe(true);
 }
 
-test(`emit data for devtool`, async () => {
+// The devtools writer (crates/rolldown_devtools/src/writer.rs) panics under
+// WASI when opening its log file — skip only there, not in native
+// single-thread mode.
+test.skipIf(isWasiTest)(`emit data for devtool`, async () => {
   // Clean up previous test data if exists
   if (existsSync(dotRolldownFileName)) {
     rmSync(dotRolldownFileName, { recursive: true, force: true });

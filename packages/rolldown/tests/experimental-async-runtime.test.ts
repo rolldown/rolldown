@@ -72,11 +72,17 @@ describe('experimental async runtime API', () => {
     expect(() => configureAsyncRuntime({ workerThreads: 2 })).toThrow(FEATURE_DISABLED);
   });
 
-  test('getAsyncRuntimeConfig returns MultiThread with positive thread counts', () => {
+  test('getAsyncRuntimeConfig returns the build flavor with positive thread counts', () => {
     const config: BindingRuntimeConfig = getAsyncRuntimeConfig();
     // `BindingRuntimeFlavor` is a napi string_enum; its runtime representation
-    // is the string 'MultiThread' (default). See async_runtime.rs.
-    expect(config.flavor).toBe('MultiThread');
+    // is 'MultiThread' or 'CurrentThread'. See async_runtime.rs. The default
+    // `tokio-runtime` build always snapshots 'MultiThread'; an `async-runtime`
+    // build reports whichever executor ROLLDOWN_RUNTIME selected.
+    if (isDefaultBuild) {
+      expect(config.flavor).toBe('MultiThread');
+    } else {
+      expect(['MultiThread', 'CurrentThread']).toContain(config.flavor);
+    }
     // env/default-derived — assert positivity, never a host-specific count.
     expect(config.workerThreads).toBeGreaterThan(0);
     expect(Number.isInteger(config.workerThreads)).toBe(true);

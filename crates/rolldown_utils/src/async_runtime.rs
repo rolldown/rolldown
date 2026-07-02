@@ -348,6 +348,28 @@ thread_local! {
   static ON_POOL_WORKER: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
 }
 
+// Per-worker LIFO slot (wake-path §6(c), tokio-style): holds at most ONE
+// runnable that was scheduled FROM this pool worker (typically a task the
+// currently running runnable just woke). It is popped by this same thread's
+// next drain/run_one iteration BEFORE the shared FIFO, so the hot
+// wake-then-await ping-pong pattern stays on one core with no queue mutex, no
+// wake and no drainer spawn. Tagged with the executor id -- the same scoping
+// pattern as `ON_POOL_WORKER` and `BlockingOwnerToken.executor_id` -- so only
+// drain/run_one/flush of the SAME executor may pop it.
+//
+// STRANDING INVARIANT (wake-path §8.3): slot work is invisible to every other
+// thread (`finish_draining`'s re-check and `wake_one` cannot see it), so the
+// owning thread MUST either run its slot entry or flush it to the shared FIFO
+// before it stops draining -- see the flush calls at `drain`'s returns, the
+// pre-park flush in `cooperative_block_on`, and `LifoSlotFlushGuard` for
+// unwinds. A runnable left here while the thread returns to rayon would be a
+// silently lost task and a `queued_runnables` leak.
+#[cfg(not(target_family = "wasm"))]
+thread_local! {
+  static LIFO_SLOT: std::cell::Cell<Option<(u64, Runnable)>> =
+    const { std::cell::Cell::new(None) };
+}
+
 #[cfg(not(target_family = "wasm"))]
 struct OnPoolWorkerGuard(Option<u64>);
 
@@ -465,6 +487,12 @@ struct MultiThreadExecutor {
 
 #[cfg(not(target_family = "wasm"))]
 impl MultiThreadExecutor {
+  /// Max consecutive runnable runs before a worker yields: `drain` exits (and
+  /// respawns via `finish_draining`) and `cooperative_block_on` flushes its
+  /// LIFO slot, so a hot slot streak cannot starve the shared FIFO or the
+  /// blocking queue on either loop (wake-path §8.7).
+  const RUNNABLE_BUDGET: usize = 64;
+
   fn new(
     options: &RuntimeOptions,
     metrics: Arc<RuntimeMetrics>,
@@ -490,7 +518,62 @@ impl MultiThreadExecutor {
   }
 
   fn schedule(self: &Arc<Self>, runnable: Runnable) {
+    // Fires for BOTH the slot and the FIFO path: a slot-resident runnable is
+    // still "queued" until popped (`runnable_started` balances it either way).
     self.metrics.runnable_scheduled();
+    // LIFO fast path (wake-path §6(c)): a runnable scheduled from a pool
+    // worker OF THIS EXECUTOR goes into that worker's slot instead of the
+    // shared FIFO -- this thread pops it before its next FIFO look, so no
+    // queue mutex, no wake, no drainer spawn.
+    //
+    // "Pops it before its next FIFO look" is only true while RUNNABLE code is
+    // on the stack (drain/run_one loop iterations, cooperative polls). It is
+    // FALSE inside a blocking closure: `ON_POOL_WORKER` spans the whole drain
+    // frame including `blocking()` calls, but the slot is only popped after
+    // the closure returns -- so a closure that spawns and then synchronously
+    // waits on the child would deadlock with the child slotted (no wake, no
+    // drainer, even with idle workers). `BLOCKING_OWNER` is `Some` exactly
+    // while straight-line blocking-closure code runs (drain/run_one blocking
+    // branches, the over-cap escape) and `None` while runnables run (the
+    // slot/FIFO owner-clear guards), so it is the discriminator: bypass the
+    // slot and take the FIFO+wake path whenever an owner frame is ambient.
+    // (A cooperative poll entered FROM a blocking closure also carries the
+    // closure's token and loses the fast path -- a rare, conservative,
+    // correctness-first trade.)
+    if ON_POOL_WORKER.with(std::cell::Cell::get) == Some(self.id)
+      && BLOCKING_OWNER.with(std::cell::Cell::get).is_none()
+    {
+      match LIFO_SLOT.with(std::cell::Cell::take) {
+        None => {
+          LIFO_SLOT.with(|slot| slot.set(Some((self.id, runnable))));
+          return;
+        }
+        // Same-executor occupant: the NEWEST runnable takes the slot (it is
+        // the hottest); the displaced occupant falls back to the shared FIFO
+        // with a normal wake so other workers can pick it up.
+        Some((id, displaced)) if id == self.id => {
+          LIFO_SLOT.with(|slot| slot.set(Some((self.id, runnable))));
+          self.push_to_queue_and_wake(displaced);
+          return;
+        }
+        // Foreign-executor occupant (defensive: requires a thread acting as a
+        // worker of two executors, e.g. under a test-installed marker; the
+        // production process has one global executor). We must not flush
+        // another executor's runnable onto OUR queue, so leave it in place --
+        // its own executor's drain on this thread pops or flushes it -- and
+        // route the new runnable to the FIFO.
+        Some(foreign) => {
+          LIFO_SLOT.with(|slot| slot.set(Some(foreign)));
+        }
+      }
+    }
+    self.push_to_queue_and_wake(runnable);
+  }
+
+  /// Shared-FIFO tail of [`Self::schedule`]: push, then wake (also used for
+  /// displaced/flushed slot runnables, whose `runnable_scheduled` accounting
+  /// already happened at their original schedule).
+  fn push_to_queue_and_wake(self: &Arc<Self>, runnable: Runnable) {
     self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push_back(runnable);
     self.wake_for_new_work();
   }
@@ -560,13 +643,30 @@ impl MultiThreadExecutor {
   }
 
   fn drain(self: Arc<Self>) {
-    const RUNNABLE_BUDGET: usize = 64;
-
     // Mark this worker so a re-entrant `block_on` (reached from a polled task)
     // drives the queue cooperatively instead of parking the worker.
     let _on_pool = OnPoolWorkerGuard::enter(self.id);
+    // Unwind backstop (wake-path §8.3): never leave a runnable stranded in
+    // the LIFO slot. Normal exits flush explicitly BEFORE `finish_draining`
+    // below (so its re-check can see the flushed runnable); this guard only
+    // covers unwinds, which should be impossible (runnables and blocking
+    // wrappers are catch_unwind'd) but must not lose a task if they happen.
+    let _slot_backstop = LifoSlotFlushGuard(&self);
 
-    for _ in 0..RUNNABLE_BUDGET {
+    // The LIFO slot shares this budget with the FIFO: a hot wake/await pair
+    // can hold the slot for at most RUNNABLE_BUDGET consecutive runs (the
+    // streak cap, wake-path §8.7) before this drainer exits, flushes the slot
+    // and lets `finish_draining` re-arm fairness for FIFO and blocking work.
+    for _ in 0..Self::RUNNABLE_BUDGET {
+      if let Some(runnable) = self.pop_lifo_slot() {
+        // Same lexical owner-clear as `run_one`'s slot/FIFO pops: the POP can
+        // run while an owner frame is ambient (e.g. a cooperative `block_on`
+        // entered from a blocking closure), and the slot must not smuggle
+        // that frame's over-cap privilege into the runnable (RD-1 (B)).
+        let _non_owner = BlockingOwnerGuard::enter(None);
+        run_runnable(&self.metrics, runnable);
+        continue;
+      }
       let runnable =
         self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
       if let Some(runnable) = runnable {
@@ -581,11 +681,45 @@ impl MultiThreadExecutor {
         self.active_blocking.fetch_sub(1, Ordering::Release);
         continue;
       }
+      // MANDATORY flush before finish_draining (wake-path §8.3). On this path
+      // the slot was observed empty at the top of the iteration and no user
+      // code ran since, so the flush is defensive -- kept unconditional so
+      // every drain exit upholds the stranding invariant by construction.
+      self.flush_lifo_slot();
       self.finish_draining();
       return;
     }
 
+    // Budget exhausted: the last runnable may have scheduled into the slot.
+    // MANDATORY flush (wake-path §8.3) before `finish_draining` so its
+    // re-check sees the runnable on the shared FIFO and re-arms a drainer.
+    self.flush_lifo_slot();
     self.finish_draining();
+  }
+
+  /// Pop this worker's LIFO slot if it holds a runnable of THIS executor.
+  /// A foreign executor's entry is left untouched (see the scoping note at
+  /// `LIFO_SLOT`).
+  fn pop_lifo_slot(&self) -> Option<Runnable> {
+    LIFO_SLOT.with(|slot| match slot.take() {
+      Some((id, runnable)) if id == self.id => Some(runnable),
+      other => {
+        slot.set(other);
+        None
+      }
+    })
+  }
+
+  /// Move this worker's slot entry (same-executor only) to the shared FIFO,
+  /// with a wake so any worker can pick it up. MANDATORY (wake-path §8.3) on
+  /// every path where this thread stops draining this executor: `drain`'s
+  /// returns (BEFORE `finish_draining`), before a cooperative park, and on
+  /// unwind via `LifoSlotFlushGuard` -- a runnable stranded in a thread-local
+  /// slot while its thread leaves executor code is a silently lost task.
+  fn flush_lifo_slot(self: &Arc<Self>) {
+    if let Some(runnable) = self.pop_lifo_slot() {
+      self.push_to_queue_and_wake(runnable);
+    }
   }
 
   /// Mint a fresh owner token for a counted blocking closure entering on this
@@ -599,6 +733,15 @@ impl MultiThreadExecutor {
   }
 
   fn finish_draining(self: &Arc<Self>) {
+    // LIFO-slot invariant (wake-path §8.4): this re-check reads only the
+    // SHARED queues -- per-worker slots are invisible to it, and that is
+    // sound because slot work never needs a foreign observer. A slot entry is
+    // always either popped and run by its owning thread (drain / run_one) or
+    // flushed to the shared FIFO by that same thread BEFORE it stops draining
+    // (both `drain` returns flush ahead of this call; `LifoSlotFlushGuard`
+    // covers unwinds; cooperative parks flush defensively). No thread leaves
+    // executor code with its slot occupied, so the exit-then-respawn window
+    // below cannot hide slot work from `ensure_drainer`.
     self.active_drainers.fetch_sub(1, Ordering::AcqRel);
     let has_runnable =
       !self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty();
@@ -627,9 +770,18 @@ impl MultiThreadExecutor {
     }
   }
 
-  /// Run a single unit of queued work (a runnable, else a blocking job).
-  /// Returns `true` if work was performed. Mirrors the body of `drain`.
+  /// Run a single unit of queued work (this worker's LIFO slot first, then a
+  /// shared-FIFO runnable, else a blocking job). Returns `true` if work was
+  /// performed. Mirrors the body of `drain`.
   fn run_one(self: &Arc<Self>) -> bool {
+    if let Some(runnable) = self.pop_lifo_slot() {
+      // Same owner-clear as the FIFO branch below (RD-1 (B)): the slot must
+      // not smuggle an owner frame's over-cap privilege into the runnables it
+      // carries any more than the shared FIFO does.
+      let _non_owner = BlockingOwnerGuard::enter(None);
+      run_runnable(&self.metrics, runnable);
+      return true;
+    }
     let runnable = self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop_front();
     if let Some(runnable) = runnable {
       // Ownership is lexical to the blocking closure: clear the owner frame for
@@ -720,8 +872,24 @@ impl MultiThreadExecutor {
     // park) when this driver is currently running, so it is never lost.
     let waker = std::task::Waker::from(Arc::clone(&parker));
     let mut cx = Context::from_waker(&waker);
+    // Consecutive `run_one` successes since the last yield point: the
+    // cooperative loop mirrors `drain`'s RUNNABLE_BUDGET streak cap. Without
+    // it, a hot slot chain (each runnable schedules a successor into this
+    // worker's slot, which `run_one` pops BEFORE the FIFO) would keep this
+    // loop inside `run_one` forever and the shared FIFO would never be
+    // reached from this thread -- a deadlock on a 1-worker pool when the
+    // awaited future depends on a FIFO task (wake-path §8.7).
+    let mut streak = 0usize;
     loop {
       if future.as_mut().poll(&mut cx).is_ready() {
+        // MANDATORY exit flush (wake-path §8.3): the final poll above may
+        // have scheduled same-executor work into THIS worker's slot (no FIFO
+        // push, no wake). The caller may synchronously wait on that work
+        // after `block_on` returns -- and the enclosing `drain` frame that
+        // would otherwise pop the slot can be arbitrarily far away -- so the
+        // slot must be handed to the shared FIFO (with a wake) before every
+        // return from this loop.
+        self.flush_lifo_slot();
         // MISS COMPENSATION (wake-path §8.2): a registry wake may have been
         // delivered to this driver while its future was completing -- the
         // permit absorbed, the queue item not consumed. Hand the wake on
@@ -735,8 +903,18 @@ impl MultiThreadExecutor {
         return;
       }
       if self.run_one() {
+        streak += 1;
+        if streak >= Self::RUNNABLE_BUDGET {
+          // Budget yield: move a hot slot occupant to the shared FIFO (with
+          // a wake), so the next `run_one` pops the FIFO front (the oldest
+          // work) and other workers can steal the chain. The awaited future
+          // is polled every iteration regardless, so it is never starved.
+          self.flush_lifo_slot();
+          streak = 0;
+        }
         continue;
       }
+      streak = 0;
       // Only a worker that owns a counted blocking frame OF THIS EXECUTOR may run
       // a queued blocking job over the cap, and only the job that frame itself
       // scheduled (the genuine nested-blocking case it must unblock). A plain
@@ -746,6 +924,11 @@ impl MultiThreadExecutor {
       if self.try_owned_blocking_over_cap() {
         continue;
       }
+      // MANDATORY pre-park flush (wake-path §8.3). Defensive on every
+      // currently reachable path: `run_one` above popped the slot and no user
+      // code ran since -- but parking with a stranded slot runnable would
+      // silently lose that task, so the invariant is upheld unconditionally.
+      self.flush_lifo_slot();
       // Park protocol: register FIRST, then re-check, then park -- the
       // waiter-side mirror of the push-then-wake schedule side. See the
       // lost-wakeup argument at [`ParkedDrivers::wake_one`].
@@ -798,6 +981,21 @@ impl MultiThreadExecutor {
         return queue.pop_front().map(|queued| queued.run);
       }
     }
+  }
+}
+
+/// Unwind backstop for `drain` (wake-path §8.3): flushes the worker's LIFO
+/// slot on drop so an unwinding drain can never strand a runnable in the
+/// thread-local slot of a thread that is about to return to rayon. Normal
+/// drain exits flush explicitly BEFORE `finish_draining`; this drop is then a
+/// no-op (the slot is already empty).
+#[cfg(not(target_family = "wasm"))]
+struct LifoSlotFlushGuard<'a>(&'a Arc<MultiThreadExecutor>);
+
+#[cfg(not(target_family = "wasm"))]
+impl Drop for LifoSlotFlushGuard<'_> {
+  fn drop(&mut self) {
+    self.0.flush_lifo_slot();
   }
 }
 
@@ -966,6 +1164,7 @@ impl ParkedDrivers {
   ///     below; the load therefore happens-after the `count` store and must
   ///     observe `count >= 1`: the slow path pops a registered parker and
   ///     wakes it.
+  ///
   /// A wake delivered to a driver that raced out of its park (or aborted it)
   /// is stored as that driver's permit; the driver re-checks every work
   /// source before it can sleep on the next park, so the wake still lands.
@@ -1714,6 +1913,7 @@ mod tests {
       };
       let sched2 = Arc::clone(&executor);
       let (runnable2, task2) = async_task::spawn(t2_body, move |r| sched2.schedule(r));
+      executor.metrics.runnable_scheduled(); // keep the raw push's accounting balanced
       executor.queue.lock().unwrap().push_back(runnable2);
       executor.ensure_drainer();
       wait_until("driver 2 parked", || executor.parked_drivers.count.load(Ordering::SeqCst) == 2);
@@ -1800,6 +2000,7 @@ mod tests {
         },
         move |r| sched_stranded.schedule(r),
       );
+      executor.metrics.runnable_scheduled(); // keep the raw push's accounting balanced
       executor.queue.lock().unwrap().push_back(stranded_runnable);
       stranded_task.detach();
 
@@ -1889,6 +2090,856 @@ mod tests {
       .recv_timeout(Duration::from_secs(30))
       .expect("a wake_one()-side wakeup was lost: the consumer is parked with work pending");
     consumer.join().unwrap();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn lifo_slot_same_worker_schedule_runs_before_older_fifo_work() {
+    // Wake-path (c): a runnable scheduled from a pool worker of the SAME
+    // executor lands in that worker's LIFO slot (no FIFO push, no wake) and is
+    // run by the next drain/run_one iteration BEFORE older shared-FIFO work.
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 2,
+      thread_name_prefix: "lifo-order".to_string(),
+    };
+    let executor =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+    let order = Arc::new(Mutex::new(Vec::<&'static str>::new()));
+
+    // Older work, pushed RAW onto the FIFO (so no drainer is spawned that
+    // could race the manual `run_one` calls below).
+    let old_order = Arc::clone(&order);
+    let sched = Arc::clone(&executor);
+    let (old_runnable, old_task) = async_task::spawn(
+      async move {
+        old_order.lock().unwrap().push("old");
+      },
+      move |r| sched.schedule(r),
+    );
+    executor.metrics.runnable_scheduled(); // keep the raw push's accounting balanced
+    executor.queue.lock().unwrap().push_back(old_runnable);
+    old_task.detach();
+
+    // Simulate being on this executor's pool worker: the schedule below must
+    // take the slot path (which never touches the FIFO nor spawns a drainer).
+    let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+    let new_order = Arc::clone(&order);
+    let sched = Arc::clone(&executor);
+    let (new_runnable, new_task) = async_task::spawn(
+      async move {
+        new_order.lock().unwrap().push("new");
+      },
+      move |r| sched.schedule(r),
+    );
+    executor.schedule(new_runnable);
+    new_task.detach();
+    assert_eq!(
+      executor.queue.lock().unwrap().len(),
+      1,
+      "the slot-path schedule must not push to the shared FIFO"
+    );
+
+    assert!(executor.run_one(), "run_one must pop the slot first");
+    assert!(executor.run_one(), "run_one must then pop the FIFO");
+    assert!(!executor.run_one(), "no work must remain");
+    assert_eq!(
+      *order.lock().unwrap(),
+      vec!["new", "old"],
+      "the slot runnable (newest) must run before older FIFO work"
+    );
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn lifo_slot_drain_runs_slot_before_older_fifo_work() {
+    // Wake-path (c), `drain` integration: with one worker, task P scheduling
+    // child C mid-drain must see C run IMMEDIATELY after P (via the slot),
+    // jumping ahead of the older queued T1/T2.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "lifo-drain".to_string(),
+      };
+      let executor =
+        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+      let order = Arc::new(Mutex::new(Vec::<&'static str>::new()));
+
+      let p_exec = Arc::clone(&executor);
+      let p_order = Arc::clone(&order);
+      let p_body = async move {
+        p_order.lock().unwrap().push("P");
+        // Scheduled from the pool worker mid-drain: must land in the slot.
+        let c_order = Arc::clone(&p_order);
+        let sched = Arc::clone(&p_exec);
+        let (c_runnable, c_task) = async_task::spawn(
+          async move {
+            c_order.lock().unwrap().push("C");
+          },
+          move |r| sched.schedule(r),
+        );
+        p_exec.schedule(c_runnable);
+        c_task.detach();
+      };
+
+      // Push P, T1, T2 RAW (deterministic FIFO order, exactly one drainer),
+      // mirroring the `runnable_scheduled` accounting a real schedule does so
+      // the queued-runnables counter stays balanced.
+      let mut tasks = Vec::new();
+      let sched = Arc::clone(&executor);
+      let (p_runnable, p_task) = async_task::spawn(p_body, move |r| sched.schedule(r));
+      executor.metrics.runnable_scheduled();
+      executor.queue.lock().unwrap().push_back(p_runnable);
+      tasks.push(p_task);
+      for name in ["T1", "T2"] {
+        let t_order = Arc::clone(&order);
+        let sched = Arc::clone(&executor);
+        let (t_runnable, t_task) = async_task::spawn(
+          async move {
+            t_order.lock().unwrap().push(name);
+          },
+          move |r| sched.schedule(r),
+        );
+        executor.metrics.runnable_scheduled();
+        executor.queue.lock().unwrap().push_back(t_runnable);
+        tasks.push(t_task);
+      }
+      executor.ensure_drainer();
+
+      for task in tasks {
+        futures::executor::block_on(task);
+      }
+      wait_until("the detached child C ran", || order.lock().unwrap().len() == 4);
+      assert_eq!(
+        *order.lock().unwrap(),
+        vec!["P", "C", "T1", "T2"],
+        "the slot child C must run right after its scheduler P, ahead of older FIFO work"
+      );
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("LIFO drain-order test did not complete ({error})"),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn lifo_slot_displaced_occupant_falls_back_to_fifo() {
+    // Wake-path (c): two same-executor schedules from one worker -- the
+    // NEWEST takes the slot; the displaced occupant must land on the shared
+    // FIFO (with a wake), never be dropped. `active_drainers` is saturated so
+    // the displacement wake cannot spawn a real drainer racing the manual
+    // `run_one` calls.
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 2,
+      thread_name_prefix: "lifo-displace".to_string(),
+    };
+    let executor =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+    executor.active_drainers.store(executor.max_drainers, Ordering::SeqCst);
+    let order = Arc::new(Mutex::new(Vec::<&'static str>::new()));
+
+    let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+    for name in ["a", "b"] {
+      let n_order = Arc::clone(&order);
+      let sched = Arc::clone(&executor);
+      let (runnable, task) = async_task::spawn(
+        async move {
+          n_order.lock().unwrap().push(name);
+        },
+        move |r| sched.schedule(r),
+      );
+      executor.schedule(runnable);
+      task.detach();
+    }
+    assert_eq!(
+      executor.queue.lock().unwrap().len(),
+      1,
+      "the displaced occupant (a) must have been pushed to the shared FIFO"
+    );
+
+    assert!(executor.run_one(), "run_one must pop the slot (b) first");
+    assert!(executor.run_one(), "run_one must then pop the displaced (a) from the FIFO");
+    assert!(!executor.run_one(), "no work must remain");
+    assert_eq!(
+      *order.lock().unwrap(),
+      vec!["b", "a"],
+      "the newest schedule must win the slot; the displaced one must survive via the FIFO"
+    );
+    executor.active_drainers.store(0, Ordering::SeqCst);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn lifo_slot_is_executor_scoped() {
+    // Wake-path (c): the slot is tagged with the executor id (mirroring the
+    // ON_POOL_WORKER / BlockingOwnerToken scoping). A worker of executor A
+    // scheduling onto executor B must bypass the slot (B's FIFO); and with
+    // A's runnable IN the slot, B must neither pop nor displace it.
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 2,
+      thread_name_prefix: "lifo-scope".to_string(),
+    };
+    let exec1 =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+    let exec2 =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+    assert_ne!(exec1.id, exec2.id, "executors must get distinct ids");
+    exec1.active_drainers.store(exec1.max_drainers, Ordering::SeqCst);
+    exec2.active_drainers.store(exec2.max_drainers, Ordering::SeqCst);
+    let order = Arc::new(Mutex::new(Vec::<&'static str>::new()));
+
+    // As exec1's worker: r1 goes to the slot, tagged exec1.
+    let _on_pool1 = OnPoolWorkerGuard::enter(exec1.id);
+    let r1_order = Arc::clone(&order);
+    let sched = Arc::clone(&exec1);
+    let (r1, t1) = async_task::spawn(
+      async move {
+        r1_order.lock().unwrap().push("one");
+      },
+      move |r| sched.schedule(r),
+    );
+    exec1.schedule(r1);
+    t1.detach();
+    assert!(exec1.queue.lock().unwrap().is_empty(), "r1 must sit in the slot, not exec1's FIFO");
+
+    {
+      // Nested: now act as exec2's worker while exec1's runnable occupies the
+      // slot. exec2 must not displace the foreign entry; r2 goes to its FIFO.
+      let _on_pool2 = OnPoolWorkerGuard::enter(exec2.id);
+      let r2_order = Arc::clone(&order);
+      let sched = Arc::clone(&exec2);
+      let (r2, t2) = async_task::spawn(
+        async move {
+          r2_order.lock().unwrap().push("two");
+        },
+        move |r| sched.schedule(r),
+      );
+      exec2.schedule(r2);
+      t2.detach();
+      assert_eq!(
+        exec2.queue.lock().unwrap().len(),
+        1,
+        "a foreign-occupied slot must route exec2's schedule to exec2's FIFO"
+      );
+      assert!(
+        exec2.pop_lifo_slot().is_none(),
+        "exec2 must not pop exec1's slot entry (executor-scoped pop)"
+      );
+      assert!(exec2.run_one(), "exec2 must drive r2 from its own FIFO");
+    }
+
+    // Back as exec1's worker: its slot entry is intact and runnable.
+    assert!(exec1.run_one(), "exec1's slot entry must have survived the foreign activity");
+    assert_eq!(*order.lock().unwrap(), vec!["two", "one"]);
+    exec1.active_drainers.store(0, Ordering::SeqCst);
+    exec2.active_drainers.store(0, Ordering::SeqCst);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn lifo_slot_flushed_on_budget_exhaustion_completes_long_chains() {
+    // Wake-path (c) §8.3: a 200-link chain in which each task schedules the
+    // next FROM the pool worker (every link lands in the slot) crosses
+    // multiple RUNNABLE_BUDGET windows. At each exhaustion the slot MUST be
+    // flushed to the FIFO before `finish_draining` (so its re-check sees the
+    // runnable and re-arms a drainer); a missing flush strands the chain at
+    // the first budget boundary (lost task + queued_runnables leak).
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    const CHAIN: u64 = 200; // > RUNNABLE_BUDGET (64)
+
+    fn spawn_link(
+      executor: &Arc<MultiThreadExecutor>,
+      remaining: u64,
+      counter: Arc<AtomicU64>,
+      done: mpsc::Sender<()>,
+    ) {
+      let body_exec = Arc::clone(executor);
+      let body = async move {
+        counter.fetch_add(1, Ordering::SeqCst);
+        if remaining > 0 {
+          spawn_link(&body_exec, remaining - 1, counter, done);
+        } else {
+          done.send(()).unwrap();
+        }
+      };
+      let sched = Arc::clone(executor);
+      let (runnable, task) = async_task::spawn(body, move |r| sched.schedule(r));
+      executor.schedule(runnable);
+      task.detach();
+    }
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "lifo-budget".to_string(),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, Arc::clone(&metrics)).unwrap());
+
+      let counter = Arc::new(AtomicU64::new(0));
+      let (chain_tx, chain_rx) = mpsc::channel();
+      spawn_link(&executor, CHAIN - 1, Arc::clone(&counter), chain_tx);
+
+      chain_rx
+        .recv_timeout(Duration::from_secs(10))
+        .expect("the slot chain stalled at a budget boundary: slot not flushed on drain exit");
+      assert_eq!(counter.load(Ordering::SeqCst), CHAIN, "every chain link must have run");
+      wait_until("runnable counters settle to zero (no slot leak)", || {
+        metrics.queued_runnables.load(Ordering::Relaxed) == 0
+          && metrics.active_runnables.load(Ordering::Relaxed) == 0
+      });
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(15)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("LIFO budget-flush chain test did not complete ({error})"),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn lifo_slot_flush_moves_slot_runnable_to_shared_fifo() {
+    // Wake-path (c) §8.3: direct pin for the flush primitive used at drain
+    // exits, before cooperative parks and by the unwind guard -- a
+    // slot-resident runnable moves to the shared FIFO with its task still
+    // completable, never dropped. (The pre-park call is defensive: `run_one`
+    // pops the slot before any park is reachable, so this primitive is its
+    // only observable seam.)
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 2,
+      thread_name_prefix: "lifo-flush".to_string(),
+    };
+    let executor =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+    executor.active_drainers.store(executor.max_drainers, Ordering::SeqCst);
+    let ran = Arc::new(AtomicBool::new(false));
+
+    let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+    let ran_flag = Arc::clone(&ran);
+    let sched = Arc::clone(&executor);
+    let (runnable, task) = async_task::spawn(
+      async move {
+        ran_flag.store(true, Ordering::SeqCst);
+      },
+      move |r| sched.schedule(r),
+    );
+    executor.schedule(runnable);
+    task.detach();
+    assert!(executor.queue.lock().unwrap().is_empty(), "the runnable must start in the slot");
+
+    executor.flush_lifo_slot();
+    assert!(executor.pop_lifo_slot().is_none(), "the slot must be empty after a flush");
+    assert_eq!(
+      executor.queue.lock().unwrap().len(),
+      1,
+      "the flushed runnable must be on the shared FIFO"
+    );
+    assert!(executor.run_one(), "the flushed runnable must still run");
+    assert!(ran.load(Ordering::SeqCst), "the flushed task must complete, not be dropped");
+    executor.active_drainers.store(0, Ordering::SeqCst);
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn lifo_slot_runnable_does_not_inherit_blocking_owner() {
+    // Wake-path (c), extending the RD-1 round-3 owner-clear (the 628 anchor)
+    // to the slot path: a runnable popped from the slot runs with
+    // BLOCKING_OWNER cleared, so it cannot borrow the driving owner frame's
+    // over-cap privilege; the ambient owner is restored afterwards.
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: 2,
+      max_blocking_tasks: 2,
+      thread_name_prefix: "lifo-owner".to_string(),
+    };
+    let executor =
+      Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+    let observed = Arc::new(Mutex::new(None::<Option<BlockingOwnerToken>>));
+
+    let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+
+    // Install the slot entry from RUNNABLE context (no ambient owner) -- the
+    // only context that may use the slot since the finding-3 fix diverts
+    // schedules issued under an owner frame to the shared FIFO.
+    let observed_slot = Arc::clone(&observed);
+    let sched = Arc::clone(&executor);
+    let (runnable, task) = async_task::spawn(
+      async move {
+        *observed_slot.lock().unwrap() = Some(BLOCKING_OWNER.with(std::cell::Cell::get));
+      },
+      move |r| sched.schedule(r),
+    );
+    executor.schedule(runnable);
+    task.detach();
+    assert!(executor.queue.lock().unwrap().is_empty(), "the runnable must sit in the slot");
+
+    // The POP can still happen while an owner frame is ambient (a cooperative
+    // `block_on` entered from a blocking closure drives `run_one` with the
+    // closure's token on the stack); the slot branch must clear it.
+    let token = executor.fresh_owner_token();
+    let _owner = BlockingOwnerGuard::enter(Some(token));
+    assert!(executor.run_one(), "the slot runnable must run");
+    assert_eq!(
+      *observed.lock().unwrap(),
+      Some(None),
+      "a slot runnable must observe a CLEARED blocking owner"
+    );
+    assert_eq!(
+      BLOCKING_OWNER.with(std::cell::Cell::get),
+      Some(token),
+      "the ambient owner frame must be restored after the slot runnable"
+    );
+  }
+
+  // Shared ping-pong probe for the LIFO fairness tests: two tasks that wake
+  // each other on every poll. Scheduled from a pool worker, each wake lands in
+  // that worker's LIFO slot, keeping the slot hot indefinitely. A task
+  // finishes when `stop` is raised (or `stop_after` polls happened), releasing
+  // its partner's stored waker so both complete.
+  #[cfg(not(target_family = "wasm"))]
+  struct PingPongShared {
+    count: AtomicU64,
+    stop: AtomicBool,
+    stop_after: u64,
+    wakers: Mutex<[Option<std::task::Waker>; 2]>,
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  struct PingPong {
+    shared: Arc<PingPongShared>,
+    me: usize,
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  impl Future for PingPong {
+    type Output = ();
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
+      let shared = &self.shared;
+      let polls = shared.count.fetch_add(1, Ordering::SeqCst);
+      if shared.stop.load(Ordering::SeqCst) || polls >= shared.stop_after {
+        let partner = shared.wakers.lock().unwrap()[1 - self.me].take();
+        if let Some(partner) = partner {
+          partner.wake();
+        }
+        return Poll::Ready(());
+      }
+      let mut wakers = shared.wakers.lock().unwrap();
+      wakers[self.me] = Some(cx.waker().clone());
+      if let Some(partner) = wakers[1 - self.me].take() {
+        drop(wakers);
+        partner.wake();
+      }
+      Poll::Pending
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  fn spawn_ping_pong_pair(
+    executor: &Arc<MultiThreadExecutor>,
+    shared: &Arc<PingPongShared>,
+  ) -> Vec<Task<()>> {
+    let mut tasks = Vec::new();
+    for me in 0..2 {
+      let sched = Arc::clone(executor);
+      let (runnable, task) =
+        async_task::spawn(PingPong { shared: Arc::clone(shared), me }, move |r| sched.schedule(r));
+      executor.schedule(runnable);
+      tasks.push(task);
+    }
+    tasks
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn lifo_slot_ping_pong_does_not_starve_queued_fifo_task() {
+    // Wake-path (c) streak cap: slot pops share `drain`'s RUNNABLE_BUDGET, so
+    // a hot wake/await pair holds a worker for at most one budget window
+    // before the slot is flushed and the FIFO gets its turn. With ONE worker,
+    // a third task queued behind an unbounded ping-pong pair must still run;
+    // if slot pops bypassed the budget the drain would never exit and T3
+    // would starve forever (caught by the bounded timeout).
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "lifo-streak".to_string(),
+      };
+      let executor =
+        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+      let shared = Arc::new(PingPongShared {
+        count: AtomicU64::new(0),
+        stop: AtomicBool::new(false),
+        stop_after: u64::MAX,
+        wakers: Mutex::new([None, None]),
+      });
+      let pair = spawn_ping_pong_pair(&executor, &shared);
+
+      // T3: queued on the shared FIFO behind the hot pair.
+      let (t3_tx, t3_rx) = mpsc::channel::<()>();
+      let sched = Arc::clone(&executor);
+      let (t3_runnable, t3_task) = async_task::spawn(
+        async move {
+          t3_tx.send(()).unwrap();
+        },
+        move |r| sched.schedule(r),
+      );
+      executor.schedule(t3_runnable);
+
+      t3_rx
+        .recv_timeout(Duration::from_secs(10))
+        .expect("a hot LIFO pair starved the FIFO: the budget streak cap is broken");
+      assert!(
+        shared.count.load(Ordering::SeqCst) >= 32,
+        "the pair must have been bouncing through the slot before T3 got its turn"
+      );
+
+      // Teardown: stop the pair and release whichever side is waiting.
+      shared.stop.store(true, Ordering::SeqCst);
+      let stored: Vec<_> =
+        shared.wakers.lock().unwrap().iter_mut().filter_map(Option::take).collect();
+      for waker in stored {
+        waker.wake();
+      }
+      for task in pair {
+        futures::executor::block_on(task);
+      }
+      futures::executor::block_on(t3_task);
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(15)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("LIFO streak-cap test did not complete ({error})"),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_hot_lifo_pair_does_not_wedge_queued_blocking_job() {
+    // Wake-path §8.7: runnables (slot included) outrank blocking work per
+    // drain iteration -- unchanged from the FIFO-only drain -- but a hot LIFO
+    // pair must not turn that priority into a permanent wedge. The budget
+    // flush keeps the drain exiting, `finish_draining` keeps re-checking the
+    // blocking queue, and the queued blocking job completes once the pair
+    // finishes its (long) run on the SOLE worker.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    const BOUNCES: u64 = 2_000; // ~31 budget windows on one worker
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "lifo-blocking".to_string(),
+      };
+      let executor =
+        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+      let shared = Arc::new(PingPongShared {
+        count: AtomicU64::new(0),
+        stop: AtomicBool::new(false),
+        stop_after: BOUNCES,
+        wakers: Mutex::new([None, None]),
+      });
+      let pair = spawn_ping_pong_pair(&executor, &shared);
+
+      // Queued while the pair keeps the slot hot on the only worker.
+      let blocking = executor.schedule_blocking(|| 11usize);
+
+      assert_eq!(
+        futures::executor::block_on(blocking).unwrap(),
+        11,
+        "the queued blocking job must complete despite the hot LIFO pair"
+      );
+      for task in pair {
+        futures::executor::block_on(task);
+      }
+      assert!(
+        shared.count.load(Ordering::SeqCst) >= BOUNCES,
+        "the pair must have actually run its full bounce quota"
+      );
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(15)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("LIFO blocking-fairness test did not complete ({error})"),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn cooperative_exit_flushes_slot_work_spawned_by_final_poll() {
+    // Codex round-1 finding 1: the awaited future's FINAL poll (the one that
+    // returns Ready) can schedule same-executor work, which lands in THIS
+    // worker's LIFO slot -- no FIFO push, no wake. The Ready exit of
+    // `cooperative_block_on` must flush the slot: the caller may wait on that
+    // child synchronously (and the enclosing drain frame can be arbitrarily
+    // far away -- here it does not exist at all, via the fake on-pool
+    // marker), so a stranded slot entry is an invisible, dead task.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    struct SpawnOnReady {
+      executor: Arc<MultiThreadExecutor>,
+      child_tx: Option<mpsc::Sender<u64>>,
+    }
+    impl Future for SpawnOnReady {
+      type Output = ();
+      fn poll(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<()> {
+        let child_tx = self.child_tx.take().expect("polled once");
+        let sched = Arc::clone(&self.executor);
+        let (runnable, task) = async_task::spawn(
+          async move {
+            child_tx.send(21).unwrap();
+          },
+          move |r| sched.schedule(r),
+        );
+        // On-pool + same executor + no ambient owner: lands in the slot.
+        self.executor.schedule(runnable);
+        task.detach();
+        Poll::Ready(())
+      }
+    }
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "exit-flush".to_string(),
+      };
+      let executor =
+        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+      let (child_tx, child_rx) = mpsc::channel::<u64>();
+      {
+        // Fake on-pool marker (1793 technique): the cooperative branch runs on
+        // THIS thread, with NO enclosing drain loop to bail the slot out.
+        let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+        let mut future =
+          std::pin::pin!(SpawnOnReady { executor: Arc::clone(&executor), child_tx: Some(child_tx) });
+        executor.block_on(future.as_mut() as Pin<&mut dyn Future<Output = ()>>);
+      }
+
+      // Synchronous bounded wait, NOT via the executor: only the exit flush
+      // (slot -> shared FIFO -> wake/ensure_drainer -> pool worker) can
+      // complete the child.
+      let value = child_rx
+        .recv_timeout(Duration::from_secs(5))
+        .expect("the child scheduled by the final poll was stranded in the LIFO slot");
+      assert_eq!(value, 21);
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("cooperative-exit slot-flush test did not complete ({error})"),
+    }
+  }
+
+  /// Perpetual same-executor chain: each link schedules its successor from
+  /// the pool worker (so every link lands in the LIFO slot) until `stop` is
+  /// raised. `hops` counts executed links.
+  #[cfg(not(target_family = "wasm"))]
+  fn spawn_hot_chain(
+    executor: &Arc<MultiThreadExecutor>,
+    stop: Arc<AtomicBool>,
+    hops: Arc<AtomicU64>,
+  ) {
+    if stop.load(Ordering::SeqCst) {
+      return;
+    }
+    let link_exec = Arc::clone(executor);
+    let body = async move {
+      hops.fetch_add(1, Ordering::SeqCst);
+      spawn_hot_chain(&link_exec, stop, hops);
+    };
+    let sched = Arc::clone(executor);
+    let (runnable, task) = async_task::spawn(body, move |r| sched.schedule(r));
+    executor.schedule(runnable);
+    task.detach();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn cooperative_block_on_budget_prevents_slot_chain_starving_fifo() {
+    // Codex round-1 finding 2: `cooperative_block_on`'s loop must mirror
+    // `drain`'s RUNNABLE_BUDGET streak cap. `run_one` pops the slot before
+    // the FIFO, so a hot chain (every link schedules its successor into the
+    // slot) keeps run_one succeeding forever and the FIFO is never reached
+    // from this thread. On a 1-worker pool (legal config) a FIFO task that
+    // completes the awaited future then never runs: deadlock. The budgeted
+    // loop must flush the slot every RUNNABLE_BUDGET runs so the FIFO task
+    // gets its turn.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "coop-budget".to_string(),
+      };
+      let executor =
+        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+      let stop = Arc::new(AtomicBool::new(false));
+      let hops = Arc::new(AtomicU64::new(0));
+
+      // M runs on the sole worker: it queues F (the task that completes the
+      // awaited future) on the FIFO, heats the slot with the chain, then
+      // block_on's the value F produces.
+      let m_exec = Arc::clone(&executor);
+      let m_stop = Arc::clone(&stop);
+      let m_hops = Arc::clone(&hops);
+      let m_body = async move {
+        let (tx, rx) = oneshot::channel::<u64>();
+        // Schedule F first: it takes the slot momentarily...
+        let sched_f = Arc::clone(&m_exec);
+        let (f_runnable, f_task) = async_task::spawn(
+          async move {
+            let _ = tx.send(7);
+          },
+          move |r| sched_f.schedule(r),
+        );
+        m_exec.schedule(f_runnable);
+        f_task.detach();
+        // ...then the chain starter displaces it to the FIFO and keeps the
+        // slot hot from here on.
+        spawn_hot_chain(&m_exec, Arc::clone(&m_stop), m_hops);
+
+        let mut inner = std::pin::pin!(async move {
+          assert_eq!(rx.await.unwrap(), 7, "F must run and complete the awaited future");
+        });
+        m_exec.block_on(inner.as_mut());
+        m_stop.store(true, Ordering::SeqCst);
+      };
+      let sched_m = Arc::clone(&executor);
+      let (m_runnable, m_task) = async_task::spawn(m_body, move |r| sched_m.schedule(r));
+      executor.schedule(m_runnable);
+
+      futures::executor::block_on(m_task);
+      assert!(
+        hops.load(Ordering::SeqCst) >= 64,
+        "the chain must have been genuinely hot (>= one budget window) before F ran"
+      );
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "cooperative block_on starved the FIFO behind a hot slot chain ({error}): the loop needs the RUNNABLE_BUDGET streak cap"
+      ),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn blocking_closure_spawn_is_not_stranded_in_slot() {
+    // Codex round-1 finding 3: ON_POOL_WORKER spans the whole drain frame,
+    // INCLUDING blocking-closure bodies. A closure that spawns a same-
+    // executor task and then waits for it synchronously would deadlock if the
+    // child were slotted (the slot only drains after the closure returns --
+    // which is what the child was supposed to unblock), even with idle
+    // workers. `schedule` must bypass the slot while BLOCKING_OWNER is set
+    // (straight-line blocking code) and push to the shared FIFO with a wake.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "blk-spawn-wait".to_string(),
+      };
+      let executor =
+        Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap());
+
+      // Closure spawns a child and BLOCKS on the channel the child must fill.
+      // A spare worker exists; only a real FIFO push + wake can reach it.
+      let blk_exec = Arc::clone(&executor);
+      let handle = executor.schedule_blocking(move || {
+        let (tx, rx) = mpsc::channel::<u64>();
+        let sched = Arc::clone(&blk_exec);
+        let (runnable, task) = async_task::spawn(
+          async move {
+            tx.send(21).unwrap();
+          },
+          move |r| sched.schedule(r),
+        );
+        blk_exec.schedule(runnable);
+        task.detach();
+        rx.recv_timeout(Duration::from_secs(5))
+          .expect("child spawned by a blocking closure was stranded in the worker's LIFO slot")
+      });
+      assert_eq!(futures::executor::block_on(handle).unwrap(), 21);
+
+      // Variant: the closure exits WITHOUT waiting; the child must still
+      // complete promptly (no stranding on the closure-exit path either).
+      let (v_tx, v_rx) = mpsc::channel::<u64>();
+      let v_exec = Arc::clone(&executor);
+      let v_handle = executor.schedule_blocking(move || {
+        let sched = Arc::clone(&v_exec);
+        let (runnable, task) = async_task::spawn(
+          async move {
+            v_tx.send(42).unwrap();
+          },
+          move |r| sched.schedule(r),
+        );
+        v_exec.schedule(runnable);
+        task.detach();
+        1u64
+      });
+      assert_eq!(futures::executor::block_on(v_handle).unwrap(), 1);
+      assert_eq!(
+        v_rx.recv_timeout(Duration::from_secs(5)).expect("fire-and-forget child must complete"),
+        42
+      );
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(15)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("blocking-closure spawn test did not complete ({error})"),
+    }
   }
 
   #[cfg(not(target_family = "wasm"))]

@@ -40,12 +40,12 @@ scripts/misc/bench-async-runtime/run.sh ~/workspace/github/rolldown-benchmark ap
 Results land in `scripts/misc/bench-async-runtime/results-<timestamp>/`
 (gitignored):
 
-| file | contents |
-| --- | --- |
-| `meta.txt` | commit, node version, binding sizes |
-| `<fixture>-wall.json` / `.md` | hyperfine wall-time stats (JSON + markdown) |
-| `<fixture>-<side>-time.txt` | `/usr/bin/time -l`: instructions retired, max RSS, ctx switches (3 samples/side) |
-| `<fixture>-threads.txt` | peak thread count per side |
+| file                          | contents                                                                         |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| `meta.txt`                    | commit, node version, binding sizes                                              |
+| `<fixture>-wall.json` / `.md` | hyperfine wall-time stats (JSON + markdown)                                      |
+| `<fixture>-<side>-time.txt`   | `/usr/bin/time -l`: instructions retired, max RSS, ctx switches (3 samples/side) |
+| `<fixture>-threads.txt`       | peak thread count per side                                                       |
 
 ## Methodology notes
 

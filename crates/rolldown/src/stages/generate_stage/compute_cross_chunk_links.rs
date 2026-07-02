@@ -525,6 +525,10 @@ impl GenerateStage<'_> {
 
         let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
         for import_ref in chunk_meta_imports.iter().copied() {
+          // Depended symbols are over-collected; this drops refs the inclusion fixpoint
+          // never marked live: constants that get inlined (never inserted — constants kept
+          // as bindings, e.g. entry exports, stay in the set), namespace objects the
+          // generate stage eliminated, and dead collected refs.
           if !self.link_output.used_symbol_refs.contains(&import_ref) {
             continue;
           }
@@ -773,6 +777,9 @@ impl GenerateStage<'_> {
           )
         })
       {
+        // Same filter as the cross-chunk import loop above: exported-symbol candidates
+        // include inlined constants, eliminated namespace objects (dynamic entries register
+        // their namespace refs here), and refs the inclusion fixpoint left dead.
         if !self.link_output.used_symbol_refs.contains(chunk_export) {
           continue;
         }

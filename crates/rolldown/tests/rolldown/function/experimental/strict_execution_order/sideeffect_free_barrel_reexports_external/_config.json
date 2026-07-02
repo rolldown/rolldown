@@ -1,0 +1,15 @@
+{
+  "_comment": "Regression for the wrappedModuleTreeshaking external-reexport-barrel guard (proposal §3 flag-on sweep). `barrel.js` is a side-effect-free ESM barrel that re-exports a binding from an EXTERNAL module (node:path); main reads it. Under the obligation model the skip would normally prune a side-effect-free barrel — but pruning THIS one would drop the external import the barrel owns (the canonical owner is the external module, not WrapKind::Esm, so the finalizer's canonical-follow cannot re-emit it), leaving `sep` resolving to nothing / an ambient global. The fix: never skip a barrel that directly imports from an external. Both the base strictExecutionOrder variant and the [wrapped_module_treeshaking: true] variant MUST keep the `node:path` import and `sep` (snapshots identical); execution asserts `typeof sep === 'string'`, so a regression that drops the external also fails at runtime.",
+  "config": {
+    "external": ["node:assert", "node:path"]
+  },
+  "configVariants": [
+    {
+      "strictExecutionOrder": true
+    },
+    {
+      "strictExecutionOrder": true,
+      "wrappedModuleTreeshaking": true
+    }
+  ]
+}

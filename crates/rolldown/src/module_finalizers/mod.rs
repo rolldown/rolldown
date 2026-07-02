@@ -402,6 +402,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
       // or the importee have side effects.
       WrapKind::Esm => {
+        // Wrapped-module tree-shaking (experimental, gated): if the importee barrel was pruned
+        // (not included — e.g. a `sideEffects:false` re-export barrel bypassed in favour of
+        // canonical owners), emit init calls for the canonical owners instead of calling
+        // `init_<barrel>`, which won't exist in the output. Mirrors the `WrapKind::None` arm above.
+        if !importee_linking_info.is_included
+          && self.ctx.options.experimental.is_wrapped_module_treeshaking_enabled()
+        {
+          if let Some(init_stmt) = self.wrapped_esm_init_stmt_for_import_record(rec_idx) {
+            *stmt = init_stmt;
+            return false;
+          }
+          return true;
+        }
         if matches!(
           importee_linking_info.concatenated_wrapped_module_kind,
           ConcatenateWrappedModuleKind::Inner

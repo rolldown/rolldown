@@ -2230,6 +2230,7 @@ export interface BindingExperimentalOptions {
   nativeMagicString?: boolean
   chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
+  wrappedModuleTreeshaking?: boolean
 }
 
 export interface BindingFilterToken {

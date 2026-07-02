@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import nodeAssert from "node:assert";
+import { sep } from "node:path";
+//#region main.js
+nodeAssert.equal(typeof sep, "string");
+//#endregion
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import nodeAssert from "node:assert";
+import { sep } from "node:path";
+// HIDDEN [\0rolldown/runtime.js]
+//#region barrel.js
+var init_barrel = __esmMin((() => {}));
+//#endregion
+__esmMin((() => {
+	init_barrel();
+	nodeAssert.equal(typeof sep, "string");
+}))();
+
+```
+
+# Variant: [strict_execution_order: true] [wrapped_module_treeshaking: true]
+
+## Assets
+
+### main.js
+
+```js
+import nodeAssert from "node:assert";
+import { sep } from "node:path";
+// HIDDEN [\0rolldown/runtime.js]
+//#region barrel.js
+var init_barrel = __esmMin((() => {}));
+//#endregion
+__esmMin((() => {
+	init_barrel();
+	nodeAssert.equal(typeof sep, "string");
+}))();
+
+```

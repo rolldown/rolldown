@@ -49,3 +49,25 @@ __esmMin((() => {
 }))();
 
 ```
+
+# Variant: [strict_execution_order: true] [wrapped_module_treeshaking: true]
+
+## Assets
+
+### main.js
+
+```js
+import nodeAssert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib-foo.js
+var value;
+var init_lib_foo = __esmMin((() => {
+	value = "foo";
+}));
+//#endregion
+__esmMin((() => {
+	init_lib_foo();
+	nodeAssert.equal(value, "foo");
+}))();
+
+```

@@ -179,6 +179,7 @@ function bindingifyExperimental(
     nativeMagicString: experimental?.nativeMagicString,
     chunkOptimization: experimental?.chunkOptimization,
     lazyBarrel: experimental?.lazyBarrel,
+    wrappedModuleTreeshaking: experimental?.wrappedModuleTreeshaking,
   };
 }
 

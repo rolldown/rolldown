@@ -1045,6 +1045,7 @@ impl GenerateStage<'_> {
       runtime_idx: self.link_output.runtime.id(),
       metas: &self.link_output.metas,
       used_symbol_refs: &mut self.link_output.used_symbol_refs,
+      used_external_symbols: &mut self.link_output.used_external_symbols,
       constant_symbol_map: &self.link_output.global_constant_symbol_map,
       options: self.options,
       normal_symbol_exports_chain_map: &self.link_output.normal_symbol_exports_chain_map,

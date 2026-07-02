@@ -7,7 +7,7 @@ use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
   ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, EntryPointKind, FlatOptions, ImportKind,
   ModuleIdx, ModuleTable, PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
-  UsedSymbolRefs, dynamic_import_usage::DynamicImportExportsUsage,
+  UsedExternalSymbols, UsedSymbolRefs, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 #[cfg(target_family = "wasm")]
@@ -69,6 +69,7 @@ pub struct LinkStageOutput {
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
   pub used_symbol_refs: UsedSymbolRefs,
+  pub used_external_symbols: UsedExternalSymbols,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
@@ -108,6 +109,7 @@ pub struct LinkStage<'a> {
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
   pub used_symbol_refs: UsedSymbolRefs,
+  pub used_external_symbols: UsedExternalSymbols,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -211,6 +213,7 @@ impl<'a> LinkStage<'a> {
       dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
       used_symbol_refs: UsedSymbolRefs::default(),
+      used_external_symbols: UsedExternalSymbols::default(),
       safely_merge_cjs_ns_map: FxHashMap::default(),
       normal_symbol_exports_chain_map: FxHashMap::default(),
       external_import_namespace_merger: FxHashMap::default(),
@@ -255,6 +258,7 @@ impl<'a> LinkStage<'a> {
         warnings: self.warnings,
         errors: self.errors,
         used_symbol_refs: self.used_symbol_refs,
+        used_external_symbols: self.used_external_symbols,
         dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
         safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
         external_import_namespace_merger: self.external_import_namespace_merger,

@@ -10,7 +10,7 @@ use rolldown_common::{
   ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
   RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, StmtEvalFlags,
   StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  UsedSymbolRefs, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  UsedExternalSymbols, UsedSymbolRefs, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
   side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
@@ -67,6 +67,7 @@ pub struct IncludeContext<'a> {
   pub runtime_idx: ModuleIdx,
   pub metas: &'a LinkingMetadataVec,
   pub used_symbol_refs: &'a mut UsedSymbolRefs,
+  pub used_external_symbols: &'a mut UsedExternalSymbols,
   pub constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
   pub options: &'a NormalizedBundlerOptions,
   pub normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -100,6 +101,7 @@ impl<'a> IncludeContext<'a> {
     runtime_idx: ModuleIdx,
     metas: &'a LinkingMetadataVec,
     used_symbol_refs: &'a mut UsedSymbolRefs,
+    used_external_symbols: &'a mut UsedExternalSymbols,
     constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
     options: &'a NormalizedBundlerOptions,
     normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -118,6 +120,7 @@ impl<'a> IncludeContext<'a> {
       runtime_idx,
       metas,
       used_symbol_refs,
+      used_external_symbols,
       constant_symbol_map,
       options,
       normal_symbol_exports_chain_map,
@@ -340,6 +343,7 @@ impl LinkStage<'_> {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
+  #[expect(clippy::too_many_lines)]
   pub fn include_statements(
     &mut self,
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
@@ -354,6 +358,7 @@ impl LinkStage<'_> {
       })
       .collect::<IndexVec<ModuleIdx, _>>();
     let mut used_symbol_refs = UsedSymbolRefs::default();
+    let mut used_external_symbols = UsedExternalSymbols::default();
     let mut is_module_included_vec: ModuleInclusionVec =
       IndexBitSet::new(self.module_table.modules.len());
     let mut module_namespace_included_reason: ModuleNamespaceReasonVec =
@@ -380,6 +385,7 @@ impl LinkStage<'_> {
       self.runtime.id(),
       &self.metas,
       &mut used_symbol_refs,
+      &mut used_external_symbols,
       &self.global_constant_symbol_map,
       self.options,
       &self.normal_symbol_exports_chain_map,
@@ -538,6 +544,7 @@ impl LinkStage<'_> {
       self.runtime.id(),
       &self.metas,
       &mut used_symbol_refs,
+      &mut used_external_symbols,
       &self.global_constant_symbol_map,
       self.options,
       &self.normal_symbol_exports_chain_map,
@@ -548,6 +555,7 @@ impl LinkStage<'_> {
     include_runtime_symbol(context, &self.runtime, depended_runtime_helper);
 
     self.used_symbol_refs = used_symbol_refs;
+    self.used_external_symbols = used_external_symbols;
     // Store the final statement inclusion results back to metas.
     is_stmt_info_included_vec.into_iter_enumerated().for_each(|(module_idx, stmt_included_vec)| {
       self.metas[module_idx].stmt_info_included = stmt_included_vec;
@@ -983,6 +991,9 @@ pub fn include_symbol(
 
   // Also include the symbol that points to the canonical ref.
   ctx.used_symbol_refs.insert(symbol_ref);
+  if ctx.modules[symbol_ref.owner].is_external() {
+    ctx.used_external_symbols.insert(symbol_ref);
+  }
 
   // CJS bailout checks are handled by `include_symbol_and_check_cjs_bailout`
   // at most call sites. This keeps `include_symbol` focused on inclusion only.
@@ -1028,6 +1039,9 @@ pub fn include_symbol(
   };
 
   ctx.used_symbol_refs.insert(canonical_ref);
+  if ctx.modules[canonical_ref.owner].is_external() {
+    ctx.used_external_symbols.insert(canonical_ref);
+  }
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
     let wrapper_ref = {
       let meta = &ctx.metas[canonical_ref.owner];

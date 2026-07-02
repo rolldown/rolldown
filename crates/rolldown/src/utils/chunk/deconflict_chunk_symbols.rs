@@ -83,7 +83,7 @@ pub fn deconflict_chunk_symbols(
       let db = link_output.symbol_db.local_db(*module);
       db.classic_data.iter_enumerated().for_each(|(symbol, _)| {
         let symbol_ref = (*module, symbol).into();
-        if link_output.used_symbol_refs.contains(&symbol_ref) {
+        if link_output.used_external_symbols.contains(&symbol_ref) {
           renamer.add_symbol_in_root_scope(symbol_ref, true);
         }
       });

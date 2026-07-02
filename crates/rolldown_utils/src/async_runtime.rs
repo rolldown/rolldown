@@ -753,37 +753,92 @@ impl MultiThreadExecutor {
 // which then re-polls its future and re-checks the queue. Used both as the
 // awaited future's `Waker` and as the signal raised by `schedule` /
 // `schedule_blocking` so newly queued work reaches a parked worker (RD-1).
+//
+// `notify` fires on EVERY schedule (the hot path), while drivers park only in
+// the rare re-entrant `block_on` case, so the common case is "notify with zero
+// waiters". The generation therefore lives in an atomic (bumped
+// unconditionally) and `notify` skips the mutex + condvar entirely when
+// `parked == 0` — see the lost-wakeup argument at `notify`.
 #[cfg(not(target_family = "wasm"))]
 #[derive(Default)]
 struct CoopSignal {
-  generation: Mutex<u64>,
+  // Wake generation. Bumped UNCONDITIONALLY by every `notify` (the fast path
+  // may skip the mutex + condvar, never the bump): a waiter that captured an
+  // older value before its last queue check refuses to park on it.
+  generation: AtomicU64,
+  // Number of waiters inside `wait_if_unchanged` (incremented under `lock`
+  // BEFORE the generation re-check). Read by `notify`'s fast path to skip the
+  // mutex + condvar when nobody can possibly be waiting.
+  parked: AtomicUsize,
+  lock: Mutex<()>,
   condvar: std::sync::Condvar,
 }
 
 #[cfg(not(target_family = "wasm"))]
 impl CoopSignal {
   fn generation(&self) -> u64 {
-    *self.generation.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    self.generation.load(Ordering::SeqCst)
   }
 
   fn notify(&self) {
-    {
-      let mut generation =
-        self.generation.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-      *generation = generation.wrapping_add(1);
+    // LOST-WAKEUP ARGUMENT (wake-path §8.1). The notifier must never skip the
+    // wake while a waiter parks on a stale generation. Notifier order:
+    //   N1: generation.fetch_add(1, SeqCst)   (unconditional -- never skipped)
+    //   N2: parked.load(SeqCst)               (fast-path check, AFTER the bump)
+    // Waiter order (`wait_if_unchanged`, both steps under `lock`):
+    //   W1: parked.fetch_add(1, SeqCst)
+    //   W2: generation.load(SeqCst)           (re-check before waiting)
+    //   W3: condvar.wait                      (atomically releases `lock`)
+    // All four accesses are SeqCst, so they take places in the single total
+    // order S of SeqCst operations, and each load observes the last store
+    // before it in S:
+    //   * If N2 reads parked == 0 it did not see W1, so N2 < W1 in S. With
+    //     program order N1 < N2 and W1 < W2, that gives N1 < N2 < W1 < W2:
+    //     the waiter's re-check W2 must observe the bumped generation and
+    //     returns WITHOUT parking -- skipping the wake is safe.
+    //   * If W2 reads the pre-bump generation then W2 < N1 in S, hence
+    //     W1 < W2 < N1 < N2: the notifier observes parked >= 1 and takes the
+    //     slow path below. The waiter holds `lock` continuously from before W1
+    //     until W3 releases it atomically, so the slow path's lock acquisition
+    //     cannot complete inside the [W2, W3) window -- notify_all fires only
+    //     once the waiter is actually waiting (or already gone), and wakes it.
+    // SeqCst (not Release/Acquire) is load-bearing: each side stores one
+    // location then loads the other (the store-buffering litmus), and with
+    // plain acq/rel BOTH sides may read stale values -- the waiter would park
+    // while the notifier skips.
+    self.generation.fetch_add(1, Ordering::SeqCst);
+    if self.parked.load(Ordering::SeqCst) == 0 {
+      // No-waiter fast path: nobody is parked or committed to parking (any
+      // in-flight waiter that missed this bump will see it at W2).
+      return;
     }
+    // Slow path: serialize with the waiter's [W1..W3] critical section so the
+    // notification cannot fall between its re-check and its wait.
+    drop(self.lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner));
     self.condvar.notify_all();
   }
 
   /// Park until the generation moves past `observed`. If a `notify` already
   /// raced ahead (generation changed) this returns immediately, preventing a
-  /// lost wakeup between the caller's last queue check and this park.
+  /// lost wakeup between the caller's last queue check and this park. See the
+  /// interleaving argument in [`Self::notify`] for why the `parked` increment
+  /// must precede the generation re-check (both under `lock`).
   fn wait_if_unchanged(&self, observed: u64) {
-    let generation = self.generation.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    if *generation == observed {
-      let guard = self.condvar.wait(generation).unwrap_or_else(std::sync::PoisonError::into_inner);
+    let guard = self.lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    // W1: become visible to `notify`'s fast-path check...
+    self.parked.fetch_add(1, Ordering::SeqCst);
+    // W2: ...then re-check the generation.
+    if self.generation.load(Ordering::SeqCst) == observed {
+      // W3: wait atomically releases `lock`.
+      let guard = self.condvar.wait(guard).unwrap_or_else(std::sync::PoisonError::into_inner);
+      drop(guard);
+    } else {
       drop(guard);
     }
+    // May momentarily overcount from a notifier's perspective (we decrement
+    // after waking); that only sends a notifier down the slow path, never
+    // skips a required wake.
+    self.parked.fetch_sub(1, Ordering::SeqCst);
   }
 }
 
@@ -1304,6 +1359,121 @@ mod tests {
         "RD-1 (a): parked pool drivers were not woken after a post-park schedule() ({error})"
       ),
     }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn coop_signal_notify_with_no_parked_waiters_skips_the_lock() {
+    // Wake-path (a): with `parked == 0`, `notify` must bump the generation and
+    // return WITHOUT touching the internal mutex/condvar (the no-waiter fast
+    // path). Proxy for "did not take the mutex": the test HOLDS the signal's
+    // internal lock the whole time; a fast-path notify completes anyway, while
+    // (control) a notify issued with a fake parked waiter registered must take
+    // the slow path and block on that held lock until it is released.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let signal = Arc::new(CoopSignal::default());
+    let before = signal.generation();
+
+    // Hold the internal lock on this thread for the whole scenario.
+    let guard = signal.lock.lock().unwrap();
+
+    // Fast path: parked == 0 -> notify must complete although the lock is held.
+    let (done_tx, done_rx) = mpsc::channel();
+    let notifier = {
+      let signal = Arc::clone(&signal);
+      std::thread::spawn(move || {
+        signal.notify();
+        done_tx.send(()).unwrap();
+      })
+    };
+    done_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("notify with parked == 0 must skip the lock (no-waiter fast path)");
+    notifier.join().unwrap();
+    assert_eq!(
+      signal.generation(),
+      before + 1,
+      "the generation bump is unconditional even on the fast path"
+    );
+
+    // Control: with parked > 0 the SAME held lock must block notify (slow
+    // path). This proves the fast path above genuinely skipped the lock rather
+    // than notify never locking at all.
+    signal.parked.fetch_add(1, Ordering::SeqCst);
+    let (done_tx, done_rx) = mpsc::channel();
+    let notifier = {
+      let signal = Arc::clone(&signal);
+      std::thread::spawn(move || {
+        signal.notify();
+        done_tx.send(()).unwrap();
+      })
+    };
+    assert!(
+      done_rx.recv_timeout(Duration::from_millis(300)).is_err(),
+      "notify with parked > 0 must take the slow path (block on the held lock)"
+    );
+    drop(guard);
+    done_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("slow-path notify must complete once the lock is released");
+    notifier.join().unwrap();
+    signal.parked.fetch_sub(1, Ordering::SeqCst);
+    assert_eq!(signal.generation(), before + 2, "the slow path also bumps the generation");
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn coop_signal_notify_vs_park_interleaving_loses_no_wakeups() {
+    // Wake-path (a) stress: N rounds of {producer: publish work, notify()}
+    // racing {consumer: capture generation, check work, wait_if_unchanged}.
+    // This walks the schedule-vs-park interleaving at every offset the OS
+    // scheduler produces; a single lost wakeup parks the consumer forever with
+    // work pending, and the bounded recv_timeout turns that into a loud
+    // failure instead of a hung suite. (No loom in this repo; std threads.)
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    const ROUNDS: usize = 20_000;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let signal = Arc::new(CoopSignal::default());
+    let work = Arc::new(AtomicBool::new(false));
+
+    let consumer = {
+      let signal = Arc::clone(&signal);
+      let work = Arc::clone(&work);
+      std::thread::spawn(move || {
+        for _ in 0..ROUNDS {
+          loop {
+            // Capture the generation BEFORE the work check, mirroring
+            // `cooperative_block_on`'s capture-before-poll/drain.
+            let generation = signal.generation();
+            if work.swap(false, Ordering::SeqCst) {
+              break;
+            }
+            signal.wait_if_unchanged(generation);
+          }
+        }
+        done_tx.send(()).unwrap();
+      })
+    };
+
+    for _ in 0..ROUNDS {
+      work.store(true, Ordering::SeqCst);
+      signal.notify();
+      // Wait until the consumer took this round's work before publishing the
+      // next, so exactly ROUNDS wakeups must all arrive.
+      while work.load(Ordering::SeqCst) {
+        std::hint::spin_loop();
+      }
+    }
+
+    done_rx
+      .recv_timeout(Duration::from_secs(30))
+      .expect("a notify()-side wakeup was lost: the consumer is parked with work pending");
+    consumer.join().unwrap();
   }
 
   #[cfg(not(target_family = "wasm"))]

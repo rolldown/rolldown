@@ -193,6 +193,12 @@ fn render_chunk_content<'code>(
       .as_ref()
       .unwrap();
 
+    // The concatenated closure holds the bodies of every module in the group. If the group's
+    // entry is TLA-tainted (has top-level `await`, or awaits a TLA importee's `init` call), those
+    // `await`s land inside this closure, so it must be `async`. This mirrors the flag threaded
+    // into `make_esm_wrapper_stmt` for the non-concatenated wrapper.
+    let is_async = ctx.link_output.metas[group.entry].is_tla_or_contains_tla_dependency;
+
     source_joiner.append_source(hoisted_fns);
     if !hoisted_vars.is_empty() {
       source_joiner.append_source(concat_string!("var ", hoisted_vars, ";"));
@@ -210,7 +216,7 @@ fn render_chunk_content<'code>(
         String::new()
       },
       if is_pife_for_module_wrappers_enabled { "(" } else { "" },
-      "() => {"
+      if is_async { "async () => {" } else { "() => {" }
     ));
     // we render each module in the group by exec order.
     group.modules.iter().for_each(|module_idx| {

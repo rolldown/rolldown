@@ -77,7 +77,11 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
     .filter_map(|token| {
       let original_token =
         sourcemap_and_lookup_table.iter().try_fold(token, |token, (sourcemap, lookup_table)| {
-          sourcemap.lookup_source_view_token(
+          // Use the approximating lookup: when a token's position falls before the first token
+          // on its line in the previous map (e.g. an indented line whose first token sits after
+          // the indent), clamp to that first token instead of dropping the mapping. Matches
+          // Rollup's `collapseSourcemaps` `traceSegment`. See rolldown#10070.
+          sourcemap.lookup_source_view_token_approx(
             lookup_table,
             token.get_src_line(),
             token.get_src_col(),

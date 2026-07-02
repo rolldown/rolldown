@@ -309,3 +309,6 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+[patch.crates-io]
+oxc_sourcemap = { git = "https://github.com/hyf0/oxc-sourcemap.git", branch = "fix/lookup-token-approx" }

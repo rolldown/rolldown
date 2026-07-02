@@ -1953,8 +1953,7 @@ dependencies = [
 [[package]]
 name = "oxc_sourcemap"
 version = "8.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ac6db7d8c33f46a0b9ebb702c077364abcd6b64c3a3a97bb86b9f5b3554833c"
+source = "git+https://github.com/hyf0/oxc-sourcemap.git?branch=fix%2Flookup-token-approx#34c65a72de55a69d15867e90985aaa7146dc4d1f"
 dependencies = [
  "base64-simd",
  "json-escape-simd",

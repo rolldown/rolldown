@@ -119,10 +119,15 @@ so the codegen checks are arranged as follows:
   native builds leave a clean tree and CI's "Check no diff" in
   `reusable-native-build.yml` keeps full coverage of everything else,
   including the threaded node loader.
-- The Node Validation job in `ci.yml` restores `packages/rolldown/src` after
-  `just build-browser` (a single-thread build that regenerates threadless
-  loaders plus a feature-gated `binding.d.cts` by design) before its
-  `git diff --exit-code`, which guards the `@rolldown/debug` generated code.
+- The Node Validation job in `ci.yml` asserts a drift allowlist after
+  `just build-browser` (a single-thread build that by design regenerates
+  exactly two committed files: a threadless `rolldown-binding.wasi.cjs` and a
+  feature-gated `binding.d.cts`): it diffs `packages/rolldown/src`, fails —
+  printing the unexpected file list and their diffs — if anything outside
+  that two-file allowlist changed, and restores only the changed allowlisted
+  files. This keeps the job's `git diff --exit-code` (which guards the
+  `@rolldown/debug` generated code) from being blinded to unexpected
+  browser-build codegen drift, instead of blanket-restoring the directory.
 - The threadless-ness of the single-thread loaders themselves is guarded by
   `scripts/misc/check-wasi-threadless.mjs` in the WASI workflow, right after
   `just build-rolldown-wasi-single`.

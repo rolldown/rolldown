@@ -557,6 +557,10 @@ impl LinkStage<'_> {
       meta.is_included = is_module_included_vec.has_bit(module_idx);
     }
 
+    // In testing builds (or with ROLLDOWN_VALIDATE_INCLUSION=1), verify the settled inclusion
+    // results uphold the "no reference to a dropped binding" contract; see `validate_inclusion`.
+    super::validate_inclusion::validate_statement_inclusion(self);
+
     tracing::trace!(
       "included statements {:#?}",
       self

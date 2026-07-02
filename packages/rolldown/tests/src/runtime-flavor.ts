@@ -23,7 +23,8 @@ export const isAsyncRuntimeBuild: boolean = (() => {
     configureAsyncRuntime({});
     return true;
   } catch (error) {
-    return !String((error as Error)?.message ?? error)
-      .includes('built without the `async-runtime` feature');
+    return !String((error as Error)?.message ?? error).includes(
+      'built without the `async-runtime` feature',
+    );
   }
 })();

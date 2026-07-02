@@ -103,6 +103,39 @@ test-node-hmr-only *args:
 test-vite: # We don't use `test-node-vite` because it's not expected to run in `just test-node`.
   vp run --filter vite-tests test
 
+# Run the scheduler unit tests plus the node suite on both flavors of the
+# shared async runtime. Requires `just build-rolldown-async-runtime` first.
+#
+# The single-thread (`ROLLDOWN_RUNTIME=single`) lane runs under an EXTERNAL
+# watchdog: when the CurrentThread executor's block_on-over-JS hazard fires
+# (a `block_on` that transitively awaits a JS continuation deadlocks the
+# thread it parks — see rolldown_utils::async_runtime), the whole JS event
+# loop freezes, so vitest's own test timeouts can never fire. Without the
+# watchdog a hazard regression would hang CI until the job-level timeout.
+# GNU `timeout` is guaranteed on ubuntu runners (coreutils); on macOS it may
+# be absent or spelled `gtimeout` (brew coreutils), so local runs fall back
+# to no watchdog instead of failing the recipe.
+[unix]
+test-async-runtime:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cargo test -p rolldown_utils --features async-runtime
+  watchdog=""
+  if command -v timeout >/dev/null 2>&1; then
+    watchdog="timeout --kill-after=60 1200"
+  elif command -v gtimeout >/dev/null 2>&1; then
+    watchdog="gtimeout --kill-after=60 1200"
+  else
+    echo "warning: GNU timeout not found; running the single-thread lane without a hazard watchdog" >&2
+  fi
+  status=0
+  ROLLDOWN_RUNTIME=single $watchdog vp run --filter rolldown-tests test:main || status=$?
+  if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
+    echo "error: single-thread lane killed by the 20min watchdog — this is the signature of the block_on-over-JS hazard (frozen JS event loop; vitest timeouts cannot fire). Look for a new block_on site that awaits a JS callback on the CurrentThread flavor." >&2
+  fi
+  [ "$status" -eq 0 ] || exit "$status"
+  vp run --filter rolldown-tests test:main
+
 # --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.
 
 # Run both Rolldown's tests and Rollup's test suite without building Rolldown.
@@ -197,6 +230,17 @@ build-rolldown-test-dev-server:
 # Build `rolldown` located in `packages/rolldown` itself and its `.wasm` binding for WASI.
 build-rolldown-wasi:
   vp run --filter rolldown build-wasi:debug
+
+# Build `rolldown` and its native `.node` binding with the shared async
+# runtime (`--no-default-features --features async-runtime`) instead of tokio.
+# The feature build regenerates two committed files: `binding.d.cts` (doc
+# comments follow the compiled cfg arm) and the browser WASI loader (the same
+# expected drift `build-rolldown` restores — see its comment). Restore both so
+# the recipe leaves a clean tree.
+build-rolldown-async-runtime:
+  vp run --filter rolldown build-binding --no-default-features --features async-runtime
+  vp run --filter rolldown build-js-glue
+  git checkout -- packages/rolldown/src/binding.d.cts packages/rolldown/src/rolldown-binding.wasi-browser.js
 
 # Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in release mode.
 build-rolldown-release:

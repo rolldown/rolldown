@@ -15,8 +15,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   chunk_graph::ChunkGraph,
   stages::link_stage::{
-    IncludeContext, SymbolIncludeReason, compute_on_demand_side_effect_stmts,
-    include_runtime_symbol, include_symbol,
+    IncludeContext, SymbolIncludeReason, compute_body_demand_keys, include_runtime_symbol,
+    include_symbol,
   },
   types::linking_metadata::{
     LinkingMetadata, LinkingMetadataVec, included_info_to_linking_metadata_vec,
@@ -1026,7 +1026,7 @@ impl GenerateStage<'_> {
     // Replay the link-stage inclusion semantics: side-effectful statements of
     // user-declared side-effect-free modules join only through body demand.
     // Already-included statements make the replayed edges no-ops.
-    let mut on_demand_side_effect_stmts = compute_on_demand_side_effect_stmts(
+    let body_demand_keys = compute_body_demand_keys(
       &self.link_output.module_table.modules,
       &self.link_output.stmt_infos,
       &self.link_output.symbol_db,
@@ -1055,7 +1055,8 @@ impl GenerateStage<'_> {
       inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
       entry_module_idxs: &self.link_output.user_defined_entry_modules,
-      on_demand_side_effect_stmts: &mut on_demand_side_effect_stmts,
+      body_demand_keys: &body_demand_keys,
+      body_demand_swept: FxHashSet::default(),
       pending: Vec::new(),
     };
 

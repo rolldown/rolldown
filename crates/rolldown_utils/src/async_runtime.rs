@@ -103,14 +103,21 @@ impl RuntimeOptions {
 pub const PARK_DEADLINE_ENV: &str = "ROLLDOWN_PARK_DEADLINE_MS";
 
 /// True on builds where no second thread can EVER deliver a wake to a parked
-/// `block_on`: wasm without the `atomics` target feature (the single-thread
-/// `wasm32-wasip1` build and `wasm32-unknown-unknown`). On such a build a
-/// CurrentThread park decision with an empty queue and no pending wake token
-/// is a PROVABLE deadlock (R2). The threaded wasi build
+/// `block_on`: every wasm build except the threaded WASI target (i.e. the
+/// single-thread `wasm32-wasip1` build and `wasm32-unknown-unknown`). On such
+/// a build a CurrentThread park decision with an empty queue and no pending
+/// wake token is a PROVABLE deadlock (R2). The threaded wasi build
 /// (`wasm32-wasip1-threads`) has real OS threads, so its parks are not
 /// provably dead and fall under the optional deadline detection instead, like
 /// native builds.
-const THREADLESS_BUILD: bool = cfg!(all(target_family = "wasm", not(target_feature = "atomics")));
+///
+/// `rolldown_wasi_threads` is emitted by this crate's build.rs for the exact
+/// `wasm32-wasip1-threads` cargo TARGET. It is NOT derivable from built-in
+/// cfgs: on current rustc the two WASI targets expose identical cfg sets --
+/// `cfg!(target_feature = "atomics")` is false even on the threads target
+/// (verified empirically; see rolldown_binding/build.rs, which uses the same
+/// mechanism for its capability report).
+const THREADLESS_BUILD: bool = cfg!(all(target_family = "wasm", not(rolldown_wasi_threads)));
 
 #[derive(Debug, Clone)]
 pub struct RuntimeConfigError(String);

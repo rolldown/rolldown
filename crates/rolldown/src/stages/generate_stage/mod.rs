@@ -153,6 +153,8 @@ impl<'a> GenerateStage<'a> {
 
     self.finalized_module_namespace_ref_usage();
 
+    self.compute_retained_export_symbols();
+
     self.compute_cross_chunk_links(&mut chunk_graph);
 
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);

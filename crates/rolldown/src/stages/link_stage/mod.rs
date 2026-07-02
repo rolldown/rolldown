@@ -6,8 +6,9 @@ use oxc_index::IndexVec;
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
   ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, EntryPointKind, FlatOptions, ImportKind,
-  ModuleIdx, ModuleTable, PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
-  UsedExternalSymbols, UsedSymbolRefs, dynamic_import_usage::DynamicImportExportsUsage,
+  ModuleIdx, ModuleTable, PreserveEntrySignatures, RetainedExportSymbols, RuntimeModuleBrief,
+  SymbolRef, SymbolRefDb, UsedExternalSymbols, UsedSymbolRefs,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 #[cfg(target_family = "wasm")]
@@ -70,6 +71,8 @@ pub struct LinkStageOutput {
   pub errors: Vec<BuildDiagnostic>,
   pub used_symbol_refs: UsedSymbolRefs,
   pub used_external_symbols: UsedExternalSymbols,
+  /// See [`RetainedExportSymbols`]; empty until the generate stage projects it.
+  pub retained_export_symbols: RetainedExportSymbols,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
@@ -259,6 +262,7 @@ impl<'a> LinkStage<'a> {
         errors: self.errors,
         used_symbol_refs: self.used_symbol_refs,
         used_external_symbols: self.used_external_symbols,
+        retained_export_symbols: RetainedExportSymbols::default(),
         dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
         safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
         external_import_namespace_merger: self.external_import_namespace_merger,

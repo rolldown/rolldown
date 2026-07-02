@@ -52,7 +52,7 @@ impl GenerateStage<'_> {
             file_emitter: &self.plugin_driver.file_emitter,
             constant_value_map: &self.link_output.global_constant_symbol_map,
             safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
-            used_symbol_refs: &self.link_output.used_symbol_refs,
+            retained_export_symbols: &self.link_output.retained_export_symbols,
             resolved_paths: self.resolved_paths.as_ref(),
             has_enum_inlining,
           };

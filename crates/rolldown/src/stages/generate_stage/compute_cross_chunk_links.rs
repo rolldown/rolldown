@@ -696,7 +696,7 @@ impl GenerateStage<'_> {
           entry_module.canonical_exports(false).for_each(|(name, export)| {
             let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
             if !exported_chunk_symbols.contains_key(&export.symbol_ref)
-              || !self.link_output.used_symbol_refs.contains(&export.symbol_ref)
+              || !self.link_output.retained_export_symbols.contains(&export.symbol_ref)
             {
               // Rolldown supports tree-shaking on dynamic entries, so not all exports are used.
               return;
@@ -715,7 +715,7 @@ impl GenerateStage<'_> {
               let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
               // Use canonical ref for lookup since that's the key in exported_chunk_symbols
               if !exported_chunk_symbols.contains_key(&export_ref)
-                || !self.link_output.used_symbol_refs.contains(&export_ref)
+                || !self.link_output.retained_export_symbols.contains(&export_ref)
               {
                 return;
               }

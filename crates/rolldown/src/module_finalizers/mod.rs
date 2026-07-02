@@ -807,7 +807,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           .constant_value_map
           .get(&self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref))
           .is_some_and(|meta| !meta.commonjs_export);
-        if !self.ctx.used_symbol_refs.contains(&resolved_export.symbol_ref)
+        if !self.ctx.retained_export_symbols.contains(&resolved_export.symbol_ref)
           && !is_inlinable_constant
         {
           return None;

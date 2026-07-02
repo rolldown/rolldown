@@ -1194,10 +1194,10 @@ mod tests {
       // `ensure_drainer`) onto a pool worker, where it resolves to 42.
       let (gate_tx, gate_rx) = oneshot::channel::<usize>();
       let scheduler = Arc::clone(&executor);
-      let (runnable, task) = async_task::spawn(
-        async move { gate_rx.await.expect("gate sender dropped") },
-        move |r| scheduler.schedule(r),
-      );
+      let (runnable, task) =
+        async_task::spawn(async move { gate_rx.await.expect("gate sender dropped") }, move |r| {
+          scheduler.schedule(r)
+        });
       executor.schedule(runnable);
 
       // Releaser thread: opens the gate ONLY after the caller has parked (registered
@@ -1945,7 +1945,9 @@ mod tests {
         let tx = tx.clone();
         let scheduler = Arc::clone(executor);
         let (runnable, task) =
-          async_task::spawn(async move { tx.send(Some(i)).unwrap() }, move |r| scheduler.schedule(r));
+          async_task::spawn(async move { tx.send(Some(i)).unwrap() }, move |r| {
+            scheduler.schedule(r)
+          });
         executor.schedule(runnable);
         task.detach();
       }
@@ -2066,7 +2068,10 @@ mod tests {
     match b_done_rx.recv_timeout(Duration::from_secs(10)) {
       Ok(sum) => {
         b_runner.join().unwrap();
-        assert_eq!(sum, expected_sum, "Topology B (dedicated-thread consumer) produced the wrong sum");
+        assert_eq!(
+          sum, expected_sum,
+          "Topology B (dedicated-thread consumer) produced the wrong sum"
+        );
       }
       Err(error) => panic!(
         "Topology B (fixed shape) failed to complete within the bound ({error}): a dedicated-thread \

@@ -11,10 +11,7 @@
 /// Behaviour-identical to the previous inline `.parse::<usize>().ok().unwrap_or(default)`
 /// for every non-zero numeric input and for non-numeric / unset values.
 pub fn resolve_thread_count(raw: Option<String>, default: usize) -> usize {
-  raw
-    .and_then(|value| value.parse::<usize>().ok())
-    .filter(|&value| value != 0)
-    .unwrap_or(default)
+  raw.and_then(|value| value.parse::<usize>().ok()).filter(|&value| value != 0).unwrap_or(default)
 }
 
 #[cfg(test)]

@@ -69,9 +69,7 @@ describe('experimental async runtime API', () => {
     if (!isDefaultBuild) {
       return;
     }
-    expect(() => configureAsyncRuntime({ workerThreads: 2 })).toThrow(
-      FEATURE_DISABLED,
-    );
+    expect(() => configureAsyncRuntime({ workerThreads: 2 })).toThrow(FEATURE_DISABLED);
   });
 
   test('getAsyncRuntimeConfig returns MultiThread with positive thread counts', () => {

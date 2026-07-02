@@ -158,6 +158,41 @@ jobs:
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
+  native-async-runtime:
+    name: Native Async Runtime
+    needs: changes
+    if: ${{ needs.changes.outputs.node-changes == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          tools: just
+          cache-key: debug-build-async-runtime
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.12.0
+        with:
+          version: '0.2.1'
+          cache: true
+
+      - name: Build Rolldown with the shared async runtime
+        run: just build-rolldown-async-runtime
+
+      # Runs (1) the scheduler unit tests (their only CI home), then the node
+      # suite under (2) ROLLDOWN_RUNTIME=single and (3) the default
+      # multi-thread flavor. The single lane carries a 20min external watchdog
+      # inside the recipe: a block_on-over-JS hazard hang freezes the JS event
+      # loop so vitest timeouts can never fire — without it a regression would
+      # eat the runner until the job timeout above.
+      - name: Scheduler unit tests + node suite (single- and multi-thread flavors)
+        run: just test-async-runtime
+
   node-dev-server-test-windows:
     needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-dev-server-test.yml

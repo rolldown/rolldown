@@ -88,6 +88,12 @@ function normalizeError(error, locExpected) {
 		// `logSourcemapBroken` is emitted at chunk-collapse time and carries no id.
 		delete clone.id;
 	}
+	if (clone.code === 'INVALID_OPTION') {
+		// Rolldown attaches the offending chunk's module id(s) to invalid-filename
+		// diagnostics (#9994) to help locate the source; Rollup carries no such ids.
+		delete clone.id;
+		delete clone.ids;
+	}
 	for (const key in clone) {
 		if (clone[key] === undefined) {
 			delete clone[key];

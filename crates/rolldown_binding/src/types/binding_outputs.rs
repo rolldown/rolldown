@@ -124,6 +124,7 @@ pub fn to_binding_error(diagnostic: &BuildDiagnostic, cwd: std::path::PathBuf) -
         message: diag.to_color_string(),
         id: error.id(),
         exporter: error.exporter(),
+        ids: error.ids(),
         loc,
         pos,
       })

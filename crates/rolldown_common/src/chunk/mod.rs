@@ -4,9 +4,10 @@ use std::{
 };
 
 use crate::{
-  ChunkIdx, ChunkKind, FilenameTemplate, ImportRecordIdx, ModuleIdx, ModuleTable, NamedImport,
-  NormalModule, NormalizedBundlerOptions, OutputExports, PreserveEntrySignatures,
-  RenderedConcatenatedModuleParts, RollupPreRenderedChunk, RuntimeHelper, SymbolRef,
+  ChunkIdx, ChunkKind, FilenameSubstitutionContext, FilenameTemplate, ImportRecordIdx, ModuleId,
+  ModuleIdx, ModuleTable, NamedImport, NormalModule, NormalizedBundlerOptions, OutputExports,
+  PreserveEntrySignatures, RenderedConcatenatedModuleParts, RollupPreRenderedChunk, RuntimeHelper,
+  SymbolRef,
   chunk::types::{
     chunk_debug_info::ChunkDebugInfo, chunk_reason_type::ChunkReasonType, module_group::ModuleGroup,
   },
@@ -218,8 +219,22 @@ impl Chunk {
     });
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
+    // Pass chunk context so an invalid `[name]` substitution (e.g. a `../node_modules/...` name from
+    // an emitted/dynamic chunk that resolves outside the input base) can point users at the module
+    // that produced it instead of just reporting the offending string.
+    let substitution_context = FilenameSubstitutionContext {
+      facade_module_id: rollup_pre_rendered_chunk.facade_module_id.as_ref().map(ModuleId::as_str),
+      module_ids: &rollup_pre_rendered_chunk.module_ids,
+    };
+
     let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
+      .render(
+        Some(&chunk_name),
+        Some(options.format.as_str()),
+        None,
+        hash_replacer,
+        substitution_context,
+      )?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);

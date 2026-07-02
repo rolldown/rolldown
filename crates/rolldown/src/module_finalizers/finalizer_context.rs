@@ -59,8 +59,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
     ast.program.with_mut(move |fields| {
       let (oxc_program, alloc) = (fields.program, fields.allocator);
 
-      let module_namespace_included =
-        self.used_symbol_refs.contains(&self.module.namespace_object_ref);
+      let module_namespace_included = self.linking_info.namespace_included;
 
       let need_inline_json_prop = matches!(self.module.module_type, ModuleType::Json)
         && !self.module.exports_kind.is_commonjs()

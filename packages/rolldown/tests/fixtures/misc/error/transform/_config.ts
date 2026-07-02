@@ -1,8 +1,14 @@
+import { isWasiTest } from '@tests/runtime-flavor';
 import { join } from 'node:path';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 export default defineTest({
+  // KNOWN: wasm/emnapi error boundary — original JS plugin errors don't
+  // round-trip on the WASI binding (stack frames, custom props, the
+  // `[plugin my-plugin]` diagnostic prefix and the PLUGIN_ERROR code are
+  // lost). See fixtures/misc/error/load/_config.ts.
+  skip: isWasiTest,
   config: {
     plugins: [
       {

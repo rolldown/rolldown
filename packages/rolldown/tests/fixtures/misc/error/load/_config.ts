@@ -1,7 +1,16 @@
+import { isWasiTest } from '@tests/runtime-flavor';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 export default defineTest({
+  // KNOWN: wasm/emnapi error boundary. On the WASI binding the original JS
+  // error thrown by a plugin hook does not round-trip through the wasm
+  // boundary: napi-rs re-creates it via emnapi's `napi_create_error`, so the
+  // original stack frames (`at errorFn1/errorFn2`) and custom properties
+  // (`extraProp`) are lost and `errors[0].code` degrades from PLUGIN_ERROR to
+  // GenericFailure. Structured plugin-error propagation — the whole point of
+  // this fixture — is not functional on wasm.
+  skip: isWasiTest,
   config: {
     plugins: [
       {

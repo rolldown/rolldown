@@ -52,6 +52,14 @@ jobs:
       - name: Stability Test
         run: vp run --filter rolldown-tests test:stability
 
+      # Full node suite against the single-thread WASI binding (the dist is
+      # still wired to the wasi-single build from the step above). The wasm
+      # binding reports the CurrentThread flavor, so all `isSingleThread`
+      # skips apply; `ROLLDOWN_TEST_WASI=1` additionally gates the
+      # wasm-boundary-specific skips (see tests/src/runtime-flavor.ts).
+      - name: Node Test (single-thread WASI)
+        run: ROLLDOWN_TEST_WASI=1 vp run --filter rolldown-tests test:main
+
       # `@example/typescript` is excluded because its config enables `devtools`, which currently
       # panics under WASI when the writer tries to open its log file (crates/rolldown_devtools/src/writer.rs).
       # `@example/native-magic-string` is excluded because it depends on a native-only addon.

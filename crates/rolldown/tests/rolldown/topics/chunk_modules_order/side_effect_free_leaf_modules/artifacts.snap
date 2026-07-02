@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region a.js
+function dup() {
+	return "from-a";
+}
+//#endregion
+//#region z.js
+function dup$1() {
+	return "from-z";
+}
+//#endregion
+//#region main.js
+console.log(dup$1(), dup());
+//#endregion
+
+```

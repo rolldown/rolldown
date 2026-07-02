@@ -1,24 +1,19 @@
 use std::{
-  fmt, io,
+  io,
   path::{Path, PathBuf},
-  sync::Arc,
 };
-
-use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem, FileSystemOs, ResolveError};
 
 use crate::file_system::FileSystem;
 
-/// Operating System
-#[derive(Clone)]
-pub struct OsFileSystem(Arc<FileSystemOs>);
+/// Operating system file system — oxc-resolver's [`FileSystemOs`], re-exported.
+///
+/// rolldown's write-capable [`FileSystem`] trait is implemented directly on it below — allowed by
+/// the orphan rule because the trait is local to this crate. Using oxc-resolver's type directly
+/// (rather than a newtype wrapper) means rolldown's bundler resolver and oxc-resolver share a
+/// single `Fs` type instead of two.
+pub use oxc_resolver::FileSystemOs;
 
-impl fmt::Debug for OsFileSystem {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "OsFileSystem")
-  }
-}
-
-impl FileSystem for OsFileSystem {
+impl FileSystem for FileSystemOs {
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     std::fs::remove_dir_all(path)
   }
@@ -47,35 +42,5 @@ impl FileSystem for OsFileSystem {
 
   fn remove_file(&self, path: &Path) -> io::Result<()> {
     std::fs::remove_file(path)
-  }
-}
-
-impl OxcResolverFileSystem for OsFileSystem {
-  fn new(yarn_pnp: bool) -> Self {
-    Self(Arc::new(FileSystemOs::new(yarn_pnp)))
-  }
-
-  fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
-    self.0.read(path)
-  }
-
-  fn read_to_string(&self, path: &Path) -> io::Result<String> {
-    self.0.read_to_string(path)
-  }
-
-  fn metadata(&self, path: &Path) -> io::Result<FileMetadata> {
-    self.0.metadata(path)
-  }
-
-  fn symlink_metadata(&self, path: &Path) -> io::Result<FileMetadata> {
-    self.0.symlink_metadata(path)
-  }
-
-  fn read_link(&self, path: &Path) -> Result<PathBuf, ResolveError> {
-    self.0.read_link(path)
-  }
-
-  fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
-    self.0.canonicalize(path)
   }
 }

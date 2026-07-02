@@ -16,7 +16,7 @@ use arcstr::ArcStr;
 use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
-use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_fs::{FileSystem, FileSystemOs};
 use rolldown_plugin::{
   HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
@@ -28,7 +28,7 @@ use sugar_path::SugarPath;
   clippy::struct_field_names,
   reason = "`bundle_span` emphasizes this's a span for this bundle, not a session level span"
 )]
-pub struct Bundle<Fs: FileSystem + Clone + 'static = OsFileSystem> {
+pub struct Bundle<Fs: FileSystem + Clone + 'static = FileSystemOs> {
   pub(crate) fs: Fs,
   pub(crate) options: SharedOptions,
   pub(crate) resolver: SharedResolver<Fs>,

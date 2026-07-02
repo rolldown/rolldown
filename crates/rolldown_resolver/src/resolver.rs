@@ -14,7 +14,7 @@ use rolldown_common::{
   ImportKind, ModuleDefFormat, ModuleId, PackageJson, Platform, ResolveOptions, ResolvedId,
   TsConfig,
 };
-use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_fs::{FileSystem, FileSystemOs};
 use rolldown_utils::dashmap::FxDashMap;
 use sugar_path::SugarPath as _;
 
@@ -22,7 +22,7 @@ use crate::resolver_config::ResolverConfig;
 
 #[derive(Debug)]
 #[expect(clippy::struct_field_names)]
-pub struct Resolver<Fs: FileSystem = OsFileSystem> {
+pub struct Resolver<Fs: FileSystem = FileSystemOs> {
   fs: Fs,
   cwd: PathBuf,
   default_resolver: ResolverGeneric<Fs>,

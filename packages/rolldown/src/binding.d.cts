@@ -3095,6 +3095,14 @@ export interface PreRenderedChunk {
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 /**
+ * Install the host timer callback backing the shared async runtime's
+ * CurrentThread timers (watch-mode debounce). Called once at import by the
+ * JS entry with `(ms) => new Promise((resolve) => setTimeout(resolve, ms))`.
+ * A no-op on the default `tokio-runtime` build (tokio owns its timer wheel).
+ */
+export declare function registerTimerHost(callback: (ms: number) => Promise<void>): void
+
+/**
  * Reset the async runtime metrics counters to zero.
  *
  * A no-op on the default `tokio-runtime` build.

@@ -176,6 +176,7 @@ module.exports.getAsyncRuntimeConfig = __napiModule.exports.getAsyncRuntimeConfi
 module.exports.getAsyncRuntimeMetrics = __napiModule.exports.getAsyncRuntimeMetrics
 module.exports.initTraceSubscriber = __napiModule.exports.initTraceSubscriber
 module.exports.registerPlugins = __napiModule.exports.registerPlugins
+module.exports.registerTimerHost = __napiModule.exports.registerTimerHost
 module.exports.resetAsyncRuntimeMetrics = __napiModule.exports.resetAsyncRuntimeMetrics
 module.exports.resolveTsconfig = __napiModule.exports.resolveTsconfig
 module.exports.shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime

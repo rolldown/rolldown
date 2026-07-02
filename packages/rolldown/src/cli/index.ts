@@ -1,4 +1,7 @@
 import process from 'node:process';
+// Side effect: registers the async-runtime timer host before any bundling
+// (watch mode's debounce timer needs it on the single-thread flavor).
+import '../timer-host';
 import { version } from '../../package.json';
 import { parseCliArguments } from './arguments';
 import { bundleWithCliOptions, bundleWithConfig } from './commands/bundle';

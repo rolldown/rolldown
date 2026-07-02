@@ -103,8 +103,9 @@ test-node-hmr-only *args:
 test-vite: # We don't use `test-node-vite` because it's not expected to run in `just test-node`.
   vp run --filter vite-tests test
 
-# Run the scheduler unit tests plus the node suite on both flavors of the
-# shared async runtime. Requires `just build-rolldown-async-runtime` first.
+# Run the scheduler unit tests plus the node and watcher suites on both
+# flavors of the shared async runtime. Requires
+# `just build-rolldown-async-runtime` first.
 #
 # The single-thread (`ROLLDOWN_RUNTIME=single`) lane arms the runtime's OWN
 # deadlock detection instead of the old external GNU-timeout watchdog: when
@@ -116,13 +117,22 @@ test-vite: # We don't use `test-node-vite` because it's not expected to run in `
 # panics with the typed `BlockOnDeadlock` diagnostic naming the offending
 # park — the lane fails fast and loud instead of hanging until a job-level
 # timeout. See rolldown_utils::async_runtime::BlockOnDeadlock.
+#
+# The watcher suite runs on both flavors since the runtime timer facility
+# landed: watch-mode debounce goes through `rolldown_utils::time::sleep_until`
+# (MultiThread heap driver / CurrentThread host-delegated setTimeout) instead
+# of tokio's reactor. Dev-engine (`dev-watch.test.ts`) tests are skipped on
+# the single flavor inside the test file (BindingDevEngine is out of scope
+# for CurrentThread), not here.
 [unix]
 test-async-runtime:
   #!/usr/bin/env bash
   set -euo pipefail
   cargo test -p rolldown_utils --features async-runtime
   ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:main
+  ROLLDOWN_RUNTIME=single ROLLDOWN_PARK_DEADLINE_MS=60000 vp run --filter rolldown-tests test:watcher
   vp run --filter rolldown-tests test:main
+  vp run --filter rolldown-tests test:watcher
 
 # --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.
 

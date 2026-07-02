@@ -12,12 +12,18 @@ use std::{future::Future, pin::Pin};
 
 #[cfg(feature = "async-runtime")]
 use napi::bindgen_prelude::{AsyncRuntime, create_custom_async_runtime};
+use napi::bindgen_prelude::{FnArgs, Promise};
 use napi_derive::napi;
 #[cfg(feature = "async-runtime")]
 use rolldown_utils::async_runtime::{
-  RuntimeFlavor, RuntimeMetricsSnapshot, RuntimeOptions, block_on_dyn, configure,
-  configured_options, metrics, reset_metrics, shutdown, spawn_detached,
+  RuntimeFlavor, RuntimeMetricsSnapshot, RuntimeOptions, TimerDriver, TimerId, block_on_dyn,
+  configure, configured_options, metrics, reset_metrics, set_timer_driver, shutdown,
+  spawn_detached,
 };
+
+use crate::types::js_callback::JsCallback;
+#[cfg(feature = "async-runtime")]
+use crate::types::js_callback::JsCallbackExt;
 
 #[cfg(feature = "async-runtime")]
 struct RolldownAsyncRuntime;
@@ -374,6 +380,94 @@ pub fn reset_async_runtime_metrics() {
 ///
 /// A no-op on the default `tokio-runtime` build.
 pub fn reset_async_runtime_metrics() {}
+
+/// Host timer driver for the shared runtime's CurrentThread flavor (timer
+/// intel §4(b)): `sleep_until` on the single-thread executor cannot park a
+/// helper thread (none exists on threadless wasm), so it delegates each timer
+/// to the host event loop through the JS callback registered at import --
+/// `(ms) => new Promise((resolve) => setTimeout(resolve, ms))`.
+///
+/// Per timer id: the FIRST `register` arms one host timeout via a detached
+/// relay task; re-registers (`Sleep` re-polls) only refresh the stored waker.
+/// The resolve-time map removal doubles as the cancellation check -- a
+/// `cancel`led (dropped) sleep's entry is gone, so the stale JS timeout fires
+/// into nothing (bounded leak: the timeout itself runs out on the JS side,
+/// which is at most the debounce delay for the watch coordinator's use).
+#[cfg(feature = "async-runtime")]
+struct JsTimerHost {
+  inner: std::sync::Arc<JsTimerHostInner>,
+}
+
+#[cfg(feature = "async-runtime")]
+struct JsTimerHostInner {
+  callback: JsCallback<FnArgs<(f64,)>, Promise<()>>,
+  pending: std::sync::Mutex<rustc_hash::FxHashMap<TimerId, std::task::Waker>>,
+}
+
+#[cfg(feature = "async-runtime")]
+impl JsTimerHostInner {
+  fn lock_pending(
+    &self,
+  ) -> std::sync::MutexGuard<'_, rustc_hash::FxHashMap<TimerId, std::task::Waker>> {
+    self.pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+  }
+}
+
+#[cfg(feature = "async-runtime")]
+impl TimerDriver for JsTimerHost {
+  fn register(&self, id: TimerId, deadline: std::time::Instant, waker: std::task::Waker) {
+    {
+      let mut pending = self.inner.lock_pending();
+      if let Some(slot) = pending.get_mut(&id) {
+        // Re-poll of a still-armed sleep: refresh the waker only.
+        *slot = waker;
+        return;
+      }
+      pending.insert(id, waker);
+    }
+    let ms = deadline.saturating_duration_since(std::time::Instant::now()).as_secs_f64() * 1000.0;
+    let inner = std::sync::Arc::clone(&self.inner);
+    spawn_detached(async move {
+      let result = async { inner.callback.invoke_async(FnArgs { data: (ms,) }).await?.await }.await;
+      if let Err(error) = result {
+        // Unreachable with the shipped glue (a bare setTimeout promise cannot
+        // reject); fail loud and still wake so the sleep re-arms with its
+        // remaining time instead of hanging silently.
+        eprintln!("rolldown: host timer callback failed: {error}");
+      }
+      let woken = inner.lock_pending().remove(&id);
+      if let Some(waker) = woken {
+        waker.wake();
+      }
+    });
+  }
+
+  fn cancel(&self, id: TimerId) {
+    let _ = self.inner.lock_pending().remove(&id);
+  }
+}
+
+#[cfg(feature = "async-runtime")]
+#[napi(ts_args_type = "callback: (ms: number) => Promise<void>")]
+/// Install the host timer callback backing the shared async runtime's
+/// CurrentThread timers (watch-mode debounce). Called once at import by the
+/// JS entry with `(ms) => new Promise((resolve) => setTimeout(resolve, ms))`.
+/// A no-op on the default `tokio-runtime` build (tokio owns its timer wheel).
+pub fn register_timer_host(callback: JsCallback<FnArgs<(f64,)>, Promise<()>>) {
+  set_timer_driver(std::sync::Arc::new(JsTimerHost {
+    inner: std::sync::Arc::new(JsTimerHostInner { callback, pending: std::sync::Mutex::default() }),
+  }));
+}
+
+#[cfg(not(feature = "async-runtime"))]
+#[napi(ts_args_type = "callback: (ms: number) => Promise<void>")]
+/// Install the host timer callback backing the shared async runtime's
+/// CurrentThread timers (watch-mode debounce). Called once at import by the
+/// JS entry with `(ms) => new Promise((resolve) => setTimeout(resolve, ms))`.
+/// A no-op on the default `tokio-runtime` build (tokio owns its timer wheel).
+pub fn register_timer_host(callback: JsCallback<FnArgs<(f64,)>, Promise<()>>) {
+  let _ = callback;
+}
 
 #[cfg(feature = "async-runtime")]
 #[napi_derive::module_init]

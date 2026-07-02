@@ -9,12 +9,14 @@ use std::{
   panic::{AssertUnwindSafe, catch_unwind},
   pin::Pin,
   sync::{
-    Arc, LazyLock, Mutex,
+    Arc, LazyLock, Mutex, OnceLock,
     atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
   },
-  task::{Context, Poll},
+  task::{Context, Poll, Waker},
   time::{Duration, Instant},
 };
+
+use rustc_hash::FxHashMap;
 
 use async_task::{Runnable, Task};
 use futures::FutureExt;
@@ -454,6 +456,14 @@ struct CurrentThreadExecutor {
   // production build.
   threadless: bool,
   park_deadline: Option<Duration>,
+  // HOST-driver timers currently armed on this runtime (timer intel §4(b)).
+  // A pending entry is a future wake token -- the host event loop's timer
+  // callback -- so the threadless CERTAIN check below must not declare a park
+  // provably dead while one exists, and the deadline verdict treats a LIVE
+  // wait (deadline still in the future) as a legitimate park. Shared with the
+  // `Sleep` futures minted for this executor (they insert at creation and
+  // remove on completion/drop).
+  host_timers: Arc<HostTimerRegistry>,
 }
 
 impl CurrentThreadExecutor {
@@ -481,6 +491,7 @@ impl CurrentThreadExecutor {
       metrics,
       threadless,
       park_deadline,
+      host_timers: Arc::new(HostTimerRegistry::default()),
     }
   }
 
@@ -558,7 +569,11 @@ impl CurrentThreadExecutor {
       if parker.consume_permit() {
         continue;
       }
-      if self.threadless {
+      // INTERACTION B (timer facility): a pending HOST timer is a future
+      // wake-token source -- the host event loop's timer callback will wake
+      // this runtime -- so the park is no longer PROVABLY dead. Park instead
+      // of panicking; the optional deadline detection below still bounds it.
+      if self.threadless && !self.host_timers.has_pending() {
         std::panic::panic_any(BlockOnDeadlock::current_thread_certain());
       }
       match self.park_deadline {
@@ -574,8 +589,19 @@ impl CurrentThreadExecutor {
             // closed, and the fingerprint read inside `park_with_deadline`
             // is stale by now. Re-check both before declaring death; a hit
             // means the park was healthy -- continue the loop (re-poll,
-            // drain, fresh full window on the next park).
-            if parker.consume_permit() || self.metrics.progress_fingerprint() != armed {
+            // drain, fresh full window on the next park). A LIVE host-timer
+            // wait (timer facility, interaction A's CT analog) also vetoes,
+            // re-checked LAST -- arming a host timer bumps no progress
+            // counter, so it is invisible to the fingerprint read: waiting
+            // out a host timer with zero progress is legitimate, its wake is
+            // scheduled on the host loop. `deadline` doubles as the grace
+            // for host firing lag; a timer past due by more than one full
+            // window without firing is the frozen-JS-loop signature this
+            // detection exists for, so it stops vetoing.
+            if parker.consume_permit()
+              || self.metrics.progress_fingerprint() != armed
+              || self.host_timers.has_live_wait(deadline)
+            {
               continue;
             }
             std::panic::panic_any(BlockOnDeadlock::current_thread_deadline(deadline));
@@ -743,6 +769,10 @@ struct MultiThreadExecutor {
   // a deadline there would panic healthy production runs. Off unless
   // configured via `RuntimeOptions::park_deadline` / `PARK_DEADLINE_ENV`.
   park_deadline: Option<Duration>,
+  // Runtime-owned timer heap plus the timekeeper role state (timer intel
+  // §4(a)); serviced by the dedicated timekeeper job and by timer-bounded
+  // cooperative parks. See the timer section below.
+  timers: TimerHeap,
   metrics: Arc<RuntimeMetrics>,
 }
 
@@ -775,6 +805,7 @@ impl MultiThreadExecutor {
       max_drainers: options.worker_threads,
       max_blocking: options.max_blocking_tasks.min(options.worker_threads),
       park_deadline: options.park_deadline.or_else(park_deadline_from_env),
+      timers: TimerHeap::default(),
       metrics,
     })
   }
@@ -1204,6 +1235,29 @@ impl MultiThreadExecutor {
         self.parked_drivers.deregister(&parker);
         continue;
       }
+      // TIMER-BOUNDED PARK (timer facility, interaction A): while any heap
+      // timer is pending, this park is a TIMER WAIT, not a deadlock
+      // candidate -- the wall clock is a guaranteed wake source -- so it uses
+      // its own bounded primitive instead of `park`/`park_with_deadline` and
+      // fires whatever came due on the way out. An armed park deadline is
+      // deliberately NOT evaluated during a timer wait: the fire schedules
+      // the woken task (fingerprint progress), and the next timerless park
+      // arms a fresh full window, so genuine-deadlock detection is delayed
+      // past the timer, never lost. This is also load-bearing for liveness:
+      // on a 1-worker pool whose only thread is parked HERE, the timekeeper
+      // job has no free thread to run on, so this driver must fire due
+      // timers itself. (A timer registered between the deadline read and the
+      // park re-arms this parker through `note_earlier_timer`'s
+      // `wake_one` -- we are registered -- or wakes the timekeeper.)
+      if let Some(next) = self.next_timer_deadline() {
+        let now = Instant::now();
+        if next > now {
+          parker.park_timeout(next - now);
+        }
+        self.parked_drivers.deregister(&parker);
+        self.fire_due_timers();
+        continue;
+      }
       match self.park_deadline {
         None => parker.park(),
         Some(deadline) => {
@@ -1231,6 +1285,13 @@ impl MultiThreadExecutor {
               //     under the queue mutex BEFORE `wake_one` popped us, so
               //     even if its `unpark` is still in flight the queue
               //     re-check observes it;
+              //   * pending timers: arming a timer bumps NO progress counter
+              //     by design, so a registration racing this already-
+              //     committed park (it read an empty heap before parking) is
+              //     invisible to every other re-check -- yet its wake (the
+              //     fire) is wall-clock-guaranteed, so this park is healthy.
+              //     The loop then re-parks TIMER-BOUNDED (see above) and
+              //     fires the timer itself if needed;
               //   * fingerprint: §8.5's premise is ZERO progress, and the
               //     read inside `park_with_deadline` is stale by the time we
               //     get here -- re-read as the LAST step. Both ENQUEUE
@@ -1255,6 +1316,17 @@ impl MultiThreadExecutor {
               #[cfg(test)]
               run_deadline_verdict_test_hook();
               if self.metrics.progress_fingerprint() != armed {
+                continue;
+              }
+              // Pending-timer re-check LAST, after even the fingerprint:
+              // arming a timer bumps no counter, so it is the one healthy
+              // wake source that can land after every earlier re-check and
+              // still be invisible to the fingerprint read above. (A
+              // registration racing the instructions after this line is the
+              // same inherent residue class as the bare future-wake -- and
+              // its timer is still served: `note_earlier_timer` claims the
+              // timekeeper independently of this driver.)
+              if self.next_timer_deadline().is_some() {
                 continue;
               }
               std::panic::panic_any(BlockOnDeadlock::multi_thread_cooperative(deadline));
@@ -1662,6 +1734,608 @@ impl ParkedDrivers {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Runtime timer facility (timer intel §4): `sleep_until` without a tokio
+// reactor. Two drivers, selected by runtime flavor:
+//
+//   * MultiThread: a runtime-owned binary heap on the executor plus a
+//     dedicated TIMEKEEPER -- one pool job that parks with `park_timeout`
+//     until the earliest deadline and doubles as a DRAINER while awake, so
+//     queued work still runs when `worker_threads = 1` (the timekeeper's
+//     parker sits in `parked_drivers`, so queue-wakes reach it like any
+//     cooperative driver). Cooperative re-entrant `block_on` parks are ALSO
+//     bounded by the earliest deadline: on a 1-worker pool whose only thread
+//     is parked inside `cooperative_block_on`, the timekeeper job has no free
+//     thread to run on, so the parked driver itself must fire due timers.
+//   * CurrentThread: timers are DELEGATED TO THE HOST event loop through an
+//     injected [`TimerDriver`] (the Node binding registers a setTimeout-based
+//     driver at import; wasi-single uses the same path). A CT runtime without
+//     a registered driver fails LOUD at `sleep_until` -- never a silent hang.
+//
+// DEADLOCK-DETECTION INTERACTIONS (the Task-4 machinery above):
+//   * MT: a wait on a pending timer is never a deadlock candidate -- the wall
+//     clock is a guaranteed wake source. Timer waits therefore use their own
+//     primitive (a plain `park_timeout` bounded by the earliest deadline),
+//     NEVER `park_with_deadline`, so an armed ROLLDOWN_PARK_DEADLINE_MS
+//     shorter than the next timer cannot fire on a legitimate timer wait; the
+//     fire itself schedules the woken task, which IS fingerprint progress for
+//     every other parked driver. The expiry VERDICT additionally re-checks
+//     the heap (see `cooperative_block_on`): arming a timer bumps no progress
+//     counter by design, so a registration racing an already-committed
+//     deadline park must veto the panic there.
+//   * CT certain check (threadless): a pending HOST timer is a future wake
+//     token (the JS setTimeout callback), so the park is no longer PROVABLY
+//     dead -- the check counts pending host timers and parks instead of
+//     panicking. The CT deadline verdict counts only LIVE waits (deadline
+//     still in the future): a pending timer whose deadline passed without
+//     firing is the frozen-JS-event-loop signature that the deadline-based
+//     detection exists to catch, so it must NOT suppress the panic.
+
+pub type TimerId = u64;
+
+/// Process-global id source for [`Sleep`] futures (both drivers).
+static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(0);
+
+/// Seam for host-delegated timers (timer intel §4(b)): the CurrentThread
+/// flavor cannot park a helper thread on a threadless build, so it delegates
+/// `sleep_until` to the host event loop through this trait. The Node binding
+/// installs a `setTimeout`-based implementation via [`set_timer_driver`] at
+/// import.
+pub trait TimerDriver: Send + Sync + 'static {
+  /// Arm (or re-arm on re-poll) `waker` to fire at/after `deadline`. Called
+  /// once per [`Sleep`] poll: implementations must treat a repeated `id` as a
+  /// waker refresh, not a second timer.
+  fn register(&self, id: TimerId, deadline: Instant, waker: Waker);
+  /// Best-effort cancel (Drop of the [`Sleep`] future). A fire that already
+  /// raced ahead is acceptable (the woken task observes the sleep completed).
+  fn cancel(&self, id: TimerId);
+}
+
+/// The injected host timer driver (see [`TimerDriver`]). First registration
+/// wins; production registers exactly once from the JS entry at import.
+static HOST_TIMER_DRIVER: OnceLock<Arc<dyn TimerDriver>> = OnceLock::new();
+
+/// Install the host timer driver used by the CurrentThread flavor's
+/// `sleep_until`. Idempotent: only the first registration takes effect.
+pub fn set_timer_driver(driver: Arc<dyn TimerDriver>) {
+  let _ = HOST_TIMER_DRIVER.set(driver);
+}
+
+/// Pending HOST-driver timers armed on one CurrentThread executor, keyed by
+/// timer id with the armed deadline as the value. Maintained by the [`Sleep`]
+/// futures themselves (insert at FIRST POLL, exactly when `driver.register`
+/// arms the host timer -- an unpolled Sleep holds no wake-token; remove on
+/// completion/drop via [`HostTimerPendingGuard`]) and read by the CT deadlock
+/// detection -- see the interaction notes at the top of this section.
+#[derive(Default)]
+struct HostTimerRegistry {
+  timers: Mutex<FxHashMap<TimerId, Instant>>,
+}
+
+impl HostTimerRegistry {
+  fn insert(&self, id: TimerId, deadline: Instant) {
+    self.timers.lock().unwrap_or_else(std::sync::PoisonError::into_inner).insert(id, deadline);
+  }
+
+  fn remove(&self, id: TimerId) {
+    self.timers.lock().unwrap_or_else(std::sync::PoisonError::into_inner).remove(&id);
+  }
+
+  /// Any host timer armed at all? A wake-token source for the threadless
+  /// CERTAIN check: the host event loop will eventually run the timer
+  /// callback, so the park is not provably dead.
+  fn has_pending(&self) -> bool {
+    !self.timers.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty()
+  }
+
+  /// Any host timer whose deadline (plus `grace` for host firing lag) is
+  /// still in the future? Used by the CT deadline VERDICT: waiting out such a
+  /// timer with zero progress is legitimate. A timer past due by more than
+  /// `grace` that never fired is not -- that is the frozen-JS-event-loop
+  /// signature the deadline detection exists to catch, so it must not keep
+  /// suppressing the panic. Callers pass the armed park deadline as `grace`
+  /// (the detector's own granularity: firing lag within one window is
+  /// indistinguishable from an expiry racing the fire).
+  fn has_live_wait(&self, grace: Duration) -> bool {
+    let now = Instant::now();
+    self
+      .timers
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner)
+      .values()
+      .any(|deadline| *deadline + grace > now)
+  }
+}
+
+/// Removes this sleep's entry from its executor's [`HostTimerRegistry`] on
+/// drop, so completion AND cancellation (Sleep dropped by a `select!` losing
+/// arm) both retire the wake-token exactly once.
+struct HostTimerPendingGuard {
+  registry: Arc<HostTimerRegistry>,
+  id: TimerId,
+}
+
+impl Drop for HostTimerPendingGuard {
+  fn drop(&mut self) {
+    self.registry.remove(self.id);
+  }
+}
+
+/// Runtime-owned timer heap for the MultiThread executor (timer intel §4(a)).
+#[cfg(not(target_family = "wasm"))]
+#[derive(Default)]
+struct TimerHeap {
+  inner: Mutex<TimerHeapInner>,
+  /// Whether the dedicated timekeeper role is claimed (the job may still be
+  /// queued in rayon behind busy workers). Claim with compare_exchange before
+  /// spawning; release on timekeeper exit, then RE-CHECK the heap (the
+  /// release-then-recheck side of the registration race, mirroring
+  /// `register_timer`'s push-then-check-claim).
+  timekeeper_claimed: AtomicBool,
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[derive(Default)]
+struct TimerHeapInner {
+  /// Min-heap of (deadline, id). Entries whose id is no longer in `entries`
+  /// are stale (cancelled or already fired) and are discarded lazily on pop.
+  queue: std::collections::BinaryHeap<std::cmp::Reverse<(Instant, TimerId)>>,
+  entries: FxHashMap<TimerId, HeapTimerEntry>,
+  /// The parker of the CURRENT timekeeper job, once it started running.
+  /// `register_timer` unparks it when the earliest deadline moves up, so the
+  /// timekeeper re-arms (task requirement: re-arm-to-earlier re-wakes).
+  timekeeper_parker: Option<Arc<DriverParker>>,
+  /// Set by `shutdown_timers`: every pending entry has been drain-fired and
+  /// later registrations must fire immediately (a `Sleep` polled after
+  /// shutdown resolves early instead of parking a closing runtime forever).
+  closed: bool,
+}
+
+#[cfg(not(target_family = "wasm"))]
+struct HeapTimerEntry {
+  waker: Waker,
+  /// Shared with the owning [`Sleep`]: set (under the heap lock) when this
+  /// timer fires or the heap shuts down, so the woken poll returns `Ready`
+  /// even when the wall clock has not reached `deadline` (shutdown
+  /// drain-fire).
+  fired: Arc<AtomicBool>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl TimerHeapInner {
+  /// Earliest pending deadline, discarding stale heap tops on the way.
+  fn next_deadline(&mut self) -> Option<Instant> {
+    while let Some(std::cmp::Reverse((deadline, id))) = self.queue.peek().copied() {
+      if self.entries.contains_key(&id) {
+        return Some(deadline);
+      }
+      self.queue.pop();
+    }
+    None
+  }
+}
+
+/// Timekeeper-role exit path, as a drop guard so an unwinding
+/// `timekeeper_main` (should be impossible: all user code it runs is
+/// catch_unwind'd) can never strand the claim -- a stuck claim would silence
+/// every future timer. Order matters: clear the parker slot, RELEASE the
+/// claim, then re-check the heap and respawn if a registration raced the
+/// exit (it pushed its entry before checking the claim, so one side always
+/// observes the other).
+#[cfg(not(target_family = "wasm"))]
+struct TimekeeperRoleGuard<'a> {
+  executor: &'a Arc<MultiThreadExecutor>,
+  parker: &'a Arc<DriverParker>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Drop for TimekeeperRoleGuard<'_> {
+  fn drop(&mut self) {
+    {
+      let mut inner =
+        self.executor.timers.inner.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      if inner.timekeeper_parker.as_ref().is_some_and(|current| Arc::ptr_eq(current, self.parker)) {
+        inner.timekeeper_parker = None;
+      }
+    }
+    self.executor.timers.timekeeper_claimed.store(false, Ordering::Release);
+    if self.executor.next_timer_deadline().is_some() {
+      self.executor.ensure_timekeeper();
+    }
+  }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl MultiThreadExecutor {
+  /// Arm (or waker-refresh) heap timer `id` at `deadline`. `fired` is the
+  /// owning `Sleep`'s completion flag: set under the heap lock on fire and on
+  /// shutdown, and set here immediately when the heap is already closed (the
+  /// caller re-checks it after registering, so a post-shutdown poll resolves
+  /// instead of parking forever).
+  fn register_timer(
+    self: &Arc<Self>,
+    id: TimerId,
+    deadline: Instant,
+    waker: Waker,
+    fired: &Arc<AtomicBool>,
+  ) {
+    let became_earliest = {
+      let mut inner = self.timers.inner.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      if inner.closed || fired.load(Ordering::SeqCst) {
+        fired.store(true, Ordering::SeqCst);
+        return;
+      }
+      if let Some(entry) = inner.entries.get_mut(&id) {
+        // Re-poll of a still-armed sleep: refresh the waker, nothing else.
+        entry.waker = waker;
+        return;
+      }
+      let previous = inner.next_deadline();
+      inner.entries.insert(id, HeapTimerEntry { waker, fired: Arc::clone(fired) });
+      inner.queue.push(std::cmp::Reverse((deadline, id)));
+      previous.is_none_or(|previous| deadline < previous)
+    };
+    if became_earliest {
+      // A pre-existing earlier deadline already has the timekeeper (claim
+      // invariant: heap non-empty => role claimed), so only a NEW earliest
+      // needs a nudge.
+      self.note_earlier_timer();
+    }
+  }
+
+  /// Best-effort cancel: drop the entry; its heap node is discarded lazily.
+  /// The timekeeper may wake once at the stale deadline, find nothing due and
+  /// re-arm -- harmless for the debounce-grade accuracy this serves.
+  fn cancel_timer(&self, id: TimerId) {
+    self.timers.inner.lock().unwrap_or_else(std::sync::PoisonError::into_inner).entries.remove(&id);
+  }
+
+  /// Earliest pending deadline (None when the heap is empty or closed).
+  fn next_timer_deadline(&self) -> Option<Instant> {
+    self.timers.inner.lock().unwrap_or_else(std::sync::PoisonError::into_inner).next_deadline()
+  }
+
+  /// Pop and wake everything due at/before now. Wakers are collected under
+  /// the lock but woken OUTSIDE it (a wake runs `schedule`, which must not
+  /// nest inside the heap lock). Firing sets each sleep's `fired` flag under
+  /// the lock, before the wake, so the woken poll observes it.
+  fn fire_due_timers(&self) {
+    let due: Vec<Waker> = {
+      let mut inner = self.timers.inner.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      let now = Instant::now();
+      let mut due = Vec::new();
+      while let Some(std::cmp::Reverse((deadline, id))) = inner.queue.peek().copied() {
+        if deadline > now {
+          break;
+        }
+        inner.queue.pop();
+        if let Some(entry) = inner.entries.remove(&id) {
+          entry.fired.store(true, Ordering::SeqCst);
+          due.push(entry.waker);
+        }
+      }
+      due
+    };
+    for waker in due {
+      waker.wake();
+    }
+  }
+
+  /// The earliest pending deadline moved up (or the heap went non-empty).
+  /// Re-arm whoever is responsible for waiting it out:
+  ///   * a parked timekeeper is unparked directly (re-arm-to-earlier);
+  ///   * otherwise (role unclaimed, or the claimed job still queued in rayon
+  ///     behind busy/parked workers and thus parker-less) nudge ONE parked
+  ///     cooperative driver -- its timer-bounded park re-reads the heap
+  ///     before re-parking -- and make sure the role is claimed so a
+  ///     dedicated waiter eventually exists.
+  fn note_earlier_timer(self: &Arc<Self>) {
+    let parker = self
+      .timers
+      .inner
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner)
+      .timekeeper_parker
+      .clone();
+    match parker {
+      Some(parker) => parker.unpark(),
+      None => {
+        self.parked_drivers.wake_one();
+        self.ensure_timekeeper();
+      }
+    }
+  }
+
+  /// Claim the timekeeper role and spawn its pool job if unclaimed.
+  fn ensure_timekeeper(self: &Arc<Self>) {
+    if self
+      .timers
+      .timekeeper_claimed
+      .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+      .is_ok()
+    {
+      let executor = Arc::clone(self);
+      self.pool.spawn_fifo(move || executor.timekeeper_main());
+    }
+  }
+
+  /// The dedicated timekeeper job (timer intel §4(a), the load-bearing
+  /// piece): waits out the earliest heap deadline with `park_timeout` and
+  /// fires due timers -- and between waits it is a full DRAINER (`run_one`
+  /// with the same streak cap and LIFO-slot flush duties as
+  /// `cooperative_block_on`), so a 1-worker pool still runs queued work while
+  /// a long timer pends. Its parker is registered in `parked_drivers` around
+  /// every park, so queue-wakes reach it; its wait is a plain bounded park,
+  /// NEVER `park_with_deadline` -- a timer wait has a guaranteed wall-clock
+  /// wake and must not trip the opt-in deadlock detection (interaction with
+  /// wake-path §6(d); see the section comment).
+  ///
+  /// Deliberately NOT counted in `active_drainers`: while parked it must not
+  /// block `ensure_drainer` from spawning real drainers for new work (they
+  /// are also woken via `wake_one`, which reaches this job's parker), and
+  /// while draining it is redundant with -- never a replacement for -- the
+  /// accounted drainers.
+  fn timekeeper_main(self: Arc<Self>) {
+    let _on_pool = OnPoolWorkerGuard::enter(self.id);
+    // Same unwind backstop as `drain` (wake-path §8.3): never strand a
+    // runnable in this thread's LIFO slot.
+    let _slot_backstop = LifoSlotFlushGuard(&self);
+    let parker = Arc::new(DriverParker::default());
+    // Exit path (clear parker, release claim, respawn-if-raced) as a drop
+    // guard: runs on normal exit and on (theoretically impossible) unwinds.
+    let _role = TimekeeperRoleGuard { executor: &self, parker: &parker };
+    {
+      let mut inner = self.timers.inner.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      if inner.closed {
+        return;
+      }
+      inner.timekeeper_parker = Some(Arc::clone(&parker));
+    }
+    let mut streak = 0usize;
+    loop {
+      self.fire_due_timers();
+      if self.run_one() {
+        streak += 1;
+        if streak >= Self::RUNNABLE_BUDGET {
+          // Streak cap (wake-path §8.7): hand a hot slot chain to the shared
+          // FIFO so other workers can steal it and timers stay serviced.
+          self.flush_lifo_slot();
+          streak = 0;
+        }
+        continue;
+      }
+      streak = 0;
+      // MANDATORY pre-park flush (wake-path §8.3), same stance as the
+      // cooperative loop: defensive on currently reachable paths, upheld
+      // unconditionally.
+      self.flush_lifo_slot();
+      let Some(next) = self.next_timer_deadline() else {
+        // Heap empty (fired, cancelled or drain-fired by shutdown): the role
+        // guard releases the claim and respawns if a registration raced us.
+        return;
+      };
+      let now = Instant::now();
+      if next <= now {
+        continue;
+      }
+      // Park protocol: register FIRST, then re-check work and the deadline,
+      // then park (the waiter-side mirror of push-then-wake; see
+      // `ParkedDrivers::wake_one`). An earlier timer registered after the
+      // re-check unparks us directly via `note_earlier_timer` (the parker
+      // slot is already published), so the permit protocol covers that race.
+      self.parked_drivers.register(&parker);
+      if self.has_queued_work() || self.next_timer_deadline() != Some(next) {
+        self.parked_drivers.deregister(&parker);
+        continue;
+      }
+      parker.park_timeout(next - now);
+      self.parked_drivers.deregister(&parker);
+    }
+  }
+
+  /// Drain-fire every pending heap timer and poison later registrations
+  /// (timer intel: `shutdown()` with armed timers must not hang a pending
+  /// `close()`). Fired sleeps resolve on their next poll; the woken tasks are
+  /// scheduled through the normal path, so a coordinator awaiting a debounce
+  /// completes its close sequence instead of parking forever.
+  fn shutdown_timers(&self) {
+    let (wakers, parker) = {
+      let mut inner = self.timers.inner.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      inner.closed = true;
+      inner.queue.clear();
+      let wakers: Vec<Waker> = inner
+        .entries
+        .drain()
+        .map(|(_, entry)| {
+          entry.fired.store(true, Ordering::SeqCst);
+          entry.waker
+        })
+        .collect();
+      (wakers, inner.timekeeper_parker.clone())
+    };
+    for waker in wakers {
+      waker.wake();
+    }
+    // Wake the timekeeper so it observes the now-empty heap and exits.
+    if let Some(parker) = parker {
+      parker.unpark();
+    }
+  }
+}
+
+/// Timer future returned by [`sleep_until`]. Resolves at/after its deadline
+/// (or early on runtime shutdown drain-fire). Dropping it cancels the
+/// underlying registration -- the `tokio::select!` losing-arm semantics the
+/// watch coordinator's debounce loop relies on.
+pub struct Sleep {
+  deadline: Instant,
+  inner: SleepInner,
+}
+
+enum SleepInner {
+  #[cfg(not(target_family = "wasm"))]
+  Heap(HeapSleep),
+  Host(HostSleep),
+}
+
+#[cfg(not(target_family = "wasm"))]
+struct HeapSleep {
+  id: TimerId,
+  executor: Arc<MultiThreadExecutor>,
+  fired: Arc<AtomicBool>,
+  registered: bool,
+}
+
+struct HostSleep {
+  id: TimerId,
+  driver: Arc<dyn TimerDriver>,
+  registered: bool,
+  /// The executor's registry, held so the FIRST poll can arm the wake-token
+  /// at the same moment `driver.register` arms the host timer.
+  registry: Arc<HostTimerRegistry>,
+  /// Retires this sleep's wake-token in the executor's registry exactly once
+  /// (created at first poll alongside the host registration, taken on
+  /// completion, dropped with the Sleep on cancellation). `None` before the
+  /// first poll: an unpolled Sleep holds no wake-token.
+  pending: Option<HostTimerPendingGuard>,
+}
+
+impl Future for Sleep {
+  type Output = ();
+
+  fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
+    let deadline = self.deadline;
+    let this = self.get_mut();
+    match &mut this.inner {
+      #[cfg(not(target_family = "wasm"))]
+      SleepInner::Heap(heap) => {
+        if heap.fired.load(Ordering::SeqCst) || Instant::now() >= deadline {
+          if heap.registered {
+            // Wall-clock completion may beat the (busy) timekeeper's fire:
+            // retire the registration so it cannot wake spuriously later.
+            heap.executor.cancel_timer(heap.id);
+            heap.registered = false;
+          }
+          return Poll::Ready(());
+        }
+        heap.executor.register_timer(heap.id, deadline, cx.waker().clone(), &heap.fired);
+        heap.registered = true;
+        // Registration on a closed (shut-down) heap stores nothing and sets
+        // `fired` instead: re-check so this poll resolves rather than parking
+        // a closing runtime forever.
+        if heap.fired.load(Ordering::SeqCst) {
+          heap.registered = false;
+          return Poll::Ready(());
+        }
+        Poll::Pending
+      }
+      SleepInner::Host(host) => {
+        if Instant::now() >= deadline {
+          if host.registered {
+            host.driver.cancel(host.id);
+            host.registered = false;
+          }
+          host.pending.take();
+          return Poll::Ready(());
+        }
+        if !host.registered {
+          // FIRST poll: the wake-token enters the registry at the same
+          // moment the host timer is armed below -- and only then. An
+          // unpolled Sleep has no host callback behind it; on a parked
+          // single thread nothing can ever poll it into arming, so counting
+          // it would let the threadless certain-deadlock check under-panic
+          // on a genuine silent hang (Codex round-1, finding 3).
+          host.registry.insert(host.id, deadline);
+          host.pending =
+            Some(HostTimerPendingGuard { registry: Arc::clone(&host.registry), id: host.id });
+        }
+        // Host drivers treat a repeated id as a waker refresh (see
+        // [`TimerDriver::register`]), so re-polls do not spawn extra host
+        // timers. A host timer that fires marginally early simply re-arms
+        // here with the remaining time.
+        host.driver.register(host.id, deadline, cx.waker().clone());
+        host.registered = true;
+        Poll::Pending
+      }
+    }
+  }
+}
+
+impl Drop for Sleep {
+  fn drop(&mut self) {
+    match &mut self.inner {
+      #[cfg(not(target_family = "wasm"))]
+      SleepInner::Heap(heap) => {
+        if heap.registered {
+          heap.executor.cancel_timer(heap.id);
+        }
+      }
+      SleepInner::Host(host) => {
+        if host.registered {
+          host.driver.cancel(host.id);
+        }
+        // `pending` (if still held) drops here and retires the wake-token.
+      }
+    }
+  }
+}
+
+/// Sleep until `deadline` on the runtime's timer facility. MultiThread uses
+/// the executor-owned heap; CurrentThread requires a host driver installed
+/// via [`set_timer_driver`] and otherwise fails LOUD (a missing driver must
+/// never become a silent never-firing debounce).
+pub fn sleep_until(deadline: Instant) -> Sleep {
+  make_sleep(&RUNTIME.backend(), HOST_TIMER_DRIVER.get().cloned(), deadline)
+}
+
+/// Flavor dispatch behind [`sleep_until`], parameterized for tests (which
+/// build executors locally and must not touch the process-global driver).
+fn make_sleep(
+  backend: &RuntimeBackend,
+  host_driver: Option<Arc<dyn TimerDriver>>,
+  deadline: Instant,
+) -> Sleep {
+  let id = NEXT_TIMER_ID.fetch_add(1, Ordering::Relaxed);
+  match backend {
+    #[cfg(not(target_family = "wasm"))]
+    RuntimeBackend::MultiThread(executor) => Sleep {
+      deadline,
+      inner: SleepInner::Heap(HeapSleep {
+        id,
+        executor: Arc::clone(executor),
+        fired: Arc::new(AtomicBool::new(false)),
+        registered: false,
+      }),
+    },
+    RuntimeBackend::CurrentThread(executor) => {
+      let Some(driver) = host_driver else {
+        panic!(
+          "CurrentThread runtime has no timer driver registered: `sleep_until` on the \
+           single-thread flavor delegates timers to the host event loop. Install one via \
+           `rolldown_utils::async_runtime::set_timer_driver` (the Node binding registers a \
+           setTimeout-based driver through `register_timer_host` at import)."
+        );
+      };
+      // The wake-token is armed at FIRST POLL (when `driver.register` arms
+      // the host timer), not here: an unpolled Sleep cannot wake anyone --
+      // nothing was handed to the host loop, and a parked single thread can
+      // never poll it into arming -- so counting it at creation would
+      // suppress the threadless certain-deadlock diagnostic on a genuine
+      // silent hang. First-poll accounting has no false-panic side.
+      Sleep {
+        deadline,
+        inner: SleepInner::Host(HostSleep {
+          id,
+          driver,
+          registered: false,
+          registry: Arc::clone(&executor.host_timers),
+          pending: None,
+        }),
+      }
+    }
+  }
+}
+
 #[derive(Clone)]
 enum RuntimeBackend {
   CurrentThread(Arc<CurrentThreadExecutor>),
@@ -1787,6 +2461,16 @@ impl RuntimeController {
   fn shutdown(&self) {
     let backend =
       self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).backend.take();
+    // Drain-fire pending heap timers before dropping the backend (timer
+    // facility): a task parked on a debounce sleep must be woken -- and its
+    // Sleep resolved early via the `fired` flag -- or a pending
+    // `watcher.close()` would hang forever on a runtime that no longer has a
+    // timekeeper. (CurrentThread host timers need no drain: the host event
+    // loop still fires their callbacks, and the driver outlives the backend.)
+    #[cfg(not(target_family = "wasm"))]
+    if let Some(RuntimeBackend::MultiThread(executor)) = &backend {
+      executor.shutdown_timers();
+    }
     drop(backend);
   }
 }
@@ -2318,9 +3002,7 @@ mod tests {
         woke_tx.send(index).unwrap();
       }));
     }
-    wait_until("both drivers registered as parked", || {
-      registry.count.load(Ordering::SeqCst) == 2
-    });
+    wait_until("both drivers registered as parked", || registry.count.load(Ordering::SeqCst) == 2);
 
     assert!(registry.wake_one(), "wake_one must wake a parked driver");
     woke_rx.recv_timeout(Duration::from_secs(5)).expect("exactly one driver must wake");
@@ -3243,8 +3925,10 @@ mod tests {
         // Fake on-pool marker (1793 technique): the cooperative branch runs on
         // THIS thread, with NO enclosing drain loop to bail the slot out.
         let _on_pool = OnPoolWorkerGuard::enter(executor.id);
-        let mut future =
-          std::pin::pin!(SpawnOnReady { executor: Arc::clone(&executor), child_tx: Some(child_tx) });
+        let mut future = std::pin::pin!(SpawnOnReady {
+          executor: Arc::clone(&executor),
+          child_tx: Some(child_tx)
+        });
         executor.block_on(future.as_mut() as Pin<&mut dyn Future<Output = ()>>);
       }
 
@@ -5185,6 +5869,625 @@ mod tests {
     assert_eq!(parse_park_deadline(Some("-5".to_string())), None);
     assert_eq!(parse_park_deadline(Some(String::new())), None);
     assert_eq!(parse_park_deadline(Some("1500".to_string())), Some(Duration::from_millis(1500)));
+  }
+
+  // ---- Timer facility (timer intel §4): heap driver + timekeeper (MT), host
+  // delegation (CT), and both deadlock-detection interactions. All tests build
+  // executors LOCALLY (never the global RUNTIME or the process-global host
+  // driver) and run hang-prone workloads on a child thread bounded by
+  // `recv_timeout`, so a regression fails loudly instead of wedging the suite.
+
+  /// Waker that only counts. For polling a raw `Sleep` without an executor.
+  struct CountingWake(AtomicUsize);
+  impl std::task::Wake for CountingWake {
+    fn wake(self: Arc<Self>) {
+      self.0.fetch_add(1, Ordering::SeqCst);
+    }
+  }
+
+  /// One armed stub timer: the latest waker plus a cancellation flag.
+  type StubTimerCell = Arc<(Mutex<Waker>, AtomicBool)>;
+
+  /// Test-local host driver: fires each registered timer from a helper OS
+  /// thread at its deadline (re-registration under the same id refreshes the
+  /// waker without arming a second thread, per the `TimerDriver` contract).
+  struct StubHostTimerDriver {
+    timers: Mutex<FxHashMap<TimerId, StubTimerCell>>,
+  }
+
+  impl StubHostTimerDriver {
+    fn new() -> Self {
+      Self { timers: Mutex::new(FxHashMap::default()) }
+    }
+  }
+
+  impl TimerDriver for StubHostTimerDriver {
+    fn register(&self, id: TimerId, deadline: Instant, waker: Waker) {
+      let mut timers = self.timers.lock().unwrap();
+      if let Some(cell) = timers.get(&id) {
+        *cell.0.lock().unwrap() = waker;
+        return;
+      }
+      let cell = Arc::new((Mutex::new(waker), AtomicBool::new(false)));
+      timers.insert(id, Arc::clone(&cell));
+      std::thread::spawn(move || {
+        let now = Instant::now();
+        if deadline > now {
+          std::thread::sleep(deadline - now);
+        }
+        if !cell.1.load(Ordering::SeqCst) {
+          cell.0.lock().unwrap().wake_by_ref();
+        }
+      });
+    }
+
+    fn cancel(&self, id: TimerId) {
+      let removed = self.timers.lock().unwrap().remove(&id);
+      if let Some(cell) = removed {
+        cell.1.store(true, Ordering::SeqCst);
+      }
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  fn multi_thread_executor(
+    workers: usize,
+    park_deadline: Option<Duration>,
+    prefix: &str,
+  ) -> Arc<MultiThreadExecutor> {
+    let options = RuntimeOptions {
+      flavor: RuntimeFlavor::MultiThread,
+      worker_threads: workers,
+      max_blocking_tasks: workers,
+      thread_name_prefix: prefix.to_string(),
+      park_deadline,
+    };
+    Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap())
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  fn heap_sleep(executor: &Arc<MultiThreadExecutor>, deadline: Instant) -> Sleep {
+    make_sleep(&RuntimeBackend::MultiThread(Arc::clone(executor)), None, deadline)
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_sleep_fires_from_foreign_block_on() {
+    // The napi-caller shape: a NON-pool thread parks in
+    // `futures::executor::block_on` awaiting a sleep. Nothing else runs on
+    // the executor, so ONLY the dedicated timekeeper can fire the timer --
+    // this is the timekeeper's existence test.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let executor = multi_thread_executor(2, None, "timer-foreign");
+      let started = Instant::now();
+      let mut future = std::pin::pin!(async {
+        heap_sleep(&executor, Instant::now() + Duration::from_millis(80)).await;
+      });
+      executor.block_on(future.as_mut());
+      assert!(
+        started.elapsed() >= Duration::from_millis(80),
+        "the sleep must not resolve before its deadline"
+      );
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => {
+        panic!("a sleep awaited from a foreign block_on never fired ({error}): no timekeeper")
+      }
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_timekeeper_runs_queued_work_while_waiting() {
+    // BINDING REQUIREMENT (timer intel §4(a)): the timekeeper is a
+    // wait-with-deadline DRAINER. With `worker_threads = 1` the parked
+    // timekeeper IS the only worker; runnables scheduled while a long timer
+    // pends must be woken through `parked_drivers` and run by the timekeeper
+    // itself, long before the timer's deadline.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let executor = multi_thread_executor(1, None, "timer-drainer");
+
+      // Arm a long timer through a real spawned task so the sole worker
+      // returns to rayon afterwards (the watch-idle Debouncing shape).
+      let sleep_exec = Arc::clone(&executor);
+      let sleep_done = Arc::new(AtomicBool::new(false));
+      let sleep_flag = Arc::clone(&sleep_done);
+      let sched = Arc::clone(&executor);
+      let (sleep_runnable, sleep_task) = async_task::spawn(
+        async move {
+          heap_sleep(&sleep_exec, Instant::now() + Duration::from_mins(1)).await;
+          sleep_flag.store(true, Ordering::SeqCst);
+        },
+        move |r| sched.schedule(r),
+      );
+      executor.schedule(sleep_runnable);
+      wait_until("the timekeeper parked on the 60s deadline", || {
+        executor.timers.inner.lock().unwrap().timekeeper_parker.is_some()
+          && executor.parked_drivers.count.load(Ordering::SeqCst) == 1
+      });
+
+      // Queued work must run NOW, not in 60s.
+      let counter = Arc::new(AtomicUsize::new(0));
+      let mut tasks = Vec::new();
+      for _ in 0..32 {
+        let counter = Arc::clone(&counter);
+        let sched = Arc::clone(&executor);
+        let (runnable, task) = async_task::spawn(
+          async move {
+            counter.fetch_add(1, Ordering::SeqCst);
+          },
+          move |r| sched.schedule(r),
+        );
+        executor.schedule(runnable);
+        tasks.push(task);
+      }
+      let blocking = executor.schedule_blocking(|| 27usize);
+      for task in tasks {
+        futures::executor::block_on(task);
+      }
+      assert_eq!(futures::executor::block_on(blocking).unwrap(), 27);
+      assert_eq!(counter.load(Ordering::SeqCst), 32);
+      assert!(
+        !sleep_done.load(Ordering::SeqCst),
+        "the 60s timer must still be pending: the work ran DURING the timer wait"
+      );
+      // Cancel the long sleep so the executor tears down promptly.
+      executor.shutdown_timers();
+      futures::executor::block_on(sleep_task);
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(15)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "queued work starved behind a parked timekeeper on a 1-worker pool ({error}): the timekeeper must double as a drainer"
+      ),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_rearming_to_earlier_deadline_rewakes_timekeeper() {
+    // Task requirement: a NEW earliest deadline (heap peek changes) must
+    // re-arm the already-parked timekeeper. The 60s sentinel timer parks the
+    // timekeeper far in the future; the 60ms timer must still fire on time.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let executor = multi_thread_executor(2, None, "timer-rearm");
+
+      let long_exec = Arc::clone(&executor);
+      let long_done = Arc::new(AtomicBool::new(false));
+      let long_flag = Arc::clone(&long_done);
+      let sched = Arc::clone(&executor);
+      let (long_runnable, long_task) = async_task::spawn(
+        async move {
+          heap_sleep(&long_exec, Instant::now() + Duration::from_mins(1)).await;
+          long_flag.store(true, Ordering::SeqCst);
+        },
+        move |r| sched.schedule(r),
+      );
+      executor.schedule(long_runnable);
+      wait_until("the timekeeper parked on the 60s sentinel", || {
+        executor.timers.inner.lock().unwrap().timekeeper_parker.is_some()
+      });
+
+      let started = Instant::now();
+      let mut future = std::pin::pin!(async {
+        heap_sleep(&executor, Instant::now() + Duration::from_millis(60)).await;
+      });
+      executor.block_on(future.as_mut());
+      let elapsed = started.elapsed();
+      assert!(elapsed >= Duration::from_millis(60), "fired before its deadline: {elapsed:?}");
+      assert!(
+        !long_done.load(Ordering::SeqCst),
+        "the 60s sentinel must still be pending: the short timer was fired by a re-armed \
+         timekeeper, not by the sentinel expiring"
+      );
+      executor.shutdown_timers();
+      futures::executor::block_on(long_task);
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(15)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "a timer earlier than the parked timekeeper's deadline never fired ({error}): re-arm-to-earlier is broken"
+      ),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_sleep_cancels_registration_on_drop() {
+    // `tokio::select!` losing-arm semantics: dropping the Sleep must retire
+    // its heap registration (no waker fired later, heap drains empty).
+    let executor = multi_thread_executor(1, None, "timer-cancel");
+    let wake_count = Arc::new(CountingWake(AtomicUsize::new(0)));
+    let waker = Waker::from(Arc::clone(&wake_count));
+    let mut cx = Context::from_waker(&waker);
+
+    let mut sleep = heap_sleep(&executor, Instant::now() + Duration::from_millis(60));
+    assert!(Pin::new(&mut sleep).poll(&mut cx).is_pending(), "must register, not resolve");
+    assert!(executor.next_timer_deadline().is_some(), "the registration must be in the heap");
+    drop(sleep);
+    assert!(
+      executor.next_timer_deadline().is_none(),
+      "cancel-on-drop must retire the heap registration"
+    );
+    // Outlive the would-be deadline: the cancelled timer must not wake.
+    std::thread::sleep(Duration::from_millis(140));
+    executor.fire_due_timers();
+    assert_eq!(wake_count.0.load(Ordering::SeqCst), 0, "a dropped Sleep's waker must never fire");
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_shutdown_with_pending_timers_drain_fires() {
+    // Acceptance criterion (timer intel §7.2): `shutdown()` with armed timers
+    // must drain-fire the pending wakers -- a `watcher.close()` awaiting a
+    // debounce sleep must complete, not hang. Also pins fire-on-register for
+    // a Sleep polled after shutdown.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let controller = RuntimeController::new();
+      // Default options: MultiThread on native.
+      let backend = controller.backend();
+      let RuntimeBackend::MultiThread(executor) = &backend else {
+        panic!("default native backend must be MultiThread");
+      };
+
+      let (parked_tx, parked_rx) = mpsc::channel();
+      let block_exec = Arc::clone(executor);
+      let blocker = std::thread::spawn(move || {
+        let mut future = std::pin::pin!(async {
+          let sleep = heap_sleep(&block_exec, Instant::now() + Duration::from_mins(2));
+          parked_tx.send(()).unwrap();
+          sleep.await;
+        });
+        block_exec.block_on(future.as_mut());
+      });
+      parked_rx.recv().unwrap();
+      wait_until("the 120s sleep registered in the heap", || {
+        executor.next_timer_deadline().is_some()
+      });
+
+      // The acceptance surface: controller shutdown while a sleep is armed.
+      controller.shutdown();
+      blocker.join().expect("the blocked sleep must be drain-fired by shutdown, not hang");
+
+      // A Sleep polled AFTER shutdown resolves immediately instead of
+      // registering with a dead heap.
+      let waker = Waker::from(Arc::new(CountingWake(AtomicUsize::new(0))));
+      let mut cx = Context::from_waker(&waker);
+      let mut late = heap_sleep(executor, Instant::now() + Duration::from_mins(2));
+      assert!(
+        Pin::new(&mut late).poll(&mut cx).is_ready(),
+        "a Sleep polled after shutdown must fire early, never park a closing runtime"
+      );
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => {
+        panic!("shutdown with pending timers hung a blocked close ({error}): drain-fire missing")
+      }
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_pending_timer_longer_than_park_deadline_does_not_panic() {
+    // INTERACTION A (MT timekeeper / timer waits vs the Task-4 deadline
+    // detector): ROLLDOWN_PARK_DEADLINE_MS armed SHORTER than the next timer
+    // deadline. The cooperative driver awaiting the sleep sits with ZERO
+    // executor progress for several full deadline windows -- a timer wait is
+    // a legitimate park (guaranteed wall-clock wake), so it must NOT be
+    // declared a BlockOnDeadlock; the timer must still fire. worker_threads=1
+    // also forces the parked driver itself to fire the timer (the timekeeper
+    // job has no free thread), pinning the coop timer-bounded park.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let executor = multi_thread_executor(1, Some(Duration::from_millis(40)), "timer-vs-deadline");
+
+      let task_exec = Arc::clone(&executor);
+      let body = async move {
+        let started = Instant::now();
+        let mut inner = std::pin::pin!(async {
+          heap_sleep(&task_exec, Instant::now() + Duration::from_millis(250)).await;
+        });
+        // Re-entrant block_on from the pool worker: the cooperative park.
+        task_exec.block_on(inner.as_mut());
+        assert!(started.elapsed() >= Duration::from_millis(250));
+      };
+      let sched = Arc::clone(&executor);
+      let (runnable, task) = async_task::spawn(body, move |r| sched.schedule(r));
+      executor.schedule(runnable);
+
+      // A pre-fix BlockOnDeadlock panic unwinds the task body (swallowed by
+      // run_runnable's catch_unwind), so the task never completes and the
+      // bounded harness below reports the failure.
+      futures::executor::block_on(task);
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => {
+        panic!("the deadline-armed timer wait neither completed nor failed cleanly ({error})")
+      }
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_timer_registered_at_verdict_edge_is_not_reported_as_deadlock() {
+    // INTERACTION A, verdict-race edge (deterministic via the Codex round-2
+    // hook): a timer registered AFTER a deadline park was committed bumps no
+    // progress counter by design, lands after the permit and queued-work
+    // re-checks, and is invisible to the fingerprint -- pre-fix the verdict
+    // panics a healthy park whose wake (the timer fire) is guaranteed. The
+    // heap re-check in the verdict must veto the panic; the driver then
+    // re-parks timer-bounded and the fire's task-wake completes the future.
+    use std::sync::mpsc;
+
+    // A raw Sleep the hook registers is woken by this waker, which releases
+    // the awaited future's gate.
+    struct GateWake {
+      gate: Arc<Mutex<Option<oneshot::Sender<usize>>>>,
+    }
+    impl std::task::Wake for GateWake {
+      fn wake(self: Arc<Self>) {
+        let gate = self.gate.lock().unwrap().take();
+        if let Some(gate) = gate {
+          let _ = gate.send(23);
+        }
+      }
+    }
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let executor = multi_thread_executor(1, Some(Duration::from_millis(40)), "timer-verdict");
+      // Saturate the drainer accounting like the round-2 test: `wake_one`
+      // fallbacks cannot start a replacement drainer behind our back, so only
+      // the verdict's own heap re-check can save this park.
+      executor.active_drainers.store(executor.max_drainers, Ordering::SeqCst);
+
+      // Completion condition: the timer registered inside the hook fires and
+      // its waker (the gate) releases the awaited future.
+      let (gate_tx, gate_rx) = oneshot::channel::<usize>();
+      let gate_tx = Arc::new(Mutex::new(Some(gate_tx)));
+
+      let hook_exec = Arc::clone(&executor);
+      let hook_gate = Arc::clone(&gate_tx);
+      // The Sleep must outlive the hook (drop cancels): park it in a slot the
+      // runner thread later cleans up.
+      let parked_sleep: Arc<Mutex<Option<Sleep>>> = Arc::new(Mutex::new(None));
+      let hook_sleep_slot = Arc::clone(&parked_sleep);
+      DEADLINE_VERDICT_TEST_HOOK.with(|slot| {
+        *slot.borrow_mut() = Some(Box::new(move || {
+          let mut sleep = heap_sleep(&hook_exec, Instant::now() + Duration::from_millis(120));
+          let waker = Waker::from(Arc::new(GateWake { gate: hook_gate }));
+          let mut cx = Context::from_waker(&waker);
+          assert!(Pin::new(&mut sleep).poll(&mut cx).is_pending());
+          *hook_sleep_slot.lock().unwrap() = Some(sleep);
+        }));
+      });
+
+      // Fake on-pool marker (1793 technique): the cooperative branch -- and
+      // therefore the thread-local hook -- runs on THIS thread.
+      let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+      let mut output = None;
+      {
+        let mut future = std::pin::pin!(async {
+          output = Some(gate_rx.await.unwrap());
+        });
+        executor.block_on(future.as_mut());
+      }
+      assert_eq!(
+        output,
+        Some(23),
+        "the edge-registered timer must have fired and released the gate"
+      );
+      executor.active_drainers.store(0, Ordering::SeqCst);
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "a timer registered between the queued-work re-check and the verdict was reported as a deadlock or its fire was lost ({error})"
+      ),
+    }
+  }
+
+  #[test]
+  fn current_thread_sleep_without_host_driver_fails_loud() {
+    // Brief acceptance: a CT runtime without a registered host driver must
+    // fail LOUD with this exact diagnostic -- never a silent never-firing
+    // debounce, never a misleading certain-deadlock panic later.
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
+    let backend = RuntimeBackend::CurrentThread(executor);
+
+    let payload = catch_unwind(AssertUnwindSafe(|| {
+      let _sleep = make_sleep(&backend, None, Instant::now() + Duration::from_millis(10));
+    }))
+    .expect_err("sleep_until on CurrentThread without a driver must panic");
+    let message = payload
+      .downcast_ref::<String>()
+      .cloned()
+      .or_else(|| payload.downcast_ref::<&str>().map(|s| (*s).to_string()))
+      .expect("panic payload must be a message");
+    assert!(
+      message.contains("CurrentThread runtime has no timer driver registered"),
+      "the diagnostic must name the missing driver, got: {message}"
+    );
+  }
+
+  #[test]
+  fn current_thread_sleep_fires_through_stub_host_driver() {
+    // CT delegation: a registered host driver's fire must complete a sleep
+    // awaited through the CT `block_on` drive loop.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
+      let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+      let driver: Arc<dyn TimerDriver> = Arc::new(StubHostTimerDriver::new());
+
+      let started = Instant::now();
+      let mut future = std::pin::pin!(async {
+        make_sleep(&backend, Some(driver), Instant::now() + Duration::from_millis(60)).await;
+      });
+      executor.block_on(future.as_mut());
+      assert!(started.elapsed() >= Duration::from_millis(60));
+      assert!(
+        !executor.host_timers.has_pending(),
+        "a completed sleep must retire its pending-registry entry"
+      );
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("a CT sleep through the host driver never fired ({error})"),
+    }
+  }
+
+  #[test]
+  fn current_thread_threadless_park_with_pending_host_timer_is_not_certain_deadlock() {
+    // INTERACTION B (CT certain check vs pending host timers): on a
+    // threadless build, a park with an empty queue but a PENDING host timer
+    // is NOT provably dead -- the host event loop's timer callback is a
+    // future wake. The certain check must count it as a wake-token source and
+    // park; the stub's fire must then complete the future. (Without any
+    // pending timer the certain panic stands -- pinned by
+    // `current_thread_threadless_park_with_no_pending_wake_panics_with_typed_diagnostic`.)
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      // Native stand-in for the threadless wasm build; the stub driver plays
+      // the host event loop's role from a helper thread.
+      let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, true, None));
+      let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+      let driver: Arc<dyn TimerDriver> = Arc::new(StubHostTimerDriver::new());
+
+      let started = Instant::now();
+      let mut future = std::pin::pin!(async {
+        make_sleep(&backend, Some(driver), Instant::now() + Duration::from_millis(60)).await;
+      });
+      executor.block_on(future.as_mut());
+      assert!(started.elapsed() >= Duration::from_millis(60));
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "a threadless CT park with a pending host timer panicked as a certain deadlock or hung ({error})"
+      ),
+    }
+  }
+
+  #[test]
+  fn current_thread_threadless_certain_check_ignores_unpolled_sleep() {
+    // Codex round-1, finding 3: the wake-token only exists once the host
+    // timer is ARMED (first poll runs `driver.register`), never at `Sleep`
+    // creation. A created-but-never-polled Sleep has no host callback behind
+    // it, and on a parked single thread nothing can ever poll it into
+    // arming -- it is provably NOT a future wake source. Counting it would
+    // suppress the threadless certain-deadlock diagnostic and reproduce
+    // exactly the silent-hang class the detector exists to make loud. (The
+    // armed twin above pins the opposite side: a POLLED pending timer DOES
+    // suppress the diagnostic.)
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, true, None));
+      let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+      let driver: Arc<dyn TimerDriver> = Arc::new(StubHostTimerDriver::new());
+
+      // Created and held across the park decision, but NEVER polled: no host
+      // timer armed, no wake source.
+      let _unpolled = make_sleep(&backend, Some(driver), Instant::now() + Duration::from_mins(1));
+
+      let payload = catch_unwind(AssertUnwindSafe(|| {
+        let mut future = std::pin::pin!(NeverReady);
+        executor.block_on(future.as_mut());
+      }))
+      .expect_err("a threadless park holding only an unpolled Sleep must still self-detect");
+      let diagnostic = payload
+        .downcast_ref::<BlockOnDeadlock>()
+        .expect("the panic payload must be the typed BlockOnDeadlock diagnostic");
+      assert_eq!(diagnostic.kind, BlockOnDeadlockKind::CurrentThreadCertain);
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "an unpolled Sleep suppressed the threadless certain-deadlock diagnostic -- block_on parked forever instead of panicking (the silent-hang class) ({error})"
+      ),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn current_thread_park_deadline_with_live_host_timer_does_not_panic() {
+    // INTERACTION A, CT analog: deadline armed (30ms) shorter than a pending
+    // host timer (200ms). Waiting out a LIVE host timer with zero progress is
+    // legitimate (the wake is scheduled on the host loop); the deadline
+    // verdict must not fire. Once the timer fires, the sleep completes.
+    use std::sync::mpsc;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let executor = Arc::new(CurrentThreadExecutor::with_detection(
+        metrics,
+        false,
+        Some(Duration::from_millis(30)),
+      ));
+      let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+      let driver: Arc<dyn TimerDriver> = Arc::new(StubHostTimerDriver::new());
+
+      let started = Instant::now();
+      let mut future = std::pin::pin!(async {
+        make_sleep(&backend, Some(driver), Instant::now() + Duration::from_millis(200)).await;
+      });
+      executor.block_on(future.as_mut());
+      assert!(started.elapsed() >= Duration::from_millis(200));
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => {
+        panic!("a CT park waiting out a live host timer fired the armed deadline or hung ({error})")
+      }
+    }
   }
 
   #[test]

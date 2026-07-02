@@ -53,7 +53,9 @@ rustc-hash = { workspace = true }
 serde_json = { workspace = true }
 simdutf8 = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true, features = ["rt"] }
+# `time` backs the `time::sleep_until` facade's default (non-async-runtime)
+# branch; tokio supports it on both wasm targets.
+tokio = { workspace = true, features = ["rt", "time"] }
 uuid = { workspace = true, features = ["v4"] }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 

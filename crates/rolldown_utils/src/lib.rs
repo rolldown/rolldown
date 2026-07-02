@@ -17,6 +17,7 @@ pub mod percent_encoding;
 pub mod rayon;
 pub mod rustc_hash;
 pub mod sanitize_filename;
+pub mod time;
 pub mod xxhash;
 pub use bitset::BitSet;
 pub use index_bitset::IndexBitSet;

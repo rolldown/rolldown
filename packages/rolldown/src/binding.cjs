@@ -655,6 +655,7 @@ module.exports.getAsyncRuntimeConfig = nativeBinding.getAsyncRuntimeConfig
 module.exports.getAsyncRuntimeMetrics = nativeBinding.getAsyncRuntimeMetrics
 module.exports.initTraceSubscriber = nativeBinding.initTraceSubscriber
 module.exports.registerPlugins = nativeBinding.registerPlugins
+module.exports.registerTimerHost = nativeBinding.registerTimerHost
 module.exports.resetAsyncRuntimeMetrics = nativeBinding.resetAsyncRuntimeMetrics
 module.exports.resolveTsconfig = nativeBinding.resolveTsconfig
 module.exports.shutdownAsyncRuntime = nativeBinding.shutdownAsyncRuntime

@@ -70,7 +70,12 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
           }
         }
         WatcherState::Debouncing { deadline, .. } => {
-          let timeout = tokio::time::sleep_until((*deadline).into());
+          // Runtime-aware timer facade: the async-runtime build has no tokio
+          // reactor, so `tokio::time::sleep_until` would panic here ("no
+          // reactor running"). Every rx arm below drops this future when it
+          // wins the select -- the facade's Sleep cancels on drop, matching
+          // tokio's semantics, so the deadline-extension loop is unchanged.
+          let timeout = rolldown_utils::time::sleep_until(*deadline);
 
           tokio::select! {
             () = timeout => {

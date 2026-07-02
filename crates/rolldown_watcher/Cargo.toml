@@ -25,10 +25,21 @@ rolldown_error = { workspace = true }
 rolldown_fs_watcher = { workspace = true }
 rolldown-notify = { workspace = true }
 rolldown_utils = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
+# No `time` feature: the debounce timer goes through the
+# `rolldown_utils::time::sleep_until` facade (runtime timer on async-runtime
+# builds, tokio otherwise), never `tokio::time` directly.
+tokio = { workspace = true, features = ["rt", "macros", "sync"] }
 tracing = { workspace = true }
 
 [dev-dependencies]
 rolldown_workspace = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread", "signal"] }
+# `time` here only serves examples/watch.rs's demo sleep.
+tokio = { workspace = true, features = [
+  "rt",
+  "macros",
+  "sync",
+  "rt-multi-thread",
+  "signal",
+  "time",
+] }

@@ -137,6 +137,7 @@ export const getAsyncRuntimeConfig = __napiModule.exports.getAsyncRuntimeConfig
 export const getAsyncRuntimeMetrics = __napiModule.exports.getAsyncRuntimeMetrics
 export const initTraceSubscriber = __napiModule.exports.initTraceSubscriber
 export const registerPlugins = __napiModule.exports.registerPlugins
+export const registerTimerHost = __napiModule.exports.registerTimerHost
 export const resetAsyncRuntimeMetrics = __napiModule.exports.resetAsyncRuntimeMetrics
 export const resolveTsconfig = __napiModule.exports.resolveTsconfig
 export const shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime

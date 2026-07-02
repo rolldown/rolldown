@@ -9,7 +9,7 @@ use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
   RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, StmtEvalFlags,
-  StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   UsedSymbolRefs, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
   side_effects::DeterminedSideEffects,
 };
@@ -78,6 +78,15 @@ pub struct IncludeContext<'a> {
   pub module_inclusion_changed: bool,
   pub module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
   pub json_module_none_self_reference_included_symbol: FxHashMap<ModuleIdx, FxHashSet<SymbolRef>>,
+  /// User-defined entry modules (static and emitted, NOT dynamic). Exempt from
+  /// on-demand side-effect inclusion: they are the requested program. Dynamic
+  /// entries join through namespace/own-export body demand instead.
+  pub entry_module_idxs: &'a FxHashSet<ModuleIdx>,
+  /// Body-demand key (a module's own export or namespace object) -> the gated
+  /// side-effect statements of that module (see
+  /// [`side_effects_included_on_demand`]). Entries are drained by
+  /// [`include_symbol`] as their key becomes used.
+  pub on_demand_side_effect_stmts: &'a mut FxHashMap<SymbolRef, Vec<(ModuleIdx, StmtInfoIdx)>>,
 }
 
 impl<'a> IncludeContext<'a> {
@@ -95,6 +104,8 @@ impl<'a> IncludeContext<'a> {
     options: &'a NormalizedBundlerOptions,
     normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
     module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
+    entry_module_idxs: &'a FxHashSet<ModuleIdx>,
+    on_demand_side_effect_stmts: &'a mut FxHashMap<SymbolRef, Vec<(ModuleIdx, StmtInfoIdx)>>,
   ) -> Self {
     Self {
       modules,
@@ -114,8 +125,55 @@ impl<'a> IncludeContext<'a> {
       module_inclusion_changed: false,
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
+      entry_module_idxs,
+      on_demand_side_effect_stmts,
     }
   }
+}
+
+/// Whether side-effectful statements of `module` that reference module-level
+/// symbols are included on demand instead of being swept in unconditionally by
+/// [`include_module`].
+///
+/// A module the user declared side-effect free (`"sideEffects": false` in
+/// package.json, `treeshake.moduleSideEffects: false`) must not have such
+/// statements retained merely because they *evaluate* effects. Without this,
+/// any force-inclusion of the module — the wrapper-ref edge under
+/// `strictExecutionOrder`, `require()` of ESM, or an inlined dynamic import
+/// under `codeSplitting: false` — resurrects side-effect statements that plain
+/// (unwrapped) tree-shaking provably drops, making inclusion inconsistent
+/// between `strictExecutionOrder: true` and `false`. It also breaks the lazy
+/// barrel loader's contract: the loader defers import records by requested
+/// exports, so a retained statement referencing a never-requested import ends up
+/// referencing a record that was correctly never loaded and crashes at runtime
+/// (#9691, #9806, #9961, #9964, #10013, #10048).
+///
+/// Instead such statements join when the module's *body* is demanded: one of
+/// its own (non-re-export) exports or its namespace object becomes used (via
+/// `on_demand_side_effect_stmts`) — e.g. `foo.bar = 1` stays once `foo` is
+/// demanded, `#7597`'s top-level asserts stay because the entry imports the
+/// module's own `Modal`. This mirrors the lazy-barrel loader exactly: body
+/// demand is its `has_local_export`/`All` case, in which it loads every plain
+/// import record of the module — so a kept statement can never reference an
+/// unloaded record, and a deferred record is only ever referenced by dropped
+/// statements.
+///
+/// Statements referencing no module-level symbol (a bare `console.log()`) and
+/// import/re-export statements (which drive wrapper init calls and side-effect
+/// imports) cannot dangle an import and keep the unconditional sweep.
+/// Exemptions: user-defined entry modules (the requested program keeps its
+/// body — dynamic entries instead join through namespace/own-export body
+/// demand, so a dead pure dynamic import can't resurrect a body), modules
+/// using `eval` (it can observe anything), and CommonJS modules (their exports
+/// are side-effect assignments that the demand edges don't model).
+fn side_effects_included_on_demand(
+  module: &NormalModule,
+  entry_module_idxs: &FxHashSet<ModuleIdx>,
+) -> bool {
+  matches!(module.side_effects, DeterminedSideEffects::UserDefined(false))
+    && matches!(module.exports_kind, ExportsKind::Esm)
+    && !module.meta.has_eval()
+    && !entry_module_idxs.contains(&module.idx)
 }
 
 fn include_cjs_bailout_exports(
@@ -208,7 +266,79 @@ fn collect_depended_runtime_helpers(
   depended_runtime_helper
 }
 
+/// Build the demand edges for modules whose side-effectful statements are
+/// included on demand (see [`side_effects_included_on_demand`]): body-demand
+/// key -> the module's gated side-effect statements.
+///
+/// A module's body counts as demanded when one of its *own* exports (an export
+/// that doesn't re-export an import) or its namespace object becomes used —
+/// mirroring the lazy-barrel loader's `local` classification, which loads every
+/// plain import record of the module exactly in those cases. Demand through
+/// pure re-exports leaves the body dropped.
+pub fn compute_on_demand_side_effect_stmts(
+  modules: &IndexModules,
+  stmt_infos: &IndexStmtInfos,
+  symbols: &SymbolRefDb,
+  treeshake_enabled: bool,
+  entry_module_idxs: &FxHashSet<ModuleIdx>,
+) -> FxHashMap<SymbolRef, Vec<(ModuleIdx, StmtInfoIdx)>> {
+  let mut map: FxHashMap<SymbolRef, Vec<(ModuleIdx, StmtInfoIdx)>> = FxHashMap::default();
+  if !treeshake_enabled {
+    return map;
+  }
+  for module in modules.iter().filter_map(Module::as_normal) {
+    if !side_effects_included_on_demand(module, entry_module_idxs) {
+      continue;
+    }
+    let gated: Vec<(ModuleIdx, StmtInfoIdx)> = stmt_infos[module.idx]
+      .iter_enumerated_without_namespace_stmt()
+      .filter(|(_, stmt_info)| is_gated_side_effect_stmt(stmt_info))
+      .map(|(stmt_idx, _)| (module.idx, stmt_idx))
+      .collect();
+    if gated.is_empty() {
+      continue;
+    }
+    let body_demand_keys = module
+      .named_exports
+      .values()
+      .filter(|local_export| !module.named_imports.contains_key(&local_export.referenced))
+      .map(|local_export| symbols.canonical_ref_for(local_export.referenced))
+      .chain(std::iter::once(module.namespace_object_ref));
+    for key in body_demand_keys {
+      map.entry(key).or_default().extend(gated.iter().copied());
+    }
+  }
+  map
+}
+
+/// A statement that joins through body demand rather than the unconditional
+/// sweep of [`include_module`]: it evaluates side effects *and* reads
+/// module-level bindings (so it can dangle a lazily-deferred import), and is not
+/// an import/re-export statement (those drive wrapper init calls and
+/// side-effect-import inclusion; `reference_needed_symbols` also pushes wrapper
+/// refs onto them, which must not count as user references).
+fn is_gated_side_effect_stmt(stmt_info: &StmtInfo) -> bool {
+  stmt_info.eval_flags.has_side_effect_for_tree_shaking()
+    && !stmt_info.referenced_symbols.is_empty()
+    && stmt_info.import_records.is_empty()
+}
+
 impl LinkStage<'_> {
+  /// User-defined (and emitted) entries — exempt from on-demand side-effect
+  /// gating: they are the requested program. A dynamic entry participates like
+  /// any module: an observed namespace or used export is body demand, while a
+  /// dead pure dynamic import must not resurrect the body its removal already
+  /// models as an empty namespace.
+  fn user_defined_entry_module_idxs(&self) -> FxHashSet<ModuleIdx> {
+    self
+      .entries
+      .values()
+      .flatten()
+      .filter(|entry| entry.kind.is_user_defined())
+      .map(|entry| entry.idx)
+      .collect()
+  }
+
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(
     &mut self,
@@ -233,6 +363,14 @@ impl LinkStage<'_> {
       .modules
       .iter()
       .any(|m| m.as_normal().is_some_and(|n| !n.ecma_view.enum_member_value_map.is_empty()));
+    let entry_module_idxs = self.user_defined_entry_module_idxs();
+    let mut on_demand_side_effect_stmts = compute_on_demand_side_effect_stmts(
+      &self.module_table.modules,
+      &self.stmt_infos,
+      &self.symbols,
+      self.options.treeshake.is_some(),
+      &entry_module_idxs,
+    );
     let context = &mut IncludeContext::new(
       &self.module_table.modules,
       &self.stmt_infos,
@@ -246,6 +384,8 @@ impl LinkStage<'_> {
       self.options,
       &self.normal_symbol_exports_chain_map,
       &mut module_namespace_included_reason,
+      &entry_module_idxs,
+      &mut on_demand_side_effect_stmts,
     );
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
@@ -402,6 +542,8 @@ impl LinkStage<'_> {
       self.options,
       &self.normal_symbol_exports_chain_map,
       &mut module_namespace_included_reason,
+      &entry_module_idxs,
+      &mut on_demand_side_effect_stmts,
     );
     include_runtime_symbol(context, &self.runtime, depended_runtime_helper);
 
@@ -719,6 +861,12 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
 
   let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
   if ctx.tree_shaking && !forced_no_treeshake {
+    // Binding-reading side-effect statements of a user-declared
+    // side-effect-free module join only through body demand instead of this
+    // sweep; see `side_effects_included_on_demand`. Statements without symbol
+    // references (e.g. a bare `console.log()`) and import/re-export statements
+    // cannot dangle an import and keep today's behavior.
+    let on_demand_side_effects = side_effects_included_on_demand(module, ctx.entry_module_idxs);
     ctx.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt().for_each(
       |(stmt_info_id, stmt_info)| {
         // No need to handle the namespace statement specially, because it doesn't have side effects and will only be included if it is used.
@@ -732,7 +880,9 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
         } else {
           stmt_info.eval_flags.has_side_effect_for_tree_shaking()
         };
-        if has_side_effects || bail_eval {
+        if (has_side_effects && !(on_demand_side_effects && is_gated_side_effect_stmt(stmt_info)))
+          || bail_eval
+        {
           include_statement(ctx, module, stmt_info_id);
         }
       },
@@ -815,6 +965,20 @@ pub fn include_symbol(
     // We don't need to add any flag since if `inlineConst` is disabled, the test expr will always
     // return `false`
     return;
+  }
+
+  // Demanding a user-declared side-effect-free module's own export (or its
+  // namespace) makes the module's body observable, so its gated side-effect
+  // statements join now (e.g. `foo.bar = 1` once `foo` is demanded); see
+  // `side_effects_included_on_demand`. Must sit after the inlined-constant
+  // bypass: demand satisfied by inlining doesn't include the module today.
+  // `remove` keeps each key processed at most once.
+  if let Some(stmts) = ctx.on_demand_side_effect_stmts.remove(&canonical_ref) {
+    for (module_idx, stmt_info_idx) in stmts {
+      if let Module::Normal(module) = &ctx.modules[module_idx] {
+        include_statement(ctx, module, stmt_info_idx);
+      }
+    }
   }
 
   // Also include the symbol that points to the canonical ref.

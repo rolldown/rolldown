@@ -41,7 +41,8 @@ mod tree_shaking;
 pub use tree_shaking::{
   ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec,
   include_statements::{
-    IncludeContext, SymbolIncludeReason, include_runtime_symbol, include_symbol,
+    IncludeContext, SymbolIncludeReason, compute_on_demand_side_effect_stmts,
+    include_runtime_symbol, include_symbol,
   },
 };
 mod wrapping;

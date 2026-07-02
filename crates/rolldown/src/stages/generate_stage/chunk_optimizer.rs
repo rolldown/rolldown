@@ -15,7 +15,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   chunk_graph::ChunkGraph,
   stages::link_stage::{
-    IncludeContext, SymbolIncludeReason, include_runtime_symbol, include_symbol,
+    IncludeContext, SymbolIncludeReason, compute_on_demand_side_effect_stmts,
+    include_runtime_symbol, include_symbol,
   },
   types::linking_metadata::{
     LinkingMetadata, LinkingMetadataVec, included_info_to_linking_metadata_vec,
@@ -1022,6 +1023,17 @@ impl GenerateStage<'_> {
     let (mut stmt_info_included_vec, mut module_included_vec, mut module_namespace_reason_vec) =
       linking_metadata_vec_to_included_info(&mut self.link_output.metas);
 
+    // Replay the link-stage inclusion semantics: side-effectful statements of
+    // user-declared side-effect-free modules join only through body demand.
+    // Already-included statements make the replayed edges no-ops.
+    let mut on_demand_side_effect_stmts = compute_on_demand_side_effect_stmts(
+      &self.link_output.module_table.modules,
+      &self.link_output.stmt_infos,
+      &self.link_output.symbol_db,
+      self.options.treeshake.is_some(),
+      &self.link_output.user_defined_entry_modules,
+    );
+
     let runtime = &self.link_output.runtime;
     let context = &mut IncludeContext {
       modules: &self.link_output.module_table.modules,
@@ -1041,6 +1053,8 @@ impl GenerateStage<'_> {
       module_namespace_included_reason: &mut module_namespace_reason_vec,
       inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
+      entry_module_idxs: &self.link_output.user_defined_entry_modules,
+      on_demand_side_effect_stmts: &mut on_demand_side_effect_stmts,
     };
 
     let mut runtime_dependent_chunks = FxHashSet::default();

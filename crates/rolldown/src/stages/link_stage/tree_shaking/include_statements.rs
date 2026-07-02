@@ -399,7 +399,7 @@ impl LinkStage<'_> {
         .into_values()
         .flatten()
         .partition(|item| item.kind.is_user_defined());
-    user_defined_entries.iter().filter(|entry| entry.kind.is_user_defined()).for_each(|entry| {
+    user_defined_entries.iter().for_each(|entry| {
       let module = match &self.module_table[entry.idx] {
         Module::Normal(module) => module,
         Module::External(_module) => {

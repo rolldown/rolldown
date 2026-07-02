@@ -383,10 +383,8 @@ fn register_async_runtime() {
   let mut options = RuntimeOptions::default();
   #[cfg(not(target_family = "wasm"))]
   {
-    options.worker_threads = resolve_thread_count(
-      std::env::var("ROLLDOWN_WORKER_THREADS").ok(),
-      num_cpus::get_physical(),
-    );
+    options.worker_threads =
+      resolve_thread_count(std::env::var("ROLLDOWN_WORKER_THREADS").ok(), num_cpus::get_physical());
   }
   options.max_blocking_tasks = resolve_thread_count(
     std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS").ok(),

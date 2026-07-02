@@ -450,12 +450,14 @@ struct MultiThreadExecutor {
   blocking_queue: Mutex<VecDeque<QueuedBlocking>>,
   active_drainers: AtomicUsize,
   active_blocking: AtomicUsize,
-  // Wakes pool workers that are parked inside a re-entrant cooperative
-  // `block_on` when new queue work is scheduled or an awaited future is woken.
-  // The pool has a fixed number of OS threads, so a parked worker cannot rely
-  // on `ensure_drainer` spawning a replacement (there is no free thread to run
-  // it) -- it must wake and run the work itself (RD-1).
-  coop_signal: Arc<CoopSignal>,
+  // Registry of pool workers currently parked inside a re-entrant cooperative
+  // `block_on`, woken ONE at a time when new queue work is scheduled. The pool
+  // has a fixed number of OS threads, so a parked worker cannot rely on
+  // `ensure_drainer` spawning a replacement (there is no free thread to run
+  // it) -- it must wake and run the work itself (RD-1). Future-wakes do NOT go
+  // through this registry: each driver's own `DriverParker` is its awaited
+  // future's waker (see the wake-domain note at `DriverParker`).
+  parked_drivers: ParkedDrivers,
   max_drainers: usize,
   max_blocking: usize,
   metrics: Arc<RuntimeMetrics>,
@@ -480,7 +482,7 @@ impl MultiThreadExecutor {
       blocking_queue: Mutex::new(VecDeque::new()),
       active_drainers: AtomicUsize::new(0),
       active_blocking: AtomicUsize::new(0),
-      coop_signal: Arc::new(CoopSignal::default()),
+      parked_drivers: ParkedDrivers::default(),
       max_drainers: options.worker_threads,
       max_blocking: options.max_blocking_tasks.min(options.worker_threads),
       metrics,
@@ -490,10 +492,21 @@ impl MultiThreadExecutor {
   fn schedule(self: &Arc<Self>, runnable: Runnable) {
     self.metrics.runnable_scheduled();
     self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push_back(runnable);
-    // Wake any cooperative `block_on` driver that is parked waiting for work,
-    // then make sure a (fresh) drainer exists for the normal case (RD-1).
-    self.coop_signal.notify();
-    self.ensure_drainer();
+    self.wake_for_new_work();
+  }
+
+  /// Queue-wake tail shared by `schedule` and `schedule_blocking`: wake ONE
+  /// parked cooperative driver; when none is parked, fall back to spawning a
+  /// drainer (RD-1). A single wake suffices because the woken driver re-checks
+  /// every work source in its loop before re-parking, and a wake it absorbs
+  /// without consuming is handed on at `cooperative_block_on` exit (miss
+  /// compensation, wake-path §8.2). MUST be called AFTER the work was pushed
+  /// under its queue mutex -- see the lost-wakeup argument at
+  /// [`ParkedDrivers::wake_one`].
+  fn wake_for_new_work(self: &Arc<Self>) {
+    if !self.parked_drivers.wake_one() {
+      self.ensure_drainer();
+    }
   }
 
   fn schedule_blocking<F, T>(self: &Arc<Self>, function: F) -> JoinHandle<T>
@@ -524,8 +537,7 @@ impl MultiThreadExecutor {
     );
     // Wake a parked cooperative driver so it can run this blocking job inline if
     // every blocking slot is held by parked drivers (RD-1 (b)).
-    self.coop_signal.notify();
-    self.ensure_drainer();
+    self.wake_for_new_work();
     JoinHandle(JoinHandleInner::Blocking(receiver))
   }
 
@@ -691,19 +703,35 @@ impl MultiThreadExecutor {
   /// Cooperative `block_on` for a re-entrant call from a pool worker. Instead
   /// of parking the worker (which would freeze one of the pool's fixed OS
   /// threads), it drives the awaited future while servicing queued work. When
-  /// nothing is immediately runnable it parks on `coop_signal`, which is woken
-  /// both by the awaited future's waker and by `schedule`/`schedule_blocking`,
-  /// so a later wake reaches this worker even when every worker is parked and
+  /// nothing is immediately runnable it parks on its own [`DriverParker`],
+  /// which is woken directly by the awaited future's waker and through the
+  /// `parked_drivers` registry by `schedule`/`schedule_blocking`, so a later
+  /// wake reaches this worker even when every worker is parked and
   /// `ensure_drainer` has no free thread to spawn a replacement (RD-1).
   fn cooperative_block_on(self: &Arc<Self>, mut future: Pin<&mut dyn Future<Output = ()>>) {
-    let signal = Arc::clone(&self.coop_signal);
-    let waker = std::task::Waker::from(Arc::clone(&signal));
+    // One parker per `block_on` frame. Nested re-entrant frames each own one:
+    // only the innermost frame runs or parks at any moment, and an outer
+    // frame's future-wake is stored as its parker's permit, consumed when
+    // control returns to that frame's loop.
+    let parker = Arc::new(DriverParker::default());
+    // WAKE-DOMAIN SPLIT (wake-path §8.2): the awaited future is polled with
+    // THIS driver's own parker as its waker, so a future-wake targets exactly
+    // the driver that awaits it -- delivered as a stored permit (skip next
+    // park) when this driver is currently running, so it is never lost.
+    let waker = std::task::Waker::from(Arc::clone(&parker));
     let mut cx = Context::from_waker(&waker);
     loop {
-      // Capture the wake generation *before* polling/draining so a wake that
-      // races with this iteration is observed and we do not park stale.
-      let generation = signal.generation();
       if future.as_mut().poll(&mut cx).is_ready() {
+        // MISS COMPENSATION (wake-path §8.2): a registry wake may have been
+        // delivered to this driver while its future was completing -- the
+        // permit absorbed, the queue item not consumed. Hand the wake on
+        // before exiting so queue work is not stranded while other drivers
+        // stay parked. (The enclosing `drain` loop re-checks the queues too,
+        // but that can be arbitrarily far away, e.g. beneath a long-running
+        // task or blocking closure.)
+        if self.has_queued_work() {
+          self.wake_for_new_work();
+        }
         return;
       }
       if self.run_one() {
@@ -718,10 +746,35 @@ impl MultiThreadExecutor {
       if self.try_owned_blocking_over_cap() {
         continue;
       }
-      // Nothing runnable right now: wait until new work is scheduled or the
-      // awaited future is woken.
-      signal.wait_if_unchanged(generation);
+      // Park protocol: register FIRST, then re-check, then park -- the
+      // waiter-side mirror of the push-then-wake schedule side. See the
+      // lost-wakeup argument at [`ParkedDrivers::wake_one`].
+      self.parked_drivers.register(&parker);
+      if self.has_queued_work() {
+        self.parked_drivers.deregister(&parker);
+        continue;
+      }
+      parker.park();
+      // `wake_one` removes the parkers it pops; a direct future-wake does
+      // not. Deregister-if-present covers both.
+      self.parked_drivers.deregister(&parker);
     }
+  }
+
+  /// Is there work a cooperative driver could pick up right now? Used by the
+  /// pre-park re-check and the exit compensation in `cooperative_block_on`;
+  /// mirrors `finish_draining`'s re-check (a queued runnable, or a queued
+  /// blocking job within the cap). The over-cap OWNED job is deliberately not
+  /// re-checked here: a job tagged with this driver's owner frame can only be
+  /// scheduled from this very thread (the frame token is ambient only here),
+  /// so it cannot appear concurrently with this driver's park -- the loop's
+  /// `try_owned_blocking_over_cap` step always observes it first.
+  fn has_queued_work(&self) -> bool {
+    if !self.queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty() {
+      return true;
+    }
+    self.active_blocking.load(Ordering::Acquire) < self.max_blocking
+      && !self.blocking_queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty()
   }
 
   /// Pop the next queued blocking job FIFO within the cap, ignoring its owner tag
@@ -748,108 +801,194 @@ impl MultiThreadExecutor {
   }
 }
 
-// Wake primitive for cooperative re-entrant `block_on` drivers parked on a pool
-// worker. `notify` bumps a generation counter and wakes every parked driver,
-// which then re-polls its future and re-checks the queue. Used both as the
-// awaited future's `Waker` and as the signal raised by `schedule` /
-// `schedule_blocking` so newly queued work reaches a parked worker (RD-1).
+// ---------------------------------------------------------------------------
+// Targeted wake machinery for cooperative re-entrant `block_on` drivers
+// (replaces the old `CoopSignal` generation broadcast).
 //
-// `notify` fires on EVERY schedule (the hot path), while drivers park only in
-// the rare re-entrant `block_on` case, so the common case is "notify with zero
-// waiters". The generation therefore lives in an atomic (bumped
-// unconditionally) and `notify` skips the mutex + condvar entirely when
-// `parked == 0` — see the lost-wakeup argument at `notify`.
+// WAKE-DOMAIN SPLIT (wake-path §8.2 / §6(b)): under the broadcast, ANY notify
+// woke ALL parked drivers, so misdirected wakes were impossible by
+// construction (and the churn was the measured tax). With targeted wakes the
+// two wake sources are split:
+//   * FUTURE-WAKES: `cooperative_block_on` polls its future with the driver's
+//     OWN `DriverParker` as the waker, so a future-wake reaches exactly the
+//     driver that awaits it. The permit bit makes a wake delivered while that
+//     driver is RUNNING (mid-poll / mid-run_one) stick: the driver skips its
+//     next park instead of losing the wake.
+//   * QUEUE-WAKES (`schedule` / `schedule_blocking`): any parked driver can
+//     serve queue work, so these go through the `ParkedDrivers` registry and
+//     wake ONE parked driver; `ensure_drainer` remains the fallback when none
+//     is parked, and an absorbed wake is handed on at `cooperative_block_on`
+//     exit (miss compensation).
+// Foreign-thread (napi caller) parks in `block_on` use
+// `futures::executor::block_on`'s own parker and are OUTSIDE this mechanism,
+// as is the CurrentThread flavor.
+
+/// No permit; the driver is running (or consumed its last permit).
+#[cfg(not(target_family = "wasm"))]
+const PARKER_EMPTY: usize = 0;
+/// A wake permit is stored; the next `park` consumes it without sleeping.
+#[cfg(not(target_family = "wasm"))]
+const PARKER_NOTIFIED: usize = 1;
+/// The driver is sleeping on the condvar (or committing to sleep under `lock`).
+#[cfg(not(target_family = "wasm"))]
+const PARKER_SLEEPING: usize = 2;
+
+/// One cooperative driver's private parker: a saturating one-permit token
+/// plus a condvar to sleep on when no permit is stored. Also the `Waker` for
+/// the future that driver's `cooperative_block_on` frame awaits.
 #[cfg(not(target_family = "wasm"))]
 #[derive(Default)]
-struct CoopSignal {
-  // Wake generation. Bumped UNCONDITIONALLY by every `notify` (the fast path
-  // may skip the mutex + condvar, never the bump): a waiter that captured an
-  // older value before its last queue check refuses to park on it.
-  generation: AtomicU64,
-  // Number of waiters inside `wait_if_unchanged` (incremented under `lock`
-  // BEFORE the generation re-check). Read by `notify`'s fast path to skip the
-  // mutex + condvar when nobody can possibly be waiting.
-  parked: AtomicUsize,
+struct DriverParker {
+  state: AtomicUsize,
   lock: Mutex<()>,
   condvar: std::sync::Condvar,
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl CoopSignal {
-  fn generation(&self) -> u64 {
-    self.generation.load(Ordering::SeqCst)
+impl DriverParker {
+  /// Grant the wake permit. Wakes the driver if it is sleeping; otherwise the
+  /// permit is stored and the driver's next [`Self::park`] returns
+  /// immediately -- a wake delivered while the driver is running is never
+  /// lost (wake-path §8.2). Multiple grants coalesce into one permit, which
+  /// is safe because a woken driver re-checks every work source in its loop
+  /// before it can park again.
+  fn unpark(&self) {
+    if self.state.swap(PARKER_NOTIFIED, Ordering::SeqCst) == PARKER_SLEEPING {
+      // The sleeper publishes PARKER_SLEEPING while holding `lock` and
+      // releases the lock only inside `condvar.wait`; the empty critical
+      // section here fences the notify so it cannot fire in the window
+      // between the sleeper's state store and its wait.
+      drop(self.lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner));
+      self.condvar.notify_one();
+    }
   }
 
-  fn notify(&self) {
-    // LOST-WAKEUP ARGUMENT (wake-path §8.1). The notifier must never skip the
-    // wake while a waiter parks on a stale generation. Notifier order:
-    //   N1: generation.fetch_add(1, SeqCst)   (unconditional -- never skipped)
-    //   N2: parked.load(SeqCst)               (fast-path check, AFTER the bump)
-    // Waiter order (`wait_if_unchanged`, both steps under `lock`):
-    //   W1: parked.fetch_add(1, SeqCst)
-    //   W2: generation.load(SeqCst)           (re-check before waiting)
-    //   W3: condvar.wait                      (atomically releases `lock`)
-    // All four accesses are SeqCst, so they take places in the single total
-    // order S of SeqCst operations, and each load observes the last store
-    // before it in S:
-    //   * If N2 reads parked == 0 it did not see W1, so N2 < W1 in S. With
-    //     program order N1 < N2 and W1 < W2, that gives N1 < N2 < W1 < W2:
-    //     the waiter's re-check W2 must observe the bumped generation and
-    //     returns WITHOUT parking -- skipping the wake is safe.
-    //   * If W2 reads the pre-bump generation then W2 < N1 in S, hence
-    //     W1 < W2 < N1 < N2: the notifier observes parked >= 1 and takes the
-    //     slow path below. The waiter holds `lock` continuously from before W1
-    //     until W3 releases it atomically, so the slow path's lock acquisition
-    //     cannot complete inside the [W2, W3) window -- notify_all fires only
-    //     once the waiter is actually waiting (or already gone), and wakes it.
-    // SeqCst (not Release/Acquire) is load-bearing: each side stores one
-    // location then loads the other (the store-buffering litmus), and with
-    // plain acq/rel BOTH sides may read stale values -- the waiter would park
-    // while the notifier skips.
-    self.generation.fetch_add(1, Ordering::SeqCst);
-    if self.parked.load(Ordering::SeqCst) == 0 {
-      // No-waiter fast path: nobody is parked or committed to parking (any
-      // in-flight waiter that missed this bump will see it at W2).
+  /// Block until the permit is granted, consuming it. Returns immediately if
+  /// a permit is already stored. Only the owning driver calls `park`, so at
+  /// most one thread ever sleeps here.
+  fn park(&self) {
+    // Fast path: consume a stored permit without touching the lock.
+    if self
+      .state
+      .compare_exchange(PARKER_NOTIFIED, PARKER_EMPTY, Ordering::SeqCst, Ordering::SeqCst)
+      .is_ok()
+    {
       return;
     }
-    // Slow path: serialize with the waiter's [W1..W3] critical section so the
-    // notification cannot fall between its re-check and its wait.
-    drop(self.lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner));
-    self.condvar.notify_all();
-  }
-
-  /// Park until the generation moves past `observed`. If a `notify` already
-  /// raced ahead (generation changed) this returns immediately, preventing a
-  /// lost wakeup between the caller's last queue check and this park. See the
-  /// interleaving argument in [`Self::notify`] for why the `parked` increment
-  /// must precede the generation re-check (both under `lock`).
-  fn wait_if_unchanged(&self, observed: u64) {
-    let guard = self.lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    // W1: become visible to `notify`'s fast-path check...
-    self.parked.fetch_add(1, Ordering::SeqCst);
-    // W2: ...then re-check the generation.
-    if self.generation.load(Ordering::SeqCst) == observed {
-      // W3: wait atomically releases `lock`.
-      let guard = self.condvar.wait(guard).unwrap_or_else(std::sync::PoisonError::into_inner);
-      drop(guard);
-    } else {
-      drop(guard);
+    let mut guard = self.lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    match self.state.compare_exchange(
+      PARKER_EMPTY,
+      PARKER_SLEEPING,
+      Ordering::SeqCst,
+      Ordering::SeqCst,
+    ) {
+      Ok(_) => {}
+      // The permit arrived between the fast path and here: consume it. (Only
+      // this thread stores PARKER_SLEEPING, so the observed value can only be
+      // PARKER_NOTIFIED.)
+      Err(_) => {
+        self.state.store(PARKER_EMPTY, Ordering::SeqCst);
+        return;
+      }
     }
-    // May momentarily overcount from a notifier's perspective (we decrement
-    // after waking); that only sends a notifier down the slow path, never
-    // skips a required wake.
-    self.parked.fetch_sub(1, Ordering::SeqCst);
+    loop {
+      guard = self.condvar.wait(guard).unwrap_or_else(std::sync::PoisonError::into_inner);
+      if self
+        .state
+        .compare_exchange(PARKER_NOTIFIED, PARKER_EMPTY, Ordering::SeqCst, Ordering::SeqCst)
+        .is_ok()
+      {
+        return;
+      }
+      // Spurious wakeup (state still PARKER_SLEEPING): keep waiting.
+    }
   }
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl std::task::Wake for CoopSignal {
+impl std::task::Wake for DriverParker {
   fn wake(self: Arc<Self>) {
-    self.notify();
+    self.unpark();
   }
 
   fn wake_by_ref(self: &Arc<Self>) {
-    self.notify();
+    self.unpark();
+  }
+}
+
+/// Registry of parked (or committed-to-parking) cooperative drivers, used by
+/// queue-wakes to wake exactly one of them.
+#[cfg(not(target_family = "wasm"))]
+#[derive(Default)]
+struct ParkedDrivers {
+  parked: Mutex<Vec<Arc<DriverParker>>>,
+  // Mirror of `parked.len()`, maintained under the mutex and read lock-free
+  // by `wake_one`'s no-waiter fast path.
+  count: AtomicUsize,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl ParkedDrivers {
+  /// Register `parker` as parked-or-parking. MUST precede the caller's final
+  /// work re-check -- see the lost-wakeup argument at [`Self::wake_one`].
+  fn register(&self, parker: &Arc<DriverParker>) {
+    let mut parked = self.parked.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    parked.push(Arc::clone(parker));
+    self.count.store(parked.len(), Ordering::SeqCst);
+  }
+
+  /// Remove `parker` if still registered. `wake_one` removes the parkers it
+  /// pops, while a direct future-wake does not, so drivers call this after
+  /// every park (and after a re-check aborts one).
+  fn deregister(&self, parker: &Arc<DriverParker>) {
+    let mut parked = self.parked.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if let Some(index) = parked.iter().position(|candidate| Arc::ptr_eq(candidate, parker)) {
+      parked.swap_remove(index);
+      self.count.store(parked.len(), Ordering::SeqCst);
+    }
+  }
+
+  /// Wake one parked driver -- most recently parked first, its stack and
+  /// caches are the warmest -- returning whether anyone was woken.
+  ///
+  /// LOST-WAKEUP ARGUMENT (wake-path §8.1, registry form). A scheduler pushes
+  /// work under a work-queue mutex Q, THEN calls `wake_one`; a parking driver
+  /// registers itself (the `count` store above, under the registry mutex),
+  /// THEN re-checks the work queues under Q, and only then parks. Order the
+  /// two Q critical sections:
+  ///   * If the driver's re-check locks Q after the scheduler's push unlocked
+  ///     it, the re-check observes the work and the driver does not park --
+  ///     skipping the wake (fast path below) is safe.
+  ///   * Otherwise the driver's re-check unlocked Q before the scheduler's
+  ///     push locked it. The driver's `count` store is sequenced before its
+  ///     re-check, the re-check's unlock of Q synchronizes-with the push's
+  ///     lock of Q, and the push is sequenced before the fast-path load
+  ///     below; the load therefore happens-after the `count` store and must
+  ///     observe `count >= 1`: the slow path pops a registered parker and
+  ///     wakes it.
+  /// A wake delivered to a driver that raced out of its park (or aborted it)
+  /// is stored as that driver's permit; the driver re-checks every work
+  /// source before it can sleep on the next park, so the wake still lands.
+  fn wake_one(&self) -> bool {
+    if self.count.load(Ordering::SeqCst) == 0 {
+      // No-waiter fast path: nobody is parked or committed to parking (any
+      // in-flight parker that missed this check re-checks the queues after
+      // registering, per the argument above).
+      return false;
+    }
+    let parker = {
+      let mut parked = self.parked.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      let parker = parked.pop();
+      self.count.store(parked.len(), Ordering::SeqCst);
+      parker
+    };
+    match parker {
+      Some(parker) => {
+        parker.unpark();
+        true
+      }
+      None => false,
+    }
   }
 }
 
@@ -1361,99 +1500,374 @@ mod tests {
     }
   }
 
+  /// Spin (yielding) until `condition` holds, failing loudly on timeout.
+  /// Used to observe executor-internal states (e.g. "both drivers are
+  /// registered as parked") without sleeps.
   #[cfg(not(target_family = "wasm"))]
-  #[test]
-  fn coop_signal_notify_with_no_parked_waiters_skips_the_lock() {
-    // Wake-path (a): with `parked == 0`, `notify` must bump the generation and
-    // return WITHOUT touching the internal mutex/condvar (the no-waiter fast
-    // path). Proxy for "did not take the mutex": the test HOLDS the signal's
-    // internal lock the whole time; a fast-path notify completes anyway, while
-    // (control) a notify issued with a fake parked waiter registered must take
-    // the slow path and block on that held lock until it is released.
-    use std::sync::mpsc;
-    use std::time::Duration;
-
-    let signal = Arc::new(CoopSignal::default());
-    let before = signal.generation();
-
-    // Hold the internal lock on this thread for the whole scenario.
-    let guard = signal.lock.lock().unwrap();
-
-    // Fast path: parked == 0 -> notify must complete although the lock is held.
-    let (done_tx, done_rx) = mpsc::channel();
-    let notifier = {
-      let signal = Arc::clone(&signal);
-      std::thread::spawn(move || {
-        signal.notify();
-        done_tx.send(()).unwrap();
-      })
-    };
-    done_rx
-      .recv_timeout(Duration::from_secs(5))
-      .expect("notify with parked == 0 must skip the lock (no-waiter fast path)");
-    notifier.join().unwrap();
-    assert_eq!(
-      signal.generation(),
-      before + 1,
-      "the generation bump is unconditional even on the fast path"
-    );
-
-    // Control: with parked > 0 the SAME held lock must block notify (slow
-    // path). This proves the fast path above genuinely skipped the lock rather
-    // than notify never locking at all.
-    signal.parked.fetch_add(1, Ordering::SeqCst);
-    let (done_tx, done_rx) = mpsc::channel();
-    let notifier = {
-      let signal = Arc::clone(&signal);
-      std::thread::spawn(move || {
-        signal.notify();
-        done_tx.send(()).unwrap();
-      })
-    };
-    assert!(
-      done_rx.recv_timeout(Duration::from_millis(300)).is_err(),
-      "notify with parked > 0 must take the slow path (block on the held lock)"
-    );
-    drop(guard);
-    done_rx
-      .recv_timeout(Duration::from_secs(5))
-      .expect("slow-path notify must complete once the lock is released");
-    notifier.join().unwrap();
-    signal.parked.fetch_sub(1, Ordering::SeqCst);
-    assert_eq!(signal.generation(), before + 2, "the slow path also bumps the generation");
+  fn wait_until(what: &str, condition: impl Fn() -> bool) {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while !condition() {
+      assert!(std::time::Instant::now() < deadline, "timed out waiting for: {what}");
+      std::thread::yield_now();
+    }
   }
 
   #[cfg(not(target_family = "wasm"))]
   #[test]
-  fn coop_signal_notify_vs_park_interleaving_loses_no_wakeups() {
-    // Wake-path (a) stress: N rounds of {producer: publish work, notify()}
-    // racing {consumer: capture generation, check work, wait_if_unchanged}.
-    // This walks the schedule-vs-park interleaving at every offset the OS
-    // scheduler produces; a single lost wakeup parks the consumer forever with
-    // work pending, and the bounded recv_timeout turns that into a loud
-    // failure instead of a hung suite. (No loom in this repo; std threads.)
+  fn parked_drivers_wake_one_with_no_parked_drivers_skips_the_lock() {
+    // Wake-path (a)/(b): with nothing registered, `wake_one` must return
+    // `false` WITHOUT touching the registry mutex (the no-waiter fast path --
+    // the common case, since queue-wakes fire on every schedule while drivers
+    // park only in rare re-entrant `block_on`). Proxy for "did not take the
+    // mutex": the test HOLDS the registry lock; a fast-path wake_one completes
+    // anyway, while (control) a wake_one issued with a parker registered must
+    // take the slow path and block on that held lock until it is released.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let registry = Arc::new(ParkedDrivers::default());
+
+    // Fast path: empty registry -> wake_one completes although the lock is held.
+    let guard = registry.parked.lock().unwrap();
+    let (done_tx, done_rx) = mpsc::channel();
+    let waker_thread = {
+      let registry = Arc::clone(&registry);
+      std::thread::spawn(move || {
+        done_tx.send(registry.wake_one()).unwrap();
+      })
+    };
+    let woke = done_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("wake_one with an empty registry must skip the lock (no-waiter fast path)");
+    assert!(!woke, "an empty registry has nobody to wake");
+    waker_thread.join().unwrap();
+    drop(guard);
+
+    // Control: with a parker registered the SAME held lock must block
+    // wake_one (slow path). This proves the fast path above genuinely skipped
+    // the lock rather than wake_one never locking at all.
+    let parker = Arc::new(DriverParker::default());
+    registry.register(&parker);
+    let guard = registry.parked.lock().unwrap();
+    let (done_tx, done_rx) = mpsc::channel();
+    let waker_thread = {
+      let registry = Arc::clone(&registry);
+      std::thread::spawn(move || {
+        done_tx.send(registry.wake_one()).unwrap();
+      })
+    };
+    assert!(
+      done_rx.recv_timeout(Duration::from_millis(300)).is_err(),
+      "wake_one with a registered parker must take the slow path (block on the held lock)"
+    );
+    drop(guard);
+    let woke = done_rx
+      .recv_timeout(Duration::from_secs(5))
+      .expect("slow-path wake_one must complete once the lock is released");
+    assert!(woke, "the slow path must pop and wake the registered parker");
+    waker_thread.join().unwrap();
+    // The popped parker received its permit: a park now returns immediately
+    // instead of sleeping (bounded by the test harness if broken).
+    parker.park();
+    assert_eq!(registry.count.load(Ordering::SeqCst), 0, "wake_one deregisters what it pops");
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn driver_parker_permit_granted_while_running_is_not_lost() {
+    // Wake-path (b) §8.2: a wake delivered while the driver is RUNNING (not
+    // parked) must be stored as a permit that makes the next `park` return
+    // immediately; multiple such wakes coalesce into ONE permit.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let parker = Arc::new(DriverParker::default());
+    // Two wakes while "running" (nobody parked yet).
+    parker.unpark();
+    parker.unpark();
+
+    let (tx, rx) = mpsc::channel();
+    let driver = {
+      let parker = Arc::clone(&parker);
+      std::thread::spawn(move || {
+        parker.park(); // must consume the stored permit without sleeping
+        tx.send(1).unwrap();
+        parker.park(); // no permit left: must genuinely sleep
+        tx.send(2).unwrap();
+      })
+    };
+
+    assert_eq!(
+      rx.recv_timeout(Duration::from_secs(5)).expect("a stored permit must not be lost"),
+      1
+    );
+    assert!(
+      rx.recv_timeout(Duration::from_millis(300)).is_err(),
+      "two pre-park wakes must coalesce into one permit (second park must sleep)"
+    );
+    parker.unpark();
+    assert_eq!(
+      rx.recv_timeout(Duration::from_secs(5)).expect("unpark must wake a sleeping driver"),
+      2
+    );
+    driver.join().unwrap();
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn parked_drivers_wake_one_wakes_exactly_one() {
+    // Wake-path (b): 2 parked drivers + 1 wake -> exactly one wakes, the
+    // other stays parked. The old broadcast could not distinguish drivers;
+    // targeted wakes must not degrade into "wake everyone" (that is the
+    // measured churn) nor "wake no one" (lost wakeup).
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let registry = Arc::new(ParkedDrivers::default());
+    let (woke_tx, woke_rx) = mpsc::channel();
+    let mut drivers = Vec::new();
+    for index in 0..2 {
+      let registry = Arc::clone(&registry);
+      let woke_tx = woke_tx.clone();
+      drivers.push(std::thread::spawn(move || {
+        let parker = Arc::new(DriverParker::default());
+        registry.register(&parker);
+        parker.park();
+        registry.deregister(&parker);
+        woke_tx.send(index).unwrap();
+      }));
+    }
+    wait_until("both drivers registered as parked", || {
+      registry.count.load(Ordering::SeqCst) == 2
+    });
+
+    assert!(registry.wake_one(), "wake_one must wake a parked driver");
+    woke_rx.recv_timeout(Duration::from_secs(5)).expect("exactly one driver must wake");
+    assert!(
+      woke_rx.recv_timeout(Duration::from_millis(300)).is_err(),
+      "the second driver must stay parked after a single wake_one"
+    );
+    assert_eq!(registry.count.load(Ordering::SeqCst), 1, "one driver must remain registered");
+
+    assert!(registry.wake_one(), "a second wake_one must wake the remaining driver");
+    woke_rx.recv_timeout(Duration::from_secs(5)).expect("the second driver must wake");
+    for driver in drivers {
+      driver.join().unwrap();
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_future_wake_targets_its_own_parked_driver() {
+    // Wake-path (b) targeting: a future-wake must reach the driver that
+    // AWAITS that future, not "some parked driver". D1 parks first awaiting
+    // rx1; D2 parks after it awaiting rx2. Completing rx1 must wake D1 even
+    // though D2 parked more recently -- a future-wake misrouted through the
+    // registry (which pops most-recently-parked) would wake D2, leave D1
+    // parked forever, and trip the bounded timeout. The old notify_all
+    // broadcast never distinguished drivers, so this pins the new obligation.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 2,
+        max_blocking_tasks: 2,
+        thread_name_prefix: "wake-target".to_string(),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
+
+      let (tx1, rx1) = oneshot::channel::<usize>();
+      let (tx2, rx2) = oneshot::channel::<usize>();
+      let t1_done = Arc::new(AtomicBool::new(false));
+      let t2_done = Arc::new(AtomicBool::new(false));
+
+      // T1: parks FIRST, awaiting rx1.
+      let t1_exec = Arc::clone(&executor);
+      let t1_flag = Arc::clone(&t1_done);
+      let t1_body = async move {
+        let mut inner = std::pin::pin!(async move {
+          assert_eq!(rx1.await.unwrap(), 7usize);
+        });
+        t1_exec.block_on(inner.as_mut());
+        t1_flag.store(true, Ordering::SeqCst);
+      };
+      let sched1 = Arc::clone(&executor);
+      let (runnable1, task1) = async_task::spawn(t1_body, move |r| sched1.schedule(r));
+      executor.schedule(runnable1);
+      wait_until("driver 1 parked", || executor.parked_drivers.count.load(Ordering::SeqCst) == 1);
+
+      // T2: parks SECOND (most recently). Its runnable is pushed RAW (no
+      // `schedule`, so no wake_one can pop the already-parked D1) and a
+      // drainer is spawned for it on the free second worker.
+      let t2_exec = Arc::clone(&executor);
+      let t2_flag = Arc::clone(&t2_done);
+      let t2_body = async move {
+        let mut inner = std::pin::pin!(async move {
+          assert_eq!(rx2.await.unwrap(), 9usize);
+        });
+        t2_exec.block_on(inner.as_mut());
+        t2_flag.store(true, Ordering::SeqCst);
+      };
+      let sched2 = Arc::clone(&executor);
+      let (runnable2, task2) = async_task::spawn(t2_body, move |r| sched2.schedule(r));
+      executor.queue.lock().unwrap().push_back(runnable2);
+      executor.ensure_drainer();
+      wait_until("driver 2 parked", || executor.parked_drivers.count.load(Ordering::SeqCst) == 2);
+
+      // Complete D1's future. The wake must land on D1 (first-parked), the
+      // driver that owns rx1's waker -- not on the more recently parked D2.
+      tx1.send(7usize).unwrap();
+      wait_until("T1 completed via its own driver's wake", || t1_done.load(Ordering::SeqCst));
+      futures::executor::block_on(task1);
+      assert!(
+        !t2_done.load(Ordering::SeqCst),
+        "D2 must still be parked: its future was never completed"
+      );
+      assert_eq!(
+        executor.parked_drivers.count.load(Ordering::SeqCst),
+        1,
+        "exactly the untargeted driver must remain parked"
+      );
+
+      // Teardown: release D2 as well.
+      tx2.send(9usize).unwrap();
+      futures::executor::block_on(task2);
+      assert!(t2_done.load(Ordering::SeqCst));
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!(
+        "future-wake did not reach its own parked driver ({error}): the wake was misdirected or lost"
+      ),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn multi_thread_cooperative_exit_hands_absorbed_wake_to_parked_driver() {
+    // Wake-path (b) miss compensation (§8.2): a driver that exits
+    // `cooperative_block_on` (future ready) while queue work remains must hand
+    // the wake on -- it may have absorbed a `wake_one` permit meant for that
+    // work. Topology: the SOLE pool worker is parked as a cooperative driver
+    // (so `ensure_drainer` can spawn nothing and only a wake can reach it); a
+    // runnable is pushed RAW (no wake of its own); the test thread then runs a
+    // ready future through the cooperative branch (the 1793 fake-on-pool
+    // technique). Its exit compensation is the ONLY mechanism left that can
+    // wake the parked worker to drain the runnable.
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let runner = std::thread::spawn(move || {
+      let metrics = Arc::new(RuntimeMetrics::default());
+      let options = RuntimeOptions {
+        flavor: RuntimeFlavor::MultiThread,
+        worker_threads: 1,
+        max_blocking_tasks: 1,
+        thread_name_prefix: "wake-compensate".to_string(),
+      };
+      let executor = Arc::new(MultiThreadExecutor::new(&options, metrics).unwrap());
+
+      // Park the sole worker as a cooperative driver awaiting a gate.
+      let (gate_tx, gate_rx) = oneshot::channel::<()>();
+      let td_exec = Arc::clone(&executor);
+      let td_body = async move {
+        let mut inner = std::pin::pin!(async move {
+          gate_rx.await.unwrap();
+        });
+        td_exec.block_on(inner.as_mut());
+      };
+      let sched = Arc::clone(&executor);
+      let (td_runnable, td_task) = async_task::spawn(td_body, move |r| sched.schedule(r));
+      executor.schedule(td_runnable);
+      wait_until("the sole driver parked", || {
+        executor.parked_drivers.count.load(Ordering::SeqCst) == 1
+      });
+
+      // Strand a runnable: pushed RAW, so no wake accompanies it, and the
+      // sole worker is parked-as-drainer, so `ensure_drainer` cannot help.
+      let (ran_tx, ran_rx) = mpsc::channel::<()>();
+      let sched_stranded = Arc::clone(&executor);
+      let (stranded_runnable, stranded_task) = async_task::spawn(
+        async move {
+          ran_tx.send(()).unwrap();
+        },
+        move |r| sched_stranded.schedule(r),
+      );
+      executor.queue.lock().unwrap().push_back(stranded_runnable);
+      stranded_task.detach();
+
+      // Drive a ready future through the cooperative branch on THIS thread
+      // (fake on-pool marker, as in the executor-scoping test). Its first
+      // poll is Ready, so the loop performs no work itself -- only the exit
+      // compensation can hand the queued runnable to the parked driver.
+      {
+        let _on_pool = OnPoolWorkerGuard::enter(executor.id);
+        let mut ready = std::pin::pin!(async {});
+        executor.block_on(ready.as_mut());
+      }
+
+      ran_rx.recv_timeout(Duration::from_secs(5)).expect(
+        "exit compensation must wake the parked driver to run the stranded queued runnable",
+      );
+
+      // Teardown: release the parked driver.
+      gate_tx.send(()).unwrap();
+      futures::executor::block_on(td_task);
+      let _ = done_tx.send(());
+    });
+
+    match done_rx.recv_timeout(Duration::from_secs(10)) {
+      Ok(()) => runner.join().unwrap(),
+      Err(error) => panic!("cooperative-exit miss compensation failed ({error})"),
+    }
+  }
+
+  #[cfg(not(target_family = "wasm"))]
+  #[test]
+  fn wake_path_wake_one_vs_park_interleaving_loses_no_wakeups() {
+    // Wake-path (a)/(b) stress: N rounds of {producer: publish work,
+    // wake_one()} racing {consumer: check work, register, re-check, park} --
+    // the exact schedule-vs-park protocol `schedule` and
+    // `cooperative_block_on` run. This walks the interleaving at every offset
+    // the OS scheduler produces; a single lost wakeup parks the consumer
+    // forever with work pending, and the bounded recv_timeout turns that into
+    // a loud failure instead of a hung suite. (No loom in this repo; std
+    // threads.)
     use std::sync::mpsc;
     use std::time::Duration;
 
     const ROUNDS: usize = 20_000;
 
     let (done_tx, done_rx) = mpsc::channel();
-    let signal = Arc::new(CoopSignal::default());
+    let registry = Arc::new(ParkedDrivers::default());
     let work = Arc::new(AtomicBool::new(false));
 
     let consumer = {
-      let signal = Arc::clone(&signal);
+      let registry = Arc::clone(&registry);
       let work = Arc::clone(&work);
       std::thread::spawn(move || {
+        let parker = Arc::new(DriverParker::default());
         for _ in 0..ROUNDS {
           loop {
-            // Capture the generation BEFORE the work check, mirroring
-            // `cooperative_block_on`'s capture-before-poll/drain.
-            let generation = signal.generation();
             if work.swap(false, Ordering::SeqCst) {
               break;
             }
-            signal.wait_if_unchanged(generation);
+            // The cooperative park protocol: register FIRST, then re-check,
+            // then park (see `ParkedDrivers::wake_one`).
+            registry.register(&parker);
+            if work.load(Ordering::SeqCst) {
+              registry.deregister(&parker);
+              continue;
+            }
+            parker.park();
+            registry.deregister(&parker);
           }
         }
         done_tx.send(()).unwrap();
@@ -1462,9 +1876,10 @@ mod tests {
 
     for _ in 0..ROUNDS {
       work.store(true, Ordering::SeqCst);
-      signal.notify();
-      // Wait until the consumer took this round's work before publishing the
-      // next, so exactly ROUNDS wakeups must all arrive.
+      // The schedule side: publish work, then wake one parked driver. When
+      // wake_one misses (consumer not registered yet), the consumer's
+      // post-register re-check must see the work instead.
+      let _ = registry.wake_one();
       while work.load(Ordering::SeqCst) {
         std::hint::spin_loop();
       }
@@ -1472,7 +1887,7 @@ mod tests {
 
     done_rx
       .recv_timeout(Duration::from_secs(30))
-      .expect("a notify()-side wakeup was lost: the consumer is parked with work pending");
+      .expect("a wake_one()-side wakeup was lost: the consumer is parked with work pending");
     consumer.join().unwrap();
   }
 

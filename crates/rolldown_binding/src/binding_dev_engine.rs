@@ -1,6 +1,6 @@
 use napi_derive::napi;
 use rolldown_dev::{
-  BundleState, BundlingFuture, OnAdditionalAssetsCallback, OnHmrUpdatesCallback, OnOutputCallback,
+  BundleState, OnAdditionalAssetsCallback, OnHmrUpdatesCallback, OnOutputCallback,
 };
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -263,26 +263,6 @@ impl BindingDevEngine {
       .compile_lazy_entry(module_id, client_id)
       .await
       .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")))
-  }
-}
-
-#[napi]
-pub struct ScheduledBuild {
-  future: BundlingFuture,
-  already_scheduled: bool,
-}
-
-#[napi]
-impl ScheduledBuild {
-  #[napi]
-  pub async fn wait(&self) -> napi::Result<()> {
-    self.future.clone().await;
-    Ok(())
-  }
-
-  #[napi]
-  pub fn already_scheduled(&self) -> bool {
-    self.already_scheduled
   }
 }
 

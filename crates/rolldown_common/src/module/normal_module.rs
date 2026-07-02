@@ -228,8 +228,12 @@ impl NormalModule {
             mutation.apply(&mut magic_string);
           }
           let code = magic_string.to_string();
+          // `collapse_sourcemaps` walks this map's tokens, so it must match the codegen map's
+          // granularity — the default `Hires::False` maps only each line's column 0 and drops
+          // indented lines' mappings (rolldown#10070).
           let mutated_map = magic_string.source_map(SourceMapOptions {
             source: Arc::clone(&original_code),
+            hires: string_wizard::Hires::Boundary,
             ..Default::default()
           });
           let map = render_output

@@ -135,6 +135,7 @@ export const enhancedTransformSync = __napiModule.exports.enhancedTransformSync
 export const FilterTokenKind = __napiModule.exports.FilterTokenKind
 export const getAsyncRuntimeConfig = __napiModule.exports.getAsyncRuntimeConfig
 export const getAsyncRuntimeMetrics = __napiModule.exports.getAsyncRuntimeMetrics
+export const getRuntimeCapabilities = __napiModule.exports.getRuntimeCapabilities
 export const initTraceSubscriber = __napiModule.exports.initTraceSubscriber
 export const registerPlugins = __napiModule.exports.registerPlugins
 export const registerTimerHost = __napiModule.exports.registerTimerHost

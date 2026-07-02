@@ -26,7 +26,7 @@ use std::sync::{
 
 use napi_derive::napi;
 
-mod async_runtime;
+pub mod async_runtime;
 mod env_config;
 
 #[cfg(all(
@@ -90,6 +90,16 @@ pub fn start_async_runtime() {
 
 #[napi_derive::module_init]
 fn init() {
+  // Pin the runtime-config snapshot at module load on EVERY artifact, not
+  // just the ones that build a Rust runtime below. The threaded-WASI tokio
+  // artifact builds none, but its JS loader sizes the real async work pool
+  // from the environment at module load -- resolving lazily there would let
+  // a post-import env change make the report diverge from the pool that is
+  // already running (and would leave the pinning to the accident of the
+  // host's WASI shim snapshotting its env). One source of truth: resolve
+  // here, where every consumer of the snapshot agrees on "load time".
+  crate::async_runtime::resolved_runtime_config();
+
   #[cfg(all(
     not(target_family = "wasm"),
     feature = "tokio-runtime",
@@ -97,28 +107,24 @@ fn init() {
   ))]
   {
     use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
-    // Single source of truth for the native default thread counts: the SAME
-    // resolution the diagnostics reporter snapshots, so the reported config
-    // always matches the runtime actually built here.
-    // - max_blocking_threads default is **512** in tokio; that is too high for
-    //   us (we don't have that many `blocking` tasks), so we default to 4.
-    // - rolldown puts a lot of blocking work on the worker threads rather than
-    //   the blocking pool, so we scale worker threads up (physical * 3 / 2).
-    let (worker_threads, max_blocking_threads) =
-      crate::async_runtime::resolve_default_runtime_threads();
+    // Build the tokio runtime from the SAME resolved snapshot the diagnostics
+    // reporter (`get_async_runtime_config`) and `get_runtime_capabilities`
+    // serve -- the single config-resolution pipeline -- so the reported
+    // config always matches the runtime actually built here. The measured
+    // defaults (worker threads at physical * 3 / 2, a dedicated 4-thread
+    // blocking pool instead of tokio's 512) live in the resolver's
+    // per-(backend, target) table; see async_runtime.rs.
+    let resolved = crate::async_runtime::resolved_runtime_config();
     let mut builder = tokio::runtime::Builder::new_multi_thread();
 
     let rt = builder
-      .max_blocking_threads(max_blocking_threads)
-      .worker_threads(worker_threads)
+      .max_blocking_threads(resolved.max_blocking_tasks)
+      .worker_threads(resolved.worker_threads)
       .thread_name("rolldown-worker")
       .enable_all()
       .build()
       .expect("Failed to create tokio runtime");
     create_custom_tokio_runtime(rt);
-    // Record what the runtime was ACTUALLY built with so the diagnostics
-    // reporter (`get_async_runtime_config`) does not re-read a later-mutated env.
-    crate::async_runtime::snapshot_default_runtime_config(worker_threads, max_blocking_threads);
   }
 
   #[cfg(not(feature = "disable_panic_hook"))]

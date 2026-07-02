@@ -653,6 +653,7 @@ module.exports.enhancedTransformSync = nativeBinding.enhancedTransformSync
 module.exports.FilterTokenKind = nativeBinding.FilterTokenKind
 module.exports.getAsyncRuntimeConfig = nativeBinding.getAsyncRuntimeConfig
 module.exports.getAsyncRuntimeMetrics = nativeBinding.getAsyncRuntimeMetrics
+module.exports.getRuntimeCapabilities = nativeBinding.getRuntimeCapabilities
 module.exports.initTraceSubscriber = nativeBinding.initTraceSubscriber
 module.exports.registerPlugins = nativeBinding.registerPlugins
 module.exports.registerTimerHost = nativeBinding.registerTimerHost

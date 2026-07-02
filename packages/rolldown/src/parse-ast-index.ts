@@ -1,3 +1,7 @@
+// This entry loads the binding (parse/parseSync); every such entry registers
+// the CurrentThread timer host at import (see timer-host.ts).
+import './timer-host';
+
 import type { Program } from '@oxc-project/types';
 import type {
   ParseResult as BindingParseResult,

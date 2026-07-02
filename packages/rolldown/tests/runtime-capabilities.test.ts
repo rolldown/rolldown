@@ -1,0 +1,440 @@
+import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import nodePath from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { Worker } from 'node:worker_threads';
+// Ensures the timer host is registered before `timers` is asserted: importing
+// the rolldown entry runs `setup.ts` -> `timer-host.ts` -> `registerTimerHost`
+// (the same side effect every public binding-loading entry now carries).
+import 'rolldown';
+import { getAsyncRuntimeConfig, getRuntimeCapabilities } from 'rolldown/experimental';
+import { describe, expect, test } from 'vitest';
+
+// This spec runs against whatever binding the worktree built (default tokio,
+// async-runtime native in either flavor, or a WASI artifact) and asserts the
+// capability report is internally coherent and matches the artifact. The
+// per-lane correctness of the individual flags is additionally pinned by the
+// suites themselves: every `isWasiTest` / `isSingleThread` skip predicate in
+// tests/src/runtime-flavor.ts is now derived from this report, so a lying
+// capability shifts the lane's pass/skip counts immediately.
+
+const testsDir = fileURLToPath(new URL('.', import.meta.url));
+
+// Run `script` (an ESM module body) in a FRESH node process that resolves
+// packages from this tests package; returns the last stdout line parsed as
+// JSON (stderr, e.g. node:wasi's ExperimentalWarning, is ignored).
+function inFreshProcess(script: string, env: Record<string, string | undefined> = {}): any {
+  const stdout = execFileSync(process.execPath, ['--input-type=module', '-e', script], {
+    cwd: testsDir,
+    env: { ...process.env, ...env },
+    encoding: 'utf8',
+  });
+  const lines = stdout.trim().split('\n');
+  return JSON.parse(lines[lines.length - 1]);
+}
+
+describe('getRuntimeCapabilities', () => {
+  const caps = getRuntimeCapabilities();
+
+  test('reports a coherent capability set for the loaded artifact', () => {
+    expect(['tokio', 'shared']).toContain(caps.backend);
+    expect(caps.asyncRuntimeBuild).toBe(caps.backend === 'shared');
+
+    expect(['native', 'wasi', 'wasi-threads']).toContain(caps.target);
+    expect(caps.wasi).toBe(caps.target !== 'native');
+
+    expect(['CurrentThread', 'MultiThread']).toContain(caps.flavor);
+    expect(caps.threads).toBe(caps.flavor === 'MultiThread');
+    expect(caps.blockOnJsThreadSafe).toBe(caps.threads);
+
+    // One pipeline: the capability flavor and the config reporter's flavor
+    // come from the same resolved snapshot / runtime controller.
+    expect(caps.flavor).toBe(getAsyncRuntimeConfig().flavor);
+
+    // Static per artifact: watch works on both native flavors and on no wasm
+    // artifact, independent of timer-host registration state.
+    expect(caps.watchSupported).toBe(!caps.wasi);
+  });
+
+  test('a timer facility is available once any public entry has loaded', () => {
+    // tokio builds own a timer wheel; the shared MultiThread flavor owns a
+    // timer heap; the shared CurrentThread flavor delegates to the host
+    // driver registered at import by every binding-loading entry.
+    expect(caps.timers).toBe(true);
+  });
+
+  test('the report is a stable snapshot, not an env re-read', () => {
+    const capsBefore = getRuntimeCapabilities();
+    const configBefore = getAsyncRuntimeConfig();
+    const mutated = { ...process.env };
+    process.env.ROLLDOWN_RUNTIME = caps.threads ? 'single' : 'multi';
+    process.env.ROLLDOWN_WORKER_THREADS = '99';
+    try {
+      expect(getRuntimeCapabilities()).toEqual(capsBefore);
+      expect(getAsyncRuntimeConfig()).toEqual(configBefore);
+    } finally {
+      process.env.ROLLDOWN_RUNTIME = mutated.ROLLDOWN_RUNTIME;
+      process.env.ROLLDOWN_WORKER_THREADS = mutated.ROLLDOWN_WORKER_THREADS;
+      if (mutated.ROLLDOWN_RUNTIME === undefined) {
+        delete process.env.ROLLDOWN_RUNTIME;
+      }
+      if (mutated.ROLLDOWN_WORKER_THREADS === undefined) {
+        delete process.env.ROLLDOWN_WORKER_THREADS;
+      }
+    }
+  });
+
+  // Codex round-1 finding 2 regression: the capability contract must not
+  // depend on import order. A fresh process whose ONLY import is
+  // `rolldown/experimental` must still see working timers (the entry carries
+  // the timer-host side effect itself) and the artifact-static watch flag.
+  // RED before the fix on CurrentThread builds: timers:false and
+  // watchSupported:false for an artifact that fully supports both.
+  test('capabilities do not depend on import order (experimental-only import)', () => {
+    const fresh = inFreshProcess(`
+      const { getRuntimeCapabilities } = await import('rolldown/experimental');
+      console.log(JSON.stringify(getRuntimeCapabilities()));
+    `);
+    expect(fresh.timers).toBe(true);
+    expect(fresh.watchSupported).toBe(!caps.wasi);
+    // Same artifact, same lane env => the flavor this process sees.
+    expect(fresh.flavor).toBe(caps.flavor);
+  });
+
+  // Codex round-1 finding 1 regression: the snapshot is pinned at MODULE
+  // LOAD on every artifact (lib.rs `init` resolves it eagerly), so an env
+  // mutation between import and the FIRST query is invisible -- the report
+  // must equal a control process that queried immediately. Threaded-WASI
+  // note: node:wasi additionally snapshots the WASI env at loader load
+  // (uvwasi), which masked the lazy-resolution hole on this particular host;
+  // the eager init makes load-time pinning a property of rolldown itself
+  // rather than of the host's WASI shim.
+  test('first query reflects load-time env even if mutated after import', () => {
+    const spawnEnv = {
+      ROLLDOWN_WORKER_THREADS: '7',
+      NAPI_RS_ASYNC_WORK_POOL_SIZE: '6',
+    };
+    const report = `
+      const { getAsyncRuntimeConfig, getRuntimeCapabilities } = await import('rolldown/experimental');
+      MUTATE;
+      console.log(JSON.stringify({ config: getAsyncRuntimeConfig(), caps: getRuntimeCapabilities() }));
+    `;
+    const mutateAll = `for (const key of ['ROLLDOWN_RUNTIME', 'ROLLDOWN_WORKER_THREADS', 'ROLLDOWN_MAX_BLOCKING_THREADS', 'ROLLDOWN_PARK_DEADLINE_MS', 'NAPI_RS_ASYNC_WORK_POOL_SIZE', 'UV_THREADPOOL_SIZE']) process.env[key] = '9'`;
+    const mutated = inFreshProcess(report.replace('MUTATE', mutateAll), spawnEnv);
+    const control = inFreshProcess(report.replace('MUTATE', ''), spawnEnv);
+    expect(mutated).toEqual(control);
+  });
+
+  // Codex round-2 finding regression: the contract must hold inside Node
+  // worker_threads too -- timer-host registration carries NO isMainThread
+  // guard (the parallel-plugin machinery loads the binding in workers). A
+  // fresh process whose FIRST binding import happens inside a worker must see
+  // working timers there; and because the native driver registry takes one
+  // registration per importing env with newest-live-wins selection
+  // (rolldown_utils TimerDriverRegistry), the worker's registration serves
+  // its own env without clobbering a later main-thread import (which
+  // registers its own driver). RED before the fix on CurrentThread builds:
+  // the worker reported timers:false (and a CT sleep_until there would have
+  // panicked driverless) while watchSupported was statically true.
+  test('capabilities hold when a worker thread imports the binding first', () => {
+    const result = inFreshProcess(`
+      import { Worker } from 'node:worker_threads';
+      const workerCaps = await new Promise((resolve, reject) => {
+        const worker = new Worker(
+          "(async () => { const { getRuntimeCapabilities } = await import('rolldown/experimental'); const { parentPort } = await import('node:worker_threads'); parentPort.postMessage(getRuntimeCapabilities()); })().catch((error) => { setTimeout(() => { throw error; }); })",
+          { eval: true },
+        );
+        worker.once('message', resolve);
+        worker.once('error', reject);
+      });
+      // The worker registered first; the main thread must not be driverless
+      // either (it registers its own per-env driver alongside the worker's).
+      const { getRuntimeCapabilities } = await import('rolldown/experimental');
+      console.log(JSON.stringify({ workerCaps, mainCaps: getRuntimeCapabilities() }));
+    `);
+    expect(result.workerCaps.timers).toBe(true);
+    expect(result.workerCaps.watchSupported).toBe(!caps.wasi);
+    expect(result.workerCaps.flavor).toBe(caps.flavor);
+    expect(result.mainCaps.timers).toBe(true);
+  });
+
+  // Codex round-3 finding regression: a worker that imports the binding FIRST
+  // and then EXITS must not leave timer duty to its dead driver. The weak
+  // threadsafe function behind the timer host does not keep the worker's
+  // event loop alive, so the worker exits naturally and its env teardown
+  // kills the callback. Under the old first-registration-wins slot the dead
+  // driver shadowed the slot forever; a later main-thread watch debounce
+  // (a REAL CurrentThread sleep -- buildDelay > 0 keeps it off the
+  // already-elapsed fast path) then busy-failed against the corpse. RED
+  // before the fix on the single flavor: 25,654 stderr lines of
+  // "rolldown: host timer callback failed: Closing" during ONE 150ms
+  // debounce window (the rebuild only completed because the wall clock
+  // passed the deadline during the spin). GREEN: the registry evicts the
+  // dead registrant, the debounce arms on the main thread's live driver, and
+  // stderr stays clean.
+  test.skipIf(!caps.watchSupported)(
+    'watch debounce timers survive a worker-first registrant that exited',
+    { retry: 3, timeout: 60_000 },
+    () => {
+      const child = spawnSync(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          `
+      import { Worker } from 'node:worker_threads';
+      import fs from 'node:fs';
+      import os from 'node:os';
+      import path from 'node:path';
+
+      // Step 1: a worker imports the binding FIRST (registering a timer host
+      // owned by the worker's env), then exits.
+      const worker = new Worker(
+        "(async () => { await import('rolldown/experimental'); const { parentPort } = await import('node:worker_threads'); parentPort.postMessage('ready'); })().catch((error) => { setTimeout(() => { throw error; }); })",
+        { eval: true },
+      );
+      await new Promise((resolve, reject) => {
+        worker.once('message', resolve);
+        worker.once('error', reject);
+      });
+      const naturalExit = await Promise.race([
+        new Promise((resolve) => worker.once('exit', () => resolve(true))),
+        new Promise((resolve) => setTimeout(() => resolve(false), 10_000)),
+      ]);
+      if (!naturalExit) {
+        // Fallback: terminate tears the env down just the same.
+        await worker.terminate();
+      }
+
+      // Step 2: the main thread imports rolldown and runs a REAL watch whose
+      // debounce must go through a CurrentThread host timer.
+      const { watch } = await import('rolldown');
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rd-worker-exit-timer-'));
+      const input = path.join(dir, 'main.js');
+      fs.writeFileSync(input, 'export const a = 1;');
+      const watcher = watch({
+        input,
+        cwd: dir,
+        output: { dir: path.join(dir, 'dist') },
+        watch: { buildDelay: 150, watcher: { usePolling: true, pollInterval: 50 } },
+      });
+
+      let endCount = 0;
+      let resolveSecondEnd;
+      const secondEnd = new Promise((resolve) => { resolveSecondEnd = resolve; });
+      watcher.on('event', (event) => {
+        if (event.code === 'END') {
+          endCount += 1;
+          if (endCount >= 2) resolveSecondEnd(true);
+        }
+      });
+      await new Promise((resolve) => {
+        const check = setInterval(() => {
+          if (endCount >= 1) { clearInterval(check); resolve(); }
+        }, 50);
+      });
+
+      // Edit across a whole-second mtime boundary (poll watcher granularity).
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      fs.writeFileSync(input, 'export const a = 2;');
+      const rebuilt = await Promise.race([
+        secondEnd,
+        new Promise((resolve) => setTimeout(() => resolve(false), 20_000)),
+      ]);
+      console.log(JSON.stringify({ rebuilt, endCount, naturalExit }));
+      process.exit(rebuilt ? 0 : 7);
+          `,
+        ],
+        { cwd: testsDir, env: { ...process.env }, encoding: 'utf8', timeout: 55_000 },
+      );
+      const lines = child.stdout.trim().split('\n');
+      const result = JSON.parse(lines[lines.length - 1]);
+      expect(result.rebuilt).toBe(true);
+      expect(result.endCount).toBeGreaterThanOrEqual(2);
+      // The RED signature: a busy retry loop against the dead worker-owned
+      // callback spams this line (25k+ occurrences pre-fix). A healthy
+      // eviction+re-arm never touches the dead driver's relay.
+      expect(child.stderr).not.toContain('host timer callback failed');
+      expect(child.status).toBe(0);
+    },
+  );
+
+  // Codex round-4 finding 3 regression: the REAL `#parallel-plugin-worker`
+  // entry is a binding-loading worker entry, so it must carry the timer-host
+  // registration itself (src now imports './timer-host' first). On native the
+  // process-global registry can mask a missing registration (main's driver
+  // serves); on the wasm artifacts the registry is per-instance and the
+  // worker would be genuinely driverless. NOTE on RED-ability: in the CURRENT
+  // dist the shared chunk that provides `require_binding` also happens to
+  // carry timer-host's top-level registration call, so the built entry
+  // registered incidentally even before the source fix -- this test pins the
+  // contract against a future chunk split that separates them.
+  const rolldownPkgDir = nodePath.dirname(
+    createRequire(import.meta.url).resolve('rolldown/package.json'),
+  );
+  const parallelWorkerEntry = nodePath.join(rolldownPkgDir, 'dist', 'parallel-plugin-worker.mjs');
+  test.skipIf(!existsSync(parallelWorkerEntry))(
+    'the parallel-plugin worker entry carries the timer-host registration',
+    { timeout: 30_000 },
+    async () => {
+      // STRUCTURAL: the entry's static import graph (the entry plus its
+      // relative chunks -- including BARE side-effect imports, which is
+      // exactly the form the timer-host import takes on the wasi dist) must
+      // contain the registration call. Top-level chunk code executes on
+      // import, so presence in the graph IS registration in the worker's
+      // env. The `(ms) => new Promise(... setTimeout(resolve, ms))` lambda
+      // body only exists in that statement.
+      const entryText = readFileSync(parallelWorkerEntry, 'utf8');
+      let graphText = entryText;
+      for (const match of entryText.matchAll(/(?:from\s+|import\s+)["'](\.\/[^"']+)["']/g)) {
+        const chunkPath = nodePath.join(nodePath.dirname(parallelWorkerEntry), match[1]);
+        if (existsSync(chunkPath)) {
+          graphText += readFileSync(chunkPath, 'utf8');
+        }
+      }
+      expect(graphText).toContain('setTimeout(resolve, ms)');
+
+      // BEHAVIORAL: the real entry must actually run as a worker under this
+      // lane's flavor (empty plugin set: registerPlugins(id, []) no-ops on an
+      // unknown registry id and the entry posts success).
+      const worker = new Worker(pathToFileURL(parallelWorkerEntry), {
+        workerData: { registryId: 0, pluginInfos: [], threadNumber: 0 },
+      });
+      try {
+        const outcome: any = await Promise.race([
+          new Promise((resolve, reject) => {
+            worker.once('message', resolve);
+            worker.once('error', reject);
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('parallel-plugin worker never reported')), 20_000),
+          ),
+        ]);
+        expect(outcome.type).toBe('success');
+      } finally {
+        await worker.terminate();
+      }
+    },
+  );
+
+  // Codex round-5 regression: relay eviction must be decided by the
+  // unforgeable Closing status or the liveness probe -- NEVER by error
+  // message. A rejected JS promise coerces to GenericFailure carrying the
+  // JS-controlled rejection string, so a LIVE callback rejecting with
+  // Error('oneshot canceled') (colliding with napi's env-died-mid-promise
+  // message) used to be misclassified as env death and evicted immediately,
+  // bypassing the 3-strike budget -- on a sole-registrant process that
+  // stranded it driverless. RED against the string-match classifier:
+  // stderr "host timer callback failed (host gone, evicting): GenericFailure,
+  // Error: oneshot canceled" and the live host called exactly ONCE (evicted;
+  // the rebuild only survived via the older entry-registered host). GREEN:
+  // "(1/3 before eviction)" strike, host stays registered, its retry fires
+  // the debounce (called twice). Only meaningful where host timers serve
+  // watch: the shared CurrentThread flavor on a watch-capable artifact.
+  test.skipIf(caps.flavor !== 'CurrentThread' || !caps.watchSupported)(
+    'a live timer host rejecting with a colliding message takes the strike path',
+    { retry: 3, timeout: 60_000 },
+    () => {
+      const child = spawnSync(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          `
+      import fs from 'node:fs';
+      import os from 'node:os';
+      import path from 'node:path';
+      import { createRequire } from 'node:module';
+      import { pathToFileURL } from 'node:url';
+
+      const { watch } = await import('rolldown');
+
+      // registerTimerHost is not re-exported publicly; recover the binding's
+      // module.exports through the dist shared chunks' require_binding
+      // factory (a plain zero-arity function; the chunks are already loaded
+      // via the 'rolldown' import above, so this adds no side effects).
+      const pkgDir = path.dirname(createRequire(import.meta.url).resolve('rolldown/package.json'));
+      const sharedDir = path.join(pkgDir, 'dist', 'shared');
+      let binding;
+      for (const name of fs.readdirSync(sharedDir)) {
+        if (!name.endsWith('.mjs')) continue;
+        const chunk = await import(pathToFileURL(path.join(sharedDir, name)));
+        for (const value of Object.values(chunk)) {
+          if (typeof value !== 'function' || value.length !== 0) continue;
+          try {
+            const candidate = value();
+            if (candidate && typeof candidate.then === 'function') {
+              candidate.catch(() => {});
+              continue;
+            }
+            if (candidate && typeof candidate.registerTimerHost === 'function') {
+              binding = candidate;
+              break;
+            }
+          } catch {}
+        }
+        if (binding) break;
+      }
+      if (!binding) {
+        console.log(JSON.stringify({ error: 'binding factory not found' }));
+        process.exit(2);
+      }
+
+      // A LIVE host: rejects its FIRST call with the colliding message, then
+      // behaves normally. Newest registrant => it serves the debounce.
+      let calls = 0;
+      binding.registerTimerHost((ms) => {
+        calls += 1;
+        if (calls === 1) return Promise.reject(new Error('oneshot canceled'));
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      });
+
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rd-collision-'));
+      const input = path.join(dir, 'main.js');
+      fs.writeFileSync(input, 'export const a = 1;');
+      const watcher = watch({
+        input,
+        cwd: dir,
+        output: { dir: path.join(dir, 'dist') },
+        watch: { buildDelay: 150, watcher: { usePolling: true, pollInterval: 50 } },
+      });
+
+      let endCount = 0;
+      let resolveSecondEnd;
+      const secondEnd = new Promise((resolve) => { resolveSecondEnd = resolve; });
+      watcher.on('event', (event) => {
+        if (event.code === 'END') {
+          endCount += 1;
+          if (endCount >= 2) resolveSecondEnd(true);
+        }
+      });
+      await new Promise((resolve) => {
+        const check = setInterval(() => {
+          if (endCount >= 1) { clearInterval(check); resolve(); }
+        }, 50);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      fs.writeFileSync(input, 'export const a = 2;');
+      const rebuilt = await Promise.race([
+        secondEnd,
+        new Promise((resolve) => setTimeout(() => resolve(false), 15_000)),
+      ]);
+      console.log(JSON.stringify({ rebuilt, endCount, calls }));
+      process.exit(rebuilt ? 0 : 7);
+          `,
+        ],
+        { cwd: testsDir, env: { ...process.env }, encoding: 'utf8', timeout: 55_000 },
+      );
+      const lines = child.stdout.trim().split('\n');
+      const result = JSON.parse(lines[lines.length - 1]);
+      expect(result.rebuilt).toBe(true);
+      // The discriminator: the live host survived its strike and was re-armed
+      // (called again); the old classifier evicted it after one call.
+      expect(result.calls).toBeGreaterThanOrEqual(2);
+      expect(child.stderr).toContain('before eviction');
+      expect(child.stderr).not.toContain('host gone, evicting');
+      expect(child.status).toBe(0);
+    },
+  );
+});

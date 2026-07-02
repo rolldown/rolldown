@@ -174,6 +174,7 @@ module.exports.enhancedTransformSync = __napiModule.exports.enhancedTransformSyn
 module.exports.FilterTokenKind = __napiModule.exports.FilterTokenKind
 module.exports.getAsyncRuntimeConfig = __napiModule.exports.getAsyncRuntimeConfig
 module.exports.getAsyncRuntimeMetrics = __napiModule.exports.getAsyncRuntimeMetrics
+module.exports.getRuntimeCapabilities = __napiModule.exports.getRuntimeCapabilities
 module.exports.initTraceSubscriber = __napiModule.exports.initTraceSubscriber
 module.exports.registerPlugins = __napiModule.exports.registerPlugins
 module.exports.registerTimerHost = __napiModule.exports.registerTimerHost

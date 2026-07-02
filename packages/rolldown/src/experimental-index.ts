@@ -1,3 +1,9 @@
+// Every public entry that loads the binding must carry this side effect: the
+// shared runtime's CurrentThread flavor delegates timers to the host event
+// loop, and the capability contract (`getRuntimeCapabilities().timers`) must
+// not depend on WHICH entry a consumer imported first.
+import './timer-host';
+
 export { dev } from './api/dev';
 export { DevEngine } from './api/dev/dev-engine';
 export type { DevOptions, DevWatchOptions } from './api/dev/dev-options';
@@ -5,6 +11,7 @@ export { freeExternalMemory, scan } from './api/experimental';
 export {
   type BindingClientHmrUpdate,
   BindingRebuildStrategy,
+  type BindingRuntimeCapabilities,
   type BindingRuntimeConfig,
   type BindingRuntimeFlavor,
   type BindingRuntimeMetrics,
@@ -12,6 +19,7 @@ export {
   configureAsyncRuntime,
   getAsyncRuntimeConfig,
   getAsyncRuntimeMetrics,
+  getRuntimeCapabilities,
   isolatedDeclaration,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,

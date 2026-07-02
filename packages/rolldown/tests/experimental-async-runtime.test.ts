@@ -5,6 +5,7 @@ import {
   configureAsyncRuntime,
   getAsyncRuntimeConfig,
   getAsyncRuntimeMetrics,
+  getRuntimeCapabilities,
   resetAsyncRuntimeMetrics,
 } from 'rolldown/experimental';
 import { describe, expect, test } from 'vitest';
@@ -19,29 +20,18 @@ import { describe, expect, test } from 'vitest';
 //
 // This spec runs against whatever binding is built in the worktree. The
 // default-build assertions below MUST execute and pass on the default
-// `tokio-runtime` build. The metrics-INCREMENT block is gated behind a
-// build-flavor probe so it only asserts on an `async-runtime` artifact.
+// `tokio-runtime` build. The metrics-INCREMENT block is gated behind the
+// artifact's own capability report so it only asserts on an `async-runtime`
+// artifact.
 
 // The exact feature-disabled message from
 // crates/rolldown_binding/src/async_runtime.rs (the `not(feature =
 // "async-runtime")` arm). We assert the backtick-wrapped substring.
 const FEATURE_DISABLED = 'built without the `async-runtime` feature';
 
-// Probe the build flavor once: on the default build `configureAsyncRuntime`
-// throws the feature-disabled error; on an `async-runtime` build it succeeds
-// (or throws a different, non-feature-disabled error). `true` => default build.
-function detectDefaultBuild(): boolean {
-  try {
-    // A no-op override: pass nothing to avoid mutating an async-runtime build's
-    // real config. On the default build this throws feature-disabled regardless.
-    configureAsyncRuntime({});
-    return false;
-  } catch (error) {
-    return String((error as Error)?.message ?? error).includes(FEATURE_DISABLED);
-  }
-}
-
-const isDefaultBuild = detectDefaultBuild();
+// The build flavor comes from the artifact's own capability report; no
+// configure-probe against the error message. `true` => default tokio build.
+const isDefaultBuild = !getRuntimeCapabilities().asyncRuntimeBuild;
 
 // The non-config, non-flavor metrics fields: the pure runtime counters that
 // must all be zero on the default build (and that rise after work on an

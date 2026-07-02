@@ -9,7 +9,7 @@ use std::{
   panic::{AssertUnwindSafe, catch_unwind},
   pin::Pin,
   sync::{
-    Arc, LazyLock, Mutex, OnceLock,
+    Arc, LazyLock, Mutex,
     atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
   },
   task::{Context, Poll, Waker},
@@ -43,11 +43,13 @@ pub struct RuntimeOptions {
   /// MultiThread COOPERATIVE driver parks -- never the foreign/napi
   /// whole-build park, see §8.5) may sleep with ZERO runtime progress before
   /// panicking with the typed [`BlockOnDeadlock`] diagnostic. `None` (the
-  /// default) disables deadline detection unless the
-  /// [`PARK_DEADLINE_ENV`] environment variable is set at executor
-  /// construction: a legitimately long park (e.g. awaiting a slow JS plugin)
-  /// must never panic a production build. The threadless-wasm CERTAIN
-  /// deadlock check is independent of this knob and always on.
+  /// default) disables deadline detection: a legitimately long park (e.g.
+  /// awaiting a slow JS plugin) must never panic a production build. The
+  /// runtime itself never reads the environment; the embedder resolves the
+  /// [`PARK_DEADLINE_ENV`] variable into this field (rolldown_binding's
+  /// single env-resolution pipeline does so at addon load). The
+  /// threadless-wasm CERTAIN deadlock check is independent of this knob and
+  /// always on.
   pub park_deadline: Option<Duration>,
 }
 
@@ -92,25 +94,13 @@ impl RuntimeOptions {
 
 /// Environment variable that arms deadline-based `block_on` deadlock
 /// detection: milliseconds a runtime-owned park may sleep with zero runtime
-/// progress before panicking (see [`RuntimeOptions::park_deadline`], which
-/// takes precedence when set). Missing, non-numeric or `0` all mean
-/// "disabled".
+/// progress before panicking (see [`RuntimeOptions::park_deadline`]).
+/// Missing, non-numeric or `0` all mean "disabled". The runtime does NOT
+/// read this variable itself: rolldown_binding's single env-resolution
+/// pipeline parses it once at addon load and hands the result to
+/// [`configure`] through [`RuntimeOptions::park_deadline`]. The name is kept
+/// here because the [`BlockOnDeadlock`] diagnostic references it.
 pub const PARK_DEADLINE_ENV: &str = "ROLLDOWN_PARK_DEADLINE_MS";
-
-/// Parse a raw [`PARK_DEADLINE_ENV`] value; unusable values (unset,
-/// non-numeric, `0`) disable deadline detection rather than erroring, the
-/// same treatment `env_config::resolve_thread_count` gives the thread-count
-/// variables.
-fn parse_park_deadline(raw: Option<String>) -> Option<Duration> {
-  let millis = raw?.parse::<u64>().ok().filter(|&millis| millis != 0)?;
-  Some(Duration::from_millis(millis))
-}
-
-/// Read [`PARK_DEADLINE_ENV`] at executor construction (wake-path §6(d)); an
-/// explicit `RuntimeOptions::park_deadline` takes precedence over it.
-fn park_deadline_from_env() -> Option<Duration> {
-  parse_park_deadline(std::env::var(PARK_DEADLINE_ENV).ok())
-}
 
 /// True on builds where no second thread can EVER deliver a wake to a parked
 /// `block_on`: wasm without the `atomics` target feature (the single-thread
@@ -767,7 +757,8 @@ struct MultiThreadExecutor {
   // (wake-path §6(d)); the foreign/napi whole-build park in `block_on`'s
   // else-branch is exempt by design (§8.5) -- it parks for entire builds and
   // a deadline there would panic healthy production runs. Off unless
-  // configured via `RuntimeOptions::park_deadline` / `PARK_DEADLINE_ENV`.
+  // configured via `RuntimeOptions::park_deadline` (the embedder resolves
+  // `PARK_DEADLINE_ENV` into it).
   park_deadline: Option<Duration>,
   // Runtime-owned timer heap plus the timekeeper role state (timer intel
   // §4(a)); serviced by the dedicated timekeeper job and by timer-bounded
@@ -804,7 +795,7 @@ impl MultiThreadExecutor {
       parked_drivers: ParkedDrivers::default(),
       max_drainers: options.worker_threads,
       max_blocking: options.max_blocking_tasks.min(options.worker_threads),
-      park_deadline: options.park_deadline.or_else(park_deadline_from_env),
+      park_deadline: options.park_deadline,
       timers: TimerHeap::default(),
       metrics,
     })
@@ -1779,8 +1770,8 @@ static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(0);
 /// Seam for host-delegated timers (timer intel §4(b)): the CurrentThread
 /// flavor cannot park a helper thread on a threadless build, so it delegates
 /// `sleep_until` to the host event loop through this trait. The Node binding
-/// installs a `setTimeout`-based implementation via [`set_timer_driver`] at
-/// import.
+/// installs a `setTimeout`-based implementation via [`register_timer_driver`]
+/// at import -- one per importing napi env (main thread AND workers).
 pub trait TimerDriver: Send + Sync + 'static {
   /// Arm (or re-arm on re-poll) `waker` to fire at/after `deadline`. Called
   /// once per [`Sleep`] poll: implementations must treat a repeated `id` as a
@@ -1789,16 +1780,135 @@ pub trait TimerDriver: Send + Sync + 'static {
   /// Best-effort cancel (Drop of the [`Sleep`] future). A fire that already
   /// raced ahead is acceptable (the woken task observes the sleep completed).
   fn cancel(&self, id: TimerId);
+  /// Whether this driver can still deliver wakes. `false` once the driver's
+  /// host is gone (the Node binding's driver dies with its owning napi env:
+  /// worker exit aborts the weak threadsafe function). Selection skips and
+  /// evicts dead drivers -- a timer armed on one would only ever busy-fail.
+  fn is_live(&self) -> bool {
+    true
+  }
+  /// Called by [`TimerDriverRegistry`] AFTER it swept this driver out of the
+  /// entries (its `is_live` turned false), with NO registry lock held.
+  /// Implementations with pending-waker bookkeeping must wake everything
+  /// armed on them here, so those sleeps re-poll onto the next live
+  /// registrant: the `is_live` probe can be the FIRST layer to notice a dying
+  /// host (before its env-cleanup hook or any call failure runs), and a
+  /// silent `retain` would strand sleeps whose only wake source was the swept
+  /// driver (Codex task-7 round 4, finding 1). Idempotent with the owner's
+  /// other eviction paths. Default no-op for drivers without waker state.
+  fn on_swept(&self) {}
 }
 
-/// The injected host timer driver (see [`TimerDriver`]). First registration
-/// wins; production registers exactly once from the JS entry at import.
-static HOST_TIMER_DRIVER: OnceLock<Arc<dyn TimerDriver>> = OnceLock::new();
+/// Handle to one registration in a [`TimerDriverRegistry`], returned by
+/// [`TimerDriverRegistry::register`] and consumed by
+/// [`TimerDriverRegistry::unregister`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TimerDriverId(u64);
 
-/// Install the host timer driver used by the CurrentThread flavor's
-/// `sleep_until`. Idempotent: only the first registration takes effect.
-pub fn set_timer_driver(driver: Arc<dyn TimerDriver>) {
-  let _ = HOST_TIMER_DRIVER.set(driver);
+/// Host timer drivers keyed by registration order, with NEWEST-LIVE-WINS
+/// selection. A driver is owned by a host context that can die independently
+/// of the process -- the Node binding registers one driver per importing napi
+/// env, and a worker's env teardown kills its driver's threadsafe function. A
+/// single first-wins slot is therefore unsound: a worker that imports the
+/// binding first and then exits would permanently shadow the slot with a dead
+/// driver, and every CT timer armed afterwards would busy-fail against it
+/// (Codex task-7 round 3). The registry instead keeps ALL registrants and
+/// selects the newest LIVE one at each [`Sleep`] poll, sweeping dead entries
+/// out as it goes.
+///
+/// Instance-based (not a hidden global) so tests exercise
+/// registration/eviction/selection against local registries; production uses
+/// the process-global one behind
+/// [`register_timer_driver`]/[`unregister_timer_driver`]/[`has_live_timer_driver`].
+#[derive(Default)]
+pub struct TimerDriverRegistry {
+  /// Registration-ordered `(id, driver)` pairs; the candidate is the LAST
+  /// live entry (newest registrant).
+  entries: Mutex<Vec<(u64, Arc<dyn TimerDriver>)>>,
+  next_id: AtomicU64,
+}
+
+impl TimerDriverRegistry {
+  /// Add `driver` as the newest registrant and return its handle.
+  pub fn register(&self, driver: Arc<dyn TimerDriver>) -> TimerDriverId {
+    let id = self.next_id.fetch_add(1, Ordering::Relaxed);
+    self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push((id, driver));
+    TimerDriverId(id)
+  }
+
+  /// Drop the registration behind `id` (no-op when already swept/removed).
+  pub fn unregister(&self, id: TimerDriverId) {
+    self
+      .entries
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner)
+      .retain(|(entry_id, _)| *entry_id != id.0);
+  }
+
+  /// The newest LIVE driver, sweeping dead entries out as a side effect.
+  /// `None` when no live driver remains registered.
+  ///
+  /// LOCK DISCIPLINE: each swept driver's [`TimerDriver::on_swept`] hook runs
+  /// AFTER the entries lock is released. The hook re-enters the registry --
+  /// the binding's implementation evicts (which calls `unregister`, taking
+  /// this same lock) and wakes pending sleeps whose re-polls call `current()`
+  /// again -- so invoking it under the lock would deadlock or self-deadlock
+  /// on re-entry. Sweeping under the lock and hooking outside it is safe: the
+  /// entry is already gone from `entries` when the hook runs, so a re-entrant
+  /// selection can never hand the swept driver out again.
+  fn current(&self) -> Option<(TimerDriverId, Arc<dyn TimerDriver>)> {
+    let mut swept: Vec<Arc<dyn TimerDriver>> = Vec::new();
+    let selected = {
+      let mut entries = self.entries.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      entries.retain(|(_, driver)| {
+        let live = driver.is_live();
+        if !live {
+          swept.push(Arc::clone(driver));
+        }
+        live
+      });
+      entries.last().map(|(id, driver)| (TimerDriverId(*id), Arc::clone(driver)))
+    };
+    for driver in swept {
+      driver.on_swept();
+    }
+    selected
+  }
+
+  /// Whether a LIVE driver is currently registered (dead-only counts as no).
+  pub fn has_live_driver(&self) -> bool {
+    self.current().is_some()
+  }
+}
+
+/// The process-global registry behind [`sleep_until`] (see
+/// [`TimerDriverRegistry`] for the lifetime story).
+static TIMER_DRIVERS: LazyLock<Arc<TimerDriverRegistry>> =
+  LazyLock::new(|| Arc::new(TimerDriverRegistry::default()));
+
+/// Register a host timer driver for the CurrentThread flavor's `sleep_until`.
+/// Every host context that can serve timers registers its own driver (the
+/// Node binding: one per importing napi env); the newest LIVE registrant
+/// serves. Returns the handle for [`unregister_timer_driver`].
+pub fn register_timer_driver(driver: Arc<dyn TimerDriver>) -> TimerDriverId {
+  TIMER_DRIVERS.register(driver)
+}
+
+/// Remove a driver registered via [`register_timer_driver`] -- called when
+/// its host context dies (the Node binding evicts on env teardown and on
+/// callback failure). Idempotent.
+pub fn unregister_timer_driver(id: TimerDriverId) {
+  TIMER_DRIVERS.unregister(id);
+}
+
+/// Whether a LIVE host timer driver is currently registered. Lets the
+/// embedder report CurrentThread timer availability honestly
+/// (rolldown_binding's `getRuntimeCapabilities`) instead of guessing: with no
+/// live driver a CurrentThread `sleep_until` would panic, so the capability
+/// must read `false` -- including when the only registrants are DEAD (their
+/// owning envs torn down), not merely when none ever registered.
+pub fn has_live_timer_driver() -> bool {
+  TIMER_DRIVERS.has_live_driver()
 }
 
 /// Pending HOST-driver timers armed on one CurrentThread executor, keyed by
@@ -2188,8 +2298,16 @@ struct HeapSleep {
 
 struct HostSleep {
   id: TimerId,
-  driver: Arc<dyn TimerDriver>,
-  registered: bool,
+  /// Selection source, NOT a pinned driver: each poll re-selects the newest
+  /// LIVE registrant, so a sleep armed on a driver whose host has since died
+  /// (worker env teardown) re-arms on the next live one instead of
+  /// busy-failing against the corpse. The process-global registry in
+  /// production; a local one in tests.
+  drivers: Arc<TimerDriverRegistry>,
+  /// The driver this sleep last armed on `(registration id, driver)`: the
+  /// cancel target on completion/drop, and the change detector for re-arming
+  /// when selection moves.
+  armed: Option<(TimerDriverId, Arc<dyn TimerDriver>)>,
   /// The executor's registry, held so the FIRST poll can arm the wake-token
   /// at the same moment `driver.register` arms the host timer.
   registry: Arc<HostTimerRegistry>,
@@ -2231,14 +2349,13 @@ impl Future for Sleep {
       }
       SleepInner::Host(host) => {
         if Instant::now() >= deadline {
-          if host.registered {
-            host.driver.cancel(host.id);
-            host.registered = false;
+          if let Some((_, driver)) = host.armed.take() {
+            driver.cancel(host.id);
           }
           host.pending.take();
           return Poll::Ready(());
         }
-        if !host.registered {
+        if host.pending.is_none() {
           // FIRST poll: the wake-token enters the registry at the same
           // moment the host timer is armed below -- and only then. An
           // unpolled Sleep has no host callback behind it; on a parked
@@ -2249,12 +2366,35 @@ impl Future for Sleep {
           host.pending =
             Some(HostTimerPendingGuard { registry: Arc::clone(&host.registry), id: host.id });
         }
+        // Re-select the newest LIVE driver on every poll: the driver that
+        // armed this sleep may have died since (its owning env torn down).
+        // All live registrants gone entirely is the no-driver condition and
+        // fails LOUD -- never a silent never-firing debounce.
+        let Some((current_id, current_driver)) = host.drivers.current() else {
+          panic!(
+            "CurrentThread runtime lost every live timer driver mid-sleep: the host contexts \
+             that registered timer drivers (via \
+             `rolldown_utils::async_runtime::register_timer_driver`; the Node binding registers \
+             one per importing env through `registerTimerHost`) have all been torn down, so this \
+             `sleep_until` can never be woken."
+          );
+        };
+        match host.armed.take() {
+          // Driver changed under this sleep (its old host died and was
+          // evicted, and a newer registrant took over): best-effort cancel on
+          // the old driver, then fall through to arm fresh on the live one.
+          // `deadline` is absolute, so the remaining time is preserved.
+          Some((armed_id, old_driver)) if armed_id != current_id => {
+            old_driver.cancel(host.id);
+          }
+          _ => {}
+        }
         // Host drivers treat a repeated id as a waker refresh (see
-        // [`TimerDriver::register`]), so re-polls do not spawn extra host
-        // timers. A host timer that fires marginally early simply re-arms
-        // here with the remaining time.
-        host.driver.register(host.id, deadline, cx.waker().clone());
-        host.registered = true;
+        // [`TimerDriver::register`]), so re-polls on an unchanged driver do
+        // not spawn extra host timers. A host timer that fires marginally
+        // early simply re-arms here with the remaining time.
+        current_driver.register(host.id, deadline, cx.waker().clone());
+        host.armed = Some((current_id, current_driver));
         Poll::Pending
       }
     }
@@ -2271,8 +2411,8 @@ impl Drop for Sleep {
         }
       }
       SleepInner::Host(host) => {
-        if host.registered {
-          host.driver.cancel(host.id);
+        if let Some((_, driver)) = host.armed.take() {
+          driver.cancel(host.id);
         }
         // `pending` (if still held) drops here and retires the wake-token.
       }
@@ -2281,18 +2421,19 @@ impl Drop for Sleep {
 }
 
 /// Sleep until `deadline` on the runtime's timer facility. MultiThread uses
-/// the executor-owned heap; CurrentThread requires a host driver installed
-/// via [`set_timer_driver`] and otherwise fails LOUD (a missing driver must
-/// never become a silent never-firing debounce).
+/// the executor-owned heap; CurrentThread requires a LIVE host driver
+/// registered via [`register_timer_driver`] and otherwise fails LOUD (a
+/// missing driver must never become a silent never-firing debounce).
 pub fn sleep_until(deadline: Instant) -> Sleep {
-  make_sleep(&RUNTIME.backend(), HOST_TIMER_DRIVER.get().cloned(), deadline)
+  make_sleep(&RUNTIME.backend(), &TIMER_DRIVERS, deadline)
 }
 
 /// Flavor dispatch behind [`sleep_until`], parameterized for tests (which
-/// build executors locally and must not touch the process-global driver).
+/// build executors and driver registries locally and must not touch the
+/// process-global ones).
 fn make_sleep(
   backend: &RuntimeBackend,
-  host_driver: Option<Arc<dyn TimerDriver>>,
+  host_drivers: &Arc<TimerDriverRegistry>,
   deadline: Instant,
 ) -> Sleep {
   let id = NEXT_TIMER_ID.fetch_add(1, Ordering::Relaxed);
@@ -2308,14 +2449,19 @@ fn make_sleep(
       }),
     },
     RuntimeBackend::CurrentThread(executor) => {
-      let Some(driver) = host_driver else {
-        panic!(
-          "CurrentThread runtime has no timer driver registered: `sleep_until` on the \
-           single-thread flavor delegates timers to the host event loop. Install one via \
-           `rolldown_utils::async_runtime::set_timer_driver` (the Node binding registers a \
-           setTimeout-based driver through `register_timer_host` at import)."
-        );
-      };
+      // Fail loud at CREATION when no live driver exists (the
+      // never-registered case gets its diagnostic at the sleep_until call
+      // site, not on some later poll). The driver is NOT pinned here: each
+      // poll re-selects the newest live registrant, so a driver dying while
+      // this sleep is in flight re-arms instead of hanging -- and if every
+      // driver dies mid-flight, the poll path has its own loud panic.
+      assert!(
+        host_drivers.has_live_driver(),
+        "CurrentThread runtime has no live timer driver registered: `sleep_until` on the \
+         single-thread flavor delegates timers to the host event loop. Install one via \
+         `rolldown_utils::async_runtime::register_timer_driver` (the Node binding registers \
+         a setTimeout-based driver per importing env through `registerTimerHost` at import)."
+      );
       // The wake-token is armed at FIRST POLL (when `driver.register` arms
       // the host timer), not here: an unpolled Sleep cannot wake anyone --
       // nothing was handed to the host loop, and a parked single thread can
@@ -2326,8 +2472,8 @@ fn make_sleep(
         deadline,
         inner: SleepInner::Host(HostSleep {
           id,
-          driver,
-          registered: false,
+          drivers: Arc::clone(host_drivers),
+          armed: None,
           registry: Arc::clone(&executor.host_timers),
           pending: None,
         }),
@@ -2349,13 +2495,9 @@ impl RuntimeBackend {
     metrics: Arc<RuntimeMetrics>,
   ) -> Result<Self, RuntimeConfigError> {
     match options.flavor {
-      RuntimeFlavor::CurrentThread => {
-        Ok(Self::CurrentThread(Arc::new(CurrentThreadExecutor::with_detection(
-          metrics,
-          THREADLESS_BUILD,
-          options.park_deadline.or_else(park_deadline_from_env),
-        ))))
-      }
+      RuntimeFlavor::CurrentThread => Ok(Self::CurrentThread(Arc::new(
+        CurrentThreadExecutor::with_detection(metrics, THREADLESS_BUILD, options.park_deadline),
+      ))),
       RuntimeFlavor::MultiThread => {
         #[cfg(not(target_family = "wasm"))]
         {
@@ -5859,17 +6001,9 @@ mod tests {
     }
   }
 
-  #[test]
-  fn park_deadline_env_parsing_treats_unset_zero_and_garbage_as_disabled() {
-    // The env knob mirrors `resolve_thread_count`'s treatment of unusable
-    // values: never panic module init over a typo, just disable detection.
-    assert_eq!(parse_park_deadline(None), None);
-    assert_eq!(parse_park_deadline(Some("0".to_string())), None);
-    assert_eq!(parse_park_deadline(Some("abc".to_string())), None);
-    assert_eq!(parse_park_deadline(Some("-5".to_string())), None);
-    assert_eq!(parse_park_deadline(Some(String::new())), None);
-    assert_eq!(parse_park_deadline(Some("1500".to_string())), Some(Duration::from_millis(1500)));
-  }
+  // The PARK_DEADLINE_ENV parse (unset/zero/garbage => disabled) moved to
+  // rolldown_binding's single env-resolution pipeline together with the read
+  // itself; its tests live there (async_runtime.rs resolver tests).
 
   // ---- Timer facility (timer intel §4): heap driver + timekeeper (MT), host
   // delegation (CT), and both deadlock-detection interactions. All tests build
@@ -5929,6 +6063,72 @@ mod tests {
     }
   }
 
+  /// Manual stub for registry-lifetime tests: records `register`/`cancel`
+  /// calls, keeps the binding-shaped pending-waker bookkeeping (latest waker
+  /// per timer id), never fires on its own, and reports the controllable
+  /// `live` flag (a killed stub plays a driver whose owning host context --
+  /// napi env in the binding -- was torn down).
+  struct ManualStubDriver {
+    live: AtomicBool,
+    registers: Mutex<Vec<(TimerId, Instant)>>,
+    cancels: Mutex<Vec<TimerId>>,
+    pending: Mutex<FxHashMap<TimerId, Waker>>,
+    swept: AtomicBool,
+  }
+
+  impl ManualStubDriver {
+    fn new() -> Arc<Self> {
+      Arc::new(Self {
+        live: AtomicBool::new(true),
+        registers: Mutex::new(Vec::new()),
+        cancels: Mutex::new(Vec::new()),
+        pending: Mutex::new(FxHashMap::default()),
+        swept: AtomicBool::new(false),
+      })
+    }
+
+    fn kill(&self) {
+      self.live.store(false, Ordering::SeqCst);
+    }
+  }
+
+  impl TimerDriver for ManualStubDriver {
+    fn register(&self, id: TimerId, deadline: Instant, waker: Waker) {
+      self.registers.lock().unwrap().push((id, deadline));
+      self.pending.lock().unwrap().insert(id, waker);
+    }
+
+    fn cancel(&self, id: TimerId) {
+      self.cancels.lock().unwrap().push(id);
+      self.pending.lock().unwrap().remove(&id);
+    }
+
+    fn is_live(&self) -> bool {
+      self.live.load(Ordering::SeqCst)
+    }
+
+    fn on_swept(&self) {
+      // The binding shape: drain the pending map and wake everything armed
+      // here so those sleeps re-poll onto the next live registrant.
+      self.swept.store(true, Ordering::SeqCst);
+      let wakers: Vec<Waker> = self.pending.lock().unwrap().drain().map(|(_, w)| w).collect();
+      for waker in wakers {
+        waker.wake();
+      }
+    }
+  }
+
+  /// Waker whose `wake` just latches a flag -- observable evidence that a
+  /// wake was DELIVERED (not merely that eviction bookkeeping ran).
+  #[derive(Default)]
+  struct WakeFlag(AtomicBool);
+
+  impl std::task::Wake for WakeFlag {
+    fn wake(self: Arc<Self>) {
+      self.0.store(true, Ordering::SeqCst);
+    }
+  }
+
   #[cfg(not(target_family = "wasm"))]
   fn multi_thread_executor(
     workers: usize,
@@ -5945,9 +6145,22 @@ mod tests {
     Arc::new(MultiThreadExecutor::new(&options, Arc::new(RuntimeMetrics::default())).unwrap())
   }
 
+  /// Local driver registry holding exactly `driver` (the common single-host
+  /// shape of the ported pre-registry tests).
+  fn registry_with(driver: Arc<dyn TimerDriver>) -> Arc<TimerDriverRegistry> {
+    let registry = Arc::new(TimerDriverRegistry::default());
+    registry.register(driver);
+    registry
+  }
+
   #[cfg(not(target_family = "wasm"))]
   fn heap_sleep(executor: &Arc<MultiThreadExecutor>, deadline: Instant) -> Sleep {
-    make_sleep(&RuntimeBackend::MultiThread(Arc::clone(executor)), None, deadline)
+    // The MultiThread arm never touches the driver registry; empty is fine.
+    make_sleep(
+      &RuntimeBackend::MultiThread(Arc::clone(executor)),
+      &Arc::new(TimerDriverRegistry::default()),
+      deadline,
+    )
   }
 
   #[cfg(not(target_family = "wasm"))]
@@ -6326,7 +6539,11 @@ mod tests {
     let backend = RuntimeBackend::CurrentThread(executor);
 
     let payload = catch_unwind(AssertUnwindSafe(|| {
-      let _sleep = make_sleep(&backend, None, Instant::now() + Duration::from_millis(10));
+      let _sleep = make_sleep(
+        &backend,
+        &Arc::new(TimerDriverRegistry::default()),
+        Instant::now() + Duration::from_millis(10),
+      );
     }))
     .expect_err("sleep_until on CurrentThread without a driver must panic");
     let message = payload
@@ -6335,9 +6552,171 @@ mod tests {
       .or_else(|| payload.downcast_ref::<&str>().map(|s| (*s).to_string()))
       .expect("panic payload must be a message");
     assert!(
-      message.contains("CurrentThread runtime has no timer driver registered"),
+      message.contains("CurrentThread runtime has no live timer driver registered"),
       "the diagnostic must name the missing driver, got: {message}"
     );
+  }
+
+  #[test]
+  fn timer_driver_registry_selects_newest_live_and_evicts_dead() {
+    // Registry semantics (Codex task-7 round 3): newest-live-wins selection,
+    // dead entries swept on contact, explicit unregister, and a dead-only
+    // registry reading as NO driver.
+    let registry = TimerDriverRegistry::default();
+    let a = ManualStubDriver::new();
+    let b = ManualStubDriver::new();
+    let a_id = registry.register(Arc::clone(&a) as Arc<dyn TimerDriver>);
+    let b_id = registry.register(Arc::clone(&b) as Arc<dyn TimerDriver>);
+    assert_ne!(a_id, b_id, "registration handles must be distinct");
+    assert_eq!(registry.current().map(|(id, _)| id), Some(b_id), "newest live registrant serves");
+    assert!(registry.has_live_driver());
+
+    // A dead newest (stub for: its owning env torn down) is skipped AND
+    // swept; selection falls back to the older live registrant.
+    b.kill();
+    assert_eq!(registry.current().map(|(id, _)| id), Some(a_id), "dead newest must be skipped");
+    // The sweep is permanent: resurrecting the flag must not bring the
+    // evicted registration back.
+    b.live.store(true, Ordering::SeqCst);
+    assert_eq!(registry.current().map(|(id, _)| id), Some(a_id), "swept entries stay gone");
+
+    // Explicit unregister (the binding's env-cleanup path) empties the
+    // registry; empty and dead-only both read as NO live driver.
+    registry.unregister(a_id);
+    assert!(registry.current().is_none());
+    assert!(!registry.has_live_driver(), "an emptied registry must not report a live driver");
+  }
+
+  #[test]
+  fn host_sleep_rearms_on_next_live_driver_after_eviction() {
+    // Codex task-7 round 3: a sleep armed on a driver whose host dies must
+    // RE-ARM on the newest live registrant with its remaining time preserved
+    // (absolute deadline), keep the executor's wake-token accounting at
+    // exactly one entry throughout, and cancel on the driver it is CURRENTLY
+    // armed on when dropped.
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
+    let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+
+    let a = ManualStubDriver::new();
+    let b = ManualStubDriver::new();
+    let registry = registry_with(Arc::clone(&a) as Arc<dyn TimerDriver>);
+    let deadline = Instant::now() + Duration::from_mins(1);
+
+    let (timer_id, b_id) = {
+      let mut sleep = std::pin::pin!(make_sleep(&backend, &registry, deadline));
+      let mut cx = Context::from_waker(Waker::noop());
+
+      // First poll arms on A (the only registrant) and takes the wake-token.
+      assert!(sleep.as_mut().poll(&mut cx).is_pending());
+      let (timer_id, armed_deadline) = a.registers.lock().unwrap()[0];
+      assert_eq!(armed_deadline, deadline);
+      assert!(executor.host_timers.has_pending(), "first poll must arm the wake-token");
+
+      // A's host dies; a newer live registrant appears (the binding shape:
+      // eviction wakes every pending sleep, which then re-polls -- here the
+      // re-poll is driven manually).
+      a.kill();
+      let b_id = registry.register(Arc::clone(&b) as Arc<dyn TimerDriver>);
+      assert!(sleep.as_mut().poll(&mut cx).is_pending());
+      assert_eq!(
+        b.registers.lock().unwrap().as_slice(),
+        &[(timer_id, deadline)],
+        "the re-poll must re-arm the SAME timer id at the SAME absolute deadline on the live driver"
+      );
+      assert_eq!(
+        a.cancels.lock().unwrap().as_slice(),
+        &[timer_id],
+        "the dead driver gets a best-effort cancel for the old arm"
+      );
+      assert_eq!(registry.current().map(|(id, _)| id), Some(b_id), "the dead driver was evicted");
+      assert!(
+        executor.host_timers.has_pending(),
+        "the wake-token survives the re-arm (still exactly this sleep's entry)"
+      );
+      (timer_id, b_id)
+    };
+
+    // Drop (the pin! scope ended): cancel goes to the CURRENT driver, and the
+    // wake-token retires.
+    let _ = b_id;
+    assert_eq!(b.cancels.lock().unwrap().as_slice(), &[timer_id]);
+    assert!(!executor.host_timers.has_pending(), "drop must retire the wake-token");
+  }
+
+  #[test]
+  fn host_sleep_panics_loud_when_every_driver_dies_mid_flight() {
+    // With NO live registrant left mid-flight there is nothing to re-arm on:
+    // the poll must fail LOUD with the typed diagnostic (acceptable per the
+    // round-3 constraints), never park a wake-less sleep silently.
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
+    let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+
+    let a = ManualStubDriver::new();
+    let registry = registry_with(Arc::clone(&a) as Arc<dyn TimerDriver>);
+    let mut sleep =
+      std::pin::pin!(make_sleep(&backend, &registry, Instant::now() + Duration::from_mins(1)));
+    let mut cx = Context::from_waker(Waker::noop());
+    assert!(sleep.as_mut().poll(&mut cx).is_pending());
+
+    a.kill();
+    let payload = catch_unwind(AssertUnwindSafe(|| {
+      let _ = sleep.as_mut().poll(&mut cx);
+    }))
+    .expect_err("a sleep with every driver dead must panic, not pend silently");
+    let message = payload
+      .downcast_ref::<String>()
+      .cloned()
+      .or_else(|| payload.downcast_ref::<&str>().map(|s| (*s).to_string()))
+      .expect("panic payload must be a message");
+    assert!(
+      message.contains("lost every live timer driver mid-sleep"),
+      "the diagnostic must name the mid-flight driver loss, got: {message}"
+    );
+  }
+
+  #[test]
+  fn registry_sweep_wakes_sleeps_pending_on_the_swept_driver() {
+    // Codex task-7 round 4, finding 1: the registry's selection sweep can be
+    // the FIRST layer to notice a dead driver (the liveness probe fires
+    // before the owner's env-cleanup hook or any call failure). A retain-only
+    // sweep would silently drop the entry and strand every sleep whose armed
+    // waker lives in the swept driver's pending map. The sweep must invoke
+    // `on_swept` on each removed driver (outside the registry lock) so the
+    // driver wakes its pending sleeps into re-selection.
+    let metrics = Arc::new(RuntimeMetrics::default());
+    let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, false, None));
+    let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
+
+    let a = ManualStubDriver::new();
+    let b = ManualStubDriver::new();
+    let registry = registry_with(Arc::clone(&a) as Arc<dyn TimerDriver>);
+    let mut sleep =
+      std::pin::pin!(make_sleep(&backend, &registry, Instant::now() + Duration::from_mins(1)));
+
+    // Arm on A with an observable waker.
+    let flag = Arc::new(WakeFlag::default());
+    let waker = Waker::from(Arc::clone(&flag));
+    let mut cx = Context::from_waker(&waker);
+    assert!(sleep.as_mut().poll(&mut cx).is_pending());
+    assert!(!flag.0.load(Ordering::SeqCst));
+
+    // A's host dies; a DIFFERENT selection (any registry touch -- here a
+    // liveness query, in production another sleep's poll) sweeps it.
+    a.kill();
+    registry.register(Arc::clone(&b) as Arc<dyn TimerDriver>);
+    let _ = registry.has_live_driver();
+
+    assert!(a.swept.load(Ordering::SeqCst), "the sweep must notify the swept driver");
+    assert!(
+      flag.0.load(Ordering::SeqCst),
+      "a sleep armed on the swept driver must be woken into re-selection, not stranded"
+    );
+
+    // The woken sleep's re-poll lands on the live registrant.
+    assert!(sleep.as_mut().poll(&mut cx).is_pending());
+    assert_eq!(b.registers.lock().unwrap().len(), 1, "the re-poll must re-arm on the live driver");
   }
 
   #[test]
@@ -6355,7 +6734,8 @@ mod tests {
 
       let started = Instant::now();
       let mut future = std::pin::pin!(async {
-        make_sleep(&backend, Some(driver), Instant::now() + Duration::from_millis(60)).await;
+        make_sleep(&backend, &registry_with(driver), Instant::now() + Duration::from_millis(60))
+          .await;
       });
       executor.block_on(future.as_mut());
       assert!(started.elapsed() >= Duration::from_millis(60));
@@ -6394,7 +6774,8 @@ mod tests {
 
       let started = Instant::now();
       let mut future = std::pin::pin!(async {
-        make_sleep(&backend, Some(driver), Instant::now() + Duration::from_millis(60)).await;
+        make_sleep(&backend, &registry_with(driver), Instant::now() + Duration::from_millis(60))
+          .await;
       });
       executor.block_on(future.as_mut());
       assert!(started.elapsed() >= Duration::from_millis(60));
@@ -6431,7 +6812,8 @@ mod tests {
 
       // Created and held across the park decision, but NEVER polled: no host
       // timer armed, no wake source.
-      let _unpolled = make_sleep(&backend, Some(driver), Instant::now() + Duration::from_mins(1));
+      let _unpolled =
+        make_sleep(&backend, &registry_with(driver), Instant::now() + Duration::from_mins(1));
 
       let payload = catch_unwind(AssertUnwindSafe(|| {
         let mut future = std::pin::pin!(NeverReady);
@@ -6475,7 +6857,8 @@ mod tests {
 
       let started = Instant::now();
       let mut future = std::pin::pin!(async {
-        make_sleep(&backend, Some(driver), Instant::now() + Duration::from_millis(200)).await;
+        make_sleep(&backend, &registry_with(driver), Instant::now() + Duration::from_millis(200))
+          .await;
       });
       executor.block_on(future.as_mut());
       assert!(started.elapsed() >= Duration::from_millis(200));

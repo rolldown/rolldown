@@ -2701,6 +2701,69 @@ export interface BindingResolveOptions {
   yarnPnp?: boolean
 }
 
+/**
+ * What this Rolldown binding IS -- backend, flavor, target -- and the
+ * capabilities that follow from it. Values are compile-time facts plus the
+ * resolved runtime snapshot; nothing re-reads the environment. Tests and
+ * embedders query the artifact instead of inferring the build flavor from
+ * env vars or error-message probes.
+ */
+export interface BindingRuntimeCapabilities {
+  /**
+   * The scheduler the binding was compiled with: 'tokio' (the default
+   * build) or 'shared' (`--features async-runtime`).
+   */
+  backend: 'tokio' | 'shared'
+  /**
+   * The executor flavor actually in effect (post-validation; on the shared
+   * build this reflects a pre-first-use `configureAsyncRuntime` override).
+   */
+  flavor: BindingRuntimeFlavor
+  /**
+   * The compile target: 'native', 'wasi' (threadless `wasm32-wasip1`) or
+   * 'wasi-threads' (`wasm32-wasip1-threads`).
+   */
+  target: 'native' | 'wasi' | 'wasi-threads'
+  /**
+   * Convenience: the binding is a WebAssembly/WASI artifact (`target !==
+   * 'native'`).
+   */
+  wasi: boolean
+  /** Compiled with `--features async-runtime` (either flavor). */
+  asyncRuntimeBuild: boolean
+  /** Work is scheduled across multiple threads (`flavor === 'MultiThread'`). */
+  threads: boolean
+  /**
+   * A timer facility backs `sleep_until` (the watch-mode debounce). This is
+   * LIVE HOST-REGISTRATION STATE, the one live field: always true on tokio
+   * builds (tokio owns a timer wheel) and on the shared MultiThread flavor
+   * (executor-owned timer heap); on the shared CurrentThread flavor timers
+   * are delegated to the host event loop, so this reads true while a LIVE
+   * `registerTimerHost` registrant exists. Every public package entry that
+   * loads the binding registers a host driver per importing env at import,
+   * so through any supported entry the answer is true; a registrant whose
+   * env died (an exited worker) is evicted and does NOT count. Only a raw
+   * binding loaded outside the supported entries can observe false (a
+   * CurrentThread `sleep_until` would panic at that point).
+   */
+  timers: boolean
+  /**
+   * Watch mode is supported by THIS ARTIFACT: static per artifact, true on
+   * both native flavors, false on every wasm artifact (watch on WASI stalls
+   * on the initial build). Deliberately independent of the live `timers`
+   * registration state -- it describes what the artifact can do, and every
+   * public entry registers the timer host the watch debounce needs before
+   * exposing any API.
+   */
+  watchSupported: boolean
+  /**
+   * `block_on` over a JS-thread continuation cannot deadlock the calling
+   * thread. False on the CurrentThread flavor (the block_on-over-JS
+   * hazard: parking the only thread starves the JS continuation forever).
+   */
+  blockOnJsThreadSafe: boolean
+}
+
 export interface BindingRuntimeConfig {
   flavor: BindingRuntimeFlavor
   workerThreads: number
@@ -3008,19 +3071,13 @@ export type FilterTokenKind =  'Id'|
 /**
  * Return the effective async runtime configuration.
  *
- * On the native default `tokio-runtime` build this reports the thread counts the
- * runtime was ACTUALLY built with at addon load (snapshotted in lib.rs `init`),
- * so a later `process.env` change cannot make the report diverge from the live
- * runtime. On the threaded WASI build it reports the napi-rs WASI loader's async
- * work pool size (NAPI_RS_ASYNC_WORK_POOL_SIZE / UV_THREADPOOL_SIZE).
- *
- * Scope: the snapshot is taken once per process (the runtime is built once in
- * `init`). If a host tears the env down and recreates it in the same process (an
- * Electron-style reload), napi-rs rebuilds its runtime with its OWN defaults and
- * the snapshot is not refreshed -- the same once-per-process lifecycle as napi's
- * env-cleanup hook. This is unchanged from before the snapshot (the prior
- * env-reading reporter could not reflect that napi-default runtime either); the
- * field is diagnostics-only, so it is left as-is rather than chasing the reload.
+ * Reported from the per-process resolved snapshot: on the native default
+ * `tokio-runtime` build these are the thread counts the tokio runtime was
+ * ACTUALLY built with at addon load (lib.rs `init` builds from the same
+ * snapshot), so a later `process.env` change cannot make the report diverge
+ * from the live runtime. On the threaded WASI build it reports the napi-rs
+ * WASI loader's async work pool size (NAPI_RS_ASYNC_WORK_POOL_SIZE /
+ * UV_THREADPOOL_SIZE), resolved once at first query.
  */
 export declare function getAsyncRuntimeConfig(): BindingRuntimeConfig
 
@@ -3030,6 +3087,13 @@ export declare function getAsyncRuntimeConfig(): BindingRuntimeConfig
  * On the default `tokio-runtime` build every counter is zero.
  */
 export declare function getAsyncRuntimeMetrics(): BindingRuntimeMetrics
+
+/**
+ * Report the loaded binding's runtime capabilities (see
+ * `BindingRuntimeCapabilities`). Derived from compile-time cfg plus the
+ * resolved runtime snapshot -- never from re-reading the environment.
+ */
+export declare function getRuntimeCapabilities(): BindingRuntimeCapabilities
 
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
 
@@ -3096,9 +3160,12 @@ export declare function registerPlugins(id: number, plugins: Array<BindingPlugin
 
 /**
  * Install the host timer callback backing the shared async runtime's
- * CurrentThread timers (watch-mode debounce). Called once at import by the
- * JS entry with `(ms) => new Promise((resolve) => setTimeout(resolve, ms))`.
- * A no-op on the default `tokio-runtime` build (tokio owns its timer wheel).
+ * CurrentThread timers (watch-mode debounce). Called at import by every
+ * binding-loading JS entry with
+ * `(ms) => new Promise((resolve) => setTimeout(resolve, ms))`; each
+ * importing env (main thread and workers alike) registers its own host, and
+ * the newest live one serves. A no-op on the default `tokio-runtime` build
+ * (tokio owns its timer wheel).
  */
 export declare function registerTimerHost(callback: (ms: number) => Promise<void>): void
 

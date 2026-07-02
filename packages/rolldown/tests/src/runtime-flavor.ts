@@ -1,4 +1,4 @@
-import { getAsyncRuntimeConfig } from 'rolldown/experimental';
+import { configureAsyncRuntime, getAsyncRuntimeConfig } from 'rolldown/experimental';
 
 // Flavor is reported by every build: async-runtime builds report the configured
 // executor; the default tokio build reports its init-time snapshot
@@ -13,3 +13,17 @@ export const isSingleThread: boolean = runtimeFlavor === 'CurrentThread';
 // Set by the WASI CI lane (reusable-wasi.yml) — distinguishes "wasm binding"
 // from "native binding in single-thread mode".
 export const isWasiTest: boolean = process.env.ROLLDOWN_TEST_WASI === '1';
+
+// True when the binding was compiled with `--features async-runtime` (either
+// flavor). Probe: on the default tokio build `configureAsyncRuntime` throws
+// the feature-disabled error; on an async-runtime build the empty-options
+// call is a no-op (same probe as experimental-async-runtime.test.ts).
+export const isAsyncRuntimeBuild: boolean = (() => {
+  try {
+    configureAsyncRuntime({});
+    return true;
+  } catch (error) {
+    return !String((error as Error)?.message ?? error)
+      .includes('built without the `async-runtime` feature');
+  }
+})();

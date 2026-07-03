@@ -105,6 +105,7 @@ impl From<SymbolIncludeReason> for SymbolProcessMask {
   }
 }
 
+#[expect(clippy::struct_excessive_bools)] // Cached option flags; raw booleans read clearest.
 pub struct IncludeContext<'a> {
   pub modules: &'a IndexModules,
   /// Per-module statement-info table, detached from `EcmaView` and held on
@@ -115,6 +116,13 @@ pub struct IncludeContext<'a> {
   pub is_module_included_vec: &'a mut ModuleInclusionVec,
   pub tree_shaking: bool,
   pub inline_const_smart: bool,
+  /// `options.treeshake.commonjs()`, hoisted out of the per-statement sweep.
+  pub treeshake_commonjs: bool,
+  /// `options.treeshake.property_write_side_effects() == False`, hoisted out of the
+  /// per-reference symbol handling.
+  pub property_write_side_effects_disabled: bool,
+  /// `options.is_dev_mode_enabled()`, hoisted out of the per-module handling.
+  pub dev_mode: bool,
   pub runtime_idx: ModuleIdx,
   pub metas: &'a LinkingMetadataVec,
   pub used_symbol_refs: &'a mut UsedSymbolRefsBuilder,
@@ -187,6 +195,12 @@ impl<'a> IncludeContext<'a> {
       is_module_included_vec,
       tree_shaking: options.treeshake.is_some(),
       inline_const_smart: options.optimization.is_inline_const_smart_mode(),
+      treeshake_commonjs: options.treeshake.commonjs(),
+      property_write_side_effects_disabled: matches!(
+        options.treeshake.property_write_side_effects(),
+        rolldown_common::PropertyWriteSideEffects::False
+      ),
+      dev_mode: options.is_dev_mode_enabled(),
       runtime_idx,
       metas,
       used_symbol_refs,
@@ -612,7 +626,7 @@ fn handle_include_module(ctx: &mut IncludeContext, module_idx: ModuleIdx) {
   });
 
   // With enabling HMR, rolldown will register included esm module's namespace object to the runtime.
-  if ctx.options.is_dev_mode_enabled()
+  if ctx.dev_mode
     && module.idx != ctx.runtime_idx
     && matches!(module.exports_kind, ExportsKind::Esm)
   {
@@ -630,15 +644,15 @@ fn handle_include_module(ctx: &mut IncludeContext, module_idx: ModuleIdx) {
 /// dangle an import and keep today's behavior.
 fn sweep_side_effect_statements(ctx: &mut IncludeContext, module: &NormalModule) {
   let on_demand_side_effects = side_effects_included_on_demand(module, ctx.entry_module_idxs);
+  let has_eval = module.meta.has_eval();
+  let safely_treeshake_commonjs =
+    module.meta.contains(EcmaViewMeta::SafelyTreeshakeCommonjs) && ctx.treeshake_commonjs;
   ctx.stmt_infos[module.idx].iter_enumerated_without_namespace_stmt().for_each(
     |(stmt_info_id, stmt_info)| {
       // No need to handle the namespace statement specially, because it doesn't have side effects and will only be included if it is used.
-      let bail_eval = module.meta.has_eval()
-        && !stmt_info.declared_symbols.is_empty()
-        && stmt_info_id.index() != 0;
-      let has_side_effects = if module.meta.contains(EcmaViewMeta::SafelyTreeshakeCommonjs)
-        && ctx.options.treeshake.commonjs()
-      {
+      let bail_eval =
+        has_eval && !stmt_info.declared_symbols.is_empty() && stmt_info_id.index() != 0;
+      let has_side_effects = if safely_treeshake_commonjs {
         stmt_info.eval_flags.contains(StmtEvalFlags::UnknownSideEffect)
       } else {
         stmt_info.eval_flags.has_side_effect_for_tree_shaking()
@@ -927,10 +941,7 @@ fn note_json_self_reference(
 /// With `propertyWriteSideEffects: false`, property-write statements are not side effects — but
 /// once the written-to symbol is included, its write statements must come along.
 fn include_property_write_referencing_stmts(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
-  if matches!(
-    ctx.options.treeshake.property_write_side_effects(),
-    rolldown_common::PropertyWriteSideEffects::False
-  ) {
+  if ctx.property_write_side_effects_disabled {
     let stmt_ids: &[StmtInfoIdx] = ctx.stmt_infos[symbol_ref.owner]
       .symbol_ref_to_referenced_stmt_idx()
       .get(&symbol_ref)

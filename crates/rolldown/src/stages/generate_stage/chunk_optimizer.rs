@@ -1042,6 +1042,12 @@ impl GenerateStage<'_> {
       is_included_vec: &mut stmt_info_included_vec,
       is_module_included_vec: &mut module_included_vec,
       tree_shaking: self.options.treeshake.is_some(),
+      treeshake_commonjs: self.options.treeshake.commonjs(),
+      property_write_side_effects_disabled: matches!(
+        self.options.treeshake.property_write_side_effects(),
+        rolldown_common::PropertyWriteSideEffects::False
+      ),
+      dev_mode: self.options.is_dev_mode_enabled(),
       runtime_idx: self.link_output.runtime.id(),
       metas: &self.link_output.metas,
       used_symbol_refs,

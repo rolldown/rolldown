@@ -6,7 +6,7 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   Asset, ChunkIdx, ConcatenateWrappedModuleKind, EmittedChunkInfo, InstantiationKind,
   ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter,
-  SymbolRef,
+  SymbolRef, UsedSymbolRefs,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult};
@@ -43,6 +43,7 @@ impl GenerateStage<'_> {
     &mut self,
     chunk_graph: &ChunkGraph,
     ast_table: IndexEcmaAst,
+    used_symbol_refs: &UsedSymbolRefs,
   ) -> BuildResult<BundleOutput> {
     let mut errors = std::mem::take(&mut self.link_output.errors);
     let mut warnings = std::mem::take(&mut self.link_output.warnings);
@@ -50,8 +51,9 @@ impl GenerateStage<'_> {
     // (the last reader), where it is dropped at scope exit by the compiler —
     // releasing the per-module bumpalo arenas before `minify_chunks` and
     // `finalize_assets` allocate.
-    let (mut instantiated_chunks, index_chunk_to_instances) =
-      self.instantiate_chunks(chunk_graph, ast_table, &mut errors, &mut warnings).await?;
+    let (mut instantiated_chunks, index_chunk_to_instances) = self
+      .instantiate_chunks(chunk_graph, ast_table, &mut errors, &mut warnings, used_symbol_refs)
+      .await?;
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
 
@@ -146,6 +148,7 @@ impl GenerateStage<'_> {
     ast_table: IndexEcmaAst,
     errors: &mut Vec<BuildDiagnostic>,
     warnings: &mut Vec<BuildDiagnostic>,
+    used_symbol_refs: &UsedSymbolRefs,
   ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToInstances)> {
     let mut index_chunk_to_instances: IndexChunkToInstances =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
@@ -186,6 +189,7 @@ impl GenerateStage<'_> {
               chunk,
               options: self.options,
               link_output: self.link_output,
+              used_symbol_refs,
               chunk_graph,
               plugin_driver: self.plugin_driver,
               module_id_to_codegen_ret,

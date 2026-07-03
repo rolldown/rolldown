@@ -386,7 +386,7 @@ where
       let is_used = if ctx.link_output.module_table[canonical_ref.owner].is_external() {
         ctx.link_output.used_external_symbols.contains(&canonical_ref)
       } else {
-        ctx.link_output.used_symbol_refs.contains(&canonical_ref)
+        ctx.used_symbol_refs.contains(&canonical_ref)
       };
       if !is_used {
         return None;

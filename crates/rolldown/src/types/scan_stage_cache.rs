@@ -4,8 +4,8 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  BarrelState, EcmaModuleAstUsage, GetLocalDbMut, ImporterRecord, Module, ModuleId, ModuleIdx,
-  ResolvedId, StableModuleId,
+  BarrelState, EcmaModuleAstUsage, EntryPointKind, GetLocalDbMut, ImporterRecord, Module, ModuleId,
+  ModuleIdx, ResolvedId, StableModuleId,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::PluginDriver;
@@ -143,8 +143,10 @@ impl ScanStageCache {
       }
     };
     // merge module_table, index_ast_scope, index_ecma_ast
+    let mut scanned_idxs = FxHashSet::default();
     for (new_idx, new_module) in modules {
       let idx = self.module_id_to_idx[new_module.id()].idx();
+      scanned_idxs.insert(idx);
 
       // Update `module_idx_by_abs_path`
       if let rolldown_common::Module::Normal(normal_module) = &new_module {
@@ -222,28 +224,40 @@ impl ScanStageCache {
       module.ecma_view.rebuild_importer_sets(&self.importers[*idx]);
     }
 
-    // merge entries
+    // merge entries. Drop the rows of re-scanned modules first: the incoming
+    // entry only carries the records that still exist, so a re-scanned
+    // importer that removed its dynamic import would otherwise leave stale
+    // rows behind.
+    for old_entry_point in &mut cache.entry_points {
+      if old_entry_point.kind == EntryPointKind::DynamicImport {
+        old_entry_point
+          .related_stmt_infos
+          .retain(|(module_idx, _, _, _)| !scanned_idxs.contains(module_idx));
+      }
+    }
     for entry_point in scan_stage_output.entry_points {
       if let Some(old_entry_point) = cache
         .entry_points
         .iter_mut()
         .find(|old_entry| old_entry.kind == entry_point.kind && old_entry.idx == entry_point.idx)
       {
-        let removed_module_idxs = entry_point
-          .related_stmt_infos
-          .iter()
-          .map(|(module_idx, _, _, _)| *module_idx)
-          .collect::<FxHashSet<_>>();
-        _ = old_entry_point
-          .related_stmt_infos
-          .extract_if(.., |(module_idx, _stmt_info_idx, _node_id, _)| {
-            removed_module_idxs.contains(module_idx)
-          });
         old_entry_point.related_stmt_infos.extend(entry_point.related_stmt_infos);
       } else {
         cache.entry_points.push(entry_point);
       }
     }
+
+    // A dynamic import entry whose last dynamic importer record disappeared
+    // must not keep producing a chunk. Records of orphaned importers survive
+    // here on purpose (re-adding an import revives the entry without a
+    // re-scan); [`Self::create_output`] filters those entries by reachability.
+    cache.entry_points.retain(|entry| {
+      entry.kind != EntryPointKind::DynamicImport
+        || self
+          .importers
+          .get(entry.idx)
+          .is_some_and(|records| records.iter().any(|record| record.kind.is_dynamic()))
+    });
 
     // Update barrel module resolved import records
     let resolved_barrel_modules = std::mem::take(&mut self.barrel_state.resolved_barrel_modules);
@@ -309,9 +323,64 @@ impl ScanStageCache {
     }
   }
 
+  /// Modules reachable from the real (non-dynamic) entries and the runtime
+  /// module. Orphans stay in the snapshot (issue #7416), so liveness has to
+  /// be derived, not assumed.
+  ///
+  /// # Panic
+  /// - if the snapshot is unset
+  fn compute_live_modules(&self) -> FxHashSet<ModuleIdx> {
+    let snapshot = self.get_snapshot();
+    let mut live = FxHashSet::default();
+    let mut queue = snapshot
+      .entry_points
+      .iter()
+      .filter(|entry| entry.kind != EntryPointKind::DynamicImport)
+      .map(|entry| entry.idx)
+      .collect::<Vec<_>>();
+    queue.push(snapshot.runtime.id());
+    while let Some(idx) = queue.pop() {
+      if !live.insert(idx) {
+        continue;
+      }
+      let Some(module) = snapshot.module_table.modules.get(idx).and_then(Module::as_normal) else {
+        continue;
+      };
+      for record in &module.ecma_view.import_records {
+        if let Some(dep_idx) = record.resolved_module
+          && !live.contains(&dep_idx)
+        {
+          queue.push(dep_idx);
+        }
+      }
+    }
+    live
+  }
+
   /// # Panic
   /// the function will panic if cache is unset
   pub fn create_output(&mut self) -> NormalizedScanStageOutput {
+    // The cache keeps a dynamic import entry while ANY importer record for it
+    // exists, including records of orphaned modules, so a re-added import can
+    // revive the entry without re-scanning the orphan. Only entries a live
+    // module dynamically imports may produce chunks though; a fresh build of
+    // the same files has no others.
+    let live_modules = self.compute_live_modules();
+    let entry_points = self
+      .get_snapshot()
+      .entry_points
+      .iter()
+      .filter(|entry| {
+        entry.kind != EntryPointKind::DynamicImport
+          || self.importers.get(entry.idx).is_some_and(|records| {
+            records
+              .iter()
+              .any(|record| record.kind.is_dynamic() && live_modules.contains(&record.importer_idx))
+          })
+      })
+      .cloned()
+      .collect();
+
     let cache = self.snapshot.as_mut().unwrap();
     // Only clone the mutated part of symbol_ref_db
     let symbol_ref_db_partial = cache.symbol_ref_db.clone_without_scoping();
@@ -332,7 +401,7 @@ impl ScanStageCache {
       stmt_infos: cache.stmt_infos.clone(),
 
       // Since `AstScope` is immutable in following phase, move it to avoid clone
-      entry_points: cache.entry_points.clone(),
+      entry_points,
       symbol_ref_db,
       runtime: cache.runtime.clone(),
       // TODO: cache warning

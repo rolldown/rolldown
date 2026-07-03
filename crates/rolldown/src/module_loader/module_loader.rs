@@ -568,6 +568,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             }
 
             let is_external = resolved_id.external.is_external();
+            // `user_defined_entry_ids` only covers entries seen by this scan;
+            // in partial mode it is empty, so cached entries need the lookup.
+            let is_cached_user_entry = self.cache.user_defined_entry.contains(&resolved_id.id);
             let idx = self.try_spawn_new_task(
               resolved_id,
               Some(ModuleTaskOwner::new(normal_module, raw_rec.span)),
@@ -606,6 +609,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             if matches!(raw_rec.kind, ImportKind::DynamicImport)
               && !is_external
               && !user_defined_entry_ids.contains(&idx)
+              && !is_cached_user_entry
             {
               match dynamic_import_entry_ids.entry(idx) {
                 Entry::Vacant(vac) => match raw_rec.dynamic_import_expr_info.as_ref() {

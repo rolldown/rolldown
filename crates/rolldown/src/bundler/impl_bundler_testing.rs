@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use rolldown_common::{Module, ModuleIdx, ModuleTable};
+use rolldown_common::{EntryPointKind, Module, ModuleIdx, ModuleTable};
 
 use super::Bundler;
 
@@ -144,11 +144,44 @@ impl Bundler {
         (format!("{:?}", entry.kind), module_id_at(&incremental.module_table, entry.idx))
       })
       .collect::<BTreeSet<_>>();
-    for entry in &fresh_snapshot.entry_points {
-      let entry =
-        (format!("{:?}", entry.kind), module_id_at(&fresh_snapshot.module_table, entry.idx));
-      if !incremental_entries.contains(&entry) {
+    let fresh_entries = fresh_snapshot
+      .entry_points
+      .iter()
+      .map(|entry| {
+        (format!("{:?}", entry.kind), module_id_at(&fresh_snapshot.module_table, entry.idx))
+      })
+      .collect::<BTreeSet<_>>();
+    for entry in &fresh_entries {
+      if !incremental_entries.contains(entry) {
         diffs.push(format!("entry point {entry:?} is missing in the incremental state"));
+      }
+    }
+    // Dynamic import entries must match exactly while a live module imports
+    // them. An entry kept only by orphans' dynamic import records is
+    // tolerated: the cache keeps the rows so re-adding an import can revive
+    // the entry, and `create_output` filters it from the build output. Other
+    // kinds allow extras on the incremental side, e.g. entries of modules
+    // that are no longer reachable (issue #7416, orphan cleanup).
+    for entry in &incremental.entry_points {
+      if entry.kind == EntryPointKind::DynamicImport {
+        let key = (format!("{:?}", entry.kind), module_id_at(&incremental.module_table, entry.idx));
+        if !fresh_entries.contains(&key) {
+          let has_live_dynamic_importer = incremental
+            .module_table
+            .modules
+            .get(entry.idx)
+            .and_then(Module::as_normal)
+            .is_some_and(|module| {
+              module
+                .dynamic_importers
+                .iter()
+                .any(|importer| fresh_module_ids.contains(&importer.to_string()))
+            });
+          if has_live_dynamic_importer {
+            diffs
+              .push(format!("dynamic import entry {key:?} only exists in the incremental state"));
+          }
+        }
       }
     }
 

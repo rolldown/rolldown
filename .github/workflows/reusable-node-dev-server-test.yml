@@ -44,6 +44,13 @@ jobs:
       - name: Build `@rolldown/test-dev-server`
         run: vp run --filter '@rolldown/test-dev-server' build
 
+      # The browser-platform tests run on Vite's full bundle mode, served from
+      # the vendored Vite submodule (kept pristine — no rolldown-side patches).
+      # setup-vite inits the submodule, installs its pinned deps, builds vite,
+      # and points its runtime `rolldown` resolution at packages/rolldown.
+      - name: Setup Vite submodule (browser-platform backend)
+        run: vp run --filter '@rolldown/test-dev-server' setup-vite
+
       - name: Install Playwright
         run: vp exec playwright install chromium
 

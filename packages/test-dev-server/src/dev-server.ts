@@ -5,17 +5,13 @@ import nodePath from 'node:path';
 import serveStatic from 'serve-static';
 import { WebSocketServer } from 'ws';
 import { FullBundleDevEnvironment } from './environments/full-bundle-dev-environment.js';
-import { indexHtmlMiddleware } from './middlewares/index-html.js';
-import { memoryFilesMiddleware } from './middlewares/memory-files.js';
 import { statusMiddleware } from './middlewares/status.js';
-import { triggerLazyBundlingMiddleware } from './middlewares/trigger-lazy-bundling.js';
-import { createAssetPlugin } from './utils/create-asset-plugin.js';
-import { createDevServerPlugin } from './utils/create-dev-server-plugin.js';
 import { decodeClientMessage } from './utils/decode-client-message.js';
 import type { Logger } from './types/logger.js';
 import type { DevConfig } from './utils/define-dev-config.js';
 import { loadDevConfig } from './utils/load-dev-config.js';
 import { normalizeDevOptions } from './utils/normalize-dev-options.js';
+import { createViteDevServer } from './vite-server.js';
 import { withResolvers } from './utils/with-resolvers.js';
 
 interface DevServerOptions {
@@ -39,11 +35,15 @@ export interface DevServerHandle {
 }
 
 /**
- * The http/websocket transport and middleware wiring around a
- * {@link FullBundleDevEnvironment} — the test-dev-server equivalent of Vite's
- * `server/index.ts`. All full-bundle behavior lives in the environment; this
- * class only owns the connect/http/ws plumbing and registers the same
- * middleware chain Vite does.
+ * The http/websocket transport around a {@link FullBundleDevEnvironment} for
+ * the **node platform only**: the artifact (and its HMR patches) are written
+ * to disk, executed as a child process by the fixture harness, and `dist/` is
+ * served statically.
+ *
+ * The browser platform runs on Vite's own full bundle mode instead
+ * (`experimental.bundledDev`, see `vite-server.ts`). Vite's bundled dev is
+ * client-environment-only, which is why this node transport (disk output,
+ * request gate, stdin rebuild trigger) is a custom implementation.
  */
 class DevServer {
   #connectServer = connect();
@@ -57,9 +57,7 @@ class DevServer {
   #port = 0;
   #closed = false;
 
-  // node platform gates requests until the initial build is on disk (browser
-  // serves a spinner instead, so it never blocks). Mirrors nothing in Vite —
-  // Vite is browser-only.
+  // node gates requests until the initial build is on disk.
   #serverStatus = {
     allowRequest: false,
     resolvers: withResolvers<void>(),
@@ -72,17 +70,10 @@ class DevServer {
   }
 
   async start(): Promise<DevServerHandle> {
-    const devOptions = normalizeDevOptions(this.#config.dev ?? {});
     // Shallow-clone before injecting the dev-server plumbing so starting a
     // server never mutates the caller's config (a config object may be used
     // to create more than one server).
     const buildOptions = { ...this.#config.build };
-
-    // Serve from memory (Vite full-bundle parity) only for a browser build
-    // target; node builds keep disk serving (the fixture harness execs the
-    // artifact from disk). `build.platform` is the only platform signal set
-    // consistently across every fixture/playground config.
-    const serveFromMemory = buildOptions.platform === 'browser';
 
     if (buildOptions.plugins != null && !Array.isArray(buildOptions.plugins)) {
       throw new Error('Plugins must be an array');
@@ -92,7 +83,7 @@ class DevServer {
     // after listen, and the HMR runtime's websocket address is baked into the
     // bundle at build time via `experimental.devMode.port`.
     // See internal-docs/dev-server-test-harness/implementation.md ("listen-before-build").
-    this.#prepareGate(serveFromMemory);
+    this.#prepareGate();
     this.#port = await this.#listen(this.#options.port);
 
     // Inject the bound port into devMode options for the HMR runtime.
@@ -100,15 +91,6 @@ class DevServer {
     const devMode = experimental.devMode ?? {};
     experimental.devMode = typeof devMode === 'object' ? { ...devMode, port: this.#port } : devMode;
     buildOptions.experimental = experimental;
-    buildOptions.plugins = [
-      ...(buildOptions.plugins ?? []),
-      // Ported bundled-dev branch of Vite's `vite:asset` plugin: resolves
-      // asset imports (`import url from './img.png'`) to a served URL eagerly
-      // at `load`, so HMR/lazy paths (which skip `renderChunk`) carry a real
-      // URL instead of a placeholder.
-      createAssetPlugin(),
-      createDevServerPlugin(devOptions, this.#logger),
-    ];
 
     const { output: outputOptions, ...inputOptions } = buildOptions;
 
@@ -116,7 +98,6 @@ class DevServer {
       const env = await FullBundleDevEnvironment.create({
         inputOptions,
         outputOptions: outputOptions ?? {},
-        serveFromMemory,
         logger: this.#logger,
       });
       this.#env = env;
@@ -124,13 +105,12 @@ class DevServer {
       if (this.#options.attachStdinTrigger) {
         this.#prepareStdin(env);
       }
-      this.#registerMiddlewares(env, serveFromMemory);
+      this.#registerMiddlewares(env);
 
       await env.run();
       // `run()` resolves when the initial build settles inside the engine, but
       // the JS-side output callback may not have executed yet. Wait for it so
-      // a resolved `start()` means the first bundle (or its error) is being
-      // served — a navigation will not land on the spinner.
+      // a resolved `start()` means the first bundle (or its error) is on disk.
       await env.waitForFirstOutput();
     } catch (e) {
       // Engine/lifecycle failure after the socket is bound: release the port
@@ -191,12 +171,10 @@ class DevServer {
     return boundPort;
   }
 
-  /** First middleware: block node requests until the initial build is ready. */
-  #prepareGate(serveFromMemory: boolean): void {
+  /** First middleware: block requests until the initial build is on disk. */
+  #prepareGate(): void {
     this.#connectServer.use(async (_req, _res, next) => {
-      // Browser never blocks: a not-ready request is answered with the
-      // "Bundling in progress" spinner by the index-html middleware.
-      if (serveFromMemory || this.#serverStatus.allowRequest) {
+      if (this.#serverStatus.allowRequest) {
         next();
       } else {
         await this.#serverStatus.resolvers.promise;
@@ -254,24 +232,16 @@ class DevServer {
     }
   }
 
-  /** Register the full-bundle middleware chain (Vite's `server/index.ts` order). */
-  #registerMiddlewares(env: FullBundleDevEnvironment, serveFromMemory: boolean): void {
-    this.#connectServer.use(triggerLazyBundlingMiddleware(env));
+  #registerMiddlewares(env: FullBundleDevEnvironment): void {
     this.#connectServer.use(statusMiddleware(env));
-
-    if (serveFromMemory) {
-      this.#connectServer.use(memoryFilesMiddleware(env));
-      this.#connectServer.use(indexHtmlMiddleware(env));
-    } else {
-      // node: the artifact (and HMR patches) are written to disk and read
-      // directly by the fixture harness, so serve `dist/` statically.
-      this.#connectServer.use(
-        serveStatic(nodePath.join(process.cwd(), 'dist'), {
-          index: ['index.html'],
-          extensions: ['html'],
-        }),
-      );
-    }
+    // The artifact (and HMR patches) are written to disk and read directly by
+    // the fixture harness, so serve `dist/` statically.
+    this.#connectServer.use(
+      serveStatic(nodePath.join(process.cwd(), 'dist'), {
+        index: ['index.html'],
+        extensions: ['html'],
+      }),
+    );
   }
 
   #readyHttpServer(): void {
@@ -281,21 +251,29 @@ class DevServer {
 }
 
 /**
- * Programmatic entry point for the browser test harness: take a config, bind
- * an OS-assigned port (or `opts.port`), run the initial build, and hand back
- * the resolved URL plus a `close()` — the test-dev-server analog of Vite's
- * `createServer(config).listen()` / `server.resolvedUrls`.
+ * Programmatic entry point for the test harness: take a config, bind an
+ * OS-assigned port (or `opts.port`), run the initial build, and hand back the
+ * resolved URL plus a `close()`.
+ *
+ * Dispatches on the build target: a `browser` build runs on Vite's full
+ * bundle mode (`vite-server.ts`); anything else runs the node disk-serving
+ * transport above.
  *
  * Deliberately does NOT consult `DEV_SERVER_PORT`: that env var is the
  * fixtures/CLI channel consumed by `serve()`.
  */
 export async function createDevServer(
   config: DevConfig,
-  opts?: { port?: number; logger?: Logger },
+  opts?: { port?: number; logger?: Logger; attachStdinTrigger?: boolean },
 ): Promise<DevServerHandle> {
+  if (config.build?.platform === 'browser') {
+    // Browser configs run on Vite bundled dev. (No stdin rebuild trigger on
+    // this path — that channel exists for the node fixtures only.)
+    return createViteDevServer(config, { port: opts?.port, logger: opts?.logger });
+  }
   const devServer = new DevServer(config, {
     port: opts?.port ?? 0,
-    attachStdinTrigger: false,
+    attachStdinTrigger: opts?.attachStdinTrigger ?? false,
     logger: opts?.logger,
   });
   return devServer.start();
@@ -308,6 +286,5 @@ export async function serve(): Promise<void> {
   const port = process.env.DEV_SERVER_PORT
     ? parseInt(process.env.DEV_SERVER_PORT, 10)
     : devOptions.port;
-  const devServer = new DevServer(devConfig, { port, attachStdinTrigger: true });
-  await devServer.start();
+  await createDevServer(devConfig, { port, attachStdinTrigger: true });
 }

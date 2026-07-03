@@ -504,11 +504,11 @@ For future debugging, these files handle lazy compilation:
 13. **`crates/rolldown/src/bundler/impl_bundler_hmr.rs`** - `Bundler::compile_lazy_entry` entry point
 14. **`crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js`** - browser runtime: `createEsm/CjsInitializer` (dedup gate), `registerModule`, `loadExports`, module-registered batching
 
-### Reference Dev Server (TS)
+### Reference Dev Server (Vite full bundle mode, vendored at `packages/test-dev-server/vite`)
 
-15. **`packages/test-dev-server/src/middlewares/trigger-lazy-bundling.ts`** - the `/@vite/lazy` middleware (500 on error, `application/javascript` on success)
-16. **`packages/test-dev-server/src/environments/full-bundle-dev-environment.ts`** - `triggerLazyBundling`, `#onAdditionalAssets`, rebuild/reload handling
-17. **`packages/test-dev-server/src/utils/create-asset-plugin.ts`** - Vite-style eager asset resolution at `load`
+15. **`packages/vite/src/node/server/middlewares/triggerLazyBundling.ts`** - the `/@vite/lazy` middleware (500 on error, `application/javascript` on success)
+16. **`packages/vite/src/node/server/bundledDev.ts`** - `triggerLazyBundling` (`devEngine.compileEntry`), `onAdditionalAssets` storage, rebuild/reload handling
+17. **`packages/vite/src/node/plugins/asset.ts`** - the bundled-dev branch resolves asset imports eagerly at `load`
 
 ## References
 

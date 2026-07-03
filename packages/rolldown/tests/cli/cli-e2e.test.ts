@@ -624,6 +624,16 @@ describe('watch cli', () => {
       })`rolldown index.ts -d dist -w`;
       const stdoutWaiter = createStreamWaiter(process.stdout);
       await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
+      // "Waiting for changes..." is printed synchronously right after
+      // `rolldownWatch()` returns -- BEFORE the initial build completes and
+      // BEFORE the file watches are armed. A write landing between the
+      // initial scan reading index.ts and watch arming is lost on Linux
+      // (inotify only reports changes made after `inotify_add_watch`), so
+      // nothing would ever rebuild and the UNRESOLVED_IMPORT wait below
+      // would time out. Arming strictly precedes the initial BUNDLE_END line
+      // ("Rebuilt ..."), so gating the write on it makes the change
+      // deterministically observable.
+      await stdoutWaiter.waitFor('Rebuilt', { timeout: 5_000 });
 
       fs.writeFileSync(
         path.join(cwd, 'index.ts'),

@@ -8,5 +8,5 @@ pub use include_statements::{
   IncludeContext, ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec,
   SymbolIncludeReason, include_symbol,
 };
-pub use on_demand::compute_on_demand_side_effect_stmts;
+pub use on_demand::compute_body_demand_keys;
 pub use passes::include_runtime_symbol;

@@ -25,7 +25,7 @@ use crate::{
 
 use super::{
   on_demand::{
-    compute_on_demand_side_effect_stmts, is_gated_side_effect_stmt, side_effects_included_on_demand,
+    compute_body_demand_keys, is_gated_side_effect_stmt, side_effects_included_on_demand,
   },
   passes::{
     collect_depended_runtime_helpers, include_cjs_bailout_exports, include_runtime_symbol,
@@ -88,11 +88,16 @@ pub struct IncludeContext<'a> {
   /// on-demand side-effect inclusion: they are the requested program. Dynamic
   /// entries join through namespace/own-export body demand instead.
   pub entry_module_idxs: &'a FxHashSet<ModuleIdx>,
-  /// Body-demand key (a module's own export or namespace object) -> the gated
-  /// side-effect statements of that module (see
-  /// [`side_effects_included_on_demand`]). Entries are drained by
-  /// [`include_symbol`] as their key becomes used.
-  pub on_demand_side_effect_stmts: &'a mut FxHashMap<SymbolRef, Vec<(ModuleIdx, StmtInfoIdx)>>,
+  /// Body-demand key (a module's own export or namespace object) -> the module whose gated
+  /// side-effect statements using that key demands (see
+  /// [`side_effects_included_on_demand`]). Consulted by [`include_symbol`] as symbols become
+  /// used.
+  pub body_demand_keys: &'a FxHashMap<SymbolRef, ModuleIdx>,
+  /// The second module-inclusion bit: modules whose *gated* side-effect statements have joined
+  /// because their body was demanded. Distinct from `is_module_included_vec` (structural
+  /// inclusion), which deliberately skips those statements for
+  /// [`side_effects_included_on_demand`] modules.
+  pub body_demand_swept: FxHashSet<ModuleIdx>,
   /// Work queue of the inclusion engine (see [`drain_work_items`]). Edge producers push typed
   /// work items here instead of recursing; the public `include_*` entry points drain it to
   /// empty before returning. Invariant (debug-asserted at every public entry point): empty
@@ -119,7 +124,7 @@ impl<'a> IncludeContext<'a> {
     normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
     module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
     entry_module_idxs: &'a FxHashSet<ModuleIdx>,
-    on_demand_side_effect_stmts: &'a mut FxHashMap<SymbolRef, Vec<(ModuleIdx, StmtInfoIdx)>>,
+    body_demand_keys: &'a FxHashMap<SymbolRef, ModuleIdx>,
   ) -> Self {
     Self {
       modules,
@@ -141,7 +146,8 @@ impl<'a> IncludeContext<'a> {
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
       entry_module_idxs,
-      on_demand_side_effect_stmts,
+      body_demand_keys,
+      body_demand_swept: FxHashSet::default(),
       pending: Vec::new(),
     }
   }
@@ -267,7 +273,7 @@ impl LinkStage<'_> {
       .iter()
       .any(|m| m.as_normal().is_some_and(|n| !n.ecma_view.enum_member_value_map.is_empty()));
     let entry_module_idxs = self.user_defined_entry_module_idxs();
-    let mut on_demand_side_effect_stmts = compute_on_demand_side_effect_stmts(
+    let body_demand_keys = compute_body_demand_keys(
       &self.module_table.modules,
       &self.stmt_infos,
       &self.symbols,
@@ -289,7 +295,7 @@ impl LinkStage<'_> {
       &self.normal_symbol_exports_chain_map,
       &mut module_namespace_included_reason,
       &entry_module_idxs,
-      &mut on_demand_side_effect_stmts,
+      &body_demand_keys,
     );
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
@@ -442,7 +448,7 @@ impl LinkStage<'_> {
       &self.normal_symbol_exports_chain_map,
       &mut module_namespace_included_reason,
       &entry_module_idxs,
-      &mut on_demand_side_effect_stmts,
+      &body_demand_keys,
     );
     include_runtime_symbol(context, &self.runtime, depended_runtime_helper);
 
@@ -709,14 +715,22 @@ fn is_bypassed_inlined_constant(
 /// statements join now (e.g. `foo.bar = 1` once `foo` is demanded); see
 /// `side_effects_included_on_demand`. Must sit after the inlined-constant
 /// bypass: demand satisfied by inlining doesn't include the module today.
-/// `remove` keeps each key processed at most once.
+/// The `body_demand_swept` bit keeps each module swept at most once.
 fn drain_body_demand_stmts(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
-  if let Some(stmts) = ctx.on_demand_side_effect_stmts.remove(&canonical_ref) {
-    for (module_idx, stmt_info_idx) in stmts {
-      if let Module::Normal(_) = &ctx.modules[module_idx] {
-        ctx.pending.push(WorkItem::Statement(module_idx, stmt_info_idx));
-      }
-    }
+  let Some(&module_idx) = ctx.body_demand_keys.get(&canonical_ref) else {
+    return;
+  };
+  if !ctx.body_demand_swept.insert(module_idx) {
+    return;
+  }
+  if let Module::Normal(_) = &ctx.modules[module_idx] {
+    ctx.stmt_infos[module_idx].iter_enumerated_without_namespace_stmt().for_each(
+      |(stmt_info_idx, stmt_info)| {
+        if is_gated_side_effect_stmt(stmt_info) {
+          ctx.pending.push(WorkItem::Statement(module_idx, stmt_info_idx));
+        }
+      },
+    );
   }
 }
 

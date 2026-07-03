@@ -222,17 +222,17 @@ mod relocate {
   #[test]
   fn refuses_to_move_a_selection_to_inside_itself() {
     let mut s = MagicString::new("abcdefghijkl");
-    assert!(s.relocate(3, 6, 3).is_err());
+    s.relocate(3, 6, 3).unwrap_err();
   }
   #[test]
   fn refuses_to_move_a_selection_to_inside_itself2() {
     let mut s = MagicString::new("abcdefghijkl");
-    assert!(s.relocate(3, 6, 4).is_err());
+    s.relocate(3, 6, 4).unwrap_err();
   }
   #[test]
   fn refuses_to_move_a_selection_to_inside_itself3() {
     let mut s = MagicString::new("abcdefghijkl");
-    assert!(s.relocate(3, 6, 6).is_err());
+    s.relocate(3, 6, 6).unwrap_err();
   }
 
   #[test]

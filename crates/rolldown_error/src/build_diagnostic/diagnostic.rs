@@ -122,14 +122,13 @@ impl Diagnostic {
     for label in self.labels.clone() {
       if is_context_too_long(&label, &self.files) {
         let span = label.span();
-        write!(
+        let _ = write!(
           message,
           "\n - {} in {} at {:?}",
           label.display_info().msg().unwrap_or_default(),
           span.source(),
           span.start()..span.end()
-        )
-        .ok();
+        );
       } else {
         builder = builder.with_label(label);
       }

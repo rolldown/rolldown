@@ -13,7 +13,7 @@ use rolldown_error::{
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
 use rolldown_resolver::{ResolveError, Resolver};
-use rolldown_utils::ecmascript::{self};
+use rolldown_utils::ecmascript;
 use rustc_hash::FxHashMap;
 
 use crate::{SharedOptions, SharedResolver};

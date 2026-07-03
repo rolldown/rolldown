@@ -13,6 +13,10 @@
 // }),
 // Looks redundant
 #![allow(clippy::missing_transmute_annotations)]
+// NAPI-RS requires `std::collections::HashMap`/`HashSet` to generate the TypeScript definitions,
+// so the whole binding crate opts out of the `FxHashMap`/`FxHashSet` type ban (the hasher is
+// already `FxBuildHasher` at every use site).
+#![allow(clippy::disallowed_types)]
 
 #[cfg(all(target_family = "wasm", tokio_unstable))]
 use std::sync::{

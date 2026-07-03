@@ -1198,6 +1198,7 @@ dependencies = [
  "heck",
  "ignore",
  "rolldown_workspace",
+ "rustc-hash",
  "serde",
  "serde_json",
 ]

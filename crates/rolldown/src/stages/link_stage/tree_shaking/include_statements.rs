@@ -59,6 +59,52 @@ bitflags::bitflags! {
     }
 }
 
+bitflags::bitflags! {
+  /// Memo key for the canonical-level tail of [`handle_include_symbol`], normalized from
+  /// [`SymbolIncludeReason`] so that every reason-dependent effect of the tail fires iff a
+  /// single mask bit is *present*:
+  /// - `Normal` and `EntryExport` behave identically in the tail, so both fold into
+  ///   [`Self::Structural`].
+  /// - Effects triggered by the *absence* of a reason bit become synthetic presence bits:
+  ///   [`note_json_self_reference`] fires when `JsonDefaultExportSelfReference` is absent, and
+  ///   the owner-module push fires (for namespace symbols) when `SimulatedFacadeChunk` is
+  ///   absent. The presence of those two reason bits triggers nothing, so it is dropped.
+  ///
+  /// This gives the skip rule its correctness argument: `seen` is a union of masks over
+  /// processed calls, each bit in it implies the corresponding effect already ran in whichever
+  /// call contributed it, so `seen ⊇ mask` means every effect of the incoming call has
+  /// happened and the (monotone) tail can be skipped.
+  #[derive(Debug, Clone, Copy)]
+  pub(in crate::stages) struct SymbolProcessMask: u8 {
+    /// `Normal` or `EntryExport` — the tail treats them identically.
+    const Structural = 1;
+    const ReExportDynamicExports = 1 << 1;
+    /// Synthetic: the reason lacked `JsonDefaultExportSelfReference`.
+    const NonJsonSelfReference = 1 << 2;
+    /// Synthetic: the reason lacked `SimulatedFacadeChunk`.
+    const NonSimulatedFacadeChunk = 1 << 3;
+  }
+}
+
+impl From<SymbolIncludeReason> for SymbolProcessMask {
+  fn from(reason: SymbolIncludeReason) -> Self {
+    let mut mask = Self::empty();
+    if reason.intersects(SymbolIncludeReason::Normal | SymbolIncludeReason::EntryExport) {
+      mask |= Self::Structural;
+    }
+    if reason.contains(SymbolIncludeReason::ReExportDynamicExports) {
+      mask |= Self::ReExportDynamicExports;
+    }
+    if !reason.contains(SymbolIncludeReason::JsonDefaultExportSelfReference) {
+      mask |= Self::NonJsonSelfReference;
+    }
+    if !reason.contains(SymbolIncludeReason::SimulatedFacadeChunk) {
+      mask |= Self::NonSimulatedFacadeChunk;
+    }
+    mask
+  }
+}
+
 pub struct IncludeContext<'a> {
   pub modules: &'a IndexModules,
   /// Per-module statement-info table, detached from `EcmaView` and held on
@@ -105,6 +151,13 @@ pub struct IncludeContext<'a> {
   /// `chunk_optimizer` constructs `IncludeContext` with a struct literal; nothing outside this
   /// module should touch it.
   pub(in crate::stages) pending: Vec<WorkItem>,
+  /// Memo of [`handle_include_symbol`]'s canonical-level tail: canonical ref -> union of
+  /// [`SymbolProcessMask`]s already processed. The tail is deterministic in (canonical ref,
+  /// mask) and performs only monotone inserts/enqueues, so a repeat whose mask is covered by
+  /// `seen` is skipped — turning O(symbol references) full handlings into O(unique canonicals).
+  /// Alias-keyed work (marking `symbol_ref` itself used, property-write retention) runs before
+  /// the memo check and is never skipped. Same visibility story as `pending`.
+  pub(in crate::stages) processed_symbol_masks: FxHashMap<SymbolRef, SymbolProcessMask>,
 }
 
 impl<'a> IncludeContext<'a> {
@@ -149,6 +202,7 @@ impl<'a> IncludeContext<'a> {
       body_demand_keys,
       body_demand_swept: FxHashSet::default(),
       pending: Vec::new(),
+      processed_symbol_masks: FxHashMap::default(),
     }
   }
 }
@@ -656,13 +710,25 @@ fn handle_include_symbol(
     return;
   }
 
-  drain_body_demand_stmts(ctx, canonical_ref);
-
-  // Also include the symbol that points to the canonical ref.
+  // Alias-keyed work: the referencing symbol itself becomes used, and (under
+  // `propertyWriteSideEffects: false`) its property-write statements come along. Keyed by
+  // `symbol_ref`, not the canonical, so it runs for every distinct alias.
   ctx.used_symbol_refs.insert(symbol_ref);
   if ctx.modules[symbol_ref.owner].is_external() {
     ctx.used_external_symbols.insert(symbol_ref);
   }
+  include_property_write_referencing_stmts(ctx, symbol_ref);
+
+  // Everything below is the canonical-level tail: deterministic in (canonical ref, mask) and
+  // monotone, so a covered repeat adds nothing (see [`SymbolProcessMask`]).
+  let mask = SymbolProcessMask::from(include_reason);
+  let seen = ctx.processed_symbol_masks.entry(canonical_ref).or_insert(SymbolProcessMask::empty());
+  if seen.contains(mask) {
+    return;
+  }
+  seen.insert(mask);
+
+  drain_body_demand_stmts(ctx, canonical_ref);
 
   // CJS bailout checks are handled by `include_symbol_and_check_cjs_bailout`
   // at most call sites. This keeps `include_symbol` focused on inclusion only.
@@ -684,8 +750,6 @@ fn handle_include_symbol(
       ctx.pending.push(WorkItem::Module(module.idx));
     }
   }
-
-  include_property_write_referencing_stmts(ctx, symbol_ref);
 }
 
 /// Mirror of the finalizer's constant inlining: a constant value is always inlined at its
@@ -776,10 +840,15 @@ fn note_namespace_inclusion_reason(
   let is_module_namespace =
     ctx.modules[canonical_ref.owner].namespace_object_ref() == Some(canonical_ref);
   if is_module_namespace {
+    // Independent `if`s, not `else if`: each recorded reason must depend on exactly one
+    // include-reason bit for the [`SymbolProcessMask`] memo's skip rule to hold. (The engine
+    // never combines Normal/EntryExport with ReExportDynamicExports in one work item today,
+    // so both shapes behave identically.)
     if include_reason.intersects(SymbolIncludeReason::Normal | SymbolIncludeReason::EntryExport) {
       ctx.module_namespace_included_reason[canonical_ref.owner]
         .insert(ModuleNamespaceIncludedReason::Unknown);
-    } else if include_reason.contains(SymbolIncludeReason::ReExportDynamicExports) {
+    }
+    if include_reason.contains(SymbolIncludeReason::ReExportDynamicExports) {
       ctx.module_namespace_included_reason[canonical_ref.owner]
         .insert(ModuleNamespaceIncludedReason::ReExportDynamicExports);
     }

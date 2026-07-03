@@ -1058,6 +1058,7 @@ impl GenerateStage<'_> {
       body_demand_keys: &body_demand_keys,
       body_demand_swept: FxHashSet::default(),
       pending: Vec::new(),
+      processed_symbol_masks: FxHashMap::default(),
     };
 
     let mut runtime_dependent_chunks = FxHashSet::default();

@@ -217,7 +217,11 @@ pub(in crate::stages) enum WorkItem {
   /// side-effectful dependencies.
   Module(ModuleIdx),
   /// A symbol became used: retain its declaration, wrapper, and owner module.
-  Symbol(SymbolRef, SymbolIncludeReason),
+  /// `check_cjs_bailout` is set at sites where the symbol may stand for a full CJS namespace
+  /// used opaquely (see [`check_cjs_bailout`]); producers that know the access is partial (a
+  /// resolved member expression on a CJS namespace) or internal (wrapper refs, CJS-interop
+  /// named exports, runtime symbols) clear it to keep CJS tree-shaking working.
+  Symbol { symbol_ref: SymbolRef, reason: SymbolIncludeReason, check_cjs_bailout: bool },
   /// Include one statement and follow everything it references.
   Statement(ModuleIdx, StmtInfoIdx),
 }
@@ -229,7 +233,9 @@ fn drain_work_items(ctx: &mut IncludeContext) {
   while let Some(item) = ctx.pending.pop() {
     match item {
       WorkItem::Module(module_idx) => handle_include_module(ctx, module_idx),
-      WorkItem::Symbol(symbol_ref, reason) => handle_include_symbol(ctx, symbol_ref, reason),
+      WorkItem::Symbol { symbol_ref, reason, check_cjs_bailout } => {
+        handle_include_symbol(ctx, symbol_ref, reason, check_cjs_bailout);
+      }
       WorkItem::Statement(module_idx, stmt_info_idx) => {
         handle_include_statement(ctx, module_idx, stmt_info_idx);
       }
@@ -248,32 +254,22 @@ pub(super) fn include_symbol_and_check_cjs_bailout(
   include_reason: SymbolIncludeReason,
 ) {
   debug_assert!(ctx.pending.is_empty(), "engine queue must be empty between public entry points");
-  push_symbol_and_check_cjs_bailout(ctx, symbol_ref, include_reason);
+  ctx.pending.push(WorkItem::Symbol {
+    symbol_ref,
+    reason: include_reason,
+    check_cjs_bailout: true,
+  });
   drain_work_items(ctx);
   debug_assert!(ctx.pending.is_empty(), "public entry points must drain the queue to empty");
 }
 
-/// Engine-internal variant of [`include_symbol_and_check_cjs_bailout`]: enqueues the symbol and
-/// runs the (order-independent) bailout check immediately, without draining. Handlers and edge
-/// producers must use this — only the public entry points drain.
-fn push_symbol_and_check_cjs_bailout(
-  ctx: &mut IncludeContext,
-  symbol_ref: SymbolRef,
-  include_reason: SymbolIncludeReason,
-) {
-  ctx.pending.push(WorkItem::Symbol(symbol_ref, include_reason));
-  check_cjs_bailout(ctx, symbol_ref);
-}
-
 /// Check if including this symbol should trigger CJS tree-shaking bailout.
-/// This is called at `include_symbol` call sites where the symbol is NOT accessed
-/// via a resolved member expression on a CJS namespace (i.e., where the full namespace
-/// might be used opaquely). When we know only a specific property is accessed
-/// (member expression with `target_commonjs_exported_symbol`), we skip this check
-/// to allow CJS tree-shaking.
-fn check_cjs_bailout(ctx: &mut IncludeContext, symbol_ref: SymbolRef) {
-  let canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
-
+/// This runs for `WorkItem::Symbol`s pushed with `check_cjs_bailout` — sites where the symbol
+/// is NOT accessed via a resolved member expression on a CJS namespace (i.e., where the full
+/// namespace might be used opaquely). When we know only a specific property is accessed
+/// (member expression with `target_commonjs_exported_symbol`), the producer clears the flag
+/// to allow CJS tree-shaking. Takes the already-resolved canonical of the used symbol.
+fn check_cjs_bailout(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
   // If the symbol is a CJS namespace import ref, bail out the target CJS module.
   if let Some(idx) =
     ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
@@ -591,12 +587,20 @@ fn handle_include_module(ctx: &mut IncludeContext, module_idx: ModuleIdx) {
   if module.meta.has_eval() && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
     // `eval` can observe any module-level binding, so every import must survive.
     module.named_imports.keys().for_each(|symbol| {
-      push_symbol_and_check_cjs_bailout(ctx, *symbol, SymbolIncludeReason::Normal);
+      ctx.pending.push(WorkItem::Symbol {
+        symbol_ref: *symbol,
+        reason: SymbolIncludeReason::Normal,
+        check_cjs_bailout: true,
+      });
     });
   }
 
   ctx.metas[module.idx].included_commonjs_export_symbol.iter().for_each(|symbol_ref| {
-    push_symbol_and_check_cjs_bailout(ctx, *symbol_ref, SymbolIncludeReason::Normal);
+    ctx.pending.push(WorkItem::Symbol {
+      symbol_ref: *symbol_ref,
+      reason: SymbolIncludeReason::Normal,
+      check_cjs_bailout: true,
+    });
   });
 
   // With enabling HMR, rolldown will register included esm module's namespace object to the runtime.
@@ -694,7 +698,11 @@ pub fn include_symbol(
   include_reason: SymbolIncludeReason,
 ) {
   debug_assert!(ctx.pending.is_empty(), "engine queue must be empty between public entry points");
-  ctx.pending.push(WorkItem::Symbol(symbol_ref, include_reason));
+  ctx.pending.push(WorkItem::Symbol {
+    symbol_ref,
+    reason: include_reason,
+    check_cjs_bailout: false,
+  });
   drain_work_items(ctx);
   debug_assert!(ctx.pending.is_empty(), "public entry points must drain the queue to empty");
 }
@@ -703,8 +711,16 @@ fn handle_include_symbol(
   ctx: &mut IncludeContext,
   symbol_ref: SymbolRef,
   include_reason: SymbolIncludeReason,
+  should_check_cjs_bailout: bool,
 ) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
+
+  // Before the constant bypass and the memo gate: the check ran unconditionally at push time
+  // when it lived there, and it is the one effect (writing into the per-fixpoint-iteration
+  // bailout set) the memo must not skip.
+  if should_check_cjs_bailout {
+    check_cjs_bailout(ctx, canonical_ref);
+  }
 
   if is_bypassed_inlined_constant(ctx, canonical_ref, include_reason) {
     return;
@@ -821,7 +837,11 @@ fn follow_cjs_namespace_alias(ctx: &mut IncludeContext, canonical_ref: &mut Symb
           return;
         };
         if namespace_alias.property_name.as_str() != "default" {
-          ctx.pending.push(WorkItem::Symbol(export_symbol.symbol_ref, SymbolIncludeReason::Normal));
+          ctx.pending.push(WorkItem::Symbol {
+            symbol_ref: export_symbol.symbol_ref,
+            reason: SymbolIncludeReason::Normal,
+            check_cjs_bailout: false,
+          });
         }
       });
     }
@@ -869,7 +889,11 @@ fn demand_esm_init_wrapper(ctx: &mut IncludeContext, canonical_ref: SymbolRef) {
       .filter(|wrapper_ref| *wrapper_ref != canonical_ref)
   };
   if let Some(wrapper_ref) = wrapper_ref {
-    ctx.pending.push(WorkItem::Symbol(wrapper_ref, SymbolIncludeReason::Normal));
+    ctx.pending.push(WorkItem::Symbol {
+      symbol_ref: wrapper_ref,
+      reason: SymbolIncludeReason::Normal,
+      check_cjs_bailout: false,
+    });
   }
 }
 
@@ -965,14 +989,15 @@ fn handle_include_statement(
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
           enqueue_declaring_statements(ctx, sym_ref);
         });
-        ctx.pending.push(WorkItem::Symbol(resolved_ref, include_kind));
         // When the member expression resolves to a specific CJS export property
         // (e.g., `ns.x`), we skip the bailout check — we know the access is partial
         // and CJS tree-shaking can work. Otherwise, the full namespace may be used
         // opaquely, so we check for bailout.
-        if member_expr_resolution.target_commonjs_exported_symbol.is_none() {
-          check_cjs_bailout(ctx, resolved_ref);
-        }
+        ctx.pending.push(WorkItem::Symbol {
+          symbol_ref: resolved_ref,
+          reason: include_kind,
+          check_cjs_bailout: member_expr_resolution.target_commonjs_exported_symbol.is_none(),
+        });
       } else {
         // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
       }
@@ -993,7 +1018,11 @@ fn handle_include_statement(
         .for_each(|sym_ref| {
           enqueue_declaring_statements(ctx, sym_ref);
         });
-      push_symbol_and_check_cjs_bailout(ctx, *original_ref, include_kind);
+      ctx.pending.push(WorkItem::Symbol {
+        symbol_ref: *original_ref,
+        reason: include_kind,
+        check_cjs_bailout: true,
+      });
     }
   });
 }

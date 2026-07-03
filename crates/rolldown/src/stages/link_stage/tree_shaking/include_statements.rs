@@ -381,6 +381,8 @@ impl LinkStage<'_> {
     let mut unused_record_idxs = vec![];
     let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
     let mut included_dynamic_entry = FxHashSet::default();
+    // Indices into `dynamic_entries` (in topological order) still awaiting inclusion.
+    let mut pending_entry_indices: Vec<usize> = (0..dynamic_entries.len()).collect();
     loop {
       context.module_inclusion_changed = false;
 
@@ -391,9 +393,14 @@ impl LinkStage<'_> {
       let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
       include_cjs_bailout_exports(context, &self.metas, bailout_modules);
 
-      dynamic_entries.iter().for_each(|entry| {
+      // Only entries not yet included are rescanned: an included entry is settled (inclusion
+      // is monotone), so it leaves `pending_entry_indices` and later iterations shrink to the
+      // dead/undecided tail. An entry sharing its module with an already-included one is
+      // settled by that sibling (same skip the full rescan used to perform via the set).
+      pending_entry_indices.retain(|&entry_index| {
+        let entry = &dynamic_entries[entry_index];
         if included_dynamic_entry.contains(&entry.idx) {
-          return;
+          return false;
         }
         let included = self.process_and_retain_dynamic_entry(
           entry,
@@ -405,6 +412,7 @@ impl LinkStage<'_> {
         if included {
           included_dynamic_entry.insert(entry.idx);
         }
+        !included
       });
 
       if !context.module_inclusion_changed {

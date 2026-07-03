@@ -28,7 +28,42 @@ impl GenerateStage<'_> {
     }
   }
 
+  /// Whether the chunk entry's `init_*` wrapper can only ever be invoked by the single
+  /// immediate call the chunk itself emits right after the chunk content
+  /// (`render_wrapped_entry_chunk`). In that case wrapping the entry's module group is pure
+  /// overhead — the closure runs exactly once, immediately — so its members can execute in
+  /// place, unwrapped, matching the output plain tree-shaking produces.
+  fn entry_group_inlinable(&self, chunk: &Chunk) -> Option<ModuleIdx> {
+    let ChunkKind::EntryPoint { module: entry_idx, .. } = chunk.kind else {
+      return None;
+    };
+    let entry_meta = &self.link_output.metas[entry_idx];
+    // Only a wrapped-ESM entry has the immediately-invoked wrapper shape.
+    if !matches!(entry_meta.wrap_kind(), WrapKind::Esm) {
+      return None;
+    }
+    // A TLA-tainted group is invoked as `await init_*()`; keep it wrapped so the `await`s
+    // stay inside an async closure regardless of output format.
+    if entry_meta.is_tla_or_contains_tla_dependency {
+      return None;
+    }
+    // `require()` importers initialize the entry through `(init_x(), __toCommonJS(...))`.
+    if entry_meta.required_by_other_module {
+      return None;
+    }
+    // Another chunk imports `init_x` to control when the entry executes.
+    if entry_meta.wrapper_ref.is_some_and(|r| chunk.exports_to_other_chunks.contains_key(&r)) {
+      return None;
+    }
+    let entry_module = self.link_output.module_table[entry_idx].as_normal()?;
+    // Any importer may lower to an `init_x()` call site (e.g. an entry statically imported
+    // by another entry, a cycle back into the entry, or a same-chunk dynamic import).
+    (entry_module.importers_idx.is_empty() && entry_module.dynamic_importers.is_empty())
+      .then_some(entry_idx)
+  }
+
   fn concatenate_wrapping_modules(&mut self, chunk: &mut Chunk) {
+    let inlinable_entry = self.entry_group_inlinable(chunk);
     // Those modules could only be a group root.
     let mut root_only = chunk
       .exports_to_other_chunks
@@ -65,6 +100,24 @@ impl GenerateStage<'_> {
 
       let mut group =
         self.expand_module_group(&module_to_exec_order, &root_only, &mut visited, *module_idx);
+
+      if inlinable_entry == Some(group.entry) {
+        // The group's `init_*` wrapper would be declared and then invoked exactly once,
+        // immediately, at the end of this chunk. Drop the wrappers so every member is
+        // finalized and rendered as a plain module executing in place (each becomes its own
+        // single-module group, interleaved by exec order via the sort below).
+        for idx in group.modules {
+          let meta = &mut self.link_output.metas[idx];
+          meta.update_wrap_kind(WrapKind::None);
+          meta.wrapper_stmt_info = None;
+          meta.wrapper_ref = None;
+          meta.wrapper_inlined = true;
+          module_idx_to_group_idx.insert(idx, module_groups.len());
+          module_groups.push(ModuleGroup::new(vec![idx], idx));
+        }
+        continue;
+      }
+
       let len = group.modules.len();
 
       for idx in &group.modules {

@@ -44,27 +44,21 @@ export { all };
 
 ```js
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
-//#region lib.js
-const stages = {
+//#endregion
+//#region main.js
+const [first, ...rest] = Object.values({
 	a: "1",
 	b: "2",
 	c: "3"
-};
+});
+if (!first) throw new Error("empty");
+const all = [first, ...rest];
+assert.deepStrictEqual(all, [
+	"1",
+	"2",
+	"3"
+]);
 //#endregion
-//#region main.js
-var first, rest, all;
-//#endregion
-__esmMin((() => {
-	[first, ...rest] = Object.values(stages);
-	if (!first) throw new Error("empty");
-	all = [first, ...rest];
-	assert.deepStrictEqual(all, [
-		"1",
-		"2",
-		"3"
-	]);
-}))();
 export { all };
 
 ```

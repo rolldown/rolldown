@@ -94,6 +94,9 @@ __esmMin((() => {
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+//#region polyfill.js
+Object.somePolyfilledFunction = () => {};
+//#endregion
 //#region user-lib.js
 async function foo() {
 	return import("./lazy-chunk.js");
@@ -101,15 +104,11 @@ async function foo() {
 var init_user_lib = __esmMin((() => {
 	Object.somePolyfilledFunction();
 }));
-__esmMin((() => {
-	//#region polyfill.js
-	Object.somePolyfilledFunction = () => {};
-	//#endregion
-	//#region main.js
-	init_user_lib();
-	foo();
-	//#endregion
-}))();
+//#endregion
+//#region main.js
+init_user_lib();
+foo();
+//#endregion
 export { init_user_lib as n, __esmMin as r, foo as t };
 
 ```

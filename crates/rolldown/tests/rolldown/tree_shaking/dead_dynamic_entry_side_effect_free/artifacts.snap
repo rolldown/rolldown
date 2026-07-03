@@ -55,12 +55,11 @@ export { __esmMin as i, init_helper as n, other as r, init_leaf as t };
 
 ```js
 import { n as other, r as __esmMin, t as init_leaf } from "./leaf.js";
+//#region entry-a.js
+init_leaf();
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+console.log(other);
 //#endregion
-__esmMin((() => {
-	init_leaf();
-	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
-	console.log(other);
-}))();
 
 ```
 
@@ -68,11 +67,10 @@ __esmMin((() => {
 
 ```js
 import { n as other, r as __esmMin, t as init_leaf } from "./leaf.js";
+//#region entry-b.js
+init_leaf();
+console.log(other);
 //#endregion
-__esmMin((() => {
-	init_leaf();
-	console.log(other);
-}))();
 
 ```
 

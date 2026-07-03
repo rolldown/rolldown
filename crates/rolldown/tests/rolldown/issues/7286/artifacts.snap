@@ -27,14 +27,11 @@ __esmMin((() => {
 
 ```js
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
-//#region main.js
-var A, foo;
 //#endregion
-__esmMin((() => {
-	A = { A: "A" };
-	({[A.A]: foo} = { A: "foo" });
-	assert.strictEqual(foo, "foo");
-}))();
+//#region main.js
+const A = { A: "A" };
+const { [A.A]: foo } = { A: "foo" };
+assert.strictEqual(foo, "foo");
+//#endregion
 
 ```

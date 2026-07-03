@@ -50,14 +50,13 @@ export { init_foo as n, foo as t };
 ### main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import "./rolldown-runtime.js";
 import { n as init_foo, t as foo } from "./vendor.js";
 import nodeAssert from "node:assert";
+//#region main.js
+init_foo();
+nodeAssert.strictEqual(foo, "foo bar");
 //#endregion
-__esmMin((() => {
-	init_foo();
-	nodeAssert.strictEqual(foo, "foo bar");
-}))();
 
 ```
 

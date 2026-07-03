@@ -17,8 +17,10 @@ use crate::{
 use super::GenerateStage;
 
 impl GenerateStage<'_> {
-  /// Pre-finalization pass computing, for every included wrapped (`WrapKind::Esm`) module, the
-  /// init-call facts the module finalizers consume when emitting `init_*()` calls:
+  /// Pre-finalization pass computing, for every included wrapped (`WrapKind::Esm`) module —
+  /// plus every [`LinkingMetadata::wrapper_inlined`] module, which was `WrapKind::Esm` until
+  /// `on_demand_wrapping` dropped its wrapper — the init-call facts the module finalizers
+  /// consume when emitting `init_*()` calls:
   ///
   /// - [`LinkingMetadata::init_is_noop`]: the module's `__esm` closure body is empty — every
   ///   top-level statement is a hoisted function declaration (lifted out of the closure) or a
@@ -52,10 +54,16 @@ impl GenerateStage<'_> {
     let results = metas
       .par_iter_enumerated()
       .filter_map(|(module_idx, meta)| {
-        if !meta.is_included || !matches!(meta.wrap_kind(), WrapKind::Esm) {
+        // `wrapper_inlined` modules were `WrapKind::Esm` until `on_demand_wrapping` dropped
+        // their wrapper to let them execute in place; their non-included re-export statements
+        // still need the transitive `init_*()` calls emitted in their place.
+        if !meta.is_included || !(matches!(meta.wrap_kind(), WrapKind::Esm) || meta.wrapper_inlined)
+        {
           return None;
         }
-        let is_noop = init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
+        // `init_is_noop` is about the module's own `__esm` closure; an inlined module has none.
+        let is_noop = matches!(meta.wrap_kind(), WrapKind::Esm)
+          && init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
         let targets_by_stmt = modules[module_idx]
           .as_normal()
           .zip(module_to_chunk[module_idx])

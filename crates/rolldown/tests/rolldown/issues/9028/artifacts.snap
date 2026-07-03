@@ -29,7 +29,9 @@ __esmMin((() => {
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-}))();
+//#endregion
+//#region main.js
+console.log(42);
+//#endregion
 
 ```

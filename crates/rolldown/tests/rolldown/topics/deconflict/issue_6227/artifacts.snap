@@ -46,24 +46,26 @@ __esmMin((() => {
 ### entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-	//#region foo.js
-	{
-		const foo = "foo" + globalThis.foo;
-		setTimeout(() => {
-			globalThis.array.push(foo);
-		}, 100);
-	}
-	//#endregion
-	//#region bar.js
-	{
-		const foo = "bar" + globalThis.bar;
+//#endregion
+//#region init.js
+globalThis.array = [];
+//#endregion
+//#region foo.js
+{
+	const foo = "foo" + globalThis.foo;
+	setTimeout(() => {
 		globalThis.array.push(foo);
-	}
-	//#endregion
-	//#region main.js
-	console.log(globalThis.array);
-	//#endregion
-}))();
+	}, 100);
+}
+//#endregion
+//#region bar.js
+{
+	const foo = "bar" + globalThis.bar;
+	globalThis.array.push(foo);
+}
+//#endregion
+//#region main.js
+console.log(globalThis.array);
+//#endregion
 
 ```

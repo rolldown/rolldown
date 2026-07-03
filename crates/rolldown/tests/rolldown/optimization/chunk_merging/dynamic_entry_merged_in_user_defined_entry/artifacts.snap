@@ -85,11 +85,11 @@ import assert from "node:assert";
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
 //#endregion
-__esmMin((() => {
-	Promise.resolve().then(() => lib_exports).then((mod) => {
-		assert.strictEqual(mod.a, 123);
-		assert.strictEqual(123, 123);
-	});
-}))();
+//#region entry.js
+Promise.resolve().then(() => lib_exports).then((mod) => {
+	assert.strictEqual(mod.a, 123);
+	assert.strictEqual(123, 123);
+});
+//#endregion
 
 ```

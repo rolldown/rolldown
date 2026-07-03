@@ -108,6 +108,13 @@ pub struct LinkingMetadata {
   /// Computed by [`crate::stages::generate_stage`]'s `compute_wrapped_esm_init_metadata`;
   /// consumed by the module finalizer.
   pub transitive_esm_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
+  /// Set by the generate stage's `on_demand_wrapping` when this module was `WrapKind::Esm` but
+  /// belongs to an entry module group whose wrapper could only ever be invoked once,
+  /// immediately — so the wrapper was dropped (`wrap_kind` reset to `WrapKind::None`) and the
+  /// module's statements execute in place. Such a module can still carry non-included re-export
+  /// statements, so `compute_wrapped_esm_init_metadata` must keep computing
+  /// [`Self::transitive_esm_init_targets`] for it.
+  pub wrapper_inlined: bool,
 }
 
 impl LinkingMetadata {

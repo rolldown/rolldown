@@ -33,20 +33,18 @@ __esmMin((() => {
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+//#endregion
 //#region dep-a.js
 var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const sideEffect = {};
 	globalThis.sideEffect = {};
 	module.exports = sideEffect;
 }));
-__esmMin((() => {
-	//#region dep-b.js
-	sideEffect.touched = true;
-	//#endregion
-	//#region main.js
-	require_dep_a();
-	//#endregion
-}))();
+//#endregion
+//#region dep-b.js
+sideEffect.touched = true;
+require_dep_a();
+//#endregion
 
 ```

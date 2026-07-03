@@ -39,14 +39,13 @@ function foo() {
 	globalThis.value = 1;
 }
 var dep_default;
-var init_dep = __esmMin((() => {
-	dep_default = /*#__PURE__*/ foo();
-}));
 //#endregion
+//#region main.js
 __esmMin((() => {
-	init_dep();
-	nodeAssert.strictEqual(globalThis.value, 1);
+	dep_default = /*#__PURE__*/ foo();
 }))();
+nodeAssert.strictEqual(globalThis.value, 1);
+//#endregion
 export { dep_default as dep };
 
 ```

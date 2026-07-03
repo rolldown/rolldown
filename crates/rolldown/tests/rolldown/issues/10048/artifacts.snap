@@ -47,9 +47,9 @@ export { getProjectAnnotations };
 ### entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region data.js
-const themes = {
+//#endregion
+//#region entry.js
+globalThis.__themes = {
 	light: {
 		base: "light",
 		appBg: "#ffffff"
@@ -59,15 +59,10 @@ const themes = {
 		appBg: "#000000"
 	}
 };
-//#endregion
 function getProjectAnnotations() {
 	return [globalThis.__themes];
 }
-__esmMin((() => {
-	//#region entry.js
-	globalThis.__themes = themes;
-	//#endregion
-}))();
+//#endregion
 export { getProjectAnnotations };
 
 ```

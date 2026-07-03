@@ -36,9 +36,9 @@ __esmMin((() => {
 
 ```js
 import nodeAssert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
-__esmMin((() => {
-	nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
-}))();
+//#endregion
+//#region main.js
+nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
+//#endregion
 
 ```

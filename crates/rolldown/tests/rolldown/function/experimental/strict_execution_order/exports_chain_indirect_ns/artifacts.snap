@@ -68,15 +68,9 @@ __esmMin((() => {
 
 ```js
 import nodeAssert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
-var value;
-__esmMin((() => {
-	//#region lib-foo.js
-	value = "foo";
-	//#endregion
-	//#region main.js
-	nodeAssert.equal(value, "foo");
-	//#endregion
-}))();
+//#endregion
+//#region main.js
+nodeAssert.equal("foo", "foo");
+//#endregion
 
 ```

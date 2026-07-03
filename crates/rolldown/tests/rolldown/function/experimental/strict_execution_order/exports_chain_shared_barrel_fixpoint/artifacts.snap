@@ -62,14 +62,9 @@ var init_inner = __esmMin((() => {
 //#endregion
 }));
 
-
-var init_main = __esmMin((() => {
 //#region outer.js
-	init_inner();
+init_inner();
 
 //#endregion
-}));
-
-init_main();
 export { inner_exports as star };
 ```

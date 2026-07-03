@@ -62,9 +62,8 @@ Object.defineProperty(exports, "init_shared", {
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
+//#region main.js
+node_assert.default.strictEqual(42, 42);
 //#endregion
-__esmMin((() => {
-	node_assert.default.strictEqual(42, 42);
-}))();
 
 ```

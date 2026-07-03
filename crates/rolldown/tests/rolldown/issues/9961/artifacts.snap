@@ -43,7 +43,7 @@ __esmMin((() => {
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+//#endregion
 //#region core/setupWorker.js
 function setupWorker(handler) {
 	return { handler };
@@ -54,12 +54,9 @@ function http() {
 	return "http";
 }
 //#endregion
-var worker;
-__esmMin((() => {
-	//#region main.js
-	worker = setupWorker(http());
-	console.log(worker);
-	//#endregion
-}))();
+//#region main.js
+const worker = setupWorker(http());
+console.log(worker);
+//#endregion
 
 ```

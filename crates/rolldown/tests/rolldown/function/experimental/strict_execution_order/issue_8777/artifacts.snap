@@ -57,17 +57,15 @@ const fooClasses = { root: "MuiFoo-root" };
 //#endregion
 //#region components/Foo/Foo.js
 var Foo;
-var init_Foo$1 = __esmMin((() => {
+//#endregion
+//#region components/Foo/index.js
+__esmMin((() => {
 	Foo = {
 		name: "Foo",
 		root: fooClasses.root
 	};
-}));
-__esmMin((() => {
-	//#region components/Foo/index.js
-	init_Foo$1();
-	//#endregion
 }))();
+//#endregion
 export { Foo, fooClasses, getFooUtilityClass };
 
 ```

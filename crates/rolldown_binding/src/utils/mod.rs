@@ -7,7 +7,12 @@ pub mod napi_error;
 pub mod normalize_binding_options;
 
 use std::any::Any;
+use std::{future::Future, pin::Pin};
 
+use napi::{
+  Env,
+  bindgen_prelude::{PromiseRaw, ToNapiValue},
+};
 use napi_derive::napi;
 use rolldown::{LogLevel, NormalizedBundlerOptions};
 use rolldown_error::{
@@ -16,6 +21,23 @@ use rolldown_error::{
 use rolldown_tracing::try_init_tracing;
 
 pub use normalize_binding_transform_options::normalize_binding_transform_options;
+
+/// Box a future before handing it to napi's [`Env::spawn_future`].
+///
+/// `Env::spawn_future` is monomorphized over the concrete future type, so every
+/// distinct async body re-instantiates the tokio task harness (`poll_future`,
+/// `Core<T, S>`, the scheduler dispatch, ...). Binding entry points run once per
+/// operation, so erasing the future to a single `Pin<Box<dyn Future>>` collapses
+/// that machinery to one instantiation per output type, at the cost of one
+/// heap allocation per call. Do not use this for per-module/per-hook futures,
+/// where the extra allocation would be on a hot path.
+pub fn spawn_boxed_future<T: 'static + Send + ToNapiValue>(
+  env: &Env,
+  fut: impl 'static + Send + Future<Output = napi::Result<T>>,
+) -> napi::Result<PromiseRaw<'_, T>> {
+  let fut: Pin<Box<dyn Future<Output = napi::Result<T>> + Send>> = Box::pin(fut);
+  env.spawn_future(fut)
+}
 
 #[napi]
 pub struct TraceSubscriberGuard {

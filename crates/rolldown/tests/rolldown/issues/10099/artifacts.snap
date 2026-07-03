@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import external_default from "extdep";
+//#region main.js
+if (!external_default || external_default.name !== "extdep-default") throw new Error("external passthrough did not resolve");
+console.log("ok:", external_default.name);
+//#endregion
+
+```

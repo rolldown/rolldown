@@ -60,11 +60,13 @@ Post-ChunkGraph processing (in generate()):
 
 ChunkGraph
     │
+    ├─ analyze_execution_order()                     Compute modules that need order wrappers
+    │
+    ├─ apply_order_wraps()                           Create only the needed order wrappers
+    │
     ├─ compute_cross_chunk_links()                    Determine cross-chunk imports/exports
     │
     ├─ ensure_lazy_module_initialization_order()      Reorder wrapped module init calls
-    │
-    ├─ on_demand_wrapping()                           Strip unnecessary wrappers
     │
     └─ merge_cjs_namespace()                          Merge CJS namespace objects
 ```
@@ -72,6 +74,8 @@ ChunkGraph
 **Key files:**
 
 - `crates/rolldown/src/stages/generate_stage/code_splitting.rs` — pipeline orchestration, `generate_chunks()`, `ensure_lazy_module_initialization_order()`
+- `crates/rolldown/src/stages/generate_stage/order_analysis.rs` — `strictExecutionOrder` analysis, including the module set that needs order wrappers
+- `crates/rolldown/src/stages/generate_stage/order_wrapping.rs` — applies order wrappers after chunk assignment
 - `crates/rolldown/src/stages/generate_stage/dynamic_already_loaded.rs` — Rollup-style dynamic import already-loaded atom reduction
 - `crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs` — merge/optimization
 - `crates/rolldown/src/chunk_graph.rs` — output data structure

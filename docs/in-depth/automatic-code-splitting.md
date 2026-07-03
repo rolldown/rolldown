@@ -408,4 +408,4 @@ This example shows the problem, before bundling, the code outputs `hello, world`
 
 :::
 
-There are some discussions on how to solve this problem. One way is to generate more common chunks once a module violates its original order. But this will generate more common chunks, which is not a good idea. Rolldown tries to solve this issue by [`strictExecutionOrder`](/reference/OutputOptions.strictExecutionOrder), which injects some helper code to ensure the execution order is respected while keeping esm output and avoiding additional common chunks.
+There are some discussions on how to solve this problem. One way is to generate more common chunks once a module violates its original order. But this will generate more common chunks, which is not a good idea. Rolldown tries to solve this issue by [`strictExecutionOrder`](/reference/OutputOptions.strictExecutionOrder), which analyzes the generated chunk graph and wraps the ESM modules whose eager execution could otherwise be reordered. This keeps ESM output and avoids adding more common chunks.

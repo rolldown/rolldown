@@ -20,16 +20,9 @@ export { foo };
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
-var foo;
-var init_lib = __esmMin((async () => {
-	foo = await Promise.resolve("foo");
-}));
+const foo = await Promise.resolve("foo");
 //#endregion
-await __esmMin((async () => {
-	await init_lib();
-}))();
 export { foo };
 
 ```

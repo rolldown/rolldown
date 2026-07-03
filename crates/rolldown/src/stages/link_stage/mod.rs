@@ -44,6 +44,7 @@ pub use tree_shaking::{
   SymbolIncludeReason, compute_body_demand_keys, include_runtime_symbol, include_symbol,
 };
 mod wrapping;
+pub(super) use wrapping::create_wrapper;
 
 /// Information about safely merged CJS namespaces for a module
 #[derive(Debug, Default, Clone)]

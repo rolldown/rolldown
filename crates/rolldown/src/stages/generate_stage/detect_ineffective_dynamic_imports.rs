@@ -1,5 +1,7 @@
 use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
 
+use rolldown_common::PostChunkOptimizationOperation;
+
 use crate::chunk_graph::ChunkGraph;
 
 use super::GenerateStage;
@@ -12,7 +14,13 @@ impl GenerateStage<'_> {
       return;
     }
 
-    for chunk in chunk_graph.chunk_table.iter() {
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      if matches!(
+        chunk_graph.post_chunk_optimization_operations.get(&chunk_idx),
+        Some(PostChunkOptimizationOperation::Removed)
+      ) {
+        continue;
+      }
       let pre_rendered_chunk =
         chunk.pre_rendered_chunk.as_ref().expect("Should have pre_rendered_chunk");
 

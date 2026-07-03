@@ -23,7 +23,6 @@ pub struct ConfigVariant {
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
   pub treeshake: Option<TreeshakeOptions>,
   pub minify_internal_exports: Option<bool>,
-  pub on_demand_wrapping: Option<bool>,
   pub profiler_names: Option<bool>,
   pub pife_for_module_wrappers: Option<bool>,
   #[serde(deserialize_with = "deserialize_inline_const", default)]
@@ -83,12 +82,6 @@ impl ConfigVariant {
     }
     if let Some(minify_internal_exports) = &self.minify_internal_exports {
       config.minify_internal_exports = Some(*minify_internal_exports);
-    }
-    if let Some(on_demand_wrapping) = &self.on_demand_wrapping {
-      config.experimental = Some(ExperimentalOptions {
-        on_demand_wrapping: Some(*on_demand_wrapping),
-        ..config.experimental.unwrap_or_default()
-      });
     }
     if let Some(profiler_names) = &self.profiler_names {
       config.profiler_names = Some(*profiler_names);
@@ -171,9 +164,6 @@ impl ConfigVariant {
     }
     if let Some(treeshake) = &self.treeshake {
       fields.push(format!("treeshake: {treeshake:?}"));
-    }
-    if let Some(on_demand_wrapping) = &self.on_demand_wrapping {
-      fields.push(format!("on_demand_wrapping: {on_demand_wrapping:?}"));
     }
     if let Some(pife_for_module_wrappers) = &self.pife_for_module_wrappers {
       fields.push(format!("pife_for_module_wrappers: {pife_for_module_wrappers:?}"));

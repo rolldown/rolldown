@@ -1,9 +1,6 @@
 {
   "config": {
     "strictExecutionOrder": true,
-    "experimental": {
-      "onDemandWrapping": true
-    },
     "codeSplitting": {
       "groups": [
         {

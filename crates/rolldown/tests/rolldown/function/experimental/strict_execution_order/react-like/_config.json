@@ -3,9 +3,6 @@
     "resolve": {
       "alias": [["this-is-only-used-for-testing", ["./commonjs.js"]]]
     },
-    "strictExecutionOrder": true,
-    "experimental": {
-      "onDemandWrapping": true
-    }
+    "strictExecutionOrder": true
   }
 }

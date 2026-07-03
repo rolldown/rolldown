@@ -94,7 +94,7 @@ OPTIONS
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
   --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
-  --strictExecutionOrder      Lets modules be executed in the order they are declared.
+  --strictExecutionOrder      Preserve source module execution order across generated chunks.
   --topLevelVar               Rewrite top-level declarations to use \`var\`.
   --transform.assumptions.ignoreFunctionLength .
   --transform.assumptions.noDocumentAll .
@@ -243,7 +243,7 @@ OPTIONS
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
   --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
-  --strictExecutionOrder      Lets modules be executed in the order they are declared.
+  --strictExecutionOrder      Preserve source module execution order across generated chunks.
   --topLevelVar               Rewrite top-level declarations to use \`var\`.
   --transform.assumptions.ignoreFunctionLength .
   --transform.assumptions.noDocumentAll .
@@ -392,7 +392,7 @@ OPTIONS
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
   --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
-  --strictExecutionOrder      Lets modules be executed in the order they are declared.
+  --strictExecutionOrder      Preserve source module execution order across generated chunks.
   --topLevelVar               Rewrite top-level declarations to use \`var\`.
   --transform.assumptions.ignoreFunctionLength .
   --transform.assumptions.noDocumentAll .
@@ -541,7 +541,7 @@ OPTIONS
   --sourcemapExcludeSources   Exclude source content from sourcemaps.
   --sourcemapFileNames <sourcemapFileNames>Name pattern for emitted sourcemaps.
   --strict <strict>           Whether to always output \`"use strict"\` directive in non-ES module outputs.
-  --strictExecutionOrder      Lets modules be executed in the order they are declared.
+  --strictExecutionOrder      Preserve source module execution order across generated chunks.
   --topLevelVar               Rewrite top-level declarations to use \`var\`.
   --transform.assumptions.ignoreFunctionLength .
   --transform.assumptions.noDocumentAll .

@@ -6,11 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-	//#region main.js
-	console.log("main");
-	//#endregion
-}))();
+//#region setup.js
+globalThis.globalValue = "foo";
+//#endregion
+//#region main.js
+console.log("main");
+//#endregion
 
 ```
 
@@ -21,11 +22,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-	//#region main.js
-	console.log("main");
-	//#endregion
-}))();
+//#region setup.js
+globalThis.globalValue = "foo";
+//#endregion
+//#region main.js
+console.log("main");
+//#endregion
 
 ```
 
@@ -36,10 +38,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ### main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-	//#region main.js
-	console.log("main");
-	//#endregion
-})();
+//#region setup.js
+globalThis.globalValue = "foo";
+//#endregion
+//#region main.js
+console.log("main");
+//#endregion
 
 ```

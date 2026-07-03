@@ -6,35 +6,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
 //#region init.js
-var init_init = __esmMin((() => {
-	globalThis.array = [];
-}));
+globalThis.array = [];
 //#endregion
 //#region foo.js
-var init_foo = __esmMin((() => {
-	{
-		const foo = "foo" + globalThis.foo;
-		setTimeout(() => {
-			globalThis.array.push(foo);
-		}, 100);
-	}
-}));
+{
+	const foo = "foo" + globalThis.foo;
+	setTimeout(() => {
+		globalThis.array.push(foo);
+	}, 100);
+}
 //#endregion
 //#region bar.js
-var init_bar = __esmMin((() => {
-	{
-		const foo = "bar" + globalThis.bar;
-		globalThis.array.push(foo);
-	}
-}));
+{
+	const foo = "bar" + globalThis.bar;
+	globalThis.array.push(foo);
+}
 //#endregion
-__esmMin((() => {
-	init_init();
-	init_foo();
-	init_bar();
-	console.log(globalThis.array);
-}))();
+//#region main.js
+console.log(globalThis.array);
+//#endregion
 
 ```

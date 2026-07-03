@@ -76,17 +76,12 @@ pub struct ExperimentalOptions {
   pub attach_debug_info: Option<AttachDebugInfo>,
   pub chunk_import_map: Option<ChunkImportMap>,
   pub chunk_modules_order: Option<ChunkModulesOrderBy>,
-  pub on_demand_wrapping: Option<bool>,
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<ChunkOptimizationOption>,
   pub lazy_barrel: Option<bool>,
 }
 
 impl ExperimentalOptions {
-  pub fn is_on_demand_wrapping_enabled(&self) -> bool {
-    self.on_demand_wrapping.unwrap_or(false)
-  }
-
   pub fn is_resolve_new_url_to_asset_enabled(&self) -> bool {
     self.resolve_new_url_to_asset.unwrap_or(false)
   }

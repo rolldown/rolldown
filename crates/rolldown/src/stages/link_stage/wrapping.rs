@@ -1,10 +1,8 @@
 use rolldown_common::{
-  EcmaViewMeta, ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule,
-  NormalizedBundlerOptions, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb,
-  TaggedSymbolRef, WrapKind,
+  ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
+  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::IndexBitSet;
-use rustc_hash::FxHashSet;
 use smallvec::smallvec;
 
 use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
@@ -16,7 +14,6 @@ struct Context<'a> {
   pub linking_infos: &'a mut LinkingMetadataVec,
   pub modules: &'a IndexModules,
   pub runtime_idx: ModuleIdx,
-  pub on_demand_wrapping: bool,
 }
 
 fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
@@ -35,14 +32,6 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
     return;
   }
 
-  // Check if the module really needs to be wrapped
-  if ctx.on_demand_wrapping
-    && matches!(module.exports_kind, ExportsKind::Esm | ExportsKind::None)
-    && !module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
-    && module.import_records.is_empty()
-  {
-    return;
-  }
   if matches!(ctx.linking_infos[target].wrap_kind(), WrapKind::None) {
     let new_wrap_kind = match module.exports_kind {
       ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
@@ -101,17 +90,8 @@ impl LinkStage<'_> {
     let mut visited_modules_for_wrapping = IndexBitSet::new(self.module_table.modules.len());
     let mut visited_modules_for_dynamic_exports = IndexBitSet::new(self.module_table.modules.len());
 
-    let mut cjs_exports_kind_modules = FxHashSet::default();
-
-    let is_strict_execution_order_enabled = self.options.is_strict_execution_order_enabled();
-    let on_demand_wrapping = self.options.experimental.is_on_demand_wrapping_enabled();
-
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       let module_id = module.idx;
-
-      if is_strict_execution_order_enabled && module.exports_kind == ExportsKind::CommonJs {
-        cjs_exports_kind_modules.insert(module_id);
-      }
 
       if module.has_star_export() {
         has_dynamic_exports_due_to_export_star(
@@ -131,7 +111,6 @@ impl LinkStage<'_> {
             linking_infos: &mut self.metas,
             modules: &self.module_table.modules,
             runtime_idx: self.runtime.id(),
-            on_demand_wrapping,
           },
           module_id,
         );
@@ -153,38 +132,11 @@ impl LinkStage<'_> {
                 linking_infos: &mut self.metas,
                 modules: &self.module_table.modules,
                 runtime_idx: self.runtime.id(),
-                on_demand_wrapping,
               },
               importee.idx,
             );
           }
         });
-      }
-    }
-    if is_strict_execution_order_enabled {
-      // Override wrap_kind if `strictExecutionOrder` is enabled.
-      for (idx, linking_info) in
-        self.metas.iter_mut_enumerated().filter(|(module_id, _)| *module_id != self.runtime.id())
-      {
-        let Some(module) = self.module_table[idx].as_normal() else {
-          continue;
-        };
-        if cjs_exports_kind_modules.contains(&idx) {
-          // If the module is CommonJs, we need to wrap it.
-          linking_info.update_wrap_kind(WrapKind::Cjs);
-        } else {
-          // If the module is a pure esm, only exports function or expression without side
-          // effects and is not execution order sensitive , we don't need to wrap it.
-          let avoid_wrapping = on_demand_wrapping
-            && !module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
-            && module.import_records.is_empty()
-            && !linking_info.required_by_other_module;
-          linking_info.update_wrap_kind(if avoid_wrapping {
-            WrapKind::None
-          } else {
-            WrapKind::Esm
-          });
-        }
       }
     }
 

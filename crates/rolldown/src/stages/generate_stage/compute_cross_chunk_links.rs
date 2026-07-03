@@ -1,5 +1,6 @@
 use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
+use crate::types::linking_metadata::LinkingMetadata;
 use crate::utils::chunk::conflict_resolver::{ConflictResolver, deconflict_order_key};
 use crate::utils::chunk::normalize_preserve_entry_signature;
 use crate::utils::external_import_interop::external_import_needs_interop;
@@ -9,7 +10,8 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolRef, UsedSymbolRefs, WrapKind,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder,
+  WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -26,6 +28,31 @@ type IndexCrossChunkDynamicImports = IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>;
 type IndexImportsFromOtherChunks =
   IndexVec<ChunkIdx, FxHashMap<ChunkIdx, Vec<CrossChunkImportItem>>>;
 
+struct CrossChunkLinkState {
+  index_chunk_exported_symbols: IndexChunkExportedSymbols,
+  index_chunk_direct_imports_from_external_modules: IndexChunkImportsFromExternalModules,
+  index_chunk_indirect_imports_from_external_modules: IndexChunkAllImportsFromExternalModules,
+  index_imports_from_other_chunks: IndexImportsFromOtherChunks,
+  index_cross_chunk_imports: IndexCrossChunkImports,
+  index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports,
+}
+
+trait UsedSymbolRefsView {
+  fn contains(&self, symbol_ref: &SymbolRef) -> bool;
+}
+
+impl UsedSymbolRefsView for UsedSymbolRefs {
+  fn contains(&self, symbol_ref: &SymbolRef) -> bool {
+    UsedSymbolRefs::contains(self, symbol_ref)
+  }
+}
+
+impl UsedSymbolRefsView for UsedSymbolRefsBuilder {
+  fn contains(&self, symbol_ref: &SymbolRef) -> bool {
+    UsedSymbolRefsBuilder::contains(self, symbol_ref)
+  }
+}
+
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn compute_cross_chunk_links(
@@ -33,38 +60,28 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     used_symbol_refs: &UsedSymbolRefs,
   ) {
-    let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
-      index_vec![FxIndexSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
-    let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
-      index_vec![FxHashMap::<SymbolRef, Vec<CompactStr>>::default(); chunk_graph.chunk_table.len()];
-    let mut index_chunk_direct_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ModuleIdx, Vec<(ModuleIdx, NamedImport)>>::default(); chunk_graph.chunk_table.len()];
-    // Used for cjs,umd,iife only
-    let mut index_chunk_indirect_imports_from_external_modules: IndexChunkAllImportsFromExternalModules =
-      index_vec![FxIndexSet::<ModuleIdx>::default(); chunk_graph.chunk_table.len()];
+    let CrossChunkLinkState {
+      index_chunk_exported_symbols,
+      index_chunk_direct_imports_from_external_modules,
+      mut index_chunk_indirect_imports_from_external_modules,
+      index_imports_from_other_chunks,
+      index_cross_chunk_imports,
+      index_cross_chunk_dynamic_imports,
+    } = self.compute_cross_chunk_link_state(chunk_graph, used_symbol_refs);
 
-    let mut index_imports_from_other_chunks: IndexImportsFromOtherChunks = index_vec![FxHashMap::<ChunkIdx, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunk_table.len()];
-    let mut index_cross_chunk_imports: IndexCrossChunkImports =
-      index_vec![FxHashSet::default(); chunk_graph.chunk_table.len()];
-    let mut index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports =
-      index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
+    #[cfg(debug_assertions)]
+    let predicted_static_import_edges: IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> =
+      index_imports_from_other_chunks
+        .iter_enumerated()
+        .map(|(chunk_idx, importee_map)| {
+          importee_map
+            .keys()
+            .copied()
+            .chain(chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks.keys().copied())
+            .collect()
+        })
+        .collect();
 
-    self.collect_depended_symbols(
-      chunk_graph,
-      &mut index_chunk_depended_symbols,
-      &mut index_chunk_direct_imports_from_external_modules,
-      &mut index_cross_chunk_dynamic_imports,
-    );
-
-    self.compute_chunk_imports(
-      chunk_graph,
-      &index_chunk_depended_symbols,
-      &index_chunk_direct_imports_from_external_modules,
-      &mut index_chunk_exported_symbols,
-      &mut index_cross_chunk_imports,
-      &mut index_imports_from_other_chunks,
-      &mut index_chunk_indirect_imports_from_external_modules,
-      used_symbol_refs,
-    );
     self.deconflict_exported_names(chunk_graph, &index_chunk_exported_symbols, used_symbol_refs);
 
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
@@ -118,7 +135,7 @@ impl GenerateStage<'_> {
       index_sorted_imports_from_external_modules,
       index_sorted_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
-      index_chunk_indirect_imports_from_external_modules,
+      index_chunk_indirect_imports_from_external_modules.iter_mut(),
     ))
     .par_bridge()
     .for_each(
@@ -128,7 +145,7 @@ impl GenerateStage<'_> {
         imports_from_external_modules,
         cross_chunk_imports,
         cross_chunk_dynamic_imports,
-        mut chunk_indirect_imports_from_external_modules,
+        chunk_indirect_imports_from_external_modules,
       )| {
         // deduplicated
         for (module_idx, _) in &imports_from_external_modules {
@@ -139,9 +156,86 @@ impl GenerateStage<'_> {
         chunk.cross_chunk_imports = cross_chunk_imports;
         chunk.cross_chunk_dynamic_imports =
           cross_chunk_dynamic_imports.into_iter().collect::<Vec<_>>();
-        chunk.import_symbol_from_external_modules = chunk_indirect_imports_from_external_modules;
+        chunk.import_symbol_from_external_modules =
+          std::mem::take(chunk_indirect_imports_from_external_modules);
       },
     );
+
+    #[cfg(debug_assertions)]
+    for (chunk_idx, predicted_edges) in predicted_static_import_edges.into_iter_enumerated() {
+      let actual_edges =
+        chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks.keys().copied().collect();
+      debug_assert_eq!(
+        predicted_edges, actual_edges,
+        "predicted static chunk import edges diverged for chunk {chunk_idx:?}",
+      );
+    }
+  }
+
+  pub(super) fn predicted_static_import_edges(
+    &mut self,
+    chunk_graph: &ChunkGraph,
+    used_symbol_refs: &UsedSymbolRefsBuilder,
+  ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
+    self
+      .compute_cross_chunk_link_state(chunk_graph, used_symbol_refs)
+      .index_imports_from_other_chunks
+      .into_iter_enumerated()
+      .map(|(chunk_idx, importee_map)| {
+        importee_map
+          .into_keys()
+          .chain(chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks.keys().copied())
+          .collect()
+      })
+      .collect()
+  }
+
+  fn compute_cross_chunk_link_state(
+    &mut self,
+    chunk_graph: &ChunkGraph,
+    used_symbol_refs: &impl UsedSymbolRefsView,
+  ) -> CrossChunkLinkState {
+    let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
+      index_vec![FxIndexSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
+    let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
+      index_vec![FxHashMap::<SymbolRef, Vec<CompactStr>>::default(); chunk_graph.chunk_table.len()];
+    let mut index_chunk_direct_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ModuleIdx, Vec<(ModuleIdx, NamedImport)>>::default(); chunk_graph.chunk_table.len()];
+    // Used for cjs,umd,iife only
+    let mut index_chunk_indirect_imports_from_external_modules: IndexChunkAllImportsFromExternalModules =
+      index_vec![FxIndexSet::<ModuleIdx>::default(); chunk_graph.chunk_table.len()];
+
+    let mut index_imports_from_other_chunks: IndexImportsFromOtherChunks = index_vec![FxHashMap::<ChunkIdx, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunk_table.len()];
+    let mut index_cross_chunk_imports: IndexCrossChunkImports =
+      index_vec![FxHashSet::default(); chunk_graph.chunk_table.len()];
+    let mut index_cross_chunk_dynamic_imports: IndexCrossChunkDynamicImports =
+      index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
+
+    self.collect_depended_symbols(
+      chunk_graph,
+      &mut index_chunk_depended_symbols,
+      &mut index_chunk_direct_imports_from_external_modules,
+      &mut index_cross_chunk_dynamic_imports,
+    );
+
+    self.compute_chunk_imports(
+      chunk_graph,
+      &index_chunk_depended_symbols,
+      &index_chunk_direct_imports_from_external_modules,
+      &mut index_chunk_exported_symbols,
+      &mut index_cross_chunk_imports,
+      &mut index_imports_from_other_chunks,
+      &mut index_chunk_indirect_imports_from_external_modules,
+      used_symbol_refs,
+    );
+
+    CrossChunkLinkState {
+      index_chunk_exported_symbols,
+      index_chunk_direct_imports_from_external_modules,
+      index_chunk_indirect_imports_from_external_modules,
+      index_imports_from_other_chunks,
+      index_cross_chunk_imports,
+      index_cross_chunk_dynamic_imports,
+    }
   }
 
   /// - Assign each symbol to the chunk it belongs to
@@ -232,6 +326,7 @@ impl GenerateStage<'_> {
                 match reference_ref {
                   rolldown_common::SymbolOrMemberExprRef::Symbol(referenced) => {
                     self.add_depended_symbol_with_wrapped_esm_init(
+                      chunk_graph,
                       depended_symbols,
                       symbols.canonical_ref_resolving_namespace(*referenced),
                     );
@@ -242,6 +337,7 @@ impl GenerateStage<'_> {
                     ) {
                       Some(sym_ref) => {
                         self.add_depended_symbol_with_wrapped_esm_init(
+                          chunk_graph,
                           depended_symbols,
                           symbols.canonical_ref_resolving_namespace(sym_ref),
                         );
@@ -256,6 +352,7 @@ impl GenerateStage<'_> {
               });
             },
           );
+          self.add_transitive_esm_init_depended_symbols(chunk_graph, depended_symbols, module.idx);
         });
 
         if let Some(entry_id) = &chunk.entry_module_idx() {
@@ -273,6 +370,7 @@ impl GenerateStage<'_> {
               .filter(|resolved_export| !resolved_export.came_from_commonjs)
             {
               self.add_depended_symbol_with_wrapped_esm_init(
+                chunk_graph,
                 depended_symbols,
                 symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref),
               );
@@ -283,6 +381,7 @@ impl GenerateStage<'_> {
             depended_symbols
               .insert(entry_meta.wrapper_ref.expect("cjs should be wrapped in esm output"));
           }
+          self.add_transitive_esm_init_depended_symbols(chunk_graph, depended_symbols, entry.idx);
 
           if matches!(self.options.format, OutputFormat::Cjs)
             && matches!(entry.exports_kind, ExportsKind::Esm)
@@ -327,17 +426,49 @@ impl GenerateStage<'_> {
 
   fn add_depended_symbol_with_wrapped_esm_init(
     &self,
+    chunk_graph: &ChunkGraph,
     depended_symbols: &mut FxIndexSet<SymbolRef>,
     symbol_ref: SymbolRef,
   ) {
+    let meta = &self.link_output.metas[symbol_ref.owner];
+    if matches!(self.link_output.module_table[symbol_ref.owner], Module::Normal(_))
+      && !module_has_live_chunk(chunk_graph, symbol_ref.owner)
+    {
+      return;
+    }
+
+    if meta.wrapper_ref == Some(symbol_ref)
+      && !esm_wrapper_stmt_is_included_in_live_chunk(meta, symbol_ref.owner, chunk_graph)
+    {
+      return;
+    }
+
     depended_symbols.insert(symbol_ref);
 
-    let meta = &self.link_output.metas[symbol_ref.owner];
     if matches!(meta.wrap_kind(), WrapKind::Esm)
       && let Some(wrapper_ref) = meta.wrapper_ref
       && wrapper_ref != symbol_ref
+      && esm_wrapper_stmt_is_included_in_live_chunk(meta, symbol_ref.owner, chunk_graph)
     {
       depended_symbols.insert(wrapper_ref);
+    }
+  }
+
+  fn add_transitive_esm_init_depended_symbols(
+    &self,
+    chunk_graph: &ChunkGraph,
+    depended_symbols: &mut FxIndexSet<SymbolRef>,
+    module_idx: ModuleIdx,
+  ) {
+    for targets in self.link_output.metas[module_idx].transitive_esm_init_targets.values() {
+      for &target_idx in targets {
+        let meta = &self.link_output.metas[target_idx];
+        if esm_wrapper_stmt_is_included_in_live_chunk(meta, target_idx, chunk_graph)
+          && let Some(wrapper_ref) = meta.wrapper_ref
+        {
+          depended_symbols.insert(wrapper_ref);
+        }
+      }
     }
   }
 
@@ -353,7 +484,7 @@ impl GenerateStage<'_> {
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
     index_chunk_indirect_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
-    used_symbol_refs: &UsedSymbolRefs,
+    used_symbol_refs: &impl UsedSymbolRefsView,
   ) {
     // For each module that has been absorbed as a facade namespace, we need to know
     // which other modules dynamically import it so we can tell whether the absorbed
@@ -633,56 +764,64 @@ impl GenerateStage<'_> {
           }
         }
 
-        // Add bare imports for side-effectful dependencies in other chunks.
-        //
-        // With strict_execution_order/wrapping, modules aren't executed in loading but on-demand.
-        // So we don't need to do plain imports to address the side effects. It would be ensured
-        // by those `init_xxx()` calls.
-        if !self.options.is_strict_execution_order_enabled() {
-          for &module_idx in &chunk.modules {
-            let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+        // Add bare imports for side-effectful dependencies in other chunks. Under strict execution
+        // order, only wrapped ESM importees are initialized by `init_*()` calls; unwrapped importees
+        // still need the normal bare chunk import.
+        let mut add_side_effect_imports_for_module = |module_idx: ModuleIdx| {
+          let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+            return;
+          };
+
+          // From import records.
+          // This adds side-effectful imports as bare imports if necessary.
+          for rec in &module.import_records {
+            if rec.kind != ImportKind::Import {
+              continue;
+            }
+            let Some(importee_module_idx) = rec.resolved_module else {
               continue;
             };
-
-            // From import records.
-            // This adds side-effectful imports as bare imports if necessary.
-            for rec in &module.import_records {
-              if rec.kind != ImportKind::Import {
-                continue;
-              }
-              let Some(importee_module_idx) = rec.resolved_module else {
-                continue;
-              };
-              if !self.link_output.module_table[importee_module_idx]
-                .side_effects()
-                .has_side_effects()
-              {
-                continue;
-              }
-              let Some(importee_chunk_idx) = chunk_graph.module_to_chunk[importee_module_idx]
-              else {
-                continue;
-              };
-              if importee_chunk_idx == chunk_id {
-                continue;
-              }
-              index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
-              let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
-              imports_from_other_chunks.entry(importee_chunk_idx).or_default();
+            if self.options.is_strict_execution_order_enabled()
+              && matches!(self.link_output.metas[importee_module_idx].wrap_kind(), WrapKind::Esm)
+            {
+              continue;
             }
+            if !self.link_output.module_table[importee_module_idx].side_effects().has_side_effects()
+            {
+              continue;
+            }
+            let Some(importee_chunk_idx) = chunk_graph.module_to_chunk[importee_module_idx] else {
+              continue;
+            };
+            if importee_chunk_idx == chunk_id {
+              continue;
+            }
+            index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
+            let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
+            imports_from_other_chunks.entry(importee_chunk_idx).or_default();
+          }
 
-            // Runtime module may have side effects (e.g. dev/HMR mode) without an import record.
-            if self.link_output.metas[module_idx].has_side_effectful_runtime_dep {
-              let runtime_idx = self.link_output.runtime.id();
-              if let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_idx] {
-                if runtime_chunk_idx != chunk_id {
-                  index_cross_chunk_imports[chunk_id].insert(runtime_chunk_idx);
-                  let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
-                  imports_from_other_chunks.entry(runtime_chunk_idx).or_default();
-                }
+          // Runtime module may have side effects (e.g. dev/HMR mode) without an import record.
+          if self.link_output.metas[module_idx].has_side_effectful_runtime_dep {
+            let runtime_idx = self.link_output.runtime.id();
+            if let Some(runtime_chunk_idx) = chunk_graph.module_to_chunk[runtime_idx] {
+              if runtime_chunk_idx != chunk_id {
+                index_cross_chunk_imports[chunk_id].insert(runtime_chunk_idx);
+                let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
+                imports_from_other_chunks.entry(runtime_chunk_idx).or_default();
               }
             }
           }
+        };
+
+        for &module_idx in &chunk.modules {
+          add_side_effect_imports_for_module(module_idx);
+        }
+
+        if let ChunkKind::EntryPoint { module: entry_module_idx, .. } = &chunk.kind
+          && !chunk.modules.contains(entry_module_idx)
+        {
+          add_side_effect_imports_for_module(*entry_module_idx);
         }
       });
   }
@@ -832,6 +971,23 @@ impl GenerateStage<'_> {
       }
     }
   }
+}
+
+fn esm_wrapper_stmt_is_included_in_live_chunk(
+  meta: &LinkingMetadata,
+  module_idx: ModuleIdx,
+  chunk_graph: &ChunkGraph,
+) -> bool {
+  meta.wrapper_stmt_info.is_some_and(|stmt_info_idx| meta.stmt_info_included.has_bit(stmt_info_idx))
+    && module_has_live_chunk(chunk_graph, module_idx)
+}
+
+fn module_has_live_chunk(chunk_graph: &ChunkGraph, module_idx: ModuleIdx) -> bool {
+  chunk_graph.module_to_chunk[module_idx].is_some_and(|chunk_idx| {
+    chunk_graph.post_chunk_optimization_operations.get(&chunk_idx)
+      != Some(&PostChunkOptimizationOperation::Removed)
+      && chunk_graph.chunk_table[chunk_idx].modules.contains(&module_idx)
+  })
 }
 
 // The same implementation with https://github.com/oxc-project/oxc/blob/crates_v0.86.0/crates/oxc_mangler/src/base54.rs#L30-L31

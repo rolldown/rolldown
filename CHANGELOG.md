@@ -1,4 +1,10 @@
 
+## [Unreleased]
+
+### 🚀 Features
+
+- strictExecutionOrder: wrap only modules whose chunk placement can reorder eager ESM execution
+
 ## [1.1.5] - 2026-07-08
 
 ### 🚀 Features
@@ -103,7 +109,6 @@
 ### ❤️ New Contributors
 
 * @V1OL3TF0X made their first contribution in [#9271](https://github.com/rolldown/rolldown/pull/9271)
-
 
 ## [1.1.4] - 2026-07-01
 

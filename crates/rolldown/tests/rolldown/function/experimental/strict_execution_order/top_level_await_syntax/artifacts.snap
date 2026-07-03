@@ -6,25 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-await __esmMin((async () => {
-	await init_foo();
-	console.log(123);
-}))();
-
-```
-
-# Variant: [on_demand_wrapping: true]
-
-## Assets
-
-### main.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-	//#region main.js
-	console.log(123);
-	//#endregion
-}))();
+//#region foo.js
+await 1e3;
+//#endregion
+//#region main.js
+console.log(123);
+//#endregion
 
 ```

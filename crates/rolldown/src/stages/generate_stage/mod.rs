@@ -107,7 +107,8 @@ mod dynamic_already_loaded;
 mod finalize_modules;
 mod manual_code_splitting;
 mod minify_chunks;
-mod on_demand_wrapping;
+mod order_analysis;
+mod order_wrapping;
 mod post_banner_footer;
 mod render_chunk_to_assets;
 
@@ -143,10 +144,6 @@ impl<'a> GenerateStage<'a> {
     self.plugin_driver.render_start(self.options).await?;
     let mut chunk_graph = self.generate_chunks(&mut used_symbol_refs).await?;
 
-    // The chunk optimizer's re-run of the inclusion pass (inside `generate_chunks`) was the
-    // last writer; sealing consumes the builder, so nothing downstream can mutate the set.
-    let used_symbol_refs = used_symbol_refs.seal();
-
     // Count only live chunks. Chunks merged away during chunk optimization (e.g.
     // the standalone runtime chunk folded back into its host) stay in
     // `chunk_table` as tombstones but are skipped at render time, so they must
@@ -161,13 +158,23 @@ impl<'a> GenerateStage<'a> {
 
     self.finalized_module_namespace_ref_usage();
 
+    let order_analysis = self.analyze_execution_order(&chunk_graph, &used_symbol_refs);
+    if let Some(analysis) = &order_analysis {
+      self.apply_order_wraps(&mut chunk_graph, &analysis.order_wraps, &mut used_symbol_refs);
+    }
+
+    // `apply_order_wraps` may include newly-created wrapper/runtime symbols. Seal only after it
+    // has had the last chance to extend the set.
+    let used_symbol_refs = used_symbol_refs.seal();
+
     self.compute_retained_export_symbols(&used_symbol_refs);
+
+    let mut ast_table = std::mem::take(&mut self.ast_table);
+    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph);
 
     self.compute_cross_chunk_links(&mut chunk_graph, &used_symbol_refs);
 
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);
-
-    self.on_demand_wrapping(&mut chunk_graph);
 
     self.merge_cjs_namespace(&mut chunk_graph);
 
@@ -207,8 +214,6 @@ impl<'a> GenerateStage<'a> {
       self.resolved_paths = Some(paths.resolve_all(ids).await);
     }
 
-    let mut ast_table = std::mem::take(&mut self.ast_table);
-    self.compute_wrapped_esm_init_metadata(&ast_table, &chunk_graph);
     self.finalize_modules(&mut chunk_graph, &mut ast_table);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs).await

@@ -646,12 +646,6 @@ export interface InputOptions {
     chunkImportMap?: boolean | { baseUrl?: string; fileName?: string };
 
     /**
-     * Enable on-demand wrapping of modules.
-     * @default false
-     * @hidden not ready for public usage yet
-     */
-    onDemandWrapping?: boolean;
-    /**
      * Enable incremental build support. Required to be used with `watch` mode.
      * @default false
      */

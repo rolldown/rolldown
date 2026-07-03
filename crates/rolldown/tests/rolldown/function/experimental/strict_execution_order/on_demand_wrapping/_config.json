@@ -10,10 +10,7 @@
         "import": "./dynamic.js"
       }
     ],
-    "strictExecutionOrder": true,
-    "experimental": {
-      "onDemandWrapping": true
-    }
+    "strictExecutionOrder": true
   },
   "expectExecuted": false
 }

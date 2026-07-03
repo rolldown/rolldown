@@ -39,14 +39,16 @@ pub struct LinkingMetadata {
   /// `wrapper_ref` is the `require_cjs` identifier in above example.
   pub wrapper_ref: Option<SymbolRef>,
   pub wrapper_stmt_info: Option<StmtInfoIdx>,
-  /// Because when `strictExecutionOrder` is enabled, all modules will be wrapped
-  /// we need to store the original wrap kind that used for
-  /// [rolldown::stages::generate_stage::code_splitting::GenerateStage::ensure_lazy_module_initialization_order] analysis
+  /// The wrap kind decided from module semantics before any generate-stage order wrapping.
   original_wrap_kind: WrapKind,
   /// The `wrap_kind` used for linking and code generation.
   /// Intent to make those two fields private, so that we could ensure they are mutated in a more
   /// safe way.
   wrap_kind: WrapKind,
+  /// Order wrapping may need an ESM wrapper binding that is callable before its declaration in
+  /// cross-chunk cycles. Interop ESM wrappers keep the historical `var init = __esm(...)` shape so
+  /// strictExecutionOrder=false output stays unchanged.
+  pub hoist_esm_wrapper: bool,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<CompactStr, ResolvedExport>,
   /// Store the names of exclude ambiguous resolved exports.
@@ -118,11 +120,11 @@ pub struct LinkingMetadata {
   /// now-unused wrapper). Computed by [`crate::stages::generate_stage`]'s
   /// `compute_wrapped_esm_init_metadata`.
   pub init_is_noop: bool,
-  /// For each non-included top-level re-export statement (`export * from`, `export {x} from`,
-  /// `export * as ns from`) of an included `WrapKind::Esm` module: the ordered wrapped-ESM
-  /// modules whose `init_*()` calls must be emitted in its place to preserve execution order.
-  /// Computed by [`crate::stages::generate_stage`]'s `compute_wrapped_esm_init_metadata`;
-  /// consumed by the module finalizer.
+  /// For each non-included top-level import/re-export statement of an included `WrapKind::Esm`
+  /// module: the ordered wrapped-ESM modules whose `init_*()` calls must be emitted in its place
+  /// to preserve execution order. Non-order wrappers keep the legacy re-export-only collection.
+  /// Computed by [`crate::stages::generate_stage`]'s `compute_wrapped_esm_init_metadata`; consumed
+  /// by the module finalizer.
   pub transitive_esm_init_targets: FxHashMap<StmtInfoIdx, Vec<ModuleIdx>>,
 }
 
@@ -152,17 +154,15 @@ impl LinkingMetadata {
     self.original_wrap_kind
   }
 
+  #[inline]
+  pub fn override_wrap_kind(&mut self, wrap_kind: WrapKind) {
+    self.wrap_kind = wrap_kind;
+  }
+
   /// Synchronize the `wrap_kind` with the original wrap kind.
   #[inline]
   pub fn sync_wrap_kind(&mut self, wrap_kind: WrapKind) {
     self.original_wrap_kind = wrap_kind;
-    self.wrap_kind = wrap_kind;
-  }
-
-  /// Use this api with caution, ideally it should be only used for https://github.com/rolldown/rolldown/blob/76350f2b77364dbba29ba93562589a6eba6211dd/crates/rolldown/src/stages/link_stage/wrapping.rs?plain=1#L165-L185
-  /// override the wrapping kind when `strictExecutionOrder` is enabled.
-  #[inline]
-  pub fn update_wrap_kind(&mut self, wrap_kind: WrapKind) {
     self.wrap_kind = wrap_kind;
   }
 

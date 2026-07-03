@@ -27,10 +27,6 @@ if (variant.includes('allow-extension')) {
   // the same for an entry that declares exports; that path is exercised by the
   // broader entry-exports snapshots.)
   //
-  // NOTE: `init_lib` (lib's own ESM wrapper, present because `strictExecutionOrder`
-  // wraps the module) is still re-exported because `main` triggers lib's init
-  // cross-chunk. That is a separate facade/chunking concern, tracked apart from the
-  // runtime-merge guard, so it is intentionally not asserted here.
   for (const leaked of runtimeHelpers) {
     assert.ok(
       !(leaked in lib),

@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use rolldown_common::{ConcatenateWrappedModuleKind, PrependRenderedImport};
+use rolldown_common::{
+  ConcatenateWrappedModuleKind, ModuleIdx, PostChunkOptimizationOperation, PrependRenderedImport,
+};
 use rolldown_utils::{index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as _};
 use rustc_hash::FxHashMap;
 use tracing::debug_span;
@@ -25,9 +27,9 @@ impl GenerateStage<'_> {
       ast_table
         .par_iter_mut_enumerated()
         .filter(|(idx, _ast)| {
-          self.link_output.module_table[*idx]
-            .as_normal()
-            .is_some_and(|m| self.link_output.metas[m.idx].is_included)
+          self.link_output.module_table[*idx].as_normal().is_some_and(|m| {
+            self.link_output.metas[m.idx].is_included && module_has_live_chunk(chunk_graph, *idx)
+          })
         })
         .filter_map(|(idx, ast)| {
           let ast = ast.as_mut()?;
@@ -103,4 +105,12 @@ impl GenerateStage<'_> {
       }
     }
   }
+}
+
+fn module_has_live_chunk(chunk_graph: &ChunkGraph, module_idx: ModuleIdx) -> bool {
+  chunk_graph.module_to_chunk[module_idx].is_some_and(|chunk_idx| {
+    chunk_graph.post_chunk_optimization_operations.get(&chunk_idx)
+      != Some(&PostChunkOptimizationOperation::Removed)
+      && chunk_graph.chunk_table[chunk_idx].modules.contains(&module_idx)
+  })
 }

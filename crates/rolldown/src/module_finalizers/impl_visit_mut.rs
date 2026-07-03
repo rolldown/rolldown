@@ -14,7 +14,10 @@ use oxc::{
 use oxc_str::CompactStr;
 use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript::ToSourceString;
-use rolldown_ecmascript_utils::{ExpressionExt, JsxExt, JsxMemberExpressionObjectExt};
+use rolldown_ecmascript_utils::{
+  EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind, EsmWrapperStmtOptions, ExpressionExt,
+  JsxExt, JsxMemberExpressionObjectExt,
+};
 
 use crate::module_finalizers::{KeepNameId, TraverseState};
 
@@ -281,15 +284,28 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           return;
         }
 
-        program.body.push(self.ast_factory.make_esm_wrapper_stmt(
-          wrap_ref_name,
-          esm_ref_expr,
-          stmts_inside_closure,
-          self.ctx.options.profiler_names,
-          self.ctx.options.optimization.is_pife_for_module_wrappers_enabled(),
-          &self.ctx.module.stable_id,
-          self.ctx.linking_info.is_tla_or_contains_tla_dependency,
-        ));
+        program.body.push(self.ast_factory.make_esm_wrapper_stmt(EsmWrapperStmtOptions {
+          binding_name: wrap_ref_name,
+          esm_fn_expr: esm_ref_expr,
+          statements: stmts_inside_closure,
+          profiler_name:
+            self.ctx.options.profiler_names.then_some(self.ctx.module.stable_id.as_str()),
+          call_kind: if self.ctx.options.optimization.is_pife_for_module_wrappers_enabled() {
+            EsmWrapperCallKind::Pife
+          } else {
+            EsmWrapperCallKind::Plain
+          },
+          body_kind: if self.ctx.linking_info.is_tla_or_contains_tla_dependency {
+            EsmWrapperBodyKind::Async
+          } else {
+            EsmWrapperBodyKind::Sync
+          },
+          decl_kind: if self.ctx.linking_info.hoist_esm_wrapper {
+            EsmWrapperDeclKind::HoistedFunction
+          } else {
+            EsmWrapperDeclKind::Var
+          },
+        }));
       }
       Some(WrapKind::None) => {}
       None => {

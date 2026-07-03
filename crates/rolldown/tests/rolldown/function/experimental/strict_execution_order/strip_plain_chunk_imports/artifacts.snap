@@ -6,12 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+//#region main.js
+await import("./page-a2.js").then(console.log);
+await import("./page-b2.js").then(console.log);
 //#endregion
-await __esmMin((async () => {
-	await import("./page-a.js").then(console.log);
-	await import("./page-b.js").then(console.log);
-}))();
 
 ```
 
@@ -25,20 +23,33 @@ function foo() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
 }
 var common, _;
-var init_common = __esmMin((() => {
-	common = "common";
-	_ = /*#__PURE__*/ foo();
-}));
+function init_common() {
+	return (init_common = __esmMin((() => {
+		common = "common";
+		_ = /*#__PURE__*/ foo();
+	})))();
+}
 //#endregion
 //#region page-a.js
 function render() {
 	console.log(common, _);
 }
+function init_page_a() {
+	return (init_page_a = __esmMin((() => {
+		init_common();
+		nodeAssert.strictEqual(globalThis.value, 0);
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	init_common();
-	nodeAssert.strictEqual(globalThis.value, 0);
-}))();
+export { render as n, init_common as r, init_page_a as t };
+
+```
+
+## page-a2.js
+
+```js
+import { n as render, t as init_page_a } from "./page-a.js";
+init_page_a();
 export { render };
 
 ```
@@ -46,14 +57,28 @@ export { render };
 ## page-b.js
 
 ```js
+import { r as init_common } from "./page-a.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
 import nodeAssert from "node:assert";
 //#region page-b.js
 function render() {}
+function init_page_b() {
+	return (init_page_b = __esmMin((() => {
+		init_common();
+		nodeAssert.strictEqual(globalThis.value, 0);
+	})))();
+}
 //#endregion
-__esmMin((() => {
-	nodeAssert.strictEqual(globalThis.value, 0);
-}))();
+export { render as n, init_page_b as t };
+
+```
+
+## page-b2.js
+
+```js
+import "./page-a.js";
+import { n as render, t as init_page_b } from "./page-b.js";
+init_page_b();
 export { render };
 
 ```

@@ -2,10 +2,5 @@
   "config": {
     "strictExecutionOrder": true
   },
-  "configVariants": [
-    {
-      "onDemandWrapping": true
-    }
-  ],
   "expectExecuted": false
 }

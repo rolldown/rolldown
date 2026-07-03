@@ -736,12 +736,12 @@ export interface OutputOptions {
    */
   keepNames?: boolean;
   /**
-   * Lets modules be executed in the order they are declared.
+   * Preserve source module execution order across generated chunks.
    *
-   * This is done by injecting runtime helpers to ensure that modules are executed in the order they are imported. External modules won't be affected.
+   * When enabled, Rolldown analyzes the finalized chunk graph and wraps only the ESM modules whose eager execution could be reordered by code splitting. Interop wrappers for CommonJS and require-of-ESM modules are unchanged. External modules are not affected.
    *
    * > [!WARNING]
-   * > Enabling this option may negatively increase bundle size. It is recommended to use this option only when absolutely necessary.
+   * > Enabling this option can increase bundle size because wrapped modules need runtime init helpers. The increase depends on how many modules are at risk in the generated chunk graph.
    * @default false
    */
   strictExecutionOrder?: boolean;

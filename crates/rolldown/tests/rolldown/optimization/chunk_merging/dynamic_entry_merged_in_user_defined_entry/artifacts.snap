@@ -15,19 +15,38 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+import { t as init_entry } from "./entry2.js";
+init_entry();
+
+```
+
+## entry2.js
+
+```js
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-// HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
-var init_lib = __esmMin((() => {}));
 //#endregion
-__esmMin((() => {
-	init_lib();
-	Promise.resolve().then(() => (init_lib(), lib_exports)).then((mod) => {
-		assert.strictEqual(mod.a, 123);
-		assert.strictEqual(123, 123);
-	});
-}))();
+//#region entry.js
+function init_entry() {
+	return (init_entry = __esmMin((() => {
+		Promise.resolve().then(() => lib_exports).then((mod) => {
+			assert.strictEqual(mod.a, 123);
+			assert.strictEqual(123, 123);
+		});
+	})))();
+}
+//#endregion
+export { init_entry as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
 
 ```
 
@@ -47,19 +66,59 @@ __esmMin((() => {
 ### entry.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+require("./entry2.js").init_entry();
+
+```
+
+### entry2.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
 let node_assert = require("node:assert");
-node_assert = __toESM(node_assert);
+node_assert = require_rolldown_runtime.__toESM(node_assert);
 //#region lib.js
-var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
-var init_lib = __esmMin((() => {}));
+var lib_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ a: () => 123 });
 //#endregion
-__esmMin((() => {
-	init_lib();
-	Promise.resolve().then(() => (init_lib(), lib_exports)).then((mod) => {
-		node_assert.default.strictEqual(mod.a, 123);
-		node_assert.default.strictEqual(123, 123);
-	});
-}))();
+//#region entry.js
+function init_entry() {
+	return (init_entry = require_rolldown_runtime.__esmMin((() => {
+		Promise.resolve().then(() => lib_exports).then((mod) => {
+			node_assert.default.strictEqual(mod.a, 123);
+			node_assert.default.strictEqual(123, 123);
+		});
+	})))();
+}
+//#endregion
+Object.defineProperty(exports, "init_entry", {
+	enumerable: true,
+	get: function() {
+		return init_entry;
+	}
+});
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
 
 ```

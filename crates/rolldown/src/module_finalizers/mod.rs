@@ -181,10 +181,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let rec = &self.ctx.module.import_records[rec_idx];
     let Some(importee_idx) = rec.resolved_module else { return init_modules };
     let importee_linking_info = &self.ctx.linking_infos[importee_idx];
+    let mut visited_symbols = FxHashSet::default();
 
     if rec.meta.contains(ImportRecordMeta::IsExportStar) {
       for resolved_export in importee_linking_info.resolved_exports.values() {
-        self.add_wrapped_esm_init_module_for_symbol(resolved_export.symbol_ref, &mut init_modules);
+        self.add_wrapped_esm_init_module_for_symbol(
+          resolved_export.symbol_ref,
+          &mut init_modules,
+          &mut visited_symbols,
+        );
       }
       return init_modules;
     }
@@ -198,6 +203,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             self.add_wrapped_esm_init_module_for_symbol(
               resolved_export.symbol_ref,
               &mut init_modules,
+              &mut visited_symbols,
             );
           }
         }
@@ -206,10 +212,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             self.add_wrapped_esm_init_module_for_symbol(
               resolved_export.symbol_ref,
               &mut init_modules,
+              &mut visited_symbols,
             );
           } else {
-            self
-              .add_wrapped_esm_init_module_for_symbol(named_import.imported_as, &mut init_modules);
+            self.add_wrapped_esm_init_module_for_symbol(
+              named_import.imported_as,
+              &mut init_modules,
+              &mut visited_symbols,
+            );
           }
         }
       }
@@ -222,8 +232,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     symbol_ref: SymbolRef,
     init_modules: &mut Vec<ModuleIdx>,
+    visited_symbols: &mut FxHashSet<SymbolRef>,
   ) {
     let canonical_ref = self.ctx.symbol_db.canonical_ref_resolving_namespace(symbol_ref);
+    if !visited_symbols.insert(canonical_ref) {
+      return;
+    }
     let meta = &self.ctx.linking_infos[canonical_ref.owner];
     if matches!(meta.wrap_kind(), WrapKind::Esm)
       // Only emit `init_*()` for wrapped owners that tree-shaking actually kept.
@@ -238,6 +252,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       && !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::Inner)
     {
       init_modules.push(canonical_ref.owner);
+      return;
+    }
+
+    let Some(module) = self.ctx.modules[canonical_ref.owner].as_normal() else {
+      return;
+    };
+    if module.namespace_object_ref != canonical_ref
+      || meta.is_included
+      || !self.ctx.linking_info.hoist_esm_wrapper
+    {
+      return;
+    }
+
+    for resolved_export in meta.resolved_exports.values() {
+      self.add_wrapped_esm_init_module_for_symbol(
+        resolved_export.symbol_ref,
+        init_modules,
+        visited_symbols,
+      );
     }
   }
 

@@ -138,6 +138,13 @@ pub enum BlockOnDeadlockKind {
   /// ever deliver one -- a PROVABLE deadlock, detected unconditionally (not
   /// timing-based).
   CurrentThreadCertain,
+  /// [`Self::CurrentThreadCertain`] detected while a HOST timer was pending.
+  /// The timer does not make the park any less dead on a threadless build:
+  /// its host callback (the JS `setTimeout` relay) can only run on the very
+  /// thread that is about to park, so it can never fire while `block_on`
+  /// holds that thread. A distinct kind only so the diagnostic can name the
+  /// shape the user actually hit.
+  CurrentThreadCertainTimerBacked,
   /// Threaded CurrentThread: a `block_on` park outlived the configured
   /// deadline with zero runtime progress.
   CurrentThreadDeadline,
@@ -167,6 +174,10 @@ impl BlockOnDeadlock {
     Self { kind: BlockOnDeadlockKind::CurrentThreadCertain, park_deadline: None }
   }
 
+  fn current_thread_certain_timer_backed() -> Self {
+    Self { kind: BlockOnDeadlockKind::CurrentThreadCertainTimerBacked, park_deadline: None }
+  }
+
   fn current_thread_deadline(deadline: Duration) -> Self {
     Self { kind: BlockOnDeadlockKind::CurrentThreadDeadline, park_deadline: Some(deadline) }
   }
@@ -194,6 +205,16 @@ impl fmt::Display for BlockOnDeadlock {
          (transitively) awaits a JS continuation (e.g. a threadsafe-function callback, like the \
          dynamic-import-vars plugin's `resolver`), but the only thread that could run that \
          continuation is the one now parking.",
+      ),
+      BlockOnDeadlockKind::CurrentThreadCertainTimerBacked => f.write_str(
+        "provable async-runtime deadlock: `block_on` on the CurrentThread flavor is about to \
+         park with an empty task queue on a threadless build while a host timer is pending. \
+         The pending timer is no rescue: its host callback (the JS `setTimeout` relay) can \
+         only run on the very thread that is now parking, so it can never fire, and no other \
+         thread exists that could ever deliver a wake. This is the block_on-awaiting-JS \
+         hazard: native code called `block_on` on a future that (transitively) awaits a JS \
+         continuation, but the only thread that could run that continuation is the one now \
+         parking.",
       ),
       BlockOnDeadlockKind::CurrentThreadDeadline => write!(
         f,
@@ -454,12 +475,14 @@ struct CurrentThreadExecutor {
   threadless: bool,
   park_deadline: Option<Duration>,
   // HOST-driver timers currently armed on this runtime (timer intel §4(b)).
-  // A pending entry is a future wake token -- the host event loop's timer
-  // callback -- so the threadless CERTAIN check below must not declare a park
-  // provably dead while one exists, and the deadline verdict treats a LIVE
-  // wait (deadline still in the future) as a legitimate park. Shared with the
-  // `Sleep` futures minted for this executor (they insert at creation and
-  // remove on completion/drop).
+  // On the THREADED CT flavor a pending entry is a future wake token -- the
+  // host event loop's timer callback -- so the deadline verdict treats a LIVE
+  // wait (deadline still in the future) as a legitimate park. On a THREADLESS
+  // build it is NOT a wake token (the host relay shares the parked thread and
+  // can never run); there the CERTAIN check only consults it to pick the
+  // timer-backed variant of the typed diagnostic. Shared with the `Sleep`
+  // futures minted for this executor (they insert at first poll and remove on
+  // completion/drop).
   host_timers: Arc<HostTimerRegistry>,
 }
 
@@ -544,7 +567,10 @@ impl CurrentThreadExecutor {
   ///   * `Pending` + queue empty + NO token, threadless build: PROVABLE
   ///     deadlock -- no other thread exists that could ever deliver the wake
   ///     (the block_on-awaiting-JS class, R2). Panic immediately with the
-  ///     typed [`BlockOnDeadlock`] diagnostic.
+  ///     typed [`BlockOnDeadlock`] diagnostic. A pending HOST timer is no
+  ///     rescue here: its `setTimeout` relay shares this very thread, so it
+  ///     can never fire while the park holds it -- it only selects the
+  ///     timer-backed variant of the same certain diagnostic.
   ///   * `Pending` + queue empty + NO token, threaded build: park. When a
   ///     `park_deadline` is armed, the park is bounded with progress-based
   ///     reset (see [`park_with_deadline`]) and panics typed if a full
@@ -566,11 +592,21 @@ impl CurrentThreadExecutor {
       if parker.consume_permit() {
         continue;
       }
-      // INTERACTION B (timer facility): a pending HOST timer is a future
-      // wake-token source -- the host event loop's timer callback will wake
-      // this runtime -- so the park is no longer PROVABLY dead. Park instead
-      // of panicking; the optional deadline detection below still bounds it.
-      if self.threadless && !self.host_timers.has_pending() {
+      // INTERACTION B (timer facility): on a THREADLESS build even a pending
+      // HOST timer is NOT a wake-token source -- the host event loop's
+      // `setTimeout` relay can only run on the very thread that is about to
+      // park, so it can never fire while `block_on` holds it. EVERY threadless
+      // park at this decision is therefore provably dead; a pending timer only
+      // selects the more precise diagnostic. Falling through instead would hit
+      // `parker.park()`, which on the real target (wasm32-wasip1 no_threads
+      // std) is an untyped "condvar wait not supported" abort -- a diagnostics
+      // downgrade, never a rescue. (The deadline verdict's LIVE-wait veto
+      // below stays: it serves the THREADED CT flavor, where the host loop
+      // genuinely runs concurrently.)
+      if self.threadless {
+        if self.host_timers.has_pending() {
+          std::panic::panic_any(BlockOnDeadlock::current_thread_certain_timer_backed());
+        }
         std::panic::panic_any(BlockOnDeadlock::current_thread_certain());
       }
       match self.park_deadline {
@@ -1761,13 +1797,16 @@ impl ParkedDrivers {
 //     the heap (see `cooperative_block_on`): arming a timer bumps no progress
 //     counter by design, so a registration racing an already-committed
 //     deadline park must veto the panic there.
-//   * CT certain check (threadless): a pending HOST timer is a future wake
-//     token (the JS setTimeout callback), so the park is no longer PROVABLY
-//     dead -- the check counts pending host timers and parks instead of
-//     panicking. The CT deadline verdict counts only LIVE waits (deadline
-//     still in the future): a pending timer whose deadline passed without
-//     firing is the frozen-JS-event-loop signature that the deadline-based
-//     detection exists to catch, so it must NOT suppress the panic.
+//   * CT certain check (threadless): a pending HOST timer is NOT a wake
+//     token -- the JS setTimeout relay can only run on the very thread that
+//     is parking, so it can never fire while `block_on` holds it. The check
+//     panics unconditionally on a threadless build; a pending timer merely
+//     selects the timer-backed variant of the typed diagnostic. The CT
+//     deadline verdict (threaded flavor, where the host loop genuinely runs
+//     concurrently) counts only LIVE waits (deadline still in the future): a
+//     pending timer whose deadline passed without firing is the
+//     frozen-JS-event-loop signature that the deadline-based detection
+//     exists to catch, so it must NOT suppress the panic.
 
 pub type TimerId = u64;
 
@@ -1938,9 +1977,10 @@ impl HostTimerRegistry {
     self.timers.lock().unwrap_or_else(std::sync::PoisonError::into_inner).remove(&id);
   }
 
-  /// Any host timer armed at all? A wake-token source for the threadless
-  /// CERTAIN check: the host event loop will eventually run the timer
-  /// callback, so the park is not provably dead.
+  /// Any host timer armed at all? Consulted by the threadless CERTAIN check
+  /// only to pick the diagnostic variant: on a threadless build the park is
+  /// provably dead either way (the host relay shares the parked thread), but
+  /// a pending timer means the timer-backed message applies.
   fn has_pending(&self) -> bool {
     !self.timers.lock().unwrap_or_else(std::sync::PoisonError::into_inner).is_empty()
   }
@@ -2363,12 +2403,13 @@ impl Future for Sleep {
           return Poll::Ready(());
         }
         if host.pending.is_none() {
-          // FIRST poll: the wake-token enters the registry at the same
-          // moment the host timer is armed below -- and only then. An
-          // unpolled Sleep has no host callback behind it; on a parked
-          // single thread nothing can ever poll it into arming, so counting
-          // it would let the threadless certain-deadlock check under-panic
-          // on a genuine silent hang (Codex round-1, finding 3).
+          // FIRST poll: the registry entry appears at the same moment the
+          // host timer is armed below -- and only then. An unpolled Sleep has
+          // no host callback behind it, so counting it at creation would
+          // wrongly veto the threaded deadline verdict (`has_live_wait`) and
+          // mislabel the threadless certain diagnostic as timer-backed
+          // (Codex round-1, finding 3; the certain panic itself no longer
+          // consults pending timers for its verdict).
           host.registry.insert(host.id, deadline);
           host.pending =
             Some(HostTimerPendingGuard { registry: Arc::clone(&host.registry), id: host.id });
@@ -2469,12 +2510,12 @@ fn make_sleep(
          `rolldown_utils::async_runtime::register_timer_driver` (the Node binding registers \
          a setTimeout-based driver per importing env through `registerTimerHost` at import)."
       );
-      // The wake-token is armed at FIRST POLL (when `driver.register` arms
-      // the host timer), not here: an unpolled Sleep cannot wake anyone --
-      // nothing was handed to the host loop, and a parked single thread can
-      // never poll it into arming -- so counting it at creation would
-      // suppress the threadless certain-deadlock diagnostic on a genuine
-      // silent hang. First-poll accounting has no false-panic side.
+      // The registry entry is created at FIRST POLL (when `driver.register`
+      // arms the host timer), not here: an unpolled Sleep cannot wake anyone
+      // -- nothing was handed to the host loop -- so counting it at creation
+      // would wrongly veto the threaded deadline verdict and mislabel the
+      // threadless certain diagnostic as timer-backed. First-poll accounting
+      // has no false-panic side.
       Sleep {
         deadline,
         inner: SleepInner::Host(HostSleep {
@@ -6760,54 +6801,68 @@ mod tests {
   }
 
   #[test]
-  fn current_thread_threadless_park_with_pending_host_timer_is_not_certain_deadlock() {
+  fn current_thread_threadless_park_with_pending_host_timer_is_still_certain_deadlock() {
     // INTERACTION B (CT certain check vs pending host timers): on a
-    // threadless build, a park with an empty queue but a PENDING host timer
-    // is NOT provably dead -- the host event loop's timer callback is a
-    // future wake. The certain check must count it as a wake-token source and
-    // park; the stub's fire must then complete the future. (Without any
-    // pending timer the certain panic stands -- pinned by
-    // `current_thread_threadless_park_with_no_pending_wake_panics_with_typed_diagnostic`.)
+    // THREADLESS build a pending host timer is NOT a wake-token source -- the
+    // host event loop's `setTimeout` relay can only run on the very thread
+    // that is about to park, so it can never fire while `block_on` holds it.
+    // The certain check must panic with the typed diagnostic anyway (the
+    // timer-backed kind, so the message names the shape), never fall through
+    // to the park -- on the real wasip1 target that park is an untyped
+    // "condvar wait not supported" abort. (This test formerly pinned the
+    // opposite: a native helper thread fired the timer and rescued the park,
+    // a concurrency THREADLESS_BUILD's own contract says cannot exist.)
     use std::sync::mpsc;
 
     let (done_tx, done_rx) = mpsc::channel();
     let runner = std::thread::spawn(move || {
       let metrics = Arc::new(RuntimeMetrics::default());
-      // Native stand-in for the threadless wasm build; the stub driver plays
-      // the host event loop's role from a helper thread.
+      // Native stand-in for the threadless wasm build; the stub driver would
+      // play the host loop from a helper thread, but the panic must land at
+      // the first park decision, long before its 60ms fire.
       let executor = Arc::new(CurrentThreadExecutor::with_detection(metrics, true, None));
       let backend = RuntimeBackend::CurrentThread(Arc::clone(&executor));
       let driver: Arc<dyn TimerDriver> = Arc::new(StubHostTimerDriver::new());
 
-      let started = Instant::now();
-      let mut future = std::pin::pin!(async {
-        make_sleep(&backend, &registry_with(driver), Instant::now() + Duration::from_millis(60))
-          .await;
-      });
-      executor.block_on(future.as_mut());
-      assert!(started.elapsed() >= Duration::from_millis(60));
+      let payload = catch_unwind(AssertUnwindSafe(|| {
+        let mut future = std::pin::pin!(async {
+          make_sleep(&backend, &registry_with(driver), Instant::now() + Duration::from_millis(60))
+            .await;
+        });
+        executor.block_on(future.as_mut());
+      }))
+      .expect_err("a threadless park must self-detect even while a host timer is pending");
+      let diagnostic = payload
+        .downcast_ref::<BlockOnDeadlock>()
+        .expect("the panic payload must be the typed BlockOnDeadlock diagnostic");
+      assert_eq!(diagnostic.kind, BlockOnDeadlockKind::CurrentThreadCertainTimerBacked);
+      assert_eq!(diagnostic.park_deadline, None, "the certain case carries no deadline");
+      let message = diagnostic.to_string();
+      assert!(
+        message.contains("host timer") && message.contains("block_on") && message.contains("JS"),
+        "the diagnostic must name the pending host timer and the block_on-awaiting-JS hazard, got: {message}"
+      );
       let _ = done_tx.send(());
     });
 
     match done_rx.recv_timeout(Duration::from_secs(10)) {
       Ok(()) => runner.join().unwrap(),
       Err(error) => panic!(
-        "a threadless CT park with a pending host timer panicked as a certain deadlock or hung ({error})"
+        "a pending host timer suppressed the threadless certain-deadlock diagnostic -- block_on parked (or completed via a helper-thread fire that cannot exist on the real target) instead of panicking ({error})"
       ),
     }
   }
 
   #[test]
   fn current_thread_threadless_certain_check_ignores_unpolled_sleep() {
-    // Codex round-1, finding 3: the wake-token only exists once the host
+    // Codex round-1, finding 3: the registry entry only exists once the host
     // timer is ARMED (first poll runs `driver.register`), never at `Sleep`
     // creation. A created-but-never-polled Sleep has no host callback behind
     // it, and on a parked single thread nothing can ever poll it into
     // arming -- it is provably NOT a future wake source. Counting it would
-    // suppress the threadless certain-deadlock diagnostic and reproduce
-    // exactly the silent-hang class the detector exists to make loud. (The
-    // armed twin above pins the opposite side: a POLLED pending timer DOES
-    // suppress the diagnostic.)
+    // mislabel the certain diagnostic as timer-backed. (The armed twin above
+    // pins the polled side: a POLLED pending timer still certain-panics, just
+    // with the timer-backed kind.)
     use std::sync::mpsc;
 
     let (done_tx, done_rx) = mpsc::channel();

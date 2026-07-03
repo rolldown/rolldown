@@ -23,11 +23,6 @@ pub struct LazyCompilationContext {
 }
 
 impl LazyCompilationContext {
-  /// Check if a module is a lazy module
-  pub fn is_lazy_module(&self, module_id: &str) -> bool {
-    self.lazy_entries.contains(module_id)
-  }
-
   /// Mark a proxy module as fetched. This changes the content returned by the load hook
   /// from a stub (fetches via /lazy endpoint) to actual code that imports the real module.
   pub fn mark_as_fetched(&self, proxy_module_id: &str) {

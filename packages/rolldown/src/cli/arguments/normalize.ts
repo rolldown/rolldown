@@ -6,10 +6,11 @@ import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import { getInputCliKeys, getOutputCliKeys, validateCliOptions } from '../../utils/validator';
 import { logger } from '../logger';
+import type { ConfigLoader } from '../../utils/load-config';
 import type { CliOptions } from './alias';
 import { setNestedProperty } from './utils';
 
-const reservedKeys = new Set(['help', 'version', 'config', 'watch', 'environment']);
+const reservedKeys = new Set(['help', 'version', 'config', 'watch', 'environment', 'configLoader']);
 
 export interface NormalizedCliOptions {
   input: InputOptions;
@@ -19,6 +20,7 @@ export interface NormalizedCliOptions {
   version: boolean;
   watch: boolean;
   environment?: string | string[];
+  configLoader?: ConfigLoader;
 }
 
 export function normalizeCliOptions(
@@ -51,6 +53,10 @@ export function normalizeCliOptions(
 
   if (options.environment !== undefined) {
     result.environment = options.environment;
+  }
+
+  if (options.configLoader !== undefined) {
+    result.configLoader = options.configLoader;
   }
 
   const keysOfInput = new Set(getInputCliKeys());

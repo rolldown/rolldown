@@ -48,6 +48,18 @@ export default defineConfig((commandLineArgs) => {
 });
 ```
 
+### Config Loaders
+
+By default Rolldown loads a config file by bundling it with Rolldown first (`configLoader: 'bundle'`). This works on any supported runtime, including for TypeScript configs.
+
+If your runtime can import the config directly (Node.js 22.18+ (native TypeScript type stripping), Bun, Deno, or a loader registered via `--import` (e.g. `tsx`, `jiti`)), you can skip the bundling step with the `native` loader:
+
+```shell
+rolldown -c rolldown.config.ts --configLoader native
+```
+
+The `native` loader is more simple and is planned to be the default in the future.
+
 ### Config Intellisense
 
 Since Rolldown ships with TypeScript typings, you can leverage your IDE's intellisense with JSDoc type hints:
@@ -138,6 +150,13 @@ The flags listed below are only available via the command line interface.
 ### `-c, --config <filename>`
 
 Use the specified config file. If the argument is used but no filename is specified, Rolldown will look for a default config file. See [Configuration Files](#configuration-files) for more details.
+
+### `--configLoader <loader>`
+
+How to load the config file. One of:
+
+- `bundle` (default): bundle the config with Rolldown before importing it.
+- `native`: import the config directly, relying on the runtime for TypeScript and loader support. See [Config Loaders](#config-loaders).
 
 ### `-h` / `--help`
 

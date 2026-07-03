@@ -478,6 +478,27 @@ describe('config', () => {
     expect(content).not.toContain('export {');
   });
 
+  it('should load config with --configLoader native (mjs)', async () => {
+    const cwd = cliFixturesDir('ext-mjs');
+    const status = await $({
+      cwd,
+    })`rolldown -c rolldown.config.mjs --configLoader native`;
+    expect(status.exitCode).toBe(0);
+    expect(cleanStdout(status.stdout)).toMatchSnapshot();
+  });
+
+  it.runIf(process.features.typescript)(
+    'should load ts config with --configLoader native',
+    async () => {
+      const cwd = cliFixturesDir('ext-ts');
+      const status = await $({
+        cwd,
+      })`rolldown -c rolldown.config.ts --configLoader native`;
+      expect(status.exitCode).toBe(0);
+      expect(cleanStdout(status.stdout)).toMatchSnapshot();
+    },
+  );
+
   it('should handle `-c -w` without `-w` being consumed as config filename (#3248)', async () => {
     const cwd = cliFixturesDir('cli-config-with-watch');
     const controller = new AbortController();

@@ -131,6 +131,7 @@
     "cac": "catalog:",
     "consola": "catalog:",
     "execa": "catalog:",
+    "fresh-import": "catalog:",
     "glob": "catalog:",
     "oxc-parser": "catalog:",
     "pathe": "catalog:",

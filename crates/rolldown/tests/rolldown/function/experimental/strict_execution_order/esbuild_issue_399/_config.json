@@ -15,7 +15,8 @@
     {
       "_configName": "strict",
       "strictExecutionOrder": true
-    }
+    },
+    { "strictExecutionOrder": true, "onDemandWrapping": true }
   ],
   "expectExecuted": false
 }

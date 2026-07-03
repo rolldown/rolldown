@@ -63,3 +63,33 @@ __esmMin((() => {
 }))();
 
 ```
+
+# Variant: [on_demand_wrapping: true]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] lib.js is dynamically imported by entry.js but also statically imported by entry.js, dynamic import will not move module into another chunk.
+
+```
+
+## Assets
+
+### entry.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => 123 });
+//#endregion
+__esmMin((() => {
+	Promise.resolve().then(() => lib_exports).then((mod) => {
+		assert.strictEqual(mod.a, 123);
+		assert.strictEqual(123, 123);
+	});
+}))();
+
+```

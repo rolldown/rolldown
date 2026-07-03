@@ -9,5 +9,6 @@
         }
       ]
     }
-  }
+  },
+  "configVariants": [{ "onDemandWrapping": true }]
 }

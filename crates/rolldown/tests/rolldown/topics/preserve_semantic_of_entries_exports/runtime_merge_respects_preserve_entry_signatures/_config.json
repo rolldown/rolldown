@@ -12,6 +12,7 @@
     "preserveEntrySignatures": "strict"
   },
   "configVariants": [
-    { "_configName": "allow-extension", "preserveEntrySignatures": "allow-extension" }
+    { "_configName": "allow-extension", "preserveEntrySignatures": "allow-extension" },
+    { "onDemandWrapping": true }
   ]
 }

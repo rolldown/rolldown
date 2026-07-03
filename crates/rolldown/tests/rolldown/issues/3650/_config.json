@@ -14,5 +14,6 @@
         }
       ]
     }
-  }
+  },
+  "configVariants": [{ "onDemandWrapping": true }]
 }

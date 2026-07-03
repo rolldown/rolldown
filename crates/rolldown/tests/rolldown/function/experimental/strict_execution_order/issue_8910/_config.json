@@ -9,5 +9,6 @@
     "external": ["node:assert"],
     "strictExecutionOrder": true,
     "preserveEntrySignatures": "false"
-  }
+  },
+  "configVariants": [{ "onDemandWrapping": true }]
 }

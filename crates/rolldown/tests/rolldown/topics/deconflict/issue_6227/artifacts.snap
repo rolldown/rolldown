@@ -38,3 +38,32 @@ __esmMin((() => {
 }))();
 
 ```
+
+# Variant: [on_demand_wrapping: true]
+
+## Assets
+
+### entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+	//#region foo.js
+	{
+		const foo = "foo" + globalThis.foo;
+		setTimeout(() => {
+			globalThis.array.push(foo);
+		}, 100);
+	}
+	//#endregion
+	//#region bar.js
+	{
+		const foo = "bar" + globalThis.bar;
+		globalThis.array.push(foo);
+	}
+	//#endregion
+	//#region main.js
+	console.log(globalThis.array);
+	//#endregion
+}))();
+
+```

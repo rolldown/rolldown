@@ -2,5 +2,6 @@
   "config": {
     "external": ["node:assert"],
     "strictExecutionOrder": true
-  }
+  },
+  "configVariants": [{ "onDemandWrapping": true }]
 }

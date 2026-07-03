@@ -12,5 +12,6 @@
     "experimental": {
       "lazyBarrel": true
     }
-  }
+  },
+  "configVariants": [{ "onDemandWrapping": true }]
 }

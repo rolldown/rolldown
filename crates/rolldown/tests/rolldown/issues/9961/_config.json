@@ -6,5 +6,7 @@
       "lazyBarrel": true
     }
   },
-  "configVariants": []
+  "configVariants": [
+    { "onDemandWrapping": true }
+  ]
 }

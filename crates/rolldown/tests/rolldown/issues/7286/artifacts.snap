@@ -18,3 +18,23 @@ __esmMin((() => {
 }))();
 
 ```
+
+# Variant: [on_demand_wrapping: true]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+//#region main.js
+var A, foo;
+//#endregion
+__esmMin((() => {
+	A = { A: "A" };
+	({[A.A]: foo} = { A: "foo" });
+	assert.strictEqual(foo, "foo");
+}))();
+
+```

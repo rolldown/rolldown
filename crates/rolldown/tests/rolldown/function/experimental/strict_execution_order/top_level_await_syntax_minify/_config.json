@@ -9,5 +9,6 @@
     "strictExecutionOrder": true,
     "minify": true
   },
+  "configVariants": [{ "onDemandWrapping": true }],
   "expectExecuted": false
 }

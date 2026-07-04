@@ -2933,9 +2933,7 @@ dependencies = [
  "regex",
  "rolldown_common",
  "rolldown_plugin",
- "rolldown_sourcemap",
  "rolldown_utils",
- "rustc-hash",
  "serde_json",
  "sugar_path",
 ]

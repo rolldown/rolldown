@@ -333,7 +333,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
   /// transform sourcemap chain without calling any transform hook; a miss runs
   /// the pipeline and stores its result.
   /// See internal-docs/transform-cache/implementation.md.
-  #[expect(clippy::too_many_arguments)]
   async fn transform_source_with_cache(
     &self,
     cache: &TransformCache,

@@ -87,7 +87,8 @@ impl PluginDriver {
   pub fn iter_plugin_with_context_by_order<'me>(
     &'me self,
     ordered_plugins: &'me [PluginIdx],
-  ) -> impl Iterator<Item = (PluginIdx, &'me SharedPluginable, &'me PluginContext)> + 'me {
+  ) -> impl ExactSizeIterator<Item = (PluginIdx, &'me SharedPluginable, &'me PluginContext)> + 'me
+  {
     ordered_plugins.iter().copied().map(move |idx| {
       let plugin = &self.plugins[idx];
       let context = &self.contexts[idx];

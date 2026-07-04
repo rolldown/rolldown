@@ -93,7 +93,7 @@ impl StmtInfos {
 
   pub fn iter_enumerated_without_namespace_stmt(
     &self,
-  ) -> impl Iterator<Item = (StmtInfoIdx, &StmtInfo)> {
+  ) -> impl ExactSizeIterator<Item = (StmtInfoIdx, &StmtInfo)> {
     self.infos.iter_enumerated().skip(1)
   }
 

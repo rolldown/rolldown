@@ -31,10 +31,6 @@ impl CopyModulePlugin {
     }
     Self { copy_extensions }
   }
-
-  pub fn is_active(&self) -> bool {
-    !self.copy_extensions.is_empty()
-  }
 }
 
 impl Plugin for CopyModulePlugin {

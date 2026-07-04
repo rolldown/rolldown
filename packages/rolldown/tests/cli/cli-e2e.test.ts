@@ -194,6 +194,25 @@ describe('cli options for bundling', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
+  it('should parse codeSplitting boolean string values', async () => {
+    const cwd = cliFixturesDir('cli-code-splitting-false');
+    const distDir = path.join(cwd, 'dist');
+
+    fs.rmSync(distDir, { recursive: true, force: true });
+    const spaceSeparated = await $({
+      cwd,
+    })`rolldown index.js --codeSplitting false --format esm --platform node --file dist/space.js`;
+    expect(spaceSeparated.exitCode).toBe(0);
+    expect(fs.readdirSync(distDir).filter((file) => file.endsWith('.js'))).toEqual(['space.js']);
+
+    fs.rmSync(distDir, { recursive: true, force: true });
+    const equalsSeparated = await $({
+      cwd,
+    })`rolldown index.js --codeSplitting=false --format esm --platform node --file dist/equals.js`;
+    expect(equalsSeparated.exitCode).toBe(0);
+    expect(fs.readdirSync(distDir).filter((file) => file.endsWith('.js'))).toEqual(['equals.js']);
+  });
+
   it('should handle pass `-s` options in any position', async () => {
     const cwd = cliFixturesDir('cli-option-sourcemap');
     const status = await $({ cwd })`rolldown index.ts -s -d dist`;

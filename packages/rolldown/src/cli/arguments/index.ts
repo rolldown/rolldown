@@ -90,6 +90,16 @@ function camelizeNestedKeys(value: Record<string, any>): Record<string, any> {
   return result;
 }
 
+function coerceStringBoolean(value: unknown): unknown {
+  if (value === 'true') {
+    return true;
+  }
+  if (value === 'false') {
+    return false;
+  }
+  return value;
+}
+
 export function parseCliArguments(): NormalizedCliOptions & {
   rawArgs: Record<string, any>;
 } {
@@ -212,6 +222,14 @@ export function parseCliArguments(): NormalizedCliOptions & {
     } else if (type === 'array' && typeof value === 'string') {
       parsedOptions[key] = [value];
     }
+  }
+
+  // `codeSplitting` accepts either a boolean or an object. Since it is registered
+  // with cac as a value-taking option, `--codeSplitting false` and
+  // `--codeSplitting=false` arrive as strings and need the same boolean coercion
+  // as boolean-only CLI flags before validation.
+  if ('codeSplitting' in parsedOptions) {
+    parsedOptions.codeSplitting = coerceStringBoolean(parsedOptions.codeSplitting);
   }
 
   // Object option parsing — parse "key:val,key:val" strings (Rollup-compatible)

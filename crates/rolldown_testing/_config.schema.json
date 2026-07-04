@@ -1033,6 +1033,16 @@
             "boolean",
             "null"
           ]
+        },
+        "transformCache": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformCacheOption"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1127,6 +1137,38 @@
         "avoidRedundantChunkLoads": {
           "type": "boolean",
           "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "TransformCacheOption": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/TransformCacheOptions"
+        }
+      ]
+    },
+    "TransformCacheOptions": {
+      "type": "object",
+      "properties": {
+        "dir": {
+          "description": "Directory where cache entries are stored. Relative paths are resolved\nagainst `cwd`. Defaults to `node_modules/.cache/rolldown`.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "key": {
+          "description": "Extra cache invalidation key mixed into every entry's hash. The cache key\nonly captures the rolldown version, the ordered plugin names, each\nmodule's id, module type and post-`load` source. Plugin *configuration*\nor *implementation* changes are invisible to it, so callers must fold\nanything that changes transform output (e.g. a hash of the resolved\nconfig and lockfile) into this key.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
         }
       },
       "additionalProperties": false

@@ -1,4 +1,14 @@
 import * as v from 'valibot';
+
+import type {
+  ChecksOptions,
+  InputOption,
+  ModuleTypes,
+  RollupLogWithString,
+  TransformOptions,
+  TreeshakingOptions,
+  WatcherOptions,
+} from '..';
 import type {
   CodegenOptions,
   CompressOptions,
@@ -24,21 +34,21 @@ import type {
 } from '../options/input-options';
 import type {
   AddonFunction,
-  CodeSplittingNameFunction,
-  CodeSplittingTestFunction,
   AssetFileNamesFunction,
   ChunkFileNamesFunction,
+  CodeSplittingNameFunction,
+  CodeSplittingOptions,
+  CodeSplittingTestFunction,
+  GeneratedCodeOptions,
+  GeneratedCodePreset,
   GlobalsFunction,
   ManualChunksFunction,
+  MinifyOptions,
+  ModuleFormat,
   OutputOptions,
   PathsFunction,
   PreRenderedAsset,
   SanitizeFileNameFunction,
-  MinifyOptions,
-  ModuleFormat,
-  CodeSplittingOptions,
-  GeneratedCodePreset,
-  GeneratedCodeOptions,
 } from '../options/output-options';
 import type { RolldownOutputPluginOption, RolldownPluginOption } from '../plugin';
 import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
@@ -46,15 +56,6 @@ import type { RenderedChunk } from '../types/rolldown-output';
 import type { AnyFn, StringOrRegExp } from '../types/utils';
 import { flattenValibotSchema } from './flatten-valibot-schema';
 import { styleText } from './style-text';
-import type {
-  ChecksOptions,
-  InputOption,
-  ModuleTypes,
-  RollupLogWithString,
-  TransformOptions,
-  TreeshakingOptions,
-  WatcherOptions,
-} from '..';
 
 type IsSchemaSubType<
   SubTypeSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>,
@@ -657,6 +658,15 @@ const InputOptionsSchema = v.strictObject({
       ),
       onDemandWrapping: v.optional(v.boolean()),
       incrementalBuild: v.optional(v.boolean()),
+      transformCache: v.optional(
+        v.union([
+          v.boolean(),
+          v.strictObject({
+            dir: v.optional(v.string()),
+            key: v.optional(v.string()),
+          }),
+        ]),
+      ),
       nativeMagicString: v.optional(v.boolean()),
       chunkOptimization: v.optional(
         v.union([

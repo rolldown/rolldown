@@ -66,6 +66,36 @@ impl ChunkOptimizationOption {
 #[cfg_attr(
   feature = "deserialize_bundler_options",
   derive(Deserialize, JsonSchema),
+  serde(rename_all = "camelCase", deny_unknown_fields, default)
+)]
+pub struct TransformCacheOptions {
+  /// Directory where cache entries are stored. Relative paths are resolved
+  /// against `cwd`. Defaults to `node_modules/.cache/rolldown`.
+  pub dir: Option<String>,
+  /// Extra cache invalidation key mixed into every entry's hash. The cache key
+  /// only captures the rolldown version, the ordered plugin names, each
+  /// module's id, module type and post-`load` source. Plugin *configuration*
+  /// or *implementation* changes are invisible to it, so callers must fold
+  /// anything that changes transform output (e.g. a hash of the resolved
+  /// config and lockfile) into this key.
+  pub key: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
+  serde(untagged)
+)]
+pub enum TransformCacheOption {
+  Bool(bool),
+  Options(TransformCacheOptions),
+}
+
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
 pub struct ExperimentalOptions {
@@ -80,6 +110,7 @@ pub struct ExperimentalOptions {
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<ChunkOptimizationOption>,
   pub lazy_barrel: Option<bool>,
+  pub transform_cache: Option<TransformCacheOption>,
 }
 
 impl ExperimentalOptions {
@@ -124,5 +155,13 @@ impl ExperimentalOptions {
 
   pub fn is_lazy_barrel_enabled(&self) -> bool {
     self.lazy_barrel.unwrap_or(false)
+  }
+
+  pub fn transform_cache_options(&self) -> Option<TransformCacheOptions> {
+    match &self.transform_cache {
+      Some(TransformCacheOption::Bool(true)) => Some(TransformCacheOptions::default()),
+      Some(TransformCacheOption::Options(options)) => Some(options.clone()),
+      Some(TransformCacheOption::Bool(false)) | None => None,
+    }
   }
 }

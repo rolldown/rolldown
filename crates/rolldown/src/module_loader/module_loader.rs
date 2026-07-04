@@ -34,6 +34,7 @@ use tracing::Instrument;
 use crate::module_loader::module_task::ModuleTaskOwner;
 use crate::types::scan_stage_cache::ScanStageCache;
 use crate::utils::load_entry_module::load_entry_module;
+use crate::utils::transform_cache::TransformCache;
 use crate::{SharedOptions, SharedResolver};
 
 use super::external_module_task::ExternalModuleTask;
@@ -190,13 +191,19 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       },
     };
 
+    // The native magic-string path generates transform sourcemaps outside the
+    // module task, so cache entries could not capture them; bypass the cache.
+    let transform_cache =
+      if magic_string_tx.is_none() { TransformCache::new(&options, &plugin_driver) } else { None };
+
     // Unbounded as defense in depth. If any sender ends up driven from a sync
     // napi binding through `block_on`, a bounded channel could deadlock: the
     // send future would wait on capacity that only the consumer can free, but
     // the consumer may need the JS thread — pinned by `block_on` — to run
     // plugin hooks first. Keeping the channel unbounded removes that edge.
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-    let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta });
+    let shared_context =
+      Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta, transform_cache });
 
     let importers = std::mem::take(&mut cache.importers);
     let intermediate_normal_modules = IntermediateNormalModules::new(is_full_scan, importers);

@@ -2230,6 +2230,7 @@ export interface BindingExperimentalOptions {
   nativeMagicString?: boolean
   chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
+  transformCache?: boolean | BindingTransformCacheOptions
 }
 
 export interface BindingFilterToken {
@@ -2727,6 +2728,11 @@ export interface BindingSourceMapOptions {
    * - "boundary": high-resolution only at word boundaries
    */
   hires?: boolean | string
+}
+
+export interface BindingTransformCacheOptions {
+  dir?: string
+  key?: string
 }
 
 export interface BindingTransformHookExtraArgs {

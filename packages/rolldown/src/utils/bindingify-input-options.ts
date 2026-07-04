@@ -1,10 +1,3 @@
-import {
-  BindingAttachDebugInfo,
-  BindingChunkModuleOrderBy,
-  BindingLogLevel,
-  BindingPropertyReadSideEffects,
-  BindingPropertyWriteSideEffects,
-} from '../binding.cjs';
 import type {
   BindingDeferSyncScanData,
   BindingExperimentalOptions,
@@ -12,8 +5,18 @@ import type {
   BindingInjectImportNamespace,
   BindingInputOptions,
 } from '../binding.cjs';
-import { bindingifyManifestPlugin, BuiltinPlugin } from '../builtin-plugin/utils';
-import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
+import {
+  BindingAttachDebugInfo,
+  BindingChunkModuleOrderBy,
+  BindingLogLevel,
+  BindingPropertyReadSideEffects,
+  BindingPropertyWriteSideEffects,
+} from '../binding.cjs';
+import {
+  BuiltinPlugin,
+  bindingifyBuiltInPlugin,
+  bindingifyManifestPlugin,
+} from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
 import type { AttachDebugOptions, DevModeOptions, InputOptions } from '../options/input-options';
@@ -176,6 +179,7 @@ function bindingifyExperimental(
     chunkImportMap: experimental?.chunkImportMap,
     onDemandWrapping: experimental?.onDemandWrapping,
     incrementalBuild: experimental?.incrementalBuild,
+    transformCache: experimental?.transformCache,
     nativeMagicString: experimental?.nativeMagicString,
     chunkOptimization: experimental?.chunkOptimization,
     lazyBarrel: experimental?.lazyBarrel,

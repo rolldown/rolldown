@@ -6,7 +6,7 @@ use oxc::span::Span;
 use rolldown_common::{
   ExportsKind, FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
   NormalModule, NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, SourcemapChainElement,
-  StrOrBytes, try_extract_lazy_barrel_info,
+  StrOrBytes, side_effects::HookSideEffects, try_extract_lazy_barrel_info,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosticOptions, EventKindSwitcher, UnloadableDependencyContext,
@@ -19,7 +19,9 @@ use rolldown_fs::FileSystem;
 use crate::{
   ecmascript::ecma_module_view_factory::{CreateEcmaViewReturn, create_ecma_view},
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
-  utils::{load_source::load_source, transform_source::transform_source},
+  utils::{
+    load_source::load_source, transform_cache::TransformCache, transform_source::transform_source,
+  },
 };
 
 use super::{resolve_utils::resolve_dependencies, task_context::TaskContext};
@@ -284,18 +286,32 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     let source = match source {
       _ if self.resolved_id.id.starts_with("rolldown:") => source,
       StrOrBytes::Str(source) => {
-        // Run plugin transform.
-        let source = transform_source(
-          &self.ctx.plugin_driver,
-          &self.resolved_id,
-          self.module_idx,
-          source,
-          sourcemap_chain,
-          hook_side_effects,
-          &mut module_type,
-          magic_string_tx,
-        )
-        .await?;
+        // Run plugin transform, backed by the persistent transform cache when
+        // `experimental.transformCache` is enabled.
+        let source = if let Some(cache) = &self.ctx.transform_cache {
+          self
+            .transform_source_with_cache(
+              cache,
+              source,
+              sourcemap_chain,
+              hook_side_effects,
+              &mut module_type,
+              magic_string_tx,
+            )
+            .await?
+        } else {
+          transform_source(
+            &self.ctx.plugin_driver,
+            &self.resolved_id,
+            self.module_idx,
+            source,
+            sourcemap_chain,
+            hook_side_effects,
+            &mut module_type,
+            magic_string_tx,
+          )
+          .await?
+        };
         source.into()
       }
       StrOrBytes::Bytes(_) => source,
@@ -310,5 +326,64 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       ))?;
     }
     Ok((source, module_type))
+  }
+
+  /// Runs the plugin transform pipeline through the persistent transform
+  /// cache: a hit restores the transformed code, module type, side effects and
+  /// transform sourcemap chain without calling any transform hook; a miss runs
+  /// the pipeline and stores its result.
+  /// See internal-docs/transform-cache/implementation.md.
+  #[expect(clippy::too_many_arguments)]
+  async fn transform_source_with_cache(
+    &self,
+    cache: &TransformCache,
+    source: String,
+    sourcemap_chain: &mut Vec<SourcemapChainElement>,
+    hook_side_effects: &mut Option<HookSideEffects>,
+    module_type: &mut ModuleType,
+    magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
+  ) -> anyhow::Result<String> {
+    let stable_id = self.resolved_id.id.stabilize(&self.ctx.options.cwd);
+    let key = cache.cache_key(stable_id.as_arc_str(), module_type, &source);
+
+    if let Some(hit) = cache.get(&key).await {
+      sourcemap_chain.extend(hit.sourcemap_chain);
+      if hit.side_effects.is_some() {
+        *hook_side_effects = hit.side_effects;
+      }
+      *module_type = hit.module_type;
+      return Ok(hit.code);
+    }
+
+    let chain_len_before_transform = sourcemap_chain.len();
+    let side_effects_before_transform = *hook_side_effects;
+    let transformed = transform_source(
+      &self.ctx.plugin_driver,
+      &self.resolved_id,
+      self.module_idx,
+      source,
+      sourcemap_chain,
+      hook_side_effects,
+      module_type,
+      magic_string_tx,
+    )
+    .await?;
+
+    // Side effects may already be set before the transform pipeline (from
+    // resolution data outside the cache key), so only the transform's own
+    // override is stored; storing the pre-existing value would replay stale
+    // resolution data on later hits.
+    let side_effects_override =
+      if *hook_side_effects == side_effects_before_transform { None } else { *hook_side_effects };
+    cache
+      .set(
+        &key,
+        &transformed,
+        module_type,
+        side_effects_override,
+        &sourcemap_chain[chain_len_before_transform..],
+      )
+      .await;
+    Ok(transformed)
   }
 }

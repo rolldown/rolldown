@@ -1,3 +1,7 @@
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { RolldownBuild } from '../api/rolldown/rolldown-build';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { watch } from '../api/watch/index';
 import type {
   LogLevel,
   LogLevelOption,
@@ -5,17 +9,12 @@ import type {
   RolldownLog,
   RolldownLogWithString,
 } from '../log/logging';
-import type { RolldownPluginOption } from '../plugin';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { Plugin, RolldownPluginOption } from '../plugin';
 import type { TreeshakingOptions } from '../types/module-side-effects';
 import type { NullValue, StringOrRegExp } from '../types/utils';
 import type { ChecksOptions } from './generated/checks-options';
 import type { TransformOptions } from './transform-options';
-// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
-import type { watch } from '../api/watch/index';
-// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
-import type { Plugin } from '../plugin';
-// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
-import type { RolldownBuild } from '../api/rolldown/rolldown-build';
 
 /**
  * @inline
@@ -656,6 +655,40 @@ export interface InputOptions {
      * @default false
      */
     incrementalBuild?: boolean;
+    /**
+     * Persist per-module transform results to disk and reuse them across
+     * builds and processes.
+     *
+     * On a cache hit the whole plugin `transform` pipeline is skipped for that
+     * module, which mainly pays off for expensive JavaScript transform hooks
+     * (framework compilers, legacy transpilers) and very large module graphs.
+     * Parsing and later build stages still run normally.
+     *
+     * The cache key covers the rolldown version, the ordered plugin names,
+     * each module's id, module type and post-`load` source, plus the `key`
+     * option. Plugin configuration or implementation changes are NOT detected
+     * automatically: fold anything that affects transform output (e.g. a hash
+     * of your resolved config and lockfile) into `key`.
+     *
+     * Not applied when `nativeMagicString` is enabled together with
+     * sourcemaps, and transform-hook side channels (`this.emitFile`,
+     * `this.addWatchFile`) are not replayed on cache hits.
+     *
+     * @default false
+     */
+    transformCache?:
+      | boolean
+      | {
+          /**
+           * Directory where cache entries are stored, resolved against `cwd`.
+           * @default 'node_modules/.cache/rolldown'
+           */
+          dir?: string;
+          /**
+           * Extra cache invalidation key, hashed into every entry.
+           */
+          key?: string;
+        };
     /**
      * Use native Rust implementation of MagicString for source map generation.
      *

@@ -36,6 +36,7 @@ pub mod bundler_options {
       es_module_flag::EsModuleFlag,
       experimental_options::{
         ChunkOptimizationOption, ChunkOptimizationOptions, ExperimentalOptions,
+        TransformCacheOption, TransformCacheOptions,
       },
       filename_template::{FilenameTemplate, is_path_fragment},
       generated_code_options::GeneratedCodeOptions,

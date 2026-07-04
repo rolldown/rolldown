@@ -15,6 +15,7 @@ pub mod render_chunks;
 pub mod render_ecma_module;
 pub mod resolve_id;
 pub mod shebang;
+pub mod transform_cache;
 pub mod transform_source;
 pub mod tweak_ast_for_scanning;
 pub mod uuid;

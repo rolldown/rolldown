@@ -4,6 +4,14 @@ import { PluginDriver } from '../plugin/plugin-driver';
 import { acquireRuntimeLease, type RuntimeLease } from '../runtime-lifecycle';
 import { createBundlerOptions } from '../utils/create-bundler-option';
 import { unwrapBindingResult } from '../utils/error';
+import {
+  attachRetryableCleanup,
+  createCleanupFailureError,
+  getRetryableCleanup,
+  isCleanupFailureError,
+  retryCleanupFromError,
+  trackRetryableCleanupOwnership,
+} from '../utils/initialize-parallel-plugins';
 import { validateOption } from '../utils/validator';
 
 export { freeExternalMemory } from '../types/external-memory-handle';
@@ -27,79 +35,116 @@ export const scan = async (rawInputOptions: InputOptions, rawOutputOptions = {})
   validateOption('output', rawOutputOptions);
 
   const inputOptions = await PluginDriver.callOptionsHook(rawInputOptions);
-  const ret = await createBundlerOptions(inputOptions, rawOutputOptions, false);
-  let runtimeLease: RuntimeLease;
+  let ret: Awaited<ReturnType<typeof createBundlerOptions>>;
   try {
-    runtimeLease = acquireRuntimeLease();
+    ret = await createBundlerOptions(inputOptions, rawOutputOptions, false);
   } catch (error) {
-    try {
-      await ret.stopWorkers?.();
-    } catch (cleanupError) {
-      throw new AggregateError(
-        [error, cleanupError],
-        'Scan runtime setup and parallel-plugin worker cleanup both failed',
-      );
-    }
-    throw error;
+    if (!isCleanupFailureError(error)) throw error;
+    return retryCleanupFromError(
+      error,
+      'Scan option setup and parallel-plugin worker retry cleanup both failed',
+    );
   }
 
-  let bundler: BindingBundler;
-  try {
-    bundler = new BindingBundler();
-  } catch (error) {
-    const errors = [error];
-    try {
-      await ret.stopWorkers?.();
-    } catch (cleanupError) {
-      errors.push(cleanupError);
-    }
-    try {
-      runtimeLease.release();
-    } catch (cleanupError) {
-      errors.push(cleanupError);
-    }
-    throw errors.length === 1 ? error : new AggregateError(errors, 'Scan setup and cleanup failed');
-  }
-
-  let cleanupPromise: Promise<void> | undefined;
-  const cleanup = () =>
-    (cleanupPromise ??= (async () => {
+  let stopWorkers = ret.stopWorkers;
+  let runtimeLease: RuntimeLease | undefined;
+  let bundler: BindingBundler | undefined;
+  let nativeClosePromise: Promise<void> | undefined;
+  let cleanupAttempt: Promise<void> | undefined;
+  const hasRetryableCleanup = () => stopWorkers !== undefined || runtimeLease !== undefined;
+  const cleanup = (): Promise<void> =>
+    (cleanupAttempt ??= (async () => {
       const errors: unknown[] = [];
+      if (bundler) {
+        nativeClosePromise ??= bundler.close();
+        try {
+          await nativeClosePromise;
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+      const ownedStopWorkers = stopWorkers;
       try {
-        await bundler.close();
+        await ownedStopWorkers?.();
+        if (stopWorkers === ownedStopWorkers) {
+          stopWorkers = undefined;
+        }
       } catch (error) {
         errors.push(error);
       }
       try {
-        await ret.stopWorkers?.();
+        runtimeLease?.release();
+        runtimeLease = undefined;
       } catch (error) {
         errors.push(error);
       }
-      try {
-        runtimeLease.release();
-      } catch (error) {
-        errors.push(error);
+      if (errors.length > 0) {
+        const cleanupError =
+          errors.length === 1
+            ? errors[0]
+            : new AggregateError(
+                errors,
+                'Scan native close, parallel-plugin worker shutdown, or runtime release failed',
+              );
+        if (hasRetryableCleanup()) {
+          const retryableError =
+            cleanupError instanceof Error
+              ? cleanupError
+              : new AggregateError([cleanupError], 'Scan cleanup failed with a non-Error value');
+          attachRetryableCleanup(retryableError, cleanup);
+          throw retryableError;
+        }
+        throw cleanupError;
       }
-      if (errors.length === 1) throw errors[0];
-      if (errors.length > 1) {
-        throw new AggregateError(
-          errors,
-          'Scan native close, parallel-plugin worker shutdown, or runtime release failed',
-        );
-      }
-    })());
+    })().finally(() => {
+      cleanupAttempt = undefined;
+    }));
+  trackRetryableCleanupOwnership(cleanup, hasRetryableCleanup);
 
-  try {
-    const result = await bundler.scan(ret.bundlerOptions);
-    unwrapBindingResult(result);
-  } catch (error) {
+  const throwAfterCleanupWithRetry = async (
+    error: unknown,
+    message: string,
+    retryMessage: string,
+  ): Promise<never> => {
     try {
       await cleanup();
     } catch (cleanupError) {
-      throw new AggregateError([error, cleanupError], 'Scan and cleanup both failed');
+      const setupError = createCleanupFailureError(
+        error,
+        cleanupError,
+        getRetryableCleanup(cleanupError),
+        message,
+      );
+      return retryCleanupFromError(setupError, retryMessage);
     }
     throw error;
+  };
+
+  try {
+    runtimeLease = acquireRuntimeLease();
+    bundler = new BindingBundler();
+  } catch (error) {
+    return throwAfterCleanupWithRetry(
+      error,
+      'Scan setup and cleanup failed',
+      'Scan setup and retry cleanup both failed',
+    );
   }
 
-  await cleanup();
+  try {
+    const result = await bundler!.scan(ret.bundlerOptions);
+    unwrapBindingResult(result);
+  } catch (error) {
+    return throwAfterCleanupWithRetry(
+      error,
+      'Scan and cleanup both failed',
+      'Scan and retry cleanup both failed',
+    );
+  }
+
+  try {
+    await cleanup();
+  } catch (error) {
+    return retryCleanupFromError(error, 'Scan cleanup retry failed');
+  }
 };

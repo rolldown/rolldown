@@ -9,7 +9,12 @@ import { PluginDriver } from '../plugin/plugin-driver';
 import { getObjectPlugins } from '../plugin/plugin-driver';
 import { bindingifyInputOptions } from './bindingify-input-options';
 import { bindingifyOutputOptions } from './bindingify-output-options';
-import { initializeParallelPlugins } from './initialize-parallel-plugins';
+import {
+  createCleanupFailureError,
+  initializeParallelPlugins,
+  isCleanupFailureError,
+  retryCleanupFromError,
+} from './initialize-parallel-plugins';
 import {
   ANONYMOUS_OUTPUT_PLUGIN_PREFIX,
   ANONYMOUS_PLUGIN_PREFIX,
@@ -55,9 +60,18 @@ export async function createBundlerOptions(
     ...checkOutputPluginOption(normalizedOutputPlugins, onLog),
   ];
 
-  const parallelPluginInitResult = import.meta.browserBuild
-    ? undefined
-    : await initializeParallelPlugins(plugins);
+  let parallelPluginInitResult: Awaited<ReturnType<typeof initializeParallelPlugins>>;
+  try {
+    parallelPluginInitResult = import.meta.browserBuild
+      ? undefined
+      : await initializeParallelPlugins(plugins);
+  } catch (error) {
+    if (!isCleanupFailureError(error)) throw error;
+    return retryCleanupFromError(
+      error,
+      'Parallel-plugin worker initialization and retry cleanup both failed',
+    );
+  }
 
   // Warn if deprecated experimental.strictExecutionOrder is used
   if ((inputOptions.experimental as any)?.strictExecutionOrder !== undefined) {
@@ -99,9 +113,23 @@ export async function createBundlerOptions(
       onLog,
       stopWorkers: parallelPluginInitResult?.stopWorkers,
     };
-  } catch (e) {
-    await parallelPluginInitResult?.stopWorkers();
-    throw e;
+  } catch (error) {
+    const stopWorkers = parallelPluginInitResult?.stopWorkers;
+    if (!stopWorkers) throw error;
+    try {
+      await stopWorkers();
+    } catch (cleanupError) {
+      return retryCleanupFromError(
+        createCleanupFailureError(
+          error,
+          cleanupError,
+          stopWorkers,
+          'Bundler option setup and parallel-plugin worker cleanup both failed',
+        ),
+        'Bundler option setup and parallel-plugin worker retry cleanup both failed',
+      );
+    }
+    throw error;
   }
 }
 

@@ -257,7 +257,7 @@ mod tests {
         Ok(())
       }
     });
-    assert!(lease.settle::<()>(Ok(())).is_ok());
+    lease.settle::<()>(Ok(())).unwrap();
 
     let lease = CallableRuntimeLease::new({
       let releases = Arc::clone(&releases);
@@ -303,7 +303,7 @@ mod tests {
       };
       drop(future);
     }));
-    assert!(result.is_ok());
+    result.unwrap();
   }
 
   #[test]
